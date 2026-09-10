@@ -9,6 +9,7 @@
 """
 
 import argparse
+import getpass
 import html
 import json
 import os
@@ -59,18 +60,90 @@ def domain_requirements(domain):
 # Извлечение
 # --------------------------------------------------------------------------
 
+# Ключи, которых не должно быть в снимке: он уходит в файл и в репозиторий.
+SECRET_KEY_RE = re.compile(r"api[_-]?key|password|passwd|secret|token|credential",
+                           re.IGNORECASE)
+
+
+def strip_secrets(snap):
+    """Вернуть копию снимка без полей, похожих на учётные данные.
+
+    fetch_live() их и не кладёт, но проверка делается перед записью на диск,
+    а не на доверии к тому, что снимок собран этим же кодом.
+    """
+    if isinstance(snap, dict):
+        return {k: strip_secrets(v) for k, v in snap.items()
+                if not SECRET_KEY_RE.search(str(k))}
+    if isinstance(snap, list):
+        return [strip_secrets(v) for v in snap]
+    return snap
+
+
+def check_url(url):
+    """Проверить и нормализовать базовый URL Odoo (ошибки URL — до сети)."""
+    from urllib.parse import urlsplit
+
+    parts = urlsplit((url or "").strip())
+    if not parts.scheme:
+        sys.exit(f"Неверный --url {url!r}: нет схемы, нужен https:// или http://")
+    if parts.scheme not in ("http", "https"):
+        sys.exit(f"Неверный --url {url!r}: схема {parts.scheme!r} не поддерживается, "
+                 "нужен https:// или http://")
+    if not parts.netloc:
+        sys.exit(f"Неверный --url {url!r}: не указан хост")
+    return f"{parts.scheme}://{parts.netloc}{parts.path.rstrip('/')}"
+
+
+def rpc_call(what, fn, *args, **kw):
+    """Выполнить XML-RPC вызов, переведя сбой в сообщение вместо трейсбека."""
+    import xmlrpc.client
+    from xml.parsers.expat import ExpatError
+
+    try:
+        return fn(*args, **kw)
+    except xmlrpc.client.Fault as exc:
+        lines = [ln.strip() for ln in (exc.faultString or "").splitlines()
+                 if ln.strip()]
+        detail = lines[-1] if lines else f"код {exc.faultCode}"
+        low = (exc.faultString or "").lower()
+        hint = ""
+        if "access" in low or "not allowed" in low or "permission" in low:
+            hint = ("\nПользователю нужны права на чтение ir.model, ir.model.fields, "
+                    "ir.ui.view, base.automation, ir.actions.server, ir.rule.")
+        elif "database" in low:
+            hint = "\nПроверьте --db: имя базы должно совпадать с именем в Odoo."
+        sys.exit(f"Odoo отклонила запрос ({what}): {detail}{hint}")
+    except xmlrpc.client.ProtocolError as exc:
+        sys.exit(f"Odoo ответила ошибкой HTTP ({what}): {exc.errcode} {exc.errmsg}.\n"
+                 f"Проверьте --url, XML-RPC запрашивался по адресу {exc.url}")
+    except (xmlrpc.client.ResponseError, ExpatError) as exc:
+        # У xmlrpc.client.Error str() == repr(), поэтому пустой текст пропускаем.
+        detail = f": {exc}" if exc.args else ""
+        sys.exit(f"Ответ не похож на XML-RPC ({what}){detail}.\n"
+                 "Обычно так отвечает не-Odoo адрес или прокси перед базой.")
+    except OSError as exc:  # DNS, отказ соединения, TLS, таймаут
+        sys.exit(f"Не удалось соединиться с Odoo ({what}): {exc}")
+
+
 def fetch_live(url, db, user, api_key):
-    """Снять снимок метаданных из живой базы по XML-RPC."""
+    """Снять снимок метаданных из живой базы по XML-RPC.
+
+    Учётные данные в снимок не попадают: meta содержит только адрес базы,
+    её имя, версию и число установленных модулей.
+    """
     import xmlrpc.client
 
+    url = check_url(url)
     common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common")
-    uid = common.authenticate(db, user, api_key, {})
+    uid = rpc_call("аутентификация", common.authenticate, db, user, api_key, {})
     if not uid:
-        sys.exit("Аутентификация не прошла: проверьте db / user / api-key")
+        sys.exit("Аутентификация не прошла: проверьте --db, --user и API-ключ "
+                 "(ключ создаётся для этого же пользователя в этой же базе)")
     models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
 
     def call(model, method, *args, **kw):
-        return models.execute_kw(db, uid, api_key, model, method, list(args), kw)
+        return rpc_call(f"{model}.{method}", models.execute_kw,
+                        db, uid, api_key, model, method, list(args), kw)
 
     def search_read(model, domain, fields, limit=0):
         return call(model, "search_read", domain, fields, limit=limit or 0)
@@ -143,8 +216,39 @@ def fetch_live(url, db, user, api_key):
 
 
 def load_dump(path):
-    with open(path, encoding="utf-8") as fh:
-        snap = json.load(fh)
+    """Прочитать снимок метаданных из JSON, внятно ругаясь на битый файл."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            snap = json.load(fh)
+    except FileNotFoundError:
+        sys.exit(f"Снимок не найден: {path}")
+    except IsADirectoryError:
+        sys.exit(f"Не файл, а каталог: {path}")
+    except PermissionError:
+        sys.exit(f"Нет прав на чтение снимка: {path}")
+    except UnicodeDecodeError as exc:
+        sys.exit(f"Снимок {path} не читается как UTF-8: {exc}")
+    except OSError as exc:
+        sys.exit(f"Снимок {path} не читается: {exc.strerror or exc}")
+    except json.JSONDecodeError as exc:
+        sys.exit(f"Снимок {path} — невалидный JSON: {exc.msg} "
+                 f"(строка {exc.lineno}, символ {exc.colno})")
+
+    if not isinstance(snap, dict):
+        sys.exit(f"Снимок {path} — {type(snap).__name__}, а ожидается объект JSON "
+                 "со слоями метаданных")
+    present = [layer for layer in LAYERS if layer in snap]
+    if not present:
+        sys.exit(f"Снимок {path} не похож на снимок odoo-graph: нет ни одного из "
+                 f"слоёв {', '.join(LAYERS)}")
+    broken = [layer for layer in present
+              if not isinstance(snap[layer], list)
+              or any(not isinstance(rec, dict) for rec in snap[layer])]
+    if broken:
+        sys.exit(f"Снимок {path} испорчен: слои {', '.join(broken)} должны быть "
+                 "списками записей-объектов")
+    if not isinstance(snap.setdefault("meta", {}), dict):
+        sys.exit(f"Снимок {path} испорчен: meta должен быть объектом")
     for layer in LAYERS:
         snap.setdefault(layer, [])
     return snap
@@ -878,6 +982,36 @@ def render_html(g, snap, title):
 
 # --------------------------------------------------------------------------
 
+def resolve_api_key(args):
+    """Достать API-ключ так, чтобы он не светился в `ps` и в history."""
+    if args.api_key:
+        print("предупреждение: --api-key устарел — ключ виден в `ps` всем "
+              "пользователям машины и оседает в history оболочки; используйте "
+              "--api-key-file, переменную ODOO_API_KEY или ввод по запросу",
+              file=sys.stderr)
+        return args.api_key
+    if args.api_key_file:
+        try:
+            with open(args.api_key_file, encoding="utf-8") as fh:
+                key = fh.read().strip()
+        except OSError as exc:
+            sys.exit(f"Не читается файл ключа {args.api_key_file}: "
+                     f"{exc.strerror or exc}")
+        if not key:
+            sys.exit(f"Файл ключа {args.api_key_file} пуст")
+        return key
+    key = os.environ.get("ODOO_API_KEY")
+    if key:
+        return key
+    if sys.stdin.isatty():
+        key = getpass.getpass(f"API-ключ Odoo для {args.user}: ").strip()
+        if key:
+            return key
+    sys.exit("Не задан API-ключ: укажите --api-key-file <файл>, переменную "
+             "окружения ODOO_API_KEY или запустите с терминала, чтобы ввести "
+             "ключ по запросу")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -888,7 +1022,12 @@ def main():
     ap.add_argument("--url", default=os.environ.get("ODOO_URL"))
     ap.add_argument("--db", default=os.environ.get("ODOO_DB"))
     ap.add_argument("--user", default=os.environ.get("ODOO_USER"))
-    ap.add_argument("--api-key", default=os.environ.get("ODOO_API_KEY"))
+    key_src = ap.add_mutually_exclusive_group()
+    key_src.add_argument("--api-key-file",
+                         help="файл с API-ключом (пробелы по краям обрезаются)")
+    key_src.add_argument("--api-key",
+                         help="API-ключ строкой (устарело: виден в `ps` "
+                              "и в history оболочки)")
     ap.add_argument("--model", action="append", default=[],
                     help="модель для отчета влияния (можно несколько)")
     ap.add_argument("--out", default="out", help="каталог результатов")
@@ -896,16 +1035,16 @@ def main():
     args = ap.parse_args()
 
     if args.live:
-        missing = [k for k in ("url", "db", "user", "api_key")
-                   if not getattr(args, k)]
+        missing = [k for k in ("url", "db", "user") if not getattr(args, k)]
         if missing:
             sys.exit("Для --live нужны: " + ", ".join("--" + m.replace("_", "-")
                                                       for m in missing))
-        snap = fetch_live(args.url, args.db, args.user, args.api_key)
+        snap = fetch_live(args.url, args.db, args.user, resolve_api_key(args))
         if args.save_dump:
             os.makedirs(os.path.dirname(args.save_dump) or ".", exist_ok=True)
             with open(args.save_dump, "w", encoding="utf-8") as fh:
-                json.dump(snap, fh, ensure_ascii=False, indent=2)
+                # Снимок — метаданные, учётным данным в нём не место.
+                json.dump(strip_secrets(snap), fh, ensure_ascii=False, indent=2)
             print(f"снимок  -> {args.save_dump}")
     else:
         snap = load_dump(args.dump)
