@@ -1,0 +1,1863 @@
+{
+  "nodes": [
+    {
+      "id": "model:x_project_task_worksheet_template_1",
+      "kind": "model",
+      "label": "x_project_task_worksheet_template_1",
+      "model": "x_project_task_worksheet_template_1",
+      "custom": true,
+      "title": "Default Worksheet"
+    },
+    {
+      "id": "field:purchase.order.x_approval_step",
+      "kind": "field",
+      "label": "x_approval_step",
+      "model": "purchase.order",
+      "ttype": "selection",
+      "flabel": "Крок узгодження",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:purchase.order",
+      "kind": "model",
+      "label": "purchase.order",
+      "model": "purchase.order",
+      "custom": false
+    },
+    {
+      "id": "field:x_project_task_worksheet_template_1.x_comments",
+      "kind": "field",
+      "label": "x_comments",
+      "model": "x_project_task_worksheet_template_1",
+      "ttype": "html",
+      "flabel": "Comments",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:sale.order.x_discount_approval",
+      "kind": "field",
+      "label": "x_discount_approval",
+      "model": "sale.order",
+      "ttype": "selection",
+      "flabel": "Узгодження знижки",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:sale.order",
+      "kind": "model",
+      "label": "sale.order",
+      "model": "sale.order",
+      "custom": false
+    },
+    {
+      "id": "field:sale.order.x_discount_visa",
+      "kind": "field",
+      "label": "x_discount_visa",
+      "model": "sale.order",
+      "ttype": "boolean",
+      "flabel": "Віза керівника на знижку",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:res.partner.x_dzherelo_migracii",
+      "kind": "field",
+      "label": "x_dzherelo_migracii",
+      "model": "res.partner",
+      "ttype": "char",
+      "flabel": "Джерело міграції (id у старій системі)",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:res.partner",
+      "kind": "model",
+      "label": "res.partner",
+      "model": "res.partner",
+      "custom": false
+    },
+    {
+      "id": "field:sale.order.x_logistyka_sposib",
+      "kind": "field",
+      "label": "x_logistyka_sposib",
+      "model": "sale.order",
+      "ttype": "char",
+      "flabel": "Логістика: спосіб передачі",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:sale.order.x_logistyka_termin",
+      "kind": "field",
+      "label": "x_logistyka_termin",
+      "model": "sale.order",
+      "ttype": "date",
+      "flabel": "Логістика: обіцяна дата передачі",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:res.partner.x_migraciya_zvirena",
+      "kind": "field",
+      "label": "x_migraciya_zvirena",
+      "model": "res.partner",
+      "ttype": "boolean",
+      "flabel": "Звірено з джерелом",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:x_project_task_worksheet_template_1.x_name",
+      "kind": "field",
+      "label": "x_name",
+      "model": "x_project_task_worksheet_template_1",
+      "ttype": "char",
+      "flabel": "Name",
+      "relation": null,
+      "related": "x_project_task_id.name"
+    },
+    {
+      "id": "field:approval.request.x_needs_director",
+      "kind": "field",
+      "label": "x_needs_director",
+      "model": "approval.request",
+      "ttype": "boolean",
+      "flabel": "Потрібна віза директора (за сумою)",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:approval.request",
+      "kind": "model",
+      "label": "approval.request",
+      "model": "approval.request",
+      "custom": false
+    },
+    {
+      "id": "field:maintenance.equipment.x_obl_majdanchyk",
+      "kind": "field",
+      "label": "x_obl_majdanchyk",
+      "model": "maintenance.equipment",
+      "ttype": "char",
+      "flabel": "Майданчик обслуговування",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:maintenance.equipment",
+      "kind": "model",
+      "label": "maintenance.equipment",
+      "model": "maintenance.equipment",
+      "custom": false
+    },
+    {
+      "id": "field:maintenance.equipment.x_obl_potuzhnist",
+      "kind": "field",
+      "label": "x_obl_potuzhnist",
+      "model": "maintenance.equipment",
+      "ttype": "float",
+      "flabel": "Параметр типу: потужність, кВт",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:hr.expense.x_over_limit",
+      "kind": "field",
+      "label": "x_over_limit",
+      "model": "hr.expense",
+      "ttype": "boolean",
+      "flabel": "Понад ліміт категорії — додаткове узгодження",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:hr.expense",
+      "kind": "model",
+      "label": "hr.expense",
+      "model": "hr.expense",
+      "custom": false
+    },
+    {
+      "id": "field:account.analytic.line.x_plan2_id",
+      "kind": "field",
+      "label": "x_plan2_id",
+      "model": "account.analytic.line",
+      "ttype": "many2one",
+      "flabel": "Напрями бізнесу",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": "model:account.analytic.line",
+      "kind": "model",
+      "label": "account.analytic.line",
+      "model": "account.analytic.line",
+      "custom": false
+    },
+    {
+      "id": "model:account.analytic.account",
+      "kind": "model",
+      "label": "account.analytic.account",
+      "model": "account.analytic.account",
+      "custom": false
+    },
+    {
+      "id": "field:project.project.x_plan2_id",
+      "kind": "field",
+      "label": "x_plan2_id",
+      "model": "project.project",
+      "ttype": "many2one",
+      "flabel": "Напрями бізнесу",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": "model:project.project",
+      "kind": "model",
+      "label": "project.project",
+      "model": "project.project",
+      "custom": false
+    },
+    {
+      "id": "field:budget.line.x_plan2_id",
+      "kind": "field",
+      "label": "x_plan2_id",
+      "model": "budget.line",
+      "ttype": "many2one",
+      "flabel": "Напрями бізнесу",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": "model:budget.line",
+      "kind": "model",
+      "label": "budget.line",
+      "model": "budget.line",
+      "custom": false
+    },
+    {
+      "id": "field:budget.report.x_plan2_id",
+      "kind": "field",
+      "label": "x_plan2_id",
+      "model": "budget.report",
+      "ttype": "many2one",
+      "flabel": "Напрями бізнесу",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": "model:budget.report",
+      "kind": "model",
+      "label": "budget.report",
+      "model": "budget.report",
+      "custom": false
+    },
+    {
+      "id": "field:pos.order.x_pos_prymitka",
+      "kind": "field",
+      "label": "x_pos_prymitka",
+      "model": "pos.order",
+      "ttype": "char",
+      "flabel": "Примітка для бекофісу",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:pos.order",
+      "kind": "model",
+      "label": "pos.order",
+      "model": "pos.order",
+      "custom": false
+    },
+    {
+      "id": "field:pos.order.x_pos_zvireno_zminu",
+      "kind": "field",
+      "label": "x_pos_zvireno_zminu",
+      "model": "pos.order",
+      "ttype": "boolean",
+      "flabel": "Звірено при закритті зміни",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:x_project_task_worksheet_template_1.x_project_task_id",
+      "kind": "field",
+      "label": "x_project_task_id",
+      "model": "x_project_task_worksheet_template_1",
+      "ttype": "many2one",
+      "flabel": "Task",
+      "relation": "project.task",
+      "related": null
+    },
+    {
+      "id": "model:project.task",
+      "kind": "model",
+      "label": "project.task",
+      "model": "project.task",
+      "custom": false
+    },
+    {
+      "id": "field:budget.analytic.x_stattya_budzhetu",
+      "kind": "field",
+      "label": "x_stattya_budzhetu",
+      "model": "budget.analytic",
+      "ttype": "char",
+      "flabel": "Бюджетна стаття",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:budget.analytic",
+      "kind": "model",
+      "label": "budget.analytic",
+      "model": "budget.analytic",
+      "custom": false
+    },
+    {
+      "id": "field:sale.order.x_taryf_pidpysky",
+      "kind": "field",
+      "label": "x_taryf_pidpysky",
+      "model": "sale.order",
+      "ttype": "char",
+      "flabel": "Тариф підписки",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:stock.putaway.rule.x_todo_obov",
+      "kind": "field",
+      "label": "x_todo_obov",
+      "model": "stock.putaway.rule",
+      "ttype": "char",
+      "flabel": "ЗАЛИШОК ПЕРЕВІРКИ: обов’язковість",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:stock.putaway.rule",
+      "kind": "model",
+      "label": "stock.putaway.rule",
+      "model": "stock.putaway.rule",
+      "custom": false
+    },
+    {
+      "id": "field:res.partner.x_todo_segment",
+      "kind": "field",
+      "label": "x_todo_segment",
+      "model": "res.partner",
+      "ttype": "selection",
+      "flabel": "Сегмент клієнта",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:quality.check.x_todo_tehkarta",
+      "kind": "field",
+      "label": "x_todo_tehkarta",
+      "model": "quality.check",
+      "ttype": "char",
+      "flabel": "Номер технологічної карти",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:quality.check",
+      "kind": "model",
+      "label": "quality.check",
+      "model": "quality.check",
+      "custom": false
+    },
+    {
+      "id": "field:mrp.bom.x_todo_tehkarta",
+      "kind": "field",
+      "label": "x_todo_tehkarta",
+      "model": "mrp.bom",
+      "ttype": "char",
+      "flabel": "Номер технологічної карти",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:mrp.bom",
+      "kind": "model",
+      "label": "mrp.bom",
+      "model": "mrp.bom",
+      "custom": false
+    },
+    {
+      "id": "field:sale.order.x_todo_umova_postavky",
+      "kind": "field",
+      "label": "x_todo_umova_postavky",
+      "model": "sale.order",
+      "ttype": "selection",
+      "flabel": "Умова поставки",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:documents.document.x_typ_dokumenta",
+      "kind": "field",
+      "label": "x_typ_dokumenta",
+      "model": "documents.document",
+      "ttype": "char",
+      "flabel": "Тип документа",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "model:documents.document",
+      "kind": "model",
+      "label": "documents.document",
+      "model": "documents.document",
+      "custom": false
+    },
+    {
+      "id": "field:purchase.order.x_umovy_incoterms",
+      "kind": "field",
+      "label": "x_umovy_incoterms",
+      "model": "purchase.order",
+      "ttype": "char",
+      "flabel": "Умови постачання: базис",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:purchase.order.x_umovy_tara",
+      "kind": "field",
+      "label": "x_umovy_tara",
+      "model": "purchase.order",
+      "ttype": "char",
+      "flabel": "Умови постачання: тара й пакування",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:budget.analytic.x_vidpovidalnyi_stattya",
+      "kind": "field",
+      "label": "x_vidpovidalnyi_stattya",
+      "model": "budget.analytic",
+      "ttype": "char",
+      "flabel": "Відповідальний за статтю",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "field:purchase.order.x_visa_head",
+      "kind": "field",
+      "label": "x_visa_head",
+      "model": "purchase.order",
+      "ttype": "boolean",
+      "flabel": "Віза керівника закупівель",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": "view:4881",
+      "kind": "view",
+      "label": "budget.analytic.form.stattya.todo",
+      "model": "budget.analytic",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 3891,
+      "inherit_name": "budget.analytic.view.form",
+      "fields": [
+        "x_stattya_budzhetu",
+        "x_vidpovidalnyi_stattya"
+      ]
+    },
+    {
+      "id": "view:4899",
+      "kind": "view",
+      "label": "documents.document.list.typ.todo",
+      "model": "documents.document",
+      "vtype": "list",
+      "mode": "extension",
+      "inherit_id": 4629,
+      "inherit_name": "documents list",
+      "fields": [
+        "x_typ_dokumenta"
+      ]
+    },
+    {
+      "id": "view:4880",
+      "kind": "view",
+      "label": "maintenance.equipment.form.typ.todo",
+      "model": "maintenance.equipment",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 4350,
+      "inherit_name": "equipment.form",
+      "fields": [
+        "x_obl_majdanchyk",
+        "x_obl_potuzhnist"
+      ]
+    },
+    {
+      "id": "view:4879",
+      "kind": "view",
+      "label": "pos.order.form.bekofis.todo",
+      "model": "pos.order",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 2908,
+      "inherit_name": "pos.order.form",
+      "fields": [
+        "x_pos_prymitka",
+        "x_pos_zvireno_zminu"
+      ]
+    },
+    {
+      "id": "view:4885",
+      "kind": "view",
+      "label": "pos.order.list.zvirka.todo",
+      "model": "pos.order",
+      "vtype": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "amount_total",
+        "date_order",
+        "name",
+        "partner_id",
+        "session_id",
+        "x_pos_zvireno_zminu"
+      ]
+    },
+    {
+      "id": "view:4878",
+      "kind": "view",
+      "label": "purchase.order.form.umovy.todo",
+      "model": "purchase.order",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 3143,
+      "inherit_name": "purchase.order.form",
+      "fields": [
+        "x_umovy_incoterms",
+        "x_umovy_tara"
+      ]
+    },
+    {
+      "id": "view:4876",
+      "kind": "view",
+      "label": "res.partner.form.migraciya.todo",
+      "model": "res.partner",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 127,
+      "inherit_name": "res.partner.form",
+      "fields": [
+        "x_dzherelo_migracii",
+        "x_migraciya_zvirena"
+      ]
+    },
+    {
+      "id": "view:4882",
+      "kind": "view",
+      "label": "res.partner.list.migraciya.todo",
+      "model": "res.partner",
+      "vtype": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "country_id",
+        "email",
+        "name",
+        "phone",
+        "x_dzherelo_migracii",
+        "x_migraciya_zvirena"
+      ]
+    },
+    {
+      "id": "view:4877",
+      "kind": "view",
+      "label": "sale.order.form.logistyka.todo",
+      "model": "sale.order",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 1528,
+      "inherit_name": "sale.order.form",
+      "fields": [
+        "x_logistyka_sposib",
+        "x_logistyka_termin",
+        "x_taryf_pidpysky"
+      ]
+    },
+    {
+      "id": "view:4891",
+      "kind": "view",
+      "label": "sale.order.list.prodovzhennya.todo",
+      "model": "sale.order",
+      "vtype": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "amount_total",
+        "name",
+        "next_invoice_date",
+        "partner_id",
+        "subscription_state",
+        "x_taryf_pidpysky"
+      ]
+    },
+    {
+      "id": "view:4883",
+      "kind": "view",
+      "label": "sale.order.list.segment.todo",
+      "model": "sale.order",
+      "vtype": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "amount_total",
+        "date_order",
+        "name",
+        "partner_id",
+        "state",
+        "x_logistyka_sposib"
+      ]
+    },
+    {
+      "id": "view:4884",
+      "kind": "view",
+      "label": "sale.order.list.shop.todo",
+      "model": "sale.order",
+      "vtype": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "amount_total",
+        "date_order",
+        "name",
+        "partner_id",
+        "state",
+        "x_logistyka_sposib",
+        "x_logistyka_termin"
+      ]
+    },
+    {
+      "id": "view:4863",
+      "kind": "view",
+      "label": "mrp.bom.form — номер технологічної карти",
+      "model": "mrp.bom",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 3554,
+      "inherit_name": "mrp.bom.form",
+      "fields": [
+        "x_todo_tehkarta"
+      ]
+    },
+    {
+      "id": "view:4858",
+      "kind": "view",
+      "label": "res.partner.form — сегмент у картці (перевірка)",
+      "model": "res.partner",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 127,
+      "inherit_name": "res.partner.form",
+      "fields": [
+        "x_todo_segment"
+      ]
+    },
+    {
+      "id": "view:4860",
+      "kind": "view",
+      "label": "res.partner.form — тільки для ролі (перевірка)",
+      "model": "res.partner",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 127,
+      "inherit_name": "res.partner.form",
+      "fields": [
+        "x_todo_segment"
+      ]
+    },
+    {
+      "id": "view:4861",
+      "kind": "view",
+      "label": "sale.order.form — умова поставки (власне поле)",
+      "model": "sale.order",
+      "vtype": "form",
+      "mode": "extension",
+      "inherit_id": 1528,
+      "inherit_name": "sale.order.form",
+      "fields": [
+        "x_todo_umova_postavky"
+      ]
+    },
+    {
+      "id": "view:4871",
+      "kind": "view",
+      "label": "crm.lead.kanban — перевірка ролей (порожнє, на прибирання)",
+      "model": "crm.lead",
+      "vtype": "kanban",
+      "mode": "extension",
+      "inherit_id": 619,
+      "inherit_name": "crm.lead.kanban",
+      "fields": []
+    },
+    {
+      "id": "model:crm.lead",
+      "kind": "model",
+      "label": "crm.lead",
+      "model": "crm.lead",
+      "custom": false
+    },
+    {
+      "id": "view:4874",
+      "kind": "view",
+      "label": "Рахунок — перевірка бланка (спорожнено після перевірки)",
+      "model": null,
+      "vtype": "qweb",
+      "mode": "extension",
+      "inherit_id": 984,
+      "inherit_name": "report_invoice_document",
+      "fields": []
+    },
+    {
+      "id": "view:4308",
+      "kind": "view",
+      "label": "template_view_Default_Worksheet",
+      "model": "x_project_task_worksheet_template_1",
+      "vtype": "form",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "x_comments",
+        "x_project_task_id"
+      ]
+    },
+    {
+      "id": "view:4309",
+      "kind": "view",
+      "label": "list_view_Default_Worksheet",
+      "model": "x_project_task_worksheet_template_1",
+      "vtype": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "create_date",
+        "x_name"
+      ]
+    },
+    {
+      "id": "view:4310",
+      "kind": "view",
+      "label": "search_view_Default_Worksheet",
+      "model": "x_project_task_worksheet_template_1",
+      "vtype": "search",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "fields": [
+        "x_name"
+      ]
+    },
+    {
+      "id": "auto:1",
+      "kind": "automation",
+      "label": "КП надіслано → перетелефонувати через 2 дні",
+      "model": "crm.lead",
+      "trigger": "on_stage_set",
+      "active": true,
+      "domain": "[('stage_id', '=', 3)]"
+    },
+    {
+      "id": "auto:2",
+      "kind": "automation",
+      "label": "Знижка понад 10 % — віза керівника",
+      "model": "sale.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('order_line.discount','>',10),('order_line.discount','<=',25),('state','in',('draft','sent')),('x_discount_visa','=',False)]"
+    },
+    {
+      "id": "auto:3",
+      "kind": "automation",
+      "label": "Знижка понад 25 % — віза директора",
+      "model": "sale.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('order_line.discount','>',25),('state','in',('draft','sent')),('x_discount_visa','=',False)]"
+    },
+    {
+      "id": "auto:4",
+      "kind": "automation",
+      "label": "Віза керівника — знижка узгоджена",
+      "model": "sale.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('x_discount_visa','=',True)]"
+    },
+    {
+      "id": "auto:5",
+      "kind": "automation",
+      "label": "Закупка понад 20 000 — чекає керівника",
+      "model": "purchase.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('amount_total','>',20000),('amount_total','<=',100000),('state','in',('draft','sent')),('x_visa_head','=',False)]"
+    },
+    {
+      "id": "auto:6",
+      "kind": "automation",
+      "label": "Закупка: віза керівника — узгоджено",
+      "model": "purchase.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('x_visa_head','=',True)]"
+    },
+    {
+      "id": "auto:7",
+      "kind": "automation",
+      "label": "Витрата понад ліміт категорії «Пальне й проїзд» (800)",
+      "model": "hr.expense",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('product_id','=',32),('total_amount','>',800)]"
+    },
+    {
+      "id": "auto:8",
+      "kind": "automation",
+      "label": "Заявка понад 5 000 — потрібна віза директора",
+      "model": "approval.request",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "domain": "[('amount','>',5000)]"
+    },
+    {
+      "id": "action:1315",
+      "kind": "action",
+      "label": "Поставити «потрібна віза керівника»",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 2,
+      "writes_path": "x_discount_approval",
+      "writes_value": "head"
+    },
+    {
+      "id": "action:1316",
+      "kind": "action",
+      "label": "Поставити «потрібна віза директора»",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 3,
+      "writes_path": "x_discount_approval",
+      "writes_value": "director"
+    },
+    {
+      "id": "action:1318",
+      "kind": "action",
+      "label": "Знижка узгоджена",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 4,
+      "writes_path": "x_discount_approval",
+      "writes_value": "approved"
+    },
+    {
+      "id": "action:1319",
+      "kind": "action",
+      "label": "Закупка: чекає керівника",
+      "model": "purchase.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 5,
+      "writes_path": "x_approval_step",
+      "writes_value": "head"
+    },
+    {
+      "id": "action:1320",
+      "kind": "action",
+      "label": "Закупка: узгоджено",
+      "model": "purchase.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 6,
+      "writes_path": "x_approval_step",
+      "writes_value": "approved"
+    },
+    {
+      "id": "action:1321",
+      "kind": "action",
+      "label": "Витрата: позначити «понад ліміт»",
+      "model": "hr.expense",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 7,
+      "writes_path": "x_over_limit",
+      "writes_value": "True"
+    },
+    {
+      "id": "action:1322",
+      "kind": "action",
+      "label": "Заявка: потрібна віза директора",
+      "model": "approval.request",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 8,
+      "writes_path": "x_needs_director",
+      "writes_value": "True"
+    },
+    {
+      "id": "action:597",
+      "kind": "action",
+      "label": "Створити активність «Дзвінок»",
+      "model": "crm.lead",
+      "state": "next_activity",
+      "usage": "base_automation",
+      "automation_id": 1,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": "action:1311",
+      "kind": "action",
+      "label": "Погодити знижку (перевірка)",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "state",
+      "writes_value": "sale"
+    },
+    {
+      "id": "action:1317",
+      "kind": "action",
+      "label": "Узгодити знижку",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "x_discount_approval",
+      "writes_value": "approved"
+    },
+    {
+      "id": "action:1326",
+      "kind": "action",
+      "label": "Поставити візу керівника закупівель",
+      "model": "purchase.order",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "x_visa_head",
+      "writes_value": false
+    },
+    {
+      "id": "action:1331",
+      "kind": "action",
+      "label": "Позначити «понад ліміт»",
+      "model": "hr.expense",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "x_over_limit",
+      "writes_value": false
+    },
+    {
+      "id": "action:1325",
+      "kind": "action",
+      "label": "Передзвонити клієнту через 2 дні",
+      "model": "crm.lead",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": "action:1350",
+      "kind": "action",
+      "label": "Надіслати КП — завдання на сьогодні",
+      "model": "crm.lead",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": "action:1332",
+      "kind": "action",
+      "label": "Погодити з керівником — завдання на завтра",
+      "model": "hr.expense",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": "action:1351",
+      "kind": "action",
+      "label": "Погодити з фінансами — завдання",
+      "model": "purchase.order",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": "action:1356",
+      "kind": "action",
+      "label": "→ КП надіслано (перевірка рецепта)",
+      "model": "crm.lead",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "stage_id",
+      "writes_value": "3"
+    },
+    {
+      "id": "rule:179",
+      "kind": "rule",
+      "label": "Sales Order multi-company",
+      "model": "sale.order",
+      "domain": "[('company_id', 'in', company_ids)]",
+      "is_global": true,
+      "groups": [],
+      "standard": true
+    },
+    {
+      "id": "rule:182",
+      "kind": "rule",
+      "label": "Portal Personal Quotations/Sales Orders",
+      "model": "sale.order",
+      "domain": "[('partner_id','child_of',[user.commercial_partner_id.id])]",
+      "is_global": false,
+      "groups": [
+        10
+      ],
+      "standard": true
+    },
+    {
+      "id": "rule:184",
+      "kind": "rule",
+      "label": "Personal Orders",
+      "model": "sale.order",
+      "domain": "['|',('user_id','=',user.id),('user_id','=',False)]",
+      "is_global": false,
+      "groups": [
+        17
+      ],
+      "standard": true
+    },
+    {
+      "id": "rule:185",
+      "kind": "rule",
+      "label": "All Orders",
+      "model": "sale.order",
+      "domain": "[(1,'=',1)]",
+      "is_global": false,
+      "groups": [
+        18
+      ],
+      "standard": true
+    },
+    {
+      "id": "rule:285",
+      "kind": "rule",
+      "label": "Purchase Order multi-company",
+      "model": "purchase.order",
+      "domain": "[('company_id', 'in', company_ids)]",
+      "is_global": true,
+      "groups": [],
+      "standard": true
+    },
+    {
+      "id": "rule:287",
+      "kind": "rule",
+      "label": "Portal Purchase Orders",
+      "model": "purchase.order",
+      "domain": "[('partner_id', 'child_of', [user.commercial_partner_id.id])]",
+      "is_global": false,
+      "groups": [
+        10
+      ],
+      "standard": true
+    },
+    {
+      "id": "rule:2",
+      "kind": "rule",
+      "label": "res.partner company",
+      "model": "res.partner",
+      "domain": "['|', '|', ('partner_share', '=', False), ('company_id', 'parent_of', company_ids), ('company_id', '=', False)]",
+      "is_global": true,
+      "groups": [],
+      "standard": true
+    },
+    {
+      "id": "rule:3",
+      "kind": "rule",
+      "label": "res_partner: portal/public: read access on my commercial partner",
+      "model": "res.partner",
+      "domain": "[('id', 'child_of', user.commercial_partner_id.id)]",
+      "is_global": false,
+      "groups": [
+        10,
+        11
+      ],
+      "standard": true
+    },
+    {
+      "id": "rule:97",
+      "kind": "rule",
+      "label": "Контрагенти: менеджер бачить своїх (перевірка)",
+      "model": "res.partner",
+      "domain": "[('user_id', 'in', [user.id, False])]",
+      "is_global": false,
+      "groups": [
+        17
+      ],
+      "standard": false
+    },
+    {
+      "id": "rule:178",
+      "kind": "rule",
+      "label": "Власний довідник: бачити лише свої компанії (перевірка)",
+      "model": "res.partner",
+      "domain": "[('company_id', 'in', company_ids + [False])]",
+      "is_global": true,
+      "groups": [],
+      "standard": false
+    }
+  ],
+  "edges": [
+    {
+      "src": "field:purchase.order.x_approval_step",
+      "dst": "model:purchase.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:x_project_task_worksheet_template_1.x_comments",
+      "dst": "model:x_project_task_worksheet_template_1",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:sale.order.x_discount_approval",
+      "dst": "model:sale.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:sale.order.x_discount_visa",
+      "dst": "model:sale.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:res.partner.x_dzherelo_migracii",
+      "dst": "model:res.partner",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:sale.order.x_logistyka_sposib",
+      "dst": "model:sale.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:sale.order.x_logistyka_termin",
+      "dst": "model:sale.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:res.partner.x_migraciya_zvirena",
+      "dst": "model:res.partner",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:x_project_task_worksheet_template_1.x_name",
+      "dst": "model:x_project_task_worksheet_template_1",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:approval.request.x_needs_director",
+      "dst": "model:approval.request",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:maintenance.equipment.x_obl_majdanchyk",
+      "dst": "model:maintenance.equipment",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:maintenance.equipment.x_obl_potuzhnist",
+      "dst": "model:maintenance.equipment",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:hr.expense.x_over_limit",
+      "dst": "model:hr.expense",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:account.analytic.line.x_plan2_id",
+      "dst": "model:account.analytic.line",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:account.analytic.line.x_plan2_id",
+      "dst": "model:account.analytic.account",
+      "kind": "relates_to"
+    },
+    {
+      "src": "field:project.project.x_plan2_id",
+      "dst": "model:project.project",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:project.project.x_plan2_id",
+      "dst": "model:account.analytic.account",
+      "kind": "relates_to"
+    },
+    {
+      "src": "field:budget.line.x_plan2_id",
+      "dst": "model:budget.line",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:budget.line.x_plan2_id",
+      "dst": "model:account.analytic.account",
+      "kind": "relates_to"
+    },
+    {
+      "src": "field:budget.report.x_plan2_id",
+      "dst": "model:budget.report",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:budget.report.x_plan2_id",
+      "dst": "model:account.analytic.account",
+      "kind": "relates_to"
+    },
+    {
+      "src": "field:pos.order.x_pos_prymitka",
+      "dst": "model:pos.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:pos.order.x_pos_zvireno_zminu",
+      "dst": "model:pos.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:x_project_task_worksheet_template_1.x_project_task_id",
+      "dst": "model:x_project_task_worksheet_template_1",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:x_project_task_worksheet_template_1.x_project_task_id",
+      "dst": "model:project.task",
+      "kind": "relates_to"
+    },
+    {
+      "src": "field:budget.analytic.x_stattya_budzhetu",
+      "dst": "model:budget.analytic",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:sale.order.x_taryf_pidpysky",
+      "dst": "model:sale.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:stock.putaway.rule.x_todo_obov",
+      "dst": "model:stock.putaway.rule",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:res.partner.x_todo_segment",
+      "dst": "model:res.partner",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:quality.check.x_todo_tehkarta",
+      "dst": "model:quality.check",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:mrp.bom.x_todo_tehkarta",
+      "dst": "model:mrp.bom",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:sale.order.x_todo_umova_postavky",
+      "dst": "model:sale.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:documents.document.x_typ_dokumenta",
+      "dst": "model:documents.document",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:purchase.order.x_umovy_incoterms",
+      "dst": "model:purchase.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:purchase.order.x_umovy_tara",
+      "dst": "model:purchase.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:budget.analytic.x_vidpovidalnyi_stattya",
+      "dst": "model:budget.analytic",
+      "kind": "field_of"
+    },
+    {
+      "src": "field:purchase.order.x_visa_head",
+      "dst": "model:purchase.order",
+      "kind": "field_of"
+    },
+    {
+      "src": "view:4881",
+      "dst": "model:budget.analytic",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4899",
+      "dst": "model:documents.document",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4880",
+      "dst": "model:maintenance.equipment",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4879",
+      "dst": "model:pos.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4885",
+      "dst": "model:pos.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4878",
+      "dst": "model:purchase.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4876",
+      "dst": "model:res.partner",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4882",
+      "dst": "model:res.partner",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4877",
+      "dst": "model:sale.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4891",
+      "dst": "model:sale.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4883",
+      "dst": "model:sale.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4884",
+      "dst": "model:sale.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4863",
+      "dst": "model:mrp.bom",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4858",
+      "dst": "model:res.partner",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4860",
+      "dst": "model:res.partner",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4861",
+      "dst": "model:sale.order",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4871",
+      "dst": "model:crm.lead",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4308",
+      "dst": "model:x_project_task_worksheet_template_1",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4309",
+      "dst": "model:x_project_task_worksheet_template_1",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4310",
+      "dst": "model:x_project_task_worksheet_template_1",
+      "kind": "view_of"
+    },
+    {
+      "src": "view:4881",
+      "dst": "field:budget.analytic.x_stattya_budzhetu",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4881",
+      "dst": "field:budget.analytic.x_vidpovidalnyi_stattya",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4899",
+      "dst": "field:documents.document.x_typ_dokumenta",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4880",
+      "dst": "field:maintenance.equipment.x_obl_majdanchyk",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4880",
+      "dst": "field:maintenance.equipment.x_obl_potuzhnist",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4879",
+      "dst": "field:pos.order.x_pos_zvireno_zminu",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4879",
+      "dst": "field:pos.order.x_pos_prymitka",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4885",
+      "dst": "field:pos.order.x_pos_zvireno_zminu",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4878",
+      "dst": "field:purchase.order.x_umovy_tara",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4878",
+      "dst": "field:purchase.order.x_umovy_incoterms",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4876",
+      "dst": "field:res.partner.x_dzherelo_migracii",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4876",
+      "dst": "field:res.partner.x_migraciya_zvirena",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4882",
+      "dst": "field:res.partner.x_migraciya_zvirena",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4882",
+      "dst": "field:res.partner.x_dzherelo_migracii",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4877",
+      "dst": "field:sale.order.x_logistyka_termin",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4877",
+      "dst": "field:sale.order.x_taryf_pidpysky",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4877",
+      "dst": "field:sale.order.x_logistyka_sposib",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4891",
+      "dst": "field:sale.order.x_taryf_pidpysky",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4883",
+      "dst": "field:sale.order.x_logistyka_sposib",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4884",
+      "dst": "field:sale.order.x_logistyka_termin",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4884",
+      "dst": "field:sale.order.x_logistyka_sposib",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4863",
+      "dst": "field:mrp.bom.x_todo_tehkarta",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4858",
+      "dst": "field:res.partner.x_todo_segment",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4860",
+      "dst": "field:res.partner.x_todo_segment",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4861",
+      "dst": "field:sale.order.x_todo_umova_postavky",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4308",
+      "dst": "field:x_project_task_worksheet_template_1.x_project_task_id",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4308",
+      "dst": "field:x_project_task_worksheet_template_1.x_comments",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4309",
+      "dst": "field:x_project_task_worksheet_template_1.x_name",
+      "kind": "shows"
+    },
+    {
+      "src": "view:4310",
+      "dst": "field:x_project_task_worksheet_template_1.x_name",
+      "kind": "shows"
+    },
+    {
+      "src": "auto:1",
+      "dst": "model:crm.lead",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:2",
+      "dst": "model:sale.order",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:2",
+      "dst": "field:sale.order.x_discount_visa",
+      "kind": "triggers_on"
+    },
+    {
+      "src": "auto:3",
+      "dst": "model:sale.order",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:3",
+      "dst": "field:sale.order.x_discount_visa",
+      "kind": "triggers_on"
+    },
+    {
+      "src": "auto:4",
+      "dst": "model:sale.order",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:4",
+      "dst": "field:sale.order.x_discount_visa",
+      "kind": "triggers_on"
+    },
+    {
+      "src": "auto:5",
+      "dst": "model:purchase.order",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:5",
+      "dst": "field:purchase.order.x_visa_head",
+      "kind": "triggers_on"
+    },
+    {
+      "src": "auto:6",
+      "dst": "model:purchase.order",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:6",
+      "dst": "field:purchase.order.x_visa_head",
+      "kind": "triggers_on"
+    },
+    {
+      "src": "auto:7",
+      "dst": "model:hr.expense",
+      "kind": "automates"
+    },
+    {
+      "src": "auto:8",
+      "dst": "model:approval.request",
+      "kind": "automates"
+    },
+    {
+      "src": "action:1315",
+      "dst": "model:sale.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1315",
+      "dst": "field:sale.order.x_discount_approval",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1315",
+      "dst": "auto:2",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1316",
+      "dst": "model:sale.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1316",
+      "dst": "field:sale.order.x_discount_approval",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1316",
+      "dst": "auto:3",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1318",
+      "dst": "model:sale.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1318",
+      "dst": "field:sale.order.x_discount_approval",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1318",
+      "dst": "auto:4",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1319",
+      "dst": "model:purchase.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1319",
+      "dst": "field:purchase.order.x_approval_step",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1319",
+      "dst": "auto:5",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1320",
+      "dst": "model:purchase.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1320",
+      "dst": "field:purchase.order.x_approval_step",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1320",
+      "dst": "auto:6",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1321",
+      "dst": "model:hr.expense",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1321",
+      "dst": "field:hr.expense.x_over_limit",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1321",
+      "dst": "auto:7",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1322",
+      "dst": "model:approval.request",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1322",
+      "dst": "field:approval.request.x_needs_director",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1322",
+      "dst": "auto:8",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:597",
+      "dst": "model:crm.lead",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:597",
+      "dst": "auto:1",
+      "kind": "runs_in"
+    },
+    {
+      "src": "action:1311",
+      "dst": "model:sale.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1317",
+      "dst": "model:sale.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1317",
+      "dst": "field:sale.order.x_discount_approval",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1326",
+      "dst": "model:purchase.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1326",
+      "dst": "field:purchase.order.x_visa_head",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1331",
+      "dst": "model:hr.expense",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1331",
+      "dst": "field:hr.expense.x_over_limit",
+      "kind": "writes"
+    },
+    {
+      "src": "action:1325",
+      "dst": "model:crm.lead",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1350",
+      "dst": "model:crm.lead",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1332",
+      "dst": "model:hr.expense",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1351",
+      "dst": "model:purchase.order",
+      "kind": "acts_on"
+    },
+    {
+      "src": "action:1356",
+      "dst": "model:crm.lead",
+      "kind": "acts_on"
+    },
+    {
+      "src": "rule:179",
+      "dst": "model:sale.order",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:182",
+      "dst": "model:sale.order",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:184",
+      "dst": "model:sale.order",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:185",
+      "dst": "model:sale.order",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:285",
+      "dst": "model:purchase.order",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:287",
+      "dst": "model:purchase.order",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:2",
+      "dst": "model:res.partner",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:3",
+      "dst": "model:res.partner",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:97",
+      "dst": "model:res.partner",
+      "kind": "restricts"
+    },
+    {
+      "src": "rule:178",
+      "dst": "model:res.partner",
+      "kind": "restricts"
+    }
+  ]
+}

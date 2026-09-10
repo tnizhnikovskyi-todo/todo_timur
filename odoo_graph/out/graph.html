@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Кастомный слой edu-online-todo</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ background:#161426;color:#e8e6f2;display:flex;height:100vh;overflow:hidden}
+#stage{flex:1;position:relative;min-width:0}
+svg{width:100%;height:100%;display:block;cursor:grab}
+aside{width:300px;flex:0 0 300px;border-left:1px solid #2c2a44;padding:18px;
+ overflow-y:auto;background:#1b1930}
+h1{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#9b98b8;margin:0 0 14px}
+.row{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13px}
+.row .dot{width:11px;height:11px;border-radius:50%;flex:0 0 11px}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .ct{color:#77749a;font-variant-numeric:tabular-nums}
+.legend{margin-top:22px;padding-top:16px;border-top:1px solid #2c2a44;font-size:12px;color:#9b98b8}
+.legend div{padding:3px 0}
+#tip{position:absolute;pointer-events:none;background:#0f0e1c;border:1px solid #3a3760;
+ border-radius:6px;padding:8px 10px;font-size:12px;max-width:320px;opacity:0;transition:opacity .1s}
+@media(max-width:760px){body{flex-direction:column;height:auto}
+ aside{width:100%;flex:none;border-left:none;border-top:1px solid #2c2a44}
+ #stage{height:60vh}}
+</style></head><body>
+<div id="stage"><svg id="g"></svg><div id="tip"></div></div>
+<aside><h1>Модели</h1><div id="list"></div>
+<div class="legend"><div><b>Форма узла</b></div>
+<div>● модель &nbsp; ● поле &nbsp; ● представление</div>
+<div>● автоматизация &nbsp; ● действие &nbsp; ● правило</div>
+<div style="margin-top:10px">Размер — число связей. Тяните узлы мышью.</div>
+</div></aside>
+<script>
+const DATA = {"nodes": [{"id": "model:x_project_task_worksheet_template_1", "kind": "model", "label": "x_project_task_worksheet_template_1", "model": "x_project_task_worksheet_template_1", "detail": ""}, {"id": "field:purchase.order.x_approval_step", "kind": "field", "label": "x_approval_step", "model": "purchase.order", "detail": "Крок узгодження · selection"}, {"id": "model:purchase.order", "kind": "model", "label": "purchase.order", "model": "purchase.order", "detail": ""}, {"id": "field:x_project_task_worksheet_template_1.x_comments", "kind": "field", "label": "x_comments", "model": "x_project_task_worksheet_template_1", "detail": "Comments · html"}, {"id": "field:sale.order.x_discount_approval", "kind": "field", "label": "x_discount_approval", "model": "sale.order", "detail": "Узгодження знижки · selection"}, {"id": "model:sale.order", "kind": "model", "label": "sale.order", "model": "sale.order", "detail": ""}, {"id": "field:sale.order.x_discount_visa", "kind": "field", "label": "x_discount_visa", "model": "sale.order", "detail": "Віза керівника на знижку · boolean"}, {"id": "field:res.partner.x_dzherelo_migracii", "kind": "field", "label": "x_dzherelo_migracii", "model": "res.partner", "detail": "Джерело міграції (id у старій системі) · char"}, {"id": "model:res.partner", "kind": "model", "label": "res.partner", "model": "res.partner", "detail": ""}, {"id": "field:sale.order.x_logistyka_sposib", "kind": "field", "label": "x_logistyka_sposib", "model": "sale.order", "detail": "Логістика: спосіб передачі · char"}, {"id": "field:sale.order.x_logistyka_termin", "kind": "field", "label": "x_logistyka_termin", "model": "sale.order", "detail": "Логістика: обіцяна дата передачі · date"}, {"id": "field:res.partner.x_migraciya_zvirena", "kind": "field", "label": "x_migraciya_zvirena", "model": "res.partner", "detail": "Звірено з джерелом · boolean"}, {"id": "field:x_project_task_worksheet_template_1.x_name", "kind": "field", "label": "x_name", "model": "x_project_task_worksheet_template_1", "detail": "Name · char"}, {"id": "field:approval.request.x_needs_director", "kind": "field", "label": "x_needs_director", "model": "approval.request", "detail": "Потрібна віза директора (за сумою) · boolean"}, {"id": "model:approval.request", "kind": "model", "label": "approval.request", "model": "approval.request", "detail": ""}, {"id": "field:maintenance.equipment.x_obl_majdanchyk", "kind": "field", "label": "x_obl_majdanchyk", "model": "maintenance.equipment", "detail": "Майданчик обслуговування · char"}, {"id": "model:maintenance.equipment", "kind": "model", "label": "maintenance.equipment", "model": "maintenance.equipment", "detail": ""}, {"id": "field:maintenance.equipment.x_obl_potuzhnist", "kind": "field", "label": "x_obl_potuzhnist", "model": "maintenance.equipment", "detail": "Параметр типу: потужність, кВт · float"}, {"id": "field:hr.expense.x_over_limit", "kind": "field", "label": "x_over_limit", "model": "hr.expense", "detail": "Понад ліміт категорії — додаткове узгодження · boolean"}, {"id": "model:hr.expense", "kind": "model", "label": "hr.expense", "model": "hr.expense", "detail": ""}, {"id": "field:account.analytic.line.x_plan2_id", "kind": "field", "label": "x_plan2_id", "model": "account.analytic.line", "detail": "Напрями бізнесу · many2one"}, {"id": "model:account.analytic.line", "kind": "model", "label": "account.analytic.line", "model": "account.analytic.line", "detail": ""}, {"id": "model:account.analytic.account", "kind": "model", "label": "account.analytic.account", "model": "account.analytic.account", "detail": ""}, {"id": "field:project.project.x_plan2_id", "kind": "field", "label": "x_plan2_id", "model": "project.project", "detail": "Напрями бізнесу · many2one"}, {"id": "model:project.project", "kind": "model", "label": "project.project", "model": "project.project", "detail": ""}, {"id": "field:budget.line.x_plan2_id", "kind": "field", "label": "x_plan2_id", "model": "budget.line", "detail": "Напрями бізнесу · many2one"}, {"id": "model:budget.line", "kind": "model", "label": "budget.line", "model": "budget.line", "detail": ""}, {"id": "field:budget.report.x_plan2_id", "kind": "field", "label": "x_plan2_id", "model": "budget.report", "detail": "Напрями бізнесу · many2one"}, {"id": "model:budget.report", "kind": "model", "label": "budget.report", "model": "budget.report", "detail": ""}, {"id": "field:pos.order.x_pos_prymitka", "kind": "field", "label": "x_pos_prymitka", "model": "pos.order", "detail": "Примітка для бекофісу · char"}, {"id": "model:pos.order", "kind": "model", "label": "pos.order", "model": "pos.order", "detail": ""}, {"id": "field:pos.order.x_pos_zvireno_zminu", "kind": "field", "label": "x_pos_zvireno_zminu", "model": "pos.order", "detail": "Звірено при закритті зміни · boolean"}, {"id": "field:x_project_task_worksheet_template_1.x_project_task_id", "kind": "field", "label": "x_project_task_id", "model": "x_project_task_worksheet_template_1", "detail": "Task · many2one"}, {"id": "model:project.task", "kind": "model", "label": "project.task", "model": "project.task", "detail": ""}, {"id": "field:budget.analytic.x_stattya_budzhetu", "kind": "field", "label": "x_stattya_budzhetu", "model": "budget.analytic", "detail": "Бюджетна стаття · char"}, {"id": "model:budget.analytic", "kind": "model", "label": "budget.analytic", "model": "budget.analytic", "detail": ""}, {"id": "field:sale.order.x_taryf_pidpysky", "kind": "field", "label": "x_taryf_pidpysky", "model": "sale.order", "detail": "Тариф підписки · char"}, {"id": "field:stock.putaway.rule.x_todo_obov", "kind": "field", "label": "x_todo_obov", "model": "stock.putaway.rule", "detail": "ЗАЛИШОК ПЕРЕВІРКИ: обов’язковість · char"}, {"id": "model:stock.putaway.rule", "kind": "model", "label": "stock.putaway.rule", "model": "stock.putaway.rule", "detail": ""}, {"id": "field:res.partner.x_todo_segment", "kind": "field", "label": "x_todo_segment", "model": "res.partner", "detail": "Сегмент клієнта · selection"}, {"id": "field:quality.check.x_todo_tehkarta", "kind": "field", "label": "x_todo_tehkarta", "model": "quality.check", "detail": "Номер технологічної карти · char"}, {"id": "model:quality.check", "kind": "model", "label": "quality.check", "model": "quality.check", "detail": ""}, {"id": "field:mrp.bom.x_todo_tehkarta", "kind": "field", "label": "x_todo_tehkarta", "model": "mrp.bom", "detail": "Номер технологічної карти · char"}, {"id": "model:mrp.bom", "kind": "model", "label": "mrp.bom", "model": "mrp.bom", "detail": ""}, {"id": "field:sale.order.x_todo_umova_postavky", "kind": "field", "label": "x_todo_umova_postavky", "model": "sale.order", "detail": "Умова поставки · selection"}, {"id": "field:documents.document.x_typ_dokumenta", "kind": "field", "label": "x_typ_dokumenta", "model": "documents.document", "detail": "Тип документа · char"}, {"id": "model:documents.document", "kind": "model", "label": "documents.document", "model": "documents.document", "detail": ""}, {"id": "field:purchase.order.x_umovy_incoterms", "kind": "field", "label": "x_umovy_incoterms", "model": "purchase.order", "detail": "Умови постачання: базис · char"}, {"id": "field:purchase.order.x_umovy_tara", "kind": "field", "label": "x_umovy_tara", "model": "purchase.order", "detail": "Умови постачання: тара й пакування · char"}, {"id": "field:budget.analytic.x_vidpovidalnyi_stattya", "kind": "field", "label": "x_vidpovidalnyi_stattya", "model": "budget.analytic", "detail": "Відповідальний за статтю · char"}, {"id": "field:purchase.order.x_visa_head", "kind": "field", "label": "x_visa_head", "model": "purchase.order", "detail": "Віза керівника закупівель · boolean"}, {"id": "view:4881", "kind": "view", "label": "budget.analytic.form.stattya.todo", "model": "budget.analytic", "detail": "form · extension"}, {"id": "view:4899", "kind": "view", "label": "documents.document.list.typ.todo", "model": "documents.document", "detail": "list · extension"}, {"id": "view:4880", "kind": "view", "label": "maintenance.equipment.form.typ.todo", "model": "maintenance.equipment", "detail": "form · extension"}, {"id": "view:4879", "kind": "view", "label": "pos.order.form.bekofis.todo", "model": "pos.order", "detail": "form · extension"}, {"id": "view:4885", "kind": "view", "label": "pos.order.list.zvirka.todo", "model": "pos.order", "detail": "list · primary"}, {"id": "view:4878", "kind": "view", "label": "purchase.order.form.umovy.todo", "model": "purchase.order", "detail": "form · extension"}, {"id": "view:4876", "kind": "view", "label": "res.partner.form.migraciya.todo", "model": "res.partner", "detail": "form · extension"}, {"id": "view:4882", "kind": "view", "label": "res.partner.list.migraciya.todo", "model": "res.partner", "detail": "list · primary"}, {"id": "view:4877", "kind": "view", "label": "sale.order.form.logistyka.todo", "model": "sale.order", "detail": "form · extension"}, {"id": "view:4891", "kind": "view", "label": "sale.order.list.prodovzhennya.todo", "model": "sale.order", "detail": "list · primary"}, {"id": "view:4883", "kind": "view", "label": "sale.order.list.segment.todo", "model": "sale.order", "detail": "list · primary"}, {"id": "view:4884", "kind": "view", "label": "sale.order.list.shop.todo", "model": "sale.order", "detail": "list · primary"}, {"id": "view:4863", "kind": "view", "label": "mrp.bom.form — номер технологічної карти", "model": "mrp.bom", "detail": "form · extension"}, {"id": "view:4858", "kind": "view", "label": "res.partner.form — сегмент у картці (перевірка)", "model": "res.partner", "detail": "form · extension"}, {"id": "view:4860", "kind": "view", "label": "res.partner.form — тільки для ролі (перевірка)", "model": "res.partner", "detail": "form · extension"}, {"id": "view:4861", "kind": "view", "label": "sale.order.form — умова поставки (власне поле)", "model": "sale.order", "detail": "form · extension"}, {"id": "view:4871", "kind": "view", "label": "crm.lead.kanban — перевірка ролей (порожнє, на прибирання)", "model": "crm.lead", "detail": "kanban · extension"}, {"id": "model:crm.lead", "kind": "model", "label": "crm.lead", "model": "crm.lead", "detail": ""}, {"id": "view:4874", "kind": "view", "label": "Рахунок — перевірка бланка (спорожнено після перевірки)", "model": null, "detail": "qweb · extension"}, {"id": "view:4308", "kind": "view", "label": "template_view_Default_Worksheet", "model": "x_project_task_worksheet_template_1", "detail": "form · primary"}, {"id": "view:4309", "kind": "view", "label": "list_view_Default_Worksheet", "model": "x_project_task_worksheet_template_1", "detail": "list · primary"}, {"id": "view:4310", "kind": "view", "label": "search_view_Default_Worksheet", "model": "x_project_task_worksheet_template_1", "detail": "search · primary"}, {"id": "auto:1", "kind": "automation", "label": "КП надіслано → перетелефонувати через 2 дні", "model": "crm.lead", "detail": "on_stage_set"}, {"id": "auto:2", "kind": "automation", "label": "Знижка понад 10 % — віза керівника", "model": "sale.order", "detail": "on_create_or_write"}, {"id": "auto:3", "kind": "automation", "label": "Знижка понад 25 % — віза директора", "model": "sale.order", "detail": "on_create_or_write"}, {"id": "auto:4", "kind": "automation", "label": "Віза керівника — знижка узгоджена", "model": "sale.order", "detail": "on_create_or_write"}, {"id": "auto:5", "kind": "automation", "label": "Закупка понад 20 000 — чекає керівника", "model": "purchase.order", "detail": "on_create_or_write"}, {"id": "auto:6", "kind": "automation", "label": "Закупка: віза керівника — узгоджено", "model": "purchase.order", "detail": "on_create_or_write"}, {"id": "auto:7", "kind": "automation", "label": "Витрата понад ліміт категорії «Пальне й проїзд» (800)", "model": "hr.expense", "detail": "on_create_or_write"}, {"id": "auto:8", "kind": "automation", "label": "Заявка понад 5 000 — потрібна віза директора", "model": "approval.request", "detail": "on_create_or_write"}, {"id": "action:1315", "kind": "action", "label": "Поставити «потрібна віза керівника»", "model": "sale.order", "detail": "object_write"}, {"id": "action:1316", "kind": "action", "label": "Поставити «потрібна віза директора»", "model": "sale.order", "detail": "object_write"}, {"id": "action:1318", "kind": "action", "label": "Знижка узгоджена", "model": "sale.order", "detail": "object_write"}, {"id": "action:1319", "kind": "action", "label": "Закупка: чекає керівника", "model": "purchase.order", "detail": "object_write"}, {"id": "action:1320", "kind": "action", "label": "Закупка: узгоджено", "model": "purchase.order", "detail": "object_write"}, {"id": "action:1321", "kind": "action", "label": "Витрата: позначити «понад ліміт»", "model": "hr.expense", "detail": "object_write"}, {"id": "action:1322", "kind": "action", "label": "Заявка: потрібна віза директора", "model": "approval.request", "detail": "object_write"}, {"id": "action:597", "kind": "action", "label": "Створити активність «Дзвінок»", "model": "crm.lead", "detail": "next_activity"}, {"id": "action:1311", "kind": "action", "label": "Погодити знижку (перевірка)", "model": "sale.order", "detail": "object_write"}, {"id": "action:1317", "kind": "action", "label": "Узгодити знижку", "model": "sale.order", "detail": "object_write"}, {"id": "action:1326", "kind": "action", "label": "Поставити візу керівника закупівель", "model": "purchase.order", "detail": "object_write"}, {"id": "action:1331", "kind": "action", "label": "Позначити «понад ліміт»", "model": "hr.expense", "detail": "object_write"}, {"id": "action:1325", "kind": "action", "label": "Передзвонити клієнту через 2 дні", "model": "crm.lead", "detail": "next_activity"}, {"id": "action:1350", "kind": "action", "label": "Надіслати КП — завдання на сьогодні", "model": "crm.lead", "detail": "next_activity"}, {"id": "action:1332", "kind": "action", "label": "Погодити з керівником — завдання на завтра", "model": "hr.expense", "detail": "next_activity"}, {"id": "action:1351", "kind": "action", "label": "Погодити з фінансами — завдання", "model": "purchase.order", "detail": "next_activity"}, {"id": "action:1356", "kind": "action", "label": "→ КП надіслано (перевірка рецепта)", "model": "crm.lead", "detail": "object_write"}, {"id": "rule:179", "kind": "rule", "label": "Sales Order multi-company", "model": "sale.order", "detail": ""}, {"id": "rule:182", "kind": "rule", "label": "Portal Personal Quotations/Sales Orders", "model": "sale.order", "detail": ""}, {"id": "rule:184", "kind": "rule", "label": "Personal Orders", "model": "sale.order", "detail": ""}, {"id": "rule:185", "kind": "rule", "label": "All Orders", "model": "sale.order", "detail": ""}, {"id": "rule:285", "kind": "rule", "label": "Purchase Order multi-company", "model": "purchase.order", "detail": ""}, {"id": "rule:287", "kind": "rule", "label": "Portal Purchase Orders", "model": "purchase.order", "detail": ""}, {"id": "rule:2", "kind": "rule", "label": "res.partner company", "model": "res.partner", "detail": ""}, {"id": "rule:3", "kind": "rule", "label": "res_partner: portal/public: read access on my commercial partner", "model": "res.partner", "detail": ""}, {"id": "rule:97", "kind": "rule", "label": "Контрагенти: менеджер бачить своїх (перевірка)", "model": "res.partner", "detail": ""}, {"id": "rule:178", "kind": "rule", "label": "Власний довідник: бачити лише свої компанії (перевірка)", "model": "res.partner", "detail": ""}], "edges": [["field:purchase.order.x_approval_step", "model:purchase.order", "field_of"], ["field:x_project_task_worksheet_template_1.x_comments", "model:x_project_task_worksheet_template_1", "field_of"], ["field:sale.order.x_discount_approval", "model:sale.order", "field_of"], ["field:sale.order.x_discount_visa", "model:sale.order", "field_of"], ["field:res.partner.x_dzherelo_migracii", "model:res.partner", "field_of"], ["field:sale.order.x_logistyka_sposib", "model:sale.order", "field_of"], ["field:sale.order.x_logistyka_termin", "model:sale.order", "field_of"], ["field:res.partner.x_migraciya_zvirena", "model:res.partner", "field_of"], ["field:x_project_task_worksheet_template_1.x_name", "model:x_project_task_worksheet_template_1", "field_of"], ["field:approval.request.x_needs_director", "model:approval.request", "field_of"], ["field:maintenance.equipment.x_obl_majdanchyk", "model:maintenance.equipment", "field_of"], ["field:maintenance.equipment.x_obl_potuzhnist", "model:maintenance.equipment", "field_of"], ["field:hr.expense.x_over_limit", "model:hr.expense", "field_of"], ["field:account.analytic.line.x_plan2_id", "model:account.analytic.line", "field_of"], ["field:account.analytic.line.x_plan2_id", "model:account.analytic.account", "relates_to"], ["field:project.project.x_plan2_id", "model:project.project", "field_of"], ["field:project.project.x_plan2_id", "model:account.analytic.account", "relates_to"], ["field:budget.line.x_plan2_id", "model:budget.line", "field_of"], ["field:budget.line.x_plan2_id", "model:account.analytic.account", "relates_to"], ["field:budget.report.x_plan2_id", "model:budget.report", "field_of"], ["field:budget.report.x_plan2_id", "model:account.analytic.account", "relates_to"], ["field:pos.order.x_pos_prymitka", "model:pos.order", "field_of"], ["field:pos.order.x_pos_zvireno_zminu", "model:pos.order", "field_of"], ["field:x_project_task_worksheet_template_1.x_project_task_id", "model:x_project_task_worksheet_template_1", "field_of"], ["field:x_project_task_worksheet_template_1.x_project_task_id", "model:project.task", "relates_to"], ["field:budget.analytic.x_stattya_budzhetu", "model:budget.analytic", "field_of"], ["field:sale.order.x_taryf_pidpysky", "model:sale.order", "field_of"], ["field:stock.putaway.rule.x_todo_obov", "model:stock.putaway.rule", "field_of"], ["field:res.partner.x_todo_segment", "model:res.partner", "field_of"], ["field:quality.check.x_todo_tehkarta", "model:quality.check", "field_of"], ["field:mrp.bom.x_todo_tehkarta", "model:mrp.bom", "field_of"], ["field:sale.order.x_todo_umova_postavky", "model:sale.order", "field_of"], ["field:documents.document.x_typ_dokumenta", "model:documents.document", "field_of"], ["field:purchase.order.x_umovy_incoterms", "model:purchase.order", "field_of"], ["field:purchase.order.x_umovy_tara", "model:purchase.order", "field_of"], ["field:budget.analytic.x_vidpovidalnyi_stattya", "model:budget.analytic", "field_of"], ["field:purchase.order.x_visa_head", "model:purchase.order", "field_of"], ["view:4881", "model:budget.analytic", "view_of"], ["view:4899", "model:documents.document", "view_of"], ["view:4880", "model:maintenance.equipment", "view_of"], ["view:4879", "model:pos.order", "view_of"], ["view:4885", "model:pos.order", "view_of"], ["view:4878", "model:purchase.order", "view_of"], ["view:4876", "model:res.partner", "view_of"], ["view:4882", "model:res.partner", "view_of"], ["view:4877", "model:sale.order", "view_of"], ["view:4891", "model:sale.order", "view_of"], ["view:4883", "model:sale.order", "view_of"], ["view:4884", "model:sale.order", "view_of"], ["view:4863", "model:mrp.bom", "view_of"], ["view:4858", "model:res.partner", "view_of"], ["view:4860", "model:res.partner", "view_of"], ["view:4861", "model:sale.order", "view_of"], ["view:4871", "model:crm.lead", "view_of"], ["view:4308", "model:x_project_task_worksheet_template_1", "view_of"], ["view:4309", "model:x_project_task_worksheet_template_1", "view_of"], ["view:4310", "model:x_project_task_worksheet_template_1", "view_of"], ["view:4881", "field:budget.analytic.x_stattya_budzhetu", "shows"], ["view:4881", "field:budget.analytic.x_vidpovidalnyi_stattya", "shows"], ["view:4899", "field:documents.document.x_typ_dokumenta", "shows"], ["view:4880", "field:maintenance.equipment.x_obl_majdanchyk", "shows"], ["view:4880", "field:maintenance.equipment.x_obl_potuzhnist", "shows"], ["view:4879", "field:pos.order.x_pos_zvireno_zminu", "shows"], ["view:4879", "field:pos.order.x_pos_prymitka", "shows"], ["view:4885", "field:pos.order.x_pos_zvireno_zminu", "shows"], ["view:4878", "field:purchase.order.x_umovy_tara", "shows"], ["view:4878", "field:purchase.order.x_umovy_incoterms", "shows"], ["view:4876", "field:res.partner.x_dzherelo_migracii", "shows"], ["view:4876", "field:res.partner.x_migraciya_zvirena", "shows"], ["view:4882", "field:res.partner.x_migraciya_zvirena", "shows"], ["view:4882", "field:res.partner.x_dzherelo_migracii", "shows"], ["view:4877", "field:sale.order.x_logistyka_termin", "shows"], ["view:4877", "field:sale.order.x_taryf_pidpysky", "shows"], ["view:4877", "field:sale.order.x_logistyka_sposib", "shows"], ["view:4891", "field:sale.order.x_taryf_pidpysky", "shows"], ["view:4883", "field:sale.order.x_logistyka_sposib", "shows"], ["view:4884", "field:sale.order.x_logistyka_termin", "shows"], ["view:4884", "field:sale.order.x_logistyka_sposib", "shows"], ["view:4863", "field:mrp.bom.x_todo_tehkarta", "shows"], ["view:4858", "field:res.partner.x_todo_segment", "shows"], ["view:4860", "field:res.partner.x_todo_segment", "shows"], ["view:4861", "field:sale.order.x_todo_umova_postavky", "shows"], ["view:4308", "field:x_project_task_worksheet_template_1.x_project_task_id", "shows"], ["view:4308", "field:x_project_task_worksheet_template_1.x_comments", "shows"], ["view:4309", "field:x_project_task_worksheet_template_1.x_name", "shows"], ["view:4310", "field:x_project_task_worksheet_template_1.x_name", "shows"], ["auto:1", "model:crm.lead", "automates"], ["auto:2", "model:sale.order", "automates"], ["auto:2", "field:sale.order.x_discount_visa", "triggers_on"], ["auto:3", "model:sale.order", "automates"], ["auto:3", "field:sale.order.x_discount_visa", "triggers_on"], ["auto:4", "model:sale.order", "automates"], ["auto:4", "field:sale.order.x_discount_visa", "triggers_on"], ["auto:5", "model:purchase.order", "automates"], ["auto:5", "field:purchase.order.x_visa_head", "triggers_on"], ["auto:6", "model:purchase.order", "automates"], ["auto:6", "field:purchase.order.x_visa_head", "triggers_on"], ["auto:7", "model:hr.expense", "automates"], ["auto:8", "model:approval.request", "automates"], ["action:1315", "model:sale.order", "acts_on"], ["action:1315", "field:sale.order.x_discount_approval", "writes"], ["action:1315", "auto:2", "runs_in"], ["action:1316", "model:sale.order", "acts_on"], ["action:1316", "field:sale.order.x_discount_approval", "writes"], ["action:1316", "auto:3", "runs_in"], ["action:1318", "model:sale.order", "acts_on"], ["action:1318", "field:sale.order.x_discount_approval", "writes"], ["action:1318", "auto:4", "runs_in"], ["action:1319", "model:purchase.order", "acts_on"], ["action:1319", "field:purchase.order.x_approval_step", "writes"], ["action:1319", "auto:5", "runs_in"], ["action:1320", "model:purchase.order", "acts_on"], ["action:1320", "field:purchase.order.x_approval_step", "writes"], ["action:1320", "auto:6", "runs_in"], ["action:1321", "model:hr.expense", "acts_on"], ["action:1321", "field:hr.expense.x_over_limit", "writes"], ["action:1321", "auto:7", "runs_in"], ["action:1322", "model:approval.request", "acts_on"], ["action:1322", "field:approval.request.x_needs_director", "writes"], ["action:1322", "auto:8", "runs_in"], ["action:597", "model:crm.lead", "acts_on"], ["action:597", "auto:1", "runs_in"], ["action:1311", "model:sale.order", "acts_on"], ["action:1317", "model:sale.order", "acts_on"], ["action:1317", "field:sale.order.x_discount_approval", "writes"], ["action:1326", "model:purchase.order", "acts_on"], ["action:1326", "field:purchase.order.x_visa_head", "writes"], ["action:1331", "model:hr.expense", "acts_on"], ["action:1331", "field:hr.expense.x_over_limit", "writes"], ["action:1325", "model:crm.lead", "acts_on"], ["action:1350", "model:crm.lead", "acts_on"], ["action:1332", "model:hr.expense", "acts_on"], ["action:1351", "model:purchase.order", "acts_on"], ["action:1356", "model:crm.lead", "acts_on"], ["rule:179", "model:sale.order", "restricts"], ["rule:182", "model:sale.order", "restricts"], ["rule:184", "model:sale.order", "restricts"], ["rule:185", "model:sale.order", "restricts"], ["rule:285", "model:purchase.order", "restricts"], ["rule:287", "model:purchase.order", "restricts"], ["rule:2", "model:res.partner", "restricts"], ["rule:3", "model:res.partner", "restricts"], ["rule:97", "model:res.partner", "restricts"], ["rule:178", "model:res.partner", "restricts"]]};
+const svg = document.getElementById('g'), tip = document.getElementById('tip');
+const W = () => svg.clientWidth, H = () => svg.clientHeight;
+const palette = ['#6f9ee8','#e8a34f','#e0555f','#5fc2b0','#63c05c','#e6cf52',
+                 '#d081c4','#e87fa0','#a98467','#9b98b8','#8fb5ef','#f0b877'];
+const models = [...new Set(DATA.nodes.map(n => n.model).filter(Boolean))];
+const counts = {};
+DATA.nodes.forEach(n => { if (n.model) counts[n.model] = (counts[n.model]||0)+1; });
+models.sort((a,b) => counts[b]-counts[a]);
+const color = {};
+models.forEach((m,i) => color[m] = palette[i % palette.length]);
+const KIND_R = {model:9, field:5, view:5.5, automation:6, action:4.5, rule:4.5};
+
+const idx = {}; DATA.nodes.forEach((n,i) => idx[n.id] = i);
+const N = DATA.nodes.map(n => ({...n,
+  x: W()/2 + (Math.random()-0.5)*380, y: H()/2 + (Math.random()-0.5)*380,
+  vx:0, vy:0, deg:0}));
+const L = DATA.edges.map(e => ({s: idx[e[0]], t: idx[e[1]], k: e[2]}))
+                    .filter(e => e.s !== undefined && e.t !== undefined);
+L.forEach(e => { N[e.s].deg++; N[e.t].deg++; });
+
+const ns = 'http://www.w3.org/2000/svg';
+const root = document.createElementNS(ns,'g'); svg.appendChild(root);
+const gl = document.createElementNS(ns,'g'); root.appendChild(gl);
+const gn = document.createElementNS(ns,'g'); root.appendChild(gn);
+
+const lines = L.map(e => {
+  const el = document.createElementNS(ns,'line');
+  el.setAttribute('stroke', e.k === 'inherits' ? '#5a5580' : '#332f52');
+  el.setAttribute('stroke-width', e.k === 'inherits' ? 1.4 : 0.9);
+  gl.appendChild(el); return el;
+});
+const circles = N.map(n => {
+  const el = document.createElementNS(ns,'circle');
+  el.setAttribute('r', (KIND_R[n.kind]||5) + Math.min(n.deg*0.55, 6));
+  el.setAttribute('fill', n.model ? color[n.model] : '#6b6890');
+  el.setAttribute('stroke', n.kind === 'model' ? '#f2f0ff' : 'none');
+  el.setAttribute('stroke-width', n.kind === 'model' ? 1.4 : 0);
+  el.style.cursor = 'pointer';
+  el.addEventListener('mousemove', ev => {
+    tip.innerHTML = '<b>' + esc(n.label) + '</b><br>' + esc(n.kind)
+      + (n.model ? ' · ' + esc(n.model) : '')
+      + (n.detail ? '<br>' + esc(n.detail) : '');
+    tip.style.opacity = 1;
+    tip.style.left = Math.min(ev.offsetX + 14, W() - 340) + 'px';
+    tip.style.top = (ev.offsetY + 14) + 'px';
+  });
+  el.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  el.addEventListener('mousedown', ev => { drag = n; ev.preventDefault(); });
+  gn.appendChild(el); return el;
+});
+function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+const gt = document.createElementNS(ns,'g'); root.appendChild(gt);
+const labels = N.map(n => {
+  if (n.kind !== 'model') return null;
+  const el = document.createElementNS(ns,'text');
+  el.textContent = n.label;
+  el.setAttribute('font-size', 10.5);
+  el.setAttribute('fill', '#cfcce6');
+  el.setAttribute('paint-order', 'stroke');
+  el.setAttribute('stroke', '#161426');
+  el.setAttribute('stroke-width', 3);
+  gt.appendChild(el); return el;
+});
+
+let drag = null, pan = null, tx = 0, ty = 0, sc = 1;
+svg.addEventListener('mousemove', ev => {
+  if (drag) { drag.x = (ev.offsetX - tx)/sc; drag.y = (ev.offsetY - ty)/sc; drag.vx = drag.vy = 0; }
+  else if (pan) { tx += ev.offsetX - pan[0]; ty += ev.offsetY - pan[1]; pan = [ev.offsetX, ev.offsetY]; apply(); }
+});
+svg.addEventListener('mousedown', ev => { if (!drag) pan = [ev.offsetX, ev.offsetY]; });
+window.addEventListener('mouseup', () => { drag = null; pan = null; });
+svg.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const f = ev.deltaY < 0 ? 1.12 : 0.89;
+  tx = ev.offsetX - (ev.offsetX - tx)*f; ty = ev.offsetY - (ev.offsetY - ty)*f;
+  sc *= f; apply();
+}, {passive:false});
+function apply(){ root.setAttribute('transform', `translate(${tx},${ty}) scale(${sc})`); }
+
+// Связи внутри модели держим короткими, между моделями — длинными,
+// чтобы кластеры расходились и граф не превращался в клубок.
+const REST = {inherits:34, field_of:52, view_of:52, automates:56, acts_on:56,
+              restricts:58, shows:64, writes:64, triggers_on:64, relates_to:150};
+
+function physics(){
+  const cx = W()/2, cy = H()/2;
+  for (let i = 0; i < N.length; i++) {
+    for (let j = i+1; j < N.length; j++) {
+      const dx = N[j].x - N[i].x, dy = N[j].y - N[i].y;
+      const d2 = dx*dx + dy*dy || 0.01;
+      if (d2 > 250000) continue;
+      const same = N[i].model && N[i].model === N[j].model;
+      const f = (same ? 700 : 2100)/d2, d = Math.sqrt(d2);
+      const fx = f*dx/d, fy = f*dy/d;
+      N[i].vx -= fx; N[i].vy -= fy; N[j].vx += fx; N[j].vy += fy;
+    }
+  }
+  L.forEach(e => {
+    const a = N[e.s], b = N[e.t];
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
+    const f = (d - (REST[e.k] || 60)) * 0.014;
+    a.vx += f*dx/d; a.vy += f*dy/d; b.vx -= f*dx/d; b.vy -= f*dy/d;
+  });
+  N.forEach(n => {
+    n.vx += (cx - n.x)*0.0026; n.vy += (cy - n.y)*0.0026;
+    if (n !== drag) { n.x += n.vx *= 0.85; n.y += n.vy *= 0.85; }
+  });
+}
+
+function paint(){
+  N.forEach((n, i) => {
+    circles[i].setAttribute('cx', n.x); circles[i].setAttribute('cy', n.y);
+    if (labels[i]) { labels[i].setAttribute('x', n.x + 12);
+                     labels[i].setAttribute('y', n.y + 4); }
+  });
+  L.forEach((e, i) => {
+    lines[i].setAttribute('x1', N[e.s].x); lines[i].setAttribute('y1', N[e.s].y);
+    lines[i].setAttribute('x2', N[e.t].x); lines[i].setAttribute('y2', N[e.t].y);
+  });
+}
+
+for (let i = 0; i < 400; i++) physics();   // прогрев до первой отрисовки
+
+function fit(){                            // вписать граф в окно
+  const xs = N.map(n => n.x), ys = N.map(n => n.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const pad = 90;
+  sc = Math.min(W()/(x1 - x0 + pad), H()/(y1 - y0 + pad), 1.6);
+  tx = (W() - (x1 + x0)*sc)/2; ty = (H() - (y1 + y0)*sc)/2;
+  apply();
+}
+fit();
+window.addEventListener('resize', fit);
+(function loop(){ physics(); paint(); requestAnimationFrame(loop); })();
+
+const list = document.getElementById('list');
+models.forEach(m => {
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<span class="dot" style="background:${color[m]}"></span>`
+    + `<span class="nm" title="${esc(m)}">${esc(m)}</span>`
+    + `<span class="ct">${counts[m]}</span>`;
+  list.appendChild(row);
+});
+</script></body></html>
+

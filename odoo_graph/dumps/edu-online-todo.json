@@ -1,0 +1,873 @@
+{
+  "meta": {
+    "db": "edu-online-todo",
+    "url": "https://edu-online-todo.odoo.com",
+    "extracted_at": "2026-09-10",
+    "extracted_via": "odoo-mcp (read-only metadata)",
+    "modules_installed": 372,
+    "modules_non_odoo": [
+      {
+        "name": "sale_subscription",
+        "author": "Camptocamp / Odoo",
+        "license": "OEEL-1"
+      },
+      {
+        "name": "l10n_ua",
+        "author": "ERP Ukraine (https://erp.co.ua)",
+        "license": "LGPL-3"
+      }
+    ],
+    "odoo_version": "19.0"
+  },
+  "models_manual": [
+    {
+      "model": "x_project_task_worksheet_template_1",
+      "name": "Default Worksheet"
+    }
+  ],
+  "fields_manual": [
+    {
+      "id": 24463,
+      "model": "purchase.order",
+      "name": "x_approval_step",
+      "label": "Крок узгодження",
+      "ttype": "selection",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 22240,
+      "model": "x_project_task_worksheet_template_1",
+      "name": "x_comments",
+      "label": "Comments",
+      "ttype": "html",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24459,
+      "model": "sale.order",
+      "name": "x_discount_approval",
+      "label": "Узгодження знижки",
+      "ttype": "selection",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24461,
+      "model": "sale.order",
+      "name": "x_discount_visa",
+      "label": "Віза керівника на знижку",
+      "ttype": "boolean",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24479,
+      "model": "res.partner",
+      "name": "x_dzherelo_migracii",
+      "label": "Джерело міграції (id у старій системі)",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24485,
+      "model": "sale.order",
+      "name": "x_logistyka_sposib",
+      "label": "Логістика: спосіб передачі",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24487,
+      "model": "sale.order",
+      "name": "x_logistyka_termin",
+      "label": "Логістика: обіцяна дата передачі",
+      "ttype": "date",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24482,
+      "model": "res.partner",
+      "name": "x_migraciya_zvirena",
+      "label": "Звірено з джерелом",
+      "ttype": "boolean",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 22241,
+      "model": "x_project_task_worksheet_template_1",
+      "name": "x_name",
+      "label": "Name",
+      "ttype": "char",
+      "relation": null,
+      "related": "x_project_task_id.name"
+    },
+    {
+      "id": 24469,
+      "model": "approval.request",
+      "name": "x_needs_director",
+      "label": "Потрібна віза директора (за сумою)",
+      "ttype": "boolean",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24501,
+      "model": "maintenance.equipment",
+      "name": "x_obl_majdanchyk",
+      "label": "Майданчик обслуговування",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24499,
+      "model": "maintenance.equipment",
+      "name": "x_obl_potuzhnist",
+      "label": "Параметр типу: потужність, кВт",
+      "ttype": "float",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24467,
+      "model": "hr.expense",
+      "name": "x_over_limit",
+      "label": "Понад ліміт категорії — додаткове узгодження",
+      "ttype": "boolean",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24471,
+      "model": "account.analytic.line",
+      "name": "x_plan2_id",
+      "label": "Напрями бізнесу",
+      "ttype": "many2one",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": 24473,
+      "model": "project.project",
+      "name": "x_plan2_id",
+      "label": "Напрями бізнесу",
+      "ttype": "many2one",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": 24475,
+      "model": "budget.line",
+      "name": "x_plan2_id",
+      "label": "Напрями бізнесу",
+      "ttype": "many2one",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": 24477,
+      "model": "budget.report",
+      "name": "x_plan2_id",
+      "label": "Напрями бізнесу",
+      "ttype": "many2one",
+      "relation": "account.analytic.account",
+      "related": null
+    },
+    {
+      "id": 24495,
+      "model": "pos.order",
+      "name": "x_pos_prymitka",
+      "label": "Примітка для бекофісу",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24497,
+      "model": "pos.order",
+      "name": "x_pos_zvireno_zminu",
+      "label": "Звірено при закритті зміни",
+      "ttype": "boolean",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 22239,
+      "model": "x_project_task_worksheet_template_1",
+      "name": "x_project_task_id",
+      "label": "Task",
+      "ttype": "many2one",
+      "relation": "project.task",
+      "related": null
+    },
+    {
+      "id": 24503,
+      "model": "budget.analytic",
+      "name": "x_stattya_budzhetu",
+      "label": "Бюджетна стаття",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24489,
+      "model": "sale.order",
+      "name": "x_taryf_pidpysky",
+      "label": "Тариф підписки",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24425,
+      "model": "stock.putaway.rule",
+      "name": "x_todo_obov",
+      "label": "ЗАЛИШОК ПЕРЕВІРКИ: обов’язковість",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 9186,
+      "model": "res.partner",
+      "name": "x_todo_segment",
+      "label": "Сегмент клієнта",
+      "ttype": "selection",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24429,
+      "model": "quality.check",
+      "name": "x_todo_tehkarta",
+      "label": "Номер технологічної карти",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24431,
+      "model": "mrp.bom",
+      "name": "x_todo_tehkarta",
+      "label": "Номер технологічної карти",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24427,
+      "model": "sale.order",
+      "name": "x_todo_umova_postavky",
+      "label": "Умова поставки",
+      "ttype": "selection",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24507,
+      "model": "documents.document",
+      "name": "x_typ_dokumenta",
+      "label": "Тип документа",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24491,
+      "model": "purchase.order",
+      "name": "x_umovy_incoterms",
+      "label": "Умови постачання: базис",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24493,
+      "model": "purchase.order",
+      "name": "x_umovy_tara",
+      "label": "Умови постачання: тара й пакування",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24505,
+      "model": "budget.analytic",
+      "name": "x_vidpovidalnyi_stattya",
+      "label": "Відповідальний за статтю",
+      "ttype": "char",
+      "relation": null,
+      "related": null
+    },
+    {
+      "id": 24465,
+      "model": "purchase.order",
+      "name": "x_visa_head",
+      "label": "Віза керівника закупівель",
+      "ttype": "boolean",
+      "relation": null,
+      "related": null
+    }
+  ],
+  "views_custom": [
+    {
+      "id": 4881,
+      "name": "budget.analytic.form.stattya.todo",
+      "model": "budget.analytic",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 3891,
+      "inherit_name": "budget.analytic.view.form",
+      "arch": "<data><xpath expr=\"//sheet\" position=\"inside\"><group string=\"Бюджетні статті\"><field name=\"x_stattya_budzhetu\"/><field name=\"x_vidpovidalnyi_stattya\"/></group></xpath></data>"
+    },
+    {
+      "id": 4899,
+      "name": "documents.document.list.typ.todo",
+      "model": "documents.document",
+      "type": "list",
+      "mode": "extension",
+      "inherit_id": 4629,
+      "inherit_name": "documents list",
+      "arch": "<data><xpath expr=\"//field[@name='name']\" position=\"after\"><field name=\"x_typ_dokumenta\" optional=\"show\"/></xpath></data>"
+    },
+    {
+      "id": 4880,
+      "name": "maintenance.equipment.form.typ.todo",
+      "model": "maintenance.equipment",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 4350,
+      "inherit_name": "equipment.form",
+      "arch": "<data><xpath expr=\"//sheet\" position=\"inside\"><group string=\"Параметри за типом\"><field name=\"x_obl_potuzhnist\"/><field name=\"x_obl_majdanchyk\"/></group></xpath></data>"
+    },
+    {
+      "id": 4879,
+      "name": "pos.order.form.bekofis.todo",
+      "model": "pos.order",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 2908,
+      "inherit_name": "pos.order.form",
+      "arch": "<data><xpath expr=\"//sheet\" position=\"inside\"><group string=\"Бекофіс\"><field name=\"x_pos_prymitka\"/><field name=\"x_pos_zvireno_zminu\"/></group></xpath></data>"
+    },
+    {
+      "id": 4885,
+      "name": "pos.order.list.zvirka.todo",
+      "model": "pos.order",
+      "type": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<list string=\"Звірка змін\"><field name=\"name\"/><field name=\"date_order\"/><field name=\"session_id\"/><field name=\"partner_id\"/><field name=\"amount_total\"/><field name=\"x_pos_zvireno_zminu\"/></list>"
+    },
+    {
+      "id": 4878,
+      "name": "purchase.order.form.umovy.todo",
+      "model": "purchase.order",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 3143,
+      "inherit_name": "purchase.order.form",
+      "arch": "<data><xpath expr=\"//sheet\" position=\"inside\"><group string=\"Умови постачання\"><field name=\"x_umovy_incoterms\"/><field name=\"x_umovy_tara\"/></group></xpath></data>"
+    },
+    {
+      "id": 4876,
+      "name": "res.partner.form.migraciya.todo",
+      "model": "res.partner",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 127,
+      "inherit_name": "res.partner.form",
+      "arch": "<data><xpath expr=\"//sheet\" position=\"inside\"><group string=\"Звірка з джерелом міграції\"><field name=\"x_dzherelo_migracii\"/><field name=\"x_migraciya_zvirena\"/></group></xpath></data>"
+    },
+    {
+      "id": 4882,
+      "name": "res.partner.list.migraciya.todo",
+      "model": "res.partner",
+      "type": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<list string=\"Контроль перенесених даних\"><field name=\"name\"/><field name=\"x_dzherelo_migracii\"/><field name=\"x_migraciya_zvirena\"/><field name=\"email\"/><field name=\"phone\"/><field name=\"country_id\"/></list>"
+    },
+    {
+      "id": 4877,
+      "name": "sale.order.form.logistyka.todo",
+      "model": "sale.order",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 1528,
+      "inherit_name": "sale.order.form",
+      "arch": "<data><xpath expr=\"//sheet\" position=\"inside\"><group string=\"Логістика й тариф\"><field name=\"x_logistyka_sposib\"/><field name=\"x_logistyka_termin\"/><field name=\"x_taryf_pidpysky\"/></group></xpath></data>"
+    },
+    {
+      "id": 4891,
+      "name": "sale.order.list.prodovzhennya.todo",
+      "model": "sale.order",
+      "type": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<list string=\"Контроль продовжень\"><field name=\"name\"/><field name=\"partner_id\"/><field name=\"subscription_state\"/><field name=\"next_invoice_date\"/><field name=\"x_taryf_pidpysky\"/><field name=\"amount_total\"/></list>"
+    },
+    {
+      "id": 4883,
+      "name": "sale.order.list.segment.todo",
+      "model": "sale.order",
+      "type": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<list string=\"Замовлення сегмента\"><field name=\"name\"/><field name=\"partner_id\"/><field name=\"date_order\"/><field name=\"x_logistyka_sposib\"/><field name=\"amount_total\"/><field name=\"state\"/></list>"
+    },
+    {
+      "id": 4884,
+      "name": "sale.order.list.shop.todo",
+      "model": "sale.order",
+      "type": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<list string=\"Замовлення магазину\"><field name=\"name\"/><field name=\"partner_id\"/><field name=\"date_order\"/><field name=\"x_logistyka_sposib\"/><field name=\"x_logistyka_termin\"/><field name=\"amount_total\"/><field name=\"state\"/></list>"
+    },
+    {
+      "id": 4863,
+      "name": "mrp.bom.form — номер технологічної карти",
+      "model": "mrp.bom",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 3554,
+      "inherit_name": "mrp.bom.form",
+      "arch": "<data><xpath expr=\"//field[@name='code']\" position=\"after\"><field name=\"x_todo_tehkarta\"/></xpath></data>"
+    },
+    {
+      "id": 4858,
+      "name": "res.partner.form — сегмент у картці (перевірка)",
+      "model": "res.partner",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 127,
+      "inherit_name": "res.partner.form",
+      "arch": "<data><xpath expr=\"//field[@name='function']\" position=\"after\"><field name=\"x_todo_segment\"/></xpath></data>"
+    },
+    {
+      "id": 4860,
+      "name": "res.partner.form — тільки для ролі (перевірка)",
+      "model": "res.partner",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 127,
+      "inherit_name": "res.partner.form",
+      "arch": "<data><xpath expr=\"//field[@name='website']\" position=\"after\"><field name=\"x_todo_segment\"/></xpath></data>"
+    },
+    {
+      "id": 4861,
+      "name": "sale.order.form — умова поставки (власне поле)",
+      "model": "sale.order",
+      "type": "form",
+      "mode": "extension",
+      "inherit_id": 1528,
+      "inherit_name": "sale.order.form",
+      "arch": "<data><xpath expr=\"//field[@name='validity_date']\" position=\"after\"><field name=\"x_todo_umova_postavky\"/></xpath></data>"
+    },
+    {
+      "id": 4871,
+      "name": "crm.lead.kanban — перевірка ролей (порожнє, на прибирання)",
+      "model": "crm.lead",
+      "type": "kanban",
+      "mode": "extension",
+      "inherit_id": 619,
+      "inherit_name": "crm.lead.kanban",
+      "arch": "<data/>"
+    },
+    {
+      "id": 4874,
+      "name": "Рахунок — перевірка бланка (спорожнено після перевірки)",
+      "model": null,
+      "type": "qweb",
+      "mode": "extension",
+      "inherit_id": 984,
+      "inherit_name": "report_invoice_document",
+      "arch": "<data/>"
+    },
+    {
+      "id": 4308,
+      "name": "template_view_Default_Worksheet",
+      "model": "x_project_task_worksheet_template_1",
+      "type": "form",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<form create=\"false\" duplicate=\"false\"><sheet><h1 invisible=\"context.get('studio') or context.get('default_x_project_task_id')\"><field name=\"x_project_task_id\"/></h1><group><field name=\"x_comments\" placeholder=\"Add details about your intervention...\"/></group></sheet></form>"
+    },
+    {
+      "id": 4309,
+      "name": "list_view_Default_Worksheet",
+      "model": "x_project_task_worksheet_template_1",
+      "type": "list",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<list default_order=\"create_date DESC\"><field name=\"create_date\"/><field name=\"x_name\"/></list>"
+    },
+    {
+      "id": 4310,
+      "name": "search_view_Default_Worksheet",
+      "model": "x_project_task_worksheet_template_1",
+      "type": "search",
+      "mode": "primary",
+      "inherit_id": null,
+      "inherit_name": null,
+      "arch": "<search><field name=\"x_name\"/><filter string=\"Created on\" date=\"create_date\" name=\"create_date\"/></search>"
+    }
+  ],
+  "automations": [
+    {
+      "id": 1,
+      "name": "КП надіслано → перетелефонувати через 2 дні",
+      "model": "crm.lead",
+      "trigger": "on_stage_set",
+      "active": true,
+      "filter_domain": "[('stage_id', '=', 3)]"
+    },
+    {
+      "id": 2,
+      "name": "Знижка понад 10 % — віза керівника",
+      "model": "sale.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('order_line.discount','>',10),('order_line.discount','<=',25),('state','in',('draft','sent')),('x_discount_visa','=',False)]"
+    },
+    {
+      "id": 3,
+      "name": "Знижка понад 25 % — віза директора",
+      "model": "sale.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('order_line.discount','>',25),('state','in',('draft','sent')),('x_discount_visa','=',False)]"
+    },
+    {
+      "id": 4,
+      "name": "Віза керівника — знижка узгоджена",
+      "model": "sale.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('x_discount_visa','=',True)]"
+    },
+    {
+      "id": 5,
+      "name": "Закупка понад 20 000 — чекає керівника",
+      "model": "purchase.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('amount_total','>',20000),('amount_total','<=',100000),('state','in',('draft','sent')),('x_visa_head','=',False)]"
+    },
+    {
+      "id": 6,
+      "name": "Закупка: віза керівника — узгоджено",
+      "model": "purchase.order",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('x_visa_head','=',True)]"
+    },
+    {
+      "id": 7,
+      "name": "Витрата понад ліміт категорії «Пальне й проїзд» (800)",
+      "model": "hr.expense",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('product_id','=',32),('total_amount','>',800)]"
+    },
+    {
+      "id": 8,
+      "name": "Заявка понад 5 000 — потрібна віза директора",
+      "model": "approval.request",
+      "trigger": "on_create_or_write",
+      "active": true,
+      "filter_domain": "[('amount','>',5000)]"
+    }
+  ],
+  "server_actions": [
+    {
+      "id": 1315,
+      "name": "Поставити «потрібна віза керівника»",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 2,
+      "writes_path": "x_discount_approval",
+      "writes_value": "head"
+    },
+    {
+      "id": 1316,
+      "name": "Поставити «потрібна віза директора»",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 3,
+      "writes_path": "x_discount_approval",
+      "writes_value": "director"
+    },
+    {
+      "id": 1318,
+      "name": "Знижка узгоджена",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 4,
+      "writes_path": "x_discount_approval",
+      "writes_value": "approved"
+    },
+    {
+      "id": 1319,
+      "name": "Закупка: чекає керівника",
+      "model": "purchase.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 5,
+      "writes_path": "x_approval_step",
+      "writes_value": "head"
+    },
+    {
+      "id": 1320,
+      "name": "Закупка: узгоджено",
+      "model": "purchase.order",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 6,
+      "writes_path": "x_approval_step",
+      "writes_value": "approved"
+    },
+    {
+      "id": 1321,
+      "name": "Витрата: позначити «понад ліміт»",
+      "model": "hr.expense",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 7,
+      "writes_path": "x_over_limit",
+      "writes_value": "True"
+    },
+    {
+      "id": 1322,
+      "name": "Заявка: потрібна віза директора",
+      "model": "approval.request",
+      "state": "object_write",
+      "usage": "base_automation",
+      "automation_id": 8,
+      "writes_path": "x_needs_director",
+      "writes_value": "True"
+    },
+    {
+      "id": 597,
+      "name": "Створити активність «Дзвінок»",
+      "model": "crm.lead",
+      "state": "next_activity",
+      "usage": "base_automation",
+      "automation_id": 1,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": 1311,
+      "name": "Погодити знижку (перевірка)",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "state",
+      "writes_value": "sale"
+    },
+    {
+      "id": 1317,
+      "name": "Узгодити знижку",
+      "model": "sale.order",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "x_discount_approval",
+      "writes_value": "approved"
+    },
+    {
+      "id": 1326,
+      "name": "Поставити візу керівника закупівель",
+      "model": "purchase.order",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "x_visa_head",
+      "writes_value": false
+    },
+    {
+      "id": 1331,
+      "name": "Позначити «понад ліміт»",
+      "model": "hr.expense",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "x_over_limit",
+      "writes_value": false
+    },
+    {
+      "id": 1325,
+      "name": "Передзвонити клієнту через 2 дні",
+      "model": "crm.lead",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": 1350,
+      "name": "Надіслати КП — завдання на сьогодні",
+      "model": "crm.lead",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": 1332,
+      "name": "Погодити з керівником — завдання на завтра",
+      "model": "hr.expense",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": 1351,
+      "name": "Погодити з фінансами — завдання",
+      "model": "purchase.order",
+      "state": "next_activity",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": null,
+      "writes_value": null
+    },
+    {
+      "id": 1356,
+      "name": "→ КП надіслано (перевірка рецепта)",
+      "model": "crm.lead",
+      "state": "object_write",
+      "usage": "ir_actions_server",
+      "automation_id": null,
+      "writes_path": "stage_id",
+      "writes_value": "3"
+    }
+  ],
+  "record_rules": [
+    {
+      "id": 179,
+      "name": "Sales Order multi-company",
+      "model": "sale.order",
+      "domain": "[('company_id', 'in', company_ids)]",
+      "global": true,
+      "groups": [],
+      "standard": true
+    },
+    {
+      "id": 182,
+      "name": "Portal Personal Quotations/Sales Orders",
+      "model": "sale.order",
+      "domain": "[('partner_id','child_of',[user.commercial_partner_id.id])]",
+      "global": false,
+      "groups": [
+        10
+      ],
+      "standard": true
+    },
+    {
+      "id": 184,
+      "name": "Personal Orders",
+      "model": "sale.order",
+      "domain": "['|',('user_id','=',user.id),('user_id','=',False)]",
+      "global": false,
+      "groups": [
+        17
+      ],
+      "standard": true
+    },
+    {
+      "id": 185,
+      "name": "All Orders",
+      "model": "sale.order",
+      "domain": "[(1,'=',1)]",
+      "global": false,
+      "groups": [
+        18
+      ],
+      "standard": true
+    },
+    {
+      "id": 285,
+      "name": "Purchase Order multi-company",
+      "model": "purchase.order",
+      "domain": "[('company_id', 'in', company_ids)]",
+      "global": true,
+      "groups": [],
+      "standard": true
+    },
+    {
+      "id": 287,
+      "name": "Portal Purchase Orders",
+      "model": "purchase.order",
+      "domain": "[('partner_id', 'child_of', [user.commercial_partner_id.id])]",
+      "global": false,
+      "groups": [
+        10
+      ],
+      "standard": true
+    },
+    {
+      "id": 2,
+      "name": "res.partner company",
+      "model": "res.partner",
+      "domain": "['|', '|', ('partner_share', '=', False), ('company_id', 'parent_of', company_ids), ('company_id', '=', False)]",
+      "global": true,
+      "groups": [],
+      "standard": true
+    },
+    {
+      "id": 3,
+      "name": "res_partner: portal/public: read access on my commercial partner",
+      "model": "res.partner",
+      "domain": "[('id', 'child_of', user.commercial_partner_id.id)]",
+      "global": false,
+      "groups": [
+        10,
+        11
+      ],
+      "standard": true
+    },
+    {
+      "id": 97,
+      "name": "Контрагенти: менеджер бачить своїх (перевірка)",
+      "model": "res.partner",
+      "domain": "[('user_id', 'in', [user.id, False])]",
+      "global": false,
+      "groups": [
+        17
+      ],
+      "standard": false
+    },
+    {
+      "id": 178,
+      "name": "Власний довідник: бачити лише свої компанії (перевірка)",
+      "model": "res.partner",
+      "domain": "[('company_id', 'in', company_ids + [False])]",
+      "global": true,
+      "groups": [],
+      "standard": false
+    }
+  ]
+}
