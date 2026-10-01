@@ -1,0 +1,4 @@
+# fastembed строго 0.7.x: в 0.5.x другой pooling, векторы несовместимы с индексом
+fastembed>=0.7,<0.8
+qdrant-client>=1.12
+mcp>=1.10
