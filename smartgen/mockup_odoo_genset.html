@@ -431,16 +431,66 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
 .lg-sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; vertical-align: -1px; }
 .example-note { font-size: 12.5px; color: var(--o-muted); display: flex; align-items: center; gap: 6px; }
 
+/* fuel: canisters, stock moves, dialogs */
+.cp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.box { background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 8px; padding: 12px 14px 14px; min-width: 0; }
+.box-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.box h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.box .sub { font-size: 12.5px; color: var(--o-muted); margin-top: 2px; }
+.box .o-list { border-radius: 6px; max-height: 420px; }
+.box .hint { margin-top: 10px; }
+.fuel-cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.cans { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.can { display: grid; justify-items: center; gap: 1px; padding: 14px 4px 8px; border: 1px solid var(--o-border); border-radius: 8px; background: var(--o-sheet); color: var(--o-fg); font-size: 12px; line-height: 1.35; min-width: 0; }
+.can:hover { border-color: var(--o-teal); }
+.can .jar { position: relative; width: 30px; height: 40px; margin-bottom: 6px; }
+.can .jar::before { content: ""; position: absolute; top: -6px; left: 4px; width: 12px; height: 6px; border: 2px solid var(--o-border-strong); border-bottom: 0; border-radius: 3px 3px 0 0; }
+.can .liq { position: absolute; inset: 0; border: 2px solid var(--o-border-strong); border-radius: 3px 10px 3px 3px; overflow: hidden; background: var(--o-bg); }
+.can .liq i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--o-teal); }
+.can.s-empty .liq { border-style: dashed; }
+.can b { font-weight: 600; font-size: 13px; }
+.can .lv { font-variant-numeric: tabular-nums; }
+.can .loc { color: var(--o-muted); font-size: 11.5px; }
+.can.s-empty .lv { color: var(--o-muted); }
+.mvs { max-height: 470px; overflow-y: auto; }
+.mv { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--o-border); }
+.mv:last-child { border-bottom: 0; }
+.mv .ms { margin-top: 1px; }
+.mv b { display: block; font-weight: 500; }
+.mv small { display: block; color: var(--o-muted); font-size: 12.5px; }
+.mv-n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mv-n .pos { color: var(--o-ok); }
+.frm { display: grid; gap: 12px; }
+.frm2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+label.f { display: grid; gap: 4px; font-weight: 500; font-size: 13px; }
+.o-input.w { width: 100%; }
+select.o-input { padding: 4px 2px; }
+.sumbox { background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.picks { display: grid; border: 1px solid var(--o-border); border-radius: 6px; max-height: 236px; overflow-y: auto; }
+.pick { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--o-border); cursor: pointer; font-size: 13.5px; }
+.pick:last-child { border-bottom: 0; }
+.pick:hover { background: var(--o-hover); }
+.pick small { color: var(--o-muted); margin-left: 4px; }
+.pick input { accent-color: var(--o-primary); width: 16px; height: 16px; margin: 0; }
+.seg label { position: relative; border-radius: 6px; padding: 4px 12px; font-size: 13px; color: var(--o-muted); cursor: pointer; }
+.seg label input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--o-teal-soft); color: var(--o-teal); font-weight: 600; }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--o-primary); outline-offset: 1px; }
+#fScrim .body { max-height: calc(100dvh - 210px); overflow-y: auto; }
+.dialog footer { flex-wrap: wrap; }
+.dialog footer .grow { flex: 1; }
+
 /* events */
 .evtype { display: inline-flex; align-items: center; gap: 6px; }
 .evtype .ms { font-size: 18px; }
 
 @media (max-width: 900px) {
-  .charts { grid-template-columns: minmax(0, 1fr); }
+  .charts, .fuel-cols { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
   .navbar { flex-wrap: wrap; height: auto; padding-block: 6px; row-gap: 4px; }
-  .menus { order: 10; flex-basis: 100%; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .menus { order: 10; flex-basis: 100%; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; gap: 0; }
+  .menus .menu { padding-inline: 5px; }
   .menu[aria-current="page"]::after { bottom: -4px; }
   .chatter { top: 0; }
   .dcard td.addr { display: none; }
@@ -449,6 +499,11 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
   .pagebody { padding-inline: 8px; }
   .kpi .v { font-size: 22px; }
   .searchbar { flex-basis: 100%; max-width: none; }
+  .cans { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
+  .can { padding: 12px 2px 6px; }
+  #useKpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #useKpis .kpi { padding: 10px 12px; }
+  .box { padding: 12px 12px 14px; }
 }
 .dim { color: var(--o-muted); }
 </style>
@@ -461,6 +516,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     <a class="nav-entry menu" href="#readings" data-page="readings">Показання</a>
     <a class="nav-entry menu" href="#analytics" data-page="analytics">Аналітика</a>
     <a class="nav-entry menu" href="#events" data-page="events">Події</a>
+    <a class="nav-entry menu" href="#fuel" data-page="fuel">Заправка</a>
     <span class="nav-entry sec">Налаштування</span>
   </nav>
   <span class="grow"></span>
@@ -495,6 +551,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     <section class="sheet">
       <div class="buttonbox">
         <button class="stat" type="button" data-href="#readings"><span class="ms">monitoring</span><span><span class="t">Показання</span><span class="v" id="statReadings">12 480</span></span></button>
+        <button class="stat" type="button" data-href="#fuel"><span class="ms">local_gas_station</span><span><span class="t">У каністрах</span><span class="v" id="statFuel">—</span></span></button>
         <button class="stat" type="button" data-goto="alarms"><span class="ms">notifications</span><span><span class="t">Тривоги</span><span class="v" id="statAlarms">1</span></span></button>
         <button class="stat" type="button" data-goto="log"><span class="ms">history</span><span><span class="t">Команди</span><span class="v" id="statCmds">6</span></span></button>
         <button class="stat" type="button" data-goto="data"><span class="ms">build</span><span><span class="t">До ТО</span><span class="v">0 год</span></span></button>
@@ -698,7 +755,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
         <th class="sticky">Час</th><th>Режим</th><th>Агрегат</th><th>Живлення</th>
         <th class="n">Мережа UAB, V</th><th class="n">Мережа, Hz</th><th class="n">Ген. UAB, V</th><th class="n">Ген., Hz</th>
         <th class="n">Струм A/B/C, A</th><th class="n">P, kW</th><th class="n">cos φ</th><th class="n">Навант., %</th>
-        <th class="n">Оберти</th><th class="n">ОР, °C</th><th class="n">Олива, kPa</th><th class="n">Паливо, %</th><th class="n">АКБ, V</th><th class="n">D+, V</th>
+        <th class="n">Оберти</th><th class="n">ОР, °C</th><th class="n">Олива, kPa</th><th class="n">Паливо, L</th><th class="n">АКБ, V</th><th class="n">D+, V</th>
         <th class="n">Мотогодини</th><th class="n">Пусків</th><th class="n">kWh</th><th>Тривоги</th>
       </tr></thead>
       <tbody id="rdBody"></tbody>
@@ -729,7 +786,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
         <div class="legend"><span><span class="lg-sw" style="background:var(--o-ok-soft)"></span>Мережа є</span><span><span class="lg-sw" style="background:var(--o-crit-soft);border:2px solid var(--o-crit)"></span>Немає мережі</span><span><span class="lg-sw" style="background:var(--o-teal)"></span>Генератор працює</span></div>
         <div id="chTimeline"></div></div>
       <div class="chart"><h4>Вироблено енергії</h4><div class="sub">kWh на добу</div><div id="chEnergy"></div></div>
-      <div class="chart"><h4>Рівень палива</h4><div class="sub">%, стрибки вгору — заправки</div><div id="chFuel"></div></div>
+      <div class="chart"><h4>Рівень палива</h4><div class="sub">L у баку (145 L), стрибки вгору — заправки</div><div id="chFuel"></div></div>
       <div class="chart"><h4>Напруга АКБ</h4><div class="sub">V, раз на 2 години</div><div id="chBat"></div></div>
       <div class="chart"><h4>Навантаження під час останньої роботи</h4><div class="sub" id="lastRunSub">kW</div><div id="chLoad"></div></div>
     </div>
@@ -753,7 +810,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
       <button class="fbtn" type="button" aria-pressed="false" data-ef="alarm">Тривоги</button>
     </div>
     <div class="o-list"><table>
-      <thead><tr><th class="sticky">Подія</th><th>Початок</th><th>Кінець</th><th class="n">Тривалість</th><th>Причина / джерело</th><th class="n">kWh</th><th class="n">Пік, kW</th><th class="n">Паливо</th><th>Підсумок</th></tr></thead>
+      <thead><tr><th class="sticky">Подія</th><th>Початок</th><th>Кінець</th><th class="n">Тривалість</th><th>Причина / джерело</th><th class="n">kWh</th><th class="n">Пік, kW</th><th class="n">Паливо, L</th><th>Підсумок</th></tr></thead>
       <tbody id="evBody"></tbody>
     </table></div>
     <div class="listfoot"><span id="evCount">—</span><span>Події формуються автоматично з показань: пуск і зупинка агрегату, зникнення і повернення мережі, зміна рівня палива, тривоги.</span></div>
@@ -779,6 +836,54 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
       <div class="hint" style="margin-top:10px">Діє лише в цю дату замість звичайного вікна розкладу.</div>
     </div>
     <footer><button class="btn btn-primary" type="button" id="tdSave">Зберегти</button><button class="btn" type="button" id="tdCancel">Скасувати</button></footer>
+  </div>
+</div>
+<!-- ================= Заправка ================= -->
+<div class="page" id="page-fuel">
+  <div class="cp">
+    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Заправка</span></div>
+    <span class="grow"></span>
+    <div class="cp-actions">
+      <button class="btn btn-primary" type="button" id="fRefuel"><span class="ms">local_gas_station</span>Заправити генератор</button>
+      <button class="btn" type="button" id="fIncome"><span class="ms">add</span>Надходження палива</button>
+    </div>
+  </div>
+  <div class="pagebody">
+    <span class="example-note"><span class="ms">info</span>Рівень у баку — з датчика контролера (у відсотках, переводимо в літри за об'ємом бака 145 L). Каністри і рух запасу ведуться в Odoo; кожна заправка звіряється зі стрибком рівня. Цифри — приклад.</span>
+    <div class="kpis" id="fuelKpis"></div>
+    <div class="fuel-cols">
+      <section class="box">
+        <div class="box-head"><h4>Каністри</h4><div class="seg" role="group" aria-label="Фільтр каністр" id="canSeg"></div></div>
+        <div class="cans" id="cans"></div>
+        <div class="hint">Натисніть каністру, щоб виправити кількість (інвентаризація), змінити місце або списати.</div>
+      </section>
+      <section class="box">
+        <div class="box-head"><div><h4>Рух запасу</h4><div class="sub">надходження, заправки, коригування</div></div></div>
+        <div class="mvs" id="moves"></div>
+      </section>
+    </div>
+    <section class="box">
+      <div class="box-head"><div><h4>Витрата палива</h4><div class="sub" id="useSub">L на добу</div></div>
+        <div class="seg" role="group" aria-label="Період"><button type="button" aria-pressed="false" data-fperiod="7">7 днів</button><button type="button" aria-pressed="true" data-fperiod="30">30 днів</button></div></div>
+      <div class="kpis" id="useKpis"></div>
+      <div class="legend" style="margin-top:12px"><span style="--c:var(--o-teal)"><i></i>Витрачено, L</span></div>
+      <div id="chUse" class="chart-plot"></div>
+    </section>
+    <section class="box">
+      <div class="box-head"><div><h4>Заправки генератора</h4><div class="sub">запис в Odoo + підтвердження датчиком рівня</div></div></div>
+      <div class="o-list"><table>
+        <thead><tr><th class="sticky">Дата</th><th>Звідки</th><th class="n">Залито, L</th><th class="n">Бак, L</th><th>Хто</th><th>Датчик</th></tr></thead>
+        <tbody id="refBody"></tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+
+<div class="scrim" id="fScrim" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="fdTitle">
+    <header><span id="fdTitle"></span><button type="button" id="fdClose" aria-label="Закрити"><span class="ms">close</span></button></header>
+    <div class="body" id="fdBody"></div>
+    <footer><button class="btn btn-primary" type="button" id="fdOk">Підтвердити</button><button class="btn" type="button" id="fdCancel">Скасувати</button><span class="grow"></span><button class="btn btn-danger" type="button" id="fdExtra" hidden></button></footer>
   </div>
 </div>
 <div class="notif" id="notif" hidden></div>
@@ -810,6 +915,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
   const V = { rpm: 0, kw: 0, oil: 0, temp: 35, genU: 0, genF: 0, cur: 0, cos: 1, bat: 27.8, dplus: 0, fuel: 95 };
   const T = { ...V };
   const MAINS = { ua: 231, ub: 226, uc: 230, uab: 397, ubc: 396, uca: 404, f: 50.0 };
+  const TANK = 145;   // tank volume, L (generator setting): the controller reports fuel in %
 
   // ---------- Kyiv time
   const fp = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Kyiv", weekday: "short", year: "numeric", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
@@ -874,7 +980,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
       ["Частота", () => V.genF, 60, v => `${fmt(v, 1)} Hz`, ""], ["cos φ", () => V.cos, 1, v => fmt(v, 2), "f-prim"],
     ]],
     ["Двигун", [
-      ["АКБ", () => V.bat, 32, v => `${fmt(v, 1)} V`, "f-ok"], ["D+", () => V.dplus, 32, v => `${fmt(v, 1)} V`, "f-ok"], ["Паливо", () => V.fuel, 100, v => `${fmt(v)} %`, "f-ok"],
+      ["АКБ", () => V.bat, 32, v => `${fmt(v, 1)} V`, "f-ok"], ["D+", () => V.dplus, 32, v => `${fmt(v, 1)} V`, "f-ok"], ["Паливо", () => V.fuel * TANK / 100, TANK, v => `${fmt(v)} L`, "f-ok"],
     ]],
     ["Мережа", [
       ["UAB", () => MAINS.uab, 500, v => `${fmt(v)} V`, "f-info"], ["UBC", () => MAINS.ubc, 500, v => `${fmt(v)} V`, "f-info"], ["UCA", () => MAINS.uca, 500, v => `${fmt(v)} V`, "f-info"],
@@ -1199,14 +1305,15 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
   }, 1000);
   setInterval(render, 30000);
   renderSchedule(); renderExceptions(); renderAlarms(); renderData(); render(); draw();
-  window.__G = { S, V, T, MAINS, kyiv, fmt, render, inWindow, notify, toMin };
+  window.__G = { S, V, T, MAINS, TANK, kyiv, fmt, render, inWindow, notify, toMin };
 })();
 </script>
 
 <script>
 (() => {
   const G = window.__G;
-  const { S, V, MAINS, kyiv, fmt, toMin } = G;
+  const { S, V, T, MAINS, TANK, kyiv, fmt, toMin } = G;
+  const toL = pct => pct / 100 * TANK;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const M = 60e3, H = 3600e3, DAY = 86400e3;
@@ -1298,7 +1405,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     for (const q of fuelPts) { if (q.t > ts) return p.t === q.t ? q.f : p.f + (q.f - p.f) * (ts - p.t) / (q.t - p.t); p = q; }
     return p.f;
   };
-  V.fuel = fuel;
+  V.fuel = T.fuel = fuel;
 
   // lifetime counters on the panel today: 33 h 44 min, 38 starts, 251 kWh
   const LIFE_MIN = 33 * 60 + 44, LIFE_STARTS = 38, LIFE_KWH = 251;
@@ -1357,7 +1464,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
       <td class="n">${n0(r.mU)}</td><td class="n">${n0(r.mF, 1)}</td><td class="n">${n0(r.gU)}</td><td class="n">${n0(r.gF, 1)}</td>
       <td class="n">${r.cur ? `${fmt(r.cur)} / ${fmt(r.cur * .97)} / ${fmt(r.cur * 1.03)}` : '<span class="dim">0 / 0 / 0</span>'}</td>
       <td class="n">${n0(r.kw, 1)}</td><td class="n">${r.pf ? fmt(r.pf, 2) : '<span class="dim">—</span>'}</td><td class="n">${n0(r.load)}</td>
-      <td class="n">${n0(r.rpm)}</td><td class="n">${fmt(r.temp)}</td><td class="n">${n0(r.oil)}</td><td class="n">${fmt(r.fuel)}</td>
+      <td class="n">${n0(r.rpm)}</td><td class="n">${fmt(r.temp)}</td><td class="n">${n0(r.oil)}</td><td class="n">${fmt(toL(r.fuel))}</td>
       <td class="n">${fmt(r.bat, 1)}</td><td class="n">${n0(r.dp, 1)}</td>
       <td class="n">${r.hours}</td><td class="n">${r.starts}</td><td class="n">${r.kwh}</td>
       <td>${r.out ? '<span class="badge b-crit">Мережа відсутня</span>' : '<span class="dim">—</span>'}</td></tr>`).join("")
@@ -1473,7 +1580,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
       kpi("Вироблено", fmt(kwh), "kWh", `за весь час — ${LIFE_KWH} kWh`) +
       kpi("Відключень мережі", outs.length, "", `разом ${fmt(outH, 1)} год без мережі`) +
       kpi("Покрито генератором", outH ? fmt(covH / outH * 100) : "—", "%", `без живлення ${fmt(Math.max(0, outH - covH), 1)} год — поза розкладом`) +
-      kpi("Витрачено палива", fmt(fuelUsed), "%", `${refuels.filter(r => r.t >= p0).length} заправки за період`) +
+      kpi("Витрачено палива", fmt(toL(fuelUsed)), "L", `${fmt(runH ? toL(fuelUsed) / runH : 0, 1)} L/год · ${refuels.filter(r => r.t >= p0).length} заправки за період`) +
       kpi("Середнє навантаження", fmt(avgKw, 1), "kW", `${fmt(avgKw / 88 * 100)} % від номіналу 88 kW`);
 
     const days = [];
@@ -1490,11 +1597,11 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     barChart($("#chEnergy"), days, [{ key: "kwh", name: "Вироблено", cls: "s-gen", color: "--o-teal" }], "kWh", 0);
     timeline($("#chTimeline"));
     const fpts = [], bpts = [];
-    for (let t = p0; t <= now; t += 2 * H) { fpts.push({ t, v: fuelAt(t) }); bpts.push({ t, v: stateAt(t).bat }); }
-    fpts.push({ t: now, v: fuelAt(now) });
+    for (let t = p0; t <= now; t += 2 * H) { fpts.push({ t, v: toL(fuelAt(t)) }); bpts.push({ t, v: stateAt(t).bat }); }
+    fpts.push({ t: now, v: toL(fuelAt(now)) });
     const step = period > 7 ? 5 : 1;
     const xf = t => fmtD(t), tf = t => fmtDT(t);
-    lineChart($("#chFuel"), fpts, { min: 0, max: 100, cls: "teal", color: "--o-teal", name: "Паливо", unit: "%", xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
+    lineChart($("#chFuel"), fpts, { min: 0, max: TANK, cls: "teal", color: "--o-teal", name: "У баку", unit: "L", xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
     lineChart($("#chBat"), bpts, { min: 26, max: 29, cls: "prim", color: "--o-primary", name: "АКБ", unit: "V", dec: 1, div: 3, xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
     const lr = [...runs].reverse().find(r => r.kw);
     if (lr) {
@@ -1523,7 +1630,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     sum: o.cover === "full" ? `Генератор підхопив за 25 с${o.timer ? " (таймер)" : ""}` : o.cover === "part" ? "Генератор працював частково — до кінця вікна розкладу" : "Генератор не запускався — поза розкладом (режим Ручний)",
     bad: o.cover !== "full",
   });
-  for (const f of refuels) events.push({ type: "fuel", s: f.t, e: null, reason: "Рівень палива різко зріс", fuel: f.to - f.from, sum: `${fmt(f.from)} % → ${fmt(f.to)} %` });
+  for (const f of refuels) events.push({ type: "fuel", s: f.t, e: null, reason: "Рівень палива різко зріс", fuel: f.to - f.from, sum: `${fmt(toL(f.from))} → ${fmt(toL(f.to))} L` });
   events.push({ type: "alarm", s: now - 9 * DAY, e: null, reason: "Попередження контролера (сигнал 01H/37)", sum: "Термін ТО минув — активна", bad: true, title: "Тривога: термін ТО" });
   events.sort((a, b) => b.s - a.s);
   const EV = {
@@ -1542,7 +1649,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
         <td>${e.reason}</td>
         <td class="n">${e.kwh ? fmt(e.kwh, 1) : '<span class="dim">—</span>'}</td>
         <td class="n">${e.peak ? fmt(e.peak, 1) : '<span class="dim">—</span>'}</td>
-        <td class="n">${e.fuel ? `${e.fuel > 0 ? "+" : "−"}${fmt(Math.abs(e.fuel))} %` : '<span class="dim">—</span>'}</td>
+        <td class="n">${e.fuel ? `${e.fuel > 0 ? "+" : "−"}${fmt(toL(Math.abs(e.fuel)))} L` : '<span class="dim">—</span>'}</td>
         <td>${e.bad ? `<span class="badge b-warn">${e.sum}</span>` : e.sum}</td></tr>`;
     }).join("");
     const c = t => events.filter(e => e.type === t).length;
@@ -1575,7 +1682,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
       ["Двигун", "03H", [
         ["0023", "Оберти", `${fmt(V.rpm)} об/хв`], ["0017", "Температура ОР", `${fmt(V.temp)} °C`], ["0018", "Опір датчика температури", "182,4 Ω"],
         ["0019", "Тиск оливи", `${fmt(V.oil)} kPa`], ["0020", "Опір датчика тиску", "10,2 Ω"],
-        ["0021", "Рівень палива", `${fmt(V.fuel)} %`], ["0022", "Опір датчика рівня", "18,5 Ω"],
+        ["0021", "Рівень палива", `${fmt(V.fuel)} % · ≈ ${fmt(toL(V.fuel))} L`], ["0022", "Опір датчика рівня", "18,5 Ω"],
         ["0024", "Напруга АКБ", `${fmt(V.bat, 1)} V`], ["0025", "Напруга D+ (зарядка)", `${fmt(V.dplus, 1)} V`],
       ]],
       ["Стан і таймери", "03H", [
@@ -1631,8 +1738,250 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     $("#dValues").hidden = dset !== "values"; $("#dFlags").hidden = dset !== "flags"; $("#dModule").hidden = dset !== "module";
   });
 
+  // ---------- fuel: tank level from the controller, canister stock and moves kept in Odoo
+  const CAN_VOL = 20, MIN_STOCK = 100, LOCS = ["Щитова", "Склад"];
+  const cans = [], moves = [], fuelLog = [];
+  let canSeq = 0;
+  const plural = (n, [one, few, many]) => n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
+  const canAcc = n => `${n} ${plural(n, ["каністру", "каністри", "каністр"])}`;
+  const money = v => `${fmt(v)} грн`;
+  const ids = list => list.map(c => c.id).join(", ");
+  const addCan = (loc, vol = CAN_VOL, l = vol) => { const c = { id: `К-${pad(++canSeq)}`, vol, l, loc }; cans.push(c); return c; };
+  const stockL = () => cans.reduce((s, c) => s + c.l, 0);
+  const canState = c => c.l <= 0 ? "empty" : c.l >= c.vol ? "full" : "part";
+  // pour from the given canisters, partly filled ones first
+  function pour(from, need) {
+    let left = need; const used = [];
+    for (const c of [...from].filter(c => c.l > 0).sort((a, b) => a.l - b.l)) {
+      if (left <= 0) break;
+      const q = Math.min(c.l, left); c.l -= q; left -= q; used.push(c);
+    }
+    return { l: need - left, used };
+  }
+  const buyNote = (supplier, price, l) => `${supplier} · ${fmt(price, 2)} грн/л · ${money(l * price)}`;
+
+  // example history: 10 canisters bought at the start, every sensor-detected refuel was poured from them
+  {
+    const t = t0 + 10 * H;
+    for (let i = 0; i < 10; i++) addCan(i < 4 ? "Щитова" : "Склад");
+    moves.push({ t, kind: "in", title: "Надходження: 10 нових каністр", sub: buyNote("АЗС WOG", 54.9, 200), delta: 200, who: "О. Коваль", price: 54.9 });
+    let prev = t;
+    for (const r of refuels) {
+      const need = Math.round(toL(r.to - r.from));
+      if (stockL() < need + CAN_VOL) {
+        const empt = cans.filter(c => c.l < c.vol), add = empt.reduce((s, c) => s + c.vol - c.l, 0);
+        empt.forEach(c => (c.l = c.vol));
+        moves.push({ t: Math.max(prev + 2 * H, r.t - DAY), kind: "in", title: `Надходження: наповнено ${canAcc(empt.length)}`, sub: buyNote("АЗС WOG", 55.4, add), delta: add, who: "О. Коваль", price: 55.4 });
+      }
+      const p = pour(cans, need);
+      moves.push({ t: r.t, kind: "out", title: "Заправка генератора", sub: `з каністр ${ids(p.used)}`, delta: -p.l, who: "О. Коваль" });
+      fuelLog.push({ t: r.t, src: `Каністри ${ids(p.used)}`, l: p.l, from: r.from, to: r.to, who: "О. Коваль", sensor: "ok" });
+      prev = r.t;
+    }
+  }
+  for (const e of events) if (e.type === "fuel") { const f = fuelLog.find(x => x.t === e.s); if (f) e.reason = `${f.src} · ${f.who}`; }
+
+  let canFilter = "all", fPeriod = 30;
+  const fkpi = (k, v, u, d) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div><div class="d">${d}</div></div>`;
+  const lastPrice = () => [...moves].reverse().find(m => m.price)?.price || 55;
+  function renderFuel() {
+    const tankL = toL(T.fuel), st = stockL(), cnt = k => cans.filter(c => canState(c) === k).length;
+    const runL = runs.reduce((s, r) => s + toL(r.fuel), 0), runHrs = runs.reduce((s, r) => s + r.hours, 0);
+    const rate = runHrs ? runL / runHrs : 0, lack = Math.max(0, MIN_STOCK - st);
+    $("#fuelKpis").innerHTML =
+      fkpi("У баку", fmt(tankL), "L", `${fmt(T.fuel)} % з ${TANK} L · датчик контролера`) +
+      fkpi("У каністрах", fmt(st), "L", [["full", ["повна", "повні", "повних"]], ["part", ["часткова", "часткові", "часткових"]], ["empty", ["порожня", "порожні", "порожніх"]]].map(([k, w]) => `${cnt(k)} ${plural(cnt(k), w)}`).join(" · ")) +
+      fkpi("Разом палива", fmt(tankL + st), "L", rate ? `вистачить на ≈ ${fmt((tankL + st) / rate)} год роботи` : "—") +
+      fkpi("Мінімальний запас", MIN_STOCK, "L", lack ? `<span class="badge b-warn">бракує ${fmt(lack)} L</span>` : `<span class="badge b-ok">запас у нормі</span>`);
+
+    $("#canSeg").innerHTML = [["all", "Усі", cans.length], ["full", "Повні", cnt("full")], ["part", "Часткові", cnt("part")], ["empty", "Порожні", cnt("empty")]]
+      .map(([k, t, n]) => `<button type="button" aria-pressed="${k === canFilter}" data-cf="${k}">${t} <span class="dim">${n}</span></button>`).join("");
+    const list = cans.filter(c => canFilter === "all" || canState(c) === canFilter);
+    $("#cans").innerHTML = list.map(c => `<button class="can s-${canState(c)}" type="button" data-can="${c.id}" aria-label="${c.id}: ${fmt(c.l)} з ${c.vol} L, ${c.loc}">
+      <span class="jar"><span class="liq"><i style="height:${(c.l / c.vol * 100).toFixed(0)}%"></i></span></span><b>${c.id}</b><span class="lv">${fmt(c.l)} / ${c.vol} L</span><span class="loc">${c.loc}</span></button>`).join("")
+      || `<div class="hint">Немає каністр у цьому фільтрі.</div>`;
+
+    let bal = 0;
+    const MV = { in: ["add_circle", "var(--o-ok)"], out: ["local_gas_station", "var(--o-teal)"], fix: ["tune", "var(--o-info)"], loc: ["swap_horiz", "var(--o-muted)"], off: ["delete", "var(--o-crit)"] };
+    const rows = [...moves].sort((a, b) => a.t - b.t).map(m => ({ ...m, bal: (bal += m.delta) })).reverse();
+    $("#moves").innerHTML = rows.map(m => `<div class="mv"><span class="ms" style="color:${MV[m.kind][1]}">${MV[m.kind][0]}</span>
+      <div><b>${m.title}</b><small>${m.sub ? m.sub + " · " : ""}${m.who} · ${fmtDT(m.t)}</small></div>
+      <div class="mv-n"><b class="${m.delta > 0 ? "pos" : ""}">${m.delta ? `${m.delta > 0 ? "+" : "−"}${fmt(Math.abs(m.delta))} L` : "—"}</b><small>залишок ${fmt(m.bal)} L</small></div></div>`).join("");
+
+    $("#refBody").innerHTML = [...fuelLog].sort((a, b) => b.t - a.t).map(f => `<tr><td class="sticky">${fmtDT(f.t)}</td><td>${f.src}</td><td class="n">${fmt(f.l)}</td>
+      <td class="n">${fmt(toL(f.from))} → ${fmt(toL(f.to))}</td><td>${f.who}</td>
+      <td>${f.sensor === "ok" ? `<span class="badge b-ok">підтверджено +${fmt(toL(f.to - f.from))} L</span>` : '<span class="badge b-info">очікує показання</span>'}</td></tr>`).join("");
+    $("#statFuel").textContent = `${fmt(st)} L`;
+    renderUse();
+  }
+
+  // consumption in litres: per day, per hour of running, per kWh
+  function renderUse() {
+    const p0 = todayStart - (fPeriod - 1) * DAY, inP = r => overlap(p0, now, r.s, r.e) / (r.e - r.s);
+    const L = runs.reduce((s, r) => s + toL(r.fuel) * inP(r), 0);
+    const hrs = runs.reduce((s, r) => s + r.hours * inP(r), 0);
+    const kwhP = runs.reduce((s, r) => s + r.kw * overlap(p0, now, r.s, r.e) / H, 0);
+    const loaded = runs.filter(r => r.kw && r.s >= p0), idle = runs.filter(r => !r.kw && r.s >= p0);
+    const rateOf = list => { const h = list.reduce((s, r) => s + r.hours, 0); return h ? list.reduce((s, r) => s + toL(r.fuel), 0) / h : 0; };
+    $("#useSub").textContent = `L на добу за ${fPeriod} днів`;
+    $("#useKpis").innerHTML =
+      fkpi("Витрачено", fmt(L), "L", `${fmt(hrs, 1)} год роботи · ≈ ${money(L * lastPrice())}`) +
+      fkpi("Середня витрата", fmt(hrs ? L / hrs : 0, 1), "L/год", `під навантаженням ${fmt(rateOf(loaded), 1)} · без навантаження ${fmt(rateOf(idle), 1)} L/год`) +
+      fkpi("На 1 kWh", kwhP ? fmt(L / kwhP, 2) : "—", "L/kWh", `вироблено ${fmt(kwhP)} kWh`) +
+      fkpi("На добу", fmt(L / fPeriod, 1), "L", `у середньому за ${fPeriod} днів`);
+    const days = [];
+    for (let d = fPeriod - 1; d >= 0; d--) {
+      const ds = todayStart - d * DAY, de = ds + DAY;
+      days.push({ label: fmtD(ds + 12 * H), tipLabel: `${["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"][kyiv(ds + 12 * H).wd]}, ${fmtD(ds + 12 * H)}`,
+        l: runs.reduce((s, r) => s + toL(r.fuel) * overlap(ds, de, r.s, r.e) / (r.e - r.s), 0) });
+    }
+    barChart($("#chUse"), days, [{ key: "l", name: "Витрачено", cls: "s-gen", color: "--o-teal" }], "L", 1);
+  }
+  $$("[data-fperiod]").forEach(b => b.onclick = () => {
+    fPeriod = +b.dataset.fperiod;
+    $$("[data-fperiod]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderUse();
+  });
+  $("#canSeg").onclick = e => { const b = e.target.closest("[data-cf]"); if (b) { canFilter = b.dataset.cf; renderFuel(); } };
+  $("#cans").onclick = e => { const b = e.target.closest("[data-can]"); if (b) openCan(cans.find(c => c.id === b.dataset.can)); };
+
+  // ---------- fuel dialogs
+  let fOk = null, fExtra = null;
+  function fDialog(title, html, ok, { okLabel = "Підтвердити", extra = null, onInput = null } = {}) {
+    $("#fdTitle").textContent = title; $("#fdBody").innerHTML = html;
+    $("#fdOk").textContent = okLabel; fOk = ok;
+    $("#fdExtra").hidden = !extra; fExtra = extra && extra[1]; if (extra) $("#fdExtra").textContent = extra[0];
+    $("#fdBody").oninput = $("#fdBody").onchange = onInput;
+    onInput && onInput();
+    $("#fScrim").hidden = false;
+    ($("#fdBody input:not([type=radio]):not([type=checkbox])") || $("#fdOk")).focus();
+  }
+  const fClose = () => { $("#fScrim").hidden = true; fOk = fExtra = null; };
+  const ferr = t => { const e = $("#fdErr"); e.textContent = t; e.hidden = false; };
+  $("#fdOk").onclick = () => { if (fOk && fOk() === false) return; fClose(); };
+  $("#fdExtra").onclick = () => { if (fExtra && fExtra() === false) return; fClose(); };
+  $("#fdCancel").onclick = fClose; $("#fdClose").onclick = fClose;
+  $("#fScrim").onclick = e => { if (e.target.id === "fScrim") fClose(); };
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#fScrim").hidden) fClose(); });
+  const chat = (who, text) => { S.chat.unshift({ day: "Сьогодні", who, time: kyiv().hhmm, text, track: true }); G.render(); };
+
+  $("#fRefuel").onclick = () => {
+    const free = Math.max(0, Math.floor(TANK - toL(T.fuel)));
+    const avail = cans.filter(c => c.l > 0).sort((a, b) => a.l - b.l || a.id.localeCompare(b.id));
+    const html = `<div class="frm">
+      <div class="sumbox">У баку ≈ <b>${fmt(toL(T.fuel))} L</b> з ${TANK} L · вільно <b>${fmt(free)} L</b></div>
+      <div class="seg" role="radiogroup" aria-label="Звідки"><label><input type="radio" name="fsrc" value="cans" checked>З каністр</label><label><input type="radio" name="fsrc" value="other">Інше джерело</label></div>
+      <div id="fdCans">${avail.length ? `<div class="picks">${avail.map(c => `<label class="pick"><input type="checkbox" value="${c.id}"><span><b>${c.id}</b><small>${c.loc}</small></span><span class="num">${fmt(c.l)} L</span></label>`).join("")}</div>` : '<div class="hint">Немає каністр з паливом — спочатку оформіть надходження.</div>'}</div>
+      <div id="fdOther" class="frm2" hidden>
+        <label class="f">Звідки<input class="o-input w" id="fdOSrc" value="Паливовоз"></label>
+        <label class="f">Залито, L<input class="o-input w" id="fdOL" type="number" min="1" max="${free}" value="${Math.min(50, free)}"></label>
+      </div>
+      <div class="sumbox" id="fdSum"></div><div class="err" id="fdErr" hidden></div></div>`;
+    const calc = () => {
+      const other = $("#fdBody [name=fsrc]:checked").value === "other";
+      if (other) return { other, l: Math.min(free, Math.max(0, Math.round(+$("#fdOL").value || 0))), have: 0, sel: [] };
+      const sel = $$("#fdCans input:checked").map(i => cans.find(c => c.id === i.value)), have = sel.reduce((s, c) => s + c.l, 0);
+      return { other, sel, have, l: Math.min(free, have) };
+    };
+    const upd = () => {
+      const r = calc();
+      $("#fdCans").hidden = r.other; $("#fdOther").hidden = !r.other; $("#fdErr").hidden = true;
+      $("#fdSum").innerHTML = !free ? "Бак повний — заливати нікуди."
+        : r.l ? `Заллється <b>${fmt(r.l)} L</b> → у баку ≈ <b>${fmt(toL(T.fuel) + r.l)} L</b>${r.have > r.l ? `<br>Не вміститься ${fmt(r.have - r.l)} L — лишиться в каністрі.` : ""}`
+        : r.other ? "Вкажіть, скільки залито." : "Позначте каністри, з яких заливаєте.";
+    };
+    fDialog("Заправка генератора", html, () => {
+      const r = calc();
+      if (!free) { ferr("Бак повний."); return false; }
+      if (!r.l) { ferr(r.other ? "Вкажіть кількість літрів." : "Позначте хоча б одну каністру з паливом."); return false; }
+      const from = T.fuel, to = from + r.l / TANK * 100, t = Date.now();
+      let src;
+      if (r.other) src = $("#fdOSrc").value.trim() || "Інше джерело";
+      else {
+        const p = pour(r.sel, r.l);
+        src = `Каністри ${ids(p.used)}`;
+        moves.push({ t, kind: "out", title: "Заправка генератора", sub: `з каністр ${ids(p.used)}`, delta: -p.l, who: "Ви" });
+      }
+      const rec = { t, src, l: r.l, from, to, who: "Ви", sensor: "wait" };
+      fuelLog.push(rec);
+      T.fuel = to;
+      chat("Ви", `Заправка: <b>${fmt(r.l)} L</b> (${src}).`);
+      renderFuel(); G.notify(`Записано: ${fmt(r.l)} L`);
+      setTimeout(() => {   // the next controller reading shows the level jump
+        rec.sensor = "ok";
+        events.push({ type: "fuel", s: t, e: null, reason: `${src} · Ви`, fuel: to - from, sum: `${fmt(toL(from))} → ${fmt(toL(to))} L` });
+        events.sort((a, b) => b.s - a.s); renderEvents();
+        chat("Система", `Датчик рівня підтвердив заправку: ${fmt(toL(from))} → ${fmt(toL(to))} L.`);
+        renderFuel();
+      }, 3000);
+    }, { okLabel: "Записати заправку", onInput: upd });
+  };
+
+  $("#fIncome").onclick = () => {
+    const empt = cans.filter(c => c.l < c.vol);
+    const html = `<div class="frm">
+      <div class="seg" role="radiogroup" aria-label="Що надійшло"><label><input type="radio" name="fin" value="fill"${empt.length ? " checked" : ""}>Наповнити наявні</label><label><input type="radio" name="fin" value="new"${empt.length ? "" : " checked"}>Нові каністри</label></div>
+      <div id="fiFill">${empt.length ? `<div class="picks">${empt.map(c => `<label class="pick"><input type="checkbox" value="${c.id}" checked><span><b>${c.id}</b><small>${c.loc}</small></span><span class="num">${fmt(c.l)} → ${c.vol} L</span></label>`).join("")}</div>` : '<div class="hint">Усі каністри повні.</div>'}</div>
+      <div id="fiNew" class="frm2" hidden>
+        <label class="f">Кількість<input class="o-input w" id="fiN" type="number" min="1" max="50" value="5"></label>
+        <label class="f">Об'єм каністри, L<input class="o-input w" id="fiV" type="number" min="5" max="60" value="${CAN_VOL}"></label>
+        <label class="f">Де зберігати<select class="o-input w" id="fiLoc">${LOCS.map(l => `<option>${l}</option>`).join("")}</select></label>
+      </div>
+      <div class="frm2">
+        <label class="f">Ціна, грн/л<input class="o-input w" id="fiP" type="number" min="0" step="0.01" value="${lastPrice().toFixed(2)}"></label>
+        <label class="f">Постачальник<input class="o-input w" id="fiS" value="АЗС WOG"></label>
+      </div>
+      <div class="sumbox" id="fiSum"></div><div class="err" id="fdErr" hidden></div></div>`;
+    const calc = () => {
+      const fresh = $("#fdBody [name=fin]:checked").value === "new", price = Math.max(0, +$("#fiP").value || 0);
+      if (fresh) { const n = Math.round(+$("#fiN").value || 0), vol = Math.round(+$("#fiV").value || 0); return { fresh, n, vol, add: n * vol, price }; }
+      const sel = $$("#fiFill input:checked").map(i => cans.find(c => c.id === i.value));
+      return { fresh, sel, n: sel.length, add: sel.reduce((s, c) => s + c.vol - c.l, 0), price };
+    };
+    const upd = () => {
+      const r = calc();
+      $("#fiFill").hidden = r.fresh; $("#fiNew").hidden = !r.fresh; $("#fdErr").hidden = true;
+      $("#fiSum").innerHTML = r.add > 0 ? `+<b>${fmt(r.add)} L</b> · ${canAcc(r.n)}${r.price ? ` · <b>${money(r.add * r.price)}</b>` : ""}<br>У каністрах стане ${fmt(stockL() + r.add)} L` : "Нічого не обрано.";
+    };
+    fDialog("Надходження палива", html, () => {
+      const r = calc(), t = Date.now(), supplier = $("#fiS").value.trim() || "—";
+      if (r.fresh && (r.n < 1 || r.n > 50 || r.vol < 5 || r.vol > 60)) { ferr("Кількість 1–50, об'єм 5–60 L."); return false; }
+      if (!(r.add > 0)) { ferr("Позначте каністри для наповнення."); return false; }
+      if (r.fresh) for (let i = 0; i < r.n; i++) addCan($("#fiLoc").value, r.vol);
+      else r.sel.forEach(c => (c.l = c.vol));
+      const title = r.fresh ? `Надходження: ${r.n} ${plural(r.n, ["нова каністра", "нові каністри", "нових каністр"])}` : `Надходження: наповнено ${canAcc(r.n)}`;
+      moves.push({ t, kind: "in", title, sub: r.price ? buyNote(supplier, r.price, r.add) : supplier, delta: r.add, who: "Ви", price: r.price || null });
+      chat("Ви", `${title}, <b>+${fmt(r.add)} L</b>.`);
+      renderFuel(); G.notify(`Додано ${fmt(r.add)} L`);
+    }, { okLabel: "Оприбуткувати", onInput: upd });
+  };
+
+  function openCan(c) {
+    let armed = false;
+    const html = `<div class="frm">
+      <div class="sumbox">${{ full: "Повна", part: "Частково заповнена", empty: "Порожня" }[canState(c)]} · ${fmt(c.l)} з ${c.vol} L · ${c.loc}</div>
+      <div class="frm2">
+        <label class="f">Фактично в каністрі, L<input class="o-input w" id="cdL" type="number" min="0" max="${c.vol}" value="${c.l}"></label>
+        <label class="f">Де зберігається<select class="o-input w" id="cdLoc">${LOCS.map(l => `<option${l === c.loc ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+      </div>
+      <div class="hint">Зміна кількості потрапляє в рух запасу як коригування (інвентаризація).</div><div class="err" id="fdErr" hidden></div></div>`;
+    fDialog(`Каністра ${c.id} · ${c.vol} L`, html, () => {
+      const l = Math.round(+$("#cdL").value), loc = $("#cdLoc").value, t = Date.now();
+      if (!(l >= 0 && l <= c.vol)) { ferr(`Від 0 до ${c.vol} L.`); return false; }
+      if (l !== c.l) moves.push({ t, kind: "fix", title: `Коригування ${c.id}`, sub: `${fmt(c.l)} → ${fmt(l)} L`, delta: l - c.l, who: "Ви" });
+      if (loc !== c.loc) moves.push({ t, kind: "loc", title: `Переміщення ${c.id}`, sub: `${c.loc} → ${loc}`, delta: 0, who: "Ви" });
+      c.l = l; c.loc = loc;
+      renderFuel(); G.notify("Збережено");
+    }, { okLabel: "Зберегти", extra: ["Списати", () => {
+      if (!armed) { armed = true; $("#fdExtra").textContent = "Так, списати"; return false; }
+      cans.splice(cans.indexOf(c), 1);
+      moves.push({ t: Date.now(), kind: "off", title: `Списано ${c.id}`, sub: c.l ? `разом із ${fmt(c.l)} L палива` : "порожня", delta: -c.l, who: "Ви" });
+      renderFuel(); G.notify(`${c.id} списано`);
+    }] });
+  }
+
   // ---------- routing
-  const PAGES = ["form", "readings", "analytics", "events"];
+  const PAGES = ["form", "readings", "analytics", "events", "fuel"];
   function route() {
     const p = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "form";
     $$(".page").forEach(x => x.classList.toggle("on", x.id === `page-${p}`));
@@ -1641,13 +1990,14 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
     if (p === "readings") renderReadings();
     if (p === "analytics") renderAnalytics();
     if (p === "events") renderEvents();
+    if (p === "fuel") renderFuel();
     window.scrollTo(0, 0);
   }
   $$("[data-href]").forEach(b => b.onclick = () => { location.hash = b.dataset.href; });
   window.addEventListener("hashchange", route);
   let rsT, lastW = innerWidth;
-  window.addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (innerWidth !== lastW && location.hash === "#analytics") renderAnalytics(); lastW = innerWidth; }, 150); });
-  renderFull(); renderReadings(); renderAnalytics(); renderEvents(); route();
+  window.addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (innerWidth !== lastW && location.hash === "#analytics") renderAnalytics(); if (innerWidth !== lastW && location.hash === "#fuel") renderUse(); lastW = innerWidth; }, 150); });
+  renderFull(); renderReadings(); renderAnalytics(); renderEvents(); renderFuel(); route();
 })();
 </script>
 
