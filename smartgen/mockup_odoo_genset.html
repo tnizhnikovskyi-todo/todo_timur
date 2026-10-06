@@ -1,0 +1,1640 @@
+<title>Генератор · Садова вулиця</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block">
+<script>document.documentElement.classList.add("js");</script>
+<style>
+/* Layout: Odoo 20 form view in one theme. Navbar + control panel, statusbar pill, sheet.
+   Inside the sheet: fields, then the "Пульт" grid — controls + power diagram on the right,
+   gauges + parameters on the left (on phones: controls first). Notebook below, chatter aside on wide screens.
+   Colors from Odoo 20 (19.5a) web.assets_web / web.assets_web_dark CSS. One font: Odoo system stack. */
+:root {
+  --o-bg: #f8f9fa;
+  --o-sheet: #ffffff;
+  --o-card: #ffffff;
+  --o-fg: #212529;
+  --o-muted: #6c727a;
+  --o-border: #dee2e6;
+  --o-border-strong: #ced4da;
+  --o-hover: #e7ebed;
+  --o-primary: #714b67;
+  --o-primary-hover: #52374b;
+  --o-primary-soft: #f1edf0;
+  --o-on-primary: #ffffff;
+  --o-teal: #017e84;
+  --o-teal-soft: #e6f2f3;
+  --o-ok: #1f8a4c; --o-ok-soft: #e2f3e9;
+  --o-warn: #b26b00; --o-warn-soft: #fcefd6;
+  --o-crit: #d23f3a; --o-crit-soft: #fbe3e0;
+  --o-info: #1c63a6; --o-info-soft: #e1edf9;
+  --o-shadow: 0 4px 18px rgba(33, 37, 41, .14);
+  --o-track: #e9ecef;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, "Noto Sans", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --o-bg: #1f1f23; --o-sheet: #2c2e35; --o-card: #262830; --o-fg: #e4e4e6; --o-muted: #a3a6ae; --o-border: #3e3f47; --o-border-strong: #4a4c55;
+    --o-hover: #383a42; --o-primary: #92427d; --o-primary-hover: #a74c8f; --o-primary-soft: #3a2a36; --o-on-primary: #ffffff;
+    --o-teal: #4fb8be; --o-teal-soft: #1f3a3c;
+    --o-ok: #5fc98c; --o-ok-soft: #1d3428; --o-warn: #e8ae4a; --o-warn-soft: #3b3018; --o-crit: #f07a70; --o-crit-soft: #3e2220;
+    --o-info: #8ab8f0; --o-info-soft: #1d2c40; --o-shadow: 0 4px 18px rgba(0, 0, 0, .5); --o-track: #3a3c44;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --o-bg: #1f1f23; --o-sheet: #2c2e35; --o-card: #262830; --o-fg: #e4e4e6; --o-muted: #a3a6ae; --o-border: #3e3f47; --o-border-strong: #4a4c55;
+  --o-hover: #383a42; --o-primary: #92427d; --o-primary-hover: #a74c8f; --o-primary-soft: #3a2a36; --o-on-primary: #ffffff;
+  --o-teal: #4fb8be; --o-teal-soft: #1f3a3c;
+  --o-ok: #5fc98c; --o-ok-soft: #1d3428; --o-warn: #e8ae4a; --o-warn-soft: #3b3018; --o-crit: #f07a70; --o-crit-soft: #3e2220;
+  --o-info: #8ab8f0; --o-info-soft: #1d2c40; --o-shadow: 0 4px 18px rgba(0, 0, 0, .5); --o-track: #3a3c44;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--o-bg); color: var(--o-fg); font-family: var(--font); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--o-primary); outline-offset: 2px; }
+.ms { font-family: "Material Symbols Rounded"; font-weight: 400; font-style: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; font-variation-settings: "FILL" 0, "opsz" 20; display: inline-block; width: 1em; overflow: hidden; vertical-align: -4px; flex: none; }
+.num, .tab { font-variant-numeric: tabular-nums; }
+
+/* navbar (Odoo 20: transparent over the page background) */
+.navbar { display: flex; align-items: center; gap: 2px; height: 46px; padding-inline: 8px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--o-bg); }
+.nav-entry { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding-inline: 8px; border-radius: 6px; background: transparent; border: 0; color: var(--o-fg); white-space: nowrap; }
+.nav-entry:hover { background: var(--o-hover); }
+.brand { font-size: 1.15em; font-weight: 500; }
+.navbar .grow { flex: 1; }
+.avatar { width: 26px; height: 26px; border-radius: 6px; background: var(--o-primary); color: var(--o-on-primary); display: inline-grid; place-items: center; font-size: 11px; font-weight: 600; flex: none; }
+.mock-badge { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--o-primary); border: 1px solid var(--o-primary); border-radius: 999px; padding: 1px 8px; margin-right: 6px; }
+
+/* control panel */
+.cp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 4px 16px 8px; border-bottom: 1px solid var(--o-border); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; border: 1px solid var(--o-border-strong); background: var(--o-sheet); color: var(--o-fg); padding: 4px 12px; font-weight: 500; font-size: 13.5px; min-height: 32px; white-space: nowrap; }
+.btn:hover { background: var(--o-hover); }
+.btn-primary { background: var(--o-primary); border-color: var(--o-primary); color: var(--o-on-primary); }
+.btn-primary:hover { background: var(--o-primary-hover); border-color: var(--o-primary-hover); }
+.btn-danger { color: var(--o-crit); }
+.crumbs { display: flex; align-items: center; gap: 6px; font-size: 13px; min-width: 0; }
+.crumbs a { color: var(--o-primary); text-decoration: none; }
+.crumbs a:hover { text-decoration: underline; }
+.crumbs .cur { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crumbs .gear { color: var(--o-muted); background: none; border: 0; padding: 2px; border-radius: 4px; }
+.cp .grow { flex: 1; }
+.pager { display: flex; align-items: center; gap: 4px; color: var(--o-muted); font-size: 13px; }
+.pager button { background: none; border: 1px solid var(--o-border-strong); border-radius: 6px; width: 30px; height: 30px; display: grid; place-items: center; color: var(--o-fg); }
+
+/* layout */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; align-items: start; }
+.formcol { min-width: 0; padding: 8px 16px 32px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.form-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.form-header .grow { flex: 1; }
+.statusbar { display: flex; padding: 2px; border: 1px solid var(--o-border); border-radius: 9px; background: var(--o-sheet); overflow-x: auto; max-width: 100%; }
+.arrow { border: 0; background: transparent; color: var(--o-muted); font-size: 13px; padding: 4px 16px 4px 20px; white-space: nowrap; clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%, 9px 50%); margin-left: -6px; cursor: default; }
+.arrow:first-child { clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%); margin-left: 0; padding-left: 12px; border-radius: 6px 0 0 6px; }
+.arrow:last-child { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 9px 50%); padding-right: 12px; border-radius: 0 6px 6px 0; }
+.arrow.cur { background: var(--o-teal-soft); color: var(--o-teal); font-weight: 600; }
+
+/* sheet */
+.sheet { background: var(--o-sheet); border: 1px solid var(--o-border); padding: 20px 24px 24px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
+.buttonbox { display: flex; flex-wrap: wrap; justify-content: flex-end; margin: -8px -12px 0 0; }
+.stat { display: flex; align-items: center; gap: 8px; background: transparent; border: 0; border-left: 1px solid var(--o-border); padding: 4px 14px; color: var(--o-fg); text-align: left; min-width: 118px; }
+.stat:first-child { border-left: 0; }
+.stat:hover { background: var(--o-hover); }
+.stat .ms { color: var(--o-muted); font-size: 22px; }
+.stat .t { display: block; font-size: 12px; line-height: 1.25; }
+.stat .v { display: block; font-size: 12px; font-weight: 500; color: var(--o-primary); font-variant-numeric: tabular-nums; }
+.titleblock h1 { margin: 0; font-size: 26px; font-weight: 500; line-height: 1.2; text-wrap: balance; }
+.titleblock .sub { color: var(--o-muted); font-size: 13px; margin-top: 2px; }
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+.field { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px; padding: 4px 0; align-items: baseline; }
+.field .lbl { font-weight: 500; }
+.field .val { min-width: 0; }
+.field small { color: var(--o-muted); }
+.badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 1px 9px; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.b-ok { background: var(--o-ok-soft); color: var(--o-ok); }
+.b-warn { background: var(--o-warn-soft); color: var(--o-warn); }
+.b-crit { background: var(--o-crit-soft); color: var(--o-crit); }
+.b-info { background: var(--o-info-soft); color: var(--o-info); }
+.b-prim { background: var(--o-primary-soft); color: var(--o-primary); }
+.b-teal { background: var(--o-teal-soft); color: var(--o-teal); }
+.b-mute { background: var(--o-hover); color: var(--o-muted); }
+.prop { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--o-info); background: var(--o-info-soft); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+.sep { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--o-muted); font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--o-border); margin: 0 0 10px; }
+
+/* ---------- Пульт: cards in the same theme */
+/* two independent stacks, so a short card never leaves a gap next to a tall one */
+.desk { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.desk-col { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--o-card); border: 1px solid var(--o-border); border-radius: 10px; padding: 14px 16px 16px; min-width: 0; }
+.card h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--o-muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card h3 small { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--o-muted); }
+
+/* gauges */
+.gauges { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; }
+.gauge { text-align: center; min-width: 0; }
+.gauge svg { width: 100%; max-width: 180px; height: auto; display: block; margin: 0 auto; overflow: visible; }
+.gauge .gv { margin-top: 2px; font-size: 22px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.gauge .gv span { font-size: 13px; font-weight: 500; color: var(--o-muted); margin-left: 3px; }
+.gauge .gl { font-size: 12.5px; color: var(--o-muted); margin-top: 2px; }
+.g-track { stroke: var(--o-track); }
+.g-ok { stroke: var(--o-teal); } .g-warn { stroke: var(--o-warn); } .g-crit { stroke: var(--o-crit); } .g-low { stroke: var(--o-info); }
+.g-tick { stroke: var(--o-border-strong); }
+.g-lab { fill: var(--o-muted); font: 500 11px var(--font); }
+.g-needle { fill: var(--o-fg); }
+.g-hub { fill: var(--o-fg); } .g-hub2 { fill: var(--o-card); }
+
+/* parameters */
+.pgroup + .pgroup { margin-top: 14px; }
+.pgroup h4 { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; }
+.pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 20px; }
+.p .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--o-muted); }
+.p .row b { color: var(--o-fg); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.p .track { height: 5px; border-radius: 99px; background: var(--o-track); overflow: hidden; margin-top: 4px; }
+.p .fill { height: 100%; width: 0%; border-radius: 99px; background: var(--o-teal); }
+.p .fill.f-prim { background: var(--o-primary); }
+.p .fill.f-info { background: var(--o-info); }
+.p .fill.f-ok { background: var(--o-ok); }
+
+/* controls */
+.pad { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { --c: var(--o-teal); --cs: var(--o-teal-soft); display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; text-align: left; padding: 12px; border-radius: 10px; border: 1px solid var(--o-border); background: var(--o-card); color: var(--o-fg); min-height: 70px; transition: border-color .15s, background .15s, transform .08s; }
+.tile:hover { border-color: var(--c); }
+.tile:active { transform: scale(.985); }
+.tile .ico { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: var(--cs); color: var(--c); }
+.tile .ico .ms { font-size: 26px; font-variation-settings: "FILL" 1, "opsz" 24; }
+.tile .tl { font-weight: 600; font-size: 15px; line-height: 1.2; }
+.tile .tl small { display: block; font-weight: 400; font-size: 12px; color: var(--o-muted); margin-top: 2px; }
+.tile .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--o-border-strong); }
+.tile.active { border-color: var(--c); background: var(--cs); }
+.tile.active .dot { background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 22%, transparent); }
+.t-auto { --c: var(--o-teal); --cs: var(--o-teal-soft); }
+.t-start { --c: var(--o-ok); --cs: var(--o-ok-soft); }
+.t-manual { --c: var(--o-primary); --cs: var(--o-primary-soft); }
+.t-stop { --c: var(--o-crit); --cs: var(--o-crit-soft); }
+.ctl-foot { margin-top: 12px; font-size: 12.5px; color: var(--o-muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+/* power diagram */
+.oneline { display: grid; grid-template-columns: auto minmax(24px, 1fr) auto minmax(24px, 1fr) auto; align-items: center; gap: 8px; }
+.node { display: grid; justify-items: center; gap: 4px; font-size: 12.5px; color: var(--o-muted); text-align: center; }
+.node .pic { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; background: var(--o-hover); color: var(--o-muted); transition: background .2s, color .2s; }
+.node .pic svg { width: 30px; height: 30px; }
+.node.on .pic { background: var(--o-teal-soft); color: var(--o-teal); }
+.node.on { color: var(--o-fg); }
+.wire { height: 4px; border-radius: 2px; background: var(--o-track); margin-bottom: 20px; }
+.wire.on { background: repeating-linear-gradient(90deg, var(--o-teal) 0 12px, transparent 12px 20px), var(--o-teal-soft); background-size: 20px 4px, 100% 4px; animation: flow-r .9s linear infinite; }
+.wire.on.rev { animation-name: flow-l; }
+@keyframes flow-r { to { background-position: 20px 0, 0 0; } }
+@keyframes flow-l { to { background-position: -20px 0, 0 0; } }
+.cb { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--o-border); }
+.cb:first-of-type { margin-top: 12px; }
+.cb .nm { font-weight: 500; }
+.cb .nm small { display: flex; align-items: center; gap: 6px; font-weight: 400; color: var(--o-muted); font-size: 12.5px; }
+.led { width: 8px; height: 8px; border-radius: 50%; background: var(--o-border-strong); flex: none; }
+.led.on { background: var(--o-ok); box-shadow: 0 0 0 3px var(--o-ok-soft); }
+
+/* out-of-schedule */
+.ooh { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 32px; }
+.durrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.o-input { border: 0; border-bottom: 1px solid var(--o-border-strong); background: transparent; padding: 3px 2px; width: 64px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.o-input:focus { border-bottom-color: var(--o-primary); outline: none; }
+.clock { font-size: 34px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.tbar { height: 5px; background: var(--o-track); border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+.tbar i { display: block; height: 100%; width: 0%; background: var(--o-primary); transition: width .5s linear; }
+.hint { font-size: 12.5px; color: var(--o-muted); }
+.rule { font-size: 12.5px; color: var(--o-muted); padding: 4px 0 4px 10px; border-left: 3px solid var(--o-primary); margin-bottom: 8px; }
+.err { color: var(--o-crit); font-size: 12.5px; margin-top: 4px; }
+
+/* notebook */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--o-border); overflow-x: auto; }
+.tabs button { border: 1px solid transparent; border-bottom: 0; background: transparent; padding: 7px 14px; border-radius: 6px 6px 0 0; color: var(--o-muted); white-space: nowrap; margin-bottom: -1px; }
+.tabs button:hover { border-color: var(--o-hover); }
+.tabs button[aria-selected="true"] { background: var(--o-sheet); border-color: var(--o-border); color: var(--o-fg); font-weight: 500; }
+.tabs .cnt { font-size: 11.5px; background: var(--o-hover); border-radius: 99px; padding: 0 6px; margin-left: 5px; font-variant-numeric: tabular-nums; }
+.panel { padding-top: 14px; }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-weight: 600; padding: 7px 10px; border-bottom: 1px solid var(--o-border); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--o-border); vertical-align: middle; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td select, td input[type="time"], td input[type="date"] { border: 0; border-bottom: 1px solid var(--o-border-strong); background: transparent; padding: 3px 2px; }
+.addline { background: none; border: 0; color: var(--o-primary); padding: 7px 10px; }
+.addline:hover { text-decoration: underline; }
+.x { background: none; border: 0; color: var(--o-muted); border-radius: 4px; padding: 2px; }
+.x:hover { color: var(--o-crit); background: var(--o-hover); }
+.cols2 { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; }
+.tblhead { font-weight: 600; margin: 0 0 6px; font-size: 14px; }
+.exc-what { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--o-border-strong); background: var(--o-sheet); border-radius: 999px; padding: 1px 8px 1px 10px; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--o-fg); }
+.chip:hover { background: var(--o-hover); }
+.chip .ms { font-size: 15px; color: var(--o-muted); vertical-align: -3px; }
+.switch { position: relative; width: 34px; height: 20px; display: inline-block; vertical-align: middle; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span { position: absolute; inset: 0; background: var(--o-border-strong); border-radius: 99px; transition: background .15s; }
+.switch span::after { content: ""; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: var(--o-sheet); border-radius: 50%; transition: transform .15s; }
+.switch input:checked + span { background: var(--o-teal); }
+.switch input:checked + span::after { transform: translateX(14px); }
+.switch input:focus-visible + span { outline: 2px solid var(--o-primary); outline-offset: 2px; }
+.alarm { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--o-border); }
+.alarm .stripe { border-radius: 2px; }
+.alarm b { display: block; font-weight: 500; }
+.alarm small { color: var(--o-muted); }
+.ex { font-size: 11px; color: var(--o-muted); border: 1px dashed var(--o-border-strong); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+
+/* chatter */
+.chatter { background: var(--o-bg); border-left: 1px solid var(--o-border); padding: 8px 12px 24px; position: sticky; top: 46px; max-height: calc(100vh - 46px); overflow-y: auto; }
+.ch-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--o-border); }
+.ch-top .grow { flex: 1; }
+.ch-top .ic { color: var(--o-muted); display: inline-flex; align-items: center; gap: 2px; font-size: 13px; }
+.day { display: flex; align-items: center; gap: 10px; color: var(--o-muted); font-size: 12px; margin: 14px 0 6px; }
+.day::before, .day::after { content: ""; flex: 1; border-top: 1px solid var(--o-border); }
+.msg { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 8px 4px; border-radius: 6px; }
+.msg:hover { background: var(--o-hover); }
+.msg .av { width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: #fff; }
+.msg .who { font-weight: 600; font-size: 13.5px; }
+.msg .when { color: var(--o-muted); font-size: 12px; margin-left: 6px; font-weight: 400; }
+.msg .body { font-size: 13.5px; }
+.msg .track { color: var(--o-muted); font-size: 13px; }
+
+/* dialogs + notification */
+.scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: start center; padding: 72px 16px 16px; z-index: 40; }
+.dialog { background: var(--o-sheet); border-radius: 8px; width: min(500px, 100%); box-shadow: var(--o-shadow); border: 1px solid var(--o-border); }
+.dialog header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--o-border); font-size: 17px; font-weight: 500; }
+.dialog header button { background: none; border: 0; color: var(--o-muted); }
+.dialog .body { padding: 16px; }
+.dialog .warnbox { margin-top: 12px; background: var(--o-warn-soft); color: var(--o-warn); border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.dialog footer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--o-border); }
+.timegrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.timegrid label { display: grid; gap: 6px; font-weight: 500; }
+.timegrid .o-input { width: 100%; font-size: 18px; }
+.notif { position: fixed; top: 56px; right: 16px; z-index: 50; background: var(--o-sheet); border: 1px solid var(--o-border); border-left: 4px solid var(--o-ok); border-radius: 6px; padding: 10px 14px; box-shadow: var(--o-shadow); max-width: min(360px, calc(100% - 32px)); font-size: 13.5px; }
+.notif.warn { border-left-color: var(--o-warn); }
+
+/* ---------- responsive */
+@media (max-width: 1280px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .chatter { position: static; max-height: none; border-left: 0; border-top: 1px solid var(--o-border); padding-inline: 16px; }
+}
+@media (max-width: 1100px) {
+  .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .desk { grid-template-columns: minmax(0, 1fr); }
+  .desk-col { display: contents; }
+  .a-controls { order: 1; } .a-gauges { order: 2; } .a-diagram { order: 3; } .a-params { order: 4; }
+  .gauges { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ooh, .cols2, .groups { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 620px) {
+  .formcol { padding-inline: 8px; }
+  .sheet { padding: 14px 12px 18px; gap: 16px; }
+  .titleblock h1 { font-size: 22px; }
+  .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field { grid-template-columns: 128px minmax(0, 1fr); }
+  .nav-entry.sec { display: none; }
+  .buttonbox { margin: 0; justify-content: flex-start; }
+  .stat { min-width: 0; flex: 1 1 45%; border-left: 0; padding: 6px 8px; }
+  .tile { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; padding: 10px; min-height: 64px; }
+  .tile .ico { width: 40px; height: 40px; }
+  .node .pic { width: 44px; height: 44px; }
+  .cp { padding-inline: 8px; }
+  .form-header .btn { order: 2; }
+}
+@media (max-width: 380px) {
+  .pad { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- pages (hash routing; without JS every page stays visible) */
+.js .page { display: none; }
+.js .page.on { display: block; }
+
+/* top menus */
+.menus { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.menu { text-decoration: none; position: relative; }
+.menu[aria-current="page"] { font-weight: 600; }
+.menu[aria-current="page"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -8px; height: 2px; border-radius: 2px; background: var(--o-primary); }
+
+/* search bar + facets (Odoo control panel) */
+.searchbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; border: 1px solid var(--o-border-strong); border-radius: 6px; background: var(--o-sheet); padding: 3px 6px; min-height: 32px; flex: 1 1 320px; max-width: 640px; }
+.searchbar .ms { color: var(--o-muted); }
+.searchbar input { border: 0; background: transparent; flex: 1; min-width: 80px; outline: none; font-size: 13.5px; }
+.facet { display: inline-flex; align-items: center; gap: 4px; background: var(--o-primary-soft); color: var(--o-primary); border-radius: 4px; padding: 0 4px 0 8px; font-size: 12.5px; font-weight: 500; }
+.facet button { background: none; border: 0; color: inherit; padding: 0; display: grid; place-items: center; }
+.facet .ms { font-size: 16px; color: inherit; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.fbtn { border: 1px solid var(--o-border-strong); background: var(--o-sheet); border-radius: 999px; padding: 2px 12px; font-size: 13px; color: var(--o-fg); }
+.fbtn[aria-pressed="true"] { background: var(--o-primary-soft); border-color: var(--o-primary); color: var(--o-primary); font-weight: 500; }
+.views { display: flex; border: 1px solid var(--o-border-strong); border-radius: 6px; overflow: hidden; }
+.views a, .views span { display: grid; place-items: center; width: 34px; height: 30px; color: var(--o-muted); text-decoration: none; }
+.views .cur { background: var(--o-teal-soft); color: var(--o-teal); }
+.views a:hover { background: var(--o-hover); }
+.pagebody { padding: 12px 16px 32px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+
+/* list view */
+.o-list { overflow: auto; background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 8px; max-height: 70vh; }
+.o-list table { font-size: 13px; }
+.o-list th { position: sticky; top: 0; background: var(--o-sheet); z-index: 2; font-weight: 600; }
+.o-list th.n, .o-list td.n { text-align: right; }
+.o-list td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.o-list tbody tr:hover td { background: var(--o-hover); }
+.o-list .sticky { position: sticky; left: 0; background: var(--o-sheet); z-index: 1; }
+.o-list th.sticky { z-index: 3; }
+.o-list tbody tr:hover td.sticky { background: var(--o-hover); }
+.o-list .dim { color: var(--o-muted); }
+.o-list tr.grp td { background: var(--o-bg); font-weight: 600; }
+.listfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--o-muted); font-size: 12.5px; }
+
+/* segmented control */
+.seg { display: inline-flex; border: 1px solid var(--o-border-strong); border-radius: 8px; padding: 2px; gap: 2px; background: var(--o-sheet); flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; border-radius: 6px; padding: 4px 12px; font-size: 13px; color: var(--o-muted); }
+.seg button[aria-pressed="true"] { background: var(--o-teal-soft); color: var(--o-teal); font-weight: 600; }
+
+/* full data: value groups + flags */
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; margin-top: 12px; align-items: start; }
+.dcard { border: 1px solid var(--o-border); border-radius: 8px; overflow: hidden; min-width: 0; }
+.dcard h5 { margin: 0; padding: 8px 12px; font-size: 13px; font-weight: 600; background: var(--o-bg); border-bottom: 1px solid var(--o-border); display: flex; justify-content: space-between; gap: 8px; }
+.dcard h5 small { font-weight: 400; color: var(--o-muted); }
+.dcard table { font-size: 13px; }
+.dcard td { padding: 5px 12px; }
+.dcard td.n.wrap { white-space: normal; }
+.dcard td.addr { color: var(--o-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; width: 1%; white-space: nowrap; }
+.dcard tr:last-child td { border-bottom: 0; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; }
+.flag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--o-border); border-radius: 999px; padding: 2px 10px 2px 8px; font-size: 12.5px; color: var(--o-muted); background: var(--o-sheet); }
+.flag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--o-border-strong); }
+.flag i { font-style: normal; font-size: 11px; color: var(--o-muted); font-variant-numeric: tabular-nums; }
+.flag.on { color: var(--o-fg); font-weight: 500; }
+.flag.on.k-state { border-color: var(--o-teal); background: var(--o-teal-soft); } .flag.on.k-state::before { background: var(--o-teal); }
+.flag.on.k-crit { border-color: var(--o-crit); background: var(--o-crit-soft); } .flag.on.k-crit::before { background: var(--o-crit); }
+.flag.on.k-warn { border-color: var(--o-warn); background: var(--o-warn-soft); } .flag.on.k-warn::before { background: var(--o-warn); }
+.flag.on.k-io { border-color: var(--o-ok); background: var(--o-ok-soft); } .flag.on.k-io::before { background: var(--o-ok); }
+.legendline { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--o-muted); margin-top: 8px; }
+.legendline span { display: inline-flex; align-items: center; gap: 6px; }
+.legendline span::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+
+/* analytics */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+.kpi .k { font-size: 12.5px; color: var(--o-muted); }
+.kpi .v { font-size: 26px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.kpi .v small { font-size: 14px; font-weight: 500; color: var(--o-muted); margin-left: 3px; }
+.kpi .d { font-size: 12px; color: var(--o-muted); margin-top: 2px; }
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.chart { background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 8px; padding: 12px 14px 10px; min-width: 0; position: relative; }
+.chart.wide { grid-column: 1 / -1; }
+.chart h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.chart .sub { font-size: 12.5px; color: var(--o-muted); margin: 2px 0 6px; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--o-muted); margin-bottom: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; background: var(--c); display: inline-block; }
+.ax { fill: var(--o-muted); font: 11px var(--font); }
+.grid { stroke: var(--o-border); stroke-width: 1; }
+.base { stroke: var(--o-border-strong); stroke-width: 1; }
+.s-gen { fill: var(--o-teal); } .s-out { fill: var(--o-primary); }
+.ln-teal { stroke: var(--o-teal); fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ar-teal { fill: var(--o-teal); opacity: .12; }
+.ln-prim { stroke: var(--o-primary); fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ar-prim { fill: var(--o-primary); opacity: .1; }
+.dotm { stroke: var(--o-sheet); stroke-width: 2; }
+.hit { fill: transparent; }
+.hit:hover, .hit.hov { fill: var(--o-fg); opacity: .05; }
+.xhair { stroke: var(--o-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.tip { position: absolute; pointer-events: none; background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 6px; box-shadow: var(--o-shadow); padding: 6px 10px; font-size: 12.5px; z-index: 5; white-space: nowrap; }
+.tip b { display: block; font-weight: 600; margin-bottom: 2px; }
+.tip span { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.tip span i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); display: inline-block; }
+.tl { display: grid; gap: 6px; margin-top: 6px; }
+.tl-row { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 12px; }
+.tl-row .lab { color: var(--o-muted); font-variant-numeric: tabular-nums; }
+.tl-bar { position: relative; height: 22px; border-radius: 4px; background: var(--o-ok-soft); overflow: hidden; }
+.tl-bar .out { position: absolute; top: 0; height: 100%; background: var(--o-crit-soft); border-left: 2px solid var(--o-crit); border-right: 2px solid var(--o-crit); }
+.tl-bar .run { position: absolute; top: 7px; height: 8px; border-radius: 3px; background: var(--o-teal); }
+.tl-bar .win { position: absolute; top: 0; height: 100%; border-left: 1px dashed var(--o-border-strong); border-right: 1px dashed var(--o-border-strong); }
+.tl-axis { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; font-size: 11px; color: var(--o-muted); }
+.tl-axis div { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.lg-sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+.example-note { font-size: 12.5px; color: var(--o-muted); display: flex; align-items: center; gap: 6px; }
+
+/* events */
+.evtype { display: inline-flex; align-items: center; gap: 6px; }
+.evtype .ms { font-size: 18px; }
+
+@media (max-width: 900px) {
+  .charts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .navbar { flex-wrap: wrap; height: auto; padding-block: 6px; row-gap: 4px; }
+  .menus { order: 10; flex-basis: 100%; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .menu[aria-current="page"]::after { bottom: -4px; }
+  .chatter { top: 0; }
+  .dcard td.addr { display: none; }
+}
+@media (max-width: 620px) {
+  .pagebody { padding-inline: 8px; }
+  .kpi .v { font-size: 22px; }
+  .searchbar { flex-basis: 100%; max-width: none; }
+}
+.dim { color: var(--o-muted); }
+</style>
+
+<header class="navbar">
+  <button class="nav-entry" type="button" aria-label="Застосунки"><span class="ms">apps</span></button>
+  <span class="nav-entry brand">Генератори</span>
+  <nav class="menus" aria-label="Розділи">
+    <a class="nav-entry menu" href="#form" data-page="form">Генератор</a>
+    <a class="nav-entry menu" href="#readings" data-page="readings">Показання</a>
+    <a class="nav-entry menu" href="#analytics" data-page="analytics">Аналітика</a>
+    <a class="nav-entry menu" href="#events" data-page="events">Події</a>
+    <span class="nav-entry sec">Налаштування</span>
+  </nav>
+  <span class="grow"></span>
+  <span class="mock-badge">Мокап</span>
+  <span class="nav-entry sec" aria-hidden="true"><span class="ms">forum</span></span>
+  <span class="nav-entry sec" aria-hidden="true"><span class="ms">schedule</span></span>
+  <span class="nav-entry sec">ToDo LTD</span>
+  <span class="avatar" aria-label="Користувач">ТН</span>
+</header>
+
+<div class="page" id="page-form">
+<div class="cp">
+  <button class="btn btn-primary" type="button">Новий</button>
+  <div class="crumbs"><a href="#">Генератори</a><span>/</span><span class="cur">Садова вулиця</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
+  <span class="grow"></span>
+  <div class="pager"><span class="num">1 / 3</span><button type="button" aria-label="Попередній"><span class="ms">chevron_left</span></button><button type="button" aria-label="Наступний"><span class="ms">chevron_right</span></button></div>
+</div>
+
+<div class="layout">
+  <main class="formcol">
+    <div class="form-header">
+      <button class="btn" type="button" id="refreshBtn"><span class="ms">refresh</span>Оновити дані</button>
+      <span class="grow"></span>
+      <div class="statusbar" id="statusbar" aria-label="Стан агрегату">
+        <button class="arrow" type="button" data-s="standby" disabled>Очікування</button>
+        <button class="arrow" type="button" data-s="crank" disabled>Пуск</button>
+        <button class="arrow" type="button" data-s="run" disabled>Робота</button>
+        <button class="arrow" type="button" data-s="cool" disabled>Охолодження</button>
+      </div>
+    </div>
+
+    <section class="sheet">
+      <div class="buttonbox">
+        <button class="stat" type="button" data-href="#readings"><span class="ms">monitoring</span><span><span class="t">Показання</span><span class="v" id="statReadings">12 480</span></span></button>
+        <button class="stat" type="button" data-goto="alarms"><span class="ms">notifications</span><span><span class="t">Тривоги</span><span class="v" id="statAlarms">1</span></span></button>
+        <button class="stat" type="button" data-goto="log"><span class="ms">history</span><span><span class="t">Команди</span><span class="v" id="statCmds">6</span></span></button>
+        <button class="stat" type="button" data-goto="data"><span class="ms">build</span><span><span class="t">До ТО</span><span class="v">0 год</span></span></button>
+      </div>
+
+      <div class="titleblock">
+        <h1>Генератор · Садова вулиця</h1>
+        <div class="sub">Київ, вул. Садова · контролер HGM6120N · модуль зв'язку CMM366B-4G</div>
+      </div>
+
+      <div class="groups">
+        <div>
+          <div class="field"><span class="lbl">Режим</span><span class="val"><span class="badge" id="fMode">Авто</span></span></div>
+          <div class="field"><span class="lbl">Керує</span><span class="val"><span class="badge" id="fSrc">Розклад</span></span></div>
+          <div class="field"><span class="lbl">Наступна подія</span><span class="val" id="fNext">—</span></div>
+        </div>
+        <div>
+          <div class="field"><span class="lbl">Зв'язок</span><span class="val"><span class="badge b-ok">Онлайн</span> <small class="num" id="fAge">12 с тому</small></span></div>
+          <div class="field"><span class="lbl">Живлення об'єкта</span><span class="val"><span class="badge" id="fFeed">Мережа</span></span></div>
+          <div class="field"><span class="lbl">Отримувач тривог</span><span class="val"><span class="badge b-warn">не призначено</span></span></div>
+        </div>
+      </div>
+
+      <!-- Пульт -->
+      <div class="desk">
+        <div class="desk-col">
+        <div class="card a-gauges">
+          <h3>Прилади <small id="gaugeNote">двигун зупинено</small></h3>
+          <div class="gauges">
+            <div class="gauge"><svg id="gRpm" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vRpm">0</b><span>об/хв</span></div><div class="gl">Оберти</div></div>
+            <div class="gauge"><svg id="gPow" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vPow">0</b><span>kW</span></div><div class="gl">Потужність</div></div>
+            <div class="gauge"><svg id="gOil" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vOil">0</b><span>kPa</span></div><div class="gl">Тиск оливи</div></div>
+            <div class="gauge"><svg id="gTemp" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vTemp">35</b><span>°C</span></div><div class="gl">Температура ОР</div></div>
+          </div>
+        </div>
+        <div class="card a-params">
+          <h3>Параметри <small class="num" id="paramAge">щойно</small></h3>
+          <div id="params"></div>
+        </div>
+        </div>
+        <div class="desk-col">
+        <div class="card a-controls">
+          <h3>Керування <small id="padState">Очікування</small></h3>
+          <div class="pad">
+            <button class="tile t-auto" type="button" data-cmd="auto"><span class="ico"><span class="ms">autorenew</span></span><span class="tl">Авто<small>пуск при зникненні мережі</small></span><span class="dot"></span></button>
+            <button class="tile t-start" type="button" data-cmd="start"><span class="ico"><span class="ms">play_arrow</span></span><span class="tl">Пуск<small>запустити двигун</small></span><span class="dot"></span></button>
+            <button class="tile t-manual" type="button" data-cmd="manual"><span class="ico"><span class="ms">back_hand</span></span><span class="tl">Ручний<small>без автопуску</small></span><span class="dot"></span></button>
+            <button class="tile t-stop" type="button" data-cmd="stop"><span class="ico"><span class="ms">stop</span></span><span class="tl">Стоп<small>зупинити двигун</small></span><span class="dot"></span></button>
+          </div>
+          <div class="ctl-foot"><span>Кожна команда — з підтвердженням і записом у журнал</span><span>HGM6120N</span></div>
+        </div>
+        <div class="card a-diagram">
+          <h3>Схема живлення <small id="feedNote">від мережі</small></h3>
+          <div class="oneline">
+            <div class="node" id="nGen"><span class="pic"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="11" width="20" height="13" rx="2"/><path d="M8 11V7h8v4M23 15h4v5h-4M2 28h28M9 17.5h6"/></svg></span>Генератор</div>
+            <div class="wire" id="wGen"></div>
+            <div class="node on" id="nLoad"><span class="pic"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 28V12l7 4v-4l7 4v-4l7 4v12zM2 28h28M9 22h2M15 22h2M21 22h2"/></svg></span>Навантаження</div>
+            <div class="wire" id="wMains"></div>
+            <div class="node" id="nMains"><span class="pic"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M16 3l-7 26M16 3l7 26M9 9h14M7 15h18M12 21h8M10 29l11-8M22 29l-11-8"/></svg></span>Мережа</div>
+          </div>
+          <div class="cb"><div class="nm">Автомат генератора<small><span class="led" id="ledGenCB"></span><span id="cbGenTxt">розімкнений</span></small></div><button class="btn" type="button" id="coGen">Замкнути</button></div>
+          <div class="cb"><div class="nm">Автомат мережі<small><span class="led" id="ledMainsCB"></span><span id="cbMainsTxt">замкнений</span></small></div><button class="btn" type="button" id="coMains">Розімкнути</button></div>
+        </div>
+        </div>
+      </div>
+
+      <!-- out-of-schedule -->
+      <div>
+        <div class="sep">Робота поза графіком</div>
+        <div class="ooh">
+          <div>
+            <div id="tIdle">
+              <form class="durrow" id="durForm" novalidate>
+                <label for="durH" style="font-weight:500">Тривалість</label>
+                <input class="o-input" id="durH" type="number" min="0" max="23" value="2" aria-label="Години"><span>год</span>
+                <input class="o-input" id="durM" type="number" min="0" max="59" step="5" value="30" aria-label="Хвилини"><span>хв</span>
+                <button class="btn btn-primary" type="submit">Застосувати</button>
+              </form>
+              <div class="err" id="durErr" hidden></div>
+              <div class="hint" style="margin-top:6px">Генератор перейде в режим Авто на вказаний час, потім у Ручний і Стоп.</div>
+            </div>
+            <div id="tRun" hidden>
+              <div class="hint">Залишилось</div>
+              <div class="clock" id="clock">00:00:00</div>
+              <div class="tbar"><i id="tFill"></i></div>
+              <div class="hint" id="tUntil">—</div>
+              <div class="durrow" style="margin-top:10px">
+                <button class="btn" type="button" data-add="15">+15 хв</button>
+                <button class="btn" type="button" data-add="30">+30 хв</button>
+                <button class="btn" type="button" data-add="60">+60 хв</button>
+                <button class="btn btn-danger" type="button" id="tCancel">Зупинити таймер</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="rule">Таймер має пріоритет над розкладом: поки він іде, зупинка за розкладом не виконується.</div>
+            <div class="rule">Після завершення або зупинки таймера — стан за розкладом: у вікні розкладу Авто, поза ним Ручний + Стоп.</div>
+            <div class="rule" style="border-left-color:var(--o-info)">Після кожної команди система читає режим контролера; якщо він не змінився — повтор до 10 хв, потім тривога.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- notebook -->
+      <div>
+        <div class="tabs" role="tablist">
+          <button role="tab" type="button" aria-selected="true" data-tab="data">Поточні дані</button>
+          <button role="tab" type="button" aria-selected="false" data-tab="schedule">Розклад</button>
+          <button role="tab" type="button" aria-selected="false" data-tab="alarms">Тривоги<span class="cnt" id="cntAlarms">1</span></button>
+          <button role="tab" type="button" aria-selected="false" data-tab="log">Журнал команд<span class="cnt" id="cntLog">6</span></button>
+        </div>
+
+        <div class="panel" data-panel="data">
+          <div style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between">
+            <div class="seg" role="group" aria-label="Набір даних">
+              <button type="button" aria-pressed="true" data-dset="values">Значення <span class="dim">· 03H</span></button>
+              <button type="button" aria-pressed="false" data-dset="flags">Сигнали <span class="dim">· 01H</span></button>
+              <button type="button" aria-pressed="false" data-dset="module">Модуль зв'язку</button>
+            </div>
+            <span class="example-note"><span class="ms">info</span>Усе, що віддає контролер HGM6120N за протоколом v1.7. Значень, яких немає на панелі SmartGen, — приклад.</span>
+          </div>
+          <div id="dValues" class="dgrid"></div>
+          <div id="dFlags" hidden>
+            <div class="legendline">
+              <span style="--c:var(--o-teal)">режим / стан</span><span style="--c:var(--o-crit)">аварійна зупинка</span><span style="--c:var(--o-warn)">попередження</span><span style="--c:var(--o-ok)">вхід / вихід увімкнено</span><span style="--c:var(--o-border-strong)">неактивний</span>
+            </div>
+            <div class="dgrid" id="flagGroups"></div>
+          </div>
+          <div id="dModule" class="dgrid" hidden></div>
+        </div>
+
+        <div class="panel" data-panel="schedule" hidden>
+          <div class="cols2">
+            <div>
+              <div class="tblhead">Вікна роботи в режимі Авто</div>
+              <div class="tbl-wrap"><table>
+                <thead><tr><th>День</th><th>Початок → Авто</th><th>Кінець → Ручний + Стоп</th><th>Активне</th><th></th></tr></thead>
+                <tbody id="schedBody"></tbody>
+              </table></div>
+              <button class="addline" type="button" id="addRow">Додати рядок</button>
+              <div class="hint">Час київський. Команди надсилаються лише на початку і в кінці вікна. Якщо генератор перемкнули на об'єкті, система не повертає режим примусово.</div>
+            </div>
+            <div>
+              <div class="tblhead">Дні-винятки</div>
+              <div class="tbl-wrap"><table>
+                <thead><tr><th>Дата</th><th>Що робити</th><th></th></tr></thead>
+                <tbody id="excBody"></tbody>
+              </table></div>
+              <button class="addline" type="button" id="addExc">Додати виняток</button>
+              <div class="hint">Рядки — приклад. «Інший час» відкриває вікно вибору часу.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="alarms" hidden><div id="alarmList"></div></div>
+
+        <div class="panel" data-panel="log" hidden>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Час</th><th>Хто</th><th>Джерело</th><th>Команда</th><th>Результат</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table></div>
+          <div class="hint" style="margin-top:8px">Рядки до ваших дій у мокапі — приклад.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="chatter" aria-label="Повідомлення та події">
+    <div class="ch-top">
+      <button class="btn btn-primary" type="button">Надіслати повідомлення</button>
+      <button class="btn" type="button">Записати примітку</button>
+      <button class="btn" type="button">Активності</button>
+      <span class="grow"></span>
+      <span class="ic"><span class="ms">attach_file</span></span>
+      <span class="ic"><span class="ms">person</span>3</span>
+    </div>
+    <div id="chat"></div>
+  </aside>
+</div>
+</div>
+
+<!-- ================= Показання ================= -->
+<div class="page" id="page-readings">
+  <div class="cp">
+    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Показання</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
+    <div class="searchbar"><span class="ms">search</span><span class="facet" id="rdFacet">Генератор: Садова вулиця<button type="button" aria-label="Прибрати фільтр"><span class="ms">close</span></button></span><input id="rdSearch" type="search" placeholder="Пошук…" aria-label="Пошук"></div>
+    <span class="grow"></span>
+    <div class="views" aria-label="Подання"><span class="cur" title="Список"><span class="ms">list</span></span><a href="#analytics" title="Графік"><span class="ms">bar_chart</span></a><a href="#analytics" title="Зведена таблиця"><span class="ms">table_chart</span></a></div>
+  </div>
+  <div class="pagebody">
+    <div style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between">
+      <div class="filters" role="group" aria-label="Фільтри">
+        <button class="fbtn" type="button" aria-pressed="false" data-rf="today">Сьогодні</button>
+        <button class="fbtn" type="button" aria-pressed="false" data-rf="run">Генератор працював</button>
+        <button class="fbtn" type="button" aria-pressed="false" data-rf="out">Без мережі</button>
+        <button class="fbtn" type="button" aria-pressed="false" data-rf="hour">Погодинно</button>
+      </div>
+      <span class="example-note"><span class="ms">info</span>Запис кожні 15 хв і при кожній зміні стану. Рядки — приклад даних.</span>
+    </div>
+    <div class="o-list"><table>
+      <thead><tr>
+        <th class="sticky">Час</th><th>Режим</th><th>Агрегат</th><th>Живлення</th>
+        <th class="n">Мережа UAB, V</th><th class="n">Мережа, Hz</th><th class="n">Ген. UAB, V</th><th class="n">Ген., Hz</th>
+        <th class="n">Струм A/B/C, A</th><th class="n">P, kW</th><th class="n">cos φ</th><th class="n">Навант., %</th>
+        <th class="n">Оберти</th><th class="n">ОР, °C</th><th class="n">Олива, kPa</th><th class="n">Паливо, %</th><th class="n">АКБ, V</th><th class="n">D+, V</th>
+        <th class="n">Мотогодини</th><th class="n">Пусків</th><th class="n">kWh</th><th>Тривоги</th>
+      </tr></thead>
+      <tbody id="rdBody"></tbody>
+    </table></div>
+    <div class="listfoot"><span id="rdCount">—</span><div class="pager"><span class="num" id="rdRange">1–80</span><button type="button" id="rdPrev" aria-label="Попередні"><span class="ms">chevron_left</span></button><button type="button" id="rdNext" aria-label="Наступні"><span class="ms">chevron_right</span></button></div></div>
+  </div>
+</div>
+
+<!-- ================= Аналітика ================= -->
+<div class="page" id="page-analytics">
+  <div class="cp">
+    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Аналітика</span></div>
+    <span class="grow"></span>
+    <div class="seg" role="group" aria-label="Період">
+      <button type="button" aria-pressed="false" data-period="7">7 днів</button>
+      <button type="button" aria-pressed="true" data-period="30">30 днів</button>
+    </div>
+    <div class="views" aria-label="Подання"><a href="#readings" title="Список"><span class="ms">list</span></a><span class="cur" title="Графік"><span class="ms">bar_chart</span></span><span title="Зведена таблиця"><span class="ms">table_chart</span></span></div>
+  </div>
+  <div class="pagebody">
+    <span class="example-note"><span class="ms">info</span>Рахується з журналу показань і подій. Цифри — приклад на згенерованих даних за 30 днів.</span>
+    <div class="kpis" id="kpis"></div>
+    <div class="charts">
+      <div class="chart wide"><h4>Робота генератора і відключення мережі</h4><div class="sub">годин на добу</div>
+        <div class="legend"><span style="--c:var(--o-teal)"><i></i>Генератор працював</span><span style="--c:var(--o-primary)"><i></i>Не було мережі</span></div>
+        <div id="chHours"></div></div>
+      <div class="chart wide"><h4>Наявність живлення за останні 7 днів</h4><div class="sub">доба 00:00–24:00 · пунктир — вікно розкладу</div>
+        <div class="legend"><span><span class="lg-sw" style="background:var(--o-ok-soft)"></span>Мережа є</span><span><span class="lg-sw" style="background:var(--o-crit-soft);border:2px solid var(--o-crit)"></span>Немає мережі</span><span><span class="lg-sw" style="background:var(--o-teal)"></span>Генератор працює</span></div>
+        <div id="chTimeline"></div></div>
+      <div class="chart"><h4>Вироблено енергії</h4><div class="sub">kWh на добу</div><div id="chEnergy"></div></div>
+      <div class="chart"><h4>Рівень палива</h4><div class="sub">%, стрибки вгору — заправки</div><div id="chFuel"></div></div>
+      <div class="chart"><h4>Напруга АКБ</h4><div class="sub">V, раз на 2 години</div><div id="chBat"></div></div>
+      <div class="chart"><h4>Навантаження під час останньої роботи</h4><div class="sub" id="lastRunSub">kW</div><div id="chLoad"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Події ================= -->
+<div class="page" id="page-events">
+  <div class="cp">
+    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Події</span></div>
+    <div class="searchbar"><span class="ms">search</span><span class="facet">Останні 30 днів<button type="button" aria-label="Прибрати фільтр"><span class="ms">close</span></button></span><input type="search" placeholder="Пошук…" aria-label="Пошук"></div>
+    <span class="grow"></span>
+    <div class="views" aria-label="Подання"><span class="cur" title="Список"><span class="ms">list</span></span><span title="Календар"><span class="ms">calendar_month</span></span><a href="#analytics" title="Графік"><span class="ms">bar_chart</span></a></div>
+  </div>
+  <div class="pagebody">
+    <div class="filters" role="group" aria-label="Тип події">
+      <button class="fbtn" type="button" aria-pressed="true" data-ef="all">Усі</button>
+      <button class="fbtn" type="button" aria-pressed="false" data-ef="run">Роботи генератора</button>
+      <button class="fbtn" type="button" aria-pressed="false" data-ef="out">Відключення мережі</button>
+      <button class="fbtn" type="button" aria-pressed="false" data-ef="fuel">Заправки</button>
+      <button class="fbtn" type="button" aria-pressed="false" data-ef="alarm">Тривоги</button>
+    </div>
+    <div class="o-list"><table>
+      <thead><tr><th class="sticky">Подія</th><th>Початок</th><th>Кінець</th><th class="n">Тривалість</th><th>Причина / джерело</th><th class="n">kWh</th><th class="n">Пік, kW</th><th class="n">Паливо</th><th>Підсумок</th></tr></thead>
+      <tbody id="evBody"></tbody>
+    </table></div>
+    <div class="listfoot"><span id="evCount">—</span><span>Події формуються автоматично з показань: пуск і зупинка агрегату, зникнення і повернення мережі, зміна рівня палива, тривоги.</span></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <header><span id="dTitle">Підтвердження</span><button type="button" id="dClose" aria-label="Закрити"><span class="ms">close</span></button></header>
+    <div class="body"><div id="dText"></div><div class="warnbox" id="dWarn" hidden></div></div>
+    <footer><button class="btn btn-primary" type="button" id="dOk">Підтвердити</button><button class="btn" type="button" id="dCancel">Скасувати</button></footer>
+  </div>
+</div>
+<div class="scrim" id="timeScrim" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="tdTitle">
+    <header><span id="tdTitle">Інший час</span><button type="button" id="tdClose" aria-label="Закрити"><span class="ms">close</span></button></header>
+    <div class="body">
+      <div class="timegrid">
+        <label for="tdStart">Початок → Авто<input id="tdStart" type="time" class="o-input"></label>
+        <label for="tdEnd">Кінець → Ручний + Стоп<input id="tdEnd" type="time" class="o-input"></label>
+      </div>
+      <div class="err" id="tdErr" hidden></div>
+      <div class="hint" style="margin-top:10px">Діє лише в цю дату замість звичайного вікна розкладу.</div>
+    </div>
+    <footer><button class="btn btn-primary" type="button" id="tdSave">Зберегти</button><button class="btn" type="button" id="tdCancel">Скасувати</button></footer>
+  </div>
+</div>
+<div class="notif" id="notif" hidden></div>
+
+
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+  const DAYS_LONG = ["понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота", "неділя"];
+  const CMD = { auto: "Авто", manual: "Ручний", start: "Пуск", stop: "Стоп" };
+  const fmt = (n, d = 0) => n.toLocaleString("uk-UA", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  const S = {
+    mode: "auto", source: "schedule", unit: "standby", genCB: false, mainsCB: true, timer: null,
+    schedule: [0, 1, 2, 3, 4].map(d => ({ day: d, start: "08:45", end: "18:30", on: true })),
+    exceptions: [{ date: "2026-12-31", action: "custom", start: "08:45", end: "14:00" }, { date: "2027-01-01", action: "skip" }],
+    log: [], chat: [],
+    alarms: [
+      { level: "warn", title: "Термін ТО минув", sub: "Лічильник до ТО: 0 год 0 хв", when: "активна", example: false },
+      { level: "ok", title: "Зв'язок з модулем відновлено", sub: "Не було даних 8 хв (03:12–03:20)", when: "05.10, 03:20", example: true },
+      { level: "crit", title: "Команда «Стоп» не підтверджена за 10 хв", sub: "Розклад, 18:30. Повторено 5 разів, режим не змінився", when: "02.10, 18:40", example: true },
+    ],
+  };
+  const V = { rpm: 0, kw: 0, oil: 0, temp: 35, genU: 0, genF: 0, cur: 0, cos: 1, bat: 27.8, dplus: 0, fuel: 95 };
+  const T = { ...V };
+  const MAINS = { ua: 231, ub: 226, uc: 230, uab: 397, ubc: 396, uca: 404, f: 50.0 };
+
+  // ---------- Kyiv time
+  const fp = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Kyiv", weekday: "short", year: "numeric", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  const WD = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  function kyiv(ts = Date.now()) {
+    const p = Object.fromEntries(fp.formatToParts(new Date(ts)).map(x => [x.type, x.value]));
+    return { wd: WD[p.weekday], min: +p.hour * 60 + +p.minute, hhmm: `${p.hour}:${p.minute}`, full: `${p.day}.${p.month}, ${p.hour}:${p.minute}`, iso: `${p.year}-${p.month}-${p.day}` };
+  }
+  const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const pad = n => String(n).padStart(2, "0");
+  function inWindow(ts = Date.now()) {
+    const k = kyiv(ts);
+    const exc = S.exceptions.find(x => x.date === k.iso);
+    if (exc) return exc.action === "custom" && k.min >= toMin(exc.start) && k.min < toMin(exc.end);
+    return S.schedule.some(r => r.on && r.day === k.wd && k.min >= toMin(r.start) && k.min < toMin(r.end));
+  }
+  function nextScheduleEvent() {
+    const k = kyiv(), now = k.wd * 1440 + k.min;
+    let best = null;
+    for (const r of S.schedule) {
+      if (!r.on) continue;
+      for (const [t, act] of [[r.start, "Авто"], [r.end, "Ручний + Стоп"]]) {
+        let abs = r.day * 1440 + toMin(t);
+        if (abs <= now) abs += 7 * 1440;
+        if (!best || abs < best.abs) best = { abs, t, act, day: r.day };
+      }
+    }
+    if (!best) return null;
+    const d = best.abs - now;
+    const word = best.day === k.wd && d < 1440 ? "сьогодні" : best.day === (k.wd + 1) % 7 ? "завтра" : DAYS_LONG[best.day];
+    return `${word}, ${best.t} → ${best.act}`;
+  }
+
+  // ---------- semicircle gauges: colors come from CSS classes, so they follow the theme
+  const pol = (r, deg) => { const a = deg * Math.PI / 180; return [100 + r * Math.sin(a), 100 - r * Math.cos(a)]; };
+  const arc = (r, a0, a1) => { const [x0, y0] = pol(r, a0), [x1, y1] = pol(r, a1); return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  function gauge(svg, o) {
+    const ang = v => -90 + (Math.min(o.max, Math.max(o.min, v)) - o.min) / (o.max - o.min) * 180;
+    let s = `<path d="${arc(84, -90, 90)}" class="g-track" stroke-width="10" fill="none" stroke-linecap="round"/>`;
+    for (const [f, t, cls] of o.zones) s += `<path d="${arc(84, ang(f), ang(t))}" class="${cls}" stroke-width="10" fill="none"/>`;
+    for (let i = 0; i <= o.ticks; i++) {
+      const a = -90 + i * 180 / o.ticks, major = i % (o.ticks / 2) === 0 || i === o.ticks;
+      const [x0, y0] = pol(72, a), [x1, y1] = pol(major ? 62 : 66, a);
+      s += `<line x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" class="g-tick" stroke-width="${major ? 2 : 1.2}" stroke-linecap="round"/>`;
+    }
+    s += `<text class="g-lab" x="16" y="116" text-anchor="middle">${o.minLabel ?? o.min}</text><text class="g-lab" x="184" y="116" text-anchor="middle">${o.maxLabel ?? o.max}</text>`;
+    s += `<g class="needle"><path d="M96.5 100 L100 34 L103.5 100 Z" class="g-needle"/></g><circle cx="100" cy="100" r="7" class="g-hub"/><circle cx="100" cy="100" r="3" class="g-hub2"/>`;
+    svg.innerHTML = s;
+    const n = svg.querySelector(".needle");
+    return v => n.setAttribute("transform", `rotate(${ang(v).toFixed(2)} 100 100)`);
+  }
+  const setRpm = gauge($("#gRpm"), { min: 0, max: 3000, ticks: 12, maxLabel: "3000", zones: [[1350, 1650, "g-ok"], [2400, 3000, "g-crit"]] });
+  const setPow = gauge($("#gPow"), { min: 0, max: 110, ticks: 10, zones: [[0, 88, "g-ok"], [88, 110, "g-crit"]] });
+  const setOil = gauge($("#gOil"), { min: 0, max: 800, ticks: 8, zones: [[0, 100, "g-warn"], [200, 600, "g-ok"], [680, 800, "g-crit"]] });
+  const setTemp = gauge($("#gTemp"), { min: 0, max: 120, ticks: 12, zones: [[0, 40, "g-low"], [60, 95, "g-ok"], [98, 120, "g-crit"]] });
+
+  // ---------- parameters with bars
+  const PARAMS = [
+    ["Генератор", [
+      ["IA", () => V.cur, 160, v => `${fmt(v)} A`, ""], ["IB", () => V.cur * .97, 160, v => `${fmt(v)} A`, ""], ["IC", () => V.cur * 1.02, 160, v => `${fmt(v)} A`, ""],
+      ["UAB", () => V.genU * 1.732, 500, v => `${fmt(v)} V`, ""], ["UBC", () => V.genU * 1.727, 500, v => `${fmt(v)} V`, ""], ["UCA", () => V.genU * 1.736, 500, v => `${fmt(v)} V`, ""],
+      ["Частота", () => V.genF, 60, v => `${fmt(v, 1)} Hz`, ""], ["cos φ", () => V.cos, 1, v => fmt(v, 2), "f-prim"],
+    ]],
+    ["Двигун", [
+      ["АКБ", () => V.bat, 32, v => `${fmt(v, 1)} V`, "f-ok"], ["D+", () => V.dplus, 32, v => `${fmt(v, 1)} V`, "f-ok"], ["Паливо", () => V.fuel, 100, v => `${fmt(v)} %`, "f-ok"],
+    ]],
+    ["Мережа", [
+      ["UAB", () => MAINS.uab, 500, v => `${fmt(v)} V`, "f-info"], ["UBC", () => MAINS.ubc, 500, v => `${fmt(v)} V`, "f-info"], ["UCA", () => MAINS.uca, 500, v => `${fmt(v)} V`, "f-info"],
+      ["Частота", () => MAINS.f, 60, v => `${fmt(v, 1)} Hz`, "f-info"],
+    ]],
+  ];
+  $("#params").innerHTML = PARAMS.map(([title, items], gi) => `<div class="pgroup"><h4>${title}</h4><div class="pgrid">${items.map(([lab, , , , cls], i) =>
+    `<div class="p"><div class="row"><span>${lab}</span><b id="pv${gi}_${i}">0</b></div><div class="track"><div class="fill ${cls}" id="pf${gi}_${i}"></div></div></div>`).join("")}</div></div>`).join("");
+  const refs = [];
+  PARAMS.forEach(([, items], gi) => items.forEach(([, get, max, f], i) => refs.push({ v: $(`#pv${gi}_${i}`), f: $(`#pf${gi}_${i}`), get, max, fmt: f })));
+
+  function draw() {
+    setRpm(V.rpm); $("#vRpm").textContent = fmt(V.rpm);
+    setPow(V.kw); $("#vPow").textContent = fmt(V.kw);
+    setOil(V.oil); $("#vOil").textContent = fmt(V.oil);
+    setTemp(V.temp); $("#vTemp").textContent = fmt(V.temp);
+    for (const r of refs) {
+      const v = Math.max(0, r.get());
+      r.v.textContent = r.fmt(v);
+      r.f.style.width = `${Math.min(100, v / r.max * 100).toFixed(1)}%`;
+    }
+  }
+
+  // ---------- simulated genset
+  function targets() {
+    const running = S.unit === "run" || S.unit === "cool";
+    Object.assign(T, { rpm: 0, oil: 0, genU: 0, genF: 0, dplus: 0, kw: 0, cur: 0, cos: 1, bat: 27.8, temp: 35 });
+    if (S.unit === "crank") Object.assign(T, { rpm: 380, oil: 80, genU: 40, genF: 6 });
+    if (running) Object.assign(T, { rpm: 1500, oil: 380, genU: 230, genF: 50, dplus: 27.6, bat: 28.3, temp: 72 });
+    if (S.genCB && S.unit === "run") Object.assign(T, { kw: 18, cur: 27, cos: 0.92 });
+  }
+  setInterval(() => {
+    for (const k in V) {
+      V[k] = reduce ? T[k] : V[k] + (T[k] - V[k]) * (k === "temp" ? 0.02 : 0.14);
+      if (Math.abs(T[k] - V[k]) < 0.02) V[k] = T[k];
+    }
+    draw();
+  }, 80);
+
+  // ---------- form rendering
+  const MODE = { auto: ["Авто", "b-teal"], manual: ["Ручний", "b-prim"], stop: ["Стоп", "b-mute"] };
+  const SRC = { schedule: ["Розклад", "b-info"], timer: ["Таймер", "b-warn"], manual: ["Вручну", "b-prim"] };
+  const UNIT = { standby: "Очікування", crank: "Пуск", run: "Робота", cool: "Охолодження" };
+  const badge = (el, [t, c]) => { el.className = "badge " + c; el.textContent = t; };
+
+  function render() {
+    badge($("#fMode"), MODE[S.mode]);
+    badge($("#fSrc"), SRC[S.source]);
+    badge($("#fFeed"), S.genCB ? ["Генератор", "b-warn"] : S.mainsCB ? ["Мережа", "b-ok"] : ["Немає живлення", "b-crit"]);
+    $$("#statusbar .arrow").forEach(a => a.classList.toggle("cur", a.dataset.s === S.unit));
+    $("#padState").textContent = UNIT[S.unit];
+    $("[data-cmd=auto]").classList.toggle("active", S.mode === "auto");
+    $("[data-cmd=manual]").classList.toggle("active", S.mode === "manual");
+    $("[data-cmd=start]").classList.toggle("active", S.unit === "crank" || S.unit === "run");
+    $("[data-cmd=stop]").classList.toggle("active", S.unit === "cool");
+    $("#gaugeNote").textContent = S.unit === "standby" ? "двигун зупинено" : UNIT[S.unit].toLowerCase();
+    $("#nGen").classList.toggle("on", S.unit !== "standby");
+    $("#nMains").classList.toggle("on", S.mainsCB);
+    $("#nLoad").classList.toggle("on", S.genCB || S.mainsCB);
+    $("#wGen").className = "wire" + (S.genCB ? " on" : "");
+    $("#wMains").className = "wire" + (S.mainsCB ? " on rev" : "");
+    $("#feedNote").textContent = S.genCB ? "від генератора" : S.mainsCB ? "від мережі" : "немає живлення";
+    $("#ledGenCB").className = "led" + (S.genCB ? " on" : "");
+    $("#ledMainsCB").className = "led" + (S.mainsCB ? " on" : "");
+    $("#cbGenTxt").textContent = S.genCB ? "замкнений" : "розімкнений";
+    $("#cbMainsTxt").textContent = S.mainsCB ? "замкнений" : "розімкнений";
+    $("#coGen").textContent = S.genCB ? "Розімкнути" : "Замкнути";
+    $("#coMains").textContent = S.mainsCB ? "Розімкнути" : "Замкнути";
+    $("#fNext").innerHTML = S.timer ? `${kyiv(S.timer.end).hhmm} → кінець таймера <small>· далі за розкладом</small>` : (nextScheduleEvent() || "Розклад вимкнено");
+    $("#tIdle").hidden = !!S.timer; $("#tRun").hidden = !S.timer;
+    targets(); renderLog(); renderChat();
+  }
+
+  function renderData() { window.__full && window.__full(); }
+
+  function renderSchedule() {
+    const body = $("#schedBody");
+    body.innerHTML = S.schedule.map((r, i) => `<tr>
+      <td><select id="sd${i}" aria-label="День">${DAYS.map((d, j) => `<option value="${j}"${j === r.day ? " selected" : ""}>${d}</option>`).join("")}</select></td>
+      <td><input id="ss${i}" type="time" value="${r.start}" aria-label="Початок"></td>
+      <td><input id="se${i}" type="time" value="${r.end}" aria-label="Кінець"></td>
+      <td><label class="switch"><input id="so${i}" type="checkbox"${r.on ? " checked" : ""} aria-label="Активне"><span></span></label></td>
+      <td><button class="x" type="button" data-del="${i}" aria-label="Видалити рядок"><span class="ms">delete</span></button></td></tr>`).join("");
+    body.oninput = body.onchange = e => {
+      const id = e.target.id, r = S.schedule[+id.slice(2)];
+      if (!r) return;
+      if (id.startsWith("sd")) r.day = +e.target.value;
+      if (id.startsWith("ss")) r.start = e.target.value || r.start;
+      if (id.startsWith("se")) r.end = e.target.value || r.end;
+      if (id.startsWith("so")) r.on = e.target.checked;
+      render();
+    };
+    body.onclick = e => { const b = e.target.closest("[data-del]"); if (b) { S.schedule.splice(+b.dataset.del, 1); renderSchedule(); render(); } };
+  }
+
+  function renderExceptions() {
+    const body = $("#excBody");
+    body.innerHTML = S.exceptions.map((x, i) => `<tr>
+      <td><input id="xd${i}" type="date" value="${x.date}" aria-label="Дата"></td>
+      <td><div class="exc-what">
+        <select id="xw${i}" aria-label="Що робити">
+          <option value="skip"${x.action === "skip" ? " selected" : ""}>Не запускати</option>
+          <option value="custom"${x.action === "custom" ? " selected" : ""}>Інший час</option>
+        </select>
+        ${x.action === "custom" ? `<button class="chip" type="button" data-xtime="${i}" aria-label="Змінити час">${x.start}–${x.end}<span class="ms">edit</span></button>` : ""}
+      </div></td>
+      <td><button class="x" type="button" data-xdel="${i}" aria-label="Видалити виняток"><span class="ms">delete</span></button></td></tr>`).join("");
+    body.onchange = e => {
+      const id = e.target.id, x = S.exceptions[+id.slice(2)];
+      if (!x) return;
+      if (id.startsWith("xd")) { x.date = e.target.value || x.date; render(); }
+      if (id.startsWith("xw")) {
+        if (e.target.value === "custom") openTimeDialog(+id.slice(2));
+        else { x.action = "skip"; renderExceptions(); render(); }
+      }
+    };
+    body.onclick = e => {
+      const d = e.target.closest("[data-xdel]");
+      if (d) { S.exceptions.splice(+d.dataset.xdel, 1); renderExceptions(); render(); return; }
+      const t = e.target.closest("[data-xtime]");
+      if (t) openTimeDialog(+t.dataset.xtime);
+    };
+  }
+
+  // time window for an exception day
+  let timeIdx = null;
+  function defaultWindow(dateStr) {
+    const wd = (new Date(dateStr + "T12:00:00").getDay() + 6) % 7;
+    const r = S.schedule.find(s => s.on && s.day === wd) || S.schedule.find(s => s.on);
+    return r ? [r.start, r.end] : ["08:45", "18:30"];
+  }
+  function openTimeDialog(i) {
+    const x = S.exceptions[i];
+    timeIdx = i;
+    const [ds, de] = x.action === "custom" ? [x.start, x.end] : defaultWindow(x.date);
+    const [y, m, d] = x.date.split("-");
+    $("#tdTitle").textContent = `Інший час на ${d}.${m}.${y}`;
+    $("#tdStart").value = ds; $("#tdEnd").value = de;
+    $("#tdErr").hidden = true;
+    $("#timeScrim").hidden = false; $("#tdStart").focus();
+  }
+  function closeTimeDialog(saved) {
+    $("#timeScrim").hidden = true;
+    if (!saved) renderExceptions();
+    timeIdx = null;
+  }
+  $("#tdSave").onclick = () => {
+    const s = $("#tdStart").value, e = $("#tdEnd").value, err = $("#tdErr");
+    if (!s || !e || toMin(e) <= toMin(s)) { err.textContent = "Кінець має бути пізніше за початок."; err.hidden = false; return; }
+    Object.assign(S.exceptions[timeIdx], { action: "custom", start: s, end: e });
+    closeTimeDialog(true); renderExceptions(); render();
+    notify(`Збережено: ${s}–${e}`);
+  };
+  $("#tdCancel").onclick = () => closeTimeDialog(false);
+  $("#tdClose").onclick = () => closeTimeDialog(false);
+  $("#timeScrim").onclick = e => { if (e.target.id === "timeScrim") closeTimeDialog(false); };
+
+  function renderAlarms() {
+    const c = { warn: "var(--o-warn)", ok: "var(--o-ok)", crit: "var(--o-crit)" };
+    $("#alarmList").innerHTML = S.alarms.map(a => `<div class="alarm"><span class="stripe" style="background:${c[a.level]}"></span>
+      <div><b>${a.title}${a.example ? '<span class="ex">приклад</span>' : ""}</b><small>${a.sub}</small></div><small class="num">${a.when}</small></div>`).join("");
+    const n = S.alarms.filter(a => a.when === "активна").length;
+    $("#cntAlarms").textContent = n; $("#statAlarms").textContent = n;
+  }
+  const RES = { pending: ["Надіслано", "b-info"], ok: ["Підтверджено", "b-ok"] };
+  function renderLog() {
+    $("#logBody").innerHTML = S.log.map(r => `<tr><td class="num">${r.when}</td><td>${r.who}</td><td>${r.src}</td><td><b>${r.cmd}</b></td>
+      <td><span class="badge ${RES[r.res][1]}">${RES[r.res][0]}</span></td></tr>`).join("");
+    $("#cntLog").textContent = S.log.length; $("#statCmds").textContent = S.log.length;
+  }
+  const AV = { "Розклад": ["РЗ", "#1c63a6"], "Таймер": ["ТМ", "#b26b00"], "Система": ["СМ", "#6c727a"], "Ви": ["ТН", "#714b67"], "О. Коваль": ["ОК", "#017e84"] };
+  function renderChat() {
+    const groups = {};
+    S.chat.forEach(m => (groups[m.day] = groups[m.day] || []).push(m));
+    $("#chat").innerHTML = Object.entries(groups).map(([day, ms]) => `<div class="day">${day}</div>` + ms.map(m => {
+      const [ini, col] = AV[m.who] || ["••", "#6c727a"];
+      return `<div class="msg"><span class="av" style="background:${col}">${ini}</span><div><div class="who">${m.who}<span class="when">${m.time}</span></div><div class="${m.track ? "track" : "body"}">${m.text}</div></div></div>`;
+    }).join("")).join("");
+  }
+
+  [["06.10, 08:45", "Розклад", "Розклад", "Авто"], ["05.10, 18:30", "Розклад", "Розклад", "Стоп"], ["05.10, 18:30", "Розклад", "Розклад", "Ручний"],
+   ["05.10, 16:05", "О. Коваль", "Кнопка", "Пуск"], ["05.10, 08:45", "Розклад", "Розклад", "Авто"], ["04.10, 21:00", "Таймер", "Таймер", "Ручний + Стоп"]]
+    .forEach(([when, who, src, cmd]) => S.log.push({ when, who, src, cmd, res: "ok" }));
+  S.chat = [
+    { day: "Сьогодні", who: "Розклад", time: "08:45", text: "Режим → <b>Авто</b>. Команду підтверджено контролером.", track: true },
+    { day: "Сьогодні", who: "Система", time: "03:20", text: "Зв'язок з модулем відновлено після 8 хв без даних.", track: true },
+    { day: "Вчора", who: "Розклад", time: "18:30", text: "Режим → <b>Ручний</b>, команда <b>Стоп</b>. Підтверджено.", track: true },
+    { day: "Вчора", who: "О. Коваль", time: "16:05", text: "Запустив вручну перед роботами на щитовій, зупинить розклад о 18:30." },
+  ];
+
+  // ---------- commands
+  let nT;
+  function notify(text, warn) { const n = $("#notif"); n.textContent = text; n.className = "notif" + (warn ? " warn" : ""); n.hidden = false; clearTimeout(nT); nT = setTimeout(() => (n.hidden = true), 2800); }
+  function send(cmd, who, src, effect) {
+    const row = { when: kyiv().full, who, src, cmd, res: "pending" };
+    S.log.unshift(row);
+    render();
+    setTimeout(() => {
+      row.res = "ok"; effect && effect();
+      S.chat.unshift({ day: "Сьогодні", who, time: kyiv().hhmm, text: `${src === "Кнопка" ? "Команда" : src + ":"} <b>${cmd}</b>. Підтверджено контролером.`, track: true });
+      render();
+    }, 1200);
+  }
+  function startUnit() { S.unit = "crank"; render(); setTimeout(() => { S.unit = "run"; render(); }, 2200); }
+  function stopUnit() {
+    if (S.genCB) { S.genCB = false; S.mainsCB = true; }
+    if (S.unit === "standby") return render();
+    S.unit = "cool"; render();
+    setTimeout(() => { S.unit = "standby"; render(); }, 3500);
+  }
+  function followSchedule(who) {
+    S.source = "schedule";
+    if (inWindow()) send("Авто", who, who, () => { S.mode = "auto"; });
+    else send("Ручний + Стоп", who, who, () => { S.mode = "manual"; stopUnit(); });
+  }
+
+  let okFn = null;
+  function ask(title, text, warn, fn) {
+    $("#dTitle").textContent = title; $("#dText").textContent = text;
+    $("#dWarn").hidden = !warn; $("#dWarn").textContent = warn || "";
+    okFn = fn; $("#scrim").hidden = false; $("#dOk").focus();
+  }
+  const close = () => { $("#scrim").hidden = true; okFn = null; };
+  $("#dCancel").onclick = close; $("#dClose").onclick = close;
+  $("#scrim").onclick = e => { if (e.target.id === "scrim") close(); };
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (!$("#scrim").hidden) close();
+    if (!$("#timeScrim").hidden) closeTimeDialog(false);
+  });
+  $("#dOk").onclick = () => { const f = okFn; close(); f && f(); };
+
+  const CONFIRM = {
+    auto: ["Перевести в режим Авто?", "Генератор запуститься сам, якщо зникне мережа.", null],
+    manual: ["Перевести в ручний режим?", "Автоматичний пуск при зникненні мережі буде вимкнено.", null],
+    start: ["Запустити генератор?", "Команда «Пуск» запустить двигун на об'єкті.", "Переконайтеся, що біля генератора немає людей і роботи з ним не ведуться."],
+    stop: ["Зупинити генератор?", "Якщо генератор живить об'єкт, навантаження повернеться на мережу, а двигун охолоне і зупиниться.", null],
+  };
+  $$("[data-cmd]").forEach(b => b.onclick = () => {
+    const c = b.dataset.cmd;
+    const [title, text, warn] = CONFIRM[c];
+    ask(title, text, c === "stop" && S.timer ? "Запущений таймер роботи поза графіком буде скасовано." : warn, () => {
+      S.source = "manual";
+      if (c === "stop") S.timer = null;
+      send(CMD[c], "Ви", "Кнопка", () => {
+        if (c === "auto") S.mode = "auto";
+        if (c === "manual") S.mode = "manual";
+        if (c === "start") { S.mode = "manual"; startUnit(); }
+        if (c === "stop") { S.mode = "manual"; stopUnit(); }
+      });
+      notify(`Команду «${CMD[c]}» надіслано`);
+    });
+  });
+
+  $("#coGen").onclick = () => {
+    if (S.genCB) return ask("Розімкнути автомат генератора?", "Навантаження буде переведено на мережу.", null,
+      () => send("Автомат генератора: розімкнути", "Ви", "Кнопка", () => { S.genCB = false; S.mainsCB = true; }));
+    if (S.unit !== "run") return notify("Генератор не працює. Спочатку «Пуск».", true);
+    ask("Перевести навантаження на генератор?", "Автомат мережі розімкнеться, автомат генератора замкнеться.", "Під час перемикання об'єкт на мить залишиться без живлення.",
+      () => send("Автомат генератора: замкнути", "Ви", "Кнопка", () => { S.genCB = true; S.mainsCB = false; }));
+  };
+  $("#coMains").onclick = () => {
+    if (S.mainsCB) return ask("Відключити об'єкт від мережі?", "Автомат мережі розімкнеться.", S.genCB ? null : "Генератор не живить об'єкт: живлення зникне повністю.",
+      () => send("Автомат мережі: розімкнути", "Ви", "Кнопка", () => { S.mainsCB = false; }));
+    ask("Перевести навантаження на мережу?", "Автомат генератора розімкнеться, автомат мережі замкнеться.", null,
+      () => send("Автомат мережі: замкнути", "Ви", "Кнопка", () => { S.mainsCB = true; S.genCB = false; }));
+  };
+
+  // ---------- out-of-schedule timer
+  $("#durForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const h = parseInt($("#durH").value, 10) || 0, m = parseInt($("#durM").value, 10) || 0, err = $("#durErr");
+    if (h < 0 || m < 0 || m > 59 || h > 23 || h * 60 + m === 0) { err.textContent = "Вкажіть тривалість від 1 хв до 23 год 59 хв."; err.hidden = false; return; }
+    err.hidden = true;
+    ask("Запустити роботу поза графіком?", `Генератор перейде в режим Авто на ${h} год ${pad(m)} хв, потім у Ручний і Стоп.`, null, () => {
+      const now = Date.now();
+      S.timer = { start: now, end: now + (h * 60 + m) * 60000 };
+      S.source = "timer";
+      send("Авто", "Ви", "Таймер", () => { S.mode = "auto"; });
+      tick(); notify("Таймер запущено");
+    });
+  });
+  $$("[data-add]").forEach(b => b.onclick = () => {
+    if (!S.timer) return;
+    const add = +b.dataset.add;
+    S.timer.end += add * 60000;
+    S.log.unshift({ when: kyiv().full, who: "Ви", src: "Таймер", cmd: `+${add} хв (до ${kyiv(S.timer.end).hhmm})`, res: "ok" });
+    S.chat.unshift({ day: "Сьогодні", who: "Ви", time: kyiv().hhmm, text: `Таймер подовжено на <b>${add} хв</b>, до ${kyiv(S.timer.end).hhmm}.`, track: true });
+    tick(); render(); notify(`Додано ${add} хв`);
+  });
+  $("#tCancel").onclick = () => ask("Зупинити таймер?",
+    inWindow() ? "Зараз вікно розкладу: генератор залишиться в режимі Авто." : "Зараз поза розкладом: генератор перейде в Ручний і Стоп.", null,
+    () => { S.timer = null; followSchedule("Таймер"); notify("Таймер зупинено"); });
+  function tick() {
+    if (!S.timer) return;
+    const now = Date.now(), left = Math.max(0, S.timer.end - now), s = Math.round(left / 1000);
+    $("#clock").textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+    $("#tFill").style.width = `${Math.min(100, (now - S.timer.start) / (S.timer.end - S.timer.start) * 100).toFixed(1)}%`;
+    $("#tUntil").textContent = `до ${kyiv(S.timer.end).hhmm}, потім ${inWindow(S.timer.end) ? "Авто за розкладом" : "Ручний + Стоп"}`;
+    if (left === 0) { S.timer = null; followSchedule("Таймер"); notify("Таймер завершився"); }
+  }
+
+  // ---------- tabs & misc
+  function openTab(name) {
+    $$(".tabs [role=tab]").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+    $$("[data-panel]").forEach(p => (p.hidden = p.dataset.panel !== name));
+  }
+  $$(".tabs [role=tab]").forEach(t => t.onclick = () => openTab(t.dataset.tab));
+  $$("[data-goto]").forEach(b => b.onclick = () => { openTab(b.dataset.goto); $(".tabs").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); });
+  $("#addRow").onclick = () => { S.schedule.push({ day: 5, start: "10:00", end: "15:00", on: true }); renderSchedule(); render(); };
+  $("#addExc").onclick = () => { S.exceptions.push({ date: "2027-01-07", action: "skip" }); renderExceptions(); };
+  $("#refreshBtn").onclick = () => { age = 0; notify("Дані оновлено з модуля"); };
+
+  S.mode = inWindow() ? "auto" : "manual";
+  let age = 12;
+  setInterval(() => {
+    age = (age + 1) % 60;
+    $("#fAge").textContent = `${age} с тому`;
+    $("#paramAge").textContent = age < 5 ? "щойно" : `${age} с тому`;
+    tick();
+    if (!$('[data-panel="data"]').hidden) renderData();
+  }, 1000);
+  setInterval(render, 30000);
+  renderSchedule(); renderExceptions(); renderAlarms(); renderData(); render(); draw();
+  window.__G = { S, V, T, MAINS, kyiv, fmt, render, inWindow, notify, toMin };
+})();
+</script>
+
+<script>
+(() => {
+  const G = window.__G;
+  const { S, V, MAINS, kyiv, fmt, toMin } = G;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const M = 60e3, H = 3600e3, DAY = 86400e3;
+  const pad = n => String(n).padStart(2, "0");
+
+  // ---------- deterministic example data for the last 30 days
+  function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const rnd = mulberry32(20261006);
+  const noise = (t, amp) => (Math.sin(t / 7.3e5) * 43758.5453 % 1) * amp;
+  const now = Date.now();
+  const todayStart = now - kyiv(now).min * M - (now % M);
+  const NDAYS = 30;
+  const t0 = todayStart - (NDAYS - 1) * DAY;
+  const fmtDT = ts => kyiv(ts).full;
+  const fmtD = ts => kyiv(ts).full.slice(0, 5);
+  const dur = ms => { const m = Math.round(ms / M); return m >= 60 ? `${Math.floor(m / 60)} год ${pad(m % 60)} хв` : `${m} хв`; };
+
+  const schedWin = ts => {
+    const k = kyiv(ts);
+    const r = S.schedule.find(r => r.on && r.day === k.wd && k.min >= toMin(r.start) && k.min < toMin(r.end));
+    return r ? { end: ts + (toMin(r.end) - k.min) * M } : null;
+  };
+
+  // mains outages
+  const outages = [];
+  for (let d = 0; d < NDAYS; d++) {
+    const base = t0 + d * DAY, r = rnd();
+    const n = r < 0.5 ? 0 : r < 0.85 ? 1 : 2;
+    for (let i = 0; i < n; i++) {
+      const s = base + (5 + rnd() * 17) * H, e = s + (1 + rnd() * 2.6) * H;
+      if (e > now - 3 * H) continue;
+      const last = outages[outages.length - 1];
+      if (last && s < last.e + H) continue;
+      outages.push({ s: Math.round(s / M) * M, e: Math.round(e / M) * M, kind: rnd() < 0.8 ? "Відсутність мережі" : "Обрив фази" });
+    }
+  }
+  // generator runs: in Auto (schedule window or a timer) the generator picks up the outage
+  const runs = [];
+  let timerUsed = false;
+  for (const o of outages) {
+    const w = schedWin(o.s + 25e3);
+    if (w) {
+      const stop = Math.min(o.e, w.end);
+      runs.push({ s: o.s + 25e3, e: stop + 3 * M, cause: "out", outage: o, reason: stop < o.e ? "Зникла мережа · режим Авто за розкладом" : "Зникла мережа · режим Авто за розкладом", cut: stop < o.e });
+      o.cover = stop < o.e ? "part" : "full";
+    } else if (!timerUsed && kyiv(o.s).min > 19 * 60 && o.s < now - 3 * DAY) {
+      timerUsed = true;
+      runs.push({ s: o.s + 25e3, e: o.e + 3 * M, cause: "out", outage: o, reason: "Зникла мережа · режим Авто за таймером поза графіком" });
+      o.cover = "full"; o.timer = true;
+    } else o.cover = "none";
+  }
+  for (let d = 0; d < NDAYS; d++) {   // weekly test run, Mondays 10:00
+    const base = t0 + d * DAY;
+    if (kyiv(base + 12 * H).wd !== 0) continue;
+    const s = base + 10 * H, e = s + 15 * M;
+    if (outages.some(o => s < o.e && e > o.s) || e > now) continue;
+    runs.push({ s, e, cause: "test", reason: "Тестовий запуск · О. Коваль (кнопка «Пуск»)" });
+  }
+  runs.sort((a, b) => a.s - b.s);
+  for (const r of runs) {
+    r.kw = r.cause === "test" ? 0 : 4 + rnd() * 7;
+    r.peak = r.cause === "test" ? 0 : r.kw * (1.35 + rnd() * 0.4);
+    r.hours = (r.e - r.s) / H;
+    r.kwh = r.kw * Math.max(0, r.hours - 0.05);
+    r.fuel = (1 + 0.22 * r.kw) * r.hours;
+  }
+  // fuel: consumption during runs, refuel below 40 % and at the end (the panel shows 95 % now)
+  const fuelPts = [{ t: t0, f: 76 }];
+  const refuels = [];
+  let fuel = 76;
+  for (const r of runs) {
+    fuelPts.push({ t: r.s, f: fuel });
+    fuel -= r.fuel;
+    fuelPts.push({ t: r.e, f: fuel });
+    if (fuel < 40) {
+      const t = r.e + 20 * H;
+      if (t < now) { refuels.push({ t, from: fuel, to: 95 }); fuelPts.push({ t, f: fuel }, { t: t + M, f: 95 }); fuel = 95; }
+    }
+  }
+  if (fuel < 93) {
+    const lastEnd = runs.length ? runs[runs.length - 1].e : t0;
+    const t = Math.min(now - 2 * H, lastEnd + 6 * H);
+    refuels.push({ t, from: fuel, to: 95 }); fuelPts.push({ t, f: fuel }, { t: t + M, f: 95 }); fuel = 95;
+  }
+  fuelPts.push({ t: now, f: fuel });
+  fuelPts.sort((a, b) => a.t - b.t);
+  const fuelAt = ts => {
+    let p = fuelPts[0];
+    for (const q of fuelPts) { if (q.t > ts) return p.t === q.t ? q.f : p.f + (q.f - p.f) * (ts - p.t) / (q.t - p.t); p = q; }
+    return p.f;
+  };
+  V.fuel = fuel;
+
+  // lifetime counters on the panel today: 33 h 44 min, 38 starts, 251 kWh
+  const LIFE_MIN = 33 * 60 + 44, LIFE_STARTS = 38, LIFE_KWH = 251;
+  const overlap = (a0, a1, b0, b1) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+  const minutesAfter = ts => runs.reduce((s, r) => s + overlap(ts, now, r.s, r.e), 0) / M;
+  const hoursAt = ts => { const m = Math.max(0, Math.round(LIFE_MIN - minutesAfter(ts))); return `${Math.floor(m / 60)}:${pad(m % 60)}`; };
+  const startsAt = ts => LIFE_STARTS - runs.filter(r => r.s > ts).length;
+  const kwhAt = ts => Math.max(0, Math.round(LIFE_KWH - runs.reduce((s, r) => s + r.kw * overlap(ts, now, r.s, r.e) / H, 0)));
+
+  const outAt = ts => outages.find(o => ts >= o.s && ts < o.e);
+  const runAt = ts => runs.find(r => ts >= r.s && ts < r.e);
+  const modeAt = ts => schedWin(ts) || runAt(ts)?.outage?.timer ? "Авто" : "Ручний";
+
+  function stateAt(ts) {
+    const o = outAt(ts), r = runAt(ts), cool = r && ts > r.e - 3 * M;
+    const loaded = r && o && !cool;
+    const kw = loaded ? Math.max(0.5, r.kw + noise(ts, 2) - 1) : 0;
+    return {
+      ts, mode: modeAt(ts), unit: r ? (cool ? "Охолодження" : "Робота") : "Очікування",
+      feed: loaded ? "Генератор" : o ? "Немає" : "Мережа", out: !!o, run: !!r,
+      mU: o ? 0 : 396 + noise(ts, 8), mF: o ? 0 : 49.95 + noise(ts, 0.1),
+      gU: r ? 397 + noise(ts + 1, 5) : 0, gF: r ? 49.9 + noise(ts + 2, 0.2) : 0,
+      cur: loaded ? kw * 1.62 : 0, kw, pf: loaded ? 0.9 + noise(ts + 3, 0.05) : 0, load: loaded ? kw / 88 * 100 : 0,
+      rpm: r ? 1495 + noise(ts + 4, 10) : 0, temp: r ? 70 + noise(ts + 5, 8) : 33 + noise(ts + 6, 4),
+      oil: r ? 360 + noise(ts + 7, 40) : 0, fuel: fuelAt(ts), bat: r ? 28.1 + noise(ts + 8, 0.2) : 27.7 + noise(ts + 9, 0.2), dp: r ? 27.6 : 0,
+      hours: hoursAt(ts), starts: startsAt(ts), kwh: kwhAt(ts),
+    };
+  }
+
+  // ---------- readings list
+  const STEP = 15 * M, PAGE = 80;
+  const READ_DAYS = 5;
+  const rdAll = [];
+  for (let t = Math.floor(now / STEP) * STEP; t > now - READ_DAYS * DAY; t -= STEP) rdAll.push(stateAt(t));
+  const RF = { today: false, run: false, out: false, hour: false };
+  let rdPage = 0;
+  const unitBadge = u => u === "Робота" ? "b-ok" : u === "Охолодження" ? "b-info" : "b-mute";
+  const feedBadge = f => f === "Генератор" ? "b-warn" : f === "Немає" ? "b-crit" : "b-ok";
+  const modeBadge = m => m === "Авто" ? "b-teal" : "b-prim";
+  function rdRows() {
+    const q = ($("#rdSearch").value || "").trim().toLowerCase();
+    return rdAll.filter(r => (!RF.today || r.ts >= todayStart) && (!RF.run || r.run) && (!RF.out || r.out)
+      && (!RF.hour || kyiv(r.ts).min % 60 === 0)
+      && (!q || `${r.mode} ${r.unit} ${r.feed} ${fmtDT(r.ts)}`.toLowerCase().includes(q)));
+  }
+  function renderReadings() {
+    const rows = rdRows(), pages = Math.max(1, Math.ceil(rows.length / PAGE));
+    rdPage = Math.min(rdPage, pages - 1);
+    const part = rows.slice(rdPage * PAGE, rdPage * PAGE + PAGE);
+    const n0 = (v, d = 0) => v ? fmt(v, d) : '<span class="dim">0</span>';
+    $("#rdBody").innerHTML = part.map(r => `<tr>
+      <td class="sticky">${fmtDT(r.ts)}</td>
+      <td><span class="badge ${modeBadge(r.mode)}">${r.mode}</span></td>
+      <td><span class="badge ${unitBadge(r.unit)}">${r.unit}</span></td>
+      <td><span class="badge ${feedBadge(r.feed)}">${r.feed}</span></td>
+      <td class="n">${n0(r.mU)}</td><td class="n">${n0(r.mF, 1)}</td><td class="n">${n0(r.gU)}</td><td class="n">${n0(r.gF, 1)}</td>
+      <td class="n">${r.cur ? `${fmt(r.cur)} / ${fmt(r.cur * .97)} / ${fmt(r.cur * 1.03)}` : '<span class="dim">0 / 0 / 0</span>'}</td>
+      <td class="n">${n0(r.kw, 1)}</td><td class="n">${r.pf ? fmt(r.pf, 2) : '<span class="dim">—</span>'}</td><td class="n">${n0(r.load)}</td>
+      <td class="n">${n0(r.rpm)}</td><td class="n">${fmt(r.temp)}</td><td class="n">${n0(r.oil)}</td><td class="n">${fmt(r.fuel)}</td>
+      <td class="n">${fmt(r.bat, 1)}</td><td class="n">${n0(r.dp, 1)}</td>
+      <td class="n">${r.hours}</td><td class="n">${r.starts}</td><td class="n">${r.kwh}</td>
+      <td>${r.out ? '<span class="badge b-crit">Мережа відсутня</span>' : '<span class="dim">—</span>'}</td></tr>`).join("")
+      || `<tr><td class="sticky" colspan="22">Немає записів за цими фільтрами.</td></tr>`;
+    $("#rdRange").textContent = rows.length ? `${rdPage * PAGE + 1}–${Math.min(rows.length, (rdPage + 1) * PAGE)} / ${fmt(rows.length)}` : "0";
+    $("#rdCount").textContent = `У мокапі — ${fmt(rdAll.length)} записів за ${READ_DAYS} днів. У базі зберігається вся історія: ~96 записів на добу (≈ 35 тис. на рік).`;
+  }
+  $$("[data-rf]").forEach(b => b.onclick = () => { RF[b.dataset.rf] = !RF[b.dataset.rf]; b.setAttribute("aria-pressed", RF[b.dataset.rf]); rdPage = 0; renderReadings(); });
+  $("#rdSearch").oninput = () => { rdPage = 0; renderReadings(); };
+  $("#rdPrev").onclick = () => { rdPage = Math.max(0, rdPage - 1); renderReadings(); };
+  $("#rdNext").onclick = () => { rdPage++; renderReadings(); };
+  $("#rdFacet button").onclick = () => G.notify("У модулі можна прибрати фільтр і бачити показання всіх генераторів.");
+
+  // ---------- charts (SVG, colors from theme classes)
+  const tip = $("#tip");
+  function showTip(e, html) {
+    tip.innerHTML = html; tip.hidden = false;
+    const w = tip.offsetWidth, x = e.pageX + 14 + w > window.scrollX + document.documentElement.clientWidth ? e.pageX - w - 14 : e.pageX + 14;
+    tip.style.left = `${x}px`; tip.style.top = `${e.pageY + 14}px`;
+  }
+  const hideTip = () => { tip.hidden = true; };
+  const niceMax = v => { const p = 10 ** Math.floor(Math.log10(v || 1)); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p; return 10 * p; };
+  const divs = max => { const m = max / 10 ** Math.floor(Math.log10(max)); return m === 2 ? 4 : 5; };
+  const decs = step => Number.isInteger(step) ? 0 : Number.isInteger(step * 10) ? 1 : 2;
+  // SVG width follows the container, so axis text keeps its real size on phones
+  const chartW = el => Math.max(300, Math.round(el.clientWidth || 640));
+  const topRounded = (x, y, w, h, r) => h <= 0 ? "" : h < r ? `M${x} ${y + h}V${y}H${x + w}V${y + h}Z` : `M${x} ${y + h}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h}Z`;
+
+  function barChart(el, items, series, unit, decimals = 1) {
+    const W = chartW(el), Hh = W < 500 ? 180 : 210, L = 30, R = 6, T = 8, B = 24, pw = W - L - R, ph = Hh - T - B;
+    const ymax = niceMax(Math.max(1, ...items.flatMap(i => series.map(s => i[s.key])))), nd = divs(ymax), yd = decs(ymax / nd);
+    const gw = pw / items.length, inner = Math.max(2, gw - Math.min(8, gw * 0.3)), bw = Math.max(1.5, (inner - 2 * (series.length - 1)) / series.length);
+    let s = "";
+    for (let i = 0; i <= nd; i++) { const y = T + ph - ph * i / nd; s += `<line class="${i ? "grid" : "base"}" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${fmt(ymax * i / nd, yd)}</text>`; }
+    const every = items.length > 14 ? (W < 500 ? 7 : 5) : 1;
+    items.forEach((it, i) => {
+      const gx = L + i * gw + (gw - inner) / 2;
+      series.forEach((sr, j) => { const h = ph * it[sr.key] / ymax; s += `<path class="${sr.cls}" d="${topRounded(gx + j * (bw + 2), T + ph - h, bw, h, Math.min(3, bw / 2))}"/>`; });
+      const last = items.length - 1;
+      if ((i % every === 0 && last - i >= every / 2) || i === last) s += i === last && items.length > 14 ? `<text class="ax" x="${W - R}" y="${Hh - 6}" text-anchor="end">${it.label}</text>` : `<text class="ax" x="${L + i * gw + gw / 2}" y="${Hh - 6}" text-anchor="middle">${it.label}</text>`;
+      s += `<rect class="hit" data-i="${i}" x="${L + i * gw}" y="${T}" width="${gw}" height="${ph}"/>`;
+    });
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${series.map(x => x.name).join(", ")}">${s}</svg>`;
+    $$(".hit", el).forEach(h => {
+      h.onpointermove = e => { const it = items[+h.dataset.i]; showTip(e, `<b>${it.tipLabel}</b>${series.map(sr => `<span style="--c:var(${sr.color})"><i></i>${sr.name}: ${fmt(it[sr.key], decimals)} ${unit}</span>`).join("")}`); };
+      h.onpointerleave = hideTip;
+    });
+  }
+
+  function lineChart(el, pts, o) {
+    const W = chartW(el), Hh = W < 500 ? 170 : 190, L = 34, R = 10, T = 10, B = 24, pw = W - L - R, ph = Hh - T - B;
+    const xs = t => L + (t - pts[0].t) / (pts[pts.length - 1].t - pts[0].t) * pw;
+    const ys = v => T + ph - (v - o.min) / (o.max - o.min) * ph;
+    let s = "";
+    const nd = o.div || 4;
+    for (let i = 0; i <= nd; i++) { const v = o.min + (o.max - o.min) * i / nd, y = ys(v); s += `<line class="${i ? "grid" : "base"}" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/><text class="ax" x="${L - 6}" y="${y + 4}" text-anchor="end">${fmt(v, o.axisDec || 0)}</text>`; }
+    const ticks = Math.min(o.ticks || 6, Math.max(2, Math.floor(pw / 64)));
+    for (let i = 0; i <= ticks; i++) { const t = pts[0].t + (pts[pts.length - 1].t - pts[0].t) * i / ticks; s += `<text class="ax" x="${xs(t)}" y="${Hh - 6}" text-anchor="${i === 0 ? "start" : i === ticks ? "end" : "middle"}">${o.xfmt(t)}</text>`; }
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${xs(p.t).toFixed(1)} ${ys(p.v).toFixed(1)}`).join("");
+    s += `<path class="ar-${o.cls}" d="${d}L${xs(pts[pts.length - 1].t)} ${T + ph}L${L} ${T + ph}Z"/><path class="ln-${o.cls}" d="${d}"/>`;
+    const last = pts[pts.length - 1];
+    s += `<circle class="dotm" cx="${xs(last.t)}" cy="${ys(last.v)}" r="4.5" style="fill:var(${o.color})"/>`;
+    s += `<line class="xhair" id="${el.id}X" y1="${T}" y2="${T + ph}" x1="0" x2="0" visibility="hidden"/><circle id="${el.id}D" r="4" cx="0" cy="0" class="dotm" style="fill:var(${o.color})" visibility="hidden"/>`;
+    s += `<rect class="hit" x="${L}" y="${T}" width="${pw}" height="${ph}" style="fill:transparent"/>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${o.name}">${s}</svg>`;
+    const svg = $("svg", el), hit = $(".hit", el), X = $(`#${el.id}X`), D = $(`#${el.id}D`);
+    hit.onpointermove = e => {
+      const r = svg.getBoundingClientRect(), vx = (e.clientX - r.left) / r.width * W;
+      const t = pts[0].t + (vx - L) / pw * (last.t - pts[0].t);
+      let best = pts[0]; for (const p of pts) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+      X.setAttribute("x1", xs(best.t)); X.setAttribute("x2", xs(best.t)); D.setAttribute("cx", xs(best.t)); D.setAttribute("cy", ys(best.v));
+      X.setAttribute("visibility", "visible"); D.setAttribute("visibility", "visible");
+      showTip(e, `<b>${o.tfmt(best.t)}</b><span style="--c:var(${o.color})"><i></i>${o.name}: ${fmt(best.v, o.dec || 0)} ${o.unit}</span>`);
+    };
+    hit.onpointerleave = () => { hideTip(); X.setAttribute("visibility", "hidden"); D.setAttribute("visibility", "hidden"); };
+  }
+
+  function timeline(el) {
+    let h = "";
+    for (let d = 6; d >= 0; d--) {
+      const ds = todayStart - d * DAY, de = ds + DAY, k = kyiv(ds + 12 * H);
+      const pct = t => ((Math.min(de, Math.max(ds, t)) - ds) / DAY * 100).toFixed(2);
+      let inner = "";
+      const sr = S.schedule.find(r => r.on && r.day === k.wd);
+      if (sr) inner += `<span class="win" style="left:${toMin(sr.start) / 14.4}%;width:${(toMin(sr.end) - toMin(sr.start)) / 14.4}%"></span>`;
+      for (const o of outages) if (o.e > ds && o.s < de) inner += `<span class="out" title="Немає мережі ${fmtDT(o.s)}–${kyiv(o.e).hhmm}" style="left:${pct(o.s)}%;width:${pct(o.e) - pct(o.s)}%"></span>`;
+      for (const r of runs) if (r.e > ds && r.s < de) inner += `<span class="run" title="Генератор ${kyiv(r.s).hhmm}–${kyiv(r.e).hhmm}" style="left:${pct(r.s)}%;width:${Math.max(0.6, pct(r.e) - pct(r.s))}%"></span>`;
+      if (d === 0) inner += `<span class="win" style="left:${pct(now)}%;width:0;border-right:0;border-left:2px solid var(--o-fg)"></span>`;
+      h += `<div class="tl-row"><span class="lab">${["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"][k.wd]} ${fmtD(ds + 12 * H)}</span><div class="tl-bar">${inner}</div></div>`;
+    }
+    h += `<div class="tl-axis"><span></span><div><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>`;
+    el.innerHTML = `<div class="tl">${h}</div>`;
+  }
+
+  // ---------- analytics
+  let period = 30;
+  function renderAnalytics() {
+    const p0 = todayStart - (period - 1) * DAY;
+    const inP = (a, b) => overlap(p0, now, a, b);
+    const runH = runs.reduce((s, r) => s + inP(r.s, r.e), 0) / H;
+    const starts = runs.filter(r => r.s >= p0).length;
+    const kwh = runs.reduce((s, r) => s + r.kw * inP(r.s, r.e) / H, 0);
+    const outs = outages.filter(o => o.e > p0);
+    const outH = outs.reduce((s, o) => s + inP(o.s, o.e), 0) / H;
+    const covH = outs.reduce((s, o) => s + runs.reduce((q, r) => q + overlap(Math.max(o.s, p0), o.e, r.s, r.e), 0), 0) / H;
+    const fuelUsed = runs.filter(r => r.s >= p0).reduce((s, r) => s + r.fuel, 0);
+    const loadedH = runs.filter(r => r.s >= p0 && r.kw).reduce((s, r) => s + r.hours, 0);
+    const avgKw = loadedH ? kwh / loadedH : 0;
+    const kpi = (k, v, u, d) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div><div class="d">${d}</div></div>`;
+    $("#kpis").innerHTML =
+      kpi("Мотогодини", fmt(runH, 1), "год", `з них під навантаженням ${fmt(loadedH, 1)} год`) +
+      kpi("Пусків", starts, "", `${runs.filter(r => r.s >= p0 && r.cause === "test").length} тестових, решта — при зникненні мережі`) +
+      kpi("Вироблено", fmt(kwh), "kWh", `за весь час — ${LIFE_KWH} kWh`) +
+      kpi("Відключень мережі", outs.length, "", `разом ${fmt(outH, 1)} год без мережі`) +
+      kpi("Покрито генератором", outH ? fmt(covH / outH * 100) : "—", "%", `без живлення ${fmt(Math.max(0, outH - covH), 1)} год — поза розкладом`) +
+      kpi("Витрачено палива", fmt(fuelUsed), "%", `${refuels.filter(r => r.t >= p0).length} заправки за період`) +
+      kpi("Середнє навантаження", fmt(avgKw, 1), "kW", `${fmt(avgKw / 88 * 100)} % від номіналу 88 kW`);
+
+    const days = [];
+    for (let d = period - 1; d >= 0; d--) {
+      const ds = todayStart - d * DAY, de = ds + DAY;
+      days.push({
+        label: fmtD(ds + 12 * H), tipLabel: `${["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"][kyiv(ds + 12 * H).wd]}, ${fmtD(ds + 12 * H)}`,
+        gen: runs.reduce((s, r) => s + overlap(ds, de, r.s, r.e), 0) / H,
+        out: outages.reduce((s, o) => s + overlap(ds, de, o.s, o.e), 0) / H,
+        kwh: runs.reduce((s, r) => s + r.kw * overlap(ds, de, r.s, r.e) / H, 0),
+      });
+    }
+    barChart($("#chHours"), days, [{ key: "gen", name: "Генератор працював", cls: "s-gen", color: "--o-teal" }, { key: "out", name: "Не було мережі", cls: "s-out", color: "--o-primary" }], "год");
+    barChart($("#chEnergy"), days, [{ key: "kwh", name: "Вироблено", cls: "s-gen", color: "--o-teal" }], "kWh", 0);
+    timeline($("#chTimeline"));
+    const fpts = [], bpts = [];
+    for (let t = p0; t <= now; t += 2 * H) { fpts.push({ t, v: fuelAt(t) }); bpts.push({ t, v: stateAt(t).bat }); }
+    fpts.push({ t: now, v: fuelAt(now) });
+    const step = period > 7 ? 5 : 1;
+    const xf = t => fmtD(t), tf = t => fmtDT(t);
+    lineChart($("#chFuel"), fpts, { min: 0, max: 100, cls: "teal", color: "--o-teal", name: "Паливо", unit: "%", xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
+    lineChart($("#chBat"), bpts, { min: 26, max: 29, cls: "prim", color: "--o-primary", name: "АКБ", unit: "V", dec: 1, div: 3, xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
+    const lr = [...runs].reverse().find(r => r.kw);
+    if (lr) {
+      const lp = [];
+      for (let t = lr.s; t <= lr.e; t += 5 * M) lp.push({ t, v: stateAt(t).kw });
+      lp.push({ t: lr.e, v: 0 });
+      $("#lastRunSub").textContent = `kW · ${fmtDT(lr.s)}–${kyiv(lr.e).hhmm}, ${dur(lr.e - lr.s)}`;
+      const lmax = niceMax(Math.max(...lp.map(p => p.v)) * 1.2);
+      lineChart($("#chLoad"), lp, { min: 0, max: lmax, div: divs(lmax), axisDec: decs(lmax / divs(lmax)), cls: "teal", color: "--o-teal", name: "Навантаження", unit: "kW", dec: 1, xfmt: t => kyiv(t).hhmm, tfmt: t => kyiv(t).hhmm, ticks: 4 });
+    }
+  }
+  $$("[data-period]").forEach(b => b.onclick = () => {
+    period = +b.dataset.period;
+    $$("[data-period]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderAnalytics();
+  });
+
+  // ---------- events
+  const events = [];
+  for (const r of runs) events.push({
+    type: "run", s: r.s, e: r.e, reason: r.reason, kwh: r.kwh, peak: r.peak, fuel: -r.fuel,
+    sum: r.cause === "test" ? "Без навантаження, пуск з 1-ї спроби" : r.cut ? "Зупинено о 18:30 за розкладом — мережі ще не було" : "Пуск з 1-ї спроби, навантаження прийнято",
+  });
+  for (const o of outages) events.push({
+    type: "out", s: o.s, e: o.e, reason: o.kind,
+    sum: o.cover === "full" ? `Генератор підхопив за 25 с${o.timer ? " (таймер)" : ""}` : o.cover === "part" ? "Генератор працював частково — до кінця вікна розкладу" : "Генератор не запускався — поза розкладом (режим Ручний)",
+    bad: o.cover !== "full",
+  });
+  for (const f of refuels) events.push({ type: "fuel", s: f.t, e: null, reason: "Рівень палива різко зріс", fuel: f.to - f.from, sum: `${fmt(f.from)} % → ${fmt(f.to)} %` });
+  events.push({ type: "alarm", s: now - 9 * DAY, e: null, reason: "Попередження контролера (сигнал 01H/37)", sum: "Термін ТО минув — активна", bad: true, title: "Тривога: термін ТО" });
+  events.sort((a, b) => b.s - a.s);
+  const EV = {
+    run: ["Робота генератора", "bolt", "var(--o-teal)"], out: ["Відключення мережі", "power_off", "var(--o-crit)"],
+    fuel: ["Заправка", "local_gas_station", "var(--o-info)"], alarm: ["Тривога", "warning", "var(--o-warn)"],
+  };
+  let evf = "all";
+  function renderEvents() {
+    const rows = events.filter(e => evf === "all" || e.type === evf);
+    $("#evBody").innerHTML = rows.map(e => {
+      const [name, icon, col] = EV[e.type];
+      return `<tr>
+        <td class="sticky"><span class="evtype"><span class="ms" style="color:${col}">${icon}</span>${e.title || name}</span></td>
+        <td>${fmtDT(e.s)}</td><td>${e.e ? fmtDT(e.e) : '<span class="dim">—</span>'}</td>
+        <td class="n">${e.e ? dur(e.e - e.s) : '<span class="dim">—</span>'}</td>
+        <td>${e.reason}</td>
+        <td class="n">${e.kwh ? fmt(e.kwh, 1) : '<span class="dim">—</span>'}</td>
+        <td class="n">${e.peak ? fmt(e.peak, 1) : '<span class="dim">—</span>'}</td>
+        <td class="n">${e.fuel ? `${e.fuel > 0 ? "+" : "−"}${fmt(Math.abs(e.fuel))} %` : '<span class="dim">—</span>'}</td>
+        <td>${e.bad ? `<span class="badge b-warn">${e.sum}</span>` : e.sum}</td></tr>`;
+    }).join("");
+    const c = t => events.filter(e => e.type === t).length;
+    $("#evCount").textContent = `${rows.length} з ${events.length}: роботи ${c("run")}, відключення ${c("out")}, заправки ${c("fuel")}, тривоги ${c("alarm")}`;
+  }
+  $$("[data-ef]").forEach(b => b.onclick = () => { evf = b.dataset.ef; $$("[data-ef]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); renderEvents(); });
+
+  // ---------- full controller data (form tab «Поточні дані»)
+  const dt = kyiv(now);
+  const VALS = () => {
+    const run = S.unit === "run" || S.unit === "cool", u = V.genU;
+    return [
+      ["Мережа", "03H", [
+        ["0000", "UA", `${MAINS.ua} V`], ["0001", "UB", `${MAINS.ub} V`], ["0002", "UC", `${MAINS.uc} V`],
+        ["0003", "UAB", `${MAINS.uab} V`], ["0004", "UBC", `${MAINS.ubc} V`], ["0005", "UCA", `${MAINS.uca} V`],
+        ["0006", "Частота", `${fmt(MAINS.f, 1)} Hz`], ["0095–0097", "Кут фаз A / B / C", "0° / 120° / 240°"],
+        ["0040", "Стан мережі", "Норма"], ["0041", "Затримка стану", "0 с"],
+      ]],
+      ["Генератор", "03H", [
+        ["0007–0009", "UA / UB / UC", `${fmt(u)} / ${fmt(u)} / ${fmt(u)} V`], ["0010–0012", "UAB / UBC / UCA", `${fmt(u * 1.732)} / ${fmt(u * 1.727)} / ${fmt(u * 1.736)} V`],
+        ["0013", "Частота", `${fmt(V.genF, 1)} Hz`], ["0092–0094", "Кут фаз A / B / C", run ? "0° / 120° / 240°" : "—"],
+      ]],
+      ["Навантаження", "03H", [
+        ["0014–0016", "Струм A / B / C", `${fmt(V.cur, 1)} / ${fmt(V.cur * .97, 1)} / ${fmt(V.cur * 1.02, 1)} A`],
+        ["0026", "Активна потужність", `${fmt(V.kw)} kW`], ["0052–0054", "Активна по фазах A / B / C", `${fmt(V.kw / 3, 1)} / ${fmt(V.kw / 3, 1)} / ${fmt(V.kw / 3, 1)} kW`],
+        ["0027", "Реактивна потужність", `${fmt(V.kw * 0.48)} kvar`], ["0028", "Повна потужність", `${fmt(V.kw * 1.1)} kVA`],
+        ["0029", "cos φ", fmt(V.cos, 2)], ["0055", "Завантаження", `${fmt(V.kw / 88 * 100)} %`],
+        ["2500–2511", "Точні значення (4 байти): I, P, Q, S", `${fmt(V.cur, 1)} A · ${fmt(V.kw, 1)} kW`],
+      ]],
+      ["Двигун", "03H", [
+        ["0023", "Оберти", `${fmt(V.rpm)} об/хв`], ["0017", "Температура ОР", `${fmt(V.temp)} °C`], ["0018", "Опір датчика температури", "182,4 Ω"],
+        ["0019", "Тиск оливи", `${fmt(V.oil)} kPa`], ["0020", "Опір датчика тиску", "10,2 Ω"],
+        ["0021", "Рівень палива", `${fmt(V.fuel)} %`], ["0022", "Опір датчика рівня", "18,5 Ω"],
+        ["0024", "Напруга АКБ", `${fmt(V.bat, 1)} V`], ["0025", "Напруга D+ (зарядка)", `${fmt(V.dplus, 1)} V`],
+      ]],
+      ["Стан і таймери", "03H", [
+        ["0034", "Стан агрегату", { standby: "0 · Очікування", crank: "3 · Прокрутка", run: "9 · Нормальна робота", cool: "10 · Охолодження" }[S.unit]],
+        ["0035", "Затримка стану", "0 с"], ["0036", "Дистанційний пуск", "0 · Без затримки"], ["0037", "Затримка", "0 с"],
+        ["0038", "Стан АВР", S.genCB ? "Генератор" : "Мережа"], ["0039", "Затримка АВР", "0 с"],
+      ]],
+      ["Лічильники і ТО", "03H", [
+        ["0042–0045", "Мотогодини", "33 год 44 хв 12 с"], ["0046–0047", "Кількість пусків", "38"], ["0048–0049", "Вироблено енергії", "251 kWh"],
+        ["0030–0031", "До ТО", "0 год 0 хв"],
+      ]],
+      ["Паливо: облік", "03H · лише HGM6100N", [
+        ["0098", "Зміна рівня (журнал подій)", "0 %"], ["0099", "Початковий рівень", "95 %"], ["0100", "Зміна понад 5 %", "ні"],
+        ["0101–0110", "Останні 10 записів рівня", "95 · 95 · 95 · 95 · 94 · 94 · 95 · 95 · 95 · 95 %"], ["0112", "Сума масиву", "949"],
+      ]],
+      ["Контролер", "03H", [
+        ["0071", "Код моделі", "HGM6120N"], ["0072–0078", "Годинник контролера", `${dt.full.replace(", ", " ")} · ${["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"][dt.wd]}`],
+        ["0050 / 0051", "Версія ПЗ / апаратна", "1.4 / 1.0"], ["0079–0081", "Дата випуску ПЗ", "18.11.2024"], ["0113–0114", "Сумісна версія ПК", "6.1.4.7"],
+      ]],
+    ];
+  };
+  const FLAGS = [
+    ["Режим і стан", "k-state", [[0, "Загальна тривога"], [1, "Загальне попередження"], [2, "Загальна аварійна зупинка"], [3, "Дистанційний режим"], [4, "Дистанційне блокування"], [6, "Мережа під навантаженням"], [7, "Генератор під навантаженням"], [40, "Режим Тест"], [41, "Режим Авто"], [42, "Режим Ручний"], [43, "Режим Стоп"], [78, "Пропущено запуск за розкладом"]]],
+    ["Аварійні зупинки", "k-crit", [[8, "Аварійний стоп"], [9, "Перевищення обертів"], [10, "Занижені оберти"], [11, "Втрата сигналу обертів"], [12, "Висока частота"], [13, "Низька частота"], [14, "Висока напруга"], [15, "Низька напруга"], [16, "Перевантаження за струмом"], [17, "Невдалий пуск"], [18, "Висока температура ОР"], [19, "Низький тиск оливи"], [20, "Втрата частоти"], [21, "Аварійний вхід"], [22, "Низький рівень палива"], [23, "Низький рівень ОР"], [44, "Обрив датчика температури"], [45, "Обрив датчика тиску"], [46, "Прострочене ТО"], [47, "Перевантаження за потужністю"]]],
+    ["Попередження", "k-warn", [[24, "Висока температура ОР"], [25, "Низький тиск оливи"], [26, "Перевантаження за струмом"], [27, "Невдала зупинка"], [28, "Низький рівень палива"], [29, "Немає заряду D+"], [30, "Низька напруга АКБ"], [31, "Висока напруга АКБ"], [32, "Вхід попередження"], [33, "Втрата сигналу обертів"], [34, "Низький рівень ОР"], [35, "Обрив датчика температури"], [36, "Обрив датчика тиску"], [37, "Термін ТО"], [38, "Збій зарядного пристрою"], [39, "Перевантаження за потужністю"]]],
+    ["Мережа", "k-state", [[64, "Аварія мережі"], [65, "Мережа в нормі"], [66, "Перенапруга"], [67, "Недонапруга"], [68, "Обрив фази"], [69, "Відсутність мережі"]]],
+    ["Генератор", "k-state", [[72, "Генератор у нормі"], [73, "Перенапруга"], [74, "Недонапруга"], [75, "Висока частота"], [76, "Низька частота"], [77, "Перевантаження за струмом"]]],
+    ["Входи і виходи", "k-io", [[48, "Вхід аварійного стопу"], [49, "Дод. вхід 1"], [50, "Дод. вхід 2"], [51, "Дод. вхід 3"], [52, "Дод. вхід 4"], [53, "Дод. вхід 5"], [56, "Реле стартера"], [57, "Реле палива"], [58, "Дод. вихід 1"], [59, "Дод. вихід 2"], [60, "Дод. вихід 3"], [61, "Дод. вихід 4"]]],
+  ];
+  function activeFlags() {
+    const run = S.unit !== "standby";
+    const on = new Set([1, 37, 48, 50, 61, 65]);   // from the panel snapshot: E-stop input, aux in 2, aux out 4; maintenance due
+    if (S.mode === "auto") on.add(41); if (S.mode === "manual") on.add(42);
+    if (S.mainsCB) on.add(6); if (S.genCB) on.add(7);
+    if (S.unit === "crank") on.add(56); if (run) on.add(57); if (S.unit === "run") on.add(72);
+    return on;
+  }
+  let dset = "values";
+  function renderFull() {
+    $("#dValues").innerHTML = VALS().map(([t, sub, rows]) => `<div class="dcard"><h5>${t}<small>${sub}</small></h5><table><tbody>${rows.map(([a, k, v]) => `<tr><td class="addr">${a}</td><td>${k}</td><td class="n${v.length > 24 ? " wrap" : ""}">${v}</td></tr>`).join("")}</tbody></table></div>`).join("");
+    const on = activeFlags();
+    $("#flagGroups").innerHTML = FLAGS.map(([t, kind, items]) => `<div class="dcard"><h5>${t}<small>${items.filter(([a]) => on.has(a)).length} з ${items.length} активні</small></h5><div class="flags">${items.map(([a, k]) => `<span class="flag ${kind}${on.has(a) ? " on" : ""}" title="Сигнал 01H, адреса ${a}">${k}<i>${String(a).padStart(4, "0")}</i></span>`).join("")}</div></div>`).join("");
+    $("#dModule").innerHTML = [
+      ["Модуль CMM366B-4G", "протокол v1.2", [["ID модуля", "313037 303133 471700 3D002E"], ["Підключення до контролера", "USB, 9600 біт/с"], ["Сервер", "ретранслятор → хмара SmartGen"], ["Остання передача", "щойно"], ["Частота передачі", "раз на 3 с онлайн, раз на хв офлайн"]]],
+      ["Розташування (GPS/BeiDou)", "", [["Широта", "50.4501"], ["Довгота", "30.5234"], ["Висота", "179 м"], ["Тип координат", "GPS"]]],
+      ["Входи модуля", "", [["Доступ до приміщення", '<span class="badge b-mute">неактивний</span>'], ["Пожежна сигналізація", '<span class="badge b-mute">неактивний</span>'], ["Тривожний вхід", '<span class="badge b-mute">неактивний</span>'], ["Заборона дистанційного керування", '<span class="badge b-mute">неактивний</span>']]],
+    ].map(([t, sub, rows]) => `<div class="dcard"><h5>${t}<small>${sub}</small></h5><table><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td class="n">${v}</td></tr>`).join("")}</tbody></table></div>`).join("");
+  }
+  window.__full = renderFull;
+  $$("[data-dset]").forEach(b => b.onclick = () => {
+    dset = b.dataset.dset;
+    $$("[data-dset]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $("#dValues").hidden = dset !== "values"; $("#dFlags").hidden = dset !== "flags"; $("#dModule").hidden = dset !== "module";
+  });
+
+  // ---------- routing
+  const PAGES = ["form", "readings", "analytics", "events"];
+  function route() {
+    const p = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "form";
+    $$(".page").forEach(x => x.classList.toggle("on", x.id === `page-${p}`));
+    $$(".menu").forEach(m => { if (m.dataset.page === p) m.setAttribute("aria-current", "page"); else m.removeAttribute("aria-current"); });
+    hideTip();
+    if (p === "readings") renderReadings();
+    if (p === "analytics") renderAnalytics();
+    if (p === "events") renderEvents();
+    window.scrollTo(0, 0);
+  }
+  $$("[data-href]").forEach(b => b.onclick = () => { location.hash = b.dataset.href; });
+  window.addEventListener("hashchange", route);
+  let rsT, lastW = innerWidth;
+  window.addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (innerWidth !== lastW && location.hash === "#analytics") renderAnalytics(); lastW = innerWidth; }, 150); });
+  renderFull(); renderReadings(); renderAnalytics(); renderEvents(); route();
+})();
+</script>
+
