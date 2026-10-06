@@ -79,7 +79,8 @@ button { cursor: pointer; }
 .crumbs a { color: var(--o-primary); text-decoration: none; }
 .crumbs a:hover { text-decoration: underline; }
 .crumbs .cur { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.crumbs .gear { color: var(--o-muted); background: none; border: 0; padding: 2px; border-radius: 4px; }
+.crumbs .gear { color: var(--o-muted); background: none; border: 0; padding: 2px; border-radius: 4px; flex: none; }
+.crumbs .back { display: none; }
 .cp .grow { flex: 1; }
 .pager { display: flex; align-items: center; gap: 4px; color: var(--o-muted); font-size: 13px; }
 .pager button { background: none; border: 1px solid var(--o-border-strong); border-radius: 6px; width: 30px; height: 30px; display: grid; place-items: center; color: var(--o-fg); }
@@ -300,9 +301,21 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
   .node .pic { width: 44px; height: 44px; }
   .cp { padding-inline: 8px; }
   .form-header .btn { order: 2; }
+  /* form record: Odoo mobile breadcrumb — back arrow + current record, pager on the same row */
+  #page-form .cp { flex-wrap: nowrap; gap: 8px; }
+  #page-form .cp .grow { display: none; }
+  #page-form .crumbs { flex: 1 1 auto; gap: 2px; }
+  #page-form .crumbs > a:not(.back), #page-form .crumbs > span:not(.cur) { display: none; }
+  #page-form .crumbs .back { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: var(--o-fg); flex: none; }
+  #page-form .crumbs .back:hover { background: var(--o-hover); text-decoration: none; }
+  #page-form .pager { gap: 2px; flex: none; }
+  #page-form .pager .num { margin-right: 2px; }
+  #page-form .pager button { width: 28px; height: 28px; }
 }
 @media (max-width: 380px) {
   .pad { grid-template-columns: minmax(0, 1fr); }
+  .oneline { gap: 4px; grid-template-columns: auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto; }
+  .node { font-size: 11.5px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
@@ -461,7 +474,7 @@ td select, td input[type="time"], td input[type="date"] { border: 0; border-bott
 <div class="page" id="page-form">
 <div class="cp">
   <button class="btn btn-primary" type="button">Новий</button>
-  <div class="crumbs"><a href="#">Генератори</a><span>/</span><span class="cur">Садова вулиця</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
+  <div class="crumbs"><a class="back" href="#" aria-label="Назад до списку генераторів"><span class="ms">arrow_back</span></a><a href="#">Генератори</a><span>/</span><span class="cur">Садова вулиця</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
   <span class="grow"></span>
   <div class="pager"><span class="num">1 / 3</span><button type="button" aria-label="Попередній"><span class="ms">chevron_left</span></button><button type="button" aria-label="Наступний"><span class="ms">chevron_right</span></button></div>
 </div>

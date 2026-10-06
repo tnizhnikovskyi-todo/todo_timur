@@ -4,7 +4,7 @@
 Страницы: «Генератор» (форма с пультом), «Показання», «Аналітика», «Події».
 
 - Исходник: `mockup_odoo_genset.html`
-- Артефакт: https://claude.ai/artifact/CwaaS3x2U3FHWdKwtFGH5Q («Генератор · Садова вулиця»), сейчас v6
+- Артефакт: https://claude.ai/artifact/CwaaS3x2U3FHWdKwtFGH5Q («Генератор · Садова вулиця»), сейчас v7
 
 ## Требования к дизайну
 
