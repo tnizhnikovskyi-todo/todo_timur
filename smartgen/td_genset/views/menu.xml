@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W0. Меню застосунку «Генератори» (ТР 2.10; SPEC 10). Потоки додають пункти ЛИШЕ рядками в кінець
-     файлу (перед </odoo>), наявні рядки не змінюють. Дії визначені у views/*.xml (їхні XML id — контракт). -->
+<!-- Власник: W0. Меню застосунку «Генератори» (ТР 2.10; SPEC 10; мокап): Генератор · Показання · Аналітика ·
+     Події · Заправка · Налаштування. Тривоги і журнал команд — smart-кнопки картки; адреса/токен — стандартні
+     Налаштування → Генератори. Потоки додають пункти ЛИШЕ рядками в кінець файлу (перед </odoo>), наявні рядки
+     не змінюють. Дії визначені у views/*.xml (їхні XML id — контракт). -->
 <odoo>
     <!-- «Генератор»: за одного генератора відкривається його форма, інакше — список (td.genset.action_open_main) -->
     <record id="action_td_genset_main" model="ir.actions.server">
@@ -20,7 +22,6 @@
     <menuitem id="menu_analytics_run_outage" name="Робота і відключення по днях" parent="menu_analytics" sequence="10"
               action="action_td_genset_analytics_run_outage"/>
     <menuitem id="menu_event" name="Події" parent="menu_root" sequence="40" action="action_td_genset_event"/>
-    <menuitem id="menu_alarm" name="Тривоги" parent="menu_root" sequence="45" action="action_td_genset_alarm"/>
     <menuitem id="menu_fuel" name="Заправка" parent="menu_root" sequence="50"/>
     <menuitem id="menu_fuel_canister" name="Каністри" parent="menu_fuel" sequence="10" action="action_td_genset_canister"/>
     <menuitem id="menu_fuel_refuel" name="Заправки" parent="menu_fuel" sequence="20" action="action_td_genset_refuel"/>
@@ -36,12 +37,8 @@
               action="action_td_genset_storage_location"/>
     <menuitem id="menu_config_controllers" name="Моделі контролерів" parent="menu_config" sequence="50"
               action="action_td_genset_controller_model" groups="group_tech"/>
-    <menuitem id="menu_config_commands" name="Журнал команд" parent="menu_config" sequence="60"
-              action="action_td_genset_command"/>
     <menuitem id="menu_config_users" name="Ролі доступу" parent="menu_config" sequence="70"
               action="base.action_res_users" groups="base.group_erp_manager"/>
-    <menuitem id="menu_config_odoo_settings" name="Адреса і токен ретранслятора" parent="menu_config" sequence="80"
-              action="action_td_genset_res_config_settings" groups="base.group_system"/>
 
     <!-- ↓ Рядки потоків W1–W5 — нижче цієї позначки -->
 </odoo>

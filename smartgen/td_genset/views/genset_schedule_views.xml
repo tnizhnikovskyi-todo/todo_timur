@@ -15,6 +15,24 @@
         </field>
     </record>
 
+    <record id="view_td_genset_schedule_form" model="ir.ui.view">
+        <field name="name">td.genset.schedule.form</field>
+        <field name="model">td.genset.schedule</field>
+        <field name="arch" type="xml">
+            <form string="Вікно розкладу">
+                <sheet>
+                    <group>
+                        <field name="genset_id"/>
+                        <field name="dayofweek"/>
+                        <field name="time_start" widget="float_time"/>
+                        <field name="time_end" widget="float_time"/>
+                        <field name="enabled" widget="boolean_toggle"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="view_td_genset_schedule_search" model="ir.ui.view">
         <field name="name">td.genset.schedule.search</field>
         <field name="model">td.genset.schedule</field>
@@ -39,6 +57,26 @@
                 <field name="time_end" widget="float_time" required="action == 'custom'" invisible="action != 'custom'"/>
                 <field name="note"/>
             </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_schedule_exception_form" model="ir.ui.view">
+        <field name="name">td.genset.schedule.exception.form</field>
+        <field name="model">td.genset.schedule.exception</field>
+        <field name="arch" type="xml">
+            <form string="День-виняток">
+                <sheet>
+                    <group>
+                        <field name="genset_id"/>
+                        <field name="date"/>
+                        <field name="action"/>
+                        <field name="time_start" widget="float_time" required="action == 'custom'" invisible="action != 'custom'"/>
+                        <field name="time_end" widget="float_time" required="action == 'custom'" invisible="action != 'custom'"/>
+                        <field name="note"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 

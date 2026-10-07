@@ -224,6 +224,16 @@ class TestW0Smoke(TdGensetCase):
                       'td.genset.fuel.receipt.wizard'):
             self.assertTrue(self.env[model].get_views([(False, 'form')])['views']['form']['arch'])
 
+    def test_w0_basic_views_per_model(self):
+        """Кожна модель модуля має власні (не згенеровані) form/list/search; майстри — form."""
+        for name, model in self.env.registry.items():
+            if not name.startswith('td.genset') or model._abstract:
+                continue
+            view_types = ['form'] if model._transient or name == 'td.genset.config' else ['form', 'list', 'search']
+            views = self.env[name].get_views([(False, view_type) for view_type in view_types])['views']
+            for view_type in view_types:
+                self.assertTrue(views[view_type]['id'], '%s: немає власного подання %s' % (name, view_type))
+
     def test_w0_main_menu_action(self):
         """«Генератор»: один генератор — його форма; кілька — список."""
         action = self.env['td.genset'].action_open_main()
