@@ -15,6 +15,8 @@
 """
 import logging
 
+import requests
+
 from odoo import api, models
 
 _logger = logging.getLogger(__name__)
@@ -102,22 +104,66 @@ class TdGensetRelayClient(models.AbstractModel):
         token = self.env['ir.config_parameter'].sudo().get_param('td_genset.relay_token') or ''
         return {'Authorization': 'Bearer %s' % token, 'Accept': 'application/json'}
 
+    @api.model
+    def _masked_headers(self):
+        """Заголовки для логів: значення токена замасковано (``Authorization: Bearer ***``, AC-57)."""
+        return {'Authorization': 'Bearer ***', 'Accept': 'application/json'}
+
     # ------------------------------------------------------------------ HTTP (W1)
     @api.model
     def _request(self, method, path, params=None, json=None):
         """Один HTTP-запит ``requests.Session.request(timeout=(5, http_timeout), verify=True)``.
 
-        Маппінг кодів на винятки — 2.6.1; ``_logger.debug('%s %s -> %s', method, path, status)``.
-        Повертає розібране тіло JSON (dict).
-
-        TODO: W1 — реалізація (AC-01, AC-10, AC-57, AC-64). Заглушка W0: без мережі, повертає ``{}``.
+        Маппінг кодів на винятки — ТР 2.6.1: таймаут / ``RequestException`` / 5xx → ``RelayUnavailable``;
+        401 → ``RelayAuthError``; 403 → ``RelayCommandsDisabled``; 409 → ``RelayBusy``; 404 → ``RelayNotFound``;
+        400 → ``RelayBadRequest``. У логах і текстах винятків — лише метод, шлях, статус і ``error``
+        (заголовки й токен — ніколи, AC-57). Повертає розібране тіло JSON (dict).
         """
-        return {}
+        method = (method or 'GET').upper()
+        base = self._base_url()
+        if not base:
+            raise RelayUnavailable(None, 'relay url is not configured', method, path)
+        try:
+            with requests.Session() as session:
+                response = session.request(
+                    method, base + path, params=params, json=json, headers=self._headers(),
+                    timeout=(CONNECT_TIMEOUT, self._timeout()), verify=True)
+        except requests.exceptions.Timeout:
+            _logger.debug('%s %s -> timeout %s', method, path, self._masked_headers())
+            raise RelayUnavailable(None, 'timeout', method, path) from None
+        except requests.exceptions.RequestException as exc:
+            _logger.debug('%s %s -> %s %s', method, path, exc.__class__.__name__, self._masked_headers())
+            raise RelayUnavailable(None, 'connection error (%s)' % exc.__class__.__name__, method, path) from None
+        status = response.status_code
+        _logger.debug('%s %s -> %s %s', method, path, status, self._masked_headers())
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+        if 200 <= status < 300:
+            if body is None:
+                raise RelayUnavailable(status, 'response is not JSON', method, path)
+            return body
+        error = body.get('error') if isinstance(body, dict) else None
+        error = str(error) if error else 'HTTP %s' % status
+        if status == 401:
+            raise RelayAuthError(status, error, method, path)
+        if status == 403:
+            raise RelayCommandsDisabled(status, error, method, path)
+        if status == 409:
+            raise RelayBusy(status, error, method, path)
+        if status == 404:
+            raise RelayNotFound(status, error, method, path)
+        if status == 400:
+            raise RelayBadRequest(status, error, method, path)
+        if status >= 500:
+            raise RelayUnavailable(status, error, method, path)
+        raise RelayError(status, error, method, path)
 
     @api.model
     def status(self):
-        """``GET /status`` як є (dict). TODO: W1 (AC-02, AC-09, AC-11). Заглушка: ``{}``."""
-        return {}
+        """``GET /status`` як є (dict)."""
+        return self._request('GET', '/status')
 
     @api.model
     def device_status(self, status, hostid):
@@ -129,32 +175,52 @@ class TdGensetRelayClient(models.AbstractModel):
 
     @api.model
     def latest(self, hostid):
-        """``GET /latest?hostid=``; ``None`` при ``404 no readings yet``. TODO: W1 (AC-02, AC-12). Заглушка: ``None``."""
-        return None
+        """``GET /latest?hostid=`` — останній знімок (dict); ``None`` при ``404 no readings yet``."""
+        try:
+            return self._request('GET', '/latest', params={'hostid': hostid} if hostid else None)
+        except RelayNotFound as exc:
+            if 'no readings yet' in (exc.error or ''):
+                return None
+            raise
 
     @api.model
     def readings(self, hostid, since, limit=500, raw=False):
         """``GET /readings?hostid&since&limit[&raw=1]`` → ``(readings, next_since)``.
 
         ``raw=True`` додає ``regs``/``coils`` (лише для омів датчиків, AC-68).
-        TODO: W1 (AC-03, AC-04, AC-45, AC-68). Заглушка: ``([], since)``.
         """
-        return [], since
+        since = int(since or 0)
+        params = {'since': since, 'limit': int(limit)}
+        if hostid:
+            params['hostid'] = hostid
+        if raw:
+            params['raw'] = 1
+        body = self._request('GET', '/readings', params=params)
+        readings = body.get('readings') or []
+        next_since = body.get('next_since')
+        if next_since is None:
+            next_since = max([int(reading['id']) for reading in readings] or [since])
+        return readings, int(next_since)
 
     @api.model
     def post_command(self, hostid, command, requested_by, source):
-        """``POST /commands``; ``requested_by`` обрізається до 120, ``source`` до 60 символів; тіло ``201``.
-
-        TODO: W1 (AC-12, AC-15, AC-16, AC-66). Заглушка: ``{}``.
-        """
-        return {}
+        """``POST /commands``; ``requested_by`` обрізається до 120, ``source`` до 60 символів; тіло ``201``."""
+        payload = {'command': command}
+        if hostid:
+            payload['hostid'] = hostid
+        if requested_by:
+            payload['requested_by'] = str(requested_by)[:REQUESTED_BY_MAX]
+        if source:
+            payload['source'] = str(source)[:SOURCE_MAX]
+        return self._request('POST', '/commands', json=payload)
 
     @api.model
     def command(self, relay_cmd_id):
-        """``GET /commands/<id>`` (dict). TODO: W1 (AC-12, AC-17). Заглушка: ``{}``."""
-        return {}
+        """``GET /commands/<id>`` (dict)."""
+        return self._request('GET', '/commands/%d' % int(relay_cmd_id))
 
     @api.model
     def commands(self, since, limit=200):
-        """``GET /commands?since=&limit=`` → список записів (без ``next_since``). TODO: W1. Заглушка: ``[]``."""
-        return []
+        """``GET /commands?since=&limit=`` → список записів (журнал ретранслятора, без ``next_since``)."""
+        body = self._request('GET', '/commands', params={'since': int(since or 0), 'limit': int(limit)})
+        return body.get('commands') or []

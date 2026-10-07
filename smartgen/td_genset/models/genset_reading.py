@@ -11,9 +11,12 @@
 """
 import json
 import logging
+from datetime import datetime, timedelta, timezone
+
+import pytz
 
 from odoo import api, fields, models
-from odoo.tools import sql
+from odoo.tools import SQL, sql
 
 from .genset import CONTROLLER_MODES, FEED_SOURCES, FUEL_SOURCES, GENSET_STATUS
 
@@ -155,6 +158,29 @@ SENSOR_OHM_SOURCES = {
     'water_temp_sensor_ohm': ('water_temp_sensor_ohm', '18'),
     'oil_pressure_sensor_ohm': ('oil_pressure_sensor_ohm', '20'),
 }
+KYIV = pytz.timezone('Europe/Kyiv')
+JOURNAL_DEFAULT = 15
+CLEANUP_BATCH = 10000
+NO_DATA_RAW = 32766          # «###» на контролері (сире значення регістра)
+MODE_KEYS = ('auto', 'manual', 'stop', 'test')
+STATUS_KEYS = frozenset(str(code) for code in range(16))
+# Сигнали 01H, що потрапляють у колонку «Тривоги» (alarm_flags): 0–2, 8–39, 44–47, 73–77 (ФВ-25, 2.8.3);
+# gen_undervoltage/gen_underfrequency — лише на етапі «Робота» (стан 8–9): при зупиненому генераторі,
+# під час пуску і зупинки напруги/частоти ще (вже) немає — це норма, не аварія (1.2, AC-07).
+ALARM_FLAG_KEYS = (
+    'common_alarm', 'common_warning', 'common_shutdown', 'emergency_stop', 'overspeed_shutdown',
+    'underspeed_shutdown', 'speed_signal_loss_shutdown', 'overfrequency_shutdown', 'underfrequency_shutdown',
+    'overvoltage_shutdown', 'undervoltage_shutdown', 'gen_overcurrent_shutdown', 'crank_failure',
+    'high_temp_shutdown', 'low_oil_pressure_shutdown', 'frequency_loss_alarm', 'input_shutdown',
+    'low_fuel_shutdown', 'low_coolant_shutdown', 'high_temp_warning', 'low_oil_pressure_warning',
+    'gen_overcurrent_warning', 'stop_failure_warning', 'low_fuel_warning', 'charging_failure_warning',
+    'battery_undervoltage_warning', 'battery_overvoltage_warning', 'input_warning', 'speed_signal_loss_warning',
+    'low_coolant_warning', 'temp_sensor_open_warning', 'oil_pressure_sensor_open_warning',
+    'maintenance_due_warning', 'charger_fail_warning', 'overpower_warning', 'temp_sensor_open_shutdown',
+    'oil_pressure_sensor_open_shutdown', 'maintenance_due_shutdown', 'overpower_shutdown', 'gen_overvoltage',
+    'gen_undervoltage', 'gen_overfrequency', 'gen_underfrequency', 'gen_overcurrent',
+)
+GEN_RUNNING_ONLY_FLAGS = ('gen_undervoltage', 'gen_underfrequency')
 REASONS = [
     ('first', 'Перший'),
     ('change', 'Зміна стану'),
@@ -637,54 +663,305 @@ class TdGensetReading(models.Model):
             reading.values_extra_text = json.dumps(reading.values_extra, ensure_ascii=False, sort_keys=True) \
                 if reading.values_extra else False
 
-    # ------------------------------------------------------------------ інтерфейси W1 (заглушки)
+    # ------------------------------------------------------------------ створення знімків (W1)
     @api.model
     def _create_from_payload(self, genset, payloads):
         """Ідемпотентно створює знімки сторінки (пропускає наявні ``relay_id``): ``ts``, ``slot_15``,
         ``is_hour``, ``READING_FIELD_MAP``, ``values_extra``, оми (``_extract_sensor_ohms``), похідні (``_derive``).
 
+        Значення ``null`` і відсутні ключі в ``create`` не передаються — у базі NULL (SPEC 4); літри, які
+        неможливо обчислити (немає ні %, ні омів), і ``run_hours_total`` без даних теж лишаються NULL.
+
         :param genset: запис ``td.genset``.
         :param list[dict] payloads: знімки ``/readings`` (``{id, ts, time_utc, hostid, reason, values[, regs, coils]}``).
         :return: створені записи в порядку ``relay_id``.
-        TODO: W1 — AC-03, AC-04, AC-06, AC-08, AC-68. Заглушка W0: порожній recordset.
         """
-        return self.browse()
+        if not payloads:
+            return self.browse()
+        relay_ids = {int(payload['id']) for payload in payloads}
+        existing = set(self.search([
+            ('genset_id', '=', genset.id), ('relay_id', 'in', list(relay_ids))]).mapped('relay_id'))
+        interval = self._td_journal_interval()
+        vals_list, no_liters = [], set()
+        for payload in sorted(payloads, key=lambda item: int(item['id'])):
+            relay_id = int(payload['id'])
+            if relay_id in existing:
+                continue
+            existing.add(relay_id)
+            values = self._td_values_with_ohms(payload)
+            ts = ts_to_datetime(payload.get('ts'), payload.get('time_utc'))
+            slot = slot_start(ts, interval)
+            vals = {
+                'genset_id': genset.id,
+                'relay_id': relay_id,
+                'ts': ts,
+                'slot_15': slot,
+                'is_hour': utc_to_kyiv(slot).minute == 0,
+            }
+            if payload.get('reason') in dict(REASONS):
+                vals['reason'] = payload['reason']
+            extra = {}
+            for key, value in values.items():
+                if key in READING_IGNORED_KEYS:
+                    continue
+                spec = READING_FIELD_MAP.get(key)
+                if not spec:
+                    extra[key] = value
+                    continue
+                converted = convert_value(value, spec[1])
+                if converted is not None:
+                    vals[spec[0]] = converted
+            if extra:
+                vals['values_extra'] = extra
+            vals.update(self._derive(values, genset))
+            if 'fuel_liters' not in vals:
+                no_liters.add(relay_id)
+            vals_list.append(vals)
+        if not vals_list:
+            return self.browse()
+        records = self.create(vals_list).sorted('relay_id')
+        records._td_fix_nulls(no_liters)
+        return records
+
+    def _td_fix_nulls(self, no_liters_relay_ids):
+        """NULL для похідних, яких немає з чого обчислити (compute store не вміє записати NULL, SPEC 4)."""
+        if not self:
+            return
+        self.flush_recordset(['fuel_liters', 'fuel_source', 'run_hours_total'])
+        no_liters = self.filtered(lambda reading: reading.relay_id in no_liters_relay_ids)
+        if no_liters:
+            self.env.cr.execute(SQL(
+                "UPDATE td_genset_reading SET fuel_liters = NULL, fuel_source = NULL WHERE id IN %s",
+                tuple(no_liters.ids)))
+        self.env.cr.execute(SQL(
+            "UPDATE td_genset_reading SET run_hours_total = NULL "
+            "WHERE id IN %s AND run_hours IS NULL AND run_minutes IS NULL", tuple(self.ids)))
+        self.invalidate_recordset(['fuel_liters', 'fuel_source', 'run_hours_total'])
+
+    @api.model
+    def _td_journal_interval(self):
+        """Інтервал журналу з налаштувань (5/10/15/30/60 хв), інакше 15."""
+        interval = self.env['td.genset.config'].get().journal_interval_min or JOURNAL_DEFAULT
+        return interval if 60 % interval == 0 else JOURNAL_DEFAULT
+
+    @api.model
+    def _td_values_with_ohms(self, payload):
+        """``values`` знімка + оми датчиків із сирого образу під ключами API (лише регістри 18/20/22, AC-68)."""
+        values = dict(payload.get('values') or {})
+        ohms = self._extract_sensor_ohms(payload)
+        for field_name, (key, _reg) in SENSOR_OHM_SOURCES.items():
+            if key not in values and ohms.get(field_name) is not None:
+                values[key] = ohms[field_name]
+        return values
 
     @api.model
     def _derive(self, values, genset):
         """Семантика 1.2: ``controller_mode`` (null → ``unknown``), ``is_running``, ``mains_ok``, ``feed_source``,
         ``alarm_flags``, ``fuel_liters``/``fuel_source`` (калібрування або %).
 
+        Похідні, для яких немає даних, у результат не потрапляють (у базі NULL).
+
         :param dict values: ``values`` знімка (вже з омами).
         :return: dict значень похідних полів.
-        TODO: W1 — AC-06, AC-07, AC-69. Заглушка W0: ``{}``.
         """
-        return {}
+        result = {}
+        mode = values.get('controller_mode')
+        result['controller_mode'] = mode if mode in MODE_KEYS else 'unknown'
+        running = derive_running(values)
+        if running is not None:
+            result['is_running'] = running
+        if values.get('mains_normal') is not None:
+            result['mains_ok'] = bool(values['mains_normal'])
+        feed = derive_feed(values)
+        if feed:
+            result['feed_source'] = feed
+        at_run = values.get('genset_status') in (8, 9)
+        flags = [key for key in ALARM_FLAG_KEYS
+                 if values.get(key) and (key not in GEN_RUNNING_ONLY_FLAGS or at_run)]
+        if flags:
+            result['alarm_flags'] = ', '.join(flags)
+        liters, source = None, None
+        ohm = values.get('fuel_level_sensor_ohm')
+        if ohm is not None and genset.fuel_calibrated:
+            liters = genset._liters_from_ohm(float(ohm))
+            source = 'ohm' if liters is not None else None
+        if liters is None and values.get('fuel_level') is not None:
+            liters = round(float(values['fuel_level']) / 100.0 * (genset.tank_volume_l or 0.0))
+            source = 'pct'
+        if liters is not None:
+            result['fuel_liters'] = liters
+            result['fuel_source'] = source
+        return result
 
     @api.model
     def _extract_sensor_ohms(self, payload):
         """Оми з ключів ``fuel_level_sensor_ohm``/``water_temp_sensor_ohm``/``oil_pressure_sensor_ohm`` (≥ 1.1.3),
         інакше з ``payload["regs"]["22"|"18"|"20"] / 10`` (raw=1, 1.1.1); решта ``regs``/``coils`` відкидається.
 
+        Ключ є, але ``null`` — «немає даних» (з образу не беремо); у регістрі 32766 — теж «немає даних».
+
         :return: ``{fuel_sensor_ohm, water_temp_sensor_ohm, oil_pressure_sensor_ohm}`` (None — немає даних).
-        TODO: W1 — AC-68. Заглушка W0: усі ``None``.
         """
-        return {name: None for name in SENSOR_OHM_SOURCES}
+        values = (payload or {}).get('values') or {}
+        regs = (payload or {}).get('regs') or {}
+        result = {}
+        for field_name, (key, reg) in SENSOR_OHM_SOURCES.items():
+            value = None
+            if key in values:
+                value = values[key]
+            else:
+                raw = regs.get(reg, regs.get(int(reg)))
+                if isinstance(raw, (int, float)) and not isinstance(raw, bool) and raw != NO_DATA_RAW:
+                    value = raw / 10.0
+            try:
+                result[field_name] = round(float(value), 1) if value is not None else None
+            except (TypeError, ValueError):
+                result[field_name] = None
+        return result
 
     @api.model
     def _mark_journal(self, genset, slots):
         """Один SQL ``UPDATE``: ``is_journal = True`` для останнього знімка кожного слота, ``False`` для решти.
 
         :param set slots: значення ``slot_15`` (datetime UTC), зачеплені сторінкою.
-        TODO: W1 — AC-08. Заглушка W0: нічого не робить.
         """
+        slots = tuple(slot for slot in (slots or ()) if slot)
+        if not slots:
+            return None
+        self.flush_model(['genset_id', 'slot_15', 'ts', 'is_journal'])
+        self.env.cr.execute(SQL("""
+            UPDATE td_genset_reading r
+               SET is_journal = (r.id = last.id)
+              FROM (SELECT DISTINCT ON (slot_15) slot_15, id
+                      FROM td_genset_reading
+                     WHERE genset_id = %(genset)s AND slot_15 IN %(slots)s
+                  ORDER BY slot_15, ts DESC, id DESC) last
+             WHERE r.genset_id = %(genset)s
+               AND r.slot_15 = last.slot_15
+               AND r.is_journal IS DISTINCT FROM (r.id = last.id)
+        """, genset=genset.id, slots=slots))
+        self.invalidate_model(['is_journal'])
         return None
 
+    # ------------------------------------------------------------------ чистка (W1)
     @api.model
     def _cron_cleanup(self):
         """Cron ``cron_cleanup`` (1 день, 03:30 Kyiv): видалення сирих знімків старших за ``reading_retention_days``
-        (крім журнальних і ``reason='change'``) партіями по 10 000; архів винятків старших за 30 днів.
-
-        TODO: W1 — AC-58. Заглушка W0: нічого не робить (успішно).
+        (крім журнальних, ``reason='change'`` і тих, на які посилаються генератор, події й команди) партіями
+        по 10 000 (``_notify_progress``); архів днів-винятків старших за 30 днів. Винятки перехоплюються (А.7).
         """
+        try:
+            with self.env.cr.savepoint():
+                self._td_archive_old_exceptions()
+                deleted = self._td_delete_old_readings()
+        except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
+            _logger.warning('td_genset: чистка знімків не вдалася: %s', exc)
+            return None
+        self.env['ir.cron']._notify_progress(done=deleted, remaining=1 if deleted >= CLEANUP_BATCH else 0)
         return None
+
+    @api.model
+    def _td_delete_old_readings(self):
+        """Одна партія (≤ 10 000) сирих знімків, старших за термін зберігання; повертає кількість видалених."""
+        days = self.env['td.genset.config'].get().reading_retention_days
+        if not days or days <= 0:
+            return 0
+        limit_ts = fields.Datetime.now() - timedelta(days=days)
+        self.env.flush_all()
+        self.env.cr.execute(SQL("""
+            SELECT r.id FROM td_genset_reading r
+             WHERE r.ts < %(limit_ts)s
+               AND r.is_journal IS NOT TRUE
+               AND r.reason IS DISTINCT FROM 'change'
+               AND NOT EXISTS (SELECT 1 FROM td_genset g
+                                WHERE g.last_reading_id = r.id OR g.prev_reading_id = r.id)
+               AND NOT EXISTS (SELECT 1 FROM td_genset_event e
+                                WHERE e.reading_start_id = r.id OR e.reading_end_id = r.id)
+               AND NOT EXISTS (SELECT 1 FROM td_genset_command c WHERE c.confirm_reading_id = r.id)
+             ORDER BY r.id
+             LIMIT %(limit)s
+        """, limit_ts=limit_ts, limit=CLEANUP_BATCH))
+        ids = [row[0] for row in self.env.cr.fetchall()]
+        if ids:
+            self.browse(ids).sudo().unlink()
+        return len(ids)
+
+    @api.model
+    def _td_archive_old_exceptions(self):
+        """Дні-винятки, старші за 30 днів, — в архів (ФВ-19)."""
+        limit_date = fields.Date.context_today(self) - timedelta(days=30)
+        old = self.env['td.genset.schedule.exception'].sudo().search([('date', '<', limit_date)])
+        if old:
+            old.write({'active': False})
+
+
+# --------------------------------------------------------------------------- допоміжні функції (W1)
+def ts_to_datetime(ts, time_utc=None):
+    """Секунди Unix UTC (або рядок ``time_utc``) → naive UTC ``datetime`` без дробових секунд (SPEC 4)."""
+    if ts is not None:
+        return datetime.fromtimestamp(float(ts), tz=timezone.utc).replace(tzinfo=None, microsecond=0)
+    if time_utc:
+        return datetime.strptime(time_utc, '%Y-%m-%dT%H:%M:%SZ')
+    return fields.Datetime.now().replace(microsecond=0)
+
+
+def utc_to_kyiv(value):
+    """Naive UTC → aware Europe/Kyiv."""
+    return pytz.utc.localize(value).astimezone(KYIV)
+
+
+def slot_start(ts, interval=JOURNAL_DEFAULT):
+    """Початок інтервалу журналу за Europe/Kyiv (DST враховано), збережений як naive UTC (ФВ-6, AC-08)."""
+    local = utc_to_kyiv(ts)
+    local = local.replace(minute=(local.minute // interval) * interval, second=0, microsecond=0)
+    return local.astimezone(pytz.utc).replace(tzinfo=None)
+
+
+def convert_value(value, field_type):
+    """Значення ``values`` → значення поля за типом ``READING_FIELD_MAP``; ``None`` — не зберігати (NULL)."""
+    if value is None:
+        return None
+    try:
+        if field_type == 'boolean':
+            return bool(value)
+        if field_type == 'float':
+            return float(value)
+        if field_type == 'integer':
+            return int(round(float(value)))
+        if field_type == 'char':
+            return str(value)
+        if field_type == 'selection':
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, (int, float)):
+                code = str(int(value))
+                return code if code in STATUS_KEYS else None
+            return value if value in MODE_KEYS else None
+    except (TypeError, ValueError):
+        return None
+    return None
+
+
+def derive_running(values):
+    """Правило 1.2: ``genset_status ∉ {0, 15}`` або ``speed > 0``; ``None`` — немає даних."""
+    status, speed = values.get('genset_status'), values.get('speed')
+    if status is None and speed is None:
+        return None
+    try:
+        by_status = status is not None and int(status) not in (0, 15)
+        by_speed = speed is not None and float(speed) > 0
+    except (TypeError, ValueError):
+        return None
+    return bool(by_status or by_speed)
+
+
+def derive_feed(values):
+    """``mains_on_load`` → mains; ``gen_on_load`` → genset; обидва ``false`` → none; інакше ``None``."""
+    mains, gen = values.get('mains_on_load'), values.get('gen_on_load')
+    if mains:
+        return 'mains'
+    if gen:
+        return 'genset'
+    if mains is False and gen is False:
+        return 'none'
+    return None

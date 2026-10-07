@@ -2,8 +2,15 @@
 """Налаштування модуля ``td.genset.config`` (singleton ``td_genset.config_main``) і рівні ескалації
 ``td.genset.notify.level`` — ТР 2.3.8, 2.3.9; SPEC 5.8, 5.9, 9.
 """
+from datetime import timedelta
+
+from markupsafe import Markup
+
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
+
+from .genset_reading import utc_to_kyiv
+from .genset_schedule import kyiv_localize
 
 NOTIFY_RULES = [
     ('always', 'Завжди'),
@@ -200,27 +207,66 @@ class TdGensetConfig(models.Model):
             config = self.sudo().search([], limit=1)
         return config
 
-    # ------------------------------------------------------------------ інтерфейси W1 (заглушки)
-    def _quiet_now(self, dt=None):
-        """Чи зараз (або ``dt``, UTC naive) тихі години за київським часом.
+    # ------------------------------------------------------------------ тихі години, тестове сповіщення (W1)
+    def _td_config(self):
+        return self[:1] or self.get()
 
-        TODO: W1 — AC-42. Заглушка W0: ``False``.
+    def _quiet_now(self, dt=None):
+        """Чи зараз (або ``dt``, UTC naive) тихі години за київським часом (AC-42).
+
+        Інтервал може переходити через північ (22:00–07:00); однакові межі — тихих годин немає.
         """
-        return False
+        config = self._td_config()
+        if not config.quiet_enabled:
+            return False
+        start, end = (config.quiet_from or 0.0) % 24, (config.quiet_to or 0.0) % 24
+        if start == end:
+            return False
+        local = utc_to_kyiv(dt or fields.Datetime.now())
+        hour = local.hour + local.minute / 60.0 + local.second / 3600.0
+        if start < end:
+            return start <= hour < end
+        return hour >= start or hour < end
 
     def _quiet_end(self, dt=None):
-        """Кінець поточних тихих годин (UTC naive) — для відкладеної ескалації.
-
-        TODO: W1 — AC-42. Заглушка W0: ``None``.
-        """
-        return None
+        """Кінець поточних тихих годин (UTC naive) — для відкладеної ескалації; ``None``, якщо зараз не тихі години."""
+        config = self._td_config()
+        now = dt or fields.Datetime.now()
+        if not config._quiet_now(now):
+            return None
+        start, end = (config.quiet_from or 0.0) % 24, (config.quiet_to or 0.0) % 24
+        local = utc_to_kyiv(now)
+        hour = local.hour + local.minute / 60.0 + local.second / 3600.0
+        day = local.date()
+        if start > end and hour >= start:
+            day += timedelta(days=1)
+        return kyiv_localize(day, end)
 
     def action_send_test_notification(self):
-        """Тестове сповіщення рівню 1 ланцюжка (AC-44).
-
-        TODO: W1 — AC-44. Заглушка W0: нічого не надсилає.
-        """
-        return False
+        """Кнопка «Надіслати тестове сповіщення» (``group_tech``): сповіщення «Тестове сповіщення модуля
+        Генератори» першому рівню ланцюжка з користувачем — вхідні + push; тривоги й ескалації немає (AC-44)."""
+        self.env['td.genset']._td_check_group('td_genset.group_tech')
+        config = self._td_config().sudo()
+        level = config.level_ids.sorted(lambda item: (item.sequence, item.id)).filtered('user_id')[:1]
+        if not level:
+            raise UserError(_('У ланцюжку ескалації немає жодного користувача — тестове сповіщення нікому надіслати.'))
+        subject = _('Тестове сповіщення модуля Генератори')
+        body = Markup('<p>%s</p>') % _('Тестове сповіщення модуля Генератори: так виглядатимуть тривоги '
+                                       'генератора (рівень «%(level)s»). Нічого робити не потрібно.',
+                                       level=level.name)
+        self.env['mail.thread'].sudo().message_notify(
+            model=self._name, res_id=config.id, partner_ids=level.user_id.partner_id.ids,
+            subject=subject, body=body, subtype_xmlid='mail.mt_note')
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Генератори'),
+                'message': _('Тестове сповіщення надіслано: %s.', level.user_id.name),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
 
 
 class TdGensetNotifyLevel(models.Model):

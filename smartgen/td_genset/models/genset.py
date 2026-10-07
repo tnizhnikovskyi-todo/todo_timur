@@ -687,3 +687,16 @@ class TdGenset(models.Model):
         action['domain'] = [('equipment_id', '=', self.equipment_id.id)] if self.equipment_id else [('id', '=', 0)]
         action['context'] = {'default_equipment_id': self.equipment_id.id} if self.equipment_id else {}
         return action
+
+    # ------------------------------------------------------------------ W1 «Моніторинг»: додані поля
+    relay_last_reading_id = fields.Integer(
+        string='Останній знімок на ретрансляторі (id)', readonly=True, copy=False, aggregator=None,
+        help='/status devices[].last_reading.id — до цього знімка доганяється історія; верхня межа бінарного '
+             'пошуку курсору для першого забору (А.7).')
+    relay_last_reading_at = fields.Datetime(
+        string='Останній знімок на ретрансляторі', readonly=True, copy=False,
+        help="/status devices[].last_reading.time_utc — свіжість даних на ретрансляторі: під час догону історії "
+             "зв'язок не вважається втраченим (2.8.6).")
+    catchup_stats = fields.Json(
+        string='Догон: підсумок', readonly=True, copy=False,
+        help='Службове: скільки знімків і подій оброблено в поточному догоні — для підсумку «Догнано історію» (А.7).')
