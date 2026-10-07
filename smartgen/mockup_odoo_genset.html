@@ -777,9 +777,10 @@ select.o-input { padding: 4px 2px; }
             </div>
           </div>
           <div>
-            <div class="rule">Таймер має пріоритет над розкладом: поки він іде, зупинка за розкладом не виконується.</div>
+            <div class="rule">Таймер має пріоритет над розкладом: кінець вікна розкладу під час таймера пропускається, на початку вікна команда не потрібна — генератор уже в Авто.</div>
             <div class="rule">Після завершення або зупинки таймера — стан за розкладом: у вікні розкладу Авто, поза ним Ручний + Стоп.</div>
-            <div class="rule" style="border-left-color:var(--o-info)">Після кожної команди система читає режим контролера; якщо він не змінився — повтор до 10 хв, потім тривога.</div>
+            <div class="rule">Ручний, Пуск і Стоп скасовують таймер. Тест лише призупиняє його: після тесту знову Авто за таймером.</div>
+            <div class="rule" style="border-left-color:var(--o-info)" id="retryRule">Після кожної команди система читає режим контролера; якщо він не змінився — повтор кожні 2 хв протягом 10 хв, потім тривога. Якщо зв'язок зник до підтвердження — перевіряємо після відновлення.</div>
           </div>
         </div>
       </div>
@@ -1065,7 +1066,9 @@ select.o-input { padding: 4px 2px; }
     remoteLock: false, nd: { oil: false },   // 01H 0004; 03H value 32766 = no data
     inputs: { access: false, fire: false, alarm: false, inhibit: false },   // CMM366B inputs (reqdatachange)
     me: "Т. Нижниковський", role: "tech",   // current user and their «Генератори» group: user → admin → tech, each includes the previous
-    test: null, testMin: 3,   // test run: after testMin minutes the generator returns to the schedule / timer mode
+    test: null, testMin: 3,
+    retryEvery: 2, retryFor: 10, awaiting: [],   // unconfirmed commands: retry every N min for M min, then an alarm
+    sim: { noExec: false, speed: 1 }, simWin: null,   // demo only: controller ignores commands, time ×30, forced schedule window   // test run: after testMin minutes the generator returns to the schedule / timer mode
     offline: null, queue: [], linkPolicy: "queue",   // module stopped sending data; schedule commands wait in the queue
     maint: { first: 30, every: 250, left: 0 },       // 03H 0030-0031: hours to maintenance
     notify: {
@@ -1101,6 +1104,7 @@ select.o-input { padding: 4px 2px; }
   const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
   const pad = n => String(n).padStart(2, "0");
   function inWindow(ts = Date.now()) {
+    if (S.simWin !== null) return S.simWin;   // «Імітація»: start / end of a schedule window pressed by hand
     const k = kyiv(ts);
     const exc = S.exceptions.find(x => x.date === k.iso);
     if (exc) return exc.action === "custom" && k.min >= toMin(exc.start) && k.min < toMin(exc.end);
@@ -1254,6 +1258,7 @@ select.o-input { padding: 4px 2px; }
     $("#fNext").innerHTML = S.test ? `${kyiv(S.test.end).hhmm} → кінець тесту <small>· далі ${afterTest()[1]}</small>` : S.timer ? `${kyiv(S.timer.end).hhmm} → кінець таймера <small>· далі за розкладом</small>` : (nextScheduleEvent() || "Розклад вимкнено");
     $("#tIdle").hidden = !!S.timer; $("#tRun").hidden = !S.timer;
     targets(); renderLog(); renderChat(); renderTest();
+    $("#retryRule").textContent = `Після кожної команди система читає режим контролера; якщо він не змінився — повтор кожні ${S.retryEvery} хв протягом ${S.retryFor} хв, потім тривога. Якщо зв'язок зник до підтвердження — перевіряємо після відновлення.`;
   }
 
   function renderData() { window.__full && window.__full(); }
@@ -1371,10 +1376,13 @@ select.o-input { padding: 4px 2px; }
     renderAlarms(); render();
   };
   const RES = { pending: ["Надіслано", "b-info"], ok: ["Підтверджено", "b-ok"], blocked: ["Не надіслано: блокування", "b-crit"],
-    queued: ["У черзі: немає зв'язку", "b-warn"], noLink: ["Не доставлено: немає зв'язку", "b-crit"], skipped: ["Пропущено: немає зв'язку", "b-mute"] };
+    queued: ["У черзі: немає зв'язку", "b-warn"], noLink: ["Не доставлено: немає зв'язку", "b-crit"], skipped: ["Пропущено: немає зв'язку", "b-mute"],
+    failed: ["Не підтверджено — тривога", "b-crit"], lost: ["Немає підтвердження: зв'язок втрачено", "b-warn"], late: ["Підтверджено після відновлення зв'язку", "b-ok"],
+    skipTimer: ["Пропущено: діє таймер", "b-mute"], already: ["Не потрібно: вже Авто за таймером", "b-mute"], skipTest: ["Пропущено: іде тест", "b-mute"] };
+  const maxTries = () => Math.max(1, Math.round(S.retryFor / S.retryEvery));
   function renderLog() {
     $("#logBody").innerHTML = S.log.map(r => `<tr><td class="num">${r.when}</td><td>${r.who}</td><td>${r.src}</td><td><b>${r.cmd}</b></td>
-      <td><span class="badge ${RES[r.res][1]}">${RES[r.res][0]}</span></td></tr>`).join("");
+      <td><span class="badge ${r.res === "retry" ? "b-warn" : RES[r.res][1]}">${r.res === "retry" ? `Спроба ${r.tries} з ${maxTries()} · без підтвердження` : RES[r.res][0]}${r.res === "ok" && r.tries > 1 ? ` (спроба ${r.tries})` : ""}</span></td></tr>`).join("");
     $("#cntLog").textContent = S.log.length; $("#statCmds").textContent = S.log.length;
   }
   const AV = { "Розклад": ["РЗ", "#1c63a6"], "Таймер": ["ТМ", "#b26b00"], "Система": ["СМ", "#6c727a"], "Ви": ["ТН", "#714b67"], "О. Коваль": ["ОК", "#017e84"],
@@ -1414,14 +1422,49 @@ select.o-input { padding: 4px 2px; }
       S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Команду <b>${cmd}</b> (${src}) не надіслано: дистанційне керування заблоковано.`, track: true });
       return render();
     }
-    const row = { when: kyiv().full, who, src, cmd, res: "pending" };
+    const row = { when: kyiv().full, who, src, cmd, res: "pending", tries: 1 };
     S.log.unshift(row);
     render();
+    attempt(row, effect);
+  }
+  // after each attempt the system reads the controller mode: changed → confirmed; not changed → retry later
+  function attempt(row, effect) {
     setTimeout(() => {
+      if (S.offline) { row.res = "lost"; S.awaiting.push({ row, effect }); return render(); }
+      if (S.sim.noExec) {
+        if (row.tries >= maxTries()) return failCmd(row);
+        if (row.tries === 1) S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Контролер не підтвердив команду <b>${row.cmd}</b>. Повторюємо кожні ${S.retryEvery} хв протягом ${S.retryFor} хв.`, track: true });
+        row.res = "retry";
+        render();
+        return setTimeout(() => { row.tries++; render(); attempt(row, effect); }, Math.max(300, S.retryEvery * 60000 / S.sim.speed - 1200));
+      }
       row.res = "ok"; effect && effect();
-      S.chat.unshift({ day: "Сьогодні", who, time: kyiv().hhmm, text: `${src === "Кнопка" ? "Команда" : src + ":"} <b>${cmd}</b>. Підтверджено контролером.`, track: true });
+      S.chat.unshift({ day: "Сьогодні", who: row.who, time: kyiv().hhmm, text: `${row.src === "Кнопка" ? "Команда" : row.src + ":"} <b>${row.cmd}</b>. Підтверджено контролером${row.tries > 1 ? ` зі спроби ${row.tries}` : ""}.`, track: true });
       render();
     }, 1200);
+  }
+  function failCmd(row) {
+    row.res = "failed";
+    S.alarms.unshift({ level: "crit", title: `Команда «${row.cmd}» не підтверджена за ${S.retryFor} хв`, when: "активна", n: { at: Date.now(), ack: null },
+      sub: `${row.src}, ${row.when}. Спроб: ${row.tries}, режим контролера не змінився. Перевірте на об'єкті: режим панелі, блокування, зв'язок модуля з контролером.` });
+    S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `<b>Команда «${row.cmd}» не виконана</b> за ${S.retryFor} хв (${row.tries} спроб). Створено тривогу.`, track: true });
+    renderAlarms(); render();
+  }
+  // what the scheduler does at the start / end of a window, given the timer and a running test
+  function scheduleEvent(kind) {
+    const t = kyiv().full;
+    if (kind === "start") {
+      if (S.timer) { S.log.unshift({ when: t, who: "Розклад", src: "Розклад", cmd: "Авто", res: "already" }); S.chat.unshift({ day: "Сьогодні", who: "Розклад", time: kyiv().hhmm, text: "Початок вікна: команда не потрібна — генератор уже в Авто за таймером.", track: true }); return render(); }
+      if (S.test) { S.log.unshift({ when: t, who: "Розклад", src: "Розклад", cmd: "Авто", res: "skipTest" }); return render(); }
+      S.source = "schedule"; return send("Авто", "Розклад", "Розклад", () => { S.mode = "auto"; });
+    }
+    if (S.timer) {
+      S.log.unshift({ when: t, who: "Розклад", src: "Розклад", cmd: "Ручний + Стоп", res: "skipTimer" });
+      S.chat.unshift({ day: "Сьогодні", who: "Розклад", time: kyiv().hhmm, text: `Кінець вікна: команду пропущено — діє таймер до ${kyiv(S.timer.end).hhmm}. Після таймера — Ручний + Стоп.`, track: true });
+      return render();
+    }
+    if (S.test) { S.log.unshift({ when: t, who: "Розклад", src: "Розклад", cmd: "Ручний + Стоп", res: "skipTest" }); return render(); }
+    S.source = "schedule"; send("Ручний + Стоп", "Розклад", "Розклад", () => { S.mode = "manual"; stopUnit(); });
   }
   // the controller walks through its own states; each step has a delay the panel counts down (03H 0035)
   const START = [[1, 3], [3, 2], [5, 2], [6, 2], [7, 3], [9, 0]], STOP = [[10, 4], [11, 2], [13, 2], [15, 2], [0, 0]];
@@ -1439,6 +1482,11 @@ select.o-input { padding: 4px 2px; }
     S.offline = null;
     const q = S.queue.splice(0);
     q.forEach(x => { x.row.res = "ok"; x.effect && x.effect(); });
+    // commands sent before the link dropped: read the controller mode; done → confirmed late, not done → retry
+    S.awaiting.splice(0).forEach(x => {
+      if (S.sim.noExec) { x.row.res = "retry"; attempt(x.row, x.effect); }
+      else { x.row.res = "late"; x.effect && x.effect(); }
+    });
     S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Зв'язок з модулем відновлено.${q.length ? ` Надіслано команд з черги: ${q.length}.` : ""}`, track: true });
     render();
   }
@@ -1489,8 +1537,9 @@ select.o-input { padding: 4px 2px; }
   const afterTest = () => S.timer ? ["auto", "Авто (таймер)"] : inWindow() ? ["auto", "Авто за розкладом"] : ["manual", "Ручний + Стоп (поза розкладом)"];
   function startTest(load) {
     clearTimeout(testT);
-    S.test = { load, end: Date.now() + S.testMin * 60000, by: S.me };
-    testT = setTimeout(endTest, S.testMin * 60000);
+    const ms = S.testMin * 60000 / S.sim.speed;
+    S.test = { load, end: Date.now() + ms, by: S.me };
+    testT = setTimeout(endTest, ms);
     renderTest(); render();
   }
   function endTest() {
@@ -1519,7 +1568,7 @@ select.o-input { padding: 4px 2px; }
     const [title, text, warn] = CONFIRM[c];
     let tmode = null;
     if (c === "test") {
-      ask(title, "", warn, () => {
+      ask(title, "", S.timer ? `${warn} Таймер не скасовується: після тесту — знову Авто за таймером.` : warn, () => {
         S.source = "manual";
         const load = tmode === "load", cmd = load ? "Тест · з навантаженням" : "Тест · без навантаження (Ручний + Пуск)";
         send(cmd, S.me, "Кнопка", () => {
@@ -1533,11 +1582,12 @@ select.o-input { padding: 4px 2px; }
       $$("[name=tmode]").forEach(r => r.onchange = () => { tmode = r.value; $("#dOk").disabled = false; });
       return;
     }
-    ask(title, text, c === "stop" && S.timer ? "Запущений таймер роботи поза графіком буде скасовано." : warn, () => {
+    const cancelsTimer = ["manual", "start", "stop"].includes(c) && S.timer;
+    ask(title, text, cancelsTimer ? `${warn ? warn + " " : ""}Запущений таймер роботи поза графіком буде скасовано.` : warn, () => {
       S.source = "manual";
-      if (c === "stop") S.timer = null;
+      if (cancelsTimer && S.timer) { S.timer = null; S.chat.unshift({ day: "Сьогодні", who: S.me, time: kyiv().hhmm, text: `Таймер роботи поза графіком скасовано командою <b>${CMD[c]}</b>.`, track: true }); }
       if (S.test) { clearTimeout(testT); S.test = null; render(); }
-      send(CMD[c], "Ви", "Кнопка", () => {
+      send(CMD[c], S.me, "Кнопка", () => {
         if (c === "auto") { const wasTest = S.mode === "test"; S.mode = "auto"; if (wasTest && S.mainsCB !== false) stopUnit(); }
         if (c === "manual") S.mode = "manual";
         if (c === "start") { S.mode = "manual"; startUnit(); }
@@ -1549,16 +1599,16 @@ select.o-input { padding: 4px 2px; }
 
   $("#coGen").onclick = () => {
     if (S.genCB) return ask("Розімкнути автомат генератора?", "Навантаження буде переведено на мережу.", null,
-      () => send("Автомат генератора: розімкнути", "Ви", "Кнопка", () => { S.genCB = false; S.mainsCB = true; }));
+      () => send("Автомат генератора: розімкнути", S.me, "Кнопка", () => { S.genCB = false; S.mainsCB = true; }));
     if (S.gs !== 8 && S.gs !== 9) return notify("Генератор ще не в режимі роботи. Спочатку «Пуск».", true);
     ask("Перевести навантаження на генератор?", "Автомат мережі розімкнеться, автомат генератора замкнеться.", "Під час перемикання об'єкт на мить залишиться без живлення.",
-      () => send("Автомат генератора: замкнути", "Ви", "Кнопка", () => { S.genCB = true; S.mainsCB = false; }));
+      () => send("Автомат генератора: замкнути", S.me, "Кнопка", () => { S.genCB = true; S.mainsCB = false; }));
   };
   $("#coMains").onclick = () => {
     if (S.mainsCB) return ask("Відключити об'єкт від мережі?", "Автомат мережі розімкнеться.", S.genCB ? null : "Генератор не живить об'єкт: живлення зникне повністю.",
-      () => send("Автомат мережі: розімкнути", "Ви", "Кнопка", () => { S.mainsCB = false; }));
+      () => send("Автомат мережі: розімкнути", S.me, "Кнопка", () => { S.mainsCB = false; }));
     ask("Перевести навантаження на мережу?", "Автомат генератора розімкнеться, автомат мережі замкнеться.", null,
-      () => send("Автомат мережі: замкнути", "Ви", "Кнопка", () => { S.mainsCB = true; S.genCB = false; }));
+      () => send("Автомат мережі: замкнути", S.me, "Кнопка", () => { S.mainsCB = true; S.genCB = false; }));
   };
 
   // ---------- out-of-schedule timer
@@ -1628,7 +1678,7 @@ select.o-input { padding: 4px 2px; }
   }, 1000);
   setInterval(render, 30000);
   renderSchedule(); renderExceptions(); renderAlarms(); renderData(); render(); draw();
-  window.__G = { endTest, S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, renderSchedule, renderExceptions, inWindow, notify, toMin, gsLeft, runSeq, reconnect, can, ROLES };
+  window.__G = { endTest, scheduleEvent, S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, renderSchedule, renderExceptions, inWindow, notify, toMin, gsLeft, runSeq, reconnect, can, ROLES };
 })();
 </script>
 
@@ -2076,6 +2126,9 @@ select.o-input { padding: 4px 2px; }
       ["stopFail", "Невдала зупинка", "03H 0034 = 14, 01H 0027"],
       ["oilNd", "Обрив датчика тиску оливи", "03H 0019 = 32766, 01H 0036"]]],
     ["Модуль CMM366B: зв'язок", [["linkLost", "Зв'язок з модулем втрачено", "немає heartbeat і даних довше, ніж задано в налаштуваннях"]]],
+    ["Команди", [
+      ["noExec", "Контролер не виконує команди", "режим після команди не змінюється — повтори, потім тривога"],
+      ["speed", "Прискорити час ×30", "лише для демо: повтори команд і тест іде в 30 разів швидше"]]],
     ["Модуль CMM366B: входи", INPUTS.map(([k, t, fld]) => [`in_${k}`, t, `${fld} · reqdatachange`])],
   ];
   const simOpen = {};
@@ -2095,7 +2148,18 @@ select.o-input { padding: 4px 2px; }
     G.renderAlarms(); renderEvents();
   }
   $("#simGrid").innerHTML = SIMS.map(([t, rows]) => `<div class="dcard"><h5>${t}<small>імітація</small></h5>${rows.map(([k, n, src]) =>
-    `<label class="simrow"><span>${n}<small>${src}</small></span><span class="switch"><input type="checkbox" data-sim="${k}"><span></span></span></label>`).join("")}</div>`).join("");
+    `<label class="simrow"><span>${n}<small>${src}</small></span><span class="switch"><input type="checkbox" data-sim="${k}"><span></span></span></label>`).join("")}</div>`).join("")
+    + `<div class="dcard"><h5>Розклад<small>імітація</small></h5>
+      <div class="simrow" style="cursor:default"><span>Подія розкладу зараз<small id="simWinTxt">вікно — за годинником</small></span><span></span></div>
+      <div class="formbar" style="padding:10px 12px"><button class="btn" type="button" data-win="start">Початок вікна</button><button class="btn" type="button" data-win="end">Кінець вікна</button><button class="btn" type="button" data-win="clock">Як за годинником</button></div></div>`;
+  $("#simGrid").onclick = e => {
+    const b = e.target.closest("[data-win]"); if (!b) return;
+    const w = b.dataset.win;
+    S.simWin = w === "clock" ? null : w === "start";
+    $("#simWinTxt").textContent = w === "clock" ? "вікно — за годинником" : w === "start" ? "вікно відкрито (імітація)" : "вікно закрито (імітація)";
+    if (w !== "clock") G.scheduleEvent(w);
+    G.render();
+  };
   $("#simGrid").onchange = e => {
     const k = e.target.dataset.sim, on = e.target.checked;
     if (!k) return;
@@ -2104,6 +2168,8 @@ select.o-input { padding: 4px 2px; }
       if (on) { G.runSeq([[14, 0]]); simAlarm(k, on, "crit", "Невдала зупинка", "Двигун не зупинився після команди «Стоп» (стан 14, 01H 0027). Потрібен виїзд на об'єкт.", "Тривога: невдала зупинка"); }
       else { G.runSeq([[15, 2], [0, 0]]); simAlarm(k, on, "crit", "Невдала зупинка", "", "Тривога: невдала зупинка"); }
     }
+    if (k === "noExec") { S.sim.noExec = on; G.notify(on ? "Контролер не виконуватиме команди" : "Контролер знову виконує команди"); }
+    if (k === "speed") { S.sim.speed = on ? 30 : 1; G.notify(on ? "Час прискорено ×30 (повтори і тест)" : "Звичайний час"); }
     if (k === "linkLost") {
       if (on) { S.offline = { since: Date.now() - (LS.alarmAfter + 1) * 60000 }; simAlarm(k, on, "crit", "Зв'язок з модулем втрачено", `Немає даних з ${kyiv(S.offline.since).hhmm}. Пульт недоступний; ${S.linkPolicy === "queue" ? "команди розкладу — у черзі" : "команди розкладу пропускаються"}.`, "Тривога: немає зв'язку"); }
       else { G.reconnect(); simAlarm(k, on, "crit", "Зв'язок з модулем втрачено", "", "Тривога: немає зв'язку"); }
@@ -2583,6 +2649,7 @@ select.o-input { padding: 4px 2px; }
         ${oset("Історія показань", "зберігати кожні, хв — і при кожній зміні стану; модуль історії не зберігає", inp("lHist", LS.history, "number", 'min="1"'))}
       </div></section>
       <section><h3>Пульт</h3><div class="oset-grid">
+        ${oset("Повтор непідтвердженої команди", "кожні N хв, доки не мине M хв; потім — тривога", pair(inp("pRetryEvery", S.retryEvery, "number", 'min="1"'), "хв, протягом", inp("pRetryFor", S.retryFor, "number", 'min="1"'), "хв"))}
         ${oset("Тривалість тестового пуску, хв", "потім генератор сам повертається в режим за розкладом або таймером", inp("pTest", S.testMin, "number", 'min="1" max="60"'))}
       </div></section>
       <section><h3>Сповіщення</h3><div class="oset-grid">
@@ -2665,6 +2732,7 @@ select.o-input { padding: 4px 2px; }
       Object.assign(LS, { server: v("lSrv"), online: num("lOn"), offline: num("lOff"), lostAfter: Math.max(1, num("lLost")), alarmAfter: Math.max(1, num("lAlarm")), timing: $("#lTiming").checked, history: Math.max(1, num("lHist")) });
       S.linkPolicy = v("lQueue");
       S.testMin = Math.min(60, Math.max(1, num("pTest") || 3));
+      S.retryEvery = Math.max(1, num("pRetryEvery") || 2); S.retryFor = Math.max(S.retryEvery, num("pRetryFor") || 10);
       ["crit", "warn", "info"].forEach(k => (S.notify.rules[k] = v(`nRule_${k}`)));
       Object.assign(S.notify.quiet, { on: $("#nQOn").checked, from: v("nQFrom") || S.notify.quiet.from, to: v("nQTo") || S.notify.quiet.to });
       Object.assign(FS, { min: Math.max(0, num("fMin")), can: Math.min(60, Math.max(5, num("fCan"))), price: Math.max(0, num("fPrice")), supplier: v("fSup"), drain: Math.max(1, num("fDrain")) });
@@ -2777,6 +2845,7 @@ select.o-input { padding: 4px 2px; }
     lLost: D(RS, "genset_link_lost_minutes", "integer", "Через скільки хвилин без даних зв'язок вважається втраченим.", { cp: "td_genset.link_lost_minutes" }),
     lAlarm: D(RS, "genset_link_alarm_minutes", "integer", "Через скільки хвилин без зв'язку створюється тривога.", { cp: "td_genset.link_alarm_minutes" }),
     lQueue: D(RS, "genset_offline_policy", "selection", "Що робити з командами розкладу і таймера, коли немає зв'язку.", { sel: "[('queue', 'У чергу'), ('skip', 'Пропустити')]", cp: "td_genset.offline_policy" }),
+    pRetryEvery: D(RS, "genset_retry_minutes", "integer", "Як часто повторювати команду, яку контролер не підтвердив. Поруч — genset_retry_window: скільки всього повторювати, потім тривога.", { cp: "td_genset.retry_minutes" }),
     pTest: D(RS, "genset_test_minutes", "integer", "Скільки триває тестовий пуск. Потім генератор повертається в режим за розкладом або таймером.", { cp: "td_genset.test_minutes" }),
     lTiming: D(RS, "genset_time_sync", "boolean", "Синхронізувати годинник модулів із сервером (інтерфейс timing).", { cp: "td_genset.time_sync", widget: "Перемикач (boolean_toggle)" }),
     lHist: D(RS, "genset_history_interval", "integer", "Як часто зберігати показання в історію, хв. Плюс запис при кожній зміні стану.", { cp: "td_genset.history_interval" }),
@@ -2812,7 +2881,7 @@ select.o-input { padding: 4px 2px; }
     [CM + "|Хто"]: D(CM, "user_id", "many2one", "Хто надіслав: користувач, розклад або таймер (системний користувач).", { rel: "res.users" }),
     [CM + "|Джерело"]: D(CM, "source", "selection", "Звідки прийшла команда.", { sel: "[('button', 'Кнопка'), ('schedule', 'Розклад'), ('timer', 'Таймер')]" }),
     [CM + "|Команда"]: D(CM, "command", "selection", "Команда 05H: 0000 Пуск, 0001 Стоп, 0002 Тест, 0003 Авто, 0004 Ручний, 0005/0006 автомати.", { sel: "[('start', 'Пуск'), ('stop', 'Стоп'), ('test', 'Тест'), ('auto', 'Авто'), ('manual', 'Ручний'), ('gen_cb', 'Автомат генератора'), ('mains_cb', 'Автомат мережі')]" }),
-    [CM + "|Результат"]: D(CM, "state", "selection", "Чи підтвердив контролер виконання: після команди система читає режим, повтор до 10 хв.", { sel: "[('sent', 'Надіслано'), ('done', 'Підтверджено'), ('blocked', 'Блокування'), ('queued', 'У черзі'), ('no_link', 'Немає зв\\'язку'), ('skipped', 'Пропущено')]", widget: "Бейдж (badge)" }),
+    [CM + "|Результат"]: D(CM, "state", "selection", "Чи підтвердив контролер виконання: після команди система читає режим; не змінився — повтор кожні N хв протягом M хв, потім тривога.", { sel: "[('sent', 'Надіслано'), ('retry', 'Повтор'), ('done', 'Підтверджено'), ('failed', 'Не підтверджено'), ('lost', 'Зв\\'язок втрачено'), ('late', 'Підтверджено після відновлення'), ('blocked', 'Блокування'), ('queued', 'У черзі'), ('skipped', 'Пропущено')]", widget: "Бейдж (badge)" }),
     [RD + "|Час"]: D(RD, "read_at", "datetime", "Час показання: кожні N хв і при кожній зміні стану."),
     [RD + "|Режим"]: D(RD, "mode", "selection", "Режим контролера, 01H 0040–0043.", { sel: MODE, widget: "Бейдж (badge)" }),
     [RD + "|Агрегат"]: D(RD, "genset_state", "selection", "Стан агрегату, 03H 0034.", { sel: GS, widget: "Бейдж (badge)" }),
