@@ -947,11 +947,6 @@ msgid "Адреса об'єкта, де стоїть генератор."
 msgstr ""
 
 #. module: td_genset
-#: model:ir.ui.menu,name:td_genset.menu_config_odoo_settings
-msgid "Адреса і токен ретранслятора"
-msgstr ""
-
-#. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_canister__active
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_controller_model__active
 #: model:ir.model.fields.selection,name:td_genset.selection__td_genset_alarm__state__active
@@ -1591,6 +1586,11 @@ msgid "Вікно повторів не може бути коротшим за 
 msgstr ""
 
 #. module: td_genset
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_schedule_form
+msgid "Вікно розкладу"
+msgstr ""
+
+#. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_refuel_wizard__free_l
 msgid "Вільно в баку, L"
 msgstr ""
@@ -2107,6 +2107,7 @@ msgstr ""
 
 #. module: td_genset
 #: model:ir.model.fields.selection,name:td_genset.selection__td_genset_command__source__exception
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_schedule_exception_form
 msgid "День-виняток"
 msgstr ""
 
@@ -2407,7 +2408,6 @@ msgstr ""
 
 #. module: td_genset
 #: model:ir.actions.act_window,name:td_genset.action_td_genset_command
-#: model:ir.ui.menu,name:td_genset.menu_config_commands
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_command_list
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
 msgid "Журнал команд"
@@ -2943,6 +2943,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:td_genset.field_td_genset__fuel_calibration_ids
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_fuel_calibration_list
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_fuel_calibration_search
 msgid "Калібрування датчика палива"
 msgstr ""
 
@@ -5942,6 +5943,7 @@ msgstr ""
 
 #. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_alarm__escalation_level
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_notify_level_form
 msgid "Рівень ескалації"
 msgstr ""
 
@@ -6639,6 +6641,11 @@ msgid "Точка з таким опором уже є в калібруванн
 msgstr ""
 
 #. module: td_genset
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_fuel_calibration_form
+msgid "Точка калібрування"
+msgstr ""
+
+#. module: td_genset
 #: model:ir.model.fields,help:td_genset.field_td_genset__fuel_calibration_ids
 msgid ""
 "Точки Ом → L. Заповніть за кривою датчика в налаштуваннях контролера (Ом → %"
@@ -6728,7 +6735,6 @@ msgstr ""
 #: model:ir.actions.act_window,name:td_genset.action_td_genset_alarm
 #: model:ir.model.fields,field_description:td_genset.field_td_genset__alarm_ids
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__alarm_flags
-#: model:ir.ui.menu,name:td_genset.menu_alarm
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_alarm_list
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_alarm_search
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
