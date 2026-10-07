@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W4. Каркас W0: майстер «Надходження палива». XML id дії (зберегти!): action_td_genset_fuel_receipt_wizard. -->
+<!-- Власник: W4. Майстер «Надходження палива» (ТР 2.3.11; SPEC 5.14; мокап — діалог «Надходження палива»).
+     XML id дії (зберегти!): action_td_genset_fuel_receipt_wizard. -->
 <odoo>
     <record id="view_td_genset_fuel_receipt_wizard_form" model="ir.ui.view">
         <field name="name">td.genset.fuel.receipt.wizard.form</field>
@@ -7,18 +8,33 @@
         <field name="arch" type="xml">
             <form string="Надходження палива">
                 <group>
-                    <field name="mode" widget="radio"/>
-                    <field name="canister_qty" invisible="mode != 'new'"/>
-                    <field name="canister_volume_l" invisible="mode != 'new'"/>
-                    <field name="location_id" invisible="mode != 'new'" required="mode == 'new'"/>
-                    <field name="canister_ids" widget="many2many_tags" invisible="mode != 'fill'"/>
-                    <field name="price_unit"/>
-                    <field name="currency_id" invisible="1"/>
-                    <field name="partner_id"/>
-                    <field name="note"/>
+                    <field name="mode" widget="radio" options="{'horizontal': true}"/>
                 </group>
+                <group invisible="mode != 'new'">
+                    <field name="canister_qty"/>
+                    <field name="canister_volume_l"/>
+                    <field name="location_id" required="mode == 'new'" options="{'no_create': True}"/>
+                </group>
+                <field name="canister_ids" invisible="mode != 'fill'" options="{'no_create': True}">
+                    <list>
+                        <field name="name"/>
+                        <field name="liters" string="У каністрі, L"/>
+                        <field name="volume_l"/>
+                        <field name="location_id"/>
+                    </list>
+                </field>
+                <group>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="price_unit"/>
+                    <field name="partner_id"/>
+                    <field name="note" placeholder="АЗС, номер накладної…"/>
+                </group>
+                <div class="alert alert-info mb-0" role="status" invisible="not summary">
+                    <field name="summary" nolabel="1"/>
+                </div>
                 <footer>
-                    <button name="action_confirm" type="object" string="Записати" class="btn-primary" data-hotkey="q"/>
+                    <button name="action_confirm" type="object" string="Оприбуткувати" class="btn-primary"
+                            data-hotkey="q"/>
                     <button string="Скасувати" class="btn-secondary" special="cancel" data-hotkey="x"/>
                 </footer>
             </form>

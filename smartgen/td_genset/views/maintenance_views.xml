@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W4. Каркас W0: поля td_* на заявці ТО і обладнанні (ТР 2.3.12). -->
+<!-- Власник: W4. Поля td_* на заявці ТО і обладнанні (ТР 2.3.12; SPEC 5.13, 10): «Підрядник» — контакт без
+     доступу до системи (рішення 1.4), генератор і мотогодини закриття. -->
 <odoo>
     <record id="view_maintenance_request_form_td_genset" model="ir.ui.view">
         <field name="name">maintenance.request.form.td.genset</field>
@@ -7,10 +8,40 @@
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
         <field name="arch" type="xml">
             <field name="maintenance_team_id" position="after">
-                <field name="td_partner_id"/>
-                <field name="td_genset_id" invisible="not td_genset_id"/>
-                <field name="td_run_hours_at_close" invisible="not td_genset_id"/>
+                <field name="td_partner_id" options="{'no_quick_create': True}"/>
             </field>
+            <field name="maintenance_type" position="after">
+                <field name="td_genset_id" invisible="not td_genset_id"/>
+                <field name="td_run_hours_at_close" invisible="not td_genset_id or not done"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_maintenance_request_list_td_genset" model="ir.ui.view">
+        <field name="name">maintenance.request.list.td.genset</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="user_id" position="after">
+                <field name="td_partner_id" optional="show"/>
+                <field name="td_genset_id" optional="hide"/>
+                <field name="td_run_hours_at_close" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_maintenance_request_search_td_genset" model="ir.ui.view">
+        <field name="name">maintenance.request.search.td.genset</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_search"/>
+        <field name="arch" type="xml">
+            <field name="maintenance_team_id" position="after">
+                <field name="td_partner_id"/>
+                <field name="td_genset_id"/>
+            </field>
+            <filter name="my_maintenances" position="after">
+                <filter string="Генератори" name="td_genset" domain="[('td_genset_id', '!=', False)]"/>
+            </filter>
         </field>
     </record>
 
