@@ -493,12 +493,62 @@ select.o-input { padding: 4px 2px; }
 .dialog footer { flex-wrap: wrap; }
 .dialog footer .grow { flex: 1; }
 
+/* alarms: notification line, acknowledge */
+.alarm-head { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--o-muted); padding-bottom: 8px; border-bottom: 1px solid var(--o-border); }
+.al-r { display: grid; justify-items: end; align-content: start; gap: 6px; }
+.nl { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; color: var(--o-info); margin-top: 4px; }
+.nl .ms { font-size: 16px; vertical-align: 0; }
+.nl.ok { color: var(--o-ok); }
+.btn-sm { min-height: 26px; padding: 2px 10px; font-size: 12.5px; }
+.lnk { color: var(--o-primary); text-decoration: none; }
+.lnk:hover { text-decoration: underline; }
+/* offline: last known values greyed out */
+.desk.stale .a-gauges, .desk.stale .a-params, .desk.stale .a-diagram { opacity: .5; filter: grayscale(1); }
+.only-phone { display: none; }
+/* maintenance */
+.mt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.mreq { border: 1px solid var(--o-border); border-radius: 8px; padding: 12px 14px; margin-top: 12px; }
+.mreq-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px; }
+.mreq-h b { font-size: 14.5px; font-weight: 600; }
+.checklist { display: grid; gap: 2px; margin: 8px 0 10px; }
+.checklist label { display: flex; gap: 8px; align-items: center; font-size: 13.5px; padding: 3px 0; cursor: pointer; }
+.checklist input { accent-color: var(--o-primary); width: 16px; height: 16px; margin: 0; }
+.checklist label.key { font-weight: 500; }
+.tbar.crit i { background: var(--o-crit); }
+/* start reliability */
+.starts { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 10px; }
+.st { font-size: 11.5px; padding: 1px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.st.a1 { background: var(--o-ok-soft); color: var(--o-ok); } .st.a2 { background: var(--o-warn-soft); color: var(--o-warn); font-weight: 600; } .st.a3 { background: var(--o-crit-soft); color: var(--o-crit); font-weight: 600; }
+.advice { display: flex; gap: 8px; align-items: flex-start; background: var(--o-warn-soft); color: var(--o-warn); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-bottom: 8px; }
+/* settings */
+.sform { display: grid; gap: 12px; }
+.sbox { background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 8px; padding: 12px 16px 14px; min-width: 0; }
+.sbox h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.sbox > .sub { font-size: 12.5px; color: var(--o-muted); margin-bottom: 10px; }
+.sgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 32px; }
+.sgrid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sfield { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px 0; }
+.sfield > span:first-child { font-weight: 500; font-size: 13.5px; }
+.sfield small { display: block; color: var(--o-muted); font-size: 12px; font-weight: 400; }
+.pair { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pair .o-input { width: 76px; }
+.chipset { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chk { position: relative; display: inline-flex; align-items: center; border: 1px solid var(--o-border-strong); border-radius: 999px; padding: 1px 10px; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.chk input { position: absolute; opacity: 0; pointer-events: none; }
+.chk:has(input:checked) { background: var(--o-primary-soft); border-color: var(--o-primary); color: var(--o-primary); font-weight: 500; }
+.chk:has(input:focus-visible) { outline: 2px solid var(--o-primary); outline-offset: 1px; }
+.formbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.formbar .grow { flex: 1; }
+.o-list tr.clk { cursor: pointer; }
+.chain td { white-space: normal; vertical-align: middle; }
+.chain select { min-width: 150px; }
+
 /* events */
 .evtype { display: inline-flex; align-items: center; gap: 6px; }
 .evtype .ms { font-size: 18px; }
 
 @media (max-width: 900px) {
-  .charts, .fuel-cols { grid-template-columns: minmax(0, 1fr); }
+  .charts, .fuel-cols, .mt-grid, .sgrid, .sgrid2 { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
   .navbar { flex-wrap: wrap; height: auto; padding-block: 6px; row-gap: 4px; }
@@ -516,6 +566,17 @@ select.o-input { padding: 4px 2px; }
   .can { padding: 12px 2px 6px; }
   #useKpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   #useKpis .kpi { padding: 10px 12px; }
+  .only-phone { display: inline-flex; }
+  /* phone: settings tables become cards, like Odoo's mobile list */
+  .cardlist thead { display: none; }
+  .cardlist table, .cardlist tbody, .cardlist tr, .cardlist td { display: block; }
+  .cardlist tr { padding: 10px 12px; border-bottom: 1px solid var(--o-border); }
+  .cardlist tr:last-child { border-bottom: 0; }
+  .cardlist td { border: 0; padding: 2px 0; white-space: normal; text-align: left !important; position: static !important; background: transparent !important; }
+  .cardlist td[data-l]::before { content: attr(data-l) " · "; color: var(--o-muted); }
+  .cardlist .o-list, .o-list.cardlist { max-height: none; }
+  .sfield { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .sbox { padding: 12px; }
   .box { padding: 12px 12px 14px; }
 }
 .dim { color: var(--o-muted); }
@@ -530,10 +591,11 @@ select.o-input { padding: 4px 2px; }
     <a class="nav-entry menu" href="#analytics" data-page="analytics">Аналітика</a>
     <a class="nav-entry menu" href="#events" data-page="events">Події</a>
     <a class="nav-entry menu" href="#fuel" data-page="fuel">Заправка</a>
-    <span class="nav-entry sec">Налаштування</span>
+    <a class="nav-entry menu sec" href="#settings" data-page="settings">Налаштування</a>
   </nav>
   <span class="grow"></span>
   <span class="mock-badge">Мокап</span>
+  <a class="nav-entry only-phone" href="#settings" aria-label="Налаштування"><span class="ms">settings</span></a>
   <span class="nav-entry sec" aria-hidden="true"><span class="ms">forum</span></span>
   <span class="nav-entry sec" aria-hidden="true"><span class="ms">schedule</span></span>
   <span class="nav-entry sec">ToDo LTD</span>
@@ -543,7 +605,7 @@ select.o-input { padding: 4px 2px; }
 <div class="page" id="page-form">
 <div class="cp">
   <button class="btn btn-primary" type="button">Новий</button>
-  <div class="crumbs"><a class="back" href="#" aria-label="Назад до списку генераторів"><span class="ms">arrow_back</span></a><a href="#">Генератори</a><span>/</span><span class="cur">Садова вулиця</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
+  <div class="crumbs"><a class="back" href="#settings" data-goset="gens" aria-label="Назад до списку генераторів"><span class="ms">arrow_back</span></a><a href="#settings" data-goset="gens">Генератори</a><span>/</span><span class="cur">Садова вулиця</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
   <span class="grow"></span>
   <div class="pager"><span class="num">1 / 3</span><button type="button" aria-label="Попередній"><span class="ms">chevron_left</span></button><button type="button" aria-label="Наступний"><span class="ms">chevron_right</span></button></div>
 </div>
@@ -567,7 +629,7 @@ select.o-input { padding: 4px 2px; }
         <button class="stat" type="button" data-href="#fuel"><span class="ms">local_gas_station</span><span><span class="t">У каністрах</span><span class="v" id="statFuel">—</span></span></button>
         <button class="stat" type="button" data-goto="alarms"><span class="ms">notifications</span><span><span class="t">Тривоги</span><span class="v" id="statAlarms">1</span></span></button>
         <button class="stat" type="button" data-goto="log"><span class="ms">history</span><span><span class="t">Команди</span><span class="v" id="statCmds">6</span></span></button>
-        <button class="stat" type="button" data-goto="data"><span class="ms">build</span><span><span class="t">До ТО</span><span class="v">0 год</span></span></button>
+        <button class="stat" type="button" data-goto="maint"><span class="ms">build</span><span><span class="t">До ТО</span><span class="v" id="statMaint">0 год</span></span></button>
       </div>
 
       <div class="titleblock">
@@ -582,9 +644,9 @@ select.o-input { padding: 4px 2px; }
           <div class="field"><span class="lbl">Наступна подія</span><span class="val" id="fNext">—</span></div>
         </div>
         <div>
-          <div class="field"><span class="lbl">Зв'язок</span><span class="val"><span class="badge b-ok">Онлайн</span> <small class="num" id="fAge">12 с тому</small></span></div>
+          <div class="field"><span class="lbl">Зв'язок</span><span class="val"><span class="badge b-ok" id="fLink">Онлайн</span> <small class="num" id="fAge">12 с тому</small></span></div>
           <div class="field"><span class="lbl">Живлення об'єкта</span><span class="val"><span class="badge" id="fFeed">Мережа</span></span></div>
-          <div class="field"><span class="lbl">Отримувач тривог</span><span class="val"><span class="badge b-warn">не призначено</span></span></div>
+          <div class="field"><span class="lbl">Отримувачі тривог</span><span class="val"><a class="lnk" href="#settings" data-goset="notify" id="fRecip">—</a></span></div>
         </div>
       </div>
 
@@ -676,6 +738,7 @@ select.o-input { padding: 4px 2px; }
           <button role="tab" type="button" aria-selected="true" data-tab="schedule">Розклад</button>
           <button role="tab" type="button" aria-selected="false" data-tab="data">Поточні дані</button>
           <button role="tab" type="button" aria-selected="false" data-tab="alarms">Тривоги<span class="cnt" id="cntAlarms">1</span></button>
+          <button role="tab" type="button" aria-selected="false" data-tab="maint">Обслуговування</button>
           <button role="tab" type="button" aria-selected="false" data-tab="log">Журнал команд<span class="cnt" id="cntLog">6</span></button>
         </div>
 
@@ -726,7 +789,8 @@ select.o-input { padding: 4px 2px; }
           </div>
         </div>
 
-        <div class="panel" data-panel="alarms" hidden><div id="alarmList"></div></div>
+        <div class="panel" data-panel="alarms" hidden><div class="alarm-head" id="alarmHead"></div><div id="alarmList"></div></div>
+        <div class="panel" data-panel="maint" hidden><div id="maintBox"></div></div>
 
         <div class="panel" data-panel="log" hidden>
           <div class="tbl-wrap"><table>
@@ -756,7 +820,7 @@ select.o-input { padding: 4px 2px; }
 <!-- ================= Показання ================= -->
 <div class="page" id="page-readings">
   <div class="cp">
-    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Показання</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
+    <div class="crumbs"><a href="#settings" data-goset="gens">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Показання</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
     <div class="searchbar"><span class="ms">search</span><span class="facet" id="rdFacet">Генератор: Садова вулиця<button type="button" aria-label="Прибрати фільтр"><span class="ms">close</span></button></span><input id="rdSearch" type="search" placeholder="Пошук…" aria-label="Пошук"></div>
     <span class="grow"></span>
     <div class="views" aria-label="Подання"><span class="cur" title="Список"><span class="ms">list</span></span><a href="#analytics" title="Графік"><span class="ms">bar_chart</span></a><a href="#analytics" title="Зведена таблиця"><span class="ms">table_chart</span></a></div>
@@ -788,7 +852,7 @@ select.o-input { padding: 4px 2px; }
 <!-- ================= Аналітика ================= -->
 <div class="page" id="page-analytics">
   <div class="cp">
-    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Аналітика</span></div>
+    <div class="crumbs"><a href="#settings" data-goset="gens">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Аналітика</span></div>
     <span class="grow"></span>
     <div class="seg" role="group" aria-label="Період">
       <button type="button" aria-pressed="false" data-period="7">7 днів</button>
@@ -808,6 +872,10 @@ select.o-input { padding: 4px 2px; }
         <div id="chTimeline"></div></div>
       <div class="chart"><h4>Вироблено енергії</h4><div class="sub">kWh на добу</div><div id="chEnergy"></div></div>
       <div class="chart"><h4>Рівень палива</h4><div class="sub">L у баку (145 L), стрибки вгору — заправки</div><div id="chFuel"></div></div>
+      <div class="chart wide"><h4>Пуски і стан АКБ</h4><div class="sub">скільки спроб знадобилось на кожен пуск і найнижча напруга АКБ під час прокрутки стартером</div>
+        <div class="legend"><span style="--c:var(--o-ok)"><i></i>з 1-ї спроби</span><span style="--c:var(--o-warn)"><i></i>з 2-ї</span><span style="--c:var(--o-crit)"><i></i>з 3-ї і більше</span></div>
+        <div class="starts" id="startStrip"></div><div id="startAdvice"></div><div id="chCrank"></div>
+        <div class="example-note" style="margin-top:6px"><span class="ms">info</span>Спроби — з переходів стану контролера «Прокрутка» → «Пауза між спробами» (03H 0034); напруга — 03H 0024 під час прокрутки.</div></div>
       <div class="chart"><h4>Напруга АКБ</h4><div class="sub">V, раз на 2 години</div><div id="chBat"></div></div>
       <div class="chart"><h4>Навантаження під час останньої роботи</h4><div class="sub" id="lastRunSub">kW</div><div id="chLoad"></div></div>
     </div>
@@ -817,7 +885,7 @@ select.o-input { padding: 4px 2px; }
 <!-- ================= Події ================= -->
 <div class="page" id="page-events">
   <div class="cp">
-    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Події</span></div>
+    <div class="crumbs"><a href="#settings" data-goset="gens">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Події</span></div>
     <div class="searchbar"><span class="ms">search</span><span class="facet">Останні 30 днів<button type="button" aria-label="Прибрати фільтр"><span class="ms">close</span></button></span><input type="search" placeholder="Пошук…" aria-label="Пошук"></div>
     <span class="grow"></span>
     <div class="views" aria-label="Подання"><span class="cur" title="Список"><span class="ms">list</span></span><span title="Календар"><span class="ms">calendar_month</span></span><a href="#analytics" title="Графік"><span class="ms">bar_chart</span></a></div>
@@ -862,7 +930,7 @@ select.o-input { padding: 4px 2px; }
 <!-- ================= Заправка ================= -->
 <div class="page" id="page-fuel">
   <div class="cp">
-    <div class="crumbs"><a href="#form">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Заправка</span></div>
+    <div class="crumbs"><a href="#settings" data-goset="gens">Генератори</a><span>/</span><a href="#form">Садова вулиця</a><span>/</span><span class="cur">Заправка</span></div>
     <span class="grow"></span>
     <div class="cp-actions">
       <button class="btn btn-primary" type="button" id="fRefuel"><span class="ms">local_gas_station</span>Заправити генератор</button>
@@ -900,6 +968,21 @@ select.o-input { padding: 4px 2px; }
   </div>
 </div>
 
+<!-- ================= Налаштування ================= -->
+<div class="page" id="page-settings">
+  <div class="cp">
+    <div class="crumbs"><span class="cur">Налаштування</span></div>
+    <span class="grow"></span>
+    <div class="seg" role="group" aria-label="Розділ налаштувань">
+      <button type="button" aria-pressed="true" data-stab="gens">Генератори</button>
+      <button type="button" aria-pressed="false" data-stab="notify">Сповіщення</button>
+      <button type="button" aria-pressed="false" data-stab="fuel">Паливо</button>
+      <button type="button" aria-pressed="false" data-stab="link">Зв'язок</button>
+    </div>
+  </div>
+  <div class="pagebody"><div id="setBody"></div></div>
+</div>
+
 <div class="scrim" id="fScrim" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="fdTitle">
     <header><span id="fdTitle"></span><button type="button" id="fdClose" aria-label="Закрити"><span class="ms">close</span></button></header>
@@ -931,11 +1014,22 @@ select.o-input { padding: 4px 2px; }
     mode: "auto", source: "schedule", gs: 0, gsEnd: 0, genCB: false, mainsCB: true, timer: null,
     remoteLock: false, nd: { oil: false },   // 01H 0004; 03H value 32766 = no data
     inputs: { access: false, fire: false, alarm: false, inhibit: false },   // CMM366B inputs (reqdatachange)
+    offline: null, queue: [], linkPolicy: "queue",   // module stopped sending data; schedule commands wait in the queue
+    maint: { first: 30, every: 250, left: 0 },       // 03H 0030-0031: hours to maintenance
+    notify: {
+      chain: [
+        { role: "Черговий", who: "О. Коваль", ch: ["Telegram", "SMS"], after: 0 },
+        { role: "Відповідальний за об'єкт", who: "Т. Нижниковський", ch: ["Telegram", "Дзвінок"], after: 10 },
+        { role: "Керівник", who: "І. Мельник", ch: ["SMS", "Email"], after: 30 },
+      ],
+      quiet: { on: true, from: "22:00", to: "07:00" },
+      rules: { crit: "Завжди", warn: "Крім тихих годин", info: "Лише в чаті" },
+    },
     schedule: [0, 1, 2, 3, 4].map(d => ({ day: d, start: "08:45", end: "18:30", on: true })),
     exceptions: [{ date: "2026-12-31", action: "custom", start: "08:45", end: "14:00" }, { date: "2027-01-01", action: "skip" }],
     log: [], chat: [],
     alarms: [
-      { level: "warn", title: "Термін ТО минув", sub: "Лічильник до ТО: 0 год 0 хв", when: "активна", example: false },
+      { level: "warn", title: "Термін ТО минув", sub: "Лічильник до ТО: 0 год 0 хв. Створено заявку ТО-0002.", when: "активна", example: false, n: { at: Date.now() - 9 * 86400e3, ack: { who: "О. Коваль", time: "через 6 хв" } } },
       { level: "ok", title: "Зв'язок з модулем відновлено", sub: "Не було даних 8 хв (03:12–03:20)", when: "05.10, 03:20", example: true },
       { level: "crit", title: "Команда «Стоп» не підтверджена за 10 хв", sub: "Розклад, 18:30. Повторено 5 разів, режим не змінився", when: "02.10, 18:40", example: true },
     ],
@@ -1042,6 +1136,7 @@ select.o-input { padding: 4px 2px; }
     if (S.genCB && (g === 8 || g === 9)) Object.assign(T, { kw: 18, cur: 27, cos: 0.92 });
   }
   setInterval(() => {
+    if (S.offline) return;   // no new data: keep the last known values
     for (const k in V) {
       V[k] = reduce ? T[k] : V[k] + (T[k] - V[k]) * (k === "temp" ? 0.02 : 0.14);
       if (Math.abs(T[k] - V[k]) < 0.02) V[k] = T[k];
@@ -1071,8 +1166,15 @@ select.o-input { padding: 4px 2px; }
     $("#gaugeNote").textContent = S.gs === 0 ? "двигун зупинено" : GS[S.gs].toLowerCase();
     $("#nGen").classList.toggle("on", S.gs !== 0);
     const lockWhy = [S.remoteLock && "блокування на контролері (01H 0004)", S.inputs.inhibit && "вхід модуля «Заборона дистанційного керування»"].filter(Boolean);
-    $("#lockBar").hidden = !lockWhy.length;
-    $("#lockTxt").textContent = `Дистанційне керування заблоковано: ${lockWhy.join(" і ")}. Команди з пульта, розкладу і таймера не надсилаються.`;
+    $("#lockBar").hidden = !lockWhy.length && !S.offline;
+    $("#lockTxt").textContent = S.offline
+      ? `Немає зв'язку з модулем — команди неможливо доставити. Показано останні отримані дані (${kyiv(S.offline.since).hhmm}). ${S.linkPolicy === "queue" ? "Команди розкладу стануть у чергу й підуть після відновлення." : "Команди розкладу буде пропущено."}`
+      : `Дистанційне керування заблоковано: ${lockWhy.join(" і ")}. Команди з пульта, розкладу і таймера не надсилаються.`;
+    if (S.offline) lockWhy.push("offline");
+    $("#fLink").className = "badge " + (S.offline ? "b-crit" : "b-ok"); $("#fLink").textContent = S.offline ? "Немає зв'язку" : "Онлайн";
+    $(".desk").classList.toggle("stale", !!S.offline);
+    $("#fRecip").textContent = S.notify.chain.map(c => c.who).join(" → ");
+    $("#statMaint").textContent = S.maint.left ? `${S.maint.left} год` : "прострочено";
     $$("[data-cmd], #coGen, #coMains, #durForm [type=submit]").forEach(b => (b.disabled = lockWhy.length > 0));
     $("#gOilWrap").classList.toggle("nd", S.nd.oil);
     $("#lOil").textContent = S.nd.oil ? "Тиск оливи · немає даних" : "Тиск оливи";
@@ -1176,14 +1278,37 @@ select.o-input { padding: 4px 2px; }
   $("#tdClose").onclick = () => closeTimeDialog(false);
   $("#timeScrim").onclick = e => { if (e.target.id === "timeScrim") closeTimeDialog(false); };
 
+  // who has been notified about an active alarm: the chain escalates until someone presses «Прийняв»
+  const quietNow = () => { const q = S.notify.quiet; if (!q.on) return false; const m = kyiv().min, a = toMin(q.from), b = toMin(q.to); return a > b ? m >= a || m < b : m >= a && m < b; };
+  function notifLine(a) {
+    if (!a.n || a.when !== "активна") return "";
+    if (a.n.ack) return `<span class="nl ok"><span class="ms">done_all</span>Прийняв ${a.n.ack.who} · ${a.n.ack.time}. Ескалацію зупинено.</span>`;
+    const rule = S.notify.rules[a.level === "crit" ? "crit" : "warn"];
+    if (rule === "Лише в чаті") return `<span class="nl"><span class="ms">forum</span>Лише в чаті — без сповіщень (налаштування)</span>`;
+    if (rule === "Крім тихих годин" && quietNow()) return `<span class="nl"><span class="ms">bedtime</span>Тихі години: сповіщення надійде о ${S.notify.quiet.to}</span>`;
+    const mins = (Date.now() - a.n.at) / 60000, ch = S.notify.chain;
+    const sent = ch.filter(c => c.after <= mins), next = ch.find(c => c.after > mins);
+    return `<span class="nl"><span class="ms">send</span>Сповіщено: ${sent.map(c => `${c.who} (${c.ch.join(", ")})`).join(" → ")}${next ? ` · якщо не прийняти — о ${kyiv(a.n.at + next.after * 60000).hhmm} отримає ${next.who}` : " · сповіщено всі рівні"}</span>`;
+  }
   function renderAlarms() {
     const c = { warn: "var(--o-warn)", ok: "var(--o-ok)", crit: "var(--o-crit)" };
-    $("#alarmList").innerHTML = S.alarms.map(a => `<div class="alarm"><span class="stripe" style="background:${c[a.level]}"></span>
-      <div><b>${a.title}${a.example ? '<span class="ex">приклад</span>' : ""}</b><small>${a.sub}</small></div><small class="num">${a.when}</small></div>`).join("");
-    const n = S.alarms.filter(a => a.when === "активна").length;
+    const act = a => a.when === "активна";
+    $("#alarmList").innerHTML = S.alarms.map((a, i) => ({ a, i })).sort((x, y) => act(y.a) - act(x.a)).map(({ a, i }) => `<div class="alarm"><span class="stripe" style="background:${c[a.level]}"></span>
+      <div><b>${a.title}${a.example ? '<span class="ex">приклад</span>' : ""}</b><small>${a.sub}</small>${notifLine(a)}</div>
+      <div class="al-r"><small class="num">${a.when}</small>${a.n && act(a) && !a.n.ack ? `<button class="btn btn-sm" type="button" data-ack="${i}">Прийняв</button>` : ""}</div></div>`).join("");
+    $("#alarmHead").innerHTML = `<span class="ms">campaign</span><span>Сповіщення: ${S.notify.chain.map(c => `${c.who}${c.after ? ` (+${c.after} хв)` : ""}`).join(" → ")} · <a class="lnk" href="#settings" data-goset="notify">налаштувати</a></span>`;
+    const n = S.alarms.filter(act).length;
     $("#cntAlarms").textContent = n; $("#statAlarms").textContent = n;
   }
-  const RES = { pending: ["Надіслано", "b-info"], ok: ["Підтверджено", "b-ok"], blocked: ["Не надіслано: блокування", "b-crit"] };
+  $("#alarmList").onclick = e => {
+    const b = e.target.closest("[data-ack]"); if (!b) return;
+    const a = S.alarms[+b.dataset.ack];
+    a.n.ack = { who: "Ви", time: kyiv().full };
+    S.chat.unshift({ day: "Сьогодні", who: "Ви", time: kyiv().hhmm, text: `Прийняв тривогу «${a.title}». Ескалацію зупинено.`, track: true });
+    renderAlarms(); render();
+  };
+  const RES = { pending: ["Надіслано", "b-info"], ok: ["Підтверджено", "b-ok"], blocked: ["Не надіслано: блокування", "b-crit"],
+    queued: ["У черзі: немає зв'язку", "b-warn"], noLink: ["Не доставлено: немає зв'язку", "b-crit"], skipped: ["Пропущено: немає зв'язку", "b-mute"] };
   function renderLog() {
     $("#logBody").innerHTML = S.log.map(r => `<tr><td class="num">${r.when}</td><td>${r.who}</td><td>${r.src}</td><td><b>${r.cmd}</b></td>
       <td><span class="badge ${RES[r.res][1]}">${RES[r.res][0]}</span></td></tr>`).join("");
@@ -1213,6 +1338,13 @@ select.o-input { padding: 4px 2px; }
   let nT;
   function notify(text, warn) { const n = $("#notif"); n.textContent = text; n.className = "notif" + (warn ? " warn" : ""); n.hidden = false; clearTimeout(nT); nT = setTimeout(() => (n.hidden = true), 2800); }
   function send(cmd, who, src, effect) {
+    if (S.offline) {
+      const auto = src === "Розклад" || src === "Таймер", queued = auto && S.linkPolicy === "queue";
+      const row = { when: kyiv().full, who, src, cmd, res: queued ? "queued" : auto ? "skipped" : "noLink" };
+      S.log.unshift(row); if (queued) S.queue.push({ row, effect });
+      S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: queued ? `Немає зв'язку: команду <b>${cmd}</b> поставлено в чергу.` : `Команду <b>${cmd}</b> не доставлено: немає зв'язку з модулем.`, track: true });
+      return render();
+    }
     if (isLocked()) {
       S.log.unshift({ when: kyiv().full, who, src, cmd, res: "blocked" });
       S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Команду <b>${cmd}</b> (${src}) не надіслано: дистанційне керування заблоковано.`, track: true });
@@ -1238,6 +1370,13 @@ select.o-input { padding: 4px 2px; }
       if (sec) seqT = setTimeout(() => step(i + 1), sec * 1000); else done && done();
     };
     step(0);
+  }
+  function reconnect() {
+    S.offline = null;
+    const q = S.queue.splice(0);
+    q.forEach(x => { x.row.res = "ok"; x.effect && x.effect(); });
+    S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Зв'язок з модулем відновлено.${q.length ? ` Надіслано команд з черги: ${q.length}.` : ""}`, track: true });
+    render();
   }
   function startUnit(done) {
     if (S.gs !== 0 && S.gs !== 15) { done && stage(S.gs) === "run" && done(); return render(); }
@@ -1352,20 +1491,27 @@ select.o-input { padding: 4px 2px; }
   $$("[data-goto]").forEach(b => b.onclick = () => { openTab(b.dataset.goto); $(".tabs").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); });
   $("#addRow").onclick = () => { S.schedule.push({ day: 5, start: "10:00", end: "15:00", on: true }); renderSchedule(); render(); };
   $("#addExc").onclick = () => { S.exceptions.push({ date: "2027-01-07", action: "skip" }); renderExceptions(); };
-  $("#refreshBtn").onclick = () => { age = 0; notify("Дані оновлено з модуля"); };
+  $("#refreshBtn").onclick = () => { if (S.offline) return notify("Немає зв'язку з модулем — оновити неможливо.", true); age = 0; notify("Дані оновлено з модуля"); };
 
   S.mode = inWindow() ? "auto" : "manual";
   let age = 12;
   setInterval(() => {
     age = (age + 1) % 60;
-    $("#fAge").textContent = `${age} с тому`;
-    $("#paramAge").textContent = age < 5 ? "щойно" : `${age} с тому`;
+    if (S.offline) {
+      const m = Math.floor((Date.now() - S.offline.since) / 60000);
+      $("#fAge").textContent = `немає даних ${m} хв · останні о ${kyiv(S.offline.since).hhmm}`;
+      $("#paramAge").textContent = `дані на ${kyiv(S.offline.since).hhmm}`;
+    } else {
+      $("#fAge").textContent = `${age} с тому`;
+      $("#paramAge").textContent = age < 5 ? "щойно" : `${age} с тому`;
+    }
+    if (age % 10 === 0) renderAlarms();
     tick(); renderGs();
     if (!$('[data-panel="data"]').hidden) renderData();
   }, 1000);
   setInterval(render, 30000);
   renderSchedule(); renderExceptions(); renderAlarms(); renderData(); render(); draw();
-  window.__G = { S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, inWindow, notify, toMin, gsLeft, runSeq };
+  window.__G = { S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, inWindow, notify, toMin, gsLeft, runSeq, reconnect };
 })();
 </script>
 
@@ -1433,6 +1579,14 @@ select.o-input { padding: 4px 2px; }
     runs.push({ s, e, cause: "test", reason: "Тестовий запуск · О. Коваль (кнопка «Пуск»)" });
   }
   runs.sort((a, b) => a.s - b.s);
+  // start reliability: attempts come from state changes 3 «Прокрутка» → 4 «Пауза між спробами» (03H 0034),
+  // voltage is the lowest battery reading while cranking (03H 0024). In the example the battery slowly weakens.
+  {
+    const rs = mulberry32(77);
+    runs.forEach(r => { const age = (r.s - t0) / (NDAYS * DAY); r.crankV = 22.6 - 1.8 * age + (rs() - 0.5) * 0.3; r.attempts = r.crankV < 21.5 && rs() < 0.5 ? 2 : 1; });
+    const recent = runs.filter(r => r.s > now - 6 * DAY);
+    if (recent.length) recent[Math.max(0, recent.length - 2)].attempts = 3;
+  }
   for (const r of runs) {
     r.kw = r.cause === "test" ? 0 : 4 + rnd() * 7;
     r.peak = r.cause === "test" ? 0 : r.kw * (1.35 + rnd() * 0.4);
@@ -1642,6 +1796,7 @@ select.o-input { padding: 4px 2px; }
     const loadedH = runs.filter(r => r.s >= p0 && r.kw).reduce((s, r) => s + r.hours, 0);
     const avgKw = loadedH ? kwh / loadedH : 0;
     const kpi = (k, v, u, d) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div><div class="d">${d}</div></div>`;
+    const pStarts = runs.filter(r => r.s >= p0), n1 = pStarts.filter(r => r.attempts === 1).length;
     $("#kpis").innerHTML =
       kpi("Мотогодини", fmt(runH, 1), "год", `з них під навантаженням ${fmt(loadedH, 1)} год`) +
       kpi("Пусків", starts, "", `${runs.filter(r => r.s >= p0 && r.cause === "test").length} тестових, решта — при зникненні мережі`) +
@@ -1649,7 +1804,9 @@ select.o-input { padding: 4px 2px; }
       kpi("Відключень мережі", outs.length, "", `разом ${fmt(outH, 1)} год без мережі`) +
       kpi("Покрито генератором", outH ? fmt(covH / outH * 100) : "—", "%", `без живлення ${fmt(Math.max(0, outH - covH), 1)} год — поза розкладом`) +
       kpi("Витрачено палива", fmt(toL(fuelUsed)), "L", `${fmt(runH ? toL(fuelUsed) / runH : 0, 1)} L/год · ${refuels.filter(r => r.t >= p0).length} заправки за період`) +
-      kpi("Середнє навантаження", fmt(avgKw, 1), "kW", `${fmt(avgKw / 88 * 100)} % від номіналу 88 kW`);
+      kpi("Середнє навантаження", fmt(avgKw, 1), "kW", `${fmt(avgKw / 88 * 100)} % від номіналу 88 kW`) +
+      kpi("Пуск з 1-ї спроби", pStarts.length ? fmt(n1 / pStarts.length * 100) : "—", "%", `${n1} з ${pStarts.length} пусків · повторних ${pStarts.length - n1}`) +
+      kpi("АКБ при прокрутці", pStarts.length ? fmt(pStarts[pStarts.length - 1].crankV, 1) : "—", "V", pStarts.length ? `на початку періоду ${fmt(pStarts[0].crankV, 1)} V` : "");
 
     const days = [];
     for (let d = period - 1; d >= 0; d--) {
@@ -1670,6 +1827,11 @@ select.o-input { padding: 4px 2px; }
     const step = period > 7 ? 5 : 1;
     const xf = t => fmtD(t), tf = t => fmtDT(t);
     lineChart($("#chFuel"), fpts, { min: 0, max: TANK, cls: "teal", color: "--o-teal", name: "У баку", unit: "L", xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
+    $("#startStrip").innerHTML = pStarts.map(r => `<span class="st a${Math.min(3, r.attempts)}" title="${fmtDT(r.s)} · спроб: ${r.attempts} · АКБ ${fmt(r.crankV, 1)} V">${fmtD(r.s)}${r.attempts > 1 ? ` ×${r.attempts}` : ""}</span>`).join("");
+    const drop = pStarts.length > 1 ? pStarts[0].crankV - pStarts[pStarts.length - 1].crankV : 0, rep = pStarts.length - n1;
+    $("#startAdvice").innerHTML = drop > 0.8 && rep ? `<div class="advice"><span class="ms">battery_alert</span><span>Напруга при прокрутці впала на ${fmt(drop, 1)} V, повторних пусків — ${rep}. Ймовірно, слабшає АКБ: перевірте її і клеми, поки генератор ще запускається.</span></div>` : "";
+    if (pStarts.length > 1) lineChart($("#chCrank"), pStarts.map(r => ({ t: r.s, v: r.crankV })), { min: 20, max: 23, div: 3, cls: "prim", color: "--o-primary", name: "АКБ при прокрутці", unit: "V", dec: 1, xfmt: xf, tfmt: tf, ticks: 5 });
+    else $("#chCrank").innerHTML = "";
     lineChart($("#chBat"), bpts, { min: 26, max: 29, cls: "prim", color: "--o-primary", name: "АКБ", unit: "V", dec: 1, div: 3, xfmt: xf, tfmt: tf, ticks: Math.min(6, Math.round(period / step)) });
     const lr = [...runs].reverse().find(r => r.kw);
     if (lr) {
@@ -1691,7 +1853,8 @@ select.o-input { padding: 4px 2px; }
   const events = [];
   for (const r of runs) events.push({
     type: "run", s: r.s, e: r.e, reason: r.reason, kwh: r.kwh, peak: r.peak, fuel: -r.fuel,
-    sum: r.cause === "test" ? "Без навантаження, пуск з 1-ї спроби" : r.cut ? "Зупинено о 18:30 за розкладом — мережі ще не було" : "Пуск з 1-ї спроби, навантаження прийнято",
+    sum: r.cause === "test" ? `Без навантаження, пуск з ${r.attempts}-ї спроби` : r.cut ? `Пуск з ${r.attempts}-ї спроби; зупинено о 18:30 за розкладом — мережі ще не було` : `Пуск з ${r.attempts}-ї спроби, навантаження прийнято`,
+    bad: r.attempts > 1,
   });
   for (const o of outages) events.push({
     type: "out", s: o.s, e: o.e, reason: o.kind,
@@ -1767,7 +1930,7 @@ select.o-input { padding: 4px 2px; }
       ]],
       ["Лічильники і ТО", "03H", [
         ["0042–0045", "Мотогодини", "33 год 44 хв 12 с"], ["0046–0047", "Кількість пусків", "38"], ["0048–0049", "Вироблено енергії", "251 kWh"],
-        ["0030–0031", "До ТО", "0 год 0 хв"],
+        ["0030–0031", "До ТО", `${S.maint.left} год 0 хв`],
       ]],
       ["Паливо: облік контролера", "03H · серія HGM6100N", [
         ["0098", "Зміна рівня (журнал подій)", "0 %"], ["0099", "Початковий рівень", "95 %"], ["0100", "Зміна понад 5 %", "ні · ознака для заправок і падінь рівня"],
@@ -1795,13 +1958,14 @@ select.o-input { padding: 4px 2px; }
       ["remoteLock", "Дистанційне блокування", "01H 0004 — пульт стає недоступним"],
       ["stopFail", "Невдала зупинка", "03H 0034 = 14, 01H 0027"],
       ["oilNd", "Обрив датчика тиску оливи", "03H 0019 = 32766, 01H 0036"]]],
+    ["Модуль CMM366B: зв'язок", [["linkLost", "Зв'язок з модулем втрачено", "немає heartbeat і даних довше, ніж задано в налаштуваннях"]]],
     ["Модуль CMM366B: входи", INPUTS.map(([k, t, fld]) => [`in_${k}`, t, `${fld} · reqdatachange`])],
   ];
   const simOpen = {};
   function simAlarm(key, on, level, title, sub, evTitle) {
     const t = Date.now();
     if (on) {
-      S.alarms.unshift({ key, level, title, sub, when: "активна" });
+      S.alarms.unshift({ key, level, title, sub, when: "активна", n: { at: t, ack: null } });
       simOpen[key] = { type: key.startsWith("in_") ? "input" : "alarm", s: t, e: null, reason: sub, sum: "активна", bad: true, title: evTitle };
       events.unshift(simOpen[key]);
     } else {
@@ -1823,6 +1987,10 @@ select.o-input { padding: 4px 2px; }
       if (on) { G.runSeq([[14, 0]]); simAlarm(k, on, "crit", "Невдала зупинка", "Двигун не зупинився після команди «Стоп» (стан 14, 01H 0027). Потрібен виїзд на об'єкт.", "Тривога: невдала зупинка"); }
       else { G.runSeq([[15, 2], [0, 0]]); simAlarm(k, on, "crit", "Невдала зупинка", "", "Тривога: невдала зупинка"); }
     }
+    if (k === "linkLost") {
+      if (on) { S.offline = { since: Date.now() - (LS.alarmAfter + 1) * 60000 }; simAlarm(k, on, "crit", "Зв'язок з модулем втрачено", `Немає даних з ${kyiv(S.offline.since).hhmm}. Пульт недоступний; ${S.linkPolicy === "queue" ? "команди розкладу — у черзі" : "команди розкладу пропускаються"}.`, "Тривога: немає зв'язку"); }
+      else { G.reconnect(); simAlarm(k, on, "crit", "Зв'язок з модулем втрачено", "", "Тривога: немає зв'язку"); }
+    }
     if (k === "oilNd") { S.nd.oil = on; simAlarm(k, on, "warn", "Немає даних з датчика тиску оливи", "Контролер повертає 32766 (на панелі «###»), сигнал «Обрив датчика тиску» 01H 0036.", "Тривога: датчик тиску"); }
     if (k.startsWith("in_")) {
       const [key, name, fld, lvl] = INPUTS.find(x => x[0] === k.slice(3));
@@ -1834,7 +2002,8 @@ select.o-input { padding: 4px 2px; }
 
   function activeFlags() {
     const g = S.gs;
-    const on = new Set([1, 37, 48, 50, 61, 65]);   // from the panel snapshot: E-stop input, aux in 2, aux out 4; maintenance due
+    const on = new Set([48, 50, 61, 65]);   // from the panel snapshot: E-stop input, aux in 2, aux out 4
+    if (!S.maint.left) { on.add(1); on.add(37); }   // maintenance due
     if (S.mode === "auto") on.add(41); if (S.mode === "manual") on.add(42); if (S.mode === "test") on.add(40);
     if (S.mainsCB) on.add(6); if (S.genCB) on.add(7);
     if (g === 3) on.add(56); if ((g >= 2 && g <= 11) || g === 14) on.add(57); if (g >= 7 && g <= 10) on.add(72);
@@ -1866,14 +2035,14 @@ select.o-input { padding: 4px 2px; }
   });
 
   // ---------- fuel: tank level from the controller, canister stock and moves kept in Odoo
-  const CAN_VOL = 20, MIN_STOCK = 100, LOCS = ["Щитова", "Склад"];
+  const FS = { min: 100, can: 20, locs: ["Щитова", "Склад"], price: 55.4, supplier: "АЗС WOG", drain: 10 };   // «Налаштування → Паливо»
   const cans = [], moves = [], fuelLog = [];
   let canSeq = 0;
   const plural = (n, [one, few, many]) => n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
   const canAcc = n => `${n} ${plural(n, ["каністру", "каністри", "каністр"])}`;
   const money = v => `${fmt(v)} грн`;
   const ids = list => list.map(c => c.id).join(", ");
-  const addCan = (loc, vol = CAN_VOL, l = vol) => { const c = { id: `К-${pad(++canSeq)}`, vol, l, loc }; cans.push(c); return c; };
+  const addCan = (loc, vol = FS.can, l = vol) => { const c = { id: `К-${pad(++canSeq)}`, vol, l, loc }; cans.push(c); return c; };
   const stockL = () => cans.reduce((s, c) => s + c.l, 0);
   const canState = c => c.l <= 0 ? "empty" : c.l >= c.vol ? "full" : "part";
   // pour from the given canisters, partly filled ones first
@@ -1895,7 +2064,7 @@ select.o-input { padding: 4px 2px; }
     let prev = t;
     for (const r of refuels) {
       const need = Math.round(toL(r.to - r.from));
-      if (stockL() < need + CAN_VOL) {
+      if (stockL() < need + FS.can) {
         const empt = cans.filter(c => c.l < c.vol), add = empt.reduce((s, c) => s + c.vol - c.l, 0);
         empt.forEach(c => (c.l = c.vol));
         moves.push({ t: Math.max(prev + 2 * H, r.t - DAY), kind: "in", title: `Надходження: наповнено ${canAcc(empt.length)}`, sub: buyNote("АЗС WOG", 55.4, add), delta: add, who: "О. Коваль", price: 55.4 });
@@ -1914,12 +2083,12 @@ select.o-input { padding: 4px 2px; }
   function renderFuel() {
     const tankL = toL(T.fuel), st = stockL(), cnt = k => cans.filter(c => canState(c) === k).length;
     const runL = runs.reduce((s, r) => s + toL(r.fuel), 0), runHrs = runs.reduce((s, r) => s + r.hours, 0);
-    const rate = runHrs ? runL / runHrs : 0, lack = Math.max(0, MIN_STOCK - st);
+    const rate = runHrs ? runL / runHrs : 0, lack = Math.max(0, FS.min - st);
     $("#fuelKpis").innerHTML =
       fkpi("У баку", fmt(tankL), "L", `${fmt(T.fuel)} % з ${TANK} L · датчик контролера`) +
       fkpi("У каністрах", fmt(st), "L", [["full", ["повна", "повні", "повних"]], ["part", ["часткова", "часткові", "часткових"]], ["empty", ["порожня", "порожні", "порожніх"]]].map(([k, w]) => `${cnt(k)} ${plural(cnt(k), w)}`).join(" · ")) +
       fkpi("Разом палива", fmt(tankL + st), "L", rate ? `вистачить на ≈ ${fmt((tankL + st) / rate)} год роботи` : "—") +
-      fkpi("Мінімальний запас", MIN_STOCK, "L", lack ? `<span class="badge b-warn">бракує ${fmt(lack)} L</span>` : `<span class="badge b-ok">запас у нормі</span>`);
+      fkpi("Мінімальний запас", FS.min, "L", lack ? `<span class="badge b-warn">бракує ${fmt(lack)} L</span>` : `<span class="badge b-ok">запас у нормі</span>`);
 
     $("#canSeg").innerHTML = [["all", "Усі", cans.length], ["full", "Повні", cnt("full")], ["part", "Часткові", cnt("part")], ["empty", "Порожні", cnt("empty")]]
       .map(([k, t, n]) => `<button type="button" aria-pressed="${k === canFilter}" data-cf="${k}">${t} <span class="dim">${n}</span></button>`).join("");
@@ -2057,12 +2226,12 @@ select.o-input { padding: 4px 2px; }
       <div id="fiFill">${empt.length ? `<div class="picks">${empt.map(c => `<label class="pick"><input type="checkbox" value="${c.id}" checked><span><b>${c.id}</b><small>${c.loc}</small></span><span class="num">${fmt(c.l)} → ${c.vol} L</span></label>`).join("")}</div>` : '<div class="hint">Усі каністри повні.</div>'}</div>
       <div id="fiNew" class="frm2" hidden>
         <label class="f">Кількість<input class="o-input w" id="fiN" type="number" min="1" max="50" value="5"></label>
-        <label class="f">Об'єм каністри, L<input class="o-input w" id="fiV" type="number" min="5" max="60" value="${CAN_VOL}"></label>
-        <label class="f">Де зберігати<select class="o-input w" id="fiLoc">${LOCS.map(l => `<option>${l}</option>`).join("")}</select></label>
+        <label class="f">Об'єм каністри, L<input class="o-input w" id="fiV" type="number" min="5" max="60" value="${FS.can}"></label>
+        <label class="f">Де зберігати<select class="o-input w" id="fiLoc">${FS.locs.map(l => `<option>${l}</option>`).join("")}</select></label>
       </div>
       <div class="frm2">
-        <label class="f">Ціна, грн/л<input class="o-input w" id="fiP" type="number" min="0" step="0.01" value="${lastPrice().toFixed(2)}"></label>
-        <label class="f">Постачальник<input class="o-input w" id="fiS" value="АЗС WOG"></label>
+        <label class="f">Ціна, грн/л<input class="o-input w" id="fiP" type="number" min="0" step="0.01" value="${FS.price.toFixed(2)}"></label>
+        <label class="f">Постачальник<input class="o-input w" id="fiS" value="${FS.supplier}"></label>
       </div>
       <div class="sumbox" id="fiSum"></div><div class="err" id="fdErr" hidden></div></div>`;
     const calc = () => {
@@ -2095,7 +2264,7 @@ select.o-input { padding: 4px 2px; }
       <div class="sumbox">${{ full: "Повна", part: "Частково заповнена", empty: "Порожня" }[canState(c)]} · ${fmt(c.l)} з ${c.vol} L · ${c.loc}</div>
       <div class="frm2">
         <label class="f">Фактично в каністрі, L<input class="o-input w" id="cdL" type="number" min="0" max="${c.vol}" value="${c.l}"></label>
-        <label class="f">Де зберігається<select class="o-input w" id="cdLoc">${LOCS.map(l => `<option${l === c.loc ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label class="f">Де зберігається<select class="o-input w" id="cdLoc">${FS.locs.map(l => `<option${l === c.loc ? " selected" : ""}>${l}</option>`).join("")}</select></label>
       </div>
       <div class="hint">Зміна кількості потрапляє в рух запасу як коригування (інвентаризація).</div><div class="err" id="fdErr" hidden></div></div>`;
     fDialog(`Каністра ${c.id} · ${c.vol} L`, html, () => {
@@ -2113,8 +2282,229 @@ select.o-input { padding: 4px 2px; }
     }] });
   }
 
+  // ---------- maintenance: Odoo «Обслуговування» request driven by the controller's countdown (03H 0030-0031)
+  const MW = ["Заміна моторної оливи", "Масляний фільтр", "Паливний фільтр", "Повітряний фільтр", "Перевірка АКБ і клем", "Скинути лічильник ТО на панелі контролера"];
+  const MSTAGES = [["new", "Нова"], ["work", "В роботі"], ["check", "Перевірка лічильника"], ["done", "Виконано"]];
+  const MR = [
+    { id: "ТО-0002", name: "ТО-1 після обкатки (30 мотогодин)", stage: "new", who: null, created: fmtDT(now - 9 * DAY), auto: true, done: MW.map(() => false) },
+    { id: "ТО-0001", name: "Пусконалагодження і перевірка після монтажу", stage: "done", who: "СервісГен", created: "14.02.2026", closed: "14.02.2026" },
+  ];
+  const hm = m => `${Math.floor(m / 60)} год ${pad(Math.round(m % 60))} хв`;
+  function renderMaint() {
+    const m = S.maint, over = Math.max(0, LIFE_MIN - m.first * 60);
+    const cur = MR.find(r => r.stage !== "done");
+    const plan = `<div class="mt-grid">
+      <div class="sbox"><h4>Регламент</h4>
+        <div class="sfield"><span>Перше ТО</span><span>через ${m.first} мотогодин (обкатка)</span></div>
+        <div class="sfield"><span>Далі</span><span>кожні ${m.every} мотогодин або раз на 12 міс.</span></div>
+        <div class="sfield"><span>Мотогодини</span><span class="num">${hm(LIFE_MIN)}</span></div>
+        <div class="sfield"><span>До ТО<small>контролер, 03H 0030–0031</small></span><span>${m.left ? `<span class="badge b-ok">${m.left} год</span>` : `<span class="badge b-crit">прострочено на ${hm(over)}</span>`}</span></div>
+        <div class="tbar${m.left ? "" : " crit"}"><i style="width:${m.left ? (100 - m.left / m.every * 100).toFixed(0) : 100}%"></i></div>
+      </div>
+      <div class="sbox"><h4>Як це працює</h4>
+        <div class="rule">Коли лічильник «До ТО» доходить до 0, Odoo сам створює заявку на ТО і тривогу «Термін ТО минув».</div>
+        <div class="rule">Генератор — обладнання, заявка — стандартна заявка модуля «Обслуговування» Odoo: виконавець, роботи, запчастини, витрати.</div>
+        <div class="rule" style="border-left-color:var(--o-info)">Скинути лічильник можна лише на панелі контролера — по протоколу такої команди немає. Заявка закривається, коли Odoo побачить скинутий лічильник.</div>
+      </div></div>`;
+    const reqCard = r => {
+      const si = MSTAGES.findIndex(x => x[0] === r.stage), all = r.done && r.done.every(Boolean);
+      return `<div class="mreq"><div class="mreq-h"><b>${r.id} · ${r.name}</b><div class="statusbar">${MSTAGES.map(([k, t], i) => `<span class="arrow${i === si ? " cur" : ""}">${t}</span>`).join("")}</div></div>
+        <div class="sgrid">
+          <div class="sfield"><span>Виконавець</span><span>${r.who || '<span class="badge b-warn">не призначено</span>'}</span></div>
+          <div class="sfield"><span>Створено</span><span>${r.created}${r.auto ? " · автоматично, лічильник ТО = 0" : ""}</span></div>
+        </div>
+        ${r.done ? `<div class="checklist">${MW.map((w, i) => `<label class="${i === MW.length - 1 ? "key" : ""}"><input type="checkbox" data-mw="${i}"${r.done[i] ? " checked" : ""}${r.stage === "work" ? "" : " disabled"}>${w}</label>`).join("")}</div>` : ""}
+        <div class="formbar">
+          ${r.stage === "new" ? '<button class="btn btn-primary" type="button" id="mTake">Взяти в роботу</button>' : ""}
+          ${r.stage === "work" ? `<button class="btn btn-primary" type="button" id="mDone"${all ? "" : " disabled"}>Роботи виконано</button><span class="hint">${all ? "" : "Позначте всі роботи, зокрема скидання лічильника на панелі."}</span>` : ""}
+          ${r.stage === "check" ? '<span class="hint"><span class="ms">hourglass_top</span> Чекаємо, поки контролер покаже скинутий лічильник (03H 0030)…</span>' : ""}
+        </div></div>`;
+    };
+    const history = MR.filter(r => r.stage === "done").map(r => `<tr><td>${r.id}</td><td>${r.name}</td><td>${r.who}</td><td>${r.closed}</td><td><span class="badge b-ok">Виконано</span></td></tr>`).join("");
+    $("#maintBox").innerHTML = plan + (cur ? reqCard(cur) : `<div class="mreq"><span class="badge b-ok">Відкритих заявок немає</span> <span class="hint">Наступне ТО — через ${m.left} мотогодин; заявку буде створено автоматично.</span></div>`)
+      + `<div class="tblhead" style="margin-top:16px">Історія</div><div class="tbl-wrap"><table><thead><tr><th>Заявка</th><th>Що</th><th>Виконавець</th><th>Закрито</th><th></th></tr></thead><tbody>${history}</tbody></table></div>`;
+  }
+  $("#maintBox").onclick = e => {
+    const r = MR.find(x => x.stage !== "done"); if (!r) return;
+    if (e.target.closest("#mTake")) { r.stage = "work"; r.who = "Ви"; G.notify(`${r.id}: взято в роботу`); S.chat.unshift({ day: "Сьогодні", who: "Ви", time: kyiv().hhmm, text: `Взяв у роботу заявку ${r.id} «${r.name}».`, track: true }); G.render(); renderMaint(); }
+    if (e.target.closest("#mDone")) {
+      r.stage = "check";
+      setTimeout(() => {   // the next reading shows the counter reset on the panel
+        S.maint.left = S.maint.every; r.stage = "done"; r.closed = kyiv().full;
+        const a = S.alarms.find(x => x.title === "Термін ТО минув" && x.when === "активна"); if (a) { a.when = `знято ${kyiv().hhmm}`; a.level = "ok"; }
+        const ev = events.find(x => x.title === "Тривога: термін ТО"); if (ev) { ev.e = Date.now(); ev.sum = "ТО виконано, лічильник скинуто"; ev.bad = false; }
+        S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Контролер показує новий лічильник: до ТО ${S.maint.every} год. Заявку ${r.id} закрито.`, track: true });
+        G.renderAlarms(); G.render(); renderEvents(); renderMaint(); renderFull();
+      }, 3000);
+      renderMaint();
+    }
+  };
+  $("#maintBox").onchange = e => {
+    const i = e.target.dataset.mw, r = MR.find(x => x.stage === "work");
+    if (i !== undefined && r) { r.done[+i] = e.target.checked; renderMaint(); }
+  };
+
+  // ---------- settings: generators (object, unit, connection), notifications, fuel, link
+  const PEOPLE = ["О. Коваль", "Т. Нижниковський", "І. Мельник", "С. Бондар"];
+  const CHANNELS = ["Telegram", "SMS", "Дзвінок", "Email"];
+  const LS = { server: "gen.todo.ltd:7001", online: 3, offline: 60, lostAfter: 3, alarmAfter: 5, history: 15, timing: true };
+  const GENS = [
+    { name: "Садова вулиця", addr: "Київ, вул. Садова", resp: "Т. Нижниковський", ctrl: "HGM6120N", kw: 88, tank: TANK, first: 30, every: 250, months: 12,
+      host: "313037 303133 471700 3D002E", hostname: "Sadova-Gen", pass: "980318", port: "USB", baud: 9600, mb: 1, online: 3, offline: 60, mode: "change", lat: "50.4501", lon: "30.5234", self: true },
+    { name: "Склад, вул. Промислова", addr: "Київ, вул. Промислова, 14", resp: "С. Бондар", ctrl: "HGM6120N", kw: 120, tank: 200, first: 30, every: 250, months: 12,
+      host: "313037 303133 471700 3D00A1", hostname: "Sklad-Gen", pass: "980318", port: "RS485", baud: 9600, mb: 1, online: 3, offline: 60, mode: "change", lat: "50.4870", lon: "30.6020", stat: { link: "on", state: "Очікування", alarms: 0 } },
+    { name: "Офіс, просп. Перемоги", addr: "Київ, просп. Перемоги, 67", resp: "Т. Нижниковський", ctrl: "HGM6110N", kw: 40, tank: 90, first: 30, every: 250, months: 12,
+      host: "", hostname: "", pass: "", port: "RS485", baud: 9600, mb: 1, online: 3, offline: 60, mode: "change", lat: "", lon: "", stat: { link: "none", state: "—", alarms: 0 } },
+  ];
+  let setTab = "gens", genEdit = null, draft = null;
+  const sf = (label, ctl, hint) => `<label class="sfield"><span>${label}${hint ? `<small>${hint}</small>` : ""}</span>${ctl}</label>`;
+  const inp = (id, v, type = "text", extra = "") => `<input class="o-input w" id="${id}" type="${type}" value="${v ?? ""}" ${extra}>`;
+  const sel = (id, opts, v, extra = "") => `<select class="o-input w" id="${id}" ${extra}>${opts.map(o => { const [val, t] = Array.isArray(o) ? o : [o, o]; return `<option value="${val}"${String(val) === String(v) ? " selected" : ""}>${t}</option>`; }).join("")}</select>`;
+  const sw = (id, on) => `<span class="switch"><input type="checkbox" id="${id}"${on ? " checked" : ""}><span></span></span>`;
+  const linkBadge = g => { const st = g.self ? (S.offline ? "off" : "on") : g.stat.link; return st === "on" ? '<span class="badge b-ok">онлайн</span>' : st === "off" ? '<span class="badge b-crit">немає зв\'язку</span>' : '<span class="badge b-mute">модуль не підключено</span>'; };
+
+  function gensList() {
+    return `<div class="box"><div class="box-head"><div><h4>Генератори</h4><div class="sub">об'єкти, агрегати і підключення модулів зв'язку</div></div><button class="btn btn-primary" type="button" id="genNew">Новий</button></div>
+      <div class="o-list cardlist"><table><thead><tr><th class="sticky">Назва</th><th>Адреса</th><th>Контролер</th><th>Модуль</th><th class="n">Бак, L</th><th class="n">Номінал, kW</th><th>Зв'язок</th><th>Стан</th><th class="n">Тривоги</th></tr></thead><tbody>
+      ${GENS.map((g, i) => `<tr class="clk" data-gen="${i}"><td class="sticky"><b>${g.name}</b></td><td>${g.addr}</td><td data-l="Контролер">${g.ctrl}</td><td data-l="Модуль">${g.host ? `CMM366B · ${g.port}` : '<span class="dim">—</span>'}</td>
+        <td class="n" data-l="Бак, L">${g.tank}</td><td class="n" data-l="Номінал, kW">${g.kw}</td><td>${linkBadge(g)}</td><td data-l="Стан">${g.self ? G.GS[S.gs] : g.stat.state}</td><td class="n" data-l="Тривоги">${g.self ? S.alarms.filter(a => a.when === "активна").length : g.stat.alarms}</td></tr>`).join("")}
+      </tbody></table></div><div class="hint">Натисніть рядок, щоб змінити налаштування об'єкта, агрегату і підключення.</div></div>`;
+  }
+  function genForm(g) {
+    const cmd = g.ctrl === "HGM6110N" ? "лише автомат генератора: 05H 0005 — розімкнути, 0006 — замкнути" : "автомати генератора і мережі: перемикачі 05H 0005 і 0006";
+    return `<div class="sform">
+      <div class="formbar"><button class="btn btn-primary" type="button" id="genSave">Зберегти</button><button class="btn" type="button" id="genBack">Скасувати</button><span class="grow"></span>
+        <button class="btn" type="button" id="genTest"${g.host ? "" : " disabled"}><span class="ms">wifi_tethering</span>Перевірити зв'язок</button></div>
+      <div class="sbox"><h4>${g.name || "Новий генератор"}</h4><div class="sgrid">
+        ${sf("Назва", inp("gName", g.name))}${sf("Адреса", inp("gAddr", g.addr))}
+        ${sf("Відповідальний", sel("gResp", PEOPLE, g.resp))}${sf("Координати", `<span>${g.lat ? `${g.lat}, ${g.lon}` : '<span class="dim">після підключення модуля</span>'}</span>`, "передає модуль (GPS)")}
+      </div></div>
+      <div class="sbox"><h4>Агрегат</h4><div class="sgrid">
+        ${sf("Контролер", sel("gCtrl", ["HGM6110N", "HGM6120N"], g.ctrl), cmd)}${sf("Номінальна потужність, kW", inp("gKw", g.kw, "number", 'min="1"'))}
+        ${sf("Об'єм бака, L", inp("gTank", g.tank, "number", 'min="1"'), "контролер дає рівень у %, у літри переводимо за цим об'ємом")}${sf("Паливо", sel("gFuel", ["Дизель"], "Дизель"))}
+        ${sf("Перше ТО, мотогодин", inp("gFirst", g.first, "number", 'min="1"'), "обкатка")}${sf("Далі кожні", `<span class="pair">${inp("gEvery", g.every, "number")}<span>мотогодин або</span>${inp("gMonths", g.months, "number")}<span>міс.</span></span>`)}
+      </div></div>
+      <div class="sbox"><h4>Підключення · модуль CMM366B-4G</h4><div class="sgrid">
+        ${sf("ID модуля (hostid)", inp("gHost", g.host, "text", 'placeholder="з наклейки модуля"'))}${sf("Назва модуля (hostname)", inp("gHn", g.hostname))}
+        ${sf("Пароль модуля", inp("gPass", g.pass, "password"))}${sf("Порт до контролера", sel("gPort", ["LINK", "RS485", "RS232", "USB"], g.port))}
+        ${sf("Швидкість, біт/с", sel("gBaud", [9600, 19200, 115200], g.baud))}${sf("Адреса контролера (Modbus)", inp("gMb", g.mb, "number", 'min="1" max="254"'), "1–254, за замовчуванням 1")}
+        ${sf("Передача онлайн / офлайн, с", `<span class="pair">${inp("gOn", g.online, "number")}<span>/</span>${inp("gOff", g.offline, "number")}</span>`, "online_rate / offline_rate")}
+        ${sf("Режим передачі", sel("gMode", [["change", "Лише зміни (економія трафіку)"], ["full", "Усі дані щоразу"]], g.mode))}
+      </div>
+      <div class="sfield"><span>Що опитуємо<small>команди para_command — під модель контролера</small></span><span class="chipset"><span class="chip">01H 0000–0079 · сигнали</span><span class="chip">03H 0000–0114 · значення</span><span class="chip">03H 2500–2511 · точні I, P, Q, S</span></span></div></div>
+    </div>`;
+  }
+  function notifyForm() {
+    const N = S.notify;
+    return `<div class="sform">
+      <div class="sbox"><h4>Ланцюжок сповіщень</h4><div class="sub">Тривогу одразу отримує перший рівень. Якщо ніхто не натиснув «Прийняв», через вказаний час її отримує наступний.</div>
+        <div class="o-list chain cardlist"><table><thead><tr><th>Рівень</th><th>Хто</th><th>Канали</th><th>Коли</th><th></th></tr></thead><tbody>
+        ${N.chain.map((c, i) => `<tr><td><b>${i + 1}. ${c.role}</b></td><td>${sel(`nWho${i}`, PEOPLE, c.who)}</td>
+          <td><span class="chipset">${CHANNELS.map(ch => `<label class="chk"><input type="checkbox" data-nch="${i}" value="${ch}"${c.ch.includes(ch) ? " checked" : ""}>${ch}</label>`).join("")}</span></td>
+          <td>${i ? `<span class="pair">через ${inp(`nAfter${i}`, c.after, "number", 'min="1"')} хв</span>` : "одразу"}</td>
+          <td>${i ? `<button class="x" type="button" data-ndel="${i}" aria-label="Прибрати рівень"><span class="ms">delete</span></button>` : ""}</td></tr>`).join("")}
+        </tbody></table></div><button class="addline" type="button" id="nAdd">Додати рівень</button></div>
+      <div class="sgrid2">
+        <div class="sbox"><h4>Що надсилати</h4>
+          ${[["crit", "Критичні", "аварійні зупинки, пожежа, злив, невдала зупинка, втрата зв'язку"], ["warn", "Попередження", "ТО, рівень палива, АКБ, датчики, блокування"], ["info", "Інформація", "пуски, зупинки, заправки"]].map(([k, t, h]) => sf(t, sel(`nRule_${k}`, ["Завжди", "Крім тихих годин", "Лише в чаті"], N.rules[k]), h)).join("")}</div>
+        <div class="sbox"><h4>Тихі години</h4>
+          ${sf("Увімкнено", sw("nQOn", N.quiet.on))}
+          ${sf("З / до", `<span class="pair">${inp("nQFrom", N.quiet.from, "time")}<span>–</span>${inp("nQTo", N.quiet.to, "time")}</span>`, "у цей час — лише те, що «Завжди»")}
+          <button class="btn" type="button" id="nTest" style="margin-top:8px"><span class="ms">send</span>Надіслати тестове сповіщення</button></div>
+      </div></div>`;
+  }
+  function fuelForm() {
+    return `<div class="sform">
+      <div class="sbox"><h4>Запас у каністрах</h4><div class="sgrid">
+        ${sf("Мінімальний запас, L", inp("fMin", FS.min, "number", 'min="0"'), "нижче — позначка «бракує» на сторінці «Заправка»")}
+        ${sf("Об'єм каністри за замовчуванням, L", inp("fCan", FS.can, "number", 'min="5" max="60"'))}
+        ${sf("Ціна за замовчуванням, грн/л", inp("fPrice", FS.price, "number", 'min="0" step="0.01"'))}
+        ${sf("Постачальник за замовчуванням", inp("fSup", FS.supplier))}
+      </div>
+      <div class="sfield"><span>Місця зберігання</span><span class="chipset">${FS.locs.map((l, i) => `<span class="chip">${l}<button class="x" type="button" data-floc="${i}" aria-label="Прибрати ${l}"><span class="ms">close</span></button></span>`).join("")}
+        <span class="pair"><input class="o-input" id="fLocNew" placeholder="Нове місце" style="width:140px"><button class="btn" type="button" id="fLocAdd">Додати</button></span></span></div></div>
+      <div class="sbox"><h4>Контроль рівня в баку</h4><div class="sgrid">
+        ${sf("Тривога «падіння без роботи» від, L", inp("fDrain", FS.drain, "number", 'min="1"'), "контролер окремо позначає зміну понад 5 % (03H 0100)")}
+        ${sf("Підтвердження заправки", "<span>ознакою контролера (понад 5 %) або за рівнем</span>")}
+      </div><div class="hint">Об'єм бака — у налаштуваннях кожного генератора.</div></div></div>`;
+  }
+  function linkForm() {
+    return `<div class="sform">
+      <div class="sbox"><h4>Сервер для модулів</h4><div class="sgrid">
+        ${sf("Адреса для даних", inp("lSrv", LS.server), "liveData і historic — сервер повертає їх модулю при реєстрації")}
+        ${sf("Протокол", "<span>CMM366A/B v1.2 · Socket, JSON + Modbus</span>")}
+        ${sf("Передача за замовчуванням, с", `<span class="pair">${inp("lOn", LS.online, "number")}<span>онлайн /</span>${inp("lOff", LS.offline, "number")}<span>офлайн</span></span>`, "для нових модулів")}
+        ${sf("Синхронізувати час модулів", sw("lTiming", LS.timing))}
+      </div></div>
+      <div class="sbox"><h4>Втрата зв'язку</h4><div class="sgrid">
+        ${sf("Вважати втраченим, якщо немає даних, хв", inp("lLost", LS.lostAfter, "number", 'min="1"'))}
+        ${sf("Тривога через, хв", inp("lAlarm", LS.alarmAfter, "number", 'min="1"'))}
+        ${sf("Команди розкладу і таймера без зв'язку", sel("lQueue", [["queue", "У чергу — надіслати після відновлення"], ["skip", "Пропустити й записати в журнал"]], S.linkPolicy))}
+        ${sf("Ручні команди без зв'язку", "<span>не надсилаються — пульт недоступний</span>")}
+      </div></div>
+      <div class="sbox"><h4>Історія</h4>${sf("Зберігати показання кожні, хв", inp("lHist", LS.history, "number", 'min="1"'), "і при кожній зміні стану; модуль історії не зберігає")}</div></div>`;
+  }
+  function renderSettings() {
+    $$("[data-stab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.stab === setTab)));
+    $("#setBody").innerHTML = setTab === "gens" ? (genEdit === null ? gensList() : genForm(genEdit < 0 ? draft : GENS[genEdit]))
+      : setTab === "notify" ? notifyForm() : setTab === "fuel" ? fuelForm() : linkForm();
+  }
+  $$("[data-stab]").forEach(b => b.onclick = () => { setTab = b.dataset.stab; genEdit = null; renderSettings(); });
+  document.addEventListener("click", e => { const g = e.target.closest("[data-goset]"); if (g) { setTab = g.dataset.goset; genEdit = null; if (location.hash === "#settings") renderSettings(); } });
+  const v = id => $("#" + id).value, num = id => +$("#" + id).value;
+  $("#setBody").onclick = e => {
+    const t = e.target;
+    const row = t.closest("[data-gen]"); if (row) { genEdit = +row.dataset.gen; return renderSettings(); }
+    if (t.closest("#genNew")) { draft = { name: "", addr: "", resp: PEOPLE[1], ctrl: "HGM6120N", kw: 60, tank: 120, first: 30, every: 250, months: 12, host: "", hostname: "", pass: "", port: "RS485", baud: 9600, mb: 1, online: LS.online, offline: LS.offline, mode: "change", lat: "", lon: "", stat: { link: "none", state: "—", alarms: 0 } }; genEdit = -1; return renderSettings(); }
+    if (t.closest("#genBack")) { genEdit = null; return renderSettings(); }
+    if (t.closest("#genTest")) { G.notify("Перевіряємо зв'язок з модулем…"); setTimeout(() => G.notify(S.offline && genEdit === 0 ? "Модуль не відповідає." : "Модуль відповів: heartbeat 0,8 с, контролер на зв'язку."), 1200); return; }
+    if (t.closest("#genSave")) {
+      const g = genEdit < 0 ? draft : GENS[genEdit];
+      if (!v("gName").trim()) return G.notify("Вкажіть назву генератора.", true);
+      Object.assign(g, { name: v("gName").trim(), addr: v("gAddr"), resp: v("gResp"), ctrl: v("gCtrl"), kw: num("gKw"), tank: num("gTank"), first: num("gFirst"), every: num("gEvery"), months: num("gMonths"),
+        host: v("gHost").trim(), hostname: v("gHn"), pass: v("gPass"), port: v("gPort"), baud: num("gBaud"), mb: num("gMb"), online: num("gOn"), offline: num("gOff"), mode: v("gMode") });
+      if (g.stat && g.host && g.stat.link === "none") g.stat.link = "on";
+      if (genEdit < 0) GENS.push(g);
+      genEdit = null; renderSettings(); return G.notify("Збережено");
+    }
+    const nd = t.closest("[data-ndel]"); if (nd) { S.notify.chain.splice(+nd.dataset.ndel, 1); afterNotify(); return renderSettings(); }
+    if (t.closest("#nAdd")) { const ch = S.notify.chain, last = ch[ch.length - 1]; ch.push({ role: "Додатковий", who: PEOPLE[3], ch: ["Telegram"], after: last.after + 30 }); afterNotify(); return renderSettings(); }
+    if (t.closest("#nTest")) { const c = S.notify.chain[0]; return G.notify(`Тестове сповіщення надіслано: ${c.who} (${c.ch.join(", ")})`); }
+    const fl = t.closest("[data-floc]"); if (fl) {
+      const loc = FS.locs[+fl.dataset.floc];
+      if (cans.some(c => c.loc === loc)) return G.notify(`У «${loc}» є каністри — спершу перемістіть їх.`, true);
+      FS.locs.splice(+fl.dataset.floc, 1); return renderSettings();
+    }
+    if (t.closest("#fLocAdd")) { const n = v("fLocNew").trim(); if (n && !FS.locs.includes(n)) FS.locs.push(n); return renderSettings(); }
+  };
+  function afterNotify() { G.renderAlarms(); G.render(); }
+  $("#setBody").onchange = e => {
+    const t = e.target, id = t.id || "";
+    if (id.startsWith("nWho")) S.notify.chain[+id.slice(4)].who = t.value;
+    if (id.startsWith("nAfter")) S.notify.chain[+id.slice(6)].after = Math.max(1, +t.value || 1);
+    if (t.dataset.nch !== undefined) { const c = S.notify.chain[+t.dataset.nch]; c.ch = t.checked ? [...c.ch, t.value] : c.ch.filter(x => x !== t.value); }
+    if (id.startsWith("nRule_")) S.notify.rules[id.slice(6)] = t.value;
+    if (id === "nQOn") S.notify.quiet.on = t.checked;
+    if (id === "nQFrom" && t.value) S.notify.quiet.from = t.value;
+    if (id === "nQTo" && t.value) S.notify.quiet.to = t.value;
+    if (id.startsWith("n")) afterNotify();
+    if (id === "fMin") FS.min = Math.max(0, num("fMin"));
+    if (id === "fCan") FS.can = Math.min(60, Math.max(5, num("fCan")));
+    if (id === "fPrice") FS.price = Math.max(0, num("fPrice"));
+    if (id === "fSup") FS.supplier = t.value;
+    if (id === "fDrain") FS.drain = Math.max(1, num("fDrain"));
+    if (id.startsWith("f")) renderFuel();
+    if (id === "lSrv") LS.server = t.value;
+    if (id === "lOn") LS.online = num("lOn"); if (id === "lOff") LS.offline = num("lOff");
+    if (id === "lTiming") LS.timing = t.checked;
+    if (id === "lLost") LS.lostAfter = num("lLost"); if (id === "lAlarm") LS.alarmAfter = num("lAlarm");
+    if (id === "lQueue") { S.linkPolicy = t.value; G.render(); }
+    if (id === "lHist") LS.history = num("lHist");
+    if (id !== "fLocNew") G.notify("Збережено");
+  };
+
   // ---------- routing
-  const PAGES = ["form", "readings", "analytics", "events", "fuel"];
+  const PAGES = ["form", "readings", "analytics", "events", "fuel", "settings"];
   function route() {
     const p = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : "form";
     $$(".page").forEach(x => x.classList.toggle("on", x.id === `page-${p}`));
@@ -2124,13 +2514,14 @@ select.o-input { padding: 4px 2px; }
     if (p === "analytics") renderAnalytics();
     if (p === "events") renderEvents();
     if (p === "fuel") renderFuel();
+    if (p === "settings") renderSettings();
     window.scrollTo(0, 0);
   }
   $$("[data-href]").forEach(b => b.onclick = () => { location.hash = b.dataset.href; });
   window.addEventListener("hashchange", route);
   let rsT, lastW = innerWidth;
   window.addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(() => { if (innerWidth !== lastW && location.hash === "#analytics") renderAnalytics(); if (innerWidth !== lastW && location.hash === "#fuel") renderUse(); lastW = innerWidth; }, 150); });
-  renderFull(); renderReadings(); renderAnalytics(); renderEvents(); renderFuel(); route();
+  renderFull(); renderReadings(); renderAnalytics(); renderEvents(); renderFuel(); renderMaint(); route();
 })();
 </script>
 

@@ -15,7 +15,7 @@ const src = path.resolve(process.argv[2] || path.join(here, "..", "mockup_odoo_g
 const outdir = path.resolve(process.argv[3] || path.join(here, "..", "shots"));
 const schemes = (process.argv[4] || "light").split(",");
 const SIZES = [["pc", 1440, 900], ["phone", 390, 844]];
-const PAGES = ["form", "readings", "analytics", "events", "fuel"];
+const PAGES = ["form", "readings", "analytics", "events", "fuel", "settings"];
 
 (async () => {
   fs.mkdirSync(outdir, { recursive: true });
