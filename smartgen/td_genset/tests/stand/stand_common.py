@@ -78,6 +78,12 @@ def kyiv_to_utc(day, hour, minute=0):
     return utc_naive(KYIV.localize(datetime.combine(day, dtime(hour, minute)), is_dst=None))
 
 
+def tomorrow_kyiv(hour, minute=0):
+    """Завтра о ``hour:minute`` Kyiv → naive UTC (денний час стенду поза тихими годинами і межами діб)."""
+    today = datetime.now(timezone.utc).astimezone(KYIV).date()
+    return kyiv_to_utc(today + timedelta(days=1), hour, minute)
+
+
 def next_weekday_kyiv(weekday, hour, minute):
     """Найближчий (з завтрашнього дня) ``weekday`` (0 — понеділок) о ``hour:minute`` Kyiv → naive UTC."""
     today = datetime.now(timezone.utc).astimezone(KYIV).date()
@@ -89,6 +95,11 @@ def float_time(dt_utc):
     """naive UTC → ``float_time`` (години) за київським часом — для рядків розкладу."""
     local = pytz.utc.localize(dt_utc).astimezone(KYIV)
     return local.hour + local.minute / 60.0
+
+
+def kyiv_weekday(dt_utc):
+    """naive UTC → день тижня за київським часом як ``dayofweek`` розкладу ('0' — понеділок)."""
+    return str(pytz.utc.localize(dt_utc).astimezone(KYIV).weekday())
 
 
 class TdGensetStandCase(TdGensetCase):
@@ -393,5 +404,6 @@ class TdGensetStandCase(TdGensetCase):
 
 __all__ = [
     'KYIV', 'OPEN_COMMAND_STATES', 'SCHEDULE_REQUESTED_BY', 'STAND_CONFIG', 'StandError', 'StandTimeout',
-    'TdGensetStandCase', 'float_time', 'kyiv_to_utc', 'next_weekday_kyiv', 'utc_naive', 'wait_until',
+    'TdGensetStandCase', 'float_time', 'kyiv_to_utc', 'kyiv_weekday', 'next_weekday_kyiv', 'tomorrow_kyiv',
+    'utc_naive', 'wait_until',
 ]
