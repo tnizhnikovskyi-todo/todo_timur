@@ -358,9 +358,14 @@ class TdGensetMonitoring(models.Model):
     def _update_link_state(self, online, now=None):
         """Правило 2.8.6: «онлайн» — модуль на зв'язку і знімки свіжіші за ``link_lost_min``; «немає зв'язку» —
         ``online=False`` ≥ ``link_lost_min`` або немає знімків ≥ ``link_lost_min`` (останній знімок — і в Odoo,
-        і на ретрансляторі, тож догон історії не вважається втратою зв'язку). Переходи ``online↔offline`` →
-        подія ``link``, ``_raise/_clear('link_lost')`` (через ``link_alarm_min``), чатер «Зв'язок відновлено
-        після N хв без даних», ``_notify_bus('link')``, крок cron команд для ``waiting_link`` (AC-09).
+        і на ретрансляторі, тож догон історії не вважається втратою зв'язку).
+
+        Момент переходу в «Немає зв'язку» (``link_changed_at``) — коли минуло ``link_lost_min`` без даних
+        (останні дані + 3 хв), незалежно від того, коли саме відпрацював cron; тривога ``link_lost`` — через
+        ``link_alarm_min`` від цього моменту (останні дані + 3 + 10 хв). Подія ``link`` охоплює весь час без даних
+        (від останніх даних до відновлення). Відновлення → подія закрита, ``_clear('link_lost')``, чатер
+        «Зв'язок відновлено після N хв без даних», ``_notify_bus('link')``, крок cron команд для ``waiting_link``
+        (AC-09).
 
         :param bool|None online: стан модуля з ``/status`` (None — невідомо).
         :param datetime now: «зараз» (UTC naive) для тестів.
@@ -377,21 +382,25 @@ class TdGensetMonitoring(models.Model):
                 continue
             fresh = now - last_data < lost_after
             silent_for = timedelta(seconds=genset.relay_seconds_since_seen or 0)
-            offline = (online is False and silent_for >= lost_after) or not fresh
-            if genset.link_state != 'offline' and offline:
-                since = last_data
-                genset.write({'link_state': 'offline', 'link_changed_at': since})
-                event_model._open(genset, 'link', since, reason=_("Немає зв'язку з модулем"))
+            moments = []            # коли настала умова «немає зв'язку» (за кожною з ознак)
+            if not fresh:
+                moments.append(last_data + lost_after)
+            if online is False and silent_for >= lost_after:
+                moments.append(now - silent_for + lost_after)
+            if genset.link_state != 'offline' and moments:
+                genset.write({'link_state': 'offline', 'link_changed_at': min(min(moments), now)})
+                event_model._open(genset, 'link', last_data, reason=_("Немає зв'язку з модулем"))
                 genset._notify_bus('link', {'state': 'offline'})
             elif genset.link_state != 'online' and online is not False and fresh:
                 was_offline = genset.link_state == 'offline'
                 lost_since = genset.link_changed_at
                 genset.write({'link_state': 'online', 'link_changed_at': now})
                 if was_offline:
-                    minutes = int(round((now - lost_since).total_seconds() / 60.0)) if lost_since else 0
-                    text = _("Зв'язок відновлено після %s хв без даних.", minutes)
                     events = event_model.sudo().search([('genset_id', '=', genset.id), ('event_type', '=', 'link'),
                                                         ('date_end', '=', False)])
+                    no_data_since = min(events.mapped('date_start')) if events else lost_since
+                    minutes = int(round((now - no_data_since).total_seconds() / 60.0)) if no_data_since else 0
+                    text = _("Зв'язок відновлено після %s хв без даних.", minutes)
                     for event in events:
                         event_model._close(event, now, summary=text)
                     alarm_model._clear(genset, 'link_lost')

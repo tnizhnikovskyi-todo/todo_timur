@@ -86,12 +86,21 @@ class TestW1Semantics(TdGensetCase):
 
     def test_ac07_mains_and_generator_semantics(self):
         """AC-07: ``mains_status=2`` + ``mains_normal=true`` → «Є мережа»; стоїть з ``gen_undervoltage`` — не аварія;
-        стан 9 з ``gen_undervoltage`` → попередження «Низька напруга генератора»."""
-        reading = self._pull(snapshot(mains_status=2, mains_normal=True, genset_status=0, gen_undervoltage=True))
+        стан 9 з ``gen_undervoltage`` → попередження «Низька напруга генератора»; у станах 1–7 (пуск, розгін,
+        прогрів) сигнали «генератор не в нормі» — теж не аварія (лише стани 8–9)."""
+        reading = self._pull(snapshot(mains_status=2, mains_normal=True, genset_status=0, gen_undervoltage=True),
+                             ts=NOW - timedelta(minutes=3))
         self.assertTrue(reading.mains_ok)
         self.assertTrue(self.genset.mains_ok)
         self.assertFalse(reading.alarm_flags and 'gen_undervoltage' in reading.alarm_flags)
         self.assertFalse(self._alarm('gen_undervoltage'))
+        for minute, status in ((-2.5, 3), (-2.0, 5), (-1.5, 7)):
+            reading = self._pull(snapshot(genset_status=status, gen_undervoltage=True, gen_underfrequency=True,
+                                          gen_overvoltage=True), ts=NOW + timedelta(minutes=minute), reason='change')
+            self.assertTrue(reading.is_running)
+            self.assertFalse(reading.alarm_flags and 'gen_' in reading.alarm_flags, status)
+            for code in ('gen_undervoltage', 'gen_underfrequency', 'gen_overvoltage'):
+                self.assertFalse(self._alarm(code), (status, code))
         reading = self._pull(snapshot(genset_status=9, gen_undervoltage=True, gen_on_load=True, mains_on_load=False),
                              ts=NOW + timedelta(minutes=1), reason='change')
         self.assertTrue(reading.is_running)
