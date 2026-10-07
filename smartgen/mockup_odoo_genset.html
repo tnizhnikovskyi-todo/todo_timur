@@ -566,6 +566,12 @@ select.o-input { padding: 4px 2px; }
 .chain td { white-space: normal; vertical-align: middle; }
 .chain select { min-width: 150px; }
 
+/* test mode choice */
+.tchoice { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; align-items: start; border: 1px solid var(--o-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+.tchoice:has(input:checked) { border-color: var(--o-primary); background: var(--o-primary-soft); }
+.tchoice input { accent-color: var(--o-primary); width: 16px; height: 16px; margin: 2px 0 0; }
+.tchoice small { display: block; color: var(--o-muted); font-size: 12.5px; }
+.qv { display: inline-flex; gap: 4px; margin-top: 4px; }
 /* roles: read-only notice */
 .ronote { display: flex; gap: 8px; align-items: flex-start; background: var(--o-info-soft); color: var(--o-info); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
 .avatar { border: 0; cursor: pointer; }
@@ -652,7 +658,7 @@ select.o-input { padding: 4px 2px; }
   <button class="btn btn-primary" type="button" id="formNew">Новий</button>
   <div class="crumbs"><a class="back" href="#settings/gens" aria-label="Назад до списку генераторів"><span class="ms">arrow_back</span></a><a href="#settings/gens">Генератори</a><span>/</span><span class="cur">Садова вулиця</span><button class="gear" type="button" aria-label="Дії"><span class="ms">settings</span></button></div>
   <span class="grow"></span>
-  <div class="pager"><span class="num">1 / 3</span><button type="button" aria-label="Попередній"><span class="ms">chevron_left</span></button><button type="button" aria-label="Наступний"><span class="ms">chevron_right</span></button></div>
+  <div class="pager"><span class="num">1 / 1</span><button type="button" aria-label="Попередній" disabled><span class="ms">chevron_left</span></button><button type="button" aria-label="Наступний" disabled><span class="ms">chevron_right</span></button></div>
 </div>
 
 <div class="layout">
@@ -721,7 +727,7 @@ select.o-input { padding: 4px 2px; }
             <button class="tile t-start" type="button" data-cmd="start"><span class="ico"><span class="ms">play_arrow</span></span><span class="tl">Пуск<small>запустити двигун</small></span><span class="dot"></span></button>
             <button class="tile t-manual" type="button" data-cmd="manual"><span class="ico"><span class="ms">back_hand</span></span><span class="tl">Ручний<small>без автопуску</small></span><span class="dot"></span></button>
             <button class="tile t-stop" type="button" data-cmd="stop"><span class="ico"><span class="ms">stop</span></span><span class="tl">Стоп<small>зупинити двигун</small></span><span class="dot"></span></button>
-            <button class="tile t-test" type="button" data-cmd="test"><span class="ico"><span class="ms">science</span></span><span class="tl">Тест<small>пуск і перевірка під навантаженням</small></span><span class="dot"></span></button>
+            <button class="tile t-test" type="button" data-cmd="test"><span class="ico"><span class="ms">science</span></span><span class="tl">Тест<small>пуск з навантаженням або без — оберете під час запуску</small></span><span class="dot"></span></button>
           </div>
           <div class="ctl-foot"><span>Кожна команда — з підтвердженням і записом у журнал</span><span>HGM6120N</span></div>
         </div>
@@ -749,7 +755,7 @@ select.o-input { padding: 4px 2px; }
             <div id="tIdle">
               <form class="durrow" id="durForm" novalidate>
                 <label for="durH" style="font-weight:500">Тривалість</label>
-                <input class="o-input" id="durH" type="number" min="0" max="23" value="2" aria-label="Години"><span>год</span>
+                <input class="o-input" id="durH" type="number" min="0" max="24" value="2" aria-label="Години"><span>год</span>
                 <input class="o-input" id="durM" type="number" min="0" max="59" step="5" value="30" aria-label="Хвилини"><span>хв</span>
                 <button class="btn btn-primary" type="submit">Застосувати</button>
               </form>
@@ -757,7 +763,7 @@ select.o-input { padding: 4px 2px; }
               <div class="hint" style="margin-top:6px">Генератор перейде в режим Авто на вказаний час, потім у Ручний і Стоп.</div>
             </div>
             <div id="tRun" hidden>
-              <div class="hint">Залишилось</div>
+              <div class="hint" id="tBy">Залишилось</div>
               <div class="clock" id="clock">00:00:00</div>
               <div class="tbar"><i id="tFill"></i></div>
               <div class="hint" id="tUntil">—</div>
@@ -1062,9 +1068,9 @@ select.o-input { padding: 4px 2px; }
     maint: { first: 30, every: 250, left: 0 },       // 03H 0030-0031: hours to maintenance
     notify: {
       chain: [
-        { role: "Черговий", who: "О. Коваль", ch: ["Telegram", "SMS"], after: 0 },
-        { role: "Відповідальний за об'єкт", who: "Т. Нижниковський", ch: ["Telegram", "Дзвінок"], after: 10 },
-        { role: "Керівник", who: "І. Мельник", ch: ["SMS", "Email"], after: 30 },
+        { role: "Черговий", who: "О. Коваль", after: 0 },
+        { role: "Відповідальний за об'єкт", who: "Т. Нижниковський", after: 10 },
+        { role: "Керівник", who: "І. Мельник", after: 30 },
       ],
       quiet: { on: true, from: "22:00", to: "07:00" },
       rules: { crit: "Завжди", warn: "Крім тихих годин", info: "Лише в чаті" },
@@ -1196,7 +1202,7 @@ select.o-input { padding: 4px 2px; }
   // what each role may change; everyone sees everything
   const NEED = { timer: "user", schedule: "admin", fuel: "admin", pult: "tech", maint: "tech", settings: "tech" };
   // «Прийняв»: anyone in the escalation chain, whatever their role
-  const can = k => k === "ack" ? S.notify.chain.some(c => c.who === S.me) : RANK[S.role] >= RANK[NEED[k]];
+  const can = k => k === "ack" ? S.role === "tech" || S.notify.chain.some(c => c.who === S.me) : RANK[S.role] >= RANK[NEED[k]];
   const gsLeft = () => S.gsEnd ? Math.max(0, Math.ceil((S.gsEnd - Date.now()) / 1000)) : 0;
   const isLocked = () => S.remoteLock || S.inputs.inhibit;
   function renderGs() { const l = gsLeft(); $("#padState").textContent = GS[S.gs] + (l ? ` · ${l} с` : ""); }
@@ -1343,15 +1349,15 @@ select.o-input { padding: 4px 2px; }
     if (rule === "Крім тихих годин" && quietNow()) return `<span class="nl"><span class="ms">bedtime</span>Тихі години: сповіщення надійде о ${S.notify.quiet.to}</span>`;
     const mins = (Date.now() - a.n.at) / 60000, ch = S.notify.chain;
     const sent = ch.filter(c => c.after <= mins), next = ch.find(c => c.after > mins);
-    return `<span class="nl"><span class="ms">send</span>Сповіщено: ${sent.map(c => `${c.who} (${c.ch.join(", ")})`).join(" → ")}${next ? ` · якщо не прийняти — о ${kyiv(a.n.at + next.after * 60000).hhmm} отримає ${next.who}` : " · сповіщено всі рівні"}</span>`;
+    return `<span class="nl"><span class="ms">send</span>Сповіщено в Odoo: ${sent.map(c => c.who).join(" → ")}${next ? ` · якщо не прийняти — о ${kyiv(a.n.at + next.after * 60000).hhmm} отримає ${next.who}` : " · сповіщено всі рівні"}</span>`;
   }
   function renderAlarms() {
     const c = { warn: "var(--o-warn)", ok: "var(--o-ok)", crit: "var(--o-crit)" };
     const act = a => a.when === "активна";
     $("#alarmList").innerHTML = S.alarms.map((a, i) => ({ a, i })).sort((x, y) => act(y.a) - act(x.a)).map(({ a, i }) => `<div class="alarm"><span class="stripe" style="background:${c[a.level]}"></span>
       <div><b>${a.title}${a.example ? '<span class="ex">приклад</span>' : ""}</b><small>${a.sub}</small>${notifLine(a)}</div>
-      <div class="al-r"><small class="num">${a.when}</small>${a.n && act(a) && !a.n.ack ? (can("ack") ? `<button class="btn btn-sm" type="button" data-ack="${i}">Прийняв</button>` : '<small class="dim">прийняти може учасник ланцюжка</small>') : ""}</div></div>`).join("");
-    $("#alarmHead").innerHTML = `<span class="ms">campaign</span><span>Сповіщення: ${S.notify.chain.map(c => `${c.who}${c.after ? ` (+${c.after} хв)` : ""}`).join(" → ")} · прийняти може будь-хто з ланцюжка · <a class="lnk" href="#settings/chain">налаштувати</a></span>`;
+      <div class="al-r"><small class="num">${a.when}</small>${a.n && act(a) && !a.n.ack ? (can("ack") ? `<button class="btn btn-sm" type="button" data-ack="${i}">Прийняв</button>` : '<small class="dim">прийняти може учасник ланцюжка або тех. адміністратор</small>') : ""}</div></div>`).join("");
+    $("#alarmHead").innerHTML = `<span class="ms">campaign</span><span>Сповіщення: ${S.notify.chain.map(c => `${c.who}${c.after ? ` (+${c.after} хв)` : ""}`).join(" → ")} · прийняти може будь-хто з ланцюжка або тех. адміністратор · <a class="lnk" href="#settings/chain">налаштувати</a></span>`;
     const n = S.alarms.filter(act).length;
     $("#cntAlarms").textContent = n; $("#statAlarms").textContent = n;
   }
@@ -1369,7 +1375,8 @@ select.o-input { padding: 4px 2px; }
       <td><span class="badge ${RES[r.res][1]}">${RES[r.res][0]}</span></td></tr>`).join("");
     $("#cntLog").textContent = S.log.length; $("#statCmds").textContent = S.log.length;
   }
-  const AV = { "Розклад": ["РЗ", "#1c63a6"], "Таймер": ["ТМ", "#b26b00"], "Система": ["СМ", "#6c727a"], "Ви": ["ТН", "#714b67"], "О. Коваль": ["ОК", "#017e84"] };
+  const AV = { "Розклад": ["РЗ", "#1c63a6"], "Таймер": ["ТМ", "#b26b00"], "Система": ["СМ", "#6c727a"], "Ви": ["ТН", "#714b67"], "О. Коваль": ["ОК", "#017e84"],
+    "Т. Нижниковський": ["ТН", "#714b67"], "І. Мельник": ["ІМ", "#1f8a4c"], "С. Бондар": ["СБ", "#b26b00"] };
   function renderChat() {
     const groups = {};
     S.chat.forEach(m => (groups[m.day] = groups[m.day] || []).push(m));
@@ -1449,8 +1456,10 @@ select.o-input { padding: 4px 2px; }
   }
 
   let okFn = null;
-  function ask(title, text, warn, fn) {
-    $("#dTitle").textContent = title; $("#dText").textContent = text;
+  function ask(title, text, warn, fn, html) {
+    $("#dTitle").textContent = title;
+    if (html) $("#dText").innerHTML = html; else $("#dText").textContent = text;
+    $("#dOk").disabled = false;
     $("#dWarn").hidden = !warn; $("#dWarn").textContent = warn || "";
     okFn = fn; $("#scrim").hidden = false; $("#dOk").focus();
   }
@@ -1469,18 +1478,38 @@ select.o-input { padding: 4px 2px; }
     manual: ["Перевести в ручний режим?", "Автоматичний пуск при зникненні мережі буде вимкнено.", null],
     start: ["Запустити генератор?", "Команда «Пуск» запустить двигун на об'єкті.", "Переконайтеся, що біля генератора немає людей і роботи з ним не ведуться."],
     stop: ["Зупинити генератор?", "Якщо генератор живить об'єкт, навантаження повернеться на мережу, а двигун охолоне і зупиниться.", null],
-    test: ["Перевести в режим Тест?", "Генератор запуститься і після прогріву прийме навантаження — перевірка під навантаженням. Щоб завершити, оберіть Авто або Стоп.", "Переконайтеся, що біля генератора немає людей і роботи з ним не ведуться."],
+    test: ["Тестовий пуск", "", "Переконайтеся, що біля генератора немає людей і роботи з ним не ведуться."],
   };
+  // «Тест»: the operator chooses each time. With load = Test mode (05H 0002), the load goes to the generator;
+  // without load = Manual + Start (05H 0004, 0000), the engine runs and the site stays on the mains.
+  const TEST_HTML = `<p style="margin:0 0 10px">Як перевірити генератор?</p>
+    <label class="tchoice"><input type="radio" name="tmode" value="load"><span><b>З навантаженням</b><small>Режим «Тест» (05H 0002): після прогріву навантаження перейде на генератор.</small></span></label>
+    <label class="tchoice"><input type="radio" name="tmode" value="idle"><span><b>Без навантаження</b><small>Ручний + Пуск (05H 0004, 0000): двигун працює, об'єкт лишається на мережі.</small></span></label>
+    <p class="hint" style="margin:4px 0 0">Щоб завершити тест — Авто або Стоп.</p>`;
   $$("[data-cmd]").forEach(b => b.onclick = () => {
     const c = b.dataset.cmd;
     const [title, text, warn] = CONFIRM[c];
+    let tmode = null;
+    if (c === "test") {
+      ask(title, "", warn, () => {
+        S.source = "manual";
+        const load = tmode === "load", cmd = load ? "Тест · з навантаженням" : "Тест · без навантаження (Ручний + Пуск)";
+        send(cmd, S.me, "Кнопка", () => {
+          if (load) { S.mode = "test"; startUnit(() => { S.genCB = true; S.mainsCB = false; render(); }); }
+          else { S.mode = "manual"; startUnit(); }
+        });
+        notify(`Команду «${cmd}» надіслано`);
+      }, TEST_HTML);
+      $("#dOk").disabled = true;
+      $$("[name=tmode]").forEach(r => r.onchange = () => { tmode = r.value; $("#dOk").disabled = false; });
+      return;
+    }
     ask(title, text, c === "stop" && S.timer ? "Запущений таймер роботи поза графіком буде скасовано." : warn, () => {
       S.source = "manual";
       if (c === "stop") S.timer = null;
       send(CMD[c], "Ви", "Кнопка", () => {
         if (c === "auto") { const wasTest = S.mode === "test"; S.mode = "auto"; if (wasTest && S.mainsCB !== false) stopUnit(); }
         if (c === "manual") S.mode = "manual";
-        if (c === "test") { S.mode = "test"; startUnit(() => { S.genCB = true; S.mainsCB = false; render(); }); }
         if (c === "start") { S.mode = "manual"; startUnit(); }
         if (c === "stop") { S.mode = "manual"; stopUnit(); }
       });
@@ -1506,34 +1535,37 @@ select.o-input { padding: 4px 2px; }
   $("#durForm").addEventListener("submit", e => {
     e.preventDefault();
     const h = parseInt($("#durH").value, 10) || 0, m = parseInt($("#durM").value, 10) || 0, err = $("#durErr");
-    if (h < 0 || m < 0 || m > 59 || h > 23 || h * 60 + m === 0) { err.textContent = "Вкажіть тривалість від 1 хв до 23 год 59 хв."; err.hidden = false; return; }
+    if (h < 0 || m < 0 || m > 59 || h * 60 + m === 0 || h * 60 + m > 24 * 60) { err.textContent = "Вкажіть тривалість від 1 хв до 24 год."; err.hidden = false; return; }
     err.hidden = true;
     if (isLocked()) return notify("Дистанційне керування заблоковано.", true);
     ask("Запустити роботу поза графіком?", `Генератор перейде в режим Авто на ${h} год ${pad(m)} хв, потім у Ручний і Стоп.`, null, () => {
       const now = Date.now();
-      S.timer = { start: now, end: now + (h * 60 + m) * 60000 };
+      S.timer = { start: now, end: now + (h * 60 + m) * 60000, by: S.me };   // one shared timer per generator
       S.source = "timer";
-      send("Авто", "Ви", "Таймер", () => { S.mode = "auto"; });
+      send("Авто", S.me, "Таймер", () => { S.mode = "auto"; });
       tick(); notify("Таймер запущено");
     });
   });
   $$("[data-add]").forEach(b => b.onclick = () => {
     if (!S.timer) return;
-    const add = +b.dataset.add;
+    const max = Date.now() + 24 * 3600e3;
+    if (S.timer.end >= max - 60000) return notify("Таймер уже на максимумі — 24 год.", true);
+    const add = Math.min(+b.dataset.add, Math.floor((max - S.timer.end) / 60000));
     S.timer.end += add * 60000;
-    S.log.unshift({ when: kyiv().full, who: "Ви", src: "Таймер", cmd: `+${add} хв (до ${kyiv(S.timer.end).hhmm})`, res: "ok" });
-    S.chat.unshift({ day: "Сьогодні", who: "Ви", time: kyiv().hhmm, text: `Таймер подовжено на <b>${add} хв</b>, до ${kyiv(S.timer.end).hhmm}.`, track: true });
+    S.log.unshift({ when: kyiv().full, who: S.me, src: "Таймер", cmd: `+${add} хв (до ${kyiv(S.timer.end).hhmm})`, res: "ok" });
+    S.chat.unshift({ day: "Сьогодні", who: S.me, time: kyiv().hhmm, text: `Таймер подовжено на <b>${add} хв</b>, до ${kyiv(S.timer.end).hhmm}.`, track: true });
     tick(); render(); notify(`Додано ${add} хв`);
   });
   $("#tCancel").onclick = () => ask("Зупинити таймер?",
     inWindow() ? "Зараз вікно розкладу: генератор залишиться в режимі Авто." : "Зараз поза розкладом: генератор перейде в Ручний і Стоп.", null,
-    () => { S.timer = null; followSchedule("Таймер"); notify("Таймер зупинено"); });
+    () => { S.chat.unshift({ day: "Сьогодні", who: S.me, time: kyiv().hhmm, text: "Зупинив таймер роботи поза графіком.", track: true }); S.timer = null; followSchedule("Таймер"); notify("Таймер зупинено"); });
   function tick() {
     if (!S.timer) return;
     const now = Date.now(), left = Math.max(0, S.timer.end - now), s = Math.round(left / 1000);
     $("#clock").textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
     $("#tFill").style.width = `${Math.min(100, (now - S.timer.start) / (S.timer.end - S.timer.start) * 100).toFixed(1)}%`;
     $("#tUntil").textContent = `до ${kyiv(S.timer.end).hhmm}, потім ${inWindow(S.timer.end) ? "Авто за розкладом" : "Ручний + Стоп"}`;
+    $("#tBy").textContent = `Залишилось · запустив ${S.timer.by} о ${kyiv(S.timer.start).hhmm} · таймер один на генератор, подовжити або зупинити може будь-хто`;
     if (left === 0) { S.timer = null; followSchedule("Таймер"); notify("Таймер завершився"); }
   }
 
@@ -2116,6 +2148,8 @@ select.o-input { padding: 4px 2px; }
     const t = t0 + 10 * H;
     for (let i = 0; i < 10; i++) addCan(i < 4 ? "Щитова" : "Склад");
     moves.push({ t, kind: "in", title: "Надходження: 10 нових каністр", sub: buyNote("АЗС WOG", 54.9, 200), delta: 200, who: "О. Коваль", price: 54.9 });
+    addCan("Щитова", 10); addCan("Щитова", 10);
+    moves.push({ t: t + 30 * M, kind: "in", title: "Надходження: 2 нові каністри по 10 L", sub: buyNote("АЗС WOG", 54.9, 20), delta: 20, who: "О. Коваль", price: 54.9 });
     let prev = t;
     for (const r of refuels) {
       const need = Math.round(toL(r.to - r.from));
@@ -2149,7 +2183,7 @@ select.o-input { padding: 4px 2px; }
       .map(([k, t, n]) => `<button type="button" aria-pressed="${k === canFilter}" data-cf="${k}">${t} <span class="dim">${n}</span></button>`).join("");
     const list = cans.filter(c => canFilter === "all" || canState(c) === canFilter);
     $("#cans").innerHTML = list.map(c => `<button class="can s-${canState(c)}" type="button" data-can="${c.id}" aria-label="${c.id}: ${fmt(c.l)} з ${c.vol} L, ${c.loc}">
-      <span class="jar"><span class="liq"><i style="height:${(c.l / c.vol * 100).toFixed(0)}%"></i></span></span><b>${c.id}</b><span class="lv">${fmt(c.l)} / ${c.vol} L</span><span class="loc">${c.loc}</span></button>`).join("")
+      <span class="jar" style="height:${Math.round(20 + c.vol)}px;margin-top:${Math.max(0, 20 - c.vol)}px"><span class="liq"><i style="height:${(c.l / c.vol * 100).toFixed(0)}%"></i></span></span><b>${c.id}</b><span class="lv">${fmt(c.l)} / ${c.vol} L</span><span class="loc">${c.loc}</span></button>`).join("")
       || `<div class="hint">Немає каністр у цьому фільтрі.</div>`;
 
     let bal = 0;
@@ -2214,6 +2248,8 @@ select.o-input { padding: 4px 2px; }
     $("#fScrim").hidden = false;
     ($("#fdBody input:not([type=radio]):not([type=checkbox])") || $("#fdOk")).focus();
   }
+  // quick canister sizes in «Надходження палива»: 20 L by default, 10 L ones exist too
+  $("#fdBody").addEventListener("click", e => { const q = e.target.closest("[data-qv]"); if (!q) return; e.preventDefault(); $("#fiV").value = q.dataset.qv; $("#fdBody").oninput && $("#fdBody").oninput(); });
   const fClose = () => { $("#fScrim").hidden = true; fOk = fExtra = null; };
   const ferr = t => { const e = $("#fdErr"); e.textContent = t; e.hidden = false; };
   $("#fdOk").onclick = () => { if (fOk && fOk() === false) return; fClose(); };
@@ -2283,7 +2319,7 @@ select.o-input { padding: 4px 2px; }
       <div id="fiFill">${empt.length ? `<div class="picks">${empt.map(c => `<label class="pick"><input type="checkbox" value="${c.id}" checked><span><b>${c.id}</b><small>${c.loc}</small></span><span class="num">${fmt(c.l)} → ${c.vol} L</span></label>`).join("")}</div>` : '<div class="hint">Усі каністри повні.</div>'}</div>
       <div id="fiNew" class="frm2" hidden>
         <label class="f">Кількість<input class="o-input w" id="fiN" type="number" min="1" max="50" value="5"></label>
-        <label class="f">Об'єм каністри, L<input class="o-input w" id="fiV" type="number" min="5" max="60" value="${FS.can}"></label>
+        <label class="f">Об'єм каністри, L<input class="o-input w" id="fiV" type="number" min="5" max="60" value="${FS.can}"><span class="qv">${[10, 20].map(v => `<button class="chip" type="button" data-qv="${v}">${v} L</button>`).join("")}</span></label>
         <label class="f">Де зберігати<select class="o-input w" id="fiLoc">${FS.locs.map(l => `<option>${l}</option>`).join("")}</select></label>
       </div>
       <div class="frm2">
@@ -2343,8 +2379,8 @@ select.o-input { padding: 4px 2px; }
   const MW = ["Заміна моторної оливи", "Масляний фільтр", "Паливний фільтр", "Повітряний фільтр", "Перевірка АКБ і клем", "Скинути лічильник ТО на панелі контролера"];
   const MSTAGES = [["new", "Нова"], ["work", "В роботі"], ["check", "Перевірка лічильника"], ["done", "Виконано"]];
   const MR = [
-    { id: "ТО-0002", name: "ТО-1 після обкатки (30 мотогодин)", stage: "new", who: null, created: fmtDT(now - 9 * DAY), auto: true, done: MW.map(() => false) },
-    { id: "ТО-0001", name: "Пусконалагодження і перевірка після монтажу", stage: "done", who: "СервісГен", created: "14.02.2026", closed: "14.02.2026" },
+    { id: "ТО-0002", name: "ТО-1 після обкатки (30 мотогодин)", stage: "new", who: null, partner: "СервісГен", created: fmtDT(now - 9 * DAY), auto: true, done: MW.map(() => false) },
+    { id: "ТО-0001", name: "Пусконалагодження і перевірка після монтажу", stage: "done", who: "Т. Нижниковський", partner: "СервісГен", created: "14.02.2026", closed: "14.02.2026" },
   ];
   const hm = m => `${Math.floor(m / 60)} год ${pad(Math.round(m % 60))} хв`;
   function renderMaint() {
@@ -2368,6 +2404,7 @@ select.o-input { padding: 4px 2px; }
       return `<div class="mreq"><div class="mreq-h"><b>${r.id} · ${r.name}</b><div class="statusbar">${MSTAGES.map(([k, t], i) => `<span class="arrow${i === si ? " cur" : ""}">${t}</span>`).join("")}</div></div>
         <div class="sgrid">
           <div class="sfield"><span>Виконавець</span><span data-fk="mUser">${r.who || '<span class="badge b-warn">не призначено</span>'}</span></div>
+          <div class="sfield"><span>Підрядник</span><span data-fk="mPartner">${r.partner || '<span class="dim">—</span>'}</span></div>
           <div class="sfield"><span>Створено</span><span data-fk="mDate">${r.created}${r.auto ? " · автоматично, лічильник ТО = 0" : ""}</span></div>
         </div>
         ${r.done ? `<div class="checklist">${MW.map((w, i) => `<label class="${i === MW.length - 1 ? "key" : ""}"><input type="checkbox" data-mw="${i}"${r.done[i] ? " checked" : ""}${r.stage === "work" && G.can("maint") ? "" : " disabled"}>${w}</label>`).join("")}</div>` : ""}
@@ -2378,9 +2415,9 @@ select.o-input { padding: 4px 2px; }
           ${r.stage === "check" ? '<span class="hint"><span class="ms">hourglass_top</span> Чекаємо, поки контролер покаже скинутий лічильник (03H 0030)…</span>' : ""}
         </div></div>`;
     };
-    const history = MR.filter(r => r.stage === "done").map(r => `<tr><td>${r.id}</td><td>${r.name}</td><td>${r.who}</td><td>${r.closed}</td><td><span class="badge b-ok">Виконано</span></td></tr>`).join("");
+    const history = MR.filter(r => r.stage === "done").map(r => `<tr><td>${r.id}</td><td>${r.name}</td><td>${r.who}</td><td>${r.partner || "—"}</td><td>${r.closed}</td><td><span class="badge b-ok">Виконано</span></td></tr>`).join("");
     $("#maintBox").innerHTML = plan + (cur ? reqCard(cur) : `<div class="mreq"><span class="badge b-ok">Відкритих заявок немає</span> <span class="hint">Наступне ТО — через ${m.left} мотогодин; заявку буде створено автоматично.</span></div>`)
-      + `<div class="tblhead" style="margin-top:16px">Історія</div><div class="tbl-wrap"><table data-m="maintenance.request"><thead><tr><th>Заявка</th><th>Що</th><th>Виконавець</th><th>Закрито</th><th></th></tr></thead><tbody>${history}</tbody></table></div>`;
+      + `<div class="tblhead" style="margin-top:16px">Історія</div><div class="tbl-wrap"><table data-m="maintenance.request"><thead><tr><th>Заявка</th><th>Що</th><th>Виконавець</th><th>Підрядник</th><th>Закрито</th><th></th></tr></thead><tbody>${history}</tbody></table></div>`;
   }
   $("#maintBox").onclick = e => {
     const r = MR.find(x => x.stage !== "done"); if (!r) return;
@@ -2404,15 +2441,10 @@ select.o-input { padding: 4px 2px; }
 
   // ---------- settings: generators (object, unit, connection), notifications, fuel, link
   const PEOPLE = ["О. Коваль", "Т. Нижниковський", "І. Мельник", "С. Бондар"];
-  const CHANNELS = ["Telegram", "SMS", "Дзвінок", "Email"];
   const LS = { server: "gen.todo.ltd:7001", online: 3, offline: 60, lostAfter: 3, alarmAfter: 5, history: 15, timing: true };
   const GENS = [
     { name: "Садова вулиця", addr: "Київ, вул. Садова", resp: "Т. Нижниковський", ctrl: "HGM6120N", kw: 88, tank: TANK, first: 30, every: 250, months: 12,
       host: "313037 303133 471700 3D002E", hostname: "Sadova-Gen", pass: "980318", port: "USB", baud: 9600, mb: 1, online: 3, offline: 60, mode: "change", lat: "50.4501", lon: "30.5234", self: true },
-    { name: "Склад, вул. Промислова", addr: "Київ, вул. Промислова, 14", resp: "С. Бондар", ctrl: "HGM6120N", kw: 120, tank: 200, first: 30, every: 250, months: 12,
-      host: "313037 303133 471700 3D00A1", hostname: "Sklad-Gen", pass: "980318", port: "RS485", baud: 9600, mb: 1, online: 3, offline: 60, mode: "change", lat: "50.4870", lon: "30.6020", stat: { link: "on", state: "Очікування", alarms: 0 } },
-    { name: "Офіс, просп. Перемоги", addr: "Київ, просп. Перемоги, 67", resp: "Т. Нижниковський", ctrl: "HGM6110N", kw: 40, tank: 90, first: 30, every: 250, months: 12,
-      host: "", hostname: "", pass: "", port: "RS485", baud: 9600, mb: 1, online: 3, offline: 60, mode: "change", lat: "", lon: "", stat: { link: "none", state: "—", alarms: 0 } },
   ];
   let setTab = "general", genEdit = null, draft = null;
   const sf = (label, ctl, hint) => `<label class="sfield"><span>${label}${hint ? `<small>${hint}</small>` : ""}</span>${ctl}</label>`;
@@ -2493,10 +2525,9 @@ select.o-input { padding: 4px 2px; }
   }
   function chainForm() {
     const N = S.notify;
-    return `<div class="sbox"><div class="sub">Тривогу одразу отримує перший рівень. Якщо ніхто не натиснув «Прийняв», через вказаний час її отримує наступний. Що саме надсилати і тихі години — у загальних <a class="lnk" href="#settings">налаштуваннях</a>.</div>
-        <div class="o-list chain cardlist"><table data-m="td.genset.notify.level"><thead><tr><th>Рівень</th><th>Хто</th><th>Канали</th><th>Коли</th><th></th></tr></thead><tbody>
+    return `<div class="sbox"><div class="sub">Один ланцюжок на всі генератори. Тривогу одразу отримує перший рівень — повідомленням в Odoo («Обговорення» і мобільний застосунок). Якщо ніхто не натиснув «Прийняв», через вказаний час її отримує наступний. Telegram, SMS і дзвінки — пізніше. Що саме надсилати і тихі години — у загальних <a class="lnk" href="#settings">налаштуваннях</a>.</div>
+        <div class="o-list chain cardlist"><table data-m="td.genset.notify.level"><thead><tr><th>Рівень</th><th>Хто</th><th>Коли</th><th></th></tr></thead><tbody>
         ${N.chain.map((c, i) => `<tr><td><b>${i + 1}. ${c.role}</b></td><td>${sel(`nWho${i}`, PEOPLE, c.who)}</td>
-          <td><span class="chipset">${CHANNELS.map(ch => `<label class="chk"><input type="checkbox" data-nch="${i}" value="${ch}"${c.ch.includes(ch) ? " checked" : ""}>${ch}</label>`).join("")}</span></td>
           <td>${i ? pair("через", inp(`nAfter${i}`, c.after, "number", 'min="1"'), "хв") : "одразу"}</td>
           <td>${i ? `<button class="x" type="button" data-ndel="${i}" aria-label="Прибрати рівень"><span class="ms">delete</span></button>` : ""}</td></tr>`).join("")}
         </tbody></table></div>
@@ -2542,7 +2573,7 @@ select.o-input { padding: 4px 2px; }
     ["Розклад і дні-винятки", "admin"],
     ["Заправка: заправити генератор, надходження палива, каністри", "admin"],
     ["Пульт: Авто, Ручний, Пуск, Стоп, Тест; автомати генератора і мережі", "tech"],
-    ["Прийняти тривогу («Прийняв») — якщо людина є в ланцюжку сповіщень", "chain"],
+    ["Прийняти тривогу («Прийняв»)", "chain"],
     ["Обслуговування: заявки на ТО", "tech"],
     ["Налаштування: генератори, підключення, сповіщення, паливо, ролі", "tech"],
   ];
@@ -2552,7 +2583,7 @@ select.o-input { padding: 4px 2px; }
     return `<div class="sform">
       <div class="sbox"><h4>Що може кожна роль</h4><div class="sub">Кожна наступна роль включає попередню. В Odoo — групи доступу застосунку «Генератори»: td_genset.group_user → group_admin → group_tech (implied_ids).</div>
         <div class="o-list"><table class="roles-m"><thead><tr><th>Дія</th>${Object.values(G.ROLES).map(t => `<th>${t}</th>`).join("")}</tr></thead><tbody>
-        ${MATRIX.map(([t, need]) => `<tr><td>${t}</td>${Object.keys(G.ROLES).map(k => need === "chain" ? '<td class="y">у ланцюжку</td>' : RK[k] >= RK[need] ? '<td class="y">✓</td>' : '<td class="n">—</td>').join("")}</tr>`).join("")}
+        ${MATRIX.map(([t, need]) => `<tr><td>${t}</td>${Object.keys(G.ROLES).map(k => need === "chain" ? (k === "tech" ? '<td class="y">✓</td>' : '<td class="y">якщо в ланцюжку</td>') : RK[k] >= RK[need] ? '<td class="y">✓</td>' : '<td class="n">—</td>').join("")}</tr>`).join("")}
         </tbody></table></div></div>
       <div class="sbox"><h4>Користувачі</h4>
         <div class="o-list cardlist"><table data-m="res.users"><thead><tr><th>Користувач</th><th>Роль</th></tr></thead><tbody>
@@ -2610,8 +2641,8 @@ select.o-input { padding: 4px 2px; }
     const t = e.target;
     const row = t.closest("[data-gen]"); if (row) { genEdit = +row.dataset.gen; return renderSettings(); }
     const nd = t.closest("[data-ndel]"); if (nd) { S.notify.chain.splice(+nd.dataset.ndel, 1); afterNotify(); return renderSettings(); }
-    if (t.closest("#nAdd")) { const ch = S.notify.chain, last = ch[ch.length - 1]; ch.push({ role: "Додатковий", who: PEOPLE[3], ch: ["Telegram"], after: last.after + 30 }); afterNotify(); return renderSettings(); }
-    if (t.closest("#nTest")) { const c = S.notify.chain[0]; return G.notify(`Тестове сповіщення надіслано: ${c.who} (${c.ch.join(", ")})`); }
+    if (t.closest("#nAdd")) { const ch = S.notify.chain, last = ch[ch.length - 1]; ch.push({ role: "Додатковий", who: PEOPLE[3], after: last.after + 30 }); afterNotify(); return renderSettings(); }
+    if (t.closest("#nTest")) { const c = S.notify.chain[0]; return G.notify(`Тестове сповіщення надіслано в Odoo: ${c.who}`); }
     const fl = t.closest("[data-floc]"); if (fl) {
       const loc = FS.locs[+fl.dataset.floc];
       if (cans.some(c => c.loc === loc)) return G.notify(`У «${loc}» є каністри — спершу перемістіть їх.`, true);
@@ -2627,7 +2658,6 @@ select.o-input { padding: 4px 2px; }
     const t = e.target, id = t.id || "";
     if (id.startsWith("nWho")) S.notify.chain[+id.slice(4)].who = t.value;
     else if (id.startsWith("nAfter")) S.notify.chain[+id.slice(6)].after = Math.max(1, +t.value || 1);
-    else if (t.dataset.nch !== undefined) { const c = S.notify.chain[+t.dataset.nch]; c.ch = t.checked ? [...c.ch, t.value] : c.ch.filter(x => x !== t.value); }
     else return;
     afterNotify(); G.notify("Збережено");
   };
@@ -2673,7 +2703,7 @@ select.o-input { padding: 4px 2px; }
     next_event: D(G, "next_event", "char", "Наступна дія розкладу або кінець таймера. Обчислюється з розкладу, днів-винятків і таймера.", { compute: 1 }),
     link_state: D(G, "link_state", "selection", "Зв'язок з модулем CMM366B. «Онлайн», якщо heartbeat або дані надходили не довше, ніж «Зв'язок втрачено» в налаштуваннях.", { sel: "[('online', 'Онлайн'), ('offline', 'Немає зв\\'язку')]", widget: "Бейдж (badge)", compute: 1 }),
     feed_source: D(G, "feed_source", "selection", "Від чого живиться об'єкт. З сигналів 01H 0006 «Мережа під навантаженням» і 0007 «Генератор під навантаженням».", { sel: FEED, widget: "Бейдж (badge)", compute: 1 }),
-    notify_level_ids: D(G, "notify_level_ids", "many2many", "Хто і в якому порядку отримує тривоги цього генератора. За замовчуванням — загальний ланцюжок ескалації.", { rel: NL, widget: "Теги (many2many_tags)" }),
+    notify_level_ids: D(G, "notify_level_ids", "many2many", "Загальний ланцюжок ескалації — один на всі генератори. Змінюється в «Налаштування → Ланцюжок ескалації».", { rel: NL, widget: "Теги (many2many_tags)", ro: 1, compute: 1 }),
     durH: D(G, "ooh_duration", "float", "Скільки генератор працює в режимі Авто поза графіком, потім — Ручний і Стоп.", { widget: FT }),
     tdStart: D(SE, "time_start", "float", "Перехід у режим Авто в цей день замість звичайного вікна розкладу.", { widget: FT }),
     tdEnd: D(SE, "time_end", "float", "Перехід у Ручний + Стоп у цей день.", { widget: FT }),
@@ -2731,7 +2761,8 @@ select.o-input { padding: 4px 2px; }
     mEvery: D(G, "maint_interval_hours", "integer", "Інтервал ТО в мотогодинах або місяцях (maint_interval_months)."),
     mHours: D(G, "run_hours", "float", "Мотогодини з контролера, 03H 0042–0045.", { widget: FT, ro: 1 }),
     mLeft: D(G, "maint_left_hours", "float", "До ТО з контролера, 03H 0030–0031. Скинути лічильник можна лише на панелі.", { widget: FT, ro: 1 }),
-    mUser: D(MR, "user_id", "many2one", "Виконавець заявки на ТО.", { rel: "res.users" }),
+    mUser: D(MR, "user_id", "many2one", "Хто з нашої команди веде заявку на ТО.", { rel: "res.users" }),
+    mPartner: D(MR, "td_partner_id", "many2one", "Підрядник, який виконує роботи. Лише контакт — у систему він не заходить.", { rel: "res.partner" }),
     mDate: D(MR, "request_date", "date", "Коли створено заявку. Автоматично — коли лічильник «До ТО» дійшов до 0."),
   };
   // list columns: «model|header»
@@ -2795,7 +2826,6 @@ select.o-input { padding: 4px 2px; }
     [G + "|Тривоги"]: D(G, "alarm_count", "integer", "Кількість активних тривог.", { compute: 1 }),
     [NL + "|Рівень"]: D(NL, "sequence, name", "integer, char", "Порядок рівня в ланцюжку і його назва."),
     [NL + "|Хто"]: D(NL, "user_id", "many2one", "Хто отримує тривогу на цьому рівні.", { rel: "res.users" }),
-    [NL + "|Канали"]: D(NL, "channel_ids", "many2many", "Якими каналами надсилати.", { rel: "td.genset.notify.channel", widget: "Теги (many2many_tags)" }),
     [NL + "|Коли"]: D(NL, "delay_minutes", "integer", "Через скільки хвилин після тривоги, якщо її досі не прийняли."),
     [SL + "|Місце"]: D(SL, "name", "char", "Назва місця зберігання."),
     [SL + "|Каністр"]: D(SL, "canister_count", "integer", "Скільки каністр тут лежить.", { compute: 1 }),
@@ -2804,7 +2834,8 @@ select.o-input { padding: 4px 2px; }
     ["res.users|Роль"]: D("res.users", "groups_id", "many2many", "Роль у застосунку «Генератори»: Співробітник, Адміністратор або Тех. адміністратор. Кожна наступна включає попередню.", { rel: "res.groups", widget: "Вибір групи застосунку (sel_groups)" }),
     [MR + "|Заявка"]: D(MR, "name", "char", "Номер заявки."),
     [MR + "|Що"]: D(MR, "description", "html", "Що зробити."),
-    [MR + "|Виконавець"]: D(MR, "user_id", "many2one", "Виконавець.", { rel: "res.users" }),
+    [MR + "|Виконавець"]: D(MR, "user_id", "many2one", "Хто з нашої команди вів заявку.", { rel: "res.users" }),
+    [MR + "|Підрядник"]: D(MR, "td_partner_id", "many2one", "Підрядник — контакт, без доступу до системи.", { rel: "res.partner" }),
     [MR + "|Закрито"]: D(MR, "close_date", "date", "Коли виконано."),
   };
 
