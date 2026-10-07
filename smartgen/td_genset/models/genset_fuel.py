@@ -8,8 +8,6 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-from .genset import FUEL_SOURCES  # noqa: F401  (контракт selection для W4)
-
 FUEL_KPI_FIELDS = (
     'canister_liters', 'fuel_in_canisters_l', 'fuel_total_l', 'fuel_hours_left', 'fuel_used_7d_l',
     'fuel_used_30d_l', 'fuel_rate_lph_7d', 'fuel_rate_lph_30d', 'fuel_rate_lpkwh_7d', 'fuel_rate_lpkwh_30d',

@@ -459,7 +459,8 @@ class TestW0Smoke(TdGensetCase):
         session = requests.Session()
         headers = {'Authorization': 'Bearer %s' % TOKEN}
         self.assertEqual(session.get(BASE_URL + '/status').status_code, 401)
-        status = session.get(BASE_URL + '/status', headers=headers).json()
+        status = session.get(BASE_URL + '/status', headers=headers, timeout=(5, 20), verify=True).json()
+        self.assertEqual((self.relay.calls[-1]['timeout'], self.relay.calls[-1]['verify']), ((5, 20), True))
         self.assertEqual(status['devices'][0]['hostid'], HOSTID)
         self.assertTrue(status['devices'][0]['commands_ready'])
         latest = session.get(BASE_URL + '/latest', headers=headers)

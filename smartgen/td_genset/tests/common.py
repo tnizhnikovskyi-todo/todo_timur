@@ -234,7 +234,7 @@ class RelayMock:
 
     Стан: ``readings`` (знімки, як їх зберігає ретранслятор — з ``regs``/``coils``), ``commands``,
     ``values`` (поточний образ контролера), ``device``/``relay`` (поля ``/status``), ``calls`` (журнал
-    запитів без заголовків: ``{'method', 'path', 'params', 'json'}``).
+    запитів без заголовків: ``{'method', 'path', 'params', 'json', 'timeout', 'verify'}``).
     """
 
     def __init__(self, base_url=BASE_URL, token=TOKEN, hostid=HOSTID, version='1.1.3'):
@@ -276,7 +276,7 @@ class RelayMock:
         mock = self
 
         def fake_request(session, method, url, *args, **kwargs):
-            return mock.handle(method, url, **kwargs)
+            return mock.handle(method, url, *args, **kwargs)
 
         self._patcher = patch.object(requests.Session, 'request', fake_request)
         self._patcher.start()
@@ -397,8 +397,11 @@ class RelayMock:
         return {key: cmd[key] for key in keys}
 
     # ------------------------------------------------------------------ обробка запиту
-    def handle(self, method, url, params=None, data=None, headers=None, json=None, timeout=None, verify=None,
-               **kwargs):
+    def handle(self, method, url, params=None, data=None, headers=None, cookies=None, files=None, auth=None,
+               timeout=None, allow_redirects=True, proxies=None, hooks=None, stream=None, verify=None, cert=None,
+               json=None):
+        """Сигнатура = ``requests.Session.request``; у ``calls`` пишуться метод, шлях, параметри, тіло,
+        ``timeout`` і ``verify`` (заголовки — ніколи, AC-57)."""
         method = (method or 'GET').upper()
         if not url.startswith(self.base_url):
             raise AssertionError('RelayMock: unexpected HTTP request outside the relay mock: %s %s' % (method, url))
@@ -412,7 +415,8 @@ class RelayMock:
                 body = jsonlib.loads(data)
             except (TypeError, ValueError):
                 body = data
-        self.calls.append({'method': method, 'path': path, 'params': dict(query), 'json': copy.deepcopy(body)})
+        self.calls.append({'method': method, 'path': path, 'params': dict(query), 'json': copy.deepcopy(body),
+                           'timeout': timeout, 'verify': verify})
         failure = self._maybe_fail(method, path)
         if failure is not None:
             return failure

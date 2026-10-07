@@ -36,7 +36,7 @@ class TdGensetUi(models.Model):
         mode = self.controller_mode
         return {
             'can_control': False,
-            'block_reason': _('Пульт: у розробці'),
+            'block_reason': _('Керування з пульта ще не реалізовано.'),
             'buttons': {name: {'enabled': False, 'active': mode == name} for name in PULT_BUTTONS},
             'breakers': {
                 'gen': {'closed': bool(self.gen_on_load), 'target_label': _('Розімкнути') if self.gen_on_load
