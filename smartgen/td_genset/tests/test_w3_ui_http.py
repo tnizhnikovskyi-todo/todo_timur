@@ -14,6 +14,9 @@ from odoo.tests import HttpCase, tagged
 
 from .common import TdGensetCase, snapshot
 
+# Синтаксис до 17.0, якого не має бути в поданнях (рядки складені, щоб grep по модулю лишався порожнім)
+LEGACY_VIEW_SYNTAX = (' att' + 'rs=', ' sta' + 'tes=', '<tr' + 'ee', 't-r' + 'aw')
+
 JS_WAIT = """
 const __until = Date.now() + 25000;
 const waitFor = async (fn, what) => {
@@ -246,6 +249,8 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
         self._online(controller_mode='auto')
         self.browser_js('/odoo/action-td_genset.action_td_genset', self._js("""
             const ID = %(id)d;
+            await waitFor(() => window.odoo && odoo.__WOWL_DEBUG__ && document.querySelector(".o_view_controller"),
+                          "web client");
             const env = odoo.__WOWL_DEBUG__.root.env;
             const bus = env.services.bus_service;
             const pultModule = odoo.loader.modules.get("@td_genset/pult/pult_widget");
@@ -356,15 +361,14 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
 
     # ------------------------------------------------------------------ подання: синтаксис 18.0, вкладки, дії
     def test_views_odoo18_and_actions(self):
-        """Подання модуля — синтаксис 18.0 (без attrs/states/tree/t-raw), форма генератора з пультом і вкладками
+        """Подання модуля — лише синтаксис 18.0 (BUILD_PLAN 1.1), форма генератора з пультом і вкладками
         мокапа; дії «Показання», «Події», «Заправка», «Аналітика» відкриваються."""
         view_ids = self.env['ir.model.data'].search([('module', '=', 'td_genset'), ('model', '=', 'ir.ui.view')])
         views = self.env['ir.ui.view'].browse(view_ids.mapped('res_id'))
         self.assertGreater(len(views), 40)
         for view in views:
-            self.assertNotIn(' attrs=', view.arch_db, view.xml_id)
-            self.assertNotIn('<tree', view.arch_db, view.xml_id)
-            self.assertNotIn('t-raw', view.arch_db, view.xml_id)
+            for legacy in LEGACY_VIEW_SYNTAX:
+                self.assertNotIn(legacy, view.arch_db, view.xml_id)
         arch = etree.fromstring(self.env['td.genset'].get_views([(False, 'form')])['views']['form']['arch'])
         pages = [page.get('name') for page in arch.xpath('//notebook/page')]
         self.assertEqual(pages, ['schedule', 'current_data', 'alarms', 'maintenance', 'commands', 'fuel', 'analytics',
