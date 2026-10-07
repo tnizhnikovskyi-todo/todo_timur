@@ -81,7 +81,8 @@ CANCELLABLE_STATES = ('queued_odoo', 'to_send', 'retry', 'waiting_link')
 CHATTER_STATES = ('done', 'done_late', 'failed', 'blocked', 'disabled_relay', 'disabled_odoo', 'auth_error',
                   'skipped', 'not_needed')
 STOP_CONFIRM_STATUSES = (10, 11, 12, 13, 15, 0)       # охолодження або зупинка (рішення 07.10, ФВ-9)
-START_CONFIRM_STATUSES = (8, 9)
+START_CONFIRM_STATUSES = (5, 6, 7, 8, 9)            # двигун запущено (не прокрутка) + оберти > 0
+START_SEQUENCE_STATUSES = (1, 2, 3, 4)               # підігрів, паливо, прокрутка, пауза між спробами
 TECH_RELAY_CODES = ('relay_cmd_disabled', 'relay_cmd_format', 'relay_auth')
 
 STEP = timedelta(minutes=1)              # крок cron і транспортного повтору
@@ -663,9 +664,19 @@ class TdGensetCommand(models.Model):
                                    attempt=attempt, max=self.max_attempts, reason=reason), **vals)
 
     def _step_awaiting(self, now):
-        """``awaiting``: знімок з ``ts ≥ done_at`` (збережений або ``GET /latest``) за умовою ФВ-9."""
+        """``awaiting``: рішення лише за знімком з ``ts ≥ done_at`` (збережений або ``GET /latest``), ФВ-9, ФВ-12.
+
+        * знімок підтверджує → ``done`` (після втрати зв'язку — ``done_late``); ``start``/``test`` +
+          ``crank_failure`` у будь-якому знімку → ``failed`` без повторів;
+        * немає зв'язку → ``waiting_link``;
+        * є знімок після ``done_at``, а мети не досягнуто → повтор через ``retry_every_min`` від ``done_at``
+          (``start``, поки контролер у послідовності пуску 1–4, чекаємо до кінця вікна);
+        * знімків після ``done_at`` ще немає → чекаємо; зв'язок є, але знімка немає довше ``retry_every_min`` + 1 хв
+          → вважаємо непідтвердженим → повтор;
+        * після відновлення зв'язку вирішує перший новий знімок (немає довше ``retry_every_min`` + 1 хв → повтор).
+        """
         genset = self.genset_id.sudo()
-        verdict, facts, newest_ts = self._find_confirmation()
+        verdict, facts, newest = self._find_confirmation()
         if verdict == 'crank':
             self._fail_crank(now, facts)
             return
@@ -677,28 +688,47 @@ class TdGensetCommand(models.Model):
                             next_attempt_at=now + STEP)
             return
         every = self._retry_every()
-        base = self.done_at or self.sent_at or now
+        silence_limit = every + STEP
         if self.link_restored_at:
-            # ФВ-12: після відновлення — перший новий знімок вирішує; без нього — чекаємо інтервал повтору
-            if self.link_lost_at and newest_ts and newest_ts > self.link_lost_at:
+            if newest and self.link_lost_at and newest['ts'] > self.link_lost_at:
                 self._confirmation_retry(now)
-                return
-            base = max(base, self.link_restored_at)
-        if self._due(base + every, now) and self._due((self.done_at or base) + DONE_GRACE, now):
+            elif now > self.link_restored_at + silence_limit:
+                self._confirmation_retry(now, reason=_('немає знімка після відновлення зв\'язку'))
+            else:
+                self.write({'next_attempt_at': now + STEP})
+            return
+        base = self.done_at or self.sent_at or now
+        if not newest:
+            if now > base + silence_limit:
+                self._confirmation_retry(now, reason=_('немає знімка після виконання'))
+            else:
+                self.write({'next_attempt_at': now + STEP})
+            return
+        if self.command == 'start' and self._start_in_progress(newest) and self.deadline_at and now < self.deadline_at:
+            self._set_state('awaiting', _('Очікує підтвердження: триває пуск (стан %(status)s)',
+                                          status=newest['genset_status']), next_attempt_at=now + STEP)
+            return
+        if self._due(base + every, now) and self._due(base + DONE_GRACE, now):
             self._confirmation_retry(now)
         else:
             self.write({'next_attempt_at': min(now + STEP, base + every)})
 
-    def _confirmation_retry(self, now):
+    def _confirmation_retry(self, now, reason=None):
         attempt = self.attempt + 1
-        self._set_state('retry', _('Спроба %(attempt)s з %(max)s · без підтвердження',
-                                   attempt=attempt, max=self.max_attempts),
+        self._set_state('retry', _('Спроба %(attempt)s з %(max)s · %(reason)s', attempt=attempt, max=self.max_attempts,
+                                   reason=reason or _('без підтвердження')),
                         attempt=attempt, next_attempt_at=now)
 
-    def _find_confirmation(self):
-        """Знімки з ``ts ≥ done_at`` у порядку часу: ``('crank' | 'done' | None, факти знімка, найновіший ts)``.
+    @staticmethod
+    def _start_in_progress(facts):
+        """Контролер у послідовності пуску (1 підігрів … 4 пауза між спробами) без ``crank_failure``."""
+        return facts.get('genset_status') in START_SEQUENCE_STATUSES and not facts.get('crank_failure')
 
-        Спершу збережені знімки (W1), потім ``GET /latest`` — якщо цього знімка ще немає в базі.
+    def _find_confirmation(self):
+        """Знімки з ``ts ≥ done_at`` (збережені W1 і ``GET /latest``, якщо його ще немає в базі), у порядку часу:
+        ``('crank' | 'done' | None, факти знімка-рішення, факти найновішого знімка або None)``.
+
+        ``crank_failure`` у будь-якому знімку після ``done_at`` для ``start``/``test`` має пріоритет.
         """
         genset = self.genset_id.sudo()
         since = self.done_at or self.sent_at
@@ -706,15 +736,8 @@ class TdGensetCommand(models.Model):
         if since:
             domain.append(('ts', '>=', since))
         readings = self.env['td.genset.reading'].sudo().search(domain, order='ts asc, id asc', limit=500)
-        newest = None
-        seen = set()
-        for reading in readings:
-            facts = self._reading_facts(reading)
-            seen.add(facts['relay_id'])
-            newest = max(newest, facts['ts']) if newest else facts['ts']
-            verdict = self._verdict(facts)
-            if verdict:
-                return verdict, facts, newest
+        snapshots = [self._reading_facts(reading) for reading in readings]
+        seen = {facts['relay_id'] for facts in snapshots}
         try:
             latest = self.env['td.genset.relay.client'].latest(genset.relay_hostid)
         except RelayError as exc:
@@ -723,20 +746,24 @@ class TdGensetCommand(models.Model):
         if isinstance(latest, dict) and latest.get('values') is not None and latest.get('id') not in seen:
             facts = self._reading_facts(latest)
             if facts['ts'] and (not since or facts['ts'] >= since):
-                newest = max(newest, facts['ts']) if newest else facts['ts']
-                verdict = self._verdict(facts)
-                if verdict:
-                    facts['record'] = self.env['td.genset.reading'].sudo().search(
-                        [('genset_id', '=', genset.id), ('relay_id', '=', latest.get('id'))], limit=1)
-                    return verdict, facts, newest
+                snapshots.append(facts)
+        snapshots.sort(key=lambda facts: facts['ts'])
+        newest = snapshots[-1] if snapshots else None
+        if self.command in CRANK_COMMANDS:
+            for facts in snapshots:
+                if facts.get('crank_failure'):
+                    return 'crank', self._with_record(facts), newest
+        for facts in snapshots:
+            if self._check_confirmation(facts):
+                return 'done', self._with_record(facts), newest
         return None, None, newest
 
-    def _verdict(self, facts):
-        if self.command in CRANK_COMMANDS and facts.get('crank_failure'):
-            return 'crank'
-        if self._check_confirmation(facts):
-            return 'done'
-        return None
+    def _with_record(self, facts):
+        """Для знімка з ``/latest`` — знайти вже збережений запис (``confirm_reading_id``), якщо він є."""
+        if not facts.get('record') and facts.get('relay_id'):
+            facts['record'] = self.env['td.genset.reading'].sudo().search(
+                [('genset_id', '=', self.genset_id.id), ('relay_id', '=', facts['relay_id'])], limit=1)
+        return facts
 
     @api.model
     def _reading_facts(self, reading):
@@ -774,7 +801,8 @@ class TdGensetCommand(models.Model):
 
         ``auto``/``manual``/``test`` — ``controller_mode`` цільовий (``unknown`` не підтверджує); ``stop`` —
         ``genset_status ∈ {10, 11, 12, 13, 15, 0}`` і ``gen_on_load = False`` (охолодження або зупинка);
-        ``start`` — ``genset_status`` 8/9 або ``speed > 0``; автомати — ``gen_on_load``/``mains_on_load`` = ціль.
+        ``start`` — двигун запущено: ``genset_status ∈ {5…9}`` і ``speed > 0`` (прокрутка 3 з обертами ~250 — ще ні);
+        автомати — ``gen_on_load``/``mains_on_load`` = ціль.
 
         :param reading: запис ``td.genset.reading`` або тіло ``GET /latest``.
         :rtype: bool
@@ -792,7 +820,7 @@ class TdGensetCommand(models.Model):
         if command == 'stop':
             return facts['genset_status'] in STOP_CONFIRM_STATUSES and not facts['gen_on_load']
         if command == 'start':
-            return facts['genset_status'] in START_CONFIRM_STATUSES or (facts['speed'] or 0) > 0
+            return facts['genset_status'] in START_CONFIRM_STATUSES and (facts['speed'] or 0) > 0
         if command == 'gen_close_open':
             return facts['gen_on_load'] is not None and bool(facts['gen_on_load']) == bool(self.target_breaker_closed)
         if command == 'mains_close_open':

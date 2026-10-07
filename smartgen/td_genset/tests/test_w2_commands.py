@@ -299,11 +299,13 @@ class TestW2Commands(TdGensetW2Case):
             self.assertIn('Не потрібно: уже Авто', self.chatter_text())
 
     def _run_minutes(self, frozen, start, minutes, command, quick_done=True):
-        """Крок cron щохвилини; ``quick_done`` — ретранслятор виконує POST за 3 с (як справжній, ~3 с)."""
+        """Крок cron щохвилини; знімок ``interval`` щохвилини (``snapshot_sec = 60``); ``quick_done`` — ретранслятор
+        виконує POST за 3 с (як справжній, ~3 с)."""
         post_minutes = []
         for minute in range(minutes + 1):
             now = start + timedelta(minutes=minute)
             frozen.move_to(now)
+            self.relay.push(None, reason='interval', ts=now)
             before = len(self.relay.commands)
             self.run_commands()
             if len(self.relay.commands) > before:
@@ -745,6 +747,85 @@ class TestW2Commands(TdGensetW2Case):
                 self.run_commands()
             self.assertEqual(len(self.posts()), 1)
 
+    def test_ac26_start_confirmed_only_when_engine_runs(self):
+        """ФВ-9 (уточнення 07.10): ``start`` підтверджується знімком після ``done_at`` з ``genset_status ∈ {5…9}`` і
+        ``speed > 0``; прокрутка (стан 3, оберти ~250) — ще ні: поки триває пуск (1–4), повторного POST немає;
+        ``crank_failure`` у будь-якому знімку після ``done_at`` → ``failed`` без повторів."""
+        start = datetime(2026, 10, 7, 11, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='manual')
+            self.relay.controller_executes = False
+            command = self.Command._enqueue(self.genset, 'start', 'button', self.user_t)
+            self.run_commands()
+            self.relay.complete_command(status='done', ts=start + timedelta(seconds=3))
+            cranking = self.relay.push(snapshot(controller_mode='manual', genset_status=3), reason='change',
+                                       ts=start + timedelta(seconds=5))
+            self.assertEqual(cranking['values']['speed'], 250)
+            for minute in range(1, 5):
+                frozen.move_to(start + timedelta(minutes=minute))
+                self.relay.push(snapshot(controller_mode='manual', genset_status=3 if minute % 2 else 4),
+                                reason='interval', ts=start + timedelta(minutes=minute))
+                self.run_commands()
+                self.assertEqual(command.state, 'awaiting')
+            self.assertIn('триває пуск', command.result_note)
+            self.assertEqual(len(self.posts()), 1)
+            frozen.move_to(start + timedelta(minutes=5))
+            self.relay.push(snapshot(controller_mode='manual', genset_status=6), reason='change',
+                            ts=start + timedelta(minutes=5))
+            self.run_commands()
+            self.assertEqual(command.state, 'done')
+        facts = {'ts': start + timedelta(minutes=1), 'controller_mode': 'manual', 'genset_status': 9, 'speed': 0,
+                 'gen_on_load': False, 'mains_on_load': True, 'crank_failure': False, 'relay_id': 1, 'record': None}
+        self.assertFalse(command._check_confirmation(facts))
+        self.assertTrue(command._check_confirmation(dict(facts, speed=1500)))
+        self.assertFalse(command._check_confirmation(dict(facts, genset_status=3, speed=250)))
+        # crank_failure у будь-якому знімку після done_at — відмова, навіть якщо пізніший знімок «працює»
+        with freeze_time(start + timedelta(hours=1)) as frozen:
+            later = start + timedelta(hours=1)
+            other = self.Command._enqueue(self.genset, 'start', 'button', self.user_t)
+            self.run_commands()
+            self.relay.complete_command(status='done', ts=later + timedelta(seconds=3))
+            self.relay.push(snapshot(controller_mode='manual', genset_status=4, crank_failure=True), reason='change',
+                            ts=later + timedelta(seconds=40))
+            self.sync()
+            self.relay.push(snapshot(controller_mode='manual', genset_status=9), reason='change',
+                            ts=later + timedelta(seconds=50))
+            frozen.move_to(later + timedelta(minutes=1))
+            self.run_commands()
+            self.assertEqual(other.state, 'failed')
+            self.assertEqual(other.result_note, 'Не виконано: невдалий пуск')
+
+    def test_ac18_awaiting_without_snapshots_does_not_resend(self):
+        """AC-18 (уточнення 07.10): без знімка після ``done_at`` повтору немає — чекаємо; зв'язок пропав →
+        ``waiting_link``; зв'язок є, але знімка немає довше ``retry_every_min`` + 1 хв → повтор."""
+        start = datetime(2026, 10, 7, 11, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='manual')
+            self.relay.controller_executes = False
+            command = self.Command._enqueue(self.genset, 'auto', 'button', self.user_t)
+            self.run_commands()
+            self.relay.complete_command(status='done', ts=start + timedelta(seconds=3))
+            for minute in (1, 2, 3):
+                frozen.move_to(start + timedelta(minutes=minute))
+                self.run_commands()
+                self.assertEqual(command.state, 'awaiting')
+            self.assertEqual(len(self.posts()), 1)
+            frozen.move_to(start + timedelta(minutes=4))   # 3 хв 57 с без знімка при живому зв'язку
+            self.run_commands()
+            self.assertEqual(command.state, 'sent')
+            self.assertEqual(command.attempt, 1)
+            self.assertEqual(len(self.posts()), 2)
+            # друга спроба: знімків немає, а зв'язок пропав (link_lost_min = 3 хв) → waiting_link, без POST
+            self.relay.complete_command(status='done', ts=start + timedelta(minutes=4, seconds=3))
+            frozen.move_to(start + timedelta(minutes=5))
+            self.run_commands()
+            self.assertEqual(command.state, 'awaiting')
+            self.set_genset(link_state='offline')
+            frozen.move_to(start + timedelta(minutes=7))
+            self.run_commands()
+            self.assertEqual(command.state, 'waiting_link')
+            self.assertEqual(len(self.posts()), 2)
+
     def test_ac27_external_control_not_reverted(self):
         """AC-27: у вікні (Авто) режим змінили не з Odoo → Odoo не надсилає ``auto`` до наступного переходу;
         на кінці вікна ``manual`` — «Не потрібно», ``stop`` — за станом генератора."""
@@ -845,6 +926,7 @@ class TestW2Commands(TdGensetW2Case):
             self.assertEqual(sent.state, 'sent')
             self.assertTrue(sent.cancel_requested)
             self.assertEqual(button.state, 'to_send')
+            self.relay.push(None, reason='interval', ts=start + timedelta(minutes=2))
             frozen.move_to(start + timedelta(minutes=3))
             command_cls = type(self.Command)
             original_step = command_cls._step_send
