@@ -285,9 +285,9 @@ class TestW0Smoke(TdGensetCase):
         self.assertTrue({field for field, _type in READING_FIELD_MAP.values()} <= names)
         self.assertTrue({'values_extra_text', 'fuel_source', 'fuel_liters'} <= names)
         reading = reading_model.create({'genset_id': self.genset.id, 'relay_id': 1, 'ts': datetime(2026, 10, 7, 12, 0),
-                                        'fuel_level': 50.0, 'run_hours': 10, 'run_minutes': 30,
+                                        'fuel_level': 40.0, 'run_hours': 10, 'run_minutes': 30,
                                         'values_extra': {'new_key': 1}})
-        self.assertEqual(reading.fuel_liters, 72.0)
+        self.assertEqual(reading.fuel_liters, 58.0)  # 40 % × 145 L, без калібрування
         self.assertEqual(reading.fuel_source, 'pct')
         self.assertAlmostEqual(reading.run_hours_total, 10.5)
         self.assertIn('new_key', reading.values_extra_text)
