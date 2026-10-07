@@ -540,26 +540,63 @@ class TestW4Fuel(TdFuelCase):
         self.assertEqual((reading.fuel_liters, reading.fuel_source), (36.0, 'ohm'))
 
     def test_ac69_recompute_in_batches(self):
-        """AC-69 (ТР 2.9): «Перерахувати літри» — партіями: перша одразу, решта — cron ``cron_recompute_liters``
-        (``_trigger()`` + ``_notify_progress``); події не перераховуються."""
+        """AC-69 (ТР 2.9): «Перерахувати літри» — перша партія (найсвіжіші знімки) синхронно у виклику кнопки,
+        старші — cron ``cron_recompute_liters`` партіями (``_trigger()`` + ``_notify_progress``); події не
+        перераховуються."""
         readings = [self._reading(snapshot(fuel_level=50 + index, fuel_sensor_ohm=100.0 + index))
                     for index in range(5)]
+
+        def sources():
+            for reading in readings:
+                reading.invalidate_recordset()   # flush: літри нових знімків обчислено (як після кроку забору W1)
+            return [reading.fuel_source for reading in readings]
+
+        self.assertEqual(sources(), ['pct'] * 5)
+        self.genset.sudo().last_reading_id = readings[-1]
         event = self._event('refuel', fields.Datetime.now(), fields.Datetime.now(), fuel_delta_l=12.0)
         self._calibrate()
+        self.assertEqual(sources(), ['pct'] * 5, 'історія не перераховується без кнопки (ТР 2.16)')
+        expected = [60.0, 60.9, 61.7, 62.6, 63.4]
         cron = self.env.ref('td_genset.cron_recompute_liters')
         triggers = self.env['ir.cron.trigger']
+
         with patch.object(genset_fuel, 'RECOMPUTE_BATCH', 2):
             action = self.genset.with_user(self.user_t).action_recompute_liters()
-            self.assertIn('решту (3)', action['params']['message'])
-            self.assertTrue(self.genset.fuel_recompute_next_id)
+            self.assertIn('2 знімки; решту (3)', action['params']['message'])
+            # синхронно — дві найсвіжіші; картка генератора вже за датчиком
+            self.assertEqual(sources(), ['pct', 'pct', 'pct', 'ohm', 'ohm'])
+            self.genset.invalidate_recordset()
+            self.assertEqual((self.genset.fuel_liters, self.genset.fuel_source), (63.4, 'ohm'))
+            self.assertEqual(self.genset.fuel_recompute_next_id, readings[3].id)
             self.assertTrue(triggers.search([('cron_id', '=', cron.id)]))
             self.assertEqual(self.env['td.genset']._cron_recompute_liters(), 1)
+            self.assertEqual(sources(), ['pct', 'ohm', 'ohm', 'ohm', 'ohm'])
             self.assertEqual(self.env['td.genset']._cron_recompute_liters(), 0)
         self.assertEqual(self.genset.fuel_recompute_next_id, 0)
         self.assertEqual(self.env['td.genset']._cron_recompute_liters(), 0)
-        expected = [60.0, 60.9, 61.7, 62.6, 63.4]
         for reading, liters in zip(readings, expected):
             reading.invalidate_recordset()
             self.assertEqual((reading.fuel_liters, reading.fuel_source), (liters, 'ohm'))
         self.assertEqual(event.fuel_delta_l, 12.0)
         self.assertTrue(cron.method_direct_trigger())
+
+        # мала база (≤ 10 000 знімків): усе перераховано синхронно, без фонового завдання
+        self.genset.fuel_calibration_ids.unlink()
+        action = self.genset.with_user(self.user_t).action_recompute_liters()
+        self.assertEqual(action['params']['message'], 'Літри перераховано за % контролера: 5 знімків.')
+        self.assertEqual((self.genset.fuel_recompute_next_id, sources()), (0, ['pct'] * 5))
+
+    def test_ac69_liters_from_ohm_contract(self):
+        """AC-69: ``_liters_from_ohm`` — округлення до 0,1 L; таблиця з 1 точки = незаповнена (``None``);
+        без опору — ``None``."""
+        genset = self.genset
+        self.assertIsNone(genset._liters_from_ohm(188.6))
+        self._calibrate(points=((10.0, 0.0),))
+        self.assertFalse(genset.fuel_calibrated)
+        self.assertIsNone(genset._liters_from_ohm(188.6))
+        self._calibrate(points=AC69_POINTS[1:])
+        self.assertTrue(genset.fuel_calibrated)
+        for ohm, liters in ((188.6, 135.8), (101.0, 60.9), (102.0, 61.7), (100.04, 60.0), (189.0, 136.1)):
+            self.assertEqual(genset._liters_from_ohm(ohm), liters, ohm)
+        for ohm in (None, False, 0.0):
+            self.assertIsNone(genset._liters_from_ohm(ohm))

@@ -858,17 +858,21 @@ class TdGensetFuel(models.Model):
 
     # ================================================================== калібрування датчика (ФВ-31, AC-69)
     def _fuel_calibration_points(self):
-        """Точки калібрування ``[(ohm, liters), …]`` за зростанням Ом; ``[]`` — калібрування не заповнене."""
+        """Точки калібрування ``[(ohm, liters), …]`` за зростанням Ом; ``[]`` — калібрування не заповнене
+        (порожня таблиця або таблиця з 1 точки)."""
         self.ensure_one()
         points = sorted((point.ohm, point.liters) for point in self.fuel_calibration_ids)
         return points if len(points) >= 2 else []
 
     def _liters_from_ohm(self, ohm):
         """Літри за калібруванням датчика палива (ФВ-31, AC-69): лінійна інтерполяція між сусідніми точками
-        Ом → L, за межами таблиці — значення крайньої точки, округлення до 0,1 L.
+        Ом → L, за межами таблиці — значення крайньої точки; результат завжди округлено до 0,1 L
+        (188,6 Ом при 100 → 60 L і 190 → 137 L дає 135,8 L).
+
+        Таблиця з 1 точки вважається незаповненою — ``None`` (як і порожня): літри рахуються за % контролера.
 
         :param float ohm: опір датчика, Ом; ``None``/``False``/0 — немає даних (як у compute знімка).
-        :return: літри або ``None``, якщо опору немає чи калібрування не заповнене (< 2 точок).
+        :return: літри (0,1 L) або ``None``, якщо опору немає чи калібрування не заповнене (< 2 точок).
         """
         if not ohm or len(self) != 1:
             return None
@@ -883,10 +887,12 @@ class TdGensetFuel(models.Model):
 
     def action_recompute_liters(self):
         """«Перерахувати літри» (``group_tech``; ФВ-31, AC-69, ТР 2.9): ``fuel_liters``/``fuel_source`` усіх
-        знімків генератора — за поточним калібруванням (≥ 2 точки, є опір) або за % × об'єм бака. Перша партія
-        (10 000 знімків) — одразу, решта — фоновим завданням ``cron_recompute_liters`` (``_trigger()`` +
-        ``_notify_progress``). Події заднім числом не перераховуються. Одна точка калібрування → помилка
-        «Калібрування має бути монотонним…», літри лишаються за %.
+        знімків генератора — за поточним калібруванням (≥ 2 точки, є опір) або за % × об'єм бака.
+
+        Перша партія — до 10 000 найсвіжіших знімків — перераховується синхронно у виклику кнопки (на невеликій
+        базі результат видно одразу); старші — фоновим завданням ``cron_recompute_liters`` партіями по 10 000
+        (``_trigger()`` + ``_notify_progress``), воркер не блокується. Події заднім числом не перераховуються.
+        Одна точка калібрування → помилка «Калібрування має бути монотонним…», літри лишаються за %.
 
         :return: дія ``display_notification``.
         """
@@ -897,9 +903,9 @@ class TdGensetFuel(models.Model):
             if len(genset.fuel_calibration_ids) == 1:
                 raise UserError(_('Калібрування має бути монотонним: потрібно щонайменше 2 точки Ом → L (зараз 1). '
                                   'Поки точок менше двох, літри рахуються за % контролера.'))
-            processed, next_id = genset._recompute_liters_batch()
+            processed, before_id = genset._recompute_liters_batch()
             done += processed
-            genset.sudo().fuel_recompute_next_id = next_id
+            genset.sudo().fuel_recompute_next_id = before_id
             remaining += genset._recompute_liters_remaining()
             sources.add('ohm' if genset.fuel_calibrated else 'pct')
         if remaining:
@@ -935,21 +941,24 @@ class TdGensetFuel(models.Model):
             },
         }
 
-    def _recompute_liters_batch(self, start_id=1, limit=None):
-        """Одна партія перерахунку літрів: знімки генератора з ``id ≥ start_id`` за зростанням id; значення —
-        ``interpolate_liters`` / ``liters_from_pct`` (NULL рівня і опору → NULL), запис — SQL ``UPDATE … FROM
-        (VALUES …)`` (без перерахунку ORM усього знімка); літри картки — з останнього знімка.
+    def _recompute_liters_batch(self, before_id=0, limit=None):
+        """Одна партія перерахунку літрів — від найсвіжіших знімків до старіших: знімки генератора з
+        ``id < before_id`` (``0`` — від найсвіжішого) за спаданням id (id знімків зростають у порядку забору,
+        тобто за часом). Значення — ``interpolate_liters`` / ``liters_from_pct`` (NULL рівня і опору → NULL),
+        запис — SQL ``UPDATE … FROM (VALUES …)`` (без перерахунку ORM усього знімка); літри картки — з
+        останнього знімка.
 
-        :return: ``(оброблено знімків, наступний id або 0 — перерахунок завершено)``.
+        :return: ``(оброблено знімків, межа наступної партії — найменший оброблений id, або 0 — завершено)``.
         """
         self.ensure_one()
         limit = limit or RECOMPUTE_BATCH
         readings = self.env['td.genset.reading']
         readings.flush_model(['genset_id', 'fuel_level', 'fuel_sensor_ohm', 'fuel_liters', 'fuel_source'])
+        before = SQL('AND id < %s', before_id) if before_id else SQL()
         self.env.cr.execute(SQL(
             """SELECT id, fuel_level, fuel_sensor_ohm FROM td_genset_reading
-                WHERE genset_id = %s AND id >= %s ORDER BY id LIMIT %s""",
-            self.id, max(start_id or 1, 1), limit,
+                WHERE genset_id = %s %s ORDER BY id DESC LIMIT %s""",
+            self.id, before, limit,
         ))
         rows = self.env.cr.fetchall()
         if not rows:
@@ -977,22 +986,23 @@ class TdGensetFuel(models.Model):
         last = self.sudo().last_reading_id
         if last and last.fuel_source:
             self.sudo().write({'fuel_liters': last.fuel_liters, 'fuel_source': last.fuel_source})
-        next_id = rows[-1][0] + 1 if len(rows) >= limit else 0
-        return len(rows), next_id
+        before_next = rows[-1][0] if len(rows) >= limit else 0
+        return len(rows), before_next
 
     def _recompute_liters_remaining(self):
-        """Скільки знімків генератора ще чекає на перерахунок літрів."""
+        """Скільки (старіших) знімків генератора ще чекає на перерахунок літрів."""
         self.ensure_one()
         if not self.fuel_recompute_next_id:
             return 0
         return self.env['td.genset.reading'].sudo().search_count(
-            [('genset_id', '=', self.id), ('id', '>=', self.fuel_recompute_next_id)])
+            [('genset_id', '=', self.id), ('id', '<', self.fuel_recompute_next_id)])
 
     @api.model
     def _cron_recompute_liters(self):
-        """Крок cron ``cron_recompute_liters``: по одній партії (10 000 знімків) на генератор з незавершеним
-        перерахунком літрів; ``ir.cron._notify_progress(done, remaining)`` — планувальник Odoo повторює крок,
-        доки є залишок (А.7). Винятки перехоплюються (cron не падає, перерахунок генератора зупиняється).
+        """Крок cron ``cron_recompute_liters``: по одній партії (10 000 знімків, від свіжіших до старіших) на
+        генератор з незавершеним перерахунком літрів; ``ir.cron._notify_progress(done, remaining)`` —
+        планувальник Odoo повторює крок, доки є залишок (А.7). Винятки перехоплюються (cron не падає,
+        перерахунок генератора зупиняється).
 
         :return: скільки знімків лишилось.
         """
@@ -1001,8 +1011,8 @@ class TdGensetFuel(models.Model):
         for genset in gensets:
             try:
                 with self.env.cr.savepoint():
-                    processed, next_id = genset._recompute_liters_batch(genset.fuel_recompute_next_id)
-                    genset.fuel_recompute_next_id = next_id
+                    processed, before_id = genset._recompute_liters_batch(genset.fuel_recompute_next_id)
+                    genset.fuel_recompute_next_id = before_id
                 done += processed
                 remaining += genset._recompute_liters_remaining()
             except Exception as error:  # cron не кидає винятків назовні (А.7)
