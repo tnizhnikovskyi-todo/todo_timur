@@ -30,11 +30,19 @@ class ResConfigSettings(models.TransientModel):
     def _compute_td_genset_relay_token_set(self):
         token_set = bool(self.env['ir.config_parameter'].sudo().get_param(TOKEN_PARAM))
         for settings in self:
-            settings.td_genset_relay_token_set = token_set
+            settings.td_genset_relay_token_set = token_set or bool(settings.td_genset_relay_token)
+
+    @api.model
+    def get_values(self):
+        """Токен у форму не повертається (поле без ``config_parameter``): лише ознака «встановлено» (AC-57)."""
+        values = super().get_values()
+        values.pop('td_genset_relay_token', None)
+        return values
 
     def set_values(self):
-        """Токен зберігається лише якщо введено нове значення (TODO: W3 — AC-01, AC-55, AC-57)."""
+        """Токен зберігається лише якщо введено нове значення; порожнє поле не затирає наявний (AC-01, AC-57)."""
         super().set_values()
         for settings in self:
-            if settings.td_genset_relay_token:
-                self.env['ir.config_parameter'].sudo().set_param(TOKEN_PARAM, settings.td_genset_relay_token.strip())
+            token = (settings.td_genset_relay_token or '').strip()
+            if token:
+                self.env['ir.config_parameter'].sudo().set_param(TOKEN_PARAM, token)
