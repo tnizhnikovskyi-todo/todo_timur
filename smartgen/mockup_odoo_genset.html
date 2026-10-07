@@ -722,6 +722,7 @@ select.o-input { padding: 4px 2px; }
         <div class="card a-controls">
           <h3>Керування <small id="padState">Очікування</small></h3>
           <div class="lockbar" id="lockBar" hidden><span class="ms">lock</span><span id="lockTxt"></span></div>
+          <div class="ronote" id="testBar" hidden><span class="ms">science</span><span id="testTxt"></span></div>
           <div class="pad">
             <button class="tile t-auto" type="button" data-cmd="auto"><span class="ico"><span class="ms">autorenew</span></span><span class="tl">Авто<small>пуск при зникненні мережі</small></span><span class="dot"></span></button>
             <button class="tile t-start" type="button" data-cmd="start"><span class="ico"><span class="ms">play_arrow</span></span><span class="tl">Пуск<small>запустити двигун</small></span><span class="dot"></span></button>
@@ -1064,6 +1065,7 @@ select.o-input { padding: 4px 2px; }
     remoteLock: false, nd: { oil: false },   // 01H 0004; 03H value 32766 = no data
     inputs: { access: false, fire: false, alarm: false, inhibit: false },   // CMM366B inputs (reqdatachange)
     me: "Т. Нижниковський", role: "tech",   // current user and their «Генератори» group: user → admin → tech, each includes the previous
+    test: null, testMin: 3,   // test run: after testMin minutes the generator returns to the schedule / timer mode
     offline: null, queue: [], linkPolicy: "queue",   // module stopped sending data; schedule commands wait in the queue
     maint: { first: 30, every: 250, left: 0 },       // 03H 0030-0031: hours to maintenance
     notify: {
@@ -1249,9 +1251,9 @@ select.o-input { padding: 4px 2px; }
     $("#cbMainsTxt").textContent = S.mainsCB ? "замкнений" : "розімкнений";
     $("#coGen").textContent = S.genCB ? "Розімкнути" : "Замкнути";
     $("#coMains").textContent = S.mainsCB ? "Розімкнути" : "Замкнути";
-    $("#fNext").innerHTML = S.timer ? `${kyiv(S.timer.end).hhmm} → кінець таймера <small>· далі за розкладом</small>` : (nextScheduleEvent() || "Розклад вимкнено");
+    $("#fNext").innerHTML = S.test ? `${kyiv(S.test.end).hhmm} → кінець тесту <small>· далі ${afterTest()[1]}</small>` : S.timer ? `${kyiv(S.timer.end).hhmm} → кінець таймера <small>· далі за розкладом</small>` : (nextScheduleEvent() || "Розклад вимкнено");
     $("#tIdle").hidden = !!S.timer; $("#tRun").hidden = !S.timer;
-    targets(); renderLog(); renderChat();
+    targets(); renderLog(); renderChat(); renderTest();
   }
 
   function renderData() { window.__full && window.__full(); }
@@ -1401,7 +1403,7 @@ select.o-input { padding: 4px 2px; }
   function notify(text, warn) { const n = $("#notif"); n.textContent = text; n.className = "notif" + (warn ? " warn" : ""); n.hidden = false; clearTimeout(nT); nT = setTimeout(() => (n.hidden = true), 2800); }
   function send(cmd, who, src, effect) {
     if (S.offline) {
-      const auto = src === "Розклад" || src === "Таймер", queued = auto && S.linkPolicy === "queue";
+      const auto = src === "Розклад" || src === "Таймер" || src === "Тест", queued = auto && S.linkPolicy === "queue";
       const row = { when: kyiv().full, who, src, cmd, res: queued ? "queued" : auto ? "skipped" : "noLink" };
       S.log.unshift(row); if (queued) S.queue.push({ row, effect });
       S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: queued ? `Немає зв'язку: команду <b>${cmd}</b> поставлено в чергу.` : `Команду <b>${cmd}</b> не доставлено: немає зв'язку з модулем.`, track: true });
@@ -1482,10 +1484,36 @@ select.o-input { padding: 4px 2px; }
   };
   // «Тест»: the operator chooses each time. With load = Test mode (05H 0002), the load goes to the generator;
   // without load = Manual + Start (05H 0004, 0000), the engine runs and the site stays on the mains.
-  const TEST_HTML = `<p style="margin:0 0 10px">Як перевірити генератор?</p>
+  // after S.testMin minutes: back to what the schedule or the timer says right now
+  let testT = null;
+  const afterTest = () => S.timer ? ["auto", "Авто (таймер)"] : inWindow() ? ["auto", "Авто за розкладом"] : ["manual", "Ручний + Стоп (поза розкладом)"];
+  function startTest(load) {
+    clearTimeout(testT);
+    S.test = { load, end: Date.now() + S.testMin * 60000, by: S.me };
+    testT = setTimeout(endTest, S.testMin * 60000);
+    renderTest(); render();
+  }
+  function endTest() {
+    clearTimeout(testT);
+    if (!S.test) return;
+    S.test = null;
+    const [m, label] = afterTest();
+    S.source = S.timer ? "timer" : "schedule";
+    S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Тест завершено через ${S.testMin} хв: генератор повертається в режим <b>${label}</b>.`, track: true });
+    send(m === "auto" ? "Авто" : "Ручний + Стоп", "Система", "Тест", () => { S.mode = m; stopUnit(); });
+    renderTest();
+  }
+  function renderTest() {
+    const t = S.test;
+    $("#testBar").hidden = !t;
+    if (!t) return;
+    const left = Math.max(0, Math.round((t.end - Date.now()) / 1000));
+    $("#testTxt").textContent = `Тест ${t.load ? "з навантаженням" : "без навантаження"} · ще ${Math.floor(left / 60)}:${pad(left % 60)} · потім ${afterTest()[1]}. Завершити раніше — Авто або Стоп.`;
+  }
+  const testHtml = () => `<p style="margin:0 0 10px">Як перевірити генератор?</p>
     <label class="tchoice"><input type="radio" name="tmode" value="load"><span><b>З навантаженням</b><small>Режим «Тест» (05H 0002): після прогріву навантаження перейде на генератор.</small></span></label>
     <label class="tchoice"><input type="radio" name="tmode" value="idle"><span><b>Без навантаження</b><small>Ручний + Пуск (05H 0004, 0000): двигун працює, об'єкт лишається на мережі.</small></span></label>
-    <p class="hint" style="margin:4px 0 0">Щоб завершити тест — Авто або Стоп.</p>`;
+    <p class="hint" style="margin:4px 0 0">Через ${S.testMin} хв генератор сам повернеться в режим за розкладом або таймером. Завершити раніше — Авто або Стоп.</p>`;
   $$("[data-cmd]").forEach(b => b.onclick = () => {
     const c = b.dataset.cmd;
     const [title, text, warn] = CONFIRM[c];
@@ -1497,9 +1525,10 @@ select.o-input { padding: 4px 2px; }
         send(cmd, S.me, "Кнопка", () => {
           if (load) { S.mode = "test"; startUnit(() => { S.genCB = true; S.mainsCB = false; render(); }); }
           else { S.mode = "manual"; startUnit(); }
+          startTest(load);
         });
         notify(`Команду «${cmd}» надіслано`);
-      }, TEST_HTML);
+      }, testHtml());
       $("#dOk").disabled = true;
       $$("[name=tmode]").forEach(r => r.onchange = () => { tmode = r.value; $("#dOk").disabled = false; });
       return;
@@ -1507,6 +1536,7 @@ select.o-input { padding: 4px 2px; }
     ask(title, text, c === "stop" && S.timer ? "Запущений таймер роботи поза графіком буде скасовано." : warn, () => {
       S.source = "manual";
       if (c === "stop") S.timer = null;
+      if (S.test) { clearTimeout(testT); S.test = null; render(); }
       send(CMD[c], "Ви", "Кнопка", () => {
         if (c === "auto") { const wasTest = S.mode === "test"; S.mode = "auto"; if (wasTest && S.mainsCB !== false) stopUnit(); }
         if (c === "manual") S.mode = "manual";
@@ -1593,12 +1623,12 @@ select.o-input { padding: 4px 2px; }
       $("#paramAge").textContent = age < 5 ? "щойно" : `${age} с тому`;
     }
     if (age % 10 === 0) renderAlarms();
-    tick(); renderGs();
+    tick(); renderGs(); renderTest();
     if (!$('[data-panel="data"]').hidden) renderData();
   }, 1000);
   setInterval(render, 30000);
   renderSchedule(); renderExceptions(); renderAlarms(); renderData(); render(); draw();
-  window.__G = { S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, renderSchedule, renderExceptions, inWindow, notify, toMin, gsLeft, runSeq, reconnect, can, ROLES };
+  window.__G = { endTest, S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, renderSchedule, renderExceptions, inWindow, notify, toMin, gsLeft, runSeq, reconnect, can, ROLES };
 })();
 </script>
 
@@ -2552,6 +2582,9 @@ select.o-input { padding: 4px 2px; }
         ${oset("Синхронізація часу модулів", "модуль регулярно звіряє годинник із сервером", sw("lTiming", LS.timing))}
         ${oset("Історія показань", "зберігати кожні, хв — і при кожній зміні стану; модуль історії не зберігає", inp("lHist", LS.history, "number", 'min="1"'))}
       </div></section>
+      <section><h3>Пульт</h3><div class="oset-grid">
+        ${oset("Тривалість тестового пуску, хв", "потім генератор сам повертається в режим за розкладом або таймером", inp("pTest", S.testMin, "number", 'min="1" max="60"'))}
+      </div></section>
       <section><h3>Сповіщення</h3><div class="oset-grid">
         ${rules.map(([k, t, h]) => oset(t, h, sel(`nRule_${k}`, ["Завжди", "Крім тихих годин", "Лише в чаті"], N.rules[k]))).join("")}
         ${oset("Тихі години", "у цей час надсилаємо лише те, що «Завжди»", `<span class="pair">${sw("nQOn", N.quiet.on)}${inp("nQFrom", N.quiet.from, "time")}<span>–</span>${inp("nQTo", N.quiet.to, "time")}</span>`)}
@@ -2631,6 +2664,7 @@ select.o-input { padding: 4px 2px; }
     if (t.closest("#gsSave")) {
       Object.assign(LS, { server: v("lSrv"), online: num("lOn"), offline: num("lOff"), lostAfter: Math.max(1, num("lLost")), alarmAfter: Math.max(1, num("lAlarm")), timing: $("#lTiming").checked, history: Math.max(1, num("lHist")) });
       S.linkPolicy = v("lQueue");
+      S.testMin = Math.min(60, Math.max(1, num("pTest") || 3));
       ["crit", "warn", "info"].forEach(k => (S.notify.rules[k] = v(`nRule_${k}`)));
       Object.assign(S.notify.quiet, { on: $("#nQOn").checked, from: v("nQFrom") || S.notify.quiet.from, to: v("nQTo") || S.notify.quiet.to });
       Object.assign(FS, { min: Math.max(0, num("fMin")), can: Math.min(60, Math.max(5, num("fCan"))), price: Math.max(0, num("fPrice")), supplier: v("fSup"), drain: Math.max(1, num("fDrain")) });
@@ -2743,6 +2777,7 @@ select.o-input { padding: 4px 2px; }
     lLost: D(RS, "genset_link_lost_minutes", "integer", "Через скільки хвилин без даних зв'язок вважається втраченим.", { cp: "td_genset.link_lost_minutes" }),
     lAlarm: D(RS, "genset_link_alarm_minutes", "integer", "Через скільки хвилин без зв'язку створюється тривога.", { cp: "td_genset.link_alarm_minutes" }),
     lQueue: D(RS, "genset_offline_policy", "selection", "Що робити з командами розкладу і таймера, коли немає зв'язку.", { sel: "[('queue', 'У чергу'), ('skip', 'Пропустити')]", cp: "td_genset.offline_policy" }),
+    pTest: D(RS, "genset_test_minutes", "integer", "Скільки триває тестовий пуск. Потім генератор повертається в режим за розкладом або таймером.", { cp: "td_genset.test_minutes" }),
     lTiming: D(RS, "genset_time_sync", "boolean", "Синхронізувати годинник модулів із сервером (інтерфейс timing).", { cp: "td_genset.time_sync", widget: "Перемикач (boolean_toggle)" }),
     lHist: D(RS, "genset_history_interval", "integer", "Як часто зберігати показання в історію, хв. Плюс запис при кожній зміні стану.", { cp: "td_genset.history_interval" }),
     nRule_crit: D(RS, "genset_notify_crit", "selection", "Коли надсилати критичні тривоги.", { sel: RULE, cp: "td_genset.notify_crit" }),
