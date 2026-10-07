@@ -109,6 +109,8 @@ class TestW1Events(TdGensetCase):
             steps.append((stamp, snapshot(**running), 'interval'))
             stamp += timedelta(minutes=2)
         steps.append((back, snapshot(genset_status=9, gen_on_load=True, mains_on_load=False)))
+        # той самий момент: навантаження вже повернулося на мережу (кілька change-знімків в одну секунду)
+        steps.append((back, snapshot(genset_status=10, mains_on_load=True)))
         steps.append((back + timedelta(minutes=3), snapshot()))
         self._feed(steps, live=False)
         outage = self._events('outage')

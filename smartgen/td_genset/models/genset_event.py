@@ -250,6 +250,21 @@ class TdGensetEvent(models.Model):
             list(exclude_ids)))
         return [dict(zip(ROW_COLUMNS, values)) for values in self.env.cr.fetchall()]
 
+    def _td_event_rows(self, genset, event, row, include_end=True):
+        """Знімки події від знімка початку до ``row`` включно — за ``relay_id`` (кілька знімків ``change`` можуть
+        мати ту саму секунду, тож межі за часом недостатньо)."""
+        start = event.reading_start_id
+        if not start:
+            return self._td_window_rows(genset, event.date_start, row['ts'],
+                                        exclude_ids=[] if include_end else [row['id']])
+        self.env['td.genset.reading'].flush_model()
+        self.env.cr.execute(SQL(
+            "SELECT %s FROM td_genset_reading WHERE genset_id = %s AND relay_id >= %s AND relay_id %s %s "
+            "ORDER BY relay_id",
+            SQL(', ').join(SQL.identifier(column) for column in ROW_COLUMNS), genset.id, start.relay_id,
+            SQL('<=') if include_end else SQL('<'), row['relay_id']))
+        return [dict(zip(ROW_COLUMNS, values)) for values in self.env.cr.fetchall()]
+
     @staticmethod
     def _td_initial(prev, key, open_event, inverse=False):
         """Останнє відоме значення ознаки перед сторінкою: зі знімка P, інакше — з відкритої події."""
@@ -298,7 +313,7 @@ class TdGensetEvent(models.Model):
                                        summary=event.summary, duration=fmt_duration(self.env, event.duration)))
 
     def _td_close_outage(self, genset, event, row):
-        rows = self._td_window_rows(genset, event.date_start, row['ts'], exclude_ids=[row['id']])
+        rows = self._td_event_rows(genset, event, row, include_end=False)
         kind = False
         for column, value in OUTAGE_KIND_SIGNALS:
             if any(item[column] for item in rows):
@@ -321,8 +336,9 @@ class TdGensetEvent(models.Model):
         else:
             seconds = False
             summary = _('Генератор не запускався')
+        kinds = dict(self._fields['outage_kind']._description_selection(self.env))
         self._close(event, row['ts'], reading_end_id=row['id'], outage_kind=kind, time_to_pickup_s=seconds,
-                    summary=summary, is_bad=not (pickup and full))
+                    summary=summary, is_bad=not (pickup and full), reason=kinds.get(kind, False))
 
     # ------------------------------------------------------------------ робота генератора
     def _td_rule_run(self, genset, row, state, catchup):
@@ -363,7 +379,7 @@ class TdGensetEvent(models.Model):
         return {'reason': _('Пуск не з Odoo')}
 
     def _td_close_run(self, genset, event, row, state):
-        rows = self._td_window_rows(genset, event.date_start, row['ts'])
+        rows = self._td_event_rows(genset, event, row)
         energies = [item['energy_kwh'] for item in rows if item['energy_kwh'] is not None]
         powers = [item['active_power'] for item in rows if item['active_power'] is not None]
         fuel_rows = [item for item in rows if item['fuel_liters'] is not None]
