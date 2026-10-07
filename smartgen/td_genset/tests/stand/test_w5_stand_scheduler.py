@@ -91,7 +91,8 @@ class TestStandScheduler(TdGensetStandCase):
         «Зупинити таймер» поза вікном → ``manual`` + ``stop``, «Керує: Розклад»."""
         self.run_scheduler()
         for hours, minutes in ((25, 0), (0, 0)):
-            with self.assertRaises((UserError, ValidationError)):
+            # assertRaises Odoo (TransactionCase) не приймає кортеж винятків; ValidationError — підклас UserError
+            with self.assertRaises(UserError):
                 self.start_timer(hours, minutes)
         self.start_timer(0, 5)
         genset = self.genset
@@ -115,7 +116,9 @@ class TestStandScheduler(TdGensetStandCase):
         self.assertEqual(back.mapped('command'), ['manual', 'stop'])
         self.drive(back, FINAL)
         self.assertEqual(back[0].state, 'done')
-        self.assertEqual(genset.controller_mode, 'manual')
+        # «Ручний + Стоп»: «Стоп» переводить контролер у режим Стоп; «Ручний» підтверджується режимом
+        # manual або stop (рішення менеджера щодо сценарію 9, AC-19)
+        self.assertEqual(genset.controller_mode, 'stop')
 
     def test_tk07_ac32_timer_overrides_window_end(self):
         """ТК-07.3 · AC-32: таймер діє на кінці вікна → команд немає, запис «Пропущено: діє таймер до HH:MM»; кінець

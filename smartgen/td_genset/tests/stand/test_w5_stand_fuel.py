@@ -8,6 +8,7 @@
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import html2plaintext
+from odoo.tools.misc import formatLang
 
 from .stand_common import TdGensetStandCase
 
@@ -195,7 +196,10 @@ class TestStandRelay111(TdGensetStandCase):
         self.assertAlmostEqual(last.oil_pressure_sensor_ohm, 9.5, places=1)
         for reading in readings:
             self.assertFalse(set(reading.values_extra or {}) & {'regs', 'coils'})
-        self.assertIn('188,6', html2plaintext(self.genset.current_data_html or ''))
+        # «188,6 Ом» в українському інтерфейсі; роздільник — за мовою користувача (formatLang), у тестовій базі —
+        # мова за замовчуванням
+        ohm_text = '%s Ом' % formatLang(self.env, 188.6, digits=1)
+        self.assertIn(ohm_text, html2plaintext(self.genset.current_data_html or ''))
 
         self.relay.sim(version='1.1.3', unset=['fuel_level_sensor_ohm'], snapshot=True)
         self.pull()                       # перший забір після перемикання ще може йти з raw=1 (останній знімок без ключів)
