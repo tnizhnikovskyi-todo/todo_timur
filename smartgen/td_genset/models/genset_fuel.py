@@ -830,7 +830,8 @@ class TdGensetFuel(models.Model):
         ``fuel_stock_low`` «Запас у каністрах N L нижчий за мінімальний M L.»; запас відновився → ``_clear``.
 
         Викликається після кожного руху запасу (``_post``) і з cron розкладу. Порожній recordset (виклик на
-        моделі) — усі активні генератори. Поки каністр немає взагалі (облік не почато), не перевіряється.
+        моделі) — усі активні генератори. Поки каністр немає взагалі (облік не почато), не перевіряється;
+        генератор у режимі догону пропускається (тривоги — після догону, як і ТО).
         """
         gensets = (self or self.search([])).sudo()
         canisters = self.env['td.genset.canister'].sudo()
@@ -842,6 +843,8 @@ class TdGensetFuel(models.Model):
         low = float_compare(stock, minimum, precision_digits=1) < 0
         alarms = self.env['td.genset.alarm'].sudo()
         for genset in gensets:
+            if genset.catchup_mode:
+                continue
             active = alarms.search_count([('genset_id', '=', genset.id), ('code', '=', 'fuel_stock_low'),
                                           ('state', '!=', 'cleared')], limit=1)
             if low and not active:
