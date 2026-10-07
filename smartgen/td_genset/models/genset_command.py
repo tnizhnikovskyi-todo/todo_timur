@@ -75,13 +75,14 @@ INFLIGHT_LIMIT = 2
 MODE_COMMANDS = ('auto', 'manual', 'test')            # підтвердження — controller_mode (ФВ-9)
 BREAKER_COMMANDS = ('gen_close_open', 'mains_close_open')
 CRANK_COMMANDS = ('start', 'test')                    # crank_failure → failed без повторів (AC-26)
+MANUAL_STOP = ('manual', 'stop')                      # пакет «Ручний + Стоп»: stop переводить контролер у Stop
 AUTO_SOURCES = ('schedule', 'timer', 'exception', 'test')
 LATE_POLICY_SOURCES = ('schedule', 'timer', 'exception')   # політика until_next (А.5)
 CANCELLABLE_STATES = ('queued_odoo', 'to_send', 'retry', 'waiting_link')
 CHATTER_STATES = ('done', 'done_late', 'failed', 'blocked', 'disabled_relay', 'disabled_odoo', 'auth_error',
                   'skipped', 'not_needed')
 STOP_CONFIRM_STATUSES = (10, 11, 12, 13, 15, 0)       # охолодження або зупинка (рішення 07.10, ФВ-9)
-START_CONFIRM_STATUSES = (5, 6, 7, 8, 9)            # двигун запущено (не прокрутка) + оберти > 0
+START_CONFIRM_STATUSES = (5, 6, 7, 8, 9)            # двигун запущено (не прокрутка); оберти не обов'язкові
 START_SEQUENCE_STATUSES = (1, 2, 3, 4)               # підігрів, паливо, прокрутка, пауза між спробами
 TECH_RELAY_CODES = ('relay_cmd_disabled', 'relay_cmd_format', 'relay_auth')
 
@@ -753,8 +754,9 @@ class TdGensetCommand(models.Model):
             for facts in snapshots:
                 if facts.get('crank_failure'):
                     return 'crank', self._with_record(facts), newest
+        manual_stop_batch = self._is_manual_stop_batch()
         for facts in snapshots:
-            if self._check_confirmation(facts):
+            if self._confirm_condition(facts, manual_stop_batch):
                 return 'done', self._with_record(facts), newest
         return None, None, newest
 
@@ -799,16 +801,25 @@ class TdGensetCommand(models.Model):
     def _check_confirmation(self, reading):
         """Умова ФВ-9 для ``self.command`` за знімком (``reading.ts ≥ done_at``).
 
-        ``auto``/``manual``/``test`` — ``controller_mode`` цільовий (``unknown`` не підтверджує); ``stop`` —
-        ``genset_status ∈ {10, 11, 12, 13, 15, 0}`` і ``gen_on_load = False`` (охолодження або зупинка);
-        ``start`` — двигун запущено: ``genset_status ∈ {5…9}`` і ``speed > 0`` (прокрутка 3 з обертами ~250 — ще ні);
-        автомати — ``gen_on_load``/``mains_on_load`` = ціль.
+        * ``auto``/``manual``/``test`` — ``controller_mode`` цільовий (``unknown`` не підтверджує); ``manual`` у пакеті
+          «Ручний + Стоп» — ``controller_mode ∈ {manual, stop}`` (``stop`` переводить контролер у режим Stop,
+          ``relay_api.md`` 7.1);
+        * ``stop`` — ``gen_on_load = False`` і ``genset_status ∈ {10, 11, 12, 13, 15, 0}`` (охолодження або
+          зупинка; для генератора, що стоїть, — перший знімок зі станом 0/15 або, якщо стан невідомий, з режимом
+          Stop);
+        * ``start`` — двигун запущено: ``genset_status ∈ {5…9}``; оберти не обов'язкові (NULL/0 не заважає), а самі
+          ``speed > 0`` без такого стану (прокрутка 3 з обертами ~250) — ще ні;
+        * автомати — ``gen_on_load``/``mains_on_load`` = ціль.
 
         :param reading: запис ``td.genset.reading`` або тіло ``GET /latest``.
         :rtype: bool
-        AC-12, AC-19, AC-21, AC-25, AC-67.
+        AC-12, AC-19, AC-21, AC-25, AC-26, AC-67.
         """
         self.ensure_one()
+        return self._confirm_condition(reading, self._is_manual_stop_batch())
+
+    def _confirm_condition(self, reading, manual_stop_batch):
+        """Тіло ``_check_confirmation``; ``manual_stop_batch`` — команда з пакета «Ручний + Стоп»."""
         facts = self._reading_facts(reading)
         if not facts or not facts.get('ts'):
             return False
@@ -816,11 +827,16 @@ class TdGensetCommand(models.Model):
             return False
         command = self.command
         if command in MODE_COMMANDS:
+            if command == 'manual' and manual_stop_batch:
+                return facts['controller_mode'] in MANUAL_STOP
             return facts['controller_mode'] == command
         if command == 'stop':
-            return facts['genset_status'] in STOP_CONFIRM_STATUSES and not facts['gen_on_load']
+            if facts['gen_on_load']:
+                return False
+            status = facts['genset_status']
+            return status in STOP_CONFIRM_STATUSES or (status is None and facts['controller_mode'] == 'stop')
         if command == 'start':
-            return facts['genset_status'] in START_CONFIRM_STATUSES and (facts['speed'] or 0) > 0
+            return facts['genset_status'] in START_CONFIRM_STATUSES
         if command == 'gen_close_open':
             return facts['gen_on_load'] is not None and bool(facts['gen_on_load']) == bool(self.target_breaker_closed)
         if command == 'mains_close_open':
@@ -949,9 +965,13 @@ class TdGensetCommand(models.Model):
             return 'retry', _('ретранслятор не готовий до команд'), 'ready'
         if self.late_transition_at and self._external_control_after(self.late_transition_at):
             return 'skipped', _('Пропущено: керування не з Odoo після переходу'), None
-        if self.command in MODE_COMMANDS and genset.controller_mode == self.command:
+        if self._is_manual_stop_batch():
+            # «Ручний + Стоп»: мета пакета — режим Stop; уже Stop → не потрібно, інакше надсилаються обидві команди
+            if genset.controller_mode == 'stop':
+                return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label('stop')), None
+        elif self.command in MODE_COMMANDS and genset.controller_mode == self.command:
             return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label(self.command)), None
-        if self.command == 'stop' and not genset.is_running:
+        elif self.command == 'stop' and not genset.is_running:
             return 'not_needed', _('Не потрібно: генератор уже зупинено'), None
         if self.command in BREAKER_COMMANDS:
             reading = genset.last_reading_id
@@ -973,13 +993,22 @@ class TdGensetCommand(models.Model):
         ``blocked``; ``relay_commands_enabled`` → ``disabled_relay``; немає зв'язку / ``commands_ready`` →
         ``retry`` (транспортний повтор); запізнілий перехід + подія ``external_control`` після нього →
         ``skipped``; «лише на переходах»: режим уже цільовий / ``stop`` для зупиненого / автомат уже в цільовому
-        положенні → ``not_needed``; знімок для автомата старший за 2 хв → ``to_send`` (чекати).
+        положенні → ``not_needed`` (пакет «Ручний + Стоп» — лише якщо контролер уже в режимі Stop, «Не потрібно:
+        уже Стоп»; інакше надсилаються обидві команди); знімок для автомата старший за 2 хв → ``to_send`` (чекати).
 
         :return: новий стан (str) або ``None`` = надсилати.
         AC-13, AC-16, AC-21, AC-23, AC-34, AC-66.
         """
         result = self._precheck_result()
         return result[0] if result else None
+
+    def _is_manual_stop_batch(self):
+        """Команда з пакета «Ручний + Стоп» (кінець вікна, кінець таймера або тесту поза вікном)."""
+        self.ensure_one()
+        if not self.batch_key or self.command not in MANUAL_STOP:
+            return False
+        siblings = self.sudo().search([('genset_id', '=', self.genset_id.id), ('batch_key', '=', self.batch_key)])
+        return set(siblings.mapped('command')) == set(MANUAL_STOP)
 
     def _external_control_after(self, moment):
         """Чи є подія «Керування не з Odoo» після ``moment`` (ФВ-10, ФВ-21)."""

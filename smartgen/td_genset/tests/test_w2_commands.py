@@ -571,6 +571,39 @@ class TestW2Commands(TdGensetW2Case):
         self.assertFalse(stop._check_confirmation(dict(cooling, genset_status=9)))
         self.assertFalse(stop._check_confirmation(dict(cooling, ts=start - timedelta(seconds=1))))
 
+    def test_ac19_batch_goal_is_stop_mode(self):
+        """AC-19 (рішення 07.10): мета пакета «Ручний + Стоп» — режим Stop. Контролер уже в Stop → обидві команди
+        «Не потрібно: уже Стоп»; Ручний і генератор стоїть → надсилаються обидві, ``manual`` підтверджує знімок
+        з режимом ``manual`` або ``stop``, ``stop`` — перший знімок зі станом 0/15."""
+        start = datetime(2026, 10, 7, 15, 30)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='stop')
+            batch = self.Command._enqueue_batch(self.genset, ['manual', 'stop'], 'schedule', 'Odoo: розклад')
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['not_needed', 'not_needed'])
+            self.assertEqual(set(batch.mapped('result_note')), {'Не потрібно: уже Стоп'})
+            self.assertFalse(self.posts())
+            self.assertTrue(batch[0]._is_manual_stop_batch())
+            self.push_state(ts=start, controller_mode='manual')
+            self.assertFalse(self.genset.is_running)
+            batch = self.Command._enqueue_batch(self.genset, ['manual', 'stop'], 'timer', 'Odoo: таймер')
+            self.relay.command_flow = 'queued'
+            self.run_commands()
+            self.assertEqual([call['json']['command'] for call in self.posts()], ['manual', 'stop'])
+            for cmd in self.relay.commands:
+                self.relay.complete_command(cmd['id'], status='done', ts=start + timedelta(seconds=3))
+            self.assertEqual(self.relay.readings[-1]['values']['controller_mode'], 'stop')
+            frozen.move_to(start + timedelta(minutes=1))
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['done', 'done'])
+            # одиночні команди пульта — правила «лише на переходах» без змін
+            self.sync()
+            single = self.Command._enqueue(self.genset, 'stop', 'button', self.user_t)
+            self.assertFalse(single._is_manual_stop_batch())
+            self.run_commands()
+            self.assertEqual(single.state, 'not_needed')
+            self.assertEqual(single.result_note, 'Не потрібно: генератор уже зупинено')
+
     def test_ac20_queue_limit_two_inflight(self):
         """AC-20: 2 незавершені на ретрансляторі → третя «У черзі Odoo», надсилається після завершення попередніх;
         одночасно від Odoo — не більше 2."""
@@ -748,9 +781,10 @@ class TestW2Commands(TdGensetW2Case):
             self.assertEqual(len(self.posts()), 1)
 
     def test_ac26_start_confirmed_only_when_engine_runs(self):
-        """ФВ-9 (уточнення 07.10): ``start`` підтверджується знімком після ``done_at`` з ``genset_status ∈ {5…9}`` і
-        ``speed > 0``; прокрутка (стан 3, оберти ~250) — ще ні: поки триває пуск (1–4), повторного POST немає;
-        ``crank_failure`` у будь-якому знімку після ``done_at`` → ``failed`` без повторів."""
+        """ФВ-9 (рішення 07.10): ``start`` підтверджується знімком після ``done_at`` з ``genset_status ∈ {5…9}`` (оберти
+        не обов'язкові: NULL/0 не заважає); прокрутка (стан 3, оберти ~250) і самі ``speed > 0`` — ще ні; поки
+        триває пуск (1–4), повторного POST немає; ``crank_failure`` у будь-якому знімку після ``done_at`` →
+        ``failed`` без повторів."""
         start = datetime(2026, 10, 7, 11, 0)
         with freeze_time(start) as frozen:
             self.push_state(ts=start - timedelta(minutes=1), controller_mode='manual')
@@ -776,9 +810,12 @@ class TestW2Commands(TdGensetW2Case):
             self.assertEqual(command.state, 'done')
         facts = {'ts': start + timedelta(minutes=1), 'controller_mode': 'manual', 'genset_status': 9, 'speed': 0,
                  'gen_on_load': False, 'mains_on_load': True, 'crank_failure': False, 'relay_id': 1, 'record': None}
-        self.assertFalse(command._check_confirmation(facts))
-        self.assertTrue(command._check_confirmation(dict(facts, speed=1500)))
+        self.assertTrue(command._check_confirmation(facts))
+        self.assertTrue(command._check_confirmation(dict(facts, speed=None)))
+        self.assertTrue(command._check_confirmation(dict(facts, genset_status=5, speed=1500)))
         self.assertFalse(command._check_confirmation(dict(facts, genset_status=3, speed=250)))
+        self.assertFalse(command._check_confirmation(dict(facts, genset_status=None, speed=1500)))
+        self.assertFalse(command._check_confirmation(dict(facts, genset_status=0, speed=0)))
         # crank_failure у будь-якому знімку після done_at — відмова, навіть якщо пізніший знімок «працює»
         with freeze_time(start + timedelta(hours=1)) as frozen:
             later = start + timedelta(hours=1)
@@ -853,10 +890,12 @@ class TestW2Commands(TdGensetW2Case):
             frozen.move_to(kyiv(2026, 10, 7, 18, 30))
             self.run_scheduler()
             self.run_commands()
-            self.assertEqual(self.commands().mapped('state'), ['not_needed', 'not_needed'])
-            self.assertEqual(self.commands()[0].result_note, 'Не потрібно: уже Ручний')
+            # рішення 07.10: «Ручний + Стоп» надсилається повністю (мета — режим Stop); Ручний підтвердиться одразу
+            self.assertEqual([call['json']['command'] for call in self.posts()], ['manual', 'stop'])
             self.assertEqual(self.genset.control_source, 'schedule')
-            self.assertFalse(self.posts())
+            frozen.move_to(kyiv(2026, 10, 7, 18, 31))
+            self.run_commands()
+            self.assertEqual(self.commands().mapped('state'), ['done', 'done'])
 
     def test_ac66_commands_disabled_in_odoo(self):
         """AC-66: «Дозволити команди» вимкнено → POST не виконується, «Не надіслано: команди вимкнено в Odoo»

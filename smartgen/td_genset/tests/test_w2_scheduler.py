@@ -79,8 +79,8 @@ class TestW2Scheduler(TdGensetW2Case):
             manual, stop = self.commands()[-2:]
             self.assertEqual(manual.batch_key, stop.batch_key)
             self.assertEqual(manual.state, 'done')
-            self.assertEqual(stop.state, 'not_needed')   # генератор стоїть — Стоп не надсилається (ФВ-9)
-            self.assertEqual(stop.result_note, 'Не потрібно: генератор уже зупинено')
+            self.assertEqual(stop.state, 'done')   # рішення 07.10: пакет надсилається повністю — мета режим Stop
+            self.assertEqual([call['json']['command'] for call in self.posts()], ['auto', 'manual', 'stop'])
             self.assertFalse(self.genset.sched_in_window)
 
     def test_ac28_window_helpers(self):
@@ -224,7 +224,7 @@ class TestW2Scheduler(TdGensetW2Case):
             self.assertEqual(len(self.posts('manual')), 1)
             self.assertEqual(manual.state, 'done_late')
             self.assertEqual(manual.result_note.split(' · ')[0], "Підтверджено після відновлення зв'язку")
-            self.assertEqual(self.commands(command='stop').state, 'not_needed')
+            self.assertEqual(self.commands(command='stop').state, 'done_late')
             self.assertIn('cmd_unconfirmed', [item['code'] for item in self.cleared])
 
     def test_ac35_missed_transition_window_only(self):
