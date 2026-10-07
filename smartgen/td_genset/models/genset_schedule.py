@@ -30,8 +30,7 @@ def kyiv_localize(date, float_time):
 
     ``NonExistentTimeError`` (весняний перехід) → перша дійсна хвилина після переходу (04:00);
     ``AmbiguousTimeError`` (осінній) → перша година (``is_dst=True``). ``float_time`` 24.0 → 00:00 наступного дня.
-
-    TODO: W2 — покрити тестами AC-37 (W0: базова реалізація).
+    Тож кожна межа вікна має рівно один UTC-момент на добу — повторна година не дає других переходів.
     """
     minutes = int(round((float_time or 0.0) * 60))
     day = date + timedelta(days=minutes // (24 * 60))
@@ -45,6 +44,25 @@ def kyiv_localize(date, float_time):
     except pytz.exceptions.AmbiguousTimeError:
         local = KYIV_TZ.localize(naive, is_dst=True)
     return local.astimezone(pytz.utc).replace(tzinfo=None)
+
+
+def to_utc(moment):
+    """``datetime`` → UTC naive (як ``fields.Datetime``). Aware — переводиться в UTC; naive — уже UTC."""
+    if moment.tzinfo is None:
+        return moment
+    return moment.astimezone(pytz.utc).replace(tzinfo=None)
+
+
+def to_kyiv(moment):
+    """UTC naive (або aware) ``datetime`` → aware Europe/Kyiv."""
+    if moment.tzinfo is None:
+        moment = pytz.utc.localize(moment)
+    return moment.astimezone(KYIV_TZ)
+
+
+def kyiv_hhmm(moment):
+    """``HH:MM`` за київським часом для UTC naive ``datetime`` (порожньо для ``False``/``None``)."""
+    return to_kyiv(moment).strftime('%H:%M') if moment else ''
 
 
 class TdGensetSchedule(models.Model):
