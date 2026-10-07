@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W2. Каркас W0: майстер підтвердження команди пульта. XML id дії (зберегти!):
+     action_td_genset_command_wizard (відкривається td.genset.action_open_command_wizard). -->
+<odoo>
+    <record id="view_td_genset_command_wizard_form" model="ir.ui.view">
+        <field name="name">td.genset.command.wizard.form</field>
+        <field name="model">td.genset.command.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Підтвердження команди">
+                <group>
+                    <field name="genset_id" readonly="1"/>
+                    <field name="command"/>
+                    <field name="test_mode" widget="radio" required="command == 'test'" invisible="command != 'test'"/>
+                    <field name="target_breaker_closed" invisible="command not in ('gen_close_open', 'mains_close_open')"/>
+                    <field name="confirm_required" invisible="1"/>
+                </group>
+                <div class="alert alert-warning" role="alert" invisible="not warning_text">
+                    <field name="warning_text" nolabel="1"/>
+                </div>
+                <footer>
+                    <button name="action_confirm" type="object" string="Підтвердити" class="btn-primary"
+                            data-hotkey="q"/>
+                    <button string="Скасувати" class="btn-secondary" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_genset_command_wizard" model="ir.actions.act_window">
+        <field name="name">Команда пульта</field>
+        <field name="res_model">td.genset.command.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

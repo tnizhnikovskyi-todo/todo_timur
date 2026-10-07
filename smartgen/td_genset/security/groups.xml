@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0. Групи доступу (ТР 2.2, А.10; SPEC 7). Record rules немає (рішення 1.3). -->
+<odoo>
+    <record id="module_category_td_genset" model="ir.module.category">
+        <field name="name">Генератори</field>
+        <field name="description">Моніторинг і керування генераторами SmartGen.</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="group_user" model="res.groups">
+        <field name="name">Генератори: Співробітник</field>
+        <field name="category_id" ref="module_category_td_genset"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Бачить усе, запускає таймер «Робота поза графіком», приймає тривоги, якщо в ланцюжку.</field>
+    </record>
+
+    <record id="group_admin" model="res.groups">
+        <field name="name">Генератори: Адміністратор</field>
+        <field name="category_id" ref="module_category_td_genset"/>
+        <field name="implied_ids" eval="[(4, ref('group_user'))]"/>
+        <field name="comment">Співробітник + розклад, дні-винятки, паливо.</field>
+    </record>
+
+    <record id="group_tech" model="res.groups">
+        <field name="name">Генератори: Тех. адміністратор</field>
+        <field name="category_id" ref="module_category_td_genset"/>
+        <field name="implied_ids" eval="[(4, ref('group_admin')), (4, ref('maintenance.group_equipment_manager'))]"/>
+        <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+        <field name="comment">Адміністратор + пульт, автомати, ТО, налаштування модуля, генератори.</field>
+    </record>
+</odoo>

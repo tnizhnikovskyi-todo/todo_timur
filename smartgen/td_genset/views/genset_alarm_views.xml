@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (переписує повністю). Каркас W0. XML id дії (зберегти!): action_td_genset_alarm. -->
+<odoo>
+    <record id="view_td_genset_alarm_list" model="ir.ui.view">
+        <field name="name">td.genset.alarm.list</field>
+        <field name="model">td.genset.alarm</field>
+        <field name="arch" type="xml">
+            <list string="Тривоги" create="0" decoration-danger="level == 'crit' and state == 'active'"
+                  decoration-warning="level == 'warn' and state == 'active'" decoration-muted="state == 'cleared'">
+                <field name="date_raised"/>
+                <field name="genset_id" optional="hide"/>
+                <field name="level"/>
+                <field name="code" optional="hide"/>
+                <field name="name"/>
+                <field name="state" widget="badge"/>
+                <field name="escalation_level" optional="hide"/>
+                <field name="acked_user_id"/>
+                <field name="can_ack" column_invisible="1"/>
+                <button name="action_ack" type="object" string="Прийняв" icon="fa-check"
+                        invisible="not can_ack or state != 'active'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_alarm_form" model="ir.ui.view">
+        <field name="name">td.genset.alarm.form</field>
+        <field name="model">td.genset.alarm</field>
+        <field name="arch" type="xml">
+            <form string="Тривога" create="0">
+                <header>
+                    <button name="action_ack" type="object" string="Прийняв" class="btn-primary"
+                            invisible="not can_ack or state != 'active'"/>
+                    <field name="state" widget="statusbar"/>
+                    <field name="can_ack" invisible="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="genset_id" readonly="1"/>
+                            <field name="code" readonly="1"/>
+                            <field name="level" readonly="1"/>
+                            <field name="source_ref" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="date_raised" readonly="1"/>
+                            <field name="date_acked" readonly="1"/>
+                            <field name="acked_user_id" readonly="1"/>
+                            <field name="date_cleared" readonly="1"/>
+                            <field name="escalation_level" readonly="1"/>
+                            <field name="next_escalation_at" readonly="1"/>
+                            <field name="notified_user_ids" widget="many2many_tags" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="description" readonly="1"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_genset_alarm_search" model="ir.ui.view">
+        <field name="name">td.genset.alarm.search</field>
+        <field name="model">td.genset.alarm</field>
+        <field name="arch" type="xml">
+            <search string="Тривоги">
+                <field name="genset_id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <filter name="not_cleared" string="Не зняті" domain="[('state', '!=', 'cleared')]"/>
+                <filter name="active_only" string="Активні" domain="[('state', '=', 'active')]"/>
+                <separator/>
+                <filter name="crit" string="Критичні" domain="[('level', '=', 'crit')]"/>
+                <filter name="warn" string="Попередження" domain="[('level', '=', 'warn')]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_level" string="Рівень" context="{'group_by': 'level'}"/>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_genset_alarm" model="ir.actions.act_window">
+        <field name="name">Тривоги</field>
+        <field name="res_model">td.genset.alarm</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_not_cleared': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Тривог немає</p>
+        </field>
+    </record>
+</odoo>

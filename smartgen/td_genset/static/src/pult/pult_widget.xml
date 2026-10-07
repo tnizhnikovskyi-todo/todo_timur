@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Пульт генератора: плейсхолдер W0 (W3 замінює плитками, приладами і схемою живлення за мокапом). -->
+<templates xml:space="preserve">
+    <t t-name="td_genset.PultWidget">
+        <div class="o_td_genset_pult" t-att-class="{'o_td_genset_pult_compact': props.compact}">
+            <div class="o_td_genset_pult_placeholder">
+                <i class="fa fa-bolt me-2" role="img" aria-label="Пульт" title="Пульт"/>
+                <span class="fw-bold">Пульт: у розробці</span>
+                <span t-if="state.pult and state.pult.block_reason" class="text-muted ms-2" t-out="state.pult.block_reason"/>
+                <span t-if="state.pult and state.pult.status and state.pult.status.label" class="badge text-bg-light ms-2"
+                      t-out="state.pult.status.label"/>
+            </div>
+        </div>
+    </t>
+</templates>

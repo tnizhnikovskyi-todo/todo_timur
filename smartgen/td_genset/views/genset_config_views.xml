@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (переписує повністю). Каркас W0: налаштування модуля, ланцюжок, моделі контролерів.
+     XML id дій (зберегти!): action_td_genset_config, action_td_genset_notify_level, action_td_genset_controller_model. -->
+<odoo>
+    <record id="view_td_genset_config_form" model="ir.ui.view">
+        <field name="name">td.genset.config.form</field>
+        <field name="model">td.genset.config</field>
+        <field name="arch" type="xml">
+            <form string="Налаштування генераторів" create="0" delete="0">
+                <sheet>
+                    <field name="is_tech" invisible="1"/>
+                    <div class="alert alert-info" role="status" invisible="is_tech">
+                        Лише перегляд: налаштування змінює тех. адміністратор.
+                    </div>
+                    <group>
+                        <group string="Пульт">
+                            <field name="retry_every_min" readonly="not is_tech"/>
+                            <field name="retry_window_min" readonly="not is_tech"/>
+                            <field name="late_retry_every_min" readonly="not is_tech"/>
+                            <field name="missed_transition_policy" readonly="not is_tech"/>
+                            <field name="test_minutes" readonly="not is_tech"/>
+                        </group>
+                        <group string="Зв'язок">
+                            <field name="link_lost_min" readonly="not is_tech"/>
+                            <field name="link_alarm_min" readonly="not is_tech"/>
+                            <field name="relay_unavailable_alarm_min" readonly="not is_tech"/>
+                            <field name="raw_regs_mode" readonly="not is_tech"/>
+                        </group>
+                        <group string="Журнал">
+                            <field name="journal_interval_min" readonly="not is_tech"/>
+                            <field name="reading_retention_days" readonly="not is_tech"/>
+                            <field name="catchup_summary" readonly="not is_tech"/>
+                        </group>
+                        <group string="Сповіщення">
+                            <field name="notify_crit" readonly="not is_tech"/>
+                            <field name="notify_warn" readonly="not is_tech"/>
+                            <field name="notify_info" readonly="not is_tech"/>
+                            <field name="quiet_enabled" widget="boolean_toggle" readonly="not is_tech"/>
+                            <field name="quiet_from" widget="float_time" readonly="not is_tech" invisible="not quiet_enabled"/>
+                            <field name="quiet_to" widget="float_time" readonly="not is_tech" invisible="not quiet_enabled"/>
+                            <field name="discuss_channel_id" readonly="not is_tech"/>
+                            <button name="action_send_test_notification" type="object"
+                                    string="Надіслати тестове сповіщення" class="btn-secondary"/>
+                        </group>
+                        <group string="Паливо">
+                            <field name="fuel_min_stock_l" readonly="not is_tech"/>
+                            <field name="canister_volume_default_l" readonly="not is_tech"/>
+                            <field name="fuel_price_default" readonly="not is_tech"/>
+                            <field name="fuel_partner_id" readonly="not is_tech"/>
+                            <field name="refuel_threshold_l" readonly="not is_tech"/>
+                            <field name="drain_threshold_l" readonly="not is_tech"/>
+                            <field name="drain_window_min" readonly="not is_tech"/>
+                            <field name="low_fuel_pct" readonly="not is_tech"/>
+                            <field name="crank_battery_warn_v" readonly="not is_tech"/>
+                        </group>
+                        <group string="ТО">
+                            <field name="maint_first_hours_default" readonly="not is_tech"/>
+                            <field name="maint_interval_hours_default" readonly="not is_tech"/>
+                            <field name="maint_interval_months_default" readonly="not is_tech"/>
+                            <field name="maint_team_id" readonly="not is_tech"/>
+                        </group>
+                    </group>
+                    <separator string="Ланцюжок ескалації"/>
+                    <field name="level_ids" readonly="not is_tech">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="name"/>
+                            <field name="user_id"/>
+                            <field name="delay_min"/>
+                        </list>
+                    </field>
+                    <separator string="Перелік робіт ТО"/>
+                    <field name="maint_checklist" readonly="not is_tech"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_genset_config" model="ir.actions.act_window">
+        <field name="name">Налаштування</field>
+        <field name="res_model">td.genset.config</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="config_main"/>
+        <field name="view_id" ref="view_td_genset_config_form"/>
+    </record>
+
+    <record id="view_td_genset_notify_level_list" model="ir.ui.view">
+        <field name="name">td.genset.notify.level.list</field>
+        <field name="model">td.genset.notify.level</field>
+        <field name="arch" type="xml">
+            <list string="Ланцюжок ескалації" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="delay_min"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_notify_level_search" model="ir.ui.view">
+        <field name="name">td.genset.notify.level.search</field>
+        <field name="model">td.genset.notify.level</field>
+        <field name="arch" type="xml">
+            <search string="Ланцюжок ескалації">
+                <field name="name"/>
+                <field name="user_id"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_genset_notify_level" model="ir.actions.act_window">
+        <field name="name">Ланцюжок ескалації</field>
+        <field name="res_model">td.genset.notify.level</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <record id="view_td_genset_controller_model_list" model="ir.ui.view">
+        <field name="name">td.genset.controller.model.list</field>
+        <field name="model">td.genset.controller.model</field>
+        <field name="arch" type="xml">
+            <list string="Моделі контролерів">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="has_mains_breaker"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_controller_model_form" model="ir.ui.view">
+        <field name="name">td.genset.controller.model.form</field>
+        <field name="model">td.genset.controller.model</field>
+        <field name="arch" type="xml">
+            <form string="Модель контролера">
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <group>
+                        <field name="name"/>
+                        <field name="code"/>
+                        <field name="has_mains_breaker"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_genset_controller_model_search" model="ir.ui.view">
+        <field name="name">td.genset.controller.model.search</field>
+        <field name="model">td.genset.controller.model</field>
+        <field name="arch" type="xml">
+            <search string="Моделі контролерів">
+                <field name="name"/>
+                <field name="code"/>
+                <filter name="archived" string="Архів" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_genset_controller_model" model="ir.actions.act_window">
+        <field name="name">Моделі контролерів</field>
+        <field name="res_model">td.genset.controller.model</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

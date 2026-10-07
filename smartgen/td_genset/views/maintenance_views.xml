@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W4. Каркас W0: поля td_* на заявці ТО і обладнанні (ТР 2.3.12). -->
+<odoo>
+    <record id="view_maintenance_request_form_td_genset" model="ir.ui.view">
+        <field name="name">maintenance.request.form.td.genset</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
+        <field name="arch" type="xml">
+            <field name="maintenance_team_id" position="after">
+                <field name="td_partner_id"/>
+                <field name="td_genset_id" invisible="not td_genset_id"/>
+                <field name="td_run_hours_at_close" invisible="not td_genset_id"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_maintenance_equipment_form_td_genset" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.td.genset</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+        <field name="arch" type="xml">
+            <field name="category_id" position="after">
+                <field name="td_genset_id" invisible="not td_genset_id"/>
+            </field>
+        </field>
+    </record>
+</odoo>

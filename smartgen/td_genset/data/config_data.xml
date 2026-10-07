@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0. Налаштування модуля (singleton) і ланцюжок ескалації без користувачів (ТР 2.3.8, 2.3.9;
+     SPEC 5.8, 5.9; користувачі рівнів заповнюються під час впровадження — рішення 1.8-4). -->
+<odoo>
+    <data noupdate="1">
+        <record id="config_main" model="td.genset.config">
+            <field name="maint_team_id" ref="maintenance_team_genset"/>
+        </record>
+        <record id="level_1" model="td.genset.notify.level">
+            <field name="config_id" ref="config_main"/>
+            <field name="sequence">1</field>
+            <field name="name">Черговий</field>
+            <field name="delay_min">0</field>
+        </record>
+        <record id="level_2" model="td.genset.notify.level">
+            <field name="config_id" ref="config_main"/>
+            <field name="sequence">2</field>
+            <field name="name">Відповідальний за об'єкт</field>
+            <field name="delay_min">10</field>
+        </record>
+        <record id="level_3" model="td.genset.notify.level">
+            <field name="config_id" ref="config_main"/>
+            <field name="sequence">3</field>
+            <field name="name">Керівник</field>
+            <field name="delay_min">30</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3. Каркас W0: блок «Генератори» у стандартних Налаштуваннях (лише base.group_system). -->
+<odoo>
+    <record id="res_config_settings_view_form_td_genset" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.td_genset</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="95"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Генератори" string="Генератори" name="td_genset" groups="base.group_system">
+                    <block title="Ретранслятор SmartGen" name="td_genset_relay">
+                        <setting string="Адреса API ретранслятора"
+                                 help="Адреса без завершального «/», напр. https://…/api/v1 (на тесті — емулятор).">
+                            <field name="td_genset_relay_url" placeholder="https://…/api/v1"/>
+                        </setting>
+                        <setting string="Токен ретранслятора"
+                                 help="Після збереження токен не показується; порожнє поле не змінює збережений токен.">
+                            <field name="td_genset_relay_token" password="True" placeholder="••••"/>
+                            <div class="text-muted" invisible="not td_genset_relay_token_set">Токен встановлено.</div>
+                            <div class="text-warning" invisible="td_genset_relay_token_set">Токен не задано.</div>
+                            <field name="td_genset_relay_token_set" invisible="1"/>
+                        </setting>
+                        <setting string="Таймаут, с" help="Таймаут читання відповіді; з'єднання — 5 с.">
+                            <field name="td_genset_http_timeout"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_td_genset_res_config_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування Odoo: Генератори</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'td_genset', 'bin_size': False}</field>
+    </record>
+</odoo>

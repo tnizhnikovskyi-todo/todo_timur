@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (заготовка W0). Дії «Аналітика» (ТР 2.10). XML id, на який посилається menu.xml (зберегти!):
+     action_td_genset_analytics_run_outage. Інші дії W3 додає тут, а пункти меню — рядками в кінець menu.xml. -->
+<odoo>
+    <record id="view_td_genset_event_graph_run_outage" model="ir.ui.view">
+        <field name="name">td.genset.event.graph.run_outage</field>
+        <field name="model">td.genset.event</field>
+        <field name="arch" type="xml">
+            <graph string="Робота і відключення по днях" type="bar" stacked="0" sample="1">
+                <field name="date_start" interval="day"/>
+                <field name="event_type"/>
+                <field name="duration" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_td_genset_analytics_run_outage" model="ir.actions.act_window">
+        <field name="name">Робота і відключення по днях</field>
+        <field name="res_model">td.genset.event</field>
+        <field name="view_mode">graph,list</field>
+        <field name="view_id" ref="view_td_genset_event_graph_run_outage"/>
+        <field name="domain">[('event_type', 'in', ('run', 'outage'))]</field>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+    </record>
+</odoo>

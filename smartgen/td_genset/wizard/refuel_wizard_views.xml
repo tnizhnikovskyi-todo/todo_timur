@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W4. Каркас W0: майстер «Заправити генератор». XML id дії (зберегти!): action_td_genset_refuel_wizard. -->
+<odoo>
+    <record id="view_td_genset_refuel_wizard_form" model="ir.ui.view">
+        <field name="name">td.genset.refuel.wizard.form</field>
+        <field name="model">td.genset.refuel.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Заправити генератор">
+                <group>
+                    <field name="genset_id"/>
+                    <field name="source" widget="radio"/>
+                    <field name="canister_ids" widget="many2many_tags" invisible="source != 'cans'"/>
+                    <field name="source_note" invisible="source != 'other'"/>
+                    <field name="liters" invisible="source != 'other'" required="source == 'other'"/>
+                    <field name="free_l"/>
+                    <field name="will_fill_l" invisible="source != 'cans'"/>
+                </group>
+                <div class="alert alert-warning" role="alert" invisible="not hint">
+                    <field name="hint" nolabel="1"/>
+                </div>
+                <footer>
+                    <button name="action_confirm" type="object" string="Заправити" class="btn-primary" data-hotkey="q"/>
+                    <button string="Скасувати" class="btn-secondary" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_genset_refuel_wizard" model="ir.actions.act_window">
+        <field name="name">Заправити генератор</field>
+        <field name="res_model">td.genset.refuel.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

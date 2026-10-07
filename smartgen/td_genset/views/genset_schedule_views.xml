@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (переписує повністю). Каркас W0: розклад і дні-винятки (редагуються на формі генератора). -->
+<odoo>
+    <record id="view_td_genset_schedule_list" model="ir.ui.view">
+        <field name="name">td.genset.schedule.list</field>
+        <field name="model">td.genset.schedule</field>
+        <field name="arch" type="xml">
+            <list string="Розклад" editable="bottom">
+                <field name="genset_id"/>
+                <field name="dayofweek"/>
+                <field name="time_start" widget="float_time"/>
+                <field name="time_end" widget="float_time"/>
+                <field name="enabled" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_schedule_search" model="ir.ui.view">
+        <field name="name">td.genset.schedule.search</field>
+        <field name="model">td.genset.schedule</field>
+        <field name="arch" type="xml">
+            <search string="Розклад">
+                <field name="genset_id"/>
+                <field name="dayofweek"/>
+                <filter name="enabled" string="Увімкнені" domain="[('enabled', '=', True)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_td_genset_schedule_exception_list" model="ir.ui.view">
+        <field name="name">td.genset.schedule.exception.list</field>
+        <field name="model">td.genset.schedule.exception</field>
+        <field name="arch" type="xml">
+            <list string="Дні-винятки" editable="bottom">
+                <field name="genset_id"/>
+                <field name="date"/>
+                <field name="action"/>
+                <field name="time_start" widget="float_time" required="action == 'custom'" invisible="action != 'custom'"/>
+                <field name="time_end" widget="float_time" required="action == 'custom'" invisible="action != 'custom'"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_schedule_exception_search" model="ir.ui.view">
+        <field name="name">td.genset.schedule.exception.search</field>
+        <field name="model">td.genset.schedule.exception</field>
+        <field name="arch" type="xml">
+            <search string="Дні-винятки">
+                <field name="genset_id"/>
+                <field name="date"/>
+                <filter name="archived" string="Архів" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+</odoo>

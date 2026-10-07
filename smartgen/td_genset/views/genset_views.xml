@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (переписує повністю за мокапом). Каркас W0: мінімальні подання td.genset.
+     XML id дій, на які посилаються menu.xml і код (зберегти!): action_td_genset. -->
+<odoo>
+    <record id="view_td_genset_form" model="ir.ui.view">
+        <field name="name">td.genset.form</field>
+        <field name="model">td.genset</field>
+        <field name="arch" type="xml">
+            <form string="Генератор">
+                <header>
+                    <button name="action_refresh" type="object" string="Оновити дані" class="btn-secondary"/>
+                    <button name="action_check_relay" type="object" string="Перевірити зв'язок"
+                            class="btn-secondary" groups="td_genset.group_tech"/>
+                    <field name="genset_stage" widget="statusbar" readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_readings" type="object" class="oe_stat_button" icon="fa-line-chart">
+                            <field name="reading_count" widget="statinfo" string="Показання"/>
+                        </button>
+                        <button name="action_open_events" type="object" class="oe_stat_button" icon="fa-calendar"
+                                string="Події"/>
+                        <button name="action_open_alarms" type="object" class="oe_stat_button" icon="fa-bell">
+                            <field name="alarm_count" widget="statinfo" string="Тривоги"/>
+                        </button>
+                        <button name="action_open_commands" type="object" class="oe_stat_button" icon="fa-terminal">
+                            <field name="command_count" widget="statinfo" string="Команди"/>
+                        </button>
+                        <button name="action_open_maintenance" type="object" class="oe_stat_button" icon="fa-wrench">
+                            <field name="maint_hours_left" widget="statinfo" string="До ТО"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <field name="active" invisible="1"/>
+                    <field name="is_tech" invisible="1"/>
+                    <field name="is_admin" invisible="1"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Садова вулиця"/></h1>
+                        <div><field name="address" placeholder="Адреса об'єкта"/></div>
+                    </div>
+                    <div class="alert alert-info" role="status" invisible="relay_hostid and relay_enabled">
+                        Вкажіть hostid і ввімкніть опитування.
+                    </div>
+                    <widget name="td_genset_pult"/>
+                    <group>
+                        <group string="Стан">
+                            <field name="controller_mode" widget="badge"/>
+                            <field name="control_source" widget="badge"/>
+                            <field name="next_event_text"/>
+                            <field name="link_state" widget="badge"/>
+                            <field name="feed_source" widget="badge"/>
+                            <field name="genset_status"/>
+                            <field name="last_reading_at"/>
+                        </group>
+                        <group string="Робота поза графіком">
+                            <field name="timer_end"/>
+                            <field name="timer_user_id" invisible="not timer_end"/>
+                            <field name="timer_progress" widget="progressbar" invisible="not timer_end"/>
+                            <field name="test_end" invisible="not test_end"/>
+                            <field name="test_mode" invisible="not test_end"/>
+                            <button name="action_open_timer_wizard" type="object" string="Застосувати"
+                                    class="btn-primary" invisible="timer_end"/>
+                            <button name="action_timer_extend_15" type="object" string="+15 хв" invisible="not timer_end"/>
+                            <button name="action_timer_extend_30" type="object" string="+30 хв" invisible="not timer_end"/>
+                            <button name="action_timer_extend_60" type="object" string="+60 хв" invisible="not timer_end"/>
+                            <button name="action_timer_stop" type="object" string="Зупинити таймер"
+                                    confirm="Зупинити таймер? Генератор перейде у стан за розкладом."
+                                    invisible="not timer_end"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Розклад" name="schedule">
+                            <field name="schedule_line_ids" readonly="not is_admin">
+                                <list editable="bottom">
+                                    <field name="dayofweek"/>
+                                    <field name="time_start" widget="float_time"/>
+                                    <field name="time_end" widget="float_time"/>
+                                    <field name="enabled" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                            <field name="exception_ids" readonly="not is_admin">
+                                <list editable="bottom">
+                                    <field name="date"/>
+                                    <field name="action"/>
+                                    <field name="time_start" widget="float_time" required="action == 'custom'"
+                                           invisible="action != 'custom'"/>
+                                    <field name="time_end" widget="float_time" required="action == 'custom'"
+                                           invisible="action != 'custom'"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Поточні дані" name="current_data">
+                            <field name="current_data_html" nolabel="1"/>
+                            <group>
+                                <group string="Двигун">
+                                    <field name="speed"/>
+                                    <field name="oil_pressure"/>
+                                    <field name="oil_pressure_sensor_ohm"/>
+                                    <field name="water_temp"/>
+                                    <field name="water_temp_sensor_ohm"/>
+                                    <field name="battery_v"/>
+                                    <field name="dplus_v"/>
+                                </group>
+                                <group string="Паливо і навантаження">
+                                    <field name="fuel_level"/>
+                                    <field name="fuel_liters"/>
+                                    <field name="fuel_source"/>
+                                    <field name="fuel_sensor_ohm"/>
+                                    <field name="active_power"/>
+                                    <field name="load_pct"/>
+                                    <field name="power_factor"/>
+                                </group>
+                                <group string="Мережа">
+                                    <field name="mains_ok"/>
+                                    <field name="mains_uab"/>
+                                    <field name="mains_ubc"/>
+                                    <field name="mains_uca"/>
+                                    <field name="mains_freq"/>
+                                    <field name="mains_on_load"/>
+                                </group>
+                                <group string="Генератор">
+                                    <field name="is_running"/>
+                                    <field name="gen_uab"/>
+                                    <field name="gen_ubc"/>
+                                    <field name="gen_uca"/>
+                                    <field name="gen_freq"/>
+                                    <field name="current_a"/>
+                                    <field name="current_b"/>
+                                    <field name="current_c"/>
+                                    <field name="gen_on_load"/>
+                                </group>
+                                <group string="Лічильники">
+                                    <field name="run_hours"/>
+                                    <field name="run_minutes"/>
+                                    <field name="run_hours_total"/>
+                                    <field name="start_count"/>
+                                    <field name="energy_kwh"/>
+                                    <field name="genset_status_delay"/>
+                                </group>
+                                <group string="Сигнали">
+                                    <field name="remote_lock"/>
+                                    <field name="common_alarm"/>
+                                    <field name="common_warning"/>
+                                    <field name="common_shutdown"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Тривоги" name="alarms">
+                            <field name="alarm_ids" readonly="1">
+                                <list decoration-danger="level == 'crit'" decoration-warning="level == 'warn'">
+                                    <field name="date_raised"/>
+                                    <field name="level"/>
+                                    <field name="name"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="acked_user_id"/>
+                                    <field name="can_ack" column_invisible="1"/>
+                                    <button name="action_ack" type="object" string="Прийняв" icon="fa-check"
+                                            invisible="not can_ack or state != 'active'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Обслуговування" name="maintenance">
+                            <group>
+                                <group string="Регламент">
+                                    <field name="maint_first_hours"/>
+                                    <field name="maint_interval_hours"/>
+                                    <field name="maint_interval_months"/>
+                                    <field name="commissioning_date"/>
+                                </group>
+                                <group string="Стан ТО">
+                                    <field name="maint_state" widget="badge"/>
+                                    <field name="maint_hours_left"/>
+                                    <field name="maint_due_date"/>
+                                    <field name="equipment_id"/>
+                                    <field name="user_id"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Журнал команд" name="commands">
+                            <field name="command_ids" readonly="1">
+                                <list>
+                                    <field name="create_date" string="Час"/>
+                                    <field name="user_id"/>
+                                    <field name="source"/>
+                                    <field name="command"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state in ('done', 'done_late')"
+                                           decoration-danger="state in ('failed', 'auth_error', 'blocked')"
+                                           decoration-warning="state in ('retry', 'waiting_link')"/>
+                                    <field name="result_note"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Паливо" name="fuel">
+                            <group>
+                                <group string="Запас">
+                                    <field name="fuel_liters" string="У баку, L"/>
+                                    <field name="fuel_in_canisters_l"/>
+                                    <field name="fuel_total_l"/>
+                                    <field name="fuel_hours_left"/>
+                                    <field name="fuel_min_stock_ok"/>
+                                    <field name="tank_volume_l"/>
+                                </group>
+                                <group string="Витрата">
+                                    <field name="fuel_used_7d_l"/>
+                                    <field name="fuel_used_30d_l"/>
+                                    <field name="fuel_rate_lph_7d"/>
+                                    <field name="fuel_rate_lph_30d"/>
+                                    <field name="fuel_rate_lpkwh_7d"/>
+                                    <field name="fuel_rate_lpkwh_30d"/>
+                                    <field name="fuel_per_day_7d"/>
+                                    <field name="fuel_per_day_30d"/>
+                                    <field name="fuel_cost_7d"/>
+                                    <field name="fuel_cost_30d"/>
+                                </group>
+                            </group>
+                            <div class="d-flex gap-2 mb-2">
+                                <button name="%(td_genset.action_td_genset_refuel_wizard)d" type="action"
+                                        string="Заправити генератор" class="btn-primary"
+                                        context="{'default_genset_id': id}" groups="td_genset.group_admin"/>
+                                <button name="%(td_genset.action_td_genset_fuel_receipt_wizard)d" type="action"
+                                        string="Надходження палива" class="btn-secondary"
+                                        groups="td_genset.group_admin"/>
+                            </div>
+                            <separator string="Калібрування датчика палива"/>
+                            <div class="text-muted mb-2">
+                                Заповніть за кривою датчика в налаштуваннях контролера (Ом → % × об'єм бака) або за
+                                реальними заправками (Ом до/після відомого об'єму).
+                            </div>
+                            <field name="fuel_calibrated" invisible="1"/>
+                            <field name="fuel_calibration_ids" readonly="not is_tech">
+                                <list editable="bottom">
+                                    <field name="ohm"/>
+                                    <field name="liters"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                            <button name="action_recompute_liters" type="object" string="Перерахувати літри"
+                                    class="btn-secondary" groups="td_genset.group_tech"
+                                    confirm="Перерахувати літри всіх знімків за поточним калібруванням і об'ємом бака?"/>
+                        </page>
+                        <page string="Аналітика" name="analytics">
+                            <group>
+                                <group string="7 днів">
+                                    <field name="kpi_run_hours_7d" widget="float_time"/>
+                                    <field name="kpi_starts_7d"/>
+                                    <field name="kpi_energy_kwh_7d"/>
+                                    <field name="kpi_outages_7d"/>
+                                    <field name="kpi_covered_pct_7d"/>
+                                    <field name="kpi_avg_load_pct_7d"/>
+                                    <field name="kpi_first_try_pct_7d"/>
+                                    <field name="kpi_crank_battery_min_7d"/>
+                                </group>
+                                <group string="30 днів">
+                                    <field name="kpi_run_hours_30d" widget="float_time"/>
+                                    <field name="kpi_starts_30d"/>
+                                    <field name="kpi_energy_kwh_30d"/>
+                                    <field name="kpi_outages_30d"/>
+                                    <field name="kpi_covered_pct_30d"/>
+                                    <field name="kpi_avg_load_pct_30d"/>
+                                    <field name="kpi_first_try_pct_30d"/>
+                                    <field name="kpi_crank_battery_min_30d"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Підключення" name="relay">
+                            <group>
+                                <group string="Генератор">
+                                    <field name="controller_model_id"/>
+                                    <field name="power_kw"/>
+                                    <field name="fuel_type"/>
+                                    <field name="company_id" groups="base.group_multi_company"/>
+                                </group>
+                                <group string="Модуль і ретранслятор">
+                                    <field name="relay_hostid"/>
+                                    <field name="relay_enabled" widget="boolean_toggle"/>
+                                    <field name="commands_allowed" widget="boolean_toggle" groups="td_genset.group_tech"/>
+                                    <field name="catchup_from_date"/>
+                                    <field name="relay_note"/>
+                                </group>
+                                <group string="Ретранслятор (/status)">
+                                    <field name="relay_online"/>
+                                    <field name="relay_seconds_since_seen"/>
+                                    <field name="relay_long_connection"/>
+                                    <field name="relay_commands_enabled"/>
+                                    <field name="relay_commands_ready"/>
+                                    <field name="relay_version"/>
+                                    <field name="relay_registers_known"/>
+                                    <field name="relay_coils_known"/>
+                                    <field name="relay_time_utc"/>
+                                    <field name="relay_snapshot_sec"/>
+                                    <field name="link_changed_at"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_genset_list" model="ir.ui.view">
+        <field name="name">td.genset.list</field>
+        <field name="model">td.genset</field>
+        <field name="arch" type="xml">
+            <list string="Генератори">
+                <field name="name"/>
+                <field name="address"/>
+                <field name="controller_model_id"/>
+                <field name="tank_volume_l"/>
+                <field name="power_kw"/>
+                <field name="link_state" widget="badge"/>
+                <field name="genset_status"/>
+                <field name="alarm_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_kanban" model="ir.ui.view">
+        <field name="name">td.genset.kanban</field>
+        <field name="model">td.genset</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <templates>
+                    <t t-name="card">
+                        <field name="name" class="fw-bold"/>
+                        <field name="address"/>
+                        <field name="link_state" widget="badge"/>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_td_genset_search" model="ir.ui.view">
+        <field name="name">td.genset.search</field>
+        <field name="model">td.genset</field>
+        <field name="arch" type="xml">
+            <search string="Генератори">
+                <field name="name"/>
+                <field name="relay_hostid"/>
+                <filter name="online" string="Онлайн" domain="[('link_state', '=', 'online')]"/>
+                <filter name="offline" string="Немає зв'язку" domain="[('link_state', '=', 'offline')]"/>
+                <separator/>
+                <filter name="archived" string="Архів" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_genset" model="ir.actions.act_window">
+        <field name="name">Генератор</field>
+        <field name="res_model">td.genset</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Додайте генератор</p>
+            <p>Вкажіть hostid модуля і ввімкніть опитування ретранслятора.</p>
+        </field>
+    </record>
+</odoo>

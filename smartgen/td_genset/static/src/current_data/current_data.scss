@@ -1,0 +1,13 @@
+// Вкладка «Поточні дані» (поле current_data_html) — W3. Каркас W0.
+.o_td_genset_current_data {
+    overflow-x: auto;
+
+    table {
+        width: 100%;
+    }
+
+    .o_td_genset_no_data {
+        color: var(--bs-secondary-color);
+        font-style: italic;
+    }
+}

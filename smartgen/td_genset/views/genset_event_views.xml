@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (переписує повністю). Каркас W0. XML id дії (зберегти!): action_td_genset_event. -->
+<odoo>
+    <record id="view_td_genset_event_list" model="ir.ui.view">
+        <field name="name">td.genset.event.list</field>
+        <field name="model">td.genset.event</field>
+        <field name="arch" type="xml">
+            <list string="Події" create="0" decoration-warning="is_bad">
+                <field name="event_type" widget="badge"/>
+                <field name="genset_id" optional="hide"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="duration" widget="float_time"/>
+                <field name="reason"/>
+                <field name="energy_kwh" optional="show"/>
+                <field name="peak_kw" optional="show"/>
+                <field name="fuel_delta_l" optional="show"/>
+                <field name="summary"/>
+                <field name="is_bad" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_event_form" model="ir.ui.view">
+        <field name="name">td.genset.event.form</field>
+        <field name="model">td.genset.event</field>
+        <field name="arch" type="xml">
+            <form string="Подія" create="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="genset_id"/>
+                            <field name="event_type"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                            <field name="duration" widget="float_time"/>
+                            <field name="is_open"/>
+                            <field name="reason"/>
+                            <field name="summary"/>
+                            <field name="is_bad"/>
+                        </group>
+                        <group>
+                            <field name="energy_kwh"/>
+                            <field name="peak_kw"/>
+                            <field name="fuel_delta_l"/>
+                            <field name="crank_attempts"/>
+                            <field name="crank_min_battery_v"/>
+                            <field name="time_to_pickup_s"/>
+                            <field name="outage_kind"/>
+                            <field name="mode_from"/>
+                            <field name="mode_to"/>
+                        </group>
+                        <group>
+                            <field name="alarm_id"/>
+                            <field name="command_id"/>
+                            <field name="refuel_id"/>
+                            <field name="reading_start_id"/>
+                            <field name="reading_end_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_genset_event_search" model="ir.ui.view">
+        <field name="name">td.genset.event.search</field>
+        <field name="model">td.genset.event</field>
+        <field name="arch" type="xml">
+            <search string="Події">
+                <field name="genset_id"/>
+                <field name="event_type"/>
+                <field name="reason"/>
+                <filter name="last_30_days" string="Останні 30 днів"
+                        domain="[('date_start', '&gt;=', (context_today() - relativedelta(days=30)).strftime('%Y-%m-%d'))]"/>
+                <filter name="open" string="Триває" domain="[('is_open', '=', True)]"/>
+                <filter name="bad" string="Увага" domain="[('is_bad', '=', True)]"/>
+                <separator/>
+                <filter name="type_run" string="Робота генератора" domain="[('event_type', '=', 'run')]"/>
+                <filter name="type_outage" string="Відключення мережі" domain="[('event_type', '=', 'outage')]"/>
+                <filter name="type_fuel" string="Паливо" domain="[('event_type', 'in', ('refuel', 'drain'))]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_type" string="Тип" context="{'group_by': 'event_type'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'date_start:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_genset_event" model="ir.actions.act_window">
+        <field name="name">Події</field>
+        <field name="res_model">td.genset.event</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Подій ще немає</p>
+            <p>Події формуються автоматично з показань генератора.</p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0. Послідовності (ТР 2.4.9; SPEC 6). -->
+<odoo>
+    <data noupdate="1">
+        <record id="seq_canister" model="ir.sequence">
+            <field name="name">Генератори: каністри</field>
+            <field name="code">td.genset.canister</field>
+            <field name="prefix">К-</field>
+            <field name="padding">2</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        <record id="seq_command" model="ir.sequence">
+            <field name="name">Генератори: команди</field>
+            <field name="code">td.genset.command</field>
+            <field name="prefix">CMD-%(year)s-</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        <record id="seq_refuel" model="ir.sequence">
+            <field name="name">Генератори: заправки</field>
+            <field name="code">td.genset.refuel</field>
+            <field name="prefix">ЗПР-%(year)s-</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3 (переписує повністю). Каркас W0: мінімальні подання «Показання».
+     XML id дії (зберегти!): action_td_genset_reading; фільтр за замовчуванням — journal. -->
+<odoo>
+    <record id="view_td_genset_reading_list" model="ir.ui.view">
+        <field name="name">td.genset.reading.list</field>
+        <field name="model">td.genset.reading</field>
+        <field name="arch" type="xml">
+            <list string="Показання" default_order="ts desc" limit="80" create="0" edit="0" delete="0">
+                <field name="ts"/>
+                <field name="genset_id" optional="hide"/>
+                <field name="controller_mode" widget="badge"/>
+                <field name="genset_status" widget="badge"/>
+                <field name="feed_source" widget="badge"/>
+                <field name="mains_uab"/>
+                <field name="mains_freq"/>
+                <field name="gen_uab"/>
+                <field name="gen_freq"/>
+                <field name="current_a" optional="hide"/>
+                <field name="current_b" optional="hide"/>
+                <field name="current_c" optional="hide"/>
+                <field name="active_power"/>
+                <field name="power_factor" optional="hide"/>
+                <field name="load_pct" optional="hide"/>
+                <field name="speed" optional="hide"/>
+                <field name="water_temp" optional="hide"/>
+                <field name="oil_pressure" optional="hide"/>
+                <field name="fuel_level" optional="hide"/>
+                <field name="fuel_liters"/>
+                <field name="fuel_sensor_ohm" optional="hide"/>
+                <field name="battery_v"/>
+                <field name="dplus_v" optional="hide"/>
+                <field name="run_hours_total" optional="hide"/>
+                <field name="start_count" optional="hide"/>
+                <field name="energy_kwh" optional="hide"/>
+                <field name="alarm_flags"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_form" model="ir.ui.view">
+        <field name="name">td.genset.reading.form</field>
+        <field name="model">td.genset.reading</field>
+        <field name="arch" type="xml">
+            <form string="Знімок показань" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="genset_id"/>
+                            <field name="ts"/>
+                            <field name="relay_id"/>
+                            <field name="reason"/>
+                            <field name="slot_15"/>
+                            <field name="is_journal"/>
+                        </group>
+                        <group>
+                            <field name="controller_mode"/>
+                            <field name="genset_status"/>
+                            <field name="is_running"/>
+                            <field name="mains_ok"/>
+                            <field name="feed_source"/>
+                            <field name="fuel_liters"/>
+                            <field name="fuel_source"/>
+                            <field name="fuel_sensor_ohm"/>
+                            <field name="water_temp_sensor_ohm"/>
+                            <field name="oil_pressure_sensor_ohm"/>
+                            <field name="alarm_flags"/>
+                        </group>
+                    </group>
+                    <group string="Інші значення">
+                        <field name="values_extra_text" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_graph" model="ir.ui.view">
+        <field name="name">td.genset.reading.graph</field>
+        <field name="model">td.genset.reading</field>
+        <field name="arch" type="xml">
+            <graph string="Показання" type="line" sample="1">
+                <field name="ts" interval="hour"/>
+                <field name="fuel_liters" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_pivot" model="ir.ui.view">
+        <field name="name">td.genset.reading.pivot</field>
+        <field name="model">td.genset.reading</field>
+        <field name="arch" type="xml">
+            <pivot string="Показання">
+                <field name="ts" interval="day" type="row"/>
+                <field name="active_power" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_search" model="ir.ui.view">
+        <field name="name">td.genset.reading.search</field>
+        <field name="model">td.genset.reading</field>
+        <field name="arch" type="xml">
+            <search string="Показання">
+                <field name="genset_id"/>
+                <field name="ts"/>
+                <filter name="journal" string="Журнал 15 хв" domain="[('is_journal', '=', True)]"/>
+                <filter name="all" string="Усі знімки" domain="[]"/>
+                <separator/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('ts', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="running" string="Генератор працював" domain="[('is_running', '=', True)]"/>
+                <filter name="no_mains" string="Без мережі" domain="[('mains_ok', '=', False)]"/>
+                <filter name="hourly" string="Погодинно" domain="[('is_hour', '=', True)]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>
+                    <filter name="group_slot" string="Інтервал 15 хв" context="{'group_by': 'slot_15'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'ts:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_genset_reading" model="ir.actions.act_window">
+        <field name="name">Показання</field>
+        <field name="res_model">td.genset.reading</field>
+        <field name="view_mode">list,graph,pivot,form</field>
+        <field name="search_view_id" ref="view_td_genset_reading_search"/>
+        <field name="context">{'search_default_journal': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Очікуємо перший знімок</p>
+            <p>Знімки з'являться після ввімкнення опитування ретранслятора на картці генератора.</p>
+        </field>
+    </record>
+</odoo>

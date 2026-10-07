@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0 (дані), логіка ТО — W4. Категорія обладнання і команда ТО (ТР 2.3.12, 2.9; SPEC 6).
+     company_id — компанія встановлення (default env.company). -->
+<odoo>
+    <data noupdate="1">
+        <record id="equipment_category_genset" model="maintenance.equipment.category">
+            <field name="name">Генератори</field>
+            <field name="technician_user_id" eval="False"/>
+        </record>
+        <record id="maintenance_team_genset" model="maintenance.team">
+            <field name="name">Генератори</field>
+        </record>
+    </data>
+</odoo>
