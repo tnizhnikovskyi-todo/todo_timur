@@ -218,14 +218,19 @@ class SimClient:
                 raise
             return self.command(relay_cmd_id)
 
-    def wait_tick(self, timeout=3.0):
-        """Дочекатися наступного кроку емулятора: пакет модуля (``last_ids.raw``) росте, поки є зв'язок."""
+    def wait_tick(self, timeout=1.0):
+        """Дочекатися наступного кроку емулятора: пакет модуля (``last_ids.raw`` росте; пакет — що 5 с часу
+        емулятора, тож після зсуву годинника — одразу), інакше (немає зв'язку, малий зсув) — 0,25 с (≥ 2 цикли
+        тікера по 0,1 с). Стан ``/_sim`` читається під замком емулятора — крок уже завершений."""
         state = self.sim_state()
-        if not state['devices'][0]['link']:
-            time.sleep(0.2)
-            return
-        before = state['last_ids']['raw']
-        wait_until(lambda: self.last_ids()['raw'] > before, timeout, 'крок емулятора')
+        if state['devices'][0]['link']:
+            before = state['last_ids']['raw']
+            try:
+                wait_until(lambda: self.last_ids()['raw'] > before, timeout, 'крок емулятора')
+                return
+            except StandTimeout:
+                pass
+        time.sleep(0.25)
 
     def advance(self, seconds):
         """Зсунути годинник емулятора вперед (лише екземпляр з ``spawn_relay``) і дочекатися його кроку."""
