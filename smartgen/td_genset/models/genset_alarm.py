@@ -61,7 +61,9 @@ WARNING_SIGNALS = {
     'charger_fail_warning': _lt('Збій зарядного пристрою'),
     'overpower_warning': _lt('Перевантаження за потужністю'),
 }
-# Сигнали генератора (2.8.3; назва — як в AC-07 «Низька напруга генератора»)
+# Сигнали «генератор не в нормі» (2.8.3; назва — як в AC-07 «Низька напруга генератора»). Тривога — лише коли
+# агрегат вийшов на режим: стан 8 «Очікування навантаження» або 9 «Нормальна робота». У станах 1–7 (підігрів,
+# прокрутка, розгін, прогрів) напруга й частота низькі за визначенням, у 0/15 (стоїть) — норма (1.2, AC-07).
 GEN_SIGNALS = {
     'gen_overvoltage': _lt('Висока напруга генератора'),
     'gen_undervoltage': _lt('Низька напруга генератора'),
@@ -69,7 +71,7 @@ GEN_SIGNALS = {
     'gen_underfrequency': _lt('Низька частота генератора'),
     'gen_overcurrent': _lt('Перевантаження генератора за струмом'),
 }
-GEN_RUNNING_ONLY = ('gen_undervoltage', 'gen_underfrequency')
+GEN_AT_RUN_STATUSES = ('8', '9')
 # Коди тривог із сигналів контролера (події «Тривога контролера» + _raise/_clear за фронтами)
 SIGNAL_CODES = frozenset(set(SHUTDOWN_SIGNALS) | set(WARNING_SIGNALS) | set(GEN_SIGNALS)
                          | {'common_shutdown', 'common_warning', 'stop_failure', 'remote_lock'})
@@ -226,11 +228,12 @@ class TdGensetAlarm(models.Model):
             active['remote_lock'] = ('warn', _('Дистанційне керування заблоковано на контролері'),
                                      _('На панелі контролера ввімкнено блокування дистанційного керування '
                                        '(01H 0004) — команди з Odoo не виконуються.'))
-        at_run = row.get('genset_status') in ('8', '9') if row.get('genset_status') is not None else None
+        status = row.get('genset_status')
+        at_run = status in GEN_AT_RUN_STATUSES if status is not None else None
         for key, lazy_label in GEN_SIGNALS.items():
             value = row.get(key)
-            if key in GEN_RUNNING_ONLY and value:
-                # норма зупиненого (1.2): лише коли агрегат на етапі «Робота» (стан 8–9)
+            if value:
+                # «генератор не в нормі» — тривога лише в станах 8–9 (вийшов на режим); стан невідомий — без змін
                 value = at_run
             if value is None:
                 unknown.add(key)

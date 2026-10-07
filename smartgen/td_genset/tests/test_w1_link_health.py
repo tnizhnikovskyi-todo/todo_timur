@@ -54,30 +54,35 @@ class TestW1LinkHealth(TdGensetCase):
         self.assertEqual(refresh['tag'], 'display_notification')
 
     def test_ac09_link_lost_and_restored(self):
-        """AC-09: 3 хв без знімків і ``online=false`` → «Немає зв'язку з HH:MM»; через 10 хв — критична тривога
-        «Немає зв'язку з модулем» рівню 1; відновлення → «Онлайн», тривога знята, «Зв'язок відновлено після N хв
-        без даних», подія «Зв'язок» закрита."""
+        """AC-09: 3 хв без знімків і ``online=false`` → «Немає зв'язку з HH:MM» (момент переходу = останні дані
+        + 3 хв); через 10 хв від переходу — критична тривога «Немає зв'язку з модулем» рівню 1; відновлення →
+        «Онлайн», тривога знята, «Зв'язок відновлено після N хв без даних», подія «Зв'язок» закрита."""
         with freeze_time(T0):
             self.push_reading(snapshot(), ts=T0 - timedelta(seconds=10))
         self._pull_at(T0)
         self.assertEqual(self.genset.link_state, 'online')
         last_data = T0 - timedelta(seconds=10)
+        lost_at = last_data + timedelta(minutes=3)          # 12:02:50 за Києвом
         self.set_status(online=False, seconds_since_seen=100)
         self._pull_at(T0 + timedelta(minutes=2))
         self.assertEqual(self.genset.link_state, 'online')
         self.set_status(online=False, seconds_since_seen=250)
         self._pull_at(T0 + timedelta(minutes=4))
         self.assertEqual(self.genset.link_state, 'offline')
-        self.assertEqual(self.genset.link_changed_at, last_data)
+        self.assertEqual(self.genset.link_changed_at, lost_at)
         event = self.env['td.genset.event'].search([('genset_id', '=', self.genset.id), ('event_type', '=', 'link')])
         self.assertEqual((len(event), event.date_start, event.is_open), (1, last_data, True))
         self.assertFalse(self._alarms('link_lost'))
-        self.set_status(seconds_since_seen=660)
-        self._pull_at(T0 + timedelta(minutes=11))
+        # 10 хв рахуються від переходу в «Немає зв'язку», а не від останніх даних
+        self.set_status(seconds_since_seen=720)
+        self._pull_at(T0 + timedelta(minutes=12))
+        self.assertFalse(self._alarms('link_lost'))
+        self.set_status(seconds_since_seen=780)
+        self._pull_at(T0 + timedelta(minutes=13))
         alarm = self._alarms('link_lost')
         self.assertEqual((alarm.level, alarm.name), ('crit', "Немає зв'язку з модулем"))
-        self.assertIn("Немає зв'язку з модулем з 11:59 (11 хв). Пульт недоступний.", alarm.description)
-        with freeze_time(T0 + timedelta(minutes=11)):
+        self.assertEqual(alarm.description, "Немає зв'язку з модулем з 12:02 (10 хв). Пульт недоступний.")
+        with freeze_time(T0 + timedelta(minutes=13)):
             self.env['td.genset.alarm']._cron_escalate()
         self.assertEqual(alarm.notified_user_ids, self.user_s)
         # модуль повернувся

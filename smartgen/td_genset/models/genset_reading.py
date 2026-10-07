@@ -165,8 +165,8 @@ NO_DATA_RAW = 32766          # «###» на контролері (сире зн�
 MODE_KEYS = ('auto', 'manual', 'stop', 'test')
 STATUS_KEYS = frozenset(str(code) for code in range(16))
 # Сигнали 01H, що потрапляють у колонку «Тривоги» (alarm_flags): 0–2, 8–39, 44–47, 73–77 (ФВ-25, 2.8.3);
-# gen_undervoltage/gen_underfrequency — лише на етапі «Робота» (стан 8–9): при зупиненому генераторі,
-# під час пуску і зупинки напруги/частоти ще (вже) немає — це норма, не аварія (1.2, AC-07).
+# «генератор не в нормі» (gen_*) — лише коли агрегат вийшов на режим (стан 8–9): у станах 1–7 напруга й частота
+# низькі за визначенням, у 0/15 (стоїть) — норма, не аварія (1.2, AC-07).
 ALARM_FLAG_KEYS = (
     'common_alarm', 'common_warning', 'common_shutdown', 'emergency_stop', 'overspeed_shutdown',
     'underspeed_shutdown', 'speed_signal_loss_shutdown', 'overfrequency_shutdown', 'underfrequency_shutdown',
@@ -180,7 +180,8 @@ ALARM_FLAG_KEYS = (
     'oil_pressure_sensor_open_shutdown', 'maintenance_due_shutdown', 'overpower_shutdown', 'gen_overvoltage',
     'gen_undervoltage', 'gen_overfrequency', 'gen_underfrequency', 'gen_overcurrent',
 )
-GEN_RUNNING_ONLY_FLAGS = ('gen_undervoltage', 'gen_underfrequency')
+GEN_RUNNING_ONLY_FLAGS = ('gen_overvoltage', 'gen_undervoltage', 'gen_overfrequency', 'gen_underfrequency',
+                          'gen_overcurrent')
 REASONS = [
     ('first', 'Перший'),
     ('change', 'Зміна стану'),
