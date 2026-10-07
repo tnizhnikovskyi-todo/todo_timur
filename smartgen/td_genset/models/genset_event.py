@@ -581,8 +581,10 @@ class TdGensetEvent(models.Model):
         entries.sort(key=lambda item: item[0])
         last = genset.cloud_cmd_last_utc
         if not last:
-            # перший /status: старі записи — історія, подій не створюємо
-            genset.cloud_cmd_last_utc = entries[-1][0] if entries else (genset.relay_time_utc or fields.Datetime.now())
+            # перший /status: старі записи — історія, подій не створюємо; без записів межа — на секунду раніше
+            # (time_utc з точністю до секунди: натискання в ту саму секунду, що й цей /status, — уже нове)
+            genset.cloud_cmd_last_utc = entries[-1][0] if entries else \
+                (genset.relay_time_utc or fields.Datetime.now()) - timedelta(seconds=1)
             return
         new = [(stamp, entry) for stamp, entry in entries if stamp > last]
         if not new:
