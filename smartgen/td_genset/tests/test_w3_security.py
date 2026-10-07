@@ -173,9 +173,9 @@ class TestW3Security(TdGensetCase):
         for name in names:
             label = fields_info[name]['string']
             self.assertTrue(label and not label.isascii(), '%s: підпис «%s» не український' % (name, label))
-        # Odoo 18: експорт вимагає «Доступ до експорту» (base.group_allow_export) — групи модуля його не дають
-        # (відкрите питання у звіті W3); без групи — відмова для будь-якої моделі.
-        self.user_s.groups_id = [(4, self.env.ref('base.group_allow_export').id)]
+        # Odoo 18: експорт вимагає «Доступ до експорту» (base.group_allow_export) — його дає група «Співробітник»
+        # (implied_ids, рішення менеджера щодо AC-59), окремо призначати не треба.
+        self.assertTrue(self.user_s.has_group('base.group_allow_export'))
         reading = self.env['td.genset.reading'].create({
             'genset_id': self.genset.id, 'relay_id': 501, 'ts': datetime(2026, 10, 7, 9, 0), 'fuel_level': 40.0,
             'fuel_sensor_ohm': 95.5, 'water_temp_sensor_ohm': 515.4, 'mains_normal': True,

@@ -10,7 +10,8 @@
     <record id="group_user" model="res.groups">
         <field name="name">Генератори: Співробітник</field>
         <field name="category_id" ref="module_category_td_genset"/>
-        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <!-- base.group_allow_export: експорт «Показань»/«Подій» для Співробітника (ФВ-41, AC-59; рішення менеджера) -->
+        <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('base.group_allow_export'))]"/>
         <field name="comment">Бачить усе, запускає таймер «Робота поза графіком», приймає тривоги, якщо в ланцюжку.</field>
     </record>
 
