@@ -173,6 +173,19 @@ button { cursor: pointer; }
 .t-start { --c: var(--o-ok); --cs: var(--o-ok-soft); }
 .t-manual { --c: var(--o-primary); --cs: var(--o-primary-soft); }
 .t-stop { --c: var(--o-crit); --cs: var(--o-crit-soft); }
+.t-test { --c: var(--o-warn); --cs: var(--o-warn-soft); grid-column: 1 / -1; min-height: 56px; }
+.tile:disabled, .btn:disabled { opacity: .45; cursor: not-allowed; }
+.tile:disabled:hover { border-color: var(--o-border); }
+.tile:disabled:active { transform: none; }
+.lockbar { display: flex; gap: 8px; align-items: flex-start; background: var(--o-warn-soft); color: var(--o-warn); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
+.arrow.cur.crit { background: var(--o-crit-soft); color: var(--o-crit); }
+.gauge.nd svg { opacity: .35; }
+.gauge.nd .gl { color: var(--o-crit); }
+.cb-hint { font-size: 12px; color: var(--o-muted); margin-top: 6px; }
+.simnote { display: flex; gap: 8px; align-items: flex-start; border: 1px dashed var(--o-border-strong); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--o-muted); margin-top: 12px; }
+.simrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--o-border); cursor: pointer; font-size: 13px; }
+.simrow:last-child { border-bottom: 0; }
+.simrow small { display: block; color: var(--o-muted); font-size: 11.5px; }
 .ctl-foot { margin-top: 12px; font-size: 12.5px; color: var(--o-muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 
 /* power diagram */
@@ -542,9 +555,9 @@ select.o-input { padding: 4px 2px; }
       <span class="grow"></span>
       <div class="statusbar" id="statusbar" aria-label="Стан агрегату">
         <button class="arrow" type="button" data-s="standby" disabled>Очікування</button>
-        <button class="arrow" type="button" data-s="crank" disabled>Пуск</button>
+        <button class="arrow" type="button" data-s="start" disabled>Пуск</button>
         <button class="arrow" type="button" data-s="run" disabled>Робота</button>
-        <button class="arrow" type="button" data-s="cool" disabled>Охолодження</button>
+        <button class="arrow" type="button" data-s="stop" disabled>Зупинка</button>
       </div>
     </div>
 
@@ -583,7 +596,7 @@ select.o-input { padding: 4px 2px; }
           <div class="gauges">
             <div class="gauge"><svg id="gRpm" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vRpm">0</b><span>об/хв</span></div><div class="gl">Оберти</div></div>
             <div class="gauge"><svg id="gPow" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vPow">0</b><span>kW</span></div><div class="gl">Потужність</div></div>
-            <div class="gauge"><svg id="gOil" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vOil">0</b><span>kPa</span></div><div class="gl">Тиск оливи</div></div>
+            <div class="gauge" id="gOilWrap"><svg id="gOil" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vOil">0</b><span>kPa</span></div><div class="gl" id="lOil">Тиск оливи</div></div>
             <div class="gauge"><svg id="gTemp" viewBox="0 0 200 118" aria-hidden="true"></svg><div class="gv"><b id="vTemp">35</b><span>°C</span></div><div class="gl">Температура ОР</div></div>
           </div>
         </div>
@@ -595,11 +608,13 @@ select.o-input { padding: 4px 2px; }
         <div class="desk-col">
         <div class="card a-controls">
           <h3>Керування <small id="padState">Очікування</small></h3>
+          <div class="lockbar" id="lockBar" hidden><span class="ms">lock</span><span id="lockTxt"></span></div>
           <div class="pad">
             <button class="tile t-auto" type="button" data-cmd="auto"><span class="ico"><span class="ms">autorenew</span></span><span class="tl">Авто<small>пуск при зникненні мережі</small></span><span class="dot"></span></button>
             <button class="tile t-start" type="button" data-cmd="start"><span class="ico"><span class="ms">play_arrow</span></span><span class="tl">Пуск<small>запустити двигун</small></span><span class="dot"></span></button>
             <button class="tile t-manual" type="button" data-cmd="manual"><span class="ico"><span class="ms">back_hand</span></span><span class="tl">Ручний<small>без автопуску</small></span><span class="dot"></span></button>
             <button class="tile t-stop" type="button" data-cmd="stop"><span class="ico"><span class="ms">stop</span></span><span class="tl">Стоп<small>зупинити двигун</small></span><span class="dot"></span></button>
+            <button class="tile t-test" type="button" data-cmd="test"><span class="ico"><span class="ms">science</span></span><span class="tl">Тест<small>пуск і перевірка під навантаженням</small></span><span class="dot"></span></button>
           </div>
           <div class="ctl-foot"><span>Кожна команда — з підтвердженням і записом у журнал</span><span>HGM6120N</span></div>
         </div>
@@ -614,6 +629,7 @@ select.o-input { padding: 4px 2px; }
           </div>
           <div class="cb"><div class="nm">Автомат генератора<small><span class="led" id="ledGenCB"></span><span id="cbGenTxt">розімкнений</span></small></div><button class="btn" type="button" id="coGen">Замкнути</button></div>
           <div class="cb"><div class="nm">Автомат мережі<small><span class="led" id="ledMainsCB"></span><span id="cbMainsTxt">замкнений</span></small></div><button class="btn" type="button" id="coMains">Розімкнути</button></div>
+          <div class="cb-hint">Команда автомата — перемикач (05H 0005/0006): перед відправкою система читає його положення з контролера (01H 0006/0007).</div>
         </div>
         </div>
       </div>
@@ -657,18 +673,19 @@ select.o-input { padding: 4px 2px; }
       <!-- notebook -->
       <div>
         <div class="tabs" role="tablist">
-          <button role="tab" type="button" aria-selected="true" data-tab="data">Поточні дані</button>
-          <button role="tab" type="button" aria-selected="false" data-tab="schedule">Розклад</button>
+          <button role="tab" type="button" aria-selected="true" data-tab="schedule">Розклад</button>
+          <button role="tab" type="button" aria-selected="false" data-tab="data">Поточні дані</button>
           <button role="tab" type="button" aria-selected="false" data-tab="alarms">Тривоги<span class="cnt" id="cntAlarms">1</span></button>
           <button role="tab" type="button" aria-selected="false" data-tab="log">Журнал команд<span class="cnt" id="cntLog">6</span></button>
         </div>
 
-        <div class="panel" data-panel="data">
+        <div class="panel" data-panel="data" hidden>
           <div style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between">
             <div class="seg" role="group" aria-label="Набір даних">
               <button type="button" aria-pressed="true" data-dset="values">Значення <span class="dim">· 03H</span></button>
               <button type="button" aria-pressed="false" data-dset="flags">Сигнали <span class="dim">· 01H</span></button>
               <button type="button" aria-pressed="false" data-dset="module">Модуль зв'язку</button>
+              <button type="button" aria-pressed="false" data-dset="sim">Імітація</button>
             </div>
             <span class="example-note"><span class="ms">info</span>Усе, що віддає контролер HGM6120N за протоколом v1.7. Значень, яких немає на панелі SmartGen, — приклад.</span>
           </div>
@@ -680,9 +697,13 @@ select.o-input { padding: 4px 2px; }
             <div class="dgrid" id="flagGroups"></div>
           </div>
           <div id="dModule" class="dgrid" hidden></div>
+          <div id="dSim" hidden>
+            <div class="simnote"><span class="ms">science</span><span>Лише для демонстрації мокапу. Перемикачі підміняють сигнали, які в робочому модулі прийдуть від контролера і модуля зв'язку, — щоб побачити, як на них реагують пульт, тривоги і події.</span></div>
+            <div class="dgrid" id="simGrid"></div>
+          </div>
         </div>
 
-        <div class="panel" data-panel="schedule" hidden>
+        <div class="panel" data-panel="schedule">
           <div class="cols2">
             <div>
               <div class="tblhead">Вікна роботи в режимі Авто</div>
@@ -806,7 +827,7 @@ select.o-input { padding: 4px 2px; }
       <button class="fbtn" type="button" aria-pressed="true" data-ef="all">Усі</button>
       <button class="fbtn" type="button" aria-pressed="false" data-ef="run">Роботи генератора</button>
       <button class="fbtn" type="button" aria-pressed="false" data-ef="out">Відключення мережі</button>
-      <button class="fbtn" type="button" aria-pressed="false" data-ef="fuel">Заправки</button>
+      <button class="fbtn" type="button" aria-pressed="false" data-ef="fuel">Паливо</button>
       <button class="fbtn" type="button" aria-pressed="false" data-ef="alarm">Тривоги</button>
     </div>
     <div class="o-list"><table>
@@ -849,7 +870,7 @@ select.o-input { padding: 4px 2px; }
     </div>
   </div>
   <div class="pagebody">
-    <span class="example-note"><span class="ms">info</span>Рівень у баку — з датчика контролера (у відсотках, переводимо в літри за об'ємом бака 145 L). Каністри і рух запасу ведуться в Odoo; кожна заправка звіряється зі стрибком рівня. Цифри — приклад.</span>
+    <span class="example-note"><span class="ms">info</span>Рівень у баку — з датчика контролера (у відсотках, переводимо в літри за об'ємом бака 145 L). Каністри і рух запасу ведуться в Odoo; кожна заправка звіряється з обліком рівня контролера, а падіння рівня без роботи двигуна стає тривогою. Цифри — приклад.</span>
     <div class="kpis" id="fuelKpis"></div>
     <div class="fuel-cols">
       <section class="box">
@@ -870,9 +891,9 @@ select.o-input { padding: 4px 2px; }
       <div id="chUse" class="chart-plot"></div>
     </section>
     <section class="box">
-      <div class="box-head"><div><h4>Заправки генератора</h4><div class="sub">запис в Odoo + підтвердження датчиком рівня</div></div></div>
+      <div class="box-head"><div><h4>Заправки і падіння рівня</h4><div class="sub">запис в Odoo + облік рівня контролером: зміна понад 5 % (03H 0100) підтверджує заправку, а без роботи двигуна — сигналізує про можливий злив</div></div></div>
       <div class="o-list"><table>
-        <thead><tr><th class="sticky">Дата</th><th>Звідки</th><th class="n">Залито, L</th><th class="n">Бак, L</th><th>Хто</th><th>Датчик</th></tr></thead>
+        <thead><tr><th class="sticky">Дата</th><th>Звідки</th><th class="n">Зміна, L</th><th class="n">Бак, L</th><th>Хто</th><th>Контролер</th></tr></thead>
         <tbody id="refBody"></tbody>
       </table></div>
     </section>
@@ -898,11 +919,18 @@ select.o-input { padding: 4px 2px; }
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
   const DAYS_LONG = ["понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота", "неділя"];
-  const CMD = { auto: "Авто", manual: "Ручний", start: "Пуск", stop: "Стоп" };
+  const CMD = { auto: "Авто", manual: "Ручний", start: "Пуск", stop: "Стоп", test: "Тест" };
+  // genset status, 03H 0034 (protocol table 13); the statusbar groups them into four stages
+  const GS = ["Очікування", "Передпусковий підігрів", "Подача палива", "Прокрутка стартером", "Пауза між спробами пуску", "Безпечний пуск",
+    "Холостий хід", "Прогрів", "Очікування навантаження", "Нормальна робота", "Охолодження", "Холостий хід перед зупинкою",
+    "Зупинка (ETS)", "Очікування зупинки", "Невдала зупинка", "Після зупинки"];
+  const stage = g => g === 0 ? "standby" : g <= 7 ? "start" : g <= 9 ? "run" : "stop";
   const fmt = (n, d = 0) => n.toLocaleString("uk-UA", { minimumFractionDigits: d, maximumFractionDigits: d });
 
   const S = {
-    mode: "auto", source: "schedule", unit: "standby", genCB: false, mainsCB: true, timer: null,
+    mode: "auto", source: "schedule", gs: 0, gsEnd: 0, genCB: false, mainsCB: true, timer: null,
+    remoteLock: false, nd: { oil: false },   // 01H 0004; 03H value 32766 = no data
+    inputs: { access: false, fire: false, alarm: false, inhibit: false },   // CMM366B inputs (reqdatachange)
     schedule: [0, 1, 2, 3, 4].map(d => ({ day: d, start: "08:45", end: "18:30", on: true })),
     exceptions: [{ date: "2026-12-31", action: "custom", start: "08:45", end: "14:00" }, { date: "2027-01-01", action: "skip" }],
     log: [], chat: [],
@@ -995,7 +1023,7 @@ select.o-input { padding: 4px 2px; }
   function draw() {
     setRpm(V.rpm); $("#vRpm").textContent = fmt(V.rpm);
     setPow(V.kw); $("#vPow").textContent = fmt(V.kw);
-    setOil(V.oil); $("#vOil").textContent = fmt(V.oil);
+    setOil(S.nd.oil ? 0 : V.oil); $("#vOil").textContent = S.nd.oil ? "—" : fmt(V.oil);
     setTemp(V.temp); $("#vTemp").textContent = fmt(V.temp);
     for (const r of refs) {
       const v = Math.max(0, r.get());
@@ -1006,11 +1034,12 @@ select.o-input { padding: 4px 2px; }
 
   // ---------- simulated genset
   function targets() {
-    const running = S.unit === "run" || S.unit === "cool";
+    const g = S.gs;
     Object.assign(T, { rpm: 0, oil: 0, genU: 0, genF: 0, dplus: 0, kw: 0, cur: 0, cos: 1, bat: 27.8, temp: 35 });
-    if (S.unit === "crank") Object.assign(T, { rpm: 380, oil: 80, genU: 40, genF: 6 });
-    if (running) Object.assign(T, { rpm: 1500, oil: 380, genU: 230, genF: 50, dplus: 27.6, bat: 28.3, temp: 72 });
-    if (S.genCB && S.unit === "run") Object.assign(T, { kw: 18, cur: 27, cos: 0.92 });
+    if (g === 3) Object.assign(T, { rpm: 380, oil: 80, genU: 40, genF: 6 });
+    if ([5, 6, 11, 12, 13].includes(g)) Object.assign(T, { rpm: 900, oil: 250, genU: 140, genF: 30, dplus: 27.4, bat: 28.1, temp: 50 });
+    if ((g >= 7 && g <= 10) || g === 14) Object.assign(T, { rpm: 1500, oil: 380, genU: 230, genF: 50, dplus: 27.6, bat: 28.3, temp: 72 });
+    if (S.genCB && (g === 8 || g === 9)) Object.assign(T, { kw: 18, cur: 27, cos: 0.92 });
   }
   setInterval(() => {
     for (const k in V) {
@@ -1021,23 +1050,32 @@ select.o-input { padding: 4px 2px; }
   }, 80);
 
   // ---------- form rendering
-  const MODE = { auto: ["Авто", "b-teal"], manual: ["Ручний", "b-prim"], stop: ["Стоп", "b-mute"] };
+  const MODE = { auto: ["Авто", "b-teal"], manual: ["Ручний", "b-prim"], stop: ["Стоп", "b-mute"], test: ["Тест", "b-warn"] };
   const SRC = { schedule: ["Розклад", "b-info"], timer: ["Таймер", "b-warn"], manual: ["Вручну", "b-prim"] };
-  const UNIT = { standby: "Очікування", crank: "Пуск", run: "Робота", cool: "Охолодження" };
+  const gsLeft = () => S.gsEnd ? Math.max(0, Math.ceil((S.gsEnd - Date.now()) / 1000)) : 0;
+  const isLocked = () => S.remoteLock || S.inputs.inhibit;
+  function renderGs() { const l = gsLeft(); $("#padState").textContent = GS[S.gs] + (l ? ` · ${l} с` : ""); }
   const badge = (el, [t, c]) => { el.className = "badge " + c; el.textContent = t; };
 
   function render() {
     badge($("#fMode"), MODE[S.mode]);
     badge($("#fSrc"), SRC[S.source]);
     badge($("#fFeed"), S.genCB ? ["Генератор", "b-warn"] : S.mainsCB ? ["Мережа", "b-ok"] : ["Немає живлення", "b-crit"]);
-    $$("#statusbar .arrow").forEach(a => a.classList.toggle("cur", a.dataset.s === S.unit));
-    $("#padState").textContent = UNIT[S.unit];
+    $$("#statusbar .arrow").forEach(a => { a.classList.toggle("cur", a.dataset.s === stage(S.gs)); a.classList.toggle("crit", S.gs === 14); });
+    renderGs();
     $("[data-cmd=auto]").classList.toggle("active", S.mode === "auto");
     $("[data-cmd=manual]").classList.toggle("active", S.mode === "manual");
-    $("[data-cmd=start]").classList.toggle("active", S.unit === "crank" || S.unit === "run");
-    $("[data-cmd=stop]").classList.toggle("active", S.unit === "cool");
-    $("#gaugeNote").textContent = S.unit === "standby" ? "двигун зупинено" : UNIT[S.unit].toLowerCase();
-    $("#nGen").classList.toggle("on", S.unit !== "standby");
+    $("[data-cmd=test]").classList.toggle("active", S.mode === "test");
+    $("[data-cmd=start]").classList.toggle("active", stage(S.gs) === "start" || stage(S.gs) === "run");
+    $("[data-cmd=stop]").classList.toggle("active", stage(S.gs) === "stop");
+    $("#gaugeNote").textContent = S.gs === 0 ? "двигун зупинено" : GS[S.gs].toLowerCase();
+    $("#nGen").classList.toggle("on", S.gs !== 0);
+    const lockWhy = [S.remoteLock && "блокування на контролері (01H 0004)", S.inputs.inhibit && "вхід модуля «Заборона дистанційного керування»"].filter(Boolean);
+    $("#lockBar").hidden = !lockWhy.length;
+    $("#lockTxt").textContent = `Дистанційне керування заблоковано: ${lockWhy.join(" і ")}. Команди з пульта, розкладу і таймера не надсилаються.`;
+    $$("[data-cmd], #coGen, #coMains, #durForm [type=submit]").forEach(b => (b.disabled = lockWhy.length > 0));
+    $("#gOilWrap").classList.toggle("nd", S.nd.oil);
+    $("#lOil").textContent = S.nd.oil ? "Тиск оливи · немає даних" : "Тиск оливи";
     $("#nMains").classList.toggle("on", S.mainsCB);
     $("#nLoad").classList.toggle("on", S.genCB || S.mainsCB);
     $("#wGen").className = "wire" + (S.genCB ? " on" : "");
@@ -1145,7 +1183,7 @@ select.o-input { padding: 4px 2px; }
     const n = S.alarms.filter(a => a.when === "активна").length;
     $("#cntAlarms").textContent = n; $("#statAlarms").textContent = n;
   }
-  const RES = { pending: ["Надіслано", "b-info"], ok: ["Підтверджено", "b-ok"] };
+  const RES = { pending: ["Надіслано", "b-info"], ok: ["Підтверджено", "b-ok"], blocked: ["Не надіслано: блокування", "b-crit"] };
   function renderLog() {
     $("#logBody").innerHTML = S.log.map(r => `<tr><td class="num">${r.when}</td><td>${r.who}</td><td>${r.src}</td><td><b>${r.cmd}</b></td>
       <td><span class="badge ${RES[r.res][1]}">${RES[r.res][0]}</span></td></tr>`).join("");
@@ -1175,6 +1213,11 @@ select.o-input { padding: 4px 2px; }
   let nT;
   function notify(text, warn) { const n = $("#notif"); n.textContent = text; n.className = "notif" + (warn ? " warn" : ""); n.hidden = false; clearTimeout(nT); nT = setTimeout(() => (n.hidden = true), 2800); }
   function send(cmd, who, src, effect) {
+    if (isLocked()) {
+      S.log.unshift({ when: kyiv().full, who, src, cmd, res: "blocked" });
+      S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv().hhmm, text: `Команду <b>${cmd}</b> (${src}) не надіслано: дистанційне керування заблоковано.`, track: true });
+      return render();
+    }
     const row = { when: kyiv().full, who, src, cmd, res: "pending" };
     S.log.unshift(row);
     render();
@@ -1184,12 +1227,26 @@ select.o-input { padding: 4px 2px; }
       render();
     }, 1200);
   }
-  function startUnit() { S.unit = "crank"; render(); setTimeout(() => { S.unit = "run"; render(); }, 2200); }
+  // the controller walks through its own states; each step has a delay the panel counts down (03H 0035)
+  const START = [[1, 3], [3, 2], [5, 2], [6, 2], [7, 3], [9, 0]], STOP = [[10, 4], [11, 2], [13, 2], [15, 2], [0, 0]];
+  let seqT = null;
+  function runSeq(steps, done) {
+    clearTimeout(seqT);
+    const step = i => {
+      const [g, sec] = steps[i];
+      S.gs = g; S.gsEnd = sec ? Date.now() + sec * 1000 : 0; render();
+      if (sec) seqT = setTimeout(() => step(i + 1), sec * 1000); else done && done();
+    };
+    step(0);
+  }
+  function startUnit(done) {
+    if (S.gs !== 0 && S.gs !== 15) { done && stage(S.gs) === "run" && done(); return render(); }
+    runSeq(START, done);
+  }
   function stopUnit() {
     if (S.genCB) { S.genCB = false; S.mainsCB = true; }
-    if (S.unit === "standby") return render();
-    S.unit = "cool"; render();
-    setTimeout(() => { S.unit = "standby"; render(); }, 3500);
+    if (S.gs === 0 || S.gs === 14) return render();
+    runSeq(STOP);
   }
   function followSchedule(who) {
     S.source = "schedule";
@@ -1218,6 +1275,7 @@ select.o-input { padding: 4px 2px; }
     manual: ["Перевести в ручний режим?", "Автоматичний пуск при зникненні мережі буде вимкнено.", null],
     start: ["Запустити генератор?", "Команда «Пуск» запустить двигун на об'єкті.", "Переконайтеся, що біля генератора немає людей і роботи з ним не ведуться."],
     stop: ["Зупинити генератор?", "Якщо генератор живить об'єкт, навантаження повернеться на мережу, а двигун охолоне і зупиниться.", null],
+    test: ["Перевести в режим Тест?", "Генератор запуститься і після прогріву прийме навантаження — перевірка під навантаженням. Щоб завершити, оберіть Авто або Стоп.", "Переконайтеся, що біля генератора немає людей і роботи з ним не ведуться."],
   };
   $$("[data-cmd]").forEach(b => b.onclick = () => {
     const c = b.dataset.cmd;
@@ -1226,8 +1284,9 @@ select.o-input { padding: 4px 2px; }
       S.source = "manual";
       if (c === "stop") S.timer = null;
       send(CMD[c], "Ви", "Кнопка", () => {
-        if (c === "auto") S.mode = "auto";
+        if (c === "auto") { const wasTest = S.mode === "test"; S.mode = "auto"; if (wasTest && S.mainsCB !== false) stopUnit(); }
         if (c === "manual") S.mode = "manual";
+        if (c === "test") { S.mode = "test"; startUnit(() => { S.genCB = true; S.mainsCB = false; render(); }); }
         if (c === "start") { S.mode = "manual"; startUnit(); }
         if (c === "stop") { S.mode = "manual"; stopUnit(); }
       });
@@ -1238,7 +1297,7 @@ select.o-input { padding: 4px 2px; }
   $("#coGen").onclick = () => {
     if (S.genCB) return ask("Розімкнути автомат генератора?", "Навантаження буде переведено на мережу.", null,
       () => send("Автомат генератора: розімкнути", "Ви", "Кнопка", () => { S.genCB = false; S.mainsCB = true; }));
-    if (S.unit !== "run") return notify("Генератор не працює. Спочатку «Пуск».", true);
+    if (S.gs !== 8 && S.gs !== 9) return notify("Генератор ще не в режимі роботи. Спочатку «Пуск».", true);
     ask("Перевести навантаження на генератор?", "Автомат мережі розімкнеться, автомат генератора замкнеться.", "Під час перемикання об'єкт на мить залишиться без живлення.",
       () => send("Автомат генератора: замкнути", "Ви", "Кнопка", () => { S.genCB = true; S.mainsCB = false; }));
   };
@@ -1255,6 +1314,7 @@ select.o-input { padding: 4px 2px; }
     const h = parseInt($("#durH").value, 10) || 0, m = parseInt($("#durM").value, 10) || 0, err = $("#durErr");
     if (h < 0 || m < 0 || m > 59 || h > 23 || h * 60 + m === 0) { err.textContent = "Вкажіть тривалість від 1 хв до 23 год 59 хв."; err.hidden = false; return; }
     err.hidden = true;
+    if (isLocked()) return notify("Дистанційне керування заблоковано.", true);
     ask("Запустити роботу поза графіком?", `Генератор перейде в режим Авто на ${h} год ${pad(m)} хв, потім у Ручний і Стоп.`, null, () => {
       const now = Date.now();
       S.timer = { start: now, end: now + (h * 60 + m) * 60000 };
@@ -1300,12 +1360,12 @@ select.o-input { padding: 4px 2px; }
     age = (age + 1) % 60;
     $("#fAge").textContent = `${age} с тому`;
     $("#paramAge").textContent = age < 5 ? "щойно" : `${age} с тому`;
-    tick();
+    tick(); renderGs();
     if (!$('[data-panel="data"]').hidden) renderData();
   }, 1000);
   setInterval(render, 30000);
   renderSchedule(); renderExceptions(); renderAlarms(); renderData(); render(); draw();
-  window.__G = { S, V, T, MAINS, TANK, kyiv, fmt, render, inWindow, notify, toMin };
+  window.__G = { S, V, T, MAINS, TANK, GS, kyiv, fmt, render, renderAlarms, inWindow, notify, toMin, gsLeft, runSeq };
 })();
 </script>
 
@@ -1382,9 +1442,16 @@ select.o-input { padding: 4px 2px; }
   }
   // fuel: consumption during runs, refuel below 40 % and at the end (the panel shows 95 % now)
   const fuelPts = [{ t: t0, f: 76 }];
-  const refuels = [];
+  const refuels = [], drains = [];
+  {   // night-time drop of ~12 L with the engine stopped, about 10 days ago
+    let d = NDAYS - 10, t;
+    do { t = t0 + d * DAY + (2 * 60 + 40) * M; d--; } while (d > 1 && runs.some(r => t < r.e + 21 * H && t + H > r.s - H));
+    drains.push({ t, e: t + 25 * M, pct: 8.5 });
+  }
   let fuel = 76;
+  const doDrains = until => { for (const d of drains) if (!d.done && d.t < until) { d.done = true; d.from = fuel; fuelPts.push({ t: d.t, f: fuel }); fuel -= d.pct; d.to = fuel; fuelPts.push({ t: d.e, f: fuel }); } };
   for (const r of runs) {
+    doDrains(r.s);
     fuelPts.push({ t: r.s, f: fuel });
     fuel -= r.fuel;
     fuelPts.push({ t: r.e, f: fuel });
@@ -1393,6 +1460,7 @@ select.o-input { padding: 4px 2px; }
       if (t < now) { refuels.push({ t, from: fuel, to: 95 }); fuelPts.push({ t, f: fuel }, { t: t + M, f: 95 }); fuel = 95; }
     }
   }
+  doDrains(now);
   if (fuel < 93) {
     const lastEnd = runs.length ? runs[runs.length - 1].e : t0;
     const t = Math.min(now - 2 * H, lastEnd + 6 * H);
@@ -1632,14 +1700,21 @@ select.o-input { padding: 4px 2px; }
   });
   for (const f of refuels) events.push({ type: "fuel", s: f.t, e: null, reason: "Рівень палива різко зріс", fuel: f.to - f.from, sum: `${fmt(toL(f.from))} → ${fmt(toL(f.to))} L` });
   events.push({ type: "alarm", s: now - 9 * DAY, e: null, reason: "Попередження контролера (сигнал 01H/37)", sum: "Термін ТО минув — активна", bad: true, title: "Тривога: термін ТО" });
+  for (const d of drains) {
+    const lost = toL(d.from - d.to);
+    events.push({ type: "drain", s: d.t, e: d.e, reason: "Двигун не працював · контролер: зміна рівня понад 5 % (03H 0100)", fuel: d.to - d.from, sum: `${fmt(toL(d.from))} → ${fmt(toL(d.to))} L — можливий злив`, bad: true });
+    S.alarms.push({ level: "crit", title: `Рівень палива впав на ${fmt(lost)} L без роботи двигуна`, sub: `${fmtDT(d.t)}–${kyiv(d.e).hhmm}: ${fmt(toL(d.from))} → ${fmt(toL(d.to))} L. Можливий злив — перевірте бак.`, when: fmtDT(d.t), example: true });
+  }
+  G.renderAlarms();
   events.sort((a, b) => b.s - a.s);
   const EV = {
     run: ["Робота генератора", "bolt", "var(--o-teal)"], out: ["Відключення мережі", "power_off", "var(--o-crit)"],
     fuel: ["Заправка", "local_gas_station", "var(--o-info)"], alarm: ["Тривога", "warning", "var(--o-warn)"],
+    drain: ["Падіння рівня палива", "trending_down", "var(--o-crit)"], input: ["Вхід модуля", "sensors", "var(--o-crit)"],
   };
   let evf = "all";
   function renderEvents() {
-    const rows = events.filter(e => evf === "all" || e.type === evf);
+    const rows = events.filter(e => evf === "all" || e.type === evf || (evf === "fuel" && e.type === "drain"));
     $("#evBody").innerHTML = rows.map(e => {
       const [name, icon, col] = EV[e.type];
       return `<tr>
@@ -1653,14 +1728,14 @@ select.o-input { padding: 4px 2px; }
         <td>${e.bad ? `<span class="badge b-warn">${e.sum}</span>` : e.sum}</td></tr>`;
     }).join("");
     const c = t => events.filter(e => e.type === t).length;
-    $("#evCount").textContent = `${rows.length} з ${events.length}: роботи ${c("run")}, відключення ${c("out")}, заправки ${c("fuel")}, тривоги ${c("alarm")}`;
+    $("#evCount").textContent = `${rows.length} з ${events.length}: роботи ${c("run")}, відключення ${c("out")}, заправки ${c("fuel")}, падіння рівня ${c("drain")}, тривоги ${c("alarm")}`;
   }
   $$("[data-ef]").forEach(b => b.onclick = () => { evf = b.dataset.ef; $$("[data-ef]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); renderEvents(); });
 
   // ---------- full controller data (form tab «Поточні дані»)
   const dt = kyiv(now);
   const VALS = () => {
-    const run = S.unit === "run" || S.unit === "cool", u = V.genU;
+    const run = S.gs >= 5 && S.gs <= 14, u = V.genU, ND = '<span class="badge b-mute">немає даних · 32766</span>';
     return [
       ["Мережа", "03H", [
         ["0000", "UA", `${MAINS.ua} V`], ["0001", "UB", `${MAINS.ub} V`], ["0002", "UC", `${MAINS.uc} V`],
@@ -1681,21 +1756,21 @@ select.o-input { padding: 4px 2px; }
       ]],
       ["Двигун", "03H", [
         ["0023", "Оберти", `${fmt(V.rpm)} об/хв`], ["0017", "Температура ОР", `${fmt(V.temp)} °C`], ["0018", "Опір датчика температури", "182,4 Ω"],
-        ["0019", "Тиск оливи", `${fmt(V.oil)} kPa`], ["0020", "Опір датчика тиску", "10,2 Ω"],
+        ["0019", "Тиск оливи", S.nd.oil ? ND : `${fmt(V.oil)} kPa`], ["0020", "Опір датчика тиску", S.nd.oil ? ND : "10,2 Ω"],
         ["0021", "Рівень палива", `${fmt(V.fuel)} % · ≈ ${fmt(toL(V.fuel))} L`], ["0022", "Опір датчика рівня", "18,5 Ω"],
         ["0024", "Напруга АКБ", `${fmt(V.bat, 1)} V`], ["0025", "Напруга D+ (зарядка)", `${fmt(V.dplus, 1)} V`],
       ]],
       ["Стан і таймери", "03H", [
-        ["0034", "Стан агрегату", { standby: "0 · Очікування", crank: "3 · Прокрутка", run: "9 · Нормальна робота", cool: "10 · Охолодження" }[S.unit]],
-        ["0035", "Затримка стану", "0 с"], ["0036", "Дистанційний пуск", "0 · Без затримки"], ["0037", "Затримка", "0 с"],
+        ["0034", "Стан агрегату", `${S.gs} · ${G.GS[S.gs]}`],
+        ["0035", "Затримка стану", `${G.gsLeft()} с`], ["0036", "Дистанційний пуск", "0 · Без затримки"], ["0037", "Затримка", "0 с"],
         ["0038", "Стан АВР", S.genCB ? "Генератор" : "Мережа"], ["0039", "Затримка АВР", "0 с"],
       ]],
       ["Лічильники і ТО", "03H", [
         ["0042–0045", "Мотогодини", "33 год 44 хв 12 с"], ["0046–0047", "Кількість пусків", "38"], ["0048–0049", "Вироблено енергії", "251 kWh"],
         ["0030–0031", "До ТО", "0 год 0 хв"],
       ]],
-      ["Паливо: облік", "03H · лише HGM6100N", [
-        ["0098", "Зміна рівня (журнал подій)", "0 %"], ["0099", "Початковий рівень", "95 %"], ["0100", "Зміна понад 5 %", "ні"],
+      ["Паливо: облік контролера", "03H · серія HGM6100N", [
+        ["0098", "Зміна рівня (журнал подій)", "0 %"], ["0099", "Початковий рівень", "95 %"], ["0100", "Зміна понад 5 %", "ні · ознака для заправок і падінь рівня"],
         ["0101–0110", "Останні 10 записів рівня", "95 · 95 · 95 · 95 · 94 · 94 · 95 · 95 · 95 · 95 %"], ["0112", "Сума масиву", "949"],
       ]],
       ["Контролер", "03H", [
@@ -1706,18 +1781,66 @@ select.o-input { padding: 4px 2px; }
   };
   const FLAGS = [
     ["Режим і стан", "k-state", [[0, "Загальна тривога"], [1, "Загальне попередження"], [2, "Загальна аварійна зупинка"], [3, "Дистанційний режим"], [4, "Дистанційне блокування"], [6, "Мережа під навантаженням"], [7, "Генератор під навантаженням"], [40, "Режим Тест"], [41, "Режим Авто"], [42, "Режим Ручний"], [43, "Режим Стоп"], [78, "Пропущено запуск за розкладом"]]],
-    ["Аварійні зупинки", "k-crit", [[8, "Аварійний стоп"], [9, "Перевищення обертів"], [10, "Занижені оберти"], [11, "Втрата сигналу обертів"], [12, "Висока частота"], [13, "Низька частота"], [14, "Висока напруга"], [15, "Низька напруга"], [16, "Перевантаження за струмом"], [17, "Невдалий пуск"], [18, "Висока температура ОР"], [19, "Низький тиск оливи"], [20, "Втрата частоти"], [21, "Аварійний вхід"], [22, "Низький рівень палива"], [23, "Низький рівень ОР"], [44, "Обрив датчика температури"], [45, "Обрив датчика тиску"], [46, "Прострочене ТО"], [47, "Перевантаження за потужністю"]]],
-    ["Попередження", "k-warn", [[24, "Висока температура ОР"], [25, "Низький тиск оливи"], [26, "Перевантаження за струмом"], [27, "Невдала зупинка"], [28, "Низький рівень палива"], [29, "Немає заряду D+"], [30, "Низька напруга АКБ"], [31, "Висока напруга АКБ"], [32, "Вхід попередження"], [33, "Втрата сигналу обертів"], [34, "Низький рівень ОР"], [35, "Обрив датчика температури"], [36, "Обрив датчика тиску"], [37, "Термін ТО"], [38, "Збій зарядного пристрою"], [39, "Перевантаження за потужністю"]]],
+    ["Аварійні зупинки", "k-crit", [[8, "Аварійний стоп"], [9, "Перевищення обертів"], [10, "Занижені оберти"], [11, "Втрата сигналу обертів"], [12, "Висока частота"], [13, "Низька частота"], [14, "Висока напруга"], [15, "Низька напруга"], [16, "Перевантаження за струмом"], [17, "Невдалий пуск"], [18, "Висока температура ОР"], [19, "Низький тиск оливи"], [20, "Втрата частоти"], [21, "Аварійний вхід"], [22, "Низький рівень палива"], [23, "Низький рівень ОР"], [44, "Обрив датчика температури"], [45, "Обрив датчика тиску"], [46, "Прострочене ТО"], [47, "Перевантаження за потужністю"], [54, "Протікання рідини"], [62, "Вхід: перевантаження за струмом"], [63, "Вхід: перевищення обертів"], [70, "Висока температура (аналоговий датчик)"], [71, "Низький тиск оливи (аналоговий датчик)"]]],
+    ["Попередження", "k-warn", [[24, "Висока температура ОР"], [25, "Низький тиск оливи"], [26, "Перевантаження за струмом"], [27, "Невдала зупинка"], [28, "Низький рівень палива"], [29, "Немає заряду D+"], [30, "Низька напруга АКБ"], [31, "Висока напруга АКБ"], [32, "Вхід попередження"], [33, "Втрата сигналу обертів"], [34, "Низький рівень ОР"], [35, "Обрив датчика температури"], [36, "Обрив датчика тиску"], [37, "Термін ТО"], [38, "Збій зарядного пристрою"], [39, "Перевантаження за потужністю"], [79, "Протікання рідини"]]],
     ["Мережа", "k-state", [[64, "Аварія мережі"], [65, "Мережа в нормі"], [66, "Перенапруга"], [67, "Недонапруга"], [68, "Обрив фази"], [69, "Відсутність мережі"]]],
     ["Генератор", "k-state", [[72, "Генератор у нормі"], [73, "Перенапруга"], [74, "Недонапруга"], [75, "Висока частота"], [76, "Низька частота"], [77, "Перевантаження за струмом"]]],
     ["Входи і виходи", "k-io", [[48, "Вхід аварійного стопу"], [49, "Дод. вхід 1"], [50, "Дод. вхід 2"], [51, "Дод. вхід 3"], [52, "Дод. вхід 4"], [53, "Дод. вхід 5"], [56, "Реле стартера"], [57, "Реле палива"], [58, "Дод. вихід 1"], [59, "Дод. вихід 2"], [60, "Дод. вихід 3"], [61, "Дод. вихід 4"]]],
   ];
+  const INPUTS = [   // key, name, protocol field, alarm level
+    ["fire", "Пожежна сигналізація", "FireAlarm", "crit"], ["access", "Доступ до приміщення", "AccessAlarm", "warn"],
+    ["alarm", "Тривожний вхід", "AlarmInput", "crit"], ["inhibit", "Заборона дистанційного керування", "InhbitRemote", "warn"]];
+  const SIMS = [
+    ["Контролер HGM6120N", [
+      ["remoteLock", "Дистанційне блокування", "01H 0004 — пульт стає недоступним"],
+      ["stopFail", "Невдала зупинка", "03H 0034 = 14, 01H 0027"],
+      ["oilNd", "Обрив датчика тиску оливи", "03H 0019 = 32766, 01H 0036"]]],
+    ["Модуль CMM366B: входи", INPUTS.map(([k, t, fld]) => [`in_${k}`, t, `${fld} · reqdatachange`])],
+  ];
+  const simOpen = {};
+  function simAlarm(key, on, level, title, sub, evTitle) {
+    const t = Date.now();
+    if (on) {
+      S.alarms.unshift({ key, level, title, sub, when: "активна" });
+      simOpen[key] = { type: key.startsWith("in_") ? "input" : "alarm", s: t, e: null, reason: sub, sum: "активна", bad: true, title: evTitle };
+      events.unshift(simOpen[key]);
+    } else {
+      const a = S.alarms.find(x => x.key === key && x.when === "активна");
+      if (a) { a.when = `знято ${kyiv(t).hhmm}`; a.level = "ok"; }
+      if (simOpen[key]) { simOpen[key].e = t; simOpen[key].sum = "знято"; simOpen[key].bad = false; delete simOpen[key]; }
+    }
+    S.chat.unshift({ day: "Сьогодні", who: "Система", time: kyiv(t).hhmm, text: on ? `<b>${title}</b>. ${sub}` : `${title} — знято.`, track: true });
+    events.sort((a, b) => b.s - a.s);
+    G.renderAlarms(); renderEvents();
+  }
+  $("#simGrid").innerHTML = SIMS.map(([t, rows]) => `<div class="dcard"><h5>${t}<small>імітація</small></h5>${rows.map(([k, n, src]) =>
+    `<label class="simrow"><span>${n}<small>${src}</small></span><span class="switch"><input type="checkbox" data-sim="${k}"><span></span></span></label>`).join("")}</div>`).join("");
+  $("#simGrid").onchange = e => {
+    const k = e.target.dataset.sim, on = e.target.checked;
+    if (!k) return;
+    if (k === "remoteLock") { S.remoteLock = on; simAlarm(k, on, "warn", "Дистанційне керування заблоковано на контролері", "Сигнал 01H 0004. Команди не надсилаються, доки блокування не знімуть на об'єкті.", "Тривога: блокування"); }
+    if (k === "stopFail") {
+      if (on) { G.runSeq([[14, 0]]); simAlarm(k, on, "crit", "Невдала зупинка", "Двигун не зупинився після команди «Стоп» (стан 14, 01H 0027). Потрібен виїзд на об'єкт.", "Тривога: невдала зупинка"); }
+      else { G.runSeq([[15, 2], [0, 0]]); simAlarm(k, on, "crit", "Невдала зупинка", "", "Тривога: невдала зупинка"); }
+    }
+    if (k === "oilNd") { S.nd.oil = on; simAlarm(k, on, "warn", "Немає даних з датчика тиску оливи", "Контролер повертає 32766 (на панелі «###»), сигнал «Обрив датчика тиску» 01H 0036.", "Тривога: датчик тиску"); }
+    if (k.startsWith("in_")) {
+      const [key, name, fld, lvl] = INPUTS.find(x => x[0] === k.slice(3));
+      S.inputs[key] = on;
+      simAlarm(k, on, lvl, `Вхід модуля: ${name.toLowerCase()}`, `Модуль CMM366B передав ${fld} = ${on ? 1 : 0}.${key === "inhibit" ? " Дистанційне керування заборонено на об'єкті." : ""}`, `Вхід модуля: ${name.toLowerCase()}`);
+    }
+    G.render(); renderFull();
+  };
+
   function activeFlags() {
-    const run = S.unit !== "standby";
+    const g = S.gs;
     const on = new Set([1, 37, 48, 50, 61, 65]);   // from the panel snapshot: E-stop input, aux in 2, aux out 4; maintenance due
-    if (S.mode === "auto") on.add(41); if (S.mode === "manual") on.add(42);
+    if (S.mode === "auto") on.add(41); if (S.mode === "manual") on.add(42); if (S.mode === "test") on.add(40);
     if (S.mainsCB) on.add(6); if (S.genCB) on.add(7);
-    if (S.unit === "crank") on.add(56); if (run) on.add(57); if (S.unit === "run") on.add(72);
+    if (g === 3) on.add(56); if ((g >= 2 && g <= 11) || g === 14) on.add(57); if (g >= 7 && g <= 10) on.add(72);
+    if (S.remoteLock) on.add(4);
+    if (g === 14) on.add(27);
+    if (S.nd.oil) on.add(36);
     return on;
   }
   let dset = "values";
@@ -1726,16 +1849,20 @@ select.o-input { padding: 4px 2px; }
     const on = activeFlags();
     $("#flagGroups").innerHTML = FLAGS.map(([t, kind, items]) => `<div class="dcard"><h5>${t}<small>${items.filter(([a]) => on.has(a)).length} з ${items.length} активні</small></h5><div class="flags">${items.map(([a, k]) => `<span class="flag ${kind}${on.has(a) ? " on" : ""}" title="Сигнал 01H, адреса ${a}">${k}<i>${String(a).padStart(4, "0")}</i></span>`).join("")}</div></div>`).join("");
     $("#dModule").innerHTML = [
-      ["Модуль CMM366B-4G", "протокол v1.2", [["ID модуля", "313037 303133 471700 3D002E"], ["Підключення до контролера", "USB, 9600 біт/с"], ["Сервер", "ретранслятор → хмара SmartGen"], ["Остання передача", "щойно"], ["Частота передачі", "раз на 3 с онлайн, раз на хв офлайн"]]],
-      ["Розташування (GPS/BeiDou)", "", [["Широта", "50.4501"], ["Довгота", "30.5234"], ["Висота", "179 м"], ["Тип координат", "GPS"]]],
-      ["Входи модуля", "", [["Доступ до приміщення", '<span class="badge b-mute">неактивний</span>'], ["Пожежна сигналізація", '<span class="badge b-mute">неактивний</span>'], ["Тривожний вхід", '<span class="badge b-mute">неактивний</span>'], ["Заборона дистанційного керування", '<span class="badge b-mute">неактивний</span>']]],
+      ["Модуль CMM366B-4G", "протокол v1.2", [
+        ["ID модуля (hostid)", "313037 303133 471700 3D002E"], ["Назва (hostname)", "Sadova-Gen"], ["Контролер (moduletype)", "HGM6120"],
+        ["Підключення до контролера", "USB, 9600 біт/с"], ["Режим передачі (data_mode)", "лише зміни"],
+        ["Частота онлайн / офлайн", "3 с / 60 с · задає наш сервер"], ["Останній heartbeat", "щойно"],
+        ["Час модуля", "синхронізовано із сервером"], ["Сервер", "ретранслятор → хмара SmartGen"]]],
+      ["Розташування", "", [["Широта", "50.4501"], ["Довгота", "30.5234"], ["Висота", "179 м"], ["Тип координат (gpsen)", "GPS"]]],
+      ["Входи модуля", "reqdatachange", INPUTS.map(([k, t, , lvl]) => [t, S.inputs[k] ? `<span class="badge ${lvl === "crit" ? "b-crit" : "b-warn"}">активний</span>` : '<span class="badge b-mute">неактивний</span>'])],
     ].map(([t, sub, rows]) => `<div class="dcard"><h5>${t}<small>${sub}</small></h5><table><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td class="n">${v}</td></tr>`).join("")}</tbody></table></div>`).join("");
   }
   window.__full = renderFull;
   $$("[data-dset]").forEach(b => b.onclick = () => {
     dset = b.dataset.dset;
     $$("[data-dset]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    $("#dValues").hidden = dset !== "values"; $("#dFlags").hidden = dset !== "flags"; $("#dModule").hidden = dset !== "module";
+    $("#dValues").hidden = dset !== "values"; $("#dFlags").hidden = dset !== "flags"; $("#dModule").hidden = dset !== "module"; $("#dSim").hidden = dset !== "sim";
   });
 
   // ---------- fuel: tank level from the controller, canister stock and moves kept in Odoo
@@ -1808,9 +1935,14 @@ select.o-input { padding: 4px 2px; }
       <div><b>${m.title}</b><small>${m.sub ? m.sub + " · " : ""}${m.who} · ${fmtDT(m.t)}</small></div>
       <div class="mv-n"><b class="${m.delta > 0 ? "pos" : ""}">${m.delta ? `${m.delta > 0 ? "+" : "−"}${fmt(Math.abs(m.delta))} L` : "—"}</b><small>залишок ${fmt(m.bal)} L</small></div></div>`).join("");
 
-    $("#refBody").innerHTML = [...fuelLog].sort((a, b) => b.t - a.t).map(f => `<tr><td class="sticky">${fmtDT(f.t)}</td><td>${f.src}</td><td class="n">${fmt(f.l)}</td>
-      <td class="n">${fmt(toL(f.from))} → ${fmt(toL(f.to))}</td><td>${f.who}</td>
-      <td>${f.sensor === "ok" ? `<span class="badge b-ok">підтверджено +${fmt(toL(f.to - f.from))} L</span>` : '<span class="badge b-info">очікує показання</span>'}</td></tr>`).join("");
+    const conf = f => f.sensor !== "ok" ? '<span class="badge b-info">очікує показання</span>'
+      : f.to - f.from >= 5 ? `<span class="badge b-ok" title="Контролер виставив ознаку зміни рівня понад 5 % (03H 0100)">підтверджено: +${fmt(toL(f.to - f.from))} L</span>`
+      : `<span class="badge b-ok" title="Менше 5 % — контролер ознаку не виставляє, звіряємо за рівнем">за рівнем: +${fmt(toL(f.to - f.from))} L</span>`;
+    $("#refBody").innerHTML = [...fuelLog.map(f => ({ ...f, kind: "in" })), ...drains.map(d => ({ ...d, kind: "drop" }))].sort((a, b) => b.t - a.t).map(f => f.kind === "drop"
+      ? `<tr><td class="sticky">${fmtDT(f.t)}</td><td>Двигун не працював</td><td class="n" style="color:var(--o-crit)">−${fmt(toL(f.from - f.to))}</td>
+        <td class="n">${fmt(toL(f.from))} → ${fmt(toL(f.to))}</td><td class="dim">—</td><td><span class="badge b-crit">падіння без роботи · можливий злив</span></td></tr>`
+      : `<tr><td class="sticky">${fmtDT(f.t)}</td><td>${f.src}</td><td class="n">+${fmt(f.l)}</td>
+        <td class="n">${fmt(toL(f.from))} → ${fmt(toL(f.to))}</td><td>${f.who}</td><td>${conf(f)}</td></tr>`).join("");
     $("#statFuel").textContent = `${fmt(st)} L`;
     renderUse();
   }
@@ -1911,7 +2043,8 @@ select.o-input { padding: 4px 2px; }
         rec.sensor = "ok";
         events.push({ type: "fuel", s: t, e: null, reason: `${src} · Ви`, fuel: to - from, sum: `${fmt(toL(from))} → ${fmt(toL(to))} L` });
         events.sort((a, b) => b.s - a.s); renderEvents();
-        chat("Система", `Датчик рівня підтвердив заправку: ${fmt(toL(from))} → ${fmt(toL(to))} L.`);
+        chat("Система", to - from >= 5 ? `Контролер зафіксував зміну рівня понад 5 % (03H 0100): ${fmt(toL(from))} → ${fmt(toL(to))} L. Заправку підтверджено.`
+          : `Рівень у баку зріс ${fmt(toL(from))} → ${fmt(toL(to))} L — заправку підтверджено за рівнем (менше 5 %, ознака контролера не виставляється).`);
         renderFuel();
       }, 3000);
     }, { okLabel: "Записати заправку", onInput: upd });
