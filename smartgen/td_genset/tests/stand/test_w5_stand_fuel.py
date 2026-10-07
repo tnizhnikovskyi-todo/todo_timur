@@ -69,7 +69,10 @@ class TestStandFuel(TdGensetStandCase):
         self.set_fuel(64)
         event = self.events('refuel')
         self.assertEqual(len(event), 1)
-        self.assertAlmostEqual(event.fuel_delta_l, self.genset.fuel_liters - before, delta=0.5)
+        # літри «за %»: ΔL — з різниці відсотків × об'єм бака (14 % → 20 L), а не з різниці округлених літрів
+        # знімків (72 → 93 L), щоб не округлювати двічі (як у ΔL «Роботи», AC-38)
+        self.assertAlmostEqual(event.fuel_delta_l, round((64 - 50) / 100.0 * self.genset.tank_volume_l), delta=0.5)
+        self.assertAlmostEqual(event.fuel_delta_l, self.genset.fuel_liters - before, delta=1.0)
         self.assertFalse(self.alarms('drain'))
         self.run_scheduler()                                       # звірка заправок (_reconcile_pending)
         self.assertEqual(refuel.sensor_state, 'confirmed')
@@ -117,8 +120,11 @@ class TestStandFuel(TdGensetStandCase):
         Calibration = self.env['td.genset.fuel.calibration']
         with self.assertRaises(AccessError):
             Calibration.with_user(self.user_a).create({'genset_id': self.genset.id, 'ohm': 10.0, 'liters': 0.0})
+        # немонотонна таблиця AC-69: 10 Ом → 0 L, 100 Ом → 137 L, далі 190 Ом → 130 L (дві точки, що лише спадають,
+        # — допустима крива датчика зі спадною характеристикою, тому перевіряємо в контексті таблиці)
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
-            Calibration.create([{'genset_id': self.genset.id, 'ohm': 100.0, 'liters': 137.0},
+            Calibration.create([{'genset_id': self.genset.id, 'ohm': 10.0, 'liters': 0.0},
+                                {'genset_id': self.genset.id, 'ohm': 100.0, 'liters': 137.0},
                                 {'genset_id': self.genset.id, 'ohm': 190.0, 'liters': 130.0}])
         Calibration.with_user(self.user_t).create([
             {'genset_id': self.genset.id, 'ohm': ohm, 'liters': liters} for ohm, liters in CALIBRATION])
