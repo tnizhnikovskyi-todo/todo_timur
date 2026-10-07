@@ -17,6 +17,7 @@ $T/serve.sh td_<имя> [порт]                      # сервер в фон
 $T/serve.sh stop td_<имя>                        # остановить (serve.sh status — что запущено)
 $T/drop_db.sh td_<имя>                           # удалить базу и filestore (--pattern 'td_w1_%'; занятые пропускает)
 $T/setup.sh template                             # пересобрать шаблон td_template (≈45 с)
+$T/i18n_export.sh td_<имя> [--fill-same]         # обновить td_genset/i18n/uk_UA.po из базы с модулем (см. ниже)
 python3 /home/user/todo_timur/smartgen/tools/fake_relay.py --port 8081 --token dev-token-0123456789abcdefghij --snapshot-sec 10
 ```
 
@@ -129,6 +130,35 @@ python3 smartgen/tools/fake_relay.py --selftest     # → SELF-TEST PASSED (≈1
 `TD_GENSET_STAND_TOKEN`, `TD_GENSET_STAND_SIM`; лог эмулятора — `logs/relay-<db>.log`.
 
 **Никаких запросов на `gen-relay.todo.ltd`**: это живой генератор. Разработка и тесты — только эмулятор.
+
+### Стендовые тесты `td_genset/tests/stand/` (W5)
+
+- `run_stand_tests.sh <db>` → тег `td_genset_stand` (≈45 тестов, ≈40 с): без `TD_GENSET_STAND_URL`/`TOKEN` они
+  пропускаются, адрес — только loopback. Каждый тест сбрасывает эмулятор (`/_sim {"reset": true, "snapshot_sec": 10}`).
+- Сценарии со временем (повторы команд, связь, догон, расписание) и режим ретранслятора 1.1.1 поднимают **свой**
+  экземпляр `fake_relay.py` на свободном порту (`tests/stand/relay_harness.py`, гасится в `tearDown`) с управляемыми
+  часами: файл эмулятора грузится как есть, его `time.time()` сдвигается (`--clock-offset`), а `/_sim` получает
+  ключ `{"clock_advance": N}`; время Odoo сдвигается синхронно (`freezegun`, `tick=True`). Поэтому эти тесты
+  стартуют, например, «в понедельник 08:44 Kyiv» независимо от реального времени.
+- Переменные: `TD_GENSET_FAKE_RELAY` — другой путь к эмулятору; `TD_GENSET_STAND_KEEP_LOGS=1` — не удалять логи
+  своих экземпляров (`/tmp/td_genset_stand_relay_*.log`).
+- `test_w5_stand_harness.py` проверяет только стенд и зелёный всегда; остальные до слияния W1–W4 красные на первой
+  проверке поведения модуля (заглушки W0).
+
+## Переводы `i18n/uk_UA.po` — `i18n_export.sh`
+
+`$T/i18n_export.sh <db> [--fill-same] [--dry-run]` — база должна быть с установленным `td_genset` (например, после
+`run_tests.sh <db>`), сама база не меняется:
+
+1. `odoo-bin --i18n-export=<tmp>/td_genset.pot --modules=td_genset` (шаблон без языка, `--addons-path` своего worktree);
+2. слияние с текущим `td_genset/i18n/uk_UA.po`: `msgmerge --no-fuzzy-matching`, если есть gettext (в контейнере нет),
+   иначе Python `polib` (зависимость Odoo 18, тот же `POFile.merge`, что Odoo использует при импорте). Переводы
+   существующих строк сохраняются, новые добавляются с пустым `msgstr`, исчезнувшие удаляются, `fuzzy` не ставится;
+3. `--fill-same` — пустые `msgstr` строк с кириллицей заполняются тем же текстом (исходные строки модуля уже
+   по-украински, для `uk_UA` перевод = оригинал); `--dry-run` — только статистика.
+
+Печатает статистику (строк / переведено / пустых / fuzzy); лог odoo-bin — `logs/i18n-<db>.log`. Перевод строк без
+кириллицы и проверку «без fuzzy и пустых msgstr для видимых строк» делает интеграция (BUILD_PLAN §3 W5, §4).
 
 ## Оговорки
 
