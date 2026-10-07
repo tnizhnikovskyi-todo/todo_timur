@@ -1,25 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W4. Каркас W0: майстер «Заправити генератор». XML id дії (зберегти!): action_td_genset_refuel_wizard. -->
+<!-- Власник: W4. Майстер «Заправити генератор» (ТР 2.3.11, 2.9; SPEC 5.14; мокап — діалог «Заправка генератора»).
+     XML id дії (зберегти!): action_td_genset_refuel_wizard.
+     Тут же — cron фонового перерахунку літрів (кнопка «Перерахувати літри», ТР 2.9, AC-69): маніфест
+     зафіксовано каркасом (BUILD_PLAN 1.6), тому запис cron лежить у файлі-власнику W4. -->
 <odoo>
     <record id="view_td_genset_refuel_wizard_form" model="ir.ui.view">
         <field name="name">td.genset.refuel.wizard.form</field>
         <field name="model">td.genset.refuel.wizard</field>
         <field name="arch" type="xml">
-            <form string="Заправити генератор">
+            <form string="Заправка генератора">
+                <div class="alert alert-info mb-2" role="status" invisible="not genset_id">
+                    У баку ≈ <field name="fuel_liters" class="oe_inline fw-bold" readonly="1"/> L з
+                    <field name="tank_volume_l" class="oe_inline" readonly="1"/> L · вільно
+                    <field name="free_l" class="oe_inline fw-bold"/> L
+                </div>
                 <group>
-                    <field name="genset_id"/>
-                    <field name="source" widget="radio"/>
-                    <field name="canister_ids" widget="many2many_tags" invisible="source != 'cans'"/>
-                    <field name="source_note" invisible="source != 'other'"/>
+                    <field name="genset_id" options="{'no_create': True}"/>
+                    <field name="source" widget="radio" options="{'horizontal': true}"/>
+                    <field name="source_note" invisible="source != 'other'" placeholder="Паливовоз, АЗС…"/>
                     <field name="liters" invisible="source != 'other'" required="source == 'other'"/>
-                    <field name="free_l"/>
-                    <field name="will_fill_l" invisible="source != 'cans'"/>
                 </group>
-                <div class="alert alert-warning" role="alert" invisible="not hint">
+                <field name="canister_ids" invisible="source != 'cans'" options="{'no_create': True}"
+                       context="{'active_test': True}">
+                    <list>
+                        <field name="name"/>
+                        <field name="liters" string="У каністрі, L"/>
+                        <field name="volume_l" optional="show"/>
+                        <field name="location_id"/>
+                        <field name="state" widget="badge" decoration-success="state == 'full'"
+                               decoration-warning="state == 'part'" optional="hide"/>
+                    </list>
+                </field>
+                <div class="alert alert-success mt-2 mb-0" role="status" invisible="not summary">
+                    <field name="summary" nolabel="1"/>
+                </div>
+                <div class="alert alert-warning mt-2 mb-0" role="alert" invisible="not hint">
                     <field name="hint" nolabel="1"/>
                 </div>
                 <footer>
-                    <button name="action_confirm" type="object" string="Заправити" class="btn-primary" data-hotkey="q"/>
+                    <button name="action_confirm" type="object" string="Записати заправку" class="btn-primary"
+                            data-hotkey="q"/>
                     <button string="Скасувати" class="btn-secondary" special="cancel" data-hotkey="x"/>
                 </footer>
             </form>
@@ -32,4 +52,20 @@
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>
+
+    <data noupdate="1">
+        <!-- Фоновий перерахунок літрів: запускається кнопкою «Перерахувати літри» через _trigger(), партіями
+             по 10 000 знімків з _notify_progress; щоденний запуск без незавершеного перерахунку нічого не робить. -->
+        <record id="cron_recompute_liters" model="ir.cron">
+            <field name="name">Генератори: перерахунок літрів палива</field>
+            <field name="model_id" ref="model_td_genset"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_recompute_liters()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="priority">20</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
 </odoo>
