@@ -231,8 +231,9 @@ class TdGensetMonitoring(models.Model):
                                                                       'first_ts': fields.Datetime.to_string(
                                                                           min(readings.mapped('ts')))}})
             last = readings[-1]
-            values = {payload['id']: reading_model._td_values_with_ohms(payload) for payload in payloads}
-            genset.with_context(td_genset_values=values.get(last.relay_id))._apply_reading(last)
+            payload = next((item for item in payloads if int(item['id']) == last.relay_id), None)
+            values = reading_model._td_values_with_ohms(payload) if payload else None
+            genset.with_context(td_genset_values=values)._apply_reading(last)
             stats = self.env['td.genset.event']._td_process(genset, readings)
             if stats['refuel']:
                 self.env['td.genset.refuel']._reconcile_pending()
