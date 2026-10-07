@@ -10,6 +10,7 @@ no-store) и моделирует генератор (HGM6120N): режимы, �
 Запуск:
     python3 fake_relay.py --port 8081 --token dev-token-0123456789abcdefghij --snapshot-sec 10
     python3 fake_relay.py --port 8081 --token dev-token-0123456789abcdefghij --hostid 3130373031334717003D002E
+    python3 fake_relay.py --port 8081 --clock-offset -3600   # часы эмулятора на час позади реальных
     python3 fake_relay.py --selftest          # прогон сценария на свободном порту → SELF-TEST PASSED
 
 В Odoo (dev): smartgen.relay_url = http://127.0.0.1:8081/api/v1, smartgen.relay_token = <токен>.
@@ -30,6 +31,8 @@ no-store) и моделирует генератор (HGM6120N): режимы, �
     curl -s -d '{"cloud_press": "manual"}' http://127.0.0.1:8081/_sim       # нажали «Ручной» в приложении SmartGen
     curl -s -d '{"set": {"battery_v": 23.5}}' http://127.0.0.1:8081/_sim    # подменить значение
     curl -s -d '{"reset": true}' http://127.0.0.1:8081/_sim                 # всё с нуля (id тоже)
+    curl -s -d '{"link": false, "advance": 600}' http://127.0.0.1:8081/_sim # «прошло 10 минут» без связи
+    curl -s -d '{"fail_next": {"status": 503, "count": 2}}' http://127.0.0.1:8081/_sim  # 2 ответа как от nginx
 
 Ключи POST /_sim (можно несколько в одном запросе; "hostid" выбирает модуль, по умолчанию первый):
     reset, restart (перезапуск ретранслятора: queued/sent → failed "relay restarted", следующий снимок "first"),
@@ -39,10 +42,21 @@ no-store) и моделирует генератор (HGM6120N): режимы, �
     remote_lock, mains_normal, fuel_level (%), crank_failure (следующий пуск неудачен), time_scale, snapshot_sec,
     noise (шум напряжений), version ("1.1.1" — без 5 полей 1.1.3), cloud_press (<команда>), registers_known / coils_known,
     set ({ключ: значение}; null = «нет данных»), unset ([ключи] — снять подмену), drop ([ключи] — убрать ключ
-    из values), snapshot (сделать снимок сейчас).
+    из values), snapshot (сделать снимок сейчас),
+    advance (с: «прожить» N секунд мгновенно — шагами ≤ 1 с, для сдвигов больше ~5,5 ч крупнее (≤ 20 000 шагов):
+    пакеты модуля, плановые снимки с нужными ts, смены состояний, исполнение и таймауты команд,
+    seconds_since_seen; до 31 суток),
+    clock_advance (с: просто перевести часы вперёд, без промежуточных шагов — как обёртка стенда
+    tests/stand/relay_harness.py: следующий тик увидит скачок), clock_offset (с: задать сдвиг часов),
+    fail_next ({"status": 500|502|503|504|4xx, "count": N, "error": "…"} — следующие N запросов к API, кроме
+    /_sim, ещё до проверки токена получают этот код: 500 → {"error": "internal error"}, 502/503/504 — HTML-страница
+    nginx, прочие — {"error": <error или "injected failure">}; null — сбросить).
+Часы эмулятора = time.time() + сдвиг (--clock-offset, clock_offset, advance, clock_advance): от них все ts/*_utc,
+интервал снимков, окно «online» (90 с), seconds_since_seen, uptime, таймауты команд. reset не трогает часы
+(время не идёт назад), но сбрасывает fail_next. GET /_sim показывает clock_offset и fail_next.
 time_scale ускоряет физику: задержки последовательностей пуска/останова, счётчики, расход топлива, а также
-~1 с исполнения команды, паузу 2 с между командами и таймаут 30 с. Интервал снимков (--snapshot-sec), окно
-«online» (90 с) и все отметки времени — реальное время.
+~1 с исполнения команды, паузу 2 с между командами и таймаут 30 с. Интервал снимков (--snapshot-sec) и окно
+«online» от time_scale не зависят.
 """
 
 import argparse
@@ -580,14 +594,19 @@ class Relay:
     """Состояние ретранслятора: модули, снимки, сырые сообщения, журнал команд. Всё — под self.lock."""
 
     def __init__(self, token, hostids, snapshot_sec=60.0, time_scale=1.0, commands_enabled=True,
-                 version="1.1.3", noise=True, seed=1):
+                 version="1.1.3", noise=True, seed=1, clock_offset=0.0):
         self.lock = threading.RLock()
         self.token = token
         self.hostids = list(hostids)
         self.defaults = dict(snapshot_sec=float(snapshot_sec), time_scale=float(time_scale),
                              commands_enabled=bool(commands_enabled), version=version, noise=noise, seed=seed)
         self.stop_event = threading.Event()
+        self.clock_offset = float(clock_offset)   # сдвиг часов эмулятора, с; reset его не трогает
         self._reset(full=True)
+
+    def now(self):
+        """Часы эмулятора: реальное время + сдвиг (--clock-offset, /_sim advance / clock_advance / clock_offset)."""
+        return time.time() + self.clock_offset
 
     # ---------------------------------------------------------- сброс / перезапуск
     def _reset(self, full):
@@ -596,8 +615,9 @@ class Relay:
         self.time_scale = d["time_scale"]
         self.commands_enabled = d["commands_enabled"]
         self.version = d["version"]
-        self.started = time.time()
+        self.started = self.now()
         self.last_tick = self.started
+        self.fail_next = None                     # инъекция ошибок API (/_sim fail_next)
         self.devices = {h: Device(h, d["noise"], d["seed"] + i) for i, h in enumerate(self.hostids)}
         self.readings, self.raw, self.commands = [], [], []
         self.reading_id = self.raw_id = self.command_id = 0
@@ -605,7 +625,7 @@ class Relay:
 
     def _restart(self):
         """Перезапуск ретранслятора: данные и id сохраняются, незавершённые команды → failed."""
-        now = time.time()
+        now = self.now()
         for cmd in self.commands:
             if cmd["status"] in ("queued", "sent"):
                 self._finish(cmd, "failed", now, error="relay restarted")
@@ -624,8 +644,9 @@ class Relay:
                 traceback.print_exc()
 
     def tick(self):
+        """Шаг симуляции по часам эмулятора: связь, пакеты модуля, физика, команды, снимки."""
         with self.lock:
-            now = time.time()
+            now = self.now()
             dt_real = max(0.0, now - self.last_tick)
             self.last_tick = now
             dt = dt_real * self.time_scale
@@ -695,7 +716,7 @@ class Relay:
 
     # ---------------------------------------------------------- команды
     def _new_command(self, dev, command, requested_by, source):
-        now = time.time()
+        now = self.now()
         self.command_id += 1
         cmd = {"id": self.command_id, "created": now, "created_utc": utc(now), "hostid": dev.hostid,
                "command": command, "requested_by": requested_by, "source": source, "status": "queued",
@@ -775,6 +796,31 @@ class Relay:
                     "sent", "done", "response", "error", "created_utc", "sent_utc", "done_utc"]
         return {k: cmd[k] for k in (keys_post if order == "post" else keys_get)}
 
+    # ---------------------------------------------------------- часы и инъекция ошибок
+    def _advance(self, seconds):
+        """«Прожить» seconds секунд часов эмулятора сразу, шагами ≤ 1 с (не больше 20 000 шагов)."""
+        if not 0 <= seconds <= 31 * 86400:
+            raise ApiError(400, "advance must be between 0 and 2678400 seconds")
+        step = max(min(1.0, self.snapshot_sec / 2.0), seconds / 20000.0)
+        self.tick()                               # сначала догнать реальное время
+        left = seconds
+        while left > 1e-9:
+            delta = min(step, left)
+            self.clock_offset += delta
+            left -= delta
+            self.tick()
+
+    def take_failure(self):
+        """Очередная инъекция ошибки (/_sim fail_next) для запроса к API или None."""
+        with self.lock:
+            fail = self.fail_next
+            if not fail:
+                return None
+            fail["count"] -= 1
+            if fail["count"] <= 0:
+                self.fail_next = None
+            return {"status": fail["status"], "error": fail.get("error")}
+
     # ---------------------------------------------------------- /status
     def _device(self, hostid, required=False):
         if hostid is None:
@@ -786,7 +832,7 @@ class Relay:
         return self.devices[hostid]
 
     def status_json(self):
-        now = time.time()
+        now = self.now()
         devices = []
         for dev in self.devices.values():
             seen_ago = None if dev.last_seen is None else int(now - dev.last_seen)
@@ -924,7 +970,9 @@ class Relay:
                                         if c["hostid"] == dev.hostid and c["status"] == "queued"],
                     "values": g.values(),
                 })
-            return {"time_utc": utc(time.time()), "version": self.version, "time_scale": self.time_scale,
+            return {"time_utc": utc(self.now()), "clock_offset": round(self.clock_offset, 3),
+                    "fail_next": dict(self.fail_next) if self.fail_next else None,
+                    "version": self.version, "time_scale": self.time_scale,
                     "snapshot_sec": self.snapshot_sec, "commands_enabled": self.commands_enabled,
                     "counts": {"raw": len(self.raw), "readings": len(self.readings), "commands": len(self.commands)},
                     "last_ids": {"reading": self.reading_id, "raw": self.raw_id, "command": self.command_id},
@@ -937,7 +985,8 @@ class Relay:
         known = {"hostid", "reset", "restart", "link", "link_blip", "seen_ago", "commands_enabled", "no_exec",
                  "reject", "no_reply", "format_learned", "remote_lock", "mains_normal", "fuel_level",
                  "crank_failure", "time_scale", "snapshot_sec", "noise", "cloud_press", "registers_known",
-                 "coils_known", "set", "unset", "drop", "snapshot", "version"}
+                 "coils_known", "set", "unset", "drop", "snapshot", "version", "advance", "clock_advance",
+                 "clock_offset", "fail_next"}
         unknown = sorted(set(data) - known)
         if unknown:
             raise ApiError(400, "unknown _sim keys: %s" % ", ".join(unknown), known=sorted(known))
@@ -946,9 +995,11 @@ class Relay:
                 self._reset(full=True)
             if data.get("restart"):
                 self._restart()
+            if "fail_next" in data:
+                self.fail_next = parse_fail_next(data["fail_next"])
             dev = self._device(data.get("hostid")) or next(iter(self.devices.values()))
             g = dev.genset
-            now = time.time()
+            now = self.now()
             if "time_scale" in data:
                 scale = float(data["time_scale"])
                 if not 0 < scale <= 10000:
@@ -1024,6 +1075,16 @@ class Relay:
                                                          "uid": "action", "params": frame})
                 if not g.flags["remote_lock"]:
                     dev.pending_effects.append((0.5, command))
+            if "clock_offset" in data:
+                self.clock_offset = number(data, "clock_offset")
+            if "clock_advance" in data:
+                jump = number(data, "clock_advance")
+                if jump < 0:
+                    raise ApiError(400, "clock_advance must be >= 0")
+                self.clock_offset += jump                 # без шагов: следующий тик увидит скачок
+            if "advance" in data:
+                self._advance(number(data, "advance"))
+                now = self.now()
             if data.get("snapshot"):
                 if not dev.link:
                     raise ApiError(409, "modem is not connected right now: no snapshots without link")
@@ -1053,6 +1114,40 @@ def qint(query, name, default):
 
 def qflag(query, name):
     return (qstr(query, name) or "").lower() in ("1", "true", "yes", "on")
+
+
+def number(data, key):
+    """Число из тела /_sim (секунды) или 400."""
+    val = data.get(key)
+    if isinstance(val, bool) or not isinstance(val, (int, float)):
+        raise ApiError(400, "%s must be a number of seconds" % key)
+    return float(val)
+
+
+def parse_fail_next(spec):
+    """/_sim fail_next: {"status": 400..599, "count": N ≥ 1 (1), "error": текст} или null."""
+    if spec is None:
+        return None
+    if not isinstance(spec, dict):
+        raise ApiError(400, "fail_next must be an object or null")
+    status, count, error = spec.get("status"), spec.get("count", 1), spec.get("error")
+    if isinstance(status, bool) or not isinstance(status, int) or not 400 <= status <= 599:
+        raise ApiError(400, "fail_next.status must be an HTTP code 400..599")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+        raise ApiError(400, "fail_next.count must be an integer >= 1")
+    if error is not None and not isinstance(error, str):
+        raise ApiError(400, "fail_next.error must be a string")
+    return {"status": status, "count": count, "error": error}
+
+
+NGINX_REASON = {502: "Bad Gateway", 503: "Service Temporarily Unavailable", 504: "Gateway Time-out"}
+
+
+def nginx_page(status):
+    """Страница ошибки nginx по умолчанию (так отвечает прокси, когда ретранслятор недоступен)."""
+    title = "%d %s" % (status, NGINX_REASON[status])
+    return ("<html>\r\n<head><title>%s</title></head>\r\n<body>\r\n<center><h1>%s</h1></center>\r\n"
+            "<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n" % (title, title)).encode("ascii")
 
 
 # ================================================================== HTTP
@@ -1108,6 +1203,14 @@ class RelayHandler(BaseHTTPRequestHandler):
             path = url.path
             query = parse_qs(url.query, keep_blank_values=True)
             is_sim = path in ("/_sim", API_PREFIX + "/_sim")
+            injected = None if is_sim else self.relay.take_failure()
+            if injected:                          # /_sim fail_next: ответ до проверки токена и маршрута
+                status = injected["status"]
+                if status in NGINX_REASON:
+                    self._send(status, None, method, html=nginx_page(status))
+                    return
+                raise ApiError(status, injected["error"] or ("internal error" if status == 500
+                                                             else "injected failure"))
             if not self._token_ok() and not (is_sim and self._is_loopback()):
                 raise ApiError(401, "missing or wrong token")
             if is_sim:
@@ -1136,10 +1239,13 @@ class RelayHandler(BaseHTTPRequestHandler):
             raise ApiError(400, "body must be JSON") from None
         return 200, self.relay.sim_apply(data)
 
-    def _send(self, status, payload, method):
-        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    def _send(self, status, payload, method, html=None):
+        if html is not None:
+            data, ctype = html, "text/html"
+        else:
+            data, ctype = json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8"
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", ctype)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(data)))
         if status == 405:
@@ -1186,7 +1292,12 @@ def selftest():
             with opener.open(req, timeout=10) as resp:
                 return resp.status, json.loads(resp.read().decode()), resp.headers
         except urllib.error.HTTPError as err:
-            return err.code, json.loads(err.read().decode() or "null"), err.headers
+            raw = err.read().decode()
+            try:
+                payload = json.loads(raw or "null")
+            except ValueError:
+                payload = raw                       # не JSON (страница nginx)
+            return err.code, payload, err.headers
 
     def check(cond, what):
         if not cond:
@@ -1358,7 +1469,57 @@ def selftest():
         check(v["battery_v"] == 23.5 and v["battery_undervoltage_warning"] and v["oil_pressure"] is None
               and v["fuel_level"] == 40, "_sim set / fuel_level / snapshot")
 
+        # часы эмулятора: advance «проживает» время шагами, clock_advance — просто скачок
+        st0 = call("GET", root + "/_sim", tok=None)[1]
+        off0, rid0, ts0 = st0["clock_offset"], st0["last_ids"]["reading"], latest()["ts"]
+        sim(advance=60)
+        st1 = call("GET", root + "/_sim", tok=None)[1]
+        check(abs(st1["clock_offset"] - off0 - 60) < 1e-6, "advance 60 → clock_offset +60 в GET /_sim")
+        new = call("GET", base + "/readings?since=%d&limit=2000" % rid0)[1]["readings"]
+        check(len(new) >= 50 and new[-1]["ts"] - ts0 >= 59 and all(b["ts"] >= a["ts"] for a, b in zip(new, new[1:]))
+              and "interval" in {r["reason"] for r in new}, "advance: плановые снимки за прожитую минуту, ts по часам")
+        check(call("GET", base + "/status")[1]["relay"]["time_utc"] >= utc(time.time() + off0 + 59),
+              "relay.time_utc по часам эмулятора")
+        sim(link=False)
+        rid1 = call("GET", root + "/_sim", tok=None)[1]["last_ids"]["reading"]
+        sim(advance=600)
+        dev = call("GET", base + "/status")[1]["devices"][0]
+        check(dev["online"] is False and dev["seconds_since_seen"] >= 600, "link off + advance 600 → online false")
+        check(call("GET", root + "/_sim", tok=None)[1]["last_ids"]["reading"] == rid1, "без связи снимков нет и при advance")
+        sim(link=True)
+        off2 = call("GET", root + "/_sim", tok=None)[1]["clock_offset"]
+        sim(clock_advance=5)
+        check(abs(call("GET", root + "/_sim", tok=None)[1]["clock_offset"] - off2 - 5) < 1e-6, "clock_advance 5")
+        check(abs(Relay("t", [DEFAULT_HOSTID], clock_offset=-3600).now() - (time.time() - 3600)) < 1,
+              "--clock-offset: начальный сдвиг часов")
         sim(time_scale=1, no_reply=True)
+        c = call("POST", base + "/commands", {"command": "auto"})[1]
+        wait(lambda: call("GET", base + "/commands/%d" % c["id"])[1]["status"] == "sent", "sent")
+        sim(advance=31)
+        c = call("GET", base + "/commands/%d" % c["id"])[1]
+        check(c["status"] == "timeout" and c["error"] == "no reply in 30 s" and c["done"] - c["sent"] >= 30,
+              "no_reply + advance 31 → timeout")
+
+        # инъекция ошибок API
+        sim(fail_next={"status": 500, "count": 2})
+        check(call("GET", base + "/status")[:2] == (500, {"error": "internal error"}), "fail_next 500 (1/2)")
+        check(call("GET", root + "/_sim", tok=None)[0] == 200, "/_sim инъекцией не затронут")
+        check(call("GET", base + "/latest", tok=None)[0] == 500, "fail_next 500 (2/2) — раньше проверки токена")
+        check(call("GET", base + "/status")[0] == 200, "после count запросов — снова 200")
+        sim(fail_next={"status": 503})
+        st, body, hdr = call("GET", base + "/readings")
+        check(st == 503 and "<center>nginx</center>" in body and hdr.get("Content-Type") == "text/html",
+              "fail_next 503 → HTML-страница nginx")
+        sim(fail_next={"status": 409, "count": 1, "error": "modem is not connected right now"})
+        check(call("POST", base + "/commands", {"command": "auto"})[:2]
+              == (409, {"error": "modem is not connected right now"}), "fail_next 409 со своим текстом")
+        sim(fail_next={"status": 502, "count": 5})
+        check(call("GET", root + "/_sim", tok=None)[1]["fail_next"] == {"status": 502, "count": 5, "error": None},
+              "GET /_sim показывает fail_next")
+        sim(fail_next=None)
+        check(call("GET", base + "/status")[0] == 200, "fail_next null сбрасывает")
+        check(call("POST", root + "/_sim", {"fail_next": {"status": 200}}, tok=None)[0] == 400, "fail_next: 400 на код вне 4xx/5xx")
+
         c = call("POST", base + "/commands", {"command": "auto"})[1]
         wait(lambda: call("GET", base + "/commands/%d" % c["id"])[1]["status"] == "sent", "sent")
         sim(restart=True, no_reply=False)
@@ -1367,7 +1528,10 @@ def selftest():
         lt = wait(lambda: (lambda x: x if x["reason"] == "first" and x["id"] > lt["id"] else None)(latest()), "first")
         check(call("GET", base + "/status")[1]["relay"]["uptime_s"] <= 2, "uptime после перезапуска")
 
-        sim(reset=True, link=False)
+        off3 = call("GET", root + "/_sim", tok=None)[1]["clock_offset"]
+        sim(fail_next={"status": 500, "count": 3})
+        st = sim(reset=True, link=False)
+        check(st["fail_next"] is None and st["clock_offset"] == off3, "reset: fail_next сброшен, часы не тронуты")
         check(call("GET", base + "/latest")[1] == {"error": "no readings yet"}, "404 no readings yet после reset")
         sim(link=True)
         lt = wait(lambda: call("GET", base + "/latest")[0] == 200 and latest(), "снимок после reset")
@@ -1391,6 +1555,8 @@ def main(argv=None):
     ap.add_argument("--snapshot-sec", type=float, default=60.0, help="интервал плановых снимков, с (реальные)")
     ap.add_argument("--hostid", action="append", help="hostid модуля (можно несколько раз)")
     ap.add_argument("--time-scale", type=float, default=1.0, help="ускорение физики генератора")
+    ap.add_argument("--clock-offset", type=float, default=0.0,
+                    help="начальный сдвиг часов эмулятора относительно реального времени, с (может быть < 0)")
     ap.add_argument("--relay-version", default="1.1.3", choices=["1.1.1", "1.1.3"],
                     help="1.1.1 — без 5 полей из 5.1 (как сейчас на сервере), 1.1.3 — с ними")
     ap.add_argument("--commands-disabled", action="store_true", help="как RELAY_COMMANDS_ENABLED=0 → 403")
@@ -1402,15 +1568,15 @@ def main(argv=None):
         return selftest()
     relay = Relay(args.token, args.hostid or [DEFAULT_HOSTID], snapshot_sec=args.snapshot_sec,
                   time_scale=args.time_scale, commands_enabled=not args.commands_disabled,
-                  version=args.relay_version, noise=not args.no_noise)
+                  version=args.relay_version, noise=not args.no_noise, clock_offset=args.clock_offset)
     try:
         server = make_server(relay, args.host, args.port, quiet=args.quiet)
     except OSError as exc:
         print("не удалось открыть %s:%d: %s" % (args.host, args.port, exc), file=sys.stderr)
         return 1
-    print("fake SmartGen relay: http://%s:%d%s (hostid %s, snapshot %ss, time_scale %s); /_sim — служебный"
-          % (args.host, server.server_address[1], API_PREFIX, ", ".join(relay.hostids), args.snapshot_sec,
-             args.time_scale), file=sys.stderr, flush=True)
+    print("fake SmartGen relay: http://%s:%d%s (hostid %s, snapshot %ss, time_scale %s, clock_offset %ss); "
+          "/_sim — служебный" % (args.host, server.server_address[1], API_PREFIX, ", ".join(relay.hostids),
+                                 args.snapshot_sec, args.time_scale, args.clock_offset), file=sys.stderr, flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
