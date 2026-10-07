@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W3 (переписує повністю). Каркас W0. XML id дії (зберегти!): action_td_genset_command. -->
+<!-- Власник: W3. Журнал команд (ТР 2.6.3, 2.10; колонки мокапа). XML id дії (контракт): action_td_genset_command. -->
 <odoo>
     <record id="view_td_genset_command_list" model="ir.ui.view">
         <field name="name">td.genset.command.list</field>
@@ -9,12 +9,13 @@
                 <field name="create_date" string="Час"/>
                 <field name="name" optional="hide"/>
                 <field name="genset_id" optional="hide"/>
-                <field name="user_id"/>
-                <field name="source"/>
-                <field name="command"/>
-                <field name="state" widget="badge" decoration-success="state in ('done', 'done_late')"
-                       decoration-danger="state in ('failed', 'auth_error', 'blocked')"
-                       decoration-warning="state in ('retry', 'waiting_link')"/>
+                <field name="user_id" string="Хто"/>
+                <field name="source" string="Джерело"/>
+                <field name="command" string="Команда"/>
+                <field name="state" string="Результат" widget="badge" decoration-success="state in ('done', 'done_late')"
+                       decoration-danger="state in ('failed', 'auth_error', 'blocked', 'disabled_relay', 'disabled_odoo')"
+                       decoration-warning="state in ('retry', 'waiting_link', 'awaiting', 'sent', 'to_send', 'queued_odoo')"
+                       decoration-muted="state in ('not_needed', 'skipped', 'cancelled')"/>
                 <field name="attempt" optional="hide"/>
                 <field name="max_attempts" optional="hide"/>
                 <field name="result_note"/>
@@ -96,6 +97,7 @@
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_empty_folder">Команд ще не було</p>
+            <p>Команди з'являються після натискання плиток пульта, запуску таймера, тесту або на переходах розкладу.</p>
         </field>
     </record>
 </odoo>

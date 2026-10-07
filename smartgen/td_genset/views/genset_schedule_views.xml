@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W3 (переписує повністю). Каркас W0: розклад і дні-винятки (редагуються на формі генератора). -->
+<!-- Власник: W3. Розклад і дні-винятки (ТР 2.7, 2.10): редагуються на формі генератора (вкладка «Розклад»). -->
 <odoo>
     <record id="view_td_genset_schedule_list" model="ir.ui.view">
         <field name="name">td.genset.schedule.list</field>

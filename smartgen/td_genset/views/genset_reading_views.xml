@@ -1,39 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W3 (переписує повністю). Каркас W0: мінімальні подання «Показання».
-     XML id дії (зберегти!): action_td_genset_reading; фільтр за замовчуванням — journal. -->
+<!-- Власник: W3. «Показання» (ТР 2.10, мокап «Показання», колонки — словник COLS): журнал 15 хв за замовчуванням,
+     фільтри, graph/pivot, експорт шаблоном «Генератори: усі значення». XML id дії (контракт): action_td_genset_reading. -->
 <odoo>
     <record id="view_td_genset_reading_list" model="ir.ui.view">
         <field name="name">td.genset.reading.list</field>
         <field name="model">td.genset.reading</field>
         <field name="arch" type="xml">
-            <list string="Показання" default_order="ts desc" limit="80" create="0" edit="0" delete="0">
-                <field name="ts"/>
+            <list string="Показання" default_order="ts desc" limit="80" create="0" edit="0" delete="0"
+                  decoration-muted="not is_journal">
+                <field name="is_journal" column_invisible="1"/>
+                <field name="ts" string="Час"/>
                 <field name="genset_id" optional="hide"/>
-                <field name="controller_mode" widget="badge"/>
-                <field name="genset_status" widget="badge"/>
-                <field name="feed_source" widget="badge"/>
-                <field name="mains_uab"/>
-                <field name="mains_freq"/>
-                <field name="gen_uab"/>
-                <field name="gen_freq"/>
-                <field name="current_a" optional="hide"/>
-                <field name="current_b" optional="hide"/>
-                <field name="current_c" optional="hide"/>
-                <field name="active_power"/>
-                <field name="power_factor" optional="hide"/>
-                <field name="load_pct" optional="hide"/>
-                <field name="speed" optional="hide"/>
-                <field name="water_temp" optional="hide"/>
-                <field name="oil_pressure" optional="hide"/>
-                <field name="fuel_level" optional="hide"/>
-                <field name="fuel_liters"/>
-                <field name="fuel_sensor_ohm" optional="hide"/>
-                <field name="battery_v"/>
-                <field name="dplus_v" optional="hide"/>
-                <field name="run_hours_total" optional="hide"/>
-                <field name="start_count" optional="hide"/>
-                <field name="energy_kwh" optional="hide"/>
-                <field name="alarm_flags"/>
+                <field name="controller_mode" string="Режим" widget="badge"
+                       decoration-info="controller_mode == 'auto'" decoration-primary="controller_mode == 'manual'"
+                       decoration-warning="controller_mode == 'test'"/>
+                <field name="genset_status" string="Агрегат" widget="badge" width="150px"
+                       decoration-success="genset_status in ('8', '9')" decoration-danger="genset_status == '14'"
+                       decoration-warning="genset_status in ('1', '2', '3', '4', '5', '6', '7', '10', '11', '12', '13')"/>
+                <field name="feed_source" string="Живлення" widget="badge" decoration-success="feed_source == 'mains'"
+                       decoration-warning="feed_source == 'genset'" decoration-danger="feed_source == 'none'"/>
+                <field name="mains_uab" string="Мережа UAB, V" digits="[16, 0]"/>
+                <field name="mains_freq" string="Мережа, Hz" digits="[16, 1]"/>
+                <field name="gen_uab" string="Ген. UAB, V" digits="[16, 0]"/>
+                <field name="gen_freq" string="Ген., Hz" digits="[16, 1]"/>
+                <field name="current_a" string="Струм A, A" digits="[16, 1]"/>
+                <field name="current_b" string="Струм B, A" digits="[16, 1]" optional="hide"/>
+                <field name="current_c" string="Струм C, A" digits="[16, 1]" optional="hide"/>
+                <field name="active_power" string="P, kW" digits="[16, 1]"/>
+                <field name="power_factor" string="cos φ" digits="[16, 2]" optional="show"/>
+                <field name="load_pct" string="Навант., %" digits="[16, 0]"/>
+                <field name="speed" string="Оберти" digits="[16, 0]"/>
+                <field name="water_temp" string="ОР, °C" digits="[16, 0]"/>
+                <field name="oil_pressure" string="Олива, kPa" digits="[16, 0]"/>
+                <field name="fuel_liters" string="Паливо, L" digits="[16, 1]"/>
+                <field name="fuel_level" string="Паливо, %" digits="[16, 0]" optional="hide"/>
+                <field name="fuel_source" optional="hide"/>
+                <field name="fuel_sensor_ohm" string="Датчик палива, Ом" optional="hide"/>
+                <field name="water_temp_sensor_ohm" string="Датчик ОР, Ом" optional="hide"/>
+                <field name="oil_pressure_sensor_ohm" string="Датчик тиску, Ом" optional="hide"/>
+                <field name="battery_v" string="АКБ, V" digits="[16, 1]"/>
+                <field name="dplus_v" string="D+, V" digits="[16, 1]" optional="show"/>
+                <field name="run_hours_total" string="Мотогодини" widget="float_time" optional="show"/>
+                <field name="start_count" string="Пусків" optional="show"/>
+                <field name="energy_kwh" string="kWh" digits="[16, 0]" optional="show"/>
+                <field name="alarm_flags" string="Тривоги" optional="show"/>
+                <field name="reason" optional="hide"/>
+                <field name="relay_id" optional="hide"/>
             </list>
         </field>
     </record>
@@ -44,30 +56,73 @@
         <field name="arch" type="xml">
             <form string="Знімок показань" create="0" edit="0" delete="0">
                 <sheet>
+                    <div class="oe_title">
+                        <h1><field name="ts" readonly="1"/></h1>
+                        <field name="genset_id" readonly="1"/>
+                    </div>
                     <group>
-                        <group>
-                            <field name="genset_id"/>
-                            <field name="ts"/>
+                        <group string="Знімок">
                             <field name="relay_id"/>
                             <field name="reason"/>
                             <field name="slot_15"/>
                             <field name="is_journal"/>
-                        </group>
-                        <group>
-                            <field name="controller_mode"/>
-                            <field name="genset_status"/>
-                            <field name="is_running"/>
-                            <field name="mains_ok"/>
-                            <field name="feed_source"/>
-                            <field name="fuel_liters"/>
-                            <field name="fuel_source"/>
-                            <field name="fuel_sensor_ohm"/>
-                            <field name="water_temp_sensor_ohm"/>
-                            <field name="oil_pressure_sensor_ohm"/>
+                            <field name="is_hour"/>
                             <field name="alarm_flags"/>
                         </group>
+                        <group string="Стан">
+                            <field name="controller_mode" widget="badge"/>
+                            <field name="genset_status" widget="badge"/>
+                            <field name="genset_status_delay"/>
+                            <field name="is_running"/>
+                            <field name="mains_ok"/>
+                            <field name="feed_source" widget="badge"/>
+                            <field name="remote_lock"/>
+                        </group>
+                        <group string="Мережа">
+                            <field name="mains_ua"/>
+                            <field name="mains_ub"/>
+                            <field name="mains_uc"/>
+                            <field name="mains_uab"/>
+                            <field name="mains_ubc"/>
+                            <field name="mains_uca"/>
+                            <field name="mains_freq"/>
+                        </group>
+                        <group string="Генератор і навантаження">
+                            <field name="gen_uab"/>
+                            <field name="gen_ubc"/>
+                            <field name="gen_uca"/>
+                            <field name="gen_freq"/>
+                            <field name="current_a"/>
+                            <field name="current_b"/>
+                            <field name="current_c"/>
+                            <field name="active_power"/>
+                            <field name="power_factor"/>
+                            <field name="load_pct"/>
+                        </group>
+                        <group string="Двигун і паливо">
+                            <field name="speed"/>
+                            <field name="water_temp"/>
+                            <field name="water_temp_sensor_ohm"/>
+                            <field name="oil_pressure"/>
+                            <field name="oil_pressure_sensor_ohm"/>
+                            <field name="fuel_level"/>
+                            <field name="fuel_sensor_ohm"/>
+                            <field name="fuel_liters"/>
+                            <field name="fuel_source"/>
+                            <field name="battery_v"/>
+                            <field name="dplus_v"/>
+                        </group>
+                        <group string="Лічильники">
+                            <field name="run_hours"/>
+                            <field name="run_minutes"/>
+                            <field name="run_hours_total" widget="float_time"/>
+                            <field name="start_count"/>
+                            <field name="energy_kwh"/>
+                            <field name="controller_sw"/>
+                            <field name="controller_hw"/>
+                        </group>
                     </group>
-                    <group string="Інші значення">
+                    <group string="Інші значення" invisible="not values_extra_text">
                         <field name="values_extra_text" nolabel="1" colspan="2"/>
                     </group>
                 </sheet>
@@ -79,9 +134,48 @@
         <field name="name">td.genset.reading.graph</field>
         <field name="model">td.genset.reading</field>
         <field name="arch" type="xml">
-            <graph string="Показання" type="line" sample="1">
+            <graph string="Показання" type="line" sample="1" disable_linking="1">
                 <field name="ts" interval="hour"/>
                 <field name="fuel_liters" type="measure"/>
+                <field name="battery_v" type="measure"/>
+                <field name="load_pct" type="measure"/>
+                <field name="active_power" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_graph_fuel" model="ir.ui.view">
+        <field name="name">td.genset.reading.graph.fuel</field>
+        <field name="model">td.genset.reading</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <graph string="Рівень палива" type="line" sample="1" disable_linking="1">
+                <field name="ts" interval="hour"/>
+                <field name="fuel_liters" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_graph_battery" model="ir.ui.view">
+        <field name="name">td.genset.reading.graph.battery</field>
+        <field name="model">td.genset.reading</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <graph string="Напруга АКБ" type="line" sample="1" disable_linking="1">
+                <field name="ts" interval="hour"/>
+                <field name="battery_v" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_td_genset_reading_graph_load" model="ir.ui.view">
+        <field name="name">td.genset.reading.graph.load</field>
+        <field name="model">td.genset.reading</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <graph string="Навантаження" type="line" sample="1" disable_linking="1">
+                <field name="ts" interval="hour"/>
+                <field name="active_power" type="measure"/>
             </graph>
         </field>
     </record>
@@ -90,9 +184,12 @@
         <field name="name">td.genset.reading.pivot</field>
         <field name="model">td.genset.reading</field>
         <field name="arch" type="xml">
-            <pivot string="Показання">
+            <pivot string="Показання" sample="1" disable_linking="1">
                 <field name="ts" interval="day" type="row"/>
                 <field name="active_power" type="measure"/>
+                <field name="fuel_liters" type="measure"/>
+                <field name="battery_v" type="measure"/>
+                <field name="mains_uab" type="measure"/>
             </pivot>
         </field>
     </record>
@@ -104,18 +201,29 @@
             <search string="Показання">
                 <field name="genset_id"/>
                 <field name="ts"/>
+                <field name="alarm_flags"/>
                 <filter name="journal" string="Журнал 15 хв" domain="[('is_journal', '=', True)]"/>
                 <filter name="all" string="Усі знімки" domain="[]"/>
                 <separator/>
                 <filter name="today" string="Сьогодні"
-                        domain="[('ts', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                        domain="[('ts', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0, 0, 0)).to_utc().strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <filter name="last_7_days" string="Останні 7 днів"
+                        domain="[('ts', '&gt;=', datetime.datetime.combine(context_today() - relativedelta(days=7), datetime.time(0, 0, 0)).to_utc().strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <filter name="last_30_days" string="Останні 30 днів"
+                        domain="[('ts', '&gt;=', datetime.datetime.combine(context_today() - relativedelta(days=30), datetime.time(0, 0, 0)).to_utc().strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <separator/>
                 <filter name="running" string="Генератор працював" domain="[('is_running', '=', True)]"/>
                 <filter name="no_mains" string="Без мережі" domain="[('mains_ok', '=', False)]"/>
                 <filter name="hourly" string="Погодинно" domain="[('is_hour', '=', True)]"/>
+                <separator/>
+                <filter name="with_alarms" string="Є тривоги" domain="[('alarm_flags', '!=', False)]"/>
+                <filter name="filter_ts" string="Час" date="ts"/>
                 <group expand="0" string="Групувати за">
                     <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>
                     <filter name="group_slot" string="Інтервал 15 хв" context="{'group_by': 'slot_15'}"/>
+                    <filter name="group_hour" string="Година" context="{'group_by': 'ts:hour'}"/>
                     <filter name="group_day" string="День" context="{'group_by': 'ts:day'}"/>
+                    <filter name="group_mode" string="Режим" context="{'group_by': 'controller_mode'}"/>
                 </group>
             </search>
         </field>
@@ -129,7 +237,8 @@
         <field name="context">{'search_default_journal': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_empty_folder">Очікуємо перший знімок</p>
-            <p>Знімки з'являться після ввімкнення опитування ретранслятора на картці генератора.</p>
+            <p>Вкажіть hostid і ввімкніть опитування на картці генератора: знімки надходять раз на хвилину і при кожній
+                зміні стану, у журнал за замовчуванням потрапляє останній знімок кожних 15 хв.</p>
         </field>
     </record>
 </odoo>

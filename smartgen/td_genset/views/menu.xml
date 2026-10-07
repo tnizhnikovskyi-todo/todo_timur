@@ -41,4 +41,17 @@
               action="base.action_res_users" groups="base.group_erp_manager"/>
 
     <!-- ↓ Рядки потоків W1–W5 — нижче цієї позначки -->
+    <!-- W3: «Аналітика» (ТР 2.10) — дії з views/analytics_actions.xml -->
+    <menuitem id="menu_analytics_energy" name="Вироблено по днях" parent="menu_analytics" sequence="20"
+              action="action_td_genset_analytics_energy"/>
+    <menuitem id="menu_analytics_cranks" name="Пуски і АКБ при прокрутці" parent="menu_analytics" sequence="30"
+              action="action_td_genset_analytics_cranks"/>
+    <menuitem id="menu_analytics_fuel_used" name="Витрата по днях" parent="menu_analytics" sequence="40"
+              action="action_td_genset_analytics_fuel_used"/>
+    <menuitem id="menu_analytics_fuel_level" name="Рівень палива" parent="menu_analytics" sequence="50"
+              action="action_td_genset_analytics_fuel_level"/>
+    <menuitem id="menu_analytics_battery" name="Напруга АКБ" parent="menu_analytics" sequence="60"
+              action="action_td_genset_analytics_battery"/>
+    <menuitem id="menu_analytics_load" name="Навантаження під час роботи" parent="menu_analytics" sequence="70"
+              action="action_td_genset_analytics_last_run"/>
 </odoo>
