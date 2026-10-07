@@ -687,3 +687,26 @@ class TdGenset(models.Model):
         action['domain'] = [('equipment_id', '=', self.equipment_id.id)] if self.equipment_id else [('id', '=', 0)]
         action['context'] = {'default_equipment_id': self.equipment_id.id} if self.equipment_id else {}
         return action
+
+    # ------------------------------------------------------------------ W4 «Паливо і ТО»: додаткові поля
+    # (BUILD_PLAN 1.6: нові поля — у кінець класу; обчислення — у genset_fuel.py)
+    fuel_canisters_summary = fields.Char(
+        string='Каністри за станом', compute='_compute_fuel_kpi',
+        help='Скільки активних каністр повних, часткових і порожніх: «6 повних · 1 часткова · 5 порожніх».')
+    fuel_min_stock_l = fields.Float(
+        string='Мінімальний запас, L', compute='_compute_fuel_kpi',
+        help='Мінімальний запас палива в каністрах (Генератори → Налаштування → Паливо).')
+    fuel_stock_lack_l = fields.Float(
+        string='Бракує до мінімального запасу, L', compute='_compute_fuel_kpi',
+        help='Скільки літрів бракує в каністрах до мінімального запасу; 0 — запас у нормі.')
+    fuel_recompute_next_id = fields.Integer(
+        string='Перерахунок літрів: наступний знімок', readonly=True, copy=False, default=0,
+        help='Службове: 0 — перерахунок не триває; інакше id знімка, з якого фонове завдання продовжить '
+             'перерахунок літрів (партіями по 10 000, кнопка «Перерахувати літри», AC-69).')
+    maint_next_hours = fields.Float(
+        string='Наступне ТО на, мотогодин', compute='_compute_maint',
+        help='На яких мотогодинах наступне ТО: «Перше ТО» до першої закритої заявки, далі мотогодини закриття '
+             'останньої заявки + «Далі кожні, мотогодин» (ТР 2.9).')
+    maint_progress = fields.Float(
+        string='Прогрес до ТО, %', compute='_compute_maint',
+        help='Яку частку поточного інтервалу ТО вже відпрацьовано, 0–100 %.')
