@@ -562,6 +562,15 @@ class TdGenset(models.Model):
         string='Я адміністратор', compute='_compute_is_admin',
         help='Поточний користувач у групі «Генератори: Адміністратор» — редагування розкладу.')
 
+    # ------------------------------------------------------------------ UI (W3, додано потоком W3 — звіт W3)
+    alarm_recipients_text = fields.Char(
+        string='Отримувачі тривог', compute='_compute_ui_texts',
+        help="Загальний ланцюжок ескалації — один на всі генератори. Змінюється в «Налаштування → Ланцюжок "
+             "ескалації».")
+    retry_rule_text = fields.Char(
+        string='Правило повторів', compute='_compute_ui_texts',
+        help='Як система підтверджує команди: інтервал і вікно повторів з налаштувань модуля.')
+
     _sql_constraints = [
         ('relay_hostid_uniq', 'unique(relay_hostid)', 'Такий hostid уже є в іншого генератора.'),
     ]

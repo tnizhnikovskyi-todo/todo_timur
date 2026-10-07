@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W3 (переписує повністю). Каркас W0. XML id дії (зберегти!): action_td_genset_alarm. -->
+<!-- Власник: W3. Тривоги (ТР 2.8, 2.10): список з «Прийняв», форма з чатером. XML id дії (контракт): action_td_genset_alarm. -->
 <odoo>
     <record id="view_td_genset_alarm_list" model="ir.ui.view">
         <field name="name">td.genset.alarm.list</field>
@@ -9,10 +9,12 @@
                   decoration-warning="level == 'warn' and state == 'active'" decoration-muted="state == 'cleared'">
                 <field name="date_raised"/>
                 <field name="genset_id" optional="hide"/>
-                <field name="level"/>
+                <field name="level" widget="badge" decoration-danger="level == 'crit'"
+                       decoration-warning="level == 'warn'" decoration-info="level == 'info'"/>
                 <field name="code" optional="hide"/>
                 <field name="name"/>
-                <field name="state" widget="badge"/>
+                <field name="state" widget="badge" decoration-danger="state == 'active'"
+                       decoration-success="state == 'acked'" decoration-muted="state == 'cleared'"/>
                 <field name="escalation_level" optional="hide"/>
                 <field name="acked_user_id"/>
                 <field name="can_ack" column_invisible="1"/>
@@ -87,6 +89,8 @@
         <field name="context">{'search_default_not_cleared': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Тривог немає</p>
+            <p>Тривоги контролера і модуля з'являються тут і в чатері генератора; ескалація — за ланцюжком у
+                налаштуваннях.</p>
         </field>
     </record>
 </odoo>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W3. Каркас W0: блок «Генератори» у стандартних Налаштуваннях (лише base.group_system). -->
+<!-- Власник: W3. Блок «Генератори» у стандартних Налаштуваннях (ТР 2.3.10, А.10): адреса, токен (маска, у форму не
+     повертається, порожнє поле не затирає), таймаут — лише base.group_system (AC-01, AC-57). -->
 <odoo>
     <record id="res_config_settings_view_form_td_genset" model="ir.ui.view">
         <field name="name">res.config.settings.view.form.inherit.td_genset</field>
@@ -10,18 +11,25 @@
             <xpath expr="//form" position="inside">
                 <app data-string="Генератори" string="Генератори" name="td_genset" groups="base.group_system">
                     <block title="Ретранслятор SmartGen" name="td_genset_relay">
-                        <setting string="Адреса API ретранслятора"
+                        <setting id="td_genset_relay_url" string="Адреса API ретранслятора"
                                  help="Адреса без завершального «/», напр. https://…/api/v1 (на тесті — емулятор).">
                             <field name="td_genset_relay_url" placeholder="https://…/api/v1"/>
                         </setting>
-                        <setting string="Токен ретранслятора"
+                        <setting id="td_genset_relay_token" string="Токен ретранслятора"
                                  help="Після збереження токен не показується; порожнє поле не змінює збережений токен.">
-                            <field name="td_genset_relay_token" password="True" placeholder="••••"/>
-                            <div class="text-muted" invisible="not td_genset_relay_token_set">Токен встановлено.</div>
-                            <div class="text-warning" invisible="td_genset_relay_token_set">Токен не задано.</div>
+                            <field name="td_genset_relay_token" password="True" placeholder="••••••••"/>
                             <field name="td_genset_relay_token_set" invisible="1"/>
+                            <div class="mt-1">
+                                <span class="badge text-bg-success" invisible="not td_genset_relay_token_set">
+                                    Токен встановлено
+                                </span>
+                                <span class="badge text-bg-warning" invisible="td_genset_relay_token_set">
+                                    Токен не задано
+                                </span>
+                            </div>
                         </setting>
-                        <setting string="Таймаут, с" help="Таймаут читання відповіді; з'єднання — 5 с.">
+                        <setting id="td_genset_http_timeout" string="Таймаут, с"
+                                 help="Таймаут читання відповіді ретранслятора; з'єднання — 5 с.">
                             <field name="td_genset_http_timeout"/>
                         </setting>
                     </block>

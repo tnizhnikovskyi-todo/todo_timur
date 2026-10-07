@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W3 (заготовка W0). Дії «Аналітика» (ТР 2.10). XML id, на який посилається menu.xml (зберегти!):
-     action_td_genset_analytics_run_outage. Інші дії W3 додає тут, а пункти меню — рядками в кінець menu.xml. -->
+<!-- Власник: W3. «Аналітика» (ТР 2.10, етап 1): дії graph/pivot на подіях і знімках з готовими фільтрами; KPI 7/30 днів —
+     поля на формі генератора (вкладка «Аналітика»). OWL-дашборд мокапа — поза обсягом (SPEC 1). XML id, на який
+     посилається menu.xml (контракт): action_td_genset_analytics_run_outage; решта — пункти в кінці menu.xml і кнопки
+     форми генератора (td.genset.action_open_analytics / action_open_last_run_load). -->
 <odoo>
+    <!-- Робота і відключення по днях -->
     <record id="view_td_genset_event_graph_run_outage" model="ir.ui.view">
         <field name="name">td.genset.event.graph.run_outage</field>
         <field name="model">td.genset.event</field>
+        <field name="priority">20</field>
         <field name="arch" type="xml">
             <graph string="Робота і відключення по днях" type="bar" stacked="0" sample="1">
                 <field name="date_start" interval="day"/>
@@ -13,13 +17,153 @@
             </graph>
         </field>
     </record>
-
     <record id="action_td_genset_analytics_run_outage" model="ir.actions.act_window">
         <field name="name">Робота і відключення по днях</field>
         <field name="res_model">td.genset.event</field>
-        <field name="view_mode">graph,list</field>
+        <field name="view_mode">graph,pivot,list</field>
         <field name="view_id" ref="view_td_genset_event_graph_run_outage"/>
         <field name="domain">[('event_type', 'in', ('run', 'outage'))]</field>
         <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Подій роботи і відключень ще немає</p>
+            <p>Графік — годин на добу: «Робота генератора» і «Відключення мережі» за показаннями контролера.</p>
+        </field>
+    </record>
+
+    <!-- Вироблено по днях -->
+    <record id="view_td_genset_event_graph_energy" model="ir.ui.view">
+        <field name="name">td.genset.event.graph.energy</field>
+        <field name="model">td.genset.event</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <graph string="Вироблено по днях" type="bar" sample="1">
+                <field name="date_start" interval="day"/>
+                <field name="energy_kwh" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_td_genset_analytics_energy" model="ir.actions.act_window">
+        <field name="name">Вироблено по днях</field>
+        <field name="res_model">td.genset.event</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="view_id" ref="view_td_genset_event_graph_energy"/>
+        <field name="domain">[('event_type', '=', 'run')]</field>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Генератор ще не працював</p>
+            <p>kWh на добу — сума подій «Робота генератора».</p>
+        </field>
+    </record>
+
+    <!-- Пуски і АКБ при прокрутці -->
+    <record id="view_td_genset_event_graph_cranks" model="ir.ui.view">
+        <field name="name">td.genset.event.graph.cranks</field>
+        <field name="model">td.genset.event</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <graph string="Пуски і АКБ при прокрутці" type="line" sample="1">
+                <field name="date_start" interval="day"/>
+                <field name="crank_min_battery_v" type="measure"/>
+                <field name="crank_attempts" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="view_td_genset_event_list_cranks" model="ir.ui.view">
+        <field name="name">td.genset.event.list.cranks</field>
+        <field name="model">td.genset.event</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <list string="Пуски" create="0" decoration-warning="crank_attempts &gt; 1">
+                <field name="date_start" string="Пуск"/>
+                <field name="genset_id" optional="hide"/>
+                <field name="crank_attempts"/>
+                <field name="crank_min_battery_v"/>
+                <field name="time_to_pickup_s" optional="hide"/>
+                <field name="reason"/>
+                <field name="summary"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_td_genset_analytics_cranks" model="ir.actions.act_window">
+        <field name="name">Пуски і АКБ при прокрутці</field>
+        <field name="res_model">td.genset.event</field>
+        <field name="view_mode">graph,list,pivot</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_td_genset_event_graph_cranks')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_td_genset_event_list_cranks')})]"/>
+        <field name="domain">[('event_type', '=', 'run')]</field>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Пусків ще не було</p>
+            <p>Спроби — з переходів стану контролера «Прокрутка» → «Пауза між спробами» (03H 0034); напруга — 03H 0024 під
+                час прокрутки (точність обмежена інтервалом знімків).</p>
+        </field>
+    </record>
+
+    <!-- Витрата по днях -->
+    <record id="view_td_genset_event_graph_fuel_used" model="ir.ui.view">
+        <field name="name">td.genset.event.graph.fuel_used</field>
+        <field name="model">td.genset.event</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <graph string="Витрата по днях" type="bar" sample="1">
+                <field name="date_start" interval="day"/>
+                <field name="fuel_delta_l" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_td_genset_analytics_fuel_used" model="ir.actions.act_window">
+        <field name="name">Витрата по днях</field>
+        <field name="res_model">td.genset.event</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="view_id" ref="view_td_genset_event_graph_fuel_used"/>
+        <field name="domain">[('event_type', '=', 'run')]</field>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Даних про витрату ще немає</p>
+            <p>Зміна палива в баку за подіями «Робота генератора», L (від'ємна — витрачено).</p>
+        </field>
+    </record>
+
+    <!-- Рівень палива -->
+    <record id="action_td_genset_analytics_fuel_level" model="ir.actions.act_window">
+        <field name="name">Рівень палива</field>
+        <field name="res_model">td.genset.reading</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="view_id" ref="view_td_genset_reading_graph_fuel"/>
+        <field name="search_view_id" ref="view_td_genset_reading_search"/>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Очікуємо перший знімок</p>
+            <p>L у баку за знімками; стрибки вгору — заправки.</p>
+        </field>
+    </record>
+
+    <!-- Напруга АКБ -->
+    <record id="action_td_genset_analytics_battery" model="ir.actions.act_window">
+        <field name="name">Напруга АКБ</field>
+        <field name="res_model">td.genset.reading</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="view_id" ref="view_td_genset_reading_graph_battery"/>
+        <field name="search_view_id" ref="view_td_genset_reading_search"/>
+        <field name="context">{'search_default_last_30_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Очікуємо перший знімок</p>
+            <p>Напруга АКБ, V (03H 0024), середня за годину.</p>
+        </field>
+    </record>
+
+    <!-- Навантаження під час роботи (кнопка форми звужує до останньої роботи) -->
+    <record id="action_td_genset_analytics_last_run" model="ir.actions.act_window">
+        <field name="name">Навантаження під час роботи</field>
+        <field name="res_model">td.genset.reading</field>
+        <field name="view_mode">graph,list,pivot</field>
+        <field name="view_id" ref="view_td_genset_reading_graph_load"/>
+        <field name="search_view_id" ref="view_td_genset_reading_search"/>
+        <field name="context">{'search_default_running': 1, 'search_default_last_7_days': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Генератор ще не працював</p>
+            <p>Активна потужність, kW (03H 0026) за знімками під час роботи генератора.</p>
+        </field>
     </record>
 </odoo>

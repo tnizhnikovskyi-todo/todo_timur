@@ -1,13 +1,32 @@
-// Вкладка «Поточні дані» (поле current_data_html) — W3. Каркас W0.
+// Вкладка «Поточні дані» (поле current_data_html) і дрібниці форми генератора. Власник: W3.
+// Таблиці карток прокручуються всередині контейнера, сторінка — ні (AC-61); дані без зв'язку — сірі (AC-09).
 .o_td_genset_current_data {
-    overflow-x: auto;
+    max-width: 100%;
+    overflow-x: hidden;
 
-    table {
-        width: 100%;
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    td {
+        overflow-wrap: anywhere;
     }
 
     .o_td_genset_no_data {
-        color: var(--bs-secondary-color);
+        color: var(--secondary-color);
         font-style: italic;
+    }
+
+    &.o_td_genset_stale .card {
+        opacity: 0.65;
+    }
+}
+
+.o_td_genset_form {
+    // правила блоку «Робота поза графіком» і підказки не розпирають сторінку на телефоні
+    .o_td_genset_rules,
+    .o_td_genset_ooh {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 }

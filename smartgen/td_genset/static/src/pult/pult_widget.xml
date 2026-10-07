@@ -1,14 +1,155 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Пульт генератора: плейсхолдер W0 (W3 замінює плитками, приладами і схемою живлення за мокапом). -->
+<!-- Пульт генератора (мокап «Генератор»: Прилади, Параметри, Керування, Схема живлення). Власник: W3. -->
 <templates xml:space="preserve">
     <t t-name="td_genset.PultWidget">
-        <div class="o_td_genset_pult" t-att-class="{'o_td_genset_pult_compact': props.compact}">
-            <div class="o_td_genset_pult_placeholder">
-                <i class="fa fa-bolt me-2" role="img" aria-label="Пульт" title="Пульт"/>
-                <span class="fw-bold">Пульт: у розробці</span>
-                <span t-if="state.pult and state.pult.block_reason" class="text-muted ms-2" t-out="state.pult.block_reason"/>
-                <span t-if="state.pult and state.pult.status and state.pult.status.label" class="badge text-bg-light ms-2"
-                      t-out="state.pult.status.label"/>
+        <div class="o_td_pult" t-att-class="{'o_td_pult_compact': props.compact, 'o_td_pult_stale': pult and pult.link.state !== 'online'}"
+             t-att-data-loaded="pult ? '1' : '0'" t-att-data-refresh="state.refreshCount"
+             t-att-data-can-control="pult and pult.can_control ? '1' : '0'">
+            <div t-if="!gensetId" class="text-muted small">Збережіть генератор, щоб побачити пульт.</div>
+            <div t-elif="!pult" class="text-muted small"><i class="fa fa-spinner fa-spin me-1"/>Завантаження пульта…</div>
+            <div t-else="" class="o_td_pult_desk">
+                <div class="o_td_pult_col">
+                    <!-- Прилади -->
+                    <section class="card o_td_pult_card o_td_pult_gauges">
+                        <div class="card-body">
+                            <h3 class="o_td_pult_h">Прилади <small t-esc="gaugeNote"/></h3>
+                            <div class="o_td_pult_gauge_row">
+                                <div t-foreach="gauges" t-as="gauge" t-key="gauge.key" class="o_td_pult_gauge"
+                                     t-att-class="{'o_td_pult_nodata': gauge.noData}" t-att-data-gauge="gauge.key">
+                                    <svg viewBox="0 0 200 118" aria-hidden="true" class="o_td_pult_gauge_svg">
+                                        <path t-att-d="gauge.track" class="o_td_pult_g_track"/>
+                                        <path t-foreach="gauge.zones" t-as="zone" t-key="zone.key" t-att-d="zone.path"
+                                              t-attf-class="o_td_pult_g_zone o_td_pult_g_{{zone.kind}}"/>
+                                        <path t-if="gauge.valueArc" t-att-d="gauge.valueArc" class="o_td_pult_g_value"/>
+                                        <line x1="100" y1="100" t-att-x2="gauge.needle.x" t-att-y2="gauge.needle.y"
+                                              class="o_td_pult_g_needle"/>
+                                        <circle cx="100" cy="100" r="5" class="o_td_pult_g_hub"/>
+                                        <text x="20" y="116" class="o_td_pult_g_scale">0</text>
+                                        <text x="180" y="116" text-anchor="end" class="o_td_pult_g_scale" t-esc="gauge.maxLabel"/>
+                                    </svg>
+                                    <div class="o_td_pult_gauge_value"><b t-esc="gauge.display"/> <span t-esc="gauge.unit"/></div>
+                                    <div class="o_td_pult_gauge_label">
+                                        <t t-esc="gauge.label"/><t t-if="gauge.noData"> · немає даних</t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Параметри -->
+                    <section class="card o_td_pult_card o_td_pult_params">
+                        <div class="card-body">
+                            <h3 class="o_td_pult_h">Параметри <small t-esc="ageText"/></h3>
+                            <div t-foreach="paramGroups" t-as="group" t-key="group.key" class="o_td_pult_pgroup">
+                                <h4 t-esc="group.title"/>
+                                <div class="o_td_pult_pgrid">
+                                    <div t-foreach="group.items" t-as="item" t-key="item.key" class="o_td_pult_p"
+                                         t-att-class="{'o_td_pult_nodata': item.noData}">
+                                        <div class="o_td_pult_p_row">
+                                            <span t-esc="item.label"/>
+                                            <b t-esc="item.display"/>
+                                        </div>
+                                        <div class="o_td_pult_track">
+                                            <div t-attf-class="o_td_pult_fill o_td_pult_fill_{{item.tone or 'default'}}"
+                                                 t-attf-style="width: {{item.width}}%"/>
+                                        </div>
+                                        <small t-if="item.hint" class="text-muted" t-esc="item.hint"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="o_td_pult_col">
+                    <!-- Керування -->
+                    <section class="card o_td_pult_card o_td_pult_controls">
+                        <div class="card-body">
+                            <h3 class="o_td_pult_h">Керування <small class="o_td_pult_status" t-esc="statusText"/></h3>
+                            <div t-if="pult.block_reason" class="alert alert-secondary py-2 px-3 mb-2 o_td_pult_lock" role="status">
+                                <i class="fa fa-lock me-2" title="Пульт недоступний"/><span t-esc="pult.block_reason"/>
+                            </div>
+                            <div t-foreach="pult.notes" t-as="note" t-key="note_index"
+                                 t-attf-class="alert py-2 px-3 mb-2 o_td_pult_note {{note.level === 'warning' ? 'alert-warning' : (note.level === 'info' ? 'alert-info' : 'alert-light text-muted')}}"
+                                 role="status">
+                                <t t-esc="note.text"/>
+                            </div>
+                            <div t-if="testInfo" class="alert alert-warning py-2 px-3 mb-2" role="status">
+                                <i class="fa fa-flask me-2" title="Тест"/>Тест<t t-if="testInfo.mode"> (<t t-esc="testInfo.mode"/>)</t> до
+                                <b t-esc="testInfo.until"/><t t-if="testInfo.after"> · <t t-esc="testInfo.after"/></t>
+                            </div>
+                            <div class="o_td_pult_tiles">
+                                <button t-foreach="tiles" t-as="tile" t-key="tile.cmd" type="button"
+                                        t-attf-class="o_td_pult_tile o_td_pult_tile_{{tile.cmd}} {{tile.active ? 'o_td_pult_active' : ''}}"
+                                        t-att-disabled="!tile.enabled" t-att-data-cmd="tile.cmd"
+                                        t-att-aria-pressed="tile.active ? 'true' : 'false'"
+                                        t-on-click="() => this.onTileClick(tile)">
+                                    <span class="o_td_pult_tile_icon"><i t-attf-class="fa {{tile.icon}}" role="img" t-att-aria-label="tile.title"/></span>
+                                    <span class="o_td_pult_tile_text">
+                                        <span class="o_td_pult_tile_title" t-esc="tile.title"/>
+                                        <small t-esc="tile.sub"/>
+                                    </span>
+                                    <span class="o_td_pult_dot"/>
+                                </button>
+                            </div>
+                            <div t-if="timerInfo" class="o_td_pult_timer mt-2">
+                                <div class="d-flex justify-content-between small">
+                                    <span>Таймер до <b t-esc="timerInfo.until"/><t t-if="timerInfo.by"> · <t t-esc="timerInfo.by"/></t></span>
+                                    <span class="font-monospace" t-esc="timerInfo.clock"/>
+                                </div>
+                                <div class="o_td_pult_track"><div class="o_td_pult_fill o_td_pult_fill_warning" t-attf-style="width: {{timerInfo.progress}}%"/></div>
+                            </div>
+                            <div class="o_td_pult_foot">
+                                <span>Кожна команда — з підтвердженням і записом у журнал</span>
+                                <span t-esc="pult.controller"/>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Схема живлення -->
+                    <section class="card o_td_pult_card o_td_pult_diagram">
+                        <div class="card-body">
+                            <h3 class="o_td_pult_h">Схема живлення <small t-esc="feedNote"/></h3>
+                            <div class="o_td_pult_oneline">
+                                <div class="o_td_pult_node" t-att-class="{'o_td_pult_on': pult.status.is_running}" data-node="gen">
+                                    <span class="o_td_pult_pic">
+                                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                                            <rect x="3" y="11" width="20" height="13" rx="2"/><path d="M8 11V7h8v4M23 15h4v5h-4M2 28h28M9 17.5h6"/>
+                                        </svg>
+                                    </span>
+                                    <span>Генератор</span>
+                                </div>
+                                <div class="o_td_pult_wire" t-att-class="{'o_td_pult_on': pult.breakers.gen and pult.breakers.gen.closed}"/>
+                                <div class="o_td_pult_node" t-att-class="{'o_td_pult_on': pult.feed !== 'none'}" data-node="load">
+                                    <span class="o_td_pult_pic">
+                                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                                            <path d="M4 28V12l7 4v-4l7 4v-4l7 4v12zM2 28h28M9 22h2M15 22h2M21 22h2"/>
+                                        </svg>
+                                    </span>
+                                    <span>Навантаження</span>
+                                </div>
+                                <div class="o_td_pult_wire o_td_pult_wire_rev" t-att-class="{'o_td_pult_on': pult.breakers.mains and pult.breakers.mains.closed}"/>
+                                <div class="o_td_pult_node" t-att-class="{'o_td_pult_on': pult.breakers.mains and pult.breakers.mains.closed}" data-node="mains">
+                                    <span class="o_td_pult_pic">
+                                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                                            <path d="M16 3l-7 26M16 3l7 26M9 9h14M7 15h18M12 21h8M10 29l11-8M22 29l-11-8"/>
+                                        </svg>
+                                    </span>
+                                    <span>Мережа</span>
+                                </div>
+                            </div>
+                            <div t-foreach="breakers" t-as="breaker" t-key="breaker.key" class="o_td_pult_cb" t-att-data-breaker="breaker.key">
+                                <div class="o_td_pult_cb_name">
+                                    <span t-esc="breaker.title"/>
+                                    <small><span class="o_td_pult_led" t-att-class="{'o_td_pult_on': breaker.closed}"/><t t-esc="breaker.stateText"/></small>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" t-att-disabled="!breaker.enabled"
+                                        t-on-click="() => this.onBreakerClick(breaker)" t-esc="breaker.label"/>
+                            </div>
+                            <div class="o_td_pult_hint">
+                                Команда автомата — перемикач (05H 0005/0006): перед відправкою система читає його положення з
+                                контролера (01H 0006/0007).
+                            </div>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
     </t>
