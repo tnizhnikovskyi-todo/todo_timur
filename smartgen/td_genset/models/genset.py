@@ -613,14 +613,14 @@ class TdGenset(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         gensets = super().create(vals_list)
-        # TODO: W4 — _ensure_equipment створює maintenance.equipment (ТР 2.9, AC-53)
+        # обладнання ТО maintenance.equipment (ТР 2.9, AC-53) — _ensure_equipment у genset_fuel.py
         gensets._ensure_equipment()
         return gensets
 
     def write(self, vals):
         res = super().write(vals)
         if {'name', 'user_id', 'active', 'company_id'} & set(vals):
-            # TODO: W4 — синхронізація/архівація обладнання ТО (ТР 2.9)
+            # синхронізація назви/відповідального/компанії й архівація обладнання ТО (ТР 2.9)
             self._ensure_equipment()
         return res
 
