@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W2. Каркас W0: майстер «Робота поза графіком». XML id дії (зберегти!): action_td_genset_timer_wizard. -->
+<!-- Власник: W2. Майстер «Робота поза графіком» (ТР 2.3.13, SPEC 5.14). XML id дії (зберегти!):
+     action_td_genset_timer_wizard. -->
 <odoo>
     <record id="view_td_genset_timer_wizard_form" model="ir.ui.view">
         <field name="name">td.genset.timer.wizard.form</field>
@@ -8,12 +9,20 @@
             <form string="Робота поза графіком">
                 <group>
                     <field name="genset_id" readonly="1"/>
-                    <field name="hours"/>
-                    <field name="minutes"/>
+                    <label for="hours" string="Тривалість"/>
+                    <div class="o_row">
+                        <field name="hours" class="oe_inline" nolabel="1"/>
+                        <span>год</span>
+                        <field name="minutes" class="oe_inline" nolabel="1"/>
+                        <span>хв</span>
+                    </div>
                 </group>
                 <div class="alert alert-info" role="status">
                     <field name="confirm_text" nolabel="1"/>
                 </div>
+                <p class="text-muted">
+                    Від 1 хв до 24 год. Таймер один на генератор: подовжити (+15 / +30 / +60 хв) або зупинити може будь-хто.
+                </p>
                 <footer>
                     <button name="action_confirm" type="object" string="Застосувати" class="btn-primary"
                             data-hotkey="q"/>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Власник: W2. Каркас W0: майстер підтвердження команди пульта. XML id дії (зберегти!):
-     action_td_genset_command_wizard (відкривається td.genset.action_open_command_wizard). -->
+<!-- Власник: W2. Майстер підтвердження команди пульта (ТР 2.3.13, SPEC 5.14, мокап: діалоги пульта).
+     XML id дії (зберегти!): action_td_genset_command_wizard (відкривається td.genset.action_open_command_wizard). -->
 <odoo>
     <record id="view_td_genset_command_wizard_form" model="ir.ui.view">
         <field name="name">td.genset.command.wizard.form</field>
@@ -9,17 +9,22 @@
             <form string="Підтвердження команди">
                 <group>
                     <field name="genset_id" readonly="1"/>
-                    <field name="command"/>
+                    <field name="command" readonly="1" force_save="1"/>
                     <field name="test_mode" widget="radio" required="command == 'test'" invisible="command != 'test'"/>
-                    <field name="target_breaker_closed" invisible="command not in ('gen_close_open', 'mains_close_open')"/>
+                    <field name="target_breaker_closed" invisible="1"/>
                     <field name="confirm_required" invisible="1"/>
                 </group>
-                <div class="alert alert-warning" role="alert" invisible="not warning_text">
-                    <field name="warning_text" nolabel="1"/>
+                <div class="alert alert-danger" role="alert" invisible="not warning_text or not confirm_required">
+                    <field name="warning_text" nolabel="1" class="text-break"/>
+                </div>
+                <div class="alert alert-info" role="status" invisible="not warning_text or confirm_required">
+                    <field name="warning_text" nolabel="1" class="text-break"/>
                 </div>
                 <footer>
                     <button name="action_confirm" type="object" string="Підтвердити" class="btn-primary"
-                            data-hotkey="q"/>
+                            invisible="confirm_required or (command == 'test' and not test_mode)" data-hotkey="q"/>
+                    <button name="action_confirm" type="object" string="Підтвердити" class="btn-danger"
+                            invisible="not confirm_required or (command == 'test' and not test_mode)" data-hotkey="w"/>
                     <button string="Скасувати" class="btn-secondary" special="cancel" data-hotkey="x"/>
                 </footer>
             </form>
