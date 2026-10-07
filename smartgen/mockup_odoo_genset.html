@@ -525,7 +525,8 @@ select.o-input { padding: 4px 2px; }
 .dd { position: relative; display: inline-flex; }
 .dd-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 240px; background: var(--o-sheet); border: 1px solid var(--o-border); border-radius: 8px; box-shadow: var(--o-shadow); padding: 6px 0; }
 .dd-menu.right { left: auto; right: 0; }
-.dd-menu a { display: block; padding: 5px 16px; color: var(--o-fg); text-decoration: none; font-size: 14px; white-space: nowrap; }
+.dd-menu { max-width: calc(100vw - 16px); }
+.dd-menu a { display: block; padding: 5px 16px 5px 16px; color: var(--o-fg); text-decoration: none; font-size: 14px; }
 .dd-menu a:hover, .dd-menu a:focus-visible { background: var(--o-hover); outline: none; }
 .dd-menu a.sub { padding-left: 28px; }
 .dd-menu a[aria-current] { font-weight: 600; }
@@ -569,6 +570,8 @@ select.o-input { padding: 4px 2px; }
 .ronote { display: flex; gap: 8px; align-items: flex-start; background: var(--o-info-soft); color: var(--o-info); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
 .avatar { border: 0; cursor: pointer; }
 .dd-menu .chk-i { display: inline-block; width: 18px; color: var(--o-primary); }
+.dd-menu a:has(.chk-i) { padding-left: 38px; text-indent: -20px; }
+.dd-menu.right { min-width: min(320px, calc(100vw - 16px)); }
 .roles-m td.y { color: var(--o-ok); font-weight: 600; text-align: center; }
 .roles-m td.n { color: var(--o-muted); text-align: center; }
 .roles-m th:not(:first-child) { text-align: center; }
@@ -1054,7 +1057,7 @@ select.o-input { padding: 4px 2px; }
     mode: "auto", source: "schedule", gs: 0, gsEnd: 0, genCB: false, mainsCB: true, timer: null,
     remoteLock: false, nd: { oil: false },   // 01H 0004; 03H value 32766 = no data
     inputs: { access: false, fire: false, alarm: false, inhibit: false },   // CMM366B inputs (reqdatachange)
-    role: "tech",   // «Генератори» access group of the current user: user → admin → tech, each includes the previous
+    me: "Т. Нижниковський", role: "tech",   // current user and their «Генератори» group: user → admin → tech, each includes the previous
     offline: null, queue: [], linkPolicy: "queue",   // module stopped sending data; schedule commands wait in the queue
     maint: { first: 30, every: 250, left: 0 },       // 03H 0030-0031: hours to maintenance
     notify: {
@@ -1191,8 +1194,9 @@ select.o-input { padding: 4px 2px; }
   const ROLES = { user: "Співробітник", admin: "Адміністратор", tech: "Тех. адміністратор" };
   const RANK = { user: 0, admin: 1, tech: 2 };
   // what each role may change; everyone sees everything
-  const NEED = { timer: "user", schedule: "admin", fuel: "admin", pult: "tech", ack: "tech", maint: "tech", settings: "tech" };
-  const can = k => RANK[S.role] >= RANK[NEED[k]];
+  const NEED = { timer: "user", schedule: "admin", fuel: "admin", pult: "tech", maint: "tech", settings: "tech" };
+  // «Прийняв»: anyone in the escalation chain, whatever their role
+  const can = k => k === "ack" ? S.notify.chain.some(c => c.who === S.me) : RANK[S.role] >= RANK[NEED[k]];
   const gsLeft = () => S.gsEnd ? Math.max(0, Math.ceil((S.gsEnd - Date.now()) / 1000)) : 0;
   const isLocked = () => S.remoteLock || S.inputs.inhibit;
   function renderGs() { const l = gsLeft(); $("#padState").textContent = GS[S.gs] + (l ? ` · ${l} с` : ""); }
@@ -1346,15 +1350,15 @@ select.o-input { padding: 4px 2px; }
     const act = a => a.when === "активна";
     $("#alarmList").innerHTML = S.alarms.map((a, i) => ({ a, i })).sort((x, y) => act(y.a) - act(x.a)).map(({ a, i }) => `<div class="alarm"><span class="stripe" style="background:${c[a.level]}"></span>
       <div><b>${a.title}${a.example ? '<span class="ex">приклад</span>' : ""}</b><small>${a.sub}</small>${notifLine(a)}</div>
-      <div class="al-r"><small class="num">${a.when}</small>${a.n && act(a) && !a.n.ack && can("ack") ? `<button class="btn btn-sm" type="button" data-ack="${i}">Прийняв</button>` : ""}</div></div>`).join("");
-    $("#alarmHead").innerHTML = `<span class="ms">campaign</span><span>Сповіщення: ${S.notify.chain.map(c => `${c.who}${c.after ? ` (+${c.after} хв)` : ""}`).join(" → ")} · <a class="lnk" href="#settings/chain">налаштувати</a></span>`;
+      <div class="al-r"><small class="num">${a.when}</small>${a.n && act(a) && !a.n.ack ? (can("ack") ? `<button class="btn btn-sm" type="button" data-ack="${i}">Прийняв</button>` : '<small class="dim">прийняти може учасник ланцюжка</small>') : ""}</div></div>`).join("");
+    $("#alarmHead").innerHTML = `<span class="ms">campaign</span><span>Сповіщення: ${S.notify.chain.map(c => `${c.who}${c.after ? ` (+${c.after} хв)` : ""}`).join(" → ")} · прийняти може будь-хто з ланцюжка · <a class="lnk" href="#settings/chain">налаштувати</a></span>`;
     const n = S.alarms.filter(act).length;
     $("#cntAlarms").textContent = n; $("#statAlarms").textContent = n;
   }
   $("#alarmList").onclick = e => {
     const b = e.target.closest("[data-ack]"); if (!b) return;
     const a = S.alarms[+b.dataset.ack];
-    a.n.ack = { who: "Ви", time: kyiv().full };
+    a.n.ack = { who: S.me, time: kyiv().full };
     S.chat.unshift({ day: "Сьогодні", who: "Ви", time: kyiv().hhmm, text: `Прийняв тривогу «${a.title}». Ескалацію зупинено.`, track: true });
     renderAlarms(); render();
   };
@@ -2419,7 +2423,8 @@ select.o-input { padding: 4px 2px; }
 
   const SETMENU = [["settings", "Налаштування"], ["settings/gens", "Генератори"], ["hdr", "Сповіщення"], ["settings/chain", "Ланцюжок ескалації", 1], ["hdr", "Паливо"], ["settings/locs", "Місця зберігання", 1], ["hdr", "Користувачі"], ["settings/roles", "Ролі доступу", 1]];
   const SETTITLE = { general: "Налаштування", gens: "Генератори", chain: "Ланцюжок ескалації", locs: "Місця зберігання", roles: "Ролі доступу" };
-  const USERS = [{ name: "Т. Нижниковський", role: "tech", me: true }, { name: "І. Мельник", role: "admin" }, { name: "С. Бондар", role: "admin" }, { name: "О. Коваль", role: "user" }];
+  const USERS = [{ name: "Т. Нижниковський", role: "tech" }, { name: "І. Мельник", role: "admin" }, { name: "С. Бондар", role: "admin" }, { name: "О. Коваль", role: "user" }];
+  const initials = n => n.replace(/\./g, "").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const oset = (title, desc, ctl) => `<div class="oset"><div class="oset-t">${title}</div>${desc ? `<div class="oset-d">${desc}</div>` : ""}<div class="oset-c">${ctl}</div></div>`;
   const pair = (a, mid, b, tail = "") => `<span class="pair">${a}<span>${mid}</span>${b}${tail ? `<span>${tail}</span>` : ""}</span>`;
 
@@ -2428,8 +2433,9 @@ select.o-input { padding: 4px 2px; }
   function ddFill(b) {
     const cur = location.hash.slice(1) || "form", m = b.nextElementSibling;
     if (b.dataset.dd === "user") {
-      m.innerHTML = `<div class="hdr" style="color:var(--o-fg)">Т. Нижниковський</div><div class="hdr">Переглянути як (мокап)</div>`
-        + Object.entries(G.ROLES).map(([k, t]) => `<a href="#" data-role="${k}"><span class="chk-i">${S.role === k ? "✓" : ""}</span>${t}</a>`).join("")
+      const inChain = n => S.notify.chain.some(c => c.who === n);
+      m.innerHTML = `<div class="hdr" style="color:var(--o-fg)">${S.me} · ${G.ROLES[S.role]}</div><div class="hdr">Переглянути як (мокап)</div>`
+        + USERS.map((u, i) => `<a href="#" data-user="${i}"><span class="chk-i">${S.me === u.name ? "✓" : ""}</span>${u.name} <span class="dim">· ${G.ROLES[u.role]}${inChain(u.name) ? " · у ланцюжку" : ""}</span></a>`).join("")
         + `<a href="#settings/roles"><span class="chk-i"></span>Ролі доступу</a>`;
       return;
     }
@@ -2444,15 +2450,16 @@ select.o-input { padding: 4px 2px; }
     b.nextElementSibling.querySelector("a").focus();
   });
   document.addEventListener("click", e => {
-    const r = e.target.closest("[data-role]");
-    if (r) { e.preventDefault(); setRole(r.dataset.role); }
+    const r = e.target.closest("[data-user]");
+    if (r) { e.preventDefault(); setUser(USERS[+r.dataset.user]); }
     if (!e.target.closest(".dd-menu")) ddClose(); else if (e.target.closest("a")) ddClose();
   });
-  function setRole(k) {
-    S.role = k;
+  function setUser(u) {
+    S.me = u.name; S.role = u.role;
+    $("[data-dd=user]").textContent = initials(u.name);
     G.render(); G.renderSchedule(); G.renderExceptions(); G.renderAlarms(); renderFuel(); renderMaint();
     if (location.hash.startsWith("#settings")) renderSettings();
-    G.notify(`Перегляд як: ${G.ROLES[k]}`);
+    G.notify(`Перегляд як: ${u.name} · ${G.ROLES[u.role]}`);
   }
   document.addEventListener("keydown", e => { if (e.key === "Escape") ddClose(); });
 
@@ -2535,7 +2542,7 @@ select.o-input { padding: 4px 2px; }
     ["Розклад і дні-винятки", "admin"],
     ["Заправка: заправити генератор, надходження палива, каністри", "admin"],
     ["Пульт: Авто, Ручний, Пуск, Стоп, Тест; автомати генератора і мережі", "tech"],
-    ["Прийняти тривогу («Прийняв»)", "tech"],
+    ["Прийняти тривогу («Прийняв») — якщо людина є в ланцюжку сповіщень", "chain"],
     ["Обслуговування: заявки на ТО", "tech"],
     ["Налаштування: генератори, підключення, сповіщення, паливо, ролі", "tech"],
   ];
@@ -2545,13 +2552,13 @@ select.o-input { padding: 4px 2px; }
     return `<div class="sform">
       <div class="sbox"><h4>Що може кожна роль</h4><div class="sub">Кожна наступна роль включає попередню. В Odoo — групи доступу застосунку «Генератори»: td_genset.group_user → group_admin → group_tech (implied_ids).</div>
         <div class="o-list"><table class="roles-m"><thead><tr><th>Дія</th>${Object.values(G.ROLES).map(t => `<th>${t}</th>`).join("")}</tr></thead><tbody>
-        ${MATRIX.map(([t, need]) => `<tr><td>${t}</td>${Object.keys(G.ROLES).map(k => RK[k] >= RK[need] ? '<td class="y">✓</td>' : '<td class="n">—</td>').join("")}</tr>`).join("")}
+        ${MATRIX.map(([t, need]) => `<tr><td>${t}</td>${Object.keys(G.ROLES).map(k => need === "chain" ? '<td class="y">у ланцюжку</td>' : RK[k] >= RK[need] ? '<td class="y">✓</td>' : '<td class="n">—</td>').join("")}</tr>`).join("")}
         </tbody></table></div></div>
       <div class="sbox"><h4>Користувачі</h4>
         <div class="o-list cardlist"><table data-m="res.users"><thead><tr><th>Користувач</th><th>Роль</th></tr></thead><tbody>
-        ${USERS.map((u, i) => `<tr><td><b>${u.name}</b>${u.me ? ' <span class="dim">(ви)</span>' : ""}</td><td>${sel(`uRole${i}`, Object.entries(G.ROLES), u.role, ro || u.me ? "disabled" : "")}</td></tr>`).join("")}
+        ${USERS.map((u, i) => `<tr><td><b>${u.name}</b>${u.name === S.me ? ' <span class="dim">(ви)</span>' : ""}${S.notify.chain.some(c => c.who === u.name) ? ' <span class="badge b-info">у ланцюжку</span>' : ""}</td><td>${sel(`uRole${i}`, Object.entries(G.ROLES), u.role, ro || u.name === S.me ? "disabled" : "")}</td></tr>`).join("")}
         </tbody></table></div>
-        <div class="hint" style="margin-top:8px">Власну роль змінити не можна — це робить інший тех. адміністратор. Для перегляду мокапу під іншою роллю — меню аватара.</div></div>
+        <div class="hint" style="margin-top:8px">Власну роль змінити не можна — це робить інший тех. адміністратор. Щоб подивитися мокап очима іншого користувача — меню аватара.</div></div>
     </div>`;
   }
   function renderSettings() {
