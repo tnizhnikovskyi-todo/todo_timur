@@ -21,11 +21,12 @@ td_require_db_name "$db"
 td_check_env
 td_require_pg
 td_db_exists "$db" || td_die "базы $db нет (создайте: $TD_TOOLS_DIR/new_db.sh $db)"
+td_lock_db "$db"
 
 state="$(td_module_state "$db" "$TD_MODULE")"
 if [[ "$state" == "installed" || "$state" == "to upgrade" ]]; then mode=-u; else mode=-i; fi
 log="$ODOO_LOG_DIR/update-$db.log"
-td_log "$db: $mode $TD_MODULE (сейчас: ${state:-нет записи}); лог: $log"
+td_log "$db: $mode $TD_MODULE (сейчас: ${state:-нет записи}) из $TD_ADDONS_DIR; лог: $log"
 
 t0=$(date +%s)
 set +e

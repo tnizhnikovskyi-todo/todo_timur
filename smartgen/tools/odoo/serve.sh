@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Сервер Odoo в фоне для проверок интерфейса (Playwright) и ручной работы.
 #
-#   serve.sh <dbname> [port] [-- <доп. аргументы odoo-bin>]   запустить (порт: первый свободный от 8069)
+#   serve.sh <dbname> [port] [-- <доп. аргументы odoo-bin>]   запустить (без порта — случайный свободный)
 #   serve.sh stop <dbname> | serve.sh <dbname> stop            остановить
 #   serve.sh stop all                                          остановить все
 #   serve.sh status                                            что запущено
 #
-# Сервер видит только свою базу (-d <dbname>, db-filter), вход: admin / admin.
+# Сервер видит только свою базу (-d <dbname>, db-filter), вход: admin / admin. Модуль — из smartgen/
+# того worktree, где лежит скрипт (--addons-path). Порт по умолчанию — свободный эфемерный (уникален
+# при параллельной работе потоков); узнать: вывод скрипта, serve.sh status или $ODOO_RUN_DIR/<dbname>.port.
 # pid и порт: $ODOO_RUN_DIR/<dbname>.pid|.port, лог: $ODOO_LOG_DIR/serve-<dbname>.log.
 # Скрипт ждёт, пока /web/health ответит 200 (до TD_SERVE_WAIT с, по умолчанию 120).
 set -euo pipefail
@@ -29,7 +31,8 @@ cmd_status() {
         any=1
         db="$(basename "$f" .pid)"; pid="$(read_pid "$db")"
         if pid_alive "$pid"; then
-            echo "$db: работает, pid $pid, http://127.0.0.1:$(read_port "$db")/web/login?db=$db"
+            echo "$db: работает, pid $pid, http://127.0.0.1:$(read_port "$db")/web/login?db=$db" \
+                 "(addons: $(cat "$ODOO_RUN_DIR/$db.addons" 2>/dev/null || echo '?'))"
         else
             echo "$db: pid-файл есть, процесса $pid нет (лог: $ODOO_LOG_DIR/serve-$db.log)"
         fi
@@ -48,7 +51,7 @@ cmd_stop() {
     fi
     pid="$(read_pid "$db")"
     if ! pid_alive "$pid"; then
-        rm -f "$ODOO_RUN_DIR/$db.pid" "$ODOO_RUN_DIR/$db.port"
+        rm -f "$ODOO_RUN_DIR/$db.pid" "$ODOO_RUN_DIR/$db.port" "$ODOO_RUN_DIR/$db.addons"
         td_log "$db: сервер не запущен"
         return 0
     fi
@@ -61,13 +64,13 @@ cmd_stop() {
         td_warn "$db: не остановился за 20 с — SIGKILL"
         kill -KILL "$pid" 2>/dev/null || true
     fi
-    rm -f "$ODOO_RUN_DIR/$db.pid" "$ODOO_RUN_DIR/$db.port"
+    rm -f "$ODOO_RUN_DIR/$db.pid" "$ODOO_RUN_DIR/$db.port" "$ODOO_RUN_DIR/$db.addons"
     td_log "$db: сервер остановлен (pid $pid)"
 }
 
 cmd_start() {
     local db="$1" port="${2:-}"; shift 2 || shift $#
-    local extra=("$@") pid log url wait_s i code
+    local extra=("$@") pid log url wait_s i code=""
     td_require_db_name "$db"
     td_check_env
     td_require_pg
@@ -82,27 +85,31 @@ cmd_start() {
         [[ "$port" =~ ^[0-9]+$ ]] || td_die "порт должен быть числом: '$port'"
         [[ "$(td_free_port "$port")" == "$port" ]] || td_die "порт $port занят"
     else
-        port="$(td_free_port 8069)"
+        port="$(td_free_port)"         # эфемерный: два потока не получат один и тот же порт
     fi
     log="$ODOO_LOG_DIR/serve-$db.log"
     # setsid: сервер не умирает вместе с вызвавшим shell; pid = pid самого odoo-bin
-    setsid "$ODOO_PY" "$ODOO_BIN" -c "$ODOO_CONF" -d "$db" --db-filter="^${db}\$" \
+    setsid "$ODOO_PY" "$ODOO_BIN" -c "$ODOO_CONF" --addons-path="$ODOO_ADDONS_PATH" -d "$db" --db-filter="^${db}\$" \
         --http-port="$port" --http-interface="$ODOO_HTTP_INTERFACE" "${extra[@]}" \
         > "$log" 2>&1 < /dev/null &
     pid=$!
     echo "$pid" > "$ODOO_RUN_DIR/$db.pid"
     echo "$port" > "$ODOO_RUN_DIR/$db.port"
+    echo "$ODOO_ADDONS_PATH" > "$ODOO_RUN_DIR/$db.addons"
 
     url="http://127.0.0.1:$port"
     wait_s="${TD_SERVE_WAIT:-120}"
     for i in $(seq 1 $(( wait_s * 2 ))); do
         if ! pid_alive "$pid"; then
             tail -n 30 "$log" >&2
-            rm -f "$ODOO_RUN_DIR/$db.pid" "$ODOO_RUN_DIR/$db.port"
+            rm -f "$ODOO_RUN_DIR/$db.pid" "$ODOO_RUN_DIR/$db.port" "$ODOO_RUN_DIR/$db.addons"
             td_die "сервер завершился при запуске, лог: $log"
         fi
-        code="$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 2 "$url/web/health" || true)"
-        [[ "$code" == "200" ]] && break
+        # 200 должен отдать именно наш процесс: ждём в его логе строку о занятом порте
+        if grep -q "HTTP service (werkzeug) running on .*:$port" "$log" 2>/dev/null; then
+            code="$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 2 "$url/web/health" || true)"
+            [[ "$code" == "200" ]] && break
+        fi
         sleep 0.5
     done
     [[ "$code" == "200" ]] || td_die "сервер не ответил за $wait_s с (pid $pid), лог: $log"

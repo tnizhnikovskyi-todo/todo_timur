@@ -12,8 +12,9 @@
 # Полный лог: $ODOO_LOG_DIR/test-<dbname>.log (перезаписывается при следующем прогоне с тем же именем).
 # Печатает итог тестов, записи ERROR/CRITICAL с трейсбеками и хвост лога.
 #
-# Параллельные прогоны безопасны, если у них разные <dbname>: своя база, свой лог,
-# свой HTTP-порт (HttpCase ходит на http_port — общий 8069 смешал бы прогоны).
+# Параллельные прогоны безопасны, если у них разные <dbname>: своя база, filestore, лог и
+# HTTP-порт (HttpCase ходит на http_port — общий 8069 смешал бы прогоны); одно имя занять дважды
+# нельзя (flock). Модуль берётся из smartgen/ того worktree, где лежит скрипт (--addons-path).
 #
 # Код выхода: код Odoo (0 — всё прошло); 1 — Odoo вернул 0, но в логе есть ERROR/CRITICAL
 # (TD_TEST_STRICT=0 отключает); 4 — модуль не найден или не установился; 124 — таймаут.
@@ -39,15 +40,18 @@ td_require_db_name "$db"
 td_check_env
 td_require_pg
 
+td_lock_db "$db"
 t0=$(date +%s%N)
 td_clone_db "$db"
 t_clone=$(( ($(date +%s%N) - t0) / 1000000 ))
 port="$(td_free_port)"
 log="$ODOO_LOG_DIR/test-$db.log"
 td_log "база $db из $TD_TEMPLATE_DB за ${t_clone} мс; -i $install --test-tags $tags; http-port $port"
+td_log "addons-path: $ODOO_ADDONS_PATH"
 td_log "лог: $log"
 
-cmd=(timeout --kill-after=30 "$timeout_s" "$ODOO_PY" "$ODOO_BIN" -c "$ODOO_CONF" -d "$db"
+cmd=(timeout --kill-after=30 "$timeout_s" "$ODOO_PY" "$ODOO_BIN" -c "$ODOO_CONF"
+     --addons-path="$ODOO_ADDONS_PATH" -d "$db"
      -i "$install" --test-enable --test-tags "$tags" --stop-after-init --log-level=test
      --http-port="$port" "${extra[@]}")
 t1=$(date +%s)

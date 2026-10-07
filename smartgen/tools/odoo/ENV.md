@@ -13,14 +13,31 @@ $T/run_tests.sh td_<имя> /td_genset:TestRelay    # только класс (�
 $T/run_stand_tests.sh td_<имя>                   # стендовые тесты (тег td_genset_stand) со своим fake_relay
 $T/new_db.sh td_<имя>                            # пустая копия шаблона (без td_genset)
 $T/update.sh td_<имя>                            # -u td_genset (или -i, если ещё не установлен)
-$T/serve.sh td_<имя> [порт]                      # сервер в фоне для Playwright, вход admin / admin
+$T/serve.sh td_<имя> [порт]                      # сервер в фоне для Playwright (порт по умолчанию случайный), admin / admin
 $T/serve.sh stop td_<имя>                        # остановить (serve.sh status — что запущено)
-$T/drop_db.sh td_<имя>                           # удалить базу и filestore (--pattern 'td_x_%' — по шаблону)
+$T/drop_db.sh td_<имя>                           # удалить базу и filestore (--pattern 'td_w1_%'; занятые пропускает)
 $T/setup.sh template                             # пересобрать шаблон td_template (≈45 с)
 python3 /home/user/todo_timur/smartgen/tools/fake_relay.py --port 8081 --token dev-token-0123456789abcdefghij --snapshot-sec 10
 ```
 
-Имена баз — `[a-z0-9_-]`; для параллельной работы у каждого агента свой префикс (`td_a1_…`, `td_a2_…`).
+Имена баз — `[a-z0-9_-]`; для параллельной работы у каждого потока свой префикс (`td_w1_…`, `td_w2_…`).
+`T` — каталог скриптов **своего** worktree (см. раздел «Git worktree»).
+
+## Git worktree (параллельные потоки W1–W5)
+
+- Скрипты вычисляют корень репозитория от своего расположения и передают odoo-bin
+  `--addons-path=/home/user/odoo18/addons,<корень worktree>/smartgen` — аргумент командной строки перекрывает
+  `addons_path` из `/home/user/odoo18.conf` (там прописана основная копия `/home/user/todo_timur`).
+  Поэтому запускайте скрипты **из своего worktree**: `/путь/к/wt/smartgen/tools/odoo/run_tests.sh td_w1_x`.
+  `run_tests.sh` печатает фактический `addons-path`; `serve.sh status` — из какого worktree поднят сервер.
+- Ручной запуск `odoo-bin -c /home/user/odoo18.conf …` без `--addons-path` возьмёт модуль из основной копии.
+- Общие для всех worktree: Postgres, `td_template`, venv, исходники Odoo, `data_dir`. Не пересекаются: база,
+  `filestore/<база>`, логи `logs/*-<база>.log`, pid/порт `run/<база>.*` — всё по имени базы.
+- Одно имя базы два прогона одновременно не займут: `run_tests.sh`, `run_stand_tests.sh`, `update.sh`,
+  `new_db.sh` берут блокировку `run/<база>.lock` (второй сразу завершится с ошибкой).
+- `drop_db.sh` пропускает базы, занятые прогоном или `serve.sh` (`--force` — удалить всё равно).
+- `serve.sh` без порта берёт случайный свободный порт и проверяет, что порт занял именно его процесс.
+- Переопределить путь целиком: `ODOO_ADDONS_PATH=/home/user/odoo18/addons,/другой/smartgen $T/run_tests.sh …`.
 
 ## Что где
 
@@ -60,7 +77,7 @@ python3 /home/user/todo_timur/smartgen/tools/fake_relay.py --port 8081 --token d
 - `new_db.sh` / `run_tests.sh`: `dropdb --force` одноимённой базы → `createdb -T td_template` (до 5 попыток) →
   копия `filestore/td_template` жёсткими ссылками (файлы filestore неизменяемы; без filestore у копии
   «битые» вложения и ассеты).
-- `run_tests.sh` запускает `odoo-bin -c /home/user/odoo18.conf -d <db> -i td_genset --test-enable
+- `run_tests.sh` запускает `odoo-bin -c /home/user/odoo18.conf --addons-path=… -d <db> -i td_genset --test-enable
   --test-tags <теги> --stop-after-init --log-level=test --http-port=<свободный порт>`. Свой порт важен:
   `HttpCase` ходит на `http_port`, и общий 8069 смешал бы параллельные прогоны.
 - Полный лог: `/home/user/odoo18-data/logs/test-<db>.log` (перезаписывается при следующем прогоне с тем же
@@ -74,7 +91,7 @@ python3 /home/user/todo_timur/smartgen/tools/fake_relay.py --port 8081 --token d
 Аргументы после `--` уходят в `odoo-bin` (например, `-- --screenshots=/tmp/shots`).
 
 `update.sh` пишет лог в `logs/update-<db>.log`, коды выхода те же. `serve.sh` — `logs/serve-<db>.log`,
-ждёт ответа `/web/health` (до 120 с), сервер видит только свою базу (`-d`, `--db-filter`).
+ждёт ответа `/web/health` от своего процесса (до 120 с), сервер видит только свою базу (`-d`, `--db-filter`).
 
 ## Замеры (4 CPU, 15 ГБ)
 
@@ -122,6 +139,7 @@ python3 smartgen/tools/fake_relay.py --selftest     # → SELF-TEST PASSED (≈1
 - Пересборка шаблона во время чужих прогонов сломает их `createdb` — предупреждайте остальных.
 - `Running as user 'root' is a security risk.` в логах — предупреждение, не ошибка. Wkhtmltopdf нет
   (PDF-отчёты не рендерятся, в логе INFO). `auth_ldap` работать не будет (нет `python-ldap`).
-- Базы `td_*` копятся (≈30 МБ каждая): `drop_db.sh --pattern 'td_%'` удаляет все, кроме шаблона.
+- Базы `td_*` копятся (≈30 МБ каждая): `drop_db.sh --pattern 'td_w1_%'` — свои; занятые чужими прогонами
+  и серверами пропускаются, шаблон не удаляется никогда.
 - Ветка 18.0 клонирована на коммит `e0d3d4e` от 07.10.2026; обновить: `git -C /home/user/odoo18 pull --depth 1`,
   затем `setup.sh venv template`.

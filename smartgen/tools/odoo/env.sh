@@ -28,6 +28,10 @@ ODOO_DATA_DIR="${ODOO_DATA_DIR:-/home/user/odoo18-data}"    # filestore, session
 ODOO_LOG_DIR="${ODOO_LOG_DIR:-$ODOO_DATA_DIR/logs}"
 ODOO_RUN_DIR="${ODOO_RUN_DIR:-$ODOO_DATA_DIR/run}"          # pid-файлы serve.sh
 ODOO_HTTP_INTERFACE="${ODOO_HTTP_INTERFACE:-127.0.0.1}"
+# addons_path передаётся odoo-bin явно (--addons-path перекрывает конфиг): из git worktree модуль
+# берётся из smartgen/ ЭТОГО worktree (TD_ADDONS_DIR вычислен от расположения скриптов), а не из
+# основной копии /home/user/todo_timur, прописанной в $ODOO_CONF.
+ODOO_ADDONS_PATH="${ODOO_ADDONS_PATH:-$ODOO_HOME/addons,$TD_ADDONS_DIR}"
 
 # ---------------------------------------------------------------- Postgres
 PG_VERSION="${PG_VERSION:-16}"
@@ -138,8 +142,16 @@ else:
 PY
 }
 
-# Запустить odoo-bin с нашим конфигом.
-td_odoo() { "$ODOO_PY" "$ODOO_BIN" -c "$ODOO_CONF" "$@"; }
+# Запустить odoo-bin с нашим конфигом и addons_path этого worktree.
+td_odoo() { "$ODOO_PY" "$ODOO_BIN" -c "$ODOO_CONF" --addons-path="$ODOO_ADDONS_PATH" "$@"; }
+
+# Эксклюзивная блокировка базы на время работы скрипта (и запущенного им odoo-bin): два прогона
+# с одним именем базы — в том числе из разных worktree — не затрут друг другу базу, filestore и лог.
+td_lock_db() {
+    mkdir -p "$ODOO_RUN_DIR"
+    exec 9>"$ODOO_RUN_DIR/$1.lock"
+    flock -n 9 || td_die "база $1 занята другим прогоном (lock $ODOO_RUN_DIR/$1.lock) — возьмите другое имя"
+}
 
 # Состояние модуля в базе: installed / uninstalled / to upgrade / … или пусто, если записи нет.
 td_module_state() {

@@ -14,6 +14,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 db="$1"
 td_require_db_name "$db"
 td_require_pg
+td_lock_db "$db"
 t0=$(date +%s%N)
 td_clone_db "$db"
 td_log "база $db создана из $TD_TEMPLATE_DB за $(( ($(date +%s%N) - t0) / 1000000 )) мс"
