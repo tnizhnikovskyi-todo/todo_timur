@@ -395,15 +395,18 @@ class TdGensetEvent(models.Model):
             summary = _('Пуск з %s-ї спроби, навантаження прийнято', attempts)
         else:
             summary = _('Пуск з %s-ї спроби, без навантаження', attempts)
-        self._close(event, row['ts'],
-                    reading_end_id=row['id'],
-                    energy_kwh=(energies[-1] - energies[0]) if len(energies) > 1 else 0.0,
-                    peak_kw=max(powers) if powers else 0.0,
-                    fuel_delta_l=self._td_fuel_delta(genset, fuel_rows[0], fuel_rows[-1]) if fuel_rows else 0.0,
-                    crank_attempts=attempts,
-                    crank_min_battery_v=min(crank_volts) if crank_volts else False,
-                    summary=summary,
-                    is_bad=attempts > 1)
+        vals = {
+            'reading_end_id': row['id'],
+            'energy_kwh': max(0.0, energies[-1] - energies[0]) if len(energies) > 1 else 0.0,
+            'peak_kw': max(powers) if powers else 0.0,
+            'fuel_delta_l': self._td_fuel_delta(genset, fuel_rows[0], fuel_rows[-1]) if fuel_rows else 0.0,
+            'crank_attempts': attempts,
+            'summary': summary,
+            'is_bad': attempts > 1,
+        }
+        if crank_volts:
+            vals['crank_min_battery_v'] = min(crank_volts)
+        self._close(event, row['ts'], **vals)
 
     @api.model
     def _td_fuel_delta(self, genset, start, end):
@@ -423,6 +426,8 @@ class TdGensetEvent(models.Model):
         active, unknown = alarm_model._td_signal_state(row)
         for code, (level, name, description) in active.items():
             entry = codes.get(code)
+            if entry and entry.get('event') and (entry.get('alarm') or not raise_alarms):
+                continue    # уже відстежується — без запитів на кожен знімок
             event = self.sudo().browse(entry['event']).exists() if entry and entry.get('event') else self.browse()
             if not event:
                 event = self._open(genset, 'alarm', row['ts'], reading_start_id=row['id'], reason=name,
@@ -604,22 +609,22 @@ class TdGensetEvent(models.Model):
         window = timedelta(minutes=(config.retry_window_min or 10) + 2)
         source_label = _('застосунок SmartGen') if source == 'cloud' else _('панель контролера')
         modes = dict(self._fields['mode_from']._description_selection(self.env))
+        domain = [('genset_id', '=', genset.id), ('event_type', '=', 'external_control'),
+                  ('date_start', '>=', stamp - window), ('date_start', '<=', stamp + window)]
         if mode_to:
             change = '%s → %s' % (modes.get(mode_from, _('невідомо')) if mode_from else _('невідомо'),
                                   modes.get(mode_to, mode_to))
+            domain.append(('mode_to', '=', mode_to))
         elif breaker:
             name = _('Автомат генератора') if breaker == 'gen_on_load' else _('Автомат мережі')
             if closed is None:
                 change = name
             else:
                 change = '%s: %s' % (name, _('замкнено') if closed else _('розімкнено'))
+            domain += [('mode_to', '=', False), ('summary', '=like', '%s%%' % name)]
         else:
             change = _('команда')
         summary = '%s (%s)' % (change, source_label)
-        domain = [('genset_id', '=', genset.id), ('event_type', '=', 'external_control'),
-                  ('date_start', '>=', stamp - window), ('date_start', '<=', stamp + window)]
-        if mode_to:
-            domain.append(('mode_to', '=', mode_to))
         duplicate = self.sudo().search(domain, order='date_start desc', limit=1) if (mode_to or breaker) else None
         if duplicate:
             if source == 'cloud' and duplicate.reason != source_label:

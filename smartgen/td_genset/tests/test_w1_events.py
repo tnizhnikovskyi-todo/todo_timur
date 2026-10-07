@@ -250,3 +250,18 @@ class TestW1Events(TdGensetCase):
             'sent_at': T + timedelta(seconds=290)})
         self._feed([(T + timedelta(seconds=300), snapshot(controller_mode='auto'))])
         self.assertEqual(len(self._events('external_control')), 2)
+
+    def test_ac27_external_breaker_in_manual(self):
+        """2.8.1: у режимі Ручний автомат змінився без команди Odoo → «Автомат мережі: розімкнено (панель
+        контролера)»; з командою Odoo «Автомат мережі» — події немає."""
+        manual = {'controller_mode': 'manual'}
+        self._feed([(T, snapshot(**manual), 'interval'),
+                    (T + timedelta(seconds=30), snapshot(mains_on_load=False, **manual))])
+        event = self._events('external_control')
+        self.assertEqual(event.summary, 'Автомат мережі: розімкнено (панель контролера)')
+        self.assertFalse(event.mode_to)
+        self.env['td.genset.command'].create({
+            'genset_id': self.genset.id, 'command': 'mains_close_open', 'source': 'button', 'state': 'done',
+            'sent_at': T + timedelta(minutes=19)})
+        self._feed([(T + timedelta(minutes=20), snapshot(mains_on_load=True, **manual))])
+        self.assertEqual(len(self._events('external_control')), 1)
