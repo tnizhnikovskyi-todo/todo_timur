@@ -9,6 +9,7 @@
    gauges + parameters on the left (on phones: controls first). Notebook below, chatter aside on wide screens.
    Colors from Odoo 20 (19.5a) web.assets_web / web.assets_web_dark CSS. One font: Odoo system stack. */
 :root {
+  --o-tip-bg: #0b0b0d; --o-tip-fg: #ffffff; --o-tip-band: #19a3bd;   /* Odoo debug field tooltip: dark in both themes */
   --o-bg: #f8f9fa;
   --o-sheet: #ffffff;
   --o-card: #ffffff;
@@ -564,6 +565,14 @@ select.o-input { padding: 4px 2px; }
 .chain td { white-space: normal; vertical-align: middle; }
 .chain select { min-width: 150px; }
 
+/* field tooltips (Odoo developer mode): «?» after the label, help + technical details on hover or tap */
+.fq { color: var(--o-info); font-size: 10.5px; font-weight: 600; margin-left: 2px; cursor: help; vertical-align: super; line-height: 0; }
+.fq:focus-visible { outline: 2px solid var(--o-primary); border-radius: 2px; }
+.ftip { position: fixed; z-index: 60; max-width: min(440px, calc(100vw - 16px)); background: var(--o-tip-bg); color: var(--o-tip-fg); border-radius: 4px; padding: 8px 10px 10px; font-size: 12.5px; line-height: 1.45; box-shadow: 0 6px 20px rgba(0, 0, 0, .35); pointer-events: none; }
+.ftip-h { background: var(--o-tip-band); color: #fff; padding: 3px 6px; margin-bottom: 6px; }
+.ftip ul { margin: 0; padding-left: 18px; }
+.ftip li { overflow-wrap: anywhere; }
+
 /* events */
 .evtype { display: inline-flex; align-items: center; gap: 6px; }
 .evtype .ms { font-size: 18px; }
@@ -663,14 +672,14 @@ select.o-input { padding: 4px 2px; }
 
       <div class="groups">
         <div>
-          <div class="field"><span class="lbl">Режим</span><span class="val"><span class="badge" id="fMode">Авто</span></span></div>
-          <div class="field"><span class="lbl">Керує</span><span class="val"><span class="badge" id="fSrc">Розклад</span></span></div>
-          <div class="field"><span class="lbl">Наступна подія</span><span class="val" id="fNext">—</span></div>
+          <div class="field"><span class="lbl" data-f="mode">Режим</span><span class="val"><span class="badge" id="fMode">Авто</span></span></div>
+          <div class="field"><span class="lbl" data-f="control_source">Керує</span><span class="val"><span class="badge" id="fSrc">Розклад</span></span></div>
+          <div class="field"><span class="lbl" data-f="next_event">Наступна подія</span><span class="val" id="fNext">—</span></div>
         </div>
         <div>
-          <div class="field"><span class="lbl">Зв'язок</span><span class="val"><span class="badge b-ok" id="fLink">Онлайн</span> <small class="num" id="fAge">12 с тому</small></span></div>
-          <div class="field"><span class="lbl">Живлення об'єкта</span><span class="val"><span class="badge" id="fFeed">Мережа</span></span></div>
-          <div class="field"><span class="lbl">Отримувачі тривог</span><span class="val"><a class="lnk" href="#settings/chain" id="fRecip">—</a></span></div>
+          <div class="field"><span class="lbl" data-f="link_state">Зв'язок</span><span class="val"><span class="badge b-ok" id="fLink">Онлайн</span> <small class="num" id="fAge">12 с тому</small></span></div>
+          <div class="field"><span class="lbl" data-f="feed_source">Живлення об'єкта</span><span class="val"><span class="badge" id="fFeed">Мережа</span></span></div>
+          <div class="field"><span class="lbl" data-f="notify_level_ids">Отримувачі тривог</span><span class="val"><a class="lnk" href="#settings/chain" id="fRecip">—</a></span></div>
         </div>
       </div>
 
@@ -794,7 +803,7 @@ select.o-input { padding: 4px 2px; }
           <div class="cols2">
             <div>
               <div class="tblhead">Вікна роботи в режимі Авто</div>
-              <div class="tbl-wrap"><table>
+              <div class="tbl-wrap"><table data-m="td.genset.schedule">
                 <thead><tr><th>День</th><th>Початок → Авто</th><th>Кінець → Ручний + Стоп</th><th>Активне</th><th></th></tr></thead>
                 <tbody id="schedBody"></tbody>
               </table></div>
@@ -803,7 +812,7 @@ select.o-input { padding: 4px 2px; }
             </div>
             <div>
               <div class="tblhead">Дні-винятки</div>
-              <div class="tbl-wrap"><table>
+              <div class="tbl-wrap"><table data-m="td.genset.schedule.exception">
                 <thead><tr><th>Дата</th><th>Що робити</th><th></th></tr></thead>
                 <tbody id="excBody"></tbody>
               </table></div>
@@ -817,7 +826,7 @@ select.o-input { padding: 4px 2px; }
         <div class="panel" data-panel="maint" hidden><div id="maintBox"></div></div>
 
         <div class="panel" data-panel="log" hidden>
-          <div class="tbl-wrap"><table>
+          <div class="tbl-wrap"><table data-m="td.genset.command">
             <thead><tr><th>Час</th><th>Хто</th><th>Джерело</th><th>Команда</th><th>Результат</th></tr></thead>
             <tbody id="logBody"></tbody>
           </table></div>
@@ -859,7 +868,7 @@ select.o-input { padding: 4px 2px; }
       </div>
       <span class="example-note"><span class="ms">info</span>Запис кожні 15 хв і при кожній зміні стану. Рядки — приклад даних.</span>
     </div>
-    <div class="o-list"><table>
+    <div class="o-list"><table data-m="td.genset.reading">
       <thead><tr>
         <th class="sticky">Час</th><th>Режим</th><th>Агрегат</th><th>Живлення</th>
         <th class="n">Мережа UAB, V</th><th class="n">Мережа, Hz</th><th class="n">Ген. UAB, V</th><th class="n">Ген., Hz</th>
@@ -922,7 +931,7 @@ select.o-input { padding: 4px 2px; }
       <button class="fbtn" type="button" aria-pressed="false" data-ef="fuel">Паливо</button>
       <button class="fbtn" type="button" aria-pressed="false" data-ef="alarm">Тривоги</button>
     </div>
-    <div class="o-list"><table>
+    <div class="o-list"><table data-m="td.genset.event">
       <thead><tr><th class="sticky">Подія</th><th>Початок</th><th>Кінець</th><th class="n">Тривалість</th><th>Причина / джерело</th><th class="n">kWh</th><th class="n">Пік, kW</th><th class="n">Паливо, L</th><th>Підсумок</th></tr></thead>
       <tbody id="evBody"></tbody>
     </table></div>
@@ -984,7 +993,7 @@ select.o-input { padding: 4px 2px; }
     </section>
     <section class="box">
       <div class="box-head"><div><h4>Заправки і падіння рівня</h4><div class="sub">запис в Odoo + облік рівня контролером: зміна понад 5 % (03H 0100) підтверджує заправку, а без роботи двигуна — сигналізує про можливий злив</div></div></div>
-      <div class="o-list"><table>
+      <div class="o-list"><table data-m="td.genset.refuel">
         <thead><tr><th class="sticky">Дата</th><th>Звідки</th><th class="n">Зміна, L</th><th class="n">Бак, L</th><th>Хто</th><th>Контролер</th></tr></thead>
         <tbody id="refBody"></tbody>
       </table></div>
@@ -2315,10 +2324,10 @@ select.o-input { padding: 4px 2px; }
     const cur = MR.find(r => r.stage !== "done");
     const plan = `<div class="mt-grid">
       <div class="sbox"><h4>Регламент</h4>
-        <div class="sfield"><span>Перше ТО</span><span>через ${m.first} мотогодин (обкатка)</span></div>
-        <div class="sfield"><span>Далі</span><span>кожні ${m.every} мотогодин або раз на 12 міс.</span></div>
-        <div class="sfield"><span>Мотогодини</span><span class="num">${hm(LIFE_MIN)}</span></div>
-        <div class="sfield"><span>До ТО<small>контролер, 03H 0030–0031</small></span><span>${m.left ? `<span class="badge b-ok">${m.left} год</span>` : `<span class="badge b-crit">прострочено на ${hm(over)}</span>`}</span></div>
+        <div class="sfield"><span>Перше ТО</span><span data-fk="mFirst">через ${m.first} мотогодин (обкатка)</span></div>
+        <div class="sfield"><span>Далі</span><span data-fk="mEvery">кожні ${m.every} мотогодин або раз на 12 міс.</span></div>
+        <div class="sfield"><span>Мотогодини</span><span class="num" data-fk="mHours">${hm(LIFE_MIN)}</span></div>
+        <div class="sfield"><span>До ТО<small>контролер, 03H 0030–0031</small></span><span data-fk="mLeft">${m.left ? `<span class="badge b-ok">${m.left} год</span>` : `<span class="badge b-crit">прострочено на ${hm(over)}</span>`}</span></div>
         <div class="tbar${m.left ? "" : " crit"}"><i style="width:${m.left ? (100 - m.left / m.every * 100).toFixed(0) : 100}%"></i></div>
       </div>
       <div class="sbox"><h4>Як це працює</h4>
@@ -2330,8 +2339,8 @@ select.o-input { padding: 4px 2px; }
       const si = MSTAGES.findIndex(x => x[0] === r.stage), all = r.done && r.done.every(Boolean);
       return `<div class="mreq"><div class="mreq-h"><b>${r.id} · ${r.name}</b><div class="statusbar">${MSTAGES.map(([k, t], i) => `<span class="arrow${i === si ? " cur" : ""}">${t}</span>`).join("")}</div></div>
         <div class="sgrid">
-          <div class="sfield"><span>Виконавець</span><span>${r.who || '<span class="badge b-warn">не призначено</span>'}</span></div>
-          <div class="sfield"><span>Створено</span><span>${r.created}${r.auto ? " · автоматично, лічильник ТО = 0" : ""}</span></div>
+          <div class="sfield"><span>Виконавець</span><span data-fk="mUser">${r.who || '<span class="badge b-warn">не призначено</span>'}</span></div>
+          <div class="sfield"><span>Створено</span><span data-fk="mDate">${r.created}${r.auto ? " · автоматично, лічильник ТО = 0" : ""}</span></div>
         </div>
         ${r.done ? `<div class="checklist">${MW.map((w, i) => `<label class="${i === MW.length - 1 ? "key" : ""}"><input type="checkbox" data-mw="${i}"${r.done[i] ? " checked" : ""}${r.stage === "work" ? "" : " disabled"}>${w}</label>`).join("")}</div>` : ""}
         <div class="formbar">
@@ -2342,7 +2351,7 @@ select.o-input { padding: 4px 2px; }
     };
     const history = MR.filter(r => r.stage === "done").map(r => `<tr><td>${r.id}</td><td>${r.name}</td><td>${r.who}</td><td>${r.closed}</td><td><span class="badge b-ok">Виконано</span></td></tr>`).join("");
     $("#maintBox").innerHTML = plan + (cur ? reqCard(cur) : `<div class="mreq"><span class="badge b-ok">Відкритих заявок немає</span> <span class="hint">Наступне ТО — через ${m.left} мотогодин; заявку буде створено автоматично.</span></div>`)
-      + `<div class="tblhead" style="margin-top:16px">Історія</div><div class="tbl-wrap"><table><thead><tr><th>Заявка</th><th>Що</th><th>Виконавець</th><th>Закрито</th><th></th></tr></thead><tbody>${history}</tbody></table></div>`;
+      + `<div class="tblhead" style="margin-top:16px">Історія</div><div class="tbl-wrap"><table data-m="maintenance.request"><thead><tr><th>Заявка</th><th>Що</th><th>Виконавець</th><th>Закрито</th><th></th></tr></thead><tbody>${history}</tbody></table></div>`;
   }
   $("#maintBox").onclick = e => {
     const r = MR.find(x => x.stage !== "done"); if (!r) return;
@@ -2406,7 +2415,7 @@ select.o-input { padding: 4px 2px; }
   document.addEventListener("keydown", e => { if (e.key === "Escape") ddClose(); });
 
   function gensList() {
-    return `<div class="o-list cardlist"><table><thead><tr><th class="sticky">Назва</th><th>Адреса</th><th>Контролер</th><th>Модуль</th><th class="n">Бак, L</th><th class="n">Номінал, kW</th><th>Зв'язок</th><th>Стан</th><th class="n">Тривоги</th></tr></thead><tbody>
+    return `<div class="o-list cardlist"><table data-m="td.genset"><thead><tr><th class="sticky">Назва</th><th>Адреса</th><th>Контролер</th><th>Модуль</th><th class="n">Бак, L</th><th class="n">Номінал, kW</th><th>Зв'язок</th><th>Стан</th><th class="n">Тривоги</th></tr></thead><tbody>
       ${GENS.map((g, i) => `<tr class="clk" data-gen="${i}"><td class="sticky"><b>${g.name}</b></td><td>${g.addr}</td><td data-l="Контролер">${g.ctrl}</td><td data-l="Модуль">${g.host ? `CMM366B · ${g.port}` : '<span class="dim">—</span>'}</td>
         <td class="n" data-l="Бак, L">${g.tank}</td><td class="n" data-l="Номінал, kW">${g.kw}</td><td>${linkBadge(g)}</td><td data-l="Стан">${g.self ? G.GS[S.gs] : g.stat.state}</td><td class="n" data-l="Тривоги">${g.self ? S.alarms.filter(a => a.when === "активна").length : g.stat.alarms}</td></tr>`).join("")}
       </tbody></table></div><div class="hint" style="margin-top:8px">Натисніть рядок, щоб відкрити налаштування об'єкта, агрегату і підключення модуля.</div>`;
@@ -2416,7 +2425,7 @@ select.o-input { padding: 4px 2px; }
     return `<div class="sform">
       <div class="sbox"><h4>Об'єкт</h4><div class="sgrid">
         ${sf("Назва", inp("gName", g.name))}${sf("Адреса", inp("gAddr", g.addr))}
-        ${sf("Відповідальний", sel("gResp", PEOPLE, g.resp))}${sf("Координати", `<span>${g.lat ? `${g.lat}, ${g.lon}` : '<span class="dim">після підключення модуля</span>'}</span>`, "передає модуль (GPS)")}
+        ${sf("Відповідальний", sel("gResp", PEOPLE, g.resp))}${sf("Координати", `<span data-fk="gCoords">${g.lat ? `${g.lat}, ${g.lon}` : '<span class="dim">після підключення модуля</span>'}</span>`, "передає модуль (GPS)")}
       </div></div>
       <div class="sbox"><h4>Агрегат</h4><div class="sgrid">
         ${sf("Контролер", sel("gCtrl", ["HGM6110N", "HGM6120N"], g.ctrl), cmd)}${sf("Номінальна потужність, kW", inp("gKw", g.kw, "number", 'min="1"'))}
@@ -2430,13 +2439,13 @@ select.o-input { padding: 4px 2px; }
         ${sf("Передача онлайн / офлайн, с", pair(inp("gOn", g.online, "number"), "/", inp("gOff", g.offline, "number")), "online_rate / offline_rate")}
         ${sf("Режим передачі", sel("gMode", [["change", "Лише зміни (економія трафіку)"], ["full", "Усі дані щоразу"]], g.mode))}
       </div>
-      <div class="sfield"><span>Що опитуємо<small>команди para_command — під модель контролера</small></span><span class="chipset"><span class="chip">01H 0000–0079 · сигнали</span><span class="chip">03H 0000–0114 · значення</span><span class="chip">03H 2500–2511 · точні I, P, Q, S</span></span></div></div>
+      <div class="sfield"><span>Що опитуємо<small>команди para_command — під модель контролера</small></span><span class="chipset" data-fk="gPoll"><span class="chip">01H 0000–0079 · сигнали</span><span class="chip">03H 0000–0114 · значення</span><span class="chip">03H 2500–2511 · точні I, P, Q, S</span></span></div></div>
     </div>`;
   }
   function chainForm() {
     const N = S.notify;
     return `<div class="sbox"><div class="sub">Тривогу одразу отримує перший рівень. Якщо ніхто не натиснув «Прийняв», через вказаний час її отримує наступний. Що саме надсилати і тихі години — у загальних <a class="lnk" href="#settings">налаштуваннях</a>.</div>
-        <div class="o-list chain cardlist"><table><thead><tr><th>Рівень</th><th>Хто</th><th>Канали</th><th>Коли</th><th></th></tr></thead><tbody>
+        <div class="o-list chain cardlist"><table data-m="td.genset.notify.level"><thead><tr><th>Рівень</th><th>Хто</th><th>Канали</th><th>Коли</th><th></th></tr></thead><tbody>
         ${N.chain.map((c, i) => `<tr><td><b>${i + 1}. ${c.role}</b></td><td>${sel(`nWho${i}`, PEOPLE, c.who)}</td>
           <td><span class="chipset">${CHANNELS.map(ch => `<label class="chk"><input type="checkbox" data-nch="${i}" value="${ch}"${c.ch.includes(ch) ? " checked" : ""}>${ch}</label>`).join("")}</span></td>
           <td>${i ? pair("через", inp(`nAfter${i}`, c.after, "number", 'min="1"'), "хв") : "одразу"}</td>
@@ -2445,7 +2454,7 @@ select.o-input { padding: 4px 2px; }
         <div class="formbar" style="margin-top:6px"><button class="addline" type="button" id="nAdd">Додати рівень</button><span class="grow"></span><button class="btn" type="button" id="nTest"><span class="ms">send</span>Надіслати тестове сповіщення</button></div></div>`;
   }
   function locsList() {
-    return `<div class="o-list cardlist"><table><thead><tr><th>Місце</th><th class="n">Каністр</th><th class="n">Палива, L</th><th></th></tr></thead><tbody>
+    return `<div class="o-list cardlist"><table data-m="td.genset.storage.location"><thead><tr><th>Місце</th><th class="n">Каністр</th><th class="n">Палива, L</th><th></th></tr></thead><tbody>
       ${FS.locs.map((l, i) => { const cs = cans.filter(c => c.loc === l); return `<tr><td><b>${l}</b></td><td class="n" data-l="Каністр">${cs.length}</td><td class="n" data-l="Палива, L">${fmt(cs.reduce((a, c) => a + c.l, 0))}</td>
         <td><button class="x" type="button" data-floc="${i}" aria-label="Прибрати ${l}"><span class="ms">delete</span></button></td></tr>`; }).join("")}
       </tbody></table></div>
@@ -2466,7 +2475,7 @@ select.o-input { padding: 4px 2px; }
       <section><h3>Сповіщення</h3><div class="oset-grid">
         ${rules.map(([k, t, h]) => oset(t, h, sel(`nRule_${k}`, ["Завжди", "Крім тихих годин", "Лише в чаті"], N.rules[k]))).join("")}
         ${oset("Тихі години", "у цей час надсилаємо лише те, що «Завжди»", `<span class="pair">${sw("nQOn", N.quiet.on)}${inp("nQFrom", N.quiet.from, "time")}<span>–</span>${inp("nQTo", N.quiet.to, "time")}</span>`)}
-        ${oset("Ланцюжок ескалації", "хто і в якому порядку отримує тривоги", `<a class="lnk" href="#settings/chain">${N.chain.map(c => c.who).join(" → ")}</a>`)}
+        ${oset("Ланцюжок ескалації", "хто і в якому порядку отримує тривоги", `<a class="lnk" data-fk="nChain" href="#settings/chain">${N.chain.map(c => c.who).join(" → ")}</a>`)}
       </div></section>
       <section><h3>Паливо</h3><div class="oset-grid">
         ${oset("Мінімальний запас у каністрах, L", "нижче — позначка «бракує» на сторінці «Заправка»", inp("fMin", FS.min, "number", 'min="0"'))}
@@ -2474,7 +2483,7 @@ select.o-input { padding: 4px 2px; }
         ${oset("Ціна за замовчуванням, грн/л", "", inp("fPrice", FS.price, "number", 'min="0" step="0.01"'))}
         ${oset("Постачальник за замовчуванням", "", inp("fSup", FS.supplier))}
         ${oset("Тривога «падіння рівня без роботи»", "від, L; контролер окремо позначає зміну понад 5 % (03H 0100)", inp("fDrain", FS.drain, "number", 'min="1"'))}
-        ${oset("Місця зберігання", "де лежать каністри", `<a class="lnk" href="#settings/locs">${FS.locs.join(", ")}</a>`)}
+        ${oset("Місця зберігання", "де лежать каністри", `<a class="lnk" data-fk="fLocs" href="#settings/locs">${FS.locs.join(", ")}</a>`)}
       </div></section>
     </div>`;
   }
@@ -2561,3 +2570,221 @@ select.o-input { padding: 4px 2px; }
 })();
 </script>
 
+<script>
+(() => {
+  // Draft data model for developers: every visible field → Odoo model, field, type. «td.» = ToDo custom modules.
+  const G = "td.genset", SE = "td.genset.schedule.exception", RF = "td.genset.refuel", RC = "td.genset.fuel.receipt", CN = "td.genset.canister",
+    SL = "td.genset.storage.location", RS = "res.config.settings", MR = "maintenance.request", RD = "td.genset.reading", EV = "td.genset.event",
+    CM = "td.genset.command", NL = "td.genset.notify.level";
+  const D = (model, field, type, help, x = {}) => ({ model, field, type, help, ...x });
+  const GS = "[('0', 'Очікування'), ('1', 'Передпусковий підігрів'), ('2', 'Подача палива'), ('3', 'Прокрутка'), ('4', 'Пауза між спробами'), ('5', 'Безпечний пуск'), ('6', 'Холостий хід'), ('7', 'Прогрів'), ('8', 'Очікування навантаження'), ('9', 'Нормальна робота'), ('10', 'Охолодження'), ('11', 'Холостий хід перед зупинкою'), ('12', 'ETS'), ('13', 'Очікування зупинки'), ('14', 'Невдала зупинка'), ('15', 'Після зупинки')]";
+  const MODE = "[('auto', 'Авто'), ('manual', 'Ручний'), ('stop', 'Стоп'), ('test', 'Тест')]", FEED = "[('mains', 'Мережа'), ('genset', 'Генератор'), ('none', 'Немає живлення')]";
+  const RULE = "[('always', 'Завжди'), ('not_quiet', 'Крім тихих годин'), ('chatter', 'Лише в чаті')]";
+  const FT = "Час (float_time)";
+  const FIELD = {
+    // generator form
+    mode: D(G, "mode", "selection", "Режим контролера. Читається з сигналів 01H 0040–0043, змінюється командами з пульта.", { sel: MODE, widget: "Бейдж (badge)", ro: 1 }),
+    control_source: D(G, "control_source", "selection", "Хто зараз керує режимом: розклад, таймер роботи поза графіком або людина з пульта.", { sel: "[('schedule', 'Розклад'), ('timer', 'Таймер'), ('manual', 'Вручну')]", widget: "Бейдж (badge)", ro: 1 }),
+    next_event: D(G, "next_event", "char", "Наступна дія розкладу або кінець таймера. Обчислюється з розкладу, днів-винятків і таймера.", { compute: 1 }),
+    link_state: D(G, "link_state", "selection", "Зв'язок з модулем CMM366B. «Онлайн», якщо heartbeat або дані надходили не довше, ніж «Зв'язок втрачено» в налаштуваннях.", { sel: "[('online', 'Онлайн'), ('offline', 'Немає зв\\'язку')]", widget: "Бейдж (badge)", compute: 1 }),
+    feed_source: D(G, "feed_source", "selection", "Від чого живиться об'єкт. З сигналів 01H 0006 «Мережа під навантаженням» і 0007 «Генератор під навантаженням».", { sel: FEED, widget: "Бейдж (badge)", compute: 1 }),
+    notify_level_ids: D(G, "notify_level_ids", "many2many", "Хто і в якому порядку отримує тривоги цього генератора. За замовчуванням — загальний ланцюжок ескалації.", { rel: NL, widget: "Теги (many2many_tags)" }),
+    durH: D(G, "ooh_duration", "float", "Скільки генератор працює в режимі Авто поза графіком, потім — Ручний і Стоп.", { widget: FT }),
+    tdStart: D(SE, "time_start", "float", "Перехід у режим Авто в цей день замість звичайного вікна розкладу.", { widget: FT }),
+    tdEnd: D(SE, "time_end", "float", "Перехід у Ручний + Стоп у цей день.", { widget: FT }),
+    // fuel dialogs
+    fdOSrc: D(RF, "source_note", "char", "Звідки залили паливо, якщо не з каністр: паливовоз, АЗС тощо."),
+    fdOL: D(RF, "liters", "float", "Скільки літрів залито в бак. Не більше вільного об'єму бака.", { req: 1 }),
+    fiN: D(RC, "canister_qty", "integer", "Кількість нових каністр, що надійшли."),
+    fiV: D(RC, "canister_volume", "float", "Об'єм однієї нової каністри, L."),
+    fiLoc: D(RC, "location_id", "many2one", "Де зберігатимуться нові каністри.", { rel: SL }),
+    fiP: D(RC, "price_unit", "float", "Ціна палива за літр — для вартості витрати на «Заправці» і в «Аналітиці».", { widget: "Грошовий (monetary)" }),
+    fiS: D(RC, "partner_id", "many2one", "Постачальник палива.", { rel: "res.partner" }),
+    cdL: D(CN, "liters", "float", "Скільки палива зараз у каністрі. Зміна записується в рух запасу як коригування."),
+    cdLoc: D(CN, "location_id", "many2one", "Де зберігається каністра.", { rel: SL }),
+    // generator settings
+    gName: D(G, "name", "char", "Назва генератора — зазвичай за адресою об'єкта.", { req: 1 }),
+    gAddr: D(G, "address", "char", "Адреса об'єкта, де стоїть генератор."),
+    gResp: D(G, "user_id", "many2one", "Відповідальний за об'єкт: другий рівень сповіщень і виконавець заявок ТО за замовчуванням.", { rel: "res.users" }),
+    gCoords: D(G, "latitude, longitude", "float", "Координати з GPS модуля (longitude / latitude при реєстрації модуля).", { ro: 1 }),
+    gCtrl: D(G, "controller_model", "selection", "Модель контролера. Від неї залежать команди автоматів і регістри, які опитує модуль.", { sel: "[('hgm6110n', 'HGM6110N'), ('hgm6120n', 'HGM6120N')]", req: 1 }),
+    gKw: D(G, "power_kw", "float", "Номінальна потужність. Від неї рахується завантаження у %."),
+    gTank: D(G, "tank_volume", "float", "Об'єм бака, L. Контролер дає рівень у % (03H 0021), у літри переводимо за цим об'ємом.", { req: 1 }),
+    gFuel: D(G, "fuel_type", "selection", "Тип палива.", { sel: "[('diesel', 'Дизель')]" }),
+    gFirst: D(G, "maint_first_hours", "integer", "Перше ТО (обкатка) — через скільки мотогодин."),
+    gEvery: D(G, "maint_interval_hours", "integer", "Інтервал ТО в мотогодинах. Поруч — maint_interval_months: що настане раніше."),
+    gHost: D(G, "module_hostid", "char", "ID модуля CMM366B (hostid, 24 символи). За ним сервер впізнає модуль при реєстрації.", { req: 1 }),
+    gHn: D(G, "module_hostname", "char", "Назва модуля (hostname), яку він передає при реєстрації."),
+    gPass: D(G, "module_password", "char", "Пароль модуля для реєстрації на сервері.", { widget: "Пароль (password)" }),
+    gPort: D(G, "module_port", "selection", "Як модуль підключено до контролера (modulePort).", { sel: "[('1', 'LINK'), ('2', 'RS485'), ('3', 'RS232'), ('4', 'USB')]" }),
+    gBaud: D(G, "module_baud", "selection", "Швидкість обміну модуля з контролером (moduleBaud).", { sel: "[('0', '9600'), ('1', '19200'), ('2', '115200')]" }),
+    gMb: D(G, "modbus_address", "integer", "Адреса контролера в мережі Modbus, 1–254."),
+    gOn: D(G, "online_rate", "integer", "Як часто модуль надсилає дані, с: онлайн. Поруч — offline_rate."),
+    gMode: D(G, "data_mode", "selection", "Режим передачі (data_mode): лише зміни (reqdatachange) або всі дані щоразу (reqdata).", { sel: "[('0', 'Лише зміни'), ('1', 'Усі дані')]" }),
+    gPoll: D(G, "poll_commands", "text", "Modbus-команди опитування (para_command), які сервер повертає модулю. Формуються під модель контролера.", { compute: 1 }),
+    // general settings (stored as system parameters)
+    lSrv: D(RS, "genset_server_address", "char", "Адреса й порт, які сервер повертає модулю як liveData і historic.", { cp: "td_genset.server_address" }),
+    lOn: D(RS, "genset_online_rate", "integer", "Передача для нових модулів, с: онлайн. Поруч — genset_offline_rate.", { cp: "td_genset.online_rate" }),
+    lLost: D(RS, "genset_link_lost_minutes", "integer", "Через скільки хвилин без даних зв'язок вважається втраченим.", { cp: "td_genset.link_lost_minutes" }),
+    lAlarm: D(RS, "genset_link_alarm_minutes", "integer", "Через скільки хвилин без зв'язку створюється тривога.", { cp: "td_genset.link_alarm_minutes" }),
+    lQueue: D(RS, "genset_offline_policy", "selection", "Що робити з командами розкладу і таймера, коли немає зв'язку.", { sel: "[('queue', 'У чергу'), ('skip', 'Пропустити')]", cp: "td_genset.offline_policy" }),
+    lTiming: D(RS, "genset_time_sync", "boolean", "Синхронізувати годинник модулів із сервером (інтерфейс timing).", { cp: "td_genset.time_sync", widget: "Перемикач (boolean_toggle)" }),
+    lHist: D(RS, "genset_history_interval", "integer", "Як часто зберігати показання в історію, хв. Плюс запис при кожній зміні стану.", { cp: "td_genset.history_interval" }),
+    nRule_crit: D(RS, "genset_notify_crit", "selection", "Коли надсилати критичні тривоги.", { sel: RULE, cp: "td_genset.notify_crit" }),
+    nRule_warn: D(RS, "genset_notify_warn", "selection", "Коли надсилати попередження.", { sel: RULE, cp: "td_genset.notify_warn" }),
+    nRule_info: D(RS, "genset_notify_info", "selection", "Коли надсилати інформаційні події.", { sel: RULE, cp: "td_genset.notify_info" }),
+    nQOn: D(RS, "genset_quiet_hours", "boolean", "Тихі години. Межі — genset_quiet_from і genset_quiet_to (float_time).", { cp: "td_genset.quiet_hours", widget: "Перемикач (boolean_toggle)" }),
+    nChain: D(RS, "genset_notify_level_ids", "one2many", "Загальний ланцюжок ескалації сповіщень.", { rel: NL }),
+    fMin: D(RS, "genset_fuel_min_stock", "float", "Мінімальний запас палива в каністрах, L.", { cp: "td_genset.fuel_min_stock" }),
+    fCan: D(RS, "genset_canister_volume", "float", "Об'єм каністри за замовчуванням, L.", { cp: "td_genset.canister_volume" }),
+    fPrice: D(RS, "genset_fuel_price", "float", "Ціна палива за замовчуванням, грн/л.", { cp: "td_genset.fuel_price", widget: "Грошовий (monetary)" }),
+    fSup: D(RS, "genset_fuel_partner_id", "many2one", "Постачальник палива за замовчуванням.", { rel: "res.partner" }),
+    fDrain: D(RS, "genset_drain_alarm_liters", "float", "Падіння рівня без роботи двигуна, від якого створюється тривога, L.", { cp: "td_genset.drain_alarm_liters" }),
+    fLocs: D(RS, "genset_location_ids", "one2many", "Місця зберігання каністр.", { rel: SL }),
+    // maintenance
+    mFirst: D(G, "maint_first_hours", "integer", "Перше ТО (обкатка) — через скільки мотогодин."),
+    mEvery: D(G, "maint_interval_hours", "integer", "Інтервал ТО в мотогодинах або місяцях (maint_interval_months)."),
+    mHours: D(G, "run_hours", "float", "Мотогодини з контролера, 03H 0042–0045.", { widget: FT, ro: 1 }),
+    mLeft: D(G, "maint_left_hours", "float", "До ТО з контролера, 03H 0030–0031. Скинути лічильник можна лише на панелі.", { widget: FT, ro: 1 }),
+    mUser: D(MR, "user_id", "many2one", "Виконавець заявки на ТО.", { rel: "res.users" }),
+    mDate: D(MR, "request_date", "date", "Коли створено заявку. Автоматично — коли лічильник «До ТО» дійшов до 0."),
+  };
+  // list columns: «model|header»
+  const COLS = {
+    "td.genset.schedule|День": D("td.genset.schedule", "dayofweek", "selection", "День тижня вікна розкладу.", { sel: "[('0', 'Понеділок'), …, ('6', 'Неділя')]" }),
+    "td.genset.schedule|Початок → Авто": D("td.genset.schedule", "time_start", "float", "Коли перевести генератор у режим Авто.", { widget: FT }),
+    "td.genset.schedule|Кінець → Ручний + Стоп": D("td.genset.schedule", "time_end", "float", "Коли перевести в Ручний і зупинити.", { widget: FT }),
+    "td.genset.schedule|Активне": D("td.genset.schedule", "active", "boolean", "Вимкнений рядок не надсилає команд.", { widget: "Перемикач (boolean_toggle)" }),
+    [SE + "|Дата"]: D(SE, "date", "date", "День, для якого розклад змінено."),
+    [SE + "|Що робити"]: D(SE, "action", "selection", "Не запускати в цей день або працювати в інший час.", { sel: "[('skip', 'Не запускати'), ('custom', 'Інший час')]" }),
+    [CM + "|Час"]: D(CM, "create_date", "datetime", "Коли команду надіслано."),
+    [CM + "|Хто"]: D(CM, "user_id", "many2one", "Хто надіслав: користувач, розклад або таймер (системний користувач).", { rel: "res.users" }),
+    [CM + "|Джерело"]: D(CM, "source", "selection", "Звідки прийшла команда.", { sel: "[('button', 'Кнопка'), ('schedule', 'Розклад'), ('timer', 'Таймер')]" }),
+    [CM + "|Команда"]: D(CM, "command", "selection", "Команда 05H: 0000 Пуск, 0001 Стоп, 0002 Тест, 0003 Авто, 0004 Ручний, 0005/0006 автомати.", { sel: "[('start', 'Пуск'), ('stop', 'Стоп'), ('test', 'Тест'), ('auto', 'Авто'), ('manual', 'Ручний'), ('gen_cb', 'Автомат генератора'), ('mains_cb', 'Автомат мережі')]" }),
+    [CM + "|Результат"]: D(CM, "state", "selection", "Чи підтвердив контролер виконання: після команди система читає режим, повтор до 10 хв.", { sel: "[('sent', 'Надіслано'), ('done', 'Підтверджено'), ('blocked', 'Блокування'), ('queued', 'У черзі'), ('no_link', 'Немає зв\\'язку'), ('skipped', 'Пропущено')]", widget: "Бейдж (badge)" }),
+    [RD + "|Час"]: D(RD, "read_at", "datetime", "Час показання: кожні N хв і при кожній зміні стану."),
+    [RD + "|Режим"]: D(RD, "mode", "selection", "Режим контролера, 01H 0040–0043.", { sel: MODE, widget: "Бейдж (badge)" }),
+    [RD + "|Агрегат"]: D(RD, "genset_state", "selection", "Стан агрегату, 03H 0034.", { sel: GS, widget: "Бейдж (badge)" }),
+    [RD + "|Живлення"]: D(RD, "feed_source", "selection", "Від чого живиться об'єкт, 01H 0006/0007.", { sel: FEED, widget: "Бейдж (badge)" }),
+    [RD + "|Мережа UAB, V"]: D(RD, "mains_uab", "float", "Лінійна напруга мережі, 03H 0003."),
+    [RD + "|Мережа, Hz"]: D(RD, "mains_freq", "float", "Частота мережі, 03H 0006."),
+    [RD + "|Ген. UAB, V"]: D(RD, "gen_uab", "float", "Лінійна напруга генератора, 03H 0010."),
+    [RD + "|Ген., Hz"]: D(RD, "gen_freq", "float", "Частота генератора, 03H 0013."),
+    [RD + "|Струм A/B/C, A"]: D(RD, "current_a, current_b, current_c", "float", "Струм по фазах, 03H 0014–0016."),
+    [RD + "|P, kW"]: D(RD, "power_kw", "float", "Активна потужність, 03H 0026."),
+    [RD + "|cos φ"]: D(RD, "power_factor", "float", "Коефіцієнт потужності, 03H 0029."),
+    [RD + "|Навант., %"]: D(RD, "load_pct", "float", "Завантаження від номіналу, 03H 0055.", { widget: "Відсоток (percentage)" }),
+    [RD + "|Оберти"]: D(RD, "rpm", "integer", "Оберти двигуна, 03H 0023."),
+    [RD + "|ОР, °C"]: D(RD, "coolant_temp", "float", "Температура охолоджувальної рідини, 03H 0017."),
+    [RD + "|Олива, kPa"]: D(RD, "oil_pressure", "float", "Тиск оливи, 03H 0019. 32766 — немає даних."),
+    [RD + "|Паливо, L"]: D(RD, "fuel_liters", "float", "Паливо в баку: рівень 03H 0021 (%) × об'єм бака.", { compute: 1 }),
+    [RD + "|АКБ, V"]: D(RD, "battery_v", "float", "Напруга АКБ, 03H 0024."),
+    [RD + "|D+, V"]: D(RD, "dplus_v", "float", "Напруга зарядки D+, 03H 0025."),
+    [RD + "|Мотогодини"]: D(RD, "run_hours", "float", "Мотогодини, 03H 0042–0045.", { widget: FT }),
+    [RD + "|Пусків"]: D(RD, "start_count", "integer", "Кількість пусків, 03H 0046–0047."),
+    [RD + "|kWh"]: D(RD, "energy_kwh", "float", "Вироблено всього, 03H 0048–0049."),
+    [RD + "|Тривоги"]: D(RD, "alarm_flags", "char", "Активні сигнали тривог 01H на момент показання."),
+    [EV + "|Подія"]: D(EV, "event_type", "selection", "Тип події. Формується автоматично з показань.", { sel: "[('run', 'Робота'), ('outage', 'Відключення мережі'), ('refuel', 'Заправка'), ('drain', 'Падіння рівня'), ('alarm', 'Тривога'), ('input', 'Вхід модуля')]" }),
+    [EV + "|Початок"]: D(EV, "date_start", "datetime", "Початок події."),
+    [EV + "|Кінець"]: D(EV, "date_end", "datetime", "Кінець події; порожньо, поки триває."),
+    [EV + "|Тривалість"]: D(EV, "duration", "float", "Тривалість події.", { widget: FT, compute: 1 }),
+    [EV + "|Причина / джерело"]: D(EV, "reason", "char", "Чому сталася подія або хто її спричинив."),
+    [EV + "|kWh"]: D(EV, "energy_kwh", "float", "Вироблено за час роботи."),
+    [EV + "|Пік, kW"]: D(EV, "peak_kw", "float", "Найбільше навантаження за подію."),
+    [EV + "|Паливо, L"]: D(EV, "fuel_delta", "float", "Зміна палива в баку за подію, L."),
+    [EV + "|Підсумок"]: D(EV, "summary", "char", "Короткий висновок по події."),
+    [RF + "|Дата"]: D(RF, "date", "datetime", "Коли змінився рівень у баку."),
+    [RF + "|Звідки"]: D(RF, "source_note", "char", "Каністри або інше джерело; для падіння рівня — двигун не працював."),
+    [RF + "|Зміна, L"]: D(RF, "liters", "float", "Скільки додалось (заправка) або зникло (падіння рівня)."),
+    [RF + "|Бак, L"]: D(RF, "level_before, level_after", "float", "Рівень у баку до і після, з контролера."),
+    [RF + "|Хто"]: D(RF, "user_id", "many2one", "Хто записав заправку.", { rel: "res.users" }),
+    [RF + "|Контролер"]: D(RF, "sensor_state", "selection", "Підтвердження рівнем у баку: ознака контролера «зміна понад 5 %» (03H 0100) або порівняння рівнів.", { sel: "[('waiting', 'Очікує'), ('controller', 'Контролер'), ('level', 'За рівнем'), ('drain', 'Падіння без роботи')]", widget: "Бейдж (badge)" }),
+    [G + "|Назва"]: D(G, "name", "char", "Назва генератора."),
+    [G + "|Адреса"]: D(G, "address", "char", "Адреса об'єкта."),
+    [G + "|Контролер"]: D(G, "controller_model", "selection", "Модель контролера.", { sel: "[('hgm6110n', 'HGM6110N'), ('hgm6120n', 'HGM6120N')]" }),
+    [G + "|Модуль"]: D(G, "module_port", "selection", "Модуль зв'язку і порт підключення до контролера.", { sel: "[('1', 'LINK'), ('2', 'RS485'), ('3', 'RS232'), ('4', 'USB')]" }),
+    [G + "|Бак, L"]: D(G, "tank_volume", "float", "Об'єм бака, L."),
+    [G + "|Номінал, kW"]: D(G, "power_kw", "float", "Номінальна потужність."),
+    [G + "|Зв'язок"]: D(G, "link_state", "selection", "Зв'язок з модулем.", { sel: "[('online', 'Онлайн'), ('offline', 'Немає зв\\'язку'), ('none', 'Не підключено')]", widget: "Бейдж (badge)", compute: 1 }),
+    [G + "|Стан"]: D(G, "genset_state", "selection", "Стан агрегату з контролера, 03H 0034.", { sel: GS, compute: 1 }),
+    [G + "|Тривоги"]: D(G, "alarm_count", "integer", "Кількість активних тривог.", { compute: 1 }),
+    [NL + "|Рівень"]: D(NL, "sequence, name", "integer, char", "Порядок рівня в ланцюжку і його назва."),
+    [NL + "|Хто"]: D(NL, "user_id", "many2one", "Хто отримує тривогу на цьому рівні.", { rel: "res.users" }),
+    [NL + "|Канали"]: D(NL, "channel_ids", "many2many", "Якими каналами надсилати.", { rel: "td.genset.notify.channel", widget: "Теги (many2many_tags)" }),
+    [NL + "|Коли"]: D(NL, "delay_minutes", "integer", "Через скільки хвилин після тривоги, якщо її досі не прийняли."),
+    [SL + "|Місце"]: D(SL, "name", "char", "Назва місця зберігання."),
+    [SL + "|Каністр"]: D(SL, "canister_count", "integer", "Скільки каністр тут лежить.", { compute: 1 }),
+    [SL + "|Палива, L"]: D(SL, "liters", "float", "Скільки палива в каністрах тут.", { compute: 1 }),
+    [MR + "|Заявка"]: D(MR, "name", "char", "Номер заявки."),
+    [MR + "|Що"]: D(MR, "description", "html", "Що зробити."),
+    [MR + "|Виконавець"]: D(MR, "user_id", "many2one", "Виконавець.", { rel: "res.users" }),
+    [MR + "|Закрито"]: D(MR, "close_date", "date", "Коли виконано."),
+  };
+
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const firstText = el => [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+  function keyFor(lbl) {
+    if (lbl.dataset.f) return lbl.dataset.f;
+    if (lbl.tagName === "TH") { const t = lbl.closest("table[data-m]"); return t && `${t.dataset.m}|${firstText(lbl)?.textContent.trim()}`; }
+    if (lbl.htmlFor) return lbl.htmlFor;
+    const box = lbl.matches("label.f, .timegrid label") ? lbl : lbl.closest(".sfield, .oset");
+    const c = box && box.querySelector(":scope [id]:is(input, select), [data-fk]");
+    return c && (c.dataset.fk || c.id);
+  }
+  function decorate(root = document) {
+    $$(".field .lbl[data-f], th, label[for], label.f, .timegrid label, .sfield > span:first-child, .oset-t", root).forEach(lbl => {
+      if (lbl.querySelector(".fq")) return;
+      const key = keyFor(lbl), f = key && (FIELD[key] || COLS[key]);
+      const t = f && firstText(lbl);
+      if (!t) return;
+      const q = document.createElement("sup");
+      q.className = "fq"; q.textContent = "?"; q.tabIndex = 0; q.dataset.key = key;
+      q.setAttribute("aria-label", "Про поле");
+      t.after(q);
+    });
+  }
+  const tip = document.createElement("div");
+  tip.className = "ftip"; tip.hidden = true; tip.setAttribute("role", "tooltip");
+  document.body.appendChild(tip);
+  function show(q) {
+    const f = FIELD[q.dataset.key] || COLS[q.dataset.key]; if (!f) return;
+    const label = firstText(q.parentElement)?.textContent.trim();
+    const li = [["Мітка", label], ["Поле", f.field], ["Модель", f.model], ["Тип", f.type]];
+    if (f.rel) li.push(["Відношення", f.rel]);
+    if (f.sel) li.push(["Вибір", f.sel]);
+    if (f.widget) li.push(["Віджет", f.widget]);
+    if (f.cp) li.push(["Системний параметр", f.cp]);
+    if (f.req) li.push(["Обов'язкове", "так"]);
+    if (f.ro) li.push(["Тільки читання", "так"]);
+    if (f.compute) li.push(["Обчислюване", "так"]);
+    li.push(["Контекст", "{}"]);
+    tip.innerHTML = `<div class="ftip-h">${esc(f.help)}</div><ul>${li.map(([k, v]) => `<li>${k}: ${esc(v)}</li>`).join("")}</ul>`;
+    tip.hidden = false;
+    const r = q.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    const x = Math.max(8, Math.min(r.left - 12, innerWidth - w - 8));
+    const y = r.bottom + 8 + h > innerHeight - 8 ? Math.max(8, r.top - h - 8) : r.bottom + 8;
+    tip.style.left = `${x}px`; tip.style.top = `${y}px`;
+  }
+  const hide = () => { tip.hidden = true; };
+  // hover only for a mouse; on touch screens the tap opens it (below)
+  document.addEventListener("pointerover", e => { const q = e.target.closest(".fq"); if (q && e.pointerType === "mouse") show(q); });
+  document.addEventListener("pointerout", e => { if (e.target.closest(".fq") && e.pointerType === "mouse") hide(); });
+  document.addEventListener("focusin", e => { const q = e.target.closest(".fq"); if (q) show(q); });
+  document.addEventListener("focusout", e => { if (e.target.closest(".fq")) hide(); });
+  // touch: tap «?» to open, tap anywhere else to close; the tap must not toggle the label's input
+  document.addEventListener("click", e => {
+    const q = e.target.closest(".fq");
+    if (q) { e.preventDefault(); e.stopPropagation(); return show(q); }
+    hide();
+  }, true);
+  addEventListener("scroll", hide, { passive: true });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
+
+  decorate();
+  // pages and dialogs that are rebuilt on the fly
+  let pend = false;
+  const mo = new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; decorate(); }); });
+  ["#setBody", "#fdBody", "#maintBox", "#scrim", "#timeScrim"].forEach(sel => { const el = document.querySelector(sel); if (el) mo.observe(el, { childList: true, subtree: sel !== "#scrim" && sel !== "#timeScrim" }); });
+})();
+</script>
