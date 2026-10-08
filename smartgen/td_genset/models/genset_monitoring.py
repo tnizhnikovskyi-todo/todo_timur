@@ -25,7 +25,7 @@ PAGE_SIZE = 500
 CATCHUP_AGE_MIN = 15          # знімок старший за 15 хв → режим догону (2.6.2 п. 4)
 OHM_KEYS = ('fuel_level_sensor_ohm', 'water_temp_sensor_ohm', 'oil_pressure_sensor_ohm')
 RAW_VERSION = (1, 1, 3)       # з цієї версії ретранслятор віддає оми ключами (ФВ-31)
-TECH_RELAY_CODES = ('relay_unavailable', 'relay_auth')
+STATUS_CLEARED_CODES = ('relay_auth',)   # знімає успішний /status; relay_unavailable — успішна сторінка /readings
 # Поля стану, що копіюються з останнього знімка в генератор (2.16)
 APPLY_FIELDS = (
     'controller_mode', 'genset_status', 'genset_status_delay', 'is_running', 'mains_ok', 'feed_source',
@@ -81,6 +81,7 @@ class TdGensetMonitoring(models.Model):
                 except Exception as exc:  # noqa: BLE001
                     _logger.warning('td_genset: %s: сторінку знімків не збережено: %s', genset.name, exc)
                     continue
+                genset._td_relay_available()
                 done += count
                 if count >= PAGE_SIZE:
                     remaining = 1
@@ -119,6 +120,10 @@ class TdGensetMonitoring(models.Model):
             return
         config = self.env['td.genset.config'].sudo().get()
         now = fields.Datetime.now()
+        # знімків немає ≥ link_lost_min → «Немає зв'язку» незалежно від причини (2.8.6): і коли /status недоступний
+        for genset in self:
+            with self.env.cr.savepoint():
+                genset._update_link_state(None, now=now)
         if not config.relay_unavailable_since:
             config.relay_unavailable_since = now
             return
@@ -130,23 +135,30 @@ class TdGensetMonitoring(models.Model):
                 alarm_model._raise(genset, 'relay_unavailable', 'warn', _('Ретранслятор недоступний %s хв', minutes),
                                    _('Ретранслятор недоступний %s хв (таймаут/5xx).', minutes), tech=True)
 
+    def _td_relay_available(self):
+        """Успішна сторінка ``/readings``: ретранслятор доступний — скинути ``relay_unavailable_since`` і зняти
+        тривогу ``relay_unavailable`` (AC-10)."""
+        config = self.env['td.genset.config'].sudo().get()
+        if config.relay_unavailable_since:
+            config.relay_unavailable_since = False
+        for genset in self.sudo():
+            self.env['td.genset.alarm']._clear(genset, 'relay_unavailable')
+
     # ------------------------------------------------------------------ /status
     def _apply_status(self, status):
         """Записує ``relay_*`` з ``/status``; викликає ``_update_link_state``, ``_check_relay_health``,
-        ``td.genset.event._detect_external_control(genset, cloud=device['cloud_commands_seen'])``;
-        скидає ``td.genset.config.relay_unavailable_since`` і тривоги недоступності/токена.
+        ``td.genset.event._detect_external_control(genset, cloud=device['cloud_commands_seen'])``; знімає тривогу
+        токена. Лічильник ``relay_unavailable_since`` і тривогу ``relay_unavailable`` скидає лише успішна сторінка
+        ``/readings`` (``_td_relay_available``): ``/status`` може відповідати, коли ``/readings`` стабільно 5xx.
 
         :param dict status: тіло ``GET /status``.
         """
         status = status or {}
         relay = status.get('relay') or {}
         client = self.env['td.genset.relay.client']
-        config = self.env['td.genset.config'].sudo().get()
-        if config.relay_unavailable_since:
-            config.relay_unavailable_since = False
         now = fields.Datetime.now()
         for genset in self.sudo():
-            for code in TECH_RELAY_CODES:
+            for code in STATUS_CLEARED_CODES:
                 self.env['td.genset.alarm']._clear(genset, code)
             device = client.device_status(status, genset.relay_hostid)
             vals = {
@@ -308,7 +320,9 @@ class TdGensetMonitoring(models.Model):
     def _apply_reading(self, reading):
         """Копіює стан останнього знімка в поля генератора (2.16): режим, стан, ``is_running``,
         ``feed_source``, лічильники, оми, ``fuel_liters``/``fuel_source``, ``last_reading_id``,
-        ``last_values_json``; ``_notify_bus('reading')``; ``_check_maintenance()`` (W4).
+        ``last_values_json``; ``_notify_bus('reading')``; ``_check_maintenance()`` (W4). У режимі догону — без
+        трекінгу в чатері (історичний стан, «Режим: …» заднім числом; ``_track_discard`` на транзакцію сторінки) і
+        без bus на кожну сторінку: одне повідомлення bus — після догону (``_finish_catchup``, AC-45).
 
         ``values`` знімка (з ``null`` і без відсутніх ключів) — з контексту ``td_genset_values``, інакше
         відновлюються з полів знімка (NULL → ключа немає).
@@ -330,10 +344,15 @@ class TdGensetMonitoring(models.Model):
         changed = {key: value for key, value in vals.items() if genset[key] != value}
         if genset.last_reading_id != reading:
             changed['last_reading_id'] = reading.id
+        if genset.catchup_mode:
+            # історичний стан: без трекінгу («Режим: …», «Керує: …») заднім числом у транзакції сторінки догону —
+            # початкові значення трекінгу знято раніше (/status), тож вимикаємо трекінг генератора до коміту
+            genset._track_discard()
         if changed:
             genset.write(changed)
         genset._check_maintenance()
-        genset._notify_bus('reading', {'reading_id': reading.id})
+        if not genset.catchup_mode:
+            genset._notify_bus('reading', {'reading_id': reading.id})
         return None
 
     def _td_values_from_reading(self, reading):
@@ -429,6 +448,7 @@ class TdGensetMonitoring(models.Model):
         for genset in self.sudo():
             genset.write({'catchup_mode': False, 'catchup_stats': False})
             self.env['td.genset.alarm']._evaluate_current(genset)
+            genset._notify_bus('reading', {'reading_id': genset.last_reading_id.id})   # одне оновлення за догон
             if not config.catchup_summary:
                 continue
             days = summary.get('days')

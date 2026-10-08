@@ -145,6 +145,49 @@ class TestW1LinkHealth(TdGensetCase):
         self.assertFalse(self._alarms('relay_unavailable') | self._alarms('relay_auth'))
         self.assertFalse(self.config.relay_unavailable_since)
 
+    def test_ac09_relay_unavailable_link_goes_offline(self):
+        """AC-09, AC-10 (ревю коду, п. 3): недоступний сам ретранслятор (таймаут/5xx) — знімків немає ≥ 3 хв →
+        «Немає зв'язку» (пульт недоступний), подія «Зв'язок» відкрита; ретранслятор відповів зі свіжими знімками →
+        «Онлайн», подія закрита."""
+        with freeze_time(T0):
+            self.push_reading(snapshot(), ts=T0 - timedelta(seconds=10))
+        self._pull_at(T0)
+        self.assertEqual(self.genset.link_state, 'online')
+        self.relay.fail('timeout')
+        with mute_logger(MONITORING_LOGGER):
+            self._pull_at(T0 + timedelta(minutes=2))
+            self.assertEqual(self.genset.link_state, 'online')
+            self._pull_at(T0 + timedelta(minutes=4))
+        self.assertEqual(self.genset.link_state, 'offline')
+        link = self.env['td.genset.event'].search([('genset_id', '=', self.genset.id), ('event_type', '=', 'link')])
+        self.assertTrue(link.filtered('is_open'))
+        self.relay.fail(None)
+        with freeze_time(T0 + timedelta(minutes=5)):
+            self.push_reading(snapshot(), ts=T0 + timedelta(minutes=5) - timedelta(seconds=5))
+        self._pull_at(T0 + timedelta(minutes=5))
+        self.assertEqual(self.genset.link_state, 'online')
+        self.assertFalse(link.filtered('is_open'))
+
+    def test_ac10_readings_5xx_counts_even_if_status_ok(self):
+        """AC-10 (ревю коду, п. 7): ``/status`` відповідає, а ``/readings`` стабільно 5xx → лічильник недоступності
+        не скидається, через 10 хв — тривога тех. «Ретранслятор недоступний 10 хв»; успішна сторінка знімків її
+        знімає і скидає лічильник."""
+        with freeze_time(T0):
+            self.push_reading(snapshot(), ts=T0 - timedelta(seconds=10))
+        self._pull_at(T0)
+        self.relay.fail(500, path='/readings')
+        with mute_logger(MONITORING_LOGGER):
+            for minute in (1, 5, 11):
+                self._pull_at(T0 + timedelta(minutes=minute))
+        alarm = self._alarms('relay_unavailable')
+        self.assertEqual(alarm.name, 'Ретранслятор недоступний 10 хв')
+        self.relay.fail(None)
+        with freeze_time(T0 + timedelta(minutes=12)):
+            self.push_reading(snapshot(), ts=T0 + timedelta(minutes=12) - timedelta(seconds=5))
+        self._pull_at(T0 + timedelta(minutes=12))
+        self.assertFalse(self._alarms('relay_unavailable'))
+        self.assertFalse(self.config.relay_unavailable_since)
+
     def test_ac11_relay_health(self):
         """AC-11: ``registers_known=0`` → тривога-попередження тех. «Ретранслятор не розбирає дані
         (registers_known=0)»; ``commands_enabled=false`` → бейдж «Керування вимкнено на ретрансляторі»."""

@@ -4,6 +4,7 @@
 Базовий клас — ``odoo.addons.td_genset.tests.common.TdGensetCase`` (RelayMock, snapshot(), push_reading,
 set_status, run_pull/run_commands/run_scheduler). Імена тестів — ``test_acNN_<що>``, AC у докстрингу.
 """
+import json
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -129,6 +130,19 @@ class TestW1PullReadings(TdGensetCase):
             self.assertIn('5 днів, 2400 знімків', summaries.body)
             self.assertFalse(self.genset.catchup_mode)
             self.assertEqual(self.genset.readings_cursor, count)
+            # ревю коду, п. 6: догон не пише трекінг стану («Режим: …») заднім числом і не шле bus на кожну сторінку —
+            # одне оновлення після догону (трекінг і bus записуються перед комітом)
+            self.env.flush_all()
+            self.env.cr.precommit.run()
+            tracked = self.env['mail.tracking.value'].sudo().search([
+                ('mail_message_id.model', '=', 'td.genset'), ('mail_message_id.res_id', '=', self.genset.id),
+                ('field_id.name', 'in', ['controller_mode', 'remote_lock'])])
+            self.assertFalse(tracked)
+            messages = [json.loads(message.message) for message in self.env['bus.bus'].sudo().search([])]
+            readings_bus = [message for message in messages if message.get('type') == 'td_genset.update'
+                            and message['payload'].get('kind') == 'reading'
+                            and message['payload'].get('genset_id') == self.genset.id]
+            self.assertEqual(len(readings_bus), 1)
 
     def test_ac45_first_pull_starts_from_catchup_date(self):
         """AC-45, А.7: перший забір (курсор 0) — бінарний пошук першого знімка не старшого за «Починати історію з»."""
