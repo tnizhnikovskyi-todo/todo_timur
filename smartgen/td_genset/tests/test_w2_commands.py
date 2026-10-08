@@ -980,3 +980,38 @@ class TestW2Commands(TdGensetW2Case):
             self.assertEqual(sent.state, 'cancelled')   # не підтверджено → повтору не буде
             self.assertEqual(button.state, 'to_send')
             self.assertEqual(button.next_attempt_at, start + timedelta(minutes=4))
+
+    # ------------------------------------------------------------------ ревю коду (ЗВІТ_РЕВЮ, п. 1, 4, 5, 8)
+    def test_ac18_after_link_restore_next_retry_waits_interval(self):
+        """AC-18, AC-14 (ревю коду, п. 1): після відновлення зв'язку перший знімок вирішує лише перше рішення —
+        після нового POST знову діє ``done_at + retry_every_min``: наступна спроба не раніше ніж через 2 хв."""
+        start = datetime(2026, 10, 7, 11, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='manual')
+            self.relay.controller_executes = False
+            command = self.Command._enqueue(self.genset, 'auto', 'button', self.user_t)
+            self.run_commands()
+            frozen.move_to(start + timedelta(minutes=1))
+            self.run_commands()
+            self.set_genset(link_state='offline')
+            frozen.move_to(start + timedelta(minutes=2))
+            self.run_commands()
+            self.assertEqual(command.state, 'waiting_link')
+            restored = start + timedelta(minutes=30)
+            frozen.move_to(restored)
+            self.set_genset(link_state='online')
+            self.push_state(ts=restored, controller_mode='manual')
+            self.run_commands()
+            self.assertEqual((command.state, len(self.posts())), ('sent', 2))   # перший знімок вирішив: повтор
+            self.assertFalse(command.link_restored_at)
+            for minute in (1, 2):   # done о 11:31; знімки з тим самим режимом — ще не час повтору
+                frozen.move_to(restored + timedelta(minutes=minute))
+                self.push_state(ts=restored + timedelta(minutes=minute), controller_mode='manual')
+                self.run_commands()
+                self.assertEqual(command.state, 'awaiting')
+                self.assertEqual(len(self.posts()), 2)
+            frozen.move_to(restored + timedelta(minutes=3))
+            self.push_state(ts=restored + timedelta(minutes=3), controller_mode='manual')
+            self.run_commands()
+            self.assertEqual(len(self.posts()), 3)   # done_at (11:31) + retry_every_min (2 хв)
+            self.assertFalse(self.raised)

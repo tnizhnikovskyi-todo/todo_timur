@@ -596,7 +596,8 @@ class TdGensetCommand(models.Model):
                         relay_cmd_id=relay_id,
                         relay_status=relay_status if relay_status in dict(RELAY_STATUSES) else 'queued',
                         relay_error=False, sent_at=now, done_at=False, last_attempt_at=now,
-                        transport_failure=False, next_attempt_at=now + STEP)
+                        transport_failure=False, next_attempt_at=now + STEP,
+                        link_restored_at=False, link_lost_at=False)
         self._clear_tech_relay_alarms()
 
     def _transport_retry(self, reason, now, link=False, relay_error=None):
@@ -690,7 +691,9 @@ class TdGensetCommand(models.Model):
             return
         every = self._retry_every()
         silence_limit = every + STEP
-        if self.link_restored_at:
+        if self.link_restored_at and (not self.done_at or self.done_at <= self.link_restored_at):
+            # перше рішення після відновлення зв'язку — за першим новим знімком; після нового POST (``_post``
+            # скидає ``link_restored_at``) — загальне правило: ``done_at + retry_every_min``, пуск 1–4
             if newest and self.link_lost_at and newest['ts'] > self.link_lost_at:
                 self._confirmation_retry(now)
             elif now > self.link_restored_at + silence_limit:
