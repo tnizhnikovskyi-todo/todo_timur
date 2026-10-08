@@ -1,10 +1,12 @@
 # Part of td_genset (ToDo). Власник файлу: W3.
-"""ACL/AccessError для С/А, налаштування, експорт, токен (AC-24, AC-55, AC-56, AC-57, AC-59).
+"""ACL/AccessError для С/А, налаштування, експорт, токен (AC-24, AC-55, AC-56, AC-57, AC-59); регресії
+security-review (`smartgen/ЗВІТ_БЕЗПЕКИ_td_genset.md`: VULN-1, WARNING-2…4, SUGGESTION-2).
 
 Матриця прав (ТР 2.5, AC-56): С — таймер; А — + розклад і заправка; Т — усе. Для кожного забороненого елемента
 кнопка прихована в поданні (``groups=``), а прямий виклик (ORM від імені користувача або справжній JSON-RPC)
 повертає помилку доступу без змін у базі.
 """
+import json
 from datetime import datetime
 
 from lxml import etree
@@ -13,7 +15,7 @@ from odoo.exceptions import AccessError
 from odoo.tests import HttpCase, tagged
 from odoo.tools import mute_logger
 
-from .common import TdGensetCase
+from .common import HOSTID, TdGensetCase
 
 
 def _arch(env, model, view_type='form'):
@@ -234,6 +236,47 @@ class TestW3SecurityRpc(TdGensetCase, HttpCase):
         return self.make_jsonrpc_request('/web/dataset/call_kw/%s/%s' % (model, method), {
             'model': model, 'method': method, 'args': args, 'kwargs': kwargs or {},
         })
+
+    def _call_error(self, login, model, method, args):
+        """JSON-RPC-виклик, що має завершитися помилкою: ``error`` відповіді (``data.name`` — клас винятку)."""
+        self.authenticate(login, login)
+        response = self.url_open('/web/dataset/call_kw/%s/%s' % (model, method), data=json.dumps({
+            'id': 0, 'jsonrpc': '2.0', 'method': 'call',
+            'params': {'model': model, 'method': method, 'args': args, 'kwargs': {}},
+        }), headers={'Content-Type': 'application/json'})
+        response.raise_for_status()
+        body = response.json()
+        self.assertIn('error', body, '%s.%s пройшов через RPC від %s' % (model, method, login))
+        return body['error']
+
+    @mute_logger('odoo.http')
+    def test_ac24_ac66_relay_client_not_callable_over_rpc(self):
+        """AC-24, AC-56, AC-66 (security-review VULN-1): методи клієнта ретранслятора (AbstractModel — ACL не
+        застосовуються) через JSON-RPC недоступні жодній ролі — С, А, Т і внутрішньому користувачу без груп модуля:
+        AccessError «Private methods … cannot be called remotely»; на ретранслятор нічого не надсилається, команда
+        не створюється. Python-виклики з cron, майстрів і кнопок працюють як раніше (решта набору тестів)."""
+        # навіть якби захист зник — жодного зовнішнього запиту: адреса ретранслятора — закритий локальний порт
+        self.env['ir.config_parameter'].sudo().set_param('td_genset.relay_url', 'http://127.0.0.1:9/api/v1')
+        plain = self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'Внутрішній користувач без груп модуля', 'login': 'td_user_plain', 'password': 'td_user_plain',
+            'email': 'td_user_plain@example.com', 'groups_id': [(6, 0, [self.env.ref('base.group_user').id])],
+        })
+        calls = (
+            ('status', []),
+            ('device_status', [{'devices': []}, HOSTID]),
+            ('latest', [HOSTID]),
+            ('readings', [HOSTID, 0]),
+            ('post_command', [HOSTID, 'start', 'RPC', 'odoo:rpc']),
+            ('command', [1]),
+            ('commands', [0]),
+        )
+        commands = self.env['td.genset.command'].search_count([])
+        for login in ('td_user_s', 'td_user_a', 'td_user_t', plain.login):
+            for method, args in calls:
+                error = self._call_error(login, 'td.genset.relay.client', method, args)
+                self.assertEqual(error['data']['name'], 'odoo.exceptions.AccessError', (login, method))
+                self.assertIn('Private methods', error['data']['message'], (login, method))
+        self.assertEqual(self.env['td.genset.command'].search_count([]), commands)
 
     @mute_logger('odoo.http')
     def test_ac24_ac56_rpc_by_role(self):

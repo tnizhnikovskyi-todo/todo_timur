@@ -7,6 +7,8 @@
 * адреса/токен/таймаут — лише ``ir.config_parameter`` (``td_genset.relay_url``, ``td_genset.relay_token``,
   ``td_genset.http_timeout``), читаються через ``sudo()``;
 * заголовки ніколи не логуються, токен не потрапляє в текст винятку (AC-57);
+* публічні методи — ``@api.private``: через JSON-RPC (``/web/dataset/call_kw``) їх не викликати (ACL до
+  AbstractModel не застосовуються, а права перевіряє викликач — cron, майстер, кнопка; AC-24, AC-66);
 * коди → винятки: таймаут / ``RequestException`` / 5xx → ``RelayUnavailable``; 401 → ``RelayAuthError``;
   403 → ``RelayCommandsDisabled``; 409 → ``RelayBusy(reason)``; 404 (крім ``no readings yet`` → ``None``)
   → ``RelayNotFound``; 400 → ``RelayBadRequest``.
@@ -160,11 +162,13 @@ class TdGensetRelayClient(models.AbstractModel):
             raise RelayUnavailable(status, error, method, path)
         raise RelayError(status, error, method, path)
 
+    @api.private
     @api.model
     def status(self):
         """``GET /status`` як є (dict)."""
         return self._request('GET', '/status')
 
+    @api.private
     @api.model
     def device_status(self, status, hostid):
         """Елемент ``devices[]`` для ``hostid`` або ``None`` (готово з W0 — чиста функція)."""
@@ -173,6 +177,7 @@ class TdGensetRelayClient(models.AbstractModel):
                 return device
         return None
 
+    @api.private
     @api.model
     def latest(self, hostid):
         """``GET /latest?hostid=`` — останній знімок (dict); ``None`` при ``404 no readings yet``."""
@@ -183,6 +188,7 @@ class TdGensetRelayClient(models.AbstractModel):
                 return None
             raise
 
+    @api.private
     @api.model
     def readings(self, hostid, since, limit=500, raw=False):
         """``GET /readings?hostid&since&limit[&raw=1]`` → ``(readings, next_since)``.
@@ -202,6 +208,7 @@ class TdGensetRelayClient(models.AbstractModel):
             next_since = max([int(reading['id']) for reading in readings] or [since])
         return readings, int(next_since)
 
+    @api.private
     @api.model
     def post_command(self, hostid, command, requested_by, source):
         """``POST /commands``; ``requested_by`` обрізається до 120, ``source`` до 60 символів; тіло ``201``."""
@@ -214,11 +221,13 @@ class TdGensetRelayClient(models.AbstractModel):
             payload['source'] = str(source)[:SOURCE_MAX]
         return self._request('POST', '/commands', json=payload)
 
+    @api.private
     @api.model
     def command(self, relay_cmd_id):
         """``GET /commands/<id>`` (dict)."""
         return self._request('GET', '/commands/%d' % int(relay_cmd_id))
 
+    @api.private
     @api.model
     def commands(self, since, limit=200):
         """``GET /commands?since=&limit=`` → список записів (журнал ретранслятора, без ``next_since``)."""
