@@ -605,3 +605,26 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             }
             console.log("test successful");
         """ % {'targets': json.dumps(targets)}), login='td_user_s')
+
+    # ------------------------------------------------------------------ D-05: «Зв'язок» у шапці
+    def test_d05_link_relative_age(self):
+        """D-05 (ТК-01.2): «Зв'язок» у шапці картки — бейдж «Онлайн» і «· N с тому» з відліком щосекунди (запис
+        оновлює bus / резервне опитування пульта), повна дата й час останнього знімка — у підказці, а не в рядку."""
+        self._online()
+        year = str(fields.Date.today().year)
+        self.browser_js('/odoo/td.genset/%d' % self.genset.id, self._js("""
+            const age = await waitFor(() => document.querySelector(".o_td_genset_link_age"), "link age");
+            const row = age.closest(".o_row");
+            const badge = row.querySelector(".badge");
+            if (!badge || !badge.innerText.includes("Онлайн")) {
+                throw new Error("no online badge: " + (badge && badge.innerText));
+            }
+            const first = age.innerText.trim();
+            if (!/^· \\d+ с тому$/.test(first)) { throw new Error("relative text: " + first); }
+            if (row.innerText.includes("%(year)s")) { throw new Error("absolute date in header: " + row.innerText); }
+            if (!age.title.includes("%(year)s") || !/\\d{1,2}:\\d{2}:\\d{2}/.test(age.title)) {
+                throw new Error("tooltip: " + age.title);
+            }
+            await waitFor(() => age.innerText.trim() !== first, "tick");
+            console.log("test successful");
+        """ % {'year': year}), login='td_user_s')

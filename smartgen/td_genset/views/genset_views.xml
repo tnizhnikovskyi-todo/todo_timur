@@ -100,7 +100,8 @@
                                        decoration-success="link_state == 'online'"
                                        decoration-danger="link_state == 'offline'"
                                        decoration-muted="link_state == 'none'"/>
-                                <field name="last_reading_at" class="text-muted small" invisible="not last_reading_at"/>
+                                <field name="last_reading_at" widget="td_genset_link_age" class="small"
+                                       invisible="not last_reading_at"/>
                             </div>
                             <field name="feed_source" widget="badge"
                                    decoration-success="feed_source == 'mains'"
