@@ -16,6 +16,7 @@ from uuid import uuid4
 from odoo import _, api, fields, models
 from odoo.tools import SQL
 
+from .genset_reading import derive_running
 from .genset_schedule import kyiv_hhmm
 from .relay_client import (RelayAuthError, RelayBadRequest, RelayBusy, RelayCommandsDisabled, RelayError,
                            RelayNotFound, RelayUnavailable)
@@ -970,25 +971,27 @@ class TdGensetCommand(models.Model):
             return 'retry', _('ретранслятор не готовий до команд'), 'ready'
         if self.late_transition_at and self._external_control_after(self.late_transition_at):
             return 'skipped', _('Пропущено: керування не з Odoo після переходу'), None
-        if self._is_manual_stop_batch():
-            # «Ручний + Стоп»: мета пакета — режим Stop; уже Stop → не потрібно, інакше надсилаються обидві команди
-            if genset.controller_mode == 'stop':
-                return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label('stop')), None
-        elif self.command in MODE_COMMANDS and genset.controller_mode == self.command:
-            return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label(self.command)), None
-        elif self.command == 'stop' and not genset.is_running:
-            return 'not_needed', _('Не потрібно: генератор уже зупинено'), None
-        elif self.command == 'start':
-            status = _status_code(genset.genset_status)
-            if status in START_SEQUENCE_STATUSES:
-                return 'to_send', _('Очікуємо: триває пуск (стан %(status)s)', status=status), 'starting'
-            if genset.is_running:
-                return 'not_needed', _('Не потрібно: генератор уже працює'), None
+        card = {'controller_mode': genset.controller_mode, 'genset_status': _status_code(genset.genset_status),
+                'is_running': genset.is_running}
+        if self._state_verdict(card):
+            # картка каже «уже в цільовому стані» — вирішує лише знімок, свіжий і новіший за попередню команду
+            # (D-03: cron команд іде перед забором показань, режим картки може бути ще до попередньої команди)
+            facts = self._judged_facts(now)
+            if facts is None:
+                return 'to_send', _('Очікуємо показання після попередньої команди'), 'stale'
+            verdict = self._state_verdict(facts)
+            if verdict:
+                return verdict
         if self.command in BREAKER_COMMANDS:
-            reading = genset.last_reading_id
-            if not reading or not reading.ts or reading.ts < now - FRESH_READING:
-                return 'to_send', _('Очікуємо показання: останній знімок старший за 2 хв'), 'stale'
-            closed = reading.gen_on_load if self.command == 'gen_close_open' else reading.mains_on_load
+            facts = self._judged_facts(now)
+            closed = None
+            if facts is not None:
+                closed = facts['gen_on_load'] if self.command == 'gen_close_open' else facts['mains_on_load']
+            if closed is None:
+                reading = genset.last_reading_id
+                if not reading or not reading.ts or reading.ts < now - FRESH_READING:
+                    return 'to_send', _('Очікуємо показання: останній знімок старший за 2 хв'), 'stale'
+                return 'to_send', _('Очікуємо показання після попередньої команди'), 'stale'
             if bool(closed) == bool(self.target_breaker_closed):
                 if self.command == 'gen_close_open':
                     note = _('Не потрібно: автомат генератора уже замкнено') if closed else \
@@ -998,6 +1001,60 @@ class TdGensetCommand(models.Model):
                         _('Не потрібно: автомат мережі уже розімкнено')
                 return 'not_needed', note, None
         return None
+
+    def _state_verdict(self, facts):
+        """«Лише на переходах» за фактами знімка або картки (``controller_mode``, ``genset_status`` — ``int``,
+        ``is_running``): ``(стан, примітка, причина)``, якщо стан уже цільовий (``not_needed``) чи триває пуск для
+        ``start`` (чекати), інакше ``None``. Пакет «Ручний + Стоп» — мета режим Стоп."""
+        self.ensure_one()
+        mode = facts.get('controller_mode')
+        if self._is_manual_stop_batch():
+            if mode == 'stop':
+                return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label('stop')), None
+        elif self.command in MODE_COMMANDS:
+            if mode == self.command:
+                return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label(self.command)), None
+        elif self.command == 'stop':
+            if facts.get('is_running') is False:
+                return 'not_needed', _('Не потрібно: генератор уже зупинено'), None
+        elif self.command == 'start':
+            status = facts.get('genset_status')
+            if status in START_SEQUENCE_STATUSES:
+                return 'to_send', _('Очікуємо: триває пуск (стан %(status)s)', status=status), 'starting'
+            if facts.get('is_running'):
+                return 'not_needed', _('Не потрібно: генератор уже працює'), None
+        return None
+
+    def _judged_facts(self, now):
+        """Знімок, за яким вирішується «уже в цільовому стані» і положення автоматів (D-03, ФВ-14): останній
+        збережений знімок генератора, а якщо він не годиться — ``GET /latest``; годиться знімок не старший за 2 хв
+        і новіший за ``done_at`` останньої команди генератора, яку виконав ретранслятор (після неї режим міг
+        змінитися, а забір показань іде після cron команд).
+
+        :return: факти знімка (``_reading_facts`` + ``is_running``) або ``None`` — чекати наступного кроку.
+        """
+        self.ensure_one()
+        genset = self.genset_id.sudo()
+        last_done = self.sudo().search([('genset_id', '=', genset.id), ('done_at', '!=', False)],
+                                       order='done_at desc', limit=1).done_at
+
+        def usable(facts):
+            return bool(facts and facts.get('ts') and facts['ts'] >= now - FRESH_READING
+                        and (not last_done or facts['ts'] > last_done))
+
+        facts = self._reading_facts(genset.last_reading_id) if genset.last_reading_id else None
+        if not usable(facts):
+            try:
+                latest = self.env['td.genset.relay.client'].latest(genset.relay_hostid)
+            except RelayError as exc:
+                _logger.info('td_genset: latest snapshot unavailable: %s', exc.status)
+                latest = None
+            facts = self._reading_facts(latest) if isinstance(latest, dict) and latest.get('values') is not None \
+                else None
+            if not usable(facts):
+                return None
+        running = derive_running({'genset_status': facts.get('genset_status'), 'speed': facts.get('speed')})
+        return dict(facts, is_running=running)
 
     def _precheck(self):
         """Перевірки ``to_send`` (А.5, 2.6.3): ``commands_allowed`` → ``disabled_odoo``; ``remote_lock`` →

@@ -1132,3 +1132,72 @@ class TestW2Commands(TdGensetW2Case):
             self.run_commands()
             self.assertEqual((command.state, command.result_note), ('not_needed', 'Не потрібно: генератор уже працює'))
             self.assertEqual(len(self.posts()), posts)
+
+    def test_d03_queued_command_judged_by_snapshot_after_previous(self):
+        """D-03 (ТК-13.1): «Авто» в черзі за пакетом «Ручний + Стоп» — картка ще «Авто» (забір показань після cron
+        команд), а знімки після пакета — «Стоп»: «Не потрібно» лише за знімком, новішим за ``done_at`` попередньої
+        команди і не старшим за 2 хв (збережений або ``GET /latest``), тож «Авто» надіслано і підтверджено; без
+        такого знімка — чекати наступного кроку («Очікуємо показання після попередньої команди»), без POST.
+        Так само «Стоп» у черзі за «Ручний + Пуск» не стає «уже зупинено» за старою карткою."""
+        start = datetime(2026, 10, 7, 15, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='auto')
+            batch = self.Command._enqueue_batch(self.genset, ['manual', 'stop'], 'schedule', 'Odoo: розклад')
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['sent', 'sent'])
+            _wizard, _action = self.confirm_wizard('auto')
+            auto = self.commands(source='button')
+            self.assertEqual(auto.state, 'queued_odoo')
+            frozen.move_to(start + timedelta(minutes=1))
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['done', 'done'])
+            self.assertEqual(self.genset.controller_mode, 'auto')            # картка ще до пакета
+            self.assertEqual(self.relay.values['controller_mode'], 'stop')
+            self.assertEqual(auto.state, 'sent')
+            self.assertEqual([call['json']['command'] for call in self.posts()], ['manual', 'stop', 'auto'])
+            frozen.move_to(start + timedelta(minutes=2))
+            self.run_commands()
+            self.assertEqual(auto.state, 'done')
+            self.assertEqual(self.relay.values['controller_mode'], 'auto')
+        # немає знімка після попередньої команди (/latest недоступний) — чекати, потім вирішує новий знімок
+        later = start + timedelta(hours=1)
+        with freeze_time(later) as frozen:
+            self.sync()
+            self.push_state(ts=later - timedelta(seconds=30), controller_mode='auto')
+            manual = self.Command._enqueue(self.genset, 'manual', 'button', self.user_t)
+            self.run_commands()
+            self.assertEqual(manual.state, 'sent')
+            frozen.move_to(later + timedelta(minutes=1))
+            self.run_commands()
+            self.assertEqual(manual.state, 'done')
+            again = self.Command._enqueue(self.genset, 'manual', 'button', self.user_t)
+            self.set_genset(controller_mode='manual')           # картка вже «Ручний», знімка після команди ще немає
+            self.relay.fail(503, path='/latest')
+            posts = len(self.posts())
+            self.run_commands()
+            self.assertEqual(again.state, 'to_send')
+            self.assertEqual(again.result_note, 'Очікуємо показання після попередньої команди')
+            self.assertFalse(again.first_sent_at)
+            self.relay.fail(None)
+            frozen.move_to(later + timedelta(minutes=2))
+            self.sync()
+            self.run_commands()
+            self.assertEqual((again.state, again.result_note), ('not_needed', 'Не потрібно: уже Ручний'))
+            self.assertEqual(len(self.posts()), posts)
+        # «Стоп» у черзі за «Ручний + Пуск»: картка «зупинено», знімок після пакета — працює
+        last = start + timedelta(hours=2)
+        with freeze_time(last) as frozen:
+            self.push_state(ts=last - timedelta(seconds=30), controller_mode='auto')
+            self.confirm_wizard('start')
+            self.run_commands()
+            self.confirm_wizard('stop')
+            stop = self.commands(command='stop', source='button')
+            self.assertEqual(stop.state, 'queued_odoo')
+            frozen.move_to(last + timedelta(minutes=1))
+            self.run_commands()
+            self.assertFalse(self.genset.is_running)                     # картка ще до пуску
+            self.assertEqual(stop.state, 'sent')
+            frozen.move_to(last + timedelta(minutes=2))
+            self.run_commands()
+            self.assertEqual(stop.state, 'done')
+            self.assertEqual(self.relay.values['genset_status'], 0)
