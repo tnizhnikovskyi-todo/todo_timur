@@ -441,6 +441,20 @@ class TdGensetScheduler(models.Model):
                             subtype_xmlid='td_genset.mt_command')
         genset._notify_bus('test', {'test_end': False})
 
+    def _pult_start_commands(self):
+        """Команди для «Пуск» з пульта (D-02): контролер виконує «Пуск» лише в режимі Ручний (``relay_api.md`` 7.1),
+        тож коли режим не Ручний (Авто, Стоп, Тест…) і двигун стоїть — пакет ``manual`` + ``start``, як «Тест без
+        навантаження»; у Ручному — лише ``start``. Двигун уже працює або триває пуск (``is_running``) — теж лише
+        ``start`` («Не потрібно: генератор уже працює» / очікування кінця пуску), без зміни режиму.
+
+        :rtype: list[str]
+        """
+        self.ensure_one()
+        genset = self.sudo()
+        if genset.controller_mode != 'manual' and not genset.is_running:
+            return ['manual', 'start']
+        return ['start']
+
     def _pult_prepare(self, command, user):
         """Перед командою пульта (А.6 «Пульт», ФВ-20, ФВ-22): Авто/Стоп під час тесту завершують тест; Ручний/Пуск/
         Стоп скасовують таймер; незавершені автоматичні команди (розклад/таймер/тест) скасовуються — керує людина;

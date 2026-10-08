@@ -18,6 +18,8 @@
 * ``command_flow = 'done' | 'sent' | 'queued' | 'failed' | 'timeout'`` — що поверне перший
   ``GET /commands/<id>`` (``done`` → ефект на контролері + знімок ``change`` з ``ts = done + 1 с``);
 * ``crank_failure = True`` — ``start``/``test`` закінчуються невдалим пуском (сигнал ``crank_failure``);
+* ``start`` контролер виконує лише в режимі Ручний (``relay_api.md`` 7.1): в Авто/Стоп/Тест — ``done`` без пуску
+  (``start_needs_manual = False`` — пуск у будь-якому режимі);
 * ``relay_restart()`` — ``queued``/``sent`` → ``failed`` «relay restarted», наступний знімок ``first``.
 
 Час — ``time.time()`` (``freezegun.freeze_time`` діє).
@@ -246,6 +248,7 @@ class RelayMock:
         self.format_learned = True
         self.controller_executes = True
         self.crank_failure = False
+        self.start_needs_manual = True
         self.command_flow = 'done'
         self.auto_effect_reading = True
         self.fail_with = None
@@ -554,7 +557,9 @@ class RelayMock:
                 values[flag] = name == command
             values['controller_mode'] = command
         running = values.get('genset_status') not in (0, 15, None)
-        if command in ('start', 'test') and self.crank_failure:
+        if command == 'start' and self.start_needs_manual and values.get('controller_mode') != 'manual':
+            pass   # «Пуск» працює лише в режимі Ручний (relay_api.md 7.1): контролер прийняв запис, але не пускає
+        elif command in ('start', 'test') and self.crank_failure:
             values.update(genset_status=0, genset_status_text='Standby', speed=0, crank_failure=True,
                           common_shutdown=True, common_alarm=True)
         elif command == 'start' or (command == 'test' and not running):

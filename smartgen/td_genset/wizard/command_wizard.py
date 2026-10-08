@@ -70,7 +70,10 @@ class TdGensetCommandWizard(models.TransientModel):
             if timer_active:
                 lines.append(timer_cancel)
         elif command == 'start':
-            lines = [_('Запустити генератор?'), _("Команда «Пуск» запустить двигун на об'єкті."), people]
+            if genset._pult_start_commands() == ['manual', 'start']:
+                lines = [_('Запустити генератор?'), _('Генератор буде переведено в Ручний і запущено.'), people]
+            else:
+                lines = [_('Запустити генератор?'), _("Команда «Пуск» запустить двигун на об'єкті."), people]
             if timer_active:
                 lines.append(timer_cancel)
         elif command == 'stop':
@@ -134,7 +137,8 @@ class TdGensetCommandWizard(models.TransientModel):
 
     def action_confirm(self):
         """Підтвердити: ``td.genset.command._enqueue(genset, command, 'button', env.user,
-        target_breaker_closed=…)``; тест → ``genset._test_start(mode, user)``; ``gen_close_open`` (замкнути) при
+        target_breaker_closed=…)``; «Пуск», коли контролер не в Ручному і двигун стоїть, — пакет «Ручний» + «Пуск»
+        (``_pult_start_commands``, D-02); тест → ``genset._test_start(mode, user)``; ``gen_close_open`` (замкнути) при
         ``genset_status ∉ {8, 9}`` → ``UserError`` «Генератор ще не в режимі роботи. Спочатку «Пуск».»; без
         зв'язку пульт недоступний. Права — ``group_tech`` (``AccessError``).
 
@@ -159,7 +163,13 @@ class TdGensetCommandWizard(models.TransientModel):
             target = bool(self.target_breaker_closed)
             if command == 'gen_close_open' and target and state.genset_status not in ('8', '9'):
                 raise UserError(_('Генератор ще не в режимі роботи. Спочатку «Пуск».'))
+        batch = state._pult_start_commands() if command == 'start' else [command]
         genset._pult_prepare(command, user)
+        if len(batch) > 1:
+            # «Пуск» не в режимі Ручний: пакет «Ручний» + «Пуск» (D-02, relay_api.md 7.1)
+            records = self.env['td.genset.command']._enqueue_batch(genset, batch, 'button', user)
+            label = ' + '.join(record._label('command') for record in records)
+            return self._notification(_('Команду «%(command)s» прийнято, очікуємо підтвердження.', command=label))
         record = self.env['td.genset.command']._enqueue(genset, command, 'button', user, target_breaker_closed=target)
         label = record._label('command')
         if command in BREAKER_COMMANDS and record.state == 'to_send' and not self._fresh_reading(state):

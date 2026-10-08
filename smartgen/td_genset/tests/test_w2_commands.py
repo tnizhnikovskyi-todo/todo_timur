@@ -1075,3 +1075,60 @@ class TestW2Commands(TdGensetW2Case):
             self.run_commands()
             self.assertEqual(command.state, 'sent')
             self.assertEqual((command.first_sent_at, command.deadline_at), (posted, posted + timedelta(minutes=10)))
+
+    def test_d02_start_not_in_manual_sends_manual_start_batch(self):
+        """D-02 (ТК-13.6): «Пуск» з пульта в режимі Авто під час таймера — у діалозі «Генератор буде переведено в
+        Ручний і запущено.» і «…таймер … буде скасовано»; після підтвердження таймер скасовано, пакет «Ручний» +
+        «Пуск» (контролер виконує «Пуск» лише в режимі Ручний, relay_api.md 7.1) — два POST поспіль, обидві
+        «Підтверджено». У Ручному — лише ``start``; двигун уже працює в Авто (зникла мережа) — лише ``start``
+        «Не потрібно: генератор уже працює», режим не змінюється."""
+        start = datetime(2026, 10, 10, 7, 0)   # субота, поза розкладом
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='auto')
+            self.genset.with_user(self.user_s)._timer_start(120, self.user_s)
+            self.run_commands()
+            self.assertEqual(self.commands(source='timer').state, 'not_needed')
+            wizard = self.env['td.genset.command.wizard'].with_user(self.user_t).create(
+                {'genset_id': self.genset.id, 'command': 'start'})
+            self.assertIn('Генератор буде переведено в Ручний і запущено.', wizard.warning_text)
+            self.assertIn('Переконайтеся, що біля генератора немає людей', wizard.warning_text)
+            self.assertIn('Запущений таймер роботи поза графіком буде скасовано', wizard.warning_text)
+            action = wizard.action_confirm()
+            self.assertEqual(action['params']['message'], 'Команду «Ручний + Пуск» прийнято, очікуємо підтвердження.')
+            self.assertFalse(self.genset.timer_end)
+            self.assertIn('Таймер скасовано командою Пуск', self.chatter_text())
+            batch = self.commands(source='button')
+            self.assertEqual(batch.mapped('command'), ['manual', 'start'])
+            self.assertEqual(len(set(batch.mapped('batch_key'))), 1)
+            self.assertIn('«Ручний» + «Пуск» — прийнято до надсилання', self.chatter_text())
+            self.run_commands()
+            self.assertEqual([call['json']['command'] for call in self.posts()], ['manual', 'start'])
+            frozen.move_to(start + timedelta(minutes=1))
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['done', 'done'])
+            self.assertEqual((self.relay.values['controller_mode'], self.relay.values['genset_status']), ('manual', 8))
+            self.assertEqual(self.genset.control_source, 'manual')
+        later = start + timedelta(hours=1)
+        with freeze_time(later):
+            self.push_state(ts=later - timedelta(minutes=1), controller_mode='manual')
+            wizard = self.env['td.genset.command.wizard'].with_user(self.user_t).create(
+                {'genset_id': self.genset.id, 'command': 'start'})
+            self.assertIn("Команда «Пуск» запустить двигун на об'єкті.", wizard.warning_text)
+            self.assertNotIn('буде переведено в Ручний', wizard.warning_text)
+            before = self.commands()
+            wizard.action_confirm()
+            self.assertEqual((self.commands() - before).mapped('command'), ['start'])
+            self.Command.search([('genset_id', '=', self.genset.id), ('state', 'not in', ('done', 'not_needed'))]) \
+                ._set_state('cancelled', 'Скасовано: тест', next_attempt_at=False)
+            self.push_state(ts=later - timedelta(seconds=30), controller_mode='auto', genset_status=9,
+                            mains_normal=False, gen_on_load=True)
+            wizard = self.env['td.genset.command.wizard'].with_user(self.user_t).create(
+                {'genset_id': self.genset.id, 'command': 'start'})
+            self.assertNotIn('буде переведено в Ручний', wizard.warning_text)
+            before, posts = self.commands(), len(self.posts())
+            wizard.action_confirm()
+            command = self.commands() - before
+            self.assertEqual(command.mapped('command'), ['start'])
+            self.run_commands()
+            self.assertEqual((command.state, command.result_note), ('not_needed', 'Не потрібно: генератор уже працює'))
+            self.assertEqual(len(self.posts()), posts)
