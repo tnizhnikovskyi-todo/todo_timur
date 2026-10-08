@@ -1040,14 +1040,18 @@ class TdGensetFuel(models.Model):
 
     # ================================================================== ТО (ФВ-35, ФВ-36; AC-53, AC-54)
     def _maint_team(self):
-        """Команда ТО з налаштувань (data: «Генератори»), якщо вона без компанії або тієї ж компанії."""
+        """Команда ТО з налаштувань (data: «Генератори», без компанії — спільна для всіх компаній), якщо вона без
+        компанії або тієї ж компанії, що й генератор; інакше — команда компанії генератора або спільна (без компанії),
+        щоб заявка ТО в компанії генератора не впала на check_company (мультикомпанійна база)."""
         self.ensure_one()
         config = self.env['td.genset.config'].sudo().get()
         team = (config.maint_team_id if config else False) \
             or self.env.ref('td_genset.maintenance_team_genset', raise_if_not_found=False)
         team = team.sudo() if team else self.env['maintenance.team'].sudo()
-        if team.company_id and self.company_id and team.company_id != self.company_id:
-            return self.env['maintenance.team'].sudo()
+        company = self.company_id
+        if team.company_id and company and team.company_id != company:
+            return self.env['maintenance.team'].sudo().search(
+                [('company_id', 'in', [company.id, False])], order='company_id, id', limit=1)
         return team
 
     def _ensure_equipment(self):

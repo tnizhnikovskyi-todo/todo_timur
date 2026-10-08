@@ -102,12 +102,14 @@ class TestW4Maintenance(AlarmSpyMixin, TdGensetCase):
         self.assertEqual(len(self._calls(self.raised, 'maintenance_due')), 1)
 
     def test_ac53_maintenance_data_in_install_company(self):
-        """AC-53 (DoD W4): категорія обладнання і команда ТО «Генератори» (data) — у компанії встановлення;
-        налаштування посилаються на команду; обладнання — в компанії генератора."""
+        """AC-53 (DoD W4): категорія обладнання і команда ТО «Генератори» (data) — без компанії, спільні для всіх
+        компаній бази (прод — 5 компаній; заявка в компанії генератора не падає на check_company, див.
+        ``TestW6ProdReadiness.test_multi_company``); налаштування посилаються на команду; обладнання — в компанії
+        генератора."""
         company = self.env.ref('base.main_company')
         self.assertEqual(self.env.company, company)
-        self.assertEqual(self.team.company_id, company)
-        self.assertEqual(self.category.company_id, company)
+        self.assertFalse(self.team.company_id)
+        self.assertFalse(self.category.company_id)
         self.assertEqual(self.config.maint_team_id, self.team)
         self.assertEqual(self.genset.equipment_id.company_id, self.genset.company_id)
 

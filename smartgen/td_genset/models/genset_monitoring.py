@@ -363,7 +363,14 @@ class TdGensetMonitoring(models.Model):
             genset._track_discard()
         if changed:
             genset.write(changed)
-        genset._check_maintenance()
+        # заявка ТО не має зупиняти забір показань (збій створення заявки — напр., обмеження іншого модуля на
+        # maintenance.request — відкотив би всю сторінку знімків щохвилини): окремий savepoint, лог без спаму
+        try:
+            with self.env.cr.savepoint():
+                genset._check_maintenance()
+        except Exception as exc:  # noqa: BLE001
+            log_failure(_logger, self.env, 'maintenance:%s' % genset.id, type(exc).__name__,
+                        'td_genset: %s: перевірка ТО не вдалася: %s', genset.name, exc)
         if not genset.catchup_mode:
             genset._notify_bus('reading', {'reading_id': reading.id})
         return None
