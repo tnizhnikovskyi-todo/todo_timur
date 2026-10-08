@@ -201,3 +201,30 @@ WARNING-2…5 і SUGGESTION — у беклог на розсуд менедже
 | «Прийняв»: С поза ланцюжком → `AccessError`; С/А у ланцюжку, Т → ok | відповідає AC-43 |
 | Websocket `td_genset_<id>`: С — отримує `td_genset.update`; без-груп — ні | відповідає А.9 |
 | Копія модуля з `@api.private` (`td_sec_b`): RPC до клієнта → `AccessError` для всіх ролей; кнопка Т працює; 16 тестів W1/W3 — 0 помилок | виправлення підтверджено |
+
+---
+
+## Статус виправлень (08.10.2026)
+
+**Вердикт після виправлень: APPROVE.** VULN-1 закрито; WARNING-1…5 і SUGGESTION-2 виконано за рішенням
+менеджера; SUGGESTION-1, -3, -4 — у беклог (див. нижче). Гілка `claude/dreamy-ramanujan-p2wlej`, коміти після
+`9628f48` (без push).
+
+| Знахідка | Що зроблено | Коміт | Регресійний тест |
+| --- | --- | --- | --- |
+| **VULN-1** (BLOCK) | `@api.private` над `@api.model` для всіх семи методів `td.genset.relay.client` (`status`, `device_status`, `latest`, `readings`, `post_command`, `command`, `commands`); імена А.11 ті самі, Python-виклики з cron, майстрів і кнопок не змінилися | `a925f7e` | `TestW3SecurityRpc.test_ac24_ac66_relay_client_not_callable_over_rpc`: С, А, Т і внутрішній користувач без груп модуля × 7 методів через `/web/dataset/call_kw` → `AccessError` «Private methods … cannot be called remotely», команда не створюється |
+| WARNING-1 | `README.md`: адреса API — плейсхолдер `https://<relay-host>/api/v1`, адреса проду — лише в системних параметрах | `b66ddc3` | — |
+| WARNING-2 | `maintenance_ext.py`: заявку з `td_genset_id` переводить у стадію «виконано» (і створює одразу в ній) лише `td_genset.group_tech`, інакше `AccessError` з поясненням; заявки іншого обладнання — стандартні права | `260205a` | `TestW3Security.test_ac56_maintenance_done_only_tech` |
+| WARNING-3 | `genset_fuel.py`: `td.genset.fuel.move.create` — лише з контексту `td_genset_post`, який ставить `_post`; інакше `UserError` «Рух запасу створюється лише через заправку/надходження/коригування» | `0a0f998` | `TestW3Security.test_ac49_fuel_move_only_via_post` |
+| WARNING-4 | `genset.py`: `@api.ondelete(at_uninstall=False)` — генератор зі знімками, подіями, тривогами, командами, заправками або рухом палива не видаляється («Архівуйте генератор замість видалення»); `ondelete='cascade'` дочірніх лишився (чистий генератор видаляється) | `28547e8` | `TestW3Security.test_ac56_genset_with_history_not_deleted` |
+| WARNING-5 | `base.group_allow_export` у групі «Співробітник» лишається (рішення щодо AC-59); у `README.md` модуля — розділ «Права: важливо знати» з описом розширення прав і способом його прибрати | `b66ddc3` | `TestW3Security.test_ac59_export_template_all_values` (група приходить через `implied_ids`) |
+| SUGGESTION-2 | `res_config_settings.py`: після `set_values` поле токена транзієнтного запису очищується — у таблиці `res_config_settings` токена немає | `eb4078e` | `TestW3Security.test_ac57_settings_token_never_returned` (стовпець `NULL` після `execute()`) |
+| i18n | нові тексти помилок — у `i18n/uk_UA.po` (1853 рядки, без порожніх і `fuzzy`) | `0e2ff05` | — |
+
+**Перевірка:** `run_tests.sh td_int_c` (HEAD `0e2ff05`) — код 0, 147 тестів, 0 помилок, без WARNING/ERROR;
+`update.sh td_int_c` — код 0; `run_stand_tests.sh td_int_c_stand` — 45/45. Контрольний прогін п'яти регресійних
+тестів на коді без виправлень (моделі відкочено, тести ті самі) — усі 5 падають, тобто тести ловлять саме ці дірки.
+
+**Беклог (не робили, за рішенням менеджера):** SUGGESTION-1 — правила за компаніями (`record_rules.xml`) на
+випадок другої компанії; SUGGESTION-3 — обмежити підтипи `message_post` для не тех. користувачів
+(`_mail_post_access = 'read'`); SUGGESTION-4 — `requests.Session.trust_env = False` у клієнті ретранслятора.
