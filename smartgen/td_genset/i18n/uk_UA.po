@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-08 04:06+0000\n"
-"PO-Revision-Date: 2026-10-08 04:06+0000\n"
+"POT-Creation-Date: 2026-10-08 10:47+0000\n"
+"PO-Revision-Date: 2026-10-08 10:47+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uk_UA\n"
@@ -2520,6 +2520,7 @@ msgstr "Додаткові хвилини (0–59, крок 5)."
 
 #. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset__commands_allowed
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
 msgid "Дозволити команди"
 msgstr "Дозволити команди"
 
@@ -8519,12 +8520,6 @@ msgstr ""
 "                                виконавець, роботи, підрядник."
 
 #. module: td_genset
-#. odoo-python
-#: code:addons/td_genset/models/genset_alarm.py:0
-msgid "Генератор: %(genset)s · рівень ланцюжка: %(level)s"
-msgstr "Генератор: %(genset)s · рівень ланцюжка: %(level)s"
-
-#. module: td_genset
 #: model:ir.actions.server,name:td_genset.cron_recompute_liters_ir_actions_server
 msgid "Генератори: перерахунок літрів палива"
 msgstr "Генератори: перерахунок літрів палива"
@@ -11897,12 +11892,6 @@ msgid "Створено о"
 msgstr "Створено о"
 
 #. module: td_genset
-#. odoo-python
-#: code:addons/td_genset/models/genset_alarm.py:0
-msgid "Тривога виникла о %(time)s, у тихі години; генератор: %(genset)s."
-msgstr "Тривога виникла о %(time)s, у тихі години; генератор: %(genset)s."
-
-#. module: td_genset
 #: model:ir.model.fields,help:td_genset.field_td_genset_alarm__followers_notify_at
 msgid ""
 "Тривогу піднято в тихі години, а правило сповіщення для її рівня — не "
@@ -11936,3 +11925,85 @@ msgstr "зупинено не з Odoo"
 #: code:addons/td_genset/models/genset_event.py:0
 msgid "мережа повернулася"
 msgstr "мережа повернулася"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_alarm.py:0
+msgid "%(date)s о %(time)s"
+msgstr "%(date)s о %(time)s"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_alarm.py:0
+msgid "%(genset)s: %(alarm)s"
+msgstr "%(genset)s: %(alarm)s"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_monitoring.py:0
+msgid "Генератор: %(genset)s · %(when)s"
+msgstr "Генератор: %(genset)s · %(when)s"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_alarm.py:0
+msgid "Генератор: %(genset)s · виникла %(when)s · рівень ланцюжка: %(level)s"
+msgstr "Генератор: %(genset)s · виникла %(when)s · рівень ланцюжка: %(level)s"
+
+#. module: td_genset
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
+msgid "Дозволити команди на справжній генератор?"
+msgstr "Дозволити команди на справжній генератор?"
+
+#. module: td_genset
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
+msgid "Заборонити команди"
+msgstr "Заборонити команди"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset.py:0
+msgid ""
+"Команди дозволено (%(user)s): пульт, таймер, тест і розклад надсилатимуть "
+"команди на справжній генератор через ретранслятор."
+msgstr ""
+"Команди дозволено (%(user)s): пульт, таймер, тест і розклад надсилатимуть "
+"команди на справжній генератор через ретранслятор."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset.py:0
+msgid ""
+"Команди заборонено (%(user)s): нові команди пульта, таймера, тесту й "
+"розкладу не надсилаються («Не надіслано: команди вимкнено в Odoo»)."
+msgstr ""
+"Команди заборонено (%(user)s): нові команди пульта, таймера, тесту й "
+"розкладу не надсилаються («Не надіслано: команди вимкнено в Odoo»)."
+
+#. module: td_genset
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
+msgid ""
+"Після цього кнопки пульта, таймер «Робота поза графіком», тест і розклад "
+"надсилатимуть команди на справжній генератор через ретранслятор: пуск, "
+"зупинка, зміна режиму, перемикання автоматів (розмикання автомата мережі "
+"знеструмлює об'єкт). Вмикайте лише після перевірки на стенді і коли на "
+"об'єкті є відповідальна людина. Вимкнути можна будь-коли кнопкою «Заборонити"
+" команди»."
+msgstr ""
+"Після цього кнопки пульта, таймер «Робота поза графіком», тест і розклад "
+"надсилатимуть команди на справжній генератор через ретранслятор: пуск, "
+"зупинка, зміна режиму, перемикання автоматів (розмикання автомата мережі "
+"знеструмлює об'єкт). Вмикайте лише після перевірки на стенді і коли на "
+"об'єкті є відповідальна людина. Вимкнути можна будь-коли кнопкою «Заборонити"
+" команди»."
+
+#. module: td_genset
+#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
+msgid "Так, дозволити команди"
+msgstr "Так, дозволити команди"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_alarm.py:0
+msgid "Тривога виникла %(when)s, у тихі години; генератор: %(genset)s."
+msgstr "Тривога виникла %(when)s, у тихі години; генератор: %(genset)s."
