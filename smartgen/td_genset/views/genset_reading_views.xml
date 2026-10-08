@@ -215,9 +215,12 @@
                 <separator/>
                 <filter name="running" string="Генератор працював" domain="[('is_running', '=', True)]"/>
                 <filter name="no_mains" string="Без мережі" domain="[('mains_ok', '=', False)]"/>
+                <separator/>
+                <!-- окремі групи: фільтри однієї групи Odoo об'єднує через АБО, різних груп — через І (D-13) -->
                 <filter name="hourly" string="Погодинно" domain="[('is_hour', '=', True)]"/>
                 <separator/>
                 <filter name="with_alarms" string="Є тривоги" domain="[('alarm_flags', '!=', False)]"/>
+                <separator/>
                 <filter name="filter_ts" string="Час" date="ts"/>
                 <group expand="0" string="Групувати за">
                     <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>

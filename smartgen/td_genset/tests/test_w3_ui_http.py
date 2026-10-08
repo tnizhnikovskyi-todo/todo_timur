@@ -656,3 +656,28 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
         self.assertTrue(arch.xpath("//field[@name='alarm_flags_text']"))
         self.assertFalse(arch.xpath("//field[@name='alarm_flags']"))
         self.assertEqual(Reading._fields['alarm_flags_text'].string, 'Тривоги')
+
+    # ------------------------------------------------------------------ D-13: групи фільтрів «Показань»
+    def test_d13_hourly_filter_own_group(self):
+        """D-13: у пошуку «Показань» «Погодинно» — окрема група фільтрів, тож з «Журнал 15 хв», «Генератор працював»,
+        «Без мережі» вона поєднується через І (фільтри однієї групи web-клієнт Odoo 18 поєднує через АБО); так само
+        «Є тривоги» і фільтр за датою «Час»."""
+        arch = etree.fromstring(self.env['td.genset.reading'].with_user(self.user_s).get_views(
+            [(False, 'search')])['views']['search']['arch'])
+        groups, current = [], []
+        for node in arch:   # межі груп — як у search_arch_parser.js: <separator/>, <group>, <field>
+            if not isinstance(node.tag, str):   # коментар XML
+                continue
+            if node.tag == 'filter' and 'group_by' not in (node.get('context') or ''):
+                current.append(node.get('name'))
+                continue
+            if current:
+                groups.append(current)
+            current = []
+        if current:
+            groups.append(current)
+        self.assertIn(['hourly'], groups)
+        self.assertIn(['with_alarms'], groups)
+        self.assertIn(['filter_ts'], groups)
+        self.assertIn(['running', 'no_mains'], groups)
+        self.assertIn(['journal', 'all'], groups)
