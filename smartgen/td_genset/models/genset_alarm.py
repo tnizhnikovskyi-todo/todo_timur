@@ -16,6 +16,7 @@ from odoo.tools import SQL
 from odoo.tools.translate import LazyTranslate
 
 from .genset_reading import utc_to_kyiv
+from .td_logging import log_failure
 
 _logger = logging.getLogger(__name__)
 _lt = LazyTranslate(__name__)
@@ -463,8 +464,9 @@ class TdGensetAlarm(models.Model):
             try:
                 with self.env.cr.savepoint():
                     alarm._td_escalate_step(config, now)
-            except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
-                _logger.warning('td_genset: ескалація тривоги %s не вдалася: %s', alarm.id, exc)
+            except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7); повтор — WARNING раз (td_logging)
+                log_failure(_logger, self.env, 'escalate:%s' % alarm.id, type(exc).__name__,
+                            'td_genset: ескалація тривоги %s не вдалася: %s', alarm.id, exc)
         # кінець тихих годин: підписники генератора — про тривоги, підняті вночі (D-08)
         self.flush_model(['followers_notify_at'])
         self.env.cr.execute(SQL("""
@@ -478,7 +480,8 @@ class TdGensetAlarm(models.Model):
                 with self.env.cr.savepoint():
                     alarm._td_notify_followers()
             except Exception as exc:  # noqa: BLE001
-                _logger.warning('td_genset: сповіщення підписників про тривогу %s не вдалося: %s', alarm.id, exc)
+                log_failure(_logger, self.env, 'followers:%s' % alarm.id, type(exc).__name__,
+                            'td_genset: сповіщення підписників про тривогу %s не вдалося: %s', alarm.id, exc)
         return None
 
     def _td_escalate_step(self, config, now):
@@ -509,7 +512,9 @@ class TdGensetAlarm(models.Model):
             self._td_notify(level.user_id, level.name)
             vals['notified_user_ids'] = [(4, level.user_id.id)]
         else:
-            _logger.warning('td_genset: рівень ескалації «%s» без користувача — пропущено', level.name)
+            # налаштування, а не збій: WARNING раз на годину на рівень, а не на кожну тривогу (td_logging)
+            log_failure(_logger, self.env, 'level:%s' % level.id, 'no_user',
+                        'td_genset: рівень ескалації «%s» без користувача — пропущено', level.name)
         if index + 1 < len(levels):
             scheduled = self.next_escalation_at or now
             delay = max(0, levels[index + 1].delay_min - level.delay_min)

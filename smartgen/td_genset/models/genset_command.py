@@ -18,6 +18,7 @@ from odoo.tools import SQL
 
 from .genset_reading import derive_running
 from .genset_schedule import kyiv_hhmm
+from .td_logging import log_failure, log_recovered
 from .relay_client import (RelayAuthError, RelayBadRequest, RelayBusy, RelayCommandsDisabled, RelayError,
                            RelayNotFound, RelayUnavailable)
 
@@ -472,15 +473,17 @@ class TdGensetCommand(models.Model):
         now = fields.Datetime.now()
         try:
             command_ids = self._lock_due_ids(now)
-        except Exception:  # noqa: BLE001 — cron не має падати (А.7)
-            _logger.warning('td_genset: command selection failed', exc_info=True)
+        except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7); повтор — WARNING раз (td_logging)
+            log_failure(_logger, self.env, 'commands:select', type(exc).__name__,
+                        'td_genset: command selection failed', exc_info=True)
             return None
         for command in self.sudo().browse(command_ids):
             command._process_due()
         try:
             self._schedule_next_run(now)
-        except Exception:  # noqa: BLE001
-            _logger.warning('td_genset: command cron trigger failed', exc_info=True)
+        except Exception as exc:  # noqa: BLE001
+            log_failure(_logger, self.env, 'commands:trigger', type(exc).__name__,
+                        'td_genset: command cron trigger failed', exc_info=True)
         return None
 
     @api.model
@@ -513,12 +516,13 @@ class TdGensetCommand(models.Model):
             try:
                 with self.env.cr.savepoint():
                     self._step()
-            except Exception:  # noqa: BLE001 — помилка однієї команди не зупиняє інші
-                _logger.warning('td_genset: command %s step failed in state %s', self.id, state_before,
-                                exc_info=True)
+            except Exception as exc:  # noqa: BLE001 — помилка однієї команди не зупиняє інші
+                log_failure(_logger, self.env, 'command:%s' % self.id, (type(exc).__name__, state_before),
+                            'td_genset: command %s step failed in state %s', self.id, state_before, exc_info=True)
                 self.env.invalidate_all()
                 self.write({'next_attempt_at': fields.Datetime.now() + STEP})
                 return
+            log_recovered(_logger, self.env, 'command:%s' % self.id, 'td_genset: command %s step succeeded', self.id)
             if self.state in FINAL_STATES or not self._due(self.next_attempt_at, fields.Datetime.now()):
                 return
 
@@ -624,8 +628,9 @@ class TdGensetCommand(models.Model):
             if alarm:
                 self.alarm_id = alarm
             return
-        except RelayError as exc:   # RelayUnavailable: таймаут, 5xx, обрив
-            _logger.info('td_genset: command %s POST failed: %s', self.id, exc.status)
+        except RelayError as exc:   # RelayUnavailable: таймаут, 5xx, обрив — у лог раз на збій (td_logging)
+            log_failure(_logger, self.env, 'relay', (type(exc).__name__, exc.status),
+                        'td_genset: command %s POST failed: %s', self.id, exc)
             self._transport_retry(_('ретранслятор недоступний'), now, relay_error=exc.error)
             return
         relay_id = (body or {}).get('id') if isinstance(body, dict) else None
@@ -668,7 +673,8 @@ class TdGensetCommand(models.Model):
         except RelayNotFound as exc:
             body = {'status': 'failed', 'error': exc.error or 'no such command'}
         except RelayError as exc:
-            _logger.info('td_genset: command %s status poll failed: %s', self.id, exc.status)
+            log_failure(_logger, self.env, 'relay', (type(exc).__name__, exc.status),
+                        'td_genset: command %s status poll failed: %s', self.id, exc)
             # API недоступний (таймаут/5xx) — 2 хв не рахуються: команда могла виконатися, тож без нового POST
             # перечитуємо GET /commands/<id>, щойно API відповість (інакше — повтор тієї самої команди)
             if not isinstance(exc, RelayUnavailable) and self._due((self.sent_at or now) + SENT_TIMEOUT, now):
@@ -792,7 +798,8 @@ class TdGensetCommand(models.Model):
         try:
             latest = self.env['td.genset.relay.client'].latest(genset.relay_hostid)
         except RelayError as exc:
-            _logger.info('td_genset: latest snapshot unavailable: %s', exc.status)
+            log_failure(_logger, self.env, 'relay', (type(exc).__name__, exc.status),
+                        'td_genset: latest snapshot unavailable: %s', exc)
             latest = None
         if isinstance(latest, dict) and latest.get('values') is not None and latest.get('id') not in seen:
             facts = self._reading_facts(latest)
@@ -1091,7 +1098,8 @@ class TdGensetCommand(models.Model):
             try:
                 latest = self.env['td.genset.relay.client'].latest(genset.relay_hostid)
             except RelayError as exc:
-                _logger.info('td_genset: latest snapshot unavailable: %s', exc.status)
+                log_failure(_logger, self.env, 'relay', (type(exc).__name__, exc.status),
+                            'td_genset: latest snapshot unavailable: %s', exc)
                 latest = None
             facts = self._reading_facts(latest) if isinstance(latest, dict) and latest.get('values') is not None \
                 else None

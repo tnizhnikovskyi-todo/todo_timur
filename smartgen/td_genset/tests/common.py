@@ -36,6 +36,8 @@ import requests
 
 from odoo.tests import TransactionCase
 
+from ..models.td_logging import reset_log_state
+
 HOSTID = '3130373031334717003D002E'
 BASE_URL = 'http://relay.test/api/v1'          # домен .test ніколи не резолвиться
 TOKEN = 'test-token-0123456789abcdefghij'
@@ -713,6 +715,7 @@ class TdGensetCase(TransactionCase):
 
     def setUp(self):
         super().setUp()
+        reset_log_state()   # стан «помилка вже в лозі» (td_logging) не переходить між тестами
         self.relay = RelayMock(version=self.relay_version)
         self.relay.start()
         self.addCleanup(self.relay.stop)

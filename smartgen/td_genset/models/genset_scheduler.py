@@ -14,6 +14,7 @@ from odoo.exceptions import UserError
 from odoo.tools import SQL
 
 from .genset_schedule import kyiv_hhmm, kyiv_localize, to_kyiv, to_utc
+from .td_logging import log_failure, log_recovered
 
 _logger = logging.getLogger(__name__)
 
@@ -41,13 +42,18 @@ class TdGensetScheduler(models.Model):
         """
         now = fields.Datetime.now()
         gensets = self.sudo().search([('relay_enabled', '=', True)])
+        # повторюваний збій кроку чи перевірки — WARNING з трасуванням один раз, далі DEBUG (td_logging)
         for genset in gensets:
             try:
                 with self.env.cr.savepoint():
                     if genset._td_lock_row():
                         genset._scheduler_step(now)
-            except Exception:  # noqa: BLE001 — cron не має падати (А.7)
-                _logger.warning('td_genset: scheduler step failed for genset %s', genset.id, exc_info=True)
+            except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
+                log_failure(_logger, self.env, 'scheduler:%s' % genset.id, type(exc).__name__,
+                            'td_genset: scheduler step failed for genset %s', genset.id, exc_info=True)
+            else:
+                log_recovered(_logger, self.env, 'scheduler:%s' % genset.id,
+                              'td_genset: scheduler step works again for genset %s', genset.id)
         side_checks = (
             ('escalation', lambda: self.env['td.genset.alarm'].sudo()._cron_escalate()),
             ('refuel reconciliation', lambda: self.env['td.genset.refuel'].sudo()._reconcile_pending()),
@@ -58,8 +64,12 @@ class TdGensetScheduler(models.Model):
             try:
                 with self.env.cr.savepoint():
                     check()
-            except Exception:  # noqa: BLE001
-                _logger.warning('td_genset: scheduler side check failed: %s', label, exc_info=True)
+            except Exception as exc:  # noqa: BLE001
+                log_failure(_logger, self.env, 'scheduler:%s' % label, type(exc).__name__,
+                            'td_genset: scheduler side check failed: %s', label, exc_info=True)
+            else:
+                log_recovered(_logger, self.env, 'scheduler:%s' % label,
+                              'td_genset: scheduler side check works again: %s', label)
         return None
 
     def _td_lock_row(self):

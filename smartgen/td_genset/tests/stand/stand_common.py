@@ -38,6 +38,7 @@ import requests
 from odoo import fields
 from odoo.tools import SQL, html2plaintext
 
+from ...models.td_logging import reset_log_state
 from ..common import TdGensetCase
 from .relay_harness import SimClient, StandError, StandTimeout, is_loopback_url, spawn_relay, wait_until
 
@@ -136,6 +137,7 @@ class TdGensetStandCase(TdGensetCase):
     def setUp(self):
         # TransactionCase.setUp — без RelayMock з TdGensetCase.setUp: модуль ходить на емулятор.
         super(TdGensetCase, self).setUp()
+        reset_log_state()
         self.relay_process = None
         self._freezer = None
         self._clock = None

@@ -18,6 +18,7 @@ from .genset_alarm import hhmm
 from .genset_event import parse_utc
 from .genset_reading import KYIV, READING_FIELD_MAP, ts_to_datetime
 from .relay_client import RelayAuthError, RelayError, RelayNotFound, RelayUnavailable
+from .td_logging import log_failure, log_recovered
 
 _logger = logging.getLogger(__name__)
 
@@ -67,11 +68,16 @@ class TdGensetMonitoring(models.Model):
             for genset in gensets:
                 if not genset._td_try_lock():
                     continue
+                # повторювані збої — WARNING один раз, далі DEBUG (td_logging): cron щохвилини не засмічує лог
                 try:
                     with self.env.cr.savepoint():
                         genset._apply_status(status)
                 except Exception as exc:  # noqa: BLE001
-                    _logger.warning('td_genset: %s: стан /status не застосовано: %s', genset.name, exc)
+                    log_failure(_logger, self.env, 'status:%s' % genset.id, type(exc).__name__,
+                                'td_genset: %s: стан /status не застосовано: %s', genset.name, exc)
+                else:
+                    log_recovered(_logger, self.env, 'status:%s' % genset.id,
+                                  'td_genset: %s: стан /status знову застосовується', genset.name)
                 try:
                     with self.env.cr.savepoint():
                         count = genset.with_context(td_genset_status=status)._pull_readings_page(client)
@@ -79,14 +85,19 @@ class TdGensetMonitoring(models.Model):
                     genset._td_relay_failed(exc)
                     continue
                 except Exception as exc:  # noqa: BLE001
-                    _logger.warning('td_genset: %s: сторінку знімків не збережено: %s', genset.name, exc)
+                    log_failure(_logger, self.env, 'page:%s' % genset.id, type(exc).__name__,
+                                'td_genset: %s: сторінку знімків не збережено: %s', genset.name, exc)
                     continue
+                log_recovered(_logger, self.env, 'page:%s' % genset.id,
+                              'td_genset: %s: знімки знову зберігаються', genset.name)
                 genset._td_relay_available()
                 done += count
                 if count >= PAGE_SIZE:
                     remaining = 1
         except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
-            _logger.warning('td_genset: забір показань не вдався: %s', exc)
+            log_failure(_logger, self.env, 'pull', type(exc).__name__, 'td_genset: забір показань не вдався: %s', exc)
+        else:
+            log_recovered(_logger, self.env, 'pull', 'td_genset: забір показань знову працює')
         finally:
             self.env['ir.cron']._notify_progress(done=done, remaining=remaining)
         return None
@@ -99,8 +110,9 @@ class TdGensetMonitoring(models.Model):
 
     def _td_relay_failed(self, exc):
         """Помилка API: 401 → тривога ``relay_auth``; таймаут/5xx → лічильник ``relay_unavailable_since`` і
-        через ``relay_unavailable_alarm_min`` хв — тривога ``relay_unavailable`` (тех.). Курсор не змінюється."""
-        _logger.warning('td_genset: ретранслятор: %s', exc)
+        через ``relay_unavailable_alarm_min`` хв — тривога ``relay_unavailable`` (тех.). Курсор не змінюється.
+        У лог — WARNING один раз на збій (код помилки), далі DEBUG, нагадування раз на годину (td_logging)."""
+        log_failure(_logger, self.env, 'relay', (type(exc).__name__, exc.status), 'td_genset: ретранслятор: %s', exc)
         alarm_model = self.env['td.genset.alarm']
         if isinstance(exc, RelayAuthError):
             for genset in self:
@@ -137,7 +149,8 @@ class TdGensetMonitoring(models.Model):
 
     def _td_relay_available(self):
         """Успішна сторінка ``/readings``: ретранслятор доступний — скинути ``relay_unavailable_since`` і зняти
-        тривогу ``relay_unavailable`` (AC-10)."""
+        тривогу ``relay_unavailable`` (AC-10). Після збою — один запис INFO «ретранслятор знову відповідає»."""
+        log_recovered(_logger, self.env, 'relay', 'td_genset: ретранслятор знову відповідає')
         config = self.env['td.genset.config'].sudo().get()
         if config.relay_unavailable_since:
             config.relay_unavailable_since = False
