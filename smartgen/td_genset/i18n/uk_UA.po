@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-07 23:17+0000\n"
-"PO-Revision-Date: 2026-10-07 23:17+0000\n"
+"POT-Creation-Date: 2026-10-08 02:12+0000\n"
+"PO-Revision-Date: 2026-10-08 02:12+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uk_UA\n"
@@ -11737,3 +11737,31 @@ msgstr "четвер"
 #: code:addons/td_genset/models/genset_command.py:0
 msgid "із запізненням (перехід %(time)s)"
 msgstr "із запізненням (перехід %(time)s)"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset.py:0
+msgid ""
+"Генератор «%(names)s» має історію (знімки, події, тривоги, команди або рух "
+"палива) — видаляти його не можна. Архівуйте генератор замість видалення."
+msgstr ""
+"Генератор «%(names)s» має історію (знімки, події, тривоги, команди або рух "
+"палива) — видаляти його не можна. Архівуйте генератор замість видалення."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/maintenance_ext.py:0
+msgid ""
+"Закрити заявку ТО генератора (стадія «виконано») може лише тех. "
+"адміністратор — група «Генератори: Тех. адміністратор». Закриття фіксує "
+"мотогодини і починає новий відлік ТО."
+msgstr ""
+"Закрити заявку ТО генератора (стадія «виконано») може лише тех. "
+"адміністратор — група «Генератори: Тех. адміністратор». Закриття фіксує "
+"мотогодини і починає новий відлік ТО."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_fuel.py:0
+msgid "Рух запасу створюється лише через заправку/надходження/коригування."
+msgstr "Рух запасу створюється лише через заправку/надходження/коригування."
