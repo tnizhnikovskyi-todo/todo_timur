@@ -70,6 +70,8 @@ MINUS = '−'
 CTX_POSTING = 'td_fuel_posting'
 CTX_APPLIED = 'td_fuel_move_applied'
 CTX_DEFER_STOCK = 'td_fuel_defer_stock_check'
+# Рух запасу створює лише _post (запас у каністрах = Σ рухів): прямий create (RPC, імпорт) — UserError.
+CTX_MOVE_POST = 'td_genset_post'
 
 
 def _config(env):
@@ -373,6 +375,15 @@ class TdGensetFuelMove(models.Model):
         string='Залишок після, L', compute='_compute_balance_after',
         help='Запас у каністрах після цього руху (підсумок по даті).')
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Рух запасу створюється лише через ``_post`` (надходження, заправка, коригування, переміщення, списання):
+        прямий ``create`` (RPC, імпорт) обійшов би зміну каністри, і запас у каністрах перестав би дорівнювати
+        Σ рухів (security-review WARNING-3)."""
+        if not self.env.context.get(CTX_MOVE_POST):
+            raise UserError(_('Рух запасу створюється лише через заправку/надходження/коригування.'))
+        return super().create(vals_list)
+
     @api.depends('date', 'liters_delta')
     def _compute_balance_after(self):
         """Запас у каністрах після руху: Σ ``liters_delta`` усіх рухів до цього включно (за датою, далі id)."""
@@ -462,7 +473,7 @@ class TdGensetFuelMove(models.Model):
         if not values.get('note'):
             values['note'] = self._default_note(kind, delta, canister, genset, refuel, before, after,
                                                 location_from, location_to, values)
-        move = self.create(values)
+        move = self.with_context(**{CTX_MOVE_POST: True}).create(values).with_env(self.env)
 
         if canister and not applied:
             if kind == 'loc':

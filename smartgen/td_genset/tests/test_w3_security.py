@@ -11,7 +11,7 @@ from datetime import datetime
 
 from lxml import etree
 
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, UserError
 from odoo.tests import HttpCase, tagged
 from odoo.tools import mute_logger
 
@@ -240,6 +240,21 @@ class TestW3Security(TdGensetCase):
         request.with_user(self.user_t).write({'stage_id': done.id})
         self.assertTrue(request.stage_id.done)
         self.assertAlmostEqual(request.td_run_hours_at_close, self.genset.run_hours_total)
+
+    def test_ac49_fuel_move_only_via_post(self):
+        """AC-49 (security-review WARNING-3): рух запасу створюється лише через ``_post`` (надходження, заправка,
+        коригування, переміщення, списання) — прямий ``create`` (RPC, імпорт) навіть від А/Т → помилка «Рух запасу
+        створюється лише через …»; запас у каністрах = Σ рухів."""
+        location = self.env['td.genset.storage.location'].create({'name': 'Щитова (рухи)'})
+        canister = self.env['td.genset.canister'].create({'location_id': location.id, 'volume_l': 20})
+        for user in (self.user_a, self.user_t):
+            with self.assertRaisesRegex(UserError, 'Рух запасу створюється лише через'):
+                self.env['td.genset.fuel.move'].with_user(user).create(
+                    {'kind': 'in', 'liters_delta': 5.0, 'canister_id': canister.id})
+        self.assertFalse(canister.move_ids)
+        move = self.env['td.genset.fuel.move']._post('in', 5.0, canister=canister)
+        self.assertEqual(canister.liters, 5.0)
+        self.assertEqual(canister.move_ids, move)
 
 
 @tagged('post_install', '-at_install')
