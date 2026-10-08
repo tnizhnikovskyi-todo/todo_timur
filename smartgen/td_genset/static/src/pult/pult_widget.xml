@@ -4,10 +4,17 @@
     <t t-name="td_genset.PultWidget">
         <div class="o_td_pult" t-att-class="{'o_td_pult_compact': props.compact, 'o_td_pult_stale': pult and pult.link.state !== 'online'}"
              t-att-data-loaded="pult ? '1' : '0'" t-att-data-refresh="state.refreshCount"
+             t-att-data-error="state.loadError ? '1' : '0'"
              t-att-data-can-control="pult and pult.can_control ? '1' : '0'">
             <div t-if="!gensetId" class="text-muted small">Збережіть генератор, щоб побачити пульт.</div>
+            <div t-elif="!pult and state.loadError" class="alert alert-warning py-2 px-3 mb-0 o_td_pult_unavailable" role="status">
+                Пульт тимчасово недоступний: дані не завантажились. Спробуємо ще раз автоматично.
+            </div>
             <div t-elif="!pult" class="text-muted small"><i class="fa fa-spinner fa-spin me-1"/>Завантаження пульта…</div>
-            <div t-else="" class="o_td_pult_desk">
+            <div t-if="pult and state.loadError" class="alert alert-warning py-1 px-3 mb-2 small o_td_pult_unavailable" role="status">
+                Пульт тимчасово недоступний: показано останні отримані дані.
+            </div>
+            <div t-if="pult" class="o_td_pult_desk">
                 <div class="o_td_pult_col">
                     <!-- Прилади -->
                     <section class="card o_td_pult_card o_td_pult_gauges">

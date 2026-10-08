@@ -10,6 +10,9 @@
  * - Живе оновлення (AC-62): канал "td_genset_<id>" (ir.websocket._build_bus_channel_list), тип
  *   "td_genset.update" → record.load() + get_pult_state; резерв — опитування раз на 30 с, якщо bus
  *   неактивний або websocket не підключений. Відлік стану агрегату і таймера — локально від server_now.
+ * - Помилка RPC (обрив мережі, закінчена сесія, 5xx) не ламає форму і не дає «Uncaught Promise»: лишається
+ *   останній стан пульта з позначкою, без даних — «Пульт тимчасово недоступний»; повторна спроба — при
+ *   наступному bus-повідомленні або резервному опитуванні (раз на 30 с), сповіщення — один раз на серію помилок.
  */
 import { Component, onMounted, onWillStart, onWillUnmount, useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
@@ -67,7 +70,7 @@ export class TdGensetPult extends Component {
         this.action = useService("action");
         this.notification = useService("notification");
         this.busService = useService("bus_service");
-        this.state = useState({ pult: null, refreshCount: 0, now: Date.now(), busy: false });
+        this.state = useState({ pult: null, refreshCount: 0, now: Date.now(), busy: false, loadError: false });
         this.skewMs = 0;
         this.channel = null;
         this.debounceTimer = null;
@@ -105,15 +108,24 @@ export class TdGensetPult extends Component {
         return this.state.pult;
     }
 
+    /** Стан пульта з сервера; помилка не виходить назовні (див. ``onLoadError``). @returns {boolean} успіх */
     async loadState() {
         if (!this.gensetId) {
-            return;
+            return false;
         }
-        const pult = await this.orm.call("td.genset", "get_pult_state", [[this.gensetId]]);
+        let pult;
+        try {
+            pult = await this.orm.call("td.genset", "get_pult_state", [[this.gensetId]]);
+        } catch {
+            this.onLoadError();
+            return false;
+        }
         const serverNow = parseIso(pult.server_now);
         this.skewMs = serverNow ? serverNow.toMillis() - Date.now() : 0;
         this.state.pult = pult;
         this.state.now = Date.now();
+        this.state.loadError = false;
+        return true;
     }
 
     async refresh() {
@@ -122,10 +134,27 @@ export class TdGensetPult extends Component {
             return;
         }
         if (!record.dirty) {
-            await record.load();
+            try {
+                await record.load();
+            } catch {
+                this.onLoadError();
+                return;
+            }
         }
-        await this.loadState();
-        this.state.refreshCount++;
+        if (await this.loadState()) {
+            this.state.refreshCount++;
+        }
+    }
+
+    /** Лишити останній стан пульта; одне сповіщення на серію помилок (без діалогу «Uncaught Promise»). */
+    onLoadError() {
+        if (!this.state.loadError) {
+            this.notification.add(
+                _t("Пульт тимчасово недоступний: не вдалося оновити дані. Спробуємо ще раз автоматично."),
+                { type: "warning" }
+            );
+        }
+        this.state.loadError = true;
     }
 
     onBusUpdate(payload) {
@@ -140,7 +169,8 @@ export class TdGensetPult extends Component {
         if (!this.gensetId) {
             return;
         }
-        if (!this.busService.isActive || this.busService.workerState !== "CONNECTED") {
+        // після помилки завантаження — повторна спроба навіть при живому websocket
+        if (this.state.loadError || !this.busService.isActive || this.busService.workerState !== "CONNECTED") {
             this.refresh();
         }
     }

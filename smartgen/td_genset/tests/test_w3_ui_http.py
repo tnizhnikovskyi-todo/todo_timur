@@ -293,6 +293,61 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             console.log("test successful");
         """ % {'id': self.genset.id}), login='td_user_t')
 
+    def test_ac62_pult_survives_rpc_failure(self):
+        """AC-61, AC-62 (ревю коду, п. 2): відмова RPC стану пульта (обрив мережі, 5xx) не ламає форму і не дає
+        «Uncaught Promise»: без даних — «Пульт тимчасово недоступний», після відновлення — пульт (повтор
+        резервним опитуванням навіть при живому websocket); помилка оновлення лишає останній стан з позначкою."""
+        self._online(controller_mode='auto')
+        self.browser_js('/odoo/action-td_genset.action_td_genset', self._js("""
+            const ID = %(id)d;
+            await waitFor(() => window.odoo && odoo.__WOWL_DEBUG__ && document.querySelector(".o_view_controller"),
+                          "web client");
+            const env = odoo.__WOWL_DEBUG__.root.env;
+            const bus = env.services.bus_service;
+            const pultModule = odoo.loader.modules.get("@td_genset/pult/pult_widget");
+            pultModule.PULT_TIMING.debounceMs = 50;
+            pultModule.PULT_TIMING.pollMs = 400;
+            Object.defineProperty(bus, "workerState", { get: () => "CONNECTED", configurable: true });
+            Object.defineProperty(bus, "isActive", { get: () => true, configurable: true });
+            const callbacks = [];
+            const subscribe = bus.subscribe;
+            bus.subscribe = (type, callback) => {
+                if (type === "td_genset.update") { callbacks.push(callback); }
+                return subscribe(type, callback);
+            };
+            const orm = env.services.orm;
+            const call = orm.call;
+            let fail = true;
+            orm.call = function (model, method, ...args) {
+                if (fail && model === "td.genset" && method === "get_pult_state") {
+                    return Promise.reject(new Error("simulated RPC failure"));
+                }
+                return call.call(this, model, method, ...args);
+            };
+            await env.services.action.doAction({
+                type: "ir.actions.act_window", res_model: "td.genset", res_id: ID, views: [[false, "form"]],
+            });
+            const root = await waitFor(() => document.querySelector(".o_td_pult[data-error='1']"), "error state");
+            if (root.dataset.loaded !== "0" || !root.querySelector(".o_td_pult_unavailable")) {
+                throw new Error("no placeholder");
+            }
+            if (!document.querySelector(".o_form_view .o_field_widget[name='controller_mode']")) {
+                throw new Error("form not rendered");
+            }
+            fail = false;
+            await waitFor(() => root.dataset.loaded === "1" && root.dataset.error === "0", "recovered by polling");
+            await waitFor(() => root.querySelector(".o_td_pult_tile_auto.o_td_pult_active"), "auto active");
+            fail = true;
+            callbacks.forEach((callback) => callback({ genset_id: ID, kind: "reading" }));
+            await waitFor(() => root.dataset.error === "1", "refresh error");
+            if (root.dataset.loaded !== "1" || !root.querySelector(".o_td_pult_tile_auto")) {
+                throw new Error("last state lost");
+            }
+            fail = false;
+            await waitFor(() => root.dataset.error === "0", "recovered again");
+            console.log("test successful");
+        """ % {'id': self.genset.id}), login='td_user_t')
+
     # ------------------------------------------------------------------ AC-56/AC-24: форма для кожної ролі
     def test_ac56_form_and_tabs_for_each_role(self):
         """AC-56, AC-24: картка відкривається для С/А/Т без помилок JS/RPC; плитки активні лише для Т; для С/А —
