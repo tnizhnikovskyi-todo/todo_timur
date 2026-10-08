@@ -75,7 +75,7 @@ class TestW1Events(TdGensetCase):
         self.assertEqual(run.crank_attempts, 2)
         self.assertAlmostEqual(run.crank_min_battery_v, 21.9)
         self.assertEqual(run.reason, 'Пуск не з Odoo')
-        self.assertEqual(run.summary, 'Пуск з 2-ї спроби, навантаження прийнято')
+        self.assertEqual(run.summary, 'Пуск з 2-ї спроби, навантаження прийнято; зупинено не з Odoo')
         self.assertTrue(run.is_bad)
         self.assertFalse(self.genset.open_run_event_id)
         self.assertIn('Точність', self.env['td.genset.event']._fields['crank_min_battery_v'].help)
@@ -91,6 +91,45 @@ class TestW1Events(TdGensetCase):
         self.assertEqual(run.reason, 'Кнопка «Пуск» · %s' % self.user_t.name)
         self.assertEqual(run.command_id, command)
         self.assertTrue(run.is_open)
+
+    def test_d07_run_reasons_by_facts(self):
+        """D-07 (ТК-09.1, ТК-13.5): причини «Роботи» за фактами. Тест з навантаженням → «Тест · хто», зупинка після
+        команди «Авто» кінця тесту; через 9 хв зникла мережа в Авто → «Зникла мережа · режим Авто», а не «Тест»
+        (команда тесту вже причина першої роботи; розклад вимкнено — без «за розкладом»); «Стоп» з пульта без
+        мережі → «зупинено командою «Стоп» (кнопка · хто) — мережі ще не було», а не «за розкладом»."""
+        Command = self.env['td.genset.command']
+
+        def command(name, source, done):
+            return Command.create({'genset_id': self.genset.id, 'command': name, 'source': source,
+                                   'user_id': self.user_t.id, 'state': 'done', 'sent_at': done - timedelta(seconds=3),
+                                   'done_at': done})
+
+        lost = {'mains_normal': False, 'mains_on_load': False}
+        test = command('test', 'test', T + timedelta(seconds=13))
+        self._feed([(T, snapshot(), 'interval'),
+                    (T + timedelta(seconds=20), snapshot(genset_status=1, controller_mode='test')),
+                    (T + timedelta(minutes=1), snapshot(genset_status=9, controller_mode='test', gen_on_load=True,
+                                                        mains_on_load=False))])
+        command('auto', 'test', T + timedelta(minutes=3, seconds=3))
+        self._feed([(T + timedelta(minutes=3, seconds=30), snapshot(genset_status=10)),
+                    (T + timedelta(minutes=4), snapshot(genset_status=0)),
+                    (T + timedelta(minutes=9), snapshot(**lost)),
+                    (T + timedelta(minutes=9, seconds=20), snapshot(genset_status=3, **lost)),
+                    (T + timedelta(minutes=10), snapshot(genset_status=9, gen_on_load=True, **lost))])
+        command('stop', 'button', T + timedelta(minutes=12))
+        self._feed([(T + timedelta(minutes=12, seconds=30), snapshot(genset_status=10, **lost)),
+                    (T + timedelta(minutes=13), snapshot(genset_status=0, **lost))])
+        first, second = self._events('run')
+        self.assertEqual((first.reason, first.command_id), ('Тест · %s' % self.user_t.name, test))
+        self.assertEqual(first.summary, 'Пуск з 1-ї спроби, навантаження прийнято; зупинено командою «Авто» (тест)')
+        self.assertEqual(second.reason, 'Зникла мережа · режим Авто')
+        self.assertFalse(second.command_id)
+        self.assertEqual(second.summary, 'Пуск з 1-ї спроби, навантаження прийнято; зупинено командою «Стоп» '
+                                         '(кнопка · %s) — мережі ще не було' % self.user_t.name)
+        body = ' '.join(self.env['mail.message'].search([('model', '=', 'td.genset'),
+                                                         ('res_id', '=', self.genset.id)]).mapped('body'))
+        self.assertIn('Зникла мережа · режим Авто', body)
+        self.assertNotIn('за розкладом', body)
 
     def test_ac39_outage_with_pickup(self):
         """AC-39: мережа зникла 11:51 і повернулась 13:47, генератор 11:51:25–13:50 → подія 1 год 56 хв,
@@ -122,7 +161,8 @@ class TestW1Events(TdGensetCase):
         self.assertEqual(outage.summary, 'Генератор підхопив за 25 с')
         self.assertFalse(outage.is_bad)
         run = self._events('run')
-        self.assertEqual(run.reason, 'Зникла мережа · режим Авто за розкладом')
+        self.assertEqual(run.reason, 'Зникла мережа · режим Авто')
+        self.assertEqual(run.summary, 'Пуск з 1-ї спроби, навантаження прийнято; мережа повернулася')
         self.assertEqual(run.date_end, back + timedelta(minutes=3))
 
     def test_ac39_outage_without_run(self):

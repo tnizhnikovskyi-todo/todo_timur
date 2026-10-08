@@ -17,6 +17,9 @@ from .genset_alarm import GEN_SIGNALS, SHUTDOWN_SIGNALS, WARNING_SIGNALS, fmt_li
 
 GAP_MIN = 3                 # пропуск між знімками > 3 хв → подія «Немає даних» (ФВ-25)
 REFUEL_WINDOW_MIN = 10      # сумарний приріст рівня за ≤ 10 хв → «Заправка» (2.8.1)
+CAUSE_COMMAND = timedelta(minutes=10)    # команда Odoo — причина пуску/зупинки, якщо виконана ≤ 10 хв до неї (D-07)
+CAUSE_MAINS = timedelta(minutes=5)       # зникнення мережі — причина пуску в Авто, якщо ≤ 5 хв до пуску (D-07)
+CAUSE_TOLERANCE = timedelta(seconds=5)   # час ретранслятора — з точністю до секунди
 MODE_COMMANDS = ('auto', 'manual', 'stop', 'test')
 BREAKER_COMMANDS = {'gen_on_load': 'gen_close_open', 'mains_on_load': 'mains_close_open'}
 ODOO_COMMAND_STATES = ('sent', 'awaiting', 'retry', 'waiting_link', 'done', 'done_late', 'failed')
@@ -364,19 +367,64 @@ class TdGensetEvent(models.Model):
                                        time=hhmm(row['ts']), summary=event.summary))
 
     def _td_run_reason(self, genset, row, state):
-        """Причина пуску (2.8.1): команда Odoo ``start``/``test`` → «Тест · хто» / «Кнопка «Пуск» · хто»;
-        відкрите відключення в Авто → «Зникла мережа · режим Авто за розкладом|таймером»; інакше «Пуск не з Odoo»."""
-        command = self._td_odoo_command(genset, ('start', 'test'), row['ts'])
+        """Причина пуску за фактами (2.8.1, D-07): команда Odoo ``start``/``test``, виконана ≤ 10 хв до пуску і ще
+        не прив'язана до іншої «Роботи», → «Тест · хто» / «Кнопка «Пуск» · хто»; режим Авто, мережі немає, і вона
+        зникла ≤ 5 хв до пуску (або ≤ 10 хв до пуску Odoo перевела контролер в Авто) → «Зникла мережа · режим Авто»;
+        інакше «Пуск не з Odoo»."""
+        command = self._td_cause_command(genset, ('start', 'test'), row['ts'], unlinked_run=True)
         if command:
             who = command.user_id.name or _('Система')
             if command.command == 'test' or command.source == 'test':
                 return {'reason': _('Тест · %s', who), 'command_id': command.id}
             return {'reason': _('Кнопка «Пуск» · %s', who), 'command_id': command.id}
-        if state['outage'] and row['controller_mode'] == 'auto':
-            by_timer = genset.control_source == 'timer' or (genset.timer_end and genset.timer_end > row['ts'])
-            return {'reason': _('Зникла мережа · режим Авто за таймером') if by_timer
-                    else _('Зникла мережа · режим Авто за розкладом')}
+        outage = state['outage']
+        if outage and row['controller_mode'] == 'auto' and (
+                outage.date_start >= row['ts'] - CAUSE_MAINS or self._td_cause_command(genset, ('auto',), row['ts'])):
+            return {'reason': _('Зникла мережа · режим Авто')}
         return {'reason': _('Пуск не з Odoo')}
+
+    def _td_stop_reason(self, genset, row, state):
+        """Причина зупинки за фактами (D-07): команда Odoo «Стоп», виконана ≤ 10 хв до зупинки, → «зупинено
+        командою «Стоп» (джерело[ · хто])»; режим Авто і мережа повернулася ≤ 10 хв до зупинки → «мережа
+        повернулася»; Odoo перевела контролер в Авто ≤ 10 хв до зупинки → «зупинено командою «Авто» (…)»; інакше
+        «зупинено не з Odoo»."""
+        command = self._td_cause_command(genset, ('stop',), row['ts'])
+        if command:
+            return self._td_command_cause(command)
+        if row['controller_mode'] == 'auto' and not state['outage'] and self.sudo().search_count([
+                ('genset_id', '=', genset.id), ('event_type', '=', 'outage'),
+                ('date_end', '>=', row['ts'] - CAUSE_COMMAND), ('date_end', '<=', row['ts'])], limit=1):
+            return _('мережа повернулася')
+        command = self._td_cause_command(genset, ('auto',), row['ts'])
+        if command:
+            return self._td_command_cause(command)
+        return _('зупинено не з Odoo')
+
+    @api.model
+    def _td_command_cause(self, command):
+        """«зупинено командою «Стоп» (кнопка · Ім'я)» / «… (розклад)» / «… (таймер)» / «… (тест)»."""
+        origin = command._label('source').lower()
+        if command.source == 'button':
+            origin = '%s · %s' % (origin, command.user_id.name or _('Система'))
+        return _('зупинено командою «%(command)s» (%(origin)s)', command=command._label('command'), origin=origin)
+
+    @api.model
+    def _td_cause_command(self, genset, commands, stamp, unlinked_run=False):
+        """Команда Odoo з ``commands``, виконана ретранслятором (``done_at``; поки Odoo не дізналася результат —
+        ``sent_at``) за 10 хв до ``stamp`` (D-07); ``unlinked_run`` — ще не причина іншої події «Робота»
+        (тест, що вже закінчився, не стає причиною наступного пуску)."""
+        since, until = stamp - CAUSE_COMMAND, stamp + CAUSE_TOLERANCE
+        candidates = self.env['td.genset.command'].sudo().search([
+            ('genset_id', '=', genset.id), ('command', 'in', list(commands)), ('state', 'in', ODOO_COMMAND_STATES),
+            '|', '&', ('done_at', '>=', since), ('done_at', '<=', until),
+            '&', '&', ('done_at', '=', False), ('sent_at', '>=', since), ('sent_at', '<=', until),
+        ], order='id desc')
+        for command in candidates:
+            if unlinked_run and self.sudo().search_count([('event_type', '=', 'run'), ('command_id', '=', command.id)],
+                                                         limit=1):
+                continue
+            return command
+        return self.env['td.genset.command']
 
     def _td_close_run(self, genset, event, row, state):
         rows = self._td_event_rows(genset, event, row)
@@ -388,13 +436,13 @@ class TdGensetEvent(models.Model):
         crank_volts = [item['battery_v'] for item in rows if item['genset_status'] == '3'
                        and item['battery_v'] is not None]
         loaded = any(item['gen_on_load'] for item in rows)
-        if state['outage']:
-            summary = _('Пуск з %(n)s-ї спроби; зупинено о %(time)s за розкладом — мережі ще не було',
-                        n=attempts, time=hhmm(row['ts']))
-        elif loaded:
+        if loaded:
             summary = _('Пуск з %s-ї спроби, навантаження прийнято', attempts)
         else:
             summary = _('Пуск з %s-ї спроби, без навантаження', attempts)
+        summary = '%s; %s' % (summary, self._td_stop_reason(genset, row, state))
+        if state['outage']:
+            summary = _('%s — мережі ще не було', summary)
         vals = {
             'reading_end_id': row['id'],
             'energy_kwh': max(0.0, energies[-1] - energies[0]) if len(energies) > 1 else 0.0,
