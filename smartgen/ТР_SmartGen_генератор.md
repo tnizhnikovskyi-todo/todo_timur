@@ -705,7 +705,7 @@ www.todo.ltd
 - **УМОВА** ланцюжок: К. (одразу), Н. (+10 хв), М. (+30 хв); правила: критичні — завжди, попередження — крім тихих годин (22:00–07:00)
 - **КОЛИ** о 23:10 виникає критична тривога і ніхто не натискає «Прийняв»
 - **ТОДІ** 23:10 — сповіщення К. (вхідні + push), 23:20 — Н., 23:40 — М.; у чатері генератора — повідомлення тривоги з підписниками
-- **ТА** попередження о 23:10 сповіщається о 07:00; «Лише в чаті» — лише запис у чатер без сповіщень.
+- **ТА** попередження о 23:10 сповіщається о 07:00; «Лише в чаті» — лише запис у чатер без сповіщень. Уточнення 08.10 (приймання): у тихі години тривога з правилом не «Завжди» — запис у чатер без сповіщень підписникам; підписники (і активність «Долити паливо») — о 07:00, якщо тривога ще активна.
 
 ###### AC-43 — «Прийняв» (вимога: ФВ-30)
 - **УМОВА** активна тривога, користувач — учасник ланцюжка (будь-якої ролі) або Корист. Т
@@ -1327,7 +1327,7 @@ www.todo.ltd
 #### 2.8.2. Тривоги: життєвий цикл
 
 - `_raise(genset, code, level, name, description='', source=None, tech=False)` (А.11): якщо активна тривога з цим `code` на генераторі є — не дублювати; інакше створити (`state=active`, `escalation_level=0`, `next_escalation_at=now`), `genset.message_post(subtype_xmlid='td_genset.mt_alarm', body=…)`, подія `alarm` для сигналів контролера.
-- `_clear(genset, code, note='')`: `state=cleared`, `date_cleared`, `next_escalation_at=NULL`, чатер «… — знято».
+- `_clear(genset, code, note='')`: `state=cleared`, `date_cleared`, `next_escalation_at=NULL`, чатер «… — знято». Уточнення 08.10 (приймання): у тихі години для рівня з правилом не «Завжди» `_raise` і `_clear` пишуть у чатер без сповіщень (`_message_log`); підписників генератора (підтип «Тривога») і активність «Долити паливо» `_cron_escalate` сповіщає о кінці тихих годин (`followers_notify_at`), якщо тривога ще активна.
 - Ескалація (у `cron_scheduler`): для `state=active` і `next_escalation_at <= now`: рівень `L = escalation_level + 1` з `config.level_ids` (за `sequence`); правило за `level` тривоги (`notify_*`): `chatter` → лише чатер, `next_escalation_at=NULL`; `not_quiet` у тихі години → `next_escalation_at` = кінець тихих годин; інакше `genset.message_notify(partner_ids=[level.user_id.partner_id.id], subject=…, body=…, subtype_xmlid='td_genset.mt_alarm')` → вхідні Odoo + push у мобільний застосунок (`mail_mobile`, OCN увімкнено на проді), `notified_user_ids += user`, `escalation_level = L`, `next_escalation_at = date_raised + next_level.delay_min` або NULL, якщо рівнів більше немає. Рівень без `user_id` пропускається (попередження в логах), ескалація йде далі за затримками рівнів (уточнення 07.10, ніч).
 - «Прийняв» (`action_ack`): `state=acked`, `acked_user_id`, `date_acked`, `next_escalation_at=NULL`, чатер «Прийняв тривогу «…». Ескалацію зупинено.»
 - Інформаційні події (`info`): `notify_info=chatter` (типово) → `genset._message_log(body=…)`; при `always/not_quiet` — ще й `message_notify` рівню 1; за наявності `discuss_channel_id` — пост у канал.

@@ -153,6 +153,11 @@ class TdGensetAlarm(models.Model):
         string='Тех. тривога', readonly=True,
         help='Тривога про ретранслятор/код: адресується всім тех. адміністраторам (а не ланцюжку), '
              'правило сповіщення — як для попереджень (ТР 2.8.4).')
+    followers_notify_at = fields.Datetime(
+        string='Сповістити підписників о', readonly=True, index=True,
+        help='Тривогу піднято в тихі години, а правило сповіщення для її рівня — не «Завжди»: у чатері — запис без '
+             'сповіщень, підписники генератора (і активність «Долити паливо») — після тихих годин, якщо тривога ще '
+             'активна.')
 
     @api.constrains('genset_id', 'code', 'state')
     def _check_unique_active_code(self):
@@ -290,6 +295,8 @@ class TdGensetAlarm(models.Model):
         """Підняти тривогу: без дубля незнятої на ``(genset, code)``; ``state='active'``,
         ``next_escalation_at=now``; чатер ``mt_alarm``; ``tech=True`` → адресати — ``group_tech``;
         ``_notify_bus('alarm')``. Низький рівень палива — ще й активність «Долити паливо» (AC-63).
+        У тихі години, якщо правило рівня не «Завжди» (D-08), — запис у чатер без сповіщень (``_message_log``),
+        а підписники й активність — після тихих годин (``followers_notify_at``, ``_cron_escalate``).
 
         Права перевіряє викликач (тривога — технічний запис, створюється через ``sudo()``).
 
@@ -316,15 +323,64 @@ class TdGensetAlarm(models.Model):
         if source:
             vals['source_ref'] = source if isinstance(source, str) else '%s,%s' % (source._name, source.id)
         alarm = self.sudo().create(vals)
-        level_label = dict(self._fields['level']._description_selection(self.env)).get(alarm.level, '')
-        body = Markup('<p><b>%s</b> · %s</p>') % (level_label, name)
-        if description:
-            body += Markup('<p>%s</p>') % description
-        genset.message_post(body=body, subtype_xmlid='td_genset.mt_alarm')
-        if code in LOW_FUEL_CODES:
-            alarm._td_schedule_refuel_activity()
+        body = alarm._td_chatter_body()
+        quiet_end = alarm._td_quiet_until(now)
+        if quiet_end:
+            # тихі години, правило не «Завжди» (D-08): запис у чатер без сповіщень, підписники — о кінці тихих годин
+            genset._message_log(body=body)
+            alarm.followers_notify_at = quiet_end
+        else:
+            genset.message_post(body=body, subtype_xmlid='td_genset.mt_alarm')
+            if code in LOW_FUEL_CODES:
+                alarm._td_schedule_refuel_activity()
         genset._notify_bus('alarm', {'alarm_id': alarm.id, 'state': 'active', 'note': name})
         return alarm
+
+    def _td_chatter_body(self):
+        """«<b>Попередження</b> · назва» + опис — повідомлення тривоги в чатері генератора."""
+        self.ensure_one()
+        level_label = dict(self._fields['level']._description_selection(self.env)).get(self.level, '')
+        body = Markup('<p><b>%s</b> · %s</p>') % (level_label, self.name)
+        if self.description:
+            body += Markup('<p>%s</p>') % self.description
+        return body
+
+    def _td_notify_rule(self, config=None):
+        """Правило сповіщення для рівня тривоги (``notify_*``; тех. тривоги — як попередження)."""
+        self.ensure_one()
+        config = config or self.env['td.genset.config'].sudo().get()
+        if self.tech_only:
+            return config.notify_warn or 'not_quiet'
+        return config['notify_%s' % (self.level or 'warn')] or 'always'
+
+    def _td_quiet_until(self, now=None, config=None):
+        """Кінець тихих годин, якщо зараз тихі години і правило рівня — не «Завжди» (D-08), інакше ``None``."""
+        self.ensure_one()
+        config = config or self.env['td.genset.config'].sudo().get()
+        if self._td_notify_rule(config) == 'always' or not config._quiet_now(now):
+            return None
+        return config._quiet_end(now)
+
+    def _td_notify_followers(self):
+        """Кінець тихих годин (D-08): підписникам генератора з підтипом «Тривога» — сповіщення про тривогу, піднятої
+        вночі, і активність «Долити паливо», якщо тривога ще активна (знята чи прийнята — лише запис у чатері)."""
+        self.ensure_one()
+        self.followers_notify_at = False
+        if self.state != 'active':
+            return
+        genset = self.genset_id.sudo()
+        subtype = self.env.ref('td_genset.mt_alarm')
+        partners = genset.message_follower_ids.filtered(
+            lambda follower: subtype in follower.subtype_ids and follower.partner_id.active).partner_id
+        partners -= self.env.user.partner_id
+        if partners:
+            body = self._td_chatter_body() + Markup('<p>%s</p>') % _(
+                'Тривога виникла о %(time)s, у тихі години; генератор: %(genset)s.',
+                time=hhmm(self.date_raised), genset=genset.name)
+            genset.message_notify(partner_ids=partners.ids, subject=self.name, body=body,
+                                  subtype_xmlid='td_genset.mt_alarm')
+        if self.code in LOW_FUEL_CODES:
+            self._td_schedule_refuel_activity()
 
     @api.model
     def _clear(self, genset, code, note=''):
@@ -335,12 +391,16 @@ class TdGensetAlarm(models.Model):
         if not alarms:
             return None
         now = fields.Datetime.now()
-        alarms.write({'state': 'cleared', 'date_cleared': now, 'next_escalation_at': False})
+        alarms.write({'state': 'cleared', 'date_cleared': now, 'next_escalation_at': False,
+                      'followers_notify_at': False})
         for alarm in alarms:
             text = _('Тривога «%(name)s» — знято о %(time)s.', name=alarm.name, time=hhmm(now))
             if note:
                 text = '%s %s' % (text, note)
-            genset.message_post(body=Markup('<p>%s</p>') % text, subtype_xmlid='td_genset.mt_alarm')
+            if alarm._td_quiet_until(now):
+                genset._message_log(body=Markup('<p>%s</p>') % text)   # тихі години (D-08): без сповіщень
+            else:
+                genset.message_post(body=Markup('<p>%s</p>') % text, subtype_xmlid='td_genset.mt_alarm')
             genset._notify_bus('alarm', {'alarm_id': alarm.id, 'state': 'cleared', 'note': alarm.name})
         return None
 
@@ -386,7 +446,8 @@ class TdGensetAlarm(models.Model):
     def _cron_escalate(self):
         """Ескалація 2.8.2 (кличе ``cron_scheduler``): для ``state='active'`` і ``next_escalation_at <= now`` —
         наступний рівень ланцюжка (або всі тех. адміністратори для тех. тривог), правила ``notify_*``,
-        тихі години (``config._quiet_now()``/``_quiet_end()``), ``message_notify`` (вхідні + push).
+        тихі години (``config._quiet_now()``/``_quiet_end()``), ``message_notify`` (вхідні + push); о кінці тихих
+        годин — сповіщення підписників генератора про тривоги, підняті вночі (``followers_notify_at``, D-08).
         Рядки блокуються ``FOR NO KEY UPDATE SKIP LOCKED``; винятки перехоплюються."""
         now = fields.Datetime.now()
         self.flush_model(['state', 'next_escalation_at'])
@@ -404,14 +465,26 @@ class TdGensetAlarm(models.Model):
                     alarm._td_escalate_step(config, now)
             except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
                 _logger.warning('td_genset: ескалація тривоги %s не вдалася: %s', alarm.id, exc)
+        # кінець тихих годин: підписники генератора — про тривоги, підняті вночі (D-08)
+        self.flush_model(['followers_notify_at'])
+        self.env.cr.execute(SQL("""
+            SELECT id FROM td_genset_alarm
+             WHERE followers_notify_at <= %s
+             ORDER BY followers_notify_at, id
+               FOR NO KEY UPDATE SKIP LOCKED
+        """, now))
+        for alarm in self.sudo().browse([row[0] for row in self.env.cr.fetchall()]):
+            try:
+                with self.env.cr.savepoint():
+                    alarm._td_notify_followers()
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning('td_genset: сповіщення підписників про тривогу %s не вдалося: %s', alarm.id, exc)
         return None
 
     def _td_escalate_step(self, config, now):
         """Один крок ескалації для однієї тривоги (див. ``_cron_escalate``)."""
         self.ensure_one()
-        rule = config['notify_%s' % (self.level or 'warn')] or 'always'
-        if self.tech_only:
-            rule = config.notify_warn or 'not_quiet'
+        rule = self._td_notify_rule(config)
         if rule == 'chatter':
             self.next_escalation_at = False
             return

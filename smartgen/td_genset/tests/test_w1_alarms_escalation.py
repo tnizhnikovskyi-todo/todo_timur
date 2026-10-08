@@ -79,6 +79,55 @@ class TestW1AlarmsEscalation(TdGensetCase):
         # повторне підняття того самого коду не дублює тривогу
         self.assertEqual(self._raise(NIGHT, 'test_crit', 'crit', 'Аварійна зупинка: тест'), crit)
 
+    def test_d08_quiet_hours_no_follower_notifications(self):
+        """D-08 (ТК-09.3): у тихі години тривоги з правилом не «Завжди» — у чатері запис без сповіщень (підписник
+        генератора вночі нічого не отримує), о 07:00 — сповіщення підписникам (і ланцюжку), якщо тривога ще активна;
+        знята вночі — без ранкового сповіщення, і її «знято» теж без сповіщень; «Долити паливо» — о 07:00;
+        критична («Завжди») — як і раніше, одразу з підписниками."""
+        alarm_subtype = self.env.ref('td_genset.mt_alarm')
+        follower = self.user_x.partner_id
+        self.genset.message_subscribe(partner_ids=follower.ids, subtype_ids=alarm_subtype.ids)
+        Notification = self.env['mail.notification']
+
+        def notified():
+            return Notification.search_count([('res_partner_id', '=', follower.id)])
+
+        def chatter(text):
+            return self.env['mail.message'].search([('model', '=', 'td.genset'), ('res_id', '=', self.genset.id),
+                                                    ('body', 'ilike', text)])
+
+        warn = self._raise(NIGHT, 'test_warn', 'warn', 'Запас у каністрах нижчий за мінімальний')
+        message = chatter('Запас у каністрах нижчий за мінімальний')
+        self.assertEqual(len(message), 1)
+        self.assertEqual(message.subtype_id, self.env.ref('mail.mt_note'))
+        self.assertEqual((notified(), warn.followers_notify_at), (0, MORNING))
+        fuel = self._raise(NIGHT, 'low_fuel', 'warn', 'Низький рівень палива: 20 L')
+        refuel = self.env.ref('td_genset.activity_refuel')
+        self.assertFalse(self.genset.activity_ids.filtered(lambda act: act.activity_type_id == refuel))
+        gone = self._raise(NIGHT, 'test_gone', 'warn', 'Попередження, що зникне вночі')
+        with freeze_time(NIGHT + timedelta(hours=1)):
+            self.env['td.genset.alarm']._clear(self.genset, 'test_gone')
+        self.assertEqual(chatter('Попередження, що зникне вночі').subtype_id, self.env.ref('mail.mt_note'))
+        self.assertFalse(gone.followers_notify_at)
+        self.assertEqual(notified(), 0)
+        crit = self._raise(NIGHT, 'test_crit', 'crit', 'Аварійна зупинка: тест')
+        self.assertEqual(chatter('Аварійна зупинка: тест').subtype_id, alarm_subtype)
+        self.assertFalse(crit.followers_notify_at)
+        self.assertEqual(notified(), 1)
+        self._escalate(MORNING - timedelta(minutes=1))
+        self.assertEqual(notified(), 1)
+        self._escalate(MORNING)
+        self.assertEqual(notified(), 3)
+        self.assertFalse(warn.followers_notify_at or fuel.followers_notify_at)
+        morning = self.env['mail.message'].search([('message_type', '=', 'user_notification'),
+                                                   ('partner_ids', 'in', follower.ids)])
+        self.assertEqual(set(morning.mapped('subject')), {warn.name, fuel.name})
+        self.assertIn('у тихі години', morning[0].body)
+        self.assertEqual(len(self.genset.activity_ids.filtered(lambda act: act.activity_type_id == refuel)), 1)
+        self.assertEqual(warn.notified_user_ids, self.user_s)
+        self._escalate(MORNING + timedelta(hours=1))
+        self.assertEqual(notified(), 3)
+
     def test_ac42_quiet_hours_window(self):
         """AC-42: тихі години 22:00–07:00 за Києвом (через північ), кінець — 07:00 наступного ранку."""
         config = self.config
