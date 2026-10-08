@@ -40,9 +40,13 @@ class ResConfigSettings(models.TransientModel):
         return values
 
     def set_values(self):
-        """Токен зберігається лише якщо введено нове значення; порожнє поле не затирає наявний (AC-01, AC-57)."""
+        """Токен зберігається лише якщо введено нове значення; порожнє поле не затирає наявний (AC-01, AC-57).
+        Після збереження поле транзієнтного запису очищується — токен не лежить у таблиці ``res_config_settings``
+        до vacuum (security-review SUGGESTION-2)."""
         super().set_values()
         for settings in self:
             token = (settings.td_genset_relay_token or '').strip()
             if token:
                 self.env['ir.config_parameter'].sudo().set_param(TOKEN_PARAM, token)
+            if settings.td_genset_relay_token:
+                settings.td_genset_relay_token = False
