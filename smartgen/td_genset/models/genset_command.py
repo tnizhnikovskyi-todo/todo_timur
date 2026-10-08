@@ -92,6 +92,7 @@ DUE_TOLERANCE = timedelta(seconds=30)    # пів кроку cron: що наст
 SENT_TIMEOUT = timedelta(minutes=2)      # sent без фіналу довше — як timeout (А.5)
 FRESH_READING = timedelta(minutes=2)     # автомати — лише за знімком не старшим за 2 хв (ФВ-14)
 DONE_GRACE = timedelta(seconds=30)       # після done контролеру треба мить на знімок «change»
+DUPLICATE_WINDOW = timedelta(minutes=5)  # перехід / повернення до розкладу не дублюють свіжу незавершену команду (D-04)
 MAX_STEPS_PER_RUN = 8
 
 SYSTEM_REQUESTERS = {
@@ -232,6 +233,10 @@ class TdGensetCommand(models.Model):
     transport_failure = fields.Boolean(
         string='Остання спроба — без доставки',
         help="Остання спроба не дійшла до контролера (409 / 5xx / немає зв'язку) — у тривозі «модуль не на зв'язку».")
+    requested_at = fields.Datetime(
+        string='Створено о', readonly=True, default=fields.Datetime.now,
+        help='Коли команду створено (час Odoo, як у кроках cron): перехід розкладу і повернення до розкладу після '
+             'таймера чи тесту не дублюють незавершену команду з тією самою метою, створену за останні 5 хв.')
     cancel_requested = fields.Boolean(
         string='Повторів не буде',
         help='Новий перехід, таймер, тест або команда з пульта скасували команду, коли вона вже була на '
@@ -413,6 +418,45 @@ class TdGensetCommand(models.Model):
         record._post_final_message(body=body)
         record._notify_command()
         return record
+
+    @api.model
+    def _same_target_open(self, genset, commands):
+        """Незавершена команда генератора з тією самою метою — ``auto`` або пакет «Ручний + Стоп», — створена за
+        останні 5 хв, без «повторів не буде» (D-04): перехід розкладу, кінець чи зупинка таймера і кінець тесту
+        її не дублюють.
+
+        :param list commands: ``['auto']`` або ``['manual', 'stop']``.
+        :return: така команда (sudo) або порожній recordset.
+        """
+        since = fields.Datetime.now() - DUPLICATE_WINDOW
+        candidates = self.sudo().search([('genset_id', '=', genset.id), ('state', 'in', OPEN_STATES),
+                                         ('requested_at', '>=', since), ('cancel_requested', '=', False)],
+                                        order='id desc')
+        for command in candidates:
+            if list(commands) == ['auto'] and command.command == 'auto':
+                return command
+            if list(commands) == list(MANUAL_STOP) and command._is_manual_stop_batch():
+                return command
+        return self.sudo().browse()
+
+    @api.model
+    def _enqueue_target(self, genset, commands, source, requested_by, cancel_reason, late_transition_at=None):
+        """Команда переходу розкладу або повернення до розкладу (``['auto']`` чи пакет ``['manual', 'stop']``): є
+        свіжа незавершена з тією самою метою (``_same_target_open``) — лише запис «Не потрібно» з приміткою «Вже
+        надіслано: <джерело>», без POST і без скасування тієї команди (D-04); інакше ``_cancel_pending`` і нова
+        команда / пакет.
+
+        :return: створені команди (sudo; запис «Не потрібно» — теж).
+        """
+        duplicate = self._same_target_open(genset, commands)
+        if duplicate:
+            note = _('Вже надіслано: %(origin)s', origin=duplicate._label('source').lower())
+            return self._log_final(genset, commands[0], source, requested_by, 'not_needed', note,
+                                   late_transition_at=late_transition_at)
+        self._cancel_pending(genset, cancel_reason)
+        if len(commands) > 1:
+            return self._enqueue_batch(genset, commands, source, requested_by, late_transition_at=late_transition_at)
+        return self._enqueue(genset, commands[0], source, requested_by, late_transition_at=late_transition_at)
 
     # ================================================================== cron
     @api.model

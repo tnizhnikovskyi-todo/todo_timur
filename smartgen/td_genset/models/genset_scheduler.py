@@ -69,31 +69,41 @@ class TdGensetScheduler(models.Model):
         return bool(self.env.cr.fetchone())
 
     def _scheduler_step(self, now):
-        """Кроки 1–7 А.6 для одного генератора."""
+        """Кроки 1–7 А.6 для одного генератора: спершу перехід розкладу, потім кінець таймера і тесту."""
+        self.ensure_one()
+        genset = self.sudo()
+        genset._scheduler_transition(now)
+        if genset.timer_end and genset.timer_end <= now:
+            genset._timer_expire()
+        if genset.test_end and genset.test_end <= now:
+            genset._test_finish()
+
+    def _scheduler_transition(self, now):
+        """Кроки 1–4 А.6: стан «у вікні» на ``now``; перший запуск лише запам'ятовує стан; зміна →
+        ``_schedule_transition`` (із запізненням, якщо cron простоював). Викликається і перед зупинкою таймера
+        (D-04): перехід, що вже настав, обробляється, поки таймер діє, — «Пропущено: діє таймер до HH:MM», а не
+        другий пакет «Ручний + Стоп» після таймера."""
         self.ensure_one()
         genset = self.sudo()
         in_window = genset._in_window(to_kyiv(now))
         if not genset.sched_last_eval_at:
             # перший запуск не «зрушує» генератор — лише запам'ятати стан (А.6 п. 2)
             genset.write({'sched_in_window': in_window, 'sched_last_eval_at': now})
-        else:
-            if in_window != genset.sched_in_window:
-                late = False
-                if now - genset.sched_last_eval_at > SCHEDULER_GAP:
-                    boundary = genset._next_transition(to_kyiv(genset.sched_last_eval_at))
-                    if boundary and boundary[0] <= now - LATE_AFTER:
-                        late = boundary[0]
-                genset._schedule_transition(in_window, now, late)
-            genset.write({'sched_in_window': in_window, 'sched_last_eval_at': now})
-        if genset.timer_end and genset.timer_end <= now:
-            genset._timer_expire()
-        if genset.test_end and genset.test_end <= now:
-            genset._test_finish()
+            return
+        if in_window != genset.sched_in_window:
+            late = False
+            if now - genset.sched_last_eval_at > SCHEDULER_GAP:
+                boundary = genset._next_transition(to_kyiv(genset.sched_last_eval_at))
+                if boundary and boundary[0] <= now - LATE_AFTER:
+                    late = boundary[0]
+            genset._schedule_transition(in_window, now, late)
+        genset.write({'sched_in_window': in_window, 'sched_last_eval_at': now})
 
     def _schedule_transition(self, entering, now, late=False):
         """Перехід розкладу (А.6 п. 4): тест → «Пропущено: іде тест»; таймер → вхід «Не потрібно: уже Авто за
         таймером» / вихід «Пропущено: діє таймер до HH:MM»; інакше скасувати незавершені команди попереднього
-        переходу і надіслати ``auto`` або «Ручний + Стоп»; ``control_source = 'schedule'``."""
+        переходу і надіслати ``auto`` або «Ручний + Стоп» (якщо така сама команда вже в роботі — «Вже надіслано»,
+        D-04); ``control_source = 'schedule'``."""
         self.ensure_one()
         genset = self.sudo()
         commands = self.env['td.genset.command'].sudo()
@@ -115,11 +125,8 @@ class TdGensetScheduler(models.Model):
                                     body=_('Кінець вікна: команду пропущено — діє таймер до %(time)s. Після таймера — '
                                            'Ручний + Стоп.', time=until))
         else:
-            commands._cancel_pending(genset, _('новий перехід'))
-            if entering:
-                commands._enqueue(genset, 'auto', source, None, late_transition_at=late)
-            else:
-                commands._enqueue_batch(genset, ['manual', 'stop'], source, None, late_transition_at=late)
+            commands._enqueue_target(genset, ['auto'] if entering else ['manual', 'stop'], source, None,
+                                     _('новий перехід'), late_transition_at=late)
             genset.control_source = 'schedule'
         genset._notify_bus('schedule', {'in_window': entering})
 
@@ -208,7 +215,8 @@ class TdGensetScheduler(models.Model):
 
     def _follow_schedule(self, source, requested_by=None):
         """Стан за розкладом після таймера/тесту (А.6 п. 6): у вікні → ``auto`` (лише якщо режим не ``auto``),
-        поза вікном → пакет ``manual`` + ``stop``; незавершені команди попереднього стану скасовуються;
+        поза вікном → пакет ``manual`` + ``stop``; незавершені команди попереднього стану скасовуються; така сама
+        команда вже в роботі (перехід розкладу щойно надіслав) — «Вже надіслано», без дубля (D-04);
         ``control_source = 'schedule'``.
 
         :param str source: ``timer`` | ``test``.
@@ -218,12 +226,14 @@ class TdGensetScheduler(models.Model):
         genset = self.sudo()
         commands = self.env['td.genset.command'].sudo()
         now = fields.Datetime.now()
-        commands._cancel_pending(genset, _('повернення до розкладу'))
+        reason = _('повернення до розкладу')
         if genset._in_window(to_kyiv(now)):
             if genset.controller_mode != 'auto':
-                commands._enqueue(genset, 'auto', source, requested_by)
+                commands._enqueue_target(genset, ['auto'], source, requested_by, reason)
+            else:
+                commands._cancel_pending(genset, reason)
         else:
-            commands._enqueue_batch(genset, ['manual', 'stop'], source, requested_by)
+            commands._enqueue_target(genset, ['manual', 'stop'], source, requested_by, reason)
         genset.control_source = 'schedule'
         genset._notify_bus('schedule')
         return None
@@ -316,6 +326,9 @@ class TdGensetScheduler(models.Model):
         genset._timer_check_allowed()
         if not genset.timer_end and not genset.test_timer_paused_left:
             raise UserError(_('Таймер не запущено.'))
+        if genset.relay_enabled:
+            # перехід розкладу, що вже настав, — поки таймер діє (D-04): «Пропущено: діє таймер до HH:MM»
+            genset._scheduler_transition(fields.Datetime.now())
         genset.write({'timer_end': False, 'timer_started_at': False, 'timer_user_id': False,
                       'test_timer_paused_left': 0})
         genset.message_post(body=_('Зупинив таймер роботи поза графіком.'), subtype_xmlid='td_genset.mt_command')

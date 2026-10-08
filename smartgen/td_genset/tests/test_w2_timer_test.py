@@ -309,3 +309,67 @@ class TestW2TimerTest(TdGensetW2Case):
             self.set_genset(test_end=False, test_mode=False)
         self.env['td.genset.schedule'].search([('genset_id', '=', self.genset.id)]).write({'enabled': False})
         self.assertEqual(self.next_event(), 'Розклад вимкнено')
+
+    # ------------------------------------------------------------------ D-04
+    def test_d04_timer_stop_at_window_end_single_batch(self):
+        """D-04 (ТК-07.3): вікно до 05:38, таймер до 05:41; «Зупинити таймер» о 05:38:50, раніше ніж планувальник
+        обробив кінець вікна, — спершу перехід, поки таймер діє («Пропущено: діє таймер до 05:41»), потім один
+        пакет «Ручний + Стоп» від таймера; наступний крок планувальника нового пакета не створює — 2 POST, не 4."""
+        self.add_line(5, 5.5, 5 + 38 / 60.0)    # субота 05:30–05:38
+        start = kyiv(2026, 10, 10, 5, 36)
+        with freeze_time(start) as frozen:
+            self.push_state(controller_mode='auto')
+            self.run_scheduler()
+            self.assertTrue(self.genset.sched_in_window)
+            self.start_timer(0, 5)
+            self.run_commands()
+            self.assertEqual(self.commands().state, 'not_needed')
+            frozen.move_to(kyiv(2026, 10, 10, 5, 38) + timedelta(seconds=50))
+            self.genset.with_user(self.user_s).action_timer_stop()
+            skipped = self.commands(state='skipped')
+            self.assertEqual((skipped.command, skipped.source, skipped.result_note),
+                             ('manual', 'schedule', 'Пропущено: діє таймер до 05:41'))
+            batch = self.commands(source='timer', state='to_send')
+            self.assertEqual(batch.mapped('command'), ['manual', 'stop'])
+            self.assertFalse(self.genset.sched_in_window)
+            self.run_commands()
+            self.tick(frozen, kyiv(2026, 10, 10, 5, 39) + timedelta(seconds=5))
+            self.tick(frozen, kyiv(2026, 10, 10, 5, 40))
+            self.assertEqual([call['json']['command'] for call in self.posts()], ['manual', 'stop'])
+            self.assertEqual(batch.mapped('state'), ['done', 'done'])
+            self.assertEqual(len(self.commands()), 4)
+            self.assertEqual(self.genset.control_source, 'schedule')
+
+    def test_d04_transition_does_not_duplicate_inflight_command(self):
+        """D-04: перехід розкладу, коли пакет «Ручний + Стоп» від таймера вже в роботі (створений ≤ 5 хв тому), —
+        запис «Не потрібно» з приміткою «Вже надіслано: таймер», без POST і без скасування пакета; так само «Авто»
+        («Вже надіслано: кнопка»); незавершена команда, старша за 5 хв, нової не блокує."""
+        self.add_line(5, 5.5, 6.0)    # субота 05:30–06:00
+        start = kyiv(2026, 10, 10, 6, 0) + timedelta(seconds=10)
+        with freeze_time(start) as frozen:
+            self.push_state(controller_mode='auto')
+            self.set_genset(sched_in_window=True, sched_last_eval_at=start - timedelta(minutes=1))
+            self.genset._follow_schedule('timer')
+            batch = self.commands()
+            self.assertEqual(batch.mapped('command'), ['manual', 'stop'])
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['sent', 'sent'])
+            self.run_scheduler()
+            duplicate = self.commands() - batch
+            self.assertEqual((duplicate.command, duplicate.source, duplicate.state, duplicate.result_note),
+                             ('manual', 'schedule', 'not_needed', 'Вже надіслано: таймер'))
+            self.assertFalse(any(batch.mapped('cancel_requested')))
+            self.assertIn('Вже надіслано: таймер', self.chatter_text())
+            self.run_commands()
+            self.assertEqual(len(self.posts()), 2)
+            frozen.move_to(start + timedelta(minutes=1))
+            self.run_commands()
+            self.assertEqual(batch.mapped('state'), ['done', 'done'])
+            auto = self.Command._enqueue(self.genset, 'auto', 'button', self.user_t)
+            record = self.Command._enqueue_target(self.genset, ['auto'], 'schedule', None, 'новий перехід')
+            self.assertEqual((record.command, record.state, record.result_note),
+                             ('auto', 'not_needed', 'Вже надіслано: кнопка'))
+            self.assertEqual(auto.state, 'to_send')
+            frozen.move_to(start + timedelta(minutes=7))
+            fresh = self.Command._enqueue_target(self.genset, ['auto'], 'schedule', None, 'новий перехід')
+            self.assertEqual((fresh.command, fresh.source, fresh.state), ('auto', 'schedule', 'to_send'))
