@@ -1015,3 +1015,63 @@ class TestW2Commands(TdGensetW2Case):
             self.run_commands()
             self.assertEqual(len(self.posts()), 3)   # done_at (11:31) + retry_every_min (2 хв)
             self.assertFalse(self.raised)
+
+    def test_ac17_sent_relay_unavailable_no_repost(self):
+        """AC-15, AC-17 (ревю коду, п. 4): після ``201`` API ретранслятора недоступний 3 хв — команда лишається
+        «Надіслано» без повторного POST (2 хв без відповіді не рахуються, поки API недоступний: команда могла
+        виконатися); API відповів — ``GET /commands/<id>`` → ``done`` → підтвердження за знімком, POST один."""
+        start = datetime(2026, 10, 7, 11, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=1), controller_mode='manual')
+            command = self.Command._enqueue(self.genset, 'auto', 'button', self.user_t)
+            self.run_commands()
+            self.assertEqual(command.state, 'sent')
+            self.relay.fail(503, path='/commands/', method='GET')
+            for minute in (1, 2, 3):
+                frozen.move_to(start + timedelta(minutes=minute))
+                self.run_commands()
+                self.assertEqual(command.state, 'sent')
+            self.assertEqual(len(self.posts()), 1)
+            self.relay.fail(None)
+            frozen.move_to(start + timedelta(minutes=4))
+            self.run_commands()
+            self.assertEqual(command.state, 'done')
+            self.assertEqual(len(self.posts()), 1)
+
+    def test_ac25_start_when_running_or_cranking(self):
+        """AC-25, AC-26 (ревю коду, п. 5): ``start``, поки триває пуск (стани 1–4), — очікування без POST; двигун
+        уже працює (стан 5–9) — «Не потрібно: генератор уже працює», POST немає."""
+        start = datetime(2026, 10, 7, 11, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(seconds=20), controller_mode='manual', genset_status=3)
+            command = self.Command._enqueue(self.genset, 'start', 'button', self.user_t)
+            self.run_commands()
+            self.assertEqual(command.state, 'to_send')
+            self.assertEqual(command.result_note, 'Очікуємо: триває пуск (стан 3)')
+            self.assertFalse(command.first_sent_at)
+            frozen.move_to(start + timedelta(minutes=1))
+            self.push_state(ts=start + timedelta(seconds=40), controller_mode='manual', genset_status=9)
+            self.run_commands()
+            self.assertEqual(command.state, 'not_needed')
+            self.assertEqual(command.result_note, 'Не потрібно: генератор уже працює')
+            self.assertFalse(self.posts())
+
+    def test_ac21_breaker_window_starts_with_first_post(self):
+        """AC-21, AC-15 (ревю коду, п. 8): автомат при знімку старшому за 2 хв — «Очікуємо показання» без старту вікна
+        повторів; вікно (``first_sent_at``/``deadline_at``) — від першого POST."""
+        start = datetime(2026, 10, 7, 11, 0)
+        with freeze_time(start) as frozen:
+            self.push_state(ts=start - timedelta(minutes=5), controller_mode='auto')
+            command = self.Command._enqueue(self.genset, 'mains_close_open', 'button', self.user_t,
+                                            target_breaker_closed=False)
+            self.run_commands()
+            self.assertEqual(command.state, 'to_send')
+            self.assertIn('Очікуємо показання', command.result_note)
+            self.assertFalse(command.first_sent_at or command.deadline_at)
+            self.assertFalse(self.posts())
+            posted = start + timedelta(minutes=4)
+            frozen.move_to(posted)
+            self.push_state(ts=posted - timedelta(seconds=20), controller_mode='auto')
+            self.run_commands()
+            self.assertEqual(command.state, 'sent')
+            self.assertEqual((command.first_sent_at, command.deadline_at), (posted, posted + timedelta(minutes=10)))

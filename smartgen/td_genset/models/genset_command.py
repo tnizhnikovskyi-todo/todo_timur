@@ -18,7 +18,7 @@ from odoo.tools import SQL
 
 from .genset_schedule import kyiv_hhmm
 from .relay_client import (RelayAuthError, RelayBadRequest, RelayBusy, RelayCommandsDisabled, RelayError,
-                           RelayNotFound)
+                           RelayNotFound, RelayUnavailable)
 
 _logger = logging.getLogger(__name__)
 
@@ -519,10 +519,10 @@ class TdGensetCommand(models.Model):
                     self._raise_tech('relay_cmd_disabled',
                                      _('Команди вимкнено на ретрансляторі (RELAY_COMMANDS_ENABLED=0).'))
                 return
-            self._start_window(now)
             if state == 'retry':
+                self._start_window(now)   # перша спроба доставки, навіть невдала (А.5, AC-15)
                 self._transport_retry(note, now, link=reason == 'link')
-            else:   # чекаємо свіжого знімка для автомата (ФВ-14)
+            else:   # чекаємо свіжого знімка для автомата (ФВ-14) або кінця пуску для start — вікно ще не почалося
                 self._set_state('to_send', note, next_attempt_at=now + STEP, last_attempt_at=now)
             return
         if self._count_inflight(self.genset_id) >= INFLIGHT_LIMIT:
@@ -624,7 +624,9 @@ class TdGensetCommand(models.Model):
             body = {'status': 'failed', 'error': exc.error or 'no such command'}
         except RelayError as exc:
             _logger.info('td_genset: command %s status poll failed: %s', self.id, exc.status)
-            if self._due((self.sent_at or now) + SENT_TIMEOUT, now):
+            # API недоступний (таймаут/5xx) — 2 хв не рахуються: команда могла виконатися, тож без нового POST
+            # перечитуємо GET /commands/<id>, щойно API відповість (інакше — повтор тієї самої команди)
+            if not isinstance(exc, RelayUnavailable) and self._due((self.sent_at or now) + SENT_TIMEOUT, now):
                 self._relay_failed(now, _('немає відповіді ретранслятора'), relay_status='timeout')
             else:
                 self.write({'next_attempt_at': now + STEP})
@@ -976,6 +978,12 @@ class TdGensetCommand(models.Model):
             return 'not_needed', _('Не потрібно: уже %(mode)s', mode=self._mode_label(self.command)), None
         elif self.command == 'stop' and not genset.is_running:
             return 'not_needed', _('Не потрібно: генератор уже зупинено'), None
+        elif self.command == 'start':
+            status = _status_code(genset.genset_status)
+            if status in START_SEQUENCE_STATUSES:
+                return 'to_send', _('Очікуємо: триває пуск (стан %(status)s)', status=status), 'starting'
+            if genset.is_running:
+                return 'not_needed', _('Не потрібно: генератор уже працює'), None
         if self.command in BREAKER_COMMANDS:
             reading = genset.last_reading_id
             if not reading or not reading.ts or reading.ts < now - FRESH_READING:
@@ -997,7 +1005,9 @@ class TdGensetCommand(models.Model):
         ``retry`` (транспортний повтор); запізнілий перехід + подія ``external_control`` після нього →
         ``skipped``; «лише на переходах»: режим уже цільовий / ``stop`` для зупиненого / автомат уже в цільовому
         положенні → ``not_needed`` (пакет «Ручний + Стоп» — лише якщо контролер уже в режимі Stop, «Не потрібно:
-        уже Стоп»; інакше надсилаються обидві команди); знімок для автомата старший за 2 хв → ``to_send`` (чекати).
+        уже Стоп»; інакше надсилаються обидві команди); знімок для автомата старший за 2 хв → ``to_send`` (чекати);
+        ``start``: двигун уже працює → ``not_needed`` «Не потрібно: генератор уже працює», триває пуск (стани 1–4) →
+        ``to_send`` (чекати, без POST).
 
         :return: новий стан (str) або ``None`` = надсилати.
         AC-13, AC-16, AC-21, AC-23, AC-34, AC-66.
