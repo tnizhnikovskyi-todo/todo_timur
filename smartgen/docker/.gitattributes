@@ -1,0 +1,6 @@
+# Docker-стенд: файлы, которые читают bash / Odoo / Python внутри Linux-контейнеров, — всегда с LF,
+# даже при клонировании на Windows с core.autocrlf=true (иначе bash: $'\r': command not found).
+*.sh text eol=lf
+*.py text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf

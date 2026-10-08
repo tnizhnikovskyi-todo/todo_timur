@@ -1,0 +1,103 @@
+# Docker-стенд модуля td_genset «Генератори» (Odoo 18.0) с эмулятором ретранслятора.
+# Запуск: из этой папки `docker compose up -d`; инструкция — README.md рядом.
+# Только для локального стенда: пароли и токен здесь учебные, порты открыты лишь на 127.0.0.1.
+name: td-genset-stand
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # Postgres наружу не открыт (нужен только Odoo). Доступ с компьютера — раскомментировать:
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+    logging: *logging
+
+  relay:
+    # Эмулятор ретранслятора SmartGen: smartgen/tools/fake_relay.py (только стандартная библиотека Python).
+    # relay_stand.py запускает его без изменений, но так, что номера снимков не начинаются с 1 после
+    # перезапуска и /_sim {"reset": true} (иначе Odoo не увидит новых снимков) — подробности в файле.
+    image: python:3.12-slim
+    user: "65534:65534"
+    # python — PID 1 в контейнере и SIGTERM не получает; на SIGINT эмулятор завершается сразу и чисто
+    stop_signal: SIGINT
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ../tools/fake_relay.py:/opt/relay/fake_relay.py:ro
+      - ./relay_stand.py:/opt/relay/relay_stand.py:ro
+    command:
+      - python
+      - /opt/relay/relay_stand.py
+      - --host=0.0.0.0
+      - --port=8081
+      - --token=dev-token-0123456789abcdefghij
+      - --snapshot-sec=10
+      - --relay-version=1.1.1
+      # hostid только для стенда («STAND-DOCKER» в hex): у настоящего модуля другой, поэтому команды
+      # генератора «Стенд» не дойдут до реального генератора, даже если указать адрес настоящего ретранслятора.
+      - --hostid=5354414E442D444F434B4552
+    ports:
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      # только TCP-соединение: HTTP-запрос раз в 15 с засорял бы лог эмулятора
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8081), 3).close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    logging: *logging
+
+  odoo:
+    image: odoo:18.0
+    # Apple Silicon: образ odoo:18.0 многоархитектурный (amd64/arm64). Если Docker всё же сообщит
+    # «no matching manifest for linux/arm64», раскомментируйте:
+    # platform: linux/amd64
+    depends_on:
+      db:
+        condition: service_healthy
+      relay:
+        condition: service_started
+    # Обёртка: при первом старте — установка base + td_genset (uk_UA, без демо) и seed.py, затем обычный odoo.
+    # /entrypoint.sh образа (переменные HOST/USER/PASSWORD) не используется: параметры базы — в odoo.conf.
+    entrypoint: ["/bin/bash", "/opt/stand/entrypoint.sh"]
+    volumes:
+      - odoo-data:/var/lib/odoo
+      - ../td_genset:/mnt/extra-addons/td_genset:ro
+      - ./odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./entrypoint.sh:/opt/stand/entrypoint.sh:ro
+      - ./seed.py:/opt/stand/seed.py:ro
+    ports:
+      - "127.0.0.1:8069:8069"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8069/web/health', timeout=5).read()"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      # первый старт: установка модуля и seed — обычно 3–5 мин (на медленном компьютере дольше)
+      start_period: 15m
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  db-data:
+  odoo-data:
