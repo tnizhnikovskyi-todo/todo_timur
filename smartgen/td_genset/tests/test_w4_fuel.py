@@ -415,6 +415,29 @@ class TestW4Fuel(TdFuelCase):
         self.env['td.genset.refuel']._reconcile_pending()
         self.assertEqual((refuel.sensor_state, refuel.sensor_note, refuel.liters), ('by_level', 'за рівнем: +80 L', 86.0))
 
+    def test_d09_refuel_window_prefers_event_after_record(self):
+        """D-09 (ТК-10.2): запис заправки 3 L не зіставляється з подією «Заправка» +20 L, що була за годину до запису
+        (вікно звірки — від 30 хв до запису до 2 год після), — «очікує показання»; з кількох подій у вікні — найближча
+        після запису, навіть якщо інша ближча, але до запису; подія ≤ 30 хв до запису (записали після доливу) —
+        зіставляється, якщо після запису подій немає."""
+        Refuel = self.env['td.genset.refuel']
+        refuel = Refuel.create({'genset_id': self.genset.id, 'source': 'other', 'liters': 3.0})
+        stamp = refuel.date
+        old = self._event('refuel', stamp - timedelta(hours=1, minutes=8), stamp - timedelta(hours=1, minutes=8),
+                          fuel_delta_l=20.0)
+        Refuel._reconcile_pending()
+        self.assertEqual((refuel.sensor_state, refuel.sensor_note), ('waiting', 'очікує показання'))
+        self.assertFalse(old.refuel_id)
+        before = self._event('refuel', stamp - timedelta(minutes=10), stamp - timedelta(minutes=10), fuel_delta_l=3.0)
+        after = self._event('refuel', stamp + timedelta(minutes=20), stamp + timedelta(minutes=20), fuel_delta_l=3.0)
+        Refuel._reconcile_pending()
+        self.assertEqual((refuel.event_id, refuel.sensor_state), (after, 'confirmed'))
+        late = Refuel.create({'genset_id': self.genset.id, 'source': 'other', 'liters': 3.0,
+                              'date': stamp + timedelta(minutes=5)})
+        Refuel._reconcile_pending()
+        self.assertEqual((late.event_id, late.sensor_state), (before, 'confirmed'))
+        self.assertFalse(old.refuel_id)
+
     # ------------------------------------------------------------------ AC-52 витрата
     def test_ac52_fuel_consumption(self):
         """AC-52: за 30 днів події «Робота» з ΔL −53 L, 15,5 год, 96 kWh, остання ціна 55,40 → «Витрачено 53 L ·

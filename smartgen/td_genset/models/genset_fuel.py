@@ -55,7 +55,8 @@ CANISTER_STATES = [
 
 RECOMPUTE_BATCH = 10000                 # знімків за один крок перерахунку літрів (ТР 2.9)
 RECOMPUTE_SQL_CHUNK = 1000              # рядків в одному UPDATE … FROM (VALUES …)
-REFUEL_WINDOW = timedelta(hours=2)      # вікно звірки заправки з подією «Заправка» (ФВ-33)
+REFUEL_WINDOW = timedelta(hours=2)      # вікно звірки заправки з подією «Заправка» після запису (ФВ-33)
+REFUEL_WINDOW_BEFORE = timedelta(minutes=30)   # … і до запису: заправку часто записують після доливу (D-09)
 REFUEL_RECHECK_DAYS = 7                 # «не підтверджені» ще звіряються з подіями, що прийшли із запізненням
 REFUEL_TOLERANCE_SHARE = 0.02           # допуск звірки без калібрування — 2 % об'єму бака
 REFUEL_TOLERANCE_CALIBRATED_L = 1.0     # допуск звірки з калібруванням датчика — 1 L
@@ -632,7 +633,8 @@ class TdGensetRefuel(models.Model):
         """Звірка заправок з подіями «Заправка» (ФВ-33, ТР 2.9, AC-51, AC-69).
 
         Для записів ``waiting`` (і ``unconfirmed`` за останні 7 днів — подія могла прийти із запізненням після
-        догону) шукається подія ``refuel`` генератора без іншого запису в межах ``date ± 2 год`` (найближча):
+        догону) шукається подія ``refuel`` генератора без іншого запису в межах ``date − 30 хв … date + 2 год``
+        (D-09: найближча після запису, а якщо після немає — найближча до нього):
         ``|ΔL − liters| ≤ 2 % бака`` (≤ 1 L, якщо калібрування датчика заповнене) → ``confirmed``, інакше
         ``by_level``; рівні до/після — зі знімків події. Немає події 2 год → ``unconfirmed`` + попередження
         ``refuel_unconfirmed`` «Заправку N L (HH:MM) не підтверджено датчиком рівня.» (не під час догону).
@@ -653,11 +655,12 @@ class TdGensetRefuel(models.Model):
                 ('genset_id', '=', genset.id),
                 ('event_type', '=', 'refuel'),
                 ('refuel_id', '=', False),
-                ('date_start', '>=', refuel.date - REFUEL_WINDOW),
+                ('date_start', '>=', refuel.date - REFUEL_WINDOW_BEFORE),
                 ('date_start', '<=', refuel.date + REFUEL_WINDOW),
             ])
             if candidates:
-                event = min(candidates, key=lambda ev: (abs((ev.date_start - refuel.date).total_seconds()), ev.id))
+                event = min(candidates, key=lambda ev: (ev.date_start < refuel.date,
+                                                        abs((ev.date_start - refuel.date).total_seconds()), ev.id))
                 if refuel.sensor_state == 'unconfirmed':
                     resolved |= genset
                 refuel._match_level_event(event)
