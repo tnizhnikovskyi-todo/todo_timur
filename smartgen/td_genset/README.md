@@ -26,6 +26,11 @@
 3. Застосунки → «Оновити список застосунків» → «Генератори» → «Встановити», або
    `odoo-bin -c <conf> -d <база> -i td_genset --stop-after-init`. Оновлення коду —
    `odoo-bin -c <conf> -d <база> -u td_genset --stop-after-init` (або Застосунки → «Оновити»), cron не вимикати.
+4. Часовий пояс (ENV-1): на тестовому сервері й на проді перевірити
+   `select * from pg_timezone_names where name like 'Europe/Ki%';` — PostgreSQL має знати `Europe/Kyiv` (без пакета
+   `tzdata-legacy` назви `Europe/Kiev` може не бути, і аналітика з групуванням за днями падає «time zone
+   "Europe/Kiev" not recognized»). Користувачам модуля ставити часовий пояс **Europe/Kyiv** (Odoo при першому вході з
+   браузера може записати `Europe/Kiev` з cookie — перевірити в Налаштування → Користувачі).
 
 ## Первинне налаштування
 
