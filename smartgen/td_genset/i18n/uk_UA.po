@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-08 02:42+0000\n"
-"PO-Revision-Date: 2026-10-08 02:42+0000\n"
+"POT-Creation-Date: 2026-10-08 04:06+0000\n"
+"PO-Revision-Date: 2026-10-08 04:06+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uk_UA\n"
@@ -99,15 +99,6 @@ msgid ""
 msgstr ""
 "/status relay.version (1.1.1; з 1.1.3 — оми датчиків і версії контролера в "
 "знімках)."
-
-#. module: td_genset
-#: model:ir.model.fields,help:td_genset.field_td_genset_reading__mains_status
-msgid ""
-"0 «Normal», 1 «Abnormal», 2 «No Delay». (регістр 03H 40; ключ API "
-"«mains_status»). NULL — немає даних."
-msgstr ""
-"0 «Normal», 1 «Abnormal», 2 «No Delay». (регістр 03H 40; ключ API "
-"«mains_status»). NULL — немає даних."
 
 #. module: td_genset
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
@@ -671,7 +662,6 @@ msgstr "Є щонайменше 2 точки калібрування — літ
 
 #. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__slot_15
-#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_reading_search
 msgid "Інтервал 15 хв"
 msgstr "Інтервал 15 хв"
 
@@ -1120,11 +1110,6 @@ msgstr "Активні"
 #: model:ir.model.fields,help:td_genset.field_td_genset_storage_location__canister_ids
 msgid "Активні каністри в цьому місці."
 msgstr "Активні каністри в цьому місці."
-
-#. module: td_genset
-#: model:ir.model.fields,help:td_genset.field_td_genset_reading__alarm_flags
-msgid "Активні сигнали тривог 01H на момент знімка (коди через кому)."
-msgstr "Активні сигнали тривог 01H на момент знімка (коди через кому)."
 
 #. module: td_genset
 #: model:ir.model.fields,help:td_genset.field_td_genset__alarm_ids
@@ -2301,15 +2286,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__remote_start_status
 msgid "Дистанційний пуск"
 msgstr "Дистанційний пуск"
-
-#. module: td_genset
-#: model:ir.model.fields,help:td_genset.field_td_genset_reading__remote_start_status
-msgid ""
-"Дистанційний пуск: 0 «No Delay», 1 «Start Delay», 2 «Stop Delay» (регістр "
-"03H 36; ключ API «remote_start_status»). NULL — немає даних."
-msgstr ""
-"Дистанційний пуск: 0 «No Delay», 1 «Start Delay», 2 «Stop Delay» (регістр "
-"03H 36; ключ API «remote_start_status»). NULL — немає даних."
 
 #. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__remote_mode
@@ -7135,13 +7111,12 @@ msgstr "Тривога, пов'язана з подією «Тривога ко�
 #. module: td_genset
 #: model:ir.actions.act_window,name:td_genset.action_td_genset_alarm
 #: model:ir.model.fields,field_description:td_genset.field_td_genset__alarm_ids
-#: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__alarm_flags
+#: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__alarm_flags_text
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_alarm_list
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_alarm_search
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_event_search
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_form
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_list
-#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_reading_list
 msgid "Тривоги"
 msgstr "Тривоги"
 
@@ -7704,6 +7679,7 @@ msgstr "%(time)s → кінець тесту · далі %(after)s"
 
 #. module: td_genset
 #. odoo-javascript
+#: code:addons/td_genset/static/src/link_age/link_age_field.js:0
 #: code:addons/td_genset/static/src/pult/pult_widget.js:0
 msgid "%s с тому"
 msgstr "%s с тому"
@@ -7716,6 +7692,7 @@ msgstr "%s хв"
 
 #. module: td_genset
 #. odoo-javascript
+#: code:addons/td_genset/static/src/link_age/link_age_field.js:0
 #: code:addons/td_genset/static/src/pult/pult_widget.js:0
 msgid "%s хв тому"
 msgstr "%s хв тому"
@@ -7946,11 +7923,6 @@ msgid "L з"
 msgstr "L з"
 
 #. module: td_genset
-#: model_terms:ir.actions.act_window,help:td_genset.action_td_genset_analytics_fuel_level
-msgid "L у баку за знімками; стрибки вгору — заправки."
-msgstr "L у баку за знімками; стрибки вгору — заправки."
-
-#. module: td_genset
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_reading_list
 msgid "P, kW"
 msgstr "P, kW"
@@ -8169,13 +8141,6 @@ msgstr "Активна по фазах A / B / C"
 #: code:addons/td_genset/models/genset_ui.py:0
 msgid "Активна потужність"
 msgstr "Активна потужність"
-
-#. module: td_genset
-#: model_terms:ir.actions.act_window,help:td_genset.action_td_genset_analytics_last_run
-msgid ""
-"Активна потужність, kW (03H 0026) за знімками під час роботи генератора."
-msgstr ""
-"Активна потужність, kW (03H 0026) за знімками під час роботи генератора."
 
 #. module: td_genset
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_refuel_list
@@ -8565,11 +8530,6 @@ msgid "Генератори: перерахунок літрів палива"
 msgstr "Генератори: перерахунок літрів палива"
 
 #. module: td_genset
-#: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_reading_search
-msgid "Година"
-msgstr "Година"
-
-#. module: td_genset
 #. odoo-python
 #: code:addons/td_genset/models/genset_ui.py:0
 msgid "Готовий до команд"
@@ -8954,18 +8914,6 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_refuel_list
 msgid "Зміна, L"
 msgstr "Зміна, L"
-
-#. module: td_genset
-#. odoo-python
-#: code:addons/td_genset/models/genset_event.py:0
-msgid "Зникла мережа · режим Авто за розкладом"
-msgstr "Зникла мережа · режим Авто за розкладом"
-
-#. module: td_genset
-#. odoo-python
-#: code:addons/td_genset/models/genset_event.py:0
-msgid "Зникла мережа · режим Авто за таймером"
-msgstr "Зникла мережа · режим Авто за таймером"
 
 #. module: td_genset
 #. odoo-python
@@ -9552,11 +9500,6 @@ msgstr "Напруга D+ (зарядка)"
 #: model_terms:ir.ui.view,arch_db:td_genset.view_td_genset_reading_graph_battery
 msgid "Напруга АКБ"
 msgstr "Напруга АКБ"
-
-#. module: td_genset
-#: model_terms:ir.actions.act_window,help:td_genset.action_td_genset_analytics_battery
-msgid "Напруга АКБ, V (03H 0024), середня за годину."
-msgstr "Напруга АКБ, V (03H 0024), середня за годину."
 
 #. module: td_genset
 #: model:ir.model.fields,field_description:td_genset.field_td_genset__maint_next_hours
@@ -10288,14 +10231,6 @@ msgstr "Прострочене ТО"
 #: code:addons/td_genset/static/src/pult/pult_widget.xml:0
 msgid "Пульт недоступний"
 msgstr "Пульт недоступний"
-
-#. module: td_genset
-#. odoo-python
-#: code:addons/td_genset/models/genset_event.py:0
-msgid ""
-"Пуск з %(n)s-ї спроби; зупинено о %(time)s за розкладом — мережі ще не було"
-msgstr ""
-"Пуск з %(n)s-ї спроби; зупинено о %(time)s за розкладом — мережі ще не було"
 
 #. module: td_genset
 #. odoo-python
@@ -11803,3 +11738,201 @@ msgstr ""
 #: code:addons/td_genset/static/src/pult/pult_widget.xml:0
 msgid "Пульт тимчасово недоступний: показано останні отримані дані."
 msgstr "Пульт тимчасово недоступний: показано останні отримані дані."
+
+#. module: td_genset
+#. odoo-javascript
+#: code:addons/td_genset/static/src/link_age/link_age_field.js:0
+msgid "%s год тому"
+msgstr "%s год тому"
+
+#. module: td_genset
+#. odoo-javascript
+#: code:addons/td_genset/static/src/link_age/link_age_field.js:0
+msgid "%s дн тому"
+msgstr "%s дн тому"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_event.py:0
+msgid "%s — мережі ще не було"
+msgstr "%s — мережі ще не було"
+
+#. module: td_genset
+#: model:ir.model.fields,help:td_genset.field_td_genset_reading__mains_status
+msgid ""
+"0 — норма (Normal), 1 — аварія (Abnormal), 2 — без затримки (No Delay); «є "
+"мережа» — за сигналом «Мережа в нормі» (регістр 03H 40; ключ API "
+"«mains_status»). NULL — немає даних."
+msgstr ""
+"0 — норма (Normal), 1 — аварія (Abnormal), 2 — без затримки (No Delay); «є "
+"мережа» — за сигналом «Мережа в нормі» (регістр 03H 40; ключ API "
+"«mains_status»). NULL — немає даних."
+
+#. module: td_genset
+#: model_terms:ir.actions.act_window,help:td_genset.action_td_genset_analytics_fuel_level
+msgid "L у баку за знімками, середнє за день; стрибки вгору — заправки."
+msgstr "L у баку за знімками, середнє за день; стрибки вгору — заправки."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_ui.py:0
+msgid "Аварія"
+msgstr "Аварія"
+
+#. module: td_genset
+#: model_terms:ir.actions.act_window,help:td_genset.action_td_genset_analytics_last_run
+msgid ""
+"Активна потужність, kW (03H 0026) за знімками під час роботи генератора, пік"
+" за день."
+msgstr ""
+"Активна потужність, kW (03H 0026) за знімками під час роботи генератора, пік"
+" за день."
+
+#. module: td_genset
+#: model:ir.model.fields,help:td_genset.field_td_genset_reading__alarm_flags
+msgid ""
+"Активні сигнали тривог 01H на момент знімка — ключі API через кому "
+"(українські назви — «Тривоги»)."
+msgstr ""
+"Активні сигнали тривог 01H на момент знімка — ключі API через кому "
+"(українські назви — «Тривоги»)."
+
+#. module: td_genset
+#: model:ir.model.fields,help:td_genset.field_td_genset_reading__alarm_flags_text
+msgid ""
+"Активні сигнали тривог 01H на момент знімка — українські назви сигналів "
+"(D-06)."
+msgstr ""
+"Активні сигнали тривог 01H на момент знімка — українські назви сигналів "
+"(D-06)."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_ui.py:0
+msgid "Без затримки"
+msgstr "Без затримки"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_command.py:0
+msgid "Вже надіслано: %(origin)s"
+msgstr "Вже надіслано: %(origin)s"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/wizard/command_wizard.py:0
+msgid "Генератор буде переведено в Ручний і запущено."
+msgstr "Генератор буде переведено в Ручний і запущено."
+
+#. module: td_genset
+#: model:ir.model.fields,help:td_genset.field_td_genset_reading__remote_start_status
+msgid ""
+"Дистанційний пуск: 0 — без затримки (No Delay), 1 — затримка пуску (Start "
+"Delay), 2 — затримка зупинки (Stop Delay) (регістр 03H 36; ключ API "
+"«remote_start_status»). NULL — немає даних."
+msgstr ""
+"Дистанційний пуск: 0 — без затримки (No Delay), 1 — затримка пуску (Start "
+"Delay), 2 — затримка зупинки (Stop Delay) (регістр 03H 36; ключ API "
+"«remote_start_status»). NULL — немає даних."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_ui.py:0
+msgid "Затримка зупинки"
+msgstr "Затримка зупинки"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_ui.py:0
+msgid "Затримка пуску"
+msgstr "Затримка пуску"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_event.py:0
+msgid "Зникла мережа · режим Авто"
+msgstr "Зникла мережа · режим Авто"
+
+#. module: td_genset
+#: model:ir.model.fields,field_description:td_genset.field_td_genset_reading__alarm_flags
+msgid "Коди тривог"
+msgstr "Коди тривог"
+
+#. module: td_genset
+#: model:ir.model.fields,help:td_genset.field_td_genset_command__requested_at
+msgid ""
+"Коли команду створено (час Odoo, як у кроках cron): перехід розкладу і "
+"повернення до розкладу після таймера чи тесту не дублюють незавершену "
+"команду з тією самою метою, створену за останні 5 хв."
+msgstr ""
+"Коли команду створено (час Odoo, як у кроках cron): перехід розкладу і "
+"повернення до розкладу після таймера чи тесту не дублюють незавершену "
+"команду з тією самою метою, створену за останні 5 хв."
+
+#. module: td_genset
+#: model_terms:ir.actions.act_window,help:td_genset.action_td_genset_analytics_battery
+msgid "Напруга АКБ, V (03H 0024), середня за день."
+msgstr "Напруга АКБ, V (03H 0024), середня за день."
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_ui.py:0
+msgid "Норма"
+msgstr "Норма"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_command.py:0
+msgid "Очікуємо показання після попередньої команди"
+msgstr "Очікуємо показання після попередньої команди"
+
+#. module: td_genset
+#: model:ir.model.fields,field_description:td_genset.field_td_genset_alarm__followers_notify_at
+msgid "Сповістити підписників о"
+msgstr "Сповістити підписників о"
+
+#. module: td_genset
+#: model:ir.model.fields,field_description:td_genset.field_td_genset_command__requested_at
+msgid "Створено о"
+msgstr "Створено о"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_alarm.py:0
+msgid "Тривога виникла о %(time)s, у тихі години; генератор: %(genset)s."
+msgstr "Тривога виникла о %(time)s, у тихі години; генератор: %(genset)s."
+
+#. module: td_genset
+#: model:ir.model.fields,help:td_genset.field_td_genset_alarm__followers_notify_at
+msgid ""
+"Тривогу піднято в тихі години, а правило сповіщення для її рівня — не "
+"«Завжди»: у чатері — запис без сповіщень, підписники генератора (і "
+"активність «Долити паливо») — після тихих годин, якщо тривога ще активна."
+msgstr ""
+"Тривогу піднято в тихі години, а правило сповіщення для її рівня — не "
+"«Завжди»: у чатері — запис без сповіщень, підписники генератора (і "
+"активність «Долити паливо») — після тихих годин, якщо тривога ще активна."
+
+#. module: td_genset
+#. odoo-javascript
+#: code:addons/td_genset/static/src/link_age/link_age_field.js:0
+msgid "Час від останнього знімка"
+msgstr "Час від останнього знімка"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_event.py:0
+msgid "зупинено командою «%(command)s» (%(origin)s)"
+msgstr "зупинено командою «%(command)s» (%(origin)s)"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_event.py:0
+msgid "зупинено не з Odoo"
+msgstr "зупинено не з Odoo"
+
+#. module: td_genset
+#. odoo-python
+#: code:addons/td_genset/models/genset_event.py:0
+msgid "мережа повернулася"
+msgstr "мережа повернулася"
