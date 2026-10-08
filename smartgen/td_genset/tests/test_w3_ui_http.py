@@ -11,11 +11,16 @@ from lxml import etree
 
 from odoo import fields
 from odoo.tests import HttpCase, tagged
+from odoo.tools.safe_eval import safe_eval
 
 from .common import TdGensetCase, snapshot
 
 # Синтаксис до 17.0, якого не має бути в поданнях (рядки складені, щоб grep по модулю лишався порожнім)
 LEGACY_VIEW_SYNTAX = (' att' + 'rs=', ' sta' + 'tes=', '<tr' + 'ee', 't-r' + 'aw')
+
+# Інтервали групування дат, які приймає web-клієнт Odoo 18 (web/static/src/search/utils/dates.js, INTERVAL_OPTIONS;
+# дата без інтервалу — month); інші (``hour``) — «Invalid groupBy description», графік не відкривається (D-01)
+WEB_DATE_INTERVALS = ('year', 'quarter', 'month', 'week', 'day')
 
 JS_WAIT = """
 const __until = Date.now() + 25000;
@@ -483,3 +488,120 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
         self.assertAlmostEqual(genset.kpi_avg_load_pct_7d, 50.0, places=1)
         self.assertEqual((genset.kpi_first_try_pct_7d, genset.kpi_first_try_pct_30d), (100.0, 50.0))
         self.assertEqual(genset.kpi_crank_battery_min_30d, 20.9)
+
+    # ------------------------------------------------------------------ D-01: графіки й зведені таблиці
+    def _graph_pivot_actions(self):
+        """Дії модуля (``ir.actions.act_window``) з поданням graph або pivot: ``{xmlid: дія}`` як для web-клієнта."""
+        data = self.env['ir.model.data'].search([('module', '=', 'td_genset'), ('model', '=', 'ir.actions.act_window')])
+        Action = self.env['ir.actions.act_window'].with_user(self.user_s)
+        actions = {}
+        for xmlid in sorted('td_genset.%s' % name for name in data.mapped('name')):
+            action = Action._for_xml_id(xmlid)
+            if {'graph', 'pivot'} & {mode for _view_id, mode in action['views']}:
+                actions[xmlid] = action
+        return actions
+
+    def _web_groupby(self, spec, fields, where):
+        """``getGroupBy`` web-клієнта Odoo 18 (web/static/src/search/utils/group_by.js): поле існує; дата —
+        інтервал лише з ``WEB_DATE_INTERVALS``; не дата — без інтервалу."""
+        name, _sep, interval = spec.partition(':')
+        self.assertIn(name, fields, '%s: %s' % (where, spec))
+        if fields[name]['type'] in ('date', 'datetime'):
+            self.assertIn(interval or 'month', WEB_DATE_INTERVALS, '%s: %s' % (where, spec))
+        else:
+            self.assertFalse(interval, '%s: %s' % (where, spec))
+        return spec
+
+    def _analytics_data(self):
+        """Знімки за 3 дні (частина — під час роботи) і події «Робота»/«Відключення мережі» для графіків."""
+        now = fields.Datetime.now()
+        for index in range(12):
+            running = index % 3 == 0
+            self.env['td.genset.reading'].create({
+                'genset_id': self.genset.id, 'relay_id': 8000 + index, 'ts': now - timedelta(hours=6 * index + 1),
+                'is_journal': True, 'fuel_level': 90 - index, 'battery_v': 26.5 - index * 0.1, 'is_running': running,
+                'active_power': 6.0 if running else 0.0, 'load_pct': 25.0 if running else 0.0,
+                'mains_ok': not running, 'feed_source': 'genset' if running else 'mains'})
+        self.env['td.genset.event'].create([
+            {'genset_id': self.genset.id, 'event_type': 'run', 'date_start': now - timedelta(days=1, hours=2),
+             'date_end': now - timedelta(days=1), 'energy_kwh': 9.0, 'crank_attempts': 1},
+            {'genset_id': self.genset.id, 'event_type': 'outage', 'date_start': now - timedelta(days=1, hours=2),
+             'date_end': now - timedelta(days=1)},
+        ])
+
+    def test_d01_graph_pivot_groupby_web_intervals(self):
+        """D-01: кожна graph/pivot-дія модуля — групування за правилами web-клієнта Odoo 18 (дати лише
+        ``year``…``day``, без ``ts:hour``) у поданні, у фільтрах «Групувати за» її пошуку і в контексті дії;
+        ``web_read_group`` / ``read_group`` з контекстом дії і цими групуваннями виконується без помилки."""
+        self._analytics_data()
+        actions = self._graph_pivot_actions()
+        for xmlid in ('td_genset.action_td_genset_reading', 'td_genset.action_td_genset_event',
+                      'td_genset.action_td_genset_analytics_fuel_level', 'td_genset.action_td_genset_analytics_battery',
+                      'td_genset.action_td_genset_analytics_last_run', 'td_genset.action_td_genset_analytics_run_outage'):
+            self.assertIn(xmlid, actions)
+        for xmlid, action in actions.items():
+            Model = self.env[action['res_model']].with_user(self.user_s)
+            context = safe_eval(action['context'] or '{}', {'uid': self.user_s.id, 'active_id': False})
+            domain = safe_eval(action['domain'] or '[]', {'uid': self.user_s.id})
+            search_view = action['search_view_id'] and action['search_view_id'][0]
+            result = Model.with_context(context).get_views(
+                [list(view) for view in action['views']] + [[search_view, 'search']])
+            fields_info = result['models'][action['res_model']]['fields']
+            search_arch = etree.fromstring(result['views']['search']['arch'])
+            filters = {node.get('name'): node for node in search_arch.iter('filter')}
+            default_groupby = []
+            for node in search_arch.iter('filter'):
+                group_by = safe_eval(node.get('context') or '{}', {'uid': self.user_s.id}).get('group_by') or []
+                for spec in [group_by] if isinstance(group_by, str) else group_by:
+                    self._web_groupby(spec, fields_info, '%s: фільтр «%s»' % (xmlid, node.get('string')))
+                    if context.get('search_default_%s' % node.get('name')):
+                        default_groupby.append(spec)
+            action_groupby = context.get('group_by') or []
+            for spec in [action_groupby] if isinstance(action_groupby, str) else action_groupby:
+                default_groupby.append(self._web_groupby(spec, fields_info, '%s: context group_by' % xmlid))
+            self.assertTrue(all(name.removeprefix('search_default_') in filters or
+                                name.removeprefix('search_default_') in fields_info
+                                for name in context if name.startswith('search_default_')), xmlid)
+            for mode in ('graph', 'pivot'):
+                if mode not in result['views']:
+                    continue
+                arch = etree.fromstring(result['views'][mode]['arch'])
+                groupby, measures = [], []
+                for node in arch.iter('field'):
+                    name = node.get('name')
+                    if node.get('type') == 'measure':
+                        measures.append('%s:%s' % (name, fields_info[name].get('aggregator') or 'sum'))
+                        continue
+                    spec = name + (':%s' % node.get('interval') if node.get('interval') else '')
+                    groupby.append(self._web_groupby(spec, fields_info, '%s: %s-подання' % (xmlid, mode)))
+                self.assertTrue(groupby, '%s: %s без групування' % (xmlid, mode))
+                groupby = default_groupby or groupby
+                web = Model.with_context(**dict(context, tz=self.user_s.tz))
+                if mode == 'graph':  # як graph_model.js: webReadGroup, lazy=False, fill_temporal
+                    data = web.with_context(fill_temporal=True).web_read_group(domain, measures, groupby, lazy=False)
+                else:  # як pivot_model.js: readGroup, lazy=False
+                    data = {'groups': web.read_group(domain, measures or ['__count'], groupby, lazy=False)}
+                self.assertTrue(data['groups'], '%s: %s без даних' % (xmlid, mode))
+
+    def test_d01_graph_pivot_actions_open_in_browser(self):
+        """D-01: кожне graph/pivot-подання дій модуля відкривається у web-клієнті під Співробітником без помилки JS
+        «Invalid groupBy description» і вікна «От халепа!»."""
+        self._analytics_data()
+        targets = [[xmlid, mode] for xmlid, action in self._graph_pivot_actions().items()
+                   for _view_id, mode in action['views'] if mode in ('graph', 'pivot')]
+        self.assertGreaterEqual(len(targets), 12)
+        self.browser_js('/odoo/action-td_genset.action_td_genset', self._js("""
+            await waitFor(() => window.odoo && odoo.__WOWL_DEBUG__ && document.querySelector(".o_view_controller"),
+                          "web client");
+            const env = odoo.__WOWL_DEBUG__.root.env;
+            for (const [xmlid, viewType] of %(targets)s) {
+                await env.services.action.doAction(xmlid, { viewType, clearBreadcrumbs: true });
+                const selector = viewType === "graph" ? ".o_graph_view .o_graph_renderer canvas"
+                                                      : ".o_pivot_view .o_pivot table";
+                await waitFor(() => document.querySelector(".o_action_manager " + selector), xmlid + " " + viewType);
+                if (document.querySelector(".o_error_dialog, .o_dialog .modal-body .o_error_detail")) {
+                    throw new Error(xmlid + " " + viewType + ": error dialog");
+                }
+            }
+            console.log("test successful");
+        """ % {'targets': json.dumps(targets)}), login='td_user_s')

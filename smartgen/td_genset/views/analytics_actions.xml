@@ -135,7 +135,7 @@
         <field name="context">{'search_default_last_30_days': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_empty_folder">Очікуємо перший знімок</p>
-            <p>L у баку за знімками; стрибки вгору — заправки.</p>
+            <p>L у баку за знімками, середнє за день; стрибки вгору — заправки.</p>
         </field>
     </record>
 
@@ -149,7 +149,7 @@
         <field name="context">{'search_default_last_30_days': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_empty_folder">Очікуємо перший знімок</p>
-            <p>Напруга АКБ, V (03H 0024), середня за годину.</p>
+            <p>Напруга АКБ, V (03H 0024), середня за день.</p>
         </field>
     </record>
 
@@ -163,7 +163,7 @@
         <field name="context">{'search_default_running': 1, 'search_default_last_7_days': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_empty_folder">Генератор ще не працював</p>
-            <p>Активна потужність, kW (03H 0026) за знімками під час роботи генератора.</p>
+            <p>Активна потужність, kW (03H 0026) за знімками під час роботи генератора, пік за день.</p>
         </field>
     </record>
 </odoo>
