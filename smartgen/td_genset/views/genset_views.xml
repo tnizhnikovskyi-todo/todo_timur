@@ -426,7 +426,20 @@
                                 <group string="Модуль і ретранслятор">
                                     <field name="relay_hostid" placeholder="24 символи, напр. 3130373031334717003D002E"/>
                                     <field name="relay_enabled" widget="boolean_toggle"/>
-                                    <field name="commands_allowed" widget="boolean_toggle" groups="td_genset.group_tech"/>
+                                    <!-- Стоп-кран етапу 2: перемикач лише показує стан, змінюють кнопки — увімкнення
+                                         з підтвердженням про справжній генератор, вимкнення одразу -->
+                                    <label for="commands_allowed" groups="td_genset.group_tech"/>
+                                    <div class="o_row" groups="td_genset.group_tech">
+                                        <field name="commands_allowed" widget="boolean_toggle" readonly="1"/>
+                                        <button name="action_allow_commands" type="object" string="Дозволити команди"
+                                                icon="fa-unlock" class="btn-warning btn-sm" invisible="commands_allowed"
+                                                confirm-title="Дозволити команди на справжній генератор?"
+                                                confirm-label="Так, дозволити команди"
+                                                confirm="Після цього кнопки пульта, таймер «Робота поза графіком», тест і розклад надсилатимуть команди на справжній генератор через ретранслятор: пуск, зупинка, зміна режиму, перемикання автоматів (розмикання автомата мережі знеструмлює об'єкт). Вмикайте лише після перевірки на стенді і коли на об'єкті є відповідальна людина. Вимкнути можна будь-коли кнопкою «Заборонити команди»."/>
+                                        <button name="action_forbid_commands" type="object" string="Заборонити команди"
+                                                icon="fa-lock" class="btn-secondary btn-sm"
+                                                invisible="not commands_allowed"/>
+                                    </div>
                                     <field name="catchup_from_date"/>
                                     <field name="relay_note"/>
                                 </group>

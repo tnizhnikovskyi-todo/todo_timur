@@ -600,6 +600,35 @@ class TdGenset(models.Model):
         group = self.env.ref(group_xmlid, raise_if_not_found=False)
         raise AccessError(_('Ця дія доступна лише групі «%(group)s».', group=group.name if group else group_xmlid))
 
+    # ================================================================== стоп-кран етапу 2 (кнопки картки)
+    def action_allow_commands(self):
+        """Кнопка «Дозволити команди» — лише тех. адміністратор; у формі — з підтвердженням (``confirm``), що команди
+        підуть на справжній генератор. ``commands_allowed = True``; хто й коли — трекінг поля (його бачить тех.
+        адміністратор) і нотатка в чатері генератора (бачать усі групи модуля); пульт оновлюється через bus."""
+        self._td_check_group('td_genset.group_tech')
+        for genset in self.filtered(lambda item: not item.commands_allowed):
+            genset.commands_allowed = True
+            genset.message_post(
+                body=_('Команди дозволено (%(user)s): пульт, таймер, тест і розклад надсилатимуть команди на справжній '
+                       'генератор через ретранслятор.', user=self.env.user.name),
+                subtype_xmlid='mail.mt_note')
+            genset._notify_bus('status')
+        return True
+
+    def action_forbid_commands(self):
+        """Кнопка «Заборонити команди» (стоп-кран, без підтвердження — має спрацьовувати одразу) — лише тех.
+        адміністратор: ``commands_allowed = False``; нові команди записуються «Не надіслано: команди вимкнено в
+        Odoo», уже передані ретранслятору не відкликаються. Хто й коли — трекінг і нотатка в чатері."""
+        self._td_check_group('td_genset.group_tech')
+        for genset in self.filtered('commands_allowed'):
+            genset.commands_allowed = False
+            genset.message_post(
+                body=_('Команди заборонено (%(user)s): нові команди пульта, таймера, тесту й розкладу не надсилаються '
+                       '(«Не надіслано: команди вимкнено в Odoo»).', user=self.env.user.name),
+                subtype_xmlid='mail.mt_note')
+            genset._notify_bus('status')
+        return True
+
     # ================================================================== compute (W0, працюють)
     @api.depends('genset_status')
     def _compute_genset_stage(self):
