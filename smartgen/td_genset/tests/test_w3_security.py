@@ -256,6 +256,20 @@ class TestW3Security(TdGensetCase):
         self.assertEqual(canister.liters, 5.0)
         self.assertEqual(canister.move_ids, move)
 
+    def test_ac56_genset_with_history_not_deleted(self):
+        """AC-56 (security-review WARNING-4): генератор з історією (знімки, події, тривоги, команди, заправки, рух
+        палива) не видаляється навіть тех. адміністратором — «Архівуйте генератор замість видалення», журнал
+        лишається; генератор без історії видаляється."""
+        alarm = self.env['td.genset.alarm']._raise(self.genset, 'test_crit', 'crit', 'Критична: тест')
+        with self.assertRaisesRegex(UserError, 'Архівуйте генератор замість видалення'):
+            self.genset.with_user(self.user_t).unlink()
+        self.assertTrue(self.genset.exists())
+        self.assertTrue(alarm.exists())
+        clean = self.env['td.genset'].create({'name': 'Без історії', 'controller_model_id': self.controller_model.id,
+                                              'power_kw': 10.0})
+        clean.with_user(self.user_t).unlink()
+        self.assertFalse(clean.exists())
+
 
 @tagged('post_install', '-at_install')
 class TestW3SecurityRpc(TdGensetCase, HttpCase):

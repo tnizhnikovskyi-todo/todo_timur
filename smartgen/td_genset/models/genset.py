@@ -15,7 +15,7 @@
 from datetime import timedelta
 
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 # --------------------------------------------------------------------------- спільні selection
 # Значення — контракт між потоками (SPEC 4, 5, 6; ТР 2.4). Імпортуються іншими файлами модуля.
@@ -632,6 +632,21 @@ class TdGenset(models.Model):
             # синхронізація назви/відповідального/компанії й архівація обладнання ТО (ТР 2.9)
             self._ensure_equipment()
         return res
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_has_history(self):
+        """Генератор з історією (знімки, події, тривоги, команди, заправки, рух палива) не видаляють — архівують:
+        дочірні записи видаляються каскадно, і зник би журнал команд і тривог (аудит дій; security-review
+        WARNING-4). Генератор без історії видаляється (``ondelete='cascade'`` дочірніх лишається)."""
+        blocked = self.browse()
+        for model in ('td.genset.reading', 'td.genset.event', 'td.genset.alarm', 'td.genset.command',
+                      'td.genset.refuel', 'td.genset.fuel.move'):
+            groups = self.env[model].sudo()._read_group([('genset_id', 'in', self.ids)], ['genset_id'])
+            blocked |= self.browse([genset.id for genset, in groups])
+        if blocked:
+            raise UserError(_('Генератор «%(names)s» має історію (знімки, події, тривоги, команди або рух палива) — '
+                              'видаляти його не можна. Архівуйте генератор замість видалення.',
+                              names='», «'.join(blocked.mapped('name'))))
 
     # ================================================================== bus (А.9) — працює з W0
     def _notify_bus(self, kind, payload=None):
