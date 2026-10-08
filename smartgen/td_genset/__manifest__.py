@@ -54,4 +54,7 @@
     },
     'application': True,
     'installable': True,
+    # токен і адреса ретранслятора (ir.config_parameter без xml id) видаляються при деінсталяції;
+    # копія бази (odoo-bin neutralize / --neutralize) — data/neutralize.sql: стоп-крани, без токена, cron вимкнено
+    'uninstall_hook': 'uninstall_hook',
 }
