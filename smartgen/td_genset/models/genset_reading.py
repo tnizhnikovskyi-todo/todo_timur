@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 import pytz
 
 from odoo import api, fields, models
+from odoo.osv import expression
 from odoo.tools import SQL, sql
 
 from .genset import CONTROLLER_MODES, FEED_SOURCES, FUEL_SOURCES, GENSET_STATUS
@@ -242,8 +243,11 @@ class TdGensetReading(models.Model):
         aggregator='max',
         help='Мотогодини + хвилини / 60.')
     alarm_flags = fields.Char(
-        string='Тривоги', readonly=True,
-        help='Активні сигнали тривог 01H на момент знімка (коди через кому).')
+        string='Коди тривог', readonly=True,
+        help='Активні сигнали тривог 01H на момент знімка — ключі API через кому (українські назви — «Тривоги»).')
+    alarm_flags_text = fields.Char(
+        string='Тривоги', compute='_compute_alarm_flags_text', search='_search_alarm_flags_text',
+        help='Активні сигнали тривог 01H на момент знімка — українські назви сигналів (D-06).')
     values_extra = fields.Json(
         string='Інші значення', readonly=True,
         help='Ключі values, яких немає в таблиці відповідності (нові версії ретранслятора); зазвичай порожньо.')
@@ -359,7 +363,7 @@ class TdGensetReading(models.Model):
         help="Відлік поточного стану (регістр 03H 35; ключ API «genset_status_delay»). NULL — немає даних.")
     remote_start_status = fields.Integer(
         string="Дистанційний пуск", readonly=True, aggregator=None,
-        help="Дистанційний пуск: 0 «No Delay», 1 «Start Delay», 2 «Stop Delay» (регістр 03H 36; ключ API «remote_start_status»). NULL — немає даних.")
+        help="Дистанційний пуск: 0 — без затримки (No Delay), 1 — затримка пуску (Start Delay), 2 — затримка зупинки (Stop Delay) (регістр 03H 36; ключ API «remote_start_status»). NULL — немає даних.")
     remote_start_delay = fields.Integer(
         string="Відлік дистанційного пуску, с", readonly=True, aggregator=None,
         help="Відлік дистанційного пуску (регістр 03H 37; ключ API «remote_start_delay»). NULL — немає даних.")
@@ -371,7 +375,7 @@ class TdGensetReading(models.Model):
         help="Відлік ATS (регістр 03H 39; ключ API «ats_status_delay»). NULL — немає даних.")
     mains_status = fields.Integer(
         string="Стан мережі (код)", readonly=True, aggregator=None,
-        help="0 «Normal», 1 «Abnormal», 2 «No Delay». (регістр 03H 40; ключ API «mains_status»). NULL — немає даних.")
+        help="0 — норма (Normal), 1 — аварія (Abnormal), 2 — без затримки (No Delay); «є мережа» — за сигналом «Мережа в нормі» (регістр 03H 40; ключ API «mains_status»). NULL — немає даних.")
     mains_status_delay = fields.Integer(
         string="Відлік стану мережі, с", readonly=True, aggregator=None,
         help="Відлік стану мережі (регістр 03H 41; ключ API «mains_status_delay»). NULL — немає даних.")
@@ -754,6 +758,31 @@ class TdGensetReading(models.Model):
             if key not in values and ohms.get(field_name) is not None:
                 values[key] = ohms[field_name]
         return values
+
+    @api.model
+    def _alarm_flag_names(self):
+        """Ключ сигналу 01H колонки «Тривоги» → українська назва (підпис поля знімка, D-06)."""
+        return {key: self._fields[key]._description_string(self.env) if key in self._fields else key
+                for key in ALARM_FLAG_KEYS}
+
+    @api.depends('alarm_flags')
+    def _compute_alarm_flags_text(self):
+        names = self._alarm_flag_names()
+        for reading in self:
+            keys = [key.strip() for key in (reading.alarm_flags or '').split(',') if key.strip()]
+            reading.alarm_flags_text = ', '.join(names.get(key, key) for key in keys) or False
+
+    def _search_alarm_flags_text(self, operator, value):
+        """Пошук «Тривоги» за українською назвою або ключем сигналу → умова на ``alarm_flags``."""
+        if operator in ('=', '!=') and not value:
+            return [('alarm_flags', operator, False)]
+        if operator not in ('ilike', 'like') or not isinstance(value, str):
+            return [('alarm_flags', operator, value)]
+        term = value.strip().lower()
+        keys = [key for key, name in self._alarm_flag_names().items() if term in name.lower() or term in key]
+        if not keys:
+            return [('id', '=', False)]
+        return expression.OR([[('alarm_flags', 'ilike', key)] for key in keys])
 
     @api.model
     def _derive(self, values, genset):

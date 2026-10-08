@@ -14,6 +14,7 @@ from markupsafe import Markup, escape
 
 from odoo import _, api, fields, models
 from odoo.tools.misc import formatLang
+from odoo.tools.translate import LazyTranslate
 
 from .genset import CONTROL_SOURCES, CONTROLLER_MODES, FEED_SOURCES, FUEL_SOURCES, GENSET_STAGES, GENSET_STATUS, \
     LINK_STATES, TEST_MODES
@@ -73,8 +74,10 @@ ANALYTICS_ACTIONS = {
     'fuel_level': 'td_genset.action_td_genset_analytics_fuel_level',
     'battery': 'td_genset.action_td_genset_analytics_battery',
 }
-REMOTE_START_TEXT = {0: 'No Delay', 1: 'Start Delay', 2: 'Stop Delay'}
-MAINS_STATUS_TEXT = {0: 'Normal', 1: 'Abnormal', 2: 'No Delay'}
+_lt = LazyTranslate(__name__)
+# Тексти кодів 03H 36 і 40 (relay_api.md 5.1: No Delay / Start Delay / Stop Delay; Normal / Abnormal / No Delay) — D-06
+REMOTE_START_TEXT = {0: _lt('Без затримки'), 1: _lt('Затримка пуску'), 2: _lt('Затримка зупинки')}
+MAINS_STATUS_TEXT = {0: _lt('Норма'), 1: _lt('Аварія'), 2: _lt('Без затримки')}
 MISSING = object()
 
 

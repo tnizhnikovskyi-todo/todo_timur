@@ -628,3 +628,31 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             await waitFor(() => age.innerText.trim() !== first, "tick");
             console.log("test successful");
         """ % {'year': year}), login='td_user_s')
+
+    # ------------------------------------------------------------------ D-06: українські тексти
+    def test_d06_ukrainian_status_and_alarm_names(self):
+        """D-06: «Поточні дані» — коди 03H 36 і 40 українською («2 · Затримка зупинки», «2 · Без затримки»), без
+        «No Delay» / «Stop Delay»; колонка «Тривоги» у «Показаннях» — українські назви сигналів замість ключів API,
+        пошук «Тривоги» — за назвою; ключі лишаються в «Коди тривог» (експорт, режим розробника)."""
+        self._online(remote_start_status=2, mains_status=2)
+        html = str(self.genset.with_user(self.user_s).current_data_html)
+        self.assertIn('2 · Затримка зупинки', html)
+        self.assertIn('2 · Без затримки', html)
+        for english in ('No Delay', 'Stop Delay', 'Start Delay', 'Abnormal'):
+            self.assertNotIn(english, html)
+        self._online(remote_start_status=1, mains_status=1)
+        html = str(self.genset.with_user(self.user_s).current_data_html)
+        self.assertIn('1 · Затримка пуску', html)
+        self.assertIn('1 · Аварія', html)
+        Reading = self.env['td.genset.reading']
+        reading = Reading.create({'genset_id': self.genset.id, 'relay_id': 9900, 'ts': fields.Datetime.now(),
+                                  'alarm_flags': 'common_alarm, common_warning, low_oil_pressure_warning'})
+        reading = reading.with_user(self.user_s)
+        self.assertEqual(reading.alarm_flags_text,
+                         'Загальна тривога, Загальне попередження, Попередження: низький тиск оливи')
+        self.assertEqual(Reading.with_user(self.user_s).search([('alarm_flags_text', 'ilike', 'тиск оливи')]), reading)
+        self.assertFalse(Reading.search([('alarm_flags_text', 'ilike', 'перевищення обертів')]))
+        arch = etree.fromstring(Reading.with_user(self.user_s).get_views([(False, 'list')])['views']['list']['arch'])
+        self.assertTrue(arch.xpath("//field[@name='alarm_flags_text']"))
+        self.assertFalse(arch.xpath("//field[@name='alarm_flags']"))
+        self.assertEqual(Reading._fields['alarm_flags_text'].string, 'Тривоги')
