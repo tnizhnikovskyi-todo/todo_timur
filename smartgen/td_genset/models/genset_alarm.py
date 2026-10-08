@@ -346,6 +346,20 @@ class TdGensetAlarm(models.Model):
             body += Markup('<p>%s</p>') % self.description
         return body
 
+    def _td_push_subject(self):
+        """Тема сповіщення — у мобільному застосунку (``mail_mobile``, OCN) це заголовок push: «<генератор>: <тривога>»,
+        щоб сповіщення було зрозуміле без відкриття Odoo."""
+        self.ensure_one()
+        return _('%(genset)s: %(alarm)s', genset=self.genset_id.sudo().name, alarm=self.name)
+
+    def _td_raised_text(self):
+        """Коли виникла тривога, за Києвом: «08.10 о 23:10»."""
+        self.ensure_one()
+        if not self.date_raised:
+            return ''
+        return _('%(date)s о %(time)s', date=utc_to_kyiv(self.date_raised).strftime('%d.%m'),
+                 time=hhmm(self.date_raised))
+
     def _td_notify_rule(self, config=None):
         """Правило сповіщення для рівня тривоги (``notify_*``; тех. тривоги — як попередження)."""
         self.ensure_one()
@@ -376,9 +390,9 @@ class TdGensetAlarm(models.Model):
         partners -= self.env.user.partner_id
         if partners:
             body = self._td_chatter_body() + Markup('<p>%s</p>') % _(
-                'Тривога виникла о %(time)s, у тихі години; генератор: %(genset)s.',
-                time=hhmm(self.date_raised), genset=genset.name)
-            genset.message_notify(partner_ids=partners.ids, subject=self.name, body=body,
+                'Тривога виникла %(when)s, у тихі години; генератор: %(genset)s.',
+                when=self._td_raised_text(), genset=genset.name)
+            genset.message_notify(partner_ids=partners.ids, subject=self._td_push_subject(), body=body,
                                   subtype_xmlid='td_genset.mt_alarm')
         if self.code in LOW_FUEL_CODES:
             self._td_schedule_refuel_activity()
@@ -533,10 +547,12 @@ class TdGensetAlarm(models.Model):
         body = Markup('<p><b>%s</b> · %s</p>') % (level_label, self.name)
         if self.description:
             body += Markup('<p>%s</p>') % self.description
-        body += Markup('<p>%s</p>') % _('Генератор: %(genset)s · рівень ланцюжка: %(level)s',
-                                        genset=self.genset_id.name, level=level_name)
+        # текст самодостатній для push у мобільний застосунок: генератор у темі, час виникнення — у тексті
+        body += Markup('<p>%s</p>') % _('Генератор: %(genset)s · виникла %(when)s · рівень ланцюжка: %(level)s',
+                                        genset=self.genset_id.sudo().name, when=self._td_raised_text(),
+                                        level=level_name)
         self.genset_id.sudo().message_notify(
-            partner_ids=partners.ids, subject=self.name, body=body, subtype_xmlid='td_genset.mt_alarm')
+            partner_ids=partners.ids, subject=self._td_push_subject(), body=body, subtype_xmlid='td_genset.mt_alarm')
 
     # ------------------------------------------------------------------ після догону (А.7)
     @api.model

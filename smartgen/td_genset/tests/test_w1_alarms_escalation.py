@@ -26,7 +26,9 @@ class TestW1AlarmsEscalation(TdGensetCase):
     def _notified(self, user, subject=None):
         domain = [('message_type', '=', 'user_notification'), ('partner_ids', 'in', user.partner_id.ids)]
         if subject:
-            domain.append(('subject', '=', subject))
+            # тема сповіщення тривоги — «<генератор>: <тривога>» (самодостатній push у мобільному застосунку);
+            # тестове сповіщення — як є
+            domain.append(('subject', 'in', [subject, '%s: %s' % (self.genset.name, subject)]))
         return self.env['mail.message'].search(domain)
 
     def _escalate(self, moment):
@@ -121,7 +123,8 @@ class TestW1AlarmsEscalation(TdGensetCase):
         self.assertFalse(warn.followers_notify_at or fuel.followers_notify_at)
         morning = self.env['mail.message'].search([('message_type', '=', 'user_notification'),
                                                    ('partner_ids', 'in', follower.ids)])
-        self.assertEqual(set(morning.mapped('subject')), {warn.name, fuel.name})
+        self.assertEqual(set(morning.mapped('subject')),
+                         {'%s: %s' % (self.genset.name, warn.name), '%s: %s' % (self.genset.name, fuel.name)})
         self.assertIn('у тихі години', morning[0].body)
         self.assertEqual(len(self.genset.activity_ids.filtered(lambda act: act.activity_type_id == refuel)), 1)
         self.assertEqual(warn.notified_user_ids, self.user_s)

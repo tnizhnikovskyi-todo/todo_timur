@@ -16,7 +16,7 @@ from odoo.tools import SQL
 
 from .genset_alarm import hhmm
 from .genset_event import parse_utc
-from .genset_reading import KYIV, READING_FIELD_MAP, ts_to_datetime
+from .genset_reading import KYIV, READING_FIELD_MAP, ts_to_datetime, utc_to_kyiv
 from .relay_client import RelayAuthError, RelayError, RelayNotFound, RelayUnavailable
 from .td_logging import log_failure, log_recovered
 
@@ -491,8 +491,12 @@ class TdGensetMonitoring(models.Model):
                 if not (rule == 'not_quiet' and config._quiet_now()):
                     level = config.level_ids.sorted(lambda item: (item.sequence, item.id)).filtered('user_id')[:1]
                     if level:
+                        # push у мобільний застосунок — самодостатній: генератор у темі й тексті, час за Києвом
+                        footer = _('Генератор: %(genset)s · %(when)s', genset=genset.name,
+                                   when=utc_to_kyiv(fields.Datetime.now()).strftime('%d.%m %H:%M'))
                         genset.message_notify(partner_ids=level.user_id.partner_id.ids, subject=genset.name,
-                                              body=Markup('<p>%s</p>') % body, subtype_xmlid='td_genset.mt_event')
+                                              body=Markup('<p>%s</p><p>%s</p>') % (body, footer),
+                                              subtype_xmlid='td_genset.mt_event')
             if config.discuss_channel_id:
                 config.discuss_channel_id.message_post(body=Markup('<p>%s: %s</p>') % (genset.name, body),
                                                        message_type='comment', subtype_xmlid='mail.mt_comment')
