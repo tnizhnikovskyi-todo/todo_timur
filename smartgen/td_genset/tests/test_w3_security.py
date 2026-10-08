@@ -216,6 +216,31 @@ class TestW3Security(TdGensetCase):
         app = etree.fromstring(view.arch).xpath("//app[@name='td_genset']")[0]
         self.assertEqual(app.get('groups'), 'base.group_system')
 
+    # ------------------------------------------------------------------ security-review: ТО, рух запасу, видалення
+    def test_ac56_maintenance_done_only_tech(self):
+        """AC-54, AC-56 (security-review WARNING-2): заявку ТО генератора переводить у стадію «виконано» лише тех.
+        адміністратор — для С/А це AccessError, відлік ТО не змінюється; так само створення заявки одразу у
+        «виконано». Т закриває заявку — фіксуються мотогодини (новий відлік ТО)."""
+        equipment = self.genset.equipment_id
+        self.assertTrue(equipment)
+        done = self.env['maintenance.stage'].search([('done', '=', True)], limit=1)
+        self.assertTrue(done)
+        Request = self.env['maintenance.request']
+        for user in (self.user_s, self.user_a):
+            # власник/виконавець заявки — сам користувач, тож стандартні правила «Обслуговування» запис дозволяють
+            request = Request.create({'name': 'ТО (%s)' % user.name, 'equipment_id': equipment.id,
+                                      'maintenance_type': 'preventive', 'owner_user_id': user.id, 'user_id': user.id})
+            with self.assertRaisesRegex(AccessError, 'тех. адміністратор'):
+                request.with_user(user).write({'stage_id': done.id})
+            self.assertFalse(request.stage_id.done)
+            with self.assertRaisesRegex(AccessError, 'тех. адміністратор'):
+                Request.with_user(user).create({'name': 'Одразу виконано', 'equipment_id': equipment.id,
+                                                'stage_id': done.id, 'owner_user_id': user.id})
+        request = Request.create({'name': 'ТО (Т)', 'equipment_id': equipment.id, 'maintenance_type': 'preventive'})
+        request.with_user(self.user_t).write({'stage_id': done.id})
+        self.assertTrue(request.stage_id.done)
+        self.assertAlmostEqual(request.td_run_hours_at_close, self.genset.run_hours_total)
+
 
 @tagged('post_install', '-at_install')
 class TestW3SecurityRpc(TdGensetCase, HttpCase):

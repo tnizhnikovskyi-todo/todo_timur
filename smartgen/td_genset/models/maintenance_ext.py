@@ -4,7 +4,8 @@
 Закриття заявки (перехід у стадію з ознакою «виконано») фіксує мотогодини генератора
 (``td_run_hours_at_close``) — від них і дати закриття рахується наступне ТО (``td.genset._compute_maint``).
 """
-from odoo import _, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError
 
 from .genset_fuel import MAINT_ACTIVITY_SUMMARY, fmt_num
 
@@ -30,9 +31,22 @@ class MaintenanceRequest(models.Model):
         string='Мотогодини при закритті', readonly=True,
         help='Мотогодини генератора на момент переведення заявки у стадію «виконано» — від них новий відлік ТО.')
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Заявку ТО генератора одразу в стадії «виконано» створює лише тех. адміністратор (див. ``write``)."""
+        requests = super().create(vals_list)
+        if requests.filtered(lambda request: request.td_genset_id and request.stage_id.done):
+            requests._td_check_close_rights()
+        return requests
+
     def write(self, vals):
-        """Перехід заявки генератора в стадію «виконано» (з іншої стадії) → ``_td_on_done`` (AC-54)."""
+        """Перехід заявки генератора в стадію «виконано» (з іншої стадії) → ``_td_on_done`` (AC-54). Закрити заявку
+        ТО генератора може лише тех. адміністратор: закриття скидає відлік ТО і знімає тривогу «Термін ТО» (матриця
+        прав «ТО — Т», AC-56; security-review WARNING-2). Заявки іншого обладнання — стандартні права."""
         was_done = {request.id: request.stage_id.done for request in self} if 'stage_id' in vals else {}
+        if vals.get('stage_id') and self.env['maintenance.stage'].browse(vals['stage_id']).done \
+                and self.filtered(lambda request: request.td_genset_id and not was_done.get(request.id)):
+            self._td_check_close_rights()
         result = super().write(vals)
         if 'stage_id' in vals:
             self.filtered(
@@ -40,11 +54,19 @@ class MaintenanceRequest(models.Model):
             )._td_on_done()
         return result
 
+    def _td_check_close_rights(self):
+        """Закриття заявки ТО генератора — лише ``td_genset.group_tech`` (cron/суперкористувач проходить)."""
+        if self.env.su or self.env.user.has_group('td_genset.group_tech'):
+            return
+        raise AccessError(_('Закрити заявку ТО генератора (стадія «виконано») може лише тех. адміністратор — група '
+                            '«Генератори: Тех. адміністратор». Закриття фіксує мотогодини і починає новий відлік ТО.'))
+
     def _td_on_done(self):
         """Хук закриття заявки ТО (ФВ-35, ФВ-36, AC-54): ``td_run_hours_at_close`` = мотогодини генератора →
         новий відлік («До ТО: 250 год», дата наступного ТО = дата закриття + місяці); якщо ТО більше не
         прострочене — ``_clear('maintenance_due')``; активність «Термін ТО» позначається виконаною; нотатка в
-        чатер генератора. Технічні записи — ``sudo`` (права на стадію заявки перевірив стандартний ``write``)."""
+        чатер генератора. Технічні записи — ``sudo`` (права на закриття перевірив ``write`` —
+        ``_td_check_close_rights``)."""
         alarms = self.env['td.genset.alarm'].sudo()
         activity_type = self.env.ref('td_genset.activity_check', raise_if_not_found=False)
         for request in self:
