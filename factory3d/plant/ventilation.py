@@ -131,13 +131,19 @@ def ventilation_data(specs):
                                 "Вентилятор вибухозахищений (IIB+H2), реле термозахисту й перетворювач частоти — "
                                 "поза небезпечною зоною.")
     heat_total = sum(u.get("heat_kw", 0) for u in units.values())
-    design = heat_balance(units)
+    chp = specs.get("chp", {})
+    chp_heat = chp.get("heat_kw_50") or 0  # КГУ вдень на 50 % — тепло в мережу першим
+    design = heat_balance(units, chp.get("heat_kw") or 0)
+    boil = max(0.0, heat_total - chp_heat)
     totals = dict(units=len(units), airflow_m3h=round(sum(u["airflow_m3h"] for u in units.values()), -2),
                   heat_kw=round(heat_total), p_now=round(sum(u["p_now"] for u in units.values()), 1),
                   p_inst=round(sum(u["p_inst"] for u in units.values()), 1),
                   outdoor_c=OUTDOOR_C, indoor_set_c=INDOOR_SET_C,
-                  boilers=BOILERS, boiler_kw=BOILER_KW, boilers_on=1 if heat_total <= 0.85 * BOILER_KW else 2,
-                  boiler_load=round(heat_total / BOILER_KW, 2), design_heat_kw=design["total"])
+                  boilers=BOILERS, boiler_kw=BOILER_KW,
+                  boilers_on=0 if boil <= 0 else 1 if boil <= 0.85 * BOILER_KW else 2,
+                  boiler_load=round(boil / BOILER_KW, 2), design_heat_kw=design["total"],
+                  chp_heat_kw=round(min(chp_heat, heat_total)), chp_heat_now=chp_heat,
+                  chp_heat_rated=chp.get("heat_kw") or 0)
     return dict(units=units, totals=totals, heat_balance=design)
 
 
@@ -151,7 +157,7 @@ WINTER_OA_SHARE = 0.5  # частка зовнішнього повітря в �
 HEAT_RECOVERY = 0.78  # RoofVent RH-9C, суха рекуперація за паспортом
 
 
-def heat_balance(units):
+def heat_balance(units, chp_kw=0):
     """Оцінка зимового теплового навантаження при −15 °C (без внутрішніх теплонадходжень)."""
     from .layout import H, W
     dt = INDOOR_SET_C - T_OUT_DESIGN
@@ -169,7 +175,8 @@ def heat_balance(units):
              ("Приплив дільниці фасадів (без рекуперації — витяжка з фарбування)", ahu_kw)]
     total = sum(v for _, v in items)
     return dict(t_out=T_OUT_DESIGN, items=[dict(name=n, kw=round(v)) for n, v in items], total=round(total),
-                capacity=BOILERS * BOILER_KW, reserve=round(BOILERS * BOILER_KW / total - 1, 2),
+                capacity=BOILERS * BOILER_KW, chp_kw=chp_kw,
+                reserve=round((BOILERS * BOILER_KW + chp_kw) / total - 1, 2),
                 note=(f"Оцінка, не проєкт: U стін {U_WALL}, покрівлі {U_ROOF}, підлоги {U_FLOOR} Вт/(м²·К); "
                       .replace("0.", "0,")) + "внутрішні теплонадходження від верстатів (сотні кВт у зміну) "
                                               "не враховано — це запас.")

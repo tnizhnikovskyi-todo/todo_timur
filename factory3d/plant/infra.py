@@ -31,7 +31,7 @@ DOOR_READERS = [("ACR-ELEC", 129.0, 62.25, "Електрощитова"), ("ACR-
 GENSET_POS = (128.5, D + 4.2)  # контейнер уздовж X за електрощитовою
 BESS_POS = (140.0, D + 3.4)
 ATS_POS = (135.1, 68.5)
-PV_INVERTERS_X = [96.0, 98.5, 101.0, 103.5]  # на зовнішній північній стіні за офісом
+PV_INVERTERS_X = [95.0 + 1.6 * k for k in range(8)]  # 8 × 115 кВт на зовнішній північній стіні за офісом
 MODULE = (2.278, 1.134)  # placeholder до паспорта: довжина, ширина, м
 PV_TILT = 10.0
 
@@ -67,34 +67,42 @@ VENT_AA = 1.02  # м² аеродинамічної площі клапана (L
 AA_PER_400 = 1.5  # орієнтир — 1,5 м² Aa на кожні 400 м² (Industriebaurichtlinie, п. 5.7)
 
 
+# Клапани стоять рядами вздовж ферм (x = 12k ± 1,8) — по ряду на зону; між рядами лишаються суцільні поля СЕС
+VENT_LINES = {"SZ-1": [13.8], "SZ-2": [25.8], "SZ-3": [49.8], "SZ-4": [73.8], "SZ-5": [49.8, 73.8],
+              "SZ-6": [97.8], "SZ-7": [121.8], "SZ-8": [145.8]}
+PV_LANE_Y = 36.0  # поперечний прохід для пожежників посередині покрівлі
+PV_LANE_W = 1.5
+PV_EDGE = 1.2  # від краю покрівлі
+PV_VENT_GAP = 2.5  # від клапанів димовидалення (VdS 2098)
+
+
 def _vent_ok(x, y, rect):
     x0, y0, x1, y1 = rect
     if not (x0 + 1.5 < x < x1 - 1.5 and y0 + 1.5 < y < y1 - 1.5):
         return False
-    if abs(x / 12 - round(x / 12)) * 12 < 0.9 or min(abs(y - c) for c in (15, 30, 45, 60)) < 0.9:
-        return False  # над фермами й прогонами
+    if min(abs(y - c) for c in (15, 30, 45, 60)) < 0.9:
+        return False  # над прогонами
     return not _roof_blocked(x, y, VENT[0] / 2, VENT[1] / 2)
 
 
 def smoke_zone_vents():
-    """Клапани по зонах: кількість — з орієнтиру по Aa, розстановка сіткою з обходом установок на даху."""
+    """Клапани по зонах: кількість — з орієнтиру по Aa, рівномірно вздовж рядів зони з обходом установок."""
     out = {}
     for code, rect in SMOKE_ZONES:
         x0, y0, x1, y1 = rect
         area = (x1 - x0) * (y1 - y0)
         n = math.ceil(area / 400 * AA_PER_400 / VENT_AA)
-        cols = 2 if x1 - x0 > 12 else 1
-        rows = math.ceil(n / cols)
+        lines = VENT_LINES[code]
+        per = [n // len(lines) + (1 if k < n % len(lines) else 0) for k in range(len(lines))]
         pts = []
-        for i in range(cols):
-            for j in range(rows):
-                bx, by = x0 + (x1 - x0) * (i + 0.5) / cols, y0 + (y1 - y0) * (j + 0.5) / rows
-                for dx, dy in ((0, 0), (1.5, 0), (-1.5, 0), (0, 1.5), (0, -1.5), (2.5, 2.0), (-2.5, -2.0),
-                               (2.5, -2.0), (-2.5, 2.0), (0, 3.0), (0, -3.0)):
-                    if _vent_ok(bx + dx, by + dy, rect):
-                        pts.append((bx + dx, by + dy))
+        for lx, cnt in zip(lines, per):
+            for k in range(cnt):
+                by = y0 + (y1 - y0) * (k + 0.5) / cnt
+                for dy in (0, 1.5, -1.5, 3.0, -3.0, 4.5, -4.5, 6.0, -6.0):
+                    if _vent_ok(lx, by + dy, rect) and all(abs(by + dy - py) > 3.0 for px, py in pts if px == lx):
+                        pts.append((lx, by + dy))
                         break
-        out[code] = dict(rect=rect, area=round(area), need=n, points=pts[:max(n, len(pts))])
+        out[code] = dict(rect=rect, area=round(area), need=n, points=pts)
     return out
 
 
@@ -102,28 +110,58 @@ def smoke_vents():
     return [p for z in smoke_zone_vents().values() for p in z["points"]]
 
 
-PV_BLOCK = (3, 4)  # модулів уздовж X × рядів; між блоками проходи 1,5 м
+PV_MAX_KWP = 900.0  # більше — лише на експорт: удень цех бере ≈ 630 кВт, ще й когенерація
+# Когенераційна установка TEDOM Quanto D800 поруч із генератором: модуль 7,2 × 2,5 м, модуль вихлопу,
+# сухий охолоджувач для літнього скидання тепла, шафовий ГРП на газопроводі середнього тиску
+CHP_POS = (118.6, D + 4.6)
+CHP_EXH_POS = (117.6, D + 6.6)
+CHP_COOLER_POS = (118.6, D + 9.6)
+CHP_GRP_POS = (112.5, D + 9.0)
+CHP_HEAT_Y, CHP_HEAT_Z = D + 5.6, 3.0  # естакада теплотраси до котельні
+CHP_LOAD_NOW = 0.5  # удень світить СЕС — установка на мінімальному тривалому навантаженні
 
 
-def pv_blocks(vents, max_kwp=520.0, wp=580):
-    """Блоки модулів (схід-захід, 10°) з проходами 1,5 м, оминаючи клапани й установки, до max_kwp."""
+def pv_rows(vents, wp=580, max_kwp=PV_MAX_KWP):
+    """Модулі суцільними полями (схід-захід, 10°): ряди вздовж X, проходи по рядах клапанів (≤ 24 м між ними)
+    і посередині покрівлі, ≥ 2,5 м від клапанів, оминаючи установки. Повертає [(x, y, нахил ±1)]."""
     lx, ly = MODULE
-    nx, ny = PV_BLOCK
-    bw, bh = nx * lx, ny * (ly + 0.15)
-    out, kwp = [], 0.0
-    for y in [2.0 + k * (bh + 1.5) for k in range(int((D - 4) / (bh + 1.5)))]:
-        for x in [2.0 + k * (bw + 1.5) for k in range(int((W - 4) / (bw + 1.5)))]:
-            cx, cy = x + bw / 2, y + bh / 2
-            if _roof_blocked(cx, cy, bw / 2, bh / 2, margin=0.8):
+    pitch = ly + 0.15
+    lanes_x = sorted({x for v in VENT_LINES.values() for x in v})
+    out = []
+    j = 0
+    y = PV_EDGE
+    while y + ly <= D - PV_EDGE:
+        if not (y + ly < PV_LANE_Y - PV_LANE_W / 2 or y > PV_LANE_Y + PV_LANE_W / 2):
+            y = PV_LANE_Y + PV_LANE_W / 2 + 0.01
+            continue
+        x = PV_EDGE
+        while x + lx <= W - PV_EDGE:
+            cx, cy = x + lx / 2, y + ly / 2
+            lane = next((lxx for lxx in lanes_x if abs(cx - lxx) < lx / 2 + PV_LANE_W / 2), None)
+            if lane is not None:
+                x = lane + PV_LANE_W / 2 + 0.01
                 continue
-            if any(abs(cx - vx) < bw / 2 + VENT[0] / 2 + 2.5 and abs(cy - vy) < bh / 2 + VENT[1] / 2 + 2.5
-                   for vx, vy in vents):  # ≥ 2,5 м від клапанів димовидалення (VdS 2098)
-                continue
-            out.append((x, y, bw, bh))
-            kwp += nx * ny * wp / 1000
-            if kwp >= max_kwp:
-                return out
+            if not _roof_blocked(cx, cy, lx / 2, ly / 2, margin=0.8) and not any(
+                    abs(cx - vx) < lx / 2 + VENT[0] / 2 + PV_VENT_GAP
+                    and abs(cy - vy) < ly / 2 + VENT[1] / 2 + PV_VENT_GAP
+                    for vx, vy in vents):
+                out.append((round(x, 3), round(y, 3), 1 if j % 2 else -1))
+                if len(out) * wp / 1000 >= max_kwp:
+                    return out
+            x += lx + 0.02
+        y += pitch
+        j += 1
     return out
+
+
+def pv_kwp(rows, wp=580):
+    return len(rows) * wp / 1000
+
+
+def pv_fields():
+    """Поля СЕС для підсумків: між проходами (смуги між рядами клапанів × половини покрівлі)."""
+    lanes = [0.0] + sorted({x for v in VENT_LINES.values() for x in v}) + [W]
+    return [(a, b) for a, b in zip(lanes, lanes[1:])]
 
 
 # ---------------------------------------------------------------- Odoo і мережа
@@ -187,7 +225,8 @@ def down_conductors():
 # Паспорти: код об'єкта → роль у equipment_specs.json
 INFRA_ROLES = {
     "GENSET": ("genset", []), "ATS-1": ("ats", []), "BESS": ("bess", []), "PV-ROOF": ("pv_module", ["pv_inverter"]),
-    "PV-INV": ("pv_inverter", []), "SMOKE-VENTS": ("smoke_vent", []), "SMOKE-CTRL": ("smoke_control", []),
+    "PV-INV": ("pv_inverter", []), "CHP": ("chp", []), "SMOKE-VENTS": ("smoke_vent", []),
+    "SMOKE-CTRL": ("smoke_control", []),
     "EXITS": ("exit_door", ["panic_bar"]), "LPS": ("lightning_air", ["earthing"]),
     "WATER": ("water_meter", ["eyewash", "wastewater"]), "ODOO-TABLETS": ("shopfloor_tablet", []),
     "ODOO-SCANNERS": ("handheld_scanner", []), "WIFI": ("wifi_ap", []),
@@ -217,26 +256,49 @@ def _fmt(v, d=0):
 def infra_data(specs, energy, vent):
     """Картки інфраструктурних об'єктів: {code: dict(rows=[[назва, значення]], note, warn, items)} + підсумки."""
     cards, cons = {}, energy["consumers"]
-    gen, bess, pvm, inv = (specs.get(k, {}) for k in ("genset", "bess", "pv_module", "pv_inverter"))
+    gen, bess, pvm, inv, chp = (specs.get(k, {}) for k in ("genset", "bess", "pv_module", "pv_inverter", "chp"))
     # сонячна станція
     vents = smoke_vents()
-    blocks = pv_blocks(vents)
-    n_mod = len(blocks) * PV_BLOCK[0] * PV_BLOCK[1]
     wp = pvm.get("wp") or 580
+    n_mod = len(pv_rows(vents, wp))
     kwp = n_mod * wp / 1000
     n_inv = len(PV_INVERTERS_X)
-    pv_now = round(kwp * 0.52)  # 12 жовтня, 10:30, ясно — ≈ 52 % від піку
+    inv_kw = inv.get("kw_ac") or 115
+    pv_now = round(min(kwp * 0.52, n_inv * inv_kw))  # 12 жовтня, 10:30, ясно — ≈ 52 % від піку
     pv_today = round(kwp * 1.35)  # з 07:30 до 10:30
     load = energy["totals"]["p_now"]
-    grid = load - pv_now
+    # когенерація: удень на мінімумі, тепло — в теплову мережу замість котлів
+    chp_kw = chp.get("power_kw") or 800
+    chp_now = round(chp_kw * CHP_LOAD_NOW)
+    chp_heat = chp.get("heat_kw_50") or 497
+    chp_gas = chp.get("gas_m3h_50") or 109
+    heat_need = vent["totals"]["heat_kw"]
+    # баланс: СЕС + КГУ → цех, надлишок → накопичувач (до 200 кВт), решта — у мережу
+    surplus = pv_now + chp_now - load
+    bess_kw = round(max(0.0, min(200.0, surplus)))
+    export = round(max(0.0, surplus - bess_kw))
+    grid = round(max(0.0, -surplus))
     cards["PV-ROOF"] = dict(rows=[["Модулів", f"{n_mod} × {wp} Вт"], ["Потужність", f"{_fmt(kwp)} кВт пік"],
                                   ["Зараз", f"{_fmt(pv_now)} кВт"], ["Сьогодні", f"{_fmt(pv_today)} кВт·год"],
                                   ["Частка СЕС зараз", f"{round(pv_now / load * 100)} % споживання"]],
-                            note="Уся генерація йде на власне споживання — цех у робочий час бере більше, ніж дає "
-                                 "станція. Блоки з проходами 1,5 м для пожежників, оминають клапани й установки.")
-    cards["PV-INV"] = dict(rows=[["Інверторів", f"{n_inv} × {inv.get('kw_ac') or 115} кВт"],
-                                 ["Навантаження", f"{round(pv_now / (n_inv * (inv.get('kw_ac') or 115)) * 100)} %"],
+                            note="Ряди модулів схід-захід по 10° з проходами 1,5 м для пожежників уздовж рядів "
+                                 "клапанів димовидалення й посередині даху; від клапанів — не ближче 2,5 м. "
+                                 "Удень разом із когенерацією покриває цех, надлишок заряджає накопичувач.")
+    cards["PV-INV"] = dict(rows=[["Інверторів", f"{n_inv} × {inv_kw} кВт"],
+                                 ["Навантаження", f"{round(pv_now / (n_inv * inv_kw) * 100)} %"],
                                  ["Стан", "усі в мережі"]])
+    cards["CHP"] = dict(rows=[["Потужність", f"{chp_kw} кВт ел. · {chp.get('heat_kw') or 856} кВт тепла"],
+                              ["Зараз", f"{chp_now} кВт ел. · {chp_heat} кВт тепла ({round(CHP_LOAD_NOW * 100)} %)"],
+                              ["Тепло", f"мережі потрібно {round(heat_need)} кВт, надлишок "
+                                        f"{max(0, round(chp_heat - heat_need))} кВт — у сухий охолоджувач"],
+                              ["Газ", f"{chp_gas} м³/год (при 100 % — {chp.get('gas_m3h') or 199})"],
+                              ["ККД", f"{_fmt((chp.get('eta_el') or 0.425) * 100, 1)} % ел. + "
+                                      f"{_fmt((chp.get('eta_th') or 0.455) * 100, 1)} % тепл."],
+                              ["Мотогодини", "3 412 · до капремонту 80 000"]],
+                        note="Працює паралельно з мережею. Удень, поки світить СЕС, тримає мінімум 50 %, увечері й "
+                             "узимку — до 100 %. Тепло йде в теплову мережу цеху, котли на відходах — у резерві "
+                             "й на пікові морози. Надлишок електрики — у накопичувач, далі в мережу "
+                             "(статус активного споживача).")
     # генератор, АВР, накопичувач
     crit = [c for c in CRITICAL if c in cons]
     crit_kw = sum(cons[c]["p_now"] for c in crit) + energy["lines"]["BW-1"]["p_now"]
@@ -259,7 +321,8 @@ def infra_data(specs, energy, vent):
     soc = 0.76
     cards["BESS"] = dict(rows=[["Ємність", f"{_fmt(kwh, 0)} кВт·год (2 шафи)"], ["Потужність", "200 кВт"],
                                ["Заряд", f"{round(soc * 100)} % · {_fmt(kwh * soc)} кВт·год"],
-                               ["Зараз", "очікування (СЕС уся йде на споживання)"],
+                               ["Зараз", f"заряджається {bess_kw} кВт (надлишок СЕС і КГУ)" if bess_kw
+                                         else "очікування"],
                                ["Режим", "зрізання піків понад 600 кВт + резерв на пуск генератора"],
                                ["Тримає критичні", f"≈ {round(kwh * soc / max(crit_kw, 1) * 60)} хв"]])
     # вода
@@ -319,7 +382,9 @@ def infra_data(specs, energy, vent):
     cards["SMOKE-CTRL"] = dict(rows=[["Щитів", f"{n_panels} × 80 А (по 7,5 А на привод)"],
                                      ["Стан", "норма, живлення від мережі"], ["Акумулятори", "72 год резерву"]])
     cards["LPS"] = dict(rows=[["Опір заземлення", "4,2 Ом (виміряно 14.05.2026)"], ["Крок сітки", f"{_fmt(MESH)} м"]])
-    totals = dict(pv_kwp=round(kwp), pv_now=pv_now, pv_today=pv_today, grid_kw=round(grid), bess_kwh=round(kwh),
+    totals = dict(pv_kwp=round(kwp), pv_now=pv_now, pv_today=pv_today, grid_kw=grid, export_kw=export,
+                  bess_kw=bess_kw, chp_kw=chp_now, chp_rated=chp_kw, chp_heat=chp_heat, chp_load=CHP_LOAD_NOW,
+                  load_kw=round(load), bess_kwh=round(kwh),
                   bess_soc=soc, genset_kva=kva, critical_kw=round(crit_kw), vents=len(vents), n_modules=n_mod,
                   vent_area=round(len(vents) * VENT_AA, 1))
     return dict(cards=cards, totals=totals)

@@ -70,11 +70,28 @@ def build_building():
     walls = Mesh()
     t = 0.3
     # північна стіна на всю висоту, південна — розріз (низький парапет), щоб було видно всередину
-    walls.box_lo(W / 2, D + t / 2, 0, W + 2 * t, t, H, "wall")
-    walls.box_lo(W / 2, D + t / 2 + 0.01, 0, W + 2 * t, t, 1.0, "wall_band")
+    from .evacuation import EXITS
+    door_w, door_h = 1.4, 2.3  # прорізи аварійних виходів (двері 1,2 м у світлі + коробка)
+
+    def gaps(side):
+        return sorted(x for _, x, _, s in EXITS if s == side)
+
+    def runs(side):
+        x = -t
+        for xc in gaps(side):
+            yield x, xc - door_w / 2
+            x = xc + door_w / 2
+        yield x, W + t
+
+    for a, b in runs("N"):
+        walls.box_lo((a + b) / 2, D + t / 2, 0, b - a, t, H, "wall")
+        walls.box_lo((a + b) / 2, D + t / 2 + 0.01, 0, b - a, t, 1.0, "wall_band")
+    for xc in gaps("N"):
+        walls.box_lo(xc, D + t / 2, door_h, door_w, t, H - door_h, "wall")
     for k in range(int(W / 6)):
         walls.box_lo(3 + k * 6, D - 0.005, 5.6, 4.4, 0.02, 1.6, "glass")
-    walls.box_lo(W / 2, -t / 2, 0, W + 2 * t, t, 1.0, "wall_band")
+    for a, b in runs("S"):
+        walls.box_lo((a + b) / 2, -t / 2, 0, b - a, t, 1.0, "wall_band")
     for side, x in (("W", -t / 2), ("E", W + t / 2)):
         wall_x(walls, x, 0.0, D, H, [(y, w) for s, y, w in DOORS if s == side], t=t, lintel=DOOR_H)
         walls.box_lo(x + (0.01 if side == "E" else -0.01), D / 2, 0, t, D, 1.0, "wall_band")

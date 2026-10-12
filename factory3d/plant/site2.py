@@ -6,10 +6,11 @@ from .evacuation import EXITS
 from .evacuation import compute as evac_compute
 from .evacuation import save as evac_save
 from .geom import Mesh, empty, instance, rounded_path, shared
-from .infra import (ATS_POS, BESS_POS, CAMERAS, CURTAIN_BOTTOM, CURTAINS, DOOR_READERS, EYEWASH, GATES, GENSET_POS,
-                    IOT_BOXES, KPP, MESH, MODULE, PARKING, PRINTERS, PV_INVERTERS_X, PV_TILT, ROOF_Z, SCALES, SCANNERS,
-                    SERVER_ROOM, SITE, SMOKE_PANEL, TRUCK_SCALE, VENT, WASTE, WASTEWATER, WATER_INLET, WATER_MAIN,
-                    down_conductors, pv_blocks, smoke_vents, tablets, wifi_aps)
+from .infra import (ATS_POS, BESS_POS, CAMERAS, CHP_COOLER_POS, CHP_EXH_POS, CHP_GRP_POS, CHP_HEAT_Y, CHP_HEAT_Z,
+                    CHP_POS, CURTAIN_BOTTOM, CURTAINS, DOOR_READERS, EYEWASH, GATES, GENSET_POS, IOT_BOXES, KPP, MESH,
+                    MODULE, PARKING, PRINTERS, PV_INVERTERS_X, PV_TILT, ROOF_Z, SCALES, SCANNERS, SERVER_ROOM, SITE,
+                    SMOKE_PANEL, TRUCK_SCALE, VENT, WASTE, WASTEWATER, WATER_INLET, WATER_MAIN, down_conductors,
+                    pv_rows, smoke_vents, tablets, wifi_aps)
 from .layout import D, H, OBST, W
 
 
@@ -26,13 +27,23 @@ def build_evacuation():
     evac_save(data)
     d = Mesh()
     for code, x, y, side in EXITS:
-        sgn = 1 if side == "S" else -1  # у бік цеху
+        out = -1 if side == "S" else 1  # назовні
+        inner = 0.0 if side == "S" else D  # внутрішня грань стіни
+        wy = inner + out * 0.15  # вісь стіни товщиною 0,3 м
+        if side == "S":  # південна стіна в моделі зрізана до парапета — біля дверей лишаємо її фрагмент
+            for k in (-1, 1):
+                d.box_lo(x + k * 1.0, wy, 1.0, 0.6, 0.3, 1.9, "wall")
+            d.box_lo(x, wy, 2.3, 1.4, 0.3, 0.6, "wall")
+            d.box_lo(x, wy, 2.9, 2.62, 0.32, 0.06, "wall_band")
+        for k in (-1, 1):  # коробка по зовнішній грані
+            d.box_lo(x + k * 0.65, inner + out * 0.27, 0, 0.1, 0.08, 2.25, "steel_dark")
+        d.box_lo(x, inner + out * 0.27, 2.2, 1.4, 0.08, 0.1, "steel_dark")
+        d.box_lo(x, inner + out * 0.25, 0.0, 1.2, 0.05, 2.2, "machine_mid")  # полотно, відчиняється назовні
+        d.box_lo(x + 0.45, inner + out * 0.29, 0.95, 0.03, 0.04, 0.2, "steel")  # ручка ззовні
+        d.box_lo(x, inner + out * 0.17, 1.0, 1.0, 0.05, 0.06, "steel")  # антипанічна штанга з боку цеху
         for k in (-1, 1):
-            d.box_lo(x + k * 0.66, y + sgn * 0.02, 0, 0.1, 0.36, 2.2, "steel_dark")
-        d.box_lo(x, y + sgn * 0.02, 2.1, 1.42, 0.36, 0.1, "steel_dark")
-        d.box_lo(x, y, 0, 1.2, 0.34, 2.1, "fire_red" if code != "EX-IN" else "machine_mid")
-        d.box_lo(x, y + sgn * 0.2, 1.0, 1.0, 0.05, 0.06, "steel")  # антипанічна штанга
-        d.box_lo(x, y + sgn * 0.19, 2.35, 0.42, 0.05, 0.18, "exit_green")  # «Вихід»
+            d.box_lo(x + k * 0.48, inner + out * 0.2, 0.98, 0.04, 0.06, 0.1, "steel")
+        d.box_lo(x, inner - out * 0.03, 2.4, 0.42, 0.05, 0.18, "exit_green")  # «Вихід» над дверима всередині
     d.build("EXITS", "evacuation", code="EXITS", kind="safety", label="Аварійні виходи",
             desc="Двері з антипанічними штангами на обох довгих стінах; над кожними — покажчик «Вихід».")
     # маршрути евакуації — зелені стрілки на підлозі
@@ -141,32 +152,165 @@ def build_backup():
     b.build("BESS", "backup", code="BESS", kind="power", label="Накопичувач енергії",
             desc="Літій-залізо-фосфатний накопичувач: зрізає піки й тримає критичні споживачі, поки "
                  "запускається генератор.", **_passport_extra("BESS"))
-    # сонячні модулі на покрівлі
+    # сонячні модулі на покрівлі: ряди схід-захід по 10° на опорних профілях
+    from .site import SPECS
+    wp = SPECS.get("pv_module", {}).get("wp") or 580
+    rows = pv_rows(smoke_vents(), wp)
     pv = Mesh()
     lx, ly = MODULE
     t = math.radians(PV_TILT)
-    blocks = pv_blocks(smoke_vents())
-    for x, y, bw, bh in blocks:
-        nx, ny = round(bw / lx), round(bh / (ly + 0.15))
-        pv.box_lo(x + bw / 2, y + bh / 2, ROOF_Z, bw, bh, 0.06, "steel_dark")
-        for i in range(nx):
-            for j in range(ny):
-                cx, cy = x + (i + 0.5) * lx, y + (j + 0.5) * (ly + 0.15)
-                sign = 1 if j % 2 else -1  # схід-захід «дахом»
-                pv.box((cx, cy, ROOF_Z + 0.2), (lx - 0.03, ly * math.cos(t), 0.035), "pv_cell",
-                       rot=(sign * PV_TILT, 0, 0))
+    for x, y, sign in rows:
+        pv.box((x + lx / 2, y + ly / 2, ROOF_Z + 0.2), (lx - 0.02, ly * math.cos(t), 0.035), "pv_cell",
+               rot=(sign * PV_TILT, 0, 0))
+    runs = {}
+    for x, y, _ in sorted(rows, key=lambda r: (r[1], r[0])):  # суцільні відрізки ряду → профілі
+        rr = runs.setdefault(y, [])
+        if rr and x - rr[-1][1] < 0.1:
+            rr[-1][1] = x + lx
+        else:
+            rr.append([x, x + lx])
+    for y, rr in runs.items():
+        for x0, x1 in rr:
+            for dy in (0.2, ly - 0.2):
+                pv.box_lo((x0 + x1) / 2, y + dy, ROOF_Z, x1 - x0, 0.04, 0.12, "alu")
     pv.build("PV-ROOF", "backup", code="PV-ROOF", kind="power", label="Сонячна станція на покрівлі",
-             desc=f"{len(blocks)} блоків модулів схід-захід з проходами 1,5 м для пожежників.",
-             **_passport_extra("PV-ROOF"))
+             desc=f"{len(rows)} модулів схід-захід рядами з проходами 1,5 м для пожежників і відступом 2,5 м "
+                  f"від клапанів димовидалення.", **_passport_extra("PV-ROOF"))
     inv = Mesh()
     for x in PV_INVERTERS_X:
         inv.box_lo(x, D + 0.5, 1.0, 1.035, 0.365, 0.7, "phenolic", bev=0.03)  # SUN2000-115KTL: 1035 × 700 × 365
         inv.box_lo(x - 0.3, D + 0.69, 1.5, 0.12, 0.01, 0.06, "status_green")
         inv.box_lo(x, D + 0.4, 1.75, 0.04, 0.04, ROOF_Z - 1.75, "steel_dark")  # кабелі з даху
-    inv.box_lo((PV_INVERTERS_X[0] + 124.0) / 2, D + 0.4, 0.9, 124.0 - PV_INVERTERS_X[0], 0.04, 0.04, "rubber")
+    inv.box_lo((PV_INVERTERS_X[0] + 124.0) / 2, D + 0.4, 2.6, 124.0 - PV_INVERTERS_X[0], 0.04, 0.04,
+               "rubber")  # над дверима EX-N5
     inv.build("PV-INV", "backup", code="PV-INV", kind="power", label="Інвертори СЕС",
               desc="Мережеві інвертори на зовнішній стіні за офісом; змінний струм — у ГРЩ.",
               **_passport_extra("PV-INV"))
+    build_chp()
+
+
+def build_chp():
+    """Когенераційна установка TEDOM Quanto D800: модуль двигун-генератор, модуль вихлопу з глушником,
+    сухий охолоджувач, газопровід із ГРП, теплотраса до котельні, кабель до ГРЩ."""
+    c = Mesh()
+    cx, cy = CHP_POS
+    c.box_lo(cx, cy, 0, 8.0, 3.2, 0.2, "steel_dark")  # фундамент
+    c.box_lo(cx, cy, 0.2, 7.2, 2.5, 3.1, "chp_body", bev=0.05)  # модуль 7200 × 2500 × 3300 мм
+    for k in range(4):  # вентиляційні решітки й двері обслуговування
+        c.box_lo(cx - 2.7 + k * 1.8, cy - 1.26, 0.6, 1.1, 0.02, 2.0, "steel_dark")
+    c.box_lo(cx + 3.61, cy, 1.0, 0.02, 1.6, 1.4, "steel_dark")
+    c.box_lo(cx - 3.0, cy - 1.27, 1.5, 0.4, 0.01, 0.25, "screen_on")
+    c.box_lo(cx + 2.4, cy, 3.3, 1.8, 1.6, 0.9, "galv")  # повітрозабір
+    ex, ey = CHP_EXH_POS
+    c.box_lo(ex, ey, 0.2, 4.9, 1.0, 2.6, "machine_mid", bev=0.03)  # модуль вихлопу 4900 × 1000 × 2600
+    c.tube([(cx - 1.5, cy + 1.25, 2.6), (cx - 1.5, ey - 0.5, 2.6)], 0.2, "steel", segs=12)
+    c.cyl((ex + 1.8, ey, 2.8 + 4.3 / 2), 0.425, 4.3, "steel", segs=20)  # глушник Ø850 × 4300
+    c.cyl((ex + 1.8, ey, 7.1 + 2.0), 0.25, 4.0, "steel", segs=16)  # труба вище покрівлі
+    c.cyl((ex + 1.8, ey, 11.15), 0.3, 0.1, "steel_dark", segs=16)
+    kx, ky = CHP_COOLER_POS  # сухий охолоджувач аварійного скидання тепла
+    for dx in (-2.8, 2.8):
+        for dy in (-1.0, 1.0):
+            c.box_lo(kx + dx, ky + dy, 0, 0.12, 0.12, 1.6, "steel_dark")
+    c.box_lo(kx, ky, 1.6, 6.0, 2.3, 1.0, "machine_mid", bev=0.03)
+    for k in range(4):
+        c.cyl((kx - 2.2 + k * 1.47, ky, 2.62), 0.6, 0.06, "steel_dark", segs=24)
+    c.tube(rounded_path([(cx + 0.5, cy + 1.25, 3.0), (cx + 0.5, ky - 1.15, 3.0), (cx + 0.5, ky - 1.15, 2.2)],
+                        radius=0.3), 0.08, "alu", segs=10)
+    c.build("CHP", "backup", code="CHP", kind="power", label="Когенераційна установка",
+            desc="Газопоршнева установка 800 кВт електрики й 856 кВт тепла: електрика — паралельно з мережею в "
+                 "ГРЩ, тепло — у теплову мережу цеху через котельню; котли на відходах — резерв і піки.",
+            **_passport_extra("CHP"))
+    g = Mesh()
+    gx, gy = CHP_GRP_POS  # шафовий ГРП: середній тиск → 8–15 кПа на вході установки
+    g.box_lo(gx, gy, 0, 1.2, 0.8, 1.6, "gas_yellow", bev=0.03)
+    g.tube([(gx, 100.0, 0.6), (gx, gy + 0.4, 0.6)], 0.06, "gas_yellow", segs=10)
+    g.tube(rounded_path([(gx + 0.6, gy, 0.8), (cx - 3.7, gy, 0.8), (cx - 3.7, cy + 0.6, 0.8),
+                         (cx - 3.6, cy + 0.6, 0.8)], radius=0.08), 0.05, "gas_yellow", segs=10)
+    g.box_lo(gx, gy - 0.41, 1.2, 0.3, 0.01, 0.2, "steel_dark")
+    g.build("CHP-GAS", "backup", code="CHP-GAS", kind="power", label="Газопровід і ГРП когенерації",
+            desc="Введення газу середнього тиску з межі майданчика, шафовий ГРП із вузлом обліку, "
+                 "≈ 199 м³/год на повній потужності.")
+    h = Mesh()  # теплотраса на естакаді до котельні (подача й зворотка в ізоляції)
+    for k, dz in enumerate((0.0, -0.32)):
+        h.tube(rounded_path([(cx - 3.6, cy + 1.0 - k * 0.3, 1.2), (cx - 4.2, cy + 1.0 - k * 0.3, 1.2),
+                             (cx - 4.2, CHP_HEAT_Y, CHP_HEAT_Z + dz), (79.6, CHP_HEAT_Y, CHP_HEAT_Z + dz)],
+                            radius=0.4), 0.11, "alu", segs=10)
+    for x in range(84, int(cx - 4), 6):  # стійки естакади — осторонь виходу EX-N5
+        h.box_lo(x, CHP_HEAT_Y, 0, 0.16, 0.16, CHP_HEAT_Z - 0.45, "steel_dark")
+        h.box_lo(x, CHP_HEAT_Y, CHP_HEAT_Z - 0.45, 0.16, 0.8, 0.08, "steel_dark")
+    h.tube(rounded_path([(cx + 3.6, cy - 0.6, 0.4), (124.2, cy - 0.6, 0.4), (124.2, D + 0.4, 0.05),
+                         (124.2, D + 0.4, 1.2)], radius=0.3), 0.08, "rubber", segs=8)  # кабель 4×NYY до ГРЩ
+    h.build("CHP-HEAT", "backup", code="CHP-HEAT", kind="power", label="Теплотраса й кабель КГУ",
+            desc="Тепло 90/70 °C — на естакаді до котельні й далі в теплову мережу цеху; кабель 1600 А — "
+                 "у ГРЩ на шини 0,4 кВ.")
+
+
+# ---------------------------------------------------------------- покриття даху
+def roof_openings():
+    """Отвори в покритті: (x, y, розмір у плані) — клапани, дахові установки, витяжки, повітроводи."""
+    from .layout import EXHAUST_POINTS, MACHINES
+    from .site import machine_rz, rot2
+    from .ventilation import AHU_POS, CHG_EXHAUST, FABRIC_DUCTS, ROOFVENTS
+    out = [(x, y, VENT[0] + 0.24) for x, y in smoke_vents()]
+    out += [(x, y, 1.1) for _, x, y, _ in ROOFVENTS]
+    out += [(AHU_POS[0] + 2.0, y, 0.7) for y, *_ in FABRIC_DUCTS]
+    out.append((CHG_EXHAUST[0], CHG_EXHAUST[1], 0.6))
+    for mch in MACHINES:
+        code, typ, _, mx, my = mch[:5]
+        for lx, ly, _ in EXHAUST_POINTS.get(typ, []):
+            ox, oy = rot2(lx, ly, machine_rz(mch))
+            out.append((mx + ox, my + oy, 0.6))
+    return out
+
+
+def build_roofdeck():
+    """Профнастил з утеплювачем і мембраною: товщина 0,12 м, верх на 9,0 м; клітинки 0,5 м без отворів,
+    злиті в прямокутники."""
+    step, th = 0.5, 0.12
+    nx, ny = int(W / step), int(D / step)
+    holes = [(x - a / 2, y - a / 2, x + a / 2, y + a / 2) for x, y, a in roof_openings()]
+
+    def free(i, j):
+        x0, y0 = i * step, j * step
+        return not any(x0 < hx1 and x0 + step > hx0 and y0 < hy1 and y0 + step > hy0
+                       for hx0, hy0, hx1, hy1 in holes)
+
+    m = Mesh()
+    open_rects = {}  # (i0, i1) → j0
+
+    def flush(key, j0, j1):
+        i0, i1 = key
+        m.box_lo((i0 + i1) * step / 2, (j0 + j1) * step / 2, ROOF_Z - th, (i1 - i0) * step, (j1 - j0) * step, th,
+                 "roof_deck")
+
+    for j in range(ny + 1):
+        runs = set()
+        if j < ny:
+            i = 0
+            while i < nx:
+                if free(i, j):
+                    i0 = i
+                    while i < nx and free(i, j):
+                        i += 1
+                    runs.add((i0, i))
+                else:
+                    i += 1
+        for key in list(open_rects):
+            if key not in runs:
+                flush(key, open_rects.pop(key), j)
+        for key in runs:
+            open_rects.setdefault(key, j)
+    t = 0.3
+    for x, y, sx, sy in ((W / 2, -t / 2, W + 2 * t, t), (W / 2, D + t / 2, W + 2 * t, t),
+                         (-t / 2, D / 2, t, D), (W + t / 2, D / 2, t, D)):
+        m.box_lo(x, y, ROOF_Z - th, sx, sy, 0.45 + th, "wall_band")  # парапет
+    for x, y, a in roof_openings():  # обичайки отворів
+        for dx, dy, sx, sy in ((0, a / 2, a + 0.1, 0.05), (0, -a / 2, a + 0.1, 0.05), (a / 2, 0, 0.05, a),
+                               (-a / 2, 0, 0.05, a)):
+            m.box_lo(x + dx, y + dy, ROOF_Z, sx, sy, 0.15, "steel_dark")
+    m.build("ROOF-DECK", "roofdeck", code="ROOF-DECK", kind="building", label="Покриття даху",
+            desc="Сталевий профнастил, мінвата й ПВХ-мембрана по фермах; отвори під клапани димовидалення, "
+                 "дахові установки й витяжки, парапет по периметру.")
 
 
 # ---------------------------------------------------------------- вода й стоки
@@ -378,6 +522,7 @@ def build_security():
 
 
 def build_infra():
+    build_roofdeck()
     build_smoke()
     build_lightning()
     build_backup()

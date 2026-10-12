@@ -575,7 +575,8 @@ class Demo:
         self.equipment["DUST-1"] = dict(name="Аспірація", category="Енергетика", filter_dp_kpa=1.4, airflow_m3h=29800,
                                         next_maintenance=ts((NOW + timedelta(days=6)).replace(hour=7, minute=0)))
         self.equipment["BOILER"] = dict(name="Котельня на відходах (2 × Kalvis K-500M)", category="Енергетика",
-                                        boilers="К1 у роботі, К2 у гарячому резерві (вмикається понад 85 % К1)",
+                                        boilers="К1 і К2 у гарячому резерві: тепло зараз дає когенераційна "
+                                                "установка; К1 вмикається, коли КГУ не вистачає, К2 — понад 85 % К1",
                                         supply_c=78,
                                         silo_fill=0.62, briquettes_today_kg=860)
         self.equipment["CHARGING"] = dict(name="Зарядна станція", category="Енергетика", busy=2, total=3)
@@ -698,8 +699,9 @@ class Demo:
                         panels=panels_load(groups), uf=0.7, mf=0.8,
                         norms_ref={k: v.get("ref") for k, v in lux_norms.items()})
         infra = infra_data(specs, energy, ventilation_data(specs))
-        energy["totals"].update(pv_kw=infra["totals"]["pv_now"], grid_kw=infra["totals"]["grid_kw"],
-                                pv_today=infra["totals"]["pv_today"])
+        it = infra["totals"]
+        energy["totals"].update(pv_kw=it["pv_now"], grid_kw=it["grid_kw"], pv_today=it["pv_today"],
+                                chp_kw=it["chp_kw"], export_kw=it["export_kw"], bess_kw=it["bess_kw"])
         fire = fire_data(specs)
         evac = self.evacuation(fire)
         self.maintenance.append(dict(id="MR/00036", name="Очистити сповіщувач 2.FAC.07 (запиленість 82 %)",

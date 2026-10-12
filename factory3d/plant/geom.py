@@ -90,6 +90,9 @@ PALETTE = {
     "pv_cell": ("#1b2a44", 0.15, 0.4),
     "water_pipe": ("#2a9d8f", 0.5, 0.2),
     "smoke_curtain": ("#c9ccc4", 0.9, 0.0, 0.55),
+    "roof_deck": ("#8d959b", 0.75, 0.3),
+    "gas_yellow": ("#e3b81c", 0.5, 0.1),
+    "chp_body": ("#2f6f4f", 0.5, 0.2),
 }
 for i, (_, hex_) in enumerate(SHEET_DECORS):
     PALETTE[f"decor{i}"] = (hex_, 0.7, 0.0)

@@ -451,7 +451,8 @@ for (const p of MANIFEST.parts) {
   p.layers.forEach((k) => partOfLayer.set(k, p.key));
   p.codes.forEach((c) => partOfCode.set(c, p.key));
 }
-for (const l of MANIFEST.layers) layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: true });
+// покриття даху ховає цех — вмикається окремо або видом «Дах і СЕС»
+for (const l of MANIFEST.layers) layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: l.key !== "roofdeck" });
 let modelReady;
 const modelLoaded = new Promise((res) => { modelReady = res; });
 function onPart(gltf) {
@@ -535,6 +536,8 @@ const VIEWS = [
   { name: "Склад ГП і відвантаження", target: [136, 36, 0], pos: [104, 6, 42] },
   { name: "План згори", target: [75, 36, 0], pos: [75, 35.9, 215] },
   { name: "Електрощитова", target: [129, 67, 1.2], pos: [116, 50, 13] },
+  { name: "Дах і СЕС", target: [75, 36, 9], pos: [-18, -58, 92], roof: true },
+  { name: "Когенерація", target: [114, 77, 2], pos: [92, 104, 26] },
 ];
 function viewPose(v) {
   if (v.pos) return { pos: b2t(v.pos), target: b2t(v.target) };
@@ -560,6 +563,7 @@ function flyTo(pos, target, animate = true) {
   tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), dur: 1000 };
 }
 function goView(v, animate = true) {
+  if (layers.get("roofdeck") && layers.get("roofdeck").want !== !!v.roof) setLayer("roofdeck", !!v.roof);
   const { pos, target } = viewPose(v);
   flyTo(pos, target, animate);
   document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.name === v.name)));
@@ -616,10 +620,10 @@ function buildLayersUI() {
       </div><div class="lg-items" id="${id}" hidden>
         <div class="lg-bulk"><button class="btn" data-bulk="1">Усі</button><button class="btn" data-bulk="0">Жодного</button></div>
       </div>`;
-    for (const [key, { label }] of list) {
+    for (const [key, { label, want }] of list) {
       const row = document.createElement("label");
       row.className = "layer";
-      row.innerHTML = `<input type="checkbox" id="layer-${key}" checked><span>${esc(label)}</span>`;
+      row.innerHTML = `<input type="checkbox" id="layer-${key}"${want ? " checked" : ""}><span>${esc(label)}</span>`;
       row.querySelector("input").onchange = (e) => setLayer(key, e.target.checked);
       box.querySelector(".lg-items").appendChild(row);
     }
@@ -652,7 +656,7 @@ function syncLayerGroups() {
     box.querySelector(".lg-n").textContent = waiting ? "завантаж…" : `${on}/${cbs.length}`;
   });
 }
-$("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, true));
+$("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, k !== "roofdeck"));
 $("#all-off").onclick = () => layers.forEach((_, k) => setLayer(k, CORE.has(k)));
 // будівля, верстати й усі інженерні мережі — без складів, транспорту й людей
 $("#eng-only").onclick = () => layers.forEach((l, k) => setLayer(k, ["building", "zones", "line", "facade"].includes(k) || l.group === "Інженерні мережі"));
@@ -1379,8 +1383,10 @@ function eqHtml(eq) {
   if (eq.boilers) rows.push(["Котли", esc(eq.boilers)]);
   if (D.ventilation && eq.boilers) {
     const V = D.ventilation.totals;
-    rows.push(["Тепло зараз", `${nf.format(V.heat_kw)} кВт · К1 ${pct(V.boiler_load)} ${bar(V.boiler_load, V.boiler_load > 0.85 ? "warn" : "")}`],
-      ["Зима (−15 °C)", `<button class="lnk" data-go="obj:HEAT-NET">≈ ${nf.format(V.design_heat_kw)} кВт</button> з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів`]);
+    rows.push(["Тепло зараз", V.chp_heat_now
+      ? `${nf.format(V.heat_kw)} кВт — <button class="lnk" data-go="obj:CHP">від КГУ</button>${V.boilers_on ? `, К1 ${pct(V.boiler_load)}` : ", котли в резерві"}`
+      : `${nf.format(V.heat_kw)} кВт · К1 ${pct(V.boiler_load)} ${bar(V.boiler_load, V.boiler_load > 0.85 ? "warn" : "")}`],
+      ["Зима (−15 °C)", `<button class="lnk" data-go="obj:HEAT-NET">≈ ${nf.format(V.design_heat_kw)} кВт</button> з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів${V.chp_heat_rated ? ` + ${nf.format(V.chp_heat_rated)} кВт КГУ` : ""}`]);
   }
   if (eq.supply_c != null) rows.push(["Подача", `${eq.supply_c} °C`]);
   if (eq.silo_fill != null) rows.push(["Силос стружки", pct(eq.silo_fill)]);
@@ -1666,8 +1672,8 @@ function lightVentSummary() {
     }).join("")}</ul>
     <div class="sub">Вентиляція й опалення</div>
     <div class="hint" style="border:0;padding:0;margin-top:0">Надворі ${nf1.format(V.outdoor_c)} °C, уставка ${nf1.format(V.indoor_set_c)} °C.
-      Подають ${nf.format(V.airflow_m3h)} м³/год, нагрів ${nf.format(V.heat_kw)} кВт: працює ${V.boilers_on} котел із ${V.boilers} (${pct(V.boiler_load)}).
-      Узимку при −15 °C ≈ ${nf.format(V.design_heat_kw)} кВт з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів.</div>
+      Подають ${nf.format(V.airflow_m3h)} м³/год, нагрів ${nf.format(V.heat_kw)} кВт: ${V.boilers_on ? `працює ${V.boilers_on} котел із ${V.boilers} (${pct(V.boiler_load)})` : "тепло дає когенераційна установка, обидва котли в резерві"}.
+      Узимку при −15 °C ≈ ${nf.format(V.design_heat_kw)} кВт з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів${V.chp_heat_rated ? ` і ${nf.format(V.chp_heat_rated)} кВт КГУ` : ""}.</div>
     <ul class="rows">${["AHU-1", "HEAT-NET", ...Object.keys(D.ventilation.units).filter((k) => D.ventilation.units[k].filter_dp_pa > 250)]
       .map((k) => (k === "HEAT-NET" ? `<li><button class="row" data-go="obj:HEAT-NET"><span class="t">Теплова мережа</span><span class="mono">${nf.format(V.heat_kw)} кВт</span><span class="m">від котельні до ${Object.values(D.ventilation.units).filter((u) => u.heat_kw).length} установок</span></button></li>` : ventRow(k))).join("")}</ul>`;
 }
@@ -1699,12 +1705,13 @@ function ventHtml(code) {
     const us = Object.entries(V.units).filter(([, u]) => u.heat_kw).sort((a, b) => b[1].heat_kw - a[1].heat_kw);
     const hb = V.heat_balance;
     return `<dl class="kv"><dt>Нагрів зараз</dt><dd>${nf.format(V.totals.heat_kw)} кВт</dd>
-        <dt>Котли</dt><dd><button class="lnk" data-go="obj:BOILER">працює ${V.totals.boilers_on} з ${V.totals.boilers}</button> · К1 ${pct(V.totals.boiler_load)}</dd>
+        ${V.totals.chp_heat_now ? `<dt>Когенерація</dt><dd><button class="lnk" data-go="obj:CHP">${nf.format(V.totals.chp_heat_kw)} кВт</button> з ${nf.format(V.totals.chp_heat_now)} кВт зараз</dd>` : ""}
+        <dt>Котли</dt><dd><button class="lnk" data-go="obj:BOILER">${V.totals.boilers_on ? `працює ${V.totals.boilers_on} з ${V.totals.boilers}` : "обидва в резерві"}</button>${V.totals.boilers_on ? ` · К1 ${pct(V.totals.boiler_load)}` : ""}</dd>
         <dt>Надворі</dt><dd>${nf1.format(V.totals.outdoor_c)} °C</dd></dl>
       ${hb ? `<div class="sub">Зима, ${nf.format(hb.t_out)} °C · оцінка навантаження</div>
       <table class="tbl">${hb.items.map((it) => `<tr><td>${esc(it.name)}</td><td class="n">${nf.format(it.kw)} кВт</td></tr>`).join("")}
         <tr><td><b>Разом</b></td><td class="n"><b>${nf.format(hb.total)} кВт</b></td></tr>
-        <tr><td>Два котли</td><td class="n">${nf.format(hb.capacity)} кВт · запас ${pct(hb.reserve)}</td></tr></table>
+        <tr><td>Два котли${hb.chp_kw ? " + КГУ" : ""}</td><td class="n">${nf.format(hb.capacity + (hb.chp_kw || 0))} кВт · запас ${pct(hb.reserve)}</td></tr></table>
       <div class="src">${esc(hb.note)}</div>` : ""}
       <div class="sub">Споживачі тепла</div>
       <table class="tbl"><tr><th>Установка</th><th class="n">Клапан</th><th class="n">кВт</th></tr>
@@ -1929,11 +1936,14 @@ function backupSummary() {
   return `<div class="sub">Власна генерація й резерв</div>
     <ul class="rows">
       ${row("PV-ROOF", "Сонячна станція", `${nf.format(T.pv_kwp)} кВт пік · сьогодні ${nf.format(T.pv_today)} кВт·год`, `${nf.format(T.pv_now)} кВт`)}
-      ${row("BESS", "Накопичувач", `${nf.format(T.bess_kwh)} кВт·год · зрізання піків`, pct(T.bess_soc))}
+      ${T.chp_rated ? row("CHP", "Когенерація", `${nf.format(T.chp_rated)} кВт · зараз ${pct(T.chp_load)}, тепло ${nf.format(T.chp_heat)} кВт`, `${nf.format(T.chp_kw)} кВт`) : ""}
+      ${row("BESS", "Накопичувач", `${nf.format(T.bess_kwh)} кВт·год · ${T.bess_kw ? `заряджається ${nf.format(T.bess_kw)} кВт` : "зрізання піків"}`, pct(T.bess_soc))}
       ${row("GENSET", "Дизель-генератор", `критичні зараз ${nf.format(T.critical_kw)} кВт`, `${T.genset_kva} кВА`)}
       ${row("ATS-1", "АВР", "мережа ↔ генератор", "мережа")}
     </ul>
-    <div class="hint" style="border:0;padding:0;margin-top:4px">З мережі зараз ≈ ${nf.format(T.grid_kw)} кВт: решту дає сонячна станція.</div>`;
+    <div class="hint" style="border:0;padding:0;margin-top:4px">${T.grid_kw > 0
+      ? `З мережі зараз ≈ ${nf.format(T.grid_kw)} кВт: решту дають сонячна станція${T.chp_kw ? " і когенерація" : ""}.`
+      : `Цех споживає ${nf.format(T.load_kw)} кВт — усе власне: СЕС ${nf.format(T.pv_now)} + КГУ ${nf.format(T.chp_kw)} кВт. Надлишок: ${nf.format(T.bess_kw)} кВт — у накопичувач${T.export_kw ? `, ${nf.format(T.export_kw)} кВт — у мережу` : ""}.`}</div>`;
 }
 
 // ---------------------------------------------------------------- телефон
