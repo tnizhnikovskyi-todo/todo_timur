@@ -410,10 +410,22 @@ IP65, DALI-2) на 7,6 м, над мостом портального склад
 | `dist/factory.glb` | Веб, Blender, Unity/Unreal. В об'єктів є властивості `code`, `kind`, `label`, `desc` (glTF extras) |
 | `dist/factory.usdz` | Перегляд на iPhone/iPad/Mac (Quick Look, AR). Вісь Y угору, метри |
 | `dist/factory.blend` | Вихідна сцена: окрема колекція на кожен шар |
-| `dist/index.html` | Переглядач (three.js): види, шари, клік по об'єкту, підписи, маршрути замовлень. Вантажить `factory.glb` і `odoo_demo.json` поруч |
-| `dist/factory_viewer.html` | Той самий переглядач одним файлом, модель вбудована. Відкривається подвійним кліком, потрібен лише інтернет для three.js із CDN |
-| `dist/odoo_demo.json` | Демо-дані «як із Odoo», вбудовані й в однофайловий переглядач |
-| `dist/factory_web.glb` | Квантована копія моделі (KHR_mesh_quantization) — саме вона вбудована в однофайловий переглядач |
+| `dist/index.html` | Переглядач (three.js). Вантажить модель частинами з `dist/parts/` і `odoo_demo.json` поруч |
+| `dist/parts/manifest.json` | Список частин: які шари в кожній, коди об'єктів, розміри |
+| `dist/parts/core.glb` | Будівля, склади, виробництво, люди — 5,7 МБ |
+| `dist/parts/engineering.glb` | Інженерні мережі — 2,7 МБ |
+| `dist/parts/fire.glb` | Пожежна безпека — 1,3 МБ |
+| `dist/parts/it.glb` | ІТ і Odoo — 0,1 МБ |
+| `dist/parts/site.glb` | Територія й охорона — 0,2 МБ |
+| `dist/factory_viewer.html` | Той самий переглядач одним файлом: частини моделі й дані вбудовані. Відкривається подвійним кліком, потрібен лише інтернет для three.js із CDN |
+| `dist/artifact.html` | Сторінка для хостингу з обмеженням розміру: дані всередині, частини моделі — окремими файлами поруч |
+| `dist/odoo_demo.json` | Демо-дані «як із Odoo» |
+
+Модель розбито на частини за групами шарів (квантовані, KHR_mesh_quantization). Спершу
+вантажиться основна — будівля, склади, виробництво, люди — і сторінка вже працює; решта
+підтягується у фоні по черзі. Якщо ввімкнути шар або перейти до об'єкта з частини, яка ще
+не прийшла, вона вантажиться одразу. Так знято обмеження на розмір однієї сторінки:
+нові шари просто додаються окремою частиною (`PARTS` у `build_scene.py`).
 
 ## Код
 
@@ -443,13 +455,14 @@ python3 -m venv .venv && .venv/bin/pip install bpy   # Blender як Python-мо�
 .venv/bin/python build_scene.py dist
 ```
 
-Для квантованої копії потрібен Node.js (`npx @gltf-transform/cli`). Без нього
-в однофайловий переглядач вбудовується повний GLB.
+Для квантування частин потрібен Node.js (`npx @gltf-transform/cli`); без нього частини
+записуються без квантування.
 
-Лише перевбудувати однофайловий переглядач після правок у `viewer/index.html`:
+Лише перевбудувати сторінки переглядача й демо-дані після правок у `viewer/index.html` або
+`plant/odoo_demo.py` (частини моделі вже лежать у `dist/parts/`):
 
 ```bash
-.venv/bin/python build_scene.py --embed dist/factory_web.glb dist
+.venv/bin/python build_scene.py --embed dist
 ```
 
 ## Переглядач

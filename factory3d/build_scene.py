@@ -8,7 +8,7 @@
     python build_scene.py --embed dist/factory.glb dist
 
 Результат: factory.glb, factory.usdz, factory.blend, odoo_demo.json, index.html, factory_viewer.html
-(+ factory_web.glb — квантована копія для переглядача, потрібен Node.js для npx).
+(+ parts/*.glb — модель частинами для переглядача, квантована через npx @gltf-transform/cli).
 
 Код розкладено по модулях пакета plant/:
   layout.py    планування: габарити, зони, ворота, верстати, маршрути
@@ -49,22 +49,85 @@ def write_odoo(out_dir):
     return path
 
 
-def embed_viewer(out_dir, glb, odoo_json=None):
-    """Однофайловий переглядач: модель (base64) і дані Odoo вбудовані, відкривається без веб-сервера."""
-    with open(glb, "rb") as f:
-        data = base64.b64encode(f.read()).decode()
+# Частини моделі для переглядача: перша вантажиться одразу, решта — у фоні або коли вмикають шар
+PARTS = [("core", "Будівля, склади, виробництво, люди",
+          ["Будівля", "Склади й логістика", "Виробництво", "Люди й транспорт"]),
+         ("engineering", "Інженерні мережі", ["Інженерні мережі"]),
+         ("fire", "Пожежна безпека", ["Пожежна безпека"]),
+         ("it", "ІТ і Odoo", ["ІТ і Odoo"]),
+         ("site", "Територія й охорона", ["Територія й охорона"])]
+
+
+def quantize(src, dst):
+    """KHR_mesh_quantization: three.js читає без декодера, файл ~40 % менший."""
+    try:
+        subprocess.run(["npx", "--yes", "@gltf-transform/cli@4.1.1", "quantize", src, dst],
+                       check=True, capture_output=True, timeout=600)
+    except (OSError, subprocess.SubprocessError):
+        print(f"gltf-transform недоступний — {os.path.basename(dst)} без квантування")
+        with open(src, "rb") as a, open(dst, "wb") as b:
+            b.write(a.read())
+
+
+def export_parts(out_dir):
+    """Кожна група шарів — окремий GLB у parts/ + manifest.json (шари, коди об'єктів, розміри)."""
+    from plant.geom import LAYER_COLL
+    from plant.layout import D, H, LAYERS, W
+    pdir = os.path.join(out_dir, "parts")
+    os.makedirs(pdir, exist_ok=True)
+    manifest = dict(dims=f"{W:.0f} × {D:.0f} м · h {H:.0f} м",
+                    layers=[dict(key=k, label=lb, group=g, order=i) for i, (k, lb, g) in enumerate(LAYERS)], parts=[])
+    for key, title, groups in PARTS:
+        keys = [k for k, _, g in LAYERS if g in groups]
+        bpy.ops.object.select_all(action="DESELECT")
+        codes = set()
+        for k in keys:
+            for ob in LAYER_COLL[k].all_objects:
+                ob.select_set(True)
+                if "code" in ob:
+                    codes.add(str(ob["code"]))
+        raw, out = os.path.join(pdir, key + ".raw.glb"), os.path.join(pdir, key + ".glb")
+        bpy.ops.export_scene.gltf(filepath=raw, export_format="GLB", use_selection=True, export_extras=True,
+                                  export_yup=True, export_apply=True, export_cameras=False, export_lights=False)
+        quantize(raw, out)
+        os.remove(raw)
+        manifest["parts"].append(dict(key=key, title=title, file=f"parts/{key}.glb", layers=keys,
+                                      codes=sorted(codes), bytes=os.path.getsize(out)))
+    with open(os.path.join(pdir, "manifest.json"), "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, separators=(",", ":"))
+    return manifest
+
+
+def _viewer_html(out_dir, parts=False, odoo=False):
+    """Сторінка переглядача: маніфест частин завжди; за потреби — частини (base64) і дані Odoo всередині."""
     with open(VIEWER, encoding="utf-8") as f:
         html = f.read()
-    html = html.replace("<!-- MODEL_DATA -->",
-                        f'<script type="application/octet-stream" id="model-data">{data}</script>')
-    odoo_json = odoo_json or os.path.join(out_dir, "odoo_demo.json")
-    if os.path.exists(odoo_json):
-        with open(odoo_json, encoding="utf-8") as f:
-            odoo = f.read().replace("</", "<\\/")
-        html = html.replace("<!-- ODOO_DATA -->",
-                            f'<script type="application/json" id="odoo-data">{odoo}</script>')
-    with open(os.path.join(out_dir, "factory_viewer.html"), "w", encoding="utf-8") as f:
-        f.write(standalone(html))
+    with open(os.path.join(out_dir, "parts", "manifest.json"), encoding="utf-8") as f:
+        manifest = json.load(f)
+    html = html.replace("<!-- PARTS_MANIFEST -->", '<script type="application/json" id="parts-manifest">'
+                        + json.dumps(manifest, ensure_ascii=False).replace("</", "<\\/") + "</script>")
+    if parts:
+        blobs = []
+        for p in manifest["parts"]:
+            with open(os.path.join(out_dir, p["file"]), "rb") as f:
+                data = base64.b64encode(f.read()).decode()
+            blobs.append(f'<script type="application/octet-stream" id="part-{p["key"]}">{data}</script>')
+        html = html.replace("<!-- MODEL_DATA -->", "\n".join(blobs))
+    if odoo:
+        with open(os.path.join(out_dir, "odoo_demo.json"), encoding="utf-8") as f:
+            data = f.read().replace("</", "<\\/")
+        html = html.replace("<!-- ODOO_DATA -->", f'<script type="application/json" id="odoo-data">{data}</script>')
+    return html
+
+
+def embed_viewer(out_dir):
+    """index.html (частини з parts/), factory_viewer.html (усе всередині, відкривається подвійним кліком)
+    і artifact.html (дані Odoo всередині, частини — поруч, для хостингу з обмеженням розміру сторінки)."""
+    for name, kw, wrap in (("index.html", {}, True), ("factory_viewer.html", dict(parts=True, odoo=True), True),
+                           ("artifact.html", dict(odoo=True), False)):
+        html = _viewer_html(out_dir, **kw)
+        with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
+            f.write(standalone(html) if wrap else html)
 
 
 def standalone(html):
@@ -72,13 +135,6 @@ def standalone(html):
     return ('<!doctype html>\n<html lang="uk"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
             '</head><body>\n' + html + "\n</body></html>\n")
-
-
-def copy_viewer(out_dir):
-    with open(VIEWER, encoding="utf-8") as f:
-        html = f.read()
-    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(standalone(html))
 
 
 def main(out_dir):
@@ -114,18 +170,9 @@ def main(out_dir):
                           export_cameras=False)
     bpy.context.preferences.filepaths.save_version = 0  # без factory.blend1
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out_dir, "factory.blend")))
-    copy_viewer(out_dir)
     write_odoo(out_dir)
-    # для однофайлового переглядача — квантована копія (KHR_mesh_quantization, three.js читає
-    # без декодера): ~40 % менше, щоб сторінка вмістилася в ліміт хостингу
-    web = os.path.join(out_dir, "factory_web.glb")
-    try:
-        subprocess.run(["npx", "--yes", "@gltf-transform/cli@4.1.1", "quantize", glb, web],
-                       check=True, capture_output=True, timeout=600)
-    except (OSError, subprocess.SubprocessError):
-        print("gltf-transform недоступний — вбудовую повний GLB")
-        web = glb
-    embed_viewer(out_dir, web)
+    export_parts(out_dir)
+    embed_viewer(out_dir)
     objs = [o for o in bpy.data.objects if o.type == "MESH"]
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs)
     print(f"objects={len(objs)} unique_meshes={len(bpy.data.meshes)} rendered_tris={tris}")
@@ -133,9 +180,8 @@ def main(out_dir):
 
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
-    if argv and argv[0] == "--embed":
-        write_odoo(argv[2])
-        copy_viewer(argv[2])
-        embed_viewer(argv[2], argv[1])
+    if argv and argv[0] == "--embed":  # лише переглядач і дані, частини моделі вже є в <dist>/parts
+        write_odoo(argv[-1])
+        embed_viewer(argv[-1])
     else:
         main(argv[0] if argv else "dist")

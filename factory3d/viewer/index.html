@@ -326,6 +326,7 @@ button { font: inherit; color: inherit; }
 </div>
 
 <!-- ODOO_DATA -->
+<!-- PARTS_MANIFEST -->
 <!-- MODEL_DATA -->
 <script type="importmap">
 { "imports": {
@@ -340,7 +341,6 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const MODEL_URL = "factory.glb";
 const ODOO_URL = "odoo_demo.json";
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (s) => document.querySelector(s);
@@ -443,15 +443,27 @@ function isShown(obj) {
   return true;
 }
 
+// ---------------------------------------------------------------- модель частинами
+// Перша частина (будівля, склади, виробництво, люди) — одразу, решта — у фоні по черзі або коли вмикають шар.
+const MANIFEST = JSON.parse(document.getElementById("parts-manifest").textContent);
+const partOfLayer = new Map(), partOfCode = new Map(), partState = new Map();
+for (const p of MANIFEST.parts) {
+  p.layers.forEach((k) => partOfLayer.set(k, p.key));
+  p.codes.forEach((c) => partOfCode.set(c, p.key));
+}
+for (const l of MANIFEST.layers) layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: true });
 let modelReady;
 const modelLoaded = new Promise((res) => { modelReady = res; });
-function onModel(gltf) {
+function onPart(gltf) {
   const root = gltf.scene;
+  const fresh = [];
   root.traverse((o) => {
     const u = o.userData || {};
-    if (u.dims) $("#dims").textContent = u.dims;
-    if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label, group: u.group, order: u.order ?? 99 });
-    if (u.code && !items.has(u.code)) items.set(u.code, o);
+    if (u.layer && o.name.startsWith("LAYER_")) {
+      const l = layers.get(u.layer);
+      if (l) { l.node = o; o.visible = l.want; }
+    }
+    if (u.code && !items.has(u.code)) { items.set(u.code, o); fresh.push(o); }
     if (u.rect) zoneRects.set(u.code, u.rect);
     if (o.isMesh) {
       // свій матеріал на кожен об'єкт, щоб підсвічування не перефарбовувало сусідів
@@ -465,27 +477,45 @@ function onModel(gltf) {
     }
   });
   scene.add(root);
+  buildLabels(fresh);
+  fresh.forEach(paint);
+  syncLayerGroups();
+}
+function loadPart(key) {
+  if (!key) return Promise.resolve();
+  if (partState.has(key)) return partState.get(key);
+  const p = MANIFEST.parts.find((x) => x.key === key);
+  const pr = new Promise((res, rej) => {
+    const done = (g) => { onPart(g); res(); };
+    const emb = document.getElementById("part-" + key);
+    if (emb) {
+      const bin = Uint8Array.from(atob(emb.textContent.trim()), (c) => c.charCodeAt(0));
+      new GLTFLoader().parse(bin.buffer, "", done, rej);
+    } else new GLTFLoader().load(p.file, done, undefined, rej);
+  });
+  partState.set(key, pr);
+  pr.catch((err) => { console.error(err); partState.delete(key); });
+  syncLayerGroups();
+  return pr;
+}
+// об'єкт може бути в частині, яка ще не завантажилась
+async function ensureCode(code) {
+  if (!items.has(code) && partOfCode.has(code)) await loadPart(partOfCode.get(code));
+  return items.get(code);
+}
+function onModelError(err) {
+  $("#loading").textContent = "Не вдалося завантажити модель. Відкрийте сторінку через веб-сервер, а не як файл.";
+  console.error(err);
+}
+buildLayersUI();
+loadPart(MANIFEST.parts[0].key).then(() => {
   const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
-  $("#dims").textContent += ` · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
-  buildLayersUI();
-  buildLabels();
+  $("#dims").textContent = `${MANIFEST.dims} · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
   goView(VIEWS[0], false);
   $("#loading").hidden = true;
   modelReady();
-}
-function onModelError(err) {
-  $("#loading").textContent = "Не вдалося завантажити factory.glb. Відкрийте сторінку через веб-сервер, а не як файл.";
-  console.error(err);
-}
-const embedded = document.getElementById("model-data");
-if (embedded) {
-  const bin = Uint8Array.from(atob(embedded.textContent.trim()), (c) => c.charCodeAt(0));
-  new GLTFLoader().parse(bin.buffer, "", onModel, onModelError);
-} else {
-  new GLTFLoader().load(MODEL_URL, onModel, (e) => {
-    if (e.total) $("#loading").textContent = `Завантаження моделі… ${Math.round((e.loaded / e.total) * 100)}%`;
-  }, onModelError);
-}
+  (async () => { for (const p of MANIFEST.parts.slice(1)) await loadPart(p.key).catch(() => {}); })();
+}).catch(onModelError);
 
 // ---------------------------------------------------------------- види
 const VIEWS = [
@@ -552,7 +582,9 @@ const CORE = new Set(["building", "zones", "line", "facade", "buffer", "dust", "
 function setLayer(key, on) {
   const l = layers.get(key);
   if (!l) return;
-  l.node.visible = on;
+  l.want = on;
+  if (l.node) l.node.visible = on;
+  else if (on) loadPart(partOfLayer.get(key));
   const cb = document.getElementById("layer-" + key);
   if (cb) cb.checked = on;
   syncLayerGroups();
@@ -600,6 +632,10 @@ function buildLayersUI() {
   }
   syncLayerGroups();
 }
+// перехід до об'єкта з вимкненого шару — шар вмикаємо
+function showLayerOf(o) {
+  for (let n = o; n; n = n.parent) if (n.userData?.layer && n.name.startsWith("LAYER_")) setLayer(n.userData.layer, true);
+}
 function syncLayerGroups() {
   document.querySelectorAll(".lgroup").forEach((box) => {
     const cbs = [...box.querySelectorAll(".lg-items input")];
@@ -607,7 +643,8 @@ function syncLayerGroups() {
     const all = box.querySelector(".lg-all");
     all.checked = on === cbs.length;
     all.indeterminate = on > 0 && on < cbs.length;
-    box.querySelector(".lg-n").textContent = `${on}/${cbs.length}`;
+    const waiting = cbs.some((c) => !layers.get(c.id.slice(6))?.node);
+    box.querySelector(".lg-n").textContent = waiting ? "завантаж…" : `${on}/${cbs.length}`;
   });
 }
 $("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, true));
@@ -628,8 +665,8 @@ function addLabel(obj, html, cls, yOffset) {
   scene.add(lbl);
   labels.push({ lbl, obj, cls });
 }
-function buildLabels() {
-  for (const [, obj] of items) {
+function buildLabels(objs = [...items.values()]) {
+  for (const obj of objs) {
     const u = obj.userData;
     if (u.kind === "zone") addLabel(obj, u.label, "zone", 0);
     if (u.kind === "machine") {
@@ -961,7 +998,7 @@ body().addEventListener("click", (e) => {
   if (t === "mo") showMO(v);
   else if (t === "pick") showPicking(v);
   else if (t === "prod") showProduct(v);
-  else if (t === "obj") { const o = items.get(v); if (o) { select(o, { keepHighlight: true }); focusOn(o); } }
+  else if (t === "obj") ensureCode(v).then((o) => { if (o) { if (!isShown(o)) showLayerOf(o); select(o, { keepHighlight: true }); focusOn(o); } });
   else if (t === "comp") showComponent(v);
   else if (t === "locs") highlightLocs(v.split(","));
   else if (t === "line") showLine(v);
@@ -1818,12 +1855,13 @@ function stopDrill() {
   b.forEach(paint);
   if (drill.saved) { drill.saved.forEach((v, k) => setLayer(k, v)); drill.saved = null; }
 }
-function startDrill() {
+async function startDrill() {
   const E = D.evacuation;
   if (!E) return;
+  await Promise.all(["fire", "site"].map((k) => loadPart(k).catch(() => {})));
   stopDrill(); select(null); clearHighlight();
   drill.on = true; drill.t0 = performance.now();
-  drill.saved = new Map([...layers].map(([k, l]) => [k, l.node.visible]));
+  drill.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
   layers.forEach((_, k) => setLayer(k, DRILL_LAYERS.has(k)));
   const green = new THREE.MeshBasicMaterial({ color: 0x1fbf6a, transparent: true, opacity: 0.85 });
   for (const r of Object.values(E.routes)) {
