@@ -85,7 +85,7 @@ def build_building():
     pw = Mesh()
     wall_y(pw, 46.0, 42.0, 92.0, 3.4, [(48.5, 4.0), (66.0, 3.0), (89.0, 4.0)])
     wall_x(pw, 42.0, 46.0, D, 3.4, [(64.0, 2.0)])
-    wall_x(pw, 92.0, 46.0, D, 3.4, [(66.0, 2.0)])
+    wall_x(pw, 92.0, 46.0, D, 3.4, [(52.0, 2.0)])
     wall_x(pw, 58.0, 66.0, D, 3.4)
     wall_x(pw, 66.0, 66.0, D, 3.4)
     wall_y(pw, 66.0, 58.0, 66.0, 3.4, [(62.0, 1.6)])
@@ -96,20 +96,20 @@ def build_building():
 
     # офіс: два поверхи із суцільним склінням на південь
     of = Mesh()
-    x0, y0, x1, y1 = 92.6, 46.6, 103.4, 57.4
+    x0, y0, x1, y1 = 92.6, 58.4, 107.8, 71.0
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     for z in (0.0, 3.2):
         of.box_lo(cx, cy, z, x1 - x0, y1 - y0, 3.0, "wall")
         of.box_lo(cx, y0 - 0.01, z + 0.9, x1 - x0 - 0.6, 0.05, 1.7, "glass")
-        for k in range(1, 7):
-            of.box_lo(x0 + 0.3 + k * (x1 - x0 - 0.6) / 7, y0 - 0.03, z + 0.9, 0.06, 0.05, 1.7, "steel_dark")
+        for k in range(1, 10):
+            of.box_lo(x0 + 0.3 + k * (x1 - x0 - 0.6) / 10, y0 - 0.03, z + 0.9, 0.06, 0.05, 1.7, "steel_dark")
         of.box_lo(cx, cy, z + 3.0, x1 - x0 + 0.2, y1 - y0 + 0.2, 0.2, "wall_band")
     of.box_lo(x0 + 1.4, y0 - 0.01, 0, 1.0, 0.06, 2.1, "steel_dark")
     for i in range(11):
-        of.box_lo(x0 - 0.8, y0 + 0.6 + i * 0.3, i * 0.3, 1.1, 0.3, 0.3, "steel")
+        of.box_lo(x1 + 0.8, y0 + 0.6 + i * 0.3, i * 0.3, 1.1, 0.3, 0.3, "steel")
     of.build("OFFICE", "building", code="OFFICE", kind="building", label="Офіс",
-             desc="Двоповерховий модуль у центрі заводу: майстри, технологи, планування змін.")
-    obst(x0 - 1.4, y0, x1, y1)
+             desc="Двоповерховий модуль біля північної стіни: майстри, технологи, планування змін.")
+    obst(x0, y0, x1 + 1.4, y1)
 
     so = Mesh()
     x0, y0, x1, y1 = 104.2, 46.6, 109.4, 57.4
@@ -418,23 +418,26 @@ def build_line_conveyors():
 
 
 def build_maintenance():
+    """Ремонтна дільниця між лініями та офісом: верстаки, інструментальні шафи, заточування,
+    балансування, стелажі запчастин."""
     m = Mesh()
-    for x in (94.0, 97.0, 100.0):
-        m.box_lo(x, 70.6, 0.86, 2.0, 0.8, 0.05, "table_top", bev=0.01)
-        legs_frame(m, x, 70.6, 2.0, 0.8, 0.86, mat="steel")
-        m.box_lo(x - 0.6, 70.75, 0.91, 0.3, 0.2, 0.15, "machine_dark", bev=0.02)
-    for x, mat in ((103.5, "status_red"), (104.8, "machine_dark"), (106.1, "machine_dark")):
-        m.box_lo(x, 70.8, 0, 1.0, 0.6, 2.0, mat, bev=0.02)
-        m.box_lo(x, 70.49, 0.2, 0.01, 0.9, 1.6, "steel_dark")
-    m.cyl((97.0, 70.6, 0.93), 0.3, 0.01, "steel", segs=32)
-    m.box_lo(96.0, 64.0, 0, 0.8, 0.6, 0.9, "machine_mid", bev=0.02)
-    m.cyl((96.0, 64.0, 1.05), 0.15, 0.05, "steel_dark", axis="X", segs=20)
-    m.box_lo(100.0, 63.0, 0, 1.6, 1.2, 1.3, "machine_mid", bev=0.03)
-    m.cyl((100.0, 63.0, 1.45), 0.2, 0.25, "steel", segs=16)
-    for k in range(4):
-        m.box_lo(108.8, 60.0 + k * 2.2, 0, 0.6, 2.0, 2.2, "shelf", bev=0.01)
+    for x in (94.2, 97.2):
+        m.box_lo(x, 56.6, 0.86, 2.0, 0.8, 0.05, "table_top", bev=0.01)
+        legs_frame(m, x, 56.6, 2.0, 0.8, 0.86, mat="steel")
+        m.box_lo(x - 0.6, 56.75, 0.91, 0.3, 0.2, 0.15, "machine_dark", bev=0.02)
+    m.cyl((97.2, 56.6, 0.93), 0.3, 0.01, "steel", segs=32)
+    for x, mat in ((99.6, "status_red"), (100.9, "machine_dark"), (102.2, "machine_dark")):
+        m.box_lo(x, 56.9, 0, 1.0, 0.6, 2.0, mat, bev=0.02)
+        m.box_lo(x, 56.59, 0.2, 0.01, 0.9, 1.6, "steel_dark")
+    m.box_lo(95.0, 50.0, 0, 0.8, 0.6, 0.9, "machine_mid", bev=0.02)  # заточувальний верстат
+    m.cyl((95.0, 50.0, 1.05), 0.15, 0.05, "steel_dark", axis="X", segs=20)
+    m.box_lo(98.6, 50.0, 0, 1.6, 1.2, 1.3, "machine_mid", bev=0.03)  # балансувальний стенд
+    m.cyl((98.6, 50.0, 1.45), 0.2, 0.25, "steel", segs=16)
+    for k in range(4):  # стелажі запчастин
+        m.box_lo(103.0, 47.6 + k * 2.2, 0, 0.6, 2.0, 2.2, "shelf", bev=0.01)
     m.build("MAINT", "line", code="MAINT-1", kind="building", label="Ремонтна дільниця",
-            desc="Верстаки, шафи з інструментом, заточування пил, балансування фрез, запчастини.")
+            desc="Поруч із лініями: верстаки, шафи з інструментом, заточування пил, балансування "
+                 "фрез, запчастини.")
 
 
 def build_buffer():
