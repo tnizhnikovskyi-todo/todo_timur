@@ -119,11 +119,17 @@ def ventilation_data(specs):
                            airflow_m3h=q_fan * on, airflow_nom=q_fan * n, p_inst=round(p_fan * n, 2),
                            p_now=round(p_fan * on, 2), state="on" if on else "standby", note=note,
                            indoor_c=29.5 if code == "EF-ELEC" else 24.0)
-    units["EF-CHG"] = dict(name="Витяжка зарядної станції", kind="fan", zone="Z-CHG",
-                           mode="Безперервно під час заряджання", airflow_m3h=1500, airflow_nom=1500,
-                           p_inst=0.25, p_now=0.25, state="on",
-                           note="Видаляє водень над зарядними пристроями крізь покрівлю. Потрібен вибухозахищений "
-                                "(Ex) вентилятор — модель ще не вибрано, цифри орієнтовні.")
+    ex = specs.get("ex_fan", {})
+    q_req = ex.get("required_m3h") or 160
+    units["EF-CHG"] = dict(name="Витяжка зарядної станції (Ex)", kind="exfan", zone="Z-CHG",
+                           mode=f"Безперервно під час заряджання, не менше {round(q_req)} м³/год",
+                           airflow_m3h=round(q_req), airflow_nom=ex.get("airflow_m3h") or 644,
+                           p_inst=ex.get("power_kw") or 0.18, p_now=round((ex.get("power_kw") or 0.18) * 0.6, 3),
+                           state="on",
+                           note="Видаляє водень над зарядними пристроями. Потрібна витрата — за EN IEC 62485-3: "
+                                "Q = 0,055 · 24 елементи · 40 А (40 % струму зарядного 100 А) × 3 батареї. "
+                                "Вентилятор вибухозахищений (IIB+H2), реле термозахисту й перетворювач частоти — "
+                                "поза небезпечною зоною.")
     heat_total = sum(u.get("heat_kw", 0) for u in units.values())
     design = heat_balance(units)
     totals = dict(units=len(units), airflow_m3h=round(sum(u["airflow_m3h"] for u in units.values()), -2),

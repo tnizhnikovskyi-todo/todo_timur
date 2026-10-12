@@ -1052,12 +1052,15 @@ def build_ventilation():
         f.build(code, "ventilation", code=code, kind="hvac", label=name, desc=note)
     c = Mesh()
     cx, cy = CHG_EXHAUST
-    c.box_lo(cx, cy, 2.75, 1.4, 0.8, 0.25, "galv")
-    c.cyl((cx, cy, (3.0 + H) / 2), 0.2, H - 3.0, "galv", segs=16)
-    c.cyl((cx, cy, H + 0.3), 0.32, 0.6, "machine_mid", segs=20)
-    c.cone_dir((cx, cy, H + 0.95), (0, 0, 1), 0.5, 0.35, "machine_mid", segs=20)
+    c.box_lo(cx, cy, 2.75, 1.4, 0.8, 0.25, "galv")  # зонт над зарядними пристроями
+    c.cyl((cx, cy, (3.0 + 6.9) / 2), 0.08, 3.9, "galv", segs=14)  # повітропровід Ø160
+    c.box_lo(cx, cy, 6.9, 0.301, 0.227, 0.285, "machine_mid", bev=0.01)  # Systemair EX 140A-4: 301 × 227 × 285 мм
+    c.box_lo(cx + 0.18, cy, 6.95, 0.06, 0.12, 0.12, "fire_red")  # вибухозахищена клемна коробка
+    c.cyl((cx, cy, (7.2 + H + 0.4) / 2), 0.08, H + 0.4 - 7.2, "galv", segs=14)
+    c.cone_dir((cx, cy, H + 0.75), (0, 0, 1), 0.28, 0.3, "machine_mid", segs=18)  # дефлектор
     c.build("EF-CHG", "ventilation", code="EF-CHG", kind="hvac", label="Витяжка зарядної станції",
-            desc="Даховий вентилятор: видаляє водень над зарядними пристроями.")
+            desc="Вибухозахищений вентилятор під покрівлею й дефлектор на даху: видаляє водень над "
+                 "зарядними пристроями.")
 
 
 # ---------------------------------------------------------------- люди, транспорт, маршрути

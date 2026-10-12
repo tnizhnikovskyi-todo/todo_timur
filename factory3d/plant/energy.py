@@ -204,6 +204,9 @@ def amps(p_kw, cos_phi):
     return p_kw * 1000 / (math.sqrt(3) * U_LV * cos_phi) if p_kw else 0.0
 
 
+FAN_ROLE = {"ahu": "make_up_ahu", "exfan": "ex_fan"}
+
+
 def consumers(specs):
     """Усі споживачі: {code: dict(name, feeder, bus|None, p_inst, p_now, cos_phi, i_now, source)}."""
     out = {}
@@ -253,7 +256,7 @@ def consumers(specs):
         if u["kind"] != "roofvent":
             out[code] = dict(name=u["name"], feeder="QF-C2", bus=None, p_inst=u["p_inst"], p_now=u["p_now"],
                              cos_phi=0.95, source="passport" if specs.get(
-                                 "make_up_ahu" if u["kind"] == "ahu" else "wall_fan", {}).get("power_kw")
+                                 FAN_ROLE.get(u["kind"], "wall_fan"), {}).get("power_kw")
                              else "estimate",
                              status="work" if u["state"] == "on" else "idle", group="vent")
     for c in out.values():
@@ -437,6 +440,7 @@ for _r in ROOFVENTS:
 ENERGY_ROLES["AHU-1"] = ("make_up_ahu", ["fabric_duct"])
 for _f in ("EF-ELEC", "EF-CMP"):  # для зарядної потрібен вибухозахищений вентилятор — окремо
     ENERGY_ROLES[_f] = ("wall_fan", [])
+ENERGY_ROLES["EF-CHG"] = ("ex_fan", [])  # водень: вибухозахищене виконання
 
 
 def energy_passport(code, specs):
