@@ -2,6 +2,7 @@
 центр на підлозі в (0, 0), потік матеріалу вздовж +X, оператор зазвичай з боку −Y."""
 import math
 
+from .layout import OPERATOR  # noqa: F401 — реекспорт для site.py
 from .geom import (cabinet, console, estop, fence, floor_frame, hazard, legs_frame, pallet, cartons,
                    rack_cart, robot, roller_table)
 
@@ -697,11 +698,3 @@ TOWER_POS = {"saw": (-0.4, 2.55, 2.02), "edge": (3.85, -0.35, 1.55), "cnc": (-2.
              "sand": (0.6, -1.2, 2.55), "glue": (1.4, -1.0, 2.72), "press": (1.95, 1.0, 2.3),
              "spray": (2.3, -1.6, 3.15), "autospray": (-0.5, -1.0, 2.8), "dry": (2.55, -2.2, 3.12),
              "uv": (-1.3, 0.7, 1.7)}
-OPERATOR = {"saw": (0.9, -3.65, 90), "edge": (-5.0, -0.95, 90), "cnc": (2.4, -2.55, 90),
-            "asm": (0.0, -1.0, 90), "pack": (-0.9, -0.95, 90), "nest": (2.3, -2.9, 90),
-            "saw_book": (0.9, -3.65, 90), "edge_robot": (-5.0, -0.95, 90), "slide": (0.9, -1.0, 90),
-            "vsaw": (0.6, -1.1, 90), "dowel": (0.0, -0.95, 90), "bore": (-3.4, -1.05, 90),
-            "hinge": (0.0, -0.85, 90), "sortbot": None, "asmline": (-3.6, -2.0, 90),
-            "box": (0.4, -1.65, 90), "packline": (-3.8, -1.15, 90), "sand": (-2.0, -1.6, 90),
-            "glue": (0.0, -0.7, 90), "press": (0.8, -2.15, 90), "spray": (0.6, -0.6, 90),
-            "autospray": (-5.0, -1.1, 90), "dry": None, "uv": (4.4, -1.1, 90)}

@@ -1280,6 +1280,10 @@ def build_all():
     build_lighting()
     build_ventilation()
     build_fire()
+    from .site2 import build_infra
+    build_infra()
     build_transport()
     build_people()
     build_columns()
+    from .site2 import build_evacuation
+    build_evacuation()  # після всіх перешкод (OBST)

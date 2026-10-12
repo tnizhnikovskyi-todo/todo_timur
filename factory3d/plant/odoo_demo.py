@@ -13,7 +13,9 @@ import sys
 from datetime import datetime, timedelta
 
 from .energy import IDLE_DEFAULT, IDLE_K, PROFILE, TARIFF, energy_data, passport_energy
+from .evacuation import load as evac_load
 from .fire import fire_data
+from .infra import infra_data
 from .lighting import layout as light_layout
 from .lighting import load_lux_norms, panels_load
 from .ventilation import ventilation_data
@@ -622,6 +624,35 @@ class Demo:
             mo["energy_cost"] = round(kwh * TARIFF)
         return en
 
+    def evacuation(self, fire):
+        ev = evac_load()
+        if not ev:
+            return None
+        rules = load_evac_rules()
+        ev.update(drill_origin="FA-CNC", drill_zone="Присадка", drill_detector="2.CNC.05",
+                  norm_distance=rules.get("evac_distance_prod_B", {}).get("value"),
+                  norm_ref=rules.get("evac_distance_prod_B", {}).get("ref"), norm_alt=50,
+                  norm_alt_ref="ДБН В.2.2-27:2025 п. 8.2.11 — якщо стінові й покрівельні панелі з полімерним "
+                               "утеплювачем; тупики — не довше 25 м (п. 8.2.9); ворота не рахуються виходами "
+                               "(п. 8.2.6).")
+        t = fire["totals"]
+        ev["drill_steps"] = [
+            dict(t=0, who="Пожежна сигналізація",
+                 text="Сповіщувач 2.CNC.05 над присадкою: дим і тепло — тривога на приладі."),
+            dict(t=3, who="Пожежна сигналізація", text=f"Увімкнено {t['sounders']} сирен-маяків по всьому цеху."),
+            dict(t=3, who="Пульт", text="Сигнал «Пожежа» передано на пульт ДСНС і черговому."),
+            dict(t=6, who="Вентиляція",
+                 text="Зупинено дахові установки й приплив фасадів, щоб не роздувати вогонь."),
+            dict(t=9, who="Димовидалення", text="Відкрито клапани димовидалення на покрівлі."),
+            dict(t=12, who="Охорона й доступ",
+                 text="Розблоковано двері з контролем доступу й турнікети, шлагбауми — вгору."),
+            dict(t=15, who="Евакуація",
+                 text="Люди йдуть зеленими маршрутами до найближчих виходів; збір — на паркуванні."),
+            dict(t=20, who="Виробництво",
+                 text="Аварійна зупинка верстатів у зоні пожежі; аспірація — іскрогасіння в готовності."),
+        ]
+        return ev
+
     # ---------------------------------------------------------------- зони та підсумки
     def build(self):
         self.build_catalog()
@@ -666,7 +697,11 @@ class Demo:
         lighting = dict(groups={k: {kk: vv for kk, vv in g.items() if kk != "fixtures"} for k, g in groups.items()},
                         panels=panels_load(groups), uf=0.7, mf=0.8,
                         norms_ref={k: v.get("ref") for k, v in lux_norms.items()})
+        infra = infra_data(specs, energy, ventilation_data(specs))
+        energy["totals"].update(pv_kw=infra["totals"]["pv_now"], grid_kw=infra["totals"]["grid_kw"],
+                                pv_today=infra["totals"]["pv_today"])
         fire = fire_data(specs)
+        evac = self.evacuation(fire)
         self.maintenance.append(dict(id="MR/00036", name="Очистити сповіщувач 2.FAC.07 (запиленість 82 %)",
                                      equipment="FA-FAC", maintenance_type="corrective", stage="Новий",
                                      request_date=ts(NOW.replace(hour=9, minute=58))))
@@ -684,8 +719,18 @@ class Demo:
             productions=self.productions, workorders=self.workorders, sale_orders=self.sale,
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
-            docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent, fire=fire,
+            docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent, fire=fire, infra=infra,
+            evacuation=evac,
             passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
+
+
+def load_evac_rules():
+    import os
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "evac_rules.json")
+    if not os.path.exists(p):
+        return {}
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def generate():

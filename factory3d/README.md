@@ -288,6 +288,95 @@ IP65, DALI-2) на 7,6 м, над мостом портального склад
 | FA-SND | Siemens (Smart Infrastructure) Cerberus PRO FDS226-RW (сирена-маяк настінна, червоний корпус, біле світло) | Стандарти: EN 54-3 тип B, EN 54-17, EN 54-23 тип B; Рівень звуку: 75…99 дБА (3 рівні гучності); Тони: 16 тонів; 2 рівні тривоги (Warning / Evacuation) | [1](https://sid.siemens.com/v/u/A6V11504317) [2](https://sid.siemens.com/api/khub/documents/C1UlBh2RM~Xj7Ia8szZDZA/content) |
 | SPARK-1 | Fagus-GreCon Greten GmbH & Co. KG GreCon BS 7: пульт Mission Control + іскрові сповіщувачі FM 1/8 + гасильний модуль HUNTER IEM | Іскровий сповіщувач: FM 1/8, ІЧ 780–1100 нм, кут огляду 120°, для темних зон (без денного та штучного світла); Швидкість потоку матеріалу: 2–50 м/с (інші за запитом); Відстань детектор → форсунка: ≈4–6 м за потоком, залежно від швидкості транспортування | [1](https://www.fagus-grecon.com/fileadmin/user_upload/downloads/fire-prevention/Data_Sheeds/flyer_benefit_SCOUT_FM_1_8_en.pdf) [2](https://www.fagus-grecon.com/fileadmin/user_upload/downloads/fire-prevention/Data_Sheeds/flyer_benefit_MISSIONCONTROL_en.pdf) |
 
+## Евакуація, димовидалення, блискавкозахист
+
+- **Аварійні виходи** (шар «Евакуація»): 11 дверей Hörmann STU з антипанічними штангами
+  dormakaba PHA 2000 на обох довгих стінах, окремий вихід із компресорної і вхід персоналу
+  навпроти прохідної. `plant/evacuation.py` рахує найкоротший шлях з кожної точки цеху до
+  найближчого виходу в обхід обладнання й перегородок (сітка 0,5 м): найдовший —
+  43.5 м. Норма ДБН В.2.2-27:2025 (табл. 8.2) для категорії В — 240 м; якщо панелі
+  стін і покрівлі з полімерним утеплювачем — 50 м (п. 8.2.11), тож запас є і в цьому разі.
+  Ворота з докшелтерами виходами не рахуються (п. 8.2.6). Зелені стрілки на підлозі — маршрути
+  від кожної зони.
+- **Сценарій пожежної тривоги** (кнопка в «Огляді» і в картці приладу): сповіщувач над
+  присадкою → сирени, сигнал на пульт, зупинка вентиляції, відкриття клапанів, розблокування
+  дверей і турнікетів; маршрути до виходів підсвічено й анімовано, над головою все сховано.
+- **Димовидалення** (ДБН В.2.5-56, п. 10.2.4, 10.4.2): цех поділено димовими завісами на 8 зон
+  ≤ 1 600 м², фарбування — окрема зона. 46 клапанів LAMILUX F100 (Aa 1,02 м²) — за
+  орієнтиром 1,5 м² Aa на 400 м² (в Україні площу визначає розрахунок); 5 щитів D+H з
+  акумуляторами на 72 год, команда — від пожежного приладу.
+- **Блискавкозахист** клас II: сітка 10 × 10 м на покрівлі, стрижні над установками,
+  струмовідводи кожні 10 м, контур заземлення DEHN.
+
+| Обладнання в моделі | Виробник і модель | Ключові параметри | Джерело |
+|---|---|---|---|
+| EXITS | Hörmann KG STU (сталеві багатофункціональні двері для зовнішніх стін) + штанга «антипаніка» Hörmann push bar EN 1125 | Призначення: зовнішні стіни, маркування за DIN EN 14351-1; Товщина полотна: 62 мм, сталь 1,0 мм, мінвата; Світловий прохід (1-стулкові): ширина 500–1465 мм, висота 640–3120 мм | [1](https://www.hoermann.com/fileadmin/_country/kataloge/pdf/86463-Stahl-und-Edelstahltueren-STS-STU-EN.pdf) |
+| EXITS (у складі) | dormakaba PHA 2000 (горизонтальна штанга «антипаніка», модульна, 1–3-точкове замикання) | Стандарт: EN 1125, маркування CE (Annex ZA); Ширина дверей: до 1000 мм або до 1300 мм (залежно від тяги/штанги); Висота дверей: до 2270 мм (в межах EN 1125) або до 3400 мм | [1](https://dormakaba-res.cloudinary.com/image/upload/v1753787326/dormakaba-prod/120000000451-tp-pha2000-phb3000-exitpad-en.pdf) [2](https://www.dormakaba.com/gb-en/solutions/products/door-hardware/panic-hardware/pha-2000-267064) |
+| SMOKE-VENTS | LAMILUX Heinrich Strunz GmbH Smoke Lift Glass Skylight F100 (F100G-S1-S, 1200×1200 мм, привод 24 В) | Стандарт: EN 12101-2 (NSHEV), CE; Аеродинамічна площа Aa: 1,02 м² (для 1200×1200 мм); Розмір (проріз): 1200 × 1200 мм | [1](https://source.thenbs.com/en/gb/product/smoke-lift-glass-skylight-f100-aov-smoke-vent-shev/tt15yEZjbnSX6rkeiFGXn2/c4kLDGE4JYBeNdWFty4rvD) [2](https://www.dh-partner.com/uk/en/products/third-party-products/nshevs/productDetail/100345/NSHEV-DOME-VENT) |
+| SMOKE-CTRL | D+H Mechatronic AG CPS-M1-080-1010-B (модульна панель керування СДТВ 24 В, 80 А) | Стандарти: EN 12101-10 (DIN EN 12101-10), ISO 21927-9, VdS 2581/2593/2344, DIN 18232-9; Вихід: 24 В DC, сумарний струм приводів 80 А; Групи приводів (моторні лінії): 10 | [1](https://www.dh-partner.com/Website/D-H-UK/D-H%20UK%20Downloads/Tender%20Texts/Txt/SHEV%20controllers.txt) [2](https://www.dh-partner.com/int/en/products/controllers/productDetail/61299/RZN-4408-K) |
+| LPS | DEHN SE Система зовнішнього блискавкозахисту: стрижень 103 231 + дріт RD 8 AlMgSi 840 008 + роз'єм FIX 453 100 | Стрижень 103 231: AlMgSi 16/10 мм, L = 2500 мм, різьба M16, конічна верхня частина 1000 мм, 1,02 кг, під бетонну основу 17 кг; Провідник 840 008: RD 8 AlMgSi, Ø8 мм, 50 мм², EN 62561-2, I к.з. 6,4 кА (1 с), ≤0,036 Ом·мм²/м; Обмеження AlMgSi: не прокладати безпосередньо по/в/під штукатуркою, бетоном, не в ґрунті | [1](https://www.voltus.com/en/dehn-103231-air-termination-rod-with-taper-thread-m16-16-10mm-almgsi-2-5-m.html) [2](https://www.dehn-international.com/store/p/en-DE/F2355/round-wires) |
+| LPS (у складі) | DEHN SE Фундаментний заземлювач St/tZn Ø10 мм (800 310) + кільцевий заземлювач V4A Ø10 мм (860 010) | Фундаментний заземлювач: кругла сталь St/tZn Ø10 мм (78 мм², 5,5 кА/1 с, цинк ≥50 мкм) або смуга 30×3,5 мм; Захисний шар бетону: не менше 5 см; Конфігурація: замкнене кільце + перемички, комірка ≤20×20 м | [1](https://www.dehn-international.com/sites/default/files/media/files/Foundation-Earth-Electrodes-DS251-E.pdf) [2](https://www.dehn-international.com/store/p/en-DE/F2355/round-wires) |
+
+## Резервне живлення й сонячна станція
+
+- Дизель-генератор KOHLER-SDMO D700 (634 кВА) у шумозахисному кожусі за електрощитовою,
+  АВР Socomec ATyS p 1600 А. Тримає критичні споживачі (пожежна сигналізація, освітлення,
+  аспірація, компресори, котельня, офіс і серверна, лінії A–B) — зараз ≈ 347 кВт із 507.
+  Бак 610 л — ≈ 5 год при 75 %; для довгих відключень потрібен зовнішній бак.
+- Накопичувач Huawei LUNA2000 — 2 шафи, 387 кВт·год / 200 кВт: зрізання піків і резерв на
+  час пуску генератора.
+- Сонячна станція ≈ 487 кВт пік: модулі LONGi Hi-MO 6 580 Вт блоками з проходами 1,5 м,
+  ≥ 2,5 м від клапанів димовидалення (VdS 2098 — українських норм для дахових СЕС не знайдено);
+  4 інвертори Huawei SUN2000-115KTL на зовнішній стіні. Уся генерація йде на власне споживання.
+
+| Обладнання в моделі | Виробник і модель | Ключові параметри | Джерело |
+|---|---|---|---|
+| GENSET | KOHLER-SDMO D700 (шумозахисне виконання M230) | Потужність PRP (основна), 400/230 В: 634 кВА / 507 кВт; Потужність ESP (резервна), 400/230 В: 697 кВА / 558 кВт; Двигун: Doosan DP180LB, V10, 18,27 л, турбонаддув, 1500 об/хв, електронний регулятор | [1](https://assets.serverroomenvironments.co.uk/assets/files/65/82/01/sdmo-d700-generator-datasheet.pdf?1553415603) [2](https://pdf.directindustry.com/pdf/sdmo/d700/8339-777587.html) |
+| ATS-1 | Socomec ATyS p 1600 A 4P (арт. 95734160), Advanced Integrated Logic | Номінальний струм Iu / AC-21 при 400 В: 1600 А; Номінальний струм AC-23 при 400 В: 1250 А (750 кВт); Кількість полюсів: 4 | [1](https://www.nhp.com.au/product/95734160) [2](https://www.nhp.com.au/public/assets/pim/Original/10030/95734160-AU-ATyS-Transfer-Switch-Advanced-Logic-4P-Datasheet.pdf) |
+| BESS | Huawei LUNA2000-200KWH-2H1 (Smart String ESS) з PCS LUNA2000-100KTL-M1 | Хімія комірок: LiFePO4 (LFP); Номінальна ємність: 193,5 кВт·год (12 батарейних модулів 12S1P по 16,13 кВт·год); Макс. потужність заряду / розряду: ≤100 кВт / ≤100 кВт (≤0,5C) | [1](https://solar.huawei.com/en/products/LUNA2000-97-129-161-200kwh/specs) [2](https://solar.huawei.com/admin/asset/v1/pro/view/53079bdabe2845f4988aa6a9565c4031.pdf) |
+| PV-ROOF | LONGi Hi-MO 6 Explorer LR5-72HTH-580M | Номінальна потужність Pmax (STC): 580 Вт (допуск 0…+3 %); ККД модуля: 22,5 %; Напруга / струм у точці Pmax: 44,06 В / 13,17 А | [1](https://liriksolar.com/image/uploads/LONGI%20Solar%20Hi-MO%206%20Explorer%20LR5-72HTH-585M%20Datasheet.pdf) [2](https://liriksolar.com/en/soniachni-paneli/soniachna-panel-na-580vt-longi-solar-hi-mo-6-explorer-lr5-72hth-580m) |
+| PV-INV | Huawei SUN2000-115KTL-M2 | Номінальна активна потужність AC: 115 кВт (макс. 125 кВА / 125 кВт при cosφ=1); Номінальна напруга / струм AC: 400 В 3W+(N)+PE / 166,0 А (макс. 182,3 А); Макс. ККД / Європейський ККД: 98,6 % / 98,4 % @400 В | [1](https://solar.huawei.com/admin/asset/v1/pro/view/1f16e0b94fdb4ed083de46d02f911df9.pdf) [2](https://solar.huawei.com/download?p=%2F-%2Fmedia%2FSolarV4%2Fsolar-version2%2Fcommon%2Fprofessionals%2Fall-products%2Fci%2Fsmart-pv-controller%2Fsun2000-115ktl-m2%2Fsun2000-115ktl-m2-datasheet-20230506.pdf) |
+
+## Вода, ІТ і Odoo, територія й охорона
+
+- **Вода й стоки:** ввід із лічильником Apator DN50, магістраль уздовж північної стіни до
+  водяних завіс фарбування, побутових і двох аварійних душів Haws (зарядна й фарбування);
+  флотаційне очищення шламової води Hydro Italia.
+- **Робочі місця Odoo:** 33 планшетів Samsung Galaxy Tab Active5 Pro на стійках біля
+  верстатів (Shop Floor), ТЗД Zebra TC22 у комірників (Barcode), принтери етикеток Zebra ZT411
+  і палетні ваги Mettler Toledo через Odoo IoT Box, 21 точок Cisco CW9166D1 під
+  покрівлею, засклена серверна з шафою APC 42U, комутатором Cisco і ДБЖ.
+- **Територія:** огорожа, двори фур, паркування, прохідна з турнікетами Gunnebo і рідерами
+  Suprema (відмітки → Odoo Attendances), автомобільні ваги АКСІС 60 т, шлагбауми CAME,
+  майданчик відходів; 12 камер Axis P1488-LE і реєстратор Axis S3016; рідери на дверях
+  електрощитової, зарядної, складу ЛФМ і серверної.
+- **Програвання зміни:** повзунок угорі (07:00–15:30) — завдання й замовлення проходять маршрути,
+  споживання змінюється за типовим профілем.
+
+Що варто знати: Odoo IoT з коробки знає лише ваги з протоколом Toledo 8217 — підключення
+підлогових ваг треба перевірити; Zebra ZT411 друкує ZPL, але в списку Odoo офіційно є ZD411/ZD420;
+у Suprema немає готової інтеграції з Odoo — відмітки йдуть імпортом або конектором.
+
+| Обладнання в моделі | Виробник і модель | Ключові параметри | Джерело |
+|---|---|---|---|
+| WATER | Apator Powogaz S.A. MWN50-G NK (турбінний Вольтмана DN50, IP65, імпульсний вихід NK) | DN: 50 мм, різьбове приєднання G; Q3 (номінальна): 40 м³/год; Q4 (перевантаження): 50 м³/год | [1](https://www.apator.com/sites/default/files/documents/mnw50-g-gh-catalogue.pdf) [2](https://api.apator.com/uploads/oferta/woda-i-cieplo/systemy/przewodowy/apt-mbus-ne/at-mbus-ne-karta-katalogowa.pdf) |
+| EYE-* | Haws Corporation 8300-8309 (комбінований аварійний душ + фонтан для очей/обличчя AXION MSR) | Витрата душу: 20 gpm ≈ 75,7 л/хв; Витрата фонтана для очей/обличчя: 3,7 gpm ≈ 14,0 л/хв; Стандарт: ANSI/ISEA Z358.1 (сертифікація CSA) | [1](https://res.cloudinary.com/dzhpkjoqj/Haws/8300-8300CRP.pdf) [2](https://safetyservicesinc.com/haws-8300-8309-axion-msr-emergency-shower-and-eye-face-wash/) |
+| WATER (у складі) | Hydro Italia S.r.l. HYDROFLOTY (флотаційна установка видалення шламу з води фарбувальних кабін; типорозміри 4M–36M) | Принцип: коагулянт + поліелектроліт, аерація, флотація, скімер шламу; Типорозміри: HYDROFLOTY 4M, 6M, 9M, 12M, 24M, 36M; Продуктивність: не опубліковано (за запитом) | [1](https://www.hydroitalia.com/en/systems/spray-booths-water-sludge-removal/) [2](https://www.aquariusconsult.biz/hydrofloty-for-paint-sludge.php) |
+| TAB-* | Samsung Galaxy Tab Active5 Pro 5G (SM-X356B) | Екран: 10,1" TFT 1920×1200 (WUXGA), до 600 ніт, до 120 Гц; Процесор: 4 нм Snapdragon, 8 ядер (2,5/2,4/1,8 ГГц); Пам'ять: 6 ГБ / 128 ГБ (опція 8 ГБ / 256 ГБ), microSD до 2 ТБ | [1](https://www.samsung.com/levant/tablets/others/galaxy-tab-active5-pro-green-128gb-sm-x356bzgamda/) [2](https://m.gsmarena.com/samsung_galaxy_tab_active5_pro-13790.php) |
+| ODOO-SCANNERS | Zebra Technologies TC22 (Wi-Fi 6E, SE4710 / SE55) | Екран: 6,0" FHD+ 1080×2160, 450 ніт, Gorilla Glass; Сканер: SE4710 1D/2D (стандартна дальність) або SE55 1D/2D Advanced Range з IntelliFocus; Процесор: Qualcomm 5430, 6 ядер, 2,1 ГГц | [1](https://www.zebra.com/content/dam/zebra_dam/en/spec-sheets/tc22-tc27-spec-sheet-en-us.pdf) [2](https://www.levata.com/zebra-tc22-handheld-terminals) |
+| PRN-* | Zebra Technologies ZT411 (4", 203/300/600 dpi) | Метод друку: термотрансферний / прямий термодрук; Роздільність: 203 dpi (8 точок/мм); опц. 300 dpi; опц. 600 dpi; Макс. ширина друку: 104 мм | [1](https://www.zebra.com/content/dam/zebra_dam/en/spec-sheets/zt400-series-spec-sheet-en-us.pdf) |
+| SCALE-* | METTLER TOLEDO PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB | НПВ: 1 500 кг; Ціна повірочної поділки e: 0,5 кг (клас III, 1×3 000e); НмПВ: 10 кг | [1](https://www.mt.com/dam/ind/IND_PDF/2023/Brochures/30556168_A_MAR_BR_PFA584_589_EN.pdf) [2](https://www.odoo.com/documentation/19.0/applications/general/iot/devices/scale.html) |
+| IOT-* | Odoo S.A. Odoo IoT Box (на базі Raspberry Pi 4) | Апаратна база: Raspberry Pi 4 (за FAQ Odoo); Відеовиходи: 2 × HDMI (додаткові екрани); Мережа: Ethernet або Wi-Fi (точка доступу «IoTBox-…», налаштування через http://10.11.12.1) | [1](https://www.odoo.com/documentation/19.0/applications/general/iot.html) [2](https://www.odoo.com/documentation/19.0/applications/general/iot/iot_box.html) |
+| WIFI | Cisco Catalyst CW9166D1 (Wi-Fi 6E, спрямована антена) | Стандарт: 802.11ax (Wi-Fi 6 / 6E); Радіомодулі: 3 × 4×4 (2,4 / 5 / 6 ГГц) + XOR 5/6 ГГц; Швидкість PHY: до 7,78 Гбіт/с (PHY, за даними Cisco) | [1](https://www.cisco.com/c/en/us/products/collateral/wireless/catalyst-9166-series-access-points/catalyst-9166-series-access-points-ds.html) |
+| SERVER | APC (Schneider Electric) NetShelter SX Gen 2 AR3100B2 (42U, 600 × 1070 мм) + Smart-UPS SRT 10 кВА SRT10KRMXLI | Висота: 42U; Габарити (В×Ш×Г): 1991 × 600 × 1070 мм; Вага шафи: 122,14 кг | [1](https://www.se.com/us/en/product/AR3100B2/) [2](https://www.se.com/us/en/product/AR3100/netshelter-sx-server-rack-enclosure-42u-black-1991h-x-600w-x-1070d-mm-with-sides/) |
+| SERVER (у складі) | Cisco Catalyst 9200L C9200L-48P-4X | Порти доступу: 48 × 1G з повним PoE+; Аплінки: 4 × 1/10G (фіксовані); Бюджет PoE: 740 Вт (1 БЖ PWR-C5-1KWAC) / 1 440 Вт (2 БЖ) | [1](https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-9200-series-switches/nb-06-cat9200-ser-data-sheet-cte-en.html) |
+| CCTV | Axis Communications AXIS P1488-LE | Роздільність: 3840 × 2160 (8 Мп), до 50/60 к/с; Сенсор: CMOS 1/1,2"; Об'єктив: 5,9–13,8 мм, 2,35× оптичний зум; ГКП 114–46° | [1](https://www.axis.com/products/axis-p1488-le/support) [2](https://www.axis.com/dam/public/14/fc/5d/datasheet-axis-p1488–le-bullet-camera-en-US-555441.pdf) |
+| SERVER (у складі) | Axis Communications AXIS S3016 Recorder 32 TB | Канали: 16; PoE: 16 × RJ45 1 Гбіт/с, IEEE 802.3at Class 4, бюджет 305 Вт; Сховище: 4 × HDD: 32 ТБ (4 × 8 ТБ), 24 ТБ корисно в RAID 5; варіанти 8 / 16 ТБ | [1](https://www.axis.com/products/axis-s3016/support) [2](https://www.axis.com/dam/public/2a/0e/bb/datasheet-axis-s3016-recorder-en-US-555493.pdf) |
+| TURNSTILES | Gunnebo Entrance Control SlimStile EV (трипод, одинарний) | Тип: трипод, електромеханічний, з ручним проворотом; Пропускна здатність: до 40 прох./хв (безконтактний зчитувач); 30 — swipe; 20 — insertion; Живлення: 230 В AC 50 Гц, 50 ВА (5 ВА в режимі N/O) | [1](https://media-01.imu.nl/storage/europesecurity.nl/2317/wp/2018/02/Datasheet-SlimStile.EV_1.5_EN_ES.pdf) [2](https://www.gunneboentrancecontrol.com/products/turnstiles/tripod-turnstiles/slimstile-ev) |
+| ACCESS | Suprema BioEntry W3 (BEW3-APB) | Ідентифікація: обличчя (AI, NPU), картки, мобільний доступ (NFC Android, BLE Android/iOS); Формати карток: 125 кГц EM, HID Prox; 13,56 МГц MIFARE, MIFARE Plus, DESFire EV1/EV2/EV3, FeliCa, iCLASS SE/SR/Seos; Дальність зчитування: 50 мм (MIFARE/DESFire/EM/iCLASS), 30 мм (FeliCa/HID Prox) | [1](https://supremainc.com/uploadfiles/Marketing_Materials/[SUPREMA-AHL-BEW3-EN-REV04].pdf) |
+| TRUCK-SCALE | Ваги Аксіс Україна (Львів) АКСІС 60-18-К-Е | НПВ: 60 000 кг; НмПВ: 400 кг; Дискретність: 20 кг (на сторінці вказано «20 г» — очевидна описка) | [1](https://vagi-axis.ua/uk/product/vesy-avtomobilnye-60t-bezfundamentnye-18m-aksis-60-18-k-b-e/) [2](https://vagi-axis.ua/uk/category/avtomobilnye-vesy/) |
+| GATE-* | CAME GARD LS6 (803BB-0490, GLS60AGS) | Ширина проїзду: до 6,5 м; Час відкриття (90°): 4–6 с (регулюється); Живлення: 220–230 В AC | [1](https://www.came.com/global/en/products/automatic-barriers-gard-ls6/) [2](https://www.came.com/global/en/products/barriers-and-turnstiles/barriers) |
+
 ## Дані Odoo (поки демо)
 
 Переглядач показує сцену так, ніби підключена Odoo 19. Дані генерує
@@ -339,6 +428,8 @@ IP65, DALI-2) на 7,6 м, над мостом портального склад
 | `plant/equipment.py`, `plant/equipment_specs.json` | паспорти реального обладнання і прив'язка до об'єктів сцени |
 | `plant/lighting.py`, `plant/ventilation.py`, `plant/lux_norms.json` | розстановка світильників за нормою, вентиляція й теплова мережа, норми освітленості |
 | `plant/fire.py`, `plant/fire_rules.json` | пожежна сигналізація: розстановка за ДБН, стан приладу |
+| `plant/evacuation.py`, `plant/evac_rules.json`, `plant/evac_routes.json` | аварійні виходи, найкоротші шляхи до них, норми евакуації (`evac_routes.json` генерується під час збирання) |
+| `plant/infra.py`, `plant/site2.py` | димовидалення, блискавкозахист, резервне живлення й СЕС, вода, робочі місця Odoo, мережа, територія, охорона |
 | `plant/energy.py` | схема електропостачання (ГРЩ, траси шинопроводів, відгалуження), розрахунок навантажень і дані лічильників |
 | `viewer/index.html` | переглядач |
 

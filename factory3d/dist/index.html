@@ -90,6 +90,11 @@ button { font: inherit; color: inherit; }
 .view[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .view kbd { font: 10px var(--f-mono); color: var(--muted); margin-right: 4px; }
 .layers { display: flex; flex-direction: column; gap: 2px; }
+.shift { position: static; display: flex; align-items: center; gap: 8px; padding: 5px 8px; }
+.shift input[type=range] { width: 170px; accent-color: var(--accent); }
+.shift .btn { font-size: 12px; padding: 4px 9px; }
+.shift .mono { min-width: 44px; }
+@media (max-width: 760px) { .shift input[type=range] { width: 110px; } #shift-now { display: none; } }
 .lgroup + .lgroup { border-top: 1px solid var(--line); padding-top: 2px; }
 .lg-head { display: flex; align-items: center; gap: 4px; }
 .lg-head { min-height: 30px; padding-left: 2px; }
@@ -262,6 +267,12 @@ button { font: inherit; color: inherit; }
     <button class="panel odoo-pill" id="odoo-pill" title="Джерело даних">
       <span class="live"></span><b>Odoo</b><span id="odoo-state">підключення…</span><span class="muted" id="odoo-time"></span>
     </button>
+    <div class="panel shift" id="shift" role="group" aria-label="Програвання зміни">
+      <button class="btn" id="shift-play" aria-label="Програти зміну">▶</button>
+      <input type="range" id="shift-t" min="420" max="930" step="5" value="630" aria-label="Час зміни">
+      <span class="mono" id="shift-l">зараз</span>
+      <button class="btn" id="shift-now">Зараз</button>
+    </div>
     <button class="btn" id="toggle-side" aria-expanded="false" aria-controls="side">Види і шари</button>
   </header>
 
@@ -347,7 +358,8 @@ const KIND = {
   zone: "Зона", machine: "Верстат · робочий центр", stock: "Місце зберігання", bin: "Комірка стелажа", rack: "Стелаж",
   kit: "Візок комплектації", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Приміщення",
   equipment: "Обладнання", person: "Працівник", power: "Електропостачання", lighting: "Освітлення",
-  hvac: "Вентиляція й опалення", fire: "Пожежна сигналізація",
+  hvac: "Вентиляція й опалення", fire: "Пожежна сигналізація", safety: "Безпека будівлі", it: "ІТ і Odoo",
+  security: "Охорона й доступ",
 };
 const MACHINE_STATUS = { work: ["ok", "У роботі"], idle: ["warn", "Простій"], stop: ["bad", "Зупинено"] };
 const BIN_STATE = { ok: ["ok", "Запас у нормі"], low: ["warn", "Нижче мінімуму"], out: ["bad", "Порожньо"] };
@@ -799,7 +811,7 @@ renderer.domElement.addEventListener("pointermove", (e) => {
 });
 addEventListener("keydown", (e) => {
   if (e.target.closest("input, textarea")) return;
-  if (e.key === "Escape") { select(null); clearHighlight(); openTab(panel.tab || "overview"); }
+  if (e.key === "Escape") { stopDrill(); select(null); clearHighlight(); openTab(panel.tab || "overview"); }
   if (/^[0-9]$/.test(e.key)) {
     const v = VIEWS[(parseInt(e.key, 10) + 9) % 10];
     if (v) goView(v);
@@ -837,6 +849,7 @@ Promise.all([loadOdoo(), modelLoaded]).then(([data]) => {
   D = data;
   indexData();
   simBase = Date.parse(D.meta.now.replace(" ", "T"));
+  scheduleWOs();
   simStart = Date.now();
   $("#odoo-pill").classList.add("on");
   $("#odoo-state").textContent = "демо-дані";
@@ -863,11 +876,14 @@ const dayHm = (s) => {
 function tickClock() {
   if (!D) return;
   const t = simNow();
-  $("#odoo-time").textContent = `синхр. ${t.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+  $("#odoo-time").textContent = simOverride != null ? `демо-час ${hhmm(simOverride)}`
+    : `синхр. ${t.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 }
 // «живі» дані: завдання в роботі просуваються, поки сторінка відкрита
 function tick() {
   if (!D || document.hidden) return;
+  if (simOverride != null) { energyTick(); updateLive(); if (panel.type === "drill") renderDrill(); return; }
+  if (panel.type === "drill") renderDrill();
   for (const wo of Object.values(D.workorders)) {
     if (wo.state !== "progress" || wo.blocked) continue;
     wo.progress = Math.min(0.98, wo.progress + 0.002 + ((wo.id.charCodeAt(6) % 5) * 0.001));
@@ -912,7 +928,7 @@ function setTabs(tab) {
   document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
 }
 document.querySelectorAll(".tab").forEach((b) => {
-  b.onclick = () => { select(null); clearHighlight(); openTab(b.dataset.tab); };
+  b.onclick = () => { stopDrill(); select(null); clearHighlight(); openTab(b.dataset.tab); };
 });
 function openTab(tab) { panel = { type: "tab", tab }; setTabs(tab); renderPanel(); }
 function openView(v, scroll = true) {
@@ -932,13 +948,14 @@ function renderPanel(soft = false) {
   else if (panel.type === "product") renderProduct(panel.code);
   else if (panel.type === "picking") renderPicking(panel.name);
   else if (panel.type === "line") renderLine(panel.code);
+  else if (panel.type === "drill") renderDrill();
   if (soft) b.scrollTop = top;
 }
 const backBtn = () => `<button class="back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика", energy: "Енергія" })[panel.tab] || "Назад")}</button>`;
 // усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
 body().addEventListener("click", (e) => {
   const back = e.target.closest("[data-back]");
-  if (back) { select(null); clearHighlight(); openTab(panel.tab || "overview"); return; }
+  if (back) { stopDrill(); select(null); clearHighlight(); openTab(panel.tab || "overview"); return; }
   const a = e.target.closest("[data-go]");
   if (!a) return;
   const [t, ...rest] = a.dataset.go.split(":");
@@ -951,6 +968,7 @@ body().addEventListener("click", (e) => {
   else if (t === "locs") highlightLocs(v.split(","));
   else if (t === "line") showLine(v);
   else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
+  else if (t === "drill") startDrill();
 });
 function renderNoData() {
   body().innerHTML = `<div class="kind">Немає даних</div><p>Не вдалося прочитати ${ODOO_URL}. Модель працює, але без даних Odoo.</p>`;
@@ -972,6 +990,7 @@ function renderOverview() {
   }
   for (const q of D.quality_checks) if (q.state === "fail") attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);
   for (const m of D.productions) if (m.reservation_state === "waiting") attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);
+  for (const [k, c] of Object.entries(D.infra?.cards || {})) if (c.warn) attention.push(["warn", c.warn, `obj:${k}`]);
   for (const [k, g] of Object.entries(D.fire?.groups || {})) {
     if (g.state !== "ok") attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${g.maintenance_request || ""}`, `obj:${k}`]);
   }
@@ -1240,7 +1259,7 @@ function renderObject(code) {
     if (u.kind === "vehicle" && idx.truck.has(code)) extra += `<div class="sub">Документ</div><ul class="rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;
     if (u.kind === "zone" && D.zones[code]) extra += zoneHtml(D.zones[code]);
     if (u.kind === "zone" && lightGroupOfZone(code)) extra += `<div class="sub">Освітлення</div>${lightingHtml(lightGroupOfZone(code)[0])}`;
-    extra += lightingHtml(code) + ventHtml(code) + fireHtml(code);
+    extra += lightingHtml(code) + ventHtml(code) + fireHtml(code) + infraHtml(code);
     if (D.energy) extra += energyHtml(code);
     if (D.passports?.[code]) extra += passportHtml(D.passports[code]);
   }
@@ -1472,6 +1491,7 @@ function renderEnergy() {
     <div class="hint" style="border:0;padding:0;margin-top:4px">Пік за добу ${nf.format(T.peak_kw)} кВт о ${esc(T.peak_time)} (15-хвилинний).</div>
     <div class="sub">Лінії від ГРЩ · натисніть, щоб побачити трасу і споживачів</div>
     <ul class="rows">${Object.keys(e.lines).map(lineRow).join("")}</ul>
+    ${backupSummary()}
     ${lightVentSummary()}
     <div class="sub">Найбільші споживачі зараз</div>
     <ul class="rows">${top.map(([code, c]) => `<li><button class="row" data-go="${items.has(code) ? `obj:${esc(code)}` : `line:${esc(c.line)}`}">
@@ -1675,7 +1695,8 @@ function fireSummary() {
   return `<div class="sub">Пожежна безпека</div>
     <ul class="rows"><li><button class="row" data-go="obj:FACP-1"><span class="t">Пожежна сигналізація</span>
       ${pill(warn.length ? ["warn", T.state] : ["ok", "Норма"])}
-      <span class="m">${T.detectors} сповіщувачів · ${T.mcp} ручних · ${T.sounders} оповіщувачів · ${T.flame} полум'я · ${T.spark_detectors} датчиків іскор</span></button></li></ul>`;
+      <span class="m">${T.detectors} сповіщувачів · ${T.mcp} ручних · ${T.sounders} оповіщувачів · ${T.flame} полум'я · ${T.spark_detectors} датчиків іскор</span></button></li></ul>
+    ${D.evacuation ? `<div class="row-btns" style="margin-top:6px"><button class="btn" data-go="drill:1">Сценарій пожежної тривоги</button></div>` : ""}`;
 }
 function fireHtml(code) {
   const F = D.fire;
@@ -1695,6 +1716,7 @@ function fireHtml(code) {
   if (code === "FACP-1") {
     const L = Object.entries(F.loops);
     return `<dl class="kv"><dt>Стан</dt><dd>${esc(T.state)}</dd><dt>Спринклери</dt><dd>${esc(T.sprinkler)}</dd></dl>
+      ${D.evacuation ? `<div class="row-btns" style="margin-top:8px"><button class="btn" data-go="drill:1">Сценарій пожежної тривоги</button></div>` : ""}
       <div class="sub">Шлейфи</div>
       <table class="tbl"><tr><th>#</th><th class="n">Сповіщ.</th><th class="n">Ручні</th><th class="n">Оповіщ.</th><th class="n">Модулі</th></tr>
         ${L.map(([n, l]) => `<tr><td>${n}</td><td class="n">${l.detectors + l.flame}</td><td class="n">${l.mcp}</td><td class="n">${l.sounders}</td><td class="n">${l.modules}</td></tr>`).join("")}</table>
@@ -1717,6 +1739,160 @@ function fireHtml(code) {
   return `<dl class="kv"><dt>Кількість</dt><dd>${n}${code === "SPARK-1" ? " датчиків + гасіння перед виходом до фільтра" : ""}</dd>
       <dt>Прилад</dt><dd><button class="lnk" data-go="obj:FACP-1">FACP-1</button></dd></dl>
     ${ev.length ? `<div class="sub">Події</div><ul class="rows">${ev.map((e) => `<li><div class="row" style="cursor:default"><span class="t" style="white-space:normal">${esc(e.text)}</span><span class="m">${dayHm(e.time)}</span></div></li>`).join("")}</ul>` : ""}`;
+}
+
+// ---------------------------------------------------------------- програвання зміни (07:00–15:30)
+let simOverride = null; // хвилини від 00:00 або null — «зараз»
+let shiftTimer = null;
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+function scheduleWOs() {
+  const ms = (s) => Date.parse(s.replace(" ", "T"));
+  for (const mo of D.productions) {
+    let t = null;
+    for (const id of mo.workorders) {
+      const w = D.workorders[id];
+      w._p0 = w.progress; w._st0 = w.state;
+      const exp = w.duration_expected * 60000;
+      if (w.date_start) { w._s = ms(w.date_start); w._f = w.date_finished ? ms(w.date_finished) : w._s + exp; }
+      else { w._s = Math.max(t ?? simBase, simBase); w._f = w._s + exp; }
+      t = w.date_planned_finished ? ms(w.date_planned_finished) : w._f;
+    }
+  }
+  for (const c of Object.values(D.energy?.consumers || {})) c._p0 = c.p_now;
+}
+function applySimTime(min) {
+  simOverride = min;
+  const t = min == null ? null : Date.parse(D.meta.now.slice(0, 10) + "T00:00") + min * 60000;
+  for (const w of Object.values(D.workorders)) {
+    if (t == null || (w.blocked && t >= simBase)) { w.progress = w._p0; w.state = w._st0; continue; }
+    const p = Math.max(0, Math.min(1, (t - w._s) / Math.max(1, w._f - w._s)));
+    w.progress = p;
+    w.state = p >= 1 ? "done" : p > 0 ? (w.blocked ? "progress" : "progress") : w._st0 === "pending" ? "pending" : "ready";
+  }
+  for (const mo of D.productions) {
+    const w = mo.workorders.map((id) => D.workorders[id]);
+    mo.progress = (w.filter((x) => x.state === "done").length + w.filter((x) => x.state === "progress").reduce((s, x) => s + x.progress, 0)) / w.length;
+    mo._st0 ??= mo.state;
+    mo.state = t == null ? mo._st0 : mo.progress >= 1 ? "done" : mo.progress > 0 ? "progress" : "confirmed";
+  }
+  if (D.energy) {
+    const h = min == null ? 10 : Math.min(23, Math.floor(min / 60));
+    const k = D.energy.typical[h] / D.energy.typical[10];
+    for (const c of Object.values(D.energy.consumers)) if (c._p0 != null) { c.base = c._p0 * k; c.p_now = c.base; }
+    energyTick();
+  }
+  $("#shift-l").textContent = min == null ? "зараз" : hhmm(min);
+  $("#shift-t").value = min ?? 630;
+  tickClock();
+  renderPanel(true);
+  updateLive();
+}
+$("#shift-t").oninput = (e) => applySimTime(+e.target.value);
+$("#shift-now").onclick = () => { stopShift(); applySimTime(null); };
+function stopShift() { clearInterval(shiftTimer); shiftTimer = null; $("#shift-play").textContent = "▶"; $("#shift-play").setAttribute("aria-label", "Програти зміну"); }
+$("#shift-play").onclick = () => {
+  if (shiftTimer) return stopShift();
+  let m = simOverride ?? 420;
+  if (m >= 930) m = 420;
+  $("#shift-play").textContent = "❚❚"; $("#shift-play").setAttribute("aria-label", "Пауза");
+  shiftTimer = setInterval(() => { m += 5; applySimTime(m); if (m >= 930) stopShift(); }, reduceMotion ? 600 : 250);
+};
+
+// ---------------------------------------------------------------- сценарій пожежної тривоги
+const drill = { on: false, objs: [], curves: [], dots: [], marks: [], t0: 0, blink: [], saved: null };
+// на час сценарію ховаємо все, що над головою, щоб було видно маршрути на підлозі
+const DRILL_LAYERS = new Set(["building", "zones", "receiving", "sheets", "hardware", "edge", "buffer", "fg", "shipping",
+  "line", "facade", "fire", "evacuation", "people", "transport", "territory"]);
+function drillMarker(x, y, z, html, cls) {
+  const el = document.createElement("div");
+  el.className = "mk " + cls;
+  el.innerHTML = html;
+  const m = new CSS2DObject(el);
+  m.position.copy(b2t([x, y, z]));
+  scene.add(m); drill.marks.push(m);
+}
+function stopDrill() {
+  if (!drill.on) return;
+  for (const o of [...drill.objs, ...drill.dots, ...drill.marks]) scene.remove(o);
+  drill.objs = []; drill.dots = []; drill.curves = []; drill.marks = [];
+  const b = drill.blink; drill.blink = [];
+  drill.on = false;
+  b.forEach(paint);
+  if (drill.saved) { drill.saved.forEach((v, k) => setLayer(k, v)); drill.saved = null; }
+}
+function startDrill() {
+  const E = D.evacuation;
+  if (!E) return;
+  stopDrill(); select(null); clearHighlight();
+  drill.on = true; drill.t0 = performance.now();
+  drill.saved = new Map([...layers].map(([k, l]) => [k, l.node.visible]));
+  layers.forEach((_, k) => setLayer(k, DRILL_LAYERS.has(k)));
+  const green = new THREE.MeshBasicMaterial({ color: 0x1fbf6a, transparent: true, opacity: 0.85 });
+  for (const r of Object.values(E.routes)) {
+    const pts = r.path.map(([x, y]) => b2t([x, y, 0.5]));
+    const path = new THREE.CurvePath();
+    for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(path, Math.max(8, pts.length * 12), 0.35, 8, false), green);
+    tube.userData.isPulse = true;
+    scene.add(tube); drill.objs.push(tube); drill.curves.push(path);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.7, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    dot.userData.isPulse = true; scene.add(dot); drill.dots.push(dot);
+  }
+  for (const e of E.exits) drillMarker(e.x, e.y, 2.8, `Вихід ${esc(e.code.slice(3))}`, "done");
+  const src = items.get(E.drill_origin);
+  if (src) { const p = topOf(src); const m = new CSS2DObject(Object.assign(document.createElement("div"), { className: "mk bad", innerHTML: `Пожежа · ${esc(E.drill_detector)}` })); m.position.copy(p).add(new THREE.Vector3(0, 0.8, 0)); scene.add(m); drill.marks.push(m); }
+  drill.blink = ["FA-SND", "SMOKE-VENTS", E.drill_origin, "EXITS"].map((c) => items.get(c)).filter(Boolean);
+  panel = { type: "drill", tab: panel.tab || "overview" };
+  renderPanel();
+  goView(VIEWS[0]);
+}
+function renderDrill() {
+  const E = D.evacuation, F = D.fire;
+  const steps = E.drill_steps || [];
+  const sec = Math.floor((performance.now() - drill.t0) / 1000);
+  const routes = Object.entries(E.routes).sort((a, b) => b[1].length - a[1].length);
+  body().innerHTML = `${backBtn()}
+    <div class="kind">Сценарій · навчальна пожежна тривога</div>
+    <h3>Пожежа в зоні «${esc(E.drill_zone)}»</h3>
+    <ul class="rows">${steps.map((s) => `<li><div class="row" style="cursor:default"><span class="t" style="white-space:normal">${esc(s.text)}</span>
+      ${pill(sec >= s.t ? ["ok", "виконано"] : ["idle", `+${s.t} с`])}<span class="m">${esc(s.who)}</span></div></li>`).join("")}</ul>
+    <div class="sub">Евакуація · найдовший шлях ${nf1.format(E.max_distance)} м${E.norm_distance ? ` (норма ≤ ${nf.format(E.norm_distance)} м${E.norm_alt ? `, з полімерними панелями ≤ ${E.norm_alt} м` : ""})` : ""}</div>
+    <table class="tbl"><tr><th>Зона</th><th>Вихід</th><th class="n">м</th></tr>
+      ${routes.map(([, r]) => `<tr><td>${esc(r.name)}</td><td class="mono">${esc(r.exit)}</td><td class="n">${nf1.format(r.length)}</td></tr>`).join("")}</table>
+    ${E.norm_ref ? `<div class="src">${esc(E.norm_ref)}${E.norm_alt_ref ? `. ${esc(E.norm_alt_ref)}` : ""}</div>` : ""}
+    <div class="actions"><button class="btn" id="drill-stop">Завершити сценарій</button></div>`;
+  $("#drill-stop").onclick = () => { stopDrill(); openTab(panel.tab || "overview"); };
+}
+
+// ---------------------------------------------------------------- інфраструктура: генерична картка з даних
+function infraHtml(code) {
+  const I = D.infra;
+  if (!I) return "";
+  if (code.startsWith("TAB-")) {
+    const wc = code.slice(4), w = D.workcenters[wc];
+    return w ? `<dl class="kv"><dt>Робочий центр</dt><dd><button class="lnk" data-go="obj:${esc(wc)}">${esc(w.name)}</button></dd>
+      <dt>Поточне завдання</dt><dd>${w.current_workorder ? esc(D.workorders[w.current_workorder].name) + " · " + esc(D.workorders[w.current_workorder].production) : "—"}</dd></dl>` : "";
+  }
+  const c = I.cards[code];
+  if (!c) return "";
+  return `<dl class="kv">${c.rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${c.warn ? `<div class="note bad">${esc(c.warn)}</div>` : ""}
+    ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
+    ${c.items ? `<div class="sub">${code === "SMOKE-VENTS" ? "Зони" : "Критичні споживачі"}</div><ul class="rows">${c.items.map((t) => `<li><div class="row" style="cursor:default"><span class="t">${esc(t)}</span></div></li>`).join("")}</ul>` : ""}`;
+}
+function backupSummary() {
+  const I = D.infra;
+  if (!I) return "";
+  const T = I.totals;
+  const row = (code, t, m, v) => `<li><button class="row" data-go="obj:${esc(code)}"><span class="t">${esc(t)}</span><span class="mono">${esc(v)}</span><span class="m">${esc(m)}</span></button></li>`;
+  return `<div class="sub">Власна генерація й резерв</div>
+    <ul class="rows">
+      ${row("PV-ROOF", "Сонячна станція", `${nf.format(T.pv_kwp)} кВт пік · сьогодні ${nf.format(T.pv_today)} кВт·год`, `${nf.format(T.pv_now)} кВт`)}
+      ${row("BESS", "Накопичувач", `${nf.format(T.bess_kwh)} кВт·год · зрізання піків`, pct(T.bess_soc))}
+      ${row("GENSET", "Дизель-генератор", `критичні зараз ${nf.format(T.critical_kw)} кВт`, `${T.genset_kva} кВА`)}
+      ${row("ATS-1", "АВР", "мережа ↔ генератор", "мережа")}
+    </ul>
+    <div class="hint" style="border:0;padding:0;margin-top:4px">З мережі зараз ≈ ${nf.format(T.grid_kw)} кВт: решту дає сонячна станція.</div>`;
 }
 
 // ---------------------------------------------------------------- телефон
@@ -1751,6 +1927,11 @@ renderer.setAnimationLoop(() => {
   if (pulse.visible) {
     pulseT = (pulseT + dt * 0.12) % 1;
     pulse.position.copy(hl.curve.getPointAt(pulseT));
+  }
+  if (drill.on) {
+    const on = Math.sin(now / 180) > 0;
+    for (const r of drill.blink) r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } });
+    drill.dots.forEach((d, i) => d.position.copy(drill.curves[i].getPointAt(((now / 1000) * 0.08 + i * 0.13) % 1)));
   }
   syncLabels();
   renderer.render(scene, camera);
