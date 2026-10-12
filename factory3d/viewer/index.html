@@ -247,26 +247,24 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 2;
-controls.maxDistance = 360;
+controls.maxDistance = 440;
 controls.screenSpacePanning = false;
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x6f767d, 0.35));
 const sun = new THREE.DirectionalLight(0xffffff, 1.45);
-sun.position.set(30, 110, 30);
-sun.target.position.set(60, 0, -38);
+sun.position.set(45, 120, 30);
+sun.target.position.set(75, 0, -40);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
-Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 85, bottom: -85, near: 1, far: 280 });
+Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 80, bottom: -80, near: 1, far: 320 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.04;
 scene.add(sun, sun.target);
 
-let flowMat = null;
 function applyTheme() {
   scene.background = new THREE.Color(css("--scene"));
-  if (flowMat) flowMat.color.set(css("--flow"));
 }
 applyTheme();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
@@ -287,7 +285,7 @@ const layers = new Map();   // key -> {node, label}
 const items = new Map();    // code -> object3D (корінь клікабельного об'єкта)
 const zoneRects = new Map();
 const lamps = [];
-let flowRoute = [];
+const routes = [];   // { points, color }
 let selected = null;
 let hovered = null;
 const selBox = new THREE.Box3Helper(new THREE.Box3(), 0xf2c230);
@@ -311,7 +309,6 @@ function onModel(gltf) {
     if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label, order: u.order ?? 99 });
     if (u.code && !items.has(u.code)) items.set(u.code, o);
     if (u.rect) zoneRects.set(u.code, u.rect);
-    if (u.route) flowRoute = JSON.parse(u.route);
     if (o.isMesh) {
       // свій матеріал на кожен об'єкт, щоб підсвічування не перефарбовувало сусідів
       o.material = o.material.clone();
@@ -320,11 +317,17 @@ function onModel(gltf) {
       o.castShadow = !o.material.transparent && kind !== "zone" && kind !== "bin" && !o.name.startsWith("Майданчик");
       o.receiveShadow = !o.material.transparent;
       if (u.role === "status") lamps.push(o);
+      const root = codeRoot(o);
+      if (root?.userData.kind === "flow") {
+        o.material.emissive = o.material.color.clone();
+        o.material.emissiveIntensity = 0.35;
+        if (root.userData.route && !routes.some((r) => r.root === root)) {
+          routes.push({ root, points: JSON.parse(root.userData.route), color: o.material.color.clone() });
+        }
+      }
     }
   });
   scene.add(root);
-  flowMat = items.get("FLOW")?.getObjectByProperty("isMesh", true)?.material ?? null;
-  if (flowMat) { flowMat.emissive = new THREE.Color(css("--flow")); flowMat.emissiveIntensity = 0.35; }
   const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
   $("#dims").textContent += ` · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
   applyTheme();
@@ -353,16 +356,16 @@ if (embedded) {
 // ---------------------------------------------------------------- види
 // ціль і положення камери в координатах Blender (метри); zone/code — від габаритів об'єкта
 const VIEWS = [
-  { name: "Загальний вигляд", target: [62, 32, 0], pos: [12, -84, 104] },
-  { name: "Склад плит", zone: "Z-SHEETS", dir: [0.25, -1, 0.85] },
-  { name: "Виробництво", target: [74, 20, 0], pos: [60, -22, 40] },
-  { name: "Розкрій", code: "SAW-1", dir: [0.7, -1, 0.75] },
+  { name: "Загальний вигляд", target: [75, 34, 0], pos: [16, -104, 122] },
+  { name: "Приймання", target: [9, 36, 0], pos: [46, 6, 38] },
+  { name: "Склад плит", zone: "Z-SHEETS", dir: [0.35, -1, 0.85] },
+  { name: "Лінії A–D", target: [62, 18, 0], pos: [50, -22, 36] },
   { name: "Крайка і робот", code: "EDGE-1", dir: [0.4, -1, 0.6] },
-  { name: "Присадка і сортування", target: [88, 16, 0], pos: [80, -6, 18] },
-  { name: "Збирання", zone: "Z-ASM", dir: [0.2, -1, 0.75] },
-  { name: "Фасади МДФ", target: [73, 66.5, 0], pos: [68, 42, 21] },
-  { name: "Склад ГП", zone: "Z-FG", dir: [-1, -0.7, 0.55] },
-  { name: "План згори", target: [60, 38, 0], pos: [60, 37.9, 175] },
+  { name: "Сортування і збирання", target: [96, 15, 0], pos: [84, -10, 22] },
+  { name: "Фасади МДФ", target: [66, 58, 0], pos: [60, 32, 26] },
+  { name: "Пакування", target: [116, 16, 0], pos: [104, -6, 20] },
+  { name: "Склад ГП і відвантаження", target: [136, 36, 0], pos: [104, 6, 42] },
+  { name: "План згори", target: [75, 36, 0], pos: [75, 35.9, 215] },
 ];
 
 function viewPose(v) {
@@ -412,7 +415,7 @@ function focusOn(obj) {
 }
 
 // ---------------------------------------------------------------- шари
-const CORE = new Set(["building", "zones", "line", "facade", "dust", "people", "flow"]);
+const CORE = new Set(["building", "zones", "line", "facade", "buffer", "dust", "people", "flow"]);
 function setLayer(key, on) {
   const l = layers.get(key);
   if (!l) return;
@@ -470,21 +473,24 @@ $("#opt-labels").onchange = syncLabels;
 $("#opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
 
 // ---------------------------------------------------------------- маршрут: точка, що біжить
-let pulse = null;
-const curves = [];
+const pulses = [];   // { mesh, curves, travel }
 function buildPulse() {
-  if (!flowRoute.length) return;
-  for (let i = 0; i < flowRoute.length - 1; i++) {
-    const a = new THREE.Vector3(...flowRoute[i].p), b = new THREE.Vector3(...flowRoute[i + 1].p);
-    const lift = 1.6 + 0.1 * a.distanceTo(b);
-    const c = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, lift));
-    curves.push(new THREE.QuadraticBezierCurve3(b2t(a.toArray()), b2t(c.toArray()), b2t(b.toArray())));
+  for (const r of routes) {
+    const curves = [];
+    for (let i = 0; i < r.points.length - 1; i++) {
+      const a = new THREE.Vector3(...r.points[i].p), b = new THREE.Vector3(...r.points[i + 1].p);
+      const lift = 1.6 + 0.1 * a.distanceTo(b);
+      const c = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, lift));
+      curves.push(new THREE.QuadraticBezierCurve3(b2t(a.toArray()), b2t(c.toArray()), b2t(b.toArray())));
+    }
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14),
+      new THREE.MeshBasicMaterial({ color: r.color, transparent: true, opacity: 0.4, depthWrite: false }));
+    mesh.add(halo);
+    mesh.userData.isPulse = true; halo.userData.isPulse = true;
+    scene.add(mesh);
+    pulses.push({ mesh, curves, travel: 0 });
   }
-  pulse = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(css("--flow")), transparent: true, opacity: 0.35, depthWrite: false }));
-  pulse.add(halo);
-  scene.add(pulse);
 }
 $("#opt-motion").checked = !reduceMotion;
 
@@ -496,7 +502,7 @@ function pick(ev) {
   ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ptr, camera);
   for (const hit of ray.intersectObjects(scene.children, true)) {
-    if (!hit.object.isMesh || !isShown(hit.object) || hit.object === pulse || hit.object.parent === pulse) continue;
+    if (!hit.object.isMesh || !isShown(hit.object) || hit.object.userData.isPulse) continue;
     const root = codeRoot(hit.object);
     if (root && root.userData.kind !== "flow") return root;
   }
@@ -584,7 +590,8 @@ function renderSummary() {
       <span class="swatch" style="background:var(--warn)"></span><span>Простій · лоток нижче мінімуму</span>
       <span class="swatch" style="background:var(--bad)"></span><span>Зупинено · комірка порожня</span>
       <span class="swatch" style="background:#2e86c1"></span><span>Синій лоток: запас у нормі</span>
-      <span class="swatch" style="background:var(--flow)"></span><span>Маршрут виробу</span>
+      <span class="swatch" style="background:#18a6c9"></span><span>Маршрут корпусу</span>
+      <span class="swatch" style="background:#b05fd8"></span><span>Маршрут фасаду</span>
     </div>
     <div class="hint">Натисніть на верстат, стелаж, комірку, працівника або зону, щоб побачити опис. Стани в моделі — приклад.</div>`;
   $("#card").querySelectorAll(".attn button").forEach((b) => {
@@ -627,7 +634,6 @@ $("#toggle-side").onclick = () => {
 // ---------------------------------------------------------------- цикл
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clock = new THREE.Clock();
-let travel = 0;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   const now = performance.now();
@@ -647,14 +653,13 @@ renderer.setAnimationLoop(() => {
     l.material.emissiveIntensity = st === "stop" ? (reduceMotion ? 0.8 : 0.2 + blink) : st === "work" ? 0.7 : 0.3;
   }
 
-  if (pulse) {
-    const motion = $("#opt-motion").checked && layers.get("flow")?.node.visible;
-    pulse.visible = !!motion;
-    if (motion) {
-      travel = (travel + dt * 0.35) % curves.length;
-      const i = Math.floor(travel);
-      pulse.position.copy(curves[i].getPoint(travel - i));
-    }
+  const motion = $("#opt-motion").checked && layers.get("flow")?.node.visible;
+  for (const p of pulses) {
+    p.mesh.visible = !!motion;
+    if (!motion) continue;
+    p.travel = (p.travel + dt * 0.35) % p.curves.length;
+    const i = Math.floor(p.travel);
+    p.mesh.position.copy(p.curves[i].getPoint(p.travel - i));
   }
   syncLabels();
   renderer.render(scene, camera);
