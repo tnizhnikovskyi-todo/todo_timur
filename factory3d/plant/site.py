@@ -10,7 +10,7 @@ from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, D
 from .energy import (BUS_Z, PFC_H, BUSWAYS, CABLE_Z, CELL_X, EMS_POS, RM6_POS, ROOM, SWB_CELLS, SWB_D, SWB_H, SWB_X0,
                      SWB_X1, SWB_Y, TRAFO_Y, TRAFOS, TRAY_Y, TRAY_Z, energy_passport, taps)
 from .equipment import body_scale, load_specs, passport
-from .fire import FACP_POS, FLAME, SPARK_DETECTORS, SPARK_EXTINGUISH, SPARK_PANEL, Z_DET
+from .fire import FACP_POS, FLAME, SPARK_DETECTORS, SPARK_EXTINGUISH, SPARK_PANEL
 from .fire import KIND_NAME as FIRE_KIND
 from .fire import DUCT_TOP
 from .fire import call_points as fire_call_points
@@ -1072,7 +1072,11 @@ def build_ventilation():
 # ---------------------------------------------------------------- пожежна сигналізація
 def _on_wall(m, x, y, side, z, w, d, h, mat, bev=0.01):
     """Пристрій на стіні/колоні: d — товщина від поверхні."""
-    if side in ("W", "E"):
+    if side == "P":  # окрема стійка
+        m.box_lo(x, y + 0.06, 0, 0.06, 0.06, z + h + 0.1, "steel_dark")
+        m.box_lo(x, y + 0.06, 0, 0.3, 0.3, 0.02, "steel_dark")
+        m.box_lo(x, y - d / 2 + 0.03, z, w, d, h, mat, bev=bev)
+    elif side in ("W", "E"):
         m.box_lo(x + (d / 2 if side == "W" else -d / 2), y, z, d, w, h, mat, bev=bev)
     else:
         m.box_lo(x, y - d / 2, z, w, d, h, mat, bev=bev)  # на північній стіні або південній грані колони
@@ -1092,15 +1096,16 @@ def build_fire():
         rows = {}
         for x, y in d["points"]:
             r = 0.05 if d["kind"] == "heat" else 0.06
-            m.cyl((x, y, Z_DET + 0.115), r + 0.01, 0.03, "phenolic", segs=14)  # база під покрівлею
-            m.cyl((x, y, Z_DET + 0.07), r, 0.06, "phenolic", segs=14)
-            m.cyl((x, y, Z_DET + 0.035), r * 0.55, 0.012, "status_red" if d["kind"] == "heat" else "steel", segs=10)
-            m.box((x + r * 0.7, y, Z_DET + 0.05), (0.012, 0.012, 0.01), "status_green")  # індикатор
+            z0 = d["z"]  # Cerberus PRO: Ø117 мм з базою
+            m.cyl((x, y, z0 + 0.115), 0.0585, 0.03, "phenolic", segs=14)  # база під покрівлею
+            m.cyl((x, y, z0 + 0.075), 0.055, 0.05, "phenolic", segs=14)
+            m.cyl((x, y, z0 + 0.045), r * 0.55, 0.012, "status_red" if d["kind"] == "heat" else "steel", segs=10)
+            m.box((x + r * 0.7, y, z0 + 0.06), (0.012, 0.012, 0.01), "status_green")  # індикатор
             rows.setdefault(round(y, 1), []).append(x)
         for y, xs in rows.items():  # кабель шлейфа вздовж ряду
             xs.sort()
             if len(xs) > 1:
-                m.box(((xs[0] + xs[-1]) / 2, y, Z_DET + 0.135), (xs[-1] - xs[0], 0.012, 0.012), "fire_red")
+                m.box(((xs[0] + xs[-1]) / 2, y, d["z"] + 0.135), (xs[-1] - xs[0], 0.012, 0.012), "fire_red")
         code = "FA-" + zone[2:]
         m.build(code, "fire", code=code, kind="fire", **ex_pp(code), label=f"Сповіщувачі · {d['name']}",
                 desc=f"{len(d['points'])} адресних сповіщувачів: {FIRE_KIND[d['kind']]}; крок ≤ {d['spacing']} м.")
@@ -1126,9 +1131,9 @@ def build_fire():
              desc="Вибухозахищені ІЧ-сповіщувачі полум'я над фарбувальними камерами й автоматом фарбування.")
     p = Mesh()
     px, py = FACP_POS
-    p.box_lo(px, py, 1.0, 0.6, 0.16, 0.55, "machine_mid", bev=0.02)
-    p.box_lo(px, py - 0.085, 1.33, 0.32, 0.01, 0.14, "screen_on")
-    p.box_lo(px - 0.2, py - 0.085, 1.12, 0.12, 0.01, 0.06, "status_green")
+    p.box_lo(px, py - 0.144, 0.9, 0.443, 0.288, 0.802, "machine_mid", bev=0.02)  # FC726-ZA: 443 × 802 × 288 мм
+    p.box_lo(px, py - 0.29, 1.42, 0.24, 0.01, 0.12, "screen_on")
+    p.box_lo(px - 0.13, py - 0.29, 1.3, 0.1, 0.01, 0.05, "status_green")
     p.build("FACP-1", "fire", code="FACP-1", kind="fire", **ex_pp("FACP-1"), label="Приймально-контрольний прилад",
             desc="Адресний прилад на 4 шлейфи біля входу в офіс (пост охорони); керує оповіщенням, "
                  "передає сигнал на пульт пожежної охорони й зупиняє вентиляцію при пожежі.")
@@ -1136,9 +1141,11 @@ def build_fire():
     for x, y in SPARK_DETECTORS:  # датчики іскор на повітроводі
         sp.box_lo(x, y, DUCT_TOP - 0.03, 0.14, 0.14, 0.12, "machine_dark", bev=0.01)
         sp.cyl((x, y, DUCT_TOP + 0.13), 0.03, 0.06, "rubber", segs=8)
-    ex, ey = SPARK_EXTINGUISH
-    sp.cyl((ex, ey, DUCT_Z), 0.44, 0.1, "steel_dark", axis="Y", segs=20)  # кільце форсунок
-    sp.box_lo(ex + 0.5, ey, DUCT_Z - 0.15, 0.2, 0.2, 0.3, "fire_red")  # клапан
+    for ex, ey, ax in SPARK_EXTINGUISH:  # кільце форсунок і клапан гасіння
+        sp.cyl((ex, ey, DUCT_Z), 0.44, 0.1, "steel_dark", axis=ax, segs=20)
+        sp.box_lo(ex + (0.5 if ax == "Y" else 0), ey + (0.5 if ax == "X" else 0), DUCT_Z - 0.15, 0.2, 0.2, 0.3,
+                  "fire_red")
+    ex, ey, _ = SPARK_EXTINGUISH[-1]
     spx, spy = SPARK_PANEL
     sp.box_lo(spx, spy, 1.1, 0.5, 0.2, 0.7, "machine_mid", bev=0.02)
     sp.box_lo(spx, spy - 0.105, 1.55, 0.2, 0.01, 0.1, "screen_on")

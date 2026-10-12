@@ -1704,8 +1704,10 @@ function fireHtml(code) {
       <ul class="rows">${F.events.map((e) => `<li><button class="row" data-go="obj:${esc(e.code)}">
         <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${e.level === "info" ? "flow" : e.level})"></span>${esc(e.text)}</span>
         <span class="m">${dayHm(e.time)}</span></button></li>`).join("")}</ul>
-      <div class="src">Розстановка: точкові сповіщувачі під покрівлею з кроком ≤ ${nf1.format(F.rules.smoke_spacing_6_12m)} м
-        (≤ ${nf.format(F.rules.smoke_area_6_12m)} м² на один), теплові — ≤ ${nf1.format(F.rules.heat_spacing)} м; ручні — біля кожного виходу.</div>`;
+      <div class="src">Розстановка за ДБН В.2.5-56:2014 зі Зміною № 2: точкові димові під покрівлею до 12 м — крок ≤ ${nf1.format(F.rules.smoke_spacing_6_12m)} м,
+        до стіни ≤ ${nf1.format(F.rules.smoke_wall_6_12m)} м (табл. 7.2); теплові — лише в котельні (стеля 4,5 м), крок ≤ ${nf1.format(F.rules.heat_spacing)} м (табл. 7.1).
+        Ручні — не далі ${nf.format(F.rules.mcp_spacing)} м від будь-якої точки (зараз найбільше ${nf1.format(T.mcp_max_m)} м по прямій).
+        Оповіщувачі — не менше ${F.rules.sounder_level} дБА або на 5 дБА вище фону (у цеху 80–85 дБА), кількість уточнює акустичний розрахунок.</div>`;
   }
   const n = { "FA-MCP": T.mcp, "FA-SND": T.sounders, "FA-FLAME": T.flame, "SPARK-1": T.spark_detectors }[code];
   if (n == null) return "";

@@ -8,12 +8,14 @@ import json
 import math
 import os
 
-from .layout import D, DOOR_Y, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_Z, W, ZONES
+from .layout import D, DOOR_Y, GANTRY_X, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_Z, W, ZONES
 from .ventilation import AHU_POS, CHG_EXHAUST, FABRIC_DUCTS, ROOFVENTS
 
 RULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fire_rules.json")
-DEFAULT_RULES = {"smoke_spacing_6_12m": 8.5, "smoke_wall_6_12m": 4.0, "smoke_area_6_12m": 55.0,
-                 "heat_spacing": 5.0, "heat_area": 25.0, "mcp_spacing": 50.0, "mcp_height": 1.5}
+# ДБН В.2.5-56:2014 зі Зміною № 2 (табл. 7.1, 7.2), ДСТУ-Н CEN/TS 54-14 (ручні сповіщувачі)
+DEFAULT_RULES = {"smoke_spacing_6_12m": 8.8, "smoke_wall_6_12m": 4.4, "smoke_area_6_12m": None,
+                 "heat_spacing": 6.4, "heat_area": None, "mcp_spacing": 30.0, "mcp_height": None,
+                 "sounder_level": 65}
 Z_DET = 8.85  # під покрівлею, між фермами (нижній пояс 8,4)
 
 # зона → тип сповіщувачів: multi — пил деревини (оптико-тепловий), smoke — склади, heat — котельня/компресорна
@@ -21,8 +23,11 @@ ZONE_DETECTOR = {
     "Z-RCV": "smoke", "Z-SHEETS": "smoke", "Z-HW": "smoke", "Z-EDGE": "smoke", "Z-PKS": "smoke",
     "Z-CUT": "multi", "Z-EB": "multi", "Z-CNC": "multi", "Z-SORT": "multi", "Z-FAC": "multi",
     "Z-ASM": "multi", "Z-PRE": "smoke", "Z-MAINT": "multi", "Z-PACK": "smoke", "Z-POST": "smoke",
-    "Z-CMP": "heat", "Z-CHG": "heat", "Z-FG": "smoke", "Z-ELEC": "smoke", "Z-OUT": "smoke",
+    # компресорна й зарядна без власної стелі: під покрівлею 9 м точкові теплові заборонені (табл. 7.1 — до 7,5 м)
+    "Z-CMP": "multi", "Z-CHG": "multi", "Z-FG": "smoke", "Z-ELEC": "smoke", "Z-OUT": "smoke",
 }
+BOILER_HOUSE = (67.6, D + 3.0, 79.6, D + 9.0)  # котельня має власне перекриття 4,5 м — теплові сповіщувачі
+Z_BOILER = 4.35
 KIND_NAME = {"multi": "оптико-теплові (пил деревини)", "smoke": "димові оптичні", "heat": "теплові"}
 # шлейфи: межі по X
 LOOPS = [(1, 0, 42), (2, 42, 92), (3, 92, 122), (4, 122, W + 1)]
@@ -30,9 +35,9 @@ LOOPS = [(1, 0, 42), (2, 42, 92), (3, 92, 122), (4, 122, W + 1)]
 FLAME = [(46.0, 71.8, 5.0, -90), (64.0, 71.8, 5.0, -90), (76.0, 71.8, 5.0, -90)]
 FACP_POS = (97.2, 58.25)  # на фасаді офісу біля входу (пост охорони на першому поверсі)
 # іскрогасіння: датчики на магістралі аспірації та гілці на північ, гасіння — перед виходом надвір
-SPARK_DETECTORS = [(47.0, DUCT_MAIN_Y), (64.0, DUCT_MAIN_Y), (79.0, DUCT_MAIN_Y),
-                   (DUCT_NORTH_X, 34.0), (DUCT_NORTH_X, 58.0)]
-SPARK_EXTINGUISH = (DUCT_NORTH_X, 66.0)
+# іскрогасіння: форсунки за 4–6 м після датчика по ходу повітря (GreCon); магістраль тече до гілки на x = 55,6
+SPARK_DETECTORS = [(47.0, DUCT_MAIN_Y), (66.0, DUCT_MAIN_Y), (79.0, DUCT_MAIN_Y), (DUCT_NORTH_X, 60.5)]
+SPARK_EXTINGUISH = [(52.5, DUCT_MAIN_Y, "X"), (60.5, DUCT_MAIN_Y, "X"), (DUCT_NORTH_X, 66.0, "Y")]
 SPARK_PANEL = (52.0, 71.75)
 DUCT_TOP = DUCT_Z + 0.38
 
@@ -42,13 +47,26 @@ def load_rules():
     if os.path.exists(RULES_PATH):
         with open(RULES_PATH, encoding="utf-8") as f:
             for k, v in json.load(f).items():
-                if isinstance(v.get("value"), (int, float)):
+                if isinstance(v.get("value"), (int, float)) or k not in rules:
                     rules[k] = v["value"]
     return rules
 
 
 def loop_of(x):
     return next(n for n, a, b in LOOPS if a <= x < b)
+
+
+def max_mcp_distance(step=2.0):
+    """Найбільша відстань по прямій від точки цеху до найближчого ручного сповіщувача (перевірка ≤ 30 м)."""
+    pts = [(x, y) for x, y, _ in call_points()]
+    worst = (0, None)
+    for i in range(int(W / step) + 1):
+        for j in range(int(D / step) + 1):
+            p = (i * step, j * step)
+            d = min(math.dist(p, q) for q in pts)
+            if d > worst[0]:
+                worst = (d, p)
+    return round(worst[0], 1), worst[1]
 
 
 def _blocked(x, y):
@@ -81,10 +99,9 @@ def detectors(rules=None):
         kind = ZONE_DETECTOR.get(code)
         if not kind:
             continue
-        if kind == "heat":
-            s = min(r["heat_spacing"], math.sqrt(r["heat_area"]))
-        else:
-            s = min(r["smoke_spacing_6_12m"], math.sqrt(r["smoke_area_6_12m"]), 2 * r["smoke_wall_6_12m"])
+        s = min(r["smoke_spacing_6_12m"], 2 * r["smoke_wall_6_12m"])
+        if r.get("smoke_area_6_12m"):
+            s = min(s, math.sqrt(r["smoke_area_6_12m"]))
         nx, ny = max(1, math.ceil((x1 - x0) / s)), max(1, math.ceil((y1 - y0) / s))
         pts = []
         for i in range(nx):
@@ -92,12 +109,20 @@ def detectors(rules=None):
                 p = _nudge(x0 + (x1 - x0) * (i + 0.5) / nx, y0 + (y1 - y0) * (j + 0.5) / ny, (x0, y0, x1, y1))
                 if p:
                     pts.append(p)
-        out[code] = dict(name=name, kind=kind, points=pts, spacing=round(s, 1), area=(x1 - x0) * (y1 - y0))
+        out[code] = dict(name=name, kind=kind, points=pts, spacing=round(s, 1), area=(x1 - x0) * (y1 - y0), z=Z_DET)
+    x0, y0, x1, y1 = BOILER_HOUSE
+    s = r["heat_spacing"]
+    nx, ny = math.ceil((x1 - x0) / s), math.ceil((y1 - y0) / s)
+    out["Z-BOILER"] = dict(name="Котельня", kind="heat", spacing=s, area=(x1 - x0) * (y1 - y0), z=Z_BOILER,
+                           points=[(x0 + (x1 - x0) * (i + 0.5) / nx, y0 + (y1 - y0) * (j + 0.5) / ny)
+                                   for i in range(nx) for j in range(ny)])
     return out
 
 
 # Колони, що є в будівлі (решту прибрано під верстати й склади) — на них ручні сповіщувачі й оповіщувачі
-COLUMN_MCP = [(48, 30), (60, 30), (84, 30), (96, 30), (108, 30), (120, 45), (36, 60), (84, 60), (132, 60)]
+COLUMN_MCP = [(48, 30), (60, 30), (84, 30), (96, 30), (108, 30), (120, 15), (120, 45), (36, 60), (84, 60),
+              (132, 60)]
+MCP_POSTS = [30.0, 60.0, 90.0, 118.0]
 COLUMN_SOUNDER = [(48, 45), (60, 45), (72, 45), (84, 45), (96, 45), (108, 45), (120, 15), (120, 60)]
 
 
@@ -110,14 +135,18 @@ def call_points():
     pts += [(50.5, 45.88, "S"), (68.0, 45.88, "S"), (91.0, 45.88, "S"),  # двері дільниці фасадів
             (98.6, 58.37, "S"), (131.3, 62.37, "S"), (114.5, 59.88, "S")]  # офіс, електрощитова, компресорна
     pts += [(x, y - 0.25, "S") for x, y in COLUMN_MCP]
+    pts += [(GANTRY_X[0] - 0.18, 9.5, "E"), (GANTRY_X[1] + 0.18, 9.5, "W")]  # на стійках порталу складу плит
+    pts += [(x, 0.6, "P") for x in MCP_POSTS]  # південна стіна в моделі зрізана — на окремих стійках
     return pts
 
 
 def sounders():
-    """Світлозвукові оповіщувачі: колони, північна стіна, торцеві стіни біля воріт."""
+    """Сирени-маяки (W-3.2-10 — покриття 10 м): кожні 10 м по стінах і перегородках, на колонах.
+    Фон у цеху 80–85 дБА, тож потрібно 85–90 дБА — точну кількість дає акустичний розрахунок."""
     pts = [(x, y - 0.25, "S") for x, y in COLUMN_SOUNDER]
-    pts += [(x, D - 0.04, "N") for x in range(12, int(W), 24)]
-    pts += [(0.04, y, "W") for y in (20.0, 50.0)] + [(W - 0.04, y, "E") for y in (20.0, 50.0)]
+    pts += [(x, D - 0.04, "N") for x in range(5, int(W), 10)]
+    pts += [(0.04, y, "W") for y in range(10, int(D), 10)] + [(W - 0.04, y, "E") for y in range(10, int(D), 10)]
+    pts += [(x, 45.88, "S") for x in range(45, 92, 10) if all(abs(x - d) > 1.8 for d in (48.5, 66.0, 89.0))]
     return pts
 
 
@@ -138,7 +167,8 @@ def fire_data(specs):
     loops[2]["modules"] += len(FLAME) + 1  # модулі входу для полум'я й іскрогасіння
     groups = {}
     for z, d in dets.items():
-        groups["FA-" + z[2:]] = dict(zone=z, zone_name=d["name"], kind=d["kind"], kind_name=KIND_NAME[d["kind"]],
+        zone = "BOILER" if z == "Z-BOILER" else z
+        groups["FA-" + z[2:]] = dict(zone=zone, zone_name=d["name"], kind=d["kind"], kind_name=KIND_NAME[d["kind"]],
                                      n=len(d["points"]), spacing=d["spacing"], area=round(d["area"]),
                                      loop=loop_of(d["points"][0][0]) if d["points"] else None, state="ok")
     groups["FA-FAC"].update(
@@ -157,6 +187,7 @@ def fire_data(specs):
     ]
     return dict(rules=r, loops=loops, groups=groups,
                 totals=dict(detectors=sum(g["n"] for g in groups.values()), mcp=len(mcp), sounders=len(snd),
+                            mcp_max_m=max_mcp_distance()[0],
                             flame=len(FLAME), spark_detectors=len(SPARK_DETECTORS),
                             state="Норма, 1 попередження", sprinkler="Спринклерна система в режимі очікування"),
                 events=events)
@@ -168,3 +199,4 @@ FIRE_ROLES = {"FACP-1": ("facp", []), "FA-MCP": ("mcp", []), "FA-SND": ("sounder
 _DET_ROLE = {"multi": "multi_detector", "smoke": "smoke_detector", "heat": "heat_detector"}
 for _z, _k in ZONE_DETECTOR.items():
     FIRE_ROLES["FA-" + _z[2:]] = (_DET_ROLE[_k], [])
+FIRE_ROLES["FA-BOILER"] = ("heat_detector", [])
