@@ -940,17 +940,12 @@ def build_lighting():
         m = Mesh()
         rows = {}
         for x, y, z in g["fixtures"]:
-            if g["kind"] == "highbay_rack":  # лінійний світильник уздовж проходу
-                along_y = g["zone"] in ("Z-FG", "Z-EDGE")
-                sx, sy = (0.16, 1.2) if along_y else (1.2, 0.16)
-                m.box_lo(x, y, z, sx, sy, 0.09, "machine_mid", bev=0.01)
-                m.box_lo(x, y, z - 0.005, sx * 0.8, sy * 0.92, 0.01, "led")
-                key = round(x, 1) if along_y else round(y, 1)
-            else:  # круглий high-bay
-                m.cyl((x, y, z + 0.05), 0.2, 0.1, "machine_dark", segs=16)
-                m.cyl((x, y, z + 0.13), 0.12, 0.06, "machine_mid", segs=12)
-                m.cyl((x, y, z - 0.005), 0.17, 0.012, "led", segs=16)
-                key = round(y, 1)
+            # CoreLine Highbay Gen5: Ø330 × 99 мм (у проходах стелажів — та сама модель з вузькою оптикою)
+            m.cyl((x, y, z + 0.05), 0.165, 0.099, "machine_dark", segs=16)
+            m.cyl((x, y, z + 0.12), 0.07, 0.05, "machine_mid", segs=12)
+            m.cyl((x, y, z - 0.005), 0.14, 0.012, "led", segs=16)
+            along_y = g["zone"] in ("Z-FG", "Z-EDGE")
+            key = round(x, 1) if along_y else round(y, 1)
             m.box_lo(x, y, z + 0.16, 0.012, 0.012, truss - z - 0.16, "steel_dark")  # підвіс
             rows.setdefault(key, []).append((x, y, z))
         for pts in rows.values():  # кабель живлення ряду
@@ -995,12 +990,13 @@ def build_lighting():
 # ---------------------------------------------------------------- вентиляція й опалення
 def build_ventilation():
     def roofvent(m):
-        m.box_lo(0, 0, H, 2.3, 2.3, 0.3, "steel_dark")  # опорна рама на покрівлі
-        m.box_lo(0, 0, H + 0.3, 2.0, 2.0, 1.25, "machine_mid", bev=0.03)  # рекуператор і вентилятори
-        m.box_lo(0, 0, H + 1.55, 2.15, 2.15, 0.12, "machine_dark")
+        # RoofVent RH-9C: дахова частина 2380 × 1750 × 2080 мм
+        m.box_lo(0, 0, H, 2.5, 1.9, 0.25, "steel_dark")  # опорна рама на покрівлі
+        m.box_lo(0, 0, H + 0.25, 2.38, 1.75, 1.7, "machine_mid", bev=0.03)  # рекуператор і вентилятори
+        m.box_lo(0, 0, H + 1.95, 2.45, 1.85, 0.13, "machine_dark")
         for sx in (-1, 1):
-            for k in range(5):
-                m.box_lo(sx * 1.01, 0, H + 0.45 + k * 0.2, 0.02, 1.6, 0.08, "steel_dark")  # жалюзі
+            for k in range(6):
+                m.box_lo(sx * 1.195, 0, H + 0.4 + k * 0.22, 0.02, 1.4, 0.08, "steel_dark")  # жалюзі
         m.box_lo(0, 0, 7.1, 1.1, 1.1, H - 7.1, "galv")  # фільтр і водяний нагрівач під покрівлею
         m.box_lo(0, 0, 7.6, 1.14, 1.14, 0.05, "steel_dark")
         m.cyl((0, 0, 6.85), 0.55, 0.5, "galv", segs=20)  # повітророзподільник
@@ -1048,9 +1044,9 @@ def build_ventilation():
     for code, name, pts, note in WALL_FANS:
         f = Mesh()
         for x, z in pts:
-            f.cyl((x, D + 0.15, z), 0.36, 0.42, "galv", axis="Y", segs=24)
-            f.cyl((x, D - 0.08, z), 0.33, 0.02, "steel_dark", axis="Y", segs=24)
-            f.box_lo(x, D + 0.42, z - 0.4, 0.86, 0.12, 0.8, "machine_mid")  # жалюзі ззовні
+            f.box((x, D + 0.15, z), (0.655, 0.42, 0.655), "galv")  # OV 4E 500: панель 655 × 655 мм
+            f.cyl((x, D - 0.08, z), 0.28, 0.02, "steel_dark", axis="Y", segs=24)
+            f.box_lo(x, D + 0.42, z - 0.36, 0.72, 0.12, 0.72, "machine_mid")  # жалюзі ззовні
         f.build(code, "ventilation", code=code, kind="hvac", label=name, desc=note)
     c = Mesh()
     cx, cy = CHG_EXHAUST

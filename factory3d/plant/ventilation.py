@@ -92,12 +92,12 @@ def ventilation_data(specs):
         mode = "Рекуперація" if zone not in ("Z-OUT", "Z-RCV") else "Приплив і витяжка"
         if code in ("RV-21", "RV-22"):
             mode, k = "Рециркуляція", 0.45
-        heat = heat_nom * k * (INDOOR_SET_C - OUTDOOR_C) / 25.0 * (0.4 if mode == "Рекуперація" else 1.0)
+        heat = heat_nom * k * (INDOOR_SET_C - OUTDOOR_C) / (INDOOR_SET_C + 15) * (0.3 if mode == "Рекуперація" else 0.8)
         units[code] = dict(
             name=f"Дахова установка {code}", kind="roofvent", zone=zone, mode=mode,
             airflow_m3h=round(q_nom * k, -1), airflow_nom=q_nom, supply_c=round(19.5 + _h(code, 1, mod=15) / 10, 1),
             indoor_c=round(17.5 + _h(code, 2, mod=20) / 10, 1), heating_valve=round(min(1.0, heat / heat_nom), 2),
-            heat_kw=round(heat, 1), p_inst=p_nom, p_now=round(p_nom * k ** 3 * 1.6 + 0.15, 2),
+            heat_kw=round(heat, 1), p_inst=p_nom, p_now=round(p_nom * k ** 3 + 0.1, 2),
             filter_dp_pa=120 + _h(code, 3, mod=90), state="on")
     units["RV-05"]["filter_dp_pa"] = 285  # фільтр забитий — привід для заявки на ТО
     q_ahu = ahu.get("airflow_m3h") or 20000
@@ -120,9 +120,10 @@ def ventilation_data(specs):
                            p_now=round(p_fan * on, 2), state="on" if on else "standby", note=note,
                            indoor_c=29.5 if code == "EF-ELEC" else 24.0)
     units["EF-CHG"] = dict(name="Витяжка зарядної станції", kind="fan", zone="Z-CHG",
-                           mode="Безперервно під час заряджання", airflow_m3h=q_fan, airflow_nom=q_fan,
-                           p_inst=p_fan, p_now=p_fan, state="on",
-                           note="Видаляє водень над зарядними пристроями крізь покрівлю.")
+                           mode="Безперервно під час заряджання", airflow_m3h=1500, airflow_nom=1500,
+                           p_inst=0.25, p_now=0.25, state="on",
+                           note="Видаляє водень над зарядними пристроями крізь покрівлю. Потрібен вибухозахищений "
+                                "(Ex) вентилятор — модель ще не вибрано, цифри орієнтовні.")
     heat_total = sum(u.get("heat_kw", 0) for u in units.values())
     totals = dict(units=len(units), airflow_m3h=round(sum(u["airflow_m3h"] for u in units.values()), -2),
                   heat_kw=round(heat_total), p_now=round(sum(u["p_now"] for u in units.values()), 1),

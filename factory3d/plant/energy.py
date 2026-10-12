@@ -435,7 +435,7 @@ ENERGY_ROLES["EMERGENCY"] = ("emergency", [])
 for _r in ROOFVENTS:
     ENERGY_ROLES[_r[0]] = ("roofvent", [])
 ENERGY_ROLES["AHU-1"] = ("make_up_ahu", ["fabric_duct"])
-for _f in ("EF-ELEC", "EF-CMP", "EF-CHG"):
+for _f in ("EF-ELEC", "EF-CMP"):  # для зарядної потрібен вибухозахищений вентилятор — окремо
     ENERGY_ROLES[_f] = ("wall_fan", [])
 
 
