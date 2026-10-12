@@ -571,7 +571,9 @@ class Demo:
                                             next_maintenance=ts((NOW + timedelta(days=8)).replace(hour=7, minute=0)))
         self.equipment["DUST-1"] = dict(name="Аспірація", category="Енергетика", filter_dp_kpa=1.4, airflow_m3h=29800,
                                         next_maintenance=ts((NOW + timedelta(days=6)).replace(hour=7, minute=0)))
-        self.equipment["BOILER"] = dict(name="Котельня на відходах", category="Енергетика", supply_c=78,
+        self.equipment["BOILER"] = dict(name="Котельня на відходах (2 × Kalvis K-500M)", category="Енергетика",
+                                        boilers="К1 у роботі, К2 у гарячому резерві (вмикається понад 85 % К1)",
+                                        supply_c=78,
                                         silo_fill=0.62, briquettes_today_kg=860)
         self.equipment["CHARGING"] = dict(name="Зарядна станція", category="Енергетика", busy=2, total=3)
         self.equipment["SPRINKLERS"] = dict(name="Спринклерна система", category="Безпека",

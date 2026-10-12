@@ -125,9 +125,45 @@ def ventilation_data(specs):
                            note="Видаляє водень над зарядними пристроями крізь покрівлю. Потрібен вибухозахищений "
                                 "(Ex) вентилятор — модель ще не вибрано, цифри орієнтовні.")
     heat_total = sum(u.get("heat_kw", 0) for u in units.values())
+    design = heat_balance(units)
     totals = dict(units=len(units), airflow_m3h=round(sum(u["airflow_m3h"] for u in units.values()), -2),
                   heat_kw=round(heat_total), p_now=round(sum(u["p_now"] for u in units.values()), 1),
                   p_inst=round(sum(u["p_inst"] for u in units.values()), 1),
                   outdoor_c=OUTDOOR_C, indoor_set_c=INDOOR_SET_C,
-                  boiler_load=round(heat_total / 495, 2))
-    return dict(units=units, totals=totals)
+                  boilers=BOILERS, boiler_kw=BOILER_KW, boilers_on=1 if heat_total <= 0.85 * BOILER_KW else 2,
+                  boiler_load=round(heat_total / BOILER_KW, 2), design_heat_kw=design["total"])
+    return dict(units=units, totals=totals, heat_balance=design)
+
+
+# Котельня: два котли Kalvis K-500M каскадом
+BOILERS, BOILER_KW = 2, 495
+T_OUT_DESIGN = -15.0  # розрахункова зимова температура (як у паспорті RoofVent)
+# Припущення для оцінки тепловтрат (не проєкт): U-коефіцієнти огороджень, Вт/(м²·К)
+U_WALL, U_ROOF, U_FLOOR = 0.35, 0.25, 0.15
+INFILTRATION_ACH = 0.1  # ворота з докшелтерами
+WINTER_OA_SHARE = 0.5  # частка зовнішнього повітря в установках узимку
+HEAT_RECOVERY = 0.78  # RoofVent RH-9C, суха рекуперація за паспортом
+
+
+def heat_balance(units):
+    """Оцінка зимового теплового навантаження при −15 °C (без внутрішніх теплонадходжень)."""
+    from .layout import H, W
+    dt = INDOOR_SET_C - T_OUT_DESIGN
+    walls = 2 * (W + D) * H
+    trans = (walls * U_WALL + W * D * U_ROOF + W * D * U_FLOOR) * dt / 1000
+    infil = W * D * H * INFILTRATION_ACH * 0.34 * dt / 1000
+    rv_q = sum(u["airflow_nom"] for u in units.values() if u["kind"] == "roofvent")
+    vent = rv_q * WINTER_OA_SHARE * 0.34 * dt * (1 - HEAT_RECOVERY) / 1000
+    ahu = units["AHU-1"]
+    ahu_kw = ahu["airflow_m3h"] * 0.34 * (ahu["supply_c"] - T_OUT_DESIGN) / 1000
+    items = [("Тепловтрати через стіни, покрівлю й підлогу", trans),
+             (f"Інфільтрація крізь ворота ({INFILTRATION_ACH:g} обміну/год)".replace(".", ","), infil),
+             (f"Дахові установки: {round(WINTER_OA_SHARE * 100)} % зовнішнього повітря, рекуперація "
+              f"{round(HEAT_RECOVERY * 100)} %", vent),
+             ("Приплив дільниці фасадів (без рекуперації — витяжка з фарбування)", ahu_kw)]
+    total = sum(v for _, v in items)
+    return dict(t_out=T_OUT_DESIGN, items=[dict(name=n, kw=round(v)) for n, v in items], total=round(total),
+                capacity=BOILERS * BOILER_KW, reserve=round(BOILERS * BOILER_KW / total - 1, 2),
+                note=(f"Оцінка, не проєкт: U стін {U_WALL}, покрівлі {U_ROOF}, підлоги {U_FLOOR} Вт/(м²·К); "
+                      .replace("0.", "0,")) + "внутрішні теплонадходження від верстатів (сотні кВт у зміну) "
+                                              "не враховано — це запас.")

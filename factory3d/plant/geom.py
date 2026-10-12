@@ -269,7 +269,7 @@ def empty(name, layer, loc=(0, 0, 0), rz=0.0, parent=None, **props):
 def make_layers():
     root = bpy.data.objects.new("FACTORY", None)
     bpy.context.scene.collection.objects.link(root)
-    for order, (key, label) in enumerate(LAYERS):
+    for order, (key, label, group) in enumerate(LAYERS):
         coll = bpy.data.collections.new(label)
         bpy.context.scene.collection.children.link(coll)
         LAYER_COLL[key] = coll
@@ -278,6 +278,7 @@ def make_layers():
         ob.parent = root
         ob["layer"] = key
         ob["label"] = label
+        ob["group"] = group
         ob["order"] = order  # glTF-експортер сортує вузли за іменем, тож порядок зберігаємо явно
         LAYER_OBJ[key] = ob
 

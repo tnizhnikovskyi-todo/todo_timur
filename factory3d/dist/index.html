@@ -90,6 +90,17 @@ button { font: inherit; color: inherit; }
 .view[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .view kbd { font: 10px var(--f-mono); color: var(--muted); margin-right: 4px; }
 .layers { display: flex; flex-direction: column; gap: 2px; }
+.lgroup + .lgroup { border-top: 1px solid var(--line); padding-top: 2px; }
+.lg-head { display: flex; align-items: center; gap: 4px; }
+.lg-head .layer { flex: 1; font-weight: 600; }
+.lg-n { font: 11px var(--f-mono); color: var(--muted); }
+.lg-tog { border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: var(--muted); }
+.lg-tog::before { content: ""; display: inline-block; width: 7px; height: 7px; border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.15s; }
+.lg-tog[aria-expanded="true"]::before { transform: translateY(1px) rotate(-135deg); }
+.lg-tog:hover { background: var(--accent-soft); color: var(--fg); }
+.lg-items { display: flex; flex-direction: column; gap: 1px; padding: 0 0 4px 22px; }
+.lg-items[hidden] { display: none; }
 .layer { display: flex; align-items: center; gap: 8px; padding: 3px 2px; cursor: pointer; font-size: 13px; }
 .layer input { accent-color: var(--accent); margin: 0; width: 15px; height: 15px; }
 .row-btns { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -269,6 +280,7 @@ button { font: inherit; color: inherit; }
       <div class="row-btns" style="margin-top:8px">
         <button class="btn" id="all-on">Усі</button>
         <button class="btn" id="all-off">Лише виробництво</button>
+        <button class="btn" id="eng-only">Інженерія</button>
       </div>
     </div>
     <div class="sec">
@@ -422,7 +434,7 @@ function onModel(gltf) {
   root.traverse((o) => {
     const u = o.userData || {};
     if (u.dims) $("#dims").textContent = u.dims;
-    if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label, order: u.order ?? 99 });
+    if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label, group: u.group, order: u.order ?? 99 });
     if (u.code && !items.has(u.code)) items.set(u.code, o);
     if (u.rect) zoneRects.set(u.code, u.rect);
     if (o.isMesh) {
@@ -527,19 +539,59 @@ function setLayer(key, on) {
   l.node.visible = on;
   const cb = document.getElementById("layer-" + key);
   if (cb) cb.checked = on;
+  syncLayerGroups();
   if (selected && !isShown(selected)) select(null);
 }
+// шари згруповано: заголовок групи вмикає/вимикає всі її шари, стрілка розгортає список
 function buildLayersUI() {
-  for (const [key, { label }] of [...layers].sort((a, b) => a[1].order - b[1].order)) {
-    const row = document.createElement("label");
-    row.className = "layer";
-    row.innerHTML = `<input type="checkbox" id="layer-${key}" checked><span>${label}</span>`;
-    row.querySelector("input").onchange = (e) => setLayer(key, e.target.checked);
-    $("#layers").appendChild(row);
+  const groups = new Map();
+  for (const [key, l] of [...layers].sort((a, b) => a[1].order - b[1].order)) {
+    const g = l.group || "Інше";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push([key, l]);
   }
+  let gi = 0;
+  for (const [g, list] of groups) {
+    const box = document.createElement("div");
+    box.className = "lgroup";
+    const id = `lg-${gi++}`;
+    box.innerHTML = `<div class="lg-head">
+        <label class="layer"><input type="checkbox" class="lg-all"><span>${esc(g)}</span></label>
+        <span class="lg-n"></span>
+        <button class="lg-tog" aria-expanded="false" aria-controls="${id}" aria-label="Показати шари групи «${esc(g)}»"></button>
+      </div><div class="lg-items" id="${id}" hidden></div>`;
+    for (const [key, { label }] of list) {
+      const row = document.createElement("label");
+      row.className = "layer";
+      row.innerHTML = `<input type="checkbox" id="layer-${key}" checked><span>${esc(label)}</span>`;
+      row.querySelector("input").onchange = (e) => setLayer(key, e.target.checked);
+      box.querySelector(".lg-items").appendChild(row);
+    }
+    box.querySelector(".lg-all").onchange = (e) => list.forEach(([k]) => setLayer(k, e.target.checked));
+    const tog = box.querySelector(".lg-tog");
+    tog.onclick = () => {
+      const open = tog.getAttribute("aria-expanded") !== "true";
+      tog.setAttribute("aria-expanded", String(open));
+      box.querySelector(".lg-items").hidden = !open;
+    };
+    $("#layers").appendChild(box);
+  }
+  syncLayerGroups();
+}
+function syncLayerGroups() {
+  document.querySelectorAll(".lgroup").forEach((box) => {
+    const cbs = [...box.querySelectorAll(".lg-items input")];
+    const on = cbs.filter((c) => c.checked).length;
+    const all = box.querySelector(".lg-all");
+    all.checked = on === cbs.length;
+    all.indeterminate = on > 0 && on < cbs.length;
+    box.querySelector(".lg-n").textContent = `${on}/${cbs.length}`;
+  });
 }
 $("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, true));
 $("#all-off").onclick = () => layers.forEach((_, k) => setLayer(k, CORE.has(k)));
+// будівля, верстати й усі інженерні мережі — без складів, транспорту й людей
+$("#eng-only").onclick = () => layers.forEach((l, k) => setLayer(k, ["building", "zones", "line", "facade"].includes(k) || l.group === "Інженерні мережі"));
 
 // ---------------------------------------------------------------- підписи
 const labels = [];
@@ -1249,6 +1301,12 @@ function eqHtml(eq) {
   if (eq.airflow_m3h != null) rows.push(["Витрата повітря", `${nf.format(eq.airflow_m3h)} м³/год`]);
   if (eq.cycles_today != null) rows.push(["Циклів за зміну", nf.format(eq.cycles_today)]);
   if (eq.vacuum_kpa != null) rows.push(["Вакуум", `${eq.vacuum_kpa} кПа`]);
+  if (eq.boilers) rows.push(["Котли", esc(eq.boilers)]);
+  if (D.ventilation && eq.boilers) {
+    const V = D.ventilation.totals;
+    rows.push(["Тепло зараз", `${nf.format(V.heat_kw)} кВт · К1 ${pct(V.boiler_load)} ${bar(V.boiler_load, V.boiler_load > 0.85 ? "warn" : "")}`],
+      ["Зима (−15 °C)", `<button class="lnk" data-go="obj:HEAT-NET">≈ ${nf.format(V.design_heat_kw)} кВт</button> з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів`]);
+  }
   if (eq.supply_c != null) rows.push(["Подача", `${eq.supply_c} °C`]);
   if (eq.silo_fill != null) rows.push(["Силос стружки", pct(eq.silo_fill)]);
   if (eq.briquettes_today_kg != null) rows.push(["Брикети за зміну", `${nf.format(eq.briquettes_today_kg)} кг`]);
@@ -1532,7 +1590,8 @@ function lightVentSummary() {
     }).join("")}</ul>
     <div class="sub">Вентиляція й опалення</div>
     <div class="hint" style="border:0;padding:0;margin-top:0">Надворі ${nf1.format(V.outdoor_c)} °C, уставка ${nf1.format(V.indoor_set_c)} °C.
-      Подають ${nf.format(V.airflow_m3h)} м³/год, нагрів ${nf.format(V.heat_kw)} кВт — ${pct(V.boiler_load)} потужності котла.</div>
+      Подають ${nf.format(V.airflow_m3h)} м³/год, нагрів ${nf.format(V.heat_kw)} кВт: працює ${V.boilers_on} котел із ${V.boilers} (${pct(V.boiler_load)}).
+      Узимку при −15 °C ≈ ${nf.format(V.design_heat_kw)} кВт з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів.</div>
     <ul class="rows">${["AHU-1", "HEAT-NET", ...Object.keys(D.ventilation.units).filter((k) => D.ventilation.units[k].filter_dp_pa > 250)]
       .map((k) => (k === "HEAT-NET" ? `<li><button class="row" data-go="obj:HEAT-NET"><span class="t">Теплова мережа</span><span class="mono">${nf.format(V.heat_kw)} кВт</span><span class="m">від котельні до ${Object.values(D.ventilation.units).filter((u) => u.heat_kw).length} установок</span></button></li>` : ventRow(k))).join("")}</ul>`;
 }
@@ -1562,9 +1621,15 @@ function ventHtml(code) {
   if (!V) return "";
   if (code === "HEAT-NET") {
     const us = Object.entries(V.units).filter(([, u]) => u.heat_kw).sort((a, b) => b[1].heat_kw - a[1].heat_kw);
+    const hb = V.heat_balance;
     return `<dl class="kv"><dt>Нагрів зараз</dt><dd>${nf.format(V.totals.heat_kw)} кВт</dd>
-        <dt>Котел</dt><dd><button class="lnk" data-go="obj:BOILER">${pct(V.totals.boiler_load)} потужності</button></dd>
+        <dt>Котли</dt><dd><button class="lnk" data-go="obj:BOILER">працює ${V.totals.boilers_on} з ${V.totals.boilers}</button> · К1 ${pct(V.totals.boiler_load)}</dd>
         <dt>Надворі</dt><dd>${nf1.format(V.totals.outdoor_c)} °C</dd></dl>
+      ${hb ? `<div class="sub">Зима, ${nf.format(hb.t_out)} °C · оцінка навантаження</div>
+      <table class="tbl">${hb.items.map((it) => `<tr><td>${esc(it.name)}</td><td class="n">${nf.format(it.kw)} кВт</td></tr>`).join("")}
+        <tr><td><b>Разом</b></td><td class="n"><b>${nf.format(hb.total)} кВт</b></td></tr>
+        <tr><td>Два котли</td><td class="n">${nf.format(hb.capacity)} кВт · запас ${pct(hb.reserve)}</td></tr></table>
+      <div class="src">${esc(hb.note)}</div>` : ""}
       <div class="sub">Споживачі тепла</div>
       <table class="tbl"><tr><th>Установка</th><th class="n">Клапан</th><th class="n">кВт</th></tr>
         ${us.map(([k, u]) => `<tr class="click" data-go="obj:${esc(k)}"><td>${esc(k)} · ${esc(D.zones[u.zone]?.name || u.zone)}</td>
