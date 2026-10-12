@@ -497,6 +497,11 @@ function loadPart(key) {
     if (emb) {
       const bin = Uint8Array.from(atob(emb.textContent.trim()), (c) => c.charCodeAt(0));
       new GLTFLoader().parse(bin.buffer, "", done, rej);
+    } else if (p.file.endsWith(".txt")) { // частина як base64-текст (хостинг без .glb)
+      fetch(p.file).then((r) => { if (!r.ok) throw new Error(`${p.file}: ${r.status}`); return r.text(); }).then((t) => {
+        const bin = Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
+        new GLTFLoader().parse(bin.buffer, "", done, rej);
+      }).catch(rej);
     } else new GLTFLoader().load(p.file, done, undefined, rej);
   });
   partState.set(key, pr);

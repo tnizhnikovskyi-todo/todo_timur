@@ -98,12 +98,16 @@ def export_parts(out_dir):
     return manifest
 
 
-def _viewer_html(out_dir, parts=False, odoo=False):
-    """Сторінка переглядача: маніфест частин завжди; за потреби — частини (base64) і дані Odoo всередині."""
+def _viewer_html(out_dir, parts=False, odoo=False, b64_files=False):
+    """Сторінка переглядача: маніфест частин завжди; за потреби — частини (base64) і дані Odoo всередині.
+    b64_files — частини як текстові файли base64 (для хостингу, що не віддає .glb)."""
     with open(VIEWER, encoding="utf-8") as f:
         html = f.read()
     with open(os.path.join(out_dir, "parts", "manifest.json"), encoding="utf-8") as f:
         manifest = json.load(f)
+    if b64_files:
+        for p in manifest["parts"]:
+            p["file"] += ".txt"
     html = html.replace("<!-- PARTS_MANIFEST -->", '<script type="application/json" id="parts-manifest">'
                         + json.dumps(manifest, ensure_ascii=False).replace("</", "<\\/") + "</script>")
     if parts:
@@ -121,13 +125,21 @@ def _viewer_html(out_dir, parts=False, odoo=False):
 
 
 def embed_viewer(out_dir):
-    """index.html (частини з parts/), factory_viewer.html (усе всередині, відкривається подвійним кліком)
-    і artifact.html (дані Odoo всередині, частини — поруч, для хостингу з обмеженням розміру сторінки)."""
-    for name, kw, wrap in (("index.html", {}, True), ("factory_viewer.html", dict(parts=True, odoo=True), True),
-                           ("artifact.html", dict(odoo=True), False)):
-        html = _viewer_html(out_dir, **kw)
+    """index.html (частини з parts/) і factory_viewer.html (усе всередині, відкривається подвійним кліком).
+    Окремо, не в git: artifact/ — сторінка з даними всередині й частинами як base64-текст поруч (для
+    хостингу з обмеженням розміру сторінки й типів файлів)."""
+    for name, kw in (("index.html", {}), ("factory_viewer.html", dict(parts=True, odoo=True))):
         with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
-            f.write(standalone(html) if wrap else html)
+            f.write(standalone(_viewer_html(out_dir, **kw)))
+    adir = os.path.join(out_dir, "artifact")
+    os.makedirs(os.path.join(adir, "parts"), exist_ok=True)
+    with open(os.path.join(adir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(_viewer_html(out_dir, odoo=True, b64_files=True))
+    for name in os.listdir(os.path.join(out_dir, "parts")):
+        if name.endswith(".glb"):
+            with open(os.path.join(out_dir, "parts", name), "rb") as src, \
+                    open(os.path.join(adir, "parts", name + ".txt"), "w") as dst:
+                dst.write(base64.b64encode(src.read()).decode())
 
 
 def standalone(html):
