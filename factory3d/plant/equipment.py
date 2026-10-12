@@ -31,7 +31,7 @@ for _i in range(1, 7):
 for _c in ("FL-1", "FL-2", "FL-3", "FL-4", "FL-5", "FL-C1", "FL-C2"):
     ROLE_BY_CODE[_c] = "forklift"
 # допоміжні одиниці, що входять до складу основної (показуються в тому самому паспорті)
-EXTRA_ROLES = {"EDGE-1": ["robot_return"], "SPRAY-1": ["paint_pump"], "PACKLINE-1": ["strapping"],
+EXTRA_ROLES = {"EDGE-1": ["robot_return"], "SPRAY-1": ["paint_pump"], "PACKLINE-1": ["strapping"], "UV-1": ["uv_oven"],
                "COMPRESSOR": ["compressor_dryer", "air_receiver"], "BOILER": ["briquetting_press"]}
 
 
