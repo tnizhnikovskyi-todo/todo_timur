@@ -7,7 +7,7 @@
 Лише перевбудувати однофайловий переглядач після правок у viewer/index.html:
     python build_scene.py --embed dist/factory.glb dist
 
-Результат: factory.glb, factory.usdz, factory.blend, index.html, factory_viewer.html
+Результат: factory.glb, factory.usdz, factory.blend, odoo_demo.json, index.html, factory_viewer.html
 (+ factory_web.glb — квантована копія для переглядача, потрібен Node.js для npx).
 
 Код розкладено по модулях пакета plant/:
@@ -26,6 +26,7 @@
 на спільний меш — у glTF він зберігається один раз, тому файл лишається малим.
 """
 import base64
+import json
 import math
 import os
 import shutil
@@ -40,14 +41,29 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 VIEWER = os.path.join(HERE, "viewer", "index.html")
 
 
-def embed_viewer(out_dir, glb):
-    """Однофайловий переглядач: модель вбудована в base64, відкривається без веб-сервера."""
+def write_odoo(out_dir):
+    """Демо-дані «як із Odoo» (plant/odoo_demo.py) поруч із моделлю."""
+    from plant.odoo_demo import generate
+    path = os.path.join(out_dir, "odoo_demo.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(generate(), f, ensure_ascii=False, separators=(",", ":"))
+    return path
+
+
+def embed_viewer(out_dir, glb, odoo_json=None):
+    """Однофайловий переглядач: модель (base64) і дані Odoo вбудовані, відкривається без веб-сервера."""
     with open(glb, "rb") as f:
         data = base64.b64encode(f.read()).decode()
     with open(VIEWER, encoding="utf-8") as f:
         html = f.read()
     html = html.replace("<!-- MODEL_DATA -->",
                         f'<script type="application/octet-stream" id="model-data">{data}</script>')
+    odoo_json = odoo_json or os.path.join(out_dir, "odoo_demo.json")
+    if os.path.exists(odoo_json):
+        with open(odoo_json, encoding="utf-8") as f:
+            odoo = f.read().replace("</", "<\\/")
+        html = html.replace("<!-- ODOO_DATA -->",
+                            f'<script type="application/json" id="odoo-data">{odoo}</script>')
     standalone = ('<!doctype html>\n<html lang="uk"><head><meta charset="utf-8">'
                   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
                   '</head><body>\n' + html + "\n</body></html>\n")
@@ -89,6 +105,7 @@ def main(out_dir):
     bpy.context.preferences.filepaths.save_version = 0  # без factory.blend1
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out_dir, "factory.blend")))
     shutil.copy(VIEWER, os.path.join(out_dir, "index.html"))
+    write_odoo(out_dir)
     # для однофайлового переглядача — квантована копія (KHR_mesh_quantization, three.js читає
     # без декодера): ~40 % менше, щоб сторінка вмістилася в ліміт хостингу
     web = os.path.join(out_dir, "factory_web.glb")
@@ -107,6 +124,8 @@ def main(out_dir):
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     if argv and argv[0] == "--embed":
+        write_odoo(argv[2])
+        shutil.copy(VIEWER, os.path.join(argv[2], "index.html"))
         embed_viewer(argv[2], argv[1])
     else:
         main(argv[0] if argv else "dist")

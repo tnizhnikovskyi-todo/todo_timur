@@ -6,9 +6,10 @@ from mathutils import Vector
 
 from .geom import (LAYER_OBJ, Mesh, cartons, empty, forklift, hazard, instance, legs_frame, pallet,
                    person, rack_cart, roller_table, rounded_path, shared, sheet_stack)
-from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, DUCT_Z, EDGE_DECORS,
-                     EXHAUST_POINTS, FLOWS, FOOTPRINT, GANTRY_X, GANTRY_Y, H, MACHINES, SHEET_COLS_X,
-                     SHEET_DECORS, SHEET_ROWS_Y, STATUS, W, ZONES, blocked, obst)
+from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, DUCT_Z, EXHAUST_POINTS,
+                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FLOWS, FOOTPRINT, GANTRY_X, GANTRY_Y, H,
+                     HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_DECORS, SHEET_ROWS_Y,
+                     STATUS, W, ZONES, blocked, edge_slot, fg_slot, hw_state, obst, sheet_slot)
 from .machines import MACHINE_BUILDERS, OPERATOR, TOWER_POS
 
 
@@ -220,9 +221,7 @@ def build_sheets():
     підйомні столи розкрійних центрів і нестингу."""
     for j, y in enumerate(SHEET_ROWS_Y):
         for i, x in enumerate(SHEET_COLS_X):
-            decor = 5 if j >= 12 else (i * 3 + j * 5) % 7
-            n = 0 if (i + 2 * j) % 11 == 0 else 5 * (2 + (i * 7 + j * 3) % 11)
-            code = f"PLT-{j + 1:02d}{chr(65 + i)}"
+            code, decor, n = sheet_slot(i, j)
             name = SHEET_DECORS[decor][0] if n else "порожньо"
             instance(code, "sheets", stack_mesh(decor, n), loc=(x, y, 0), code=code, kind="stock",
                      label=f"Стос {code}", desc=f"{name}, {n} арк." if n else "Місце вільне.")
@@ -264,10 +263,10 @@ def build_sheets():
 
 
 def build_hardware():
-    sec_w, nsec, x0 = 2.0, 6, 15.5
-    levels = [0.12, 0.72, 1.32, 1.92]
+    sec_w, nsec, x0 = 2.0, HW_SECTIONS, 15.5
+    levels = [0.12, 0.72, 1.32, 1.92][:HW_LEVELS]
     depth = 0.6
-    rows = {f"R{k + 1}": 48.0 + 4.2 * k for k in range(6)}
+    rows = {f"R{k + 1}": 48.0 + 4.2 * k for k in range(HW_ROWS)}
 
     def frame(m):
         for s in range(nsec + 1):
@@ -302,8 +301,7 @@ def build_hardware():
         for s in range(1, nsec + 1):
             for li, z in enumerate(levels, 1):
                 code = f"FUR-{row}-S{s:02d}-L{li}"
-                h = (ri * 7 + s * 3 + li * 5) % 23
-                state = "low" if h in (0, 1) else "out" if h == 2 else "ok"
+                state = hw_state(ri, s, li)
                 instance(code, "hardware", bins(state), loc=(x0 + (s - 0.5) * sec_w, y, z),
                          code=code, kind="bin", state=state, label=f"Комірка {code}",
                          desc={"ok": "Запас у нормі.", "low": "Запас нижче мінімуму.",
@@ -338,8 +336,7 @@ def build_edge():
         obst(x - 0.5, ys, x + 0.5, ye)
         for s in range(1, nsec + 1):
             for li, z in enumerate(levels, 1):
-                decor = (ui + s + li) % len(EDGE_DECORS)
-                n = (ui * 5 + s * 3 + li * 7) % 12
+                decor, n = edge_slot(ui, s, li)
                 code = f"EB-{u}-S{s}-L{li}"
                 instance(code, "edge", rolls(decor, n), loc=(x, ys + (s - 0.5) * sec, z),
                          code=code, kind="stock", label=f"Полиця {code}",
@@ -557,14 +554,11 @@ def build_dust():
 
 
 # ---------------------------------------------------------------- готова продукція і відвантаження
-FG_ROWS = [123.2, 127.6, 128.7, 133.1, 134.2]
-FG_PRODUCTS = ["Шафа нижня 600", "Шафа верхня 800", "Пенал 400", "Тумба 3 шухляди",
-               "Стіл офісний 1400", "Шафа для документів 800", "Комод 4 шухляди"]
 
 
 def build_fg():
-    bay_w, nbay, y0 = 2.7, 18, 3.0
-    levels = [0.0, 1.9, 3.8, 5.7]
+    bay_w, nbay, y0 = 2.7, FG_BAYS, 3.0
+    levels = [0.0, 1.9, 3.8, 5.7][:FG_LEVELS]
     depth = 1.1
 
     def frame(m):
@@ -601,10 +595,8 @@ def build_fg():
         for b in range(1, nbay + 1):
             for li, z in enumerate(levels, 1):
                 code = f"FG-{row}-B{b:02d}-L{li}"
-                seed = (ri * 11 + b * 3 + li * 5) % 7
-                n = 0 if seed in (0, 4) else (1 if seed == 3 else 2)
-                l0, l1 = 2 + seed % 2, 2 + (seed + 1) % 2
-                prod = FG_PRODUCTS[(b + li + ri) % len(FG_PRODUCTS)]
+                n, l0, l1, pi = fg_slot(ri, b, li)
+                prod = FG_PRODUCTS[pi]
                 instance(code, "fg", load(n, l0 if n else 0, l1 if n > 1 else 0),
                          loc=(x, y0 + (b - 0.5) * bay_w, z), code=code, kind="stock",
                          label=f"Комірка {code}", desc=f"{prod}: {n} палет." if n else "Вільно.")
