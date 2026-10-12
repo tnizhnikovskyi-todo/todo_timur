@@ -90,7 +90,13 @@ button { font: inherit; color: inherit; }
 .layers { display: flex; flex-direction: column; gap: 2px; }
 .lgroup + .lgroup { border-top: 1px solid var(--line); padding-top: 2px; }
 .lg-head { display: flex; align-items: center; gap: 4px; }
-.lg-head .layer { flex: 1; font-weight: 600; }
+.lg-head { min-height: 30px; padding-left: 2px; }
+.lg-head .lg-all { accent-color: var(--accent); margin: 0 6px 0 0; width: 15px; height: 15px; cursor: pointer; }
+.lg-name { flex: 1; text-align: left; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
+  font: 600 13px var(--f-body); color: var(--fg); }
+.lg-name:hover { color: var(--accent); }
+.lg-bulk { display: flex; gap: 6px; margin: 2px 0 4px; }
+.lg-bulk .btn { font-size: 11px; padding: 2px 8px; }
 .lg-n { font: 11px var(--f-mono); color: var(--muted); }
 .lg-tog { border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: var(--muted); }
 .lg-tog::before { content: ""; display: inline-block; width: 7px; height: 7px; border-right: 1.5px solid currentColor;
@@ -554,10 +560,13 @@ function buildLayersUI() {
     box.className = "lgroup";
     const id = `lg-${gi++}`;
     box.innerHTML = `<div class="lg-head">
-        <label class="layer"><input type="checkbox" class="lg-all"><span>${esc(g)}</span></label>
+        <input type="checkbox" class="lg-all" aria-label="Усі шари групи «${esc(g)}»" title="Увімкнути / вимкнути всю групу">
+        <button class="lg-name" aria-expanded="false" aria-controls="${id}">${esc(g)}</button>
         <span class="lg-n"></span>
         <button class="lg-tog" aria-expanded="false" aria-controls="${id}" aria-label="Показати шари групи «${esc(g)}»"></button>
-      </div><div class="lg-items" id="${id}" hidden></div>`;
+      </div><div class="lg-items" id="${id}" hidden>
+        <div class="lg-bulk"><button class="btn" data-bulk="1">Усі</button><button class="btn" data-bulk="0">Жодного</button></div>
+      </div>`;
     for (const [key, { label }] of list) {
       const row = document.createElement("label");
       row.className = "layer";
@@ -565,13 +574,16 @@ function buildLayersUI() {
       row.querySelector("input").onchange = (e) => setLayer(key, e.target.checked);
       box.querySelector(".lg-items").appendChild(row);
     }
-    box.querySelector(".lg-all").onchange = (e) => list.forEach(([k]) => setLayer(k, e.target.checked));
-    const tog = box.querySelector(".lg-tog");
-    tog.onclick = () => {
-      const open = tog.getAttribute("aria-expanded") !== "true";
-      tog.setAttribute("aria-expanded", String(open));
+    const setAll = (on) => list.forEach(([k]) => setLayer(k, on));
+    box.querySelector(".lg-all").onchange = (e) => setAll(e.target.checked);
+    box.querySelectorAll("[data-bulk]").forEach((b) => { b.onclick = () => setAll(b.dataset.bulk === "1"); });
+    const toggle = () => {
+      const open = box.querySelector(".lg-tog").getAttribute("aria-expanded") !== "true";
+      box.querySelectorAll(".lg-tog, .lg-name").forEach((b) => b.setAttribute("aria-expanded", String(open)));
       box.querySelector(".lg-items").hidden = !open;
     };
+    box.querySelector(".lg-tog").onclick = toggle;
+    box.querySelector(".lg-name").onclick = toggle;
     $("#layers").appendChild(box);
   }
   syncLayerGroups();
