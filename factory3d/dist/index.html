@@ -262,7 +262,7 @@ button { font: inherit; color: inherit; }
       <h2>Показ</h2>
       <div class="layers">
         <label class="layer"><input type="checkbox" id="opt-labels" checked><span>Підписи</span></label>
-        <label class="layer"><input type="checkbox" id="opt-motion" checked><span>Рух маршрутом</span></label>
+        <label class="layer"><input type="checkbox" id="opt-motion" checked><span>Анімація маршруту замовлення</span></label>
         <label class="layer"><input type="checkbox" id="opt-shadows" checked><span>Тіні</span></label>
       </div>
     </div>
@@ -385,7 +385,6 @@ const layers = new Map();
 const items = new Map();    // code -> корінь клікабельного об'єкта
 const zoneRects = new Map();
 const lamps = [];
-const routes = [];
 let selected = null;
 let hovered = null;
 const selBox = new THREE.Box3Helper(new THREE.Box3(), 0xf2c230);
@@ -420,13 +419,6 @@ function onModel(gltf) {
       o.castShadow = !o.material.transparent && kind !== "zone" && kind !== "bin" && !o.name.startsWith("Майданчик");
       o.receiveShadow = !o.material.transparent;
       if (u.role === "status") lamps.push(o);
-      if (kind === "flow") {
-        o.material.emissive = o.material.color.clone();
-        o.material.emissiveIntensity = 0.35;
-        if (r.userData.route && !routes.some((x) => x.root === r)) {
-          routes.push({ root: r, points: JSON.parse(r.userData.route), color: o.material.color.clone() });
-        }
-      }
     }
   });
   scene.add(root);
@@ -434,7 +426,6 @@ function onModel(gltf) {
   $("#dims").textContent += ` · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
   buildLayersUI();
   buildLabels();
-  buildPulse();
   goView(VIEWS[0], false);
   $("#loading").hidden = true;
   modelReady();
@@ -513,7 +504,7 @@ function fitBox(box, animate = true) {
 const focusOn = (obj) => fitBox(new THREE.Box3().setFromObject(obj));
 
 // ---------------------------------------------------------------- шари
-const CORE = new Set(["building", "zones", "line", "facade", "buffer", "dust", "people", "flow"]);
+const CORE = new Set(["building", "zones", "line", "facade", "buffer", "dust", "people"]);
 function setLayer(key, on) {
   const l = layers.get(key);
   if (!l) return;
@@ -570,30 +561,18 @@ function syncLabels() {
 $("#opt-labels").onchange = syncLabels;
 $("#opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
 
-// ---------------------------------------------------------------- маршрути: точки, що біжать
-const pulses = [];
-function buildPulse() {
-  for (const r of routes) {
-    const curves = [];
-    for (let i = 0; i < r.points.length - 1; i++) {
-      const a = new THREE.Vector3(...r.points[i].p), b = new THREE.Vector3(...r.points[i + 1].p);
-      const lift = 1.6 + 0.1 * a.distanceTo(b);
-      const c = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, lift));
-      curves.push(new THREE.QuadraticBezierCurve3(b2t(a.toArray()), b2t(c.toArray()), b2t(b.toArray())));
-    }
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14),
-      new THREE.MeshBasicMaterial({ color: r.color, transparent: true, opacity: 0.4, depthWrite: false }));
-    mesh.add(halo);
-    mesh.userData.isPulse = true; halo.userData.isPulse = true;
-    scene.add(mesh);
-    pulses.push({ mesh, curves, travel: 0 });
-  }
-}
+// ---------------------------------------------------------------- точка, що біжить маршрутом вибраного замовлення
+const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+pulse.add(new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14),
+  new THREE.MeshBasicMaterial({ color: 0xf2c230, transparent: true, opacity: 0.45, depthWrite: false })));
+pulse.traverse((o) => { o.userData.isPulse = true; });
+pulse.visible = false;
+scene.add(pulse);
+let pulseT = 0;
 $("#opt-motion").checked = !reduceMotion;
 
 // ---------------------------------------------------------------- підсвічування (вибір, наведення, Odoo, режим кольору)
-const hl = { roots: new Set(), markers: [], path: null };
+const hl = { roots: new Set(), markers: [], path: null, curve: null };
 let colorMode = "none";
 const C_OK = new THREE.Color("#27ae60"), C_WARN = new THREE.Color("#f39c12"), C_BAD = new THREE.Color("#e74c3c");
 const C_SEL = new THREE.Color("#f2c230"), C_HOV = new THREE.Color("#7fb3d5"), C_HL = new THREE.Color("#18a6c9");
@@ -613,7 +592,7 @@ function modeColor(root) {
   return null;
 }
 function paint(root) {
-  if (!root || root.userData.kind === "flow") return;
+  if (!root) return;
   let color = null, k = 0;
   if (root === selected) { color = C_SEL; k = 0.22; }
   else if (hl.roots.has(root)) { color = C_HL; k = 0.4; }
@@ -637,6 +616,7 @@ function clearHighlight() {
   for (const m of hl.markers) scene.remove(m);
   hl.markers = [];
   if (hl.path) { scene.remove(hl.path); hl.path.geometry.dispose(); hl.path = null; }
+  hl.curve = null;
 }
 function topOf(obj) {
   const box = new THREE.Box3().setFromObject(obj);
@@ -666,6 +646,7 @@ function highlight(entries, { path = false, fit = true } = {}) {
   }
   if (path && pts.length > 1) {
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    hl.curve = curve; pulseT = 0;
     hl.path = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 24, 0.14, 8, false),
       new THREE.MeshBasicMaterial({ color: 0xf2c230, transparent: true, opacity: 0.9 }));
     hl.path.userData.isPulse = true;
@@ -684,7 +665,7 @@ function pick(ev) {
   for (const hit of ray.intersectObjects(scene.children, true)) {
     if (!hit.object.isMesh || !isShown(hit.object) || hit.object.userData.isPulse) continue;
     const root = codeRoot(hit.object);
-    if (root && root.userData.kind !== "flow") return root;
+    if (root) return root;
   }
   return null;
 }
@@ -917,8 +898,7 @@ function legendHtml() {
     <span class="swatch" style="background:var(--ok)"></span><span>Маячок верстата: у роботі</span>
     <span class="swatch" style="background:var(--warn)"></span><span>Простій · лоток нижче мінімуму</span>
     <span class="swatch" style="background:var(--bad)"></span><span>Зупинено · комірка порожня</span>
-    <span class="swatch" style="background:#18a6c9"></span><span>Маршрут корпусу</span>
-    <span class="swatch" style="background:#b05fd8"></span><span>Маршрут фасаду</span></div>`;
+    <span class="swatch" style="background:#f2c230"></span><span>Маршрут виробничого замовлення — оберіть його у вкладці «Виробництво»</span></div>`;
 }
 
 // ---------------------------------------------------------------- вкладка «Виробництво»
@@ -1252,13 +1232,10 @@ renderer.setAnimationLoop(() => {
     l.material.emissive.set(l.material.color);
     l.material.emissiveIntensity = st === "stop" ? (reduceMotion ? 0.8 : 0.2 + blink) : st === "work" ? 0.7 : 0.3;
   }
-  const motion = $("#opt-motion").checked && layers.get("flow")?.node.visible && !hl.path;
-  for (const p of pulses) {
-    p.mesh.visible = !!motion;
-    if (!motion) continue;
-    p.travel = (p.travel + dt * 0.35) % p.curves.length;
-    const i = Math.floor(p.travel);
-    p.mesh.position.copy(p.curves[i].getPoint(p.travel - i));
+  pulse.visible = !!(hl.curve && $("#opt-motion").checked);
+  if (pulse.visible) {
+    pulseT = (pulseT + dt * 0.12) % 1;
+    pulse.position.copy(hl.curve.getPointAt(pulseT));
   }
   syncLabels();
   renderer.render(scene, camera);

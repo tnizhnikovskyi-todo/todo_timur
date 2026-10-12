@@ -1,16 +1,16 @@
 """Будівля, зони, склади, інженерія, люди, транспорт і маршрути — усе, що не є верстатом."""
-import json
 import math
-
-from mathutils import Vector
 
 from .geom import (LAYER_OBJ, Mesh, cartons, empty, forklift, hazard, instance, legs_frame, pallet,
                    person, rack_cart, roller_table, rounded_path, shared, sheet_stack)
 from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, DUCT_Z, EXHAUST_POINTS,
-                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FLOWS, FOOTPRINT, GANTRY_X, GANTRY_Y, H,
+                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FOOTPRINT, GANTRY_X, GANTRY_Y, H,
                      HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_DECORS, SHEET_ROWS_Y,
                      STATUS, W, ZONES, blocked, edge_slot, fg_slot, hw_state, obst, sheet_slot)
+from .equipment import body_scale, load_specs, passport
 from .machines import MACHINE_BUILDERS, OPERATOR, TOWER_POS
+
+SPECS = load_specs()
 
 
 def rot2(lx, ly, rz):
@@ -378,8 +378,11 @@ def build_machines():
     for mch in MACHINES:
         code, typ, name, x, y, desc = mch[:6]
         rz = machine_rz(mch)
+        pp = passport(code, SPECS)
+        extra = {"maker": pp["manufacturer"], "model": pp["model"]} if pp else {}
         root = empty(code, "facade" if y > 46 else "line", loc=(x, y, 0), rz=rz, code=code,
-                     kind="machine", label=name, desc=desc, status=STATUS[code])
+                     kind="machine", label=name, desc=desc, status=STATUS[code], **extra)
+        scale = body_scale(typ, pp)
         tx, ty, tz = TOWER_POS[typ]
         layer = "facade" if y > 46 else "line"
 
@@ -387,14 +390,15 @@ def build_machines():
             from .geom import signal_tower
             MACHINE_BUILDERS[typ](m)
             signal_tower(m, tx, ty, tz)
-        instance(code + "_body", layer, shared("machine_" + typ, body), parent=root)
+        instance(code + "_body", layer, shared("machine_" + typ, body), parent=root).scale = scale
         st = STATUS[code]
 
         def lamp(m, st=st, tx=tx, ty=ty, tz=tz):
             lv = {"work": 0, "idle": 1, "stop": 2}[st]
             m.cyl((tx, ty, tz + 0.34 + lv * 0.075), 0.048, 0.072,
                   {"work": "status_green", "idle": "status_amber", "stop": "status_red"}[st], segs=16)
-        instance(code + "_lamp", layer, shared(f"lamp_{typ}_{st}", lamp), parent=root, role="status")
+        instance(code + "_lamp", layer, shared(f"lamp_{typ}_{st}", lamp), parent=root,
+                 role="status").scale = scale
         fx, fy = FOOTPRINT[typ]
         if rz % 180:
             fx, fy = fy, fx
@@ -825,30 +829,6 @@ def build_transport():
                  label=label, desc="Напівпричіп 13,6 м біля воріт.")
 
 
-def arc_points(p0, p1, n=28):
-    a, b = Vector(p0), Vector(p1)
-    lift = 1.6 + 0.1 * (b - a).length
-    c = (a + b) / 2 + Vector((0, 0, lift))
-    return [tuple((1 - t) ** 2 * a + 2 * (1 - t) * t * c + t ** 2 * b)
-            for t in (i / n for i in range(n + 1))]
-
-
-def build_flow():
-    for code, label, mat, points in FLOWS:
-        m = Mesh()
-        for (_, _, p0), (_, _, p1) in zip(points, points[1:]):
-            pts = arc_points(p0, p1)
-            m.tube(pts[:-2], 0.09, mat)
-            tip = Vector(pts[-1])
-            m.cone_dir(tip, tip - Vector(pts[-3]), 0.28, 0.7, mat)
-        for _, _, p in points:
-            m.cyl(p, 0.22, 0.14, mat, segs=16)
-        m.build(code, "flow", code=code, kind="flow", label=label,
-                desc=" → ".join(n for _, n, _ in points) + ".",
-                route=json.dumps([{"code": c, "label": n, "p": p} for c, n, p in points],
-                                 ensure_ascii=False))
-
-
 def build_all():
     LAYER_OBJ["building"].parent["dims"] = f"{W:.0f} × {D:.0f} м · h {H:.0f} м"
     build_building()
@@ -869,5 +849,4 @@ def build_all():
     build_utilities()
     build_transport()
     build_people()
-    build_flow()
     build_columns()
