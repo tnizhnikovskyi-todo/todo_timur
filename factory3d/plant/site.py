@@ -4,7 +4,7 @@ import math
 from .geom import (LAYER_OBJ, Mesh, cartons, empty, forklift, hazard, instance, legs_frame, pallet,
                    person, rack_cart, roller_table, rounded_path, shared, sheet_stack)
 from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, DUCT_Z, EXHAUST_POINTS,
-                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FOOTPRINT, GANTRY_X, GANTRY_Y, H,
+                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FOOTPRINT, GANTRY_COLS, GANTRY_X, GANTRY_Y, H,
                      HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_DECORS, SHEET_ROWS_Y,
                      STATUS, W, ZONES, blocked, edge_slot, fg_slot, hw_state, obst, sheet_slot)
 from .equipment import body_scale, load_specs, passport
@@ -223,8 +223,10 @@ def build_sheets():
         for i, x in enumerate(SHEET_COLS_X):
             code, decor, n = sheet_slot(i, j)
             name = SHEET_DECORS[decor][0] if n else "порожньо"
+            where = "під порталом" if i >= len(SHEET_COLS_X) - GANTRY_COLS else "буфер, навантажувач"
             instance(code, "sheets", stack_mesh(decor, n), loc=(x, y, 0), code=code, kind="stock",
-                     label=f"Стос {code}", desc=f"{name}, {n} арк." if n else "Місце вільне.")
+                     label=f"Стос {code}",
+                     desc=(f"{name}, {n} арк." if n else "Місце вільне.") + f" ({where})")
 
     g = Mesh()
     xa, xb = GANTRY_X
@@ -243,7 +245,7 @@ def build_sheets():
         g.box_lo((xa + xb) / 2, by + dy, zr + 0.6, xb - xa + 0.8, 0.35, 0.7, "machine", bev=0.05)
     for x in (xa, xb):
         g.box_lo(x, by, zr + 0.55, 0.8, 1.6, 0.8, "machine_mid", bev=0.05)
-    tx = 27.4  # візок і вакуумне захоплення над стосом
+    tx = 34.0  # візок і вакуумне захоплення над стосом
     g.box_lo(tx, by, zr + 1.3, 1.4, 1.5, 0.6, "machine_accent", bev=0.05)
     g.box_lo(tx, by, 3.1, 0.35, 0.35, zr - 1.8, "alu", bev=0.02)
     g.box_lo(tx, by, 2.85, 0.5, 0.5, 0.3, "machine_dark", bev=0.03)
@@ -252,14 +254,14 @@ def build_sheets():
         for j in range(3):
             g.cyl((tx - 1.05 + i * 0.7, by - 0.6 + j * 0.6, 2.66), 0.1, 0.06, "rubber", segs=14)
     g.box_lo(tx, by, 2.6, 2.8, 2.07, 0.016, "decor1")
-    for y in range(2, 44, 3):  # огородження зони порталу з боку приймання
-        g.box_lo(14.3, y, 0, 0.06, 0.06, 2.0, "marking")
-        g.box_lo(14.3, y + 1.5, 0.1, 0.02, 2.9, 1.8, "guard_glass")
+    for y in range(2, 44, 3):  # огородження зони порталу з боку буфера плит
+        g.box_lo(xa - 0.4, y, 0, 0.06, 0.06, 2.0, "marking")
+        g.box_lo(xa - 0.4, y + 1.5, 0.1, 0.02, 2.9, 1.8, "guard_glass")
     g.build("GANTRY-1", "sheets", code="GANTRY-1", kind="equipment", label="Портальний склад плит",
-            desc="Портал над стосами з вакуумним захопленням: бере лист зі стосу й кладе прямо на "
-                 "підйомні столи розкрійних центрів (колії порталу заходять над ними) і нестингу. "
-                 "Без навантажувачів у зоні.")
-    obst(xa - 0.5, ya - 0.5, xb + 0.5, yb + 0.5)
+            desc="Портал над трьома рядами стосів із вакуумною траверсою: бере лист і кладе прямо на "
+                 "підйомні столи розкрійних центрів і нестингу (колії заходять над ними). Буфер плит "
+                 "поруч поповнює навантажувач.")
+    obst(14.6, ya - 0.5, xb + 0.5, yb + 0.5)  # разом із буфером плит — без колон усередині
 
 
 def build_hardware():

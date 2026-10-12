@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 from .equipment import ROLE_BY_CODE, load_specs, passport
 from .layout import (EDGE_LEVELS, EDGE_SECTIONS, EDGE_UNITS, FG_BAYS, FG_LEVELS, FG_PRODUCTS,
-                     FG_ROWS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
+                     FG_ROWS, GANTRY_COLS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
                      STATUS, ZONES, edge_slot, fg_slot, hw_state, sheet_slot)
 
 NOW = datetime(2026, 10, 12, 10, 30)
@@ -153,7 +153,8 @@ class Demo:
                     n = min(n, 10)  # дефіцит бетону — через нього стоїть пакетний розкрій
                 quants = [dict(product=pcode, qty=n, lot=f"{pcode}-{2609 + (i + j) % 5}-{100 + i * 14 + j}",
                                reserved=min(n, 10) if det(code, mod=4) == 0 else 0)] if n else []
-                self.location(code, f"{WH}/Сировина/Плити/{code}", quants, capacity=60, kind="stack")
+                area = "Портал" if i >= len(SHEET_COLS_X) - GANTRY_COLS else "Буфер"
+                self.location(code, f"{WH}/Сировина/Плити/{area}/{code}", quants, capacity=60, kind="stack")
         # фурнітура: правило поповнення на кожну комірку
         po_lines = []
         for ri in range(HW_ROWS):
