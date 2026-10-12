@@ -1,19 +1,23 @@
-"""Мебельный цех и склад — процедурная 3D-сцена.
+"""Меблеве підприємство: виробництво та склади — процедурна 3D-сцена.
 
-Запуск (Blender как Python-модуль, pip install bpy):
+Запуск (Blender як Python-модуль, pip install bpy):
     python build_scene.py dist/
-или в Blender:
+або у Blender:
     blender -b -P build_scene.py -- dist/
 
-Результат: factory.glb, factory.usdz, factory.blend.
+Результат: factory.glb, factory.usdz, factory.blend, index.html, factory_viewer.html.
 
-Координаты в метрах. Оси Blender: X — вдоль здания (поток материала слева
-направо), Y — поперёк, Z — вверх. При экспорте в glTF ось Y становится вверх.
+Координати в метрах. Осі Blender: X — уздовж будівлі (потік матеріалу зліва
+направо), Y — поперек, Z — угору. При експорті в glTF вісь Y стає вертикальною.
 
-Структура сцены:
-  LAYER_<key>         пустышка-слой (в просмотрщике — переключатель слоя)
-    <объект>          у каждого кликабельного объекта есть свойства
-                      code / kind / label / desc (в glTF это extras)
+Структура сцени:
+  FACTORY                 корінь (extras: dims — габарити будівлі)
+    LAYER_<key>           порожній об'єкт-шар (у переглядачі — перемикач шару)
+      <об'єкт>            у кожного клікабельного об'єкта є властивості
+                          code / kind / label / desc (у glTF це extras)
+
+Однакові об'єкти (верстати одного типу, стелажі, палети, комірки) посилаються
+на спільний меш — у glTF він зберігається один раз, тому файл лишається малим.
 """
 import base64
 import json
@@ -22,128 +26,175 @@ import os
 import shutil
 import sys
 
-import bpy  # noqa: I001 — bpy должен импортироваться раньше bmesh/mathutils
+import bpy  # noqa: I001 — bpy має імпортуватися раніше за bmesh/mathutils
 import bmesh
-from mathutils import Matrix, Vector
+from mathutils import Euler, Matrix, Vector
 
 # --------------------------------------------------------------------------
-# Планировка
+# Планування
 # --------------------------------------------------------------------------
-W, D, H = 60.0, 30.0, 7.0  # здание: длина, ширина, высота
+W, D, H = 120.0, 60.0, 9.0  # будівля: довжина, ширина, висота
 
 LAYERS = [
-    ("building", "Здание"),
-    ("roof", "Кровля и фермы"),
-    ("zones", "Разметка зон"),
-    ("receiving", "Приёмка и ОТК"),
+    ("building", "Будівля"),
+    ("roof", "Покрівля, ферми, світло"),
+    ("zones", "Розмітка зон"),
+    ("receiving", "Приймання та ВТК"),
     ("sheets", "Склад плит"),
-    ("hardware", "Склад фурнитуры"),
-    ("edge", "Склад кромки"),
-    ("buffer", "Буфер у линии"),
-    ("line", "Производственная линия"),
-    ("fg", "Склад готовой продукции"),
-    ("shipping", "Отгрузка"),
+    ("hardware", "Склад фурнітури"),
+    ("edge", "Склад крайки"),
+    ("buffer", "Буфер комплектів"),
+    ("line", "Виробничі дільниці"),
+    ("dust", "Аспірація"),
+    ("fg", "Склад готової продукції"),
+    ("shipping", "Відвантаження"),
     ("transport", "Транспорт"),
-    ("flow", "Маршрут изделия"),
+    ("people", "Персонал"),
+    ("flow", "Маршрут виробу"),
 ]
 
-# code, название, (x0, y0, x1, y1), цвет заливки, описание
+# code, назва, (x0, y0, x1, y1), колір заливки, опис
 ZONES = [
-    ("Z-RCV", "Приёмка", (0.6, 0.6, 8.4, 13.4), "#7fb3d5",
-     "Разгрузка фур с плитой и фурнитурой, сверка с накладной."),
-    ("Z-QC", "Входной контроль", (0.6, 14.0, 8.4, 20.4), "#c39bd3",
-     "Проверка декора, толщины и геометрии плит перед размещением."),
-    ("Z-EDGE", "Склад кромки", (0.6, 21.0, 8.4, 29.4), "#f5cba7",
-     "Рулоны кромки ПВХ по декорам и толщинам."),
-    ("Z-SHEETS", "Склад плит", (8.9, 0.6, 22.6, 15.2), "#d7bde2",
-     "Напольное хранение ДСП, МДФ и ХДФ стопами по декорам."),
-    ("Z-HW", "Склад фурнитуры", (8.9, 15.8, 22.6, 29.4), "#a9dfbf",
-     "Стеллажи с ячейками: петли, направляющие, крепёж, ручки."),
-    ("Z-PRE", "Буфер у линии", (23.0, 0.6, 27.4, 29.4), "#f9e79f",
-     "Тележки с комплектами деталей и фурнитуры под заказ."),
-    ("Z-LINE", "Производство", (27.8, 0.6, 48.4, 22.6), "#aed6f1",
-     "Раскрой → кромкооблицовка → присадка → сборка → упаковка."),
-    ("Z-OFFICE", "Офис мастера", (27.8, 23.2, 36.6, 29.4), "#d5d8dc",
-     "Мастер участка, планирование смены."),
-    ("Z-MAINT", "Ремонтный участок", (37.0, 23.2, 48.4, 29.4), "#d5d8dc",
-     "Обслуживание станков, заточка и замена инструмента."),
-    ("Z-POST", "Выход с линии", (48.9, 9.8, 59.4, 13.8), "#f9e79f",
-     "Упакованные изделия ждут размещения на складе."),
-    ("Z-FG", "Склад готовой продукции", (48.9, 14.4, 59.4, 29.4), "#abebc6",
-     "Паллетные стеллажи, 3 яруса."),
-    ("Z-OUT", "Отгрузка", (48.9, 0.6, 59.4, 9.2), "#f5b7b1",
-     "Сборка отгрузок по заказам и погрузка в машины."),
+    ("Z-RCV", "Приймання", (0.6, 0.6, 15.4, 25.4), "#8fb9d6",
+     "Розвантаження фур із плитою та фурнітурою, звірка з накладною. Троє воріт."),
+    ("Z-QC", "Вхідний контроль", (0.6, 26.0, 15.4, 35.4), "#c3a6d1",
+     "Перевірка декору, товщини й геометрії плит перед розміщенням."),
+    ("Z-EDGE", "Склад крайки", (0.6, 36.0, 15.4, 59.4), "#efcfae",
+     "Рулони крайки ПВХ за декорами й товщинами."),
+    ("Z-SHEETS", "Склад плит", (16.0, 0.6, 44.4, 30.4), "#d2c0dc",
+     "Автоматизований склад: портал із вакуумним захопленням подає плити на розкрій."),
+    ("Z-HW", "Склад фурнітури", (16.0, 31.0, 44.4, 59.4), "#b1d8bf",
+     "Шість стелажів з комірками: завіси, напрямні, кріплення, ручки."),
+    ("Z-PRE", "Буфер комплектів", (45.0, 26.0, 49.4, 59.4), "#eadf9f",
+     "Візки з фурнітурою під замовлення для дільниці збирання."),
+    ("Z-CUT", "Розкрій", (50.0, 0.6, 61.6, 44.4), "#b9d3e6",
+     "Три розкрійні центри та нестинг-ЧПК для МДФ."),
+    ("Z-EB", "Крайкооблицювання", (62.0, 0.6, 78.4, 25.4), "#b9d3e6",
+     "Три прохідні крайкооблицювальні верстати."),
+    ("Z-CNC", "Присадка ЧПК", (79.0, 0.6, 98.4, 25.4), "#b9d3e6",
+     "Чотири портальні обробні центри та візки сортування деталей."),
+    ("Z-ASM", "Збирання", (62.0, 26.0, 90.4, 44.4), "#c6dcc0",
+     "Шість збиральних дільниць із корпусними ваймами."),
+    ("Z-PACK", "Пакування", (90.8, 26.0, 98.4, 44.4), "#e3d3b4",
+     "Пакувальні столи й палетообмотувачі."),
+    ("Z-OFFICE", "Офіс", (50.0, 45.0, 63.6, 59.4), "#d5d8dc",
+     "Майстри дільниць, технологи, планування змін."),
+    ("Z-MAINT", "Ремонтна дільниця", (64.0, 45.0, 80.4, 59.4), "#d5d8dc",
+     "Обслуговування верстатів, заточування та заміна інструменту."),
+    ("Z-SOC", "Побутові приміщення", (80.8, 45.0, 98.4, 59.4), "#d5d8dc",
+     "Роздягальні, їдальня, медпункт."),
+    ("Z-POST", "Вихід з лінії", (99.0, 24.6, 119.4, 30.4), "#eadf9f",
+     "Запаковані вироби чекають на розміщення на складі."),
+    ("Z-FG", "Склад готової продукції", (99.0, 31.0, 119.4, 59.4), "#b4dfc1",
+     "Вісім рядів палетних стелажів, 4 яруси."),
+    ("Z-OUT", "Відвантаження", (99.0, 0.6, 119.4, 24.0), "#ecbdb7",
+     "Комплектування відвантажень за замовленнями, четверо воріт."),
 ]
 
-# Ворота: стена, центр по Y, ширина
-DOORS = [("W", 4.0, 3.2), ("W", 9.0, 3.2), ("E", 3.0, 3.2), ("E", 7.0, 3.2)]
-DOOR_H = 4.2
-
-COLUMNS = [(x, y) for x in (12, 24, 36, 48) for y in (10, 20)]
+# Ворота: стіна, центр по Y, ширина
+DOORS = [("W", 5.0, 3.4), ("W", 11.0, 3.4), ("W", 17.0, 3.4),
+         ("E", 4.0, 3.4), ("E", 9.5, 3.4), ("E", 15.0, 3.4), ("E", 20.5, 3.4)]
+DOOR_H = 4.5
 
 SHEET_DECORS = [
     ("ДСП 16 мм Дуб Сонома", "#c9a46f"),
-    ("ДСП 16 мм Белый", "#efede6"),
+    ("ДСП 16 мм Білий", "#efede6"),
     ("ДСП 16 мм Антрацит", "#45484c"),
     ("ДСП 16 мм Венге", "#4b3426"),
     ("ДСП 18 мм Бетон", "#a7a39b"),
-    ("МДФ 18 мм под покраску", "#b08a5a"),
-    ("ХДФ 3 мм белый", "#e8e4da"),
+    ("МДФ 18 мм під фарбування", "#b08a5a"),
+    ("ХДФ 3 мм білий", "#e8e4da"),
 ]
-# стопы плит: ряд (y) × колонка (x); индекс декора, число листов
-SHEET_ROWS_Y = {"A": 3.0, "B": 7.5, "C": 12.0}
-SHEET_COLS_X = [10.7, 14.1, 17.5, 20.9]
-SHEET_STACKS = {
-    "A": [(0, 58), (0, 34), (1, 61), (1, 22)],
-    "B": [(2, 40), (2, 9), (3, 27), (4, 45)],
-    "C": [(5, 30), (6, 110), (0, 0), (1, 48)],
-}
+# Портальний склад плит: сітка стосів 7 × 6
+SHEET_COLS_X = [18.6 + 3.3 * i for i in range(7)]
+SHEET_ROWS_Y = [3.0 + 3.0 * j for j in range(6)]
 
 MACHINES = [
-    # code, тип, название, x, y, описание
-    ("SAW-1", "saw", "Раскрой 1", 31.5, 4.8,
-     "Форматно-раскроечный центр с прижимной балкой. Режет плиту 2800×2070 на детали."),
-    ("SAW-2", "saw", "Раскрой 2", 31.5, 12.6,
-     "Второй раскроечный центр, работает на МДФ и ХДФ."),
-    ("EDGE-1", "edge", "Кромкооблицовка", 41.5, 4.5,
-     "Проходной кромкооблицовочный станок: торцовка, фрезеровка свесов, циклёвка."),
-    ("CNC-1", "cnc", "Присадка ЧПУ", 41.5, 12.6,
-     "Сверлильно-присадочный центр: отверстия под конфирматы, петли и эксцентрики."),
-    ("ASM-1", "asm", "Сборка 1", 40.5, 19.0,
-     "Стол сборки корпусов, установка фурнитуры и фасадов."),
-    ("ASM-2", "asm", "Сборка 2", 34.5, 19.0,
-     "Второй стол сборки."),
-    ("PACK-1", "pack", "Упаковка", 45.4, 18.6,
-     "Упаковка в гофрокартон и обмотка паллет стрейч-плёнкой."),
+    # code, тип, назва, x, y, опис
+    ("SAW-1", "saw", "Розкрій 1", 55.8, 5.0,
+     "Розкрійний центр із притискною балкою та програмним штовхачем. Ріже плиту 2800×2070 "
+     "на деталі за картою розкрою."),
+    ("SAW-2", "saw", "Розкрій 2", 55.8, 14.5, "Розкрійний центр, ДСП 16–18 мм."),
+    ("SAW-3", "saw", "Розкрій 3", 55.8, 24.0, "Розкрійний центр, ХДФ і задні стінки."),
+    ("NEST-1", "nest", "Нестинг ЧПК", 55.8, 35.0,
+     "Фрезерний центр для нестингу: розкрій МДФ-фасадів і криволінійних деталей, "
+     "автоматичне завантаження та вивантаження."),
+    ("EDGE-1", "edge", "Крайкооблицювання 1", 70.2, 4.0,
+     "Прохідний крайкооблицювальний верстат: клей-розплав, торцювання, фрезерування звисів, "
+     "циклювання, полірування. Повертальний конвеєр позаду."),
+    ("EDGE-2", "edge", "Крайкооблицювання 2", 70.2, 11.0, "Прохідний верстат, крайка 0,4–2 мм."),
+    ("EDGE-3", "edge", "Крайкооблицювання 3", 70.2, 18.0, "Прохідний верстат, PUR-клей."),
+    ("CNC-1", "cnc", "Присадка ЧПК 1", 84.0, 5.0,
+     "Портальний обробний центр із ЧПК: свердлильна голова, магазин інструменту, "
+     "вакуумні присоски на консолях."),
+    ("CNC-2", "cnc", "Присадка ЧПК 2", 84.0, 13.5, "Портальний обробний центр."),
+    ("CNC-3", "cnc", "Присадка ЧПК 3", 93.0, 5.0, "Портальний обробний центр."),
+    ("CNC-4", "cnc", "Присадка ЧПК 4", 93.0, 13.5, "Портальний обробний центр."),
+]
+for i, (x, y) in enumerate(((66.0, 30.5), (75.0, 30.5), (84.0, 30.5),
+                            (66.0, 39.5), (75.0, 39.5), (84.0, 39.5)), 1):
+    MACHINES.append((f"ASM-{i}", "asm", f"Збирання {i}", x, y,
+                     "Корпусна вайма з пневмоприжимами та верстак для встановлення фурнітури."))
+MACHINES += [
+    ("PACK-1", "pack", "Пакування 1", 94.6, 30.5,
+     "Пакувальний стіл із гофрокартоном і палетообмотувач стрейч-плівкою."),
+    ("PACK-2", "pack", "Пакування 2", 94.6, 39.5, "Пакувальний стіл і палетообмотувач."),
+]
+STATUS = {code: "work" for code, *_ in MACHINES}
+STATUS.update({"SAW-3": "idle", "EDGE-3": "idle", "CNC-2": "stop", "ASM-5": "idle"})
+
+# Габарити верстатів (для колон і розмітки): x, y
+FOOTPRINT = {"saw": (7.4, 7.6), "edge": (12.6, 3.8), "cnc": (6.6, 4.4), "asm": (6.0, 3.6),
+             "pack": (5.2, 3.2), "nest": (11.2, 4.6)}
+
+# Точки підключення аспірації в локальних координатах верстата
+DUCT_POINTS = {"saw": [(0.3, 1.9, 1.95)],
+               "edge": [(-2.3, 0.25, 1.55), (0.6, 0.25, 1.55), (2.9, 0.25, 1.55)],
+               "cnc": [(-1.9, 1.5, 1.6)],
+               "nest": [(0.0, 1.6, 2.6)]}
+DUCT_MAIN_Y, DUCT_Z = 25.7, 7.6
+
+# Маршрут виробу: точки прив'язки дуг (x, y, z)
+FLOW = [
+    ("Z-RCV", "Приймання", (8.0, 11.0, 1.2)),
+    ("Z-SHEETS", "Склад плит", (30.0, 13.0, 2.0)),
+    ("SAW-1", "Розкрій", (55.8, 5.0, 2.3)),
+    ("EDGE-1", "Крайка", (70.2, 4.0, 1.9)),
+    ("CNC-1", "Присадка", (84.0, 5.0, 2.7)),
+    ("ASM-3", "Збирання", (84.0, 30.5, 2.4)),
+    ("PACK-1", "Пакування", (94.6, 30.5, 2.6)),
+    ("Z-POST", "Вихід з лінії", (106.0, 27.5, 1.4)),
+    ("Z-FG", "Склад ГП", (110.0, 45.0, 3.0)),
+    ("Z-OUT", "Відвантаження", (110.0, 10.0, 1.4)),
 ]
 
-# Маршрут изделия: точки привязки дуг (x, y, z)
-FLOW = [
-    ("Z-RCV", "Приёмка", (4.5, 7.0, 1.2)),
-    ("Z-SHEETS", "Склад плит", (15.5, 7.5, 1.5)),
-    ("Z-PRE", "Буфер", (25.2, 6.5, 1.4)),
-    ("SAW-1", "Раскрой", (31.5, 4.8, 2.0)),
-    ("EDGE-1", "Кромка", (41.5, 4.5, 1.6)),
-    ("CNC-1", "Присадка", (41.5, 12.6, 2.4)),
-    ("ASM-1", "Сборка", (40.5, 19.0, 1.6)),
-    ("PACK-1", "Упаковка", (45.4, 18.6, 1.8)),
-    ("Z-POST", "Выход с линии", (53.0, 11.8, 1.2)),
-    ("Z-FG", "Склад ГП", (52.0, 22.0, 2.5)),
-    ("Z-OUT", "Отгрузка", (55.0, 5.0, 1.2)),
-]
+# Прямокутники, крізь які не можна ставити колони (заповнюються будівельниками)
+OBST = []
+
+
+def obst(x0, y0, x1, y1):
+    OBST.append((min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)))
+
+
+def blocked(x, y, pad=0.4):
+    return any(x0 - pad < x < x1 + pad and y0 - pad < y < y1 + pad for x0, y0, x1, y1 in OBST)
+
 
 # --------------------------------------------------------------------------
-# Материалы
+# Матеріали: колір (sRGB), шорсткість, металевість, [прозорість], [світіння]
 # --------------------------------------------------------------------------
 PALETTE = {
     "ground": ("#3a3d40", 0.95, 0.0),
-    "floor": ("#b9bcbd", 0.85, 0.0),
+    "floor": ("#aeb2b3", 0.6, 0.0),
     "wall": ("#d9dee2", 0.7, 0.1),
-    "wall_band": ("#5a7184", 0.6, 0.2),
-    "steel": ("#6c7a86", 0.45, 0.7),
+    "wall_band": ("#4f6679", 0.6, 0.2),
+    "steel": ("#7d8a95", 0.4, 0.75),
     "steel_dark": ("#3c4650", 0.5, 0.6),
     "column": ("#8a96a0", 0.5, 0.5),
+    "alu": ("#c7ccd1", 0.3, 0.85),
+    "galv": ("#b4bcc3", 0.35, 0.9),
     "marking": ("#f2c230", 0.6, 0.0),
+    "hazard_black": ("#1e1f21", 0.6, 0.0),
     "rack_upright": ("#2f5d8a", 0.45, 0.4),
     "rack_beam": ("#e8742a", 0.45, 0.3),
     "shelf": ("#9aa4ad", 0.5, 0.4),
@@ -152,25 +203,44 @@ PALETTE = {
     "bin_yellow": ("#e5b223", 0.55, 0.0),
     "pallet": ("#b8925a", 0.9, 0.0),
     "carton": ("#c49a64", 0.85, 0.0),
-    "machine": ("#e6e8ea", 0.45, 0.2),
-    "machine_accent": ("#1f6f8b", 0.4, 0.3),
-    "machine_dark": ("#2b3036", 0.5, 0.3),
+    "tape": ("#9c7444", 0.5, 0.0),
+    "wrap": ("#e6eef2", 0.15, 0.0, 0.35),
+    "machine": ("#e3e6e8", 0.35, 0.15),
+    "machine_mid": ("#b9c0c6", 0.4, 0.2),
+    "machine_accent": ("#1d6a86", 0.35, 0.25),
+    "machine_dark": ("#2b3036", 0.45, 0.3),
+    "phenolic": ("#f1f1ec", 0.35, 0.0),
+    "guard_glass": ("#bcd9e6", 0.05, 0.0, 0.28),
     "table_top": ("#c8a878", 0.7, 0.0),
     "rubber": ("#1c1d1f", 0.9, 0.0),
-    "forklift": ("#f0a224", 0.5, 0.1),
+    "forklift": ("#f0a224", 0.45, 0.1),
     "glass": ("#8fb8cf", 0.1, 0.0),
     "truck_cab": ("#c8ced3", 0.4, 0.5),
     "trailer": ("#eef1f3", 0.5, 0.2),
     "dock_shelter": ("#232629", 0.9, 0.0),
-    "status_green": ("#27ae60", 0.4, 0.0),
-    "status_amber": ("#f39c12", 0.4, 0.0),
-    "status_red": ("#e74c3c", 0.4, 0.0),
+    "lamp_off_g": ("#2f5a3f", 0.4, 0.0),
+    "lamp_off_a": ("#6b5222", 0.4, 0.0),
+    "lamp_off_r": ("#5e2a26", 0.4, 0.0),
+    "status_green": ("#27ae60", 0.3, 0.0),
+    "status_amber": ("#f39c12", 0.3, 0.0),
+    "status_red": ("#e74c3c", 0.3, 0.0),
+    "estop": ("#d0281d", 0.4, 0.0),
+    "screen": ("#10303f", 0.2, 0.0),
+    "screen_on": ("#1d3d52", 0.2, 0.0, 1.0, ("#3aa0d8", 0.8)),
+    "led": ("#f4f7fa", 0.3, 0.0, 1.0, ("#ffffff", 2.0)),
     "flow": ("#18a6c9", 0.3, 0.0),
     "edge_roll": ("#c9a46f", 0.6, 0.0),
-    "screen": ("#10303f", 0.2, 0.0),
+    "trousers": ("#2b3a55", 0.85, 0.0),
+    "shirt": ("#4a5563", 0.85, 0.0),
+    "hivis": ("#d7e62f", 0.6, 0.0),
+    "hivis_or": ("#f07c22", 0.6, 0.0),
+    "skin": ("#d6a27f", 0.7, 0.0),
+    "hair": ("#3b2a20", 0.9, 0.0),
+    "pegboard": ("#8e969c", 0.7, 0.2),
+    "film_roll": ("#e9eef1", 0.2, 0.0, 0.8),
 }
 for i, (_, hex_) in enumerate(SHEET_DECORS):
-    PALETTE[f"decor{i}"] = (hex_, 0.75, 0.0)
+    PALETTE[f"decor{i}"] = (hex_, 0.7, 0.0)
 for code, _, _, hex_, _ in ZONES:
     PALETTE["zone_" + code] = (hex_, 0.9, 0.0)
 
@@ -185,29 +255,46 @@ def srgb_to_linear(c):
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 
 
+def hex_to_lin(hex_):
+    h = hex_.lstrip("#")
+    return [srgb_to_linear(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4)]
+
+
 def make_materials():
-    for name, (hex_, rough, metal) in PALETTE.items():
-        h = hex_.lstrip("#")
-        rgb = [srgb_to_linear(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4)]
+    for name, spec in PALETTE.items():
+        hex_, rough, metal = spec[:3]
+        alpha = spec[3] if len(spec) > 3 else 1.0
+        emit = spec[4] if len(spec) > 4 else None
+        rgb = hex_to_lin(hex_)
         m = bpy.data.materials.new(name)
-        m.use_nodes = True
+        if hasattr(m, "use_nodes") and not m.node_tree:
+            m.use_nodes = True
         bsdf = m.node_tree.nodes.get("Principled BSDF")
         bsdf.inputs["Base Color"].default_value = (*rgb, 1.0)
         bsdf.inputs["Roughness"].default_value = rough
         bsdf.inputs["Metallic"].default_value = metal
-        m.diffuse_color = (*rgb, 1.0)
+        if alpha < 1.0:
+            bsdf.inputs["Alpha"].default_value = alpha
+            if hasattr(m, "surface_render_method"):
+                m.surface_render_method = "BLENDED"
+            else:
+                m.blend_method = "BLEND"
+        if emit:
+            bsdf.inputs["Emission Color"].default_value = (*hex_to_lin(emit[0]), 1.0)
+            bsdf.inputs["Emission Strength"].default_value = emit[1]
+        m.diffuse_color = (*rgb, alpha)
         MAT[name] = m
 
 
 # --------------------------------------------------------------------------
-# Построение геометрии
+# Побудова геометрії
 # --------------------------------------------------------------------------
 LAYER_OBJ = {}
 LAYER_COLL = {}
 
 
 class Mesh:
-    """Набирает несколько примитивов в один меш (меньше объектов — быстрее сцена)."""
+    """Набирає багато примітивів в один меш (менше об'єктів — швидша сцена)."""
 
     def __init__(self):
         self.bm = bmesh.new()
@@ -218,31 +305,58 @@ class Mesh:
             self.mats.append(mat)
         return self.mats.index(mat)
 
-    def _paint(self, verts, mat, smooth=False):
+    def _paint(self, faces, mat, smooth=False):
         mi = self._mi(mat)
-        for f in {f for v in verts for f in v.link_faces}:
+        for f in faces:
             f.material_index = mi
             f.smooth = smooth
 
-    def box(self, c, s, mat, rz=0.0):
-        """c — центр, s — размеры (x, y, z), rz — поворот вокруг Z в градусах."""
-        m = (Matrix.Translation(Vector(c)) @ Matrix.Rotation(math.radians(rz), 4, "Z")
+    @staticmethod
+    def _faces_of(verts):
+        return {f for v in verts for f in v.link_faces}
+
+    def box(self, c, s, mat, rz=0.0, rot=None, bev=0.0):
+        """c — центр, s — розміри (x, y, z), rz — поворот навколо Z у градусах,
+        rot — (rx, ry, rz) у градусах, bev — радіус скруглення ребер."""
+        rx, ry, rzz = rot if rot else (0.0, 0.0, rz)
+        m = (Matrix.Translation(Vector(c))
+             @ Euler((math.radians(rx), math.radians(ry), math.radians(rzz))).to_matrix().to_4x4()
              @ Matrix.Diagonal((*s, 1.0)))
         r = bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
-        self._paint(r["verts"], mat)
+        verts = r["verts"]
+        self._paint(self._faces_of(verts), mat)
+        bev = min(bev, min(s) * 0.45)
+        if bev > 0.004:
+            edges = list({e for v in verts for e in v.link_edges})
+            res = bmesh.ops.bevel(self.bm, geom=verts + edges, offset=bev, offset_type="OFFSET",
+                                  segments=2 if bev >= 0.02 else 1, profile=0.5,
+                                  affect="EDGES", clamp_overlap=True)
+            self._paint(res["faces"], mat, smooth=True)
 
-    def box_lo(self, x, y, z0, sx, sy, sz, mat, rz=0.0):
-        """Коробка, стоящая основанием на высоте z0."""
-        self.box((x, y, z0 + sz / 2), (sx, sy, sz), mat, rz)
+    def box_lo(self, x, y, z0, sx, sy, sz, mat, rz=0.0, bev=0.0):
+        """Коробка, що стоїть основою на висоті z0."""
+        self.box((x, y, z0 + sz / 2), (sx, sy, sz), mat, rz, bev=bev)
 
-    def cyl(self, c, r, h, mat, axis="Z", segs=20, r2=None):
-        rot = {"Z": Matrix.Identity(4),
-               "X": Matrix.Rotation(math.radians(90), 4, "Y"),
-               "Y": Matrix.Rotation(math.radians(90), 4, "X")}[axis]
-        m = Matrix.Translation(Vector(c)) @ rot
+    def cyl(self, c, r, h, mat, axis="Z", segs=20, r2=None, rot=None):
+        if rot:
+            R = Euler(tuple(math.radians(a) for a in rot)).to_matrix().to_4x4()
+        else:
+            R = {"Z": Matrix.Identity(4),
+                 "X": Matrix.Rotation(math.radians(90), 4, "Y"),
+                 "Y": Matrix.Rotation(math.radians(90), 4, "X")}[axis]
         res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segs,
-                                    radius1=r, radius2=r if r2 is None else r2, depth=h, matrix=m)
-        self._paint(res["verts"], mat, smooth=True)
+                                    radius1=r, radius2=r if r2 is None else r2, depth=h,
+                                    matrix=Matrix.Translation(Vector(c)) @ R)
+        faces = self._faces_of(res["verts"])
+        self._paint(faces, mat, smooth=True)
+        for f in faces:  # торці пласкі
+            if len(f.verts) > 4:
+                f.smooth = False
+
+    def sphere(self, c, r, mat, subdiv=2, scale=(1, 1, 1)):
+        m = Matrix.Translation(Vector(c)) @ Matrix.Diagonal((*scale, 1.0))
+        res = bmesh.ops.create_icosphere(self.bm, subdivisions=subdiv, radius=r, matrix=m)
+        self._paint(self._faces_of(res["verts"]), mat, smooth=True)
 
     def cone_dir(self, tip, direction, r, h, mat, segs=16):
         d = Vector(direction).normalized()
@@ -251,29 +365,36 @@ class Mesh:
         res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=segs,
                                     radius1=r, radius2=0.0, depth=h,
                                     matrix=Matrix.Translation(center) @ rot)
-        self._paint(res["verts"], mat, smooth=True)
+        self._paint(self._faces_of(res["verts"]), mat, smooth=True)
 
-    def tube(self, pts, r, mat, segs=8):
-        """Труба вдоль ломаной pts."""
+    def tube(self, pts, r, mat, segs=10, caps=False):
+        """Труба вздовж ламаної pts (кільця орієнтуються за дотичною)."""
         rings = []
+        prev_n = None
         for i, p in enumerate(pts):
             p = Vector(p)
             a = Vector(pts[max(i - 1, 0)])
             b = Vector(pts[min(i + 1, len(pts) - 1)])
             t = (b - a).normalized()
-            n = t.orthogonal().normalized()
+            if prev_n is None:
+                n = t.orthogonal().normalized()
+            else:  # переносимо нормаль, щоб труба не перекручувалась
+                n = (prev_n - t * prev_n.dot(t)).normalized()
+            prev_n = n
             bn = t.cross(n)
-            ring = []
-            for k in range(segs):
-                ang = 2 * math.pi * k / segs
-                ring.append(self.bm.verts.new(p + (n * math.cos(ang) + bn * math.sin(ang)) * r))
-            rings.append(ring)
+            rings.append([self.bm.verts.new(p + (n * math.cos(2 * math.pi * k / segs)
+                                                 + bn * math.sin(2 * math.pi * k / segs)) * r)
+                          for k in range(segs)])
         mi = self._mi(mat)
         for r0, r1 in zip(rings, rings[1:]):
             for k in range(segs):
                 f = self.bm.faces.new((r0[k], r0[(k + 1) % segs], r1[(k + 1) % segs], r1[k]))
                 f.material_index = mi
                 f.smooth = True
+        if caps:
+            for ring in (rings[0], rings[-1][::-1]):
+                f = self.bm.faces.new(ring[::-1])
+                f.material_index = mi
 
     def build(self, name, layer, parent=None, loc=(0, 0, 0), rz=0.0, **props):
         me = bpy.data.meshes.new(name)
@@ -306,7 +427,7 @@ def empty(name, layer, loc=(0, 0, 0), rz=0.0, parent=None, **props):
 def make_layers():
     root = bpy.data.objects.new("FACTORY", None)
     bpy.context.scene.collection.objects.link(root)
-    for key, label in LAYERS:
+    for order, (key, label) in enumerate(LAYERS):
         coll = bpy.data.collections.new(label)
         bpy.context.scene.collection.children.link(coll)
         LAYER_COLL[key] = coll
@@ -315,21 +436,188 @@ def make_layers():
         ob.parent = root
         ob["layer"] = key
         ob["label"] = label
+        ob["order"] = order  # glTF-експортер сортує вузли за іменем, тож порядок зберігаємо явно
         LAYER_OBJ[key] = ob
 
 
-# ---------------------------------------------------------------- здание
+def rounded_path(pts, radius=0.4, n=6):
+    """Ламана із заокругленими кутами (для повітроводів)."""
+    pts = [Vector(p) for p in pts]
+    out = [pts[0]]
+    for a, b, c in zip(pts, pts[1:], pts[2:]):
+        d1, d2 = (b - a), (c - b)
+        r = min(radius, d1.length / 2, d2.length / 2)
+        p0, p1 = b - d1.normalized() * r, b + d2.normalized() * r
+        for i in range(n + 1):
+            t = i / n
+            out.append((1 - t) ** 2 * p0 + 2 * (1 - t) * t * b + t ** 2 * p1)
+    out.append(pts[-1])
+    return [tuple(p) for p in out]
+
+
+# ---------------------------------------------------------------- дрібні деталі
+def pallet(m, x, y, z=0.0, sx=1.2, sy=0.8):
+    """Європалета: нижні дошки, бобишки, поперечки, верхній настил."""
+    ys = (-sy / 2 + 0.05, 0.0, sy / 2 - 0.05)
+    xs = (-sx / 2 + 0.07, 0.0, sx / 2 - 0.07)
+    if sx < sy:  # палета повернута довгою стороною вздовж Y
+        for xx in (-sx / 2 + 0.05, 0.0, sx / 2 - 0.05):
+            m.box_lo(x + xx, y, z, 0.1, sy, 0.022, "pallet")
+        for xx in (-sx / 2 + 0.05, 0.0, sx / 2 - 0.05):
+            for yy in (-sy / 2 + 0.07, 0.0, sy / 2 - 0.07):
+                m.box_lo(x + xx, y + yy, z + 0.022, 0.1, 0.14, 0.078, "pallet")
+        for yy in (-sy / 2 + 0.07, 0.0, sy / 2 - 0.07):
+            m.box_lo(x, y + yy, z + 0.1, sx, 0.14, 0.022, "pallet")
+        for k in range(5):
+            m.box_lo(x - sx / 2 + 0.05 + k * (sx - 0.1) / 4, y, z + 0.122, 0.1, sy, 0.022, "pallet")
+        return
+    for yy in ys:
+        m.box_lo(x, y + yy, z, sx, 0.1, 0.022, "pallet")
+    for xx in xs:
+        for yy in ys:
+            m.box_lo(x + xx, y + yy, z + 0.022, 0.14, 0.1, 0.078, "pallet")
+    for xx in xs:
+        m.box_lo(x + xx, y, z + 0.1, 0.14, sy, 0.022, "pallet")
+    for k in range(5):
+        m.box_lo(x, y - sy / 2 + 0.05 + k * (sy - 0.1) / 4, z + 0.122, sx, 0.1, 0.022, "pallet")
+
+
+def cartons(m, x, y, z, sx, sy, layers, wrap=True):
+    """Шари коробок 2×2 зі скотчем; за потреби — стрейч-плівка."""
+    bx, by, bh = sx / 2 - 0.01, sy / 2 - 0.01, 0.4
+    for k in range(layers):
+        for i in (-1, 1):
+            for j in (-1, 1):
+                cx, cy, cz = x + i * sx / 4, y + j * sy / 4, z + k * (bh + 0.005)
+                m.box_lo(cx, cy, cz, bx, by, bh, "carton", bev=0.008)
+                m.box_lo(cx, cy, cz + bh, bx * 0.98, 0.05, 0.003, "tape")
+    if wrap:
+        m.box_lo(x, y, z - 0.01, sx + 0.03, sy + 0.03, layers * (bh + 0.005) + 0.02, "wrap")
+
+
+def hazard(m, x0, x1, y, z, depth=0.02, h=0.06, along="X", w=0.12):
+    """Жовто-чорна смуга безпеки."""
+    n = max(1, int(abs(x1 - x0) / w))
+    for i in range(n):
+        c = x0 + (i + 0.5) * (x1 - x0) / n
+        mat = "marking" if i % 2 == 0 else "hazard_black"
+        if along == "X":
+            m.box_lo(c, y, z, abs(x1 - x0) / n, depth, h, mat)
+        else:
+            m.box_lo(y, c, z, depth, abs(x1 - x0) / n, h, mat)
+
+
+def estop(m, x, y, z):
+    m.box_lo(x, y, z, 0.09, 0.09, 0.07, "marking", bev=0.01)
+    m.cyl((x, y, z + 0.09), 0.035, 0.04, "estop", segs=14)
+
+
+def console(m, x, y, z_top, facing=-90.0, w=0.62):
+    """Пульт оператора на стійці: нахилена панель, екран, кнопка аварійної зупинки."""
+    m.box_lo(x, y, 0, 0.22, 0.22, z_top - 0.05, "machine_mid", bev=0.02)
+    m.box_lo(x, y, 0, 0.45, 0.45, 0.04, "machine_dark", bev=0.01)
+    a = math.radians(facing)
+    ox, oy = math.cos(a), math.sin(a)
+    tilt = 25
+    m.box((x, y, z_top + 0.12), (0.42, w, 0.07), "machine", rot=(0, -tilt, facing + 90), bev=0.015)
+    m.box((x + ox * 0.03, y + oy * 0.03, z_top + 0.15), (0.3, w * 0.55, 0.02), "screen_on",
+          rot=(0, -tilt, facing + 90))
+    m.box((x + ox * 0.18, y + oy * 0.18, z_top + 0.33), (0.05, w * 0.9, 0.36), "machine_dark",
+          rot=(0, 10, facing + 90), bev=0.01)
+    m.box((x + ox * 0.205, y + oy * 0.205, z_top + 0.33), (0.01, w * 0.8, 0.3), "screen_on",
+          rot=(0, 10, facing + 90))
+    estop(m, x - oy * w * 0.38, y + ox * w * 0.38, z_top + 0.12)
+
+
+def signal_tower(m, x, y, z):
+    m.cyl((x, y, z + 0.02), 0.05, 0.04, "machine_dark", segs=14)
+    m.cyl((x, y, z + 0.17), 0.012, 0.26, "alu", segs=8)
+    for i, mat in enumerate(("lamp_off_g", "lamp_off_a", "lamp_off_r")):
+        m.cyl((x, y, z + 0.34 + i * 0.075), 0.045, 0.07, mat, segs=16)
+    m.cyl((x, y, z + 0.57), 0.045, 0.02, "machine_dark", segs=16)
+
+
+def status_lamp(x, y, z, status):
+    lv = {"work": 0, "idle": 1, "stop": 2}[status]
+    mat = {"work": "status_green", "idle": "status_amber", "stop": "status_red"}[status]
+    m = Mesh()
+    m.cyl((x, y, z + 0.34 + lv * 0.075), 0.048, 0.072, mat, segs=16)
+    return m
+
+
+def floor_frame(m, sx, sy, mat="marking", w=0.08):
+    for (cx, cy, a, b) in ((0, -sy / 2, sx, w), (0, sy / 2, sx, w),
+                           (-sx / 2, 0, w, sy), (sx / 2, 0, w, sy)):
+        m.box((cx, cy, 0.022), (a, b, 0.02), mat)
+
+
+def legs_frame(m, x, y, sx, sy, h, mat="machine_mid", t=0.06):
+    for dx in (-sx / 2 + t, sx / 2 - t):
+        for dy in (-sy / 2 + t, sy / 2 - t):
+            m.box_lo(x + dx, y + dy, 0, t, t, h, mat)
+            m.box_lo(x + dx, y + dy, 0, 0.12, 0.12, 0.02, "machine_dark")
+    for dy in (-sy / 2 + t, sy / 2 - t):
+        m.box_lo(x, y + dy, 0.15, sx - 2 * t, t * 0.8, t * 0.8, mat)
+
+
+def roller_table(m, x, y, sx, sy, h, pitch=0.25, axis="Y"):
+    legs_frame(m, x, y, sx, sy, h - 0.06)
+    if axis == "Y":
+        for dy in (-sy / 2, sy / 2):
+            m.box_lo(x, y + dy, h - 0.1, sx, 0.05, 0.1, "alu", bev=0.006)
+        n = int(sx / pitch)
+        for i in range(n):
+            m.cyl((x - sx / 2 + (i + 0.5) * sx / n, y, h - 0.03), 0.03, sy - 0.04, "galv",
+                  axis="Y", segs=10)
+    else:
+        for dx in (-sx / 2, sx / 2):
+            m.box_lo(x + dx, y, h - 0.1, 0.05, sy, 0.1, "alu", bev=0.006)
+        n = int(sy / pitch)
+        for i in range(n):
+            m.cyl((x, y - sy / 2 + (i + 0.5) * sy / n, h - 0.03), 0.03, sx - 0.04, "galv",
+                  axis="X", segs=10)
+
+
+
+MESHES = {}
+
+
+def shared(key, fn):
+    """Меш, спільний для всіх об'єктів з тим самим ключем (у glTF зберігається один раз)."""
+    me = MESHES.get(key)
+    if me is None:
+        m = Mesh()
+        fn(m)
+        me = bpy.data.meshes.new(key)
+        m.bm.normal_update()
+        m.bm.to_mesh(me)
+        m.bm.free()
+        for mt in m.mats:
+            me.materials.append(MAT[mt])
+        MESHES[key] = me
+    return me
+
+
+def instance(name, layer, me, parent=None, loc=(0, 0, 0), rz=0.0, **props):
+    ob = bpy.data.objects.new(name, me)
+    place(ob, layer, parent, loc, rz, props)
+    return ob
+
+
+# ---------------------------------------------------------------- будівля
 def build_building():
     m = Mesh()
-    m.box((W / 2, D / 2, -0.06), (W + 40, D + 24, 0.1), "ground")
+    m.box((W / 2, D / 2, -0.06), (W + 60, D + 40, 0.1), "ground")
     m.box((W / 2, D / 2, -0.1), (W, D, 0.2), "floor")
-    m.build("Площадка и пол", "building")
+    m.build("Майданчик і підлога", "building")
 
     walls = Mesh()
-    t = 0.25
-    # северная стена — во всю высоту, южная — разрез (низкий парапет), чтобы было видно внутрь
+    t = 0.3
+    # північна стіна на всю висоту, південна — розріз (низький парапет), щоб було видно всередину
     walls.box_lo(W / 2, D + t / 2, 0, W + 2 * t, t, H, "wall")
-    walls.box_lo(W / 2, D + t / 2 + 0.01, 0, W + 2 * t, t, 0.9, "wall_band")
+    walls.box_lo(W / 2, D + t / 2 + 0.01, 0, W + 2 * t, t, 1.0, "wall_band")
+    for k in range(20):  # стрічкові вікна
+        walls.box_lo(3 + k * 6, D - 0.005, 5.6, 4.4, 0.02, 1.6, "glass")
     walls.box_lo(W / 2, -t / 2, 0, W + 2 * t, t, 1.0, "wall_band")
     for side, x in (("W", -t / 2), ("E", W + t / 2)):
         doors = sorted((y, w) for s, y, w in DOORS if s == side)
@@ -340,50 +628,84 @@ def build_building():
             walls.box_lo(x, yc, DOOR_H, t, w, H - DOOR_H, "wall")
             y0 = b
         walls.box_lo(x, (y0 + D) / 2, 0, t, D - y0, H, "wall")
-        walls.box_lo(x + (0.01 if side == "E" else -0.01), D / 2, 0, t, D, 0.9, "wall_band")
-    walls.build("Стены", "building")
+        walls.box_lo(x + (0.01 if side == "E" else -0.01), D / 2, 0, t, D, 1.0, "wall_band")
+    walls.build("Стіни", "building")
 
-    st = Mesh()
-    for x, y in COLUMNS:
-        st.box_lo(x, y, 0, 0.4, 0.4, H, "column")
-        st.box_lo(x, y, 0, 0.55, 0.55, 1.2, "marking")
-    st.build("Колонны", "building")
     rf = Mesh()
     for x in range(0, int(W) + 1, 12):
-        rf.box_lo(x, D / 2, H - 0.45, 0.2, D, 0.45, "steel")
-    for y in (10.0, 20.0):
-        rf.box_lo(W / 2, y, H - 0.25, W, 0.12, 0.25, "steel_dark")
-    rf.build("Фермы", "roof")
+        rf.box_lo(x, D / 2, H - 0.6, 0.25, D, 0.6, "steel")
+        for k in range(10):  # решітка ферми
+            rf.box((x, 3 + k * 6, H - 0.3), (0.06, 0.06, 0.7), "steel", rot=(40 if k % 2 else -40, 0, 0))
+    for y in (15.0, 30.0, 45.0):
+        rf.box_lo(W / 2, y, H - 0.3, W, 0.14, 0.3, "steel_dark")
+    for x in range(3, int(W), 6):  # світильники high-bay
+        for y in range(5, int(D), 10):
+            rf.cyl((x, y, H - 0.9), 0.03, 0.6, "steel_dark", segs=6)
+            rf.cyl((x, y, H - 1.25), 0.32, 0.1, "machine_mid", segs=20)
+            rf.cyl((x, y, H - 1.31), 0.28, 0.02, "led", segs=20)
+    rf.build("Ферми та світильники", "roof")
 
-    # офис мастера: два этажа со сплошным остеклением на юг
+    # офіс: два поверхи із суцільним склінням на південь
     of = Mesh()
-    x0, y0, x1, y1 = 28.0, 23.6, 36.4, 29.6
+    x0, y0, x1, y1 = 50.2, 45.6, 63.4, 59.6
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    for z in (0.0, 3.1):
-        of.box_lo(cx, cy, z, x1 - x0, y1 - y0, 2.9, "wall")
-        of.box_lo(cx, y0 - 0.01, z + 0.9, x1 - x0 - 0.6, 0.05, 1.6, "glass")
-        of.box_lo(cx, cy, z + 2.9, x1 - x0 + 0.2, y1 - y0 + 0.2, 0.2, "wall_band")
-    for i in range(10):  # лестница
-        of.box_lo(x1 + 0.6, y0 + 0.4 + i * 0.3, i * 0.31, 1.0, 0.3, 0.31, "steel")
-    of.build("OFFICE", "building", code="OFFICE", kind="building",
-             label="Офис мастера", desc="Двухэтажный модуль: мастер участка и технолог.")
+    for z in (0.0, 3.2):
+        of.box_lo(cx, cy, z, x1 - x0, y1 - y0, 3.0, "wall")
+        of.box_lo(cx, y0 - 0.01, z + 0.9, x1 - x0 - 0.6, 0.05, 1.7, "glass")
+        for k in range(1, 9):
+            of.box_lo(x0 + 0.3 + k * (x1 - x0 - 0.6) / 9, y0 - 0.03, z + 0.9, 0.06, 0.05, 1.7, "steel_dark")
+        of.box_lo(cx, cy, z + 3.0, x1 - x0 + 0.2, y1 - y0 + 0.2, 0.2, "wall_band")
+    of.box_lo(x0 + 1.4, y0 - 0.01, 0, 1.0, 0.06, 2.1, "steel_dark")
+    for i in range(11):  # сходи
+        of.box_lo(x1 + 0.7, y0 + 0.4 + i * 0.3, i * 0.3, 1.1, 0.3, 0.3, "steel")
+    of.box_lo(x1 + 1.27, y0 + 2.0, 0, 0.04, 3.4, 4.3, "marking")
+    of.build("OFFICE", "building", code="OFFICE", kind="building", label="Офіс",
+             desc="Двоповерховий модуль: майстри, технологи, планування змін.")
+    obst(x0, y0, x1 + 1.4, y1)
+
+    so = Mesh()
+    x0, y0, x1, y1 = 81.0, 45.6, 98.2, 59.6
+    so.box_lo((x0 + x1) / 2, (y0 + y1) / 2, 0, x1 - x0, y1 - y0, 3.4, "wall")
+    so.box_lo((x0 + x1) / 2, (y0 + y1) / 2, 3.4, x1 - x0 + 0.2, y1 - y0 + 0.2, 0.2, "wall_band")
+    for k in range(6):
+        so.box_lo(x0 + 1.6 + k * 2.8, y0 - 0.01, 1.0, 1.8, 0.05, 1.4, "glass")
+    so.box_lo(x0 + 0.9, y0 - 0.01, 0, 1.2, 0.06, 2.2, "steel_dark")
+    so.build("SOCIAL", "building", code="SOCIAL", kind="building", label="Побутові приміщення",
+             desc="Роздягальні, душові, їдальня на 60 місць, медпункт.")
+    obst(x0, y0, x1, y1)
 
     for side, yc, w in DOORS:
         d = Mesh()
         inside = 1 if side == "W" else -1
         x = 0.0 if side == "W" else W
-        d.box_lo(x - inside * 0.35, yc, 0, 0.5, w + 0.8, DOOR_H + 0.4, "dock_shelter")
+        d.box_lo(x - inside * 0.4, yc, 0, 0.5, w + 0.8, DOOR_H + 0.4, "dock_shelter", bev=0.05)
         d.box_lo(x + inside * 1.2, yc, 0.0, 2.4, w - 0.4, 0.03, "steel")
+        hazard(d, yc - w / 2 + 0.2, yc + w / 2 - 0.2, x + inside * 2.4, 0.0, depth=0.1, h=0.032,
+               along="Y")
         for dy in (-1, 1):
-            d.box_lo(x + inside * 0.15, yc + dy * (w / 2 + 0.1), 0, 0.2, 0.2, DOOR_H, "marking")
+            d.box_lo(x + inside * 0.17, yc + dy * (w / 2 + 0.1), 0, 0.2, 0.2, DOOR_H, "marking")
+            d.box_lo(x - inside * 0.68, yc + dy * 0.9, 0.9, 0.12, 0.25, 0.3, "rubber", bev=0.02)
+        d.box_lo(x + inside * 0.45, yc, DOOR_H - 0.1, 0.5, w, 0.25, "machine_mid", bev=0.03)
         layer = "receiving" if side == "W" else "shipping"
         idx = sum(1 for s, yy, _ in DOORS if s == side and yy <= yc)
-        kind_ru = "Ворота приёмки" if side == "W" else "Ворота отгрузки"
+        kind_ua = "Ворота приймання" if side == "W" else "Ворота відвантаження"
         d.build(f"DOCK-{side}{idx}", layer, code=f"DOCK-{side}{idx}", kind="dock",
-                label=f"{kind_ru} {idx}", desc="Докшелтер и уравнительная платформа.")
+                label=f"{kind_ua} {idx}", desc="Докшелтер, секційні ворота, вирівнювальна платформа.")
 
 
-# ---------------------------------------------------------------- зоны
+def build_columns():
+    m = Mesh()
+    for x in range(12, int(W), 12):
+        for y in (15, 30, 45):
+            if blocked(x, y):
+                continue
+            m.box_lo(x, y, 0, 0.45, 0.45, H, "column")
+            m.box_lo(x, y, 0, 0.6, 0.6, 1.2, "marking")
+            hazard(m, x - 0.3, x + 0.3, y - 0.305, 1.05, h=0.12, w=0.12)
+    m.build("Колони", "building")
+
+
+# ---------------------------------------------------------------- зони
 def build_zones():
     for code, name, (x0, y0, x1, y1), _, desc in ZONES:
         m = Mesh()
@@ -396,375 +718,851 @@ def build_zones():
                 rect=[x0, y0, x1, y1])
 
 
-# ---------------------------------------------------------------- склады
-def pallet(m, x, y, z=0.0, rz=0.0, sx=1.2, sy=0.8):
-    m.box_lo(x, y, z, sx, sy, 0.144, "pallet", rz)
+# ---------------------------------------------------------------- склади
+def sheet_stack(m, x, y, z, n, decor, thick=0.016):
+    """Стос плит на піддоні з прокладками; кожні 10 листів — тонка лінія для об'єму."""
+    m.box_lo(x, y, z, 2.9, 2.15, 0.03, "pallet")
+    for dx in (-1.2, -0.4, 0.4, 1.2):
+        m.box_lo(x + dx, y, z + 0.03, 0.1, 2.15, 0.07, "pallet")
+    if not n:
+        return
+    h = n * thick
+    m.box_lo(x, y, z + 0.1, 2.8, 2.07, h, "decor%d" % decor)
+    for k in range(1, int(n / 10) + 1):
+        zz = z + 0.1 + k * 10 * thick
+        if zz < z + 0.1 + h - 0.005:
+            m.box((x, y - 1.036, zz), (2.8, 0.004, 0.004), "machine_dark")
+
+
+def stack_mesh(decor, n):
+    thick = 0.003 if decor == 6 else 0.016
+
+    def fn(m):
+        sheet_stack(m, 0, 0, 0, n, decor, thick)
+        m.box_lo(-1.5, 0, 0.01, 0.06, 2.15, 0.02, "marking")
+    return shared(f"stack_{decor}_{n}", fn)
 
 
 def build_receiving():
     m = Mesh()
-    for i, (y, n) in enumerate(((3.0, 30), (6.0, 40), (9.5, 22))):
-        m.box_lo(4.0, y, 0, 2.9, 2.1, 0.12, "pallet")
-        m.box_lo(4.0, y, 0.12, 2.8, 2.07, n * 0.016, "decor%d" % (i % 2))
+    for i, (x, y, n) in enumerate(((6.0, 3.5, 30), (6.0, 7.0, 40), (6.0, 14.0, 22),
+                                   (10.5, 3.5, 55), (10.5, 9.0, 18), (10.5, 20.0, 35))):
+        sheet_stack(m, x, y, 0.0, n, i % 3)
+        m.box_lo(x, y, 0.08, 2.86, 2.13, n * 0.016 + 0.04, "wrap")
+    for k, (x, y) in enumerate(((3.0, 21.5), (3.0, 23.5), (5.0, 22.5))):
+        pallet(m, x, y)
+        cartons(m, x, y, 0.146, 1.15, 0.75, 2 + k % 2)
     m.build("IN-STAGE", "receiving", code="IN-STAGE", kind="stock",
-            label="Плита на разгрузке", desc="Три стопы с фуры: ДСП Дуб Сонома и Белый, ждут сверки.")
+            label="Вантаж на розвантаженні",
+            desc="Стоси плит і палети з фурнітурою з двох фур, чекають на звірку.")
 
     q = Mesh()
-    q.box_lo(4.5, 17.0, 0, 2.0, 1.0, 0.9, "table_top")
-    q.box_lo(4.5, 17.0, 0.9, 0.8, 0.6, 0.02, "decor0")
-    q.box_lo(2.5, 17.0, 0, 2.9, 2.1, 0.12, "pallet")
-    q.box_lo(2.5, 17.0, 0.12, 2.8, 2.07, 0.4, "decor2")
+    for qx in (5.0, 10.5):
+        q.box_lo(qx, 31.0, 0.84, 2.0, 1.0, 0.05, "table_top", bev=0.01)
+        legs_frame(q, qx, 31.0, 2.0, 1.0, 0.84)
+        q.box_lo(qx + 0.1, 31.0, 0.89, 0.8, 0.6, 0.016, "decor0")
+        q.box_lo(qx - 0.6, 31.2, 0.89, 0.3, 0.2, 0.04, "machine_dark", bev=0.005)
+    sheet_stack(q, 4.0, 28.0, 0.0, 25, 2)
     for dx in (-1.45, 1.45):
         for dy in (-1.05, 1.05):
-            q.box_lo(2.5 + dx, 17.0 + dy, 0, 0.08, 0.08, 1.0, "status_red")
-    q.build("QC-1", "receiving", code="QC-1", kind="stock", label="Входной контроль",
-            desc="Стол замеров и стопа на карантине (красные стойки — не прошла проверку).")
+            q.box_lo(4.0 + dx, 28.0 + dy, 0, 0.08, 0.08, 1.0, "status_red")
+    q.box_lo(4.0, 26.9, 0.85, 3.0, 0.02, 0.06, "status_red")
+    sheet_stack(q, 10.5, 28.0, 0.0, 40, 0)
+    q.build("QC-1", "receiving", code="QC-1", kind="stock", label="Вхідний контроль",
+            desc="Столи замірів; стос ліворуч на карантині (червоні стійки — не пройшов перевірку).")
+    obst(0, 0, 15.4, 35.4)
 
 
 def build_sheets():
-    for row, y in SHEET_ROWS_Y.items():
+    """Портальний склад плит: стоси під порталом із вакуумним захопленням,
+    рольганги подачі на розкрійні центри."""
+    k = 0
+    for j, y in enumerate(SHEET_ROWS_Y):
         for i, x in enumerate(SHEET_COLS_X):
-            decor, n = SHEET_STACKS[row][i]
-            code = f"PLT-{row}{i + 1}"
-            m = Mesh()
-            m.box_lo(x, y, 0, 2.9, 2.15, 0.1, "pallet")
-            if n:
-                m.box_lo(x, y, 0.1, 2.8, 2.07, n * 0.016 if decor != 6 else n * 0.003 + 0.02,
-                         "decor%d" % decor)
-            m.box_lo(x - 1.5, y, 0.01, 0.06, 2.15, 0.02, "marking")
-            name = SHEET_DECORS[decor][0] if n else "пусто"
-            m.build(code, "sheets", code=code, kind="stock", label=f"Стопа {code}",
-                    desc=f"{name}, {n} лист." if n else "Место свободно.")
+            decor = (i * 3 + j * 5) % 7
+            n = 0 if (i + 2 * j) % 11 == 0 else 5 * (2 + (i * 7 + j * 3) % 11)
+            code = f"PLT-{chr(65 + j)}{i + 1}"
+            name = SHEET_DECORS[decor][0] if n else "порожньо"
+            instance(code, "sheets", stack_mesh(decor, n), loc=(x, y, 0), code=code, kind="stock",
+                     label=f"Стос {code}", desc=f"{name}, {n} арк." if n else "Місце вільне.")
+            k += 1
+
+    g = Mesh()
+    x0, x1, ya, yb, zr = 16.6, 44.0, 0.9, 26.6, 6.2
+    for y in (ya, yb):  # колії порталу на стійках
+        for x in (x0, x0 + 6.85, x0 + 13.7, x0 + 20.55, x1):
+            g.box_lo(x, y, 0, 0.35, 0.35, zr, "machine_accent", bev=0.03)
+            g.box_lo(x, y, 0, 0.6, 0.6, 0.03, "steel_dark")
+            g.box_lo(x, y, 0, 0.5, 0.5, 1.1, "marking")
+        g.box_lo((x0 + x1) / 2, y, zr, x1 - x0 + 0.4, 0.45, 0.55, "machine_accent", bev=0.04)
+        g.box_lo((x0 + x1) / 2, y, zr + 0.55, x1 - x0 + 0.2, 0.12, 0.08, "steel")
+    bx = 30.0  # міст порталу
+    for dx in (-0.45, 0.45):
+        g.box_lo(bx + dx, (ya + yb) / 2, zr + 0.6, 0.35, yb - ya + 0.8, 0.7, "machine", bev=0.05)
+    for y in (ya, yb):
+        g.box_lo(bx, y, zr + 0.55, 1.6, 0.8, 0.8, "machine_mid", bev=0.05)
+    ty = 9.0  # візок і вакуумне захоплення над стосом
+    g.box_lo(bx, ty, zr + 1.3, 1.5, 1.4, 0.6, "machine_accent", bev=0.05)
+    g.box_lo(bx, ty, 3.1, 0.35, 0.35, zr - 1.8, "alu", bev=0.02)  # телескопічна колона
+    g.box_lo(bx, ty, 2.85, 0.5, 0.5, 0.3, "machine_dark", bev=0.03)
+    g.box_lo(bx, ty, 2.7, 2.6, 1.8, 0.12, "machine_mid", bev=0.02)
+    for i in range(4):
+        for j in range(3):
+            g.cyl((bx - 1.05 + i * 0.7, ty - 0.6 + j * 0.6, 2.66), 0.1, 0.06, "rubber", segs=14)
+    g.box_lo(bx, ty, 2.6, 2.8, 2.07, 0.016, "decor1")
+    g.cyl((bx + 0.4, ty + 0.5, zr + 1.0), 0.06, 1.2, "machine_dark", rot=(0, 0, 0), segs=10)
+    # рольганги подачі на розкрій
+    for y in (5.0, 14.5, 24.0):
+        roller_table(g, 47.0, y, 9.6, 2.1, 0.55, pitch=0.4, axis="Y")
+        g.box_lo(42.5, y, 0, 3.0, 2.3, 0.5, "machine_mid", bev=0.03)  # підйомний стіл
+        g.box_lo(42.5, y, 0.5, 2.8, 2.07, 0.016 * 3, "decor0")
+    # огородження зони порталу
+    for x in range(17, 44, 3):
+        g.box_lo(x, 0.35, 0, 0.06, 0.06, 2.0, "marking")
+        g.box_lo(x + 1.5, 0.35, 0.1, 2.9, 0.02, 1.8, "guard_glass")
+    g.build("GANTRY-1", "sheets", code="GANTRY-1", kind="equipment", label="Портальний склад плит",
+            desc="Портал над стосами з вакуумним захопленням: бере лист зі стосу і кладе на "
+                 "рольганг подачі до розкрійних центрів. Без навантажувачів у зоні.")
+    obst(16.0, 0.0, 51.8, 27.0)
 
 
 def build_hardware():
-    rows_y = {"R1": 17.4, "R2": 21.6, "R3": 25.8}
-    sec_w, nsec, x0 = 2.0, 5, 10.5
+    sec_w, nsec, x0 = 2.0, 12, 18.5
     levels = [0.12, 0.72, 1.32, 1.92]
     depth = 0.6
-    # состояние ячеек для наглядности: синие — норма, жёлтые — мало, красные — пусто
-    low = {("R1", 2, 3), ("R2", 4, 1), ("R3", 1, 4), ("R2", 2, 2)}
-    out = {("R3", 5, 2), ("R1", 5, 4)}
-    for row, y in rows_y.items():
-        fr = Mesh()
+    rows = {f"R{k + 1}": 33.5 + 4.3 * k for k in range(6)}
+
+    def frame(m):
         for s in range(nsec + 1):
             for dy in (-depth / 2, depth / 2):
-                fr.box_lo(x0 + s * sec_w, y + dy, 0, 0.06, 0.06, 2.5, "rack_upright")
+                m.box_lo(s * sec_w, dy, 0, 0.06, 0.06, 2.5, "rack_upright")
+            for z in (0.4, 1.2, 2.0):
+                m.box((s * sec_w, 0, z), (0.02, depth, 0.02), "rack_upright", rot=(30, 0, 0))
         for z in levels:
-            fr.box_lo(x0 + nsec * sec_w / 2, y, z - 0.03, nsec * sec_w, depth, 0.03, "shelf")
+            m.box_lo(nsec * sec_w / 2, 0, z - 0.03, nsec * sec_w, depth, 0.03, "shelf")
             for dy in (-depth / 2, depth / 2):
-                fr.box_lo(x0 + nsec * sec_w / 2, y + dy, z - 0.08, nsec * sec_w, 0.04, 0.08,
-                          "rack_beam")
-        fr.build(f"RACK-{row}", "hardware", code=f"RACK-{row}", kind="rack",
-                 label=f"Стеллаж {row}", desc=f"{nsec} секций × {len(levels)} яруса, ячейки с лотками.")
+                m.box_lo(nsec * sec_w / 2, dy, z - 0.08, nsec * sec_w, 0.04, 0.08, "rack_beam")
+
+    def bins(state):
+        mat = {"ok": "bin", "low": "bin_yellow", "out": "bin_red"}[state]
+
+        def fn(m):
+            if state != "out":
+                for b in range(4):
+                    bx = -sec_w / 2 + 0.27 + b * 0.49
+                    m.box_lo(bx, 0, 0, 0.44, 0.5, 0.26, mat, bev=0.012)
+                    m.box_lo(bx, -0.24, 0.16, 0.2, 0.03, 0.08, mat, bev=0.008)
+            m.box_lo(0, -depth / 2 - 0.03, -0.075, 0.24, 0.01, 0.06,
+                     mat if state != "ok" else "phenolic")
+        return shared("bins_" + state, fn)
+
+    me_frame = shared("hw_rack", frame)
+    for ri, (row, y) in enumerate(rows.items()):
+        instance(f"RACK-{row}", "hardware", me_frame, loc=(x0, y, 0), code=f"RACK-{row}",
+                 kind="rack", label=f"Стелаж {row}",
+                 desc=f"{nsec} секцій × {len(levels)} яруси, комірки з лотками.")
+        obst(x0, y - 0.4, x0 + nsec * sec_w, y + 0.4)
         for s in range(1, nsec + 1):
             for li, z in enumerate(levels, 1):
-                code = f"FUR-{row}-S{s}-L{li}"
-                m = Mesh()
-                state = "out" if (row, s, li) in out else "low" if (row, s, li) in low else "ok"
-                mat = {"ok": "bin", "low": "bin_yellow", "out": "bin_red"}[state]
-                nb = 0 if state == "out" else 4
-                for b in range(nb):
-                    bx = x0 + (s - 1) * sec_w + 0.27 + b * 0.49
-                    m.box_lo(bx, y, z, 0.44, 0.5, 0.26, mat)
-                m.box_lo(x0 + (s - 0.5) * sec_w, y - depth / 2 - 0.03, z - 0.075, 0.24, 0.01, 0.06,
-                         mat if state != "ok" else "screen")
-                m.build(code, "hardware", code=code, kind="bin", state=state,
-                        label=f"Ячейка {code}",
-                        desc={"ok": "Запас в норме.", "low": "Запас ниже минимума.",
-                              "out": "Ячейка пуста."}[state])
+                code = f"FUR-{row}-S{s:02d}-L{li}"
+                h = (ri * 7 + s * 3 + li * 5) % 23
+                state = "low" if h in (0, 1) else "out" if h == 2 else "ok"
+                instance(code, "hardware", bins(state), loc=(x0 + (s - 0.5) * sec_w, y, z),
+                         code=code, kind="bin", state=state, label=f"Комірка {code}",
+                         desc={"ok": "Запас у нормі.", "low": "Запас нижче мінімуму.",
+                               "out": "Комірка порожня."}[state])
 
 
 def build_edge():
-    for u, x in (("U1", 2.4), ("U2", 6.4)):
-        fr = Mesh()
-        ys, ye = 22.2, 28.6
-        for yy in (ys, (ys + ye) / 2, ye):
+    ys, ye, nsec = 37.5, 58.5, 4
+    sec = (ye - ys) / nsec
+    levels = (0.1, 0.9, 1.7)
+
+    def frame(m):
+        for k in range(nsec + 1):
             for dx in (-0.45, 0.45):
-                fr.box_lo(x + dx, yy, 0, 0.06, 0.06, 2.4, "rack_upright")
-        for z in (0.1, 0.9, 1.7):
-            fr.box_lo(x, (ys + ye) / 2, z - 0.04, 0.9, ye - ys, 0.04, "shelf")
-        fr.build(f"EB-{u}", "edge", code=f"EB-{u}", kind="rack", label=f"Стеллаж кромки {u}",
-                 desc="Рулоны кромки ПВХ стоят на ребре.")
-        for li, z in enumerate((0.1, 0.9, 1.7), 1):
-            m = Mesh()
-            decor = (li + (3 if u == "U2" else 0)) % len(EDGE_DECORS)
-            n = [9, 14, 6, 11, 4, 12][(li - 1) + (3 if u == "U2" else 0)]
+                m.box_lo(dx, ys + k * sec, 0, 0.06, 0.06, 2.4, "rack_upright")
+        for z in levels:
+            m.box_lo(0, (ys + ye) / 2, z - 0.04, 0.9, ye - ys, 0.04, "shelf")
+
+    def rolls(decor, n):
+        def fn(m):
             for k in range(n):
-                m.cyl((x, ys + 0.45 + k * 0.42, z + 0.32), 0.3, 0.08, "edge%d" % decor, axis="Y")
-            code = f"EB-{u}-L{li}"
-            m.build(code, "edge", code=code, kind="stock", label=f"Полка {code}",
-                    desc=f"{n} рулонов кромки по 200 м.")
+                cy = -sec / 2 + 0.45 + k * 0.42
+                m.cyl((0, cy, 0.32), 0.3, 0.06, "edge%d" % decor, axis="Y", segs=24)
+                m.cyl((0, cy, 0.32), 0.08, 0.065, "carton", axis="Y", segs=12)
+        return shared(f"rolls_{decor}_{n}", fn)
+
+    me_frame = shared("edge_rack", frame)
+    for ui, x in enumerate((3.0, 7.5, 12.0), 1):
+        u = f"U{ui}"
+        instance(f"EB-{u}", "edge", me_frame, loc=(x, 0, 0), code=f"EB-{u}", kind="rack",
+                 label=f"Стелаж крайки {u}", desc="Рулони крайки ПВХ стоять на ребрі.")
+        obst(x - 0.5, ys, x + 0.5, ye)
+        for s in range(1, nsec + 1):
+            for li, z in enumerate(levels, 1):
+                decor = (ui + s + li) % len(EDGE_DECORS)
+                n = (ui * 5 + s * 3 + li * 7) % 12
+                code = f"EB-{u}-S{s}-L{li}"
+                instance(code, "edge", rolls(decor, n), loc=(x, ys + (s - 0.5) * sec, z),
+                         code=code, kind="stock", label=f"Полиця {code}",
+                         desc=f"{n} рулонів крайки по 200 м." if n else "Полиця порожня.")
 
 
 def build_buffer():
-    for i, y in enumerate((4.0, 8.6, 13.4, 17.8, 22.4), 1):
-        m = Mesh()
-        x = 25.2
-        m.box_lo(x, y, 0.15, 1.3, 2.2, 0.05, "steel")
-        for dx in (-0.55, 0.55):
-            for dy in (-1.0, 1.0):
-                m.cyl((x + dx, y + dy, 0.075), 0.075, 0.05, "rubber", axis="X", segs=12)
-        m.box_lo(x, y - 1.05, 0.2, 1.3, 0.05, 1.1, "steel")
-        for k in range(4 if i != 5 else 1):
-            m.box_lo(x - 0.1, y + 0.1, 0.2 + k * 0.1, 0.9, 1.6, 0.016, "decor%d" % ((i + k) % 4))
-        m.box_lo(x + 0.45, y + 0.6, 0.2, 0.3, 0.4, 0.2, "bin")
-        code = f"KIT-{i}"
-        m.build(code, "buffer", code=code, kind="kit", label=f"Тележка {code}",
-                desc="Комплект деталей и фурнитуры под один заказ." if i != 5
-                else "Тележка почти пустая, ждёт комплектации.")
+    def cart(k):
+        def fn(m):
+            m.box_lo(0, 0, 0.15, 1.3, 2.2, 0.04, "steel", bev=0.01)
+            for dx in (-0.55, 0.55):
+                for dy in (-1.0, 1.0):
+                    m.cyl((dx, dy, 0.075), 0.075, 0.05, "rubber", axis="X", segs=14)
+                    m.box_lo(dx, dy, 0.13, 0.08, 0.06, 0.03, "steel_dark")
+            for dy in (-1.05, 1.05):
+                m.box_lo(0, dy, 0.19, 1.3, 0.05, 1.1, "steel", bev=0.01)
+            m.cyl((0, -1.25, 1.3), 0.025, 1.0, "machine_dark", axis="X", segs=8)
+            for j in range(k):
+                for i in range(3):
+                    m.box_lo(-0.4 + i * 0.4, -0.7 + j * 0.5, 0.19, 0.34, 0.44, 0.2,
+                             ("bin", "bin_yellow", "bin")[(i + j) % 3], bev=0.01)
+                    m.box_lo(-0.4 + i * 0.4, -0.7 + j * 0.5, 0.6, 0.34, 0.44, 0.18, "carton",
+                             bev=0.005)
+        return shared(f"cart_{k}", fn)
 
-
-# ---------------------------------------------------------------- станки
-def status_tower(m, x, y, h=2.2):
-    m.box_lo(x, y, 0, 0.05, 0.05, h, "steel_dark")
-    for i, mat in enumerate(("status_green", "status_amber", "status_red")):
-        m.cyl((x, y, h + 0.07 + i * 0.13), 0.06, 0.12, mat, segs=12)
-
-
-def outline(m, sx, sy, mat="marking", w=0.08):
-    for (cx, cy, a, b) in ((0, -sy / 2, sx, w), (0, sy / 2, sx, w), (-sx / 2, 0, w, sy), (sx / 2, 0, w, sy)):
-        m.box((cx, cy, 0.02), (a, b, 0.02), mat)
+    for i in range(11):
+        y = 28.0 + 2.8 * i
+        k = 1 if i == 10 else 2 + i % 3
+        code = f"KIT-{i + 1:02d}"
+        instance(code, "buffer", cart(k), loc=(47.2, y, 0), code=code, kind="kit",
+                 label=f"Візок {code}",
+                 desc="Комплект фурнітури під одне замовлення." if k > 1
+                 else "Візок майже порожній, чекає на комплектацію.")
+    obst(46.4, 26.5, 48.0, 59.0)
 
 
 def machine_saw(m):
-    m.box_lo(-1.4, 0, 0, 2.6, 3.8, 0.88, "machine")
-    m.box_lo(-1.4, 0, 0.88, 2.6, 3.8, 0.02, "machine_dark")
-    m.box_lo(0.25, 0, 0, 0.8, 4.5, 1.25, "machine")
-    m.box_lo(0.25, 0, 1.25, 0.6, 4.7, 0.4, "machine_accent")
-    m.box_lo(0.25, -2.45, 0, 0.8, 0.4, 1.9, "machine_dark")
-    for dy in (-1.4, 0, 1.4):
-        m.box_lo(1.75, dy, 0, 2.0, 1.1, 0.88, "machine")
-        m.box_lo(1.75, dy, 0.88, 2.0, 1.1, 0.015, "machine_dark")
-    m.box_lo(-0.3, -2.95, 0, 0.4, 0.4, 1.25, "machine_dark")
-    m.box((-0.3, -2.95, 1.45), (0.55, 0.12, 0.4), "screen", rz=0)
-    # стопа плиты на подаче и нарезанные детали на выходе
-    m.box_lo(-1.4, 0, 0.9, 2.5, 2.07, 0.24, "decor0")
-    for i, dy in enumerate((-1.4, -0.1, 1.2)):
-        m.box_lo(1.6, dy, 0.9, 1.4, 0.7, 0.016 * (3 + i), "decor0")
-    outline(m, 6.0, 6.6)
+    """Розкрійний центр: задній підйомний стіл, програмний штовхач, притискна балка,
+    передні пневмостоли з отворами, кутовий упор, пульт."""
+    # задній підйомний стіл зі стосом
+    m.box_lo(-1.75, 0, 0, 2.9, 3.6, 0.35, "machine_mid", bev=0.03)
+    for dx in (-0.9, 0.0, 0.9):
+        m.box((-1.75 + dx, 0, 0.42), (0.08, 3.4, 0.14), "steel_dark", rot=(0, 0, 0))
+    m.box_lo(-1.75, 0, 0.5, 2.82, 3.4, 0.04, "steel", bev=0.01)
+    m.box_lo(-1.75, 0, 0.54, 2.8, 2.07, 0.3, "decor0")
+    m.box((-1.75, -1.036, 0.69), (2.8, 0.004, 0.004), "machine_dark")
+    # програмний штовхач: напрямні + портал із цангами
+    for dy in (-2.1, 2.1):
+        m.box_lo(-1.8, dy, 0, 3.6, 0.22, 1.05, "machine", bev=0.03)
+        m.box_lo(-1.8, dy, 1.05, 3.6, 0.14, 0.06, "alu", bev=0.01)
+        hazard(m, -3.55, -0.05, dy + (0.12 if dy > 0 else -0.12), 0.0, depth=0.01, h=0.12)
+    m.box_lo(-2.6, 0, 1.0, 0.32, 4.5, 0.26, "machine_accent", bev=0.04)
+    m.box_lo(-2.6, 0, 1.26, 0.25, 4.3, 0.08, "machine_dark", bev=0.01)
+    for k in range(8):
+        m.box_lo(-2.38, -1.75 + k * 0.5, 0.82, 0.12, 0.08, 0.2, "machine_dark", bev=0.01)
+    # корпус пильної лінії та притискна балка
+    m.box_lo(0.25, 0, 0, 0.9, 4.7, 0.86, "machine", bev=0.04)
+    m.box_lo(0.25, 0, 0.86, 0.9, 4.5, 0.03, "steel")
+    m.box((0.25, 0, 0.895), (0.03, 4.4, 0.01), "hazard_black")
+    for dy in (-2.55, 2.55):
+        m.box_lo(0.25, dy, 0, 0.75, 0.5, 1.6, "machine_accent", bev=0.05)
+    m.box_lo(0.25, 0, 1.5, 0.95, 5.6, 0.52, "machine_accent", bev=0.08)
+    m.box_lo(0.72, 0, 1.58, 0.02, 4.9, 0.36, "machine", bev=0.01)  # передня кришка
+    m.box_lo(0.25, 0, 1.04, 0.3, 4.6, 0.1, "steel", bev=0.01)        # притискна шина
+    for k in range(6):
+        m.cyl((0.25, -1.9 + k * 0.76, 1.27), 0.05, 0.38, "alu", segs=12)  # пневмоциліндри
+    m.box_lo(0.25, 3.0, 0.2, 0.7, 0.5, 0.7, "machine_dark", bev=0.04)  # двигун пили
+    m.cyl((0.25, 2.65, 1.05), 0.16, 0.12, "steel_dark", axis="Y", segs=24)
+    # передні пневмостоли
+    for dy in (-1.45, 0.0, 1.45):
+        legs_frame(m, 1.95, dy, 2.3, 1.15, 0.84)
+        m.box_lo(1.95, dy, 0.84, 2.3, 1.15, 0.05, "phenolic", bev=0.01)
+        for i in range(5):
+            for j in range(3):
+                m.cyl((1.1 + i * 0.42, dy - 0.38 + j * 0.38, 0.892), 0.012, 0.004, "machine_dark",
+                      segs=8)
+    m.box_lo(1.95, -2.08, 0.89, 2.3, 0.08, 0.1, "alu", bev=0.01)  # кутовий упор
+    for i in range(4):
+        m.box_lo(1.0 + i * 0.6, -2.08, 0.99, 0.02, 0.09, 0.012, "hazard_black")
+    # нарізані деталі на столах
+    for i, (dy, n) in enumerate(((-1.4, 4), (-0.15, 6), (1.25, 3))):
+        m.box_lo(1.7 + 0.1 * i, dy, 0.89, 1.4, 0.72, 0.016 * n, "decor0")
+    # світлова завіса та шафа керування
+    for dy in (-2.4, 2.4):
+        m.box_lo(-3.4, dy, 0, 0.07, 0.07, 1.8, "marking", bev=0.01)
+        m.box_lo(-3.4, dy, 0, 0.2, 0.2, 0.02, "machine_dark")
+    m.box_lo(-1.2, 3.35, 0, 1.2, 0.55, 2.0, "machine_mid", bev=0.02)
+    m.box_lo(-1.2, 3.07, 0.2, 0.01, 0.4, 1.6, "machine_dark")
+    m.box_lo(-1.0, 3.07, 1.0, 0.02, 0.03, 0.2, "steel_dark")
+    m.box_lo(-1.2, 3.35, 2.0, 1.25, 0.6, 0.05, "machine_dark")
+    # килимок оператора
+    m.box_lo(2.0, -2.75, 0, 2.2, 0.8, 0.015, "rubber")
+    console(m, 0.9, -3.05, 1.0, facing=90)
+    floor_frame(m, 7.4, 7.2)
 
 
 def machine_edge(m):
-    m.box_lo(0, 0, 0, 8.0, 1.0, 1.0, "machine")
-    for i in range(5):
-        m.box_lo(-3.2 + i * 1.6, 0.05, 1.0, 1.45, 0.9, 0.35, "machine_accent" if i % 2 else "machine")
-    m.box_lo(-5.0, 0, 0, 2.0, 1.2, 0.9, "steel")
-    m.box_lo(5.0, 0, 0, 2.0, 1.2, 0.9, "steel")
-    m.box_lo(0, 1.25, 0, 10.0, 0.6, 0.8, "steel")
-    for i in range(20):
-        m.cyl((-4.75 + i * 0.5, 1.25, 0.82), 0.03, 0.55, "steel_dark", axis="Y", segs=8)
-    m.cyl((-3.9, -0.75, 1.15), 0.3, 0.06, "edge_roll")
-    m.box_lo(-3.9, -0.75, 0, 0.1, 0.1, 0.85, "steel_dark")
-    m.box_lo(3.2, -0.75, 0, 0.4, 0.3, 1.3, "machine_dark")
-    m.box((3.2, -0.92, 1.45), (0.5, 0.06, 0.35), "screen")
-    for i in range(3):
-        m.box_lo(-5.0, 0, 0.9 + i * 0.02, 1.4, 0.7, 0.016, "decor0")
-    outline(m, 12.4, 3.6)
+    """Крайкооблицювальний верстат: секційна станина, гусениця подачі, верхня
+    притискна балка з роликами, кожухи агрегатів з оглядовими вікнами, клейова
+    ванна, магазин крайки, опорна консоль, конвеєри."""
+    L = 8.0
+    for i in range(6):  # станина секціями з дверцятами
+        sx = L / 6
+        cx = -L / 2 + (i + 0.5) * sx
+        m.box_lo(cx, 0, 0.06, sx - 0.02, 0.95, 0.82, "machine", bev=0.02)
+        m.box_lo(cx, -0.478, 0.35, 0.03, 0.01, 0.2, "steel_dark")
+        m.box_lo(cx, -0.476, 0.12, sx - 0.12, 0.004, 0.66, "machine_mid")
+    for x in (-L / 2 + 0.2, L / 2 - 0.2):
+        for dy in (-0.35, 0.35):
+            m.cyl((x, dy, 0.03), 0.06, 0.06, "machine_dark", segs=10)
+    m.box_lo(0, -0.22, 0.88, L, 0.3, 0.06, "hazard_black")  # гусениця
+    for k in range(40):
+        m.box_lo(-L / 2 + 0.1 + k * 0.2, -0.22, 0.94, 0.16, 0.28, 0.01, "steel_dark")
+    # верхня притискна балка
+    for x in (-3.2, 0.0, 3.2):
+        m.box_lo(x, 0.15, 0.88, 0.25, 0.22, 0.65, "machine_mid", bev=0.02)
+    m.box_lo(0, -0.12, 1.4, L - 0.2, 0.45, 0.14, "machine_mid", bev=0.03)
+    for k in range(36):
+        m.cyl((-L / 2 + 0.25 + k * 0.215, -0.22, 1.12), 0.045, 0.12, "rubber", axis="Y", segs=12)
+    # кожухи агрегатів
+    hoods = [(-2.6, 1.3, "machine_accent"), (-1.15, 1.3, "machine"), (0.3, 1.3, "machine_accent"),
+             (1.75, 1.3, "machine"), (3.15, 1.2, "machine_accent")]
+    for x, w, mat in hoods:
+        m.box_lo(x, 0.22, 0.95, w, 0.5, 0.55, mat, bev=0.06)
+        m.box_lo(x, -0.035, 1.05, w * 0.7, 0.02, 0.32, "guard_glass", bev=0.01)
+    # прозорий захисний козирок
+    m.box((0, -0.55, 1.2), (L - 0.4, 0.02, 0.45), "guard_glass", rot=(-25, 0, 0))
+    # клейова ванна
+    m.box_lo(-3.6, 0.25, 0.95, 0.5, 0.45, 0.35, "machine_dark", bev=0.03)
+    m.cyl((-3.6, 0.25, 1.38), 0.16, 0.08, "steel", segs=20)
+    # магазин крайки на кронштейні
+    m.box_lo(-4.15, -0.75, 0, 0.1, 0.1, 1.05, "steel_dark")
+    m.box((-4.0, -0.62, 1.05), (0.35, 0.06, 0.06), "steel_dark", rot=(0, 0, 40))
+    m.cyl((-3.85, -0.48, 1.1), 0.36, 0.02, "alu", segs=28)
+    m.cyl((-3.85, -0.48, 1.13), 0.3, 0.04, "edge_roll", segs=28)
+    m.cyl((-3.85, -0.48, 1.13), 0.08, 0.045, "carton", segs=12)
+    # опорна консоль спереду
+    m.box_lo(0, -1.0, 0.82, L, 0.06, 0.06, "alu", bev=0.01)
+    for x in (-3.5, -1.5, 0.5, 2.5):
+        m.box((x, -0.75, 0.8), (0.05, 0.5, 0.05), "steel_dark")
+        m.cyl((x, -1.0, 0.9), 0.04, 0.03, "rubber", axis="Y", segs=10)
+    # конвеєри: подача, вихід, повертальний позаду
+    roller_table(m, -5.0, 0, 2.0, 1.1, 0.92, axis="Y")
+    roller_table(m, 5.0, 0, 2.0, 1.1, 0.92, axis="Y")
+    roller_table(m, 0, 1.25, 10.0, 0.6, 0.82, pitch=0.3, axis="Y")
+    # пульт на поворотній консолі
+    m.box_lo(-4.3, 0.55, 0.88, 0.1, 0.1, 0.7, "steel_dark")
+    m.box((-4.05, 0.2, 1.58), (0.6, 0.08, 0.08), "steel_dark", rot=(0, 0, -50))
+    m.box((-3.85, -0.05, 1.55), (0.06, 0.4, 0.3), "machine_dark", rot=(0, 15, 0), bev=0.01)
+    m.box((-3.82, -0.05, 1.55), (0.01, 0.34, 0.24), "screen_on", rot=(0, 15, 0))
+    estop(m, -3.6, -0.3, 0.88)
+    # деталі на гусениці та на виході
+    m.box_lo(-1.6, -0.15, 0.95, 1.4, 0.72, 0.016, "decor0")
+    m.box_lo(4.9, 0.05, 0.92, 1.4, 0.72, 0.016 * 3, "decor0")
+    floor_frame(m, 12.6, 3.8)
 
 
 def machine_cnc(m):
-    m.box_lo(0, 0, 0, 3.4, 1.9, 0.82, "machine")
-    m.box_lo(0, 0, 0.82, 3.2, 1.7, 0.06, "machine_dark")
-    for dy in (-1.1, 1.1):
-        m.box_lo(0.3, dy, 0, 0.45, 0.35, 2.0, "machine_accent")
-    m.box_lo(0.3, 0, 2.0, 0.55, 2.6, 0.45, "machine_accent")
-    m.box_lo(0.3, 0, 1.3, 0.45, 0.5, 0.7, "machine")
-    m.cyl((0.3, 0, 1.2), 0.05, 0.2, "steel_dark", segs=10)
-    m.box_lo(-0.6, 0, 0.88, 1.4, 0.7, 0.016, "decor1")
-    m.box_lo(-2.4, -1.3, 0, 0.7, 0.6, 2.0, "machine_dark")
-    m.box_lo(-1.9, -1.4, 0, 0.35, 0.35, 1.2, "machine_dark")
-    m.box((-1.9, -1.58, 1.4), (0.5, 0.05, 0.35), "screen")
-    outline(m, 5.6, 3.8)
+    """Портальний обробний центр: станина, консолі з вакуумними присосками,
+    портал, Z-каретка зі свердлильною головою і шпинделем, магазин
+    інструменту, кабель-канал, бампери безпеки, огорожа, вакуум-насос."""
+    m.box_lo(0, 0, 0, 4.4, 2.2, 0.72, "machine", bev=0.05)
+    m.box_lo(0, -1.11, 0.1, 4.0, 0.01, 0.5, "machine_mid")
+    m.box_lo(0, 0, 0.72, 4.2, 2.0, 0.04, "machine_dark")
+    for x in (-1.9, 1.9):
+        for dy in (-0.9, 0.9):
+            m.cyl((x, dy, 0.03), 0.07, 0.06, "machine_dark", segs=10)
+    # консолі з присосками
+    for i in range(6):
+        x = -1.75 + i * 0.7
+        m.box_lo(x, 0, 0.76, 0.14, 1.9, 0.08, "alu", bev=0.01)
+        for dy in (-0.55, 0.15):
+            m.box_lo(x, dy, 0.84, 0.14, 0.12, 0.05, "machine_dark", bev=0.01)
+    m.box_lo(-0.35, -0.2, 0.89, 1.6, 0.7, 0.016, "decor1")
+    m.box_lo(-0.35, -0.2, 0.89 + 0.016, 1.6, 0.004, 0.001, "machine_dark")
+    # напрямні порталу
+    for dy in (-1.08, 1.08):
+        m.box_lo(0, dy, 0.72, 4.3, 0.1, 0.14, "steel", bev=0.01)
+    # портал
+    gx = 0.5
+    for dy in (-1.2, 1.2):
+        m.box_lo(gx, dy, 0.76, 0.6, 0.32, 1.5, "machine_accent", bev=0.05)
+    m.box_lo(gx, 0, 2.15, 0.66, 2.9, 0.5, "machine_accent", bev=0.07)
+    m.box_lo(gx - 0.34, 0, 2.2, 0.01, 2.5, 0.38, "machine", bev=0.005)
+    # кабель-канал на порталі
+    for k in range(16):
+        m.box_lo(gx + 0.12, -1.3 + k * 0.17, 2.65, 0.22, 0.14, 0.1, "machine_dark", bev=0.01)
+    # Z-каретка та голова
+    m.box_lo(gx - 0.42, 0.2, 1.2, 0.3, 0.45, 1.05, "machine", bev=0.03)
+    m.box_lo(gx - 0.45, 0.2, 1.02, 0.36, 0.42, 0.2, "machine_dark", bev=0.02)
+    for i in range(4):
+        for j in range(3):
+            m.cyl((gx - 0.55 + i * 0.07, 0.08 + j * 0.12, 0.97), 0.008, 0.1, "alu", segs=6)
+    m.cyl((gx - 0.45, -0.18, 1.4), 0.12, 0.45, "machine_mid", segs=20)
+    m.cyl((gx - 0.45, -0.18, 1.1), 0.05, 0.16, "steel", segs=12)
+    m.cyl((gx - 0.45, 0.2, 0.98), 0.22, 0.05, "rubber", segs=24)  # щітка аспірації
+    # магазин інструменту
+    m.cyl((-2.0, -1.3, 1.25), 0.38, 0.06, "machine_mid", segs=28)
+    for k in range(10):
+        a = 2 * math.pi * k / 10
+        m.cyl((-2.0 + 0.3 * math.cos(a), -1.3 + 0.3 * math.sin(a), 1.15), 0.03, 0.14, "alu", segs=8)
+    m.box_lo(-2.0, -1.3, 0, 0.12, 0.12, 1.2, "steel_dark")
+    # бампери безпеки та огорожа позаду
+    m.box_lo(0, -1.45, 0.25, 4.4, 0.12, 0.12, "marking", bev=0.03)
+    hazard(m, -2.2, 2.2, -1.52, 0.25, depth=0.005, h=0.12)
+    for x in (-2.4, -0.8, 0.8, 2.4):
+        m.box_lo(x, 1.9, 0, 0.06, 0.06, 1.9, "marking")
+    for x in (-1.6, 0.0, 1.6):
+        m.box_lo(x, 1.9, 0.15, 1.5, 0.02, 1.7, "guard_glass")
+    m.box_lo(0, 1.9, 1.88, 4.86, 0.05, 0.05, "marking")
+    # шафа керування, вакуум-насос, пульт
+    m.box_lo(-2.85, 1.2, 0, 0.7, 0.6, 2.0, "machine_mid", bev=0.02)
+    m.box_lo(-2.49, 1.2, 0.2, 0.01, 0.45, 1.6, "machine_dark")
+    m.box_lo(2.8, 1.25, 0, 0.8, 0.6, 0.7, "machine_dark", bev=0.03)
+    for k in range(6):
+        m.box_lo(2.8, 0.94, 0.12 + k * 0.09, 0.7, 0.02, 0.03, "steel")
+    console(m, 2.4, -1.9, 1.0, facing=-90)
+    floor_frame(m, 6.6, 4.4)
 
 
 def machine_asm(m):
-    m.box_lo(0, 0, 0, 3.0, 1.6, 0.8, "steel")
-    m.box_lo(0, 0, 0.8, 3.0, 1.6, 0.05, "table_top")
-    # корпус шкафа на столе
-    for dx in (-0.29, 0.29):
-        m.box_lo(dx, 0, 0.85, 0.016, 0.56, 0.72, "decor0")
-    m.box_lo(0, 0, 0.85, 0.6, 0.56, 0.016, "decor0")
-    m.box_lo(0, 0, 1.55, 0.6, 0.56, 0.016, "decor0")
-    m.box_lo(0, 0.27, 0.85, 0.6, 0.01, 0.72, "decor6")
-    m.box_lo(0, 1.25, 0, 2.6, 0.08, 2.0, "steel")
-    m.box_lo(0, 1.2, 0.9, 2.4, 0.02, 1.0, "machine")
-    m.box_lo(-2.2, 0, 0, 1.0, 0.7, 0.9, "steel")
-    for k in range(3):
-        m.box_lo(-2.2, 0, 0.9 + k * 0.016, 0.8, 0.5, 0.016, "decor0")
-    outline(m, 5.6, 3.4)
+    """Збиральна дільниця: корпусна вайма з пневмоприжимами та верстак."""
+    # вайма: рама, ролики стола, стійки, приводи
+    m.box_lo(0, 0, 0.6, 2.8, 1.3, 0.08, "steel", bev=0.01)
+    legs_frame(m, 0, 0, 2.8, 1.3, 0.6, mat="machine_accent", t=0.08)
+    for i in range(10):
+        m.cyl((-1.25 + i * 0.28, 0, 0.71), 0.025, 1.2, "galv", axis="Y", segs=10)
+    for dx in (-1.5, 1.5):
+        m.box_lo(dx, -0.1, 0, 0.14, 0.14, 2.3, "machine_accent", bev=0.02)
+        for z in (0.95, 1.35):
+            m.cyl((dx * 0.86, -0.1, z), 0.04, 0.4, "alu", axis="X", segs=12)
+            m.box((dx * 0.7, -0.1, z), (0.03, 0.3, 0.2), "steel_dark", bev=0.005)
+    m.box_lo(0, -0.1, 2.3, 3.14, 0.16, 0.16, "machine_accent", bev=0.02)
+    for dx in (-0.5, 0.5):
+        m.cyl((dx, -0.1, 2.1), 0.045, 0.4, "alu", segs=12)
+        m.box_lo(dx, -0.1, 1.8, 0.4, 0.4, 0.03, "steel_dark")
+    # корпус шафи у ваймі
+    cz = 0.75
+    for dx in (-0.39, 0.39):
+        m.box_lo(dx, 0, cz, 0.018, 0.56, 0.9, "decor0")
+    for z in (cz, cz + 0.88):
+        m.box_lo(0, 0, z, 0.8, 0.56, 0.018, "decor0")
+    m.box_lo(0, 0, cz + 0.44, 0.76, 0.52, 0.016, "decor0")
+    m.box_lo(0, 0.27, cz, 0.8, 0.005, 0.9, "decor6")
+    # верстак
+    bx, by = 0.0, 1.35
+    m.box_lo(bx, by, 0.86, 2.2, 0.75, 0.05, "table_top", bev=0.01)
+    legs_frame(m, bx, by, 2.2, 0.75, 0.86, mat="steel")
+    m.box_lo(bx - 0.6, by, 0.1, 0.6, 0.7, 0.7, "machine_mid", bev=0.01)  # тумба з шухлядами
+    for k in range(4):
+        m.box_lo(bx - 0.6, by - 0.355, 0.15 + k * 0.17, 0.5, 0.01, 0.14, "machine", bev=0.003)
+        m.box_lo(bx - 0.6, by - 0.365, 0.21 + k * 0.17, 0.16, 0.01, 0.02, "steel_dark")
+    m.box_lo(bx, by + 0.35, 0.91, 2.2, 0.03, 1.0, "pegboard")
+    for k in range(6):  # інструмент на перфопанелі
+        m.box_lo(bx - 0.8 + k * 0.32, by + 0.32, 1.35, 0.05, 0.03, 0.25, "machine_dark")
+    for k in range(5):  # лотки з фурнітурою
+        m.box_lo(bx - 0.8 + k * 0.4, by + 0.25, 1.15, 0.3, 0.15, 0.12,
+                 ("bin", "bin_yellow", "bin", "status_red", "bin")[k], bev=0.008)
+    m.box_lo(bx + 0.5, by - 0.05, 0.91, 0.08, 0.2, 0.18, "machine_accent", bev=0.02)  # шуруповерт
+    m.cyl((bx + 0.5, by - 0.17, 1.06), 0.02, 0.08, "machine_dark", axis="Y", segs=10)
+    m.box_lo(bx + 0.5, by - 0.05, 0.91, 0.12, 0.12, 0.05, "machine_dark", bev=0.01)
+    # котушка пневмошланга
+    m.box_lo(1.7, 1.2, 0, 0.08, 0.08, 1.8, "steel_dark")
+    m.cyl((1.7, 1.1, 1.6), 0.22, 0.12, "machine_accent", axis="Y", segs=20)
+    # візок із деталями та готова шафа
+    m.box_lo(-2.25, 0, 0.12, 1.0, 0.7, 0.04, "steel")
+    for dx in (-0.4, 0.4):
+        for dy in (-0.28, 0.28):
+            m.cyl((-2.25 + dx, dy, 0.06), 0.06, 0.04, "rubber", axis="X", segs=12)
+    for k in range(4):
+        m.box_lo(-2.25, 0, 0.16 + k * 0.017, 0.8, 0.5, 0.016, "decor0")
+    m.box_lo(2.35, -0.3, 0, 0.6, 0.58, 0.82, "decor0", bev=0.004)
+    m.box_lo(2.35, -0.6, 0.02, 0.58, 0.02, 0.78, "decor1", bev=0.003)
+    m.box_lo(2.35, -0.62, 0.6, 0.16, 0.02, 0.02, "steel")
+    floor_frame(m, 6.0, 3.6)
 
 
 def machine_pack(m):
-    m.box_lo(-0.7, 0, 0, 2.2, 1.4, 0.85, "steel")
-    m.box_lo(-0.7, 0, 0.85, 2.2, 1.4, 0.04, "table_top")
-    m.cyl((-0.7, 0.75, 1.05), 0.2, 1.3, "carton", axis="X")
-    m.box_lo(-0.9, -0.1, 0.89, 0.9, 0.7, 0.4, "carton")
-    m.cyl((1.4, 0, 0.06), 0.8, 0.12, "steel_dark", segs=28)
-    m.box_lo(1.4, 1.0, 0, 0.2, 0.2, 2.3, "machine_accent")
-    m.box_lo(1.4, 0.88, 1.0, 0.25, 0.1, 0.4, "machine")
-    pallet(m, 1.4, 0, 0.12)
-    for k in range(3):
-        m.box_lo(1.4, 0, 0.27 + k * 0.42, 1.15, 0.75, 0.4, "carton")
-    outline(m, 5.0, 3.0)
+    """Пакування: роликовий стіл, розмотувач гофрокартону, палетообмотувач."""
+    roller_table(m, -0.9, 0, 2.2, 1.2, 0.88, axis="Y")
+    m.box_lo(-1.2, 0, 0.88, 0.9, 0.65, 0.4, "carton", bev=0.008)
+    m.box_lo(-1.2, -0.02, 1.28, 0.9, 0.05, 0.003, "tape")
+    m.box_lo(-0.4, 0.1, 0.88, 0.5, 0.4, 0.03, "carton")
+    # розмотувач гофрокартону
+    for dx in (-1.9, 0.1):
+        m.box_lo(dx, 0.85, 0, 0.06, 0.06, 1.15, "steel_dark")
+    m.cyl((-0.9, 0.85, 1.1), 0.25, 1.8, "carton", axis="X", segs=24)
+    m.cyl((-0.9, 0.85, 1.1), 0.03, 2.1, "steel", axis="X", segs=8)
+    m.box((-0.9, 0.6, 0.98), (1.8, 0.4, 0.004), "carton", rot=(30, 0, 0))
+    # палетообмотувач
+    m.box_lo(1.5, 0, 0, 1.9, 1.9, 0.07, "machine_dark", bev=0.02)
+    m.box((1.5, -1.15, 0.035), (1.9, 0.5, 0.02), "steel", rot=(-8, 0, 0))
+    m.cyl((1.5, 0, 0.09), 0.85, 0.05, "steel", segs=36)
+    m.box_lo(1.5, 1.1, 0, 0.22, 0.22, 2.5, "machine_accent", bev=0.03)
+    m.box_lo(1.5, 1.32, 0.3, 0.3, 0.2, 0.6, "machine", bev=0.02)
+    m.box((1.5, 1.425, 0.75), (0.2, 0.01, 0.12), "screen_on")
+    m.box_lo(1.5, 0.9, 1.1, 0.34, 0.2, 0.45, "machine", bev=0.03)
+    m.cyl((1.5, 0.78, 1.33), 0.07, 0.5, "film_roll", segs=16)
+    pallet(m, 1.5, 0, 0.115)
+    cartons(m, 1.5, 0, 0.26, 1.15, 0.75, 3)
+    floor_frame(m, 5.2, 3.2)
+
+
+
+def forklift(m):
+    m.box_lo(0, 0, 0.15, 1.6, 1.05, 0.72, "forklift", bev=0.06)
+    m.box_lo(-0.65, 0, 0.15, 0.42, 1.05, 0.95, "machine_dark", bev=0.08)  # противага
+    for dx in (-0.55, 0.55):
+        for dy in (-0.48, 0.48):
+            m.cyl((dx, dy, 0.24), 0.24, 0.2, "rubber", axis="Y", segs=18)
+            m.cyl((dx, dy * 1.02, 0.24), 0.12, 0.21, "steel", axis="Y", segs=12)
+    for dx in (-0.5, 0.35):
+        for dy in (-0.45, 0.45):
+            m.box_lo(dx, dy, 0.87, 0.06, 0.06, 1.18, "machine_dark")
+    m.box_lo(-0.07, 0, 2.05, 0.95, 1.0, 0.05, "machine_dark", bev=0.01)
+    m.box_lo(-0.15, 0, 0.87, 0.45, 0.5, 0.12, "machine_dark", bev=0.04)  # сидіння
+    m.box((-0.36, 0, 1.2), (0.08, 0.48, 0.5), "machine_dark", rot=(0, -12, 0), bev=0.03)
+    m.cyl((0.22, 0, 1.25), 0.15, 0.03, "machine_dark", rot=(0, -40, 0), segs=16)  # кермо
+    m.cyl((0.12, 0, 1.05), 0.025, 0.4, "machine_dark", rot=(0, -40, 0), segs=8)
+    for dy in (-0.32, 0.32):
+        m.box_lo(0.88, dy, 0.05, 0.08, 0.1, 2.4, "steel_dark", bev=0.01)  # щогла
+    m.box_lo(0.88, 0, 2.3, 0.08, 0.74, 0.08, "steel_dark")
+    m.box_lo(0.95, 0, 0.1, 0.06, 0.9, 0.5, "steel_dark")  # каретка
+    for dy in (-0.25, 0.25):
+        m.box_lo(1.5, dy, 0.1, 1.1, 0.12, 0.04, "steel_dark")
+    m.cyl((-0.1, 0, 2.12), 0.06, 0.08, "status_amber", segs=12)  # маячок
+
+
+def person(m, x, y, rz=0.0, vest="hivis", arms="front"):
+    """Низькополігональна фігура оператора (зріст ~1,75 м)."""
+    a = math.radians(rz)
+    ca, sa = math.cos(a), math.sin(a)
+
+    def P(lx, ly, z):
+        return (x + lx * ca - ly * sa, y + lx * sa + ly * ca, z)
+    for s in (-1, 1):
+        m.box(P(0, s * 0.1, 0.43), (0.16, 0.15, 0.82), "trousers", rz=rz, bev=0.05)
+        m.box(P(0.04, s * 0.1, 0.04), (0.27, 0.12, 0.08), "rubber", rz=rz, bev=0.03)
+    m.box(P(0, 0, 1.13), (0.24, 0.42, 0.62), "shirt", rz=rz, bev=0.08)
+    m.box(P(0, 0, 1.15), (0.27, 0.45, 0.46), vest, rz=rz, bev=0.08)
+    for s in (-1, 1):
+        if arms == "front":
+            m.box(P(0.18, s * 0.26, 1.08), (0.48, 0.1, 0.1), "shirt", rot=(0, 35, rz), bev=0.04)
+            m.sphere(P(0.38, s * 0.24, 0.94), 0.05, "skin", subdiv=1)
+        else:
+            m.box(P(0, s * 0.27, 1.08), (0.1, 0.1, 0.58), "shirt", rz=rz, bev=0.04)
+            m.sphere(P(0, s * 0.27, 0.76), 0.05, "skin", subdiv=1)
+    m.cyl(P(0, 0, 1.5), 0.05, 0.1, "skin", segs=10)
+    m.sphere(P(0.01, 0, 1.64), 0.11, "skin", scale=(1.0, 0.9, 1.12))
+    m.sphere(P(-0.01, 0, 1.69), 0.112, "hair", scale=(1.0, 0.92, 0.85))
+    for s in (-1, 1):  # навушники
+        m.cyl(P(0, s * 0.11, 1.64), 0.045, 0.04, "status_red", axis="Y", segs=12, rot=(90, 0, rz))
+
+
+
+
+def machine_nest(m):
+    """Нестинг-центр: підйомний стіл завантаження зі стосом МДФ, стіл із жертовною
+    плитою, портал зі шпинделем і витяжним ковпаком, лінійний магазин інструменту,
+    стрічковий конвеєр вивантаження, принтер етикеток, шафа керування."""
+    # завантаження
+    m.box_lo(-4.0, 0, 0, 2.9, 2.3, 0.45, "machine_mid", bev=0.03)
+    m.box_lo(-4.0, 0, 0.45, 2.8, 2.07, 0.018 * 14, "decor5")
+    for dy in (-1.3, 1.3):
+        m.box_lo(-3.4, dy, 0, 4.0, 0.2, 1.0, "machine", bev=0.03)
+    m.box_lo(-3.2, 0, 1.0, 0.25, 2.8, 0.2, "machine_accent", bev=0.03)  # штовхач
+    # станина та стіл
+    m.box_lo(0.3, 0, 0, 4.4, 2.5, 0.8, "machine", bev=0.05)
+    m.box_lo(0.3, 0, 0.8, 4.2, 2.3, 0.05, "machine_dark")
+    m.box_lo(0.3, 0, 0.85, 4.1, 2.2, 0.03, "table_top")
+    m.box_lo(0.0, 0, 0.88, 2.8, 2.07, 0.018, "decor5")
+    for k in range(1, 4):
+        m.box((0.0 - 1.4 + k * 0.7, 0, 0.899), (0.006, 2.0, 0.002), "machine_dark")
+    m.box((0.0, 0, 0.899), (2.7, 0.006, 0.002), "machine_dark")
+    for dy in (-1.2, 1.2):
+        m.box_lo(0.3, dy, 0.8, 4.4, 0.1, 0.14, "steel", bev=0.01)
+    # портал
+    gx = 0.6
+    for dy in (-1.4, 1.4):
+        m.box_lo(gx, dy, 0.8, 0.6, 0.32, 1.5, "machine_accent", bev=0.05)
+    m.box_lo(gx, 0, 2.2, 0.7, 3.1, 0.55, "machine_accent", bev=0.07)
+    for k in range(18):
+        m.box_lo(gx + 0.14, -1.45 + k * 0.17, 2.75, 0.22, 0.14, 0.1, "machine_dark", bev=0.01)
+    m.box_lo(gx - 0.45, -0.3, 1.25, 0.32, 0.5, 1.1, "machine", bev=0.03)
+    m.cyl((gx - 0.45, -0.3, 1.45), 0.14, 0.5, "machine_mid", segs=20)
+    m.cyl((gx - 0.45, -0.3, 1.0), 0.26, 0.2, "guard_glass", segs=24)  # витяжний ковпак
+    m.cyl((gx - 0.45, -0.3, 0.93), 0.27, 0.05, "rubber", segs=24)
+    m.cyl((gx - 0.45, -0.3, 0.98), 0.03, 0.14, "alu", segs=8)
+    # лінійний магазин інструменту
+    m.box_lo(-1.8, 1.45, 0.8, 1.0, 0.25, 0.25, "machine_mid", bev=0.02)
+    for k in range(8):
+        m.cyl((-2.2 + k * 0.12, 1.45, 1.12), 0.035, 0.12, "alu", segs=8)
+    # вивантаження: стрічковий конвеєр
+    legs_frame(m, 4.4, 0, 3.0, 2.3, 0.82)
+    m.box_lo(4.4, 0, 0.82, 3.0, 2.3, 0.06, "rubber", bev=0.02)
+    for dx in (-1.5, 1.5):
+        m.cyl((4.4 + dx, 0, 0.85), 0.06, 2.3, "steel", axis="Y", segs=12)
+    for i, (dx, dy) in enumerate(((-0.8, -0.5), (0.1, 0.6), (0.9, -0.4))):
+        m.box_lo(4.4 + dx, dy, 0.88, 0.7, 0.5, 0.018, "decor5")
+        m.box_lo(4.4 + dx, dy, 0.898, 0.1, 0.06, 0.002, "phenolic")  # етикетка
+    m.box_lo(5.3, -1.5, 0, 0.12, 0.12, 1.3, "steel_dark")
+    m.box_lo(5.3, -1.4, 1.3, 0.35, 0.3, 0.25, "machine_dark", bev=0.02)  # принтер етикеток
+    # шафа керування, бампер, пульт
+    m.box_lo(-1.8, 1.95, 0, 0.9, 0.5, 2.0, "machine_mid", bev=0.02)
+    m.box_lo(-1.8, 1.69, 0.2, 0.7, 0.01, 1.6, "machine_dark")
+    m.box_lo(0.3, -1.6, 0.25, 4.4, 0.12, 0.12, "marking", bev=0.03)
+    hazard(m, -1.9, 2.5, -1.67, 0.25, depth=0.005, h=0.12)
+    console(m, 2.3, -2.35, 1.0, facing=90)
+    floor_frame(m, 11.2, 4.6)
 
 
 MACHINE_BUILDERS = {"saw": machine_saw, "edge": machine_edge, "cnc": machine_cnc,
-                    "asm": machine_asm, "pack": machine_pack}
-TOWER_POS = {"saw": (-0.3, 2.6), "edge": (3.8, -1.3), "cnc": (1.9, -1.4),
-             "asm": (1.6, -0.9), "pack": (-1.9, -0.9)}
-STATUS = {"SAW-1": "work", "SAW-2": "idle", "EDGE-1": "work", "CNC-1": "stop",
-          "ASM-1": "work", "ASM-2": "idle", "PACK-1": "work"}
+                    "asm": machine_asm, "pack": machine_pack, "nest": machine_nest}
+TOWER_POS = {"saw": (-0.4, 2.55, 2.02), "edge": (3.85, -0.35, 1.55), "cnc": (-2.85, 1.2, 2.05),
+             "asm": (1.5, -0.1, 2.46), "pack": (1.5, 1.1, 2.5), "nest": (-1.8, 1.95, 2.02)}
+# Де стоїть оператор: x, y, поворот (локально)
+OPERATOR = {"saw": (0.9, -3.65, 90), "edge": (-5.0, -0.95, 90), "cnc": (2.4, -2.55, 90),
+            "asm": (0.0, -1.0, 90), "pack": (-0.9, -0.95, 90), "nest": (2.3, -2.9, 90)}
 
 
 def build_machines():
     for code, typ, name, x, y, desc in MACHINES:
         root = empty(code, "line", loc=(x, y, 0), code=code, kind="machine", label=name,
                      desc=desc, status=STATUS[code])
-        body = Mesh()
-        MACHINE_BUILDERS[typ](body)
-        tx, ty = TOWER_POS[typ]
-        status_tower(body, tx, ty)
-        body.build(code + "_body", "line", parent=root)
-        lamp = Mesh()
-        lamp.cyl((tx, ty, 2.66), 0.1, 0.16, {"work": "status_green", "idle": "status_amber",
-                                              "stop": "status_red"}[STATUS[code]], segs=16)
-        lamp.build(code + "_lamp", "line", parent=root, role="status")
+        tx, ty, tz = TOWER_POS[typ]
+
+        def body(m, typ=typ, tx=tx, ty=ty, tz=tz):
+            MACHINE_BUILDERS[typ](m)
+            signal_tower(m, tx, ty, tz)
+        instance(code + "_body", "line", shared("machine_" + typ, body), parent=root)
+        st = STATUS[code]
+
+        def lamp(m, st=st, tx=tx, ty=ty, tz=tz):
+            lv = {"work": 0, "idle": 1, "stop": 2}[st]
+            m.cyl((tx, ty, tz + 0.34 + lv * 0.075), 0.048, 0.072,
+                  {"work": "status_green", "idle": "status_amber", "stop": "status_red"}[st], segs=16)
+        instance(code + "_lamp", "line", shared(f"lamp_{typ}_{st}", lamp), parent=root,
+                 role="status")
+        fx, fy = FOOTPRINT[typ]
+        obst(x - fx / 2, y - fy / 2, x + fx / 2, y + fy / 2)
 
 
 def build_maintenance():
     m = Mesh()
-    for x in (39.0, 42.0):
-        m.box_lo(x, 28.6, 0, 2.0, 0.8, 0.9, "steel")
-        m.box_lo(x, 28.6, 0.9, 2.0, 0.8, 0.04, "table_top")
-    m.box_lo(45.5, 28.8, 0, 1.0, 0.6, 2.0, "status_red")
-    m.box_lo(46.8, 28.8, 0, 1.0, 0.6, 2.0, "machine_dark")
-    m.cyl((42.0, 28.6, 0.98), 0.3, 0.01, "steel", segs=32)
-    m.build("MAINT", "line", code="MAINT-1", kind="building", label="Ремонтный участок",
-            desc="Верстаки, шкафы с инструментом, заточка пил.")
+    for x in (66.0, 69.0, 72.0):
+        m.box_lo(x, 58.6, 0.86, 2.0, 0.8, 0.05, "table_top", bev=0.01)
+        legs_frame(m, x, 58.6, 2.0, 0.8, 0.86, mat="steel")
+        m.box_lo(x - 0.6, 58.75, 0.91, 0.3, 0.2, 0.15, "machine_dark", bev=0.02)
+    for x, mat in ((75.5, "status_red"), (76.8, "machine_dark"), (78.1, "machine_dark")):
+        m.box_lo(x, 58.8, 0, 1.0, 0.6, 2.0, mat, bev=0.02)
+        m.box_lo(x, 58.49, 0.2, 0.01, 0.9, 1.6, "steel_dark")
+    m.cyl((69.0, 58.6, 0.93), 0.3, 0.01, "steel", segs=32)
+    m.box_lo(70.0, 55.0, 0, 0.8, 0.6, 0.9, "machine_mid", bev=0.02)  # заточувальний верстат
+    m.cyl((70.0, 55.0, 1.05), 0.15, 0.05, "steel_dark", axis="X", segs=20)
+    m.box_lo(74.0, 54.0, 0, 1.6, 1.2, 1.3, "machine_mid", bev=0.03)  # балансувальний стенд
+    m.cyl((74.0, 54.0, 1.45), 0.2, 0.25, "steel", segs=16)
+    for k in range(4):  # стелаж запчастин
+        m.box_lo(79.5, 47.5 + k * 2.2, 0, 0.6, 2.0, 2.2, "shelf", bev=0.01)
+    m.build("MAINT", "line", code="MAINT-1", kind="building", label="Ремонтна дільниця",
+            desc="Верстаки, шафи з інструментом, заточування пил, балансування фрез, запчастини.")
 
 
-# ---------------------------------------------------------------- готовая продукция
-FG_ROWS = {"R1": 50.15, "R2": 54.05, "R3": 55.15}
-FG_PRODUCTS = ["Шкаф нижний 600", "Шкаф верхний 800", "Пенал 400", "Тумба 3 ящика",
-               "Стол офисный 1400", "Шкаф для документов 800"]
+# ---------------------------------------------------------------- аспірація
+def build_dust():
+    m = Mesh()
+    branch_xs = []
+    for code, typ, _, mx, my, _ in MACHINES:
+        for (lx, ly, lz) in DUCT_POINTS.get(typ, []):
+            px, py = mx + lx, my + ly
+            branch_xs.append(px)
+            pts = rounded_path([(px, py, lz), (px, py, DUCT_Z - 0.7), (px, DUCT_MAIN_Y, DUCT_Z - 0.7),
+                                (px, DUCT_MAIN_Y, DUCT_Z)], radius=0.35)
+            m.tube(pts, 0.11, "galv", segs=14)
+            m.cyl((px, py, lz + 0.1), 0.15, 0.2, "galv", segs=16)
+            m.cyl((px, py, DUCT_Z - 1.9), 0.14, 0.12, "steel_dark", segs=16)
+    # магістраль під покрівлею, далі крізь північну стіну до фільтра
+    xe, xw = max(branch_xs) + 0.5, 48.8
+    fy = D + 5.0
+    main = rounded_path([(xe, DUCT_MAIN_Y, DUCT_Z), (xw, DUCT_MAIN_Y, DUCT_Z),
+                         (xw, fy - 1.5, DUCT_Z), (xw, fy - 1.5, 7.0)], radius=1.2, n=8)
+    m.tube(main, 0.38, "galv", segs=22, caps=True)
+    for x in range(int(xw) + 2, int(xe), 3):
+        m.box_lo(x, DUCT_MAIN_Y, DUCT_Z + 0.38, 0.03, 0.03, H - DUCT_Z - 0.95, "steel_dark")
+        m.cyl((x, DUCT_MAIN_Y, DUCT_Z), 0.4, 0.05, "steel_dark", axis="X", segs=22)
+    # рукавний фільтр, циклон і вентилятор надворі
+    fx = xw
+    for dx in (-1.4, 1.4):
+        for dy in (-1.4, 1.4):
+            m.box_lo(fx + dx, fy + dy, 0, 0.16, 0.16, 2.6, "steel_dark")
+    m.box_lo(fx, fy, 2.6, 3.2, 3.2, 4.6, "galv", bev=0.05)
+    for k in range(7):
+        m.box_lo(fx, fy - 1.61, 3.0 + k * 0.6, 3.2, 0.02, 0.05, "steel")
+    m.cyl((fx, fy, 2.0), 1.55, 1.2, "galv", r2=0.25, segs=24, rot=(180, 0, 0))
+    m.box_lo(fx, fy, 0, 1.1, 1.1, 1.0, "machine_accent", bev=0.03)
+    m.box_lo(fx + 3.0, fy, 0, 1.6, 1.3, 1.4, "machine_accent", bev=0.04)
+    m.cyl((fx + 3.0, fy, 1.9), 0.45, 1.0, "galv", segs=20)
+    m.cyl((fx + 3.0, fy, 5.0), 0.35, 5.2, "galv", segs=20)
+    m.box_lo(fx, fy, 7.2, 3.5, 3.5, 0.08, "steel_dark")
+    for k in range(9):  # сходи обслуговування
+        m.box_lo(fx - 2.0, fy - 1.2 + k * 0.3, k * 0.3, 0.8, 0.3, 0.3, "steel")
+    m.build("DUST", "dust", code="DUST-1", kind="equipment", label="Аспірація",
+            desc="Відсмоктування стружки від розкрою, нестингу, крайкооблицювання та ЧПК: "
+                 "магістраль під покрівлею, рукавний фільтр і вентилятор надворі.")
+
+
+# ---------------------------------------------------------------- готова продукція
+FG_ROWS = [100.2, 104.0, 105.1, 108.9, 110.0, 113.8, 114.9, 118.7]
+FG_PRODUCTS = ["Шафа нижня 600", "Шафа верхня 800", "Пенал 400", "Тумба 3 шухляди",
+               "Стіл офісний 1400", "Шафа для документів 800", "Комод 4 шухляди"]
 
 
 def build_fg():
-    bay_w, nbay, y0 = 2.7, 5, 15.0
-    levels = [0.0, 1.9, 3.8]
+    bay_w, nbay, y0 = 2.7, 9, 32.0
+    levels = [0.0, 1.9, 3.8, 5.7]
     depth = 1.1
-    filled = 0
-    for row, x in FG_ROWS.items():
-        fr = Mesh()
+
+    def frame(m):
         for b in range(nbay + 1):
             for dx in (-depth / 2, depth / 2):
-                fr.box_lo(x + dx, y0 + b * bay_w, 0, 0.09, 0.09, 5.4, "rack_upright")
-            for z in (1.0, 2.0, 3.0, 4.0, 5.0):
-                fr.box_lo(x, y0 + b * bay_w, z, depth, 0.04, 0.04, "rack_upright")
+                m.box_lo(dx, b * bay_w, 0, 0.09, 0.07, 7.4, "rack_upright")
+                m.box_lo(dx, b * bay_w, 0, 0.18, 0.14, 0.01, "steel_dark")
+            for k, z in enumerate((0.6, 1.5, 2.4, 3.3, 4.2, 5.1, 6.0, 6.9)):
+                m.box((0, b * bay_w, z), (depth, 0.03, 0.03), "rack_upright",
+                      rot=(0, 30 if k % 2 else -30, 0))
+        m.box_lo(-depth / 2 - 0.12, 0, 0, 0.12, 0.2, 0.4, "marking", bev=0.01)
+        m.box_lo(-depth / 2 - 0.12, nbay * bay_w, 0, 0.12, 0.2, 0.4, "marking", bev=0.01)
         for z in levels[1:]:
             for dx in (-depth / 2, depth / 2):
-                fr.box_lo(x + dx, y0 + nbay * bay_w / 2, z - 0.12, 0.06, nbay * bay_w, 0.12,
-                          "rack_beam")
-        fr.build(f"FG-RACK-{row}", "fg", code=f"FG-RACK-{row}", kind="rack",
-                 label=f"Паллетный стеллаж {row}", desc=f"{nbay} пролётов × {len(levels)} яруса.")
+                m.box_lo(dx, nbay * bay_w / 2, z - 0.12, 0.06, nbay * bay_w, 0.12, "rack_beam")
+
+    def load(n, l0, l1):
+        def fn(m):
+            for p, layers in zip(range(n), (l0, l1)):
+                py = -0.65 + p * 1.3
+                pallet(m, 0, py, 0.02, sx=1.0, sy=1.2)
+                cartons(m, 0, py, 0.166, 0.95, 1.15, layers)
+            m.box_lo(-depth / 2 - 0.02, 0, 0.05, 0.01, 0.3, 0.08, "phenolic" if n else "status_amber")
+        return shared(f"fg_{n}_{l0}_{l1}", fn)
+
+    me_frame = shared("fg_rack", frame)
+    for ri, x in enumerate(FG_ROWS, 1):
+        row = f"R{ri}"
+        instance(f"FG-RACK-{row}", "fg", me_frame, loc=(x, y0, 0), code=f"FG-RACK-{row}",
+                 kind="rack", label=f"Палетний стелаж {row}",
+                 desc=f"{nbay} прольотів × {len(levels)} яруси.")
+        obst(x - depth / 2 - 0.2, y0, x + depth / 2, y0 + nbay * bay_w)
         for b in range(1, nbay + 1):
             for li, z in enumerate(levels, 1):
                 code = f"FG-{row}-B{b}-L{li}"
-                seed = (sum(map(ord, code)) + b * 3 + li * 5) % 7
+                seed = (ri * 11 + b * 3 + li * 5) % 7
                 n = 0 if seed in (0, 4) else (1 if seed == 3 else 2)
-                m = Mesh()
-                for p in range(n):
-                    py = y0 + (b - 1) * bay_w + 0.7 + p * 1.3
-                    pallet(m, x, py, z + 0.02, sx=1.0, sy=1.2)
-                    layers = 2 + (seed + p) % 2
-                    for k in range(layers):
-                        m.box_lo(x, py, z + 0.17 + k * 0.42, 0.95, 1.15, 0.4, "carton")
-                    filled += 1
-                prod = FG_PRODUCTS[(b + li + len(row)) % len(FG_PRODUCTS)]
-                m.box_lo(x - depth / 2 - 0.02, y0 + (b - 0.5) * bay_w, z + 0.05 if z else 0.05,
-                         0.01, 0.3, 0.08, "screen" if n else "status_amber")
-                m.build(code, "fg", code=code, kind="stock",
-                        label=f"Ячейка {code}",
-                        desc=f"{prod}: {n} паллет." if n else "Свободно.")
+                l0, l1 = 2 + seed % 2, 2 + (seed + 1) % 2
+                prod = FG_PRODUCTS[(b + li + ri) % len(FG_PRODUCTS)]
+                instance(code, "fg", load(n, l0 if n else 0, l1 if n > 1 else 0),
+                         loc=(x, y0 + (b - 0.5) * bay_w, z + (0.0 if li == 1 else 0.0)),
+                         code=code, kind="stock", label=f"Комірка {code}",
+                         desc=f"{prod}: {n} палет." if n else "Вільно.")
 
 
 def build_post_and_shipping():
     m = Mesh()
-    for i, x in enumerate((50.5, 52.2, 53.9)):
-        pallet(m, x, 11.8)
-        for k in range(2 + i % 2):
-            m.box_lo(x, 11.8, 0.15 + k * 0.42, 1.15, 0.75, 0.4, "carton")
-    m.build("POST-STAGE", "fg", code="POST-STAGE", kind="stock", label="Готово к размещению",
-            desc="Упакованные паллеты с линии, ждут размещения в стеллаже.")
+    for i, x in enumerate((101.0, 102.7, 104.4, 107.8, 109.5, 112.9)):
+        pallet(m, x, 27.6)
+        cartons(m, x, 27.6, 0.146, 1.15, 0.75, 2 + i % 2)
+    m.build("POST-STAGE", "fg", code="POST-STAGE", kind="stock", label="Готово до розміщення",
+            desc="Запаковані палети з лінії чекають на розміщення в стелажі.")
 
     s = Mesh()
-    for j, y in enumerate((2.4, 4.0, 6.4, 8.0)):
-        for i, x in enumerate((54.0, 55.6)):
-            if (i + j) % 3 == 2:
+    for j, (_, y, _) in enumerate(d for d in DOORS if d[0] == "E"):
+        for k in range(6):
+            x = 104.0 + k * 1.7
+            if (j * 3 + k) % 5 == 4:
                 continue
             pallet(s, x, y)
-            for k in range(2 + (i + j) % 2):
-                s.box_lo(x, y, 0.15 + k * 0.42, 1.15, 0.75, 0.4, "carton")
-    s.build("OUT-STAGE", "shipping", code="OUT-STAGE", kind="stock", label="Отгрузка на сегодня",
-            desc="Паллеты, собранные под машины к воротам 1 и 2.")
+            cartons(s, x, y, 0.146, 1.15, 0.75, 2 + (j + k) % 2)
+        s.box((108.3, y - 0.65, 0.022), (10.5, 0.08, 0.02), "marking")
+        s.box((108.3, y + 0.65, 0.022), (10.5, 0.08, 0.02), "marking")
+    s.build("OUT-STAGE", "shipping", code="OUT-STAGE", kind="stock",
+            label="Відвантаження на сьогодні",
+            desc="Палети, зібрані в коридори під машини до воріт 1–4.")
+    obst(99.0, 0.0, 120.0, 30.4)
 
 
-# ---------------------------------------------------------------- транспорт
-def forklift(m):
-    m.box_lo(0, 0, 0.15, 1.6, 1.05, 0.75, "forklift")
-    m.box_lo(-0.65, 0, 0.15, 0.4, 1.05, 0.95, "machine_dark")
-    for dx in (-0.55, 0.55):
-        for dy in (-0.48, 0.48):
-            m.cyl((dx, dy, 0.24), 0.24, 0.22, "rubber", axis="Y", segs=16)
-    for dx in (-0.5, 0.35):
-        for dy in (-0.45, 0.45):
-            m.box_lo(dx, dy, 0.9, 0.06, 0.06, 1.15, "machine_dark")
-    m.box_lo(-0.07, 0, 2.05, 0.95, 1.0, 0.05, "machine_dark")
-    m.box_lo(-0.1, 0, 0.9, 0.5, 0.5, 0.45, "machine_dark")
-    for dy in (-0.3, 0.3):
-        m.box_lo(0.9, dy, 0.05, 0.08, 0.1, 2.3, "steel_dark")
-    for dy in (-0.25, 0.25):
-        m.box_lo(1.45, dy, 0.1, 1.1, 0.12, 0.04, "steel_dark")
+# ---------------------------------------------------------------- люди
+def build_people():
+    def body(vest, arms):
+        return shared(f"person_{vest}_{arms}", lambda m: person(m, 0, 0, 0, vest, arms))
+
+    people = []
+    for code, typ, name, x, y, _ in MACHINES:
+        st = STATUS[code]
+        if st == "idle":
+            continue
+        ox, oy, rz = OPERATOR[typ]
+        vest = "hivis_or" if st == "stop" else "hivis"
+        label = "Налагоджувальник" if st == "stop" else "Оператор"
+        people.append((f"OP-{code}", f"{label} · {name}", x + ox, y + oy, rz, vest,
+                       "down" if st == "stop" else "front",
+                       "Діагностика зупинки верстата." if st == "stop" else f"Працює на дільниці «{name}»."))
+    people += [
+        ("OP-W1", "Комірник", 25.0, 37.6, -90, "hivis", "front", "Комплектування фурнітури."),
+        ("OP-W2", "Комірник", 35.0, 46.2, 90, "hivis", "front", "Комплектування фурнітури."),
+        ("OP-W3", "Приймальник", 9.0, 12.0, 180, "hivis_or", "down", "Звірка поставки з накладною."),
+        ("OP-W4", "Оператор порталу", 45.5, 1.4, 120, "hivis", "front", "Керує портальним складом плит."),
+        ("OP-W5", "Комірник ГП", 107.0, 28.5, 90, "hivis_or", "down", "Розміщення готової продукції."),
+    ]
+    for code, label, x, y, rz, vest, arms, desc in people:
+        instance(code, "people", body(vest, arms), loc=(x, y, 0), rz=rz, code=code,
+                 kind="person", label=label, desc=desc)
 
 
 def build_transport():
-    f1 = Mesh()
-    forklift(f1)
-    f1.box_lo(1.45, 0, 0.14, 1.2, 0.8, 0.144, "pallet")
-    f1.box_lo(1.45, 0, 0.28, 1.1, 0.75, 0.5, "carton")
-    f1.build("FL-1", "transport", loc=(52.0, 21.0, 0), rz=-90, code="FL-1", kind="vehicle",
-             label="Погрузчик 1", desc="Электропогрузчик 1,6 т, высота подъёма 4,5 м.")
-    f2 = Mesh()
-    forklift(f2)
-    f2.box_lo(1.6, 0, 0.14, 2.9, 2.1, 0.1, "pallet")
-    f2.box_lo(1.6, 0, 0.24, 2.8, 2.07, 0.35, "decor1")
-    f2.build("FL-2", "transport", loc=(16.0, 5.3, 0), rz=180, code="FL-2", kind="vehicle",
-             label="Погрузчик 2", desc="Перевозит стопу плиты с приёмки на склад.")
+    def fl_pallet(m):
+        forklift(m)
+        pallet(m, 1.45, 0, 0.14)
+        cartons(m, 1.45, 0, 0.286, 1.1, 0.75, 1)
 
-    def truck(m, length=8.5):
-        m.box_lo(0, 0, 1.1, length, 2.5, 2.9, "trailer")
-        m.box_lo(-length / 2 - 1.15, 0, 0.6, 2.2, 2.4, 2.6, "truck_cab")
-        m.box_lo(-length / 2 - 2.0, 0, 1.9, 0.5, 2.2, 1.0, "glass")
+    def fl_sheets(m):
+        forklift(m)
+        sheet_stack(m, 1.6, 0, 0.14, 22, 1)
+
+    for code, label, x, y, rz, fn, desc in (
+            ("FL-1", "Навантажувач 1", 102.1, 44.0, -90, fl_pallet,
+             "Електронавантажувач 1,6 т, висота підйому 6 м."),
+            ("FL-2", "Навантажувач 2", 8.5, 16.5, 0, fl_sheets,
+             "Розвантажує фуру зі стосами плит."),
+            ("FL-3", "Навантажувач 3", 110.0, 6.8, 180, fl_pallet,
+             "Вантажить палети в машину біля воріт 1."),
+            ("FL-4", "Навантажувач 4", 111.9, 50.0, 90, fl_pallet,
+             "Знімає палету з третього ярусу.")):
+        key = "fl_sheets" if fn is fl_sheets else "fl_pallet"
+        instance(code, "transport", shared(key, fn), loc=(x, y, 0), rz=rz, code=code,
+                 kind="vehicle", label=label, desc=desc)
+
+    def truck(m, length=13.6):
+        m.box_lo(0, 0, 1.1, length, 2.5, 2.9, "trailer", bev=0.04)
+        for k in range(1, 12):
+            m.box_lo(-length / 2 + k * length / 12, -1.255, 1.15, 0.04, 0.01, 2.8, "machine_mid")
+        m.box_lo(-length / 2 - 1.15, 0, 0.6, 2.2, 2.4, 2.6, "truck_cab", bev=0.12)
+        m.box_lo(-length / 2 - 2.2, 0, 1.9, 0.1, 2.1, 1.0, "glass")
+        m.box_lo(-length / 2 - 2.25, 0, 0.6, 0.1, 2.2, 0.4, "machine_dark", bev=0.03)
         m.box_lo(-1.0, 0, 0.6, length, 1.0, 0.5, "steel_dark")
-        for x in (-length / 2 - 1.5, length / 2 - 2.6, length / 2 - 1.3):
+        for x in (-length / 2 - 1.5, length / 2 - 3.6, length / 2 - 2.3, length / 2 - 1.0):
             for dy in (-1.0, 1.0):
-                m.cyl((x, dy, 0.5), 0.5, 0.35, "rubber", axis="Y", segs=18)
+                m.cyl((x, dy, 0.5), 0.5, 0.35, "rubber", axis="Y", segs=20)
+                m.cyl((x, dy * 1.01, 0.5), 0.28, 0.36, "steel", axis="Y", segs=14)
 
-    t1 = Mesh()
-    truck(t1)
-    t1.build("TRUCK-IN", "transport", loc=(-4.6, 4.0, 0), rz=0, code="TRUCK-IN", kind="vehicle",
-             label="Фура на разгрузке", desc="Поставка плиты у ворот приёмки 1.")
-    t2 = Mesh()
-    truck(t2)
-    t2.build("TRUCK-OUT", "transport", loc=(W + 4.6, 3.0, 0), rz=180, code="TRUCK-OUT",
-             kind="vehicle", label="Машина под погрузкой", desc="Отгрузка у ворот 1.")
+    me = shared("truck", truck)
+    for code, label, x, y, rz in (("TRUCK-IN-1", "Фура на розвантаженні", -7.3, 11.0, 0),
+                                  ("TRUCK-IN-2", "Фура на розвантаженні", -7.3, 17.0, 0),
+                                  ("TRUCK-OUT-1", "Машина під навантаженням", W + 7.3, 4.0, 180),
+                                  ("TRUCK-OUT-2", "Машина під навантаженням", W + 7.3, 15.0, 180)):
+        instance(code, "transport", me, loc=(x, y, 0), rz=rz, code=code, kind="vehicle",
+                 label=label, desc="Напівпричіп 13,6 м біля воріт.")
 
 
 # ---------------------------------------------------------------- маршрут
-def arc_points(p0, p1, n=24):
+def arc_points(p0, p1, n=28):
     a, b = Vector(p0), Vector(p1)
-    lift = 1.6 + 0.12 * (b - a).length
+    lift = 1.6 + 0.1 * (b - a).length
     c = (a + b) / 2 + Vector((0, 0, lift))
     return [tuple((1 - t) ** 2 * a + 2 * (1 - t) * t * c + t ** 2 * b)
             for t in (i / n for i in range(n + 1))]
@@ -774,24 +1572,41 @@ def build_flow():
     m = Mesh()
     for (_, _, p0), (_, _, p1) in zip(FLOW, FLOW[1:]):
         pts = arc_points(p0, p1)
-        m.tube(pts[:-2], 0.07, "flow")
+        m.tube(pts[:-2], 0.09, "flow")
         tip = Vector(pts[-1])
-        m.cone_dir(tip, tip - Vector(pts[-3]), 0.22, 0.6, "flow")
+        m.cone_dir(tip, tip - Vector(pts[-3]), 0.28, 0.7, "flow")
     for _, _, p in FLOW:
-        m.cyl(p, 0.18, 0.12, "flow", segs=16)
-    m.build("FLOW", "flow", code="FLOW", kind="flow", label="Маршрут изделия",
-            desc="Приёмка → склад плит → буфер → раскрой → кромка → присадка → сборка → "
-                 "упаковка → склад ГП → отгрузка.",
+        m.cyl(p, 0.22, 0.14, "flow", segs=16)
+    m.build("FLOW", "flow", code="FLOW", kind="flow", label="Маршрут виробу",
+            desc="Приймання → склад плит → розкрій → крайка → присадка → збирання → "
+                 "пакування → склад ГП → відвантаження.",
             route=json.dumps([{"code": c, "label": n, "p": p} for c, n, p in FLOW],
                              ensure_ascii=False))
 
 
 # --------------------------------------------------------------------------
+def embed_viewer(out_dir, glb):
+    """Однофайловий переглядач: модель вбудована в base64, відкривається без веб-сервера."""
+    viewer = os.path.join(os.path.dirname(os.path.abspath(__file__)), "viewer", "index.html")
+    with open(glb, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    with open(viewer, encoding="utf-8") as f:
+        html = f.read()
+    html = html.replace("<!-- MODEL_DATA -->",
+                        f'<script type="application/octet-stream" id="model-data">{data}</script>')
+    standalone = ('<!doctype html>\n<html lang="uk"><head><meta charset="utf-8">'
+                  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+                  '</head><body>\n' + html + "\n</body></html>\n")
+    with open(os.path.join(out_dir, "factory_viewer.html"), "w", encoding="utf-8") as f:
+        f.write(standalone)
+
+
 def main(out_dir):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.unit_settings.system = "METRIC"
     make_materials()
     make_layers()
+    LAYER_OBJ["building"].parent["dims"] = f"{W:.0f} × {D:.0f} м · h {H:.0f} м"
     build_building()
     build_zones()
     build_receiving()
@@ -801,15 +1616,18 @@ def main(out_dir):
     build_buffer()
     build_machines()
     build_maintenance()
+    build_dust()
     build_fg()
     build_post_and_shipping()
     build_transport()
+    build_people()
     build_flow()
+    build_columns()
 
-    # камера и свет — для тех, кто откроет .blend
+    # камера і світло — для тих, хто відкриє .blend
     cam = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
     bpy.context.scene.collection.objects.link(cam)
-    cam.location = (8, -32, 38)
+    cam.location = (20, -62, 74)
     cam.rotation_euler = (math.radians(52), 0, math.radians(-25))
     bpy.context.scene.camera = cam
     sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
@@ -829,26 +1647,17 @@ def main(out_dir):
                           export_cameras=False)
     bpy.context.preferences.filepaths.save_version = 0  # без factory.blend1
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out_dir, "factory.blend")))
-    viewer = os.path.join(os.path.dirname(os.path.abspath(__file__)), "viewer", "index.html")
-    shutil.copy(viewer, os.path.join(out_dir, "index.html"))
-    # однофайловый просмотрщик: модель встроена в base64, открывается без веб-сервера
-    with open(glb, "rb") as f:
-        data = base64.b64encode(f.read()).decode()
-    with open(viewer, encoding="utf-8") as f:
-        html = f.read()
-    html = html.replace("<!-- MODEL_DATA -->",
-                        f'<script type="application/octet-stream" id="model-data">{data}</script>')
-    standalone = ('<!doctype html>\n<html lang="ru"><head><meta charset="utf-8">'
-                  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
-                  '</head><body>\n' + html + "\n</body></html>\n")
-    with open(os.path.join(out_dir, "factory_viewer.html"), "w", encoding="utf-8") as f:
-        f.write(standalone)
-    n = sum(1 for o in bpy.data.objects if o.type == "MESH")
-    tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons)
-               for o in bpy.data.objects if o.type == "MESH")
-    print(f"meshes={n} tris={tris}")
+    shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)), "viewer", "index.html"),
+                os.path.join(out_dir, "index.html"))
+    embed_viewer(out_dir, glb)
+    objs = [o for o in bpy.data.objects if o.type == "MESH"]
+    tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs)
+    print(f"objects={len(objs)} unique_meshes={len(bpy.data.meshes)} rendered_tris={tris}")
 
 
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
-    main(argv[0] if argv else "dist")
+    if argv and argv[0] == "--embed":  # python build_scene.py --embed dist/factory_web.glb dist
+        embed_viewer(argv[2], argv[1])
+    else:
+        main(argv[0] if argv else "dist")

@@ -1,10 +1,10 @@
-<title>Мебельный цех 3D</title>
+<title>Меблеве підприємство 3D</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Раскладка: 3D на весь экран, слева плавающая панель видов и слоёв, справа карточка объекта.
-   Тон — техническая документация цеха: холодные серые, жёлтая разметка пола как единственный акцент. */
+/* Розкладка: 3D на весь екран, ліворуч плаваюча панель видів і шарів, праворуч картка об'єкта.
+   Тон — технічна документація цеху: холодні сірі, жовта розмітка підлоги як єдиний акцент. */
 :root {
   --scene: #e4e9ec;
   --bg: #eef1f3;
@@ -147,40 +147,40 @@ button { font: inherit; color: inherit; }
   #side.open { display: flex; }
   #card { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 42%; }
   #help { display: none; }
-  .views { grid-template-columns: 1fr 1fr 1fr; }
+  .views { grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .btn, .view { transition: none; } }
 </style>
 
 <div id="app">
-  <div id="stage" aria-label="3D-модель цеха"></div>
+  <div id="stage" aria-label="3D-модель підприємства"></div>
   <div id="labels"></div>
-  <div id="loading">Загрузка модели…</div>
+  <div id="loading">Завантаження моделі…</div>
 
   <header class="bar">
-    <div class="panel brand"><h1>Мебельный цех</h1><span class="dims">60 × 30 м · h 7 м · 7 станков</span></div>
-    <button class="btn" id="toggle-side" aria-expanded="false" aria-controls="side">Виды и слои</button>
+    <div class="panel brand"><h1>Меблеве підприємство</h1><span class="dims" id="dims"></span></div>
+    <button class="btn" id="toggle-side" aria-expanded="false" aria-controls="side">Види і шари</button>
   </header>
 
-  <nav class="panel" id="side" aria-label="Виды и слои">
+  <nav class="panel" id="side" aria-label="Види і шари">
     <div class="sec">
-      <h2>Виды</h2>
+      <h2>Види</h2>
       <div class="views" id="views"></div>
     </div>
     <div class="sec">
-      <h2>Слои</h2>
+      <h2>Шари</h2>
       <div class="layers" id="layers"></div>
       <div class="row-btns" style="margin-top:8px">
-        <button class="btn" id="all-on">Все</button>
-        <button class="btn" id="all-off">Только цех</button>
+        <button class="btn" id="all-on">Усі</button>
+        <button class="btn" id="all-off">Лише виробництво</button>
       </div>
     </div>
     <div class="sec">
       <h2>Показ</h2>
       <div class="layers">
-        <label class="layer"><input type="checkbox" id="opt-labels" checked><span>Подписи</span></label>
-        <label class="layer"><input type="checkbox" id="opt-motion" checked><span>Движение по маршруту</span></label>
-        <label class="layer"><input type="checkbox" id="opt-shadows" checked><span>Тени</span></label>
+        <label class="layer"><input type="checkbox" id="opt-labels" checked><span>Підписи</span></label>
+        <label class="layer"><input type="checkbox" id="opt-motion" checked><span>Рух маршрутом</span></label>
+        <label class="layer"><input type="checkbox" id="opt-shadows" checked><span>Тіні</span></label>
       </div>
     </div>
   </nav>
@@ -188,8 +188,8 @@ button { font: inherit; color: inherit; }
   <aside class="panel" id="card" aria-live="polite"></aside>
 
   <div class="panel" id="help">
-    <span><b>ЛКМ</b> вращать</span><span><b>ПКМ</b> сдвиг</span><span><b>Колесо</b> масштаб</span>
-    <span><b>Клик</b> выбрать</span><span><b>Двойной клик</b> приблизить</span><span><b>1–8</b> виды · <b>Esc</b> сброс</span>
+    <span><b>ЛКМ</b> обертати</span><span><b>ПКМ</b> зсув</span><span><b>Коліщатко</b> масштаб</span>
+    <span><b>Клік</b> вибрати</span><span><b>Подвійний клік</b> наблизити</span><span><b>1–9, 0</b> види · <b>Esc</b> скинути</span>
   </div>
 </div>
 
@@ -212,17 +212,22 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (s) => document.querySelector(s);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-// Blender (X вдоль, Y поперёк, Z вверх) → three.js (Y вверх)
+// Blender (X уздовж, Y поперек, Z угору) → three.js (Y угору)
 const b2t = ([x, y, z]) => new THREE.Vector3(x, z, -y);
 
 const KIND = {
-  zone: "Зона", machine: "Станок", stock: "Место хранения", bin: "Ячейка стеллажа", rack: "Стеллаж",
-  kit: "Тележка комплектации", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Помещение",
+  zone: "Зона", machine: "Верстат", stock: "Місце зберігання", bin: "Комірка стелажа", rack: "Стелаж",
+  kit: "Візок комплектації", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Приміщення",
+  equipment: "Обладнання", person: "Працівник",
 };
 const MACHINE_STATUS = {
-  work: ["ok", "В работе"], idle: ["warn", "Простой"], stop: ["bad", "Остановлен"],
+  work: ["ok", "У роботі"], idle: ["warn", "Простій"], stop: ["bad", "Зупинено"],
 };
-const BIN_STATE = { ok: ["ok", "Запас в норме"], low: ["warn", "Ниже минимума"], out: ["bad", "Пусто"] };
+const BIN_STATE = { ok: ["ok", "Запас у нормі"], low: ["warn", "Нижче мінімуму"], out: ["bad", "Порожньо"] };
+const plural = (n, one, few, many) => {
+  const d = n % 10, h = n % 100;
+  return d === 1 && h !== 11 ? one : d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many;
+};
 
 // ---------------------------------------------------------------- сцена
 const stage = $("#stage");
@@ -236,33 +241,33 @@ stage.appendChild(renderer.domElement);
 const labelRenderer = new CSS2DRenderer({ element: $("#labels") });
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 600);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 1200);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI * 0.49;
-controls.minDistance = 3;
-controls.maxDistance = 180;
+controls.minDistance = 2;
+controls.maxDistance = 320;
 controls.screenSpacePanning = false;
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x6f767d, 0.35));
 const sun = new THREE.DirectionalLight(0xffffff, 1.45);
-sun.position.set(10, 60, 30);
-sun.target.position.set(30, 0, -15);
+sun.position.set(30, 110, 30);
+sun.target.position.set(60, 0, -30);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -50, right: 50, top: 40, bottom: -40, near: 1, far: 160 });
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 70, bottom: -70, near: 1, far: 260 });
 sun.shadow.bias = -0.0004;
-sun.shadow.normalBias = 0.03;
+sun.shadow.normalBias = 0.04;
 scene.add(sun, sun.target);
 
+let flowMat = null;
 function applyTheme() {
   scene.background = new THREE.Color(css("--scene"));
   if (flowMat) flowMat.color.set(css("--flow"));
 }
-let flowMat = null;
 applyTheme();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -277,9 +282,9 @@ function resize() {
 addEventListener("resize", resize);
 resize();
 
-// ---------------------------------------------------------------- данные модели
+// ---------------------------------------------------------------- дані моделі
 const layers = new Map();   // key -> {node, label}
-const items = new Map();    // code -> object3D (корень кликабельного объекта)
+const items = new Map();    // code -> object3D (корінь клікабельного об'єкта)
 const zoneRects = new Map();
 const lamps = [];
 let flowRoute = [];
@@ -302,23 +307,26 @@ function onModel(gltf) {
   const root = gltf.scene;
   root.traverse((o) => {
     const u = o.userData || {};
-    if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label });
+    if (u.dims) $("#dims").textContent = u.dims;
+    if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label, order: u.order ?? 99 });
     if (u.code && !items.has(u.code)) items.set(u.code, o);
     if (u.rect) zoneRects.set(u.code, u.rect);
     if (u.route) flowRoute = JSON.parse(u.route);
     if (o.isMesh) {
-      // свои материалы на каждый объект, чтобы подсветка не перекрашивала соседей
+      // свій матеріал на кожен об'єкт, щоб підсвічування не перефарбовувало сусідів
       o.material = o.material.clone();
       o.material.envMapIntensity = 0.45;
-      const isZone = codeRoot(o)?.userData.kind === "zone";
-      o.castShadow = !isZone && !o.name.startsWith("Площадка");
-      o.receiveShadow = true;
+      const kind = codeRoot(o)?.userData.kind;
+      o.castShadow = !o.material.transparent && kind !== "zone" && kind !== "bin" && !o.name.startsWith("Майданчик");
+      o.receiveShadow = !o.material.transparent;
       if (u.role === "status") lamps.push(o);
     }
   });
   scene.add(root);
   flowMat = items.get("FLOW")?.getObjectByProperty("isMesh", true)?.material ?? null;
   if (flowMat) { flowMat.emissive = new THREE.Color(css("--flow")); flowMat.emissiveIntensity = 0.35; }
+  const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
+  $("#dims").textContent += ` · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
   applyTheme();
   buildLayersUI();
   buildLabels();
@@ -328,39 +336,49 @@ function onModel(gltf) {
   $("#loading").hidden = true;
 }
 function onModelError(err) {
-  $("#loading").textContent = "Не удалось загрузить factory.glb. Откройте страницу через веб-сервер, а не как файл.";
+  $("#loading").textContent = "Не вдалося завантажити factory.glb. Відкрийте сторінку через веб-сервер, а не як файл.";
   console.error(err);
 }
-// модель встроена в страницу (однофайловая сборка) или лежит рядом как factory.glb
+// модель вбудована в сторінку (однофайлова збірка) або лежить поруч як factory.glb
 const embedded = document.getElementById("model-data");
 if (embedded) {
   const bin = Uint8Array.from(atob(embedded.textContent.trim()), (c) => c.charCodeAt(0));
   new GLTFLoader().parse(bin.buffer, "", onModel, onModelError);
 } else {
   new GLTFLoader().load(MODEL_URL, onModel, (e) => {
-    if (e.total) $("#loading").textContent = `Загрузка модели… ${Math.round((e.loaded / e.total) * 100)}%`;
+    if (e.total) $("#loading").textContent = `Завантаження моделі… ${Math.round((e.loaded / e.total) * 100)}%`;
   }, onModelError);
 }
 
-// ---------------------------------------------------------------- виды
-// цель и положение камеры в координатах Blender (метры)
+// ---------------------------------------------------------------- види
+// ціль і положення камери в координатах Blender (метри); zone/code — від габаритів об'єкта
 const VIEWS = [
-  { name: "Общий вид", target: [31, 12, 0], pos: [4, -42, 50] },
-  { name: "Приёмка", zone: "Z-RCV", dir: [1, -1.2, 1.1] },
-  { name: "Склад плит", zone: "Z-SHEETS", dir: [0.3, -1, 0.9] },
-  { name: "Фурнитура", zone: "Z-HW", dir: [0.6, -1, 0.55] },
-  { name: "Производство", zone: "Z-LINE", dir: [-0.2, -1, 0.75] },
-  { name: "Склад ГП", zone: "Z-FG", dir: [-1, -0.6, 0.6] },
-  { name: "Отгрузка", zone: "Z-OUT", dir: [-0.7, -1, 0.8] },
-  { name: "План сверху", target: [30, 15, 0], pos: [30, 14.9, 78] },
+  { name: "Загальний вигляд", target: [62, 26, 0], pos: [14, -74, 92] },
+  { name: "Склад плит", zone: "Z-SHEETS", dir: [0.25, -1, 0.85] },
+  { name: "Фурнітура", zone: "Z-HW", dir: [0.5, -1, 0.6] },
+  { name: "Виробництво", target: [74, 20, 0], pos: [60, -22, 40] },
+  { name: "Розкрій", code: "SAW-1", dir: [0.7, -1, 0.75] },
+  { name: "Крайка", code: "EDGE-1", dir: [0.15, -1, 0.55] },
+  { name: "Присадка ЧПК", code: "CNC-1", dir: [0.5, -1, 0.8] },
+  { name: "Збирання", zone: "Z-ASM", dir: [0.2, -1, 0.75] },
+  { name: "Склад ГП", zone: "Z-FG", dir: [-1, -0.7, 0.55] },
+  { name: "План згори", target: [60, 30, 0], pos: [60, 29.9, 150] },
 ];
 
 function viewPose(v) {
   if (v.pos) return { pos: b2t(v.pos), target: b2t(v.target) };
-  const [x0, y0, x1, y1] = zoneRects.get(v.zone);
-  const c = [(x0 + x1) / 2, (y0 + y1) / 2, 0.5];
-  const size = Math.max(x1 - x0, y1 - y0);
-  const d = new THREE.Vector3(...v.dir).normalize().multiplyScalar(size * 1.35 + 6);
+  let c, size;
+  if (v.zone) {
+    const [x0, y0, x1, y1] = zoneRects.get(v.zone);
+    c = [(x0 + x1) / 2, (y0 + y1) / 2, 0.5];
+    size = Math.max(x1 - x0, y1 - y0) * 1.1;
+  } else {
+    const box = new THREE.Box3().setFromObject(items.get(v.code));
+    const ct = box.getCenter(new THREE.Vector3());
+    c = [ct.x, -ct.z, 1.0];
+    size = box.getSize(new THREE.Vector3()).length() * 0.9;
+  }
+  const d = new THREE.Vector3(...v.dir).normalize().multiplyScalar(size + 4);
   return { pos: b2t([c[0] + d.x, c[1] + d.y, c[2] + d.z]), target: b2t(c) };
 }
 
@@ -369,7 +387,7 @@ function flyTo(pos, target, animate = true) {
   if (!animate || reduceMotion) {
     camera.position.copy(pos); controls.target.copy(target); controls.update(); tween = null; return;
   }
-  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), dur: 900 };
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), dur: 1000 };
 }
 function goView(v, animate = true) {
   const { pos, target } = viewPose(v);
@@ -379,7 +397,7 @@ function goView(v, animate = true) {
 VIEWS.forEach((v, i) => {
   const b = document.createElement("button");
   b.className = "view"; b.dataset.name = v.name; b.setAttribute("aria-pressed", "false");
-  b.innerHTML = `<kbd>${i + 1}</kbd>${v.name}`;
+  b.innerHTML = `<kbd>${(i + 1) % 10}</kbd>${v.name}`;
   b.onclick = () => { goView(v); closeSideOnPhone(); };
   $("#views").appendChild(b);
 });
@@ -389,12 +407,12 @@ function focusOn(obj) {
   const c = box.getCenter(new THREE.Vector3());
   const r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1.5);
   const dir = camera.position.clone().sub(controls.target).normalize();
-  flyTo(c.clone().add(dir.multiplyScalar(r * 2.6 + 3)), c);
+  flyTo(c.clone().add(dir.multiplyScalar(r * 2.4 + 3)), c);
   document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", "false"));
 }
 
-// ---------------------------------------------------------------- слои
-const CORE = new Set(["building", "zones", "line", "flow"]);
+// ---------------------------------------------------------------- шари
+const CORE = new Set(["building", "zones", "line", "dust", "people", "flow"]);
 function setLayer(key, on) {
   const l = layers.get(key);
   if (!l) return;
@@ -404,7 +422,7 @@ function setLayer(key, on) {
   if (selected && !isShown(selected)) select(null);
 }
 function buildLayersUI() {
-  for (const [key, { label }] of layers) {
+  for (const [key, { label }] of [...layers].sort((a, b) => a[1].order - b[1].order)) {
     const row = document.createElement("label");
     row.className = "layer";
     row.innerHTML = `<input type="checkbox" id="layer-${key}" checked><span>${label}</span>`;
@@ -415,7 +433,7 @@ function buildLayersUI() {
 $("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, true));
 $("#all-off").onclick = () => layers.forEach((_, k) => setLayer(k, CORE.has(k)));
 
-// ---------------------------------------------------------------- подписи
+// ---------------------------------------------------------------- підписи
 const labels = [];
 function addLabel(obj, html, cls, yOffset) {
   const el = document.createElement("div");
@@ -426,7 +444,7 @@ function addLabel(obj, html, cls, yOffset) {
   const lbl = new CSS2DObject(el);
   lbl.position.set(c.x, (cls === "zone" ? 0.05 : box.max.y) + yOffset, c.z);
   scene.add(lbl);
-  labels.push({ lbl, obj });
+  labels.push({ lbl, obj, cls });
 }
 function buildLabels() {
   for (const [, obj] of items) {
@@ -438,34 +456,39 @@ function buildLabels() {
     }
   }
 }
+const tmpV = new THREE.Vector3();
 function syncLabels() {
   const on = $("#opt-labels").checked;
-  for (const { lbl, obj } of labels) lbl.visible = on && isShown(obj);
+  const dist = camera.position.distanceTo(controls.target);
+  for (const { lbl, obj, cls } of labels) {
+    // підписи верстатів — лише коли камера достатньо близько, інакше загальний план захаращений
+    const near = cls === "zone" ? dist > 18 : camera.position.distanceTo(lbl.getWorldPosition(tmpV)) < 70;
+    lbl.visible = on && near && isShown(obj);
+  }
 }
 $("#opt-labels").onchange = syncLabels;
 $("#opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
 
-// ---------------------------------------------------------------- маршрут: бегущая точка
+// ---------------------------------------------------------------- маршрут: точка, що біжить
 let pulse = null;
-let curves = [];
+const curves = [];
 function buildPulse() {
   if (!flowRoute.length) return;
   for (let i = 0; i < flowRoute.length - 1; i++) {
     const a = new THREE.Vector3(...flowRoute[i].p), b = new THREE.Vector3(...flowRoute[i + 1].p);
-    const lift = 1.6 + 0.12 * a.distanceTo(b);
+    const lift = 1.6 + 0.1 * a.distanceTo(b);
     const c = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, lift));
     curves.push(new THREE.QuadraticBezierCurve3(b2t(a.toArray()), b2t(c.toArray()), b2t(b.toArray())));
   }
-  pulse = new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 14),
-    new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.6, 20, 14),
+  pulse = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14),
     new THREE.MeshBasicMaterial({ color: new THREE.Color(css("--flow")), transparent: true, opacity: 0.35, depthWrite: false }));
   pulse.add(halo);
   scene.add(pulse);
 }
 $("#opt-motion").checked = !reduceMotion;
 
-// ---------------------------------------------------------------- выбор
+// ---------------------------------------------------------------- вибір
 const ray = new THREE.Raycaster();
 const ptr = new THREE.Vector2();
 function pick(ev) {
@@ -507,8 +530,13 @@ renderer.domElement.addEventListener("dblclick", (e) => {
   const o = pick(e);
   if (o) { select(o); focusOn(o); }
 });
+// наведення: не частіше ніж раз на 80 мс — сцена велика, промінь дорогий
+let hoverAt = 0;
 renderer.domElement.addEventListener("pointermove", (e) => {
-  if (e.buttons) return;
+  if (e.buttons || e.pointerType === "touch") return;
+  const now = performance.now();
+  if (now - hoverAt < 80) return;
+  hoverAt = now;
   const o = pick(e);
   if (o === hovered) return;
   if (hovered && hovered !== selected) tint(hovered, 0x000000, 0);
@@ -519,43 +547,46 @@ renderer.domElement.addEventListener("pointermove", (e) => {
 addEventListener("keydown", (e) => {
   if (e.target.closest("input, textarea")) return;
   if (e.key === "Escape") select(null);
-  const n = parseInt(e.key, 10);
-  if (n >= 1 && n <= VIEWS.length) goView(VIEWS[n - 1]);
+  if (/^[0-9]$/.test(e.key)) {
+    const v = VIEWS[(parseInt(e.key, 10) + 9) % 10];
+    if (v) goView(v);
+  }
 });
 
-// ---------------------------------------------------------------- карточка
+// ---------------------------------------------------------------- картка
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 function renderSummary() {
-  const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
+  const all = [...items.values()];
+  const machines = all.filter((o) => o.userData.kind === "machine");
   const working = machines.filter((o) => o.userData.status === "work").length;
-  const bins = [...items.values()].filter((o) => o.userData.kind === "bin");
+  const bins = all.filter((o) => o.userData.kind === "bin");
   const low = bins.filter((o) => o.userData.state === "low");
   const out = bins.filter((o) => o.userData.state === "out");
   const attention = [
-    ...machines.filter((o) => o.userData.status === "stop").map((o) => ["bad", `${o.userData.label} — остановлен`, o]),
-    ...machines.filter((o) => o.userData.status === "idle").map((o) => ["warn", `${o.userData.label} — простой`, o]),
-    ...out.map((o) => ["bad", `${o.userData.code} — пусто`, o]),
-    ...low.map((o) => ["warn", `${o.userData.code} — ниже минимума`, o]),
+    ...machines.filter((o) => o.userData.status === "stop").map((o) => ["bad", `${o.userData.label} — зупинено`, o]),
+    ...machines.filter((o) => o.userData.status === "idle").map((o) => ["warn", `${o.userData.label} — простій`, o]),
+    ...out.map((o) => ["bad", `${o.userData.code} — порожньо`, o]),
+    ...low.map((o) => ["warn", `${o.userData.code} — нижче мінімуму`, o]),
   ];
   $("#card").innerHTML = `
-    <div class="kind">Сейчас на площадке</div>
+    <div class="kind">Зараз на майданчику</div>
     <div class="summary">
-      <div><b>${working}/${machines.length}</b><span>станков в работе</span></div>
-      <div><b>${low.length}</b><span>ячеек ниже минимума</span></div>
-      <div><b>${out.length}</b><span>пустых ячеек</span></div>
+      <div><b>${working}/${machines.length}</b><span>верстатів у роботі</span></div>
+      <div><b>${low.length}</b><span>комірок нижче мінімуму</span></div>
+      <div><b>${out.length}</b><span>порожніх комірок</span></div>
     </div>
     <ul class="attn">${attention.slice(0, 6).map(([c, t], i) =>
       `<li><button data-i="${i}"><span class="dot" style="background:var(--${c})"></span>${esc(t)}</button></li>`).join("")}</ul>
-    ${attention.length > 6 ? `<div class="hint" style="border:0;padding:0;margin-top:6px">и ещё ${attention.length - 6}</div>` : ""}
+    ${attention.length > 6 ? `<div class="hint" style="border:0;padding:0;margin-top:6px">і ще ${attention.length - 6}</div>` : ""}
     <div class="legend">
-      <span class="swatch" style="background:var(--ok)"></span><span>Маячок станка: в работе</span>
-      <span class="swatch" style="background:var(--warn)"></span><span>Простой · лоток ниже минимума</span>
-      <span class="swatch" style="background:var(--bad)"></span><span>Остановлен · ячейка пуста</span>
-      <span class="swatch" style="background:#2e86c1"></span><span>Синий лоток: запас в норме</span>
-      <span class="swatch" style="background:var(--flow)"></span><span>Маршрут изделия</span>
+      <span class="swatch" style="background:var(--ok)"></span><span>Маячок верстата: у роботі</span>
+      <span class="swatch" style="background:var(--warn)"></span><span>Простій · лоток нижче мінімуму</span>
+      <span class="swatch" style="background:var(--bad)"></span><span>Зупинено · комірка порожня</span>
+      <span class="swatch" style="background:#2e86c1"></span><span>Синій лоток: запас у нормі</span>
+      <span class="swatch" style="background:var(--flow)"></span><span>Маршрут виробу</span>
     </div>
-    <div class="hint">Нажмите на станок, стеллаж, ячейку или зону, чтобы увидеть описание. Состояния в модели — пример.</div>`;
+    <div class="hint">Натисніть на верстат, стелаж, комірку, працівника або зону, щоб побачити опис. Стани в моделі — приклад.</div>`;
   $("#card").querySelectorAll(".attn button").forEach((b) => {
     b.onclick = () => { const o = attention[+b.dataset.i][2]; select(o); focusOn(o); };
   });
@@ -571,14 +602,14 @@ function renderCard() {
     const [c, t] = BIN_STATE[u.state]; chip = `<span class="chip ${c}">${t}</span>`;
   }
   $("#card").innerHTML = `
-    <div class="kind">${esc(KIND[u.kind] || "Объект")}</div>
+    <div class="kind">${esc(KIND[u.kind] || "Об'єкт")}</div>
     <h3>${esc(u.label || u.code)}</h3>
     <div class="code">${esc(u.code)}</div>
     ${chip}
     ${u.desc ? `<p>${esc(u.desc)}</p>` : ""}
     <div class="actions">
-      <button class="btn" id="c-focus">Приблизить</button>
-      <button class="btn" id="c-close">Закрыть</button>
+      <button class="btn" id="c-focus">Наблизити</button>
+      <button class="btn" id="c-close">Закрити</button>
     </div>`;
   $("#c-focus").onclick = () => focusOn(selected);
   $("#c-close").onclick = () => select(null);
@@ -608,7 +639,7 @@ renderer.setAnimationLoop(() => {
   }
   controls.update();
 
-  // мигание остановленных станков
+  // зупинені верстати блимають
   const blink = 0.5 + 0.5 * Math.sin(now / 220);
   for (const l of lamps) {
     const st = codeRoot(l)?.userData.status;
@@ -620,7 +651,7 @@ renderer.setAnimationLoop(() => {
     const motion = $("#opt-motion").checked && layers.get("flow")?.node.visible;
     pulse.visible = !!motion;
     if (motion) {
-      travel = (travel + dt * 0.45) % curves.length;
+      travel = (travel + dt * 0.35) % curves.length;
       const i = Math.floor(travel);
       pulse.position.copy(curves[i].getPoint(travel - i));
     }
