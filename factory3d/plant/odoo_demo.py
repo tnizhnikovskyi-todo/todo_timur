@@ -13,6 +13,9 @@ import sys
 from datetime import datetime, timedelta
 
 from .energy import IDLE_DEFAULT, IDLE_K, PROFILE, TARIFF, energy_data, passport_energy
+from .lighting import layout as light_layout
+from .lighting import load_lux_norms, panels_load
+from .ventilation import ventilation_data
 from .equipment import ROLE_BY_CODE, load_specs, passport
 from .layout import (EDGE_LEVELS, EDGE_SECTIONS, EDGE_UNITS, FG_BAYS, FG_LEVELS, FG_PRODUCTS,
                      FG_ROWS, GANTRY_COLS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
@@ -655,6 +658,16 @@ class Demo:
         zones["Z-RCV"]["pickings"] = [p["name"] for p in self.pickings if p["type"] == "incoming"]
         zones["Z-OUT"]["pickings"] = [p["name"] for p in self.pickings if p["type"] == "outgoing"]
         energy = self.build_energy(specs)
+        lux_norms = load_lux_norms()
+        groups = light_layout(specs, lux_norms)
+        lighting = dict(groups={k: {kk: vv for kk, vv in g.items() if kk != "fixtures"} for k, g in groups.items()},
+                        panels=panels_load(groups), uf=0.7, mf=0.8,
+                        norms_ref={k: v.get("ref") for k, v in lux_norms.items()})
+        vent = ventilation_data(specs)
+        vent["units"]["RV-05"]["maintenance_request"] = "MR/00035"
+        self.maintenance.append(dict(id="MR/00035", name="Заміна фільтрів: перепад тиску 285 Па при нормі до 250",
+                                     equipment="RV-05", maintenance_type="preventive", stage="Новий",
+                                     request_date=ts(NOW.replace(hour=6, minute=50))))
         return dict(
             meta=dict(source="Odoo 19 · демо-дані", database="mebli-demo", company="Меблева фабрика (демо)",
                       warehouse=WH, now=ts(NOW), note="Згенеровано скриптом plant/odoo_demo.py; "
@@ -663,7 +676,7 @@ class Demo:
             productions=self.productions, workorders=self.workorders, sale_orders=self.sale,
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
-            docks=self.docks, zones=zones, energy=energy,
+            docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent,
             passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
 
 

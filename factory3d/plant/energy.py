@@ -14,6 +14,9 @@ import math
 
 from .equipment import NOMINAL_MM, ROLE_BY_CODE
 from .layout import FOOTPRINT, MACHINES, STATUS
+from .lighting import layout as light_layout
+from .lighting import LIGHT_ZONES, PANELS, load_lux_norms, panels_load
+from .ventilation import ROOFVENTS, ventilation_data
 
 U_LV = 400  # В, низька сторона
 BUS_Z = 6.2  # висота розподільних шинопроводів (низ ферм 8,4; аспірація 7,6; світильники 7,7)
@@ -176,10 +179,6 @@ UTILITIES = [
      "Котел, подача палива, брикетувальний прес."),
     ("CHARGING", "Зарядна станція (3 зарядні пристрої)", "C2", "charger", 3, None, 0.67, 0.95,
      "Зайнято 2 з 3 постів."),
-    ("LIGHT", "Освітлення цеху (175 LED-світильників)", "C2", None, 1, 26.0, 1.0, 0.95,
-     "175 світильників × 150 Вт — оцінка."),
-    ("HVAC", "Припливно-витяжна вентиляція, повітряні завіси", "C2", None, 1, 55.0, 0.7, 0.86,
-     "Оцінка для фарбувальних дільниць і воріт."),
     ("OFFICE", "Офіс, побутові приміщення, серверна", "C2", None, 1, 32.0, 0.55, 0.92,
      "Оцінка: кондиціонування, ІТ, кухня."),
 ]
@@ -238,6 +237,25 @@ def consumers(specs):
             p, src = kw, "estimate"
         out[code] = dict(name=name, feeder=CABLE_FEEDERS[cf][0], bus=None, p_inst=round(p, 1),
                          p_now=round(p * load, 1), cos_phi=pf, source=src, status="work", note=note)
+    lt = light_layout(specs, load_lux_norms())
+    for code, pl in panels_load(lt).items():
+        out[code] = dict(name=pl["name"], feeder="QF-C2", bus=None, p_inst=pl["p_inst"], p_now=pl["p_now"],
+                         cos_phi=0.95, source="passport" if specs.get("highbay", {}).get("watt") else "estimate",
+                         status="work", group="light",
+                         note=f"{pl['n']} світильників; диммування DALI за присутністю й денним світлом.")
+    vu = ventilation_data(specs)["units"]
+    rv = [u for u in vu.values() if u["kind"] == "roofvent"]
+    out["RV-ALL"] = dict(name=f"Дахові установки вентиляції ({len(rv)} шт.)", feeder="QF-C2", bus=None,
+                         p_inst=round(sum(u["p_inst"] for u in rv), 1), p_now=round(sum(u["p_now"] for u in rv), 1),
+                         cos_phi=0.95, source="passport" if specs.get("roofvent", {}).get("power_kw") else "estimate",
+                         status="work", group="vent", note="Вентилятори з ЕС-двигунами, витрата — за датчиками CO₂.")
+    for code, u in vu.items():
+        if u["kind"] != "roofvent":
+            out[code] = dict(name=u["name"], feeder="QF-C2", bus=None, p_inst=u["p_inst"], p_now=u["p_now"],
+                             cos_phi=0.95, source="passport" if specs.get(
+                                 "make_up_ahu" if u["kind"] == "ahu" else "wall_fan", {}).get("power_kw")
+                             else "estimate",
+                             status="work" if u["state"] == "on" else "idle", group="vent")
     for c in out.values():
         c["i_now"] = round(amps(c["p_now"], c["cos_phi"]))
     return out
@@ -347,7 +365,9 @@ def energy_data(specs, now_h=10.5):
 def day_profile(cons, now_h):
     """Середня потужність по годинах: сьогодні до now_h і типовий робочий день (дві зміни)."""
     prod = sum(c["p_now"] for c in cons.values() if c["bus"])
-    util = {k: cons[k]["p_now"] for k in ("COMPRESSOR", "DUST-1", "BOILER", "CHARGING", "LIGHT", "HVAC", "OFFICE")}
+    util = {k: cons[k]["p_now"] for k in ("COMPRESSOR", "DUST-1", "BOILER", "CHARGING", "OFFICE")}
+    util["LIGHT"] = sum(c["p_now"] for c in cons.values() if c.get("group") == "light")
+    util["HVAC"] = sum(c["p_now"] for c in cons.values() if c.get("group") == "vent")
     night = (0.25 * util["LIGHT"] + 0.35 * util["HVAC"] + util["BOILER"] + 0.25 * util["OFFICE"]
              + 1.3 * util["CHARGING"] + 0.06 * util["COMPRESSOR"] + 0.03 * prod)
     work = prod + sum(util.values())
@@ -406,6 +426,17 @@ for _b in BUSWAYS:
     ENERGY_ROLES[_b["feeder"]] = ("main_switchboard", ["power_meter"])
 for _c in CABLE_FEEDERS.values():
     ENERGY_ROLES[_c[0]] = ("main_switchboard", ["power_meter"])
+# освітлення й вентиляція
+for _z, _t, _kind, *_ in LIGHT_ZONES:
+    ENERGY_ROLES["LT-" + _z[2:]] = (_kind, ["lighting_control"])
+for _p in PANELS:
+    ENERGY_ROLES[_p[0]] = ("lighting_control", [])
+ENERGY_ROLES["EMERGENCY"] = ("emergency", [])
+for _r in ROOFVENTS:
+    ENERGY_ROLES[_r[0]] = ("roofvent", [])
+ENERGY_ROLES["AHU-1"] = ("make_up_ahu", ["fabric_duct"])
+for _f in ("EF-ELEC", "EF-CMP", "EF-CHG"):
+    ENERGY_ROLES[_f] = ("wall_fan", [])
 
 
 def energy_passport(code, specs):

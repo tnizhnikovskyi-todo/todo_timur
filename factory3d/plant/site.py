@@ -10,6 +10,10 @@ from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, D
 from .energy import (BUS_Z, PFC_H, BUSWAYS, CABLE_Z, CELL_X, EMS_POS, RM6_POS, ROOM, SWB_CELLS, SWB_D, SWB_H, SWB_X0,
                      SWB_X1, SWB_Y, TRAFO_Y, TRAFOS, TRAY_Y, TRAY_Z, energy_passport, taps)
 from .equipment import body_scale, load_specs, passport
+from .lighting import PANELS
+from .lighting import layout as light_layout
+from .ventilation import (AHU_POS, AIR_RING_Z, CHG_EXHAUST, FABRIC_DUCTS, FABRIC_R, FABRIC_Z, HEAT_R, ROOFVENTS,
+                          RV_BOTTOM, SPRINKLER_Z, WALL_FANS, heat_paths)
 from .machines import MACHINE_BUILDERS, OPERATOR, TOWER_POS
 
 SPECS = load_specs()
@@ -77,12 +81,7 @@ def build_building():
             rf.box((x, 3 + k * 6, H - 0.3), (0.06, 0.06, 0.7), "steel", rot=(40 if k % 2 else -40, 0, 0))
     for y in (15.0, 30.0, 45.0, 60.0):
         rf.box_lo(W / 2, y, H - 0.3, W, 0.14, 0.3, "steel_dark")
-    for x in range(3, int(W), 6):
-        for y in range(5, int(D), 10):
-            rf.cyl((x, y, H - 0.9), 0.03, 0.6, "steel_dark", segs=6)
-            rf.cyl((x, y, H - 1.25), 0.32, 0.1, "machine_mid", segs=20)
-            rf.cyl((x, y, H - 1.31), 0.28, 0.02, "led", segs=20)
-    rf.build("Ферми та світильники", "roof")
+    rf.build("Ферми", "roof")
 
     # перегородки: дільниця фасадів (окреме приміщення), склад ЛФМ, компресорна, зарядна
     pw = Mesh()
@@ -654,17 +653,17 @@ def build_utilities():
     c.box_lo(114.6, 62.0, 0, 1.2, 0.8, 1.3, "machine_mid", bev=0.04)
     c.tube(rounded_path([(112.1, 64.0, 1.8), (113.0, 64.0, 2.6), (113.0, 70.2, 2.6), (113.6, 70.2, 2.6)],
                         radius=0.25), 0.05, "air_blue", segs=10)
-    c.tube(rounded_path([(114.2, 70.2, 3.0), (114.2, 70.2, 8.15), (114.2, 61.0, 8.15)], radius=0.3),
-           0.06, "air_blue", segs=10)
+    c.tube(rounded_path([(114.2, 70.2, 3.0), (114.2, 70.2, AIR_RING_Z), (114.2, 61.0, AIR_RING_Z)], radius=0.3),
+           0.045, "air_blue", segs=10)
     c.build("COMPRESSOR", "utilities", code="COMPRESSOR", kind="equipment", label="Компресорна станція",
             desc="Два гвинтові компресори, ресивер 2 м³, рефрижераторний осушувач і фільтри.")
 
     a = Mesh()
-    ring = [(114.2, 61.0, 8.15), (109.8, 61.0, 8.15), (109.8, 1.5, 8.15), (42.6, 1.5, 8.15),
-            (42.6, 45.8, 8.15), (109.8, 45.8, 8.15)]
-    a.tube(rounded_path(ring, radius=0.6), 0.06, "air_blue", segs=10)
+    z = AIR_RING_Z
+    ring = [(114.2, 61.0, z), (109.8, 61.0, z), (109.8, 1.5, z), (42.6, 1.5, z), (42.6, 45.8, z), (109.8, 45.8, z)]
+    a.tube(rounded_path(ring, radius=0.6), 0.045, "air_blue", segs=10)
     for x in range(46, 108, 6):
-        a.tube([(x, 1.5, 8.15), (x, 1.5, 2.0)], 0.03, "air_blue", segs=8)
+        a.tube([(x, 1.5, z), (x, 1.5, 2.0)], 0.03, "air_blue", segs=8)
         a.box_lo(x, 1.5, 1.2, 0.15, 0.12, 0.3, "machine_dark")
     a.build("AIR-RING", "utilities", code="AIR-RING", kind="equipment", label="Пневмомагістраль",
             desc="Кільце стисненого повітря 6 бар над виробничою зоною з опусками до дільниць.")
@@ -684,11 +683,11 @@ def build_utilities():
                  desc="Акумулятор заряджається.")
 
     s = Mesh()
-    s.box_lo(1.0, D / 2, H - 0.75, 0.12, D - 2, 0.12, "fire_red")
-    for y in range(5, int(D), 5):
-        s.box_lo(W / 2, y, H - 0.7, W - 1.5, 0.05, 0.05, "fire_red")
+    s.box_lo(1.0, D / 2, SPRINKLER_Z - 0.05, 0.12, D - 2, 0.1, "fire_red")
+    for y in range(5, int(D), 5):  # над тепловою мережею й пневмокільцем
+        s.box_lo(W / 2, y, SPRINKLER_Z - 0.025, W - 1.5, 0.05, 0.05, "fire_red")
         for x in range(4, int(W), 4):
-            s.box_lo(x, y, H - 0.8, 0.03, 0.03, 0.1, "steel")
+            s.box_lo(x, y, SPRINKLER_Z - 0.125, 0.03, 0.03, 0.1, "steel")
     s.build("SPRINKLERS", "roof", code="SPRINKLERS", kind="equipment", label="Спринклерне пожежогасіння",
             desc="Розподільні трубопроводи під покрівлею, зрошувачі з кроком 4 × 5 м.")
 
@@ -933,6 +932,136 @@ def build_energy():
                  "фідері по Modbus TCP.")
 
 
+# ---------------------------------------------------------------- освітлення
+def build_lighting():
+    groups = light_layout(SPECS)
+    truss = H - 0.6
+    for code, g in groups.items():
+        m = Mesh()
+        rows = {}
+        for x, y, z in g["fixtures"]:
+            if g["kind"] == "highbay_rack":  # лінійний світильник уздовж проходу
+                along_y = g["zone"] in ("Z-FG", "Z-EDGE")
+                sx, sy = (0.16, 1.2) if along_y else (1.2, 0.16)
+                m.box_lo(x, y, z, sx, sy, 0.09, "machine_mid", bev=0.01)
+                m.box_lo(x, y, z - 0.005, sx * 0.8, sy * 0.92, 0.01, "led")
+                key = round(x, 1) if along_y else round(y, 1)
+            else:  # круглий high-bay
+                m.cyl((x, y, z + 0.05), 0.2, 0.1, "machine_dark", segs=16)
+                m.cyl((x, y, z + 0.13), 0.12, 0.06, "machine_mid", segs=12)
+                m.cyl((x, y, z - 0.005), 0.17, 0.012, "led", segs=16)
+                key = round(y, 1)
+            m.box_lo(x, y, z + 0.16, 0.012, 0.012, truss - z - 0.16, "steel_dark")  # підвіс
+            rows.setdefault(key, []).append((x, y, z))
+        for pts in rows.values():  # кабель живлення ряду
+            pts.sort()
+            for a, b in zip(pts, pts[1:]):
+                if abs(a[2] - b[2]) > 0.01 or math.dist(a[:2], b[:2]) > 14:
+                    continue
+                mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+                m.box_lo(mx, my, a[2] + 0.2, abs(b[0] - a[0]) + 0.02, abs(b[1] - a[1]) + 0.02, 0.02, "rubber")
+        if not g["n"]:
+            continue
+        m.build(code, "lighting", code=code, kind="lighting", label=f"Освітлення · {g['zone_name']}",
+                desc=f"{g['n']} світильників, норма {g['e_norm']} лк ({g['task_name']}), розрахунок "
+                     f"{g['e_calc']} лк.")
+    # щити освітлення на північній стіні, живлення — з кабельного лотка
+    for code, x, name in PANELS:
+        p = Mesh()
+        px = x + (0.25 if code == "LP-3" else 0.0)
+        p.box_lo(px, 71.75, 1.0, 0.6, 0.25, 1.2, "elec_cab", bev=0.01)
+        p.box_lo(px, 71.62, 1.85, 0.16, 0.01, 0.12, "screen_on")
+        for k in range(3):
+            p.box_lo(px - 0.15 + k * 0.15, 71.62, 1.3, 0.08, 0.01, 0.25, "machine_dark")
+        if code == "LP-1":
+            path = [(57.0, TRAY_Y, TRAY_Z), (px, TRAY_Y, TRAY_Z), (px, 71.8, 2.2)]
+        elif code == "LP-3":
+            path = [(CELL_X["QF-C2"], TRAY_Y, TRAY_Z), (px, TRAY_Y, TRAY_Z), (px, 71.8, 2.2)]
+        else:
+            path = [(px, TRAY_Y, TRAY_Z), (px, 71.8, 2.2)]
+        p.tube(rounded_path(path, radius=0.2), 0.03, "rubber", segs=8)
+        p.build(code, "lighting", code=code, kind="lighting", label=name.split(" · ")[0], desc=name)
+    # аварійні покажчики «Вихід» над воротами
+    ex = Mesh()
+    for side, yc, w in DOORS:
+        x = 0.36 if side == "W" else W - 0.36
+        ex.box_lo(x, yc, DOOR_H + 0.35, 0.05, 0.42, 0.18, "exit_green")
+    for x, y in ((48.5, 46.15), (66.0, 46.15), (89.0, 46.15), (129.7, 62.3), (94.0, 58.33)):
+        ex.box_lo(x, y, 2.65, 0.42, 0.05, 0.18, "exit_green")
+    ex.build("EMERGENCY", "lighting", code="EMERGENCY", kind="lighting", label="Аварійне освітлення",
+             desc="Покажчики «Вихід» над воротами й дверима; частина світильників має аварійний модуль.")
+
+
+# ---------------------------------------------------------------- вентиляція й опалення
+def build_ventilation():
+    def roofvent(m):
+        m.box_lo(0, 0, H, 2.3, 2.3, 0.3, "steel_dark")  # опорна рама на покрівлі
+        m.box_lo(0, 0, H + 0.3, 2.0, 2.0, 1.25, "machine_mid", bev=0.03)  # рекуператор і вентилятори
+        m.box_lo(0, 0, H + 1.55, 2.15, 2.15, 0.12, "machine_dark")
+        for sx in (-1, 1):
+            for k in range(5):
+                m.box_lo(sx * 1.01, 0, H + 0.45 + k * 0.2, 0.02, 1.6, 0.08, "steel_dark")  # жалюзі
+        m.box_lo(0, 0, 7.1, 1.1, 1.1, H - 7.1, "galv")  # фільтр і водяний нагрівач під покрівлею
+        m.box_lo(0, 0, 7.6, 1.14, 1.14, 0.05, "steel_dark")
+        m.cyl((0, 0, 6.85), 0.55, 0.5, "galv", segs=20)  # повітророзподільник
+        m.cyl((0, 0, RV_BOTTOM + 0.1), 0.55, 0.2, "galv", r2=0.25, segs=20, rot=(180, 0, 0))
+        for k in range(8):
+            a = k * math.pi / 4
+            m.box((0.5 * math.cos(a), 0.5 * math.sin(a), 6.75), (0.04, 0.12, 0.3), "steel_dark", rz=math.degrees(a))
+    me = shared("roofvent", roofvent)
+    for code, x, y, zone in ROOFVENTS:
+        instance(code, "ventilation", me, loc=(x, y, 0), code=code, kind="hvac", label=f"Дахова установка {code}",
+                 desc="Приплив і витяжка з рекуперацією тепла та водяним нагрівачем; повітророзподільник "
+                      "регулює струмінь залежно від режиму (нагрів / охолодження).")
+
+    # теплова мережа від котельні: подача (червона) над зворотком (синя)
+    hn = Mesh()
+    for flow, ret in heat_paths():
+        hn.tube(rounded_path(flow, radius=0.25), HEAT_R, "pipe_red", segs=10)
+        hn.tube(rounded_path(ret, radius=0.25), HEAT_R, "pipe_blue", segs=10)
+    for x in range(10, 142, 6):
+        hn.box_lo(x, 46.42, 7.98, 0.5, 0.03, 0.03, "steel_dark")  # хомути
+        hn.box_lo(x, 46.42, 8.01, 0.02, 0.02, H - 0.6 - 8.01, "steel_dark")
+    hn.build("HEAT-NET", "ventilation", code="HEAT-NET", kind="hvac", label="Теплова мережа",
+             desc="Гаряча вода від котельні на відходах до нагрівачів дахових установок і припливної "
+                  "установки фасадів; подача над зворотком.")
+
+    # припливна установка дільниці фасадів і тканинні повітроводи
+    a = Mesh()
+    ax, ay = AHU_POS
+    a.box_lo(ax, ay, H, 6.4, 2.4, 0.25, "steel_dark")
+    a.box_lo(ax, ay, H + 0.25, 6.0, 2.0, 1.9, "machine_mid", bev=0.04)
+    for k in range(5):
+        a.box_lo(ax - 2.4 + k * 1.2, ay - 1.01, H + 0.35, 0.01, 0.01, 1.7, "steel_dark")
+    a.box_lo(ax - 3.3, ay, H + 0.6, 0.6, 1.6, 1.3, "galv")  # забір повітря
+    ys = [y for y, *_ in FABRIC_DUCTS]
+    a.box_lo(ax + 2.0, (min(ys) + max(ys)) / 2, H + 0.5, 0.7, max(ys) - min(ys) + 0.7, 0.7, "galv")
+    for y, x0, x1 in FABRIC_DUCTS:
+        a.box_lo(ax + 2.0, y, FABRIC_Z + FABRIC_R - 0.05, 0.6, 0.6, H + 0.5 - FABRIC_Z - FABRIC_R + 0.05, "galv")
+        a.tube([(x0, y, FABRIC_Z), (x1, y, FABRIC_Z)], FABRIC_R, "fabric_blue", segs=18, caps=True)
+        a.box_lo((x0 + x1) / 2, y, FABRIC_Z + FABRIC_R, x1 - x0, 0.015, 0.015, "steel_dark")  # трос
+    a.build("AHU-1", "ventilation", code="AHU-1", kind="hvac", label="Припливна установка фасадів",
+            desc="Установка на покрівлі подає підігріте повітря у два тканинні повітроводи над дільницею "
+                 "фасадів — замість того, що витягують фарбувальні камери й сушка.")
+
+    # витяжні вентилятори: електрощитова, компресорна (у стіні), зарядна (крізь покрівлю)
+    for code, name, pts, note in WALL_FANS:
+        f = Mesh()
+        for x, z in pts:
+            f.cyl((x, D + 0.15, z), 0.36, 0.42, "galv", axis="Y", segs=24)
+            f.cyl((x, D - 0.08, z), 0.33, 0.02, "steel_dark", axis="Y", segs=24)
+            f.box_lo(x, D + 0.42, z - 0.4, 0.86, 0.12, 0.8, "machine_mid")  # жалюзі ззовні
+        f.build(code, "ventilation", code=code, kind="hvac", label=name, desc=note)
+    c = Mesh()
+    cx, cy = CHG_EXHAUST
+    c.box_lo(cx, cy, 2.75, 1.4, 0.8, 0.25, "galv")
+    c.cyl((cx, cy, (3.0 + H) / 2), 0.2, H - 3.0, "galv", segs=16)
+    c.cyl((cx, cy, H + 0.3), 0.32, 0.6, "machine_mid", segs=20)
+    c.cone_dir((cx, cy, H + 0.95), (0, 0, 1), 0.5, 0.35, "machine_mid", segs=20)
+    c.build("EF-CHG", "ventilation", code="EF-CHG", kind="hvac", label="Витяжка зарядної станції",
+            desc="Даховий вентилятор: видаляє водень над зарядними пристроями.")
+
+
 # ---------------------------------------------------------------- люди, транспорт, маршрути
 def build_people():
     def body(vest, arms):
@@ -1054,6 +1183,8 @@ def build_all():
     build_post_and_shipping()
     build_utilities()
     build_energy()
+    build_lighting()
+    build_ventilation()
     build_transport()
     build_people()
     build_columns()

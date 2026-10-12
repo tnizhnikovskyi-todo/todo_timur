@@ -82,6 +82,10 @@ PALETTE = {
     "copper": ("#b8733a", 0.35, 0.9),
     "trafo_coil": ("#3a4b5c", 0.45, 0.1),
     "mesh_fence": ("#9aa3aa", 0.4, 0.6, 0.35),
+    "exit_green": ("#1e9e57", 0.3, 0.0, 1.0, ("#2bd67f", 1.5)),
+    "pipe_red": ("#b8392e", 0.6, 0.1),
+    "pipe_blue": ("#2f6db5", 0.6, 0.1),
+    "fabric_blue": ("#5b8fc4", 0.9, 0.0),
 }
 for i, (_, hex_) in enumerate(SHEET_DECORS):
     PALETTE[f"decor{i}"] = (hex_, 0.7, 0.0)
@@ -552,5 +556,3 @@ def person(m, x, y, rz=0.0, vest="hivis", arms="front"):
     m.sphere(P(-0.01, 0, 1.69), 0.112, "hair", scale=(1.0, 0.92, 0.85))
     for s in (-1, 1):  # навушники
         m.cyl(P(0, s * 0.11, 1.64), 0.045, 0.04, "status_red", axis="Y", segs=12, rot=(90, 0, rz))
-
-
