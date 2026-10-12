@@ -565,7 +565,7 @@ class Demo:
         self.equipment["COMPRESSOR"] = dict(name="Компресорна станція", category="Енергетика", pressure_bar=6.8,
                                             hours=17840, load=0.63,
                                             next_maintenance=ts((NOW + timedelta(days=8)).replace(hour=7, minute=0)))
-        self.equipment["DUST-1"] = dict(name="Аспірація", category="Енергетика", filter_dp_kpa=1.4, airflow_m3h=42000,
+        self.equipment["DUST-1"] = dict(name="Аспірація", category="Енергетика", filter_dp_kpa=1.4, airflow_m3h=29800,
                                         next_maintenance=ts((NOW + timedelta(days=6)).replace(hour=7, minute=0)))
         self.equipment["BOILER"] = dict(name="Котельня на відходах", category="Енергетика", supply_c=78,
                                         silo_fill=0.62, briquettes_today_kg=860)

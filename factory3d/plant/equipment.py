@@ -32,7 +32,7 @@ for _c in ("FL-1", "FL-2", "FL-3", "FL-4", "FL-5", "FL-C1", "FL-C2"):
     ROLE_BY_CODE[_c] = "forklift"
 # допоміжні одиниці, що входять до складу основної (показуються в тому самому паспорті)
 EXTRA_ROLES = {"EDGE-1": ["robot_return"], "SPRAY-1": ["paint_pump"], "PACKLINE-1": ["strapping"], "UV-1": ["uv_oven"],
-               "COMPRESSOR": ["compressor_dryer", "air_receiver"], "BOILER": ["briquetting_press"]}
+               "BOILER": ["briquetting_press"]}
 
 
 # Габарити наших процедурних моделей (мм, уздовж потоку × поперек × висота) — щоб підігнати
@@ -54,10 +54,13 @@ def body_scale(typ, rec):
     """Масштаб (x, y, z) тіла верстата за паспортними габаритами, або (1, 1, 1)."""
     nom = NOMINAL_MM.get(typ)
     dims = (rec or {}).get("dimensions_mm") or {}
-    if not nom or not all(isinstance(dims.get(k), (int, float)) and dims.get(k) for k in ("L", "W")):
-        return (1.0, 1.0, 1.0)
+    num = lambda k: isinstance(dims.get(k), (int, float)) and dims.get(k) > 0  # noqa: E731
     lo, hi = SCALE_LIMITS
     clamp = lambda v: max(lo, min(hi, v))  # noqa: E731
+    if not nom or not num("L"):
+        return (1.0, 1.0, 1.0)
+    if not num("W"):  # опублікована лише довжина (напр., крайкооблицювальні) — тягнемо вздовж потоку
+        return (clamp(dims["L"] / nom[0]), 1.0, 1.0)
     real_long, real_short = max(dims["L"], dims["W"]), min(dims["L"], dims["W"])
     nx, ny, nz = nom
     if nx >= ny:

@@ -885,8 +885,25 @@ function renderOverview() {
     <div class="sub">Потребує уваги</div>
     <ul class="rows">${attention.map(([c, t, go]) => `<li><button class="row" data-go="${esc(go)}">
       <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${c})"></span>${esc(t)}</span></button></li>`).join("")}</ul>
+    ${fleetHtml()}
     ${legendHtml()}
     <div class="hint">Дані: ${esc(D.meta.source)}, база «${esc(D.meta.database)}». ${esc(D.meta.note)}</div>`;
+}
+// парк обладнання: одна модель — один рядок, кількість одиниць і перехід до першої
+function fleetHtml() {
+  if (!D.passports) return "";
+  const groups = new Map();
+  for (const [code, pp] of Object.entries(D.passports)) {
+    const key = `${pp.manufacturer} ${pp.model}`;
+    if (!groups.has(key)) groups.set(key, { pp, codes: [] });
+    groups.get(key).codes.push(code);
+  }
+  return `<div class="sub">Парк обладнання · ${groups.size} моделей</div><ul class="rows">${[...groups.values()].map(({ pp, codes }) => {
+    const first = items.get(codes[0]);
+    return `<li><button class="row" data-go="obj:${esc(codes[0])}"><span class="t">${esc(pp.manufacturer)} ${esc(pp.model)}</span>
+      <span class="mono">${codes.length > 1 ? `× ${codes.length}` : ""}</span>
+      <span class="m">${esc(first?.userData.label || codes[0])}${codes.length > 1 ? ` та ще ${codes.length - 1}` : ""}</span></button></li>`;
+  }).join("")}</ul>`;
 }
 function legendHtml() {
   if (colorMode === "fill") return `<div class="sub">Заповненість складу</div><div class="legend">
