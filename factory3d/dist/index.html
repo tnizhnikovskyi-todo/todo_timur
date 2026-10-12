@@ -1,0 +1,622 @@
+<title>Мебельный цех 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Раскладка: 3D на весь экран, слева плавающая панель видов и слоёв, справа карточка объекта.
+   Тон — техническая документация цеха: холодные серые, жёлтая разметка пола как единственный акцент. */
+:root {
+  --scene: #e4e9ec;
+  --bg: #eef1f3;
+  --panel: rgba(250, 251, 252, 0.92);
+  --panel-solid: #fafbfc;
+  --fg: #1d2833;
+  --muted: #5d6b78;
+  --line: #cfd7de;
+  --accent: #c99500;
+  --accent-fg: #1d2833;
+  --accent-soft: rgba(242, 194, 48, 0.22);
+  --ok: #1e9e57;
+  --warn: #d98a00;
+  --bad: #d63a2b;
+  --idle: #7f8c99;
+  --flow: #18a6c9;
+  --shadow: 0 6px 24px rgba(20, 35, 50, 0.12);
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --scene: #1a2027; --bg: #12171c; --panel: rgba(27, 33, 40, 0.92); --panel-solid: #1b2128;
+    --fg: #e3e9ee; --muted: #93a1ae; --line: #33404c; --accent: #f2c230; --accent-fg: #12171c;
+    --accent-soft: rgba(242, 194, 48, 0.16); --ok: #3cc479; --warn: #f0a52a; --bad: #f0604f;
+    --idle: #8d9aa6; --flow: #39c0e0; --shadow: 0 6px 24px rgba(0, 0, 0, 0.4); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --scene: #1a2027; --bg: #12171c; --panel: rgba(27, 33, 40, 0.92); --panel-solid: #1b2128;
+  --fg: #e3e9ee; --muted: #93a1ae; --line: #33404c; --accent: #f2c230; --accent-fg: #12171c;
+  --accent-soft: rgba(242, 194, 48, 0.16); --ok: #3cc479; --warn: #f0a52a; --bad: #f0604f;
+  --idle: #8d9aa6; --flow: #39c0e0; --shadow: 0 6px 24px rgba(0, 0, 0, 0.4); color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); overflow: hidden; }
+#app { position: relative; height: 100%; }
+#stage { position: absolute; inset: 0; background: var(--scene); }
+#stage canvas { display: block; outline: none; }
+#labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.panel, header.bar { z-index: 2; }
+
+.panel {
+  position: absolute; z-index: 2; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: var(--shadow); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+header.bar {
+  position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: center;
+  gap: 12px; flex-wrap: wrap; pointer-events: none;
+}
+header.bar > * { pointer-events: auto; }
+.brand { padding: 8px 14px; display: flex; align-items: baseline; gap: 12px; position: static; }
+.brand h1 { margin: 0; font: 600 18px/1.2 var(--f-display); letter-spacing: 0.01em; text-wrap: balance; }
+.brand .dims { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+#toggle-side { display: none; }
+
+button { font: inherit; color: inherit; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel-solid); border-radius: 7px; padding: 6px 10px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible, .view:focus-visible, .layer input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#side {
+  top: 68px; left: 12px; width: 236px; max-height: calc(100% - 132px); overflow: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.sec h2 {
+  margin: 0 0 6px; font: 600 11px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--muted);
+}
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.view {
+  border: 1px solid transparent; background: transparent; text-align: left; padding: 5px 7px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1.25;
+}
+.view:hover { background: var(--accent-soft); }
+.view[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.view kbd { font: 10px var(--f-mono); color: var(--muted); margin-right: 4px; }
+.layers { display: flex; flex-direction: column; gap: 2px; }
+.layer { display: flex; align-items: center; gap: 8px; padding: 3px 2px; cursor: pointer; font-size: 13px; }
+.layer input { accent-color: var(--accent); margin: 0; width: 15px; height: 15px; }
+.row-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.row-btns .btn { font-size: 12px; padding: 4px 8px; }
+
+#card { top: 68px; right: 12px; width: 300px; max-height: calc(100% - 132px); overflow: auto; padding: 14px 16px; }
+#card .kind { font: 600 11px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+#card h3 { margin: 6px 0 2px; font: 600 20px/1.2 var(--f-display); text-wrap: balance; }
+#card .code { font: 12px var(--f-mono); color: var(--muted); }
+#card p { margin: 10px 0 0; max-width: 60ch; }
+#card .actions { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 3px 9px 3px 7px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid currentColor;
+}
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); }
+.chip.idle { color: var(--idle); }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.summary div { border-top: 2px solid var(--line); padding-top: 6px; }
+.summary b { display: block; font: 600 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.summary span { font-size: 11px; color: var(--muted); line-height: 1.25; display: block; }
+.attn { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.attn button {
+  width: 100%; display: flex; gap: 8px; align-items: center; text-align: left; background: transparent;
+  border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; cursor: pointer; font-size: 13px;
+}
+.attn button:hover { border-color: var(--accent); }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.legend { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.swatch { width: 14px; height: 10px; border-radius: 2px; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+
+#help {
+  bottom: 12px; left: 12px; padding: 6px 10px; font-size: 12px; color: var(--muted);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+#help b { color: var(--fg); font-weight: 500; }
+
+.lbl {
+  font: 500 12px/1.2 var(--f-display); color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+  padding: 2px 7px; border-radius: 5px; white-space: nowrap; letter-spacing: 0.01em;
+}
+.lbl.zone { text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; background: transparent; border: 0; padding: 0;
+  text-shadow: 0 0 3px var(--scene), 0 0 6px var(--scene); color: var(--fg); }
+.lbl .st { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+
+#loading {
+  position: absolute; inset: 0; display: grid; place-items: center; font: 500 14px var(--f-display);
+  color: var(--muted); letter-spacing: 0.04em; pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  #toggle-side { display: inline-block; }
+  .brand .dims { display: none; }
+  #side { display: none; width: auto; right: 12px; max-height: 55%; }
+  #side.open { display: flex; }
+  #card { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 42%; }
+  #help { display: none; }
+  .views { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .btn, .view { transition: none; } }
+</style>
+
+<div id="app">
+  <div id="stage" aria-label="3D-модель цеха"></div>
+  <div id="labels"></div>
+  <div id="loading">Загрузка модели…</div>
+
+  <header class="bar">
+    <div class="panel brand"><h1>Мебельный цех</h1><span class="dims">60 × 30 м · h 7 м · 7 станков</span></div>
+    <button class="btn" id="toggle-side" aria-expanded="false" aria-controls="side">Виды и слои</button>
+  </header>
+
+  <nav class="panel" id="side" aria-label="Виды и слои">
+    <div class="sec">
+      <h2>Виды</h2>
+      <div class="views" id="views"></div>
+    </div>
+    <div class="sec">
+      <h2>Слои</h2>
+      <div class="layers" id="layers"></div>
+      <div class="row-btns" style="margin-top:8px">
+        <button class="btn" id="all-on">Все</button>
+        <button class="btn" id="all-off">Только цех</button>
+      </div>
+    </div>
+    <div class="sec">
+      <h2>Показ</h2>
+      <div class="layers">
+        <label class="layer"><input type="checkbox" id="opt-labels" checked><span>Подписи</span></label>
+        <label class="layer"><input type="checkbox" id="opt-motion" checked><span>Движение по маршруту</span></label>
+        <label class="layer"><input type="checkbox" id="opt-shadows" checked><span>Тени</span></label>
+      </div>
+    </div>
+  </nav>
+
+  <aside class="panel" id="card" aria-live="polite"></aside>
+
+  <div class="panel" id="help">
+    <span><b>ЛКМ</b> вращать</span><span><b>ПКМ</b> сдвиг</span><span><b>Колесо</b> масштаб</span>
+    <span><b>Клик</b> выбрать</span><span><b>Двойной клик</b> приблизить</span><span><b>1–8</b> виды · <b>Esc</b> сброс</span>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const MODEL_URL = "factory.glb";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s) => document.querySelector(s);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// Blender (X вдоль, Y поперёк, Z вверх) → three.js (Y вверх)
+const b2t = ([x, y, z]) => new THREE.Vector3(x, z, -y);
+
+const KIND = {
+  zone: "Зона", machine: "Станок", stock: "Место хранения", bin: "Ячейка стеллажа", rack: "Стеллаж",
+  kit: "Тележка комплектации", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Помещение",
+};
+const MACHINE_STATUS = {
+  work: ["ok", "В работе"], idle: ["warn", "Простой"], stop: ["bad", "Остановлен"],
+};
+const BIN_STATE = { ok: ["ok", "Запас в норме"], low: ["warn", "Ниже минимума"], out: ["bad", "Пусто"] };
+
+// ---------------------------------------------------------------- сцена
+const stage = $("#stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer({ element: $("#labels") });
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 600);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 3;
+controls.maxDistance = 180;
+controls.screenSpacePanning = false;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6f767d, 0.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.45);
+sun.position.set(10, 60, 30);
+sun.target.position.set(30, 0, -15);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -50, right: 50, top: 40, bottom: -40, near: 1, far: 160 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target);
+
+function applyTheme() {
+  scene.background = new THREE.Color(css("--scene"));
+  if (flowMat) flowMat.color.set(css("--flow"));
+}
+let flowMat = null;
+applyTheme();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = stage;
+  renderer.setSize(w, h);
+  labelRenderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+
+// ---------------------------------------------------------------- данные модели
+const layers = new Map();   // key -> {node, label}
+const items = new Map();    // code -> object3D (корень кликабельного объекта)
+const zoneRects = new Map();
+const lamps = [];
+let flowRoute = [];
+let selected = null;
+let hovered = null;
+const selBox = new THREE.Box3Helper(new THREE.Box3(), 0xf2c230);
+selBox.visible = false;
+scene.add(selBox);
+
+function codeRoot(obj) {
+  for (let o = obj; o; o = o.parent) if (o.userData && o.userData.code) return o;
+  return null;
+}
+function isShown(obj) {
+  for (let o = obj; o; o = o.parent) if (!o.visible) return false;
+  return true;
+}
+
+new GLTFLoader().load(MODEL_URL, (gltf) => {
+  const root = gltf.scene;
+  root.traverse((o) => {
+    const u = o.userData || {};
+    if (u.layer && o.name.startsWith("LAYER_")) layers.set(u.layer, { node: o, label: u.label });
+    if (u.code && !items.has(u.code)) items.set(u.code, o);
+    if (u.rect) zoneRects.set(u.code, u.rect);
+    if (u.route) flowRoute = JSON.parse(u.route);
+    if (o.isMesh) {
+      // свои материалы на каждый объект, чтобы подсветка не перекрашивала соседей
+      o.material = o.material.clone();
+      o.material.envMapIntensity = 0.45;
+      const isZone = codeRoot(o)?.userData.kind === "zone";
+      o.castShadow = !isZone && !o.name.startsWith("Площадка");
+      o.receiveShadow = true;
+      if (u.role === "status") lamps.push(o);
+    }
+  });
+  scene.add(root);
+  flowMat = items.get("FLOW")?.getObjectByProperty("isMesh", true)?.material ?? null;
+  if (flowMat) { flowMat.emissive = new THREE.Color(css("--flow")); flowMat.emissiveIntensity = 0.35; }
+  applyTheme();
+  buildLayersUI();
+  buildLabels();
+  buildPulse();
+  renderSummary();
+  goView(VIEWS[0], false);
+  $("#loading").hidden = true;
+}, (e) => {
+  if (e.total) $("#loading").textContent = `Загрузка модели… ${Math.round((e.loaded / e.total) * 100)}%`;
+}, (err) => {
+  $("#loading").textContent = "Не удалось загрузить factory.glb. Откройте страницу через веб-сервер, а не как файл.";
+  console.error(err);
+});
+
+// ---------------------------------------------------------------- виды
+// цель и положение камеры в координатах Blender (метры)
+const VIEWS = [
+  { name: "Общий вид", target: [31, 12, 0], pos: [4, -42, 50] },
+  { name: "Приёмка", zone: "Z-RCV", dir: [1, -1.2, 1.1] },
+  { name: "Склад плит", zone: "Z-SHEETS", dir: [0.3, -1, 0.9] },
+  { name: "Фурнитура", zone: "Z-HW", dir: [0.6, -1, 0.55] },
+  { name: "Производство", zone: "Z-LINE", dir: [-0.2, -1, 0.75] },
+  { name: "Склад ГП", zone: "Z-FG", dir: [-1, -0.6, 0.6] },
+  { name: "Отгрузка", zone: "Z-OUT", dir: [-0.7, -1, 0.8] },
+  { name: "План сверху", target: [30, 15, 0], pos: [30, 14.9, 78] },
+];
+
+function viewPose(v) {
+  if (v.pos) return { pos: b2t(v.pos), target: b2t(v.target) };
+  const [x0, y0, x1, y1] = zoneRects.get(v.zone);
+  const c = [(x0 + x1) / 2, (y0 + y1) / 2, 0.5];
+  const size = Math.max(x1 - x0, y1 - y0);
+  const d = new THREE.Vector3(...v.dir).normalize().multiplyScalar(size * 1.35 + 6);
+  return { pos: b2t([c[0] + d.x, c[1] + d.y, c[2] + d.z]), target: b2t(c) };
+}
+
+let tween = null;
+function flyTo(pos, target, animate = true) {
+  if (!animate || reduceMotion) {
+    camera.position.copy(pos); controls.target.copy(target); controls.update(); tween = null; return;
+  }
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), dur: 900 };
+}
+function goView(v, animate = true) {
+  const { pos, target } = viewPose(v);
+  flyTo(pos, target, animate);
+  document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.name === v.name)));
+}
+VIEWS.forEach((v, i) => {
+  const b = document.createElement("button");
+  b.className = "view"; b.dataset.name = v.name; b.setAttribute("aria-pressed", "false");
+  b.innerHTML = `<kbd>${i + 1}</kbd>${v.name}`;
+  b.onclick = () => { goView(v); closeSideOnPhone(); };
+  $("#views").appendChild(b);
+});
+
+function focusOn(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const c = box.getCenter(new THREE.Vector3());
+  const r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1.5);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  flyTo(c.clone().add(dir.multiplyScalar(r * 2.6 + 3)), c);
+  document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", "false"));
+}
+
+// ---------------------------------------------------------------- слои
+const CORE = new Set(["building", "zones", "line", "flow"]);
+function setLayer(key, on) {
+  const l = layers.get(key);
+  if (!l) return;
+  l.node.visible = on;
+  const cb = document.getElementById("layer-" + key);
+  if (cb) cb.checked = on;
+  if (selected && !isShown(selected)) select(null);
+}
+function buildLayersUI() {
+  for (const [key, { label }] of layers) {
+    const row = document.createElement("label");
+    row.className = "layer";
+    row.innerHTML = `<input type="checkbox" id="layer-${key}" checked><span>${label}</span>`;
+    row.querySelector("input").onchange = (e) => setLayer(key, e.target.checked);
+    $("#layers").appendChild(row);
+  }
+}
+$("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, true));
+$("#all-off").onclick = () => layers.forEach((_, k) => setLayer(k, CORE.has(k)));
+
+// ---------------------------------------------------------------- подписи
+const labels = [];
+function addLabel(obj, html, cls, yOffset) {
+  const el = document.createElement("div");
+  el.className = "lbl " + cls;
+  el.innerHTML = html;
+  const box = new THREE.Box3().setFromObject(obj);
+  const c = box.getCenter(new THREE.Vector3());
+  const lbl = new CSS2DObject(el);
+  lbl.position.set(c.x, (cls === "zone" ? 0.05 : box.max.y) + yOffset, c.z);
+  scene.add(lbl);
+  labels.push({ lbl, obj });
+}
+function buildLabels() {
+  for (const [, obj] of items) {
+    const u = obj.userData;
+    if (u.kind === "zone") addLabel(obj, u.label, "zone", 0);
+    if (u.kind === "machine") {
+      const [cls] = MACHINE_STATUS[u.status] || ["idle"];
+      addLabel(obj, `<span class="st" style="background:var(--${cls})"></span>${u.label}`, "mach", 0.6);
+    }
+  }
+}
+function syncLabels() {
+  const on = $("#opt-labels").checked;
+  for (const { lbl, obj } of labels) lbl.visible = on && isShown(obj);
+}
+$("#opt-labels").onchange = syncLabels;
+$("#opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
+
+// ---------------------------------------------------------------- маршрут: бегущая точка
+let pulse = null;
+let curves = [];
+function buildPulse() {
+  if (!flowRoute.length) return;
+  for (let i = 0; i < flowRoute.length - 1; i++) {
+    const a = new THREE.Vector3(...flowRoute[i].p), b = new THREE.Vector3(...flowRoute[i + 1].p);
+    const lift = 1.6 + 0.12 * a.distanceTo(b);
+    const c = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, lift));
+    curves.push(new THREE.QuadraticBezierCurve3(b2t(a.toArray()), b2t(c.toArray()), b2t(b.toArray())));
+  }
+  pulse = new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 14),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.6, 20, 14),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(css("--flow")), transparent: true, opacity: 0.35, depthWrite: false }));
+  pulse.add(halo);
+  scene.add(pulse);
+}
+$("#opt-motion").checked = !reduceMotion;
+
+// ---------------------------------------------------------------- выбор
+const ray = new THREE.Raycaster();
+const ptr = new THREE.Vector2();
+function pick(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  for (const hit of ray.intersectObjects(scene.children, true)) {
+    if (!hit.object.isMesh || !isShown(hit.object) || hit.object === pulse || hit.object.parent === pulse) continue;
+    const root = codeRoot(hit.object);
+    if (root && root.userData.kind !== "flow") return root;
+  }
+  return null;
+}
+function tint(obj, color, intensity) {
+  obj?.traverse((o) => {
+    if (o.isMesh && o.userData.role !== "status" && o.material.emissive) {
+      o.material.emissive.set(color); o.material.emissiveIntensity = intensity;
+    }
+  });
+}
+function select(obj) {
+  if (selected) tint(selected, 0x000000, 0);
+  selected = obj;
+  if (obj) {
+    tint(obj, 0xf2c230, 0.2);
+    selBox.box.setFromObject(obj).expandByScalar(0.08);
+    selBox.visible = true;
+  } else selBox.visible = false;
+  renderCard();
+}
+
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  select(pick(e));
+});
+renderer.domElement.addEventListener("dblclick", (e) => {
+  const o = pick(e);
+  if (o) { select(o); focusOn(o); }
+});
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (e.buttons) return;
+  const o = pick(e);
+  if (o === hovered) return;
+  if (hovered && hovered !== selected) tint(hovered, 0x000000, 0);
+  hovered = o;
+  if (o && o !== selected && o.userData.kind !== "zone") tint(o, 0x7fb3d5, 0.18);
+  renderer.domElement.style.cursor = o ? "pointer" : "";
+});
+addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea")) return;
+  if (e.key === "Escape") select(null);
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= VIEWS.length) goView(VIEWS[n - 1]);
+});
+
+// ---------------------------------------------------------------- карточка
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function renderSummary() {
+  const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
+  const working = machines.filter((o) => o.userData.status === "work").length;
+  const bins = [...items.values()].filter((o) => o.userData.kind === "bin");
+  const low = bins.filter((o) => o.userData.state === "low");
+  const out = bins.filter((o) => o.userData.state === "out");
+  const attention = [
+    ...machines.filter((o) => o.userData.status === "stop").map((o) => ["bad", `${o.userData.label} — остановлен`, o]),
+    ...machines.filter((o) => o.userData.status === "idle").map((o) => ["warn", `${o.userData.label} — простой`, o]),
+    ...out.map((o) => ["bad", `${o.userData.code} — пусто`, o]),
+    ...low.map((o) => ["warn", `${o.userData.code} — ниже минимума`, o]),
+  ];
+  $("#card").innerHTML = `
+    <div class="kind">Сейчас на площадке</div>
+    <div class="summary">
+      <div><b>${working}/${machines.length}</b><span>станков в работе</span></div>
+      <div><b>${low.length}</b><span>ячеек ниже минимума</span></div>
+      <div><b>${out.length}</b><span>пустых ячеек</span></div>
+    </div>
+    <ul class="attn">${attention.slice(0, 6).map(([c, t], i) =>
+      `<li><button data-i="${i}"><span class="dot" style="background:var(--${c})"></span>${esc(t)}</button></li>`).join("")}</ul>
+    ${attention.length > 6 ? `<div class="hint" style="border:0;padding:0;margin-top:6px">и ещё ${attention.length - 6}</div>` : ""}
+    <div class="legend">
+      <span class="swatch" style="background:var(--ok)"></span><span>Маячок станка: в работе</span>
+      <span class="swatch" style="background:var(--warn)"></span><span>Простой · лоток ниже минимума</span>
+      <span class="swatch" style="background:var(--bad)"></span><span>Остановлен · ячейка пуста</span>
+      <span class="swatch" style="background:#2e86c1"></span><span>Синий лоток: запас в норме</span>
+      <span class="swatch" style="background:var(--flow)"></span><span>Маршрут изделия</span>
+    </div>
+    <div class="hint">Нажмите на станок, стеллаж, ячейку или зону, чтобы увидеть описание. Состояния в модели — пример.</div>`;
+  $("#card").querySelectorAll(".attn button").forEach((b) => {
+    b.onclick = () => { const o = attention[+b.dataset.i][2]; select(o); focusOn(o); };
+  });
+}
+function renderCard() {
+  if (!selected) return renderSummary();
+  const u = selected.userData;
+  let chip = "";
+  if (u.kind === "machine" && MACHINE_STATUS[u.status]) {
+    const [c, t] = MACHINE_STATUS[u.status]; chip = `<span class="chip ${c}">${t}</span>`;
+  }
+  if (u.kind === "bin" && BIN_STATE[u.state]) {
+    const [c, t] = BIN_STATE[u.state]; chip = `<span class="chip ${c}">${t}</span>`;
+  }
+  $("#card").innerHTML = `
+    <div class="kind">${esc(KIND[u.kind] || "Объект")}</div>
+    <h3>${esc(u.label || u.code)}</h3>
+    <div class="code">${esc(u.code)}</div>
+    ${chip}
+    ${u.desc ? `<p>${esc(u.desc)}</p>` : ""}
+    <div class="actions">
+      <button class="btn" id="c-focus">Приблизить</button>
+      <button class="btn" id="c-close">Закрыть</button>
+    </div>`;
+  $("#c-focus").onclick = () => focusOn(selected);
+  $("#c-close").onclick = () => select(null);
+}
+
+// ---------------------------------------------------------------- телефон
+function closeSideOnPhone() {
+  if (matchMedia("(max-width: 760px)").matches) { $("#side").classList.remove("open"); $("#toggle-side").setAttribute("aria-expanded", "false"); }
+}
+$("#toggle-side").onclick = () => {
+  const open = $("#side").classList.toggle("open");
+  $("#toggle-side").setAttribute("aria-expanded", String(open));
+};
+
+// ---------------------------------------------------------------- цикл
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const clock = new THREE.Clock();
+let travel = 0;
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const now = performance.now();
+  if (tween) {
+    const k = Math.min((now - tween.start) / tween.dur, 1), e = ease(k);
+    camera.position.lerpVectors(tween.p0, tween.p1, e);
+    controls.target.lerpVectors(tween.t0, tween.t1, e);
+    if (k === 1) tween = null;
+  }
+  controls.update();
+
+  // мигание остановленных станков
+  const blink = 0.5 + 0.5 * Math.sin(now / 220);
+  for (const l of lamps) {
+    const st = codeRoot(l)?.userData.status;
+    l.material.emissive.set(l.material.color);
+    l.material.emissiveIntensity = st === "stop" ? (reduceMotion ? 0.8 : 0.2 + blink) : st === "work" ? 0.7 : 0.3;
+  }
+
+  if (pulse) {
+    const motion = $("#opt-motion").checked && layers.get("flow")?.node.visible;
+    pulse.visible = !!motion;
+    if (motion) {
+      travel = (travel + dt * 0.45) % curves.length;
+      const i = Math.floor(travel);
+      pulse.position.copy(curves[i].getPoint(travel - i));
+    }
+  }
+  syncLabels();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+});
+</script>
