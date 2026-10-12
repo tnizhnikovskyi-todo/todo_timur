@@ -12,6 +12,7 @@ import json
 import sys
 from datetime import datetime, timedelta
 
+from .equipment import ROLE_BY_CODE, load_specs, passport
 from .layout import (EDGE_LEVELS, EDGE_SECTIONS, EDGE_UNITS, FG_BAYS, FG_LEVELS, FG_PRODUCTS,
                      FG_ROWS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
                      STATUS, ZONES, edge_slot, fg_slot, hw_state, sheet_slot)
@@ -591,6 +592,15 @@ class Demo:
         self.build_workcenters()
         self.build_logistics()
         self.build_people_equipment()
+        specs = load_specs()
+        for code, eq in self.equipment.items():  # модель і серійник — у maintenance.equipment
+            pp = passport(code, specs)
+            if pp:
+                eq.update(manufacturer=pp["manufacturer"], model=pp["model"])
+        for code, wc in self.workcenters.items():
+            pp = passport(code, specs)
+            if pp:
+                wc.update(manufacturer=pp["manufacturer"], model=pp["model"])
         zones = {}
         prefix = {"Z-SHEETS": ("PLT-",), "Z-HW": ("FUR-",), "Z-EDGE": ("EB-",), "Z-PKS": ("PACK-STORE", "PAL-"),
                   "Z-FG": ("FG-R",), "Z-RCV": ("IN-STAGE", "QC-1"), "Z-OUT": ("OUT-STAGE",),
@@ -620,7 +630,8 @@ class Demo:
             productions=self.productions, workorders=self.workorders, sale_orders=self.sale,
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
-            docks=self.docks, zones=zones)
+            docks=self.docks, zones=zones,
+            passports={c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))})
 
 
 def generate():
