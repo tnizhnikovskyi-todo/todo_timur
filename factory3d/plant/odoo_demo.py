@@ -12,6 +12,7 @@ import json
 import sys
 from datetime import datetime, timedelta
 
+from .energy import IDLE_DEFAULT, IDLE_K, PROFILE, TARIFF, energy_data, passport_energy
 from .equipment import ROLE_BY_CODE, load_specs, passport
 from .layout import (EDGE_LEVELS, EDGE_SECTIONS, EDGE_UNITS, FG_BAYS, FG_LEVELS, FG_PRODUCTS,
                      FG_ROWS, GANTRY_COLS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
@@ -585,6 +586,36 @@ class Demo:
         ]
         self.equipment["FL-2"]["maintenance_request"] = "MR/00034"
 
+    # ---------------------------------------------------------------- електроенергія
+    def build_energy(self, specs):
+        """Лічильники на фідерах ГРЩ: поточна потужність, кВт·год за зміну на верстат і на замовлення."""
+        en = energy_data(specs)
+        cons = en["consumers"]
+        typ = {m[0]: m[1] for m in MACHINES}
+        shift_min = (NOW.hour - 7) * 60 + NOW.minute  # зміна з 07:00
+        for code, c in cons.items():
+            wc = self.workcenters.get(code)
+            if wc and code in typ:
+                kf = PROFILE.get(typ[code], (0.5, 0.86))[0]
+                idle = IDLE_K.get(typ[code], IDLE_DEFAULT)
+                prod = min(wc["productive_minutes"], shift_min)
+                c["kwh_shift"] = round(c["p_inst"] * (kf * prod + idle * (shift_min - prod)) / 60, 1)
+                wc["energy"] = dict(p_now=c["p_now"], line=c["line"])
+            else:
+                c["kwh_shift"] = round(c["p_now"] * shift_min / 60, 1)
+        for mo in self.productions:
+            kwh = 0.0
+            for wid in mo["workorders"]:
+                w = self.workorders[wid]
+                c = cons.get(w["workcenter"])
+                if not c or w["state"] not in ("done", "progress"):
+                    continue
+                kf = PROFILE.get(typ.get(w["workcenter"]), (0.5, 0.86))[0]
+                kwh += c["p_inst"] * kf * (w.get("duration") or 0) / 60
+            mo["energy_kwh"] = round(kwh, 1)
+            mo["energy_cost"] = round(kwh * TARIFF)
+        return en
+
     # ---------------------------------------------------------------- зони та підсумки
     def build(self):
         self.build_catalog()
@@ -623,6 +654,7 @@ class Demo:
                              workcenters=wc_zone.get(zc, []))
         zones["Z-RCV"]["pickings"] = [p["name"] for p in self.pickings if p["type"] == "incoming"]
         zones["Z-OUT"]["pickings"] = [p["name"] for p in self.pickings if p["type"] == "outgoing"]
+        energy = self.build_energy(specs)
         return dict(
             meta=dict(source="Odoo 19 · демо-дані", database="mebli-demo", company="Меблева фабрика (демо)",
                       warehouse=WH, now=ts(NOW), note="Згенеровано скриптом plant/odoo_demo.py; "
@@ -631,8 +663,8 @@ class Demo:
             productions=self.productions, workorders=self.workorders, sale_orders=self.sale,
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
-            docks=self.docks, zones=zones,
-            passports={c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))})
+            docks=self.docks, zones=zones, energy=energy,
+            passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
 
 
 def generate():

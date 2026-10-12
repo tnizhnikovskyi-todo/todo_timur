@@ -7,6 +7,8 @@ from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, D
                      FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FOOTPRINT, GANTRY_COLS, GANTRY_X, GANTRY_Y, H,
                      HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_DECORS, SHEET_ROWS_Y,
                      STATUS, W, ZONES, blocked, edge_slot, fg_slot, hw_state, obst, sheet_slot)
+from .energy import (BUS_Z, PFC_H, BUSWAYS, CABLE_Z, CELL_X, EMS_POS, RM6_POS, ROOM, SWB_CELLS, SWB_D, SWB_H, SWB_X0,
+                     SWB_X1, SWB_Y, TRAFO_Y, TRAFOS, TRAY_Y, TRAY_Z, energy_passport, taps)
 from .equipment import body_scale, load_specs, passport
 from .machines import MACHINE_BUILDERS, OPERATOR, TOWER_POS
 
@@ -729,6 +731,208 @@ def build_utilities():
                  "два пожежні резервуари по 300 м³ і насосна пожежогасіння.")
 
 
+# ---------------------------------------------------------------- електропостачання
+def duct(m, pts, w, h, mat="busbar", joint=3.0, hang=True):
+    """Короб шинопроводу вздовж ортогональної ламаної: стики кожні joint м, підвіси до ферм."""
+    for a, b in zip(pts, pts[1:]):
+        dx, dy, dz = (b[i] - a[i] for i in range(3))
+        ln = abs(dx) + abs(dy) + abs(dz)
+        if ln < 1e-6:
+            continue
+        c = tuple((a[i] + b[i]) / 2 for i in range(3))
+        if abs(dx) > 1e-6:
+            size, ax = (ln + w, w, h), 0
+        elif abs(dy) > 1e-6:
+            size, ax = (w, ln + w, h), 1
+        else:
+            size, ax = (w, h, ln + h), 2
+        m.box(c, size, mat)
+        if ax == 2:
+            continue
+        n = int(ln // joint)
+        for k in range(1, n + 1):
+            t = k * joint / ln
+            p = tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+            js = [w + 0.04, w + 0.04, h + 0.04]
+            js[ax] = 0.1
+            m.box(p, tuple(js), "steel_dark")
+            if hang:
+                m.box_lo(p[0], p[1], p[2] + h / 2, 0.025, 0.025, H - 0.6 - p[2] - h / 2, "steel_dark")
+
+
+def build_energy():
+    def ex(code):
+        pp = energy_passport(code, SPECS)
+        return {"maker": pp["manufacturer"], "model": pp["model"]} if pp else {}
+
+    # електрощитова: сітчасте огородження з дверима, діелектричний килим перед ГРЩ
+    rm = Mesh()
+    x0, y0, x1, y1 = ROOM
+    for pts in ([(x0, y1), (x0, y0), (EMS_POS[0] - 0.8, y0)], [(EMS_POS[0] + 0.8, y0), (x1, y0), (x1, y1)]):
+        for a, b in zip(pts, pts[1:]):
+            n = max(1, round(math.dist(a, b) / 2.0))
+            for k in range(n + 1):
+                px, py = a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n
+                rm.box_lo(px, py, 0, 0.06, 0.06, 2.4, "steel_dark")
+            mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+            sx, sy = (abs(b[0] - a[0]) or 0.02), (abs(b[1] - a[1]) or 0.02)
+            rm.box_lo(mx, my, 0.1, sx, sy, 2.25, "mesh_fence")
+            rm.box_lo(mx, my, 2.35, sx or 0.05, sy or 0.05, 0.05, "steel_dark")
+    for sx in (EMS_POS[0] - 2.2, EMS_POS[0] + 2.2, x0 + 1.5):  # знаки «Обережно! Електрична напруга»
+        rm.cone_dir((sx, y0 - 0.04, 1.75), (0, 0, -1), 0.2, 0.34, "marking", segs=3)
+    rm.box_lo((SWB_X0 + SWB_X1) / 2, SWB_Y - SWB_D / 2 - 0.55, 0, SWB_X1 - SWB_X0, 1.0, 0.012, "rubber")
+    rm.build("Огородження електрощитової", "energy")
+    obst(x0 - 0.3, y0 - 0.3, x1 + 0.3, y1)
+
+    # комірки 10 кВ
+    v = Mesh()
+    vx, vy = RM6_POS
+    vw, vd, vh = 1.62, 0.71, 1.14  # RM6 NE-QIQI за паспортом
+    v.box_lo(vx, vy, 0, vw, vd, vh, "elec_cab", bev=0.02)
+    for k in range(4):
+        cx = vx - 0.6 + k * 0.4
+        v.box_lo(cx, vy - vd / 2 - 0.005, 0.55, 0.34, 0.01, 0.5, "machine_mid")
+        v.box_lo(cx, vy - vd / 2 - 0.01, 0.85, 0.3, 0.01, 0.025, "steel_dark")  # мнемосхема
+        v.cyl((cx, vy - vd / 2 - 0.02, 0.7), 0.035, 0.03, "estop", axis="Y", segs=12)
+        v.box_lo(cx, vy - vd / 2 - 0.005, 0.12, 0.3, 0.01, 0.3, "steel_dark")  # кабельний відсік
+    for tx, _ in TRAFOS.values():  # кабелі 10 кВ у кабельному каналі до трансформаторів
+        v.box_lo((vx + tx) / 2 + 0.3, vy - 1.15, 0, abs(tx - vx) + 0.6, 0.5, 0.015, "steel_dark")
+        v.box_lo(tx, (vy + TRAFO_Y) / 2 - 0.3, 0, 0.5, vy - 1.15 - TRAFO_Y + 0.25, 0.015, "steel_dark")
+    v.build("RM6-1", "energy", code="RM6-1", kind="power", label="Комірки 10 кВ", **ex("RM6-1"),
+            desc="Ввід 10 кВ від мережі і дві трансформаторні комірки з вимикачами навантаження та "
+                 "запобіжниками; кабелі до Т1 і Т2 — у каналі під плитами підлоги.")
+
+    # трансформатори в захисних кожухах + шинопроводи до вводів ГРЩ
+    for code, (tx, ty) in TRAFOS.items():
+        t = Mesh()
+        cw, cd, ch = 2.0, 1.17, 2.4  # кожух IP31 Trihal 1000 кВА за паспортом
+        t.box_lo(tx, ty, 0, cw + 0.1, cd + 0.1, 0.12, "steel_dark")
+        for dx in (-cw / 2, cw / 2):
+            for dy in (-cd / 2, cd / 2):
+                t.box_lo(tx + dx, ty + dy, 0.12, 0.06, 0.06, ch - 0.12, "elec_cab")
+        t.box_lo(tx, ty, ch - 0.06, cw + 0.06, cd + 0.06, 0.08, "elec_cab")
+        t.box_lo(tx, ty + cd / 2, 0.12, cw, 0.03, ch - 0.18, "elec_cab")
+        t.box_lo(tx, ty - cd / 2, 0.15, cw - 0.08, 0.02, ch - 0.25, "mesh_fence")  # оглядова сітка
+        for sx in (-1, 1):
+            t.box_lo(tx + sx * cw / 2, ty, 0.12, 0.03, cd, ch - 0.18, "elec_cab")
+            for k in range(8):
+                t.box_lo(tx + sx * (cw / 2 + 0.01), ty, 1.2 + k * 0.12, 0.01, cd - 0.3, 0.04, "steel_dark")
+        t.box_lo(tx, ty, 0.12, 1.8, 0.7, 0.18, "steel_dark")  # візок
+        for k in range(3):
+            cx = tx - 0.62 + k * 0.62
+            t.cyl((cx, ty, 1.05), 0.27, 1.25, "trafo_coil", segs=24)
+            t.cyl((cx, ty, 1.72), 0.12, 0.1, "copper", segs=12)
+        for z in (0.32, 1.78):
+            t.box_lo(tx, ty, z, 1.75, 0.3, 0.14, "steel_dark")  # ярма магнітопроводу
+        t.box_lo(tx, ty - cd / 2 - 0.02, 1.9, 0.36, 0.01, 0.22, "alu")  # табличка
+        # шинопровід трансформатор → ввід ГРЩ
+        duct(t, [(tx, ty, ch), (tx, ty, 3.1), (tx, SWB_Y, 3.1), (tx, SWB_Y, SWB_H)], 0.14, 0.164, hang=False)
+        q = "Q1" if code == "T1" else "Q2"
+        t.build(code, "energy", code=code, kind="power", label=f"Трансформатор {code}", **ex(code),
+                desc=f"Сухий трансформатор 1000 кВА 10/0,4 кВ у захисному кожусі; шинопровід "
+                     f"над проходом заходить зверху у ввідну шафу {q}.")
+
+    # ГРЩ: кожна шафа — окремий об'єкт, щоб клік показував свій фідер
+    root = empty("SWB-1", "energy", code="SWB-1", kind="power", label="ГРЩ 0,4 кВ", **ex("SWB-1"),
+                 desc="Головний розподільний щит: дві секції шин, два вводи, секційний вимикач, "
+                      "фідери шинопроводів і кабельних ліній, установки компенсації.")
+    for code, name, w, typ, feeds in SWB_CELLS:
+        c = Mesh()
+        x = CELL_X[code]
+        fy = SWB_Y - SWB_D / 2
+        ch = PFC_H if typ == "pfc" else SWB_H
+        c.box_lo(x, SWB_Y, 0, w - 0.012, SWB_D, 0.1, "steel_dark")
+        c.box_lo(x, SWB_Y, 0.1, w - 0.012, SWB_D, ch - 0.1, "elec_cab")
+        c.box_lo(x, fy - 0.005, 0.12, 0.012, 0.01, ch - 0.2, "machine_mid")
+        if typ in ("incomer", "coupler"):
+            c.box_lo(x, fy - 0.01, 0.95, w * 0.6, 0.02, 0.45, "machine_dark", bev=0.01)  # ACB
+            c.box_lo(x, fy - 0.03, 1.12, w * 0.3, 0.02, 0.1, "screen_on")
+            c.cyl((x + w * 0.22, fy - 0.03, 1.05), 0.03, 0.03, "status_green", axis="Y", segs=10)
+        if typ == "incomer":
+            for k in range(3):
+                c.box_lo(x - 0.25 + k * 0.25, fy - 0.01, 1.7, 0.16, 0.01, 0.12, "screen_on")
+        if typ in ("feeder", "cable"):
+            for k in range(4 if typ == "cable" else 2):
+                c.box_lo(x, fy - 0.01, 0.4 + k * 0.4, w * 0.55, 0.02, 0.24, "machine_dark", bev=0.01)
+                c.box_lo(x + w * 0.18, fy - 0.025, 0.47 + k * 0.4, 0.06, 0.02, 0.1, "estop")
+            c.box_lo(x, fy - 0.015, 1.8, 0.16, 0.02, 0.14, "screen_on")  # лічильник фідера
+        if typ == "pfc":
+            for k in range(10):
+                c.box_lo(x, fy - 0.005, 0.25 + k * 0.08, w * 0.7, 0.01, 0.03, "steel_dark")
+            c.box_lo(x, fy - 0.015, 1.75, 0.16, 0.02, 0.14, "screen_on")
+            c.box_lo(x, SWB_Y, ch, w * 0.5, SWB_D * 0.5, 0.08, "steel_dark")  # вентилятор
+        c.box_lo(x, fy - 0.01, ch - 0.12, w * 0.7, 0.01, 0.07, "phenolic")  # бирка
+        c.build("SWB_" + code, "energy", parent=root, code=code, kind="power", label=f"Шафа {code}", desc=name,
+                **ex(code))
+
+    # розподільні шинопроводи з відгалужувальними коробками й кабелями до верстатів
+    tp = taps()
+    for b in BUSWAYS:
+        m = Mesh()
+        pts = [(x, y, BUS_Z) for x, y in b["path"]]
+        x, y = b["path"][0]
+        duct(m, [(x, y, SWB_H)] + pts, 0.113, 0.146)  # Canalis KSA: переріз 113 × 146 мм
+        for code, t in tp.items():
+            if t["bus"] != b["code"]:
+                continue
+            tx, ty = t["tap"]
+            cx, cy, cz = t["conn"]
+            zb = BUS_Z - 0.073 - 0.31  # коробка KSB…DC4: 450 × 310 × 246 мм під шинопроводом
+            m.box_lo(tx, ty, zb, 0.45, 0.246, 0.31, "elec_cab", bev=0.01)
+            m.box_lo(tx + 0.12, ty - 0.13, zb + 0.08, 0.06, 0.03, 0.15, "machine_dark")
+            path = [(tx, ty, zb), (tx, ty, CABLE_Z), (tx, cy, CABLE_Z), (cx, cy, CABLE_Z), (cx, cy, cz)]
+            path = [p for i, p in enumerate(path) if i == 0 or math.dist(p, path[i - 1]) > 0.05]
+            m.tube(rounded_path(path, radius=0.3), 0.025, "rubber", segs=8)
+        m.build(b["code"], "energy", code=b["code"], kind="power", label=b["name"], **ex(b["code"]),
+                desc=f"Розподільний шинопровід {b['rating']} А від фідера {b['feeder']}; відгалужувальні "
+                     "коробки з автоматами живлять верстати кабелями зверху.")
+
+    # кабельні фідери: лоток уздовж північної стіни, щити компресорної й зарядної, виходи надвір
+    tr = Mesh()
+    west = 57.0
+    for code in ("QF-C1", "QF-C2"):
+        x = CELL_X[code]
+        duct(tr, [(x, SWB_Y, SWB_H), (x, SWB_Y, TRAY_Z), (x, TRAY_Y, TRAY_Z)], 0.3, 0.1, mat="galv", hang=False)
+    xe = CELL_X["QF-C2"]
+    tr.box((((xe + west) / 2), TRAY_Y, TRAY_Z), (xe - west, 0.3, 0.08), "galv")
+    tr.box((((xe + west) / 2), TRAY_Y, TRAY_Z + 0.06), (xe - west, 0.22, 0.05), "rubber")
+    for k in range(int((xe - west) // 2.5) + 1):
+        bx = west + 0.5 + k * 2.5
+        tr.box_lo(bx, (TRAY_Y + D) / 2, TRAY_Z - 0.06, 0.04, D - TRAY_Y + 0.2, 0.04, "steel_dark")
+    for px, top, bottom in ((113.2, 2.4, 1.4), (118.3, 2.8, 2.0)):  # щити компресорної та зарядної
+        tr.box_lo(px, 71.8, bottom, 0.6, 0.25, top - bottom, "elec_cab", bev=0.01)
+        tr.box_lo(px, 71.67, bottom + 0.3, 0.1, 0.01, 0.12, "screen_on")
+        tr.tube(rounded_path([(px, TRAY_Y, TRAY_Z - 0.04), (px, 71.8, TRAY_Z - 0.4), (px, 71.8, top)],
+                             radius=0.2), 0.03, "rubber", segs=8)
+    tr.tube(rounded_path([(west, TRAY_Y, TRAY_Z), (west - 0.5, TRAY_Y, TRAY_Z), (west - 0.5, D + 0.6, TRAY_Z),
+                          (west - 0.5, D + 0.6, 2.2), (53.0, D + 0.6, 2.2), (53.0, D + 1.4, 1.8)], radius=0.3),
+            0.05, "rubber", segs=10)
+    tr.box_lo(53.0, D + 1.4, 0, 0.8, 0.4, 1.8, "elec_cab", bev=0.02)  # щит аспірації надворі
+    tr.box_lo(53.0, D + 1.19, 1.3, 0.12, 0.01, 0.1, "screen_on")
+    bxx = DUCT_NORTH_X + 7.0 + 9.0 + 1.2
+    tr.tube(rounded_path([(bxx, TRAY_Y, TRAY_Z), (bxx, D + 0.6, TRAY_Z), (bxx, D + 0.6, 3.2), (bxx, D + 3.0, 3.2)],
+                         radius=0.3), 0.05, "rubber", segs=10)
+    tr.build("CABLES", "energy", code="CABLES", kind="power", label="Кабельні фідери",
+             desc="Кабельний лоток уздовж північної стіни: компресорна, зарядна, офіс, освітлення, "
+                  "вентиляція; через стіну — до щита аспірації та котельні.")
+
+    # АРМ енергетика: стіл, два монітори з мнемосхемою і графіком споживання
+    e = Mesh()
+    qx, qy = EMS_POS
+    e.box_lo(qx, qy, 0.72, 1.6, 0.8, 0.04, "table_top", bev=0.01)
+    legs_frame(e, qx, qy, 1.6, 0.8, 0.72, mat="steel_dark")
+    for dx in (-0.36, 0.36):
+        e.box_lo(qx + dx, qy + 0.2, 0.76, 0.08, 0.08, 0.3, "steel_dark")
+        e.box((qx + dx, qy + 0.17, 1.28), (0.62, 0.04, 0.38), "machine_dark", rot=(-8, 0, 0))
+        e.box((qx + dx, qy + 0.145, 1.28), (0.58, 0.01, 0.34), "screen_on", rot=(-8, 0, 0))
+    e.box_lo(qx, qy - 0.1, 0.76, 0.45, 0.15, 0.02, "machine_dark")
+    e.box_lo(qx, qy - 0.75, 0, 0.5, 0.5, 0.48, "machine_dark", bev=0.05)
+    e.box_lo(qx, qy - 0.98, 0.48, 0.5, 0.06, 0.6, "machine_dark", bev=0.03)
+    e.build("EMS-1", "energy", code="EMS-1", kind="power", label="АРМ енергетика", **ex("EMS-1"),
+            desc="Мнемосхема ГРЩ, графік споживання, журнал подій; дані — з лічильників на кожному "
+                 "фідері по Modbus TCP.")
+
+
 # ---------------------------------------------------------------- люди, транспорт, маршрути
 def build_people():
     def body(vest, arms):
@@ -849,6 +1053,7 @@ def build_all():
     build_fg()
     build_post_and_shipping()
     build_utilities()
+    build_energy()
     build_transport()
     build_people()
     build_columns()

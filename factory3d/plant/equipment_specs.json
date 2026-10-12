@@ -29,6 +29,12 @@
   "sources": [
    "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-310-with-lifting-table",
    "https://www.homag.com/fileadmin/product/paneldividing/brochures/sawteq-s-300/panel-dividing-saw-sawteq-s-300-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: HOMAG у брошурі SAWTEQ S-300/S-310 та на сторінці продукту наводить лише двигун основної пилки 11 кВт (опц. 18/24 кВт) і підрізної 1,5 кВт (опц. 2,2 кВт); загальна встановлена потужність не вказана, дилерських оголошень з нею не знайдено.",
+  "connected_sources": [
+   "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-310-with-lifting-table",
+   "https://wtp.hoechsmann.com/es/lexikon/pdf/hom_sawteqs_-300_-310_2023_de.pdf"
   ]
  },
  {
@@ -60,6 +66,11 @@
   "sources": [
    "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-510-with-lifting-table",
    "https://www.homag.com/fileadmin/product/paneldividing/brochures/sawteq-s-500/panel-dividing-saw-sawteq-s-500-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: для SAWTEQ S-510 опубліковано лише двигун основної пилки 30 кВт (опц. 47 кВт) і підрізної 2,2 кВт; загальна встановлена потужність не вказана.",
+  "connected_sources": [
+   "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-510-with-lifting-table"
   ]
  },
  {
@@ -87,6 +98,11 @@
   "power_kw": 5.5,
   "sources": [
    "https://www.altendorf.com/en/machines/altendorf-f-45/"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: Altendorf для F 45 вказує лише двигун 5,5 кВт (3000/4000/5000 об/хв); загальна потужність підключення не наведена.",
+  "connected_sources": [
+   "https://www.altendorf.com/en/machines/altendorf-f-45/"
   ]
  },
  {
@@ -113,6 +129,11 @@
   "sources": [
    "https://www.striebig.com/en/vertical-saws/evolution",
    "https://www.striebig.com/07_downloads/produktinformationen/datenblaetter/en/datasheet-striebig-evolution-en.pdf"
+  ],
+  "connected_kw": 7.3,
+  "connected_note": "Споживана потужність (Wattage) 7,3 кВт при двигуні пилки 5,5 кВт; Striebig зазначає, що всі техдані на сторінці EVOLUTION наведено для типу 6224 — окремого значення для 4224 (той самий пиляльний агрегат, менша довжина різу) не опубліковано.",
+  "connected_sources": [
+   "https://www.striebig.com/en/vertical-saws/evolution"
   ]
  },
  {
@@ -140,6 +161,11 @@
   "sources": [
    "https://www.homag.com/en/product-detail/machines/cnc-machining-centers/cnc-gantry-processing-center-centateq-n-510",
    "https://www.homag.com/fileadmin/product/cnc/brochures/centateq-n-510/cnc-processing-center-nesting-centateq-n-510-en.pdf"
+  ],
+  "connected_kw": 39,
+  "connected_note": "Загальна потужність підключення 39 кВт — дилерське оголошення Höchsmann, CENTATEQ N-510 BHN 510/5722/F/R (2024 р., 5-осьовий шпиндель 12 кВт, стіл MATRIX 5700 × 2160 мм, 4 вакуумні насоси 1380 м³/год). Конфігурація відрізняється від /32/22; офіційно HOMAG загальну потужність не публікує.",
+  "connected_sources": [
+   "https://www.hoechsmann.com/en/article/86732/homag_centateq_n-510_bhn_510_5722_f_r"
   ]
  },
  {
@@ -169,6 +195,12 @@
   "sources": [
    "https://www.homag.com/en/product-detail/machines/storage-systems/storage-system-storeteq-p-300-p-500",
    "https://www.homag.com/fileadmin/product/automation/brochures/storeteq-p-300-500/storage-systems-storeteq-p-300-500-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: HOMAG для STORETEQ P-500 не наводить електричних даних ні в брошурі, ні на сторінці продукту.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/automation/brochures/storeteq-p-300-500/storage-systems-storeteq-p-300-500-en.pdf",
+   "https://homag.com/en/product-detail/machines/storage-systems/storage-system-storeteq-p-300-p-500"
   ]
  },
  {
@@ -197,6 +229,11 @@
   "sources": [
    "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-500-s-500-profiline/Edge-banding-machines-edgeteq-s-500-s-500-profiline-en.pdf",
    "https://wtp.hoechsmann.com/en/lexikon/36866/homag_edgeteq_s-500"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі EDGETEQ S-500 / S-500 profiLine та дилерських оголошеннях загальна потужність підключення для варіанту airTec не знайдена.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-500-s-500-profiline/Edge-banding-machines-edgeteq-s-500-s-500-profiline-en.pdf"
   ]
  },
  {
@@ -221,6 +258,12 @@
   "power_kw": null,
   "sources": [
    "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-380-s-380-profiline/Edge-banding-machines-edgeteq-s-380-s-380-profiline-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: для EDGETEQ S-380 1660 офіційного значення немає; у вживаних оголошеннях інших конфігурацій S-380 фігурують різні значення, які не вдалося перевірити для моделі 1660.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-380-s-380-profiline/Edge-banding-machines-edgeteq-s-380-s-380-profiline-en.pdf",
+   "https://www.hoechsmann.com/en/article/15713/homag_edgeteq_s-380_optimat_kdf_660_e"
   ]
  },
  {
@@ -248,6 +291,11 @@
   "sources": [
    "https://www.kuka.com/en-de/products/robotics-systems/industrial-robots/kr-quantec",
    "https://k2tool.ru/downloads/733-broshjura-promyshlennogo-robota-kuka-kr-quantec-kr-120-r2700-2"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у даташиті KUKA KR C5 вказано лише живлення AC 380–480 В, 3 фази, 50–60 Гц; потужність підключення робота KR 120 R2700-2 з KR C5 у відкритих джерелах не знайдена.",
+  "connected_sources": [
+   "https://www.leobotics.fr/wp-content/uploads/2021/05/datasheet-fiche-technique-controlleur-robot-industriel-kuka-kr-c5.pdf"
   ]
  },
  {
@@ -274,6 +322,12 @@
   "sources": [
    "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-processing-centers-centateq-p-110-en.pdf",
    "https://www.homag.com/en/product-detail/machines/cnc-machining-centers/cnc-processing-center-centateq-p-110"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: для CENTATEQ P-110 опубліковано лише фрезерний шпиндель 10 кВт (опц. 13,2 кВт); у дилерському оголошенні Höchsmann (P-110 /31, 2019 р.) загальна потужність також не вказана.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-processing-centers-centateq-p-110-en.pdf",
+   "https://www.hoechsmann.com/en/article/89702/homag_centateq_p-110_v_bmg_110_31_k"
   ]
  },
  {
@@ -301,6 +355,11 @@
   "sources": [
    "https://www.homag.com/fileadmin/product/cnc/brochures/drillteq-h-600/centres-d-usinage-drillteq-h-600-fr.pdf",
    "https://www.homag.com/en/product-detail/machines/cnc-drilling-and-routing-machining-centers/cnc-processing-center-drillteq-h-600"
+  ],
+  "connected_kw": 19.5,
+  "connected_note": "Потужність підключення (puissance connectée) 19,5 кВт — базова DRILLTEQ H-600 і варіант з функцією встановлення шкантів; з функцією обробки 6-ї сторони — 23,5 кВт (брошура HOMAG, французькою).",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/drillteq-h-600/centres-d-usinage-drillteq-h-600-fr.pdf"
   ]
  },
  {
@@ -328,6 +387,11 @@
   "sources": [
    "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-drilling-dowel-inserting-machine-DRILLTEQ-D-510-en.pdf",
    "https://www.homag.com/en/product-detail/machines/cnc-drilling-and-dowel-inserting-machines/cnc-drilling-and-dowel-inserting-machine-drillteq-d-510"
+  ],
+  "connected_kw": 11,
+  "connected_note": "Загальна потужність підключення ≈11 кВт (у брошурі: «Total connected voltage … approx. 11 kW») для обох виконань DRILLTEQ D-510 — довжина деталі 1250 і 2500 мм.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-drilling-dowel-inserting-machine-DRILLTEQ-D-510-en.pdf"
   ]
  },
  {
@@ -355,6 +419,11 @@
   "sources": [
    "https://xcart.wurthlac.com/skin/common_files/files/specs/BM53.2004US-Blum_Minipress-P-Product_Details.pdf",
    "https://publications.blum.com/2024/catalogue/en/631/"
+  ],
+  "connected_kw": 1.1,
+  "connected_note": "Потужність двигуна 1,1 кВт — єдиний електропривод MINIPRESS P за даними Blum; окремої «загальної потужності підключення» не наведено.",
+  "connected_sources": [
+   "https://xcart.wurthlac.com/skin/common_files/files/specs/BM53.2004US-Blum_Minipress-P-Product_Details.pdf"
   ]
  },
  {
@@ -380,6 +449,11 @@
   "sources": [
    "https://www.homag.com/en/product-detail/machines/automation/robot-solutions-for-the-furniture-industry/robot-sorting-cell-sortbot-r-300",
    "https://wtp.hoechsmann.com/en/lexikon/pdf/hom_sortbot_r-300_2023_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі SORTBOT R-300 та на сторінці HOMAG електричні дані відсутні.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/en/lexikon/pdf/hom_sortbot_r-300_2023_en.pdf"
   ]
  },
  {
@@ -404,6 +478,11 @@
   },
   "power_kw": 11,
   "sources": [
+   "https://wtp.hoechsmann.com/es/lexikon/pdf/scm_dmc_sd_2017_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у каталозі SCM dmc sd наведено лише головний двигун 11 кВт (версія з 2 агрегатами); загальна встановлена потужність не вказана.",
+  "connected_sources": [
    "https://wtp.hoechsmann.com/es/lexikon/pdf/scm_dmc_sd_2017_en.pdf"
   ]
  },
@@ -433,6 +512,11 @@
   "power_kw": 28,
   "sources": [
    "https://wtp.hoechsmann.com/cz/lexikon/pdf/orm_airsystem_cvm_vacuum_2021_en_ru_fr_it_es.pdf"
+  ],
+  "connected_kw": 28,
+  "connected_note": "Загальне споживання (Total Consumption) 28 кВт, з них нагрів 21 кВт — AIR SYSTEM ECO 30/14 (для 25/14 — 25 кВт), каталог Orma 2021.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/cz/lexikon/pdf/orm_airsystem_cvm_vacuum_2021_en_ru_fr_it_es.pdf"
   ]
  },
  {
@@ -460,6 +544,11 @@
   "sources": [
    "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/dry-painting-booth/dry-painting-booth-mod-amber-3-mm-3000x3250-as-per-e-c-rules/",
    "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/racks-carriages-etc/different-carriages/zinc-plated-adjustable-rotating-trolley-art-cbc9/"
+  ],
+  "connected_kw": 2.2,
+  "connected_note": "Потужність витяжного агрегату 2,2 кВт — єдиний електроспоживач, указаний дилером для камери Ardesia AMBER 3 (суха фільтрація, 3000 × 3250 мм); загальна потужність окремо не наведена.",
+  "connected_sources": [
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/dry-painting-booth/dry-painting-booth-mod-amber-3-mm-3000x3250-as-per-e-c-rules/"
   ]
  },
  {
@@ -485,6 +574,11 @@
   },
   "power_kw": 5.1,
   "sources": [
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/water-curtain-painting-booths/water-painting-booth-mod-double-4-as-per-e-c-rules-mm-4000x3300/"
+  ],
+  "connected_kw": 5.1,
+  "connected_note": "Сума опублікованих потужностей: витяжний вентилятор 4 кВт + насос водяної завіси 1,1 кВт (Ardesia DOUBLE 4, 4000 × 3300 мм); загальну потужність дилер окремо не вказує.",
+  "connected_sources": [
    "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/water-curtain-painting-booths/water-painting-booth-mod-double-4-as-per-e-c-rules-mm-4000x3300/"
   ]
  },
@@ -513,6 +607,11 @@
   "sources": [
    "https://www.machineseeker.com/cefla-easy+duo/i-22608062",
    "https://www.ceflafinishing.com/en/products/easy-spraying-machines"
+  ],
+  "connected_kw": 18,
+  "connected_note": "«Total connection power 18 kW» — вживаний Cefla EASY DUO 2008 р. (оголошення Machineseeker; точне виконання 2000 DUO D у лістингу не уточнено).",
+  "connected_sources": [
+   "https://www.machineseeker.com/cefla-easy+duo/i-22608062"
   ]
  },
  {
@@ -540,6 +639,11 @@
   "sources": [
    "https://www.machineseeker.com/cefla-easy+2000/i-22555187",
    "https://www.ceflafinishing.com/en/products/omnidry-vertical-oven"
+  ],
+  "connected_kw": 17,
+  "connected_note": "Загальна встановлена електрична потужність 17 кВт (теплова — 130 000 ккал/год) — двозонна вертикальна сушка в складі вживаної лінії Cefla EASY 2000, 2005 р. (оголошення Machineseeker); значення лише для сушки.",
+  "connected_sources": [
+   "https://www.machineseeker.com/cefla-easy+2000/i-22555187"
   ]
  },
  {
@@ -566,6 +670,11 @@
   "sources": [
    "https://www.werktuigen.com/cefla+%28by+sorbini%29-smartcoater+mf-evo/wt-596-1289",
    "https://www.ceflafinishing.com/en/products/smartcoater-pro"
+  ],
+  "connected_kw": 2.9,
+  "connected_note": "Загальна встановлена потужність 2,9 кВт — вальцьовий лакувальний верстат Cefla (Sorbini) Smartcoater MF-EVO (оголошення Werktuigen; рік не вказано); без УФ-сушки.",
+  "connected_sources": [
+   "https://www.werktuigen.com/cefla+%28by+sorbini%29-smartcoater+mf-evo/wt-596-1289"
   ]
  },
  {
@@ -591,6 +700,11 @@
   "sources": [
    "https://www.used-machines.com/cefla-uv-r+%2F+3/gm-209-18902",
    "https://www.ceflafinishing.com/en/products/uv-r-uv-oven"
+  ],
+  "connected_kw": 56,
+  "connected_note": "Номінальна потужність 56 кВт / 104 А — УФ-сушка Cefla UV-R/3 (3 лампи), 2018 р. (оголошення Used-machines).",
+  "connected_sources": [
+   "https://www.used-machines.com/cefla-uv-r+%2F+3/gm-209-18902"
   ]
  },
  {
@@ -643,6 +757,11 @@
   "sources": [
    "https://www.homag.com/en/product-detail/machines/case-clamps/electric-throughfeed-case-clamp-cabteq-t-200",
    "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі CABTEQ S-200/S-250/T-200/T-250 (2023) електричні дані не наведені.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
   ]
  },
  {
@@ -669,6 +788,11 @@
   "power_kw": null,
   "sources": [
    "https://www.homag.com/en/product-detail/machines/case-clamps/stationary-case-clamp-cabteq-s-250",
+   "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі CABTEQ S-200/S-250/T-200/T-250 (2023) електричні дані не наведені.",
+  "connected_sources": [
    "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
   ]
  },
@@ -697,6 +821,11 @@
   "sources": [
    "https://wtp.hoechsmann.com/en/lexikon/pdf/pnt_nextmode_25_en.pdf",
    "https://panotec.com/en/products/nextpro/"
+  ],
+  "connected_kw": 10,
+  "connected_note": "«POWER: 10 kW» — потужність живлення Panotec Nextmode 2.5 за брошурою виробника.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/en/lexikon/pdf/pnt_nextmode_25_en.pdf"
   ]
  },
  {
@@ -721,6 +850,11 @@
   },
   "power_kw": 1.9,
   "sources": [
+   "https://pack-trade.com/en/nproduct/palletayzer_robopac_rotoplat_508_pds_hqyvw"
+  ],
+  "connected_kw": 1.9,
+  "connected_note": "Встановлена потужність 1,9 кВт, живлення 230 В 1 ф — Robopac Rotoplat 508 PDS (дилерська сторінка).",
+  "connected_sources": [
    "https://pack-trade.com/en/nproduct/palletayzer_robopac_rotoplat_508_pds_hqyvw"
   ]
  },
@@ -749,6 +883,12 @@
   "sources": [
    "https://www.smipack.it/products/4/1029/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en",
    "https://www.smipack.it/products/4/1043/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en"
+  ],
+  "connected_kw": 19.75,
+  "connected_note": "Сума встановлених потужностей за даними Smipack: L-зварювач FP8000CS — 3950 Вт + термотунель T652 — 15 800 Вт.",
+  "connected_sources": [
+   "https://www.smipack.it/products/4/1029/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en",
+   "https://www.smipack.it/products/4/1043/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en"
   ]
  },
  {
@@ -774,6 +914,11 @@
   "power_kw": 0.2,
   "sources": [
    "https://www.mosca.com/en/Produkte/Umreifungsmaschinen/Umreifungsmaschinen/productdetail/sonixs-ms-6-728",
+   "https://www.mosca.com/en/product/datasheet/sonixs-ms-6-728/660"
+  ],
+  "connected_kw": 0.2,
+  "connected_note": "Споживана потужність 0,2 кВт, 100–240 В 50/60 Гц — Mosca SoniXs MS-6 (даташит виробника).",
+  "connected_sources": [
    "https://www.mosca.com/en/product/datasheet/sonixs-ms-6-728/660"
   ]
  },
@@ -802,6 +947,11 @@
   "sources": [
    "https://storage.mtender.gov.md/get/6de37aeb-d954-4d2f-99c9-97a33c8dc183-1649407528882",
    "https://shopct.atlascopco.com/en-GB/products/8101018078/lv911-ce-vessel-900l-11b"
+  ],
+  "connected_kw": 37,
+  "connected_note": "Встановлена потужність двигуна 37 кВт (один агрегат GA 37 VSD+, 4–12,5 бар) — каталог Atlas Copco GA 15-37 VSD+; повна вхідна потужність агрегату з вентилятором і перетворювачем окремо не опублікована.",
+  "connected_sources": [
+   "https://storage.mtender.gov.md/get/6de37aeb-d954-4d2f-99c9-97a33c8dc183-1649407528882"
   ]
  },
  {
@@ -828,6 +978,11 @@
   "power_kw": null,
   "sources": [
    "https://www.nestro.com/de/loesungen/filtersysteme/kompakt_jet_filters/"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: NESTRO для Kompakt-JET-Filter NKJ (13 000–32 000 м³/год) вказує лише привід IE5 (синхронно-реактивний двигун + перетворювач частоти); потужність двигуна вентилятора у відкритому доступі не знайдена (даташит — лише через issuu).",
+  "connected_sources": [
+   "https://www.nestro.com/de/loesungen/filtersysteme/kompakt_jet_filters/"
   ]
  },
  {
@@ -852,6 +1007,11 @@
   "power_kw": null,
   "sources": [
    "https://www.kalvis.lt/en/produktas/m-series-boilers-with-volcanic-fuel-supply/"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: Kalvis для K-500M наводить лише номінальну теплову потужність; електроспоживання (вентилятори, шнеки) не опубліковане.",
+  "connected_sources": [
+   "https://www.kalvis.lt/en/produktas/m-series-boilers-with-volcanic-fuel-supply/"
   ]
  },
  {
@@ -875,6 +1035,11 @@
   "power_kw": 15,
   "sources": [
    "https://www.schuko.de/en/products-systems/briquetting-presses",
+   "https://www.schuko.de/fileadmin/content/PDFs/WG_12/Brikettierpressen/briquetting-presses-Compacto-GB.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: Schuko для Compacto CT 2500 75/160 вказує лише потужність гідравлічного двигуна 15 кВт; загальна потужність підключення (з подавальним шнеком) не наведена.",
+  "connected_sources": [
    "https://www.schuko.de/fileadmin/content/PDFs/WG_12/Brikettierpressen/briquetting-presses-Compacto-GB.pdf"
   ]
  },
@@ -929,6 +1094,275 @@
   "sources": [
    "https://www.jungheinrich.co.uk/products/new-forklifts/tow-tractors/ezs-350-108324",
    "https://media-live2.prod.scw.jungheinrichcloud.com/resource/blob/2498314/0709eaf0434ec15d22518e83e2a5e74d/ezs-3-2026-specsheet-en-2026-07-pdf-data.pdf"
+  ]
+ },
+ {
+  "role": "transformer",
+  "manufacturer": "Schneider Electric",
+  "model": "Trihal 1000 кВА 10/0,4 кВ, Dyn11, у кожусі IP31 (2 шт.)",
+  "reason": "Сухий трансформатор з литою ізоляцією класів C2/E2/F1 допускає встановлення всередині цеху поруч із ГРЩ; два по 1000 кВА покривають розрахунковий максимум ≈650–700 кВА з резервом N-1.",
+  "specs": {
+   "Номінальна потужність": "1000 кВА (природне повітряне охолодження AN; +40 % з примусовим AF)",
+   "Напруга": "ВН 10 кВ (клас ізоляції 12 кВ) / НН 400 В (до 433 В)",
+   "Схема і група з'єднань": "Dyn (трикутник / зірка з виведеною нейтраллю), напр. Dyn11",
+   "Напруга короткого замикання Uk": "6 %",
+   "Втрати навантаження": "8800 Вт при 75 °C; 10 000 Вт при 120 °C",
+   "Рівень шуму": "LWA 73 дБ(A); LPA 59 дБ(A) на 1 м",
+   "Клас нагрівостійкості ізоляції": "F (литий компаунд класу F)",
+   "Класи стійкості (IEC 60076-11 / HD 464)": "C2, E2, F1",
+   "Маса": "2390 кг у кожусі IP31 (2125 кг без кожуха IP00)",
+   "Габарити без кожуха (IP00)": "1525 × 945 × 1675 мм (Д × Ш × В)",
+   "Втрати / струм холостого ходу": "2000 Вт / 1,2 %",
+   "Примітка": "Габарити — кожух IP31 для класу ізоляції 7,2/12 кВ за даташитом Trihal Standard losses (NRJED311119EN); дані орієнтовні, остаточні — за кресленням після замовлення. power_kw не застосовується (потужність у кВА)."
+  },
+  "dimensions_mm": {
+   "L": 2000,
+   "W": 1170,
+   "H": 2400
+  },
+  "power_kw": null,
+  "sources": [
+   "https://zenex.home.pl/pub/katalogi/schneider/3_aparatura_sn/3_1_transformatory/3_1_1_transformator_zywiczny_resilglas/pdf/katalogi_i_ulotki/trihal_standard_losses_nrjed311119en.pdf",
+   "http://www.trinetgrup.ro/cat_schneider/pdf/Trihal.pdf",
+   "https://www.se.com/be/en/faqs/FA269764/"
+  ]
+ },
+ {
+  "role": "substation",
+  "manufacturer": "Schneider Electric",
+  "model": "RM6 NE-QIQI 24 кВ (моноблок РУ 10 кВ: 2 лінійні вимикачі навантаження I + 2 трансформаторні запобіжники-вимикачі Q)",
+  "reason": "Компактний елегазовий моноблок для вбудованої підстанції: два кабельні вводи 10 кВ (кільце) і два приєднання на трансформатори 2×1000 кВА із захистом запобіжниками Fusarc CF.",
+  "specs": {
+   "Номінальна напруга": "12 / 17,5 / 24 кВ (для мережі 10 кВ)",
+   "Номінальний струм збірних шин": "630 А (або 400 А)",
+   "Функція I (лінійний вимикач навантаження)": "630 А; Ik 20 кА 1 або 3 с (виконання 24 кВ / 630 А)",
+   "Функція Q (вимикач навантаження із запобіжниками)": "захист трансформатора, струм залежить від вибору запобіжника",
+   "Стійкість бака до внутрішньої дуги": "20 кА 1 с; опція IAC A-FL для кабельного відсіку",
+   "Ізоляційне середовище": "SF6, герметичний бак 0,2 бар, «запаяний на весь термін служби»",
+   "Ступінь захисту": "бак IP67; відсік НН і привід IP3X; кабельний відсік IP2XC; IK07",
+   "Маса": "390 кг (NE-QIQI)",
+   "Габарити (Д × Г × В)": "1619 × 710 × 1142 мм",
+   "Примітка щодо наступника": "SF6-вільна альтернатива того ж виробника — RM AirSeT",
+   "Примітка": "За уточненням координатора замість КТП — внутрішнє РУ 10 кВ. Дані з каталогу RM6 24 kV (AMTED398032EN, 2014); глибина 710 мм з кресленням, висота 1142 мм."
+  },
+  "dimensions_mm": {
+   "L": 1619,
+   "W": 710,
+   "H": 1142
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.more-energy.com.mx/wp-content/uploads/2017/09/AMTED398032EN_web.pdf",
+   "https://www.se.com/eg/en/product/RM63NIQI24D2SMEGY/rm6-3-functions-iqi-non-extensible-24-kv-cubicle/"
+  ]
+ },
+ {
+  "role": "main_switchboard",
+  "manufacturer": "Schneider Electric",
+  "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+  "reason": "Типово випробувана система ГРЩ до 4000 А з Icw 100 кА/1 с — із запасом для двох вводів по 1600 А, секційного вимикача та відхідних ліній; поширена в Україні.",
+  "specs": {
+   "Номінальний струм": "до 4000 А",
+   "Струм короткочасної стійкості Icw": "100 кА (дійсне) / 1 с",
+   "Ударний струм Ipk": "220 кА",
+   "Форми розділення": "форма 2, 3 (3b) або 4 за IEC 61439-2",
+   "Ступінь захисту": "IP30 / IP31 (з дверима й ущільненням) / IP55",
+   "Ударостійкість": "IK07 (рамка), IK08 (двері IP30), IK10 (двері IP55)",
+   "Ширина шаф": "300, 400, 650, 800 мм",
+   "Глибина шаф": "400 або 600 мм",
+   "Висота шаф": "2000 мм",
+   "Стандарти": "IEC 61439-1/-2",
+   "Напруга Ue / Ui (шини)": "690 В / 1000 В",
+   "Примітка": "dimensions_mm — одна шафа шириною 800 мм, глибиною 600 мм. Чинний каталог PrismaSeT P 4000 A (430E25000, v5.0, 2026) недоступний для автоматичного завантаження; параметри — з каталогу Prisma Plus P 2012 та дилерської сторінки."
+  },
+  "dimensions_mm": {
+   "L": 800,
+   "W": 600,
+   "H": 2000
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.linkpano.com.tr/en/prismaset-p.html",
+   "http://www.ncei-sa.com/wp-content/uploads/2017/10/11-PRISMA-P.pdf",
+   "https://www.se.com/uk/en/product-range/22928838-prismaset-p/",
+   "https://www.se.com/il/en/download/document/430E25000/"
+  ]
+ },
+ {
+  "role": "acb",
+  "manufacturer": "Schneider Electric",
+  "model": "MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X",
+  "reason": "Повітряний вимикач 1600 А для вводу від трансформатора 1000 кВА (Iн НН ≈1445 А) і секційного вимикача; Icu 66 кА із запасом перекриває струм КЗ на шинах 0,4 кВ.",
+  "specs": {
+   "Номінальний струм In": "1600 А при 40 °C (номінали датчика 800–1600 А)",
+   "Гранична відключаюча здатність Icu": "66 кА при 220/415 В і 440 В",
+   "Робоча відключаюча здатність Ics": "66 кА (100 % Icu)",
+   "Номінальна напруга Ue / Ui / Uimp": "690 В / 1000 В / 12 кВ",
+   "Розцеплювач": "MicroLogic 2.0 X / 5.0 X (LSI, рекомендовано) / 6.0 X / 7.0 X",
+   "Категорія селективності": "B",
+   "Розсіювана потужність": "390 Вт",
+   "Габарити з кошиком (Ш × В × Г)": "441 × 439 × 403 мм",
+   "Маса": "90 кг",
+   "Струм короткочасної стійкості Icw / включаюча Icm": "66 кА 1 с (36 кА 3 с) / 145 кА",
+   "Примітка": "Розцеплювач MicroLogic X замовляється окремо (MicroLogic 5.0 X — LV847283 для фіксованого / LV847284 для висувного виконання за каталогом). L = ширина, W = глибина, H = висота."
+  },
+  "dimensions_mm": {
+   "L": 441,
+   "W": 403,
+   "H": 439
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/LV848273/",
+   "https://www.se.com/ua/uk/product/download-pdf/LV848273",
+   "https://www.electrocentr.com.ua/files/documentation/Masterpact_MTZ_catalog_numbers_2020_en"
+  ]
+ },
+ {
+  "role": "busbar_main",
+  "manufacturer": "Schneider Electric",
+  "model": "Canalis KTA 1600 А (алюміній), напр. KTA1600ED4403",
+  "reason": "Шинопровід 1600 А для зв'язку трансформатор 1000 кВА → ввід ГРЩ і головної магістралі; IP55, стійкість 65 кА.",
+  "specs": {
+   "Номінальний струм Ie": "1600 А при 35 °C (97 % при 40 °C)",
+   "Матеріал провідників": "алюміній",
+   "Полярність": "3L + N + PE",
+   "Напруга Ue / Ui": "1000 В / 1000 В",
+   "Струм короткочасної стійкості Icw": "65 кА (стандартне виконання)",
+   "Ударний струм Ipk": "143 кА",
+   "Ступінь захисту": "IP55, IK08",
+   "Переріз корпусу": "140 × 164 мм (Ш × В)",
+   "Погонна маса": "22 кг/м",
+   "Крок відгалужень": "880 мм (3 відгалуження на 4 м)",
+   "Сумісні відгалужувачі": "Canalis KS і KT, з ComPacT NSX — до 400 А (KSB400DC4)",
+   "Примітка": "Дані — для розподільної секції 4 м з відгалуженнями; для ділянки трансформатор → ГРЩ застосовують транспортні секції того ж ряду KTA 1600 без відгалужень (окремий даташит не завантажувався). Максимальний відгалужувач KT понад 400 А не перевірявся."
+  },
+  "dimensions_mm": {
+   "L": 4000,
+   "W": 140,
+   "H": 164
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/KTA1600ED4403",
+   "https://electrika.com/catalogues/schneider-electric/schneider-electric--miscellaneous/schneider-electric-miscellaneous/kgkhkvkt/kta1600ed4403/part/352251",
+   "https://www.electrika.com/catalogues/Schneider-Electric-Busbar-Trunking/Part-Number-Reference/KSB250DC4/Tap-off-unit-250A-Compact-NS/miscellaneous/ksb400dc4/part/125036"
+  ]
+ },
+ {
+  "role": "busbar_dist",
+  "manufacturer": "Schneider Electric",
+  "model": "Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)",
+  "reason": "Шинопровід із штепсельними відгалуженнями вздовж лінії верстатів: живлення кожного верстата через відгалужувач з автоматом без окремих кабелів від ГРЩ.",
+  "specs": {
+   "Номінальний струм Ie": "630 А при 35 °C (ряд KSA 500…1000 А)",
+   "Матеріал провідників": "алюміній",
+   "Полярність": "3L + N + PE (4 полюси)",
+   "Напруга Ue / Ui / Uimp": "230…690 В / 690 В / 8 кВ",
+   "Струм короткочасної стійкості Icw": "32,1 кА",
+   "Ударний струм Ipk": "67,5 кА",
+   "Кількість відгалужень": "6 на секцію 3 м",
+   "Крок відгалужень": "1000 мм",
+   "Ступінь захисту": "IP55, IK08",
+   "Переріз корпусу": "113 × 146 мм (Ш × В)",
+   "Маса секції": "36,4 кг",
+   "Стандарти": "IEC 61439-1, IEC 61439-6"
+  },
+  "dimensions_mm": {
+   "L": 3000,
+   "W": 113,
+   "H": 146
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/KSA630ED4306"
+  ]
+ },
+ {
+  "role": "tapoff",
+  "manufacturer": "Schneider Electric",
+  "model": "Canalis KSB160DC4 — відгалужувач 160 А під ComPacT NSX100/160 (ряд KSB…DC4 до 400 А)",
+  "reason": "Штепсельна коробка відгалуження з автоматом NSX для живлення окремого верстата від шинопроводу KS/KT; для більших споживачів — KSB250DC4 / KSB400DC4.",
+  "specs": {
+   "Номінальний струм": "160 А при 35 °C (ряд: 160 / 250 / 400 А — KSB160DC4 / KSB250DC4 / KSB400DC4)",
+   "Апарат захисту": "ComPacT NSX100 або NSX160 (замовляється окремо)",
+   "Сумісність": "шинопроводи Canalis KS і KT",
+   "Полярність": "3L + N + PE",
+   "Напруга Ue / Uimp": "400–500 В (залежно від апарата) / 6,8 кВ",
+   "Керування": "подовжена поворотна рукоятка",
+   "Підключення кабелю": "кабельні наконечники, до 70 мм²",
+   "Ступінь захисту": "IP55, IK08",
+   "Габарити (Ш × В × Г)": "450 × 310 × 246 мм",
+   "Маса": "9,5 кг"
+  },
+  "dimensions_mm": {
+   "L": 450,
+   "W": 246,
+   "H": 310
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/KSB160DC4",
+   "https://www.electrika.com/catalogues/Schneider-Electric-Busbar-Trunking/Part-Number-Reference/KSB250DC4/Tap-off-unit-250A-Compact-NS/miscellaneous/ksb400dc4/part/125036",
+   "https://www.voltimum.co.uk/product-details/Goi5Mtbs/schneider-electric/tap-off-unit-160a-compact-ns"
+  ]
+ },
+ {
+  "role": "power_meter",
+  "manufacturer": "Schneider Electric",
+  "model": "PowerLogic PM5560 (METSEPM5560)",
+  "reason": "Лічильник класу 0,2S з Ethernet Modbus TCP для обліку споживання кожного фідера/лінії та передачі даних у SCADA/EMS цеху.",
+  "specs": {
+   "Клас точності": "0,2S (активна енергія, IEC 62053-22); реактивна ±1 %",
+   "Вимірювані величини": "струм, напруга, частота, P, Q, S, cos φ, енергія, багатотарифний облік",
+   "Якість електроенергії": "гармоніки до 63-ї",
+   "Зв'язок": "Modbus TCP/IP (2 порти Ethernet), BACnet IP, DNP3, Modbus RTU RS-485",
+   "Вимірювальні входи": "1 А / 5 А (через ТС); 20–400 В Ф-N, 20–828 В Ф-Ф",
+   "Входи / виходи": "4 цифрові входи, 2 цифрові виходи",
+   "Пам'ять / веб-сервер": "1,1 МБ журналів, вбудований веб-сервер, e-mail сповіщення",
+   "Живлення": "90–528 В AC або 100–300 В DC; до 16 ВА",
+   "Ступінь захисту": "IP54 спереду, IP30 ззаду",
+   "Габарити": "96 × 96 × 72 мм (монтаж у двері шафи)",
+   "Маса": "0,45 кг"
+  },
+  "dimensions_mm": {
+   "L": 96,
+   "W": 72,
+   "H": 96
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/METSEPM5560"
+  ]
+ },
+ {
+  "role": "pfc",
+  "manufacturer": "Schneider Electric",
+  "model": "PowerLogic VarSet 350 квар, з антирезонансними дроселями 3,8 (190 Гц), верхній ввід, з автоматом (VLVAF5P03517AK) — по одній на секцію шин",
+  "reason": "Автоматична КРМ з розстроєними дроселями для мережі з частотними перетворювачами верстатів; 2 × 350 квар на дві секції шин 0,4 кВ.",
+  "specs": {
+   "Номінальна реактивна потужність": "350 квар при 400/415 В, 50 Гц",
+   "Ступені": "50 + 3 × 100 квар (крок 50 квар)",
+   "Контролер": "PowerLogic PFC VPL6 (VarPlus Logic)",
+   "Антирезонансні дроселі": "так, коефіцієнт 3,8 (частота настроювання 190 Гц)",
+   "Допустимий рівень гармонік": "Gh/Sn 25–50 %, THDu 4–7 %",
+   "Захист вводу": "автоматичний вимикач, Icu 50 кА",
+   "Захист ступенів": "запобіжники (КЗ), контроль гармонік контролером",
+   "Ступінь захисту": "IP31, IK10, установка в приміщенні",
+   "Температура роботи": "−5…+45 °C",
+   "Маса": "до 450 кг",
+   "Габарити (Ш × Г × В)": "800 × 600 × 2200 мм",
+   "Примітка": "Потужність КРМ (2 × 350 квар) обрана під трансформатори 2 × 1000 кВА; потребує перевірки за розрахунком cos φ проєкту. power_kw не застосовується (квар)."
+  },
+  "dimensions_mm": {
+   "L": 800,
+   "W": 600,
+   "H": 2200
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/VLVAF5P03517AK",
+   "https://www.voltimum.co.uk/products/schneider-electric/energy-management-controller/varset-capacitor-bank-auto-350kvar-dr38-top-entry-400v-50hz-cb-vlvaf5p03517ak"
   ]
  }
 ]

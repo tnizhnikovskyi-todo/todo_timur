@@ -93,7 +93,7 @@ button { font: inherit; color: inherit; }
 .row-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .row-btns .btn { font-size: 12px; padding: 4px 8px; }
 
-#card { top: 68px; right: 12px; width: 300px; max-height: calc(100% - 132px); overflow: auto; padding: 14px 16px; }
+#card { top: 68px; right: 12px; width: 320px; max-height: calc(100% - 132px); overflow: auto; padding: 14px 16px; }
 #card .kind { font: 600 11px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
 #card h3 { margin: 6px 0 2px; font: 600 20px/1.2 var(--f-display); text-wrap: balance; }
 #card .code { font: 12px var(--f-mono); color: var(--muted); }
@@ -167,8 +167,8 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) { .odoo-pill.on .live { animation: none; } }
 .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 8px; flex: none; }
 .tab {
-  flex: 1; border: 0; background: transparent; padding: 10px 4px 8px; font: 600 12px var(--f-display);
-  letter-spacing: 0.03em; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  flex: 1; border: 0; background: transparent; padding: 10px 2px 8px; font: 600 11.5px var(--f-display);
+  letter-spacing: 0.01em; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -222,6 +222,12 @@ button { font: inherit; color: inherit; }
 .mk.bad { background: #d63a2b; border-color: #d63a2b; }
 .radio { display: flex; flex-direction: column; gap: 2px; }
 .pp-head { font: 600 15px/1.3 var(--f-display); margin-top: 2px; }
+.chart { display: block; width: 100%; height: auto; margin-top: 4px; }
+.chart .typ { fill: none; stroke: var(--muted); stroke-width: 0.6; }
+.chart .day { fill: var(--accent); } .chart .now { fill: var(--warn); }
+.chart text { fill: var(--muted); font: 7px var(--f-mono); }
+.chart-key { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.chart-key i { display: inline-block; width: 10px; height: 8px; margin-right: 4px; vertical-align: -1px; }
 .src { font-size: 11px; color: var(--muted); margin-top: 6px; }
 .src a { color: var(--fg); text-decoration-color: var(--accent); }
 @media (max-width: 760px) { #card { width: auto; } .odoo-pill .muted { display: none; } #side { top: 112px; } }
@@ -251,6 +257,7 @@ button { font: inherit; color: inherit; }
         <label class="layer"><input type="radio" name="cmode" id="cm-none" value="none" checked><span>Звичайні кольори</span></label>
         <label class="layer"><input type="radio" name="cmode" id="cm-fill" value="fill"><span>Заповненість складу</span></label>
         <label class="layer"><input type="radio" name="cmode" id="cm-oee" value="oee"><span>OEE верстатів</span></label>
+        <label class="layer"><input type="radio" name="cmode" id="cm-power" value="power"><span>Споживання електроенергії</span></label>
       </div>
     </div>
     <div class="sec">
@@ -277,6 +284,7 @@ button { font: inherit; color: inherit; }
       <button class="tab" role="tab" id="tab-production" data-tab="production" aria-selected="false">Виробництво</button>
       <button class="tab" role="tab" id="tab-stock" data-tab="stock" aria-selected="false">Склад</button>
       <button class="tab" role="tab" id="tab-logistics" data-tab="logistics" aria-selected="false">Логістика</button>
+      <button class="tab" role="tab" id="tab-energy" data-tab="energy" aria-selected="false">Енергія</button>
     </div>
     <div class="body" id="cardbody"></div>
   </aside>
@@ -317,7 +325,7 @@ const b2t = ([x, y, z]) => new THREE.Vector3(x, z, -y);
 const KIND = {
   zone: "Зона", machine: "Верстат · робочий центр", stock: "Місце зберігання", bin: "Комірка стелажа", rack: "Стелаж",
   kit: "Візок комплектації", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Приміщення",
-  equipment: "Обладнання", person: "Працівник",
+  equipment: "Обладнання", person: "Працівник", power: "Електропостачання",
 };
 const MACHINE_STATUS = { work: ["ok", "У роботі"], idle: ["warn", "Простій"], stop: ["bad", "Зупинено"] };
 const BIN_STATE = { ok: ["ok", "Запас у нормі"], low: ["warn", "Нижче мінімуму"], out: ["bad", "Порожньо"] };
@@ -459,6 +467,7 @@ const VIEWS = [
   { name: "Пакування", target: [116, 16, 0], pos: [104, -6, 20] },
   { name: "Склад ГП і відвантаження", target: [136, 36, 0], pos: [104, 6, 42] },
   { name: "План згори", target: [75, 36, 0], pos: [75, 35.9, 215] },
+  { name: "Електрощитова", target: [129, 67, 1.2], pos: [116, 50, 13] },
 ];
 function viewPose(v) {
   if (v.pos) return { pos: b2t(v.pos), target: b2t(v.target) };
@@ -491,7 +500,7 @@ function goView(v, animate = true) {
 VIEWS.forEach((v, i) => {
   const b = document.createElement("button");
   b.className = "view"; b.dataset.name = v.name; b.setAttribute("aria-pressed", "false");
-  b.innerHTML = `<kbd>${(i + 1) % 10}</kbd>${v.name}`;
+  b.innerHTML = `${i < 10 ? `<kbd>${(i + 1) % 10}</kbd>` : ""}${v.name}`;
   b.onclick = () => { goView(v); closeSideOnPhone(); };
   $("#views").appendChild(b);
 });
@@ -591,6 +600,12 @@ function modeColor(root) {
     const wc = D.workcenters[u.code];
     if (!wc) return null;
     return wc.oee >= 0.75 ? C_OK : wc.oee >= 0.5 ? C_WARN : C_BAD;
+  }
+  if (colorMode === "power" && D.energy) {
+    const e = D.energy, c = e.consumers[u.code];
+    if (c) return c.p_now >= 30 ? C_BAD : c.p_now >= 10 ? C_WARN : C_OK;
+    const l = e.lines[u.code] || e.transformers[u.code];
+    if (l) return l.load >= 0.8 ? C_BAD : l.load >= 0.6 ? C_WARN : C_OK;
   }
   return null;
 }
@@ -790,7 +805,9 @@ function tick() {
     mo.progress = (w.filter((x) => x.state === "done").length + w.filter((x) => x.state === "progress")
       .reduce((s, x) => s + x.progress, 0)) / w.length;
   }
+  energyTick();
   updateLive();
+  if (colorMode === "power") repaintAll();
 }
 function updateLive() {
   const val = (key) => {
@@ -805,6 +822,14 @@ function updateLive() {
   document.querySelectorAll("[data-t]").forEach((el) => {
     const v = val(el.dataset.t);
     if (v != null) el.textContent = pct(v);
+  });
+  document.querySelectorAll("[data-e]").forEach((el) => {
+    const v = eVal(el.dataset.e);
+    if (v != null) el.textContent = eFmt[el.dataset.ef](v);
+  });
+  document.querySelectorAll("[data-eb]").forEach((el) => {
+    const v = eVal(el.dataset.eb);
+    if (v != null) { el.firstElementChild.style.width = barW(v); el.className = `pbar ${loadCls(v)}`; }
   });
 }
 
@@ -828,14 +853,16 @@ function renderPanel(soft = false) {
   const top = body().scrollTop;
   const b = body();
   if (panel.type === "tab") {
-    ({ overview: renderOverview, production: renderProduction, stock: renderStock, logistics: renderLogistics })[panel.tab]();
+    ({ overview: renderOverview, production: renderProduction, stock: renderStock, logistics: renderLogistics,
+      energy: renderEnergy })[panel.tab]();
   } else if (panel.type === "object") renderObject(panel.code);
   else if (panel.type === "mo") renderMO(panel.name);
   else if (panel.type === "product") renderProduct(panel.code);
   else if (panel.type === "picking") renderPicking(panel.name);
+  else if (panel.type === "line") renderLine(panel.code);
   if (soft) b.scrollTop = top;
 }
-const backBtn = () => `<button class="back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика" })[panel.tab] || "Назад")}</button>`;
+const backBtn = () => `<button class="back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика", energy: "Енергія" })[panel.tab] || "Назад")}</button>`;
 // усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
 body().addEventListener("click", (e) => {
   const back = e.target.closest("[data-back]");
@@ -850,6 +877,8 @@ body().addEventListener("click", (e) => {
   else if (t === "obj") { const o = items.get(v); if (o) { select(o, { keepHighlight: true }); focusOn(o); } }
   else if (t === "comp") showComponent(v);
   else if (t === "locs") highlightLocs(v.split(","));
+  else if (t === "line") showLine(v);
+  else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
 });
 function renderNoData() {
   body().innerHTML = `<div class="kind">Немає даних</div><p>Не вдалося прочитати ${ODOO_URL}. Модель працює, але без даних Odoo.</p>`;
@@ -914,6 +943,10 @@ function legendHtml() {
     <span class="swatch" style="background:var(--ok)"></span><span>75 % і більше</span>
     <span class="swatch" style="background:var(--warn)"></span><span>50–75 %</span>
     <span class="swatch" style="background:var(--bad)"></span><span>менше 50 %</span></div>`;
+  if (colorMode === "power") return `<div class="sub">Споживання електроенергії</div><div class="legend">
+    <span class="swatch" style="background:var(--bad)"></span><span>споживач від 30 кВт · лінія понад 80 %</span>
+    <span class="swatch" style="background:var(--warn)"></span><span>10–30 кВт · 60–80 %</span>
+    <span class="swatch" style="background:var(--ok)"></span><span>до 10 кВт · до 60 %</span></div>`;
   return `<div class="sub">Легенда</div><div class="legend">
     <span class="swatch" style="background:var(--ok)"></span><span>Маячок верстата: у роботі</span>
     <span class="swatch" style="background:var(--warn)"></span><span>Простій · лоток нижче мінімуму</span>
@@ -969,6 +1002,7 @@ function renderMO(name) {
       <dt>Старт</dt><dd>${dayHm(mo.date_start)}</dd>
       <dt>Дедлайн</dt><dd>${dayHm(mo.date_deadline)}</dd>
       <dt>Готовність</dt><dd><span data-t="mo:${esc(mo.name)}">${pct(mo.progress)}</span> ${bar(mo.progress, "", `mo:${esc(mo.name)}`)}</dd>
+      ${mo.energy_kwh != null ? `<dt>Електроенергія</dt><dd>${kwhU(mo.energy_kwh)} · ≈ ${nf.format(mo.energy_cost)} грн <span class="mono">(виконані операції)</span></dd>` : ""}
       ${mo.child_productions ? `<dt>Фасади</dt><dd>${mo.child_productions.map((c) => `<button class="lnk" data-go="mo:${esc(c)}">${esc(c)}</button>`).join(", ")}</dd>` : ""}
     </dl>
     <div class="sub">Робочі завдання · маршрут підсвічено в 3D</div>
@@ -1122,6 +1156,7 @@ function renderObject(code) {
     if (u.kind === "dock" && D.docks[code]) extra += `<div class="sub">Документ на воротах</div><ul class="rows">${pickRow(idx.pick.get(D.docks[code]))}</ul>`;
     if (u.kind === "vehicle" && idx.truck.has(code)) extra += `<div class="sub">Документ</div><ul class="rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;
     if (u.kind === "zone" && D.zones[code]) extra += zoneHtml(D.zones[code]);
+    if (D.energy) extra += energyHtml(code);
     if (D.passports?.[code]) extra += passportHtml(D.passports[code]);
   }
   body().innerHTML = `${backBtn()}
@@ -1218,7 +1253,9 @@ function passportHtml(pp) {
     <table class="tbl">${Object.entries(u.specs || {}).filter(([, v]) => v != null && v !== "")
       .map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n" style="white-space:normal">${esc(v)}</td></tr>`).join("")}</table>
     ${(u.sources || []).length ? `<div class="src">Джерела: ${u.sources.map((h, i) =>
-      `<a href="${esc(h)}" target="_blank" rel="noopener">${i + 1}</a>`).join(" · ")}</div>` : ""}`;
+      `<a href="${esc(h)}" target="_blank" rel="noopener">${i + 1}</a>`).join(" · ")}</div>` : ""}
+    ${u.connected_note ? `<div class="src"><b>Потужність підключення:</b> ${u.connected_kw != null ? kwU(u.connected_kw) : "не опублікована"}. ${esc(u.connected_note)}
+      ${(u.connected_sources || []).map((h, i) => `<a href="${esc(h)}" target="_blank" rel="noopener">[${i + 1}]</a>`).join(" ")}</div>` : ""}`;
   return unit(pp, true) + (pp.units || []).map((u) => unit(u, false)).join("");
 }
 function zoneHtml(z) {
@@ -1237,6 +1274,215 @@ function zoneHtml(z) {
     ${(z.pickings || []).length ? `<div class="sub">Документи</div><ul class="rows">${z.pickings.map((n) => pickRow(idx.pick.get(n))).join("")}</ul>` : ""}`;
 }
 $("#odoo-pill").onclick = () => { select(null); clearHighlight(); openTab("overview"); };
+
+// ---------------------------------------------------------------- електропостачання
+const nf2 = new Intl.NumberFormat("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nf1 = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 1 });
+const kwU = (v) => `${nf1.format(v)} кВт`;
+const kwhU = (v) => `${nf1.format(v)} кВт·год`;
+const eFmt = {
+  kw: kwU, kw0: (v) => `${nf.format(Math.round(v))} кВт`, a: (v) => `${nf.format(Math.round(v))} А`,
+  kva: (v) => `${nf.format(Math.round(v))} кВА`, pct,
+};
+const loadCls = (v) => (v >= 0.8 ? "bad" : v >= 0.6 ? "warn" : "");
+// ключ «живого» значення: c:<споживач>:<поле> | l:<лінія>:<поле> | t:<трансформатор>:<поле> | tot:<поле>
+function eVal(key) {
+  const e = D?.energy;
+  if (!e) return null;
+  const [t, code, f] = key.split(":");
+  if (t === "tot") return e.totals[code];
+  const o = t === "c" ? e.consumers[code] : t === "l" ? e.lines[code] : t === "t" ? e.transformers[code] : null;
+  return o?.[f];
+}
+const kpiE = (key, f) => `<b data-e="${esc(key)}" data-ef="${f}">${eFmt[f](eVal(key))}</b>`;
+const ev = (key, f) => `<span data-e="${esc(key)}" data-ef="${f}">${eFmt[f](eVal(key))}</span>`;
+const ebar = (key) => `<div class="pbar ${loadCls(eVal(key))}" data-eb="${esc(key)}"><i style="width:${barW(eVal(key))}"></i></div>`;
+const cosU = (v) => nf2.format(v);
+const tanPhi = (c) => Math.tan(Math.acos(c));
+
+// споживання «дихає», поки сторінка відкрита: лічильники оновлюються, суми перераховуються
+function energyTick() {
+  const e = D.energy;
+  if (!e) return;
+  for (const c of Object.values(e.consumers)) {
+    if (c.status !== "work") continue;
+    c.base ??= c.p_now;
+    c.p_now = Math.round(c.base * (0.94 + Math.random() * 0.12) * 10) / 10;
+    c.i_now = Math.round((c.p_now * 1000) / (Math.sqrt(3) * 400 * c.cos_phi));
+  }
+  for (const ln of Object.values(e.lines)) {
+    const cs = ln.consumers.map((k) => e.consumers[k]);
+    const p = cs.reduce((s, c) => s + c.p_now, 0), q = cs.reduce((s, c) => s + c.p_now * tanPhi(c.cos_phi), 0);
+    ln.p_now = Math.round(p * 10) / 10;
+    ln.i_now = Math.round((Math.hypot(p, q) * 1000) / (Math.sqrt(3) * 400));
+    ln.load = ln.i_now / ln.rating_a;
+  }
+  for (const t of Object.values(e.transformers)) {
+    const p = Object.values(e.lines).filter((l) => e.cells[l.cell].section === t.section).reduce((s, l) => s + l.p_now, 0);
+    t.p_kw = Math.round(p * 10) / 10;
+    t.s_kva = Math.round(p / t.cos_phi);
+    t.load = t.s_kva / t.rating_kva;
+    t.i_a = Math.round((t.s_kva * 1000) / (Math.sqrt(3) * 400));
+    Object.assign(e.cells[t.incomer], { i_now: t.i_a, p_now: t.p_kw });
+  }
+  for (const c of Object.values(e.cells)) if (c.line) Object.assign(c, { i_now: e.lines[c.line].i_now, p_now: e.lines[c.line].p_now });
+  const ts = Object.values(e.transformers);
+  e.totals.p_now = ts.reduce((s, t) => s + t.p_kw, 0);
+  e.totals.s_now = ts.reduce((s, t) => s + t.s_kva, 0);
+}
+
+// стовпчики кВт·год по годинах: сьогодні (заливка) поверх типового робочого дня (контур)
+function chartHtml(today, typical) {
+  const max = Math.max(...typical, ...today.filter((v) => v != null)) * 1.08;
+  const H = 70, w = 10, nowH = today.findLastIndex((v) => v != null);
+  const y = (v) => H - (v / max) * H;
+  const bars = typical.map((t, h) => {
+    const v = today[h];
+    return `<rect class="typ" x="${h * w + 1.5}" y="${y(t)}" width="${w - 3}" height="${H - y(t)}"><title>${String(h).padStart(2, "0")}:00 · типовий день ${nf.format(t)} кВт·год</title></rect>`
+      + (v != null ? `<rect class="${h === nowH ? "now" : "day"}" x="${h * w + 2.5}" y="${y(v)}" width="${w - 5}" height="${H - y(v)}"><title>${String(h).padStart(2, "0")}:00 · сьогодні ${nf.format(v)} кВт·год${h === nowH ? " (година триває)" : ""}</title></rect>` : "");
+  }).join("");
+  const ticks = [0, 6, 12, 18, 24].map((h) => `<text x="${Math.min(h * w, 232)}" y="${H + 9}">${String(h).padStart(2, "0")}</text>`).join("");
+  return `<svg class="chart" viewBox="0 0 240 ${H + 11}" role="img" aria-label="Споживання по годинах">${bars}${ticks}</svg>
+    <div class="chart-key"><span><i style="background:var(--accent)"></i>сьогодні</span><span><i style="border:1px solid var(--muted)"></i>типовий робочий день</span></div>`;
+}
+
+function lineRow(code) {
+  const l = D.energy.lines[code];
+  return `<li><button class="row" data-go="line:${esc(code)}"><span class="t">${esc(l.name)}</span>
+    <span class="mono">${ev(`l:${code}:load`, "pct")}</span>
+    <span class="m">${l.kind === "busway" ? "шинопровід" : "кабелі"} ${nf.format(l.rating_a)} А · ${ev(`l:${code}:i_now`, "a")} · ${ev(`l:${code}:p_now`, "kw")}</span>
+    <span class="pw">${ebar(`l:${code}:load`)}</span></button></li>`;
+}
+function trafoRow(code) {
+  const t = D.energy.transformers[code];
+  return `<li><button class="row" data-go="obj:${esc(code)}"><span class="t">${esc(t.name)} · ${nf.format(t.rating_kva)} кВА</span>
+    <span class="mono">${ev(`t:${code}:load`, "pct")}</span>
+    <span class="m">секція ${t.section} · ${ev(`t:${code}:s_kva`, "kva")} · ${ev(`t:${code}:i_a`, "a")}</span>
+    <span class="pw">${ebar(`t:${code}:load`)}</span></button></li>`;
+}
+
+function renderEnergy() {
+  setTabs("energy");
+  const e = D.energy;
+  if (!e) { body().innerHTML = `<p>Немає даних енергообліку.</p>`; return; }
+  const T = e.totals;
+  const top = Object.entries(e.consumers).sort((a, b) => b[1].p_now - a[1].p_now).slice(0, 8);
+  body().innerHTML = `
+    <div class="kpis">
+      <div class="kpi">${kpiE("tot:p_now", "kw0")}<span>зараз · встановлено ${nf.format(T.p_inst)} кВт</span></div>
+      <div class="kpi">${kpiE("tot:s_now", "kva")}<span>із ${nf.format(T.capacity_kva)} кВА двох трансформаторів</span></div>
+      <div class="kpi"><b>${nf.format(T.kwh_today)}</b><span>кВт·год від 00:00 · ≈ ${nf.format(T.cost_today)} грн</span></div>
+      <div class="kpi"><b>${cosU(T.cos_after)}</b><span>cos φ з компенсацією (без неї ${cosU(T.cos_before)})</span></div>
+    </div>
+    <div class="sub">Трансформатори</div>
+    <ul class="rows">${Object.keys(e.transformers).map(trafoRow).join("")}</ul>
+    <div class="sub">Профіль доби · кВт·год по годинах</div>
+    ${chartHtml(e.profile, e.typical)}
+    <div class="hint" style="border:0;padding:0;margin-top:4px">Пік за добу ${nf.format(T.peak_kw)} кВт о ${esc(T.peak_time)} (15-хвилинний).</div>
+    <div class="sub">Лінії від ГРЩ · натисніть, щоб побачити трасу і споживачів</div>
+    <ul class="rows">${Object.keys(e.lines).map(lineRow).join("")}</ul>
+    <div class="sub">Найбільші споживачі зараз</div>
+    <ul class="rows">${top.map(([code, c]) => `<li><button class="row" data-go="${items.has(code) ? `obj:${esc(code)}` : `line:${esc(c.line)}`}">
+      <span class="t">${esc(c.name)}</span><span class="mono">${ev(`c:${code}:p_now`, "kw")}</span>
+      <span class="m">${esc(e.lines[c.line].name)} · встановлено ${kwU(c.p_inst)}</span></button></li>`).join("")}</ul>
+    <div class="sub">Журнал подій</div>
+    <ul class="rows">${e.events.map((ev_) => `<li><button class="row" data-go="obj:${esc(ev_.code)}">
+      <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${ev_.level === "info" ? "flow" : ev_.level})"></span>${esc(ev_.text)}</span>
+      <span class="m">${dayHm(ev_.time)}</span></button></li>`).join("")}</ul>
+    ${colorMode === "power" ? legendHtml() : `<div class="note">Увімкніть «Розфарбування → Споживання електроенергії», щоб побачити навантаження на 3D-моделі.</div>`}
+    <div class="hint">${esc(e.meta.source)}. ${esc(e.meta.note)} Тариф умовний: ${nf2.format(e.meta.tariff_uah)} грн/кВт·год.</div>`;
+}
+
+function showLine(code) {
+  const ln = D.energy?.lines[code];
+  if (!ln) return;
+  select(null);
+  openView({ type: "line", code });
+  const objCode = ln.kind === "busway" ? code : "CABLES";
+  highlight([{ code: objCode, html: `${esc(ln.name.split(" · ")[0])} · ${pct(ln.load)}`, cls: "hl" },
+    ...ln.consumers.filter((c) => items.has(c)).map((c) => ({ code: c, html: kwU(D.energy.consumers[c].p_now), cls: "prog" }))]);
+}
+function lineBody(code) {
+  const e = D.energy, l = e.lines[code], cell = e.cells[l.cell];
+  const cs = l.consumers.map((c) => [c, e.consumers[c]]).sort((a, b) => b[1].p_now - a[1].p_now);
+  return `<dl class="kv">
+      <dt>Автомат у ГРЩ</dt><dd><button class="lnk" data-go="obj:${esc(l.cell)}">${esc(l.cell)}</button> · секція ${cell.section}</dd>
+      <dt>Номінал</dt><dd>${nf.format(l.rating_a)} А</dd>
+      <dt>Струм</dt><dd>${ev(`l:${code}:i_now`, "a")} · ${ev(`l:${code}:load`, "pct")} ${ebar(`l:${code}:load`)}</dd>
+      <dt>Потужність</dt><dd>${ev(`l:${code}:p_now`, "kw")} з ${kwU(l.p_inst)} встановлених</dd>
+      <dt>cos φ</dt><dd>${cosU(l.cos_phi)}</dd></dl>
+    <div class="sub">Споживачі · ${cs.length}</div>
+    <table class="tbl"><tr><th>Споживач</th><th class="n">Зараз</th><th class="n">Встан.</th></tr>
+      ${cs.map(([c, v]) => `<tr${items.has(c) ? ` class="click" data-go="obj:${esc(c)}"` : ""}><td>${esc(v.name)}${v.status !== "work" ? ` ${pill(MACHINE_STATUS[v.status])}` : ""}</td>
+        <td class="n">${ev(`c:${c}:p_now`, "kw")}</td><td class="n">${kwU(v.p_inst)}${v.source === "estimate" ? "*" : ""}</td></tr>`).join("")}</table>
+    ${cs.some(([, v]) => v.source === "estimate") ? `<div class="src">* оцінка за аналогами: виробник не публікує встановлену потужність.</div>` : ""}`;
+}
+function renderLine(code) {
+  const l = D.energy.lines[code];
+  body().innerHTML = `${backBtn()}
+    <div class="kind">Лінія живлення · ${l.kind === "busway" ? "шинопровід" : "кабельні фідери"}</div>
+    <h3>${esc(l.name)}</h3><div class="code">${esc(code)}</div>
+    ${lineBody(code)}
+    ${D.passports?.[code] ? passportHtml(D.passports[code]) : ""}`;
+}
+
+function energyHtml(code) {
+  const e = D.energy;
+  let h = "";
+  const c = e.consumers[code];
+  if (c) {
+    const tariff = e.meta.tariff_uah;
+    h += `<div class="sub">Електроживлення</div><dl class="kv">
+      <dt>Лінія</dt><dd><button class="lnk" data-go="line:${esc(c.line)}">${esc(e.lines[c.line].name)}</button></dd>
+      <dt>Автомат</dt><dd><button class="lnk" data-go="obj:${esc(c.feeder)}">${esc(c.feeder)}</button> у ГРЩ</dd>
+      <dt>Зараз</dt><dd>${ev(`c:${code}:p_now`, "kw")} · ${ev(`c:${code}:i_now`, "a")}</dd>
+      <dt>Встановлена</dt><dd>${kwU(c.p_inst)} <span class="mono">${c.source === "passport" ? "паспорт" : c.source === "mixed" ? "паспорт + оцінка" : "оцінка"}</span></dd>
+      <dt>cos φ</dt><dd>${cosU(c.cos_phi)}</dd>
+      ${c.kwh_shift != null ? `<dt>За зміну</dt><dd>${kwhU(c.kwh_shift)} · ≈ ${nf.format(Math.round(c.kwh_shift * tariff))} грн</dd>` : ""}</dl>
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}`;
+  }
+  if (e.lines[code]) h += lineBody(code);
+  if (code === "CABLES") h += `<div class="sub">Лінії</div><ul class="rows">${lineRow("C1")}${lineRow("C2")}</ul>`;
+  const t = e.transformers[code];
+  if (t) {
+    h += `<dl class="kv"><dt>Номінал</dt><dd>${nf.format(t.rating_kva)} кВА, 10/0,4 кВ</dd>
+      <dt>Навантаження</dt><dd>${ev(`t:${code}:load`, "pct")} ${ebar(`t:${code}:load`)}</dd>
+      <dt>Повна</dt><dd>${ev(`t:${code}:s_kva`, "kva")} · ${ev(`t:${code}:i_a`, "a")}</dd>
+      <dt>Обмотки</dt><dd>${t.temp_c} °C</dd>
+      <dt>cos φ</dt><dd>${cosU(t.cos_phi)}</dd>
+      <dt>Живить</dt><dd>секцію ${t.section} через <button class="lnk" data-go="obj:${esc(t.incomer)}">${esc(t.incomer)}</button></dd></dl>
+      <div class="note">Резерв: якщо один трансформатор вимкнуть, секційний вимикач замкнеться і другий понесе все навантаження заводу (${ev("tot:s_now", "kva")} з ${nf.format(t.rating_kva)} кВА).</div>`;
+  }
+  const cell = e.cells[code];
+  if (cell) {
+    const rows = [["Секція шин", cell.section ?? "між секціями"]];
+    if (cell.line) rows.push(["Лінія", `<button class="lnk" data-go="line:${esc(cell.line)}">${esc(e.lines[cell.line].name)}</button>`],
+      ["Струм", `${ev(`l:${cell.line}:i_now`, "a")} з ${nf.format(cell.rating_a)} А ${ebar(`l:${cell.line}:load`)}`]);
+    if (cell.type === "incomer") rows.push(["Від", `<button class="lnk" data-go="obj:${esc(cell.feeds)}">трансформатора ${esc(cell.feeds)}</button>`],
+      ["Струм", `${ev(`t:${cell.feeds}:i_a`, "a")} з ${nf.format(cell.rating_a)} А`], ["Потужність", ev(`t:${cell.feeds}:p_kw`, "kw")]);
+    if (cell.type === "coupler") rows.push(["Стан", "розімкнений (АВР у готовності)"], ["Номінал", `${nf.format(cell.rating_a)} А`]);
+    if (cell.type === "pfc") rows.push(["Ступені", esc(cell.steps)], ["Видає", `${cell.q_now} квар з ${cell.rating_kvar}`],
+      ["cos φ секції", `${cosU(cell.cos_before)} → ${cosU(cell.cos_after)}`]);
+    h += `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>${cell.note ? `<div class="note">${esc(cell.note)}</div>` : ""}`;
+  }
+  if (code === "SWB-1" || code === "EMS-1") {
+    h += `<div class="kpis" style="margin-top:10px">
+        <div class="kpi">${kpiE("tot:p_now", "kw0")}<span>споживання зараз</span></div>
+        <div class="kpi"><b>${cosU(e.totals.cos_after)}</b><span>cos φ на вводах</span></div></div>
+      <ul class="rows">${Object.keys(e.transformers).map(trafoRow).join("")}</ul>
+      <div class="sub">Шафи ГРЩ</div>
+      <table class="tbl"><tr><th>Шафа</th><th class="n">Струм</th></tr>
+        ${Object.entries(e.cells).map(([k, v]) => `<tr class="click" data-go="obj:${esc(k)}"><td><b>${esc(k)}</b> · ${esc(v.name)}</td>
+          <td class="n">${v.line ? ev(`l:${v.line}:i_now`, "a") : v.type === "incomer" ? ev(`t:${v.feeds}:i_a`, "a") : v.type === "pfc" ? `${v.q_now} квар` : "—"}</td></tr>`).join("")}</table>
+      <div class="row-btns" style="margin-top:8px"><button class="btn" data-go="etab:1">Енергія — детально</button></div>`;
+  }
+  if (code === "RM6-1") {
+    h += `<dl class="kv"><dt>Ввід</dt><dd>10 кВ, кабель від мережі</dd>
+      <dt>Струм 10 кВ</dt><dd>≈ ${nf1.format(e.totals.s_now / (Math.sqrt(3) * 10))} А</dd>
+      <dt>Відходять</dt><dd><button class="lnk" data-go="obj:T1">Т1</button>, <button class="lnk" data-go="obj:T2">Т2</button></dd></dl>`;
+  }
+  return h;
+}
 
 // ---------------------------------------------------------------- телефон
 function closeSideOnPhone() {

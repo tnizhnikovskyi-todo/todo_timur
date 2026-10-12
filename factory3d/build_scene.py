@@ -29,7 +29,6 @@ import base64
 import json
 import math
 import os
-import shutil
 import subprocess
 import sys
 
@@ -64,11 +63,22 @@ def embed_viewer(out_dir, glb, odoo_json=None):
             odoo = f.read().replace("</", "<\\/")
         html = html.replace("<!-- ODOO_DATA -->",
                             f'<script type="application/json" id="odoo-data">{odoo}</script>')
-    standalone = ('<!doctype html>\n<html lang="uk"><head><meta charset="utf-8">'
-                  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
-                  '</head><body>\n' + html + "\n</body></html>\n")
     with open(os.path.join(out_dir, "factory_viewer.html"), "w", encoding="utf-8") as f:
-        f.write(standalone)
+        f.write(standalone(html))
+
+
+def standalone(html):
+    """Повний HTML-документ навколо сторінки переглядача (сам viewer/index.html — без «скелета»)."""
+    return ('<!doctype html>\n<html lang="uk"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+            '</head><body>\n' + html + "\n</body></html>\n")
+
+
+def copy_viewer(out_dir):
+    with open(VIEWER, encoding="utf-8") as f:
+        html = f.read()
+    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(standalone(html))
 
 
 def main(out_dir):
@@ -104,7 +114,7 @@ def main(out_dir):
                           export_cameras=False)
     bpy.context.preferences.filepaths.save_version = 0  # без factory.blend1
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out_dir, "factory.blend")))
-    shutil.copy(VIEWER, os.path.join(out_dir, "index.html"))
+    copy_viewer(out_dir)
     write_odoo(out_dir)
     # для однофайлового переглядача — квантована копія (KHR_mesh_quantization, three.js читає
     # без декодера): ~40 % менше, щоб сторінка вмістилася в ліміт хостингу
@@ -125,7 +135,7 @@ if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     if argv and argv[0] == "--embed":
         write_odoo(argv[2])
-        shutil.copy(VIEWER, os.path.join(argv[2], "index.html"))
+        copy_viewer(argv[2])
         embed_viewer(argv[2], argv[1])
     else:
         main(argv[0] if argv else "dist")
