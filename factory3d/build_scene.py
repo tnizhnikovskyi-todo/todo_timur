@@ -15,6 +15,7 @@
     <объект>          у каждого кликабельного объекта есть свойства
                       code / kind / label / desc (в glTF это extras)
 """
+import base64
 import json
 import math
 import os
@@ -826,9 +827,22 @@ def main(out_dir):
                           convert_orientation=True, export_global_forward_selection="NEGATIVE_Z",
                           export_global_up_selection="Y", export_lights=False,
                           export_cameras=False)
+    bpy.context.preferences.filepaths.save_version = 0  # без factory.blend1
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out_dir, "factory.blend")))
     viewer = os.path.join(os.path.dirname(os.path.abspath(__file__)), "viewer", "index.html")
     shutil.copy(viewer, os.path.join(out_dir, "index.html"))
+    # однофайловый просмотрщик: модель встроена в base64, открывается без веб-сервера
+    with open(glb, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    with open(viewer, encoding="utf-8") as f:
+        html = f.read()
+    html = html.replace("<!-- MODEL_DATA -->",
+                        f'<script type="application/octet-stream" id="model-data">{data}</script>')
+    standalone = ('<!doctype html>\n<html lang="ru"><head><meta charset="utf-8">'
+                  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+                  '</head><body>\n' + html + "\n</body></html>\n")
+    with open(os.path.join(out_dir, "factory_viewer.html"), "w", encoding="utf-8") as f:
+        f.write(standalone)
     n = sum(1 for o in bpy.data.objects if o.type == "MESH")
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons)
                for o in bpy.data.objects if o.type == "MESH")

@@ -193,6 +193,7 @@ button { font: inherit; color: inherit; }
   </div>
 </div>
 
+<!-- MODEL_DATA -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -297,7 +298,7 @@ function isShown(obj) {
   return true;
 }
 
-new GLTFLoader().load(MODEL_URL, (gltf) => {
+function onModel(gltf) {
   const root = gltf.scene;
   root.traverse((o) => {
     const u = o.userData || {};
@@ -325,12 +326,21 @@ new GLTFLoader().load(MODEL_URL, (gltf) => {
   renderSummary();
   goView(VIEWS[0], false);
   $("#loading").hidden = true;
-}, (e) => {
-  if (e.total) $("#loading").textContent = `Загрузка модели… ${Math.round((e.loaded / e.total) * 100)}%`;
-}, (err) => {
+}
+function onModelError(err) {
   $("#loading").textContent = "Не удалось загрузить factory.glb. Откройте страницу через веб-сервер, а не как файл.";
   console.error(err);
-});
+}
+// модель встроена в страницу (однофайловая сборка) или лежит рядом как factory.glb
+const embedded = document.getElementById("model-data");
+if (embedded) {
+  const bin = Uint8Array.from(atob(embedded.textContent.trim()), (c) => c.charCodeAt(0));
+  new GLTFLoader().parse(bin.buffer, "", onModel, onModelError);
+} else {
+  new GLTFLoader().load(MODEL_URL, onModel, (e) => {
+    if (e.total) $("#loading").textContent = `Загрузка модели… ${Math.round((e.loaded / e.total) * 100)}%`;
+  }, onModelError);
+}
 
 // ---------------------------------------------------------------- виды
 // цель и положение камеры в координатах Blender (метры)
