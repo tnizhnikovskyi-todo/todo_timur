@@ -347,7 +347,7 @@ const KIND = {
   zone: "Зона", machine: "Верстат · робочий центр", stock: "Місце зберігання", bin: "Комірка стелажа", rack: "Стелаж",
   kit: "Візок комплектації", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Приміщення",
   equipment: "Обладнання", person: "Працівник", power: "Електропостачання", lighting: "Освітлення",
-  hvac: "Вентиляція й опалення",
+  hvac: "Вентиляція й опалення", fire: "Пожежна сигналізація",
 };
 const MACHINE_STATUS = { work: ["ok", "У роботі"], idle: ["warn", "Простій"], stop: ["bad", "Зупинено"] };
 const BIN_STATE = { ok: ["ok", "Запас у нормі"], low: ["warn", "Нижче мінімуму"], out: ["bad", "Порожньо"] };
@@ -972,6 +972,9 @@ function renderOverview() {
   }
   for (const q of D.quality_checks) if (q.state === "fail") attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);
   for (const m of D.productions) if (m.reservation_state === "waiting") attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);
+  for (const [k, g] of Object.entries(D.fire?.groups || {})) {
+    if (g.state !== "ok") attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${g.maintenance_request || ""}`, `obj:${k}`]);
+  }
   for (const [k, u] of Object.entries(D.ventilation?.units || {})) {
     if (u.filter_dp_pa > 250) attention.push(["warn", `${k}: забитий фільтр вентиляції (${u.filter_dp_pa} Па) · ${u.maintenance_request || ""}`, `obj:${k}`]);
   }
@@ -989,6 +992,7 @@ function renderOverview() {
     <div class="sub">Потребує уваги</div>
     <ul class="rows">${attention.map(([c, t, go]) => `<li><button class="row" data-go="${esc(go)}">
       <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${c})"></span>${esc(t)}</span></button></li>`).join("")}</ul>
+    ${fireSummary()}
     ${fleetHtml()}
     ${legendHtml()}
     <div class="hint">Дані: ${esc(D.meta.source)}, база «${esc(D.meta.database)}». ${esc(D.meta.note)}</div>`;
@@ -1236,7 +1240,7 @@ function renderObject(code) {
     if (u.kind === "vehicle" && idx.truck.has(code)) extra += `<div class="sub">Документ</div><ul class="rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;
     if (u.kind === "zone" && D.zones[code]) extra += zoneHtml(D.zones[code]);
     if (u.kind === "zone" && lightGroupOfZone(code)) extra += `<div class="sub">Освітлення</div>${lightingHtml(lightGroupOfZone(code)[0])}`;
-    extra += lightingHtml(code) + ventHtml(code);
+    extra += lightingHtml(code) + ventHtml(code) + fireHtml(code);
     if (D.energy) extra += energyHtml(code);
     if (D.passports?.[code]) extra += passportHtml(D.passports[code]);
   }
@@ -1660,6 +1664,57 @@ function ventHtml(code) {
   return `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
     ${u.note ? `<div class="note">${esc(u.note)}</div>` : ""}
     ${mr ? `<div class="note bad"><b>${esc(mr.id)}</b> · ${esc(mr.name)}</div>` : ""}`;
+}
+
+// ---------------------------------------------------------------- пожежна сигналізація
+function fireSummary() {
+  const F = D.fire;
+  if (!F) return "";
+  const T = F.totals;
+  const warn = Object.entries(F.groups).filter(([, g]) => g.state !== "ok");
+  return `<div class="sub">Пожежна безпека</div>
+    <ul class="rows"><li><button class="row" data-go="obj:FACP-1"><span class="t">Пожежна сигналізація</span>
+      ${pill(warn.length ? ["warn", T.state] : ["ok", "Норма"])}
+      <span class="m">${T.detectors} сповіщувачів · ${T.mcp} ручних · ${T.sounders} оповіщувачів · ${T.flame} полум'я · ${T.spark_detectors} датчиків іскор</span></button></li></ul>`;
+}
+function fireHtml(code) {
+  const F = D.fire;
+  if (!F) return "";
+  const g = F.groups[code];
+  if (g) {
+    const mr = g.maintenance_request ? idx.mr.get(g.maintenance_request) : null;
+    return `<dl class="kv"><dt>Зона</dt><dd><button class="lnk" data-go="obj:${esc(g.zone)}">${esc(g.zone_name)}</button> · ${nf.format(g.area)} м²</dd>
+        <dt>Тип</dt><dd>${esc(g.kind_name)}</dd>
+        <dt>Кількість</dt><dd>${g.n} · крок ≤ ${nf1.format(g.spacing)} м</dd>
+        <dt>Шлейф</dt><dd>${g.loop ?? "—"} приладу <button class="lnk" data-go="obj:FACP-1">FACP-1</button></dd>
+        <dt>Стан</dt><dd>${pill(g.state === "ok" ? ["ok", "Норма"] : ["warn", "Попередження"])}</dd></dl>
+      ${g.warning ? `<div class="note">${esc(g.warning)}</div>` : ""}
+      ${mr ? `<div class="note bad"><b>${esc(mr.id)}</b> · ${esc(mr.name)}</div>` : ""}`;
+  }
+  const T = F.totals;
+  if (code === "FACP-1") {
+    const L = Object.entries(F.loops);
+    return `<dl class="kv"><dt>Стан</dt><dd>${esc(T.state)}</dd><dt>Спринклери</dt><dd>${esc(T.sprinkler)}</dd></dl>
+      <div class="sub">Шлейфи</div>
+      <table class="tbl"><tr><th>#</th><th class="n">Сповіщ.</th><th class="n">Ручні</th><th class="n">Оповіщ.</th><th class="n">Модулі</th></tr>
+        ${L.map(([n, l]) => `<tr><td>${n}</td><td class="n">${l.detectors + l.flame}</td><td class="n">${l.mcp}</td><td class="n">${l.sounders}</td><td class="n">${l.modules}</td></tr>`).join("")}</table>
+      <div class="sub">Групи сповіщувачів</div>
+      <ul class="rows">${Object.entries(F.groups).filter(([, g]) => g.n).map(([k, g]) => `<li><button class="row" data-go="obj:${esc(k)}">
+        <span class="t">${esc(g.zone_name)}</span>${g.state === "ok" ? `<span class="mono">${g.n}</span>` : pill(["warn", "увага"])}
+        <span class="m">${esc(g.kind_name)} · шлейф ${g.loop}</span></button></li>`).join("")}</ul>
+      <div class="sub">Журнал приладу</div>
+      <ul class="rows">${F.events.map((e) => `<li><button class="row" data-go="obj:${esc(e.code)}">
+        <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${e.level === "info" ? "flow" : e.level})"></span>${esc(e.text)}</span>
+        <span class="m">${dayHm(e.time)}</span></button></li>`).join("")}</ul>
+      <div class="src">Розстановка: точкові сповіщувачі під покрівлею з кроком ≤ ${nf1.format(F.rules.smoke_spacing_6_12m)} м
+        (≤ ${nf.format(F.rules.smoke_area_6_12m)} м² на один), теплові — ≤ ${nf1.format(F.rules.heat_spacing)} м; ручні — біля кожного виходу.</div>`;
+  }
+  const n = { "FA-MCP": T.mcp, "FA-SND": T.sounders, "FA-FLAME": T.flame, "SPARK-1": T.spark_detectors }[code];
+  if (n == null) return "";
+  const ev = F.events.filter((e) => e.code === code);
+  return `<dl class="kv"><dt>Кількість</dt><dd>${n}${code === "SPARK-1" ? " датчиків + гасіння перед виходом до фільтра" : ""}</dd>
+      <dt>Прилад</dt><dd><button class="lnk" data-go="obj:FACP-1">FACP-1</button></dd></dl>
+    ${ev.length ? `<div class="sub">Події</div><ul class="rows">${ev.map((e) => `<li><div class="row" style="cursor:default"><span class="t" style="white-space:normal">${esc(e.text)}</span><span class="m">${dayHm(e.time)}</span></div></li>`).join("")}</ul>` : ""}`;
 }
 
 // ---------------------------------------------------------------- телефон

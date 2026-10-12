@@ -15,6 +15,7 @@ import math
 from .equipment import NOMINAL_MM, ROLE_BY_CODE
 from .layout import FOOTPRINT, MACHINES, STATUS
 from .lighting import layout as light_layout
+from .fire import FIRE_ROLES
 from .lighting import LIGHT_ZONES, PANELS, load_lux_norms, panels_load
 from .ventilation import ROOFVENTS, ventilation_data
 
@@ -444,7 +445,7 @@ ENERGY_ROLES["EF-CHG"] = ("ex_fan", [])  # водень: вибухозахищ�
 
 
 def energy_passport(code, specs):
-    role, extra = ENERGY_ROLES.get(code, (None, []))
+    role, extra = ENERGY_ROLES.get(code) or FIRE_ROLES.get(code) or (None, [])
     if role not in specs:
         return None
     main = dict(specs[role])
@@ -453,4 +454,4 @@ def energy_passport(code, specs):
 
 
 def passport_energy(specs):
-    return {c: pp for c in ENERGY_ROLES if (pp := energy_passport(c, specs))}
+    return {c: pp for c in [*ENERGY_ROLES, *FIRE_ROLES] if (pp := energy_passport(c, specs))}

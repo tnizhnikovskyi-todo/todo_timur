@@ -10,6 +10,12 @@ from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, D
 from .energy import (BUS_Z, PFC_H, BUSWAYS, CABLE_Z, CELL_X, EMS_POS, RM6_POS, ROOM, SWB_CELLS, SWB_D, SWB_H, SWB_X0,
                      SWB_X1, SWB_Y, TRAFO_Y, TRAFOS, TRAY_Y, TRAY_Z, energy_passport, taps)
 from .equipment import body_scale, load_specs, passport
+from .fire import FACP_POS, FLAME, SPARK_DETECTORS, SPARK_EXTINGUISH, SPARK_PANEL, Z_DET
+from .fire import KIND_NAME as FIRE_KIND
+from .fire import DUCT_TOP
+from .fire import call_points as fire_call_points
+from .fire import detectors as fire_detectors
+from .fire import sounders as fire_sounders
 from .lighting import PANELS
 from .lighting import layout as light_layout
 from .ventilation import (AHU_POS, AIR_RING_Z, CHG_EXHAUST, FABRIC_DUCTS, FABRIC_R, FABRIC_Z, HEAT_R, ROOFVENTS,
@@ -688,7 +694,7 @@ def build_utilities():
         s.box_lo(W / 2, y, SPRINKLER_Z - 0.025, W - 1.5, 0.05, 0.05, "fire_red")
         for x in range(4, int(W), 4):
             s.box_lo(x, y, SPRINKLER_Z - 0.125, 0.03, 0.03, 0.1, "steel")
-    s.build("SPRINKLERS", "roof", code="SPRINKLERS", kind="equipment", label="Спринклерне пожежогасіння",
+    s.build("SPRINKLERS", "sprinklers", code="SPRINKLERS", kind="equipment", label="Спринклерне пожежогасіння",
             desc="Розподільні трубопроводи під покрівлею, зрошувачі з кроком 4 × 5 м.")
 
     o = Mesh()
@@ -1063,6 +1069,86 @@ def build_ventilation():
                  "зарядними пристроями.")
 
 
+# ---------------------------------------------------------------- пожежна сигналізація
+def _on_wall(m, x, y, side, z, w, d, h, mat, bev=0.01):
+    """Пристрій на стіні/колоні: d — товщина від поверхні."""
+    if side in ("W", "E"):
+        m.box_lo(x + (d / 2 if side == "W" else -d / 2), y, z, d, w, h, mat, bev=bev)
+    else:
+        m.box_lo(x, y - d / 2, z, w, d, h, mat, bev=bev)  # на північній стіні або південній грані колони
+
+
+def ex_pp(code):
+    pp = energy_passport(code, SPECS)
+    return {"maker": pp["manufacturer"], "model": pp["model"]} if pp else {}
+
+
+def build_fire():
+    dets = fire_detectors()
+    for zone, d in dets.items():
+        if not d["points"]:
+            continue
+        m = Mesh()
+        rows = {}
+        for x, y in d["points"]:
+            r = 0.05 if d["kind"] == "heat" else 0.06
+            m.cyl((x, y, Z_DET + 0.115), r + 0.01, 0.03, "phenolic", segs=14)  # база під покрівлею
+            m.cyl((x, y, Z_DET + 0.07), r, 0.06, "phenolic", segs=14)
+            m.cyl((x, y, Z_DET + 0.035), r * 0.55, 0.012, "status_red" if d["kind"] == "heat" else "steel", segs=10)
+            m.box((x + r * 0.7, y, Z_DET + 0.05), (0.012, 0.012, 0.01), "status_green")  # індикатор
+            rows.setdefault(round(y, 1), []).append(x)
+        for y, xs in rows.items():  # кабель шлейфа вздовж ряду
+            xs.sort()
+            if len(xs) > 1:
+                m.box(((xs[0] + xs[-1]) / 2, y, Z_DET + 0.135), (xs[-1] - xs[0], 0.012, 0.012), "fire_red")
+        code = "FA-" + zone[2:]
+        m.build(code, "fire", code=code, kind="fire", **ex_pp(code), label=f"Сповіщувачі · {d['name']}",
+                desc=f"{len(d['points'])} адресних сповіщувачів: {FIRE_KIND[d['kind']]}; крок ≤ {d['spacing']} м.")
+
+    mc = Mesh()
+    for x, y, side in fire_call_points():
+        _on_wall(mc, x, y, side, 1.35, 0.09, 0.05, 0.09, "estop")
+        _on_wall(mc, x, y, side, 1.37, 0.06, 0.055, 0.05, "phenolic", bev=0.0)
+    mc.build("FA-MCP", "fire", code="FA-MCP", kind="fire", **ex_pp("FA-MCP"), label="Ручні пожежні сповіщувачі",
+             desc="Біля кожних воріт і дверей та на колонах уздовж проїздів, на висоті 1,4 м.")
+    sd = Mesh()
+    for x, y, side in fire_sounders():
+        _on_wall(sd, x, y, side, 2.9, 0.12, 0.08, 0.14, "fire_red")
+        _on_wall(sd, x, y, side, 3.04, 0.08, 0.1, 0.05, "led", bev=0.0)
+    sd.build("FA-SND", "fire", code="FA-SND", kind="fire", **ex_pp("FA-SND"), label="Світлозвукові оповіщувачі",
+             desc="Сирена і спалах: у шумному цеху світловий сигнал обов'язковий.")
+    fl = Mesh()
+    for x, y, z, _ in FLAME:
+        fl.box_lo(x, y - 0.1, z, 0.16, 0.2, 0.16, "machine_mid", bev=0.01)
+        fl.box_lo(x, y - 0.205, z + 0.05, 0.1, 0.01, 0.07, "screen")
+        fl.box_lo(x, y - 0.05, z - 0.12, 0.05, 0.05, 0.12, "steel_dark")
+    fl.build("FA-FLAME", "fire", code="FA-FLAME", kind="fire", **ex_pp("FA-FLAME"), label="Сповіщувачі полум'я (Ex)",
+             desc="Вибухозахищені ІЧ-сповіщувачі полум'я над фарбувальними камерами й автоматом фарбування.")
+    p = Mesh()
+    px, py = FACP_POS
+    p.box_lo(px, py, 1.0, 0.6, 0.16, 0.55, "machine_mid", bev=0.02)
+    p.box_lo(px, py - 0.085, 1.33, 0.32, 0.01, 0.14, "screen_on")
+    p.box_lo(px - 0.2, py - 0.085, 1.12, 0.12, 0.01, 0.06, "status_green")
+    p.build("FACP-1", "fire", code="FACP-1", kind="fire", **ex_pp("FACP-1"), label="Приймально-контрольний прилад",
+            desc="Адресний прилад на 4 шлейфи біля входу в офіс (пост охорони); керує оповіщенням, "
+                 "передає сигнал на пульт пожежної охорони й зупиняє вентиляцію при пожежі.")
+    sp = Mesh()
+    for x, y in SPARK_DETECTORS:  # датчики іскор на повітроводі
+        sp.box_lo(x, y, DUCT_TOP - 0.03, 0.14, 0.14, 0.12, "machine_dark", bev=0.01)
+        sp.cyl((x, y, DUCT_TOP + 0.13), 0.03, 0.06, "rubber", segs=8)
+    ex, ey = SPARK_EXTINGUISH
+    sp.cyl((ex, ey, DUCT_Z), 0.44, 0.1, "steel_dark", axis="Y", segs=20)  # кільце форсунок
+    sp.box_lo(ex + 0.5, ey, DUCT_Z - 0.15, 0.2, 0.2, 0.3, "fire_red")  # клапан
+    spx, spy = SPARK_PANEL
+    sp.box_lo(spx, spy, 1.1, 0.5, 0.2, 0.7, "machine_mid", bev=0.02)
+    sp.box_lo(spx, spy - 0.105, 1.55, 0.2, 0.01, 0.1, "screen_on")
+    sp.tube(rounded_path([(spx + 0.2, spy, 1.4), (spx + 0.2, spy, 6.4), (ex + 0.5, spy, 6.4),
+                          (ex + 0.5, ey, 6.4), (ex + 0.5, ey, DUCT_Z - 0.15)], radius=0.2), 0.025, "pipe_blue", segs=8)
+    sp.build("SPARK-1", "fire", code="SPARK-1", kind="fire", **ex_pp("SPARK-1"), label="Іскрогасіння аспірації",
+             desc="Датчики іскор на магістралі аспірації й гілці до фільтра; за ними — водяне гасіння, "
+                  "щоб іскра від пили чи фрези не дійшла до рукавного фільтра й силосу.")
+
+
 # ---------------------------------------------------------------- люди, транспорт, маршрути
 def build_people():
     def body(vest, arms):
@@ -1186,6 +1272,7 @@ def build_all():
     build_energy()
     build_lighting()
     build_ventilation()
+    build_fire()
     build_transport()
     build_people()
     build_columns()

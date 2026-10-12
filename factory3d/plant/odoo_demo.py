@@ -13,6 +13,7 @@ import sys
 from datetime import datetime, timedelta
 
 from .energy import IDLE_DEFAULT, IDLE_K, PROFILE, TARIFF, energy_data, passport_energy
+from .fire import fire_data
 from .lighting import layout as light_layout
 from .lighting import load_lux_norms, panels_load
 from .ventilation import ventilation_data
@@ -665,6 +666,11 @@ class Demo:
         lighting = dict(groups={k: {kk: vv for kk, vv in g.items() if kk != "fixtures"} for k, g in groups.items()},
                         panels=panels_load(groups), uf=0.7, mf=0.8,
                         norms_ref={k: v.get("ref") for k, v in lux_norms.items()})
+        fire = fire_data(specs)
+        self.maintenance.append(dict(id="MR/00036", name="Очистити сповіщувач 2.FAC.07 (запиленість 82 %)",
+                                     equipment="FA-FAC", maintenance_type="corrective", stage="Новий",
+                                     request_date=ts(NOW.replace(hour=9, minute=58))))
+        fire["groups"]["FA-FAC"]["maintenance_request"] = "MR/00036"
         vent = ventilation_data(specs)
         vent["units"]["RV-05"]["maintenance_request"] = "MR/00035"
         self.maintenance.append(dict(id="MR/00035", name="Заміна фільтрів: перепад тиску 285 Па при нормі до 250",
@@ -678,7 +684,7 @@ class Demo:
             productions=self.productions, workorders=self.workorders, sale_orders=self.sale,
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
-            docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent,
+            docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent, fire=fire,
             passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
 
 
