@@ -247,7 +247,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 2;
-controls.maxDistance = 320;
+controls.maxDistance = 360;
 controls.screenSpacePanning = false;
 
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -255,10 +255,10 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture
 scene.add(new THREE.HemisphereLight(0xffffff, 0x6f767d, 0.35));
 const sun = new THREE.DirectionalLight(0xffffff, 1.45);
 sun.position.set(30, 110, 30);
-sun.target.position.set(60, 0, -30);
+sun.target.position.set(60, 0, -38);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
-Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 70, bottom: -70, near: 1, far: 260 });
+Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 85, bottom: -85, near: 1, far: 280 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.04;
 scene.add(sun, sun.target);
@@ -353,16 +353,16 @@ if (embedded) {
 // ---------------------------------------------------------------- види
 // ціль і положення камери в координатах Blender (метри); zone/code — від габаритів об'єкта
 const VIEWS = [
-  { name: "Загальний вигляд", target: [62, 26, 0], pos: [14, -74, 92] },
+  { name: "Загальний вигляд", target: [62, 32, 0], pos: [12, -84, 104] },
   { name: "Склад плит", zone: "Z-SHEETS", dir: [0.25, -1, 0.85] },
-  { name: "Фурнітура", zone: "Z-HW", dir: [0.5, -1, 0.6] },
   { name: "Виробництво", target: [74, 20, 0], pos: [60, -22, 40] },
   { name: "Розкрій", code: "SAW-1", dir: [0.7, -1, 0.75] },
-  { name: "Крайка", code: "EDGE-1", dir: [0.15, -1, 0.55] },
-  { name: "Присадка ЧПК", code: "CNC-1", dir: [0.5, -1, 0.8] },
+  { name: "Крайка і робот", code: "EDGE-1", dir: [0.4, -1, 0.6] },
+  { name: "Присадка і сортування", target: [88, 16, 0], pos: [80, -6, 18] },
   { name: "Збирання", zone: "Z-ASM", dir: [0.2, -1, 0.75] },
+  { name: "Фасади МДФ", target: [73, 66.5, 0], pos: [68, 42, 21] },
   { name: "Склад ГП", zone: "Z-FG", dir: [-1, -0.7, 0.55] },
-  { name: "План згори", target: [60, 30, 0], pos: [60, 29.9, 150] },
+  { name: "План згори", target: [60, 38, 0], pos: [60, 37.9, 175] },
 ];
 
 function viewPose(v) {
@@ -412,7 +412,7 @@ function focusOn(obj) {
 }
 
 // ---------------------------------------------------------------- шари
-const CORE = new Set(["building", "zones", "line", "dust", "people", "flow"]);
+const CORE = new Set(["building", "zones", "line", "facade", "dust", "people", "flow"]);
 function setLayer(key, on) {
   const l = layers.get(key);
   if (!l) return;
