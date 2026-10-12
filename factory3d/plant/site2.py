@@ -163,17 +163,21 @@ def build_backup():
         pv.box((x + lx / 2, y + ly / 2, ROOF_Z + 0.2), (lx - 0.02, ly * math.cos(t), 0.035), "pv_cell",
                rot=(sign * PV_TILT, 0, 0))
     runs = {}
-    for x, y, _ in sorted(rows, key=lambda r: (r[1], r[0])):  # суцільні відрізки ряду → профілі
-        rr = runs.setdefault(y, [])
+    for x, y, sign in sorted(rows, key=lambda r: (r[1], r[0])):  # суцільні відрізки ряду → профілі
+        rr = runs.setdefault((y, sign), [])
         if rr and x - rr[-1][1] < 0.1:
             rr[-1][1] = x + lx
         else:
             rr.append([x, x + lx])
-    for y, rr in runs.items():
+    for (y, sign), rr in runs.items():
         for x0, x1 in rr:
-            for dy in (0.2, ly - 0.2):
-                pv.box_lo((x0 + x1) / 2, y + dy, ROOF_Z, x1 - x0, 0.04, 0.12, "alu")
-    pv.build("PV-ROOF", "backup", code="PV-ROOF", kind="power", label="Сонячна станція на покрівлі",
+            for dy in (0.2, ly - 0.2):  # профілі на покритті: висота — до нижньої грані нахиленого модуля
+                h = 0.2 + sign * (dy - ly / 2) * math.sin(t) - 0.018
+                pv.box_lo((x0 + x1) / 2, y + dy, ROOF_Z, x1 - x0, 0.04, h, "alu")
+                for xf in [x0 + 0.3 + k * 1.5 for k in range(int((x1 - x0 - 0.6) / 1.5) + 1)]:
+                    pv.box_lo(xf, y + dy, ROOF_Z, 0.16, 0.16, 0.02, "steel_dark")  # опора з баластом
+    pv.build("PV-ROOF", "roofdeck",  # панелі лежать на покритті — показуються й ховаються разом із ним
+             code="PV-ROOF", kind="power", label="Сонячна станція на покрівлі",
              desc=f"{len(rows)} модулів схід-захід рядами з проходами 1,5 м для пожежників і відступом 2,5 м "
                   f"від клапанів димовидалення.", **_passport_extra("PV-ROOF"))
     inv = Mesh()
