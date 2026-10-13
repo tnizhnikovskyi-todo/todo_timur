@@ -1,0 +1,310 @@
+# factory3d для Odoo 19 — архітектурний каркас
+
+Версія 0.1 · 13.10.2026 · менеджер проєкту документації. Цей файл — спільна основа для
+документів усіх модулів (`docs/modules/<module>/ARCHITECTURE.md` і `SPEC.md`). Правила
+оформлення модульних документів — у `docs/DOC_STANDARD.md`.
+
+## 1. Принцип
+
+Усе робиться **як для проду**: ролі, права, тести, стоп-крани, тестовий сервер, прод,
+експлуатація — усі 10 етапів, які пройшов `td_genset`. Різниця одна: замість живого обладнання
+до системи підключений наш **емулятор обладнання** (`factory3d_iot_sim`), який говорить
+тими самими протоколами, що й справжні пристрої (OPC UA, Modbus TCP, BACnet/IP, MQTT, REST
+вендорів). Модулі для проду **не знають**, що говорять з емулятором. Перехід на живий пристрій —
+зміна адреси в налаштуваннях джерела даних і звірка, а не новий код.
+
+Джерело істини для поведінки заводу — **макет**: 3D-модель і переглядач (`viewer/index.html`),
+демо-дані `dist/odoo_demo.json` (генератор `plant/odoo_demo.py`), паспорти обладнання
+`plant/equipment_specs.json`, розрахунки `plant/energy.py`, `lighting.py`, `ventilation.py`,
+`fire.py`, `evacuation.py`, `infra.py`, заливка/читання Odoo `plant/odoo_push.py`,
+`odoo_flows.py`, `odoo_pull.py`, data-модуль `odoo_addons/factory3d_iot_sim` (196 сигналів).
+Усе, що є в макеті, має з'явитися в Odoo; чого в макеті немає — не вигадуємо, а виносимо у
+відкриті питання.
+
+## 2. Склад і фази
+
+| # | Модуль | Фаза | Призначення (один рядок) | Місце в репозиторії |
+|---|---|---|---|---|
+| 1 | `factory3d_base` | 1 | Коди сцени, зони цеху, ворота, паспорти обладнання, спільні групи прав | `odoo_addons/factory3d_base` |
+| 2 | `factory3d_viewer` | 1 | 3D-переглядач усередині Odoo: дані з ORM, живі оновлення, «Показати в 3D», журнал станів, кіоск | `odoo_addons/factory3d_viewer` |
+| 3 | `factory3d_iot_sim` | 1 | Емулятор обладнання (окремий сервіс) + пульт сценаріїв в Odoo | `services/iot_sim` + `odoo_addons/factory3d_iot_sim` |
+| 4 | `factory3d_telemetry` | 2 | Хребет збору даних: джерела, сигнали, показання, пороги → заявки ТО, ТО за лічильником; сервіс-колектор | `odoo_addons/factory3d_telemetry` + `services/collector` |
+| 5 | `factory3d_machine_connect` | 2 | Верстати: стани → журнал часу, автостарт/стоп завдань, простої, OEE; портал STORETEQ; карти розкрою з МО | `odoo_addons/factory3d_machine_connect` (+ плагіни колектора) |
+| 6 | `factory3d_energy` | 3 | Ієрархія електропостачання, лічильники, кВт·год і вартість на завдання/МО, СЕС, КГУ, накопичувач, тарифи | `odoo_addons/factory3d_energy` (+ плагін) |
+| 7 | `td_genset` (перенос) | 3 | Готовий модуль генератора SmartGen HGM6120N + CMM366B-4G: перенос на 19, зв'язка з моделлю | окремий репозиторій td_genset; тут — запит на зміни |
+| 8 | `factory3d_yard` | 4 | Двір: рейси сторонніх фур, черга і бронювання воріт, шлагбауми, розпізнавання номерів, автоваги | `odoo_addons/factory3d_yard` (+ плагіни) |
+| 9 | `factory3d_access` | 4 | СКУД Suprema BioStar 2: відмітки → Відвідування, картки, турнікети, відвідувачі, люди по зонах | `odoo_addons/factory3d_access` |
+| 10 | `factory3d_bms` | 5 | Освітлення (норми ДБН, DALI), вентиляція й опалення, тепловий баланс, BACnet | `odoo_addons/factory3d_bms` (+ плагіни) |
+| 11 | `factory3d_fire_safety` | 5 | Пожежна сигналізація (тільки читання), іскрогасіння, димовидалення, евакуація за нормами, журнал навчальних тривог | `odoo_addons/factory3d_fire_safety` (+ плагін) |
+
+Фаза 1 потрібна всім: `factory3d_base` дає коди й зони, емулятор дає обладнання. Фази 3–5
+незалежні одна від одної й можуть іти паралельно.
+
+## 3. Граф залежностей (manifest `depends`)
+
+```
+factory3d_base          ← stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet
+factory3d_viewer        ← factory3d_base, bus, web          (решта модулів — optional через хук, §6.7)
+factory3d_iot_sim       ← factory3d_base                    (пульт сценаріїв; сам емулятор — поза Odoo)
+factory3d_telemetry     ← factory3d_base, maintenance
+factory3d_machine_connect ← factory3d_telemetry, mrp_workorder
+factory3d_energy        ← factory3d_telemetry, mrp_account
+td_genset               ← (власні) + factory3d_base, factory3d_energy   (зв'язка з GENSET і балансом)
+factory3d_yard          ← factory3d_base, stock_picking_batch, delivery, factory3d_telemetry
+factory3d_access        ← factory3d_base, hr_attendance
+factory3d_bms           ← factory3d_telemetry
+factory3d_fire_safety   ← factory3d_telemetry, hr_attendance
+```
+
+Циклів немає. Усе, що пишеться на стандартні моделі (`stock.location`, `mrp.workcenter`,
+`maintenance.equipment`, `hr.employee`, `stock.picking.batch`), робить **тільки** `factory3d_base`
+або модуль-власник функції; два модулі не додають поле з однаковим значенням.
+
+Факти з демо-бази (Odoo 19.0+e, перевірено 13.10.2026): установлені `stock`, `stock_picking_batch`
+(диспетчеризація: `stock.picking.batch.dock_id → stock.location`, `vehicle_category_id`,
+`driver_id`), `stock_fleet`, `fleet`, `delivery`, `mrp`, `mrp_workorder`, `mrp_account`
+(`mrp.production.extra_cost`), `mrp_maintenance` (`maintenance.equipment.workcenter_id`),
+`maintenance`, `quality_control`, `hr`, `hr_attendance`, `iot`, `stock_barcode`,
+`spreadsheet_dashboard`, `web_gantt`, `web_map`. Моделі `stock.dock` **немає** — ворота в Odoo 19 =
+`stock.location` з ознакою доку. На `stock.picking` у демо є тимчасові поля `x_dock`, `x_truck`,
+`x_vehicle` (Char), на `maintenance.equipment` — `x_f3d_signal_ids` (data-модуль). Усі `x_*`
+підлягають міграції в прод-модулі (§6.1, §6.4).
+
+## 4. Топологія розгортання
+
+```
+┌──────────────────────────── docker compose (поруч з Odoo, як /opt/timur-o19) ───────────────────────────┐
+│  odoo19 (Enterprise) + factory3d_*        postgres                                                       │
+│        ▲ JSON-RPC push /f3d/telemetry/*   ▲                                                              │
+│        │ (токен)                          │                                                              │
+│  collector  ── плагіни протоколів ──► [ емулятор iot_sim ]  або  [ живі пристрої в мережі цеху ]         │
+│   (services/collector)                     (services/iot_sim: OPC UA, Modbus TCP, BACnet/IP, MQTT,       │
+│                                             HelvarNet, SICS, REST BioStar 2 / woodStore / Axis / tapio) │
+│  Odoo ◄── REST керування /sim/* ──► емулятор (пульт сценаріїв factory3d_iot_sim)                         │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Колектор** (`services/collector`) — довгоживучий Python-сервіс: тримає з'єднання з пристроями
+  (підписки OPC UA, MQTT, опитування Modbus/BACnet), буферизує, відправляє показання в Odoo пакетами.
+  Конфігурацію (які джерела, які сигнали, адреси) бере з Odoo (`GET /f3d/telemetry/config`).
+  Один процес, плагін на протокол; плагіни належать модулям (таблиця §6.6).
+- **Емулятор** (`services/iot_sim`) — один Python-сервіс, що підіймає сервери всіх протоколів
+  із протокольної матриці (§6.6), має рушій сценаріїв і REST-керування. У тестовому й прод-контурі
+  стоїть замість пристроїв; при переході на живий пристрій колектор перенацілюють на нього.
+- **Odoo** зберігає конфігурацію, агрегати, документи, заявки; ніколи не ходить у мережу цеху сам
+  (крім REST до емулятора з пульта сценаріїв і REST BioStar 2 з `factory3d_access`).
+- Сирі часові ряди великого обсягу (енергія, телеметрія) — у Odoo лише агрегати; сирі — у
+  колекторі/окремому сховищі (TimescaleDB, фаза 3 за потреби). Деталі — у SPEC `factory3d_telemetry`.
+
+## 5. Конвенції (обов'язкові для всіх SPEC)
+
+- **Імена.** Нові моделі `f3d.<name>` (`f3d.zone`, `f3d.signal`, `f3d.reading`); поля, додані до
+  стандартних моделей, з префіксом `f3d_` (`f3d_code`, `f3d_zone_id`); XML-id
+  `<module>.<model>_<what>` (`factory3d_base.view_f3d_zone_form`); групи
+  `factory3d_base.group_f3d_user` / `group_f3d_manager` / `group_f3d_admin`; параметри
+  `ir.config_parameter` з ключем `factory3d.<module>.<param>`.
+- **Жодних `x_`-полів** у прод-модулях. Демо-поля `x_*` мігрують у `post_init_hook` модуля-власника.
+- **Мова.** Інтерфейс і документація — українська (`uk_UA`), технічні імена — англійська.
+  Python 3.12, Odoo 19 ORM; маніфест: `version` `19.0.1.0.0`, `author` `ToDo`, `license` `LGPL-3`,
+  `category` як у стандартних застосунків, `installable: True`.
+- **Код сцени** (`f3d_code`) — єдиний ключ між Odoo і 3D (§6.1). Унікальний у межах моделі.
+- **Сигнали** іменуються шляхом у даних переглядача: `energy/consumers/SAW-1/p_now`,
+  `equipment/FL-1/battery`, `ventilation/units/RV-05/filter_dp_pa`, `infra/totals/pv_now`
+  (так само, як `x_code` у data-модулі `factory3d_iot_sim` — сумісність із переглядачем).
+- **Стоп-крани.** У кожному модулі з обладнанням: `factory3d.<module>.read_enabled` (за
+  замовчуванням `True` на тесті, `False` одразу після встановлення на проді) і
+  `factory3d.<module>.write_enabled` (команди на пристрої; за замовчуванням `False`), плюс
+  `neutralize.sql` (вимикає крони, джерела, токени) — як у `td_genset`.
+- **Права.** Читання — `group_f3d_user`; налаштування джерел, порогів, зон — `group_f3d_manager`;
+  токени, стоп-крани, емулятор — `group_f3d_admin` (входить у `base.group_system`). Операційні
+  дії лишаються в стандартних групах (`mrp.group_mrp_user`, `stock.group_stock_user`,
+  `maintenance.group_equipment_manager`, `hr_attendance.group_hr_attendance_officer`).
+- **Тести.** `odoo.tests.TransactionCase`/`HttpCase` з тегами `post_install`, `-at_install`,
+  `f3d`; стендові сценарії (ТК-xx) — проти емулятора. Мінімум: кожен AC покритий або юніт-тестом,
+  або ТК.
+- **Безпека.** Усі ендпоінти колектора/емулятора — з токеном (`Authorization: Bearer`), токени
+  в `ir.config_parameter` лише для `group_f3d_admin`, у логах не друкуються; пристрої — тільки
+  читання, якщо SPEC явно не дозволяє запис (стоп-кран `write_enabled`).
+- **Міграція й деінсталяція.** `post_init_hook` переносить демо-дані без втрат; `uninstall_hook`
+  не видаляє бізнес-дані (лише свої крони/параметри).
+
+## 6. Наскрізні контракти
+
+### 6.1 Код сцени — `f3d.scene.mixin` (`factory3d_base`)
+
+Абстрактна модель-домішка: `f3d_code` (Char, index, unique per model через SQL-constraint),
+`f3d_kind` (Selection: `location`, `workcenter`, `equipment`, `employee`, `dock`, `zone`,
+`vehicle`, `other`), метод `action_f3d_show()` (повертає client action переглядача з
+`{code}`), `search_f3d(code)`. Домішку отримують `stock.location`, `mrp.workcenter`,
+`maintenance.equipment`, `hr.employee`, `f3d.zone`, `stock.picking.batch` (для фур).
+
+Звідки береться код у демо (джерело міграції): `stock.location.barcode` (`PLT-04C`,
+`RCK-R2-1C`, `FUR-R1-S02-L3`, `FG-R1-B01-L1`), `mrp.workcenter.code` (`SAW-1`, `CNC-2`),
+`maintenance.equipment.serial_no` (`FL-1`, `COMPRESSOR`, `GENSET`, `RV-05`), `hr.employee.barcode`
+(код без дефісів: `OPSAW1` → `OP-SAW-1`; таблиця відповідності — у SPEC base), ворота — `DOCK-W1…W7`,
+`DOCK-E1…E7`, зони — `Z-RCV-1…`, `Z-SHEETS`, `Z-HW`, `Z-EDGE`, `Z-PKS`, `Z-CUT`… (повний перелік —
+ключі `zones`, `docks`, `locations`, `workcenters`, `equipment`, `employees` в `dist/odoo_demo.json`).
+
+### 6.2 Зони й ворота
+
+- `f3d.zone` (`factory3d_base`): код, назва, тип (`receiving`, `storage`, `production`,
+  `assembly`, `packing`, `shipping`, `technical`, `office`, `outdoor`), контур на плані
+  (полігон у метрах, JSON), прив'язки: комірки (`stock.location.f3d_zone_id`), робочі центри,
+  обладнання, ворота. Джерело: `zones` в `odoo_demo.json` і `plant/layout.py`.
+- **Ворота = `stock.location`** з ознакою доку (стандартна диспетчеризація Odoo 19), плюс
+  `f3d_code`, `f3d_side` (`west`/`east`), `f3d_dock_no` (1…7), `f3d_accepts` (категорії
+  товарів: 1–3 плити, 4 фурнітура, 5 крайка, 6 ЛФМ і плівка, 7 пакматеріали), `f3d_zone_id`.
+  Поля `x_dock`, `x_truck`, `x_vehicle` на `stock.picking` **замінюються** стандартним
+  `batch_id` (пакетне переміщення з `dock_id`, `vehicle_category_id`, `driver_id`) і полями
+  `factory3d_base`: `stock.picking.batch.f3d_truck` (Char, держномер або назва фури з макета),
+  `f3d_vehicle_id` (техніка = `maintenance.equipment` навантажувача/тягача). Рейси сторонніх
+  фур (водії, перевізники, бронювання) — це вже `factory3d_yard`, який посилається на `batch_id`.
+
+### 6.3 Паспорт обладнання
+
+`maintenance.equipment` + поля `factory3d_base`: `f3d_role` (роль із `equipment_specs.json`:
+`beam_saw`, `compressor`, `facp`…), `f3d_manufacturer`, `f3d_model`, `f3d_reason` (чому обрано),
+`f3d_power_kw`, `f3d_connected_kw`, `f3d_dimensions` (Д×Ш×В мм), `f3d_spec_ids` (one2many
+`f3d.equipment.spec`: параметр, значення, одиниця, джерело), `f3d_source_ids` (посилання на
+джерела: URL + назва; PDF — вкладеннями), `f3d_units` (скільки одиниць під одним паспортом).
+Зв'язок верстат ↔ обладнання — стандартний `workcenter_id` (`mrp_maintenance`). Імпорт 93
+паспортів із `plant/equipment_specs.json` — крок `post_init_hook`/data-файл `factory3d_base`.
+Поле `note`, куди зараз зливається паспорт текстом, після міграції лишається як є (не чистимо).
+
+### 6.4 Телеметрія (`factory3d_telemetry`) — спільний хребет
+
+- `f3d.source` — джерело даних: тип (`opcua`, `modbus_tcp`, `bacnet_ip`, `mqtt`, `http_push`,
+  `helvarnet`, `sics`, `rest_vendor`), адреса/порт/параметри (JSON), `collector_id`, стан
+  (`online`/`offline`/`error`, останній контакт), `read_enabled`.
+- `f3d.signal` — визначення сигналу: `code` (шлях, §5), `equipment_id`, `source_id`, адреса в
+  джерелі (`address`: NodeId / регістр+тип / об'єкт BACnet / топік), `unit`, `kind`
+  (`gauge`, `counter`, `state`, `event`), `period_s`, `scale`, пороги (`warn_low`, `warn_high`,
+  `alarm_low`, `alarm_high`, `alarm_state`), `last_value`, `last_ts`, `status`
+  (`ok`/`warn`/`alarm`/`stale`), `maintenance_request_id` (відкрита заявка).
+- `f3d.reading` — показання (ts, signal, value, quality), ротація за `factory3d.telemetry.keep_days`;
+  агрегати `f3d.reading.hour` (min/avg/max/sum/count).
+- Ендпоінти (JSON, токен колектора): `GET /f3d/telemetry/config` (джерела+сигнали для цього
+  колектора, ETag), `POST /f3d/telemetry/push` (пакет `[{code, ts, value, q}]`, ідемпотентно),
+  `POST /f3d/telemetry/status` (стан джерел), `GET /f3d/telemetry/health`.
+- Пороги → `maintenance.request` (одна відкрита заявка на сигнал; закриття заявки скидає
+  `status`), ТО за лічильником (`maintenance.equipment.f3d_meter_signal_id`, інтервал у
+  мотогодинах/циклах → планова заявка).
+- Інші модулі **не** створюють власних моделей показань: вони додають типи джерел, плагіни
+  колектора, правила й представлення поверх `f3d.signal`/`f3d.reading`.
+
+### 6.5 Колектор — протокол із Odoo і плагіни
+
+Плагін = Python-пакет `collector/plugins/<protocol>.py` з інтерфейсом `connect(source)`,
+`subscribe(signals)`/`poll()`, `write(signal, value)` (лише якщо `write_enabled`), `health()`.
+Відповідальність:
+
+| Плагін | Протокол | Належить модулю |
+|---|---|---|
+| `modbus_tcp` | Modbus TCP (pymodbus) | `factory3d_telemetry` |
+| `mqtt` | MQTT 3.1.1/5 (paho) | `factory3d_telemetry` |
+| `http_push` | приймач HTTP POST від пристроїв (Axis, tapio webhooks) | `factory3d_telemetry` |
+| `opcua` | OPC UA клієнт (asyncua), companion spec Woodworking | `factory3d_machine_connect` |
+| `woodstore` | REST HOMAG woodStore/STORETEQ (завдання порталу, стоси) | `factory3d_machine_connect` |
+| `bacnet_ip` | BACnet/IP (bacpypes3) | `factory3d_bms` |
+| `helvarnet` | HelvarNet TCP (освітлення DALI) | `factory3d_bms` |
+| `sics` | METTLER TOLEDO SICS (TCP) для автоваг | `factory3d_yard` |
+| `biostar2` | REST Suprema BioStar 2 (опитування з Odoo, без колектора) | `factory3d_access` |
+| `relay_genset` | API ретранслятора SmartGen (існуючий, у `td_genset`) | `td_genset` |
+
+### 6.6 Протокольна матриця емулятора (рішення менеджера)
+
+Емулятор реалізує **серверну** сторону кожного рядка; модуль-споживач — клієнтську (через
+плагін колектора). Карти регістрів/вузлів/об'єктів пише автор SPEC `factory3d_iot_sim` як «документація
+вендора» (додатки P-xx), а модулі-споживачі на них посилаються. Де є опублікований стандарт —
+підмножина стандарту; де немає — наше припущення, позначене «ПРИПУЩЕННЯ, звірити з вендором».
+
+| ID | Клас пристроїв (коди з макета) | Реальна модель | Протокол емулятора | Еталон | Споживач |
+|---|---|---|---|---|---|
+| P-01 | Верстати HOMAG: SAW-1..3, NEST-1, EDGE-1..3, CNC-1..4, BORE-1, DOWEL-1, SORT-1, ASMLINE-1 | SAWTEQ, CENTATEQ, EDGETEQ, DRILLTEQ, SORTBOT, CABTEQ | OPC UA (сервер на верстат або один сервер, простір імен на верстат) | OPC 40550-1 «OPC UA for Woodworking» (umati): MachineryItem, State (Machine/Location/Flags/Overview), Events, JobList/Production | `factory3d_machine_connect` |
+| P-02 | Верстати без інтерфейсу: SLIDE-1, VSAW-1, SAND-1, PRESS-1, GLUE-1, SPRAY-1, AUTOSPRAY-1, DRY-1, UV-1, HINGE-1, BOX-1, WRAP, SHRINK, STRAP, CLAMP-1..6 | Altendorf, Striebig, SCM, Orma, Ardesia, Cefla, Blum, Panotec, Robopac, Smipack, Mosca | Modbus TCP, модуль вводу/виводу (ретрофіт): дискретні входи «в роботі», «аварія», лічильник циклів | карта регістрів як у Advantech ADAM-6050/6060 (ПРИПУЩЕННЯ: конкретна модель I/O) | `factory3d_machine_connect` |
+| P-03 | Портал GANTRY-1 і склад плит | HOMAG STORETEQ P-500 + woodStore | REST JSON «woodStore API v1» (стоси ↔ залишки, завдання порталу, стан порталу) + OPC UA стан | ПРИПУЩЕННЯ (інтерфейс woodStore закритий; звірити з HOMAG) | `factory3d_machine_connect` |
+| P-04 | Карти розкрою й програми | HOMAG intelliDivide / woodWOP | файловий обмін: CSV списку деталей на оптимізацію, MPR для ЧПК; емулятор приймає файли через REST `/jobs` і відповідає планом | формат імпорту intelliDivide (звірити), MPR — відкритий формат | `factory3d_machine_connect` |
+| P-05 | Лічильники: вводи T1/T2, комірки ГРЩ QF-*, шинопроводи BW-1..4, споживачі (35 верстатів, компресор, аспірація…) | Schneider PowerLogic PM5560; MasterPact MTZ2 (Micrologic X, IFE) | Modbus TCP, unit id на лічильник | опублікована карта регістрів PM5560 (Schneider «PM5500 Modbus register list») | `factory3d_energy` |
+| P-06 | Рухоме обладнання FL-1..7, TUG-1 | Linde X50, Jungheinrich EFG 216 / EZS 350 | MQTT JSON: `f3d/mobile/<code>/telemetry` (battery_pct, hours, state, lat/x,y) | ПРИПУЩЕННЯ: телематичний шлюз із MQTT (Linde connect / Jungheinrich FleetControl не мають відкритого API) | `factory3d_telemetry` |
+| P-07 | Інженерія: COMPRESSOR (Atlas Copco GA 37 VSD+ Elektronikon Mk5), DUST-1 (NESTRO NKJ), BOILER (Kalvis K-500M), CHP (TEDOM), BESS (Huawei LUNA2000), PV-INV (Huawei SUN2000), ATS-1 (Socomec ATyS p), трансформатори T1/T2 (датчики температури), лічильник води | — | Modbus TCP, карти вендорів; СЕС і накопичувач — SunSpec/Huawei Modbus | карти Elektronikon Mk5, Huawei SUN2000 Modbus TCP, TEDOM, ATyS p Modbus — підмножина опублікованого | `factory3d_telemetry`, `factory3d_energy` |
+| P-08 | Вентиляція й опалення RV-01..25, AHU-1, котельня; освітлення LP-1..3 (групи LT-*) | Hoval RoofVent RH-9C, VTS VENTUS, Helvar Imagine 950 DALI-2 | BACnet/IP (вентустановки, опалення); HelvarNet TCP (освітлення DALI: групи, сцени, рівень, стан) | BACnet об'єкти AI/AO/BI/BO/MSV; HelvarNet 2.x (опубліковано Helvar) | `factory3d_bms` |
+| P-09 | Пожежна сигналізація FACP, шлейфи 1–4, групи FA-*, іскрогасіння GreCon BS 7, димовидалення D+H CPS-M1 | Siemens Cerberus PRO FC726-ZA | BACnet/IP **тільки читання** (стан зон/сповіщувачів, події: тривога, несправність, запиленість, вимкнення); GreCon і D+H — дискретні входи через I/O (як P-02) | BACnet-інтерфейс Cerberus PRO (звірити назву модуля в Siemens); ПРИПУЩЕННЯ для GreCon/D+H | `factory3d_fire_safety` |
+| P-10 | СКУД: зчитувачі ACC-*, турнікети TURN-*, користувачі | Suprema BioEntry W3 + BioStar 2; Gunnebo SlimStile EV | REST BioStar 2 API (підмножина: `/api/login`, `/api/users`, `/api/devices`, `/api/events/search`, `/api/doors`) | опублікований BioStar 2 API | `factory3d_access` |
+| P-11 | Двір: шлагбауми GATE-IN/OUT (CAME GARD LS6), камери LPR (Axis P1488-LE + License Plate Verifier), автоваги SCALE-TRUCK (АКСІС 60-18-К-Е), КПП | — | шлагбауми — Modbus TCP I/O (коїли «відкрити», входи «відкрито/перешкода»); LPR — HTTP POST JSON від Axis LPV на колектор; ваги — ASCII по TCP (SICS-сумісний діалект) | Axis LPV event format (опубліковано); SICS (METTLER TOLEDO); АКСІС — ПРИПУЩЕННЯ | `factory3d_yard` |
+| P-12 | Генератор GENSET | KOHLER-SDMO D700 + SmartGen HGM6120N + CMM366B-4G | API ретранслятора SmartGen — існуючий `fake_relay.py` з профілем D700 | `relay_api.md` у `td_genset` | `td_genset` |
+| P-13 | Ваги PFA584, принтери ZT411, сканери TC22, планшети | Odoo IoT Box | стандартний Odoo IoT — **поза емулятором** | — | — |
+
+Керування емулятором: REST `/sim/v1/*` (токен): `GET /status`, `GET /devices`,
+`POST /scenario/<name>/start|stop` (сценарії: `shift`, `machine_fault <code>`, `blackout`,
+`filter_clogged <code>`, `truck_no_booking`, `fire_drill <zone>`, `access_event`),
+`POST /device/<code>/fault|clear`, `POST /time {factor}` (прискорення), `GET /signals`.
+Режими: `scenario` (емулятор сам веде завод за змінами й завданнями, які отримав по P-03/P-04)
+і `follow_odoo` (тільки читає стан завдань з Odoo по XML-RPC і веде верстати за ним — для демо
+без `factory3d_machine_connect`). Пульт в Odoo (`factory3d_iot_sim`) — лише обгортка над `/sim/v1`.
+
+### 6.7 Переглядач — контракт даних
+
+- Формат даних переглядача = `dist/odoo_demo.json` (ключі `meta`, `products`, `locations`,
+  `workcenters`, `productions`, `workorders`, `sale_orders`, `purchase_orders`, `pickings`,
+  `quality_checks`, `maintenance_requests`, `equipment`, `employees`, `docks`, `zones`, `energy`,
+  `lighting`, `ventilation`, `fire`, `infra`, `evacuation`, `sheet_chain`, `ship_chain`,
+  `material_paths`, `full_cycle_mo`, `passports`). Еталон побудови з живої бази —
+  `plant/odoo_pull.py` (`LiveDemo`); статична частина (розкладка, маршрути, норми) — з моделі.
+- Хук постачальника даних: абстрактна модель `f3d.viewer.provider` з методом
+  `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None`; кожен модуль реєструє свій
+  провайдер (`energy`, `lighting`, `ventilation`, `fire`, `infra`, `evacuation`, `yard`, `access`),
+  переглядач збирає `payload` послідовно за `sequence`. Без модуля — розділ лишається з
+  моделі (статика) або порожній.
+- Живі оновлення: канал шини `f3d_viewer` (`bus.bus`), повідомлення `{model, codes, kind}`;
+  переглядач дозапитує лише змінені об'єкти (`/f3d/viewer/delta`).
+- «Показати в 3D» — `action_f3d_show()` домішки (§6.1); кнопка на формах `stock.location`,
+  `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `mrp.production`, `stock.picking`,
+  `f3d.zone`, `sale.order` (за MO/відвантаженнями).
+- Журнал станів (`f3d.viewer.snapshot`) для програвання зміни: знімок `payload` раз на N хв + події.
+- Сигнали емуляції/телеметрії потрапляють у `payload` за шляхом = `f3d.signal.code` (§5).
+
+### 6.8 Заявки ТО з обладнання
+
+Єдине правило для всіх модулів: поріг/подія → `maintenance.request` із полями
+`f3d_signal_id`, `f3d_equipment_code`, `maintenance_type='corrective'`, команда — з обладнання;
+дедуплікація: поки відкрита заявка на сигнал, нова не створюється; закриття заявки → `status=ok`
+і запис у журнал. Тексти заявок — українською, з показником і порогом («Заміна фільтрів:
+перепад тиску 285 Па при нормі до 250»).
+
+## 7. Порядок робіт і хвилі документації
+
+- **Хвиля 1 (паралельно):** `factory3d_base`, `factory3d_iot_sim`, `factory3d_viewer`.
+  Емулятор публікує «документацію вендора» (додатки P-01…P-12).
+- **Хвиля 2 (паралельно, після хвилі 1):** `factory3d_telemetry`, `factory3d_machine_connect`,
+  `factory3d_energy`, `td_genset`, `factory3d_yard`, `factory3d_access`, `factory3d_bms`,
+  `factory3d_fire_safety`. Посилаються на SPEC хвилі 1; суперечності вирішує менеджер
+  (журнал рішень §8).
+
+## 8. Журнал рішень менеджера
+
+| ID | Рішення | Чому |
+|---|---|---|
+| D-01 | Емулятор — окремий сервіс поза Odoo, говорить реальними протоколами | інакше прод-модулі довелося б переписувати при переході на залізо; data-модуль у демо-базі стає макетом |
+| D-02 | Один сервіс-колектор із плагінами замість драйверів усередині Odoo | довгі з'єднання (OPC UA, MQTT) не живуть у воркерах Odoo; як ретранслятор у `td_genset` |
+| D-03 | Ворота = `stock.location`-док Odoo 19, не власна модель | `stock_picking_batch` уже дає `dock_id`, диспетчеризацію й Gantt |
+| D-04 | `factory3d_telemetry` — єдині моделі сигналів/показань для всіх | без цього 5 модулів зробили б 5 журналів показань |
+| D-05 | Верстати HOMAG — OPC UA за OPC 40550-1 (umati); tapio — не в v1 | відкритий стандарт галузі, HOMAG його підтримує; tapio — хмара, платний доступ |
+| D-06 | СЕС/накопичувач — Modbus TCP (Huawei/SunSpec), лічильники — PM5560 | опубліковані карти регістрів |
+| D-07 | Пожежна панель — BACnet/IP тільки читання; жодних записів у прилад | вимога безпеки; узгодити з монтажником |
+| D-08 | Освітлення — HelvarNet (Imagine 950), вентиляція — BACnet/IP | опубліковані протоколи вендорів із макета |
+| D-09 | Мобільна техніка — MQTT-шлюз (припущення) | у Linde/Jungheinrich немає відкритого API; шлюз — типове рішення |
+| D-10 | Документація модулів — українською, два файли на модуль (`ARCHITECTURE.md`, `SPEC.md`) | стандарт ToDo; SPEC має вистачати Sonnet для коду, Opus для тестів |
+| D-11 | Сирі ряди — поза Odoo за потреби (TimescaleDB), в Odoo — агрегати й останні значення | обсяг даних (35 верстатів × 1 с) не для PostgreSQL Odoo |
+| D-12 | `td_genset` переносять як є; у цьому проєкті — лише запит на зміни і зв'язка з моделлю | модуль пройшов 10 етапів і стоїть на проді |
+
+## 9. Відкриті питання до замовника (зведені)
+
+1. Генератор: хто веде логіку мережа/генератор — HGM6120N (AMF) чи АВР ATyS p? Впливає на
+   `td_genset` і `factory3d_energy`.
+2. Доступ до інтерфейсів HOMAG: OPC UA на верстатах, woodStore API, формат intelliDivide.
+3. Модуль BACnet на Cerberus PRO FC726 і дозвіл монтажника на читання.
+4. Є на заводі система управління будівлею, чи ми читаємо з установок напряму?
+5. Телематика навантажувачів: який шлюз.
+6. Частота опитування лічильників і термін зберігання сирих даних.
+7. Хто бронює ворота для сторонніх фур (портал постачальника?), що з фурою без броні.
+8. Тариф на електроенергію й зони, правило розподілу енергії на МО.
