@@ -26,8 +26,10 @@ from .odoo_rpc import Odoo
 
 MOD = "factory3d"
 TZ = ZoneInfo("Europe/Kyiv")
-STEPS = ["base", "locations", "workcenters", "people", "purchase", "sale", "internal", "production",
-         "stock", "quality", "maintenance", "finish"]
+STEPS = ["settings", "base", "locations", "workcenters", "people", "purchase", "sale", "internal", "production",
+         "boms", "stock", "quality", "maintenance", "finish"]
+# налаштування, без яких Odoo ховає меню «Локації», «Робочі центри», «Операції»
+SETTINGS = {"group_stock_multi_locations": True, "group_mrp_routings": True}
 UOM = {"шт": ("Units", None), "м": ("m", None), "кг": ("kg", None),
        "арк": (None, "Аркуш"), "компл": (None, "Комплект"), "рул": (None, "Рулон")}
 FG_PRICE = {"KC-B600": 6400, "KC-W800": 4800, "KC-T400": 7900, "OF-D3": 5600, "OF-T1400": 9800,
@@ -106,6 +108,15 @@ class Push:
 
     def uom(self, u):
         return self.ref(key("uom", u))
+
+    # ------------------------------------------------------------ налаштування
+    def step_settings(self):
+        o = self.o
+        fields = o("res.config.settings", "fields_get", attributes=["type"])
+        vals = {k: v for k, v in SETTINGS.items() if k in fields}
+        wid = o("res.config.settings", "create", vals)
+        o("res.config.settings", "execute", [wid])
+        print(f"settings: {', '.join(vals)}")
 
     # ------------------------------------------------------------ довідники
     def step_base(self):
@@ -207,7 +218,7 @@ class Push:
             note = " ".join(x for x in (wc.get("manufacturer"), wc.get("model")) if x)
             self.ensure(key("wc", code), "mrp.workcenter", {
                 "name": wc["name"], "code": code, "time_efficiency": wc["time_efficiency"] * 100,
-                "oee_target": 85, "note": f"<p>{note}</p>" if note else False})
+                "oee_target": 85, "time_start": 15, "note": f"<p>{note}</p>" if note else False})
         print(f"workcenters: {len(self.d['workcenters'])}")
 
     def step_people(self):
@@ -401,6 +412,45 @@ class Push:
             self.run_workorders(mo, wos)
             n += 1
         print(f"production: {n} нових виробничих замовлень")
+
+    # ------------------------------------------------------------ специфікації й операції
+    def step_boms(self):
+        """Специфікація на кожну пару «виріб + лінія»: компоненти на 1 шт і операції маршруту.
+        Наявні МО й завдання прив'язуються до неї (bom_id, operation_id)."""
+        o, d = self.o, self.d
+        units = self.uom("шт")
+        first = {}
+        for mo in d["productions"]:
+            first.setdefault((mo["product"], mo["route"]), mo)
+        for (pcode, route), mo in first.items():
+            wos = [d["workorders"][w] for w in mo["workorders"]]
+            xid = key("bom", pcode, route)
+            if not self.ref(xid):
+                per = {"Розкрій": 2.2, "Пакетний розкрій": 0.9, "Крайкооблицювання": 1.6, "Присадка": 2.0,
+                       "Прохідна присадка": 0.8, "Шкантування": 1.0, "Сортування": 0.5, "Збирання": 6.0,
+                       "Пакування": 3.0}
+                self.ensure(xid, "mrp.bom", {
+                    "product_tmpl_id": self.prod_tmpl(pcode), "product_qty": 1, "product_uom_id": units,
+                    "code": f"лінія {route}" if not route.startswith("F") else f"фасади {route}",
+                    "bom_line_ids": [(0, 0, {"product_id": self.prod(c["product"]),
+                                             "product_qty": round(c["qty"] / mo["qty"], 4),
+                                             "product_uom_id": self.uom(d["products"][c["product"]]["uom"])})
+                                     for c in mo["components"]],
+                    "operation_ids": [(0, 0, {"name": w["name"], "sequence": w["sequence"],
+                                              "workcenter_id": self.ref(key("wc", w["workcenter"])),
+                                              "time_mode": "manual",
+                                              "time_cycle_manual": per.get(w["name"], 1.5)}) for w in wos]})
+            bom = self.ref(xid)
+            ops = o("mrp.routing.workcenter", "search_read", [["bom_id", "=", bom]], fields=["sequence"],
+                    order="sequence,id")
+            for m in d["productions"]:
+                if (m["product"], m["route"]) != (pcode, route):
+                    continue
+                mid = self.ref(key("mo", m["name"]))
+                o("mrp.production", "write", [mid], {"bom_id": bom})
+                for w, op in zip([d["workorders"][x] for x in m["workorders"]], ops):
+                    o("mrp.workorder", "write", [self.ref(key("wo", w["id"]))], {"operation_id": op["id"]})
+        print(f"boms: {len(first)} специфікацій з операціями")
 
     def run_workorders(self, mo, wos):
         if mo["state"] != "progress":
