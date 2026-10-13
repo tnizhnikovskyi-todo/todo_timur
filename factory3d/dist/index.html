@@ -244,6 +244,11 @@ button { font: inherit; color: inherit; }
 .mk.done { background: #1e9e57; border-color: #1e9e57; } .mk.prog { background: #d98a00; border-color: #d98a00; }
 .mk.pend { background: #6b7886; border-color: #6b7886; } .mk.hl { background: #0f7f9e; border-color: #0f7f9e; }
 .mk.bad { background: #d63a2b; border-color: #d63a2b; }
+.mo-tag { font: 600 10px/1 var(--f-mono, monospace); padding: 2px 4px; border-radius: 4px; color: #fff; white-space: nowrap;
+  transform: translate(10px, -10px); pointer-events: auto; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.mo-tag.bad { outline: 2px solid #d63a2b; }
+.layer.prod-ov { font-weight: 600; margin-bottom: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.layer.prod-ov small { display: block; font-weight: 400; color: var(--muted); }
 .radio { display: flex; flex-direction: column; gap: 2px; }
 .pp-head { font: 600 15px/1.3 var(--f-display); margin-top: 2px; }
 .chart { display: block; width: 100%; height: auto; margin-top: 4px; }
@@ -293,6 +298,7 @@ button { font: inherit; color: inherit; }
     </div>
     <div class="sec">
       <h2>Шари</h2>
+      <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>маршрути й поточне місце кожного замовлення · вид згори без інженерії</small></span></label>
       <div class="layers" id="layers"></div>
       <div class="row-btns" style="margin-top:8px">
         <button class="btn" id="all-on">Усі</button>
@@ -803,6 +809,111 @@ function highlight(entries, { path = false, fit = true } = {}) {
   if (fit) fitBox(box);
 }
 
+// ---------------------------------------------------------------- шар «Замовлення в роботі»
+// маршрут кожного замовлення в роботі (верстати в порядку операцій) і точка там, де воно зараз:
+// на верстаті поточної операції або посередині переходу між завершеною й наступною
+const prodOv = { on: false, objs: [], dots: [], color: new Map(), byMo: new Map(), focus: null, saved: null };
+// вибране замовлення — яскраво, решта маршрутів притухає
+function prodFocus(name) {
+  prodOv.focus = name;
+  prodOv.byMo.forEach((objs, mo) => {
+    const k = !name || mo === name ? 1 : 0.15;
+    for (const o of objs) {
+      if (o.isCSS2DObject) o.element.style.opacity = k;
+      else o.traverse((x) => { if (x.material) { x.material.transparent = true; x.material.opacity = (x.userData.op0 ??= x.material.opacity) * k; } });
+    }
+  });
+}
+const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожежна безпека", "ІТ і Odoo", "Територія й охорона"]);
+const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
+function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
+function clearProdOverlay() {
+  for (const o of prodOv.objs) { scene.remove(o); o.geometry?.dispose(); }
+  prodOv.objs = []; prodOv.dots = []; prodOv.color.clear(); prodOv.byMo.clear();
+}
+function moPosition(wos) {
+  const k = wos.findIndex((w) => w.state === "progress");
+  if (k >= 0) return { k, f: 0, w: wos[k] };
+  const done = wos.map((w) => w.state === "done").lastIndexOf(true);
+  if (done < 0) return { k: 0, f: 0, w: wos[0] };
+  if (done === wos.length - 1) return null;
+  return { k: done, f: 0.5, w: wos[done + 1] }; // між операціями — у буфері / в дорозі
+}
+function drawProdOverlay() {
+  clearProdOverlay();
+  if (!prodOv.on || !D) return;
+  const mos = D.productions.filter((m) => m.state === "progress");
+  mos.forEach((mo, i) => {
+    const wos = mo.workorders.map((id) => D.workorders[id]);
+    const pts = [], at = [];
+    const off = new THREE.Vector3(((i % 6) - 2.5) * 0.35, 0, (Math.floor(i / 6) - 2.5) * 0.35); // розвести збіжні маршрути
+    for (const w of wos) {
+      const obj = items.get(w.workcenter);
+      if (!obj) { at.push(pts.length - 1); continue; }
+      const p = topOf(obj).add(new THREE.Vector3(0, 1.5, 0)).add(off);
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) pts.push(p);
+      at.push(pts.length - 1);
+    }
+    if (!pts.length) return;
+    const col = moColor(i);
+    prodOv.color.set(mo.name, "#" + col.getHexString());
+    const mine = [];
+    prodOv.byMo.set(mo.name, mine);
+    const add = (o) => { scene.add(o); prodOv.objs.push(o); mine.push(o); };
+    const curve = pts.length > 1 ? new THREE.CatmullRomCurve3(pts, false, "centripetal") : null;
+    if (curve) {
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 20, 0.22, 6, false),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 }));
+      tube.userData.isPulse = true;
+      add(tube);
+    }
+    const pos = moPosition(wos);
+    if (!pos) return;
+    const a = Math.max(0, at[pos.k]), b = Math.max(0, at[Math.min(pos.k + 1, at.length - 1)]);
+    const u = a + (b - a) * pos.f;
+    const p = curve ? curve.getPoint(u / (pts.length - 1)) : pts[0];
+    const blocked = !!pos.w?.blocked;
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: col }));
+    const ring = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 12),
+      new THREE.MeshBasicMaterial({ color: blocked ? 0xd63a2b : 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
+    dot.add(ring);
+    dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
+    dot.traverse((o) => { o.userData.isPulse = true; });
+    add(dot); prodOv.dots.push(ring);
+    const el = document.createElement("div");
+    el.className = "mo-tag" + (blocked ? " bad" : "");
+    el.style.background = "#" + col.getHexString();
+    el.textContent = mo.name.split("/").pop();
+    el.title = `${mo.name} · ${mo.product_name} × ${mo.qty} — ${pos.w ? `${pos.f ? "до " : ""}${pos.w.name}` : ""}${blocked ? " · зупинка" : ""}`;
+    el.addEventListener("click", (e) => { e.stopPropagation(); showMO(mo.name); });
+    const tag = new CSS2DObject(el);
+    tag.position.copy(dot.position);
+    add(tag);
+  });
+  if (prodOv.focus) prodFocus(prodOv.focus);
+}
+async function setProdOverlay(on) {
+  if (prodOv.on === on) return;
+  prodOv.on = on;
+  $("#opt-prod").checked = on;
+  if (on) {
+    stopDrill();
+    prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
+    layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) setLayer(k, false); });
+    select(null); clearHighlight();
+    goView({ name: "План згори", target: [77, 36, 0], pos: [77, 35.9, 172] });
+    await modelLoaded;
+    drawProdOverlay();
+    openTab("production");
+  } else {
+    clearProdOverlay(); prodOv.focus = null;
+    if (prodOv.saved) prodOv.saved.forEach((want, k) => setLayer(k, want));
+    prodOv.saved = null;
+    renderPanel();
+  }
+}
+$("#opt-prod").onchange = (e) => setProdOverlay(e.target.checked);
+
 // ---------------------------------------------------------------- вибір мишею
 const ray = new THREE.Raycaster();
 const ptr = new THREE.Vector2();
@@ -1001,7 +1112,7 @@ const backBtn = () => `<button class="back" data-back="1">← ${esc(({ overview:
 // усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
 body().addEventListener("click", (e) => {
   const back = e.target.closest("[data-back]");
-  if (back) { stopDrill(); select(null); clearHighlight(); openTab(panel.tab || "overview"); return; }
+  if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) prodFocus(null); openTab(panel.tab || "overview"); return; }
   const a = e.target.closest("[data-go]");
   if (!a) return;
   const [t, ...rest] = a.dataset.go.split(":");
@@ -1117,7 +1228,7 @@ function renderProduction() {
       const wc = cur ? D.workcenters[cur.workcenter] : null;
       const blocked = cur?.blocked;
       return `<li><button class="row" data-go="mo:${esc(m.name)}">
-        <span class="t">${esc(m.name)} · ${esc(m.product_name)} × ${m.qty}</span>${pill(blocked ? ["bad", "Зупинка"] : MO_STATE[m.state] || ["idle", m.state])}
+        <span class="t">${prodOv.color.has(m.name) ? `<span class="swatch" style="background:${prodOv.color.get(m.name)};display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px"></span>` : ""}${esc(m.name)} · ${esc(m.product_name)} × ${m.qty}</span>${pill(blocked ? ["bad", "Зупинка"] : MO_STATE[m.state] || ["idle", m.state])}
         <span class="m">${cur ? `${esc(cur.name)} — ${esc(wc?.name || cur.workcenter)}` : "—"} · ${esc(m.origin)}</span>
         <span class="pw">${bar(m.progress, blocked ? "bad" : "", `mo:${esc(m.name)}`)}</span></button></li>`;
     }).join("")}</ul>`;
@@ -1127,6 +1238,7 @@ function showMO(name) {
   if (!mo) return;
   select(null);
   openView({ type: "mo", name });
+  if (prodOv.on) prodFocus(name);
   const wos = mo.workorders.map((id) => D.workorders[id]);
   highlight(wos.map((w) => ({
     code: w.workcenter,
@@ -1835,6 +1947,7 @@ function applySimTime(min) {
   tickClock();
   renderPanel(true);
   updateLive();
+  if (prodOv.on) drawProdOverlay();
 }
 $("#shift-t").oninput = (e) => applySimTime(+e.target.value);
 $("#shift-now").onclick = () => { stopShift(); applySimTime(null); };
@@ -1873,6 +1986,7 @@ async function startDrill() {
   const E = D.evacuation;
   if (!E) return;
   await Promise.all(["fire", "site"].map((k) => loadPart(k).catch(() => {})));
+  await setProdOverlay(false);
   stopDrill(); select(null); clearHighlight();
   drill.on = true; drill.t0 = performance.now();
   drill.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
@@ -1980,6 +2094,10 @@ renderer.setAnimationLoop(() => {
   if (pulse.visible) {
     pulseT = (pulseT + dt * 0.12) % 1;
     pulse.position.copy(hl.curve.getPointAt(pulseT));
+  }
+  if (prodOv.dots.length && !reduceMotion) {
+    const s = 1 + 0.25 * Math.sin(now / 260);
+    for (const r of prodOv.dots) r.scale.setScalar(s);
   }
   if (drill.on) {
     const on = Math.sin(now / 180) > 0;
