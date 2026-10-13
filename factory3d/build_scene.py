@@ -40,9 +40,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 VIEWER = os.path.join(HERE, "viewer", "index.html")
 
 
-def write_odoo(out_dir):
-    """Демо-дані «як із Odoo» (plant/odoo_demo.py) поруч із моделлю."""
-    from plant.odoo_demo import generate
+def write_odoo(out_dir, live=False):
+    """Дані Odoo поруч із моделлю: демо (plant/odoo_demo.py) або, з --live, жива база (plant/odoo_pull.py)."""
+    if live:
+        from plant.odoo_pull import generate
+    else:
+        from plant.odoo_demo import generate
     path = os.path.join(out_dir, "odoo_demo.json")
     from plant.cycle_check import check
     data = generate()
@@ -153,7 +156,7 @@ def standalone(html):
             '</head><body>\n' + html + "\n</body></html>\n")
 
 
-def main(out_dir):
+def main(out_dir, live=False):
     from plant.geom import make_layers, make_materials
     from plant.site import build_all
 
@@ -186,7 +189,7 @@ def main(out_dir):
                           export_cameras=False)
     bpy.context.preferences.filepaths.save_version = 0  # без factory.blend1
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out_dir, "factory.blend")))
-    write_odoo(out_dir)
+    write_odoo(out_dir, live)
     export_parts(out_dir)
     embed_viewer(out_dir)
     objs = [o for o in bpy.data.objects if o.type == "MESH"]
@@ -196,8 +199,10 @@ def main(out_dir):
 
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
+    live = "--live" in argv  # дані з Odoo (ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD), а не демо
+    argv = [a for a in argv if a != "--live"]
     if argv and argv[0] == "--embed":  # лише переглядач і дані, частини моделі вже є в <dist>/parts
-        write_odoo(argv[-1])
+        write_odoo(argv[-1], live)
         embed_viewer(argv[-1])
     else:
-        main(argv[0] if argv else "dist")
+        main(argv[0] if argv else "dist", live)

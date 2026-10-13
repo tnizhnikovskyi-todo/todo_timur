@@ -1310,7 +1310,8 @@ Promise.all([loadOdoo(), modelLoaded]).then(([data]) => {
   scheduleWOs();
   simStart = Date.now();
   $("#odoo-pill").classList.add("on");
-  $("#odoo-state").textContent = "демо-дані";
+  $("#odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";
+  if (D.meta.live) $("#odoo-pill").title = `Знімок бази на ${D.meta.pulled_at}`;
   tickClock();
   setInterval(tick, 3000);
   setInterval(tickClock, 1000);
