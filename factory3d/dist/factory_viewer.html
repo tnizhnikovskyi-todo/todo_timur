@@ -266,6 +266,51 @@ ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
 .src { font-size: 11px; color: var(--muted); margin-top: 6px; }
 .src a { color: var(--fg); text-decoration-color: var(--accent); }
 @media (max-width: 760px) { #card { width: auto; } .odoo-pill .muted { display: none; } #side { top: 112px; } }
+
+/* ---------- Потік зміни: стрічка часу над сценою, поки грає таймер ---------- */
+#flow { top: 68px; left: 284px; right: 384px; padding: 8px 12px 8px; display: flex; flex-direction: column; gap: 4px; }
+#flow[hidden] { display: none; }
+.fl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fl-head b { font: 600 14px/1.2 var(--f-display); letter-spacing: 0.01em; }
+.fl-head .mono { color: var(--muted); }
+.fl-head #flow-time { color: var(--fg); font-weight: 500; }
+.fl-key { margin-left: auto; display: flex; gap: 10px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.fl-key i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
+.fl-key .tri { width: 0; height: 0; border: 5px solid transparent; border-top: 8px solid #2f80c0; border-bottom: 0; }
+.fl-key .tri.up { border-top: 0; border-bottom: 8px solid var(--ok); }
+.fl-key .dot2 { border-radius: 50%; background: var(--idle); }
+#flow-svg { display: block; width: 100%; }
+#flow-svg text { fill: var(--muted); font: 11px var(--f-body); }
+#flow-svg text.ax { font: 10px var(--f-mono); }
+#flow-svg text.ln { fill: var(--fg); }
+#flow-svg .lane { fill: color-mix(in srgb, var(--line) 28%, transparent); }
+#flow-svg .grid { stroke: color-mix(in srgb, var(--line) 80%, transparent); stroke-width: 1; }
+#flow-svg [data-go] { cursor: pointer; }
+#flow-svg .wo { transition: opacity 0.2s; }
+#flow-svg .wo.act { stroke: var(--fg); stroke-width: 1; }
+#flow-svg .wo.bad { stroke: var(--bad); stroke-width: 1.5; }
+#flow-svg .wo:hover { stroke: var(--accent); stroke-width: 1.5; }
+#flow-svg .past { fill: color-mix(in srgb, var(--fg) 5%, transparent); }
+#flow-svg .now { stroke: var(--accent); stroke-width: 2; }
+#flow-svg .nowlbl { fill: var(--accent-fg); font: 600 10px var(--f-mono); }
+#flow-svg .nowbg { fill: var(--accent); }
+.fl-feed { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; font-size: 12px; min-height: 34px; }
+.fl-feed li { display: flex; gap: 6px; min-width: 0; align-items: baseline; color: var(--muted); }
+.fl-feed li.new { color: var(--fg); }
+.fl-feed .mono { flex: none; }
+.fl-feed .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-feed .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; align-self: center; }
+@media (max-width: 1180px) {
+  #flow { left: 12px; right: 12px; }
+  body.flow-on #side, body.flow-on #card { top: calc(var(--flow-bottom, 68px) + 8px); max-height: calc(100% - var(--flow-bottom, 68px) - 72px); }
+}
+@media (max-width: 760px) {
+  #flow { padding: 6px 8px; }
+  .fl-key { display: none; }
+  .fl-feed { grid-template-columns: 1fr; min-height: 0; }
+  .fl-feed li:nth-child(n+3) { display: none; }
+  body.flow-on #card { top: auto; max-height: 34%; }
+}
 </style>
 
 <div id="app">
@@ -286,6 +331,14 @@ ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
     </div>
     <button class="btn" id="toggle-side" aria-expanded="false" aria-controls="side">Види і шари</button>
   </header>
+
+  <section class="panel" id="flow" hidden aria-label="Потік зміни">
+    <div class="fl-head"><b>Потік зміни</b><span class="mono" id="flow-time"></span><span class="mono" id="flow-sum"></span>
+      <span class="fl-key"><span><i class="tri"></i>фура з матеріалами</span><span><i class="dot2"></i>склад → цех</span>
+        <span><i class="tri up"></i>фура клієнта</span><span>смуга — операція, колір — замовлення</span></span></div>
+    <svg id="flow-svg" role="img" aria-label="Операції замовлень і переміщення матеріалів за часом зміни"></svg>
+    <ul class="fl-feed" id="flow-feed" aria-live="off"></ul>
+  </section>
 
   <nav class="panel" id="side" aria-label="Види і шари">
     <div class="sec">
@@ -930,7 +983,10 @@ function cyclePosition(wos, at, firstOut, lastIn) {
 function drawProdOverlay() {
   clearProdOverlay();
   if (!prodOv.on || !D) return;
-  const mos = D.productions.filter((m) => m.state === "progress");
+  const sim = simOverride != null; // програвання зміни: показуємо всі замовлення дня, рух — за часом операцій
+  prodOv.sim = sim;
+  prodOv.tracks = []; prodOv.batches = [];
+  const mos = D.productions.filter((m) => (sim ? m.state !== "cancel" : m.state === "progress"));
   const mats = new Map(); // однаковий шлях матеріалу в кількох замовлень — одна лінія, товща
   for (const mo of mos) {
     for (const c of mo.components) {
@@ -960,6 +1016,7 @@ function drawProdOverlay() {
     m.userData.isPulse = true;
     m.userData.mos = e.mos;
     scene.add(m); prodOv.objs.push(m); matObjs.push(m);
+    if (sim) continue; // у програванні матеріал їде партіями у свій час — див. buildBatches
     const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 2.4);
     matObjs.push(...parts); prodOv.parts.push(...parts);
   }
@@ -968,13 +1025,13 @@ function drawProdOverlay() {
     const wos = mo.workorders.map((id) => D.workorders[id]);
     const off = new THREE.Vector3(((i % 6) - 2.5) * 0.35, 0, (Math.floor(i / 6) - 2.5) * 0.35); // розвести збіжні маршрути
     // увесь цикл однією лінією: фура з плитами → приймання → стелаж → портал → верстати → склад ГП → фура клієнта
-    const pts = [], stage = [];
+    const pts = [], stage = [], codes = [];
     const push = (code, kind) => {
       const obj = items.get(code);
       if (!obj) return pts.length - 1;
       const p = topOf(obj).add(new THREE.Vector3(0, kind === "op" ? 1.5 : 1.0, 0)).add(off);
       if (kind !== "op") p.y = Math.min(p.y, 3.0); // стелажі високі — лінія лишається низько
-      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) { pts.push(p); stage.push(kind); }
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) { pts.push(p); stage.push(kind); codes.push(code); }
       return pts.length - 1;
     };
     for (const st of mo.supply?.steps || []) push(st.code, "in");
@@ -984,7 +1041,7 @@ function drawProdOverlay() {
     for (const st of mo.delivery?.steps || []) push(st.code, "out");
     const firstOut = pts.length > nOps ? nOps : nOps - 1;
     if (pts.length < 2) return;
-    const col = moColor(i);
+    const col = moColor(idx.moI.get(mo.name) ?? i);
     prodOv.color.set(mo.name, "#" + col.getHexString());
     const mine = [];
     prodOv.byMo.set(mo.name, mine);
@@ -1004,6 +1061,9 @@ function drawProdOverlay() {
     const end = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 12), new THREE.MeshBasicMaterial({ color: col }));
     end.position.copy(pts[pts.length - 1]);
     add(start); add(end);
+    const fg = codes.findIndex((c, j) => j >= firstOut && /^FG-/.test(c));
+    const track = { mo, wos, at, lastIn, firstOut, fg: fg > 0 ? fg : firstOut, n: pts.length, curve,
+      out: mo.delivery?.picking ? dayMin(idx.pick.get(mo.delivery.picking)?.scheduled_date) : null };
     const pos = cyclePosition(wos, at, firstOut, lastIn);
     const p = curve.getPoint(Math.min(1, Math.max(0, pos.u / (pts.length - 1))));
     const blocked = !!pos.w?.blocked && pos.w.state === "progress";
@@ -1023,8 +1083,105 @@ function drawProdOverlay() {
     const tag = new CSS2DObject(el);
     tag.position.copy(dot.position);
     add(tag);
+    Object.assign(track, { dot, ring, tag, el, col: "#" + col.getHexString() });
+    prodOv.tracks.push(track);
   });
+  if (sim) { buildBatches(mos); prodSimMove(simMinutes() ?? simOverride); }
   if (prodOv.focus) prodFocus(prodOv.focus);
+}
+
+// ---------------------------------------------------------------- рух за часом зміни (поки грає таймер)
+const dayStart = () => Date.parse(D.meta.now.slice(0, 10) + "T00:00");
+const dayMin = (s) => (s ? (Date.parse(s.replace(" ", "T")) - dayStart()) / 60000 : null);
+const woMin = (w, k) => (w[k] - dayStart()) / 60000;
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+// де замовлення о хвилині t: на верстаті під час операції, у дорозі між операціями, після пакування — склад ГП,
+// за 30 хв до відвантаження — до воріт і фури клієнта
+function trackAt(tr, t) {
+  const { wos, at } = tr;
+  const lerp = (a, b, k) => a + (b - a) * clamp01(k);
+  const s0 = woMin(wos[0], "_s");
+  if (t < s0) return { u: lerp(tr.lastIn, at[0], (t - (s0 - 20)) / 20), ph: t < s0 - 20 ? "матеріал під порталом, чекає розкрою" : `до операції «${wos[0].name}»` };
+  for (let k = 0; k < wos.length; k++) {
+    const s = woMin(wos[k], "_s"), f = woMin(wos[k], "_f");
+    if (t < s) {
+      const pf = woMin(wos[k - 1], "_f");
+      return { u: lerp(at[k - 1], at[k], (t - pf) / Math.max(1, Math.min(20, s - pf))), ph: `у дорозі до «${wos[k].name}»` };
+    }
+    if (t < f) return { u: at[k], ph: `${wos[k].name} · ${D.workcenters[wos[k].workcenter]?.name || wos[k].workcenter}`, w: wos[k] };
+  }
+  const fl = woMin(wos[wos.length - 1], "_f");
+  if (tr.out != null && t >= tr.out - 30) return { u: lerp(tr.fg, tr.n - 1, (t - (tr.out - 30)) / 30), ph: "відвантаження клієнту" };
+  if (tr.firstOut >= tr.n - 1 && tr.fg >= tr.n - 1) return { u: at[at.length - 1], ph: "готово" };
+  return { u: lerp(at[at.length - 1], tr.fg, (t - fl) / 20), ph: "склад готової продукції" };
+}
+// партії матеріалів: фура → склад у час приймання; склад → верстат за 25 хв до операції, що їх споживає
+const IN_CODE = /^(GATE|TRUCK|DOCK|UNLOAD|QC|SCALE|PRN)/;
+function codesCurve(codes) {
+  const pts = [];
+  codes.forEach((code, j) => {
+    const obj = items.get(code);
+    if (!obj) return;
+    const p = topOf(obj).add(new THREE.Vector3(0, j === codes.length - 1 ? 1.4 : 0.9, 0));
+    if (j < codes.length - 1) p.y = Math.min(p.y, 2.6);
+    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+  });
+  return pts.length > 1 ? new THREE.CatmullRomCurve3(pts, false, "centripetal") : null;
+}
+const BATCH_GEO = new THREE.BoxGeometry(1.1, 0.7, 1.1);
+const batchMat = new Map();
+function addBatch(codes, kind, w0, w1, mos, label) {
+  const curve = codesCurve(codes);
+  if (!curve || w1 <= w0) return;
+  if (!batchMat.has(kind)) batchMat.set(kind, new THREE.MeshBasicMaterial({ color: MAT_COLOR[kind] ?? 0x888888 }));
+  const m = new THREE.Mesh(BATCH_GEO, batchMat.get(kind));
+  m.userData = { isPulse: true, curve, w0, w1, mos, label };
+  m.visible = false;
+  scene.add(m); prodOv.objs.push(m); prodOv.batches.push(m);
+}
+function buildBatches(mos) {
+  const inSeen = new Set();
+  for (const mo of mos) {
+    const wos = mo.workorders.map((id) => D.workorders[id]);
+    for (const c of mo.components) {
+      if (!c.path?.length || !c.to) continue;
+      const codes = c.path.map((st) => st.code);
+      let s = codes.findIndex((x) => !IN_CODE.test(x));
+      if (s < 0) s = codes.length - 1;
+      const rc = c.receipt && idx.pick.get(c.receipt);
+      if (rc && !inSeen.has(rc.name) && s > 0) { // приймання: фура → склад, раз на документ
+        inSeen.add(rc.name);
+        const m0 = dayMin(rc.scheduled_date);
+        if (m0 != null) addBatch(codes.slice(0, s + 1), c.kind, m0, m0 + 35, null, rc.name);
+      }
+      if (c.product === mo.supply?.product) continue; // плиту везе сама мітка замовлення
+      const w = wos.find((x) => x.workcenter === c.to) || wos[0];
+      const ws = woMin(w, "_s");
+      addBatch([...codes.slice(s), c.to], c.kind, ws - 25, ws, new Set([mo.name]), mo.name);
+    }
+  }
+}
+function prodSimMove(t) {
+  if (!prodOv.sim || t == null) return;
+  for (const tr of prodOv.tracks) {
+    const pos = trackAt(tr, t);
+    const p = tr.curve.getPoint(clamp01(pos.u / Math.max(1, tr.n - 1)));
+    tr.dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
+    tr.tag.position.copy(tr.dot.position);
+    const bad = !!pos.w?.blocked && t >= (simBase - dayStart()) / 60000;
+    if (tr.bad !== bad) { tr.bad = bad; tr.ring.material.color.set(bad ? 0xd63a2b : 0xffffff); tr.el.classList.toggle("bad", bad); }
+    if (tr.ph !== pos.ph) {
+      tr.ph = pos.ph;
+      tr.el.title = `${tr.mo.name} · ${tr.mo.product_name} × ${tr.mo.qty} — ${pos.ph}` + (tr.mo.delivery ? ` → ${tr.mo.delivery.partner}` : "");
+    }
+  }
+  const f = prodOv.focus;
+  for (const b of prodOv.batches) {
+    const d = b.userData;
+    const on = t >= d.w0 && t <= d.w1 && (!f || !d.mos || d.mos.has(f));
+    b.visible = on;
+    if (on) b.position.copy(d.curve.getPointAt(clamp01((t - d.w0) / (d.w1 - d.w0))));
+  }
 }
 // у шарі замовлень довгі назви зон приймання й відвантаження перекривають фури — лишаємо «Ворота N»
 function shortDoorLabels(on) {
@@ -1147,6 +1304,7 @@ function indexData() {
       idx.prodLocs.get(q.product).push({ code, qty: q.qty, reserved: q.reserved || 0 });
     }
   }
+  idx.moI = new Map(D.productions.map((m, i) => [m.name, i]));
   idx.truck = new Map(D.pickings.filter((p) => p.truck).map((p) => [p.truck, p.name]));
 }
 Promise.all([loadOdoo(), modelLoaded]).then(([data]) => {
@@ -2185,17 +2343,201 @@ function applySimTime(min) {
   tickClock();
   renderPanel(true);
   updateLive();
-  if (prodOv.on) drawProdOverlay();
+  // у програванні шар будується раз, далі мітки рухаються щокадру; перебудова — лише при зміні режиму
+  if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) drawProdOverlay();
+  flowUpdate(min);
 }
 $("#shift-t").oninput = (e) => applySimTime(+e.target.value);
 $("#shift-now").onclick = () => { stopShift(); applySimTime(null); };
+const SHIFT_STEP_MS = reduceMotion ? 600 : 250;
+let simCont = null; // крок таймера і коли він стався — для плавного руху між кроками
+function simMinutes() {
+  if (simOverride == null) return null;
+  if (!shiftTimer || !simCont) return simOverride;
+  return Math.min(FLOW_T1, simCont.m + ((performance.now() - simCont.at) / SHIFT_STEP_MS) * 5);
+}
+
+// ---------------------------------------------------------------- потік зміни: стрічка часу над сценою
+const FLOW_T0 = 420, FLOW_T1 = 930; // 07:00–15:30, як повзунок
+const FLOW_LANES = [
+  { key: "in", name: "Приймання" },
+  { key: "move", name: "Склад → цех", short: "Склад" },
+  { key: "cut", name: "Розкрій", re: /^(SAW|SLIDE|VSAW|NEST)-/ },
+  { key: "edge", name: "Крайка", re: /^EDGE-/ },
+  { key: "drill", name: "Присадка", re: /^(CNC|BORE|DOWEL)-/ },
+  { key: "front", name: "Фасади", re: /^(SAND|GLUE|PRESS|SPRAY|AUTOSPRAY|DRY|UV|HINGE)-/ },
+  { key: "asm", name: "Збирання", re: /^(SORT|ASM|ASMLINE)-/ },
+  { key: "pack", name: "Пакування", re: /^(PACK|PACKLINE|BOX)-/ },
+  { key: "out", name: "Відвантаження", short: "Відвант." },
+];
+const PICK_LANE = { incoming: "in", putaway: "move", replenish: "move", pick_components: "move", store_finished: "out", outgoing: "out" };
+const flow = { built: false, bars: [], evs: [], feed: [], W: 0 };
+const moShort = (n) => "MO/" + n.split("/").pop();
+const moCol = (n) => "#" + moColor(idx.moI.get(n) ?? 0).getHexString();
+const wcName = (c) => D.workcenters[c]?.name || c;
+function linesBrief(p) {
+  const l = p.lines || [];
+  const s = l.slice(0, 2).map((x) => `${P(x.product).name.split(" ").slice(0, 3).join(" ")} ${nf.format(x.qty)} ${P(x.product).uom}`).join(", ");
+  return l.length > 2 ? `${s} і ще ${l.length - 2}` : s;
+}
+function flowBuild() {
+  flow.bars = []; flow.evs = []; flow.feed = [];
+  for (const mo of D.productions) {
+    const wos = mo.workorders.map((id) => D.workorders[id]);
+    wos.forEach((w, k) => {
+      if (w._s == null) return;
+      const s = woMin(w, "_s"), f = woMin(w, "_f");
+      const lane = FLOW_LANES.find((l) => l.re?.test(w.workcenter))?.key || "asm";
+      if (f > FLOW_T0 && s < FLOW_T1) flow.bars.push({ s, f, lane, w, mo: mo.name });
+      const nx = wos[k + 1];
+      flow.feed.push({ m: s, mo: mo.name, text: `${moShort(mo.name)} · ${w.name} на «${wcName(w.workcenter)}»` });
+      flow.feed.push({ m: f, mo: mo.name, text: `${moShort(mo.name)} · ${w.name} готово → ${nx ? `«${wcName(nx.workcenter)}»` : mo.delivery ? "склад ГП" : "до основного замовлення"}` });
+    });
+  }
+  for (const p of D.pickings) {
+    const m = dayMin(p.scheduled_date), lane = PICK_LANE[p.type];
+    if (m == null || !lane || m < 0 || m > 24 * 60) continue;
+    if (m >= FLOW_T0 && m <= FLOW_T1) flow.evs.push({ m, lane, p });
+    const dock = p.dock ? items.get(p.dock)?.userData.label || p.dock : "";
+    const text = {
+      incoming: () => `Фура ${p.partner}: ${linesBrief(p)}${dock ? ` → ${dock}` : ""}`,
+      putaway: () => `${linesBrief(p)}: контроль → ${p.location_dest}`,
+      replenish: () => `${linesBrief(p)}: стелаж → портал ${p.location_dest}`,
+      pick_components: () => `Комплект для ${moShort(p.origin)} → ${p.location_dest}`,
+      store_finished: () => `${moShort(p.origin)}: ${linesBrief(p)} → склад ГП`,
+      outgoing: () => `Відвантаження ${p.partner}: ${linesBrief(p)}${dock ? ` · ${dock}` : ""}`,
+    }[p.type]();
+    flow.feed.push({ m, text, pick: p.name, mo: idx.mo.has(p.origin) ? p.origin : null });
+  }
+  flow.feed.sort((a, b) => a.m - b.m);
+  flow.built = true;
+}
+// смуги паралельних операцій в одному етапі — у підрядки, щоб не перекривались
+function packRows(bars) {
+  const ends = [];
+  for (const b of bars.sort((a, c) => a.s - c.s)) {
+    let r = ends.findIndex((e) => e <= b.s);
+    if (r < 0) { r = ends.length; ends.push(0); }
+    ends[r] = b.f; b.row = r % 3;
+  }
+  return Math.max(1, Math.min(3, ends.length));
+}
+function flowPlace() {
+  $("#flow").style.top = Math.round($("header.bar").getBoundingClientRect().bottom + 8) + "px";
+  document.body.style.setProperty("--flow-bottom", Math.round($("#flow").getBoundingClientRect().bottom) + "px");
+}
+function flowRender() {
+  const svg = $("#flow-svg");
+  flowPlace();
+  const W = Math.max(320, Math.round(svg.getBoundingClientRect().width || 600));
+  flow.W = W;
+  const narrow = W < 560, LX = narrow ? 74 : 104, RX = W - 6, top = 4, RH = 4;
+  const X = (m) => LX + ((Math.max(FLOW_T0, Math.min(FLOW_T1, m)) - FLOW_T0) / (FLOW_T1 - FLOW_T0)) * (RX - LX);
+  flow.X = X;
+  let y = top, out = "";
+  const grid = [];
+  for (let h = 7; h <= 15; h += W < 560 ? 2 : 1) grid.push(h * 60);
+  const laneY = {};
+  for (const L of FLOW_LANES) {
+    const bars = flow.bars.filter((b) => b.lane === L.key);
+    const rows = packRows(bars);
+    const h = Math.max(13, rows * RH + 4);
+    laneY[L.key] = { y, h };
+    out += `<rect class="lane" x="${LX}" y="${y}" width="${RX - LX}" height="${h - 2}" rx="2"/>`;
+    out += `<text class="ln" x="${LX - 6}" y="${y + h / 2 + 3}" text-anchor="end">${esc(narrow ? L.short || L.name : L.name)}</text>`;
+    for (const b of bars) {
+      const x0 = X(b.s), x1 = Math.max(X(b.f), x0 + 1.5);
+      out += `<rect class="wo" data-go="mo:${esc(b.mo)}" data-i="${flow.bars.indexOf(b)}" x="${x0.toFixed(1)}" y="${(y + 2 + b.row * RH).toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${RH - 0.8}" rx="1" fill="${moCol(b.mo)}"><title>${esc(b.mo)} · ${esc(b.w.name)} · ${esc(wcName(b.w.workcenter))} · ${hhmm(Math.round(b.s))}–${hhmm(Math.round(b.f))}</title></rect>`;
+    }
+    y += h;
+  }
+  const H = y + 14;
+  for (const g of grid) out = `<line class="grid" x1="${X(g)}" x2="${X(g)}" y1="${top}" y2="${y}"/><text class="ax" x="${X(g)}" y="${y + 11}" text-anchor="middle">${hhmm(g)}</text>` + out;
+  out = `<rect class="past" id="fl-past" x="${LX}" y="${top}" width="0" height="${y - top}"/>` + out;
+  for (const e of flow.evs) {
+    const L = laneY[e.lane], x = X(e.m), cy = L.y + L.h / 2 - 1;
+    const tip = `<title>${hhmm(Math.round(e.m))} · ${esc(e.p.name)} · ${esc(e.p.picking_type)}${e.p.partner ? " · " + esc(e.p.partner) : ""}</title>`;
+    const shape = e.p.type === "incoming" ? `<path d="M${x - 5},${cy - 4} L${x + 5},${cy - 4} L${x},${cy + 4} Z" fill="#2f80c0"/>`
+      : e.p.type === "outgoing" ? `<path d="M${x - 5},${cy + 4} L${x + 5},${cy + 4} L${x},${cy - 4} Z" fill="var(--ok)"/>`
+      : `<circle cx="${x}" cy="${cy}" r="3.2" fill="${e.p.type === "store_finished" ? "var(--ok)" : "var(--idle)"}"/>`;
+    out += `<g class="ev" data-go="pick:${esc(e.p.name)}" data-e="${flow.evs.indexOf(e)}">${shape}${tip}</g>`;
+  }
+  out += `<g id="fl-now"><line class="now" x1="0" x2="0" y1="${top}" y2="${y}"/></g>`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("height", H);
+  svg.innerHTML = out;
+  flow.top = top; flow.bottom = y;
+  flowPlace();
+}
+function flowViewOffset() {
+  const c = renderer.domElement, W = c.clientWidth, H = c.clientHeight;
+  if ($("#flow").hidden || !W) { camera.clearViewOffset(); return; }
+  const dy = Math.round(($("#flow").getBoundingClientRect().bottom - c.getBoundingClientRect().top) / 2 - 24);
+  camera.setViewOffset(W, H, 0, -Math.max(0, dy), W, H);
+}
+function flowCursor(t) {
+  if (!flow.X || $("#flow").hidden) return;
+  const x = flow.X(t).toFixed(1);
+  const g = document.getElementById("fl-now");
+  if (g) g.firstElementChild.setAttribute("x1", x), g.firstElementChild.setAttribute("x2", x);
+  const past = document.getElementById("fl-past");
+  if (past) past.setAttribute("width", Math.max(0, flow.X(t) - flow.X(FLOW_T0)).toFixed(1));
+}
+function flowUpdate(min) {
+  const on = min != null && !!D;
+  const el = $("#flow");
+  if (el.hidden === on) {
+    el.hidden = !on;
+    document.body.classList.toggle("flow-on", on);
+    if (on) { if (!flow.built) flowBuild(); flowRender(); }
+    flowViewOffset();
+  }
+  if (!on) return;
+  const t = min;
+  let act = 0;
+  $("#flow-svg").querySelectorAll(".wo").forEach((r) => {
+    const b = flow.bars[+r.dataset.i];
+    const a = b.s <= t && t < b.f;
+    act += a;
+    r.style.opacity = b.f <= t ? 0.85 : a ? 1 : 0.28;
+    r.classList.toggle("act", a);
+    r.classList.toggle("bad", a && !!b.w.blocked && t >= (simBase - dayStart()) / 60000);
+  });
+  $("#flow-svg").querySelectorAll(".ev").forEach((g) => { g.style.opacity = flow.evs[+g.dataset.e].m <= t ? 1 : 0.3; });
+  const trucks = flow.evs.filter((e) => e.p.type === "incoming" && e.m <= t).length;
+  const ships = flow.evs.filter((e) => e.p.type === "outgoing" && e.m <= t).length;
+  $("#flow-time").textContent = hhmm(t);
+  $("#flow-sum").textContent = `${act} операцій зараз · фур прийнято ${trucks} · відвантажень ${ships}`;
+  const last = flow.feed.filter((e) => e.m <= t).slice(-4).reverse();
+  $("#flow-feed").innerHTML = last.map((e) => `<li class="${t - e.m <= 15 ? "new" : ""}"><span class="mono">${hhmm(Math.max(0, Math.round(e.m)))}</span>
+    <span class="sw" style="background:${e.mo ? moCol(e.mo) : e.pick && idx.pick.get(e.pick)?.type === "incoming" ? "#2f80c0" : "var(--idle)"}"></span>
+    <button class="lnk t" data-go="${e.pick ? `pick:${esc(e.pick)}` : `mo:${esc(e.mo)}`}">${esc(e.text)}</button></li>`).join("");
+  flowCursor(simMinutes() ?? t);
+}
+// клік по смузі, події чи рядку стрічки — та сама картка, що й у правій панелі
+$("#flow").addEventListener("click", (e) => {
+  const a = e.target.closest("[data-go]");
+  if (!a) return;
+  const [k, ...rest] = a.dataset.go.split(":");
+  const v = rest.join(":");
+  if (k === "mo") showMO(v); else if (k === "pick") showPicking(v);
+});
+addEventListener("resize", () => { if (!$("#flow").hidden && flow.built) { flowRender(); flowUpdate(simOverride); } flowViewOffset(); });
+
 function stopShift() { clearInterval(shiftTimer); shiftTimer = null; $("#shift-play").textContent = "▶"; $("#shift-play").setAttribute("aria-label", "Програти зміну"); }
 $("#shift-play").onclick = () => {
   if (shiftTimer) return stopShift();
   let m = simOverride ?? 420;
   if (m >= 930) m = 420;
   $("#shift-play").textContent = "❚❚"; $("#shift-play").setAttribute("aria-label", "Пауза");
-  shiftTimer = setInterval(() => { m += 5; applySimTime(m); if (m >= 930) stopShift(); }, reduceMotion ? 600 : 250);
+  if (!D) return;
+  applySimTime(m);
+  simCont = { m, at: performance.now() };
+  if (!prodOv.on) setProdOverlay(true); // потік видно згори: план цеху з маршрутами замовлень
+  shiftTimer = setInterval(() => {
+    m += 5; applySimTime(m); simCont = { m, at: performance.now() };
+    if (m >= 930) stopShift();
+  }, SHIFT_STEP_MS);
 };
 
 // ---------------------------------------------------------------- сценарій пожежної тривоги
@@ -2346,6 +2688,8 @@ renderer.setAnimationLoop(() => {
     for (const r of drill.blink) r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } });
     drill.dots.forEach((d, i) => d.position.copy(drill.curves[i].getPointAt(((now / 1000) * 0.08 + i * 0.13) % 1)));
   }
+  const sm = simMinutes(); // програвання зміни: курсор стрічки й мітки в 3D рухаються плавно між кроками таймера
+  if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) prodSimMove(sm); }
   syncLabels();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
