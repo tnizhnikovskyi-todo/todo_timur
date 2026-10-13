@@ -914,10 +914,21 @@ function drawProdOverlay() {
   });
   if (prodOv.focus) prodFocus(prodOv.focus);
 }
+// у шарі замовлень довгі назви зон приймання й відвантаження перекривають фури — лишаємо «Ворота N»
+function shortDoorLabels(on) {
+  for (const { lbl, obj, cls } of labels) {
+    const m = cls === "zone" && /^Z-(RCV|OUT)-(\d+)$/.exec(obj.userData.code || "");
+    if (!m) continue;
+    const el = lbl.element;
+    el.dataset.full ??= el.innerHTML;
+    el.innerHTML = on ? `Ворота ${m[2]}` : el.dataset.full;
+  }
+}
 async function setProdOverlay(on) {
   if (prodOv.on === on) return;
   prodOv.on = on;
   $("#opt-prod").checked = on;
+  shortDoorLabels(on);
   if (on) {
     stopDrill();
     prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
