@@ -1902,6 +1902,7 @@ function eqHtml(eq) {
   if (eq.last_inspection) rows.push(["Остання перевірка", eq.last_inspection]);
   if (eq.next_maintenance) rows.push(["Наступне ТО", dayHm(eq.next_maintenance)]);
   if (eq.current_task) rows.push(["Завдання", `<button class="lnk" data-go="pick:${esc(eq.current_task)}">${esc(eq.current_task)}</button>`]);
+  if (D.meta.iot && rows.length) rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);
   const mr = eq.maintenance_request ? idx.mr.get(eq.maintenance_request) : null;
   return `<dl class="kv"><dt>Обладнання</dt><dd>${esc(eq.name)}${eq.serial ? ` <span class="mono">${esc(eq.serial)}</span>` : ""}</dd>
     ${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>

@@ -2,6 +2,10 @@
 поля «Ворота / Фура / Техніка» на формах, графік зміни, зони поза WH/Stock, партії й палети, багатокрокові
 маршрути (приймання плит через вхідний контроль, комплектація й розміщення ГП, відвантаження у 2 кроки),
 правила поповнення, дочірні МО фасадів, простої верстатів, перевізники. Підмішуються до Push у odoo_push.py."""
+import base64
+import io
+import os
+import zipfile
 from datetime import timedelta
 from html import escape
 
@@ -671,3 +675,134 @@ class FlowSteps:
             n += 1
         print(f"docks: 14 воріт, {n} фур біля воріт як пакетні переміщення")
 
+
+    # ------------------------------------------------------------ сигнали для модуля імітації IoT
+    def signal_specs(self):
+        """Сигнали з моделі: шлях у даних переглядача (x_code), стартове значення й поведінка датчика."""
+        d = self.d
+        en, eqs, specs = d["energy"]["consumers"], d["equipment"], []
+
+        def add(path, name, eq, kind, unit, mode, value, seq, **kw):
+            specs.append(dict(code=path, name=name, eq=eq, kind=kind, unit=unit, mode=mode, value=value, seq=seq, **kw))
+        for code, wc in d["workcenters"].items():  # верстати: потужність від стану робочого центру + кВт·год
+            c = en.get(code)
+            if not c:
+                continue
+            p = f"energy/consumers/{code}"
+            add(f"{p}/p_now", f"{wc['name']}: потужність", code, "Потужність", "кВт", "machine", c["p_now"], 10,
+                wc=code, nominal=c["p_now"] if c["status"] == "work" else round(c["p_inst"] * 0.55, 1), noise=0.08,
+                rate=round(c["p_inst"] * 0.08, 2))
+            add(f"{p}/kwh_shift", f"{wc['name']}: енергія за зміну", code, "Енергія", "кВт·год", "energy",
+                c.get("kwh_shift", 0), 20, source=f"{p}/p_now")
+        for code in ("GANTRY-1", "COMPRESSOR", "DUST-1", "BOILER", "CHARGING"):  # інженерні споживачі
+            c, p = en[code], f"energy/consumers/{code}"
+            add(f"{p}/p_now", f"{c['name']}: потужність", code, "Потужність", "кВт", "noise", c["p_now"], 10,
+                nominal=c["p_now"], noise=round(c["p_now"] * 0.04, 2))
+            add(f"{p}/kwh_shift", f"{c['name']}: енергія за зміну", code, "Енергія", "кВт·год", "energy",
+                c.get("kwh_shift", 0), 20, source=f"{p}/p_now")
+        for code, e in eqs.items():
+            p = f"equipment/{code}"
+            if "battery" in e:  # навантажувачі й тягач: розряд у роботі, зарядка на межі 20 %
+                add(f"{p}/battery", f"{e['name']} {code}: заряд АКБ", code, "Заряд АКБ", "%", "drain",
+                    round(e["battery"] * 100, 1), 10, rate=0.15, limit=20, charging=e.get("state") == "charging")
+                add(f"{p}/hours", f"{e['name']} {code}: мотогодини", code, "Мотогодини", "год", "hours", e["hours"],
+                    20, source=f"{p}/battery")
+        g, cp, du, bo = eqs["GANTRY-1"], eqs["COMPRESSOR"], eqs["DUST-1"], eqs["BOILER"]
+        add("equipment/GANTRY-1/cycles_today", "Портал: циклів за день", "GANTRY-1", "Цикли", "шт", "counter",
+            g["cycles_today"], 20, rate=3, source="energy/consumers/GANTRY-1/p_now")
+        add("equipment/GANTRY-1/vacuum_kpa", "Портал: вакуум присосок", "GANTRY-1", "Вакуум", "кПа", "noise",
+            g["vacuum_kpa"], 10, nominal=g["vacuum_kpa"], noise=0.5, alarm="above", threshold=-60)
+        add("equipment/COMPRESSOR/pressure_bar", "Компресор: тиск", "COMPRESSOR", "Тиск", "бар", "noise",
+            cp["pressure_bar"], 10, nominal=cp["pressure_bar"], noise=0.05, alarm="below", threshold=6.0)
+        add("equipment/COMPRESSOR/load", "Компресор: завантаження", "COMPRESSOR", "Завантаження", "%", "noise",
+            round(cp["load"] * 100), 10, nominal=round(cp["load"] * 100), noise=3)
+        add("equipment/COMPRESSOR/hours", "Компресор: мотогодини", "COMPRESSOR", "Мотогодини", "год", "hours",
+            cp["hours"], 20, source="energy/consumers/COMPRESSOR/p_now")
+        add("equipment/DUST-1/airflow_m3h", "Аспірація: витрата повітря", "DUST-1", "Витрата", "м³/год", "noise",
+            du["airflow_m3h"], 10, nominal=du["airflow_m3h"], noise=300)
+        add("equipment/DUST-1/filter_dp_kpa", "Аспірація: перепад на фільтрі", "DUST-1", "Перепад", "кПа", "drift",
+            du["filter_dp_kpa"], 10, nominal=1.0, rate=0.0005, alarm="above", threshold=1.8)
+        add("equipment/BOILER/supply_c", "Котельня: подача", "BOILER", "Температура", "°C", "noise", bo["supply_c"],
+            10, nominal=bo["supply_c"], noise=0.4)
+        add("equipment/BOILER/silo_fill", "Котельня: бункер брикетів", "BOILER", "Рівень", "%", "level",
+            round(bo["silo_fill"] * 100), 10, nominal=95, rate=0.02, limit=15)
+        for code in ("SPRINKLERS", "AIR-RING"):
+            e = eqs[code]
+            add(f"equipment/{code}/pressure_bar", f"{e['name']}: тиск", code, "Тиск", "бар", "noise",
+                e["pressure_bar"], 10, nominal=e["pressure_bar"], noise=0.04, alarm="below",
+                threshold=6.5 if code == "SPRINKLERS" else 6.0)
+        mrs = {m["equipment"]: m["id"] for m in d["maintenance_requests"]}
+        for code, u in d["ventilation"]["units"].items():  # вентиляція: витрата, подача, фільтр забивається
+            p = f"ventilation/units/{code}"
+            add(f"{p}/airflow_m3h", f"{u['name']}: витрата", code, "Витрата", "м³/год", "noise", u["airflow_m3h"], 10,
+                nominal=u["airflow_m3h"], noise=round(u["airflow_m3h"] * 0.02))
+            if u.get("supply_c") is not None:
+                add(f"{p}/supply_c", f"{u['name']}: подача", code, "Температура", "°C", "noise", u["supply_c"], 10,
+                    nominal=u["supply_c"], noise=0.2)
+            if u.get("filter_dp_pa") is not None:
+                add(f"{p}/filter_dp_pa", f"{u['name']}: перепад на фільтрі", code, "Перепад", "Па", "drift",
+                    u["filter_dp_pa"], 10, nominal=120, rate=0.05, alarm="above", threshold=250, request=mrs.get(code))
+        add("fire/groups/FA-FAC/dust", "Сповіщувач 2.FAC.07: запиленість", "FA-FAC", "Запиленість", "%", "drift", 82,
+            10, nominal=10, rate=0.01, alarm="above", threshold=90, request=mrs.get("FA-FAC"))
+        for code, t in d["energy"]["transformers"].items():
+            p = f"energy/transformers/{code}"
+            add(f"{p}/p_kw", f"{t['name']}: навантаження", code, "Потужність", "кВт", "noise", t["p_kw"], 10,
+                nominal=t["p_kw"], noise=round(t["p_kw"] * 0.03, 1))
+            add(f"{p}/temp_c", f"{t['name']}: температура", code, "Температура", "°C", "noise", t["temp_c"], 10,
+                nominal=t["temp_c"], noise=0.3, alarm="above", threshold=110)
+        it = d["infra"]["totals"]
+        h = NOW.hour + NOW.minute / 60
+        add("infra/totals/pv_now", "СЕС: виробіток", "PV-INV", "Потужність", "кВт", "solar", it["pv_now"], 10,
+            nominal=round(it["pv_now"] / max(0.05, 1 - ((h - 13) / 6) ** 2)))
+        add("infra/totals/chp_kw", "Когенерація: електрична потужність", "CHP", "Потужність", "кВт", "noise",
+            it["chp_kw"], 10, nominal=it["chp_kw"], noise=4)
+        add("infra/totals/bess_soc", "Накопичувач: заряд", "BESS", "Заряд", "%", "noise", round(it["bess_soc"] * 100),
+            10, nominal=round(it["bess_soc"] * 100), noise=0.3)
+        return specs
+
+    def step_iot_module(self):
+        """Імпортувати data-модуль factory3d_iot_sim з odoo_addons/ (Застосунки → Імпортувати модуль)."""
+        o = self.o
+        root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "odoo_addons")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for base, _, files in os.walk(os.path.join(root, "factory3d_iot_sim")):
+                for f in files:
+                    full = os.path.join(base, f)
+                    z.write(full, os.path.relpath(full, root))
+        wid = o("base.import.module", "create", {"module_file": base64.b64encode(buf.getvalue()).decode(),
+                                                 "force": True})
+        o("base.import.module", "import_module", [wid])
+        print(f"iot_module: factory3d_iot_sim — {o.installed('factory3d_iot_sim').get('factory3d_iot_sim')}")
+
+    def step_signals(self):
+        """Сигнали обладнання для модуля factory3d_iot_sim (імітація підключених датчиків)."""
+        o = self.o
+        if not o.has("x_f3d_signal"):
+            print("signals: модуль factory3d_iot_sim не встановлено — пропуск")
+            return
+        specs = self.signal_specs()
+        req = {}
+        for mr in self.d["maintenance_requests"]:
+            req[mr["id"]] = self.ref(key("mr", mr["id"]))
+        n = 0
+        for s in specs:  # спершу джерела (порядок 10), потім лічильники, що на них посилаються (20)
+            eq = self.ref(key("eq", s["eq"]))
+            vals = {"x_name": s["name"], "x_code": s["code"], "x_sequence": s["seq"], "x_active": True,
+                    "x_equipment_id": eq or False, "x_kind": s["kind"], "x_unit": s["unit"], "x_mode": s["mode"],
+                    "x_nominal": s.get("nominal", 0), "x_noise": s.get("noise", 0), "x_rate": s.get("rate", 0),
+                    "x_limit": s.get("limit", 0), "x_alarm": s.get("alarm") or False,
+                    "x_threshold": s.get("threshold", 0)}
+            if s.get("wc"):
+                vals["x_workcenter_id"] = self.ref(key("wc", s["wc"]))
+            if s.get("source"):
+                vals["x_source_id"] = self.ref(key("sig", s["source"]))
+            xid = key("sig", s["code"])
+            if not self.ref(xid):  # стартовий стан — лише при створенні, далі значення веде імітація
+                vals.update(x_value=s["value"], x_charging=bool(s.get("charging")), x_state="норма",
+                            x_seed=det(s["code"], mod=2 ** 31))
+                if s.get("request") and req.get(s["request"]):
+                    vals["x_request_id"] = req[s["request"]]
+                n += 1
+            self.ensure(xid, "x_f3d_signal", vals)
+        print(f"signals: {len(specs)} сигналів ({n} нових) для імітації IoT")

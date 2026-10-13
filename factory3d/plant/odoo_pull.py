@@ -267,9 +267,39 @@ class LiveDemo(Demo):
             if r["schedule_date"]:
                 m["schedule_date"] = local(r["schedule_date"])
 
+    def sync_signals(self, data):
+        """Показники обладнання з модуля factory3d_iot_sim: x_code — шлях у даних переглядача
+        (energy/consumers/SAW-1/p_now, equipment/FL-1/battery…); відсотки в моделі — частки."""
+        o = self.o
+        if not o.has("x_f3d_signal"):
+            return
+        rows = o("x_f3d_signal", "search_read", [["x_active", "=", True], ["x_code", "!=", False]],
+                 fields=["x_code", "x_value", "x_unit", "x_mode", "x_charging", "x_updated", "x_state"])
+        last = None
+        for r in rows:
+            *path, leaf = r["x_code"].split("/")
+            node = data
+            for k in path:
+                node = node.get(k) if isinstance(node, dict) else None
+                if node is None:
+                    break
+            if node is None:
+                continue
+            v = r["x_value"]
+            node[leaf] = round(v / 100, 3) if r["x_unit"] == "%" else round(v, 2) if abs(v) < 20 else round(v, 1)
+            if r["x_mode"] == "drain" and "state" in node:
+                node["state"] = "charging" if r["x_charging"] else "busy"
+            if r["x_updated"] and (last is None or r["x_updated"] > last):
+                last = r["x_updated"]
+        t = data["infra"]["totals"]
+        data["energy"]["totals"].update(pv_kw=t["pv_now"], chp_kw=t["chp_kw"])
+        data["meta"]["iot"] = {"source": "імітація датчиків (модуль factory3d_iot_sim)", "signals": len(rows),
+                               "alarms": sum(r["x_state"] == "тривога" for r in rows), "updated": local(last)}
+
     def build(self):
         data = super().build()
         self.sync_maintenance(data)
+        self.sync_signals(data)
         host = urlparse(self.o.url).hostname
         data["meta"].update(
             source=f"Odoo {self.o.version['server_serie']} · {host}", database=self.o.db, live=True,
@@ -277,7 +307,9 @@ class LiveDemo(Demo):
             pulled_at=datetime.now(TZ).strftime("%Y-%m-%d %H:%M"),
             note=f"Живі дані з бази (XML-RPC, лише читання): {self.stats.get('pickings', 0)} переміщень, "
                  f"{self.stats.get('productions', 0)} виробничих замовлень, {self.stats.get('quants', 0)} залишків. "
-                 f"Демо-годинник зупинено на {ts(NOW)} — від нього рахуються таймери робочих завдань.")
+                 f"Демо-годинник зупинено на {ts(NOW)} — від нього рахуються таймери робочих завдань."
+                 + (f" Показники обладнання — {data['meta']['iot']['signals']} сигналів імітації IoT, оновлено "
+                    f"{data['meta']['iot']['updated']}." if data["meta"].get("iot") else ""))
         return data
 
 

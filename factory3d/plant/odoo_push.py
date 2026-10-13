@@ -26,7 +26,7 @@ MOD = "factory3d"
 STEPS = ["modules", "settings", "base", "views", "calendar", "locations", "workcenters", "people", "purchase",
          "sale", "internal", "production", "boms", "layout", "lots", "stock", "routes", "orderpoints", "children",
          "fronts", "mo_locations", "consumption", "po_links", "docks", "wc_tags", "losses", "quality", "maintenance",
-         "equipment", "preventive", "attendance", "carriers", "finish"]
+         "equipment", "preventive", "iot_module", "signals", "attendance", "carriers", "finish"]
 # усе, чим користується модель: без цих налаштувань Odoo ховає меню й поля
 SETTINGS = {"group_stock_multi_locations": True,   # місця зберігання (комірки, стелажі, ворота)
             "group_mrp_routings": True,            # робочі замовлення й робочі центри

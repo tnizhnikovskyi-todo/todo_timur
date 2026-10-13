@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="model_x_f3d_signal" model="ir.model">
+    <field name="name">Сигнал обладнання</field>
+    <field name="model">x_f3d_signal</field>
+  </record>
+  <record id="model_x_f3d_reading" model="ir.model">
+    <field name="name">Показання сигналу</field>
+    <field name="model">x_f3d_reading</field>
+  </record>
+  <record id="field_x_f3d_signal__x_name" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_name</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Сигнал</field>
+    <field name="required" eval="True"/>
+  </record>
+  <record id="field_x_f3d_signal__x_code" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_code</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Код у моделі</field>
+  </record>
+  <record id="field_x_f3d_signal__x_sequence" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_sequence</field>
+    <field name="ttype">integer</field>
+    <field name="field_description">Порядок</field>
+  </record>
+  <record id="field_x_f3d_signal__x_active" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_active</field>
+    <field name="ttype">boolean</field>
+    <field name="field_description">Увімкнено</field>
+  </record>
+  <record id="field_x_f3d_signal__x_equipment_id" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_equipment_id</field>
+    <field name="ttype">many2one</field>
+    <field name="field_description">Обладнання</field>
+    <field name="relation">maintenance.equipment</field>
+    <field name="on_delete">cascade</field>
+  </record>
+  <record id="field_x_f3d_signal__x_workcenter_id" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_workcenter_id</field>
+    <field name="ttype">many2one</field>
+    <field name="field_description">Робочий центр</field>
+    <field name="relation">mrp.workcenter</field>
+    <field name="on_delete">set null</field>
+  </record>
+  <record id="field_x_f3d_signal__x_source_id" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_source_id</field>
+    <field name="ttype">many2one</field>
+    <field name="field_description">Від сигналу</field>
+    <field name="relation">x_f3d_signal</field>
+    <field name="on_delete">set null</field>
+  </record>
+  <record id="field_x_f3d_signal__x_kind" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_kind</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Величина</field>
+  </record>
+  <record id="field_x_f3d_signal__x_unit" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_unit</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Од.</field>
+  </record>
+  <record id="field_x_f3d_signal__x_mode" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_mode</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Поведінка</field>
+  </record>
+  <record id="field_x_f3d_signal__x_value" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_value</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Значення</field>
+  </record>
+  <record id="field_x_f3d_signal__x_nominal" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_nominal</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Номінал</field>
+  </record>
+  <record id="field_x_f3d_signal__x_noise" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_noise</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Шум</field>
+  </record>
+  <record id="field_x_f3d_signal__x_rate" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_rate</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Швидкість за хвилину</field>
+  </record>
+  <record id="field_x_f3d_signal__x_limit" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_limit</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Межа перемикання</field>
+  </record>
+  <record id="field_x_f3d_signal__x_alarm" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_alarm</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Тривога, якщо значення</field>
+  </record>
+  <record id="field_x_f3d_signal__x_threshold" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_threshold</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Поріг</field>
+  </record>
+  <record id="field_x_f3d_signal__x_state" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_state</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Стан</field>
+  </record>
+  <record id="field_x_f3d_signal__x_charging" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_charging</field>
+    <field name="ttype">boolean</field>
+    <field name="field_description">На зарядці</field>
+  </record>
+  <record id="field_x_f3d_signal__x_seed" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_seed</field>
+    <field name="ttype">integer</field>
+    <field name="field_description">Зерно</field>
+  </record>
+  <record id="field_x_f3d_signal__x_updated" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_updated</field>
+    <field name="ttype">datetime</field>
+    <field name="field_description">Оновлено</field>
+  </record>
+  <record id="field_x_f3d_signal__x_request_id" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="name">x_request_id</field>
+    <field name="ttype">many2one</field>
+    <field name="field_description">Заявка ТО</field>
+    <field name="relation">maintenance.request</field>
+    <field name="on_delete">set null</field>
+  </record>
+  <record id="field_x_f3d_reading__x_name" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="name">x_name</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Сигнал</field>
+    <field name="required" eval="True"/>
+  </record>
+  <record id="field_x_f3d_reading__x_signal_id" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="name">x_signal_id</field>
+    <field name="ttype">many2one</field>
+    <field name="field_description">Сигнал обладнання</field>
+    <field name="relation">x_f3d_signal</field>
+    <field name="on_delete">cascade</field>
+  </record>
+  <record id="field_x_f3d_reading__x_equipment_id" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="name">x_equipment_id</field>
+    <field name="ttype">many2one</field>
+    <field name="field_description">Обладнання</field>
+    <field name="relation">maintenance.equipment</field>
+    <field name="on_delete">cascade</field>
+  </record>
+  <record id="field_x_f3d_reading__x_value" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="name">x_value</field>
+    <field name="ttype">float</field>
+    <field name="field_description">Значення</field>
+  </record>
+  <record id="field_x_f3d_reading__x_unit" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="name">x_unit</field>
+    <field name="ttype">char</field>
+    <field name="field_description">Од.</field>
+  </record>
+  <record id="field_x_f3d_reading__x_time" model="ir.model.fields">
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="name">x_time</field>
+    <field name="ttype">datetime</field>
+    <field name="field_description">Час</field>
+  </record>
+  <record id="field_maintenance_equipment__x_f3d_signal_ids" model="ir.model.fields">
+    <field name="model_id" ref="maintenance.model_maintenance_equipment"/>
+    <field name="name">x_f3d_signal_ids</field>
+    <field name="ttype">one2many</field>
+    <field name="field_description">Сигнали</field>
+    <field name="relation">x_f3d_signal</field>
+    <field name="relation_field">x_equipment_id</field>
+  </record>
+  <record id="access_x_f3d_signal_user" model="ir.model.access">
+    <field name="name">x_f3d_signal user</field>
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="group_id" ref="base.group_user"/>
+    <field name="perm_read" eval="True"/>
+    <field name="perm_write" eval="True"/>
+    <field name="perm_create" eval="True"/>
+    <field name="perm_unlink" eval="True"/>
+  </record>
+  <record id="access_x_f3d_reading_user" model="ir.model.access">
+    <field name="name">x_f3d_reading user</field>
+    <field name="model_id" ref="model_x_f3d_reading"/>
+    <field name="group_id" ref="base.group_user"/>
+    <field name="perm_read" eval="True"/>
+    <field name="perm_write" eval="True"/>
+    <field name="perm_create" eval="True"/>
+    <field name="perm_unlink" eval="True"/>
+  </record>
+</odoo>

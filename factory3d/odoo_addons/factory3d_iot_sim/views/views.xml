@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_signal_list" model="ir.ui.view">
+    <field name="name">x_f3d_signal.list</field>
+    <field name="model">x_f3d_signal</field>
+    <field name="arch" type="xml">
+      <list string="Сигнали обладнання" default_order="x_sequence, id"
+            decoration-danger="x_state == 'тривога'" decoration-muted="not x_active">
+        <field name="x_equipment_id"/>
+        <field name="x_kind"/>
+        <field name="x_value"/>
+        <field name="x_unit"/>
+        <field name="x_state"/>
+        <field name="x_charging" optional="hide"/>
+        <field name="x_request_id" optional="show"/>
+        <field name="x_updated"/>
+        <field name="x_code" optional="hide"/>
+        <field name="x_mode" optional="hide"/>
+        <field name="x_active" optional="hide"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_signal_form" model="ir.ui.view">
+    <field name="name">x_f3d_signal.form</field>
+    <field name="model">x_f3d_signal</field>
+    <field name="arch" type="xml">
+      <form string="Сигнал обладнання">
+        <sheet>
+          <div class="oe_title"><h1><field name="x_name"/></h1></div>
+          <group>
+            <group string="Зараз">
+              <field name="x_value"/>
+              <field name="x_unit"/>
+              <field name="x_state"/>
+              <field name="x_charging" invisible="x_mode != 'drain'"/>
+              <field name="x_updated"/>
+              <field name="x_request_id"/>
+            </group>
+            <group string="Звідки">
+              <field name="x_equipment_id"/>
+              <field name="x_workcenter_id"/>
+              <field name="x_source_id"/>
+              <field name="x_kind"/>
+              <field name="x_code"/>
+              <field name="x_active"/>
+            </group>
+            <group string="Як поводиться">
+              <field name="x_mode"/>
+              <field name="x_nominal"/>
+              <field name="x_noise"/>
+              <field name="x_rate"/>
+              <field name="x_limit"/>
+            </group>
+            <group string="Тривога">
+              <field name="x_alarm"/>
+              <field name="x_threshold"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_signal_search" model="ir.ui.view">
+    <field name="name">x_f3d_signal.search</field>
+    <field name="model">x_f3d_signal</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="x_name"/>
+        <field name="x_equipment_id"/>
+        <filter name="alarm" string="Тривога" domain="[('x_state', '=', 'тривога')]"/>
+        <filter name="active" string="Увімкнені" domain="[('x_active', '=', True)]"/>
+        <group>
+          <filter name="by_equipment" string="Обладнання" context="{'group_by': 'x_equipment_id'}"/>
+          <filter name="by_kind" string="Величина" context="{'group_by': 'x_kind'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="view_reading_list" model="ir.ui.view">
+    <field name="name">x_f3d_reading.list</field>
+    <field name="model">x_f3d_reading</field>
+    <field name="arch" type="xml">
+      <list string="Журнал показань" default_order="x_time desc" create="false">
+        <field name="x_time"/>
+        <field name="x_equipment_id"/>
+        <field name="x_name"/>
+        <field name="x_value"/>
+        <field name="x_unit"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_reading_graph" model="ir.ui.view">
+    <field name="name">x_f3d_reading.graph</field>
+    <field name="model">x_f3d_reading</field>
+    <field name="arch" type="xml">
+      <graph string="Показання" type="line">
+        <field name="x_time" interval="hour"/>
+        <field name="x_signal_id"/>
+        <field name="x_value" type="measure"/>
+      </graph>
+    </field>
+  </record>
+
+  <record id="view_reading_search" model="ir.ui.view">
+    <field name="name">x_f3d_reading.search</field>
+    <field name="model">x_f3d_reading</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="x_name"/>
+        <field name="x_signal_id"/>
+        <field name="x_equipment_id"/>
+        <group>
+          <filter name="by_signal" string="Сигнал" context="{'group_by': 'x_signal_id'}"/>
+          <filter name="by_equipment" string="Обладнання" context="{'group_by': 'x_equipment_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="view_equipment_form_signals" model="ir.ui.view">
+    <field name="name">maintenance.equipment.form.f3d.signals</field>
+    <field name="model">maintenance.equipment</field>
+    <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//notebook" position="inside">
+        <page string="Сигнали" name="f3d_signals" invisible="not x_f3d_signal_ids">
+          <field name="x_f3d_signal_ids" readonly="1">
+            <list decoration-danger="x_state == 'тривога'">
+              <field name="x_kind"/>
+              <field name="x_value"/>
+              <field name="x_unit"/>
+              <field name="x_state"/>
+              <field name="x_updated"/>
+            </list>
+          </field>
+        </page>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="action_signals" model="ir.actions.act_window">
+    <field name="name">Сигнали обладнання</field>
+    <field name="res_model">x_f3d_signal</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{'search_default_active': 1}</field>
+  </record>
+  <record id="action_readings" model="ir.actions.act_window">
+    <field name="name">Журнал показань</field>
+    <field name="res_model">x_f3d_reading</field>
+    <field name="view_mode">graph,list</field>
+  </record>
+
+  <menuitem id="menu_iot_root" name="Імітація IoT" parent="maintenance.menu_maintenance_title" sequence="5"/>
+  <menuitem id="menu_iot_signals" name="Сигнали обладнання" parent="menu_iot_root" action="action_signals" sequence="1"/>
+  <menuitem id="menu_iot_readings" name="Журнал показань" parent="menu_iot_root" action="action_readings" sequence="2"/>
+  <menuitem id="menu_iot_tick" name="Оновити зараз" parent="menu_iot_root" action="action_iot_tick_now" sequence="10"/>
+  <menuitem id="menu_iot_start" name="Увімкнути імітацію" parent="menu_iot_root" action="action_iot_start" sequence="11"/>
+  <menuitem id="menu_iot_stop" name="Зупинити імітацію" parent="menu_iot_root" action="action_iot_stop" sequence="12"/>
+</odoo>
