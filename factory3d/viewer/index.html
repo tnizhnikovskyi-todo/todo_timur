@@ -734,7 +734,7 @@ let pulseT = 0;
 $("#opt-motion").checked = !reduceMotion;
 
 // ---------------------------------------------------------------- підсвічування (вибір, наведення, Odoo, режим кольору)
-const hl = { roots: new Set(), markers: [], path: null, curve: null, branches: [] };
+const hl = { roots: new Set(), markers: [], path: null, curve: null, branches: [], parts: [] };
 let colorMode = "none";
 const C_OK = new THREE.Color("#27ae60"), C_WARN = new THREE.Color("#f39c12"), C_BAD = new THREE.Color("#e74c3c");
 const C_SEL = new THREE.Color("#f2c230"), C_HOV = new THREE.Color("#7fb3d5"), C_HL = new THREE.Color("#18a6c9");
@@ -788,8 +788,8 @@ function clearHighlight() {
   for (const m of hl.markers) scene.remove(m);
   hl.markers = [];
   if (hl.path) { scene.remove(hl.path); hl.path.geometry.dispose(); hl.path = null; }
-  for (const b of hl.branches) { scene.remove(b); b.geometry?.dispose(); }
-  hl.branches = [];
+  for (const b of hl.branches) { scene.remove(b); if (b.geometry !== PART_GEO) b.geometry?.dispose(); }
+  hl.branches = []; hl.parts = [];
   hl.curve = null;
 }
 function topOf(obj) {
@@ -801,6 +801,27 @@ function topOf(obj) {
 // гілки матеріалів: [{ codes: [...], color, label }] — тонка лінія від в'їзду до верстата, що споживає
 const MAT_COLOR = { "плита": 0x2f80c0, "фурнітура": 0x8e44ad, "крайка": 0xe67e22, "ЛФМ": 0x16a085,
   "плівка ПВХ": 0x16a085, "пакування": 0x7f8c8d };
+// точки, що біжать гілкою матеріалу: кількість — від числа замовлень, швидкість ~ 5 м/с у масштабі плану
+const PART_GEO = new THREE.SphereGeometry(0.32, 10, 8);
+function branchParticles(curve, color, n, sink, tag, size = 1) {
+  const len = curve.getLength();
+  const out = [];
+  for (let j = 0; j < n; j++) {
+    const p = new THREE.Mesh(PART_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+    p.userData = { isPulse: true, curve, len, u: j / n, v: 4.5 + (j % 3) * 0.6, mos: tag };
+    p.scale.setScalar(size);
+    p.position.copy(curve.getPointAt(p.userData.u));
+    scene.add(p); sink.push(p); out.push(p);
+  }
+  return out;
+}
+function moveParticles(list, dt) {
+  for (const p of list) {
+    const d = p.userData;
+    d.u = (d.u + (dt * d.v) / Math.max(d.len, 1)) % 1;
+    p.position.copy(d.curve.getPointAt(d.u));
+  }
+}
 function drawBranch(br) {
   const pts = [];
   br.codes.forEach((code, j) => {
@@ -816,6 +837,7 @@ function drawBranch(br) {
     new THREE.MeshBasicMaterial({ color: br.color ?? 0x888888, transparent: true, opacity: 0.85 }));
   m.userData.isPulse = true;
   scene.add(m); hl.branches.push(m);
+  branchParticles(c, br.color ?? 0x888888, 3, hl.branches, null, prodOv.on ? 2.0 : 1.3).forEach((p) => hl.parts.push(p));
   if (br.label && br.at) {
     const obj = items.get(br.at);
     if (obj) {
@@ -887,8 +909,8 @@ const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожеж
 const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
 function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
 function clearProdOverlay() {
-  for (const o of prodOv.objs) { scene.remove(o); o.geometry?.dispose(); }
-  prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.color.clear(); prodOv.byMo.clear();
+  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO) o.geometry?.dispose(); }
+  prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.parts = []; prodOv.color.clear(); prodOv.byMo.clear();
 }
 // місце замовлення на всьому циклі: індекс точки маршруту (дробовий — у дорозі між точками)
 function cyclePosition(wos, at, firstOut, lastIn) {
@@ -926,11 +948,14 @@ function drawProdOverlay() {
     });
     if (pts.length < 2) continue;
     const r = 0.07 + 0.025 * Math.min(e.mos.size, 6);
-    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), pts.length * 16, r, 5, false),
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    const m = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 16, r, 5, false),
       new THREE.MeshBasicMaterial({ color: MAT_COLOR[e.kind] ?? 0x888888, transparent: true, opacity: 0.7 }));
     m.userData.isPulse = true;
     m.userData.mos = e.mos;
     scene.add(m); prodOv.objs.push(m); matObjs.push(m);
+    const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 2.4);
+    matObjs.push(...parts); prodOv.parts.push(...parts);
   }
   prodOv.mats = matObjs;
   mos.forEach((mo, i) => {
@@ -2301,6 +2326,10 @@ renderer.setAnimationLoop(() => {
   if (pulse.visible) {
     pulseT = (pulseT + dt * 0.12) % 1;
     pulse.position.copy(hl.curve.getPointAt(pulseT));
+  }
+  if (!reduceMotion && $("#opt-motion").checked) { // матеріали біжать гілками
+    if (prodOv.parts?.length) moveParticles(prodOv.parts, dt);
+    if (hl.parts.length) moveParticles(hl.parts, dt);
   }
   if (prodOv.dots.length && !reduceMotion) {
     const s = 1 + 0.25 * Math.sin(now / 260);
