@@ -306,6 +306,7 @@ def infra_data(specs, energy, vent):
     fuel, tank = 0.82, gen.get("tank_l") or 610
     lph = gen.get("fuel_lph_75") or 103.8
     cards["GENSET"] = dict(rows=[["Потужність", f"{kva} кВА / {kw} кВт (основна)"], ["Стан", "резерв, автостарт"],
+                                 ["Контролер", f"{gen.get('controller') or 'SmartGen HGM6120N'} · CMM366B-4G → Odoo"],
                                  ["Паливо", f"{round(fuel * 100)} % · {round(fuel * tank)} л"],
                                  ["Автономність", f"≈ {_fmt(fuel * tank / lph, 1)} год при 75 %"],
                                  ["Критичні споживачі зараз", f"{_fmt(crit_kw)} кВт з {kw} кВт"],

@@ -379,6 +379,9 @@ IP65, DALI-2) на 7,6 м, над мостом портального склад
   АВР Socomec ATyS p 1600 А. Тримає критичні споживачі (пожежна сигналізація, освітлення,
   аспірація, компресори, котельня, офіс і серверна, лінії A–B) — зараз ≈ 347 кВт із 507.
   Бак 610 л — ≈ 5 год при 75 %; для довгих відключень потрібен зовнішній бак.
+  Контролер — SmartGen HGM6120N (AMF) з модулем зв'язку CMM366B-4G замість штатної APM403: у Odoo
+  генератор веде готовий модуль `td_genset` (гілка `claude/dreamy-ramanujan-p2wlej`, Odoo 18 — потрібен
+  перенос на 19). Виконання N без CAN: дані ECU двигуна (J1939) недоступні, лише резистивні датчики.
 - Накопичувач Huawei LUNA2000 — 2 шафи, 387 кВт·год / 200 кВт: зрізання піків, резерв на
   час пуску генератора, удень — заряд від надлишку СЕС і КГУ.
 - Сонячна станція 900 кВт пік: 1 552 модулі LONGi Hi-MO 6 580 Вт рядами схід-захід по 10°
@@ -400,7 +403,7 @@ IP65, DALI-2) на 7,6 м, над мостом портального склад
 
 | Обладнання в моделі | Виробник і модель | Ключові параметри | Джерело |
 |---|---|---|---|
-| GENSET | KOHLER-SDMO D700 (шумозахисне виконання M230) | Потужність PRP (основна), 400/230 В: 634 кВА / 507 кВт; Потужність ESP (резервна), 400/230 В: 697 кВА / 558 кВт; Двигун: Doosan DP180LB, V10, 18,27 л, турбонаддув, 1500 об/хв, електронний регулятор | [1](https://assets.serverroomenvironments.co.uk/assets/files/65/82/01/sdmo-d700-generator-datasheet.pdf?1553415603) [2](https://pdf.directindustry.com/pdf/sdmo/d700/8339-777587.html) |
+| GENSET | KOHLER-SDMO D700 (шумозахисне виконання M230) | Потужність PRP (основна), 400/230 В: 634 кВА / 507 кВт; Потужність ESP (резервна), 400/230 В: 697 кВА / 558 кВт; Двигун: Doosan DP180LB, V10, 18,27 л, турбонаддув, 1500 об/хв, електронний регулятор; Контролер: SmartGen HGM6120N + CMM366B-4G | [1](https://assets.serverroomenvironments.co.uk/assets/files/65/82/01/sdmo-d700-generator-datasheet.pdf?1553415603) [2](https://pdf.directindustry.com/pdf/sdmo/d700/8339-777587.html) [3](https://www.smartgen.cn/yun/data/download/HGM6110N_6120N_6110NC_6120NC_6110CAN_6120CAN_en.pdf) [4](http://blog.smartgen.cn/smartgen-smartgen-cloud-plus-ios-version-is-launched/) |
 | ATS-1 | Socomec ATyS p 1600 A 4P (арт. 95734160), Advanced Integrated Logic | Номінальний струм Iu / AC-21 при 400 В: 1600 А; Номінальний струм AC-23 при 400 В: 1250 А (750 кВт); Кількість полюсів: 4 | [1](https://www.nhp.com.au/product/95734160) [2](https://www.nhp.com.au/public/assets/pim/Original/10030/95734160-AU-ATyS-Transfer-Switch-Advanced-Logic-4P-Datasheet.pdf) |
 | BESS | Huawei LUNA2000-200KWH-2H1 (Smart String ESS) з PCS LUNA2000-100KTL-M1 | Хімія комірок: LiFePO4 (LFP); Номінальна ємність: 193,5 кВт·год (12 батарейних модулів 12S1P по 16,13 кВт·год); Макс. потужність заряду / розряду: ≤100 кВт / ≤100 кВт (≤0,5C) | [1](https://solar.huawei.com/en/products/LUNA2000-97-129-161-200kwh/specs) [2](https://solar.huawei.com/admin/asset/v1/pro/view/53079bdabe2845f4988aa6a9565c4031.pdf) |
 | PV-ROOF | LONGi Hi-MO 6 Explorer LR5-72HTH-580M | Номінальна потужність Pmax (STC): 580 Вт (допуск 0…+3 %); ККД модуля: 22,5 %; Напруга / струм у точці Pmax: 44,06 В / 13,17 А | [1](https://liriksolar.com/image/uploads/LONGI%20Solar%20Hi-MO%206%20Explorer%20LR5-72HTH-585M%20Datasheet.pdf) [2](https://liriksolar.com/en/soniachni-paneli/soniachna-panel-na-580vt-longi-solar-hi-mo-6-explorer-lr5-72hth-580m) |
