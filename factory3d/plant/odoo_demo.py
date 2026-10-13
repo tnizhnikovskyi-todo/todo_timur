@@ -433,15 +433,26 @@ class Demo:
         e_docks = [f"DOCK-E{i}" for i in range(1, 8)]
         hw_po = self.purchase[0]
         incoming = [
+            # уже прийняті сьогодні: їхні вантажі ще біля воріт, на контролі або в карантині
+            ("WH/IN/00123", "edge", "P00405", w_docks[4], None, "done", 1.0,
+             [("EB2-ANT", 1200), ("EB04-WHT", 2400), ("EB2-WNG", 800)], NOW.replace(hour=7, minute=40)),
+            ("WH/IN/00124", "paint", "P00406", w_docks[5], None, "done", 1.0,
+             [("LFM-PR", 160), ("LFM-ENW", 120)], NOW.replace(hour=8, minute=10)),
+            ("WH/IN/00125", "pack", "P00407", w_docks[6], None, "done", 1.0,
+             [("PK-FF1400", 1500), ("PK-STR500", 12)], NOW.replace(hour=8, minute=50)),
+            ("WH/IN/00126", "sheets", "P00403", w_docks[1], None, "done", 1.0,
+             [("DSP16-ANT", 60)], NOW.replace(hour=7, minute=10)),
+            ("WH/IN/00127", "sheets", "P00408", w_docks[1], None, "done", 1.0,
+             [("DSP16-WNG", 45)], NOW.replace(hour=9, minute=45)),
             ("WH/IN/00128", "sheets", "P00409", w_docks[0], "TRUCK-IN-1", "assigned", 0.6,
              [("DSP16-SON", 120), ("DSP16-WHT", 80)], NOW.replace(hour=9, minute=30)),
             ("WH/IN/00129", "sheets", "P00410", w_docks[2], "TRUCK-IN-2", "assigned", 0.2,
              [("MDF18-RAW", 60), ("HDF3-WHT", 200)], NOW.replace(hour=10, minute=15)),
-            ("WH/IN/00130", "hw", hw_po["name"], w_docks[4], "TRUCK-IN-3", "assigned", 0.0,
+            ("WH/IN/00130", "hw", hw_po["name"], w_docks[3], "TRUCK-IN-3", "assigned", 0.4,
              [(lin["product"], lin["qty"]) for lin in hw_po["lines"][:8]], NOW.replace(hour=10, minute=40)),
             ("WH/IN/00131", "sheets", "P00414", w_docks[1], None, "assigned", 0.0,
              [("DSP18-CON", 120), ("DSP16-ANT", 60)], NOW.replace(hour=13, minute=0)),
-            ("WH/IN/00132", "edge", "P00415", w_docks[3], None, "assigned", 0.0,
+            ("WH/IN/00132", "edge", "P00415", w_docks[4], None, "assigned", 0.0,
              [("EB2-SON", 2000), ("EB2-WHT", 1400)], NOW.replace(hour=14, minute=0)),
             ("WH/IN/00133", "paint", "P00416", w_docks[5], None, "assigned", 0.0,
              [("LFM-ENW", 200), ("LFM-UV", 120)], NOW.replace(hour=14, minute=30)),
@@ -461,16 +472,17 @@ class Demo:
         for po in self.purchase:
             if po["name"] == "P00414":
                 po["locations"] = empty_rack[:4]  # куди підуть плити з фури о 13:00
-        putaway = [("WH/INT/00060", "done", 1.0, "QC-PLT-3", empty_rack[4], None, 2, 30, NOW.replace(hour=9, minute=5)),
+        putaway = [("WH/INT/00060", "done", 1.0, "QC-PLT-2", empty_rack[4], None, 2, 35, NOW.replace(hour=8, minute=5)),
                    ("WH/INT/00061", "assigned", 0.5, "QC-PLT-1", empty_rack[5], "FL-2", 1, 35,
                     NOW.replace(hour=10, minute=25))]
         for name, state, prog, src, dest, fl, decor, qty, when in putaway:
             self.pickings.append(dict(
                 name=name, picking_type="Розміщення плит у стелажі", type="putaway", partner="",
-                origin="QC/00413" if src == "QC-PLT-1" else "QC/00411", state=state, scheduled_date=ts(when),
+                origin="QC/00413" if src == "QC-PLT-1" else "WH/IN/00126", state=state, scheduled_date=ts(when),
                 progress=prog, source_locations=[src], location_dest=dest, vehicle=fl,
                 lines=[dict(product=SHEET_PRODUCTS[decor][0], qty=qty, qty_done=round(qty * prog))],
-                note="Контроль пройдено — стос їде в стелаж." if fl else ""))
+                note="Контроль пройдено — стос їде в стелаж." if fl else
+                "35 арк. пройшли контроль; 25 — у карантині (QC/00412)."))
         # поповнення під портал: стелаж → ряд під порталом цілим стосом (крок 4)
         by_prod = {}
         for c, loc in self.locations.items():
@@ -514,31 +526,35 @@ class Demo:
                 for q in loc["quants"]:
                     fg_by_product.setdefault(q["product"], []).append(code)
         trucks = {1: "TRUCK-OUT-1", 4: "TRUCK-OUT-2", 6: "TRUCK-OUT-3"}
-        for k, dock in enumerate(e_docks):
-            so = self.sale[k % len(self.sale)]
+        taken = {}
+        for k, so in enumerate(self.sale):  # кожне замовлення клієнта — своє відвантаження зі своїми рядками
+            dock = e_docks[k % len(e_docks)]
             name = f"WH/OUT/{412 + k:05d}"
+            later = k >= len(e_docks)  # друга машина до тих самих воріт — завтра
             loading = k in trucks
-            state = "assigned" if k != 3 else "waiting"
+            state = "waiting" if k == 3 or later else "assigned"
             prog = {1: 0.7, 4: 0.3, 6: 0.1}.get(k, 0.0)
             lines, cells = [], []
-            for j in range(2 + k % 2):
-                pcode = FG_CODES[(k * 2 + j) % len(FG_CODES)]
-                qty = 8 + det(name, j, mod=4) * 8
+            for j, ln in enumerate(so["lines"]):
+                pcode, qty = ln["product"], ln["qty"]
                 lines.append(dict(product=pcode, qty=qty, qty_done=round(qty * prog)))
-                for c in fg_by_product.get(pcode, [])[k * 2: k * 2 + 2]:
+                free = [c for c in fg_by_product.get(pcode, []) if c not in taken]
+                for c in free[:2]:
+                    taken[c] = name
                     cells.append(c)
                     for q in self.locations[c]["quants"]:
                         q["reserved"] = q["qty"]
                         q["reserved_for"] = name
+            when = (NOW + timedelta(days=1)).replace(hour=9, minute=0) if later else \
+                NOW.replace(hour=11 + k % 3, minute=0) if loading else None
             self.pickings.append(dict(
                 name=name, picking_type="Відвантаження", type="outgoing", partner=so["partner"],
-                origin=so["name"], state=state, scheduled_date=so["commitment_date"] if not loading
-                else ts(NOW.replace(hour=11 + k % 3, minute=0)), dock=dock, truck=trucks.get(k),
-                progress=prog, lines=lines, source_locations=cells, carrier="Власний транспорт"
-                if k % 2 else "Нова Пошта Вантаж (демо)",
+                origin=so["name"], state=state, scheduled_date=ts(when) if when else so["commitment_date"],
+                dock=dock, truck=trucks.get(k), progress=prog, lines=lines, source_locations=cells,
+                carrier="Власний транспорт" if k % 2 else "Нова Пошта Вантаж (демо)",
                 note="Чекає завершення МО" if state == "waiting" else ""))
             so["delivery"] = name
-            self.docks[dock] = name
+            self.docks.setdefault(dock, name)
         # комплектація компонентів (WH/PC) у візки буфера
         for k in range(12):
             code = f"KIT-{k + 1:02d}"
@@ -578,10 +594,11 @@ class Demo:
             dict(product=line["product"], qty=line["qty_done"], reserved_for=p["name"])
             for p in self.pickings if p["type"] == "outgoing" for line in p["lines"] if line["qty_done"]],
             kind="area")
-        self.location("IN-STAGE", f"{WH}/Приймання", [
-            dict(product=line["product"], qty=line["qty_done"], picking=p["name"])
-            for p in self.pickings if p["type"] == "incoming" for line in p["lines"] if line["qty_done"]],
-            kind="area")
+        for k in range(4, len(DOOR_Y) + 1):  # вивантаження перед воротами 4–7: те, що вже зняли з фури
+            self.location(f"UNLOAD-{k}", f"{WH}/Вхід/Ворота {k}", [
+                dict(product=line["product"], qty=line["qty_done"], picking=p["name"])
+                for p in self.pickings if p["type"] == "incoming" and p["dock"] == f"DOCK-W{k}"
+                for line in p["lines"] if line["qty_done"]], kind="area")
         self.location("QC-1", f"{WH}/Приймання/Карантин", [
             dict(product="DSP16-ANT", qty=25, lot="DSP16-ANT-2608-77", quality="QC/00412")], kind="area")
 
@@ -756,6 +773,21 @@ class Demo:
                                 note=None if rack else "У стелажах немає — під порталом останні аркуші; "
                                 f"поповнення з {pick['name'] if pick else 'наступного приймання'}")
 
+    def component_sources(self):
+        """Кожен компонент МО — від якого приймання й через які ворота він прийшов."""
+        door_of = {"FUR": 4, "EB": 5, "LFM": 6, "PK": 7, "PVC": 6}
+        incoming = sorted((p for p in self.pickings if p["type"] == "incoming"), key=lambda p: p["scheduled_date"])
+        for mo in self.productions:
+            for c in mo["components"]:
+                rec = [p for p in incoming if any(ln["product"] == c["product"] for ln in p["lines"])]
+                done = [p for p in rec if p["progress"] > 0]
+                pick = (done or rec or [None])[-1]
+                if pick:
+                    c["receipt"], c["door"] = pick["name"], int(pick["dock"][-1])
+                else:
+                    pre = c["product"].split("-")[0]
+                    c["door"] = door_of.get(pre, door_of.get(pre[:2], 1 + sum(map(ord, c["product"])) % 3))
+
     def mo_delivery(self):
         """Для кожного МО на замовлення клієнта — шлях після пакування: вихід з пакування → комірка складу ГП
         → зона відвантаження перед воротами → ворота → машина клієнта."""
@@ -789,6 +821,23 @@ class Demo:
                                   note=None if out.get("truck") else
                                   f"Машину ще не подано — відвантаження {out['scheduled_date'][:16].replace('-', '.')}"
                                   + (" · чекає завершення МО" if out["state"] == "waiting" else ""))
+        # фасади: буфер фасадів → складання свого корпусу → далі шлях корпусу до клієнта
+        by_name = {m["name"]: m for m in self.productions}
+        for mo in self.productions:
+            parent = by_name.get(mo["origin"])
+            if not parent or not parent.get("delivery"):
+                continue
+            buf = next((c for c, loc in self.locations.items() if c.startswith("FRONTS-")
+                        and loc.get("production") == parent["name"]), None)
+            asm = next((self.workorders[w]["workcenter"] for w in parent["workorders"]
+                        if self.workorders[w]["workcenter"].startswith("ASM")), None)
+            steps = ([dict(code=buf, label="буфер фасадів", note=self.locations[buf]["complete_name"])] if buf else [])
+            if asm:
+                steps.append(dict(code=asm, label=f"складання {parent['name'][-5:]}",
+                                  note=f"фасади ставлять на корпус {parent['name']}"))
+            pd = parent["delivery"]
+            mo["delivery"] = dict(picking=pd["picking"], partner=pd["partner"], via=parent["name"],
+                                  steps=steps + pd["steps"], note=pd["note"])
         full = next((m for m in self.productions if m["state"] == "progress" and m.get("delivery")
                      and m["delivery"]["steps"][-1]["code"].startswith("TRUCK-OUT")
                      and m.get("supply", {}).get("steps", [{}])[0].get("code", "").startswith("TRUCK-IN")), None)
@@ -865,6 +914,7 @@ class Demo:
         self.build_workcenters()
         self.build_logistics()
         self.mo_supply()
+        self.component_sources()
         self.mo_delivery()
         self.build_people_equipment()
         specs = load_specs()
@@ -886,7 +936,8 @@ class Demo:
                     "Z-PKS": "WH/Сировина/Пакування", "Z-FG": "WH/Готова продукція",
                     "Z-POST": "WH/Пост-виробництво", "Z-PRE": "WH/Передвиробництво"}
         for k in range(1, len(DOOR_Y) + 1):  # окрема зона перед кожними воротами
-            prefix[f"Z-RCV-{k}"] = (f"UNLOAD-{k}", f"QC-PLT-{k}") if k <= 3 else ("QC-1", "IN-STAGE") if k == 4 else ()
+            prefix[f"Z-RCV-{k}"] = (f"UNLOAD-{k}", f"QC-PLT-{k}") if k <= 3 else (f"UNLOAD-{k}", "QC-1") if k == 4 else \
+                (f"UNLOAD-{k}",)
             odoo_loc[f"Z-RCV-{k}"] = f"WH/Приймання/Ворота {k}"
             odoo_loc[f"Z-OUT-{k}"] = f"WH/Відвантаження/Ворота {k}"
         wc_zone = {}

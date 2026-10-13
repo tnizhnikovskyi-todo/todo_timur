@@ -44,8 +44,12 @@ def write_odoo(out_dir):
     """Демо-дані «як із Odoo» (plant/odoo_demo.py) поруч із моделлю."""
     from plant.odoo_demo import generate
     path = os.path.join(out_dir, "odoo_demo.json")
+    from plant.cycle_check import check
+    data = generate()
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(generate(), f, ensure_ascii=False, separators=(",", ":"))
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    issues = check(data)  # наскрізний цикл: від вивантаження фури до відвантаження клієнту
+    print("cycle_check:", "OK" if not issues else f"{len(issues)} проблем\n  " + "\n  ".join(issues))
     return path
 
 

@@ -1346,14 +1346,14 @@ function renderMO(name) {
         <td>${pill(w.blocked ? ["bad", "Зупинка"] : WO_STATE[w.state])}</td>
         <td class="n">${w.duration ?? "—"} / ${w.duration_expected}</td></tr>`).join("")}
     </table>
-    ${mo.delivery ? `<div class="sub">Шлях до клієнта · ${esc(mo.delivery.partner)}</div>
+    ${mo.delivery ? `<div class="sub">Шлях до клієнта · ${esc(mo.delivery.partner)}${mo.delivery.via ? ` · через корпус ${esc(mo.delivery.via)}` : ""}</div>
     <ol class="steps">${mo.delivery.steps.map((st) => `<li><button class="lnk" data-go="obj:${esc(st.code)}">${esc(st.label[0].toUpperCase() + st.label.slice(1))}</button>
       <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}</ol>
     ${mo.delivery.note ? `<div class="note">${esc(mo.delivery.note)}</div>` : ""}` : ""}
-    <div class="sub">Компоненти · натисніть, щоб побачити на складі</div>
+    <div class="sub">Компоненти · звідки прийшли й де лежать</div>
     <table class="tbl"><tr><th>Компонент</th><th class="n">Потреба</th><th></th></tr>
       ${mo.components.map((c) => `<tr class="click" data-go="comp:${esc(mo.name)}|${esc(c.product)}">
-        <td>${esc(P(c.product).name)}</td><td class="n">${qtyU(c.qty, c.product)}</td>
+        <td>${esc(P(c.product).name)}<br><span style="color:var(--muted)">ворота ${c.door}${c.receipt ? ` · ${esc(c.receipt)}` : " · із залишку"}</span></td><td class="n">${qtyU(c.qty, c.product)}</td>
         <td>${c.available ? pill(["ok", "є"]) : pill(["bad", "бракує"])}</td></tr>`).join("")}
     </table>
     ${mo.reservation_state === "waiting" ? `<div class="note bad">Компоненти не зарезервовано повністю — замовлення чекає приймання.</div>` : ""}`;
@@ -1460,13 +1460,23 @@ function showPicking(name) {
     Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route, { path: true }));
     return;
   }
-  if (p.dock) e.push({ code: p.dock, html: p.type === "incoming" ? "Розвантаження" : "Навантаження", cls: "prog" });
+  if (p.type === "incoming") { // маршрут приймання: фура → вивантаження → контроль → місце зберігання
+    const k = +p.dock.slice(-1);
+    const route = [{ code: p.truck || p.dock, html: p.truck ? "фура" : `ворота ${k}`, cls: "prog" },
+      { code: `UNLOAD-${k}`, html: "вивантаження", cls: "prog" }];
+    if (k <= 3) route.push({ code: `QC-PLT-${k}`, html: "контроль", cls: "prog" });
+    if (k === 4) route.push({ code: "QC-1", html: "контроль", cls: "prog" });
+    const prods = new Set(p.lines.map((l) => l.product));
+    let dest = idx.po.get(p.origin)?.locations || [];
+    if (!dest.length) dest = Object.entries(D.locations).filter(([c, l]) => !/^(UNLOAD|QC)/.test(c)
+      && l.quants.some((q) => prods.has(q.product))).map(([c]) => c);
+    dest.slice(0, 3).forEach((c, i) => route.push({ code: c, html: i ? null : "на зберігання", cls: "done" }));
+    Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route.filter((x) => items.has(x.code)), { path: true }));
+    return;
+  }
+  if (p.dock) e.push({ code: p.dock, html: "Навантаження", cls: "prog" });
   if (p.truck) e.push({ code: p.truck, html: null });
   for (const c of p.source_locations || []) e.push({ code: c, html: p.type === "outgoing" ? "відібрати" : "звідси", cls: "hl" });
-  if (p.type === "incoming") {
-    e.push({ code: "IN-STAGE", html: null });
-    for (const c of idx.po.get(p.origin)?.locations || []) e.push({ code: c, html: "сюди", cls: "done" });
-  }
   if (p.type === "outgoing") e.push({ code: "OUT-STAGE", html: null });
   if (p.type === "store_finished") e.push({ code: "POST-STAGE", html: "з пакування", cls: "hl" });
   if (p.type === "pick_components" && p.location_dest) e.push({ code: p.location_dest, html: "у візок", cls: "prog" });
