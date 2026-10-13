@@ -299,7 +299,7 @@ ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
     </div>
     <div class="sec">
       <h2>Шари</h2>
-      <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>маршрути й поточне місце кожного замовлення · вид згори без інженерії</small></span></label>
+      <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>маршрути від фури через склад плит до верстатів і поточне місце кожного замовлення · вид згори без інженерії</small></span></label>
       <div class="layers" id="layers"></div>
       <div class="row-btns" style="margin-top:8px">
         <button class="btn" id="all-on">Усі</button>
@@ -868,6 +868,25 @@ function drawProdOverlay() {
       tube.userData.isPulse = true;
       add(tube);
     }
+    // шлях плити від фури: ворота → вивантаження → контроль → стелаж → під порталом → перший верстат
+    const sp = [];
+    for (const st of mo.supply?.steps || []) {
+      const obj = items.get(st.code);
+      if (!obj) continue;
+      const p = topOf(obj).add(new THREE.Vector3(0, 1.0, 0)).add(off);
+      p.y = Math.min(p.y, 3.0) + off.x * 0.2; // стелажі високі — тримаємо лінію низько, щоб не перекривала план
+      if (!sp.length || sp[sp.length - 1].distanceTo(p) > 0.8) sp.push(p);
+    }
+    if (sp.length) {
+      sp.push(pts[0]);
+      const sc = new THREE.CatmullRomCurve3(sp, false, "centripetal");
+      const st = new THREE.Mesh(new THREE.TubeGeometry(sc, sp.length * 20, 0.18, 6, false),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55 }));
+      const start = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8 }));
+      start.position.copy(sp[0]);
+      for (const o of [st, start]) { o.userData.isPulse = true; add(o); }
+    }
     const pos = moPosition(wos);
     if (!pos) return;
     const a = Math.max(0, at[pos.k]), b = Math.max(0, at[Math.min(pos.k + 1, at.length - 1)]);
@@ -902,7 +921,8 @@ async function setProdOverlay(on) {
     prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
     layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) setLayer(k, false); });
     select(null); clearHighlight();
-    goView({ name: "План згори", target: [77, 36, 0], pos: [77, 35.9, 172] });
+    // увесь цех разом із фурами біля західних воріт — між лівою й правою панелями
+    goView({ name: "План згори", target: [78, 36, 0], pos: [78, 35.9, 275] });
     await modelLoaded;
     drawProdOverlay();
     openTab("production");

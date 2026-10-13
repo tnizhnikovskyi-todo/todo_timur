@@ -23,7 +23,7 @@ from .equipment import ROLE_BY_CODE, load_specs, passport
 from .layout import (EDGE_LEVELS, EDGE_SECTIONS, EDGE_UNITS, FG_BAYS, FG_LEVELS, FG_PRODUCTS,
                      FG_ROWS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
                      STATUS, ZONES, edge_slot, fg_slot, hw_state, sheet_slot)
-from .layout import QC_STACKS, RACK_LEVELS, RACK_LINES, SHEET_DOORS, UNLOAD_STACKS, rack_bays, rack_slot
+from .layout import DOOR_Y, QC_STACKS, RACK_LEVELS, RACK_LINES, SHEET_DOORS, UNLOAD_STACKS, rack_bays, rack_slot
 
 NOW = datetime(2026, 10, 12, 10, 30)
 WH = "WH"
@@ -817,12 +817,16 @@ class Demo:
         zones = {}
         prefix = {"Z-SHEETS": ("PLT-", "RCK-"), "Z-HW": ("FUR-",), "Z-EDGE": ("EB-",),
                   "Z-PKS": ("PACK-STORE", "PAL-"),
-                  "Z-FG": ("FG-R",), "Z-RCV": ("IN-STAGE", "QC-1", "UNLOAD-", "QC-PLT-"), "Z-OUT": ("OUT-STAGE",),
+                  "Z-FG": ("FG-R",),
                   "Z-POST": ("POST-STAGE",), "Z-PRE": ("KIT-", "FRONTS-1", "FRONTS-2", "FRONTS-3"),
                   "Z-FAC": ("PAINT-STORE", "FRONTS-4", "FRONTS-5", "FRONTS-6")}
         odoo_loc = {"Z-SHEETS": "WH/Сировина/Плити", "Z-HW": "WH/Сировина/Фурнітура", "Z-EDGE": "WH/Сировина/Крайка",
-                    "Z-PKS": "WH/Сировина/Пакування", "Z-FG": "WH/Готова продукція", "Z-RCV": "WH/Приймання",
-                    "Z-OUT": "WH/Відвантаження", "Z-POST": "WH/Пост-виробництво", "Z-PRE": "WH/Передвиробництво"}
+                    "Z-PKS": "WH/Сировина/Пакування", "Z-FG": "WH/Готова продукція",
+                    "Z-POST": "WH/Пост-виробництво", "Z-PRE": "WH/Передвиробництво"}
+        for k in range(1, len(DOOR_Y) + 1):  # окрема зона перед кожними воротами
+            prefix[f"Z-RCV-{k}"] = (f"UNLOAD-{k}", f"QC-PLT-{k}") if k <= 3 else ("QC-1", "IN-STAGE") if k == 4 else ()
+            odoo_loc[f"Z-RCV-{k}"] = f"WH/Приймання/Ворота {k}"
+            odoo_loc[f"Z-OUT-{k}"] = f"WH/Відвантаження/Ворота {k}"
         wc_zone = {}
         for mch in MACHINES:
             code, _, _, x, y = mch[:5]
@@ -831,11 +835,13 @@ class Demo:
                     wc_zone.setdefault(zc, []).append(code)
                     break
         for zc, name, *_ in ZONES:
-            locs = [c for c in self.locations if c.startswith(prefix.get(zc, ("\0",)))]
+            locs = [c for c in self.locations if prefix.get(zc) and c.startswith(prefix[zc])]
             zones[zc] = dict(name=name, odoo_location=odoo_loc.get(zc), locations=locs,
                              workcenters=wc_zone.get(zc, []))
-        zones["Z-RCV"]["pickings"] = [p["name"] for p in self.pickings if p["type"] == "incoming"]
-        zones["Z-OUT"]["pickings"] = [p["name"] for p in self.pickings if p["type"] == "outgoing"]
+        for p in self.pickings:
+            if p.get("dock"):
+                side, k = p["dock"][5], p["dock"][6:]
+                zones[f"Z-{'RCV' if side == 'W' else 'OUT'}-{k}"].setdefault("pickings", []).append(p["name"])
         energy = self.build_energy(specs)
         lux_norms = load_lux_norms()
         groups = light_layout(specs, lux_norms)

@@ -20,12 +20,13 @@ Z_DET = 8.85  # під покрівлею, між фермами (нижній �
 
 # зона → тип сповіщувачів: multi — пил деревини (оптико-тепловий), smoke — склади, heat — котельня/компресорна
 ZONE_DETECTOR = {
-    "Z-RCV": "smoke", "Z-SHEETS": "smoke", "Z-HW": "smoke", "Z-EDGE": "smoke", "Z-PKS": "smoke",
+    "Z-SHEETS": "smoke", "Z-HW": "smoke", "Z-EDGE": "smoke", "Z-PKS": "smoke",
     "Z-CUT": "multi", "Z-EB": "multi", "Z-CNC": "multi", "Z-SORT": "multi", "Z-FAC": "multi",
     "Z-ASM": "multi", "Z-PRE": "smoke", "Z-MAINT": "multi", "Z-PACK": "smoke", "Z-POST": "smoke",
     # компресорна й зарядна без власної стелі: під покрівлею 9 м точкові теплові заборонені (табл. 7.1 — до 7,5 м)
-    "Z-CMP": "multi", "Z-CHG": "multi", "Z-FG": "smoke", "Z-ELEC": "smoke", "Z-OUT": "smoke",
+    "Z-CMP": "multi", "Z-CHG": "multi", "Z-FG": "smoke", "Z-ELEC": "smoke",
 }
+ZONE_DETECTOR.update({z[0]: "smoke" for z in ZONES if z[0].startswith(("Z-RCV-", "Z-OUT-"))})
 BOILER_HOUSE = (67.6, D + 3.0, 79.6, D + 9.0)  # котельня має власне перекриття 4,5 м — теплові сповіщувачі
 Z_BOILER = 4.35
 KIND_NAME = {"multi": "оптико-теплові (пил деревини)", "smoke": "димові оптичні", "heat": "теплові"}

@@ -9,7 +9,7 @@ import json
 import math
 import os
 
-from .layout import ZONES
+from .layout import DOOR_ZONES_E, DOOR_ZONES_W, ZONES
 from .ventilation import obstacles as vent_obstacles
 
 UF, MF = 0.7, 0.8  # коефіцієнт використання (високий цех, світлі стіни) і коефіцієнт експлуатації
@@ -32,7 +32,6 @@ NORM_NAMES = {
 
 # zone, вид робіт, тип світильника, щит освітлення, рівень зараз (диммування), ряди над проходами
 LIGHT_ZONES = [
-    ("Z-RCV", "packing_dispatch", "highbay", "LP-1", 1.0, None),
     ("Z-SHEETS", "storage_floor", "highbay", "LP-1", 0.8, None),
     ("Z-HW", "storage_racks", "highbay_rack", "LP-1", 0.7, ("y", [50.1, 54.3, 58.5, 62.7, 66.9])),
     ("Z-EDGE", "storage_racks", "highbay_rack", "LP-1", 0.7, ("x", [32.1])),
@@ -51,8 +50,9 @@ LIGHT_ZONES = [
     ("Z-CHG", "battery_charging", "highbay", "LP-3", 0.5, None),
     ("Z-FG", "storage_racks", "highbay_rack", "LP-3", 0.6, ("x", [125.4, 130.9, 135.4])),
     ("Z-ELEC", "switchgear_room", "highbay", "LP-3", 0.5, None),
-    ("Z-OUT", "packing_dispatch", "highbay", "LP-3", 1.0, None),
 ]
+LIGHT_ZONES[0:0] = [(z[0], "packing_dispatch", "highbay", "LP-1", 1.0, None) for z in DOOR_ZONES_W]
+LIGHT_ZONES += [(z[0], "packing_dispatch", "highbay", "LP-3", 1.0, None) for z in DOOR_ZONES_E]
 # щити освітлення: code, x на північній стіні, назва
 PANELS = [("LP-1", 40.0, "Щит освітлення ЩО-1 · склади сировини, приймання"),
           ("LP-2", 90.6, "Щит освітлення ЩО-2 · лінії й дільниця фасадів"),
