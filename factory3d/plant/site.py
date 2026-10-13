@@ -658,11 +658,12 @@ def build_buffer():
                      desc="Комплект фурнітури під одне замовлення." if k > 1
                      else "Візок майже порожній, чекає на комплектацію.")
     rc = shared("rack_cart", lambda m: rack_cart(m, 0, 0))
+    # етажерка фасадів на кожне замовлення фасадів (FRONTS-k ↔ k-те МО фасадів у odoo_demo.py)
     for i, (x, y) in enumerate(((95.0, 37.5), (97.5, 37.5), (100.0, 37.5), (88.5, 66.0), (88.5, 69.0),
-                                (88.5, 63.0)), 1):
+                                (88.5, 63.0), (102.5, 37.5), (105.0, 37.5)), 1):
         code = f"FRONTS-{i}"
         instance(code, "buffer" if y < 46 else "facade", rc, loc=(x, y, 0), code=code, kind="kit",
-                 label=f"Етажерка {code}", desc="Готові фасади з завісами, чекають на збирання.")
+                 label=f"Етажерка {code}", desc="Фасади з завісами під одне замовлення — чекають на збирання.")
 
 
 def build_paint_store():

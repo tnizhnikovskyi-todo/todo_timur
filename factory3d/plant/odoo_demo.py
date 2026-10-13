@@ -572,12 +572,13 @@ class Demo:
                           [dict(product=c["product"], qty=c["qty"]) for c in hw] if done else [],
                           kind="kit", production=mo["name"], picking=name)
         fronts = [m for m in self.productions if m["route"].startswith("F")]
-        for k in range(6):
+        for k, mo in enumerate(fronts):  # окрема етажерка на кожне замовлення фасадів
             code = f"FRONTS-{k + 1}"
-            mo = fronts[k % len(fronts)]
+            done = round(mo["qty"] * (1.0 if mo["state"] == "done" else mo.get("progress", 0)))
             self.location(code, f"{WH}/Передвиробництво/Фасади/{code}",
-                          [dict(product=mo["product"], qty=mo["qty"])], kind="kit",
-                          production=mo.get("origin"), note=f"Фасади з {mo['name']}")
+                          [dict(product=mo["product"], qty=done)] if done else [], kind="kit",
+                          production=mo.get("origin"), fronts_mo=mo["name"],
+                          note=f"Фасади з {mo['name']}: готово {done} з {mo['qty']}")
         # розміщення готової продукції (WH/SFP) і зона виходу
         post = []
         for k in range(4):
@@ -828,7 +829,7 @@ class Demo:
             if not parent or not parent.get("delivery"):
                 continue
             buf = next((c for c, loc in self.locations.items() if c.startswith("FRONTS-")
-                        and loc.get("production") == parent["name"]), None)
+                        and loc.get("fronts_mo") == mo["name"]), None)
             asm = next((self.workorders[w]["workcenter"] for w in parent["workorders"]
                         if self.workorders[w]["workcenter"].startswith("ASM")), None)
             steps = ([dict(code=buf, label="буфер фасадів", note=self.locations[buf]["complete_name"])] if buf else [])
@@ -930,14 +931,15 @@ class Demo:
         prefix = {"Z-SHEETS": ("PLT-", "RCK-"), "Z-HW": ("FUR-",), "Z-EDGE": ("EB-",),
                   "Z-PKS": ("PACK-STORE", "PAL-"),
                   "Z-FG": ("FG-R",),
-                  "Z-POST": ("POST-STAGE",), "Z-PRE": ("KIT-", "FRONTS-1", "FRONTS-2", "FRONTS-3"),
+                  "Z-POST": ("POST-STAGE",), "Z-PRE": ("KIT-", "FRONTS-1", "FRONTS-2", "FRONTS-3",
+                            "FRONTS-7", "FRONTS-8"),
                   "Z-FAC": ("PAINT-STORE", "FRONTS-4", "FRONTS-5", "FRONTS-6")}
         odoo_loc = {"Z-SHEETS": "WH/Сировина/Плити", "Z-HW": "WH/Сировина/Фурнітура", "Z-EDGE": "WH/Сировина/Крайка",
                     "Z-PKS": "WH/Сировина/Пакування", "Z-FG": "WH/Готова продукція",
                     "Z-POST": "WH/Пост-виробництво", "Z-PRE": "WH/Передвиробництво"}
         for k in range(1, len(DOOR_Y) + 1):  # окрема зона перед кожними воротами
-            prefix[f"Z-RCV-{k}"] = (f"UNLOAD-{k}", f"QC-PLT-{k}") if k <= 3 else (f"UNLOAD-{k}", "QC-1") if k == 4 else \
-                (f"UNLOAD-{k}",)
+            qc = (f"QC-PLT-{k}",) if k <= 3 else ("QC-1",) if k == 4 else ()
+            prefix[f"Z-RCV-{k}"] = (f"UNLOAD-{k}",) + qc
             odoo_loc[f"Z-RCV-{k}"] = f"WH/Приймання/Ворота {k}"
             odoo_loc[f"Z-OUT-{k}"] = f"WH/Відвантаження/Ворота {k}"
         wc_zone = {}

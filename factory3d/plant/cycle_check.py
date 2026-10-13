@@ -62,6 +62,9 @@ def check(d):
             issues.append(f"{m['name']}: шлях плити не починається з вивантаження")
         if not dl or not dl["steps"][-1]["code"].startswith(("TRUCK-OUT", "DOCK-E")):
             issues.append(f"{m['name']}: шлях не закінчується відвантаженням")
+        steps = (dl or {}).get("steps", [])
+        if m["route"].startswith("F") and not any(st["code"].startswith("FRONTS-") for st in steps):
+            issues.append(f"{m['name']}: фасади без етажерки в буфері")
         for c in m["components"]:
             if not c.get("door"):
                 issues.append(f"{m['name']}: невідомо, звідки {c['product']}")
