@@ -23,7 +23,7 @@ from .equipment import ROLE_BY_CODE, load_specs, passport
 from .layout import (EDGE_LEVELS, EDGE_SECTIONS, EDGE_UNITS, FG_BAYS, FG_LEVELS, FG_PRODUCTS,
                      FG_ROWS, HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_ROWS_Y,
                      STATUS, ZONES, edge_slot, fg_slot, hw_state, sheet_slot)
-from .layout import GANTRY_SKIP, INFEED, RACK_LEVELS, RACK_LINES, rack_bays, rack_slot
+from .layout import QC_STACKS, RACK_LEVELS, RACK_LINES, SHEET_DOORS, UNLOAD_STACKS, rack_bays, rack_slot
 
 NOW = datetime(2026, 10, 12, 10, 30)
 WH = "WH"
@@ -155,8 +155,6 @@ class Demo:
         # портальний склад плит
         for j in range(len(SHEET_ROWS_Y)):
             for i in range(len(SHEET_COLS_X)):
-                if (i, j) in GANTRY_SKIP:
-                    continue
                 code, decor, n = sheet_slot(i, j)
                 pcode = SHEET_PRODUCTS[decor][0]
                 if pcode == "DSP18-CON":
@@ -176,12 +174,13 @@ class Demo:
                     quants = [dict(product=pcode, qty=n, lot=lot)] if n else []
                     self.location(code, f"{WH}/Сировина/Плити/Стелажі/{line}/{code}", quants, capacity=55,
                                   kind="stack")
-        # на транспортерах: INFEED-1 — стос під порталом і стос на зовнішній станції, INFEED-2 — під порталом
-        on_infeed = {"INFEED-1": [(2, 40), (0, 35)], "INFEED-2": [(4, 30)]}
-        for code, *_ in INFEED:
-            self.location(code, f"{WH}/Сировина/Плити/Транспортери/{code}",
-                          [dict(product=SHEET_PRODUCTS[d][0], qty=q) for d, q in on_infeed[code]], capacity=110,
-                          kind="stack")
+        # приймання плит: вивантаження біля воріт 1–3 (WH/Вхід) і площадки контролю (WH/Контроль якості)
+        for k, _ in enumerate(SHEET_DOORS, 1):
+            self.location(f"UNLOAD-{k}", f"{WH}/Вхід/Ворота {k}",
+                          [dict(product=SHEET_PRODUCTS[d][0], qty=n) for n, d in UNLOAD_STACKS[k]], kind="area")
+            n, d = QC_STACKS[k]
+            self.location(f"QC-PLT-{k}", f"{WH}/Контроль якості/Плити {k}",
+                          [dict(product=SHEET_PRODUCTS[d][0], qty=n)], kind="area")
         # фурнітура: правило поповнення на кожну комірку
         po_lines = []
         for ri in range(HW_ROWS):
@@ -450,48 +449,60 @@ class Demo:
              [("PK-FF1400", 3000), ("PK-STR500", 24)], (NOW + timedelta(days=1)).replace(hour=9, minute=0)),
         ]
         for name, sup, origin, dock, truck, state, done, lines, when in incoming:
-            dest = {"sheets": "Стелажі плит", "hw": "Склад фурнітури", "edge": "Склад крайки",
+            dest = {"sheets": "Вхід → контроль плит → стелажі", "hw": "Склад фурнітури", "edge": "Склад крайки",
                     "paint": "Склад ЛФМ", "pack": "Пакувальні матеріали"}[sup]
             self.pickings.append(dict(
                 name=name, picking_type="Приймання", type="incoming", partner=SUPPLIERS[sup], origin=origin,
                 state=state, scheduled_date=ts(when), dock=dock, truck=truck, location_dest=dest,
                 progress=done, lines=[dict(product=p, qty=q, qty_done=round(q * done)) for p, q in lines]))
             self.docks[dock] = name
-        # поповнення порталу: стелаж → транспортер → місце під порталом (правило мін. запасу)
+        # розміщення після контролю: площадка контролю → стелаж (крок 3)
         empty_rack = [c for c, loc in self.locations.items() if c.startswith("RCK-") and not loc["quants"]]
         for po in self.purchase:
             if po["name"] == "P00414":
-                po["locations"] = empty_rack[:4]  # куди ставити плити з фури
+                po["locations"] = empty_rack[:4]  # куди підуть плити з фури о 13:00
+        putaway = [("WH/INT/00060", "done", 1.0, "QC-PLT-3", empty_rack[4], None, 2, 30, NOW.replace(hour=9, minute=5)),
+                   ("WH/INT/00061", "assigned", 0.5, "QC-PLT-1", empty_rack[5], "FL-2", 1, 35,
+                    NOW.replace(hour=10, minute=25))]
+        for name, state, prog, src, dest, fl, decor, qty, when in putaway:
+            self.pickings.append(dict(
+                name=name, picking_type="Розміщення плит у стелажі", type="putaway", partner="",
+                origin="QC/00413" if src == "QC-PLT-1" else "QC/00411", state=state, scheduled_date=ts(when),
+                progress=prog, source_locations=[src], location_dest=dest, vehicle=fl,
+                lines=[dict(product=SHEET_PRODUCTS[decor][0], qty=qty, qty_done=round(qty * prog))],
+                note="Контроль пройдено — стос їде в стелаж." if fl else ""))
+        # поповнення під портал: стелаж → ряд під порталом цілим стосом (крок 4)
         by_prod = {}
         for c, loc in self.locations.items():
             if c.startswith("RCK-"):
                 for q in loc["quants"]:
                     by_prod.setdefault(q["product"], []).append(c)
-        gantry_empty = [c for c, loc in self.locations.items() if c.startswith("PLT-") and not loc["quants"]]
-        repl = [("WH/INT/00071", "done", 1.0, "INFEED-1", "FL-2", 2, 40, NOW.replace(hour=9, minute=40)),
-                ("WH/INT/00072", "assigned", 0.5, "INFEED-2", "FL-6", 3, 35, NOW.replace(hour=10, minute=20)),
-                ("WH/INT/00073", "assigned", 0.5, "INFEED-1", "FL-2", 0, 35, NOW.replace(hour=10, minute=50))]
-        for k, (name, state, prog, infeed, fl, decor, qty, when) in enumerate(repl):
+        repl = [("WH/INT/00071", "done", 1.0, "PLT-03A", "FL-6", 2, 40, NOW.replace(hour=9, minute=40)),
+                ("WH/INT/00072", "assigned", 0.5, "PLT-07C", "FL-6", 3, 35, NOW.replace(hour=10, minute=20)),
+                ("WH/INT/00073", "assigned", 0.0, "PLT-08A", None, 5, 30, NOW.replace(hour=11, minute=0))]
+        for k, (name, state, prog, target, fl, decor, qty, when) in enumerate(repl):
             pcode = SHEET_PRODUCTS[decor][0]
             srcs = by_prod.get(pcode) or ["RCK-R1-1A"]
-            src = srcs[k % len(srcs)]
-            target = gantry_empty[k % len(gantry_empty)] if gantry_empty else None
             self.pickings.append(dict(
-                name=name, picking_type="Поповнення порталу", type="replenish", partner="",
-                origin="Мінімальний запас порталу", state=state, scheduled_date=ts(when), progress=prog,
-                source_locations=[src], location_dest=infeed, target=target, vehicle=fl,
+                name=name, picking_type="Поповнення під портал", type="replenish", partner="",
+                origin="Мінімальний запас під порталом", state=state, scheduled_date=ts(when), progress=prog,
+                source_locations=[srcs[k % len(srcs)]], location_dest=target, vehicle=fl,
                 lines=[dict(product=pcode, qty=qty, qty_done=round(qty * prog))],
-                note={0: "Стос на транспортері, портал перекладає листи.",
-                      1: "Навантажувач ставить стос на транспортер 2.",
-                      2: "Стос на зовнішній станції транспортера 1 — заїде, щойно портал звільнить "
-                         "приймальну станцію."}[k]))
+                note={0: "Стос стоїть у ряду 3, портал бере з нього листи.",
+                      1: "Навантажувач у проході 4 ставить стос у ряд 7; прохід заблоковано для порталу.",
+                      2: "Наступне: МДФ для нестингу, ряд 8."}[k]))
         # вхідний контроль
         self.quality += [
             dict(name="QC/00412", title="Вхідний контроль плит", product="DSP16-ANT", lot="DSP16-ANT-2608-77",
                  state="fail", location="QC-1", picking="WH/IN/00126",
                  note="Товщина 16,6 мм при допуску ±0,3 мм. Стос у карантині, претензія постачальнику."),
             dict(name="QC/00413", title="Вхідний контроль плит", product="DSP16-SON", lot="DSP16-SON-2610-31",
-                 state="pass", location="QC-1", picking="WH/IN/00128", note="Декор і геометрія в нормі."),
+                 state="pass", location="QC-PLT-1", picking="WH/IN/00128",
+                 note="Товщина 16,1 мм у 4 точках, декор і кромки в нормі — у стелаж (WH/INT/00061)."),
+            dict(name="QC/00415", title="Вхідний контроль плит", product=SHEET_PRODUCTS[QC_STACKS[2][1]][0],
+                 state="none", location="QC-PLT-2", picking="WH/IN/00127", note="Контролер міряє товщину."),
+            dict(name="QC/00416", title="Вхідний контроль плит", product=SHEET_PRODUCTS[QC_STACKS[3][1]][0],
+                 state="none", location="QC-PLT-3", picking="WH/IN/00129", note="Чекає контролера."),
             dict(name="QC/00414", title="Контроль збирання", product=self.productions[0]["product"],
                  state="none", location="ASMLINE-1", production=self.productions[0]["name"],
                  note="Перевірка діагоналей і роботи фасадів — перед пакуванням."),
@@ -703,6 +714,47 @@ class Demo:
         return ev
 
     # ---------------------------------------------------------------- зони та підсумки
+    def sheet_chain(self):
+        """Ланцюжок плит від фури до пили: кроки з об'єктами сцени, документами Odoo й залишками."""
+        def sheets(prefix):
+            return sum(q["qty"] for c, loc in self.locations.items() if c.startswith(prefix) for q in loc["quants"])
+
+        def stacks(prefix):
+            n = sum(1 for c, loc in self.locations.items() if c.startswith(prefix) and loc["quants"])
+            word = "стос" if n % 10 == 1 and n % 100 != 11 else \
+                "стоси" if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else "стосів"
+            return f"{n} {word}"
+        pk = {p["name"]: p for p in self.pickings}
+        put, rep = pk["WH/INT/00061"], pk["WH/INT/00072"]
+        saw_mo = next((m["name"] for m in self.productions if m["state"] == "progress" and any(
+            self.workorders[w]["workcenter"] == "SAW-1" and self.workorders[w]["state"] == "progress"
+            for w in m["workorders"])), self.productions[0]["name"])
+        steps = [
+            dict(n=1, title="Вивантаження з фури", docs=["WH/IN/00128", "WH/IN/00129"],
+                 codes=["TRUCK-IN-1", "UNLOAD-1", "TRUCK-IN-2", "UNLOAD-3", "UNLOAD-2"],
+                 stock=f"{stacks('UNLOAD-')} · {sheets('UNLOAD-')} арк.",
+                 desc="Стоси знімають із фури біля воріт 1–3 і звіряють із накладною (WH/IN → Вхід)."),
+            dict(n=2, title="Приймання й контроль якості", docs=["QC/00413", "QC/00415", "QC/00416", "QC/00412"],
+                 codes=["QC-PLT-1", "QC-PLT-2", "QC-PLT-3", "QC-1"],
+                 stock=f"{stacks('QC-PLT-')} · {sheets('QC-PLT-')} арк.",
+                 desc="Товщина, декор, кромки, вологість. Брак — у карантин біля воріт 4, решта — у стелажі."),
+            dict(n=3, title="Склад плит · стелажі", docs=["WH/INT/00061", "WH/INT/00060"],
+                 codes=["BOARD-RACKS", put["location_dest"], "FL-2"],
+                 stock=f"{stacks('RCK-')} · {sheets('RCK-')} арк.",
+                 desc="8 ліній стелажів по 4 яруси; навантажувач кладе стос із площадки контролю."),
+            dict(n=4, title="Склад під порталом", docs=["WH/INT/00072", "WH/INT/00071", "WH/INT/00073"],
+                 codes=["GANTRY-1", rep["location_dest"], "FL-6"],
+                 stock=f"{stacks('PLT-')} · {sheets('PLT-')} арк.",
+                 desc="Навантажувач ставить цілий стос у ряд під порталом через ворота з блокуванням зони."),
+            dict(n=5, title="Виробництво", docs=[saw_mo],
+                 codes=["SAW-1", "SAW-2", "SAW-3", "NEST-1"], stock="портал подає по одному листу",
+                 desc="Портал кладе лист на підйомний стіл розкрійного центру чи нестингу."),
+        ]
+        path = [("TRUCK-IN-1", "1 · фура"), ("UNLOAD-1", "1 · вивантаження"), ("QC-PLT-1", "2 · контроль"),
+                (put["location_dest"], "3 · стелаж"), (rep["location_dest"], "4 · під порталом"),
+                ("SAW-1", "5 · розкрій")]
+        return dict(steps=steps, path=[dict(code=c, label=lbl) for c, lbl in path])
+
     def build(self):
         self.build_catalog()
         self.build_stock()
@@ -720,9 +772,9 @@ class Demo:
             if pp:
                 wc.update(manufacturer=pp["manufacturer"], model=pp["model"])
         zones = {}
-        prefix = {"Z-SHEETS": ("PLT-", "RCK-", "INFEED-"), "Z-HW": ("FUR-",), "Z-EDGE": ("EB-",),
+        prefix = {"Z-SHEETS": ("PLT-", "RCK-"), "Z-HW": ("FUR-",), "Z-EDGE": ("EB-",),
                   "Z-PKS": ("PACK-STORE", "PAL-"),
-                  "Z-FG": ("FG-R",), "Z-RCV": ("IN-STAGE", "QC-1"), "Z-OUT": ("OUT-STAGE",),
+                  "Z-FG": ("FG-R",), "Z-RCV": ("IN-STAGE", "QC-1", "UNLOAD-", "QC-PLT-"), "Z-OUT": ("OUT-STAGE",),
                   "Z-POST": ("POST-STAGE",), "Z-PRE": ("KIT-", "FRONTS-1", "FRONTS-2", "FRONTS-3"),
                   "Z-FAC": ("PAINT-STORE", "FRONTS-4", "FRONTS-5", "FRONTS-6")}
         odoo_loc = {"Z-SHEETS": "WH/Сировина/Плити", "Z-HW": "WH/Сировина/Фурнітура", "Z-EDGE": "WH/Сировина/Крайка",
@@ -771,7 +823,7 @@ class Demo:
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
             docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent, fire=fire, infra=infra,
-            evacuation=evac,
+            evacuation=evac, sheet_chain=self.sheet_chain(),
             passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
 
 

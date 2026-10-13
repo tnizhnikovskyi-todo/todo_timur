@@ -25,7 +25,7 @@ ROLE_BY_CODE = {
     "PACK-1": "stretch_wrapper", "PACK-2": "stretch_wrapper", "PACKLINE-1": "shrink_line",
     "COMPRESSOR": "compressor", "DUST-1": "dust_extraction", "BOILER": "biomass_boiler",
     "TUGGER-1": "tugger",
-    "BOARD-RACKS": "board_rack", "INFEED-1": "infeed_conveyor", "INFEED-2": "infeed_conveyor",
+    "BOARD-RACKS": "board_rack",
     "FL-2": "board_forklift", "FL-6": "board_forklift",
 }
 for _i in range(1, 7):

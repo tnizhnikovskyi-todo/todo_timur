@@ -1120,6 +1120,7 @@ body().addEventListener("click", (e) => {
   else if (t === "prod") showProduct(v);
   else if (t === "obj") ensureCode(v).then((o) => { if (o) { if (!isShown(o)) showLayerOf(o); select(o, { keepHighlight: true }); focusOn(o); } });
   else if (t === "comp") showComponent(v);
+  else if (t === "chain") showChain(v);
   else if (t === "locs") highlightLocs(v.split(","));
   else if (t === "line") showLine(v);
   else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
@@ -1340,7 +1341,7 @@ function highlightLocs(codes) { highlight(codes.map((c) => ({ code: c, html: "",
 
 // ---------------------------------------------------------------- вкладка «Логістика»
 const PICK_KIND = { incoming: "Приймання", outgoing: "Відвантаження", pick_components: "Комплектація компонентів",
-  store_finished: "Розміщення готової продукції", replenish: "Поповнення порталу" };
+  store_finished: "Розміщення готової продукції", replenish: "Поповнення під портал", putaway: "Розміщення плит у стелажі" };
 function pickRow(p) {
   return `<li><button class="row" data-go="pick:${esc(p.name)}">
     <span class="t">${esc(p.name)}${p.partner ? ` · ${esc(p.partner)}` : ""}</span>${pill(PICK_STATE[p.state] || ["idle", p.state])}
@@ -1350,10 +1351,15 @@ function pickRow(p) {
 function renderLogistics() {
   setTabs("logistics");
   const by = (t) => D.pickings.filter((p) => p.type === t);
-  body().innerHTML = `
-    <div class="sub" style="margin-top:2px">Приймання · західні ворота</div><ul class="rows">${by("incoming").map(pickRow).join("")}</ul>
+  const SC = D.sheet_chain;
+  body().innerHTML = `${SC ? `<div class="sub" style="margin-top:2px">Ланцюжок плит · від фури до пили</div>
+    <ul class="rows">${SC.steps.map((st) => `<li><button class="row" data-go="chain:${st.n}"><span class="t">${st.n}. ${esc(st.title)}</span>
+      <span class="mono">${esc(st.stock)}</span><span class="m">${esc(st.desc)}</span></button></li>`).join("")}</ul>
+    <div class="row-btns" style="margin:6px 0 4px"><button class="btn" data-go="chain:all">Показати весь шлях у 3D</button></div>` : ""}
+    <div class="sub">Приймання · західні ворота</div><ul class="rows">${by("incoming").map(pickRow).join("")}</ul>
+    <div class="sub">Розміщення плит у стелажі · після контролю</div><ul class="rows">${by("putaway").map(pickRow).join("")}</ul>
     <div class="sub">Відвантаження · східні ворота</div><ul class="rows">${by("outgoing").map(pickRow).join("")}</ul>
-    <div class="sub">Поповнення порталу · стелажі → транспортер</div><ul class="rows">${by("replenish").map(pickRow).join("")}</ul>
+    <div class="sub">Поповнення під портал · стелажі → ряди під порталом</div><ul class="rows">${by("replenish").map(pickRow).join("")}</ul>
     <div class="sub">Розміщення готової продукції</div><ul class="rows">${by("store_finished").map(pickRow).join("")}</ul>
     <div class="sub">Комплектація компонентів</div><ul class="rows">${by("pick_components").map(pickRow).join("")}</ul>`;
 }
@@ -1373,12 +1379,26 @@ function showPicking(name) {
   if (p.type === "outgoing") e.push({ code: "OUT-STAGE", html: null });
   if (p.type === "store_finished") e.push({ code: "POST-STAGE", html: "з пакування", cls: "hl" });
   if (p.type === "pick_components" && p.location_dest) e.push({ code: p.location_dest, html: "у візок", cls: "prog" });
-  if (p.type === "replenish") {
+  if (p.type === "replenish" || p.type === "putaway") {
     if (p.vehicle) e.push({ code: p.vehicle, html: "навантажувач", cls: "prog" });
-    e.push({ code: p.location_dest, html: "транспортер", cls: "prog" });
-    if (p.target) e.push({ code: p.target, html: "під портал", cls: "done" });
+    e.push({ code: p.location_dest, html: p.type === "putaway" ? "у стелаж" : "під портал", cls: "done" });
   }
   highlight(e);
+}
+// ланцюжок плит: крок — підсвітити його об'єкти; all — шлях від фури до пили з номерами кроків
+async function showChain(v) {
+  const SC = D.sheet_chain;
+  if (!SC) return;
+  select(null);
+  if (v === "all") {
+    for (const p of SC.path) await ensureCode(p.code);
+    highlight(SC.path.map((p) => ({ code: p.code, html: esc(p.label), cls: "prog" })), { path: true });
+    return;
+  }
+  const st = SC.steps.find((x) => String(x.n) === v);
+  if (!st) return;
+  for (const c of st.codes) await ensureCode(c);
+  highlight(st.codes.map((c, i) => ({ code: c, html: i ? null : `${st.n} · ${esc(st.title)}`, cls: "hl" })));
 }
 function renderPicking(name) {
   const p = idx.pick.get(name);
@@ -1480,7 +1500,7 @@ function locHtml(code, loc) {
         ${q.quality ? `<br><span style="color:var(--bad)">брак ${esc(q.quality)}</span>` : ""}</td>
         <td class="n">${qtyU(q.qty, q.product)}${q.reserved && !q.reserved_for ? `<br><span style="color:var(--warn)">резерв ${nf.format(q.reserved)}</span>` : ""}</td></tr>`).join("")
         || `<tr><td colspan="2">Порожньо.</td></tr>`}</table>
-    ${code === "QC-1" ? D.quality_checks.map((q) => `<div class="note ${q.state === "fail" ? "bad" : ""}"><b>${esc(q.name)}</b> · ${esc(q.title)} — ${q.state === "fail" ? "брак" : q.state === "pass" ? "пройдено" : "очікує"}<br>${esc(q.note)}</div>`).join("") : ""}`;
+    ${code.startsWith("QC-") ? D.quality_checks.filter((q) => q.location === code).map((q) => `<div class="note ${q.state === "fail" ? "bad" : ""}"><b>${esc(q.name)}</b> · ${esc(q.title)} — ${q.state === "fail" ? "брак" : q.state === "pass" ? "пройдено" : "очікує"}<br>${esc(q.note)}</div>`).join("") : ""}`;
 }
 function empHtml(emp) {
   const wo = emp.current_workorder ? D.workorders[emp.current_workorder] : null;
