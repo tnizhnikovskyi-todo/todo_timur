@@ -58,16 +58,45 @@ def check(d):
             issues.append(f"{so['name']}: немає відвантаження")
     for m in d["productions"]:
         s, dl = m.get("supply"), m.get("delivery")
-        if not s or not any(st["code"].startswith("UNLOAD-") for st in s["steps"]):
-            issues.append(f"{m['name']}: шлях плити не починається з вивантаження")
-        if not dl or not dl["steps"][-1]["code"].startswith(("TRUCK-OUT", "DOCK-E")):
-            issues.append(f"{m['name']}: шлях не закінчується відвантаженням")
+        if not s or s["steps"][0]["code"] != "GATE-W" or not any(st["code"].startswith("UNLOAD-") for st in s["steps"]):
+            issues.append(f"{m['name']}: шлях плити не починається з в'їзду й вивантаження")
+        if not dl or dl["steps"][-1]["code"] != "GATE-E" or not any(
+                st["code"].startswith(("TRUCK-OUT", "DOCK-E")) for st in dl["steps"]):
+            issues.append(f"{m['name']}: шлях не закінчується відвантаженням і виїздом")
         steps = (dl or {}).get("steps", [])
         if m["route"].startswith("F") and not any(st["code"].startswith("FRONTS-") for st in steps):
             issues.append(f"{m['name']}: фасади без етажерки в буфері")
+        wcs = {d["workorders"][w]["workcenter"] for w in m["workorders"]}
         for c in m["components"]:
             if not c.get("door"):
                 issues.append(f"{m['name']}: невідомо, звідки {c['product']}")
+            path = c.get("path") or []
+            if not path or path[0]["code"] != "GATE-W" or not any(st["code"].startswith("UNLOAD-") for st in path):
+                issues.append(f"{m['name']}: {c['product']} — шлях не від в'їзду й вивантаження")
+            if c.get("to") not in wcs:
+                issues.append(f"{m['name']}: {c['product']} — не дійшов до свого верстата ({c.get('to')})")
+    # усе, що є в моделі, має бути на чиємусь шляху
+    used = set()
+    for m in d["productions"]:
+        for part in ((m.get("supply") or {}).get("steps", []), (m.get("delivery") or {}).get("steps", [])):
+            used |= {st["code"] for st in part}
+        used |= {d["workorders"][w]["workcenter"] for w in m["workorders"]}
+        for c in m["components"]:
+            used |= {st["code"] for st in c.get("path") or []}
+    need = ["GATE-W", "GATE-E", "TRUCK-SCALE", "TUGGER-1", "BOARD-RACKS", "QC-1", "SCALE-RCV", "PRN-RCV",
+            "PACK-STORE", "PAINT-STORE", "BOX-1", "POST-STAGE", "PRN-PACK1"] + \
+        [f"UNLOAD-{k}" for k in range(1, 8)] + [f"DOCK-W{k}" for k in range(1, 8) if False]
+    for code in need:
+        if code not in used and not any(u.startswith(code) for u in used):
+            if code == "BOARD-RACKS" and any(u.startswith("RCK-") for u in used):
+                continue
+            issues.append(f"{code}: не бере участі в жодному циклі")
+    if not any(u.startswith("FUR-") for u in used):
+        issues.append("Фурнітура зі стелажів не потрапляє в жоден цикл")
+    if not any(u.startswith("KIT-") for u in used):
+        issues.append("Візки комплектів не беруть участі в циклах")
+    if not any(u.startswith("EB-") for u in used):
+        issues.append("Склад крайки не бере участі в циклах")
     return issues
 
 

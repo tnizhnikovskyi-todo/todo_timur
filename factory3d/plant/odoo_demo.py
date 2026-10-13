@@ -259,8 +259,10 @@ class Demo:
             "C": [("Пакетний розкрій", "SAW-3"), ("Крайкооблицювання", "EDGE-3"),
                   ("Прохідна присадка", "BORE-1"), ("Шкантування", "DOWEL-1"), ("Сортування", "SORT-1"),
                   ("Збирання", "ASMLINE-1"), ("Термоусадка та обв'язка", "PACKLINE-1")],
-            "D": [("Розкрій нестандарту", "{saw}"), ("Присадка", "{cnc}"), ("Сортування", "SORT-1"),
+            "D": [("Розкрій нестандарту", "{saw}"), ("Крайкооблицювання", "EDGE-3"), ("Присадка", "{cnc}"),
+                  ("Сортування", "SORT-1"),
                   ("Збирання", "ASM-{a}"), ("Коробка під розмір", "BOX-1"), ("Пакування", "PACK-{p}")],
+            # нестандарт облицьовують на лінії C, поки вона чекає на ДСП Бетон
             "F1": [("Нестинг МДФ", "NEST-1"), ("Шліфування", "SAND-1"), ("Нанесення клею", "GLUE-1"),
                    ("Облицювання плівкою", "PRESS-1"), ("Встановлення завіс", "HINGE-1")],
             "F2": [("Нестинг МДФ", "NEST-1"), ("Шліфування", "SAND-1"), ("Фарбування (автомат)", "AUTOSPRAY-1"),
@@ -279,12 +281,12 @@ class Demo:
             ("C", 2, {}, "progress"), ("C", 3, {}, "progress"), ("C", 6, {}, "progress"),
             ("C", 0, {}, "confirmed"),  # бракує ДСП 18 Бетон — пакетний розкрій і крайка C простоюють
             ("D", 0, {"saw": "SLIDE-1", "cnc": "CNC-3", "a": 3, "p": 1}, "progress"),
-            ("D", 1, {"saw": "SLIDE-1", "cnc": "CNC-3", "a": 3, "p": 1}, "progress"),
-            ("D", 1, {"saw": "SLIDE-1", "cnc": "CNC-4", "a": 4, "p": 2}, "progress"),
-            ("D", 3, {"saw": "SLIDE-1", "cnc": "CNC-4", "a": 3, "p": 1}, "progress"),
-            ("D", 3, {"saw": "VSAW-1", "cnc": "CNC-3", "a": 4, "p": 2}, "progress"),
-            ("D", 3, {"saw": "SLIDE-1", "cnc": "CNC-4", "a": 6, "p": 2}, "progress"),
-            ("D", 4, {"saw": "SLIDE-1", "cnc": "CNC-3", "a": 6, "p": 1}, "progress"),
+            ("D", 2, {"saw": "SLIDE-1", "cnc": "CNC-3", "a": 3, "p": 1}, "progress"),
+            ("D", 2, {"saw": "SLIDE-1", "cnc": "CNC-4", "a": 4, "p": 2}, "progress"),
+            ("D", 4, {"saw": "SLIDE-1", "cnc": "CNC-4", "a": 3, "p": 1}, "progress"),
+            ("D", 4, {"saw": "VSAW-1", "cnc": "CNC-3", "a": 4, "p": 2}, "progress"),
+            ("D", 4, {"saw": "SLIDE-1", "cnc": "CNC-4", "a": 6, "p": 2}, "progress"),
+            ("D", 5, {"saw": "SLIDE-1", "cnc": "CNC-3", "a": 6, "p": 1}, "progress"),
             ("D", 0, {"saw": "VSAW-1", "cnc": "CNC-4", "a": 6, "p": 2}, "confirmed"),
             ("F1", 0, {}, "progress"), ("F2", 1, {}, "progress"), ("F1", 2, {}, "progress"),
             ("F1", 3, {}, "progress"), ("F2", 2, {}, "progress"), ("F3", 2, {}, "progress"),
@@ -760,6 +762,7 @@ class Demo:
             else:
                 steps = [dict(code=f"DOCK-W{door}", label="ворота", note=f"Ворота {door} · прийнято раніше"
                               + (f", лот {lot}" if lot else ""))]
+            steps.insert(0, dict(code="GATE-W", label="в'їзд", note="КПП приймання, реєстрація фури"))
             qc = qc_by_pick.get(pick["name"]) if pick and pick["truck"] else None
             steps += [dict(code=f"UNLOAD-{door}", label="вивантаження", note="звірка з накладною"),
                       dict(code=f"QC-PLT-{door}", label="контроль", doc=qc["name"] if qc else None,
@@ -775,19 +778,73 @@ class Demo:
                                 f"поповнення з {pick['name'] if pick else 'наступного приймання'}")
 
     def component_sources(self):
-        """Кожен компонент МО — від якого приймання й через які ворота він прийшов."""
-        door_of = {"FUR": 4, "EB": 5, "LFM": 6, "PK": 7, "PVC": 6}
+        """Шлях кожного матеріалу МО від в'їзду фури до верстата, що його споживає:
+        плити й ХДФ — через контроль, стелажі й портал; фурнітура — контроль, зважування, етикетка,
+        стелаж, комплект у візку, тягач; крайка, ЛФМ і плівка, пакматеріали — зі своїх складів."""
+        door_of = {"FUR": 4, "EB": 5, "LFM": 6, "PVC": 6, "PK": 7}
+        kind_of = {"FUR": "фурнітура", "EB": "крайка", "LFM": "ЛФМ", "PVC": "плівка ПВХ", "PK": "пакування"}
         incoming = sorted((p for p in self.pickings if p["type"] == "incoming"), key=lambda p: p["scheduled_date"])
+        trucks = {int(p["dock"][-1]): p["truck"] for p in incoming if p.get("truck")}
+        kits = {loc.get("production"): c for c, loc in self.locations.items() if c.startswith("KIT-")}
+
+        def first(prefix, product):
+            return next((c for c, loc in self.locations.items() if c.startswith(prefix)
+                         and any(q["product"] == product and q["qty"] for q in loc["quants"])), None)
         for mo in self.productions:
+            wcs = [self.workorders[w]["workcenter"] for w in mo["workorders"]]
+
+            def wc(*pre):
+                return next((w for w in wcs if w.startswith(pre)), None)
             for c in mo["components"]:
-                rec = [p for p in incoming if any(ln["product"] == c["product"] for ln in p["lines"])]
-                done = [p for p in rec if p["progress"] > 0]
-                pick = (done or rec or [None])[-1]
-                if pick:
-                    c["receipt"], c["door"] = pick["name"], int(pick["dock"][-1])
-                else:
-                    pre = c["product"].split("-")[0]
-                    c["door"] = door_of.get(pre, door_of.get(pre[:2], 1 + sum(map(ord, c["product"])) % 3))
+                prod = c["product"]
+                pre = next((k for k in ("DSP", "MDF", "HDF", "FUR", "EB", "LFM", "PVC", "PK")
+                            if prod.startswith(k)), "")
+                rec = [p for p in incoming if any(ln["product"] == prod for ln in p["lines"])]
+                got = [p for p in rec if p["progress"] > 0]  # уже розвантажене сьогодні
+                pick = (got or rec or [None])[-1]
+                c["door"] = int(pick["dock"][-1]) if pick else door_of.get(pre, 1 + sum(map(ord, prod)) % 3)
+                if got:
+                    c["receipt"] = got[-1]["name"]
+                elif rec:  # на складі із залишку, наступна партія ще їде
+                    c["expected"] = f"{rec[-1]['name']} о {rec[-1]['scheduled_date'][11:16]}"
+                k = c["door"]
+                path = [dict(code="GATE-W", label="в'їзд"),
+                        dict(code=trucks.get(k) or f"DOCK-W{k}", label=f"ворота {k}"),
+                        dict(code=f"UNLOAD-{k}", label="вивантаження")]
+                if pre in ("DSP", "MDF", "HDF"):
+                    c["kind"], c["to"] = "плита", wc("SAW", "NEST", "SLIDE", "VSAW")
+                    path.append(dict(code=f"QC-PLT-{k}", label="контроль"))
+                    for loc, lbl in ((first("RCK-", prod), "стелаж"), (first("PLT-", prod), "під порталом")):
+                        if loc:
+                            path.append(dict(code=loc, label=lbl))
+                elif pre == "FUR":
+                    c["kind"] = kind_of[pre]
+                    c["to"] = wc("ASM", "ASMLINE") or wc("HINGE")
+                    path += [dict(code="QC-1", label="контроль"), dict(code="SCALE-RCV", label="зважування"),
+                             dict(code="PRN-RCV", label="етикетка партії")]
+                    cell = first("FUR-", prod)
+                    if cell:
+                        path.append(dict(code=cell, label="стелаж фурнітури"))
+                    if c["to"] and c["to"].startswith("ASM"):
+                        path.append(dict(code=kits.get(mo["name"], "Z-PRE"), label="комплект WH/PC"
+                                         if mo["name"] in kits else "буфер комплектів"))
+                    path.append(dict(code="TUGGER-1", label="тягач"))
+                elif pre == "EB":
+                    c["kind"], c["to"] = kind_of[pre], wc("EDGE")
+                    cell = first("EB-", prod)
+                    if cell:
+                        path.append(dict(code=cell, label="склад крайки"))
+                elif pre in ("LFM", "PVC"):
+                    c["kind"] = kind_of[pre]
+                    c["to"] = (wc("PRESS") if pre == "PVC" else wc("GLUE") if prod == "LFM-GLUE"
+                               else wc("AUTOSPRAY", "SPRAY", "UV")) or wc("GLUE", "SPRAY", "PRESS")
+                    path.append(dict(code="PAINT-STORE", label="склад ЛФМ"))
+                elif pre == "PK":
+                    c["kind"], c["to"] = kind_of[pre], wc("BOX", "PACK")
+                    path += [dict(code="PACK-STORE", label="пакматеріали"), dict(code="PAL-1", label="піддони")]
+                    if c["to"] != "BOX-1":
+                        path.append(dict(code="BOX-1", label="коробки з гофрокартону"))
+                c["path"] = path
 
     def mo_delivery(self):
         """Для кожного МО на замовлення клієнта — шлях після пакування: вихід з пакування → комірка складу ГП
@@ -809,15 +866,22 @@ class Demo:
             cell = cell or next((c for c in fg if any(q["product"] == mo["product"]
                                                       for q in self.locations[c]["quants"])), None)
             cell = cell or next((c for c in fg if not self.locations[c]["quants"]), fg[0])
-            steps = [dict(code="POST-STAGE", label="вихід з пакування", doc=sfp.get(mo["name"]),
+            last = self.workorders[mo["workorders"][-1]]["workcenter"]
+            steps = [dict(code="PRN-PACK2" if last in ("PACK-2", "PACKLINE-1") else "PRN-PACK1",
+                          label="етикетка SSCC", note="друк з Odoo через IoT Box")] if last.startswith("PACK") else []
+            steps += [dict(code="POST-STAGE", label="вихід з пакування", doc=sfp.get(mo["name"]),
                           note="палета запакована, етикетка SSCC — чекає розміщення"),
                      dict(code=cell, label="склад ГП", note=self.locations[cell]["complete_name"]),
+                     dict(code="SCALE-OUT1" if int(k) <= 4 else "SCALE-OUT2", label="зважування палети",
+                          note="вага в документ відвантаження"),
                      dict(code=f"Z-OUT-{k}", label=f"відвантаження · ворота {k}", doc=out["name"],
                           note=f"комплектування {out['name']} для {so['partner']}"),
                      dict(code=out["dock"], label="ворота", note=f"Ворота відвантаження {k}")]
             if out.get("truck"):
                 steps.append(dict(code=out["truck"], label="фура клієнта",
                                   note=f"{out.get('carrier') or ''} · завантаження {round(out['progress'] * 100)} %"))
+            steps += [dict(code="TRUCK-SCALE", label="вагова", note="контрольне зважування машини на виїзді"),
+                      dict(code="GATE-E", label="виїзд", note="через КПП відвантаження")]
             mo["delivery"] = dict(picking=out["name"], partner=so["partner"], steps=steps,
                                   note=None if out.get("truck") else
                                   f"Машину ще не подано — відвантаження {out['scheduled_date'][:16].replace('-', '.')}"
@@ -840,9 +904,22 @@ class Demo:
             mo["delivery"] = dict(picking=pd["picking"], partner=pd["partner"], via=parent["name"],
                                   steps=steps + pd["steps"], note=pd["note"])
         full = next((m for m in self.productions if m["state"] == "progress" and m.get("delivery")
-                     and m["delivery"]["steps"][-1]["code"].startswith("TRUCK-OUT")
-                     and m.get("supply", {}).get("steps", [{}])[0].get("code", "").startswith("TRUCK-IN")), None)
+                     and any(st["code"].startswith("TRUCK-OUT") for st in m["delivery"]["steps"])
+                     and any(st["code"].startswith("TRUCK-IN") for st in m.get("supply", {}).get("steps", []))
+                     and any(c["product"].startswith("FUR") and "KIT-" in str(c.get("path"))
+                             for c in m["components"])), None)
         self.full_cycle_mo = full["name"] if full else self.productions[0]["name"]
+
+    def material_paths(self):
+        """Типовий шлях кожного виду матеріалу (з першого МО, де він є) — для вкладки «Логістика»."""
+        out = {}
+        for mo in self.productions:
+            for c in mo["components"]:
+                k = c.get("kind")
+                if k and k not in out and c.get("to"):
+                    out[k] = dict(kind=k, product=c["product"], mo=mo["name"],
+                                  steps=c["path"] + [dict(code=c["to"], label=self.workcenters[c["to"]]["name"])])
+        return list(out.values())
 
     def ship_chain(self):
         """Ланцюжок відвантаження від пакування до машини клієнта."""
@@ -873,10 +950,12 @@ class Demo:
             return sum(q["qty"] for c, loc in self.locations.items() if c.startswith(prefix) for q in loc["quants"])
 
         def stacks(prefix):
-            n = sum(1 for c, loc in self.locations.items() if c.startswith(prefix) and loc["quants"])
+            n = sum(len(loc["quants"]) if c.startswith(("UNLOAD-", "QC-PLT-")) else 1  # біля воріт — по стосах
+                    for c, loc in self.locations.items() if c.startswith(prefix) and loc["quants"])
             word = "стос" if n % 10 == 1 and n % 100 != 11 else \
                 "стоси" if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else "стосів"
             return f"{n} {word}"
+        PLT_DOORS = ("UNLOAD-1", "UNLOAD-2", "UNLOAD-3")  # ворота плит; 4–7 — фурнітура, крайка, ЛФМ, пакування
         pk = {p["name"]: p for p in self.pickings}
         put, rep = pk["WH/INT/00061"], pk["WH/INT/00072"]
         saw_mo = next((m["name"] for m in self.productions if m["state"] == "progress" and any(
@@ -885,7 +964,7 @@ class Demo:
         steps = [
             dict(n=1, title="Вивантаження з фури", docs=["WH/IN/00128", "WH/IN/00129"],
                  codes=["TRUCK-IN-1", "UNLOAD-1", "TRUCK-IN-2", "UNLOAD-3", "UNLOAD-2"],
-                 stock=f"{stacks('UNLOAD-')} · {sheets('UNLOAD-')} арк.",
+                 stock=f"{stacks(PLT_DOORS)} · {sheets(PLT_DOORS)} арк.",
                  desc="Стоси знімають із фури біля воріт 1–3 і звіряють із накладною (WH/IN → Вхід)."),
             dict(n=2, title="Приймання й контроль якості", docs=["QC/00413", "QC/00415", "QC/00416", "QC/00412"],
                  codes=["QC-PLT-1", "QC-PLT-2", "QC-PLT-3", "QC-1"],
@@ -988,6 +1067,7 @@ class Demo:
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
             docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent, fire=fire, infra=infra,
             evacuation=evac, sheet_chain=self.sheet_chain(), ship_chain=self.ship_chain(),
+            material_paths=self.material_paths(),
             full_cycle_mo=self.full_cycle_mo,
             passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
 

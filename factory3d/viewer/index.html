@@ -727,7 +727,7 @@ let pulseT = 0;
 $("#opt-motion").checked = !reduceMotion;
 
 // ---------------------------------------------------------------- підсвічування (вибір, наведення, Odoo, режим кольору)
-const hl = { roots: new Set(), markers: [], path: null, curve: null };
+const hl = { roots: new Set(), markers: [], path: null, curve: null, branches: [] };
 let colorMode = "none";
 const C_OK = new THREE.Color("#27ae60"), C_WARN = new THREE.Color("#f39c12"), C_BAD = new THREE.Color("#e74c3c");
 const C_SEL = new THREE.Color("#f2c230"), C_HOV = new THREE.Color("#7fb3d5"), C_HL = new THREE.Color("#18a6c9");
@@ -781,6 +781,8 @@ function clearHighlight() {
   for (const m of hl.markers) scene.remove(m);
   hl.markers = [];
   if (hl.path) { scene.remove(hl.path); hl.path.geometry.dispose(); hl.path = null; }
+  for (const b of hl.branches) { scene.remove(b); b.geometry?.dispose(); }
+  hl.branches = [];
   hl.curve = null;
 }
 function topOf(obj) {
@@ -789,7 +791,38 @@ function topOf(obj) {
   return new THREE.Vector3(c.x, box.max.y, c.z);
 }
 // entries: [{ code, html, cls }]; path: з'єднати точки в заданому порядку
-function highlight(entries, { path = false, fit = true } = {}) {
+// гілки матеріалів: [{ codes: [...], color, label }] — тонка лінія від в'їзду до верстата, що споживає
+const MAT_COLOR = { "плита": 0x2f80c0, "фурнітура": 0x8e44ad, "крайка": 0xe67e22, "ЛФМ": 0x16a085,
+  "плівка ПВХ": 0x16a085, "пакування": 0x7f8c8d };
+function drawBranch(br) {
+  const pts = [];
+  br.codes.forEach((code, j) => {
+    const obj = items.get(code);
+    if (!obj) return;
+    const p = topOf(obj).add(new THREE.Vector3(0, j === br.codes.length - 1 ? 1.2 : 0.8, 0));
+    if (j < br.codes.length - 1) p.y = Math.min(p.y, 2.6);
+    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+  });
+  if (pts.length < 2) return;
+  const c = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+  const m = new THREE.Mesh(new THREE.TubeGeometry(c, pts.length * 16, 0.09, 6, false),
+    new THREE.MeshBasicMaterial({ color: br.color ?? 0x888888, transparent: true, opacity: 0.85 }));
+  m.userData.isPulse = true;
+  scene.add(m); hl.branches.push(m);
+  if (br.label && br.at) {
+    const obj = items.get(br.at);
+    if (obj) {
+      const el = document.createElement("div");
+      el.className = "mk pend";
+      el.style.background = el.style.borderColor = "#" + new THREE.Color(br.color).getHexString();
+      el.innerHTML = br.label;
+      const mk = new CSS2DObject(el);
+      mk.position.copy(topOf(obj)).add(new THREE.Vector3(0, 0.9, 0));
+      scene.add(mk); hl.markers.push(mk);
+    }
+  }
+}
+function highlight(entries, { path = false, fit = true, branches = [] } = {}) {
   clearHighlight();
   const box = new THREE.Box3();
   const pts = [];
@@ -816,6 +849,10 @@ function highlight(entries, { path = false, fit = true } = {}) {
       new THREE.MeshBasicMaterial({ color: 0xf2c230, transparent: true, opacity: 0.9 }));
     hl.path.userData.isPulse = true;
     scene.add(hl.path);
+  }
+  for (const br of branches) {
+    drawBranch(br);
+    for (const c of br.codes) { const o = items.get(c); if (o) box.expandByObject(o); }
   }
   if (fit) fitBox(box);
 }
@@ -1160,6 +1197,7 @@ body().addEventListener("click", (e) => {
   else if (t === "obj") ensureCode(v).then((o) => { if (o) { if (!isShown(o)) showLayerOf(o); select(o, { keepHighlight: true }); focusOn(o); } });
   else if (t === "comp") showComponent(v);
   else if (t === "chain") showChain(v);
+  else if (t === "matp") showMatPath(+v);
   else if (t === "locs") highlightLocs(v.split(","));
   else if (t === "line") showLine(v);
   else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
@@ -1286,8 +1324,21 @@ function showMO(name) {
     cls: w.blocked ? "bad" : w.state === "done" ? "done" : w.state === "progress" ? "prog" : "pend",
   }));
   const dl = (mo.delivery?.steps || []).map((st) => ({ code: st.code, html: esc(st.label), cls: "done" }));
-  Promise.all([...sup, ...dl].map((e) => ensureCode(e.code))).then(() => {
-    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops, ...dl], { path: true });
+  // кожен інший матеріал — тонкою гілкою свого кольору до верстата, що його споживає
+  const seen = new Set();
+  const branches = mo.components.filter((c) => c.path && c.to && c.product !== mo.supply?.product).map((c) => {
+    const codes = [...c.path.map((st) => st.code), c.to];
+    const store = c.path.find((st) => /^(FUR-|EB-|PAINT|PACK-STORE|RCK-|PLT-)/.test(st.code));
+    return { codes, color: MAT_COLOR[c.kind], label: esc(c.kind), at: store?.code, key: c.kind + codes.join() };
+  }).filter((b) => { // кілька позицій фурнітури з одного стелажа — одна лінія й одна мітка на вид
+    if (seen.has(b.key)) return false;
+    if ([...seen].some((k) => k.startsWith(b.label))) b.label = null;
+    seen.add(b.key);
+    return true;
+  });
+  const need = [...sup, ...dl, ...branches.flatMap((b) => b.codes.map((code) => ({ code })))];
+  Promise.all(need.map((e) => ensureCode(e.code))).then(() => {
+    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops, ...dl], { path: true, branches });
   });
   highlight(ops, { path: true, fit: false });
 }
@@ -1327,10 +1378,11 @@ function renderMO(name) {
     <ol class="steps">${mo.delivery.steps.map((st) => `<li><button class="lnk" data-go="obj:${esc(st.code)}">${esc(st.label[0].toUpperCase() + st.label.slice(1))}</button>
       <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}</ol>
     ${mo.delivery.note ? `<div class="note">${esc(mo.delivery.note)}</div>` : ""}` : ""}
-    <div class="sub">Компоненти · звідки прийшли й де лежать</div>
+    <div class="sub">Матеріали · шлях від в'їзду до верстата (у 3D — тонкі лінії свого кольору)</div>
     <table class="tbl"><tr><th>Компонент</th><th class="n">Потреба</th><th></th></tr>
       ${mo.components.map((c) => `<tr class="click" data-go="comp:${esc(mo.name)}|${esc(c.product)}">
-        <td>${esc(P(c.product).name)}<br><span style="color:var(--muted)">ворота ${c.door}${c.receipt ? ` · ${esc(c.receipt)}` : " · із залишку"}</span></td><td class="n">${qtyU(c.qty, c.product)}</td>
+        <td>${c.kind ? `<span class="swatch" style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:#${new THREE.Color(MAT_COLOR[c.kind] ?? 0x888888).getHexString()}"></span>` : ""}${esc(P(c.product).name)}
+          <br><span style="color:var(--muted)">${c.path ? c.path.slice(1).map((st) => esc(st.label)).join(" → ") + ` → ${esc(D.workcenters[c.to]?.name || c.to || "")}` : `ворота ${c.door}`}${c.receipt ? ` · ${esc(c.receipt)}` : ` · із залишку${c.expected ? `; наступна партія ${esc(c.expected)}` : ""}`}</span></td><td class="n">${qtyU(c.qty, c.product)}</td>
         <td>${c.available ? pill(["ok", "є"]) : pill(["bad", "бракує"])}</td></tr>`).join("")}
     </table>
     ${mo.reservation_state === "waiting" ? `<div class="note bad">Компоненти не зарезервовано повністю — замовлення чекає приймання.</div>` : ""}`;
@@ -1414,6 +1466,9 @@ function renderLogistics() {
     ${D.ship_chain ? `<div class="sub">Ланцюжок відвантаження · від пакування до фури</div>
     <ul class="rows">${D.ship_chain.steps.map((st) => `<li><button class="row" data-go="chain:s${st.n}"><span class="t">${st.n}. ${esc(st.title)}</span>
       <span class="mono">${esc(st.stock)}</span><span class="m">${esc(st.desc)}</span></button></li>`).join("")}</ul>` : ""}
+    ${(D.material_paths || []).length ? `<div class="sub">Шляхи матеріалів · від в'їзду до верстата</div>
+    <ul class="rows">${D.material_paths.map((m, i) => `<li><button class="row" data-go="matp:${i}"><span class="t">${esc(m.kind[0].toUpperCase() + m.kind.slice(1))}</span>
+      <span class="mono">${m.steps.length} кроків</span><span class="m">${m.steps.slice(1).map((st) => esc(st.label)).join(" → ")}</span></button></li>`).join("")}</ul>` : ""}
     ${D.full_cycle_mo ? `<div class="row-btns" style="margin:6px 0 4px"><button class="btn" data-go="mo:${esc(D.full_cycle_mo)}">Весь цикл у 3D: фура → виробництво → фура (${esc(D.full_cycle_mo)})</button></div>` : ""}
     <div class="sub">Приймання · західні ворота</div><ul class="rows">${by("incoming").map(pickRow).join("")}</ul>
     <div class="sub">Розміщення плит у стелажі · після контролю</div><ul class="rows">${by("putaway").map(pickRow).join("")}</ul>
@@ -1464,6 +1519,13 @@ function showPicking(name) {
   highlight(e);
 }
 // ланцюжок плит: крок — підсвітити його об'єкти; all — шлях від фури до пили з номерами кроків
+async function showMatPath(i) {
+  const m = D.material_paths?.[i];
+  if (!m) return;
+  select(null);
+  for (const st of m.steps) await ensureCode(st.code);
+  highlight(m.steps.map((st, j) => ({ code: st.code, html: esc(st.label), cls: j === m.steps.length - 1 ? "done" : "hl" })), { path: true });
+}
 async function showChain(v) {
   const SC = D.sheet_chain;
   if (!SC) return;
