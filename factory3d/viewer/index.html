@@ -247,6 +247,9 @@ button { font: inherit; color: inherit; }
 .mo-tag.bad { outline: 2px solid #d63a2b; }
 .layer.prod-ov { font-weight: 600; margin-bottom: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
 .layer.prod-ov small { display: block; font-weight: 400; color: var(--muted); }
+.prod-legend { font-size: 11.5px; color: var(--muted); margin: -2px 0 8px; line-height: 1.6; }
+.prod-legend span { white-space: nowrap; margin-right: 6px; }
+.prod-legend i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
 .radio { display: flex; flex-direction: column; gap: 2px; }
 ol.steps { margin: 4px 0 6px; padding-left: 20px; font-size: 13px; }
 ol.steps li { margin: 3px 0; }
@@ -300,6 +303,10 @@ ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
     <div class="sec">
       <h2>Шари</h2>
       <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>весь цикл кожного замовлення: від фури з плитами через верстати до фури клієнта, і де воно зараз · вид згори без інженерії</small></span></label>
+      <div id="prod-legend" class="prod-legend" hidden>Матеріали:
+        <span><i style="background:#2f80c0"></i>плита, ХДФ</span><span><i style="background:#8e44ad"></i>фурнітура</span>
+        <span><i style="background:#e67e22"></i>крайка</span><span><i style="background:#16a085"></i>ЛФМ, плівка</span>
+        <span><i style="background:#7f8c8d"></i>пакування</span> · товща лінія — більше замовлень</div>
       <div class="layers" id="layers"></div>
       <div class="row-btns" style="margin-top:8px">
         <button class="btn" id="all-on">Усі</button>
@@ -864,6 +871,10 @@ const prodOv = { on: false, objs: [], dots: [], color: new Map(), byMo: new Map(
 // вибране замовлення — яскраво, решта маршрутів притухає
 function prodFocus(name) {
   prodOv.focus = name;
+  for (const m of prodOv.mats || []) {
+    m.userData.op0 ??= m.material.opacity;
+    m.material.opacity = m.userData.op0 * (!name || m.userData.mos.has(name) ? 1 : 0.1);
+  }
   prodOv.byMo.forEach((objs, mo) => {
     const k = !name || mo === name ? 1 : 0.15;
     for (const o of objs) {
@@ -877,7 +888,7 @@ const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
 function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
 function clearProdOverlay() {
   for (const o of prodOv.objs) { scene.remove(o); o.geometry?.dispose(); }
-  prodOv.objs = []; prodOv.dots = []; prodOv.color.clear(); prodOv.byMo.clear();
+  prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.color.clear(); prodOv.byMo.clear();
 }
 // місце замовлення на всьому циклі: індекс точки маршруту (дробовий — у дорозі між точками)
 function cyclePosition(wos, at, firstOut, lastIn) {
@@ -892,6 +903,36 @@ function drawProdOverlay() {
   clearProdOverlay();
   if (!prodOv.on || !D) return;
   const mos = D.productions.filter((m) => m.state === "progress");
+  const mats = new Map(); // однаковий шлях матеріалу в кількох замовлень — одна лінія, товща
+  for (const mo of mos) {
+    for (const c of mo.components) {
+      if (!c.path || !c.to || c.product === mo.supply?.product) continue;
+      const codes = [...c.path.map((st) => st.code), c.to];
+      const key = c.kind + "|" + codes.join();
+      const e = mats.get(key) || { kind: c.kind, codes, mos: new Set() };
+      e.mos.add(mo.name);
+      mats.set(key, e);
+    }
+  }
+  const matObjs = [];
+  for (const e of mats.values()) {
+    const pts = [];
+    e.codes.forEach((code, j) => {
+      const obj = items.get(code);
+      if (!obj) return;
+      const p = topOf(obj).add(new THREE.Vector3(0, j === e.codes.length - 1 ? 1.2 : 0.6, 0));
+      if (j < e.codes.length - 1) p.y = Math.min(p.y, 2.2);
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+    });
+    if (pts.length < 2) continue;
+    const r = 0.07 + 0.025 * Math.min(e.mos.size, 6);
+    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), pts.length * 16, r, 5, false),
+      new THREE.MeshBasicMaterial({ color: MAT_COLOR[e.kind] ?? 0x888888, transparent: true, opacity: 0.7 }));
+    m.userData.isPulse = true;
+    m.userData.mos = e.mos;
+    scene.add(m); prodOv.objs.push(m); matObjs.push(m);
+  }
+  prodOv.mats = matObjs;
   mos.forEach((mo, i) => {
     const wos = mo.workorders.map((id) => D.workorders[id]);
     const off = new THREE.Vector3(((i % 6) - 2.5) * 0.35, 0, (Math.floor(i / 6) - 2.5) * 0.35); // розвести збіжні маршрути
@@ -969,13 +1010,14 @@ async function setProdOverlay(on) {
   prodOv.on = on;
   $("#opt-prod").checked = on;
   shortDoorLabels(on);
+  $("#prod-legend").hidden = !on;
   if (on) {
     stopDrill();
     prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
     layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) setLayer(k, false); });
     select(null); clearHighlight();
-    // увесь цех разом із фурами біля західних воріт — між лівою й правою панелями
-    goView({ name: "План згори", target: [78, 36, 0], pos: [78, 35.9, 275] });
+    // увесь майданчик від КПП приймання до вагової й КПП відвантаження — між лівою й правою панелями
+    goView({ name: "План згори", target: [89, 31, 0], pos: [89, 30.9, 330] });
     await modelLoaded;
     drawProdOverlay();
     openTab("production");
