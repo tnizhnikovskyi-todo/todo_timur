@@ -248,6 +248,9 @@ button { font: inherit; color: inherit; }
 .layer.prod-ov { font-weight: 600; margin-bottom: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
 .layer.prod-ov small { display: block; font-weight: 400; color: var(--muted); }
 .radio { display: flex; flex-direction: column; gap: 2px; }
+ol.steps { margin: 4px 0 6px; padding-left: 20px; font-size: 13px; }
+ol.steps li { margin: 3px 0; }
+ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
 .pp-head { font: 600 15px/1.3 var(--f-display); margin-top: 2px; }
 .chart { display: block; width: 100%; height: auto; margin-top: 4px; }
 .chart .typ { fill: none; stroke: var(--muted); stroke-width: 0.6; }
@@ -1239,11 +1242,17 @@ function showMO(name) {
   openView({ type: "mo", name });
   if (prodOv.on) prodFocus(name);
   const wos = mo.workorders.map((id) => D.workorders[id]);
-  highlight(wos.map((w) => ({
+  // маршрут від фури: шлях плити (приймання → контроль → стелаж → під порталом), далі операції
+  const sup = (mo.supply?.steps || []).map((st) => ({ code: st.code, html: esc(st.label), cls: "hl" }));
+  const ops = wos.map((w) => ({
     code: w.workcenter,
     html: `${w.sequence}${w.state === "progress" ? ` · ${pct(w.progress)}` : ""}`,
     cls: w.blocked ? "bad" : w.state === "done" ? "done" : w.state === "progress" ? "prog" : "pend",
-  })), { path: true });
+  }));
+  Promise.all(sup.map((e) => ensureCode(e.code))).then(() => {
+    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops], { path: true });
+  });
+  highlight(ops, { path: true, fit: false });
 }
 function renderMO(name) {
   const mo = idx.mo.get(name);
@@ -1264,7 +1273,12 @@ function renderMO(name) {
       ${mo.energy_kwh != null ? `<dt>Електроенергія</dt><dd>${kwhU(mo.energy_kwh)} · ≈ ${nf.format(mo.energy_cost)} грн <span class="mono">(виконані операції)</span></dd>` : ""}
       ${mo.child_productions ? `<dt>Фасади</dt><dd>${mo.child_productions.map((c) => `<button class="lnk" data-go="mo:${esc(c)}">${esc(c)}</button>`).join(", ")}</dd>` : ""}
     </dl>
-    <div class="sub">Робочі завдання · маршрут підсвічено в 3D</div>
+    ${mo.supply ? `<div class="sub">Шлях плити до пили · ${esc(P(mo.supply.product).name)}</div>
+    <ol class="steps">${mo.supply.steps.map((st) => `<li><button class="lnk" data-go="obj:${esc(st.code)}">${esc(st.label[0].toUpperCase() + st.label.slice(1))}</button>
+      <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}
+      <li><b>Портал → ${esc(D.workcenters[wos[0]?.workcenter]?.name || "")}</b> <span class="m">лист на підйомний стіл, далі операції нижче</span></li></ol>
+    ${mo.supply.note ? `<div class="note ${mo.supply.warn ? "bad" : ""}">${esc(mo.supply.note)}</div>` : ""}` : ""}
+    <div class="sub">Робочі завдання · маршрут від фури підсвічено в 3D</div>
     <table class="tbl"><tr><th>#</th><th>Операція / центр</th><th>Стан</th><th class="n">Хв</th></tr>
       ${wos.map((w) => `<tr class="click" data-go="obj:${esc(w.workcenter)}">
         <td>${w.sequence}</td><td>${esc(w.name)}<br><span style="color:var(--muted)">${esc(D.workcenters[w.workcenter]?.name || w.workcenter)}</span>

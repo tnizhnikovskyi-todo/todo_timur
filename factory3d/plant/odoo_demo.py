@@ -714,6 +714,48 @@ class Demo:
         return ev
 
     # ---------------------------------------------------------------- зони та підсумки
+    def mo_supply(self):
+        """Для кожного МО — шлях його основної плити до першої операції: фура й ворота приймання →
+        вхідний контроль → стелаж → стос під порталом (звідти портал кладе лист на стіл пили)."""
+        sheet_codes = {c for c, _ in SHEET_PRODUCTS}
+        incoming = [p for p in self.pickings if p["type"] == "incoming" and p["partner"] == SUPPLIERS["sheets"]]
+        qc_by_pick = {q["picking"]: q for q in self.quality if q.get("picking")}
+
+        def first(prefix, product):
+            return next((c for c, loc in self.locations.items() if c.startswith(prefix)
+                         and any(q["product"] == product and q["qty"] for q in loc["quants"])), None)
+        for mo in self.productions:
+            prod = next((c["product"] for c in mo["components"] if c["product"] in sheet_codes), None)
+            if not prod:
+                continue
+            pick = next((p for p in incoming if any(ln["product"] == prod for ln in p["lines"])), None)
+            door = int(pick["dock"][-1]) if pick else 1 + sum(map(ord, prod)) % 3
+            gantry, rack = first("PLT-", prod), first("RCK-", prod)
+            lot = next((q.get("lot") for q in self.locations[gantry]["quants"] if q["product"] == prod), None) \
+                if gantry else None
+            if pick and pick["truck"]:  # така сама плита саме розвантажується
+                steps = [dict(code=pick["truck"], label="фура", doc=pick["name"],
+                              note=f"Ворота {door} · {pick['name']} — ця плита зараз розвантажується")]
+            elif pick and not rack:  # дефіцит — чекаємо фуру
+                steps = [dict(code=f"DOCK-W{door}", label="фура о " + pick["scheduled_date"][11:16], doc=pick["name"],
+                              note=f"Ворота {door} · {pick['name']}: фура ще в дорозі")]
+            else:
+                steps = [dict(code=f"DOCK-W{door}", label="ворота", note=f"Ворота {door} · прийнято раніше"
+                              + (f", лот {lot}" if lot else ""))]
+            qc = qc_by_pick.get(pick["name"]) if pick and pick["truck"] else None
+            steps += [dict(code=f"UNLOAD-{door}", label="вивантаження", note="звірка з накладною"),
+                      dict(code=f"QC-PLT-{door}", label="контроль", doc=qc["name"] if qc else None,
+                           note=(qc["note"] if qc else "вхідний контроль пройдено при прийманні"))]
+            if rack:
+                steps.append(dict(code=rack, label="стелаж", note=self.locations[rack]["complete_name"]))
+            if gantry:
+                steps.append(dict(code=gantry, label="під порталом",
+                                  note=(f"лот {lot}" if lot else "") + " · портал кладе лист на стіл пили"))
+            mo["supply"] = dict(product=prod, steps=steps, lot=lot,
+                                warn=None if rack or gantry else "Плити немає ні в стелажах, ні під порталом",
+                                note=None if rack else "У стелажах немає — під порталом останні аркуші; "
+                                f"поповнення з {pick['name'] if pick else 'наступного приймання'}")
+
     def sheet_chain(self):
         """Ланцюжок плит від фури до пили: кроки з об'єктами сцени, документами Odoo й залишками."""
         def sheets(prefix):
@@ -761,6 +803,7 @@ class Demo:
         self.build_production()
         self.build_workcenters()
         self.build_logistics()
+        self.mo_supply()
         self.build_people_equipment()
         specs = load_specs()
         for code, eq in self.equipment.items():  # модель і серійник — у maintenance.equipment
