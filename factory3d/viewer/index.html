@@ -299,7 +299,7 @@ ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
     </div>
     <div class="sec">
       <h2>Шари</h2>
-      <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>маршрути від фури через склад плит до верстатів і поточне місце кожного замовлення · вид згори без інженерії</small></span></label>
+      <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>весь цикл кожного замовлення: від фури з плитами через верстати до фури клієнта, і де воно зараз · вид згори без інженерії</small></span></label>
       <div class="layers" id="layers"></div>
       <div class="row-btns" style="margin-top:8px">
         <button class="btn" id="all-on">Усі</button>
@@ -590,7 +590,17 @@ function fitBox(box, animate = true) {
   const r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 2);
   const dir = camera.position.clone().sub(controls.target).normalize();
   if (dir.y < 0.45) { dir.y = 0.45; dir.normalize(); }
-  flyTo(c.clone().add(dir.multiplyScalar(r * 2.1 + 4)), c, animate);
+  // вписати у вільну смугу між лівою й правою панелями, а не в усе вікно
+  const W0 = renderer.domElement.clientWidth || innerWidth, H0 = renderer.domElement.clientHeight || innerHeight;
+  const vis = (el) => el && getComputedStyle(el).display !== "none" && el.getBoundingClientRect().width > 0 ? el.getBoundingClientRect() : null;
+  const L = vis($("#side")), R = vis($("#card"));
+  const x0 = L && L.right < W0 * 0.45 ? L.right : 0, x1 = R && R.left > W0 * 0.55 ? R.left : W0;
+  const k = Math.min(2.2, W0 / Math.max(200, x1 - x0));
+  const dist = r * 2.1 * Math.max(1, k * camera.aspect > 1 ? k : 1) + 4;
+  const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize().negate();
+  const perPx = (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / H0;
+  const t = c.clone().add(right.multiplyScalar(-((x0 + x1) / 2 - W0 / 2) * perPx));
+  flyTo(t.clone().add(dir.multiplyScalar(dist)), t, animate);
   document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", "false"));
 }
 const focusOn = (obj) => fitBox(new THREE.Box3().setFromObject(obj));
@@ -886,6 +896,24 @@ function drawProdOverlay() {
         new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8 }));
       start.position.copy(sp[0]);
       for (const o of [st, start]) { o.userData.isPulse = true; add(o); }
+    }
+    // після пакування: вихід з пакування → склад ГП → зона відвантаження → ворота → фура клієнта
+    const dp = [pts[pts.length - 1]];
+    for (const st of mo.delivery?.steps || []) {
+      const obj = items.get(st.code);
+      if (!obj) continue;
+      const p = topOf(obj).add(new THREE.Vector3(0, 1.0, 0)).add(off);
+      p.y = Math.min(p.y, 3.0) + off.x * 0.2;
+      if (dp[dp.length - 1].distanceTo(p) > 0.8) dp.push(p);
+    }
+    if (dp.length > 1) {
+      const dc = new THREE.CatmullRomCurve3(dp, false, "centripetal");
+      const dt = new THREE.Mesh(new THREE.TubeGeometry(dc, dp.length * 20, 0.18, 6, false),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55 }));
+      const end = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 12),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8 }));
+      end.position.copy(dp[dp.length - 1]);
+      for (const o of [dt, end]) { o.userData.isPulse = true; add(o); }
     }
     const pos = moPosition(wos);
     if (!pos) return;
@@ -1280,8 +1308,9 @@ function showMO(name) {
     html: `${w.sequence}${w.state === "progress" ? ` · ${pct(w.progress)}` : ""}`,
     cls: w.blocked ? "bad" : w.state === "done" ? "done" : w.state === "progress" ? "prog" : "pend",
   }));
-  Promise.all(sup.map((e) => ensureCode(e.code))).then(() => {
-    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops], { path: true });
+  const dl = (mo.delivery?.steps || []).map((st) => ({ code: st.code, html: esc(st.label), cls: "done" }));
+  Promise.all([...sup, ...dl].map((e) => ensureCode(e.code))).then(() => {
+    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops, ...dl], { path: true });
   });
   highlight(ops, { path: true, fit: false });
 }
@@ -1309,7 +1338,7 @@ function renderMO(name) {
       <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}
       <li><b>Портал → ${esc(D.workcenters[wos[0]?.workcenter]?.name || "")}</b> <span class="m">лист на підйомний стіл, далі операції нижче</span></li></ol>
     ${mo.supply.note ? `<div class="note ${mo.supply.warn ? "bad" : ""}">${esc(mo.supply.note)}</div>` : ""}` : ""}
-    <div class="sub">Робочі завдання · маршрут від фури підсвічено в 3D</div>
+    <div class="sub">Робочі завдання · у 3D весь цикл: від фури з плитами до фури клієнта</div>
     <table class="tbl"><tr><th>#</th><th>Операція / центр</th><th>Стан</th><th class="n">Хв</th></tr>
       ${wos.map((w) => `<tr class="click" data-go="obj:${esc(w.workcenter)}">
         <td>${w.sequence}</td><td>${esc(w.name)}<br><span style="color:var(--muted)">${esc(D.workcenters[w.workcenter]?.name || w.workcenter)}</span>
@@ -1317,6 +1346,10 @@ function renderMO(name) {
         <td>${pill(w.blocked ? ["bad", "Зупинка"] : WO_STATE[w.state])}</td>
         <td class="n">${w.duration ?? "—"} / ${w.duration_expected}</td></tr>`).join("")}
     </table>
+    ${mo.delivery ? `<div class="sub">Шлях до клієнта · ${esc(mo.delivery.partner)}</div>
+    <ol class="steps">${mo.delivery.steps.map((st) => `<li><button class="lnk" data-go="obj:${esc(st.code)}">${esc(st.label[0].toUpperCase() + st.label.slice(1))}</button>
+      <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}</ol>
+    ${mo.delivery.note ? `<div class="note">${esc(mo.delivery.note)}</div>` : ""}` : ""}
     <div class="sub">Компоненти · натисніть, щоб побачити на складі</div>
     <table class="tbl"><tr><th>Компонент</th><th class="n">Потреба</th><th></th></tr>
       ${mo.components.map((c) => `<tr class="click" data-go="comp:${esc(mo.name)}|${esc(c.product)}">
@@ -1401,6 +1434,10 @@ function renderLogistics() {
     <ul class="rows">${SC.steps.map((st) => `<li><button class="row" data-go="chain:${st.n}"><span class="t">${st.n}. ${esc(st.title)}</span>
       <span class="mono">${esc(st.stock)}</span><span class="m">${esc(st.desc)}</span></button></li>`).join("")}</ul>
     <div class="row-btns" style="margin:6px 0 4px"><button class="btn" data-go="chain:all">Показати весь шлях у 3D</button></div>` : ""}
+    ${D.ship_chain ? `<div class="sub">Ланцюжок відвантаження · від пакування до фури</div>
+    <ul class="rows">${D.ship_chain.steps.map((st) => `<li><button class="row" data-go="chain:s${st.n}"><span class="t">${st.n}. ${esc(st.title)}</span>
+      <span class="mono">${esc(st.stock)}</span><span class="m">${esc(st.desc)}</span></button></li>`).join("")}</ul>` : ""}
+    ${D.full_cycle_mo ? `<div class="row-btns" style="margin:6px 0 4px"><button class="btn" data-go="mo:${esc(D.full_cycle_mo)}">Весь цикл у 3D: фура → виробництво → фура (${esc(D.full_cycle_mo)})</button></div>` : ""}
     <div class="sub">Приймання · західні ворота</div><ul class="rows">${by("incoming").map(pickRow).join("")}</ul>
     <div class="sub">Розміщення плит у стелажі · після контролю</div><ul class="rows">${by("putaway").map(pickRow).join("")}</ul>
     <div class="sub">Відвантаження · східні ворота</div><ul class="rows">${by("outgoing").map(pickRow).join("")}</ul>
@@ -1414,6 +1451,15 @@ function showPicking(name) {
   select(null);
   openView({ type: "picking", name });
   const e = [];
+  if (p.type === "outgoing") { // маршрут відвантаження: комірки ГП → зона перед воротами → ворота → машина
+    const k = p.dock.slice(-1);
+    const cells = [...new Set(p.source_locations || [])];
+    const route = [...cells.map((c, i) => ({ code: c, html: i ? null : "відібрати", cls: "hl" })),
+      { code: `Z-OUT-${k}`, html: "комплектування", cls: "prog" }, { code: p.dock, html: `ворота ${k}`, cls: "prog" }];
+    if (p.truck) route.push({ code: p.truck, html: "фура клієнта", cls: "done" });
+    Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route, { path: true }));
+    return;
+  }
   if (p.dock) e.push({ code: p.dock, html: p.type === "incoming" ? "Розвантаження" : "Навантаження", cls: "prog" });
   if (p.truck) e.push({ code: p.truck, html: null });
   for (const c of p.source_locations || []) e.push({ code: c, html: p.type === "outgoing" ? "відібрати" : "звідси", cls: "hl" });
@@ -1440,7 +1486,8 @@ async function showChain(v) {
     highlight(SC.path.map((p) => ({ code: p.code, html: esc(p.label), cls: "prog" })), { path: true });
     return;
   }
-  const st = SC.steps.find((x) => String(x.n) === v);
+  const ship = v.startsWith("s");
+  const st = (ship ? D.ship_chain : SC).steps.find((x) => String(x.n) === (ship ? v.slice(1) : v));
   if (!st) return;
   for (const c of st.codes) await ensureCode(c);
   highlight(st.codes.map((c, i) => ({ code: c, html: i ? null : `${st.n} · ${esc(st.title)}`, cls: "hl" })));

@@ -756,6 +756,67 @@ class Demo:
                                 note=None if rack else "У стелажах немає — під порталом останні аркуші; "
                                 f"поповнення з {pick['name'] if pick else 'наступного приймання'}")
 
+    def mo_delivery(self):
+        """Для кожного МО на замовлення клієнта — шлях після пакування: вихід з пакування → комірка складу ГП
+        → зона відвантаження перед воротами → ворота → машина клієнта."""
+        pk = {p["name"]: p for p in self.pickings}
+        sale = {so["name"]: so for so in self.sale}
+        sfp = {p["origin"]: p["name"] for p in self.pickings if p["type"] == "store_finished"}
+        fg = [c for c in self.locations if c.startswith("FG-R")]
+        for mo in self.productions:
+            so = sale.get(mo["origin"])
+            if not so:  # фасади йдуть у буфер комплектів до свого корпусу
+                continue
+            out = pk.get(so.get("delivery"))
+            if not out:
+                continue
+            k = out["dock"][-1]
+            cell = next((c for c in out["source_locations"]
+                         if any(q["product"] == mo["product"] for q in self.locations[c]["quants"])), None)
+            cell = cell or next((c for c in fg if any(q["product"] == mo["product"]
+                                                      for q in self.locations[c]["quants"])), None)
+            cell = cell or next((c for c in fg if not self.locations[c]["quants"]), fg[0])
+            steps = [dict(code="POST-STAGE", label="вихід з пакування", doc=sfp.get(mo["name"]),
+                          note="палета запакована, етикетка SSCC — чекає розміщення"),
+                     dict(code=cell, label="склад ГП", note=self.locations[cell]["complete_name"]),
+                     dict(code=f"Z-OUT-{k}", label=f"відвантаження · ворота {k}", doc=out["name"],
+                          note=f"комплектування {out['name']} для {so['partner']}"),
+                     dict(code=out["dock"], label="ворота", note=f"Ворота відвантаження {k}")]
+            if out.get("truck"):
+                steps.append(dict(code=out["truck"], label="фура клієнта",
+                                  note=f"{out.get('carrier') or ''} · завантаження {round(out['progress'] * 100)} %"))
+            mo["delivery"] = dict(picking=out["name"], partner=so["partner"], steps=steps,
+                                  note=None if out.get("truck") else
+                                  f"Машину ще не подано — відвантаження {out['scheduled_date'][:16].replace('-', '.')}"
+                                  + (" · чекає завершення МО" if out["state"] == "waiting" else ""))
+        full = next((m for m in self.productions if m["state"] == "progress" and m.get("delivery")
+                     and m["delivery"]["steps"][-1]["code"].startswith("TRUCK-OUT")
+                     and m.get("supply", {}).get("steps", [{}])[0].get("code", "").startswith("TRUCK-IN")), None)
+        self.full_cycle_mo = full["name"] if full else self.productions[0]["name"]
+
+    def ship_chain(self):
+        """Ланцюжок відвантаження від пакування до машини клієнта."""
+        outs = [p for p in self.pickings if p["type"] == "outgoing"]
+        fg = [c for c in self.locations if c.startswith("FG-R")]
+        full = sum(1 for c in fg if self.locations[c]["quants"])
+        steps = [
+            dict(n=1, title="Пакування", codes=["PACK-1", "PACK-2", "PACKLINE-1"], stock="",
+                 desc="Остання операція МО: палетообмотувачі й лінія термоусадки."),
+            dict(n=2, title="Вихід з пакування", codes=["POST-STAGE"],
+                 stock=f"{sum(1 for p in self.pickings if p['type'] == 'store_finished')} палети на розміщення",
+                 desc="Палета з етикеткою SSCC чекає навантажувача (WH/SFP — розміщення готової продукції)."),
+            dict(n=3, title="Склад готової продукції", codes=[f"FG-RACK-R{r}" for r in range(1, 6)],
+                 stock=f"{full} з {len(fg)} комірок зайнято",
+                 desc="Палетні стелажі; під кожне відвантаження резервуються комірки."),
+            dict(n=4, title="Зона відвантаження перед воротами", codes=[f"Z-OUT-{k}" for k in range(1, 8)],
+                 stock=f"{len(outs)} відвантажень сьогодні",
+                 desc="Комплектування WH/OUT у коридорі перед своїми воротами."),
+            dict(n=5, title="Фура клієнта", codes=[p["truck"] for p in outs if p.get("truck")],
+                 stock=f"{sum(1 for p in outs if p.get('truck'))} машини біля воріт",
+                 desc="Завантаження через докшелтер, документи — з Odoo."),
+        ]
+        return dict(steps=steps)
+
     def sheet_chain(self):
         """Ланцюжок плит від фури до пили: кроки з об'єктами сцени, документами Odoo й залишками."""
         def sheets(prefix):
@@ -804,6 +865,7 @@ class Demo:
         self.build_workcenters()
         self.build_logistics()
         self.mo_supply()
+        self.mo_delivery()
         self.build_people_equipment()
         specs = load_specs()
         for code, eq in self.equipment.items():  # модель і серійник — у maintenance.equipment
@@ -872,7 +934,8 @@ class Demo:
             purchase_orders=self.purchase, pickings=self.pickings, quality_checks=self.quality,
             maintenance_requests=self.maintenance, equipment=self.equipment, employees=self.employees,
             docks=self.docks, zones=zones, energy=energy, lighting=lighting, ventilation=vent, fire=fire, infra=infra,
-            evacuation=evac, sheet_chain=self.sheet_chain(),
+            evacuation=evac, sheet_chain=self.sheet_chain(), ship_chain=self.ship_chain(),
+            full_cycle_mo=self.full_cycle_mo,
             passports={**{c: pp for c in ROLE_BY_CODE if (pp := passport(c, specs))}, **passport_energy(specs)})
 
 
