@@ -4,9 +4,11 @@ import math
 from .geom import (LAYER_OBJ, Mesh, cartons, empty, forklift, hazard, instance, legs_frame, pallet,
                    person, rack_cart, roller_table, rounded_path, shared, sheet_stack)
 from .layout import (D, DOOR_H, DOORS, DUCT_MAIN_Y, DUCT_NORTH_X, DUCT_POINTS, DUCT_Z, EXHAUST_POINTS,
-                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FOOTPRINT, GANTRY_COLS, GANTRY_X, GANTRY_Y, H,
+                     FG_BAYS, FG_LEVELS, FG_PRODUCTS, FG_ROWS, FOOTPRINT, GANTRY_X, GANTRY_Y, H,
                      HW_LEVELS, HW_ROWS, HW_SECTIONS, MACHINES, SHEET_COLS_X, SHEET_DECORS, SHEET_ROWS_Y,
                      STATUS, W, ZONES, blocked, edge_slot, fg_slot, hw_state, obst, sheet_slot)
+from .layout import (GANTRY_SKIP, INFEED, INFEED_H, INFEED_W, RACK_BAY, RACK_DEPTH, RACK_H, RACK_LEVELS,
+                     RACK_LINES, RACK_X0, rack_bays, rack_slot)
 from .energy import (BUS_Z, PFC_H, BUSWAYS, CABLE_Z, CELL_X, EMS_POS, RM6_POS, ROOM, SWB_CELLS, SWB_D, SWB_H, SWB_X0,
                      SWB_X1, SWB_Y, TRAFO_Y, TRAFOS, TRAY_Y, TRAY_Z, energy_passport, taps)
 from .equipment import body_scale, load_specs, passport
@@ -240,17 +242,144 @@ def build_receiving():
     obst(0, 0, 14.0, D)
 
 
+def stack_on_forks(m, x, z, n, decor, thick=0.016):
+    """Стос на вилах: прокладки вздовж вил (локальна X), 2800 — упоперек навантажувача."""
+    m.box_lo(x, 0, z, 2.15, 2.9, 0.03, "pallet")
+    for dy in (-1.2, -0.4, 0.4, 1.2):
+        m.box_lo(x, dy, z + 0.03, 2.15, 0.1, 0.07, "pallet")
+    if n:
+        m.box_lo(x, 0, z + 0.1, 2.07, 2.8, n * thick, "decor%d" % decor)
+
+
+def board_forklift(m, lift=0.15, n=0, decor=1):
+    """Linde X50/600: електронавантажувач 5 т, ширина 1448 мм, довжина до спинки вил 3173 мм, вила 2000 мм
+    на позиціонері; щогла у складеному стані 3230 мм."""
+    m.box_lo(0.15, 0, 0.2, 2.45, 1.38, 0.85, "forklift", bev=0.06)
+    m.box_lo(-1.15, 0, 0.2, 0.75, 1.448, 1.2, "machine_dark", bev=0.1)  # противага
+    for dx, r in ((1.0, 0.36), (-0.95, 0.3)):
+        for dy in (-0.56, 0.56):
+            m.cyl((dx, dy, r), r, 0.3, "rubber", axis="Y", segs=20)
+            m.cyl((dx, dy * 1.03, r), r * 0.5, 0.31, "steel", axis="Y", segs=12)
+    for dx in (-0.65, 0.95):
+        for dy in (-0.63, 0.63):
+            m.box_lo(dx, dy, 1.05, 0.07, 0.07, 1.25, "machine_dark")
+    m.box_lo(0.15, 0, 2.3, 1.75, 1.36, 0.06, "machine_dark", bev=0.01)
+    m.box_lo(-0.2, 0, 1.05, 0.5, 0.55, 0.12, "machine_dark", bev=0.04)  # сидіння
+    m.box((-0.45, 0, 1.4), (0.08, 0.52, 0.55), "machine_dark", rot=(0, -12, 0), bev=0.03)
+    m.cyl((0.4, 0, 1.45), 0.17, 0.03, "machine_dark", rot=(0, -40, 0), segs=16)
+    for dy in (-0.48, 0.48):
+        m.box_lo(1.55, dy, 0.08, 0.12, 0.16, 3.15, "steel_dark", bev=0.01)  # щогла
+    m.box_lo(1.55, 0, 3.1, 0.12, 1.1, 0.1, "steel_dark")
+    m.box_lo(1.66, 0, lift + 0.05, 0.1, 1.5, 1.05, "steel_dark")  # каретка з позиціонером вил
+    for dy in (-0.8, 0.8):
+        m.box_lo(2.71, dy, lift, 2.0, 0.15, 0.06, "steel_dark")
+        m.box_lo(1.74, dy, lift, 0.06, 0.15, 1.0, "steel_dark")
+    m.cyl((-0.3, 0, 2.42), 0.07, 0.1, "status_amber", segs=12)
+    if n is not None:
+        stack_on_forks(m, 2.78, lift + 0.06, n, decor)
+
+
+def rack_line(m, line, yc, side):
+    """Лінія стелажа PR 600: подвійні рами 2×850 зі вставками 300, по 4 балки INP 120 на ярус."""
+    bays = rack_bays(line)
+    x1 = RACK_X0 + bays * RACK_BAY
+    ys = (-RACK_DEPTH / 2, -0.15, 0.15, RACK_DEPTH / 2)
+    for k in range(bays + 1):
+        x = RACK_X0 + k * RACK_BAY
+        for dy in ys:
+            m.box_lo(x, yc + dy, 0, 0.09, 0.09, RACK_H, "rack_upright")
+            m.box_lo(x, yc + dy, 0, 0.16, 0.16, 0.012, "steel_dark")  # п'ята
+        for a, b in ((ys[0], ys[1]), (ys[2], ys[3])):  # розкоси рам
+            for z in (0.3, 1.5, 2.7, 3.9):
+                L = math.hypot(b - a, 1.2)
+                m.box((x, yc + (a + b) / 2, z + 0.6), (0.03, 0.03, L), "rack_upright",
+                      rot=(math.degrees(math.atan2(b - a, 1.2)) * (1 if int(z) % 2 else -1), 0, 0))
+        for z in (0.6, 2.0, 3.4, 4.5):
+            m.box_lo(x, yc, z, 0.05, 0.3, 0.05, "steel_dark")  # вставки між рамами
+        fy = yc + side * (RACK_DEPTH / 2 + 0.12)
+        m.box_lo(x, fy, 0, 0.3, 0.2, 0.4, "marking")  # захист стійок з боку проходу
+    for z in RACK_LEVELS[1:]:
+        for dy in ys:
+            m.box_lo((RACK_X0 + x1) / 2, yc + dy, z - 0.12, x1 - RACK_X0, 0.06, 0.12, "rack_beam")
+    for x in (RACK_X0 - 0.35, x1 + 0.35):  # торцевий захист
+        m.box_lo(x, yc, 0, 0.12, RACK_DEPTH + 0.2, 0.12, "marking")
+        m.box_lo(x, yc, 0.38, 0.12, RACK_DEPTH + 0.2, 0.12, "marking")
+        for dy in (-RACK_DEPTH / 2, RACK_DEPTH / 2):
+            m.box_lo(x, yc + dy, 0, 0.12, 0.12, 0.5, "marking")
+    fy = yc + side * (RACK_DEPTH / 2 + 0.35)
+    m.box_lo((RACK_X0 + x1) / 2, fy, 0.004, x1 - RACK_X0, 0.1, 0.012, "marking")  # межа проходу
+    return x1
+
+
+def infeed(m, code, yc, x0, L):
+    """Ланцюговий транспортер Interroll PM 9720: дві станції по 3,8 м (по 2 модулі × 3 ланцюги)."""
+    for dy in (-INFEED_W / 2, INFEED_W / 2):
+        m.box_lo(x0 + L / 2, yc + dy, 0.25, L, 0.08, INFEED_H - 0.25, "machine_mid")
+    for x in [x0 + 0.2 + k * (L - 0.4) / 4 for k in range(5)]:
+        for dy in (-INFEED_W / 2 + 0.1, INFEED_W / 2 - 0.1):
+            m.box_lo(x, yc + dy, 0, 0.1, 0.1, 0.3, "steel_dark")
+        m.box_lo(x, yc, 0.25, 0.08, INFEED_W - 0.1, 0.08, "steel_dark")
+    for mod in (-1, 1):
+        for c in (-0.42, 0.0, 0.42):
+            m.box_lo(x0 + L / 2, yc + mod * 0.5685 + c, INFEED_H - 0.06, L - 0.1, 0.06, 0.06, "rubber")
+    for xs in (x0 + L / 4, x0 + 3 * L / 4):  # приводи станцій
+        for mod in (-1, 1):
+            m.cyl((xs, yc + mod * 0.5685, 0.18), 0.12, 0.3, "machine_accent", axis="Y", segs=14)
+    m.box_lo(x0 + L / 2, yc, INFEED_H, 0.04, INFEED_W, 0.01, "marking")  # межа станцій
+    m.box_lo(x0 + L - 0.05, yc, INFEED_H - 0.05, 0.1, INFEED_W, 0.25, "fire_red")  # упор
+    for dy in (-1, 1):  # смуги безпеки вздовж станції навантажувача
+        hazard(m, x0 - 0.3, x0 + L / 2 - 0.1, yc + dy * (INFEED_W / 2 + 0.3), 0.004, depth=0.1, h=0.012, w=0.25)
+
+
 def build_sheets():
-    """Портальний склад: колії вздовж Y, міст уздовж X, стоси сіткою, портал подає лист прямо на
-    підйомні столи розкрійних центрів і нестингу."""
+    """Склад плит: стелажі буфера (навантажувач), два транспортери поповнення крізь огородження,
+    портальний склад, що подає лист прямо на підйомні столи розкрійних центрів і нестингу."""
     for j, y in enumerate(SHEET_ROWS_Y):
         for i, x in enumerate(SHEET_COLS_X):
+            if (i, j) in GANTRY_SKIP:
+                continue
             code, decor, n = sheet_slot(i, j)
             name = SHEET_DECORS[decor][0] if n else "порожньо"
-            where = "під порталом" if i >= len(SHEET_COLS_X) - GANTRY_COLS else "буфер, навантажувач"
             instance(code, "sheets", stack_mesh(decor, n), loc=(x, y, 0), code=code, kind="stock",
                      label=f"Стос {code}",
-                     desc=(f"{name}, {n} арк." if n else "Місце вільне.") + f" ({where})")
+                     desc=(f"{name}, {n} арк." if n else "Місце вільне.") + " (під порталом)")
+    # стелажі буфера
+    r = Mesh()
+    for li, (line, yc, side) in enumerate(RACK_LINES):
+        x1 = rack_line(r, line, yc, side)
+        obst(RACK_X0 - 0.45, yc - RACK_DEPTH / 2 - 0.1, x1 + 0.45, yc + RACK_DEPTH / 2 + 0.1)
+        for b in range(rack_bays(line)):
+            for lv, z in enumerate(RACK_LEVELS):
+                code, decor, n = rack_slot(li, b, lv)
+                name = SHEET_DECORS[decor][0] if n else "порожньо"
+                instance(code, "sheets", stack_mesh(decor, n), loc=(RACK_X0 + (b + 0.5) * RACK_BAY, yc, z),
+                         code=code, kind="stock", label=f"Стелаж {line} · проліт {b + 1} · ярус {lv + 1}",
+                         desc=(f"{name}, {n} арк." if n else "Місце вільне.") + " Буфер, навантажувач.")
+    for yc in (5.7, 15.8, 25.9, 36.0):  # осі проходів — пунктир від приймання до огородження порталу
+        for x in range(15, 27, 2):
+            r.box((x + 0.5, yc, 0.012), (1.0, 0.08, 0.012), "marking")
+    r.build("BOARD-RACKS", "sheets", code="BOARD-RACKS", kind="equipment", label="Стелажі плит",
+            desc="Буфер плит на стелажах: стоси 2800 × 2070 до 3,4 т на ярус, 4 яруси, проходи 5,8 м між "
+                 "лініями — продовження коридорів від воріт приймання.")
+    for code, line, yc, x0, L in INFEED:
+        c = Mesh()
+        infeed(c, code, yc, x0, L)
+        k = int(code[-1])
+        sheet_stack(c, x0 + 3 * L / 4, yc, INFEED_H, 40 if k == 1 else 30, (2, 4)[k - 1])
+        if k == 1:
+            sheet_stack(c, x0 + L / 4, yc, INFEED_H, 35, 0)
+        obst(x0 - 0.3, yc - INFEED_W / 2 - 0.3, x0 + L, yc + INFEED_W / 2 + 0.3)
+        c.build(code, "sheets", code=code, kind="equipment", label=f"Транспортер поповнення {k}",
+                desc="Навантажувач ставить стос на зовнішню станцію, транспортер завозить його крізь "
+                     "світлову завісу під портал; портал бере лист зі стосу.")
+    for code, label, x, y, rz, lift, n, decor, desc in (
+            ("FL-2", "Навантажувач плит 1", 18.6, 15.8, 0, 0.25, 30, 1,
+             "Везе стос із фури (ворота 2) у стелаж за WH/IN."),
+            ("FL-6", "Навантажувач плит 2", 24.4 + 7.6 / 4, 32.1 + 2.78, -90, INFEED_H + 0.04, 35, 3,
+             "Ставить стос зі стелажа на транспортер поповнення 2 (WH/INT/00072).")):
+        instance(code, "transport", shared(f"bfl_{code}", lambda m, lift=lift, n=n, decor=decor:
+                                           board_forklift(m, lift, n, decor)),
+                 loc=(x, y, 0), rz=rz, code=code, kind="vehicle", label=label, desc=desc)
 
     g = Mesh()
     xa, xb = GANTRY_X
@@ -278,13 +407,28 @@ def build_sheets():
         for j in range(3):
             g.cyl((tx - 1.05 + i * 0.7, by - 0.6 + j * 0.6, 2.66), 0.1, 0.06, "rubber", segs=14)
     g.box_lo(tx, by, 2.6, 2.8, 2.07, 0.016, "decor1")
-    for y in range(2, 44, 3):  # огородження зони порталу з боку буфера плит
-        g.box_lo(xa - 0.4, y, 0, 0.06, 0.06, 2.0, "marking")
-        g.box_lo(xa - 0.4, y + 1.5, 0.1, 0.02, 2.9, 1.8, "guard_glass")
+    gaps = [(yc - 1.25, yc + 1.25) for _, _, yc, _, _ in INFEED]  # прорізи для транспортерів
+    fx, pts = xa - 0.4, []
+    a = ya
+    for g0, g1 in gaps + [(yb, yb)]:
+        n = max(1, math.ceil((g0 - a) / 3.0))
+        pts.append([a + (g0 - a) * k / n for k in range(n + 1)])
+        a = g1
+    for seg in pts:  # огородження зони порталу з боку стелажів
+        for y in seg:
+            g.box_lo(fx, y, 0, 0.06, 0.06, 2.0, "marking")
+        for y0, y1 in zip(seg, seg[1:]):
+            g.box_lo(fx, (y0 + y1) / 2, 0.1, 0.02, y1 - y0 - 0.08, 1.8, "guard_glass")
+    for g0, g1 in gaps:  # світлова завіса SICK M4000 з мьютингом
+        for y in (g0, g1):
+            g.box_lo(fx, y, 0, 0.09, 0.09, 1.9, "marking")
+            g.box_lo(fx + 0.05, y, 0.3, 0.02, 0.04, 1.4, "hazard_black")
+            g.box_lo(fx - 0.35, y, 0.75, 0.7, 0.04, 0.04, "steel_dark")  # датчики мьютингу
+            g.box_lo(fx - 0.7, y, 0.7, 0.06, 0.06, 0.12, "status_green")
     g.build("GANTRY-1", "sheets", code="GANTRY-1", kind="equipment", label="Портальний склад плит",
             desc="Портал над трьома рядами стосів із вакуумною траверсою: бере лист і кладе прямо на "
-                 "підйомні столи розкрійних центрів і нестингу (колії заходять над ними). Буфер плит "
-                 "поруч поповнює навантажувач.")
+                 "підйомні столи розкрійних центрів і нестингу (колії заходять над ними). Стоси зі стелажів "
+                 "заходять на двох транспортерах крізь огородження зі світловими завісами.")
     obst(14.6, ya - 0.5, xb + 0.5, yb + 0.5)  # разом із буфером плит — без колон усередині
 
 
@@ -1214,23 +1358,16 @@ def build_transport():
         pallet(m, 1.45, 0, 0.14)
         cartons(m, 1.45, 0, 0.286, 1.1, 0.75, 1)
 
-    def fl_sheets(m):
-        forklift(m)
-        sheet_stack(m, 1.6, 0, 0.14, 22, 1)
-
     for code, label, x, y, rz, fn, desc in (
             ("FL-1", "Навантажувач ГП 1", 125.4, 30.0, 90, fl_pallet,
              "Ставить палету в стелаж, висота підйому 6 м."),
-            ("FL-2", "Навантажувач приймання", 11.5, 21.0, 0, fl_sheets,
-             "Везе стос плит із фури до зони порталу."),
             ("FL-3", "Навантажувач відвантаження", 145.5, 45.0, 0, fl_pallet,
              "Вантажить палету в машину біля воріт 5."),
             ("FL-4", "Навантажувач ГП 2", 131.2, 40.0, -90, fl_pallet,
              "Знімає палету з третього ярусу."),
             ("FL-5", "Навантажувач пакування", 120.5, 16.0, 90, fl_pallet,
              "Відвозить запаковані палети в зону виходу.")):
-        key = "fl_sheets" if fn is fl_sheets else "fl_pallet"
-        instance(code, "transport", shared(key, fn), loc=(x, y, 0), rz=rz, code=code,
+        instance(code, "transport", shared("fl_pallet", fn), loc=(x, y, 0), rz=rz, code=code,
                  kind="vehicle", label=label, desc=desc)
 
     def tugger(m):

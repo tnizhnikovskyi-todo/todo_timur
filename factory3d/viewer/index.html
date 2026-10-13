@@ -1340,7 +1340,7 @@ function highlightLocs(codes) { highlight(codes.map((c) => ({ code: c, html: "",
 
 // ---------------------------------------------------------------- вкладка «Логістика»
 const PICK_KIND = { incoming: "Приймання", outgoing: "Відвантаження", pick_components: "Комплектація компонентів",
-  store_finished: "Розміщення готової продукції" };
+  store_finished: "Розміщення готової продукції", replenish: "Поповнення порталу" };
 function pickRow(p) {
   return `<li><button class="row" data-go="pick:${esc(p.name)}">
     <span class="t">${esc(p.name)}${p.partner ? ` · ${esc(p.partner)}` : ""}</span>${pill(PICK_STATE[p.state] || ["idle", p.state])}
@@ -1353,6 +1353,7 @@ function renderLogistics() {
   body().innerHTML = `
     <div class="sub" style="margin-top:2px">Приймання · західні ворота</div><ul class="rows">${by("incoming").map(pickRow).join("")}</ul>
     <div class="sub">Відвантаження · східні ворота</div><ul class="rows">${by("outgoing").map(pickRow).join("")}</ul>
+    <div class="sub">Поповнення порталу · стелажі → транспортер</div><ul class="rows">${by("replenish").map(pickRow).join("")}</ul>
     <div class="sub">Розміщення готової продукції</div><ul class="rows">${by("store_finished").map(pickRow).join("")}</ul>
     <div class="sub">Комплектація компонентів</div><ul class="rows">${by("pick_components").map(pickRow).join("")}</ul>`;
 }
@@ -1372,6 +1373,11 @@ function showPicking(name) {
   if (p.type === "outgoing") e.push({ code: "OUT-STAGE", html: null });
   if (p.type === "store_finished") e.push({ code: "POST-STAGE", html: "з пакування", cls: "hl" });
   if (p.type === "pick_components" && p.location_dest) e.push({ code: p.location_dest, html: "у візок", cls: "prog" });
+  if (p.type === "replenish") {
+    if (p.vehicle) e.push({ code: p.vehicle, html: "навантажувач", cls: "prog" });
+    e.push({ code: p.location_dest, html: "транспортер", cls: "prog" });
+    if (p.target) e.push({ code: p.target, html: "під портал", cls: "done" });
+  }
   highlight(e);
 }
 function renderPicking(name) {

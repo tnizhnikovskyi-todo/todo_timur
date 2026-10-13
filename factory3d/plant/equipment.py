@@ -25,10 +25,12 @@ ROLE_BY_CODE = {
     "PACK-1": "stretch_wrapper", "PACK-2": "stretch_wrapper", "PACKLINE-1": "shrink_line",
     "COMPRESSOR": "compressor", "DUST-1": "dust_extraction", "BOILER": "biomass_boiler",
     "TUGGER-1": "tugger",
+    "BOARD-RACKS": "board_rack", "INFEED-1": "infeed_conveyor", "INFEED-2": "infeed_conveyor",
+    "FL-2": "board_forklift", "FL-6": "board_forklift",
 }
 for _i in range(1, 7):
     ROLE_BY_CODE[f"ASM-{_i}"] = "case_clamp_manual"
-for _c in ("FL-1", "FL-2", "FL-3", "FL-4", "FL-5", "FL-C1", "FL-C2"):
+for _c in ("FL-1", "FL-3", "FL-4", "FL-5", "FL-C1", "FL-C2"):
     ROLE_BY_CODE[_c] = "forklift"
 # допоміжні одиниці, що входять до складу основної (показуються в тому самому паспорті)
 EXTRA_ROLES = {"EDGE-1": ["robot_return"], "SPRAY-1": ["paint_pump"], "PACKLINE-1": ["strapping"], "UV-1": ["uv_oven"],
