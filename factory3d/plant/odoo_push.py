@@ -25,7 +25,8 @@ from .odoo_rpc import Odoo, key, utc
 MOD = "factory3d"
 STEPS = ["modules", "settings", "base", "views", "calendar", "locations", "workcenters", "people", "purchase",
          "sale", "internal", "production", "boms", "layout", "lots", "stock", "routes", "orderpoints", "children",
-         "losses", "quality", "maintenance", "carriers", "finish"]
+         "fronts", "mo_locations", "consumption", "po_links", "docks", "wc_tags", "losses", "quality", "maintenance",
+         "equipment", "preventive", "attendance", "carriers", "finish"]
 # усе, чим користується модель: без цих налаштувань Odoo ховає меню й поля
 SETTINGS = {"group_stock_multi_locations": True,   # місця зберігання (комірки, стелажі, ворота)
             "group_mrp_routings": True,            # робочі замовлення й робочі центри
@@ -440,9 +441,12 @@ class Push(FlowSteps):
                 if (m["product"], m["route"]) != (pcode, route):
                     continue
                 mid = self.ref(key("mo", m["name"]))
-                o("mrp.production", "write", [mid], {"bom_id": bom})
+                if o("mrp.production", "read", [mid], ["bom_id"])[0]["bom_id"] is False:
+                    o("mrp.production", "write", [mid], {"bom_id": bom})  # повторний запис скидає місця МО
                 for w, op in zip([d["workorders"][x] for x in m["workorders"]], ops):
-                    o("mrp.workorder", "write", [self.ref(key("wo", w["id"]))], {"operation_id": op["id"]})
+                    wid = self.ref(key("wo", w["id"]))
+                    if not o("mrp.workorder", "read", [wid], ["operation_id"])[0]["operation_id"]:
+                        o("mrp.workorder", "write", [wid], {"operation_id": op["id"]})
         print(f"boms: {len(first)} специфікацій з операціями")
 
     def run_workorders(self, mo, wos):
