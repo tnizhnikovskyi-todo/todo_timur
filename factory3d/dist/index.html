@@ -598,7 +598,7 @@ function fitBox(box, animate = true) {
   const L = vis($("#side")), R = vis($("#card"));
   const x0 = L && L.right < W0 * 0.45 ? L.right : 0, x1 = R && R.left > W0 * 0.55 ? R.left : W0;
   const k = Math.min(2.2, W0 / Math.max(200, x1 - x0));
-  const dist = r * 2.1 * Math.max(1, k * camera.aspect > 1 ? k : 1) + 4;
+  const dist = r * 2.1 * Math.sqrt(k) + 4; // смуга вужча за вікно — відсуваємось, але без зайвого запасу
   const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize().negate();
   const perPx = (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / H0;
   const t = c.clone().add(right.multiplyScalar(-((x0 + x1) / 2 - W0 / 2) * perPx));
@@ -844,13 +844,14 @@ function clearProdOverlay() {
   for (const o of prodOv.objs) { scene.remove(o); o.geometry?.dispose(); }
   prodOv.objs = []; prodOv.dots = []; prodOv.color.clear(); prodOv.byMo.clear();
 }
-function moPosition(wos) {
+// місце замовлення на всьому циклі: індекс точки маршруту (дробовий — у дорозі між точками)
+function cyclePosition(wos, at, firstOut, lastIn) {
   const k = wos.findIndex((w) => w.state === "progress");
-  if (k >= 0) return { k, f: 0, w: wos[k] };
+  if (k >= 0) return { u: at[k], w: wos[k], phase: wos[k].name };
   const done = wos.map((w) => w.state === "done").lastIndexOf(true);
-  if (done < 0) return { k: 0, f: 0, w: wos[0] };
-  if (done === wos.length - 1) return null;
-  return { k: done, f: 0.5, w: wos[done + 1] }; // між операціями — у буфері / в дорозі
+  if (done < 0) return { u: Math.max(0, lastIn), w: wos[0], phase: "плита під порталом, чекає першої операції" };
+  if (done === wos.length - 1) return { u: firstOut, w: null, phase: "запаковано — на шляху до клієнта" };
+  return { u: at[done] + (at[done + 1] - at[done]) * 0.5, w: wos[done + 1], phase: `до ${wos[done + 1].name}` };
 }
 function drawProdOverlay() {
   clearProdOverlay();
@@ -858,83 +859,59 @@ function drawProdOverlay() {
   const mos = D.productions.filter((m) => m.state === "progress");
   mos.forEach((mo, i) => {
     const wos = mo.workorders.map((id) => D.workorders[id]);
-    const pts = [], at = [];
     const off = new THREE.Vector3(((i % 6) - 2.5) * 0.35, 0, (Math.floor(i / 6) - 2.5) * 0.35); // розвести збіжні маршрути
-    for (const w of wos) {
-      const obj = items.get(w.workcenter);
-      if (!obj) { at.push(pts.length - 1); continue; }
-      const p = topOf(obj).add(new THREE.Vector3(0, 1.5, 0)).add(off);
-      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) pts.push(p);
-      at.push(pts.length - 1);
-    }
-    if (!pts.length) return;
+    // увесь цикл однією лінією: фура з плитами → приймання → стелаж → портал → верстати → склад ГП → фура клієнта
+    const pts = [], stage = [];
+    const push = (code, kind) => {
+      const obj = items.get(code);
+      if (!obj) return pts.length - 1;
+      const p = topOf(obj).add(new THREE.Vector3(0, kind === "op" ? 1.5 : 1.0, 0)).add(off);
+      if (kind !== "op") p.y = Math.min(p.y, 3.0); // стелажі високі — лінія лишається низько
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) { pts.push(p); stage.push(kind); }
+      return pts.length - 1;
+    };
+    for (const st of mo.supply?.steps || []) push(st.code, "in");
+    const lastIn = pts.length - 1;
+    const at = wos.map((w) => push(w.workcenter, "op"));
+    const nOps = pts.length;
+    for (const st of mo.delivery?.steps || []) push(st.code, "out");
+    const firstOut = pts.length > nOps ? nOps : nOps - 1;
+    if (pts.length < 2) return;
     const col = moColor(i);
     prodOv.color.set(mo.name, "#" + col.getHexString());
     const mine = [];
     prodOv.byMo.set(mo.name, mine);
-    const add = (o) => { scene.add(o); prodOv.objs.push(o); mine.push(o); };
-    const curve = pts.length > 1 ? new THREE.CatmullRomCurve3(pts, false, "centripetal") : null;
-    if (curve) {
-      const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 20, 0.22, 6, false),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 }));
-      tube.userData.isPulse = true;
-      add(tube);
-    }
-    // шлях плити від фури: ворота → вивантаження → контроль → стелаж → під порталом → перший верстат
-    const sp = [];
-    for (const st of mo.supply?.steps || []) {
-      const obj = items.get(st.code);
-      if (!obj) continue;
-      const p = topOf(obj).add(new THREE.Vector3(0, 1.0, 0)).add(off);
-      p.y = Math.min(p.y, 3.0) + off.x * 0.2; // стелажі високі — тримаємо лінію низько, щоб не перекривала план
-      if (!sp.length || sp[sp.length - 1].distanceTo(p) > 0.8) sp.push(p);
-    }
-    if (sp.length) {
-      sp.push(pts[0]);
-      const sc = new THREE.CatmullRomCurve3(sp, false, "centripetal");
-      const st = new THREE.Mesh(new THREE.TubeGeometry(sc, sp.length * 20, 0.18, 6, false),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55 }));
-      const start = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8 }));
-      start.position.copy(sp[0]);
-      for (const o of [st, start]) { o.userData.isPulse = true; add(o); }
-    }
-    // після пакування: вихід з пакування → склад ГП → зона відвантаження → ворота → фура клієнта
-    const dp = [pts[pts.length - 1]];
-    for (const st of mo.delivery?.steps || []) {
-      const obj = items.get(st.code);
-      if (!obj) continue;
-      const p = topOf(obj).add(new THREE.Vector3(0, 1.0, 0)).add(off);
-      p.y = Math.min(p.y, 3.0) + off.x * 0.2;
-      if (dp[dp.length - 1].distanceTo(p) > 0.8) dp.push(p);
-    }
-    if (dp.length > 1) {
-      const dc = new THREE.CatmullRomCurve3(dp, false, "centripetal");
-      const dt = new THREE.Mesh(new THREE.TubeGeometry(dc, dp.length * 20, 0.18, 6, false),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55 }));
-      const end = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 12),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8 }));
-      end.position.copy(dp[dp.length - 1]);
-      for (const o of [dt, end]) { o.userData.isPulse = true; add(o); }
-    }
-    const pos = moPosition(wos);
-    if (!pos) return;
-    const a = Math.max(0, at[pos.k]), b = Math.max(0, at[Math.min(pos.k + 1, at.length - 1)]);
-    const u = a + (b - a) * pos.f;
-    const p = curve ? curve.getPoint(u / (pts.length - 1)) : pts[0];
-    const blocked = !!pos.w?.blocked;
+    const add = (o) => { o.traverse((x) => { x.userData.isPulse = true; }); scene.add(o); prodOv.objs.push(o); mine.push(o); };
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    add(new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 20, 0.2, 6, false),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 })));
+    const pointMat = new THREE.MeshBasicMaterial({ color: col.clone().lerp(new THREE.Color(0xffffff), 0.45) });
+    pts.forEach((p, j) => { // точки складів і приймання/відвантаження
+      if (stage[j] === "op" || j === 0 || j === pts.length - 1) return;
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), pointMat);
+      m.position.copy(p);
+      add(m);
+    });
+    const start = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), new THREE.MeshBasicMaterial({ color: col }));
+    start.position.copy(pts[0]);
+    const end = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 12), new THREE.MeshBasicMaterial({ color: col }));
+    end.position.copy(pts[pts.length - 1]);
+    add(start); add(end);
+    const pos = cyclePosition(wos, at, firstOut, lastIn);
+    const p = curve.getPoint(Math.min(1, Math.max(0, pos.u / (pts.length - 1))));
+    const blocked = !!pos.w?.blocked && pos.w.state === "progress";
     const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: col }));
     const ring = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 12),
       new THREE.MeshBasicMaterial({ color: blocked ? 0xd63a2b : 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
     dot.add(ring);
     dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
-    dot.traverse((o) => { o.userData.isPulse = true; });
     add(dot); prodOv.dots.push(ring);
     const el = document.createElement("div");
     el.className = "mo-tag" + (blocked ? " bad" : "");
     el.style.background = "#" + col.getHexString();
     el.textContent = mo.name.split("/").pop();
-    el.title = `${mo.name} · ${mo.product_name} × ${mo.qty} — ${pos.w ? `${pos.f ? "до " : ""}${pos.w.name}` : ""}${blocked ? " · зупинка" : ""}`;
+    el.title = `${mo.name} · ${mo.product_name} × ${mo.qty} — ${pos.phase}${blocked ? " · зупинка" : ""}`
+      + (mo.delivery ? ` → ${mo.delivery.partner}` : "");
     el.addEventListener("click", (e) => { e.stopPropagation(); showMO(mo.name); });
     const tag = new CSS2DObject(el);
     tag.position.copy(dot.position);
