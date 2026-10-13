@@ -19,8 +19,7 @@ from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from .odoo_demo import NOW, Demo, ts
-from .odoo_push import key
-from .odoo_rpc import Odoo
+from .odoo_rpc import Odoo, key
 
 TZ = ZoneInfo("Europe/Kyiv")
 PICK_STATE = {"confirmed": "waiting", "waiting": "waiting", "assigned": "assigned", "done": "done",
@@ -185,40 +184,45 @@ class LiveDemo(Demo):
 
     # ------------------------------------------------------------ залишки
     def sync_stock(self):
+        """Залишки по комірках (за штрихкодом = код у сцені) з партіями й палетами з бази."""
         o = self.o
-        root = self.xid.get("loc_root")
+        root = self.xid.get("loc_wh") or self.xid.get("loc_root")
         locs = o("stock.location", "search_read", [["id", "child_of", root], ["barcode", "!=", False]],
                  fields=["barcode"])
         code_of = {r["id"]: r["barcode"] for r in locs}
-        quants = o("stock.quant", "search_read", [["location_id", "in", list(code_of)]],
-                   fields=["location_id", "product_id", "quantity", "reserved_quantity"])
+        quants = o("stock.quant", "search_read", [["location_id", "in", list(code_of)], ["quantity", "!=", 0]],
+                   fields=["location_id", "product_id", "quantity", "reserved_quantity", "lot_id", "package_id"])
         live = {}
         for q in quants:
-            c = code_of[q["location_id"][0]]
             p = self.code.get(q["product_id"][0])
-            if p and q["quantity"]:
-                agg = live.setdefault(c, {}).setdefault(p, [0, 0])
-                agg[0] += q["quantity"]
-                agg[1] += q["reserved_quantity"]
+            if p:
+                live.setdefault(code_of[q["location_id"][0]], []).append(dict(
+                    product=p, qty=round(q["quantity"], 2), reserved=round(q["reserved_quantity"], 2),
+                    lot=q["lot_id"][1] if q["lot_id"] else None,
+                    package=q["package_id"][1] if q["package_id"] else None))
+        known = set(code_of.values())
         for code, loc in self.locations.items():
-            if code not in set(code_of.values()):
+            if code not in known:
                 continue
-            old = {}
+            extra = {}  # що знає лише модель: для якого документа стос, карантин, приймання
             for q in loc["quants"]:
-                old.setdefault(q["product"], q)
+                extra.setdefault(q["product"], {k: v for k, v in q.items()
+                                                if k not in ("product", "qty", "reserved", "lot", "package")})
             new = []
-            for p, (qty, res) in sorted(live.get(code, {}).items()):
-                same = [q for q in loc["quants"] if q["product"] == p]
-                if same and abs(sum(q["qty"] for q in same) - qty) < 1e-6:
-                    new += same  # кількість не змінилась — лишаємо палети/партії з моделі як є
-                    continue
-                base = dict(old.get(p) or {"product": p})
-                base["qty"] = round(qty, 2)
-                if res:
-                    base["reserved"] = round(res, 2)
-                else:
-                    base.pop("reserved", None)
-                new.append(base)
+            rows = live.get(code, [])
+            for p in {q["product"] for q in rows}:  # без партій і палет, кількість та сама — розбивка з моделі
+                mine = [q for q in rows if q["product"] == p]
+                demo = [q for q in loc["quants"] if q["product"] == p]
+                if len(demo) > 1 and not any(q["lot"] or q["package"] for q in mine) and \
+                        abs(sum(q["qty"] for q in mine) - sum(q["qty"] for q in demo)) < 1e-6:
+                    new += demo
+                    rows = [q for q in rows if q["product"] != p]
+            for q in sorted(rows, key=lambda x: (x["product"], x["package"] or "", x["lot"] or "")):
+                item = {"product": q["product"], "qty": q["qty"], **extra.get(q["product"], {})}
+                for f in ("lot", "package", "reserved"):
+                    if q[f]:
+                        item[f] = q[f]
+                new.append(item)
             loc["quants"] = new
             if loc.get("kind") == "pallet_cell":
                 loc["fill"] = min(1.0, len(new) / 2)

@@ -14,22 +14,25 @@
     python3 -m plant.odoo_push --only base,locations
 """
 import argparse
-import hashlib
-import re
 import sys
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 from .cycle_check import DOOR_GOODS
 from .odoo_demo import NOW, Demo
-from .odoo_rpc import Odoo
+from .odoo_flows import OUTSIDE_STOCK, FlowSteps
+from .odoo_rpc import Odoo, key, utc
 
 MOD = "factory3d"
-TZ = ZoneInfo("Europe/Kyiv")
-STEPS = ["settings", "base", "locations", "workcenters", "people", "purchase", "sale", "internal", "production",
-         "boms", "stock", "quality", "maintenance", "finish"]
-# налаштування, без яких Odoo ховає меню «Локації», «Робочі центри», «Операції»
-SETTINGS = {"group_stock_multi_locations": True, "group_mrp_routings": True}
+STEPS = ["modules", "settings", "base", "views", "calendar", "locations", "workcenters", "people", "purchase",
+         "sale", "internal", "production", "boms", "layout", "lots", "stock", "routes", "orderpoints", "children",
+         "losses", "quality", "maintenance", "carriers", "finish"]
+# усе, чим користується модель: без цих налаштувань Odoo ховає меню й поля
+SETTINGS = {"group_stock_multi_locations": True,   # місця зберігання (комірки, стелажі, ворота)
+            "group_mrp_routings": True,            # робочі замовлення й робочі центри
+            "group_uom": True,                     # аркуш, комплект, рулон, кг, м
+            "group_stock_production_lot": True,    # партії плит, крайки, ЛФМ
+            "group_stock_tracking_lot": True,      # палети готової продукції (упаковки PACK…)
+            "group_stock_adv_location": True}      # багатокрокові маршрути: приймання, виробництво, відвантаження
 UOM = {"шт": ("Units", None), "м": ("m", None), "кг": ("kg", None),
        "арк": (None, "Аркуш"), "компл": (None, "Комплект"), "рул": (None, "Рулон")}
 FG_PRICE = {"KC-B600": 6400, "KC-W800": 4800, "KC-T400": 7900, "OF-D3": 5600, "OF-T1400": 9800,
@@ -44,24 +47,7 @@ INTERNAL_TYPES = {  # тип у демо → (назва типу операці
     "store_finished": ("Розміщення готової продукції", "SFP")}
 
 
-def utc(s):
-    """'2026-10-12 10:30' за Києвом → рядок UTC для полів Odoo."""
-    if not s:
-        return False
-    dt = datetime.strptime(s, "%Y-%m-%d %H:%M").replace(tzinfo=TZ)
-    return dt.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def key(*parts):
-    """Зовнішній ID: латиниця як є, а для кирилиці — ще й короткий хеш, щоб назви не злипалися."""
-    raw = "_".join(str(p) for p in parts)
-    k = re.sub(r"[^0-9A-Za-z]+", "_", raw).strip("_").lower()
-    if not raw.isascii():
-        k += "_" + hashlib.md5(raw.encode()).hexdigest()[:8]
-    return k
-
-
-class Push:
+class Push(FlowSteps):
     def __init__(self, o, d):
         self.o, self.d = o, d
         self.o.ctx = {"lang": "uk_UA", "tz": "Europe/Kyiv", "tracking_disable": True,
@@ -141,8 +127,10 @@ class Push:
         partners |= {p["carrier"] for p in d["pickings"] if p.get("carrier") and "демо" in p["carrier"]}
         for name in sorted(partners):
             self.ensure(key("partner", name), "res.partner", {"name": name, "is_company": True, "country_id": ua})
+        lots = {q["product"] for loc in d["locations"].values() for q in loc["quants"] if q.get("lot")}
         for code, p in d["products"].items():
             vals = {"name": p["name"], "default_code": code, "type": "consu", "is_storable": True,
+                    "tracking": "lot" if code in lots else "none",
                     "categ_id": self.ref(key("categ", p["categ"])), "uom_id": self.uom(p["uom"]),
                     "sale_ok": p["categ"] == "Готова продукція", "purchase_ok": bool(p.get("seller")),
                     "list_price": FG_PRICE.get(code, 0)}
@@ -163,6 +151,7 @@ class Push:
         o("stock.warehouse", "write", [wh["id"]], {"name": "Меблева фабрика"})
         self.bind_once("warehouse", "stock.warehouse", wh["id"])
         self.bind_once("loc_root", "stock.location", wh["lot_stock_id"][0])
+        self.bind_once("loc_wh", "stock.location", wh["view_location_id"][0])
         stock = wh["lot_stock_id"][0]
         seq_model = "ir.sequence"
         for typ, (label, prefix) in INTERNAL_TYPES.items():
@@ -179,12 +168,14 @@ class Push:
 
     # ------------------------------------------------------------ комірки складу
     def step_locations(self):
+        """Комірки під WH/Stock; зони приймання, контролю, карантину, передвиробництва, пост-виробництва й
+        відвантаження — поруч зі Stock (як Input/Quality Control/Output у стандарті): там товар ще не вільний."""
         root = self.ref("loc_root")
         groups = {"": root}
         made = 0
         for code, loc in sorted(self.d["locations"].items(), key=lambda kv: kv[1]["complete_name"]):
             parts = loc["complete_name"].split("/")[1:]  # без «WH»
-            parent = root
+            parent = self.ref("loc_wh") if parts[0] in OUTSIDE_STOCK else root
             for i in range(len(parts) - 1):
                 path = "/".join(parts[: i + 1])
                 if path not in groups:
@@ -218,7 +209,8 @@ class Push:
             note = " ".join(x for x in (wc.get("manufacturer"), wc.get("model")) if x)
             self.ensure(key("wc", code), "mrp.workcenter", {
                 "name": wc["name"], "code": code, "time_efficiency": wc["time_efficiency"] * 100,
-                "oee_target": 85, "time_start": 15, "note": f"<p>{note}</p>" if note else False})
+                "oee_target": 85, "time_start": 15, "note": f"<p>{note}</p>" if note else False,
+                "resource_calendar_id": self.ref("calendar_shift1")})
         print(f"workcenters: {len(self.d['workcenters'])}")
 
     def step_people(self):
@@ -229,7 +221,8 @@ class Push:
             if dep not in deps:
                 deps[dep] = self.ensure(key("dep", dep), "hr.department", {"name": dep})
             eid = self.ensure(key("emp", code), "hr.employee", {
-                "name": e["name"], "job_title": e["job"], "department_id": deps[dep]})
+                "name": e["name"], "job_title": e["job"], "department_id": deps[dep],
+                "resource_calendar_id": self.ref("calendar_shift1")})
             if e.get("workcenter"):
                 o("mrp.workcenter", "write", [self.ref(key("wc", e["workcenter"]))], {"employee_ids": [(4, eid)]})
         print(f"people: {len(self.d['employees'])} співробітників, {len(deps)} відділів")
@@ -500,23 +493,27 @@ class Push:
 
     # ------------------------------------------------------------ залишки (інвентаризація)
     def step_stock(self):
-        """Залишки по комірках — рівно як у демо: інвентаризація виставляє абсолютну кількість."""
+        """Залишки по комірках — рівно як у демо, з партіями й палетами: інвентаризація виставляє
+        абсолютну кількість на кожну пару «комірка + товар + партія + палета»."""
         o, d = self.o, self.d
         want = {}
         for code, loc in d["locations"].items():
             lid = self.loc(code)
             for q in loc["quants"]:
                 if q["qty"]:
-                    k = (lid, self.prod(q["product"]))
+                    lot = self.lot_id(q["product"], self.lot_of(code, q))
+                    pkg = self.package_id(q.get("package"))
+                    k = (lid, self.prod(q["product"]), lot, pkg)
                     want[k] = want.get(k, 0) + q["qty"]
-        root = self.ref("loc_root")
-        have = o("stock.quant", "search_read", [["location_id", "child_of", root]],
-                 fields=["location_id", "product_id", "quantity"])
+        have = o("stock.quant", "search_read", [["location_id", "child_of", self.ref("loc_wh")],
+                                                ["location_id.usage", "=", "internal"]],
+                 fields=["location_id", "product_id", "quantity", "lot_id", "package_id"])
         ctx = dict(self.o.ctx, inventory_mode=True)
         todo = []
         seen = set()
         for q in have:
-            k = (q["location_id"][0], q["product_id"][0])
+            k = (q["location_id"][0], q["product_id"][0], q["lot_id"] and q["lot_id"][0],
+                 q["package_id"] and q["package_id"][0])
             seen.add(k)
             tgt = want.get(k, 0)
             if abs(q["quantity"] - tgt) > 1e-6:
@@ -531,6 +528,7 @@ class Push:
                 ids.append(ref)
             else:
                 ids.append(o("stock.quant", "create", {"location_id": ref[0], "product_id": ref[1],
+                                                       "lot_id": ref[2], "package_id": ref[3],
                                                        "inventory_quantity": qty}, context=ctx))
         for i in range(0, len(ids), 200):
             o("stock.quant", "action_apply_inventory", ids[i:i + 200], context=ctx)
@@ -573,7 +571,24 @@ class Push:
                 o("quality.check", "do_pass", [rid])
             elif qc["state"] == "fail":
                 o("quality.check", "do_fail", [rid])
-        print(f"quality: {len(d['quality_checks'])} перевірок")
+        # партія на перевірці й сповіщення про брак (карантинний стос QC-1, претензія постачальнику)
+        for qc in d["quality_checks"]:
+            rid = self.ref(key("qc", qc["name"]))
+            lot = qc.get("lot") and self.lot_id(qc["product"], qc["lot"])
+            if lot:
+                o("quality.check", "write", [rid], {"lot_ids": [(6, 0, [lot])]})
+            if qc["state"] == "fail":
+                self.ensure(key("qa", qc["name"]), "quality.alert", {
+                    "title": f"{qc['title']}: брак партії {qc.get('lot') or ''}".strip(),
+                    "check_id": rid, "product_tmpl_id": self.prod_tmpl(qc["product"]),
+                    "product_id": self.prod(qc["product"]), "lot_ids": [(6, 0, [lot] if lot else [])],
+                    "team_id": team,
+                    "picking_id": self.ref(key("pick", qc["picking"])) if qc.get("picking") else False,
+                    "description": f"<p>{qc['note']} Стос — у карантині ({qc['location']}).</p>",
+                    "partner_id": self.partner(next((p["partner"] for p in d["pickings"]
+                                                     if p["name"] == qc.get("picking")), None))})
+        print(f"quality: {len(d['quality_checks'])} перевірок, "
+              f"{sum(q['state'] == 'fail' for q in d['quality_checks'])} сповіщення про брак")
 
     def step_maintenance(self):
         o, d = self.o, self.d
@@ -587,14 +602,17 @@ class Push:
                 cats[name] = self.ensure(key("eqcat", name), "maintenance.equipment.category", {"name": name})
             return cats[name]
         wc_link = "workcenter_id" in o("maintenance.equipment", "fields_get", attributes=["type"])
+        team = self.ensure("maint_team", "maintenance.team", {"name": "Служба головного механіка",
+                                                               "member_ids": [(6, 0, [o.uid])]})
         for code, wc in d["workcenters"].items():
             vals = {"name": wc["name"], "category_id": cat("Верстати"), "serial_no": code,
+                    "maintenance_team_id": team,
                     "model": " ".join(x for x in (wc.get("manufacturer"), wc.get("model")) if x)}
             if wc_link:
                 vals["workcenter_id"] = self.ref(key("wc", code))
             self.ensure(key("eq", code), "maintenance.equipment", vals)
         for code, eq in d["equipment"].items():
-            vals = {"name": eq["name"], "category_id": cat(eq.get("category", "Інше")),
+            vals = {"name": eq["name"], "category_id": cat(eq.get("category", "Інше")), "maintenance_team_id": team,
                     "serial_no": eq.get("serial") or code,
                     "model": " ".join(x for x in (eq.get("manufacturer"), eq.get("model")) if x) or False}
             self.ensure(key("eq", code), "maintenance.equipment", vals)
@@ -602,13 +620,14 @@ class Push:
                  "RV-05": ("Припливно-витяжна установка RV-05", "Вентиляція")}
         for code, (name, c) in extra.items():
             self.ensure(key("eq", code), "maintenance.equipment",
-                        {"name": name, "category_id": cat(c), "serial_no": code})
+                        {"name": name, "category_id": cat(c), "serial_no": code, "maintenance_team_id": team})
         stages = o("maintenance.stage", "search_read", [], fields=["id", "name", "done"], order="sequence")
         stage = {"Новий": stages[0]["id"], "В роботі": stages[1]["id"] if len(stages) > 1 else stages[0]["id"]}
         for mr in d["maintenance_requests"]:
             xid = key("mr", mr["id"])
             vals = {"name": mr["name"], "equipment_id": self.ref(key("eq", mr["equipment"])),
                     "maintenance_type": mr["maintenance_type"], "stage_id": stage.get(mr["stage"], stages[0]["id"]),
+                    "maintenance_team_id": team,
                     "priority": mr.get("priority", "1"),
                     "description": f"<p>{mr['id']}" + (f" · виконавець: {mr['technician']}" if mr.get("technician")
                                                          else "") + "</p>"}
@@ -626,9 +645,10 @@ class Push:
         open_picks = o("stock.picking", "search", [["state", "in", ["confirmed", "waiting", "assigned"]]])
         if open_picks:
             o("stock.picking", "action_assign", open_picks)
-        for p in self.d["pickings"]:  # відвантаження, які вже вантажать у фуру (зібрано частину рядків)
-            if p["type"] == "outgoing" and p["progress"] and self.ref(key("pick", p["name"])):
-                self.set_done_qty(self.ref(key("pick", p["name"])), p["lines"], False)
+        for p in self.d["pickings"]:  # почате, але не закінчене: зібрано/перевезено частину рядків
+            pid = self.ref(key("pick", p["name"]))
+            if pid and p["type"] != "incoming" and p["state"] != "done" and p["progress"]:
+                self.set_done_qty(pid, p["lines"], False)
         mos = o("mrp.production", "search", [["state", "in", ["confirmed", "progress"]]])
         if mos:
             o("mrp.production", "action_assign", mos)
