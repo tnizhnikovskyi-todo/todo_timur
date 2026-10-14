@@ -4,3 +4,6 @@ from . import mrp_workcenter
 from . import f3d_equipment_passport
 from . import maintenance_equipment
 from . import f3d_zone
+from . import stock_location
+from . import stock_picking_batch
+from . import stock_picking

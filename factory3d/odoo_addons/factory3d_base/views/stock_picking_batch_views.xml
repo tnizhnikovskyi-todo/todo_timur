@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-08 -->
+    <record id="view_stock_picking_batch_form_f3d" model="ir.ui.view">
+        <field name="name">stock.picking.batch.form.f3d</field>
+        <field name="model">stock.picking.batch</field>
+        <field name="inherit_id" ref="stock_fleet.stock_picking_batch_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='dock_id']" position="after">
+                <field name="f3d_truck"/>
+                <field name="f3d_vehicle_id"/>
+            </xpath>
+            <xpath expr="//sheet/*[1]" position="before">
+                <div class="alert alert-warning" role="alert" invisible="not f3d_dock_warning">
+                    <field name="f3d_dock_warning" readonly="1" nolabel="1"/>
+                </div>
+            </xpath>
+            <xpath expr="//page[@name='page_transfers']" position="after">
+                <page name="f3d" string="Завод 3D">
+                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="f3d_viewer_available" invisible="1"/>
+                    <group name="f3d_scene" string="Код сцени">
+                        <field name="f3d_code" string="Код фури в 3D" readonly="not is_f3d_manager"/>
+                        <field name="f3d_alias" readonly="not is_f3d_manager"/>
+                        <field name="f3d_kind" readonly="not is_f3d_manager"/>
+                        <field name="f3d_dock_code"/>
+                    </group>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object"
+                            icon="fa-cube" class="btn-secondary" invisible="not f3d_code"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- V-09 -->
+    <record id="view_stock_picking_batch_list_f3d" model="ir.ui.view">
+        <field name="name">stock.picking.batch.list.f3d</field>
+        <field name="model">stock.picking.batch</field>
+        <field name="inherit_id" ref="stock_fleet.stock_picking_batch_tree"/>
+        <field name="arch" type="xml">
+            <field name="dock_id" position="after">
+                <field name="f3d_truck" optional="show"/>
+                <field name="f3d_vehicle_id" optional="hide"/>
+                <field name="f3d_code" optional="hide"/>
+            </field>
+        </field>
+    </record>
+</odoo>

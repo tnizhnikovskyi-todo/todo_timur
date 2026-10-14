@@ -68,6 +68,8 @@
                             <field name="location_ids" readonly="1">
                                 <list>
                                     <field name="complete_name"/>
+                                    <field name="f3d_code"/>
+                                    <field name="f3d_kind"/>
                                     <field name="barcode"/>
                                 </list>
                             </field>
@@ -84,6 +86,7 @@
                         <page name="equipment" string="Обладнання">
                             <field name="equipment_ids" readonly="1">
                                 <list>
+                                    <field name="f3d_code"/>
                                     <field name="name"/>
                                     <field name="category_id"/>
                                 </list>
@@ -92,7 +95,10 @@
                         <page name="docks" string="Ворота">
                             <field name="dock_location_ids" readonly="1">
                                 <list>
+                                    <field name="f3d_code"/>
                                     <field name="complete_name"/>
+                                    <field name="f3d_side"/>
+                                    <field name="f3d_dock_no"/>
                                 </list>
                             </field>
                         </page>

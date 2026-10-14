@@ -65,7 +65,7 @@ def locations(env):
         loc = Loc.search_f3d(row['code'])
         if not loc:
             continue
-        capacity = int(float(row['capacity'])) if row.get('capacity') else 0
+        capacity = float(row['capacity']) if row.get('capacity') else 0
         vals = {'f3d_loc_kind': row['kind'], 'f3d_capacity': capacity}
         if loc.f3d_loc_kind != vals['f3d_loc_kind'] or loc.f3d_capacity != capacity:
             loc.write(vals)

@@ -102,8 +102,6 @@ class TestGeometry(F3DCase):
 class TestCounters(F3DCase):
 
     def test_counts_and_docks(self):
-        if 'f3d_kind' not in self.env['stock.location']._fields:
-            self.skipTest('f3d_kind на stock.location з\'явиться з домішкою W3')
         zone = self.make_zone('X-CNT', zone_type='storage')
         self.loc_in.f3d_zone_id = zone
         self.make_dock(self.dock_w1, 'west', 1, 0.0, 5.0)
@@ -163,8 +161,6 @@ class TestZoneBind(F3DCase):
             self.assertEqual(self.loc_in.f3d_zone_id, zone)
 
     def test_equipment_from_workcenter(self):
-        if 'f3d_code' not in self.env['maintenance.equipment']._fields:
-            self.skipTest('f3d_code на maintenance.equipment з\'явиться з домішкою W4')
         zone = self.env.ref('factory3d_base.zone_z_cut')
         self.wc.write({'f3d_code': 'SAW-T', 'f3d_zone_id': zone.id})
         self.eq.f3d_code = 'SAW-T'

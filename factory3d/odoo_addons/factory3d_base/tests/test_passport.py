@@ -141,8 +141,6 @@ class TestCodesHooks(F3DCase):
 
     def test_locations(self):  # AC-10
         Loc = self.env['stock.location']
-        if 'f3d_code' not in Loc._fields:
-            self.skipTest("stock.location без домішки — W3")
         stock = self.wh.lot_stock_id
         stock.barcode = 'WHSTOCK'
         loc_a = Loc.create({'name': 'A', 'usage': 'internal', 'location_id': stock.id, 'barcode': 'A-1'})
@@ -198,8 +196,6 @@ class TestLocationKinds(F3DCase):
     def setUp(self):
         super().setUp()
         Loc = self.env['stock.location']
-        if 'f3d_loc_kind' not in Loc._fields:
-            self.skipTest("stock.location.f3d_loc_kind відсутнє (файл W3)")
         parent = self.wh.view_location_id
         self.plt, self.fur = (Loc.create({'name': c, 'usage': 'internal', 'location_id': parent.id,
                                           'f3d_code': c}) for c in ('PLT-T1', 'FUR-T1'))
