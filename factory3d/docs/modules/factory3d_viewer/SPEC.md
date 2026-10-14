@@ -2140,7 +2140,7 @@ num|null req; `sources` list[str] req; `units` list[dict тієї ж форми]
 | Спринклери, пневмокільце | `equipment/SPRINKLERS/pressure_bar` (тривога `below 6.5`), `equipment/AIR-RING/pressure_bar` (`below 6.0`) | 2 | бар | `equipment[...]` |
 | Вентиляція | `ventilation/units/<U>/airflow_m3h` (29), `/supply_c` (26), `/filter_dp_pa` (26, `drift`, тривога `above 250`, заявка `MR/00035` для `RV-05`) | 81 | м³/год; °C; Па | `ventilation.units[U]` |
 | Пожежна | `fire/groups/FA-FAC/dust` (`%` → частка, `drift`, тривога `above 90`, заявка `MR/00036`) | 1 | % | `fire.groups["FA-FAC"].dust` |
-| Трансформатори | `energy/transformers/{T1,T2}/p_kw`, `/temp_c` (тривога `above 110`) | 4 | кВт; °C | `energy.transformers[T]` |
+| Трансформатори | `energy/transformers/{T1,T2}/p_kw`, `/temp_c` (поріг energy: попередження 130, тривога 140 °C; відповідь № 24) | 4 | кВт; °C | `energy.transformers[T]` |
 | Генерація | `infra/totals/pv_now` (`solar`), `infra/totals/chp_kw`, `infra/totals/bess_soc` (`%` → частка) | 3 | кВт; кВт; % | `infra.totals`; `energy.totals.pv_kw/chp_kw` дублюються (M-01h) |
 | **Разом** | | **196** | | |
 

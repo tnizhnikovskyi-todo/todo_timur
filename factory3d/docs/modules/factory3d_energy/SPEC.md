@@ -14,6 +14,7 @@ selection telemetry M-03; §5.4), X-19 (групи `group_f3d_energy_user/cost/m
 37014/37016 без змін.
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-03, Q-04, Q-05, Q-06, Q-07, Q-13, Q-14, Q-15, Q-16, Q-17, Q-18, Q-19, Q-20.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-01, Q-02.
+Зміни: 14.10.2026 — закрито відповідями замовника № 20–24: Q-09, Q-10; пороги температури трансформаторів 130/140 °C.
 
 Позначення: UT — юніт-тест `odoo.tests` (`TransactionCase`), TC — стенд (емулятор + колектор + Odoo), MAN — ручна
 перевірка на копії демо-бази. Odoo 19: `models.Constraint`, `post_init_hook(env)`/`uninstall_hook(env)`, `fields.Json`,
@@ -1256,7 +1257,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
    кВт при ліміті {threshold} кВт"`, обладнання `SWB-1`. Приклад: 800 → 720 / 800; `grid15 = 812,4` → заявка
    «Перевищення договірної потужності: 812,4 кВт при ліміті 800 кВт».
 2. Статичні пороги — з Додатка C (колонка «Пороги»): фідери `i_now` — 0,9·номінал / номінал (BW, C1: 567 / 630; C2:
-   360 / 400), вводи 1 440 / 1 600 А, трансформатори `s_kva` 900 / 1 000 кВА, `temp_c` 100 / 110 °C (`hysteresis=2`,
+   360 / 400), вводи 1 440 / 1 600 А, трансформатори `s_kva` 900 / 1 000 кВА, `temp_c` 130 / 140 °C (клас ізоляції F, паспорт 140/150 — Odoo попереджає раніше за захист; відповідь № 24) (`hysteresis=2`,
    `min_duration_s=60`), cos φ ліній `warn_low=0,85`, cos φ на вводах `energy/totals/cos_phi` 0,95 / 0,90
    (`min_duration_s=900`), асиметрія 10 / 20 % (`min_duration_s=900`), небаланс 3 / 5 % (`min_duration_s=3600`), стани
    (`alarm_states`: `tripped`, `fault`), мотогодини КГУ 76 000 / 80 000, `fail_start` `alarm_high=0,5`.
@@ -1571,7 +1572,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-69 | FR-16, A-04 | Then моделі `f3d.viewer.provider.energy` (`_f3d_sequence=100`, `_f3d_sections=('energy',)`) і `.infra` (150, `('infra',)`) є в реєстрі без `factory3d_viewer`; `_inherit` порожній; виклик `_f3d_viewer_collect({}, ctx)` без viewer не падає | UT |
 | AC-70 | FR-03, A-06 | Then адреси: `energy/consumers/SAW-1/p_now` = `{"fc":3,"addr":3059,"type":"f32",…}` на джерелі `MB-U11-PM-SAW-1` (`params.unit=11`); `…/kwh_total` = `addr 3203`, `i64`, `scale 0.001`; `infra/pv/PV-INV-3/p_kw` = `addr 32080`, `i32`, `0.001` на `MB-U63-SUN-3`; `infra/ats/position` = `addr 20483`, `kind='state'`, `states` 4; `infra/chp/state` `addr 40000`; усі 220 адрес проходять `tools.address.validate_address('modbus_tcp', …)` telemetry без помилок | UT |
 | AC-71 | FR-03, FR-11 | Then 49 сигналів `…/kwh_shift`: `source_id=EN-DERIVED`, `derived_from_id` = `…/kwh_total` того самого споживача; `EN-DERIVED.type='f3d_energy'`, `collector_id` порожній, тип у `_f3d_local_types()` | UT |
-| AC-72 | FR-03 | Given сигнал `energy/transformers/T1/temp_c` існує з адресою telemetry; When хук; Then адреса й джерело незмінні, `warn_high=100`, `alarm_high=110`, `hysteresis=2`, `min_duration_s=60` | UT |
+| AC-72 | FR-03 | Given сигнал `energy/transformers/T1/temp_c` існує з адресою telemetry; When хук; Then адреса й джерело незмінні, `warn_high=130`, `alarm_high=140`, `hysteresis=2`, `min_duration_s=60` (відповідь № 24) | UT |
 | AC-73 | FR-03 | When telemetry API-01 `GET /f3d/telemetry/config` колектора `COL-MAIN`; Then у `sources` 68 джерел `MB-U*` енергетики з 220 сигналами, `EN-DERIVED` відсутнє | TC |
 | AC-74 | FR-24 | When `uninstall_hook(env)`; Then параметрів `factory3d.energy.*` немає; сигнали з CSV без `source_id`; створені модулем — `active=False`; 87 мігрованих — активні; джерела `MB-U*` — `active=False` | UT |
 | AC-75 | FR-21 | Then меню §3 з xml-id, `sequence`, батьками й групами (`menu_f3d_energy.sequence=50`, батько `factory3d_base.menu_f3d_root`) | UT |
@@ -1745,8 +1746,8 @@ genset_relay` + колектор telemetry (`COL-MAIN`, токен) + копія
 | Q-06 | **Закрито 14.10 (відповідь № 16, CONSISTENCY):** **AVCO** для готової продукції й напівфабрикатів — §3 налаштувань. `extra_cost` лише для FIFO/AVCO; для `standard` — чаттер |
 | Q-07 | **Закрито 14.10 (відповідь № 16, CONSISTENCY):** енергія простою — накладні РЦ (`idle`). енергія простою — рядки `idle`, не на МО |
 | Q-08 | **закрито X-42, X-41** (D-20, D-21): iot_sim §8.4.1 — PDU за документом вендора, ATyS p за Annexe III; energy — адреси за документами вендорів (A-06) без змін; ТК-05…ТК-08 не блоковані |
-| Q-09 | стан вимикачів — регістр 2018 PM5560 (ПРИПУЩЕННЯ) |
-| Q-10 | пороги температури трансформаторів 100/110 °C |
+| Q-09 | **Закрито 14.10 (відповідь № 23, CONSISTENCY):** окреме джерело IFE (Modbus TCP) з картою MicroLogic X; до карти — регістр 2018 PM5560 (ПРИПУЩЕННЯ iot_sim §8.7). стан вимикачів — регістр 2018 PM5560 (ПРИПУЩЕННЯ) |
+| Q-10 | **Закрито 14.10 (відповідь № 24, CONSISTENCY):** Odoo: попередження 130 °C, тривога 140 °C (паспорт класу F — 140/150); R-xx §9 п. 2, AC-72, Додаток C. пороги температури трансформаторів 100/110 °C |
 | Q-11 | допуск балансу 3 % / 2 кВт·год |
 | Q-12 | асиметрія 10/20 %, cos φ 0,95/0,90 |
 | Q-13 | **Закрито 14.10 (відповідь № 4, CONSISTENCY):** генерація на секції 2, критична шина за АВР; накопичувач від генератора не заряджається. генерація на секції 2, `ATS-1` — корінь під `SWB-1` |
@@ -2143,7 +2144,7 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 | 158 | `energy/transformers/T1/i_a` | D | `MB-U01-PM-Q1` | fc3 3009 f32 (3010) | gauge | А | 10/300 | — | catalog | так | T1 |
 | 159 | `energy/transformers/T1/cos_phi` | D | `MB-U01-PM-Q1` | fc3 3083 f32 (3084) | gauge | — | 10/300 | — | catalog | так | T1 |
 | 160 | `energy/transformers/T1/s_kva` | D | `MB-U01-PM-Q1` | fc3 3075 f32 (3076) | gauge | кВА | 10/300 | warn > 900, alarm > 1000 | catalog | так | T1 |
-| 161 | `energy/transformers/T1/temp_c` | T | `MB-U96-RTD1 (telemetry)` | telemetry Додаток C | gauge | °C | 30/300 | warn > 100, alarm > 110 | sim_data | так | T1 |
+| 161 | `energy/transformers/T1/temp_c` | T | `MB-U96-RTD1 (telemetry)` | telemetry Додаток C | gauge | °C | 30/300 | warn > 130, alarm > 140 | sim_data | так | T1 |
 | 162 | `energy/cells/Q1/imbalance_pct` | E | `EN-DERIVED` | R-07 | gauge | % | 3600/0 | warn > 3, alarm > 5 (2 год) | energy | ні | Q1 |
 | 163 | `energy/cells/Q1/i_unbal_pct` | E | `EN-DERIVED` | R-12 | gauge | % | 300/300 | warn > 10, alarm > 20 (15 хв) | energy | ні | Q1 |
 | 164 | `energy/cells/Q2/p_now` | D | `MB-U02-PM-Q2` | fc3 3059 f32 (3060) | gauge | кВт | 10/300 | — | catalog | так | Q2 |
@@ -2159,7 +2160,7 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 | 174 | `energy/transformers/T2/i_a` | D | `MB-U02-PM-Q2` | fc3 3009 f32 (3010) | gauge | А | 10/300 | — | catalog | так | T2 |
 | 175 | `energy/transformers/T2/cos_phi` | D | `MB-U02-PM-Q2` | fc3 3083 f32 (3084) | gauge | — | 10/300 | — | catalog | так | T2 |
 | 176 | `energy/transformers/T2/s_kva` | D | `MB-U02-PM-Q2` | fc3 3075 f32 (3076) | gauge | кВА | 10/300 | warn > 900, alarm > 1000 | catalog | так | T2 |
-| 177 | `energy/transformers/T2/temp_c` | T | `MB-U96-RTD1 (telemetry)` | telemetry Додаток C | gauge | °C | 30/300 | warn > 100, alarm > 110 | sim_data | так | T2 |
+| 177 | `energy/transformers/T2/temp_c` | T | `MB-U96-RTD1 (telemetry)` | telemetry Додаток C | gauge | °C | 30/300 | warn > 130, alarm > 140 | sim_data | так | T2 |
 | 178 | `energy/cells/Q2/imbalance_pct` | E | `EN-DERIVED` | R-07 | gauge | % | 3600/0 | warn > 3, alarm > 5 (2 год) | energy | ні | Q2 |
 | 179 | `energy/cells/Q2/i_unbal_pct` | E | `EN-DERIVED` | R-12 | gauge | % | 300/300 | warn > 10, alarm > 20 (15 хв) | energy | ні | Q2 |
 | 180 | `energy/lines/BW-1/p_now` | D | `MB-U03-PM-QF-1` | fc3 3059 f32 (3060) | gauge | кВт | 10/300 | — | catalog | так | QF-1 |
