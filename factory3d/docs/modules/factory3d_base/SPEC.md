@@ -208,6 +208,7 @@ class F3dZone(models.Model):
 | `name` | Char(128) | `req`, `string="Назва"` |
 | `sequence` | Integer | `default=10` |
 | `zone_type` | Selection | `[('receiving','Приймання'),('storage','Склад'),('production','Виробництво'),('assembly','Збирання'),('packing','Пакування'),('shipping','Відвантаження'),('technical','Технічна'),('office','Офіс і побут'),('outdoor','Двір')]`, `req`, `string="Тип"` |
+| `is_roof` | Boolean | `default=False`, `string="Дах"`, `help="Контур лежить на рівні покрівлі (z = 9 м), а не на підлозі; лише для типу «Двір»"` — `Z-ROOF` (рішення менеджера, Q-06) |
 | `polygon` | Json | `string="Контур, м"`, список точок `[[x, y], …]`, ≥ 3; зберігається як JSON |
 | `polygon_text` | Text | `compute="_compute_polygon_text"`, `inverse="_inverse_polygon_text"`: `json.dumps(polygon)` ↔ `json.loads` (помилка розбору → `ValidationError("Контур: очікується JSON-список точок [[x, y], …]")`) |
 | `area_m2` | Float | `compute="_compute_geometry"`, `store=True`, `digits=(12,1)`, `string="Площа, м²"` |
@@ -231,8 +232,10 @@ class F3dZone(models.Model):
 
 `@api.constrains("polygon")` `_check_polygon` (R-09): `polygon` порожній — дозволено (зона без
 контуру); інакше: список довжиною ≥ 3; кожна точка — список/кортеж із 2 чисел (`int`/`float`, не
-`bool`); усі `0 ≤ x ≤ plant_length_m` і `0 ≤ y ≤ plant_width_m` (параметри CB-12, з допуском
-`+0.5` м на стіни); площа > 0. Текст помилки: `"Контур зони %s: %s"` із причиною.
+`bool`); усі `site_x0_m ≤ x ≤ site_x1_m` і `site_y0_m ≤ y ≤ site_y1_m` (параметри CB-12: територія
+`plant/infra.py:SITE` = −32…182 × −30…100; надвірні зони виходять за будівлю); площа > 0; `is_roof`
+лише при `zone_type='outdoor'` (`"Позначка «Дах» — лише для зон типу «Двір»."`). Текст помилки:
+`"Контур зони %s: %s"` із причиною.
 
 Обчислення `_compute_geometry` (`@api.depends("polygon")`): якщо `polygon` порожній → усі нулі;
 інакше `area_m2 = |Σ (x_i·y_{i+1} − x_{i+1}·y_i)| / 2` (формула Гаусса), `x_min = min(x)` тощо.
@@ -242,7 +245,7 @@ class F3dZone(models.Model):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `@api.model zone_at(self, x, y, company=None)` | кандидати: `search([('active','=',True),('x_min','<=',x),('x_max','>=',x),('y_min','<=',y),('y_max','>=',y)], order='sequence')`; для кожного — тест «промінь» (парність перетинів ребер полігона); повернути першу зону, що містить точку; інакше порожній recordset. Точка на ребрі вважається всередині. Приклад: `zone_at(45.5, 5.0)` → `Z-CUT`; `zone_at(0.3, 5.0)` → порожньо (стіна) |
+| `@api.model zone_at(self, x, y, company=None, roof=False)` | кандидати: `search([('active','=',True),('is_roof','=',roof),('x_min','<=',x),('x_max','>=',x),('y_min','<=',y),('y_max','>=',y)], order='sequence')` (дах шукається лише при `roof=True`); для кожного — тест «промінь» (парність перетинів ребер полігона); повернути першу зону, що містить точку; інакше порожній recordset. Точка на ребрі вважається всередині. Приклад: `zone_at(45.5, 5.0)` → `Z-CUT`; `zone_at(0.3, 5.0)` → порожньо (стіна) |
 | `action_view_locations/_workcenters/_equipment(self)` | `ir.actions.act_window` на відповідну модель із `domain=[('f3d_zone_id','=',self.id)]`, `context={'default_f3d_zone_id': self.id}` |
 | `action_f3d_show(self)` | успадковано (M-01) |
 
@@ -587,6 +590,10 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
 | `factory3d.base.plant_length_m` | `150` | `param_plant_length` |
 | `factory3d.base.plant_width_m` | `72` | `param_plant_width` |
 | `factory3d.base.plant_height_m` | `9` | `param_plant_height` |
+| `factory3d.base.site_x0_m` | `-32` | `param_site_x0` (`plant/infra.py:SITE`) |
+| `factory3d.base.site_y0_m` | `-30` | `param_site_y0` |
+| `factory3d.base.site_x1_m` | `182` | `param_site_x1` |
+| `factory3d.base.site_y1_m` | `100` | `param_site_y1` |
 | `factory3d.base.keep_x_fields` | `False` | `param_keep_x_fields` |
 | `factory3d.base.uninstall_restore_x_fields` | `True` | `param_uninstall_restore` |
 | `factory3d.base.migration_state` | `pending` | `param_migration_state` (хук пише `skipped`/`partial`/`done`) |
@@ -660,10 +667,12 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
 `id,passport_id:id,sequence,kind,url,name` — `sources` (215, `kind=main`), `connected_sources`
 (37, `kind=connected`); `name` = хост URL.
 
-**`data/f3d_zone_data.xml`** (34 записи, `noupdate="1"`, xml-id `zone_<slug>`, slug = код у нижньому
+**`data/f3d_zone_data.xml`** (45 записів, `noupdate="1"`, xml-id `zone_<slug>`, slug = код у нижньому
 регістрі з `-`→`_`: `zone_z_rcv_1`, `zone_z_sheets`): `f3d_code`, `name`, `zone_type` (додаток C),
-`polygon` (`eval="[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]"` з `plant/layout.py:ZONES`), `color`,
-`description`, `sequence` (порядок у `ZONES`: 10, 20, …). `root_location_id` не в XML — ставить хук
+`polygon` (`eval="[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]"` з `plant/layout.py:ZONES` — 34 цехових; для 11
+надвірних — прямокутники додатка C.2, які генератор рахує з констант `plant/infra.py` і координат
+`plant/site.py:881–919` за правилом A-19), `color`, `description`, `sequence` (порядок у `ZONES`:
+10, 20, …; надвірні — 400…500), `is_roof` (лише `Z-ROOF`). `root_location_id` не в XML — ставить хук
 (шляхи залежать від бази).
 
 **`data/scene_docks.csv`** (14 рядків): `code,side,no,barcode,alias,x,y,width,height,accepts,zone`:
@@ -676,11 +685,11 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
 порталом / 55 у стелажі, `bin` 6…1666, `shelf` 2200, `pallet_cell` 2, `PAL-1…3` 14). Приклад:
 `PLT-01A,stack,60`; `FUR-R1-S01-L1,bin,66`; `UNLOAD-1,area,`; `KIT-01,kit,`.
 
-**`data/scene_zone_links.csv`** (211 рядків): `zone,kind,value` з `kind ∈ {prefix, code, workcenter, equipment, root}`:
+**`data/scene_zone_links.csv`** (225 рядків): `zone,kind,value` з `kind ∈ {prefix, code, workcenter, equipment, root}`:
 - `prefix` (7): `Z-SHEETS:PLT-`, `Z-SHEETS:RCK-`, `Z-HW:FUR-`, `Z-EDGE:EB-`, `Z-PKS:PAL-`, `Z-FG:FG-R`, `Z-PRE:KIT-`;
 - `code` (29): `Z-RCV-k:UNLOAD-k` (7), `Z-RCV-1..3:QC-PLT-1..3` (3), `Z-RCV-4:QC-1`, `Z-PKS:PACK-STORE`, `Z-FAC:PAINT-STORE`, `Z-POST:POST-STAGE`, `Z-PRE:FRONTS-1,2,3,7,8` (5), `Z-FAC:FRONTS-4,5,6` (3), `Z-OUT-k:DOCK-Ek` (7); примітка: для `UNLOAD-k` хук знаходить локацію за `f3d_alias` (після кроку 2 її `f3d_code` = `DOCK-Wk`);
 - `workcenter` (35): з `zones[*].workcenters`;
-- `equipment` (119): 29 `ventilation.units[*].zone`, 32 `fire.groups` (без `FA-BOILER`), 32 `lighting.groups`, 26 за A-06 (додаток F);
+- `equipment` (133): 29 `ventilation.units[*].zone`, 33 `fire.groups` (`FA-BOILER` → `Z-BOILER`), 32 `lighting.groups`, 26 за A-06 і 13 за A-19 (додаток F: `GATE-W`→`Z-GATE-W`; `GATE-E`, `TRUCK-SCALE`→`Z-GATE-E`; `TURNSTILES`→`Z-KPP`; `GENSET`, `BESS`, `CHP`, `PV-INV`→`Z-ENERGY`; `BOILER`→`Z-BOILER`; `PV-ROOF`, `SMOKE-VENTS`, `LPS`→`Z-ROOF`; `ATS-1`→`Z-ELEC`);
 - `root` (21): `Z-RCV-k:WH/Вхід/Ворота k`, `Z-SHEETS:WH/Stock/Сировина/Плити`, `Z-HW:WH/Stock/Сировина/Фурнітура`, `Z-EDGE:WH/Stock/Сировина/Крайка`, `Z-PKS:WH/Stock/Сировина/Пакування`, `Z-PRE:WH/Stock/Передвиробництво`, `Z-POST:WH/Пост-виробництво`, `Z-FG:WH/Stock/Готова продукція`, `Z-OUT-k:WH/Відвантаження/Ворота k`.
 
 **`data/scene_employee_codes.csv`** (35 рядків): `barcode,f3d_code,name` — додаток B.
@@ -706,7 +715,7 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
 | 4 | `codes.employees(env)` | `hr.employee.barcode`, `scene_employee_codes.csv`, `mrp.workcenter.employee_ids` | `f3d_code = _f3d_code_from_barcode(barcode, wc)` для працівників без коду; `wc` = перший РЦ, де `employee in wc.employee_ids` | так само | `employees: 35` | 0 |
 | 5 | `codes.equipment(env)` | `maintenance.equipment.serial_no`, `scene_equipment_codes.csv`, `ir.model.data` (`module='factory3d'`) | R-07: код за `serial_no` ∈ `code` (201) → за `xmlid` (`ir.model.data` `module='factory3d', name=xmlid, model='maintenance.equipment'`) → за `legacy_serial` (7); пишеться лише порожнім | так само | `equipment: 208`, `by_serial: 201`, `by_xmlid_or_legacy: 7`, `unmatched: 0` | 0 |
 | 6 | `passports.link(env)` | `scene_equipment_codes.csv`, паспорти з data | для рядків із `role`: `eq = env['maintenance.equipment'].search_f3d(code)`; `eq.f3d_passport_id = ref('factory3d_base.passport_'+role)`; `eq.f3d_component_passport_ids = Command.set([...])` | перезапис тими ж значеннями | `linked: 205`, `components: 63`, `no_passport: 3` | 0 |
-| 7 | `zones.bind(env)` | `scene_zone_links.csv` | `root` → `root_location_id = search([('complete_name','=',value)])`; `prefix` → `stock.location.search([('f3d_code','=like', value+'%')]).f3d_zone_id = zone`; `code` → `search_f3d(value)`; `workcenter` → `mrp.workcenter.search_f3d`; `equipment` → `maintenance.equipment.search_f3d`; потім для обладнання з `workcenter_id` і без зони: `f3d_zone_id = workcenter_id.f3d_zone_id` | перезапис | `roots: 21`, `locations: 695`, `workcenters: 35`, `equipment: 154` | `zones: 34` (з data), прив'язок 0 |
+| 7 | `zones.bind(env)` | `scene_zone_links.csv` | `root` → `root_location_id = search([('complete_name','=',value)])`; `prefix` → `stock.location.search([('f3d_code','=like', value+'%')]).f3d_zone_id = zone`; `code` → `search_f3d(value)`; `workcenter` → `mrp.workcenter.search_f3d`; `equipment` → `maintenance.equipment.search_f3d`; потім для обладнання з `workcenter_id` і без зони: `f3d_zone_id = workcenter_id.f3d_zone_id` | перезапис | `roots: 21`, `locations: 695`, `workcenters: 35`, `equipment: 168` | `zones: 45` (з data), прив'язок 0 |
 | 8 | `batches.migrate(env)` | `x_fields.read_manual_field` для `x_dock`, `x_truck`, `x_vehicle` на `stock.picking` | R-11…R-13 | за `batch_id` і `description` | `batches_updated: 6`, `batches_created: 18`, `pickings_attached: 18`, `pickings_total_in_batches: 24` | `skipped` (полів немає) |
 | 9 | `batches.verify(env)` | ті самі | R-13; повертає `mismatches: list[str]` | — | `mismatches: 0`, `moves_changed: 0` | — |
 | 10 | `x_fields.drop_demo(env)` | `ir.ui.view` (xml-id `factory3d.view_picking_form_dock`, `factory3d.view_picking_list_dock`), `ir.model.fields` `x_dock/x_truck/x_vehicle` (`state='manual'`) | лише якщо `mismatches == 0` і `keep_x_fields` False: `unlink` представлень (через `ir.model.data` → `res_id`), далі `drop_manual_fields(env, 'stock.picking', ['x_dock','x_truck','x_vehicle'])` | повторно — нічого | `views_dropped: 2`, `fields_dropped: 3` | 0 |
@@ -761,7 +770,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | R-06 | **Код працівника** — M-10 `_f3d_code_from_barcode`; застосовується лише до порожнього `f3d_code`; зміна бейджа код не змінює |
 | R-07 | **Код обладнання**: `serial_no ∈ scene_equipment_codes.code` → код; інакше `ir.model.data(module='factory3d', model='maintenance.equipment', res_id=id).name ∈ xmlid` → код; інакше `serial_no ∈ legacy_serial` → код; інакше без коду + WARNING. 7 навантажувачів: `FL-4369→FL-1`, `FL-4912→FL-2`, `FL-4731→FL-3`, `FL-4374→FL-4`, `FL-4193→FL-5`, `FL-4606→FL-C1`, `FL-4787→FL-C2` |
 | R-08 | **Зона локації/РЦ/обладнання** — за `scene_zone_links.csv` (§5.2): `prefix` через `=like`, `code` точно, обладнання РЦ — зона РЦ. Нові локації користувача зони не отримують автоматично (ставить технолог або `zone_at` у майбутніх модулях) |
-| R-09 | **Контур зони**: ≥ 3 точок, числа, у межах `[0, plant_length_m+0.5] × [0, plant_width_m+0.5]`, площа > 0 (M-02). Площа — формула Гаусса. Приклади: `Z-SHEETS` (14.6,0.6)–(41.4,45.4) → 1200.6 м²; `Z-FAC` → 1235.0; `Z-RCV-7` (0.6,60.15)–(13.4,71.4) → 144.0 |
+| R-09 | **Контур зони**: ≥ 3 точок, числа, у межах території `[site_x0_m, site_x1_m] × [site_y0_m, site_y1_m]` = `[−32, 182] × [−30, 100]` (`plant/infra.py:SITE`), площа > 0 (M-02). Площа — формула Гаусса. Приклади: `Z-SHEETS` (14.6,0.6)–(41.4,45.4) → 1200.6 м²; `Z-FAC` → 1235.0; `Z-RCV-7` (0.6,60.15)–(13.4,71.4) → 144.0; `Z-YARD-W` (−32,0)–(0,72) → 2304.0; `Z-ROOF` (0,0)–(150,72) → 10800.0. Надвірні контури виведено за A-19 (габарит об'єктів моделі + 1 м) |
 | R-10 | **Реєстрація доку**: ворота `west` → `warehouse.in_type_id.dock_ids`, `east` → `warehouse.out_type_id.dock_ids`; `dispatch_management=True` на типі. Після хука `in_type.dock_ids` = {`WH/Вхід/Ворота 1…7`}, `out_type.dock_ids` = {`WH/Відвантаження/Ворота 1…7`} (батьківська `WH/Відвантаження` прибирається, A-10). Стандарт Odoo 19 (`stock_fleet`): `batch.dock_id` обмежено `child_of allowed_dock_ids`; при записі `dock_id` або `batch_id` стандарт переписує `location_dest_id` (incoming/internal) чи `location_id` (outgoing) рухів на док — це очікувана поведінка |
 | R-11 | **Групування переміщень у пакети** (крок 8): для кожного `stock.picking` з непорожнім `x_dock`, `x_truck` або `x_vehicle`, упорядкованих за `id`: (а) `x_truck` непорожній → пакет = існуючий за xml-id `factory3d.batch_<slug(x_truck)>` або `search([('description','=like', x_truck+' %')], limit=1)` або `picking.batch_id`; якщо не знайдено — створити як у (б) з `f3d_code=f3d_truck=x_truck`; (б) інакше, якщо `picking.batch_id` порожній → створити пакет: `picking_type_id=picking.picking_type_id`, `dock_id = env['stock.location'].search_f3d(x_dock)` (якщо `x_dock`; не знайдено → mismatch), `vehicle_category_id = ref('factory3d.vehcat_truck')` (через `ir.model.data`, якщо є) при `x_dock`, `f3d_vehicle_id = env['maintenance.equipment'].search_f3d(x_vehicle)` при `x_vehicle`, `scheduled_date=picking.scheduled_date`, `user_id=picking.user_id`, `description = ' · '.join(filter(None, [x_truck, x_dock, x_vehicle]))`. Один пакет на документ (Q-02). Створення — ORM без `picking_ids` (тоді `stock_fleet` не чіпає рухів) |
 | R-12 | **Прив'язка документа до пакета** (A-09): `cr.execute("UPDATE stock_picking SET batch_id = %s WHERE id = %s AND batch_id IS NULL", (bid, pid))`; після всіх — `env['stock.picking'].invalidate_model(['batch_id'])`, `env['stock.picking.batch'].invalidate_model(['picking_ids','state','scheduled_date'])`; для створених пакетів: усі документи `done`/`cancel` → `batch._compute_state()` (стандарт дає `done`); інакше `batch.action_confirm()` (стандарт: `_sanity_check` + `in_progress`; документи вже `assigned`). Існуючі 6 пакетів: `write({'f3d_code': x_truck, 'f3d_truck': x_truck})` без `dock_id` у `vals` |
@@ -823,11 +832,11 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | AC-12 | FR-04 | Given РЦ `code='T-9'` без `f3d_code`; When `codes.workcenters`; Then `f3d_code='T-9'`. TC: 35 | UT + TC |
 | AC-13 | FR-04/09 | Given працівники з бейджами `OPSAW1`, `OPW3`, `OPNEW7` (останній у `employee_ids` РЦ `NEW-7`), `ZZ` (без РЦ); When `codes.employees`; Then `OP-SAW-1`, `OP-W3`, `OP-NEW-7`, без коду. TC: 35 кодів, Administrator без коду | UT + TC |
 | AC-14 | FR-04 | Given обладнання `serial_no='SAW-1'`, `serial_no='FL-4369'` з xml-id `factory3d.eq_fl_1`, `serial_no='FL-4912'` без xml-id, `serial_no='ZZ-1'` (не в таблиці); When `codes.equipment`; Then `SAW-1`, `FL-1`, `FL-2` (legacy), без коду + `unmatched=1`. TC: 208, `unmatched=0`, кількість `maintenance.equipment` незмінна (208) | UT + TC |
-| AC-15 | FR-05 | Given установка; When читаємо `f3d.zone`; Then 34 записи з кодами додатка C, типи: 7 `receiving`, 7 `storage`, 5 `production`, 1 `assembly`, 1 `packing`, 7 `shipping`, 4 `technical`, 2 `office` | UT |
+| AC-15 | FR-05 | Given установка; When читаємо `f3d.zone`; Then 45 записів з кодами додатка C, типи: 7 `receiving`, 7 `storage`, 5 `production`, 1 `assembly`, 1 `packing`, 7 `shipping`, 4 `technical`, 2 `office`, 11 `outdoor`; `is_roof` = True лише у `Z-ROOF`; контури надвірних — додаток C.2 | UT |
 | AC-16 | FR-05 | Given зона `Z-CMP` з контуром `[[110,60],[115.6,60],[115.6,71.4],[110,71.4]]`; Then `area_m2=63.8`, `x_min=110`, `y_max=71.4`. When контур із 2 точок / точка `[200, 0]` / `[[1,1],[2,2],[3,3]]` (площа 0) / не-JSON у `polygon_text`; Then `ValidationError` | UT |
-| AC-17 | FR-05 | When `zone_at(45.5, 5.0)`; Then `Z-CUT`; `zone_at(0.3, 5.0)` → порожньо; `zone_at(14.6, 0.6)` (кут `Z-SHEETS`) → `Z-SHEETS`; `zone_at(140, 65)` → `Z-OUT-7` | UT |
+| AC-17 | FR-05 | When `zone_at(45.5, 5.0)`; Then `Z-CUT`; `zone_at(0.3, 5.0)` → порожньо; `zone_at(14.6, 0.6)` (кут `Z-SHEETS`) → `Z-SHEETS`; `zone_at(140, 65)` → `Z-OUT-7`; `zone_at(-7.3, 5.0)` (фура `TRUCK-IN-1`) → `Z-YARD-W`; `zone_at(172, -14)` (автоваги) → `Z-GATE-E`; `zone_at(128.5, 76.2)` (генератор) → `Z-ENERGY`; `zone_at(75, 36)` з виключенням `is_roof` (`zone_at(x, y, roof=False)`) → `Z-CNC`, а не `Z-ROOF` (дах не бере участі в пошуку на підлозі: параметр `roof=False` за замовчуванням) | UT |
 | AC-18 | FR-05 | Given зона з 2 локаціями (одна `dock`), 1 РЦ, 1 обладнанням; Then `location_count=2`, `dock_count=1`, `dock_location_ids` = ворота, `workcenter_count=1`, `equipment_count=1`; архівована локація не рахується | UT |
-| AC-19 | FR-05 | Given копія демо; Then `root_location_id` у 21 зоні (`Z-SHEETS` → `WH/Stock/Сировина/Плити`, `Z-RCV-1` → `WH/Вхід/Ворота 1`, `Z-OUT-7` → `WH/Відвантаження/Ворота 7`); `Z-SHEETS.location_count=123`, `Z-HW=144`, `Z-EDGE=24`, `Z-PKS=4`, `Z-FG=360`, `Z-PRE=17`, `Z-FAC=4`, `Z-POST=1`, `Z-RCV-1=2`, `Z-RCV-4=2`, `Z-RCV-5=1`, `Z-OUT-k=1`; `Z-CUT.workcenter_count=6`, `Z-ASM=7`; `Z-ELEC.equipment_count ≥ 19` (16 + `LT-ELEC`, `FA-ELEC`, `EF-ELEC`, `RV-*`) | TC |
+| AC-19 | FR-05 | Given копія демо; Then `root_location_id` у 21 зоні (`Z-SHEETS` → `WH/Stock/Сировина/Плити`, `Z-RCV-1` → `WH/Вхід/Ворота 1`, `Z-OUT-7` → `WH/Відвантаження/Ворота 7`); `Z-SHEETS.location_count=123`, `Z-HW=144`, `Z-EDGE=24`, `Z-PKS=4`, `Z-FG=360`, `Z-PRE=17`, `Z-FAC=4`, `Z-POST=1`, `Z-RCV-1=2`, `Z-RCV-4=2`, `Z-RCV-5=1`, `Z-OUT-k=1`; `Z-CUT.workcenter_count=6`, `Z-ASM=7`; `Z-ELEC.equipment_count = 20` (16 + `ATS-1` + `LT-ELEC`, `FA-ELEC`, `EF-ELEC`); `Z-ENERGY.equipment_count=4`, `Z-BOILER=2` (`BOILER`, `FA-BOILER`), `Z-ROOF=3`, `Z-GATE-E=2`, `Z-GATE-W=1`, `Z-KPP=1`; `Z-YARD-W/E`, `Z-PARKING`, `Z-FIREWATER`, `Z-WASTE` — 0 | TC |
 | AC-20 | FR-06 | Given внутрішня локація; When `f3d_kind='dock'` без сторони/номера → `ValidationError`; з `west`/1 → ок; друга `west`/1 → `ValidationError`; `f3d_kind='location'` з `f3d_dock_no=2` → `ValidationError`; `f3d_kind='zone'` на локації → `ValidationError` | UT |
 | AC-21 | FR-06 | Given ворота `west`/1 у складі `WH`; When `f3d_register_dock()`; Then `WH.in_type_id.dispatch_management=True`, ворота ∈ `in_type_id.dock_ids`; повтор — без дублювання; `east` → `out_type_id`. TC: `in_type.dock_ids` = 7 західних, `out_type.dock_ids` = 7 східних, `WH/Відвантаження` не в списку | UT + TC |
 | AC-22 | FR-06 | Given ворота з `f3d_accepts=[Плитні матеріали]`, пакет із документом, де товар категорії «Крайка»; Then `f3d_dock_warning` містить `Крайка`; товар дочірньої категорії «Плитні матеріали/ХДФ» → без попередження; ворота без категорій → `False`; збереження пакета не блокується | UT |
@@ -854,7 +863,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | AC-43 | FR-10 | Given користувач `stock.group_stock_manager` без `group_f3d_manager`; When `location.write({'f3d_code':'X-1'})`; Then `AccessError`; `write({'name':'Нова'})` — ок; з `group_f3d_manager` — ок | UT |
 | AC-44 | FR-10 | Then існують меню з xml-id таблиці §3 із указаними `sequence`, `parent_id`, групами; `menu_f3d_root.sequence=75` | UT |
 | AC-45 | FR-10 | Given 2 компанії, зона компанії B; When користувач компанії A шукає зони; Then зона B не видна; зона без компанії видна обом | UT |
-| AC-46 | FR-11 | Then усі 8 параметрів §5.1 існують зі значеннями за замовчуванням (крім `migration_state`, що після хука ≠ `pending`) | UT |
+| AC-46 | FR-11 | Then усі 12 параметрів §5.1 існують зі значеннями за замовчуванням (крім `migration_state`, що після хука ≠ `pending`) | UT |
 | AC-47 | FR-11 | Given чиста база (без `x_*`); Then `migration_state='skipped'`, звіт без помилок, установка успішна | UT |
 | AC-48 | FR-11 | Given чиста база з установленим модулем і 1 зоною, 1 локацією з кодом; When `uninstall_hook(env)`; Then параметри `factory3d.base.*` відсутні, локація існує; `restore_manual_fields` створив `x_dock/x_truck/x_vehicle` | UT |
 | AC-49 | FR-11 | When виконати `data/neutralize.sql` (через `cr.execute(file content)`); Then `environment='test'`; файл виконується без помилки | UT |
@@ -887,7 +896,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | `::TestSearch` | `test_search_f3d_code_alias`, `test_search_empty`, `test_search_archived`, `test_resolve_order`, `test_resolve_all` | AC-05…07 | зона `X-1`, локація `X-1`, РЦ `X-1` | рівність recordset; `None`; порядок |
 | `::TestShow` | `test_show_with_viewer`, `test_show_without_viewer`, `test_show_no_code`, `test_viewer_detection_real` | AC-08, AC-09 | `viewer_installed(True/False)` | точна рівність усього dict дії (`assertEqual`); `tag`, `params.title`; `UserError`; без патча `_f3d_viewer_installed()` дорівнює `ir.module.module` `factory3d_viewer` `state=='installed'` |
 | `test_employee.py::TestEmployeeCode` | `test_from_table`, `test_from_workcenter`, `test_opw_rule`, `test_unknown`, `test_hook_employees` | AC-13, AC-40 | працівники 4 шт., РЦ `NEW-7` з `employee_ids` | значення M-10; після `codes.employees(env)` коди на місці; повтор не змінює |
-| `test_zone.py::TestZoneData` | `test_34_zones_loaded`, `test_types_distribution`, `test_polygons_inside_plant` | AC-15 | data | кількості; усі `x_max ≤ 150`, `y_max ≤ 72` |
+| `test_zone.py::TestZoneData` | `test_45_zones_loaded`, `test_types_distribution`, `test_polygons_inside_site`, `test_indoor_inside_building`, `test_roof_flag` | AC-15 | data | кількості; усі зони в межах `[−32,182]×[−30,100]`; 34 цехових у межах `[0,150]×[0,72]`; `is_roof` лише `Z-ROOF`; `is_roof` на зоні типу `storage` → `ValidationError` |
 | `::TestGeometry` | `test_area_bbox`, `test_polygon_validation`, `test_polygon_text_inverse`, `test_zone_at` | AC-16, AC-17 | `make_zone` | `area_m2 == 63.8` (assertAlmostEqual, 1 знак); `ValidationError` 4 випадки; `zone_at` 4 точки |
 | `::TestCounters` | `test_counts_and_docks`, `test_archived_not_counted` | AC-18 | зона + 2 локації (`make_dock` одна) + РЦ + обладнання | лічильники; `dock_location_ids` |
 | `test_dock.py::TestDockConstraints` | `test_requires_side_no`, `test_unique_side_no`, `test_kind_mismatch`, `test_kind_zone_forbidden`, `test_coords_bounds` | AC-20, AC-23 | `make_dock` | `ValidationError` тексти починаються з очікуваних фраз |
@@ -917,7 +926,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | ТК | Кроки | Очікуваний результат | Де дивитися |
 |---|---|---|---|
 | ТК-01 Установка | `odoo-bin -d <copy> -i factory3d_base --stop-after-init`; лог рівня INFO | без ERROR/WARNING (крім відомих Odoo); у лозі рядки кроків 1–11 із кількостями §5.3; `migration_state='done'` | лог; Налаштування → Технічні → Параметри системи → `factory3d.base.*` |
-| ТК-02 Коди й зони | SQL/UI: `SELECT f3d_kind,count(*) FROM stock_location WHERE f3d_code IS NOT NULL GROUP BY 1` → `location 682`, `dock 14`; `mrp_workcenter` 35; `hr_employee` 35; `maintenance_equipment` 208 (серійники навантажувачів `FL-4369`… мають код `FL-1`…); `SELECT f3d_loc_kind,count(*) FROM stock_location WHERE f3d_loc_kind IS NOT NULL GROUP BY 1` → `pallet_cell 360, bin 144, stack 123, shelf 24, kit 20, area 18`; `f3d_capacity > 0` → 654 (AC-54); `f3d_zone` 34; лічильники зон за AC-19 | кількості точні; Завод 3D → Завод → Зони: kanban 34 карток із площами; `Z-SHEETS` → 123 місця, 0 РЦ; `Z-CUT` → 6 РЦ | меню «Завод 3D», форми зон |
+| ТК-02 Коди й зони | SQL/UI: `SELECT f3d_kind,count(*) FROM stock_location WHERE f3d_code IS NOT NULL GROUP BY 1` → `location 682`, `dock 14`; `mrp_workcenter` 35; `hr_employee` 35; `maintenance_equipment` 208 (серійники навантажувачів `FL-4369`… мають код `FL-1`…); `f3d_zone` 45 (11 `outdoor`, kanban показує їх окремою групою); `SELECT f3d_loc_kind,count(*) FROM stock_location WHERE f3d_loc_kind IS NOT NULL GROUP BY 1` → `pallet_cell 360, bin 144, stack 123, shelf 24, kit 20, area 18`; `f3d_capacity > 0` → 654 (AC-54); `f3d_zone` 34; лічильники зон за AC-19 | кількості точні; Завод 3D → Завод → Зони: kanban 34 карток із площами; `Z-SHEETS` → 123 місця, 0 РЦ; `Z-CUT` → 6 РЦ | меню «Завод 3D», форми зон |
 | ТК-03 Пакети й поля x_* | порівняти `S1` з новим станом: кожен рядок із `x_dock` → `batch_id` непорожній і `batch.dock_id.f3d_code == x_dock`; `S2` == поточний знімок рухів; `S4` незмінний; `stock_picking_batch` 24 рядки; `ir_model_fields` без `x_dock/x_truck/x_vehicle` для `stock.picking`; `ir_ui_view` без `view_picking_form_dock` | 0 розбіжностей; пакети `BATCH/IN/00001…3`, `BATCH/OUT/00004…6` з `f3d_code`; 15 нових пакетів із доком, 3 з технікою; стани `done` для 6 пакетів | Склад → Операції → Пакетні переміщення (список із колонками «Фура», «Техніка»); форма `WH/IN/00128`: «Ворота WH/Вхід/Ворота 1», «Фура TRUCK-IN-1» |
 | ТК-04 Інтерфейс | (1) Обслуговування → Обладнання → `SAW-1` → вкладка «Паспорт»: HOMAG, SAWTEQ S-310…, 14 параметрів, 4 джерела, «Одиниць під паспортом» 2; «Показати в 3D» → жовте повідомлення (viewer не встановлений). (2) Склад → Конфігурація → Місця зберігання → `WH/Вхід/Ворота 4` → «Завод 3D»: Ворота, Захід, № 4, «Фурнітура», X 0, Y 35; «Типи операцій» = Receipts. (3) Новий пакет типу Receipts: поле «Док» пропонує 7 західних воріт; вибрати `Ворота 1`, додати документ із крайкою → попередження «Ворота DOCK-W1 приймають: Плитні матеріали…». (4) Працівники → Олег Мельник (OPSAW1) → «Завод 3D»: `OP-SAW-1`. (5) Комірник (користувач лише `stock.group_stock_user`) бачить меню «Завод 3D», вкладки, але поле «Код сцени» readonly | усе як описано, без traceback | UI |
 | ТК-05 Повтор і деінсталяція | (1) Завод 3D → Налаштування → «Повторити міграцію демо-даних» (адміністратор) → звіт `batches_created: 0`, кількості незмінні. (2) Деінсталювати модуль → `SELECT x_dock,x_truck,x_vehicle FROM stock_picking` дорівнює `S1`; `stock_picking_batch` 24 (лишаються); `f3d_zone`, `f3d_equipment_passport` таблиць немає; `S3`, `S5` незмінні. (3) Повторна установка → ТК-01…ТК-03 знову зелені (пакети вже є → `batches_created: 0`, звірка 0) | як описано | SQL, Застосунки |
@@ -981,7 +990,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | Q-03 | закрито менеджером 13.10: `f3d_loc_kind`/`f3d_capacity` імпортуються (FR-13, R-21, A-16) |
 | Q-04 | `attachment_id` порожнє; PDF не завантажуються |
 | Q-05 | A-06: 26 одиниць прив'язано за README (додаток F) |
-| Q-06 | тип `outdoor` є в selection, записів немає |
+| Q-06 | вирішено менеджером 13.10: 11 надвірних зон у base (додаток C.2, A-19, `is_roof` для `Z-ROOF`) |
 | Q-07 | `OUT-STAGE` без зони |
 | Q-08 | рядки українською в коді |
 | Q-09 | `plant/odoo_pull.py` не правимо в цьому модулі; до правки — `keep_x_fields=True` на живій базі |
@@ -1012,7 +1021,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | | пожежна: `FACP-1`, `FA-MCP`, `FA-SND`, `FA-FLAME`, `SPARK-1`, `FA-<зона>` (32), `FA-BOILER`, `SMOKE-VENTS`, `SMOKE-CTRL`, `EXITS` | 41 | | `serial_no` |
 | | інше: `LPS`, `WATER`, `ODOO-TABLETS`, `ODOO-SCANNERS`, `WIFI`, `SERVER`, `TURNSTILES`, `ACCESS`, `CCTV`, `TRUCK-SCALE`, `GATE-W`, `GATE-E`, `PRN-RCV`, `PRN-PACK1`, `PRN-PACK2`, `PRN-OUT`, `SCALE-OUT1`, `SCALE-OUT2`, `SCALE-RCV`, `IOT-RCV`, `IOT-PACK`, `IOT-OUT`, `EYE-CHG`, `EYE-PAINT` | 22 | | `serial_no` |
 | `hr.employee` | `OP-<код РЦ>` (28), `OP-W<1-7>` (7) | 35 | `OP-SAW-1`, `OP-W1` | `barcode` без дефісів |
-| `f3d.zone` | `Z-RCV-<1-7>`, `Z-OUT-<1-7>`, `Z-<назва>` (20) | 34 | `Z-SHEETS` | data-файл |
+| `f3d.zone` | цех: `Z-RCV-<1-7>`, `Z-OUT-<1-7>`, `Z-<назва>` (20); територія: `Z-GATE-W`, `Z-GATE-E`, `Z-YARD-W`, `Z-YARD-E`, `Z-KPP`, `Z-PARKING`, `Z-BOILER`, `Z-FIREWATER`, `Z-ENERGY`, `Z-WASTE`, `Z-ROOF` | 45 | `Z-SHEETS`, `Z-ENERGY` | data-файл |
 | `stock.picking.batch` | `TRUCK-IN-<1-3>`, `TRUCK-OUT-<1-3>` | 6 | `TRUCK-IN-1` | `x_truck` |
 
 Разом обладнання: 35 + 19 + 26 + 36 + 29 + 41 + 22 = 208.
@@ -1112,6 +1121,29 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | Z-OUT-5 | Відвантаження · ворота 5 | shipping | 136.0 | 40.15 | 149.4 | 49.85 | 130.0 | #ecbdb7 | WH/Відвантаження/Ворота 5 |
 | Z-OUT-6 | Відвантаження · ворота 6 | shipping | 136.0 | 50.15 | 149.4 | 59.85 | 130.0 | #f3d0cb | WH/Відвантаження/Ворота 6 |
 | Z-OUT-7 | Відвантаження · ворота 7 | shipping | 136.0 | 60.15 | 149.4 | 71.4 | 150.8 | #ecbdb7 | WH/Відвантаження/Ворота 7 |
+
+### C.2 Надвірні зони (`zone_type='outdoor'`, 11; контури за A-19 з `plant/infra.py`, `site.py:881–919`, `site2.py`)
+
+| f3d_code | name | x0 | y0 | x1 | y1 | area_m2 | Об'єкти моделі, з яких виведено контур | Обладнання (f3d_zone_id) |
+|---|---|---|---|---|---|---|---|---|
+| Z-GATE-W | КПП приймання (в'їзд, шлагбаум) | −25.0 | −30.0 | −15.0 | 0.0 | 300.0 | `GATES[0]`: `GATE-W` x=−20 на огорожі y=−30, ширина 8 м; `CAM-05` (−20,−28.5); смуга до двору | GATE-W |
+| Z-GATE-E | КПП відвантаження (виїзд, шлагбаум, автоваги) | 163.0 | −30.0 | 175.0 | 0.0 | 360.0 | `GATE-E` x=168; `TRUCK_SCALE=(172,−14)` 3×18 м + табло при x=169.4; `CAM-06` | GATE-E, TRUCK-SCALE |
+| Z-YARD-W | Двір приймання (фури біля західних воріт) | −32.0 | 0.0 | 0.0 | 72.0 | 2304.0 | `SITE` x0=−32 … стіна x=0; `TRUCK-IN-1…3` при x=−7.3; `CAM-08` | — |
+| Z-YARD-E | Двір відвантаження (фури біля східних воріт) | 150.0 | 0.0 | 182.0 | 72.0 | 2304.0 | стіна x=150 … `SITE` x1=182; `TRUCK-OUT-1…3` при x=157.3; `CAM-09` | — |
+| Z-KPP | Прохідна персоналу (турнікети, пішохідна доріжка) | 95.0 | −30.0 | 104.0 | 0.0 | 270.0 | `KPP=(98.4,−27)`: будівля 3×4 при (101.4,−27), навіс 4×4.4, турнікети x=97.5/98.8, доріжка x=98.4 до входу `EX-IN`; `CAM-07` | TURNSTILES |
+| Z-PARKING | Паркування персоналу | 106.0 | −27.0 | 150.0 | −6.0 | 924.0 | `PARKING` як є | — |
+| Z-BOILER | Майданчик котельні (котельня, силос стружки, брикетувальний прес) | 59.4 | 74.0 | 80.6 | 83.6 | 203.5 | силос r=2 при (62.6,78) + стійки ±1.4; котельня 12×6 при (73.6,78), димарі; прес 2.4×1.1 при (61.6,82) + 3 палети брикетів до x=67.4 | BOILER, FA-BOILER |
+| Z-FIREWATER | Пожежні резервуари й насосна | 3.5 | 74.5 | 28.0 | 83.6 | 223.0 | два резервуари r=3.5 при (8,79) і (17,79) з драбинами (x+3.55); насосна 4×3 при (25,77.5); трубопровід до стіни | — (резервуари — частина об'єкта `BOILER`, окремого коду немає) |
+| Z-ENERGY | Майданчик енергетики за північною стіною (генератор, КГУ, накопичувач, ГРП, охолоджувач, інвертори СЕС) | 93.5 | 72.0 | 145.3 | 83.8 | 611.2 | `GENSET_POS=(128.5,76.2)` плита 5.4×2; `BESS_POS=(140,75.4)` плита 5.8×1.6 до x=144.3; `CHP_POS=(118.6,76.6)` 8×3.2; `CHP_EXH_POS=(117.6,78.6)`; `CHP_COOLER_POS=(118.6,81.6)` 6×2.3; `CHP_GRP_POS=(112.5,81)`; `PV_INVERTERS_X` 95…106.2 на стіні y=72.5 | GENSET, BESS, CHP, PV-INV (`ATS-1` — усередині будівлі → `Z-ELEC`) |
+| Z-WASTE | Майданчик відходів | 158.0 | 78.0 | 176.0 | 92.0 | 252.0 | `WASTE` як є; `CAM-12` (167,85) | — |
+| Z-ROOF | Дах і сонячна станція (`is_roof`) | 0.0 | 0.0 | 150.0 | 72.0 | 10800.0 | контур будівлі `W×D`; `PV-ROOF`, клапани димовидалення, блискавкозахист на покрівлі `ROOF_Z=9` | PV-ROOF, SMOKE-VENTS, LPS |
+
+`color` надвірних — службовий `#d5d8dc` (як технічні зони), дах — `#c9cfe6`; `description` — з `desc`
+відповідних об'єктів `site2.py:build_territory` (`TERRITORY`, `KPP`, `WASTE`, шлагбауми, ваги) і
+`site.py:916–919` (`BOILER`), `site2.py:135–236` (генератор, накопичувач, КГУ, ГРП, інвертори),
+`site2.py:179–182` (СЕС). `root_location_id` у надвірних зон порожній. `sequence`: 400 … 500 з кроком 10
+у порядку таблиці. Поза зонами лишаються: шлагбаумна смуга між КПП і паркуванням, газопровід до межі
+майданчика (y=100), естакада теплотраси — це лінійні об'єкти без площі.
 
 `description` — з п'ятого елемента кортежу `ZONES`/`RCV_DESC` (`plant/layout.py`). Прив'язки РЦ:
 `Z-CUT`: SAW-1, SAW-2, SAW-3, SLIDE-1, VSAW-1, NEST-1; `Z-EB`: EDGE-1, EDGE-2, EDGE-3, CNC-3;
@@ -1237,10 +1269,17 @@ BOX-1, PACKLINE-1.
 | EYE-PAINT | Z-FAC | «аварійних душів Haws (… фарбування)» |
 | PRN-PACK1, PRN-PACK2, IOT-PACK | Z-PACK | «етикетка SSCC на пакуванні», принтери пакування 1/2 |
 
-Без зони (надвір/невизначено): GENSET, ATS-1, BESS, PV-ROOF, PV-INV, CHP, DUST-1, BOILER, FA-BOILER,
-TRUCK-SCALE, GATE-W, GATE-E, LPS, WATER, SMOKE-VENTS, SMOKE-CTRL, EXITS, LP-1…3, EMERGENCY, FA-MCP,
-FA-SND, FA-FLAME, SPARK-1, SERVER, WIFI, TURNSTILES, ACCESS, CCTV, ODOO-TABLETS, ODOO-SCANNERS,
-PRN-RCV, PRN-OUT, SCALE-*, IOT-RCV, IOT-OUT, AIR-RING, SPRINKLERS, FL-*, TUGGER-1 (Q-05, Q-06).
+Надвірні зони за моделлю території (A-19, 13 одиниць): GATE-W → Z-GATE-W; GATE-E, TRUCK-SCALE → Z-GATE-E;
+TURNSTILES → Z-KPP; GENSET, BESS, CHP, PV-INV → Z-ENERGY; BOILER → Z-BOILER (разом із FA-BOILER з
+`fire.groups`, зона якого в макеті вже `Z-BOILER`); PV-ROOF, SMOKE-VENTS, LPS → Z-ROOF; ATS-1 → Z-ELEC
+(`ATS_POS=(135.1, 68.5)` — усередині електрощитової). Силос, брикетувальний прес, резервуари, насосна,
+КПП, шлагбаумні тумби, камери `CAM-*` окремих одиниць обладнання в базі не мають (частина об'єктів
+`BOILER`, `KPP`, `CCTV`).
+
+Без зони (розподілені по всьому заводу або без координат у моделі): DUST-1 (фільтр — об'єкт у шарі
+аспірації всередині цеху), WATER, SMOKE-CTRL, EXITS, LP-1…3, EMERGENCY, FA-MCP, FA-SND, FA-FLAME,
+SPARK-1, SERVER, WIFI, ACCESS, CCTV, ODOO-TABLETS, ODOO-SCANNERS, PRN-RCV, PRN-OUT, SCALE-*, IOT-RCV,
+IOT-OUT, AIR-RING, SPRINKLERS, FL-*, TUGGER-1 (Q-05).
 
 Навантажувачі в базі (`serial_no` ≠ код): FL-4369 → FL-1 «Навантажувач ГП 1»; FL-4912 → FL-2
 «Навантажувач приймання» (Linde X50); FL-4731 → FL-3 «Навантажувач відвантаження»; FL-4374 → FL-4
