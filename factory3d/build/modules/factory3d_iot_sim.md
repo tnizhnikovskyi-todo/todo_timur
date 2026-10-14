@@ -10,7 +10,7 @@
 | W0 | принят | 670b3fb | unit 3/3, TestInstall OK |
 | W1a | принят | e3023b2 | unit 79/79, core cov 99 %, ruff OK |
 | W1b-2 | принят | d2fdc56 | svc 156/156, models cov 99 % |
-| W1b-1 | в работе (worktree) | — | — |
+| W1b-1 | смержен, интеграция (7 красных юнитов) | 0c265bf | — |
 | W2 | принят | 1348d5d | svc tests 98/98, ruff OK |
 | W3 | в работе (worktree) | — | — |
 | W4 | в работе (worktree) | — | — |
