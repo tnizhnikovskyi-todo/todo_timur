@@ -1,3 +1,4 @@
+# ruff: noqa: B018
 {
     "name": "Завод 3D: міст base ↔ mrp_maintenance",
     "summary": "Заповнює maintenance.equipment.workcenter_id за збігом f3d_code з робочим центром",

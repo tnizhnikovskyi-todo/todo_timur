@@ -1,9 +1,9 @@
 # factory3d_base
-Статус: IN_PROGRESS
-Тесты: —, ТК: ждут эмулятор
-Решений без заказчика: 13 (ниже)
+Статус: DONE (юнит-DoD); ТК-01…05 не прогнаны — нет копии демо-базы `odoo`
+Тесты: 150/150 (/factory3d_base, 100 post-install, 2026-10-14), ruff чисто; ТК: ждут копию демо-базы
+Решений без заказчика: 15 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: мост factory3d_base_mrp_maintenance не тестирован — нет Enterprise (ENV-1)
+Требует внимания человека: ТК-01…05 по DEPLOY_TEST.md на копии базы `odoo`; мост factory3d_base_mrp_maintenance не тестирован — нет Enterprise (ENV-1); правки SPEC: DEC-5, DEC-11, DEC-15
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -12,7 +12,7 @@
 | W2 | принят | 0766b01 | /factory3d_base 42/42 (2 skip до W3/W4) |
 | W4 | принят | 36a0877 | /factory3d_base 62/62 |
 | W3 | принят | f50bbfa | /factory3d_base 84/84 |
-| W5 | в работе | | |
+| W5 | принят | 4140379 | /factory3d_base 150/150 |
 
 ## Решения без заказчика
 - DEC-1 (ENV-1): `mrp_maintenance` недоступен — убран из `depends`; связь оборудование↔РЦ по `f3d_code` (A-15);
@@ -32,3 +32,6 @@
 - DEC-11: синтетика TestBatchMigration — 4 пакета на 4 документа, а не 3 как в §13.1: по R-11(б)/Q-02 «один пакет на документ», противоречие внутри SPEC, приоритет у правила. — `tests/test_migration.py`
 - DEC-12: `f3d_register_dock` пишет `dock_ids`/`dispatch_management` типа операции через `sudo()` (пользователь склада может не иметь прав на тип); черновики при миграции — `in_progress` напрямую, без `action_confirm`. — `models/stock_location.py:80`, `hooks/batches.py`
 - DEC-13: нет ворот на чистой базе — INFO, а не WARNING (чистый лог установки); колонка `zone` в `scene_docks.csv` игнорируется (зоны — `zones.bind`). — `hooks/docks.py`
+- DEC-14: `f3d_run_migration` проверяет `group_f3d_admin`, затем выполняет оркестратор под `sudo()` (админ без прав склада получал AccessError); `verify` вызывается только если `migrate` не skipped. — `models/f3d_scene_mixin.py:172`, `hooks/__init__.py`
+- DEC-15: `f3d.zone.company_id` обязательное (M-02), поэтому ветка `company_id=False` record rule (§4.3) и случай AC-45 «зона без компании» недостижимы — противоречие в SPEC. — `models/f3d_zone.py:56`
+- AC только синтетикой, кратности — через ТК: AC-10…12, 14, 19, 24…31, 34, 35.
