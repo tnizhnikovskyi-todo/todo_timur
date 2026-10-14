@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-01 -->
+    <record id="view_f3d_zone_form" model="ir.ui.view">
+        <field name="name">f3d.zone.form</field>
+        <field name="model">f3d.zone</field>
+        <field name="arch" type="xml">
+            <form string="Зона цеху">
+                <header>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object"
+                            class="btn-primary" invisible="not f3d_code or not f3d_viewer_available"/>
+                </header>
+                <sheet>
+                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="f3d_viewer_available" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_locations" type="object" class="oe_stat_button"
+                                icon="fa-map-marker">
+                            <field name="location_count" widget="statinfo" string="Місця"/>
+                        </button>
+                        <button name="action_view_workcenters" type="object" class="oe_stat_button"
+                                icon="fa-cogs">
+                            <field name="workcenter_count" widget="statinfo" string="Робочі центри"/>
+                        </button>
+                        <button name="action_view_equipment" type="object" class="oe_stat_button"
+                                icon="fa-wrench">
+                            <field name="equipment_count" widget="statinfo" string="Обладнання"/>
+                        </button>
+                        <div class="oe_stat_button" icon="fa-truck" name="stat_docks">
+                            <field name="dock_count" widget="statinfo" string="Ворота"/>
+                        </div>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва зони"/></h1>
+                    </div>
+                    <group>
+                        <group string="Зона" name="zone_main">
+                            <field name="f3d_code" readonly="not is_f3d_manager"/>
+                            <field name="zone_type"/>
+                            <field name="is_roof" invisible="zone_type != 'outdoor'"/>
+                            <field name="sequence"/>
+                            <field name="color" widget="color"/>
+                            <field name="root_location_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Геометрія" name="zone_geometry">
+                            <field name="polygon_text" widget="ace" options="{'mode': 'json'}"/>
+                            <field name="area_m2"/>
+                            <label for="x_min" string="Габарит, м"/>
+                            <div class="o_row">
+                                <field name="x_min"/>
+                                <field name="y_min"/>
+                                <field name="x_max"/>
+                                <field name="y_max"/>
+                            </div>
+                        </group>
+                        <group string="Код сцени" name="f3d_scene">
+                            <field name="f3d_alias" readonly="not is_f3d_manager"/>
+                            <field name="f3d_kind" readonly="not is_f3d_manager"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="description" string="Опис">
+                            <field name="description"/>
+                        </page>
+                        <page name="locations" string="Місця">
+                            <field name="location_ids" readonly="1">
+                                <list>
+                                    <field name="complete_name"/>
+                                    <field name="barcode"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="workcenters" string="Робочі центри">
+                            <field name="workcenter_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="f3d_code"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="equipment" string="Обладнання">
+                            <field name="equipment_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="category_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="docks" string="Ворота">
+                            <field name="dock_location_ids" readonly="1">
+                                <list>
+                                    <field name="complete_name"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- V-02 -->
+    <record id="view_f3d_zone_list" model="ir.ui.view">
+        <field name="name">f3d.zone.list</field>
+        <field name="model">f3d.zone</field>
+        <field name="arch" type="xml">
+            <list string="Зони цеху" decoration-muted="not active">
+                <field name="active" column_invisible="1"/>
+                <field name="sequence" widget="handle"/>
+                <field name="f3d_code"/>
+                <field name="name"/>
+                <field name="zone_type"/>
+                <field name="area_m2"/>
+                <field name="location_count"/>
+                <field name="workcenter_count"/>
+                <field name="equipment_count"/>
+                <field name="root_location_id"/>
+                <field name="color" widget="color" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- V-03 -->
+    <record id="view_f3d_zone_search" model="ir.ui.view">
+        <field name="name">f3d.zone.search</field>
+        <field name="model">f3d.zone</field>
+        <field name="arch" type="xml">
+            <search string="Зони цеху">
+                <field name="name"/>
+                <field name="f3d_code"/>
+                <field name="root_location_id"/>
+                <filter name="type_receiving" string="Приймання" domain="[('zone_type', '=', 'receiving')]"/>
+                <filter name="type_storage" string="Склад" domain="[('zone_type', '=', 'storage')]"/>
+                <filter name="type_production" string="Виробництво" domain="[('zone_type', '=', 'production')]"/>
+                <filter name="type_assembly" string="Збирання" domain="[('zone_type', '=', 'assembly')]"/>
+                <filter name="type_packing" string="Пакування" domain="[('zone_type', '=', 'packing')]"/>
+                <filter name="type_shipping" string="Відвантаження" domain="[('zone_type', '=', 'shipping')]"/>
+                <filter name="type_technical" string="Технічна" domain="[('zone_type', '=', 'technical')]"/>
+                <filter name="type_office" string="Офіс і побут" domain="[('zone_type', '=', 'office')]"/>
+                <filter name="type_outdoor" string="Двір" domain="[('zone_type', '=', 'outdoor')]"/>
+                <separator/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_zone_type" string="Тип" context="{'group_by': 'zone_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- V-04 -->
+    <record id="view_f3d_zone_kanban" model="ir.ui.view">
+        <field name="name">f3d.zone.kanban</field>
+        <field name="model">f3d.zone</field>
+        <field name="arch" type="xml">
+            <kanban string="Зони цеху">
+                <field name="color"/>
+                <templates>
+                    <t t-name="card">
+                        <div t-attf-style="border-left: 6px solid #{record.color.raw_value or '#d5d8dc'}; padding-left: 8px;">
+                            <field name="name" class="fw-bold fs-5"/>
+                            <div class="text-muted"><field name="f3d_code"/> · <field name="zone_type"/></div>
+                            <div><field name="area_m2"/> м²</div>
+                            <div class="text-muted">
+                                <field name="location_count"/> міст ·
+                                <field name="workcenter_count"/> РЦ ·
+                                <field name="equipment_count"/> обл.
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_f3d_zone" model="ir.actions.act_window">
+        <field name="name">Зони</field>
+        <field name="res_model">f3d.zone</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="context">{'search_default_group_zone_type': 1}</field>
+    </record>
+</odoo>
