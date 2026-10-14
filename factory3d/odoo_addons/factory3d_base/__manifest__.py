@@ -14,6 +14,8 @@
         "security/f3d_security.xml",
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
+        "data/f3d_zone_data.xml",
+        "views/f3d_zone_views.xml",
         "views/hr_employee_views.xml",
         "views/mrp_workcenter_views.xml",
         "views/f3d_menus.xml",

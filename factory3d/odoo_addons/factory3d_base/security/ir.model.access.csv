@@ -1,1 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_zone_user,f3d.zone user,model_f3d_zone,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_zone_manager,f3d.zone manager,model_f3d_zone,factory3d_base.group_f3d_manager,1,1,1,1

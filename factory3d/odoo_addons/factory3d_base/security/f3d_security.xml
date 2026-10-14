@@ -35,4 +35,9 @@
     <record id="mrp.group_mrp_user" model="res.groups">
         <field name="implied_ids" eval="[Command.link(ref('group_f3d_user'))]"/>
     </record>
+    <record id="f3d_zone_rule_company" model="ir.rule">
+        <field name="name">Зони: мультикомпанія</field>
+        <field name="model_id" ref="model_f3d_zone"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
 </odoo>

@@ -13,6 +13,8 @@
               groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_plant" name="Завод" parent="menu_f3d_root" sequence="20"
               groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_zone" name="Зони" parent="menu_f3d_plant" sequence="10"
+              action="action_f3d_zone" groups="group_f3d_user"/>
     <menuitem id="menu_f3d_config" name="Налаштування" parent="menu_f3d_root" sequence="99"
               groups="factory3d_base.group_f3d_manager"/>
     <menuitem id="menu_f3d_config_params" name="Параметри системи" parent="menu_f3d_config" sequence="95"
