@@ -17,7 +17,7 @@ X-06 (§11 п. 4: COV допустимий, у v1 лишається опиту�
 з sequence резерву 80); закрито Q-09 (X-34, X-40, X-58) і Q-10 (X-06).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-07, Q-08, Q-11, Q-12, Q-13, Q-14.
 Зміни: 14.10.2026 — аудит 2: X-95 (R-27, M-11: розділ `ventilation` доповнюється через `deep_merge`, ключ `units[AHU-1].room_pressure_pa`; AC-79), X-103 (TC-AC 49, 50, 52 прив'язано до ТК/чек-листа §13.2/§13.5).
-Зміни: 14.10.2026 — аудит 2 (доповнення): X-102 (легенда типів перевірок на початку §12).
+Зміни: 14.10.2026 — аудит 2 (доповнення): X-102 (легенда типів перевірок на початку §12; AC-47 «UT (JS)» → JT).
 
 Позначення: **UT** — юніт-тест `odoo.tests`; **PT** — pytest плагіна з фейковим роутером Helvar; **TC** — стенд
 (емулятор + колектор + Odoo); **MAN** — ручна перевірка. Odoo 19: SQL-обмеження — `models.Constraint`; хуки
@@ -1320,7 +1320,7 @@ class HelvarNetPlugin(SourcePlugin):
 
 ## 12. Acceptance Criteria
 
-Формат: Given / When / Then; тип перевірки (легенда, DOC_STANDARD, X-102): **UT** — юніт-тест Odoo (`odoo.tests.TransactionCase`, §13.1.1; «UT (JS)» — HOOT-тест клієнта), **PT** — pytest плагіна колектора поза Odoo (§13.1.2), **TC** — стенд на емуляторі або копія демо-бази (§13.2, §13.5), **MAN** — ручна перевірка. «Демо» — копія бази `odoo` з установленими
+Формат: Given / When / Then; тип перевірки (легенда, DOC_STANDARD, X-102): **UT** — юніт-тест Odoo (`odoo.tests.TransactionCase`, §13.1.1), **JT** — HOOT-тест клієнта (§13.1.1), **PT** — pytest плагіна колектора поза Odoo (§13.1.2), **TC** — стенд на емуляторі або копія демо-бази (§13.2, §13.5), **MAN** — ручна перевірка. «Демо» — копія бази `odoo` з установленими
 `factory3d_base`, `factory3d_telemetry`, `factory3d_bms`; «чиста» — база з `--without-demo=all` і тими самими модулями.
 
 | ID | FR / R | Given / When / Then | Тип |
@@ -1371,7 +1371,7 @@ class HelvarNetPlugin(SourcePlugin):
 | AC-44 | R-26, R-27 | живі: LT-CUT `level=60` → `level 0.6`, `e_now 305`; RV-05 `mode=ST`, `state=stopped` → `mode «Очікування»`, `mode_code «ST»`, `state «standby»`; `heating_valve` 12 % → 0.12; `supply_c` 19,337 → 19.34; `airflow_m3h` 5 852,544 → 5852.5; `faults` 1 → ключ `faults: 1`, `faulty: "1.2.1.5"` | UT |
 | AC-45 | M-11, A-06 | `_f3d_viewer_delta(patch, ctx)` з `changes={'f3d.signal': {'equipment/COMPRESSOR/pressure_bar'}}` → `patch` порожній; з `{'f3d.signal': {'lighting/groups/LT-CUT/level'}}` → `patch['lighting']` повний розділ, `ventilation` немає; `{'f3d.bms': {'RV-05'}}` → обидва провайдери пишуть свої розділи; моделі мають `_name` з префіксом `f3d.viewer.provider.` і **не** успадковують `f3d.viewer.provider` (`_inherit` порожній); користувач без `group_f3d_user` → розділ не змінюється; без `factory3d_viewer` установка й тести модуля проходять | UT |
 | AC-46 | FR-14, R-28 | `get_overview_data()` на установленій базі: `zones` — 34 (без `outdoor`), кожна з `polygon` ≥ 3 точок; `groups` 32, `panels` 3 (LP-1 x=40,0), `units` 29 (RV-05 x=21,5, y=33,5); `kpi.groups_total=32`, `units_total=29`; `heat.design.total=753`; `deviations` — список відкритих ≤ 50; користувач без доступу до `f3d.bms.hvac.unit` → `units=[]` без винятку | UT |
-| AC-47 | FR-14 | `action_open('f3d.bms.light.group', id, 'form')` → `act_window` форми; `'show3d'` → дія `action_f3d_show` обладнання LT-CUT; `model='res.users'` → `AccessError`. Hoot-тест `overview.test.js`: монтування `F3dBmsOverview` з фіктивними даними (2 зони, 1 установка) рендерить 2 `polygon` з класами `o_f3d_bms_ok`/`o_f3d_bms_alarm`, 1 `circle`, KPI «32 / 32»; клік по зоні викликає `orm.call(..., 'action_open', [...,'form'])` | UT (JS) |
+| AC-47 | FR-14 | `action_open('f3d.bms.light.group', id, 'form')` → `act_window` форми; `'show3d'` → дія `action_f3d_show` обладнання LT-CUT; `model='res.users'` → `AccessError`. Hoot-тест `overview.test.js`: монтування `F3dBmsOverview` з фіктивними даними (2 зони, 1 установка) рендерить 2 `polygon` з класами `o_f3d_bms_ok`/`o_f3d_bms_alarm`, 1 `circle`, KPI «32 / 32»; клік по зоні викликає `orm.call(..., 'action_open', [...,'form'])` | JT |
 | AC-48 | FR-21, §5.3 | чиста база (base + telemetry без демо-обладнання): Then 13 норм, 6 сцен, 3 щити, 32 групи, 29 установок, 1 баланс (4 рядки, 753), 33 джерела модуля (32 + `BMS-DERIVED`), 549 сигналів `module='bms'` (`created: 549`), `install_report.state='partial'`, `not_found: 66`; установка без винятків | UT |
 | AC-49 | FR-21, A-04 | демо: `install_report` `created: 468`, `updated: 81`; 81 сигнал `ventilation/*` має `origin='sim_data'`, `last_value` і `status` як до установки (знімок), `source_id` = `BAC-<dev>-<code>`, адреса за Додатком B; сигнал RV-05 `filter_dp_pa` має `maintenance_request_id` = заявка id 6; 176 нових — `origin='catalog'`, 292 — `origin='module'` | TC |
 | AC-50 | §5.3 крок 3 | демо: `equipment_id` у 32 груп (`LT-CUT` → «Освітлення: Розкрій»), 3 щитів, 29 установок (RV-05 → «Припливно-витяжна установка RV-05»), баланс → `BOILER`, `CHP`; 32 джерела з обладнанням | TC |

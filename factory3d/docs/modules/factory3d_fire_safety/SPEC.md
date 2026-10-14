@@ -17,6 +17,7 @@ R-05, R-07, R-17, R-23, Додаток A.1/A.2 — Q-06/Q-07); `factory3d_machin
 `factory3d_iot_sim` SPEC §8.11 (P-09), §8.4.1 (unit 85), §9.1 R-25…R-27, §9.3 S-07/S-08, API-13, Додаток A
 (сигнали 189, 603–646, 1 167–1 168); `factory3d_access` SPEC M-16, CA-03, CA-09 (джерело проходів, рішення менеджера 14.10);
 каркас `docs/ARCHITECTURE.md` §5, §6.4, §6.7, §6.8, D-07. Контракти, що задає модуль, — CF-01…CF-06 (ARCH §2.1). Усі рядки інтерфейсу — українською в коді (D-14), без `.po`; жодних `x_`-полів.
+Зміни: 14.10.2026 — аудит 2 (доповнення): X-102 (AC-71 «UT (pytest)» → PT; легенда типів §12).
 
 Загальні правила моделей: `_description` українською; `Datetime` — UTC (стандарт Odoo), у payload — рядки за
 Києвом через `factory3d_viewer.tools.dates` (viewer R-02); `_log_access=True` всюди, крім `f3d.fire.event`;
@@ -2013,7 +2014,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 
 ## 12. Acceptance Criteria
 
-Тип перевірки: UT — юніт-тест Odoo (§13.1), TC — стенд на емуляторі (§13.2), MAN — ручна перевірка в протоколі.
+Тип перевірки: UT — юніт-тест Odoo (§13.1), PT — pytest поза Odoo (§13.1: `test_data_sync.py`), TC — стенд на емуляторі (§13.2), MAN — ручна перевірка в протоколі.
 «Чиста база» — база з `factory3d_base`, `factory3d_telemetry`, `hr_attendance` без демо-даних обладнання; «копія демо» —
 копія бази `odoo` тестового сервера (14.10.2026).
 
@@ -2089,7 +2090,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-68 | M-18, R-14 п. 5 | payload API-01 (LSZ 14, `test-alarm`, «Тест: сповіщувач 2.CNC.05, Присадка») за 3 с від події `test` FA-CNC → `message_text` дописано, `device_id=2.CNC.05`; без події → нова подія `bacnet`; без `instance` → `ValueError`; керівні символи в `message_text` видалено | UT |
 | AC-69 | FR-07 | `action_recompute_compliance()` повертає `display_notification` з текстом «Перераховано: зони 35/35, ручні max 26,9 м, маршрути 32/32, димові зони 8/8»; `compliance_ts` заповнено; `_cron_compliance()` дає ті самі значення | UT |
 | AC-70 | FR-04, R-23 | `lsp_id(2,16,7)=21607`, `lsp_id(1,90,1)=19001`, `lsp_id(9,1,1)` → `ValueError`; у data 302 пристрої C-NET з унікальним `lsp_instance > 0` (серед них `3.SOC.01…02` → 33401…33402, `3.OFFICE.01…08` → 33501…33508), 51 — з 0; адреса `3.FAC.01` для пристрою шлейфу 2 → `ValidationError` | UT |
-| AC-71 | FR-20 | `tools/gen_data.py` у тимчасову теку → файли побайтово дорівнюють `data/*` репозиторію | UT (pytest) |
+| AC-71 | FR-20 | `tools/gen_data.py` у тимчасову теку → файли побайтово дорівнюють `data/*` репозиторію | PT |
 | AC-72 | FR-01, P-09 | стенд (ТК-01): колектор читає dev 200 і u85; за ≤ 2 хв `comm='online'`, 35 зон `normal`, `FA-FAC.warn` за запиленістю емулятора, подія `comm_restored` | TC |
 | AC-73 | FR-13, FR-23 | стенд (ТК-04): навчання «Запустити на емуляторі» → крок 1 `t_fact_s ≤ 15`, крок 2 ≤ 18, крок 5 ≤ 24; авто-стоп; протокол PDF | TC |
 | AC-74 | FR-18 | стенд (ТБ-05): за весь прогін ТК-01…ТК-10 у перехопленні UDP 47808 немає жодного `WriteProperty`, `WritePropertyMultiple`, `SubscribeCOV`, `AcknowledgeAlarm`, `LifeSafetyOperation`, `DeviceCommunicationControl`, `ReinitializeDevice` від колектора; на TCP 502 unit 85 — жодної функції 05/06/15/16 | TC |
