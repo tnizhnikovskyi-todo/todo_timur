@@ -317,7 +317,7 @@ def deep_merge(dst: dict, src: dict) -> dict:
 
 Група `mrp.group_mrp_user`. Алгоритм — R-06 (робочі центри, OEE, втрати), R-07 (МО і завдання, прогрес,
 демо-годинник, `energy_kwh`; `energy_cost` — лише при `ctx["energy_cost"]`, X-25), R-08 (компоненти МО). Читає `mrp.workcenter` (`f3d_code`, `name`, `working_state`,
-`default_capacity`, `time_efficiency`, `note`), `mrp.production` (`name`, `state`, `reservation_state`,
+`capacity_ids`, `time_efficiency`, `note`; поля `default_capacity` в Odoo 19 немає — X-92), `mrp.production` (`name`, `state`, `reservation_state`,
 `product_id`, `product_qty`, `product_uom_id`, `origin`, `date_start`, `date_deadline`, `bom_id.code`,
 `workorder_ids`, `move_raw_ids`, `mrp_production_source_count`, `procurement_group_id`), `mrp.workorder`
 (`id`, `name`, `production_id`, `workcenter_id`, `state`, `sequence`, `duration_expected`, `date_start`,
@@ -1305,7 +1305,9 @@ F3dViewer(document.getElementById("app"), {client: new FileClient("odoo_demo.jso
   обмежено `0…1`. Приклад (демо): SAW-1: `productive 176`, зміна 07:00, `now` 10:30 → `210` хв → `0.84`.
   CNC-2: `65/210 = 0.31`. (Стандартне поле `mrp.workcenter.oee` Odoo рахує за інший період, тому не
   використовується.)
-- `capacity` = `default_capacity`, `time_efficiency` = `time_efficiency/100`.
+- `capacity` = `capacity` першого рядка `capacity_ids` без продукту (`product_id = False`), інакше `1.0` — так само,
+  як `mrp.workcenter._get_capacity()` Odoo 19 для загальної місткості (поля `default_capacity` немає; X-92);
+  `time_efficiency` = `time_efficiency/100`.
 - `idle_reason`: якщо `status='idle'` — перший рядок `note` робочого центру (HTML → текст) або, якщо є
   завдання `waiting` у черзі, «Чекає компонентів для {production}» ; якщо немає — відсутній.
 - `maintenance_request`: назва першої відкритої заявки з `equipment_id.workcenter_id` = центр.
