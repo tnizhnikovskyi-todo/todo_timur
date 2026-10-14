@@ -1,0 +1,16 @@
+# SPEC §8.1.2 (мінімальні перевірені версії; закріплюються «==» при першому збиранні)
+fastapi>=0.115.12
+uvicorn[standard]>=0.34.2
+httpx>=0.28.1
+pydantic>=2.11
+pydantic-settings>=2.9
+astral>=3.2
+PyYAML>=6.0.2
+cryptography>=44
+prometheus-client>=0.21
+paho-mqtt>=2.1.0
+# протокольні бібліотеки додають воркери відповідних протоколів:
+# asyncua==1.1.6, pymodbus==3.9.2, bacpypes3==0.0.102
+pytest>=8.3
+pytest-asyncio>=0.25
+pytest-timeout>=2.3

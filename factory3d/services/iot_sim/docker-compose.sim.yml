@@ -1,0 +1,31 @@
+# SPEC §8.1.4. Запуск з кореня проєкту: docker compose -f docker-compose.sim.yml --profile demo up
+networks:
+  f3d_sim: {internal: true}
+  odoo_default: {external: true}
+services:
+  iot_sim:
+    build: ./services/iot_sim
+    profiles: ["demo", "dev"]
+    networks: [f3d_sim, odoo_default]      # odoo_default — лише для API-01/follow_odoo (allow-list)
+    env_file: ./services/iot_sim/.env      # SIM_* (§8.2.1); у репозиторії — .env.example без секретів
+    environment: {SIM_GENSET_RELAY_TOKEN: "${RELAY_SIM_TOKEN}"}   # той самий токен, що в genset_relay (X-75)
+    volumes: ["iot_sim_state:/app/state"]
+    ports: ["127.0.0.1:8090:8090", "127.0.0.1:4840:4840"]   # лише профіль dev; у demo — без ports
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/sim/v1/health', timeout=3)"], interval: 30s, timeout: 5s, retries: 3}   # без curl у python:3.12-slim (X-90)
+    depends_on: [mosquitto]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: ["/tmp"]
+    user: "10001:10001"
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    profiles: ["demo", "dev"]
+    networks: [f3d_sim]
+    volumes: ["./services/iot_sim/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro", "./services/iot_sim/mosquitto/passwd:/mosquitto/config/passwd:ro"]
+  genset_relay:                            # td_genset §8.5, запит CI-02 (X-75)
+    build: ${TD_GENSET_PATH}/relay         # з репозиторію td_genset, профіль D700 (fake_relay.py)
+    profiles: ["demo", "dev"]
+    networks: [f3d_sim, odoo_default]      # odoo_default — щоб Odoo (td_genset) достукався до genset_relay:8000
+    environment: {RELAY_PROFILE: d700, RELAY_PORT: "8000", RELAY_SIM_TOKEN: "${RELAY_SIM_TOKEN}", RELAY_TIME_FACTOR: "1", RELAY_TZ: Europe/Kyiv}
+    healthcheck: {test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 3)"], interval: 30s, timeout: 5s, retries: 3}   # TCP-перевірка порту (td_genset §8.5, X-90)
+volumes: {iot_sim_state: {}}

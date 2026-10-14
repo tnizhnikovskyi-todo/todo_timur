@@ -1,0 +1,371 @@
+# Резервний реєстр пристроїв (W0: мінімум, виведений з catalog/signals.csv).
+# Повний реєстр генерує tools/gen_devices.py (пізніші воркери).
+devices:
+  - code: "ACCESS"
+    protocols: [P-10]
+  - code: "ACR-CHG"
+    protocols: [P-10]
+  - code: "ACR-ELEC"
+    protocols: [P-10]
+  - code: "ACR-IN"
+    protocols: [P-10]
+  - code: "ACR-PAINT"
+    protocols: [P-10]
+  - code: "ACR-SRV"
+    protocols: [P-10]
+  - code: "AHU-1"
+    protocols: [P-05, P-08]
+  - code: "AIR-RING"
+    protocols: [P-07]
+  - code: "ASM-1"
+    protocols: [P-02, P-05]
+  - code: "ASM-2"
+    protocols: [P-02, P-05]
+  - code: "ASM-3"
+    protocols: [P-02, P-05]
+  - code: "ASM-4"
+    protocols: [P-02, P-05]
+  - code: "ASM-5"
+    protocols: [P-02, P-05]
+  - code: "ASM-6"
+    protocols: [P-02, P-05]
+  - code: "ASMLINE-1"
+    protocols: [P-01, P-05]
+  - code: "ATS-1"
+    protocols: [P-07]
+  - code: "AUTOSPRAY-1"
+    protocols: [P-02, P-05]
+  - code: "BESS"
+    protocols: [P-07]
+  - code: "BOILER"
+    protocols: [P-05, P-08]
+  - code: "BORE-1"
+    protocols: [P-01, P-05]
+  - code: "BOX-1"
+    protocols: [P-02, P-05]
+  - code: "CAM-05"
+    protocols: [P-11]
+  - code: "CAM-06"
+    protocols: [P-11]
+  - code: "CHARGING"
+    protocols: [P-05]
+  - code: "CHP"
+    protocols: [P-07]
+  - code: "CNC-1"
+    protocols: [P-01, P-05]
+  - code: "CNC-2"
+    protocols: [P-01, P-05]
+  - code: "CNC-3"
+    protocols: [P-01, P-05]
+  - code: "CNC-4"
+    protocols: [P-01, P-05]
+  - code: "COMPRESSOR"
+    protocols: [P-05, P-07]
+  - code: "CUTOPT"
+    protocols: []
+  - code: "DOWEL-1"
+    protocols: [P-01, P-05]
+  - code: "DRY-1"
+    protocols: [P-02, P-05]
+  - code: "DUST-1"
+    protocols: [P-05, P-07]
+  - code: "EDGE-1"
+    protocols: [P-01, P-05]
+  - code: "EDGE-2"
+    protocols: [P-01, P-05]
+  - code: "EDGE-3"
+    protocols: [P-01, P-05]
+  - code: "EF-CHG"
+    protocols: [P-05, P-08]
+  - code: "EF-CMP"
+    protocols: [P-05, P-08]
+  - code: "EF-ELEC"
+    protocols: [P-05, P-08]
+  - code: "EMS-1"
+    protocols: []
+  - code: "FA-ASM"
+    protocols: [P-09]
+  - code: "FA-BOILER"
+    protocols: [P-09]
+  - code: "FA-CHG"
+    protocols: [P-09]
+  - code: "FA-CMP"
+    protocols: [P-09]
+  - code: "FA-CNC"
+    protocols: [P-09]
+  - code: "FA-CUT"
+    protocols: [P-09]
+  - code: "FA-EB"
+    protocols: [P-09]
+  - code: "FA-EDGE"
+    protocols: [P-09]
+  - code: "FA-ELEC"
+    protocols: [P-09]
+  - code: "FA-FAC"
+    protocols: [P-09]
+  - code: "FA-FG"
+    protocols: [P-09]
+  - code: "FA-HW"
+    protocols: [P-09]
+  - code: "FA-MAINT"
+    protocols: [P-09]
+  - code: "FA-OFFICE"
+    protocols: [P-09]
+  - code: "FA-OUT-1"
+    protocols: [P-09]
+  - code: "FA-OUT-2"
+    protocols: [P-09]
+  - code: "FA-OUT-3"
+    protocols: [P-09]
+  - code: "FA-OUT-4"
+    protocols: [P-09]
+  - code: "FA-OUT-5"
+    protocols: [P-09]
+  - code: "FA-OUT-6"
+    protocols: [P-09]
+  - code: "FA-OUT-7"
+    protocols: [P-09]
+  - code: "FA-PACK"
+    protocols: [P-09]
+  - code: "FA-PKS"
+    protocols: [P-09]
+  - code: "FA-POST"
+    protocols: [P-09]
+  - code: "FA-PRE"
+    protocols: [P-09]
+  - code: "FA-RCV-1"
+    protocols: [P-09]
+  - code: "FA-RCV-2"
+    protocols: [P-09]
+  - code: "FA-RCV-3"
+    protocols: [P-09]
+  - code: "FA-RCV-4"
+    protocols: [P-09]
+  - code: "FA-RCV-5"
+    protocols: [P-09]
+  - code: "FA-RCV-6"
+    protocols: [P-09]
+  - code: "FA-RCV-7"
+    protocols: [P-09]
+  - code: "FA-SHEETS"
+    protocols: [P-09]
+  - code: "FA-SOC"
+    protocols: [P-09]
+  - code: "FA-SORT"
+    protocols: [P-09]
+  - code: "FACP-1"
+    protocols: [P-09]
+  - code: "FL-1"
+    protocols: [P-06]
+  - code: "FL-2"
+    protocols: [P-06]
+  - code: "FL-3"
+    protocols: [P-06]
+  - code: "FL-4"
+    protocols: [P-06]
+  - code: "FL-5"
+    protocols: [P-06]
+  - code: "FL-C1"
+    protocols: [P-06]
+  - code: "FL-C2"
+    protocols: [P-06]
+  - code: "GANTRY-1"
+    protocols: [P-03, P-05]
+  - code: "GATE-E"
+    protocols: [P-11]
+  - code: "GATE-W"
+    protocols: [P-11]
+  - code: "GENSET"
+    protocols: [P-12]
+  - code: "GLUE-1"
+    protocols: [P-02, P-05]
+  - code: "HINGE-1"
+    protocols: [P-02, P-05]
+  - code: "LP-1"
+    protocols: [P-05, P-08]
+  - code: "LP-2"
+    protocols: [P-05, P-08]
+  - code: "LP-3"
+    protocols: [P-05, P-08]
+  - code: "LT-ASM"
+    protocols: [P-08]
+  - code: "LT-CHG"
+    protocols: [P-08]
+  - code: "LT-CMP"
+    protocols: [P-08]
+  - code: "LT-CNC"
+    protocols: [P-08]
+  - code: "LT-CUT"
+    protocols: [P-08]
+  - code: "LT-EB"
+    protocols: [P-08]
+  - code: "LT-EDGE"
+    protocols: [P-08]
+  - code: "LT-ELEC"
+    protocols: [P-08]
+  - code: "LT-FAC"
+    protocols: [P-08]
+  - code: "LT-FG"
+    protocols: [P-08]
+  - code: "LT-HW"
+    protocols: [P-08]
+  - code: "LT-MAINT"
+    protocols: [P-08]
+  - code: "LT-OUT-1"
+    protocols: [P-08]
+  - code: "LT-OUT-2"
+    protocols: [P-08]
+  - code: "LT-OUT-3"
+    protocols: [P-08]
+  - code: "LT-OUT-4"
+    protocols: [P-08]
+  - code: "LT-OUT-5"
+    protocols: [P-08]
+  - code: "LT-OUT-6"
+    protocols: [P-08]
+  - code: "LT-OUT-7"
+    protocols: [P-08]
+  - code: "LT-PACK"
+    protocols: [P-08]
+  - code: "LT-PKS"
+    protocols: [P-08]
+  - code: "LT-POST"
+    protocols: [P-08]
+  - code: "LT-PRE"
+    protocols: [P-08]
+  - code: "LT-RCV-1"
+    protocols: [P-08]
+  - code: "LT-RCV-2"
+    protocols: [P-08]
+  - code: "LT-RCV-3"
+    protocols: [P-08]
+  - code: "LT-RCV-4"
+    protocols: [P-08]
+  - code: "LT-RCV-5"
+    protocols: [P-08]
+  - code: "LT-RCV-6"
+    protocols: [P-08]
+  - code: "LT-RCV-7"
+    protocols: [P-08]
+  - code: "LT-SHEETS"
+    protocols: [P-08]
+  - code: "LT-SORT"
+    protocols: [P-08]
+  - code: "NEST-1"
+    protocols: [P-01, P-05]
+  - code: "OFFICE"
+    protocols: [P-05]
+  - code: "PACK-1"
+    protocols: [P-02, P-05]
+  - code: "PACK-2"
+    protocols: [P-02, P-05]
+  - code: "PACKLINE-1"
+    protocols: [P-02, P-05]
+  - code: "PRESS-1"
+    protocols: [P-02, P-05]
+  - code: "PV-INV"
+    protocols: [P-07]
+  - code: "Q1"
+    protocols: [P-05]
+  - code: "Q2"
+    protocols: [P-05]
+  - code: "QF-1"
+    protocols: [P-05]
+  - code: "QF-2"
+    protocols: [P-05]
+  - code: "QF-3"
+    protocols: [P-05]
+  - code: "QF-4"
+    protocols: [P-05]
+  - code: "QF-C1"
+    protocols: [P-05]
+  - code: "QF-C2"
+    protocols: [P-05]
+  - code: "RV-01"
+    protocols: [P-08]
+  - code: "RV-02"
+    protocols: [P-08]
+  - code: "RV-03"
+    protocols: [P-08]
+  - code: "RV-04"
+    protocols: [P-08]
+  - code: "RV-05"
+    protocols: [P-08]
+  - code: "RV-06"
+    protocols: [P-08]
+  - code: "RV-07"
+    protocols: [P-08]
+  - code: "RV-08"
+    protocols: [P-08]
+  - code: "RV-09"
+    protocols: [P-08]
+  - code: "RV-10"
+    protocols: [P-08]
+  - code: "RV-11"
+    protocols: [P-08]
+  - code: "RV-12"
+    protocols: [P-08]
+  - code: "RV-13"
+    protocols: [P-08]
+  - code: "RV-14"
+    protocols: [P-08]
+  - code: "RV-15"
+    protocols: [P-08]
+  - code: "RV-16"
+    protocols: [P-08]
+  - code: "RV-17"
+    protocols: [P-08]
+  - code: "RV-18"
+    protocols: [P-08]
+  - code: "RV-19"
+    protocols: [P-08]
+  - code: "RV-20"
+    protocols: [P-08]
+  - code: "RV-21"
+    protocols: [P-08]
+  - code: "RV-22"
+    protocols: [P-08]
+  - code: "RV-23"
+    protocols: [P-08]
+  - code: "RV-24"
+    protocols: [P-08]
+  - code: "RV-25"
+    protocols: [P-08]
+  - code: "RV-ALL"
+    protocols: [P-05]
+  - code: "SAND-1"
+    protocols: [P-02, P-05]
+  - code: "SAW-1"
+    protocols: [P-01, P-05]
+  - code: "SAW-2"
+    protocols: [P-01, P-05]
+  - code: "SAW-3"
+    protocols: [P-01, P-05]
+  - code: "SLIDE-1"
+    protocols: [P-02, P-05]
+  - code: "SMOKE-CTRL"
+    protocols: [P-09]
+  - code: "SORT-1"
+    protocols: [P-01, P-05]
+  - code: "SPARK-1"
+    protocols: [P-09]
+  - code: "SPRAY-1"
+    protocols: [P-02, P-05]
+  - code: "SPRINKLERS"
+    protocols: [P-07]
+  - code: "T1"
+    protocols: [P-05, P-07]
+  - code: "T2"
+    protocols: [P-05, P-07]
+  - code: "TRUCK-SCALE"
+    protocols: [P-11]
+  - code: "TUGGER-1"
+    protocols: [P-06]
+  - code: "TURNSTILES"
+    protocols: [P-10]
+  - code: "UV-1"
+    protocols: [P-02, P-05]
+  - code: "VSAW-1"
+    protocols: [P-02, P-05]
+  - code: "WATER"
+    protocols: [P-07]
