@@ -749,7 +749,7 @@ class FlowSteps:
             add(f"{p}/p_kw", f"{t['name']}: навантаження", code, "Потужність", "кВт", "noise", t["p_kw"], 10,
                 nominal=t["p_kw"], noise=round(t["p_kw"] * 0.03, 1))
             add(f"{p}/temp_c", f"{t['name']}: температура", code, "Температура", "°C", "noise", t["temp_c"], 10,
-                nominal=t["temp_c"], noise=0.3, alarm="above", threshold=110)
+                nominal=t["temp_c"], noise=0.3, alarm="above", threshold=140)
         it = d["infra"]["totals"]
         h = NOW.hour + NOW.minute / 60
         add("infra/totals/pv_now", "СЕС: виробіток", "PV-INV", "Потужність", "кВт", "solar", it["pv_now"], 10,

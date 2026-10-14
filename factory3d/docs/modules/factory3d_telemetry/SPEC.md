@@ -30,6 +30,7 @@ R-17 п. 6, R-22 і приклад, API-05, §8.7, хук крок 5 і Дода
 Нові ID: AC-93…AC-103, A-23…A-25 (ARCH).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-05, Q-06, Q-07, Q-10, Q-11, Q-13.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-01, Q-02, Q-09, Q-16, Q-17.
+Зміни: 14.10.2026 — рівень 0: поріг тривоги температури трансформаторів T1/T2 140 °C (відповідь № 24), демо-базу оновлено.
 
 Позначення: UT — юніт-тест `odoo.tests`; HT — `HttpCase`; CT — pytest колектора з фейковими серверами;
 TC — стенд (емулятор + колектор + Odoo); MAN — ручна перевірка на тестовому сервері timur-o19demo
@@ -2288,7 +2289,7 @@ SPEC §8.4, CM-06): `cmd` (`gantry` | `cutopt` — сигнал команд, н
 | `energy/consumers/<інженерні>/p_now` (GANTRY-1, COMPRESSOR, DUST-1, BOILER, CHARGING) | 5 | `noise` | energy | — | energy |
 | `energy/consumers/*/kwh_shift` | 40 | `energy` | energy | — (`derived_from` = `p_now`) | energy |
 | `energy/transformers/T1/p_kw`, `…/T2/p_kw` | 2 | `noise` | energy | — | energy |
-| `energy/transformers/T1/temp_c`, `…/T2/temp_c` | 2 | `noise` | energy | `above` 110 (рівень 0; хук energy ставить 130/140, відповідь № 24) | **telemetry** (ADAM-6015 u96, Додаток C.2) |
+| `energy/transformers/T1/temp_c`, `…/T2/temp_c` | 2 | `noise` | energy | `above` 140 (відповідь № 24; попередження 130 додає хук energy) | **telemetry** (ADAM-6015 u96, Додаток C.2) |
 | `infra/totals/pv_now`, `chp_kw`, `bess_soc` | 3 | `solar`, `noise` | energy | — | energy |
 | `equipment/<техніка>/battery` (8) | 8 | `drain` | telemetry | — (дані: 25/15, Q-07) | **telemetry** (MQTT) |
 | `equipment/<техніка>/hours` (8) | 8 | `hours` | telemetry | — | **telemetry** (MQTT) |
