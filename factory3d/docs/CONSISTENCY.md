@@ -1,6 +1,6 @@
 # Узгодженість документації модулів factory3d
 
-Дата: 14.10.2026 · аудитор узгодженості (агент) · версія 0.3 · статус: **X-01…X-69 затверджено менеджером 14.10.2026** (X-63…X-66 — bms-прохід, пропозиції аудитора прийняті без змін).
+Дата: 14.10.2026 · аудитор узгодженості (агент) · версія 0.3 · статус: **X-01…X-72 затверджено менеджером 14.10.2026** (X-63…X-66 — bms-прохід, пропозиції аудитора прийняті без змін).
 
 **Затвердження.** Усі 62 рішення реєстру прийняті, включно з 25 пропозиціями аудитора. Вибір варіантів: X-18 — код `equipment/CUTOPT/cmd` (без службового префікса `mc/`); X-40 — рекомендації bms приймаються, остаточно після звірки з завершеним SPEC bms; X-47 — окремі канали DO4/DO5, підтвердити в монтажника; X-60 — API-12 приймає `fault/clear` для пасивних пристроїв P-09 з LSZ (без нового сценарію). Рішення перенесено в журнал каркаса (`docs/ARCHITECTURE.md` §8, D-13…D-25); правки каркаса X-21, X-22, X-24, X-55 уже внесені. Правки модулів — окремим проходом за розділом «Що виправити — за файлами».
 
@@ -129,6 +129,9 @@ X-01…X-62 затверджено: 37 рядків — рішення з жур
 | X-67 | 1. Контракти | важлива | iot_sim, td_genset, energy | iot_sim R-12 тримає КГУ в острові «з BESS», а R-22 дає `P_genset = Σ критичних = 348`; з працюючою КГУ баланс емулятора не сходиться з energy R-14 п. 9 і td_genset R-06 v0.2 (виміряні chp/pv/bess) | В острові `P_genset = max(0, min(P_nom, Σ критичних − chp_kw − pv_now − bess_kw))`; обидва варіанти (КГУ стоїть / працює) у прикладах і AC | iot_sim SPEC → R-12, R-22, S-03 `blackout`, AC | затверджено менеджером (знахідка td_genset, правки за реєстром) |
 | X-68 | 10. Числа | дрібна | energy, td_genset | energy ARCH CE-04 посилається на «Q-13 td_genset» щодо `critical_codes`, а Q-13 td_genset — про коди подій | Посилання → X-11 / td_genset R-04 | energy ARCH → CE-04 | затверджено менеджером (знахідка td_genset) |
 | X-69 | 5. Меню й групи | дрібна | td_genset, base | За правилом X-32 пункт «Налаштування <модуля>» — під `menu_f3d_config` з sequence резерву; td_genset має лише `res.config.settings` без пункту; у M-07 немає полів для `ats_position_i/ii_value` і не описано перерахунок `period_s` при зміні `offline_min` (описано в T-6) | Додати пункт «Налаштування генератора» під `factory3d_base.menu_f3d_config`, sequence 55; у M-07 — поля `ats_position_i_value/ii_value`, `set_values` посилається на T-6 | td_genset SPEC → §3 (меню), M-07, AC | затверджено менеджером (знахідка td_genset) |
+| X-70 | 7. Адреси | важлива | yard, telemetry | yard SPEC §8.2 `address.sics.json` має `additionalProperties:false` і не допускає спільних ключів `scale`/`offset`, які telemetry A.0 дозволяє для всіх типів (X-63) | yard додає `scale`, `offset` у схему `address.sics.json` (як telemetry A.0) | yard SPEC → §8.2, Додаток A (за потреби) | затверджено менеджером (знахідка telemetry) |
+| X-71 | 7. Адреси | дрібна | bms, telemetry | bms ARCH CH-05 дає `fade_s` 0…6553,5, а SPEC §8.2.2 — 0…90; bms SPEC §8.9 описує запис MSV:1 «`text` → індекс за `states`», а після X-66 запис іде за зворотним `map` | `fade_s` 0…90 (як SPEC, у межах команд HelvarNet); §8.9 — «за зворотним `map` (telemetry R-23, X-66)» | bms ARCH → CH-05; bms SPEC → §8.9 | затверджено менеджером (знахідка telemetry) |
+| X-72 | 7. Адреси | важлива | iot_sim, telemetry | telemetry v0.2 R-24 розбирає Modbus-адресу каталогу лише у формі `u<unit> fc<n> pdu<addr>[+<count>]`; інакше застосовує правило за вендором | Каталог iot_sim (Додаток A) і таблиці §8.x — Modbus-адреси у формі `u<unit> fc<n> pdu<addr>[+<count>]` (PDU за документом вендора, X-42) | iot_sim SPEC → Додаток A, §8.4–8.9 | затверджено менеджером (знахідка telemetry) |
 
 ## Що виправити — за файлами
 
@@ -141,11 +144,11 @@ X-01…X-62 затверджено: 37 рядків — рішення з жур
 | `factory3d_telemetry` SPEC/ARCH | X-02 (API-02 = `_f3d_ingest`), X-03 (payload команд, 19.0.1.1.0), X-04 (R-18 `env.su`), X-05 (`bacnet_event`, `read_only`), X-06 (stale для COV), X-07 (`delta` агрегатів), X-16 (`origin='module'`), X-27 (CT-07 порядок), X-37 (PIV у A.1/R-23), X-42 (R-24, Q-04), X-45 (схеми `sics`), X-46 (`write.pulse_ms`), X-52 (ключі opcua/rest_vendor), X-53 (ARCH FR-22, приклад R-22), X-63 (R-02: масштаб застосовує плагін за адресою, ядро — `signal.scale`), X-66 (запис MSV за зворотним `map`) |
 | `td_genset` (міст `factory3d_genset`) SPEC/ARCH | X-01 (M-04, T-1, A-15), X-10 (R-06 КГУ виміряна), X-11 (`is_critical`, M-08 п. 4), X-13 (T-6, §2.0.2), X-20 (`depends` без viewer), X-23 (власна дельта з `deep_merge`), X-41 (§5.1 значення положень після iot_sim), X-62 (§8.6 «26 рядків»), X-69 (меню налаштувань, M-07) |
 | `factory3d_access` SPEC/ARCH | X-23 (картки `infra` у дельті), X-33 (міст `factory3d_access_telemetry` і 7 сигналів) |
-| `factory3d_yard` SPEC/ARCH | X-15 (опис `f3d_plate`), X-17 (коди джерел), X-23 (R-20 п. 7 `deep_merge`), X-45 (посилання на спільну схему), X-46 (`pulse_ms` у Додатку A), X-47 (`cmd_hold` GATE-E), X-48 (R-07 п. 4), X-57 (ТК-01, ТК-03) |
+| `factory3d_yard` SPEC/ARCH | X-15 (опис `f3d_plate`), X-17 (коди джерел), X-23 (R-20 п. 7 `deep_merge`), X-45 (посилання на спільну схему), X-46 (`pulse_ms` у Додатку A), X-47 (`cmd_hold` GATE-E), X-48 (R-07 п. 4), X-57 (ТК-01, ТК-03), X-70 (`scale`/`offset` у схемі `sics`) |
 | `factory3d_fire_safety` SPEC/ARCH | X-12 (R-17 `machines` за CM-02), X-16 (`origin`), X-17 (`BAC-200-FACP-1`), X-37 (Додаток B → BV/PIV), X-44 (`params.device/network`, M-19), X-60 (ТК-03) |
 | `factory3d_machine_connect` SPEC/ARCH | X-03 (CM-08/R-21 після payload), X-16 (`origin`), X-18 (`mc/cutopt/cmd`), X-27 (`mc_state` `viewer_visible=False`), X-57 (ТК-02, ТК-08, ТК-12, ТК-14) |
 | `factory3d_energy` SPEC/ARCH | X-16 (прибрати `selection_add` `origin`), X-19 (групи `group_f3d_energy_*`), X-68 (CE-04 посилання) |
-| `factory3d_bms` SPEC/ARCH | X-16 (прибрати `selection_add` `origin`), X-19 (власний привілей групи оператора), X-58 (ТК-02 — лише `value`); після X-06 — можна повернути COV. Нові X-63…X-66 правок у bms не вимагають (bms — еталон; правлять telemetry й iot_sim) |
+| `factory3d_bms` SPEC/ARCH | X-16 (прибрати `selection_add` `origin`), X-19 (власний привілей групи оператора), X-58 (ТК-02 — лише `value`), X-71 (`fade_s`, §8.9 MSV); після X-06 — можна повернути COV. Нові X-63…X-66 правок у bms не вимагають (bms — еталон; правлять telemetry й iot_sim) |
 
 ## Питання до замовника
 
