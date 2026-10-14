@@ -2,7 +2,7 @@
 
 Версія 0.2 · 14.10.2026 (0.1 — 13.10.2026) · технічне рішення — `ARCHITECTURE.md` (поруч). Мова: українська; технічні імена — англійською.
 
-Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: CHANGES_PLACEHOLDER
+Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: X-15 (`bookings.truck` = `f3d_code`; follow_odoo читає `f3d_code`/`f3d_truck`/`f3d_plate`, ворота — `dock_id.f3d_code`), X-31 (меню під `factory3d_base.menu_f3d_root`, sequence 90; налаштування — під `menu_f3d_config`), X-34 (каталог +503 рядки № 663–1 165 з додатків energy/fire_safety/yard/machine_connect/bms; рядки 644/646/654/656 — по одному входу), X-35 (149 рядків `protocol=none` «обчислює <модуль>», не в `/signals`), X-36 (`fire/totals/state` = LSZ:0, MSV:1 → `fire/totals/system_state`; шлейф — лише `fault(reason=loop)`), X-37 (Cerberus — BV/PIV), X-38 (`…/state` без заявок, `JobOrderID = WO%05d`, завершені JobOrder у списку), X-39 (%-сигнали `scale` ×1), X-40 (стан щита — агрегат роутера, R-23 `heat_nom = 116,8`, біти C:110 за Helvar, EF-CHG — тривога), X-41 (ATyS p — Annexe III, §8.9.4), X-42 (Modbus — PDU за документом вендора, §8.4.1), X-43 (ADAM — молодше слово першим), X-47 (DO5 — «тримати» GATE-E), X-48 (LPR: `capture_timestamp = sim_now`, `plateList` — назва списку, `plateListMode`), X-49 (номер з `f3d_plate`; `АА4512КТ` — TRUCK-OUT-1), X-50 (BioStar 4102/4867 за `det % 2`, сортування за зростанням, `offset`/`hint`), X-51 (LUNA2000 без перекриттів), X-54 (приклад API-01 з base C/D), X-56 (`read_enabled` за `factory3d.base.environment`), X-58 (`value` у прикладі `filter_clogged`), X-59 (CI-01: `amf_master`, `genset_load_kw`, `test_on_load`, API-F-01…F-09), X-60 (`fault`/`clear` на пасивних `FA-*`), X-61 (+9 споживачів u51–59), X-64 (HelvarNet: `A:1`, відповідь у версії запиту, C:164 з кадрами `$`, `SIM_HELVAR_VERSION`), X-65 (розкладка DALI за bms R-06 / Додаток A.1), X-67 (острів: `P_genset = Σ критичних − chp_kw − pv_now + bess_kw`, 0…558 кВт; параметр `chp_island`), X-72 (Modbus-адреси в каталозі й таблицях — форма `u<unit> fc<n> pdu<addr>[+<count>]`); нові AC-51…AC-65, ТК-17; закрито Q-07 (X-41), Q-09 (X-53), Q-15 (X-59).
 
 Контракти, на які спирається документ: `docs/ARCHITECTURE.md` §5 (конвенції імен сигналів, стоп-крани, права), §6.1–6.3 (`f3d.scene.mixin.f3d_code`, `f3d.zone`, ворота-`stock.location`, паспорт `maintenance.equipment.f3d_*`), §6.6 (протокольна матриця P-01…P-13, REST `/sim/v1/*`, режими `scenario`/`follow_odoo`), §6.7 (шляхи даних переглядача), §6.8 (заявки ТО), рішення D-01, D-05…D-09, D-13, D-20 (адреси Modbus — PDU за вендором, ADAM — молодше слово першим), D-21 (ATyS p — Annexe III), D-23 (AMF — варіант A); реєстр `docs/CONSISTENCY.md` (X-xx); рішення автора A-01…A-12 (`ARCHITECTURE.md` §7).
 
@@ -87,10 +87,12 @@ services/iot_sim/
 │   └── logging_conf.py             JSON-логи, SecretFilter
 ├── state/                          snapshot.json (volume)
 └── tests/
-    ├── unit/                       test_rng.py, test_clock.py, test_models_*.py, test_world.py, test_scenarios.py
+    ├── unit/                       test_rng.py, test_clock.py, test_models_*.py, test_world.py, test_scenarios.py, test_registry.py,
+    │                               test_lighting_layout.py, test_outbound_guard.py
     ├── protocols/                  test_opcua.py, test_modbus_*.py, test_bacnet.py, test_helvarnet.py, test_mqtt.py,
     │                               test_biostar.py, test_woodstore.py, test_jobs.py, test_sics.py, test_lpr.py, test_control_api.py
-    ├── stand/                      ТК-01…ТК-16 проти compose (pytest -m stand)
+    ├── stand/                      ТК-01…ТК-17 проти compose (pytest -m stand)
+    ├── data/                       parts_48.csv (AC-43), bms_dali_devices.csv (копія bms Додаток A.1, AC-65)
     └── conftest.py                 фікстури: world(seed), running servers (порти з SIM_TEST_PORT_BASE)
 ```
 
@@ -654,7 +656,7 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 | — | `POST /lpr-sink` | JSON Axis (§8.13.2) | `{"received": true}` | заглушка приймача LPR для фази 1; складає у `events` як `kind=info, device=CAM-xx` |
 | — | `GET /catalog/signals.csv`, `GET /catalog/devices.json` | — | файли каталогу (для `factory3d_telemetry` і тестів) | токен |
 
-Приклад запуску сценарію:
+Приклад запуску сценарію (параметр рівня фільтра — `value` за схемою S-04, не `dp_pa`; X-58):
 
 ```http
 POST /sim/v1/scenario/filter_clogged/start HTTP/1.1
@@ -885,7 +887,7 @@ async with Client("opc.tcp://iot-sim:4840/f3d/") as c:
 | TEDOM (72) | ПРИПУЩЕННЯ — адреси задано одразу в PDU (`40000…`) | `N` | `big` | energy Додаток A.1 |
 | ADAM-6050/6060/6017/6015 (80–96) | Modicon `0xxxx` / `4xxxx` (`00001`, `40001`) | coil/DI `0000N` → `N − 1`; HR `4NNNN` → `N − 40001` | **молодше слово першим (`little`)** — лічильники й float (D-20, X-43) | ADAM-6000 User Manual Ed.12, Appendix B.2 |
 
-  Байти в слові — big-endian для всіх. У цьому документі (таблиці §8.4–§8.13, AC, ТК, каталог Додатка A) адреса Modbus подається **PDU-формою** `u<unit> fc<n> pdu<addr>[+<count>] <type>[ little]` (telemetry Q-04) або колонкою «PDU»; номер за документом вендора — довідково. Емулятор відповідає саме за PDU-адресами: запит на PDU = «номер документа» для PM5560/Elektronikon/ADAM отримає сусідній регістр або виняток 0x02.
+  Байти в слові — big-endian для всіх. У цьому документі (таблиці §8.4–§8.13, AC, ТК, каталог Додатка A) адреса Modbus подається **PDU-формою** `u<unit> fc<n> pdu<addr>[+<count>]` (+ `<type>[ little]` у каталозі; telemetry Q-04, telemetry R-24 шаблон (0) — X-72; у картах пристроїв з кількома unit — без `u<unit>`, unit — за таблицею нижче); номер за документом вендора — довідково. Емулятор відповідає саме за PDU-адресами: запит на PDU = «номер документа» для PM5560/Elektronikon/ADAM отримає сусідній регістр або виняток 0x02.
 - Таблиця unit id (A-03):
 
 | unit id | Пристрій | Карта |
@@ -911,29 +913,29 @@ async with Client("opc.tcp://iot-sim:4840/f3d/") as c:
 
 **Еталон:** Advantech «ADAM-6000 Series User Manual», Ed. 12 (листопад 2022), Appendix B.2 «ADAM-6000 I/O Modbus Mapping Tables» — https://advdownload.advantech.com/productfile/Downloadfile4/1-2B6FKTG/ADAM-6000_User_Manaul_Ed.12-FINAL.pdf (переглянуто 13.10.2026). Карта модуля ADAM-6050 (12 DI, 6 DO, лічильники 32 біт на кожному DI):
 
-| Адреса (документ) | PDU | Функція | Опис | R/W |
+| Адреса (документ) | Адреса (PDU, X-72; `u80…u83`) | Функція | Опис | R/W |
 |---|---|---|---|---|
-| 00001–00012 | 0–11 | 01/02 | DI value, канали 0–11 (1 = замкнено/активно) | R |
-| 00017–00022 | 16–21 | 01/05 | DO value, канали 0–5 | R/W |
-| 00033 + 4·k | 32 + 4·k | 01/05 | Counter start (1)/stop (0) каналу k (k = 0…11) | R/W |
-| 00034 + 4·k | 33 + 4·k | 05 | Clear counter (1) | W |
-| 00035 + 4·k | 34 + 4·k | 01/05 | Clear overflow | R/W |
-| 00036 + 4·k | 35 + 4·k | 01/05 | DI latch status | R/W |
-| 40001 + 2·k … 40002 + 2·k | 2·k … 2·k + 1 | 03 | Counter/Frequency value каналу k, 32 біт, **молодше слово першим** (`little`, D-20/X-43): перший регістр = біти 0–15 | R |
-| 40301 | 300 | 03 | DI value всі канали (біти 0–11) | R |
-| 40303 | 302 | 03/06 | DO value всі канали (біти 0–5) | R/W |
-| 40211–40212 | 210–211 | 03 | Module name (`0x6050`) | R |
+| 00001–00012 | `fc2 pdu0+12` (або `fc1`) | 01/02 | DI value, канали 0–11 (1 = замкнено/активно) | R |
+| 00017–00022 | `fc1 pdu16+6` (запис FC 05) | 01/05 | DO value, канали 0–5 | R/W |
+| 00033 + 4·k | `fc1 pdu<32+4k>` | 01/05 | Counter start (1)/stop (0) каналу k (k = 0…11) | R/W |
+| 00034 + 4·k | запис FC 05 `pdu<33+4k>` | 05 | Clear counter (1) | W |
+| 00035 + 4·k | `fc1 pdu<34+4k>` | 01/05 | Clear overflow | R/W |
+| 00036 + 4·k | `fc1 pdu<35+4k>` | 01/05 | DI latch status | R/W |
+| 40001 + 2·k … 40002 + 2·k | `fc3 pdu<2k>+2` `u32 little` | 03 | Counter/Frequency value каналу k, 32 біт, **молодше слово першим** (`little`, D-20/X-43): перший регістр = біти 0–15 | R |
+| 40301 | `fc3 pdu300` | 03 | DI value всі канали (біти 0–11) | R |
+| 40303 | `fc3 pdu302` (запис FC 06) | 03/06 | DO value всі канали (біти 0–5) | R/W |
+| 40211–40212 | `fc3 pdu210+2` | 03 | Module name (`0x6050`) | R |
 
 Розкладка верстатів (кожен верстат: `DI(2m)` = «в роботі» (сухий контакт реле «цикл/подача»), `DI(2m+1)` = «аварія» (контакт реле несправності), лічильник на `DI(2m)` = цикли/деталі; `m` = порядок у модулі 0…4):
 
 | unit | модуль | m=0 | m=1 | m=2 | m=3 | m=4 |
 |---|---|---|---|---|---|---|
-| 80 | IO-1 | SLIDE-1 (DI0/1, cnt 40001 = PDU 0) | VSAW-1 (DI2/3, 40005 = PDU 4) | SAND-1 (DI4/5, 40009 = PDU 8) | PRESS-1 (DI6/7, 40013 = PDU 12) | GLUE-1 (DI8/9, 40017 = PDU 16) |
+| 80 | IO-1 | SLIDE-1 (DI0/1, cnt 40001 = `u80 fc3 pdu0+2`) | VSAW-1 (DI2/3, 40005 = `pdu4+2`) | SAND-1 (DI4/5, 40009 = `pdu8+2`) | PRESS-1 (DI6/7, 40013 = `pdu12+2`) | GLUE-1 (DI8/9, 40017 = `pdu16+2`) |
 | 81 | IO-2 | SPRAY-1 | AUTOSPRAY-1 | DRY-1 | UV-1 | HINGE-1 |
 | 82 | IO-3 | BOX-1 | PACK-1 | PACK-2 | PACKLINE-1 | ASM-1 |
 | 83 | IO-4 | ASM-2 | ASM-3 | ASM-4 | ASM-5 | ASM-6 |
 
-DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — резерв (запис приймається, без ефекту, логується). Поведінка: `DI(run)=1` ⇔ `CurrentState=WORKING` за R-14; `DI(fault)=1` ⇔ збій (R-15); лічильник += 1 на кожну деталь/цикл (R-16), після 65 535 перенос у старше слово (другий регістр; machine_connect ТК-05); `Clear counter` обнуляє. Модуль відповідає на `40211 = 0x6050` (PDU 210).
+DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — резерв (запис приймається, без ефекту, логується). Поведінка: `DI(run)=1` ⇔ `CurrentState=WORKING` за R-14; `DI(fault)=1` ⇔ збій (R-15); лічильник += 1 на кожну деталь/цикл (R-16), після 65 535 перенос у старше слово (другий регістр; machine_connect ТК-05); `Clear counter` обнуляє. Модуль відповідає на `40211 = 0x6050` (`fc3 pdu210`).
 
 ### 8.5 Додаток P-03 — «woodStore API v1» (портал STORETEQ P-500)
 
@@ -974,45 +976,45 @@ DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — рез
 
 #### 8.7.1 Карта регістрів (однакова для всіх unit 1–8, 11–59)
 
-| Регістр (документ) | PDU | Назва | Тип | Одиниця | Масштаб | R/W | Емулятор |
+| Регістр (документ) | Адреса (PDU, X-72) | Назва | Тип | Одиниця | Масштаб | R/W | Емулятор |
 |---|---|---|---|---|---|---|---|
-| 30–49 | 29–48 | Meter Name | UTF-8 (20 рег.) | — | — | R | `"PM-<код>"` (`PM-SAW-1`, `PM-Q1`) |
-| 50–69 | 49–68 | Meter Model | UTF-8 | — | — | R | `"PM5560"` |
-| 70–89 | 69–88 | Manufacturer | UTF-8 | — | — | R | `"Schneider Electric"` |
-| 130–131 | 129–130 | Serial Number | UINT32 | — | — | R | `2026000000 + unit` |
-| 1637–1639 | 1636–1638 | Firmware X.Y.Z | UINT16 ×3 | — | — | R | 2, 7, 4 |
-| 2014 | 2013 | Number of Phases | UINT16 | — | — | R | 3 |
-| 2015 | 2014 | Number of Wires | UINT16 | — | — | R | 4 |
-| 2016 | 2015 | Power System Configuration | UINT16 | — | — | R | 11 (3PH4W Wye Gnd) |
-| 2017 | 2016 | Nominal Frequency | UINT16 | Гц | 1 | R | 50 |
-| 2029–2030 | 2028–2029 | CT Primary / CT Secondary | UINT16 | А | 1 | R | вводи 1600/5, фідери 630/5, споживачі 100/5 |
-| 2025–2026, 2027 | 2024–2025, 2026 | VT Primary / Secondary | F32 / UINT16 | В | 1 | R | 400 / 400 (без ТН) |
-| 3000–3001 | 2999–3000 | Current A | F32 | А | 1 | R | R-01 |
-| 3002–3003 | 3001–3002 | Current B | F32 | А | 1 | R | |
-| 3004–3005 | 3003–3004 | Current C | F32 | А | 1 | R | |
-| 3006–3007 | 3005–3006 | Current N | F32 | А | 1 | R | ≈ 2 % від фазного |
-| 3010–3011 | 3009–3010 | Current Avg | F32 | А | 1 | R | `S·1000/(√3·400)` |
-| 3020–3021 / 3022–3023 / 3024–3025 | 3019–3020 / 3021–3022 / 3023–3024 | Voltage A-B / B-C / C-A | F32 | В | 1 | R | 400 ± 1 % |
-| 3026–3027 | 3025–3026 | Voltage L-L Avg | F32 | В | 1 | R | |
-| 3028–3029 / 3030–3031 / 3032–3033 | 3027–3028 / 3029–3030 / 3031–3032 | Voltage A-N / B-N / C-N | F32 | В | 1 | R | 230 ± 1 % |
-| 3036–3037 | 3035–3036 | Voltage L-N Avg | F32 | В | 1 | R | |
-| 3054–3055 / 3056–3057 / 3058–3059 | 3053–3054 / 3055–3056 / 3057–3058 | Active Power A / B / C | F32 | кВт | 1 | R | P/3 ± 3 % |
-| 3060–3061 | 3059–3060 | **Active Power Total** | F32 | кВт | 1 | R | `energy/…/p_now`; від'ємне = віддача в мережу (вводи, R-13) |
-| 3062–3067 | 3061–3066 | Reactive Power A/B/C | F32 | кВАр | 1 | R | |
-| 3068–3069 | 3067–3068 | Reactive Power Total | F32 | кВАр | 1 | R | `P·tan(acos cosφ)` |
-| 3070–3075 | 3069–3074 | Apparent Power A/B/C | F32 | кВА | 1 | R | |
-| 3076–3077 | 3075–3076 | Apparent Power Total | F32 | кВА | 1 | R | `√(P²+Q²)` |
-| 3078–3083 | 3077–3082 | Power Factor A/B/C | F32 | — | 1 | R | |
-| 3084–3085 | 3083–3084 | **Power Factor Total** | F32 (знак — чотириквадрантний) | — | 1 | R | cos φ за `PROFILE` (0,82–0,97) |
-| 3110–3111 | 3109–3110 | Frequency | F32 | Гц | 1 | R | 50,00 ± 0,02 |
-| 3204–3207 | 3203–3206 | **Active Energy Delivered (Into Load)** | INT64 | Вт·год | 1 | R | накопичувальний лічильник R-03 → `…/kwh_total` (energy Додаток A.1, X-34); `kwh_shift` з нього обчислює energy (R-11 energy, X-35) |
-| 3208–3211 | 3207–3210 | Active Energy Received (Out of Load) | INT64 | Вт·год | 1 | R | > 0 лише на вводах при експорті → `energy/cells/Q*/kwh_export` |
-| 3212–3215 | 3211–3214 | Active Energy Delivered + Received | INT64 | Вт·год | 1 | R | |
-| 3220–3223 | 3219–3222 | Reactive Energy Delivered | INT64 | ВАр·год | 1 | R | |
-| 2700–2701 | 2699–2700 | Active Energy Delivered (Float32-копія) | F32 | кВт·год | 1 | R | те саме, що 3204 / 1000 |
-| 2704–2705 | 2703–2704 | Active Energy Received (Float32) | F32 | кВт·год | 1 | R | |
-| 2018 (ПРИПУЩЕННЯ) | 2017 | Breaker state (лише unit 1–8) | UINT16 | — | — | R | 0 open / 1 closed / 2 tripped — замість карти Micrologic X/IFE; на проді — інший `f3d.source` |
-| 5680 | 5679 | Command Semaphore (FAQ FA234017) | UINT16 | — | — | R/W | повертається, запис логується; команда 2020 «Reset All Energies» → обнулення 3204+ (лише `write_enabled` споживача) |
+| 30–49 | `fc3 pdu29+20` | Meter Name | UTF-8 (20 рег.) | — | — | R | `"PM-<код>"` (`PM-SAW-1`, `PM-Q1`) |
+| 50–69 | `fc3 pdu49+20` | Meter Model | UTF-8 | — | — | R | `"PM5560"` |
+| 70–89 | `fc3 pdu69+20` | Manufacturer | UTF-8 | — | — | R | `"Schneider Electric"` |
+| 130–131 | `fc3 pdu129+2` | Serial Number | UINT32 | — | — | R | `2026000000 + unit` |
+| 1637–1639 | `fc3 pdu1636+3` | Firmware X.Y.Z | UINT16 ×3 | — | — | R | 2, 7, 4 |
+| 2014 | `fc3 pdu2013` | Number of Phases | UINT16 | — | — | R | 3 |
+| 2015 | `fc3 pdu2014` | Number of Wires | UINT16 | — | — | R | 4 |
+| 2016 | `fc3 pdu2015` | Power System Configuration | UINT16 | — | — | R | 11 (3PH4W Wye Gnd) |
+| 2017 | `fc3 pdu2016` | Nominal Frequency | UINT16 | Гц | 1 | R | 50 |
+| 2029–2030 | `fc3 pdu2028+2` | CT Primary / CT Secondary | UINT16 | А | 1 | R | вводи 1600/5, фідери 630/5, споживачі 100/5 |
+| 2025–2026, 2027 | `fc3 pdu2024+2`, `pdu2026` | VT Primary / Secondary | F32 / UINT16 | В | 1 | R | 400 / 400 (без ТН) |
+| 3000–3001 | `fc3 pdu2999+2` | Current A | F32 | А | 1 | R | R-01 |
+| 3002–3003 | `fc3 pdu3001+2` | Current B | F32 | А | 1 | R | |
+| 3004–3005 | `fc3 pdu3003+2` | Current C | F32 | А | 1 | R | |
+| 3006–3007 | `fc3 pdu3005+2` | Current N | F32 | А | 1 | R | ≈ 2 % від фазного |
+| 3010–3011 | `fc3 pdu3009+2` | Current Avg | F32 | А | 1 | R | `S·1000/(√3·400)` |
+| 3020–3021 / 3022–3023 / 3024–3025 | `fc3 pdu3019+2` / `pdu3021+2` / `pdu3023+2` | Voltage A-B / B-C / C-A | F32 | В | 1 | R | 400 ± 1 % |
+| 3026–3027 | `fc3 pdu3025+2` | Voltage L-L Avg | F32 | В | 1 | R | |
+| 3028–3029 / 3030–3031 / 3032–3033 | `fc3 pdu3027+2` / `pdu3029+2` / `pdu3031+2` | Voltage A-N / B-N / C-N | F32 | В | 1 | R | 230 ± 1 % |
+| 3036–3037 | `fc3 pdu3035+2` | Voltage L-N Avg | F32 | В | 1 | R | |
+| 3054–3055 / 3056–3057 / 3058–3059 | `fc3 pdu3053+2` / `pdu3055+2` / `pdu3057+2` | Active Power A / B / C | F32 | кВт | 1 | R | P/3 ± 3 % |
+| 3060–3061 | `fc3 pdu3059+2` | **Active Power Total** | F32 | кВт | 1 | R | `energy/…/p_now`; від'ємне = віддача в мережу (вводи, R-13) |
+| 3062–3067 | `fc3 pdu3061+6` | Reactive Power A/B/C | F32 | кВАр | 1 | R | |
+| 3068–3069 | `fc3 pdu3067+2` | Reactive Power Total | F32 | кВАр | 1 | R | `P·tan(acos cosφ)` |
+| 3070–3075 | `fc3 pdu3069+6` | Apparent Power A/B/C | F32 | кВА | 1 | R | |
+| 3076–3077 | `fc3 pdu3075+2` | Apparent Power Total | F32 | кВА | 1 | R | `√(P²+Q²)` |
+| 3078–3083 | `fc3 pdu3077+6` | Power Factor A/B/C | F32 | — | 1 | R | |
+| 3084–3085 | `fc3 pdu3083+2` | **Power Factor Total** | F32 (знак — чотириквадрантний) | — | 1 | R | cos φ за `PROFILE` (0,82–0,97) |
+| 3110–3111 | `fc3 pdu3109+2` | Frequency | F32 | Гц | 1 | R | 50,00 ± 0,02 |
+| 3204–3207 | `fc3 pdu3203+4` | **Active Energy Delivered (Into Load)** | INT64 | Вт·год | 1 | R | накопичувальний лічильник R-03 → `…/kwh_total` (energy Додаток A.1, X-34); `kwh_shift` з нього обчислює energy (R-11 energy, X-35) |
+| 3208–3211 | `fc3 pdu3207+4` | Active Energy Received (Out of Load) | INT64 | Вт·год | 1 | R | > 0 лише на вводах при експорті → `energy/cells/Q*/kwh_export` |
+| 3212–3215 | `fc3 pdu3211+4` | Active Energy Delivered + Received | INT64 | Вт·год | 1 | R | |
+| 3220–3223 | `fc3 pdu3219+4` | Reactive Energy Delivered | INT64 | ВАр·год | 1 | R | |
+| 2700–2701 | `fc3 pdu2699+2` | Active Energy Delivered (Float32-копія) | F32 | кВт·год | 1 | R | те саме, що 3204 / 1000 |
+| 2704–2705 | `fc3 pdu2703+2` | Active Energy Received (Float32) | F32 | кВт·год | 1 | R | |
+| 2018 (ПРИПУЩЕННЯ) | `fc3 pdu2017` | Breaker state (лише unit 1–8) | UINT16 | — | — | R | 0 open / 1 closed / 2 tripped — замість карти Micrologic X/IFE; на проді — інший `f3d.source` |
+| 5680 | `fc3 pdu5679` (запис FC 06/16) | Command Semaphore (FAQ FA234017) | UINT16 | — | — | R/W | повертається, запис логується; команда 2020 «Reset All Energies» → обнулення 3204+ (лише `write_enabled` споживача) |
 
 Невизначені регістри в діапазоні 0–6000 повертають 0 (не виняток) — так поводиться реальний PM5xxx для зарезервованих адрес? **Ні** — емулятор повертає виняток 0x02 поза описаними діапазонами, щоб тести ловили хибні адреси.
 
@@ -1066,33 +1068,33 @@ DI10/DI11 кожного модуля — резерв (0). DO0–DO5 — рез
 
 **Еталон:** Huawei «SUN2000MB Modbus Interface Definitions», V200R023C10, Issue 02, 2024-02-01 (копія — https://community.jeedom.com/uploads/short-url/cEJpNRU5j3k0LvPW43eRU7nKzfr.pdf, переглянуто 13.10.2026); документ охоплює моделі SUN2000-12…25KTL-M5/MB0 — для SUN2000-115KTL-M2 карта **ідентична за цими регістрами** (спільний простір 30000/32000/40000 серії SUN2000; ПРИПУЩЕННЯ щодо повної тотожності, звірити з «SUN2000-(100KTL-115KTL) Modbus Interface Definitions»). Modbus TCP порт 502; у проді unit = «communication address» інвертора (за замовчуванням 1, документ §7.2.2.3), у емуляторі 61–68. Типи: U16/I16/U32/I32/STR, gain — дільник. **Адреси в документі Huawei — уже PDU**: колонка «Регістр» = PDU на дроті (`N`, без «− 1»; §8.4.1, X-42).
 
-| Регістр (PDU) | К-сть | Назва | Тип | Gain | Одиниця | R/W | Емулятор |
+| Адреса (PDU, X-72) | К-сть | Назва | Тип | Gain | Одиниця | R/W | Емулятор |
 |---|---|---|---|---|---|---|---|
-| 30000 | 15 | Model | STR | — | — | RO | `"SUN2000-115KTL-M2"` |
-| 30015 | 10 | SN | STR | — | — | RO | `"HV2240…0<n>"` |
-| 30073 | 2 | Rated power Pn | U32 | 1000 | кВт | RO | 115,000 |
-| 30075 | 2 | Maximum active power Pmax | U32 | 1000 | кВт | RO | 125,000 |
-| 32016 + 2·(k) | 1 | PV<k+1> voltage (k = 0…9) | I16 | 10 | В | RO | 650–780 вдень, 0 вночі |
-| 32017 + 2·(k) | 1 | PV<k+1> current | I16 | 100 | А | RO | за потужністю |
-| 32064 | 2 | DC power | I32 | 1000 | кВт | RO | `P_ac / 0,986` |
-| 32066 / 32067 / 32068 | 1 | Grid line voltage AB / BC / CA | U16 | 10 | В | RO | 400 ± 1 % |
-| 32069 / 32070 / 32071 | 1 | Phase A / B / C voltage | U16 | 10 | В | RO | 230 |
-| 32072 / 32074 / 32076 | 2 | Phase A / B / C current | I32 | 1000 | А | RO | `P/(√3·400)` |
-| 32078 | 2 | Peak active power of current day | I32 | 1000 | кВт | RO | макс за добу |
-| 32080 | 2 | **Active power** | I32 | 1000 | кВт | RO | R-11 (`infra/pv/PV-INV-k/p_kw`); сума ×8 = `infra/totals/pv_now` |
-| 32082 | 2 | Reactive power | I32 | 1000 | кВАр | RO | 0 |
-| 32084 | 1 | Power factor | I16 | 1000 | — | RO | 1,000 |
-| 32085 | 1 | Grid frequency | U16 | 100 | Гц | RO | 50,00 |
-| 32086 | 1 | Efficiency | U16 | 100 | % | RO | 98,4 |
-| 32087 | 1 | Internal temperature | I16 | 10 | °C | RO | 25 + 0,25·P% |
-| 32088 | 1 | Insulation resistance | U16 | 1000 | МОм | RO | 3,000 |
-| 32089 | 1 | **Device status** | E16 | — | — | RO | enum нижче |
-| 32090 | 1 | Fault code | U16 | — | — | RO | 0; при збої — 2032 (Grid loss) / 2064 (Internal fault) |
-| 32091 / 32093 | 2 / 2 | Startup time / Shutdown time | Epoch s | 1 | с | RO | схід/захід сонця |
-| 32106 | 2 | Accumulated energy yield | U32 | 100 | кВт·год | RO | накопич. → `infra/pv/PV-INV-k/kwh_total` (energy Додаток A.1) |
-| 32114 | 2 | **Daily energy yield** | U32 | 100 | кВт·год | RO | `infra/pv/PV-INV-k/kwh_today`; обнулення о 00:00 |
-| 40000 | 2 | System time (local) | Epoch s | 1 | с | RW | `sim_now`; запис приймається (лише `write_enabled` споживача) |
-| 42000 | 1 | Power grid standard code | U16 | — | — | RW | 0 |
+| `fc3 pdu30000+15` | 15 | Model | STR | — | — | RO | `"SUN2000-115KTL-M2"` |
+| `fc3 pdu30015+10` | 10 | SN | STR | — | — | RO | `"HV2240…0<n>"` |
+| `fc3 pdu30073+2` | 2 | Rated power Pn | U32 | 1000 | кВт | RO | 115,000 |
+| `fc3 pdu30075+2` | 2 | Maximum active power Pmax | U32 | 1000 | кВт | RO | 125,000 |
+| `fc3 pdu<32016+2k>` | 1 | PV<k+1> voltage (k = 0…9) | I16 | 10 | В | RO | 650–780 вдень, 0 вночі |
+| `fc3 pdu<32017+2k>` | 1 | PV<k+1> current | I16 | 100 | А | RO | за потужністю |
+| `fc3 pdu32064+2` | 2 | DC power | I32 | 1000 | кВт | RO | `P_ac / 0,986` |
+| `fc3 pdu32066` / `pdu32067` / `pdu32068` | 1 | Grid line voltage AB / BC / CA | U16 | 10 | В | RO | 400 ± 1 % |
+| `fc3 pdu32069` / `pdu32070` / `pdu32071` | 1 | Phase A / B / C voltage | U16 | 10 | В | RO | 230 |
+| `fc3 pdu32072+2` / `pdu32074+2` / `pdu32076+2` | 2 | Phase A / B / C current | I32 | 1000 | А | RO | `P/(√3·400)` |
+| `fc3 pdu32078+2` | 2 | Peak active power of current day | I32 | 1000 | кВт | RO | макс за добу |
+| `fc3 pdu32080+2` | 2 | **Active power** | I32 | 1000 | кВт | RO | R-11 (`infra/pv/PV-INV-k/p_kw`); сума ×8 = `infra/totals/pv_now` |
+| `fc3 pdu32082+2` | 2 | Reactive power | I32 | 1000 | кВАр | RO | 0 |
+| `fc3 pdu32084` | 1 | Power factor | I16 | 1000 | — | RO | 1,000 |
+| `fc3 pdu32085` | 1 | Grid frequency | U16 | 100 | Гц | RO | 50,00 |
+| `fc3 pdu32086` | 1 | Efficiency | U16 | 100 | % | RO | 98,4 |
+| `fc3 pdu32087` | 1 | Internal temperature | I16 | 10 | °C | RO | 25 + 0,25·P% |
+| `fc3 pdu32088` | 1 | Insulation resistance | U16 | 1000 | МОм | RO | 3,000 |
+| `fc3 pdu32089` | 1 | **Device status** | E16 | — | — | RO | enum нижче |
+| `fc3 pdu32090` | 1 | Fault code | U16 | — | — | RO | 0; при збої — 2032 (Grid loss) / 2064 (Internal fault) |
+| `fc3 pdu32091+2` / `pdu32093+2` | 2 / 2 | Startup time / Shutdown time | Epoch s | 1 | с | RO | схід/захід сонця |
+| `fc3 pdu32106+2` | 2 | Accumulated energy yield | U32 | 100 | кВт·год | RO | накопич. → `infra/pv/PV-INV-k/kwh_total` (energy Додаток A.1) |
+| `fc3 pdu32114+2` | 2 | **Daily energy yield** | U32 | 100 | кВт·год | RO | `infra/pv/PV-INV-k/kwh_today`; обнулення о 00:00 |
+| `fc3 pdu40000+2` (запис FC 16/06) | 2 | System time (local) | Epoch s | 1 | с | RW | `sim_now`; запис приймається (лише `write_enabled` споживача) |
+| `fc3 pdu42000` (запис FC 16/06) | 1 | Power grid standard code | U16 | — | — | RW | 0 |
 
 Enum `Device status` (32089), підмножина, яку використовує емулятор (значення за документом Huawei): `0x0000` Standby: initializing; `0x0001` Standby: detecting insulation resistance; `0x0002` Standby: detecting irradiation; `0x0003` Standby: grid detecting; `0x0100` Starting; `0x0200` **On-grid**; `0x0201` Grid connection: power limited; `0x0300` Shutdown: fault; `0x0301` Shutdown: command; `0x0303` Shutdown: communication disconnected (blackout); `0xA000` Standby: no irradiation (ніч). Повний перелік — документ, §4 «Device status».
 
@@ -1102,40 +1104,40 @@ Enum `Device status` (32089), підмножина, яку використов�
 
 Регістр = PDU (як SUN2000, §8.4.1). Діапазони регістрів **не перекриваються** (X-51): кожне 32-бітне значення займає два регістри `N…N+1`, і жодна інша величина не має адреси всередині цього діапазону.
 
-| Регістр (PDU) | К-сть | Займає | Назва | Тип | Gain | Одиниця | Емулятор |
+| Адреса (PDU, X-72) | К-сть | Займає | Назва | Тип | Gain | Одиниця | Емулятор |
 |---|---|---|---|---|---|---|---|
-| 37000 | 1 | 37000 | Running status | U16 | — | 0 offline, 1 standby, 2 running, 3 fault, 4 sleep | `infra/bess/state` (R-13) |
-| 37001 | 2 | 37001–37002 | Charge/Discharge power | I32 | 1 | Вт (+ заряд, − розряд) | `infra/totals/bess_kw·1000` |
-| 37003 | 1 | 37003 | Bus voltage | U16 | 10 | В | 760 (адреса — за документом Huawei SUN2000 ESS; X-51) |
-| 37004 | 1 | 37004 | **SOC** | U16 | 10 | % | `infra/totals/bess_soc` |
-| 37006 | 1 | 37006 | Working mode | U16 | — | 2 = maximise self-consumption, 4 = time-of-use | 4 |
-| 37014 | 2 | 37014–37015 | Total charge | U32 | 100 | кВт·год | накопич. → `infra/bess/kwh_charge_total` (energy Додаток A.1) |
-| 37016 | 2 | 37016–37017 | Total discharge | U32 | 100 | кВт·год | накопич. → `infra/bess/kwh_discharge_total` (energy Додаток A.1) |
-| 37018 / 37020 | 2 / 2 | 37018–37019 / 37020–37021 | Current-day charge / discharge capacity | U32 | 100 | кВт·год | обнулення 00:00; ПРИПУЩЕННЯ емулятора — у документі SUN2000 ESS денні лічильники мають адреси 37015/37017, які тут зайняті лічильниками total (їх читає energy без змін, X-51) |
-| 37022 | 1 | 37022 | Battery temperature | I16 | 10 | °C | 25 + 0,05·|P| |
-| 37046 | 2 | 37046–37047 | Rated capacity | U32 | 1 | Вт·год | 387 000 (2 шафи) |
-| 37050 | 1 | 37050 | SOH | U16 | 10 | % | 99,0 |
+| `fc3 pdu37000` | 1 | 37000 | Running status | U16 | — | 0 offline, 1 standby, 2 running, 3 fault, 4 sleep | `infra/bess/state` (R-13) |
+| `fc3 pdu37001+2` | 2 | 37001–37002 | Charge/Discharge power | I32 | 1 | Вт (+ заряд, − розряд) | `infra/totals/bess_kw·1000` |
+| `fc3 pdu37003` | 1 | 37003 | Bus voltage | U16 | 10 | В | 760 (адреса — за документом Huawei SUN2000 ESS; X-51) |
+| `fc3 pdu37004` | 1 | 37004 | **SOC** | U16 | 10 | % | `infra/totals/bess_soc` |
+| `fc3 pdu37006` | 1 | 37006 | Working mode | U16 | — | 2 = maximise self-consumption, 4 = time-of-use | 4 |
+| `fc3 pdu37014+2` | 2 | 37014–37015 | Total charge | U32 | 100 | кВт·год | накопич. → `infra/bess/kwh_charge_total` (energy Додаток A.1) |
+| `fc3 pdu37016+2` | 2 | 37016–37017 | Total discharge | U32 | 100 | кВт·год | накопич. → `infra/bess/kwh_discharge_total` (energy Додаток A.1) |
+| `fc3 pdu37018+2` / `pdu37020+2` | 2 / 2 | 37018–37019 / 37020–37021 | Current-day charge / discharge capacity | U32 | 100 | кВт·год | обнулення 00:00; ПРИПУЩЕННЯ емулятора — у документі SUN2000 ESS денні лічильники мають адреси 37015/37017, які тут зайняті лічильниками total (їх читає energy без змін, X-51) |
+| `fc3 pdu37022` | 1 | 37022 | Battery temperature | I16 | 10 | °C | 25 + 0,05·\|P\| |
+| `fc3 pdu37046+2` | 2 | 37046–37047 | Rated capacity | U32 | 1 | Вт·год | 387 000 (2 шафи) |
+| `fc3 pdu37050` | 1 | 37050 | SOH | U16 | 10 | % | 99,0 |
 
 #### 8.9.3 Atlas Copco GA 37 VSD+ / Elektronikon Mk5 (COMPRESSOR, unit 70)
 
 **ПРИПУЩЕННЯ, звірити з Atlas Copco** (карту Modbus TCP Mk5 вендор видає за серійним номером — Q-05; публічно доступний лише опис Mk IV через ComBox-S). Макет регістрів емулятора (holding, номери 1-based; на дроті **PDU = номер − 1**, як telemetry Додаток C.2 — `HR 3002` → `addr 3001`; §8.4.1, X-42):
 
-| Регістр | PDU | Назва | Тип | Масштаб | Одиниця | Емулятор (R-08) |
+| Регістр | Адреса (PDU) | Назва | Тип | Масштаб | Одиниця | Емулятор (R-08) |
 |---|---|---|---|---|---|---|
-| 3001 | 3000 | Machine status | U16 | — | 0 stopped, 1 running loaded, 2 running unloaded, 3 shutdown/fault, 4 standby (VSD мін.) | `equipment/COMPRESSOR/state` |
-| 3002 | 3001 | Outlet pressure | U16 | ×0,001 | бар | `pressure_bar` (6,5–7,0) |
-| 3003 | 3002 | Element outlet temperature | U16 | ×0,1 | °C | `temp_c` 78–88; > 110 → fault |
-| 3004 | 3003 | Dew point | I16 | ×0,1 | °C | 3,0 |
-| 3005 | 3004 | Ambient temperature | I16 | ×0,1 | °C | 24,0 (компресорна) |
-| 3010 | 3009 | Load (VSD output) | U16 | ×1 | % | `load` |
-| 3011 | 3010 | Motor speed | U16 | ×1 | об/хв | 1 200 + 36·load |
-| 3012 | 3011 | Motor current | U16 | ×0,1 | А | `37·load/100·1000/(√3·400·0,95)` |
-| 3020–3021 | 3019–3020 | Running hours | U32 | ×1 | год | `hours` |
-| 3022–3023 | 3021–3022 | Loaded hours | U32 | ×1 | год | ≈ 0,65·hours |
-| 3024–3025 | 3023–3024 | Load cycles | U32 | ×1 | — | +1 на цикл load/unload |
-| 3030 | 3029 | Service timer (до ТО) | U16 | ×1 | год | 160 (= 18 000 − 17 840, MR/00033) |
-| 3040 | 3039 | Shutdown code | U16 | — | 0 / 11 (high temp) / 12 (motor overload) / 20 (comm) | за збоєм |
-| 3100 | 3099 | Setpoint pressure | U16 | ×0,001 | бар | 7,000; RW (лише `write_enabled`) |
+| 3001 | `fc3 pdu3000` | Machine status | U16 | — | 0 stopped, 1 running loaded, 2 running unloaded, 3 shutdown/fault, 4 standby (VSD мін.) | `equipment/COMPRESSOR/state` |
+| 3002 | `fc3 pdu3001` | Outlet pressure | U16 | ×0,001 | бар | `pressure_bar` (6,5–7,0) |
+| 3003 | `fc3 pdu3002` | Element outlet temperature | U16 | ×0,1 | °C | `temp_c` 78–88; > 110 → fault |
+| 3004 | `fc3 pdu3003` | Dew point | I16 | ×0,1 | °C | 3,0 |
+| 3005 | `fc3 pdu3004` | Ambient temperature | I16 | ×0,1 | °C | 24,0 (компресорна) |
+| 3010 | `fc3 pdu3009` | Load (VSD output) | U16 | ×1 | % | `load` |
+| 3011 | `fc3 pdu3010` | Motor speed | U16 | ×1 | об/хв | 1 200 + 36·load |
+| 3012 | `fc3 pdu3011` | Motor current | U16 | ×0,1 | А | `37·load/100·1000/(√3·400·0,95)` |
+| 3020–3021 | `fc3 pdu3019+2` | Running hours | U32 | ×1 | год | `hours` |
+| 3022–3023 | `fc3 pdu3021+2` | Loaded hours | U32 | ×1 | год | ≈ 0,65·hours |
+| 3024–3025 | `fc3 pdu3023+2` | Load cycles | U32 | ×1 | — | +1 на цикл load/unload |
+| 3030 | `fc3 pdu3029` | Service timer (до ТО) | U16 | ×1 | год | 160 (= 18 000 − 17 840, MR/00033) |
+| 3040 | `fc3 pdu3039` | Shutdown code | U16 | — | 0 / 11 (high temp) / 12 (motor overload) / 20 (comm) | за збоєм |
+| 3100 | `fc3 pdu3099` (запис FC 06) | Setpoint pressure | U16 | ×0,001 | бар | 7,000; RW (лише `write_enabled`) |
 
 Дві машини GA 37 (×2 у паспорті) представлені одним контролером-майстром (ES-керування) — unit 70; розподіл навантаження між машинами всередині моделі.
 
@@ -1143,17 +1145,17 @@ Enum `Device status` (32089), підмножина, яку використов�
 
 **Еталон:** Socomec «ATyS p — Automatic Transfer Switching Equipment, Instruction manual 542 001 D», **Annexe III** (адреси Modbus, десяткові; https://www.nhp.com.au/public/assets/pim/Original/10043/Socomec-Transfer-Switch-ATyS-P-User-Manual.pdf, переглянуто 14.10.2026; перелік — td_genset ARCHITECTURE §1.1) — D-21, X-41. Адреси Annexe III — уже PDU (`N`, §8.4.1); FC 03 (читання), FC 06 (запис 21761). Коди значень — за Annexe III; ті самі, що читають energy (Додаток A.1/A.2, R-02 п. 4) і td_genset (R-05: `ats_position_i_value = 2`, `ats_position_ii_value = 3`).
 
-| Регістр (PDU) | Назва (Annexe III) | Тип | Значення | Емулятор (R-22) | Сигнал |
+| Адреса (PDU, X-72) | Назва (Annexe III) | Тип | Значення | Емулятор (R-22) | Сигнал |
 |---|---|---|---|---|---|
-| 20480–20481 | Date / time | U32 | секунди | `sim_now` (UNIX с; ПРИПУЩЕННЯ щодо формату поля — звірити з Annexe III) | — |
-| 20482 | Operating Mode | U16 | `0x0000` Manual, `0x0001` Locked, `0x0010` Auto, `0x0020` Remote, `0x0040` Inhibit | `0x0020` (32, Remote control) при `amf_master=hgm` (варіант A, D-23); `0x0010` (16, Auto) при `amf_master=ats` (варіант B) | `infra/ats/mode` |
-| 20483 | Switch Position | U16 | 0 Unknown, 1 Position 0, 2 Position I, 3 Position II | 2 (I, мережа) у нормі; 1 (0) — мертва зона ODT 3 с під час переключення; 3 (II, генератор) в острові | `infra/ats/position` |
-| 20484 | Source 2 Start Generator relay State | U16 | 0 / 1 | варіант B: 1 від наказу пуску (1FT після втрати мережі) до зупинки (після 2CT); варіант A — 0 (пуск веде HGM6120N) | `infra/ats/gen_start` |
-| 20485 | Priority | U16 | пріоритетне джерело | 1 (джерело 1 — мережа; ПРИПУЩЕННЯ щодо кодування) | — |
-| 20486 | Source 1 State | U16 | 0 Under threshold, 1 Present, 2 Available | 2 у нормі; 0 під час `blackout`; після повернення мережі — 1 на 2 с (стабілізація), далі 2 | `infra/ats/src1_state` |
-| 20487 | Source 2 State | U16 | 0 Under threshold, 1 Present, 2 Available | 0 (генератор стоїть); 1 — генератор запущений, `gen_ok` ще немає; 2 — `gen_ok` (API-F-01) або запасний режим §8.14 | `infra/ats/src2_state` |
-| 21761 | Set Operating Mode (запис) | U16 | коди як 20482 | запис FC 06 приймається лише при `SIM_WRITE_ACCEPT=1`, змінює 20482, подія `command`; інакше виняток 0x04 | — |
-| 57635 | Modbus slave address | U16 | 1…247 | 71 | — |
+| `fc3 pdu20480+2` | Date / time | U32 | секунди | `sim_now` (UNIX с; ПРИПУЩЕННЯ щодо формату поля — звірити з Annexe III) | — |
+| `fc3 pdu20482` | Operating Mode | U16 | `0x0000` Manual, `0x0001` Locked, `0x0010` Auto, `0x0020` Remote, `0x0040` Inhibit | `0x0020` (32, Remote control) при `amf_master=hgm` (варіант A, D-23); `0x0010` (16, Auto) при `amf_master=ats` (варіант B) | `infra/ats/mode` |
+| `fc3 pdu20483` | Switch Position | U16 | 0 Unknown, 1 Position 0, 2 Position I, 3 Position II | 2 (I, мережа) у нормі; 1 (0) — мертва зона ODT 3 с під час переключення; 3 (II, генератор) в острові | `infra/ats/position` |
+| `fc3 pdu20484` | Source 2 Start Generator relay State | U16 | 0 / 1 | варіант B: 1 від наказу пуску (1FT після втрати мережі) до зупинки (після 2CT); варіант A — 0 (пуск веде HGM6120N) | `infra/ats/gen_start` |
+| `fc3 pdu20485` | Priority | U16 | пріоритетне джерело | 1 (джерело 1 — мережа; ПРИПУЩЕННЯ щодо кодування) | — |
+| `fc3 pdu20486` | Source 1 State | U16 | 0 Under threshold, 1 Present, 2 Available | 2 у нормі; 0 під час `blackout`; після повернення мережі — 1 на 2 с (стабілізація), далі 2 | `infra/ats/src1_state` |
+| `fc3 pdu20487` | Source 2 State | U16 | 0 Under threshold, 1 Present, 2 Available | 0 (генератор стоїть); 1 — генератор запущений, `gen_ok` ще немає; 2 — `gen_ok` (API-F-01) або запасний режим §8.14 | `infra/ats/src2_state` |
+| `fc3 pdu21761` (запис FC 06) | Set Operating Mode (запис) | U16 | коди як 20482 | запис FC 06 приймається лише при `SIM_WRITE_ACCEPT=1`, змінює 20482, подія `command`; інакше виняток 0x04 | — |
+| `fc3 pdu57635` | Modbus slave address | U16 | 1…247 | 71 | — |
 
 `infra/ats/src1_ok`, `src2_ok`, `fail_start` емулятор не віддає — їх обчислює energy з 20486/20487/20484 (R-14 energy, X-35). Таймери АВР емулятора — заводські умовчання мануалу 542 001 D, у регістрах не віддаються: 1FT 3 с, 2AT 5 с, ODT 3 с, 1RT 180 с, 2CT 180 с, 2ST 30 с (td_genset ARCHITECTURE §1.1); у варіанті A час переключення й повернення задає HGM6120N (`fake_relay`, R-22).
 
@@ -1163,36 +1165,36 @@ Enum `Device status` (32089), підмножина, яку використов�
 
 **ПРИПУЩЕННЯ, звірити з TEDOM** (точки даних ProCon не опубліковано — Q-06). Адреси задано одразу в **PDU** (колонка «Регістр» = адреса на дроті, як energy Додаток A.1; §8.4.1, X-42).
 
-| Регістр | Назва | Тип | Масштаб | Одиниця | Емулятор (R-12) |
+| Адреса (PDU, X-72) | Назва | Тип | Масштаб | Одиниця | Емулятор (R-12) |
 |---|---|---|---|---|---|
-| 40000 | State | U16 | — | 0 stop, 1 starting, 2 running, 3 fault, 4 cooling down | `infra/chp/state` |
-| 40001 | Electrical power | U16 | ×1 | кВт | `infra/totals/chp_kw` (400 удень, 800 увечері) |
-| 40002 | Heat output | U16 | ×1 | кВт | `heat_kw` (497 / 856) |
-| 40003 | Gas consumption | U16 | ×0,1 | м³/год | 109 / 199 |
-| 40004 / 40005 | Supply / return water temperature | U16 | ×0,1 | °C | 90 / 70 |
-| 40006 | Engine speed | U16 | ×1 | об/хв | 1 500 |
-| 40007 | Load setpoint | U16 | ×1 | % | 50 (RW, `write_enabled`) |
-| 40010–40011 | Running hours | U32 | ×1 | год | 3 412 |
-| 40012–40013 | Number of starts | U32 | ×1 | — | 211 |
-| 40014–40015 | Energy produced total | U32 | ×1 | кВт·год | накопич. → `infra/chp/kwh_total` (energy Додаток A.1) |
-| 40020 | Alarm code | U16 | — | 0 / 101 (gas pressure low) / 205 (overtemp) | за збоєм |
+| `fc3 pdu40000` | State | U16 | — | 0 stop, 1 starting, 2 running, 3 fault, 4 cooling down | `infra/chp/state` |
+| `fc3 pdu40001` | Electrical power | U16 | ×1 | кВт | `infra/totals/chp_kw` (400 удень, 800 увечері) |
+| `fc3 pdu40002` | Heat output | U16 | ×1 | кВт | `heat_kw` (497 / 856) |
+| `fc3 pdu40003` | Gas consumption | U16 | ×0,1 | м³/год | 109 / 199 |
+| `fc3 pdu40004` / `pdu40005` | Supply / return water temperature | U16 | ×0,1 | °C | 90 / 70 |
+| `fc3 pdu40006` | Engine speed | U16 | ×1 | об/хв | 1 500 |
+| `fc3 pdu40007` (запис FC 06) | Load setpoint | U16 | ×1 | % | 50 (RW, `write_enabled`) |
+| `fc3 pdu40010+2` | Running hours | U32 | ×1 | год | 3 412 |
+| `fc3 pdu40012+2` | Number of starts | U32 | ×1 | — | 211 |
+| `fc3 pdu40014+2` | Energy produced total | U32 | ×1 | кВт·год | накопич. → `infra/chp/kwh_total` (energy Додаток A.1) |
+| `fc3 pdu40020` | Alarm code | U16 | — | 0 / 101 (gas pressure low) / 205 (overtemp) | за збоєм |
 
 #### 8.9.6 Аналогові й дискретні модулі ADAM для інженерії (unit 84, 90, 96)
 
 **Еталон:** ADAM-6000 User Manual Ed.12, Appendix B.2 (карти ADAM-6017: AI 40001–40008 raw U16, float IEEE754 40031–40046, burnout 00121–00128, high/low alarm 00131–00148; ADAM-6015: 7 каналів RTD, AI 40001–40007, float 40031–40044, burnout 00121–00127; ADAM-6050 — §8.4.2).
 
-| unit | Модуль | Канал | Сигнал | Діапазон (R-20) | Адреси (документ → PDU, §8.4.1) |
+| unit | Модуль | Канал | Сигнал | Діапазон (R-20) | Адреси (документ → PDU-форма, §8.4.1, X-72) |
 |---|---|---|---|---|---|
-| 90 | ADAM-6017 (4–20 мА, type code `0x0107`) | AI0 | `equipment/DUST-1/airflow_m3h` | 0…32 000 м³/год | raw 40001 → PDU 0, float 40031–40032 → PDU 30–31 (мА) |
-| 90 | | AI1 | `equipment/DUST-1/filter_dp_kpa` | 0…4 кПа | raw 40002 → PDU 1, float 40033–40034 → PDU 32–33 |
-| 90 | | AI2 | `equipment/SPRINKLERS/pressure_bar` | 0…16 бар | raw 40003 → PDU 2, float 40035–40036 → PDU 34–35 |
-| 90 | | AI3 | `equipment/AIR-RING/pressure_bar` | 0…16 бар | raw 40004 → PDU 3, float 40037–40038 → PDU 36–37 |
-| 90 | | AI4–AI7 | резерв | — | raw 40005–40008 (PDU 4–7) = 0, burnout 00125–00128 (PDU 124–127) = 1 |
-| 96 | ADAM-6015 (PT100, type code `0x0020`, −50…+150 °C) | RTD0–RTD2 | `energy/transformers/T1/temp_c` (макс. з трьох обмоток) | −50…+150 °C | raw 40001–40003 → PDU 0–2, float 40031–40036 → PDU 30–35 (°C) |
-| 96 | | RTD3–RTD5 | `energy/transformers/T2/temp_c` | | raw 40004–40006 → PDU 3–5, float 40037–40042 → PDU 36–41 |
-| 96 | | RTD6 | резерв (burnout 00127 = 1) | | 40007 → PDU 6 |
-| 84 | ADAM-6050 | DI0 / DI1 | `equipment/DUST-1/state` (вентилятори в роботі / аварія) | — | 00001 / 00002 → PDU 0 / 1 (FC 02) |
-| 84 | | DI8 (лічильник) | `infra/water/m3_total` (1 імп = 10 л, Apator MWN50 NK) | — | лічильник 40017–40018 → PDU 16–17 (`u32 little`); старт 00065 → PDU 64 |
+| 90 | ADAM-6017 (4–20 мА, type code `0x0107`) | AI0 | `equipment/DUST-1/airflow_m3h` | 0…32 000 м³/год | raw 40001 → `u90 fc3 pdu0`, float 40031–40032 → `u90 fc3 pdu30+2` (мА) |
+| 90 | | AI1 | `equipment/DUST-1/filter_dp_kpa` | 0…4 кПа | raw 40002 → `u90 fc3 pdu1`, float 40033–40034 → `pdu32+2` |
+| 90 | | AI2 | `equipment/SPRINKLERS/pressure_bar` | 0…16 бар | raw 40003 → `u90 fc3 pdu2`, float 40035–40036 → `pdu34+2` |
+| 90 | | AI3 | `equipment/AIR-RING/pressure_bar` | 0…16 бар | raw 40004 → `u90 fc3 pdu3`, float 40037–40038 → `pdu36+2` |
+| 90 | | AI4–AI7 | резерв | — | raw 40005–40008 (`u90 fc3 pdu4+4`) = 0, burnout 00125–00128 (`u90 fc1 pdu124+4`) = 1 |
+| 96 | ADAM-6015 (PT100, type code `0x0020`, −50…+150 °C) | RTD0–RTD2 | `energy/transformers/T1/temp_c` (макс. з трьох обмоток) | −50…+150 °C | raw 40001–40003 → `u96 fc3 pdu0+3`, float 40031–40036 → `u96 fc3 pdu30+6` (°C) |
+| 96 | | RTD3–RTD5 | `energy/transformers/T2/temp_c` | | raw 40004–40006 → `u96 fc3 pdu3+3`, float 40037–40042 → `pdu36+6` |
+| 96 | | RTD6 | резерв (burnout 00127 = 1) | | 40007 → `u96 fc3 pdu6` |
+| 84 | ADAM-6050 | DI0 / DI1 | `equipment/DUST-1/state` (вентилятори в роботі / аварія) | — | 00001 / 00002 → `u84 fc2 pdu0` / `pdu1` |
+| 84 | | DI8 (лічильник) | `infra/water/m3_total` (1 імп = 10 л, Apator MWN50 NK) | — | лічильник 40017–40018 → `u84 fc3 pdu16+2` (`u32 little`); старт 00065 → `u84 fc1 pdu64` |
 | 84 | | DI2–DI7, DI9–DI11, DO0–DO5 | резерв | — | 0 |
 
 **R-20 масштабування ADAM:** `raw = round(65535·(mA − 4)/16)` для 4–20 мА, де `mA = 4 + 16·(eng − lo)/(hi − lo)`; для RTD `raw = round(65535·(t + 50)/200)`; float-регістри — інженерна одиниця (мА або °C) IEEE754, **молодше слово першим** (`40031` = молодше, як лічильники ADAM; D-20, X-43). Споживач читає або raw (і масштабує за каталогом `lo/hi`), або float.
@@ -1305,7 +1307,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | 185 / 186 / 187 / 188 / 189 | Query Time / Longitude / Latitude / Time Zone / DST | `>V:2,C:185#` | `sim_now` epoch; 30.52 / 50.45 / +120 / 1 |
 | 190 / 191 | Query Software Version / HelvarNet Version | `>V:2,C:191#` | `?…=5.4.0#` / `=<SIM_HELVAR_VERSION>#` (умовчання `2`; bms R-31 визначає за нею версію сеансу) |
 
-Адресація емулятора: cluster 1; router 1 = LP-1, 2 = LP-2, 3 = LP-3; subnet 1…4 = лінії DALI роутера (по 64 світильники на лінію, паспорт `lighting_control` Imagine 950). **Розкладка світильників по лініях — правило bms R-06** (X-65): для груп щита в порядку каталогу (`G` = 1…32): якщо на поточній лінії вже зайнято `used > 0` адрес і група з `n` світильників не вміщується в залишок (`n > 64 − used`) — група починається з нової лінії (`line += 1`, `used = 0`); далі `n` пристроїв поспіль з адреси `used + 1`, з переходом на наступну лінію при 64 (лише для групи, більшої за лінію). Результат — таблиця `dali_devices` **bms Додаток A.1** (джерело істини, як каталог за X-34); емулятор будує склад груп тим самим правилом і має збігатися з нею дослівно (AC-66). Приклади: LP-1 — `LT-RCV-1` `@1.1.1.1-4`, `LT-RCV-2` `@1.1.1.5-8` … `LT-PKS` `@1.1.1.49-50`; LP-2 — `LT-CUT` `@1.2.1.1-27`, `LT-EB` `@1.2.1.28-54`, `LT-CNC` `@1.2.2.1-27` (27 > 64 − 54), `LT-SORT` `@1.2.2.28-39`, `LT-FAC` `@1.2.3.1-64;@1.2.4.1-27`; LP-3 — `LT-ASM` `@1.3.1.1-15` … `LT-OUT-1` `@1.3.1.59-62`, `LT-OUT-2` `@1.3.2.1-4` (4 > 64 − 62) … `LT-OUT-7` `@1.3.2.21-24`. Склад групи віддається командою C:164; датчики 322 — пристрої 65…70 кожної лінії (presence/lux), без змін. Номери груп `G` = порядковий номер LT-* у каталозі (1…32), G:40 = EMERGENCY. Push при кожній зміні рівня групи: `>V:<v>,C:13,G:<n>,L:<lvl>,F:<f>#` усім TCP-клієнтам роутера (версія — `SIM_HELVAR_VERSION`).
+Адресація емулятора: cluster 1; router 1 = LP-1, 2 = LP-2, 3 = LP-3; subnet 1…4 = лінії DALI роутера (по 64 світильники на лінію, паспорт `lighting_control` Imagine 950). **Розкладка світильників по лініях — правило bms R-06** (X-65): для груп щита в порядку каталогу (`G` = 1…32): якщо на поточній лінії вже зайнято `used > 0` адрес і група з `n` світильників не вміщується в залишок (`n > 64 − used`) — група починається з нової лінії (`line += 1`, `used = 0`); далі `n` пристроїв поспіль з адреси `used + 1`, з переходом на наступну лінію при 64 (лише для групи, більшої за лінію). Результат — таблиця `dali_devices` **bms Додаток A.1** (джерело істини, як каталог за X-34); емулятор будує склад груп тим самим правилом і має збігатися з нею дослівно (AC-65). Приклади: LP-1 — `LT-RCV-1` `@1.1.1.1-4`, `LT-RCV-2` `@1.1.1.5-8` … `LT-PKS` `@1.1.1.49-50`; LP-2 — `LT-CUT` `@1.2.1.1-27`, `LT-EB` `@1.2.1.28-54`, `LT-CNC` `@1.2.2.1-27` (27 > 64 − 54), `LT-SORT` `@1.2.2.28-39`, `LT-FAC` `@1.2.3.1-64;@1.2.4.1-27`; LP-3 — `LT-ASM` `@1.3.1.1-15` … `LT-OUT-1` `@1.3.1.59-62`, `LT-OUT-2` `@1.3.2.1-4` (4 > 64 − 62) … `LT-OUT-7` `@1.3.2.21-24`. Склад групи віддається командою C:164; датчики 322 — пристрої 65…70 кожної лінії (presence/lux), без змін. Номери груп `G` = порядковий номер LT-* у каталозі (1…32), G:40 = EMERGENCY. Push при кожній зміні рівня групи: `>V:<v>,C:13,G:<n>,L:<lvl>,F:<f>#` усім TCP-клієнтам роутера (версія — `SIM_HELVAR_VERSION`).
 
 ### 8.11 Додаток P-09 — пожежна сигналізація Siemens Cerberus PRO (BACnet/IP тільки читання), GreCon BS 7, D+H CPS-M1
 
@@ -1335,17 +1337,17 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 
 Один вхід — один сигнал каталогу (рядки 644/646 звужено до DI0/DI4, решта входів — окремі коди 684–688; X-34, fire Додаток B).
 
-| Канал | Адреса (документ → PDU) | Сигнал | Поведінка |
+| Канал | Адреса (документ → PDU-форма, X-72) | Сигнал | Поведінка |
 |---|---|---|---|
-| DI0 | 00001 → FC 02 PDU 0 | `fire/spark/SPARK-1/state` (іскра виявлена) | імпульс 0,6 с (R-26); лічильник 40001–40002 (PDU 0–1, `u32 little`) = `fire/spark/SPARK-1/count_today` |
-| DI1 | 00002 → PDU 1 | `fire/spark/SPARK-1/extinguishing` — гасіння активне | імпульс 2 с після DI0 |
-| DI2 | 00003 → PDU 2 | `fire/spark/SPARK-1/fault` — несправність іскрогасіння | 0; сценарій `spark fault=true` → 1 |
-| DI3 | 00004 → PDU 3 | `fire/spark/SPARK-1/water_ok` — тиск води гасіння в нормі | 1 |
-| DI4 | 00005 → PDU 4 | `fire/smoke/SMOKE-VENTS/state` — клапани відкриті (кінцевики, усі 44) | R-27 |
-| DI5 | 00006 → PDU 5 | `fire/smoke/SMOKE-CTRL/fault` — несправність щита D+H (АКБ/живлення) | 0 |
-| DI6 | 00007 → PDU 6 | `fire/smoke/SMOKE-CTRL/battery` — щит D+H на живленні від АКБ | 1 під час `blackout` |
-| DO0 | 00017 → FC 01/05 PDU 16 | команда «відкрити клапани» (CPS-M1 вхід «вентиляція/пожежа»), без сигналу каталогу | приймається; виконується, якщо `SIM_WRITE_ACCEPT=1` (default) → DI4 через 60 с |
-| DO1 | 00018 → PDU 17 | команда «закрити» | |
+| DI0 | 00001 → `u85 fc2 pdu0` | `fire/spark/SPARK-1/state` (іскра виявлена) | імпульс 0,6 с (R-26); лічильник 40001–40002 (`u85 fc3 pdu0+2`, `u32 little`) = `fire/spark/SPARK-1/count_today` |
+| DI1 | 00002 → `u85 fc2 pdu1` | `fire/spark/SPARK-1/extinguishing` — гасіння активне | імпульс 2 с після DI0 |
+| DI2 | 00003 → `u85 fc2 pdu2` | `fire/spark/SPARK-1/fault` — несправність іскрогасіння | 0; сценарій `spark fault=true` → 1 |
+| DI3 | 00004 → `u85 fc2 pdu3` | `fire/spark/SPARK-1/water_ok` — тиск води гасіння в нормі | 1 |
+| DI4 | 00005 → `u85 fc2 pdu4` | `fire/smoke/SMOKE-VENTS/state` — клапани відкриті (кінцевики, усі 44) | R-27 |
+| DI5 | 00006 → `u85 fc2 pdu5` | `fire/smoke/SMOKE-CTRL/fault` — несправність щита D+H (АКБ/живлення) | 0 |
+| DI6 | 00007 → `u85 fc2 pdu6` | `fire/smoke/SMOKE-CTRL/battery` — щит D+H на живленні від АКБ | 1 під час `blackout` |
+| DO0 | 00017 → `u85 fc1 pdu16` (запис FC 05) | команда «відкрити клапани» (CPS-M1 вхід «вентиляція/пожежа»), без сигналу каталогу | приймається; виконується, якщо `SIM_WRITE_ACCEPT=1` (default) → DI4 через 60 с |
+| DO1 | 00018 → `u85 fc1 pdu17` (запис FC 05) | команда «закрити» | |
 
 ### 8.12 Додаток P-10 — Suprema BioStar 2 REST (СКУД)
 
@@ -1373,14 +1375,14 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 
 Канали — окремо для кожних воріт (GATE-W / GATE-E); адреса — документ ADAM → PDU (§8.4.1); кожен канал — окремий сигнал каталогу (рядки 654–657, 689–698; yard Додаток A).
 
-| Канал GATE-W / GATE-E | Адреса (документ → PDU) | Призначення | Сигнал (`<G>` = ворота) |
+| Канал GATE-W / GATE-E | Адреса (документ → PDU-форма, X-72) | Призначення | Сигнал (`<G>` = ворота) |
 |---|---|---|---|
-| DI0 / DI2 | 00001 / 00003 → FC 02 PDU 0 / 2 | стріла відкрита (кінцевик) | `yard/gates/<G>/state` |
-| DI1 / DI3 | 00002 / 00004 → PDU 1 / 3 | індукційна петля зайнята (машина під стрілою); лічильник 40003–40004 / 40007–40008 (PDU 2–3 / 6–7, `u32 little`) = проїзди | `…/loop`, `…/passes_today` |
-| DI4 / DI5 | 00005 / 00006 → PDU 4 / 5 | фотоелемент перешкоди | `…/photocell` |
-| DO0 / DO1 | 00017 / 00018 → FC 01/05 PDU 16 / 17 | команда «відкрити» (імпульс ≥ 1 с); емулятор: стріла відкривається за 5 с (DI0/DI2 = 1), закривається через 15 с після звільнення петлі | `…/cmd_open` |
-| DO2 / DO3 | 00019 / 00020 → PDU 18 / 19 | «закрити примусово» | `…/cmd_close` |
-| DO4 / DO5 | 00021 / 00022 → PDU 20 / 21 | «тримати відкритим» (пожежа/евакуація) — **окремий канал на ворота** (X-47): DO4 тримає лише GATE-W, DO5 — лише GATE-E; R-25 крок +12 с ставить обидва; ПРИПУЩЕННЯ монтажу — підтвердити в монтажника (CONSISTENCY «Питання до замовника» № 11, yard Q-13) | `…/cmd_hold` |
+| DI0 / DI2 | 00001 / 00003 → `u86 fc2 pdu0` / `pdu2` | стріла відкрита (кінцевик) | `yard/gates/<G>/state` |
+| DI1 / DI3 | 00002 / 00004 → `u86 fc2 pdu1` / `pdu3` | індукційна петля зайнята (машина під стрілою); лічильник 40003–40004 / 40007–40008 (`u86 fc3 pdu2+2` / `pdu6+2`, `u32 little`) = проїзди | `…/loop`, `…/passes_today` |
+| DI4 / DI5 | 00005 / 00006 → `u86 fc2 pdu4` / `pdu5` | фотоелемент перешкоди | `…/photocell` |
+| DO0 / DO1 | 00017 / 00018 → `u86 fc1 pdu16` / `pdu17` (запис FC 05) | команда «відкрити» (імпульс ≥ 1 с); емулятор: стріла відкривається за 5 с (DI0/DI2 = 1), закривається через 15 с після звільнення петлі | `…/cmd_open` |
+| DO2 / DO3 | 00019 / 00020 → `u86 fc1 pdu18` / `pdu19` (запис FC 05) | «закрити примусово» | `…/cmd_close` |
+| DO4 / DO5 | 00021 / 00022 → `u86 fc1 pdu20` / `pdu21` (запис FC 05) | «тримати відкритим» (пожежа/евакуація) — **окремий канал на ворота** (X-47): DO4 тримає лише GATE-W, DO5 — лише GATE-E; R-25 крок +12 с ставить обидва; ПРИПУЩЕННЯ монтажу — підтвердити в монтажника (CONSISTENCY «Питання до замовника» № 11, yard Q-13) | `…/cmd_hold` |
 
 #### 8.13.2 Axis P1488-LE + AXIS License Plate Verifier — HTTP POST JSON
 
@@ -1428,7 +1430,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 |---|---|---|
 | стан генератора | API-F-01 `GET /sim/v1/state` → `gen_ok`, `breaker` (`mains`/`gen`), `state`, `p_kw`, `fuel_pct` | кожну 1 с, поки активний `blackout`/`genset_test`; ATyS `src2_state`, `position` (варіант A) і баланс R-13 — з нього |
 | мережа (варіант `hgm`) | API-F-02 `POST /sim/v1/mains {"available": false}` / `{"available": true, "u_v": 400, "f_hz": 50.0}` | початок / кінець `blackout`; у варіанті `ats` **не** викликається (td_genset Додаток D.3) |
-| пуск (варіант `ats`, `genset_test`) | API-F-03 `POST /sim/v1/remote_start {"on": true|false}` | `ats`: через 1FT 3 с після втрати мережі (20484 = 1) / після 2CT 180 с повернення; `genset_test`: на `duration_s` |
+| пуск (варіант `ats`, `genset_test`) | API-F-03 `POST /sim/v1/remote_start {"on": true\|false}` | `ats`: через 1FT 3 с після втрати мережі (20484 = 1) / після 2CT 180 с повернення; `genset_test`: на `duration_s` |
 | навантаження | API-F-04 `POST /sim/v1/load {"kw": P_genset}` | після `breaker == "gen"` (варіант A) або переключення ATyS у II (варіант B) і далі при зміні `P_genset` ≥ 1 кВт (R-22, X-67); `{"kw": 0}` — при поверненні мережі |
 | збій, паливо, час, скидання, журнал | API-F-05 `fault`/`clear`, API-F-06 `fuel`, API-F-07 `time` (той самий `factor`, що API-14), API-F-08 `reset` (разом з API-17), API-F-09 `events` | сценарії/тести; `POST /time` емулятора дублюється в API-F-07, `POST /reset` — в API-F-08 |
 
@@ -1480,13 +1482,13 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | R-20 | Масштаб ADAM | §8.9.6: `raw = round(65535·(mA − 4)/16)`, `mA = 4 + 16·(eng − lo)/(hi − lo)`; RTD `raw = round(65535·(t + 50)/200)`; float-регістри — мА / °C | DUST airflow 29 768 → `mA = 18,88` → `raw = 60 950`; T1 59 °C → `raw = 35 716` |
 | R-21 | Вода | витрата `q = 2,1 м³/год` у зміні, `0,3` поза зміною, `+1,5` під час роботи фарбування (SPRAY-1/AUTOSPRAY-1 WORKING); імпульси `n = floor(q·dt/3600·100)` (10 л/імп) на DI8 u84; `m3_total = 18 642 + Σ/100`; `flow_m3h` = ковзне середнє 5 хв | 1 год зміни → 210 імп → +2,1 м³ |
 | R-22 | Blackout / АВР (ATyS p за Annexe III — §8.9.4, X-41; генератор — CI-01 / API-F, X-59) | `blackout(on)` (t0): мережа зникає — ATyS `20486 = 0` (Source 1 under threshold), `20490…=0`, PV → `0x0303` (`pv_now = 0`), PM5560 вводів `P = 0`, споживачі некритичних ліній → `PowerPresent=False` (ERROR); критичні лінії (BW-1, LP-1..3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG — `CRITICAL` макета) вважаються живленими (критична шина за АВР; на інтервалі пуску — від BESS, R-13; недостачу емулятор не моделює — ПРИПУЩЕННЯ, td_genset Q-08); освітлення до переключення — аварійне (EMERGENCY 100 %, C:110 `0x400`, решта 0), після переключення в II LP-1..3 — за розкладом R-24; КГУ — R-12 (`chp_island`). **Варіант A** (`amf_master=hgm`, D-23; `20482 = 0x0020` Remote): API-F-02 `mains {"available": false}`; щосекунди API-F-01: двигун запущений → `20487 = 1`, `gen_ok` → `20487 = 2`; `breaker == "gen"` → `20483` 2 → 1 (ODT 3 с) → 3, `transfer_counter += 1`. **Варіант B** (`ats`; `20482 = 0x0010` Auto): через 1FT 3 с `20484 = 1` + API-F-03 `remote_start {"on": true}`; `gen_ok` → `20487 = 2`, через 2AT 5 с `20483` 2 → 1 (ODT 3 с) → 3; `gen_ok` немає за 2ST 30 с від наказу пуску → подія `alarm` «АВР: генератор не запустився (FAIL START)», `20483` лишається 2 (сигнал `fail_start` рахує energy, X-35). **Навантаження генератора в острові** (X-67; як energy R-14 п. 9 і td_genset R-06): з моменту переключення в II і далі щотіку `P_genset = min(SIM_GENSET_KW_MAX, max(0, P_crit − chp_kw − pv_now + bess_kw))`, де `P_crit` = Σ `p_now` споживачів критичних ліній, `chp_kw`, `pv_now`, `bess_kw` (+ заряд / − розряд) — значення моделей емулятора в тому самому тіку (те, що «вимірюють» energy і міст); результат → API-F-04 `load {"kw": P_genset}` при зміні ≥ 1 кВт; явний параметр `genset_load_kw` S-03 замінює формулу. `blackout(off)`: `20486` 1 (2 с) → 2; варіант A — API-F-02 `mains {"available": true}`, коли `breaker == "mains"` (таймери HGM) — `20483` 3 → 1 → 2, API-F-04 `{"kw": 0}`; варіант B — через 1RT 180 с `20483` 3 → 1 → 2, API-F-04 `{"kw": 0}`, через 2CT 180 с `20484 = 0` + API-F-03 `{"on": false}`; `20487 = 0` після `state == "standby"` (API-F-01); запасний режим без `fake_relay` (§8.14) — `20487 = 2` і переключення через 15 с після t0, повернення через 60 с після `blackout(off)`; КГУ перезапускається (R-12), PV — `0x0001` → `0x0200`; протокольно: RV/AHU — `BV:1=0` під час відсутності живлення на C2 → `ST` | `blackout`, варіант A, `chp_island=false`, макет 12.10 10:30: t0 `20486=0`, `bess_kw=−200`; ≈ t0 + 30 с (умовчання HGM, td_genset §8.4) `breaker=gen` → `20483=3`, `bess_kw=0`, `P_genset = 348 − 0 − 0 + 0 = 348` кВт (= td_genset R-06 / AC-56, energy R-14: `load_kw 348`, `shed 278`); `chp_island=true` (день): `chp_kw = min(400, 348) = 348` → `P_genset = 348 − 348 − 0 + 0 = 0` (ДГУ без навантаження, API-F-04 `{"kw": 0}`); тест із `P_crit = 600`, `chp_island=false` → `min(558, 600) = 558` |
-| R-23 | Вентустановка | `k` (частка витрати) за режимом: `VE`/`AQ_VE` 0,85; `AQ_ECO` 0,55…0,85 (`k = 0,55 + det(code) mod 30/100` — як макет); `REC` 0,45; `VEL` 0,35; `ST/Off` 0; `airflow = 8000·k` (AHU-1: `20000·0,85`); `supply_c = 19,5 + det/10` ± 0,2 (R-01), поза зміною 16; `indoor_c` R-01 навколо `17,5 + det/10`; `heating_valve = clamp(heat/heat_nom, 0, 1)`, `heat = 60·k·(18 − outdoor)/(18 + 15)·(0,3 у рекуперації | 0,8 без)`; `p_now = 8,6·k³ + 0,1`; режим за календарем: зміна → макетний режим зони (`VE` для RCV/OUT, `AQ` решта, `REC` для RV-21/22), обід (11:30–12:00) → без змін, поза зміною → `VEL`, ніч 22:00–06:00 → `ST`; `filter_dp` R-09; `BI:3 = dp > 250` | RV-05: `k=0,74` → 5 913 м³/год (макет 5 912,6), `heat=6,9 кВт`, `valve=0,06` |
-| R-24 | Освітлення | рівень групи за розкладом: зміна → рівень макета (`level` 0,5…1,0: склади 0,6–0,8, цех 1,0, компресорна/зарядна/електрощитова 0,5); 06:00–07:00 і 15:30–17:00 → 0,5; ніч → 0,1 (склади з датчиками присутності — 0 без присутності, 1 при проході техніки R-19 у зоні); денне світло (`sun > 0,5`) знижує приймання/відвантаження на 20 %; `p_now_W = n·126·level`; HelvarNet-команди (13/11/14) перекривають розклад до наступної зміни розкладу; `lighting_scene` сценарій — явна сцена | LT-CUT: 27 світильників, `level=1,0` → 3,4 кВт; LT-FG: 12·126·0,6 = 0,9 кВт |
-| R-25 | Пожежна панель | стани зон `quiet`; `fire_drill(zone, detector)`: t=0 `LSP(det)=test-alarm(9)`, `LSZ(zone)=test-alarm`, `LSZ:0=test-alarm`, `MSV:1=4 Test`, `AV:1 += 1`; +3 с `BI:10=1` (сирени), `BI:11=0` (навчання не передається на пульт; `fire_alarm` реальна — `BI:11=1`); +6 с всі RV/AHU `BV:1=0`; +9 с `u85 DI4=1` (клапани), `DI5=0`; +12 с BioStar `20480` на всіх дверях, `u86 DO4=1` (шлагбауми вгору); +20 с РЦ зони → `ExternalEmergency=True` → ERROR; закінчення (`duration_s` або `stop`) → усе назад у зворотному порядку за 30 с; `fault` сценарію/`fault(reason=sensor)` на групі → `LSZ=fault(3)`, `BI:<loop>=1`, `AV:2 += 1`, заявка «Несправність шлейфу 2: сповіщувач 2.FAC.07»; запиленість R-09 → `AV` і при `> 90` `reliability=unreliable-other` + заявка «Очистити сповіщувач 2.FAC.07 (запиленість 91 %)» | макет: подія 09:58 попередження 82 % |
+| R-23 | Вентустановка | `k` (частка витрати) за режимом: `VE`/`AQ_VE` 0,85; `AQ_ECO` 0,55…0,85 (`k = 0,55 + det(code) mod 30/100` — як макет); `REC` 0,45; `VEL` 0,35; `ST/Off` 0; `airflow = 8000·k` (AHU-1: `20000·0,85`); `supply_c = 19,5 + det/10` ± 0,2 (R-01), поза зміною 16; `indoor_c` R-01 навколо `17,5 + det/10`; `heat = heat_nom·k·(18 − outdoor)/(18 + 15)·f`, `heat_nom = 116,8 кВт` (паспорт `roofvent`, bms R-10), `f = 0,3` для `AQ`, `0,8` для `VE`, `VEL`, `REC`, `EA`, `SA`, `heat = 0` для `ST`/`Off` (формула bms R-13; X-40); AHU-1: `heat = airflow·1,2/3600·(21 − outdoor)`; `heating_valve` — у **%**: `100·clamp(heat/heat_nom, 0, 1)` (сигнал і AO:1 — %, `scale=1`, частка — лише в payload переглядача; X-39); `p_now = 8,6·k³ + 0,1`; режим за календарем: зміна → макетний режим зони (`VE` для RCV/OUT, `AQ` решта, `REC` для RV-21/22), обід (11:30–12:00) → без змін, поза зміною → `VEL`, ніч 22:00–06:00 → `ST`; `filter_dp` R-09; `BI:3 = dp > 250` | RV-05: `k=0,74` → 5 913 м³/год (макет 5 912,6); тепло за bms R-13 з `k=0,72` (AQ, `outdoor=9`): `116,8·0,72·9/33·0,3 = 6,88` → **6,9 кВт** (= макет), клапан `6,9/116,8 = 0,06` → `heating_valve = 6 %`; RV-01 (VE, `k=0,68`): `116,8·0,68·9/33·0,8 = 17,3` кВт, клапан 15 %; AHU-1 17 000 м³/год, `outdoor=9`: `68,0` кВт |
+| R-24 | Освітлення | рівень групи за розкладом: зміна → рівень макета (`level` 0,5…1,0: склади 0,6–0,8, цех 1,0, компресорна/зарядна/електрощитова 0,5); 06:00–07:00 і 15:30–17:00 → 0,5; ніч → 0,1 (склади з датчиками присутності — 0 без присутності, 1 при проході техніки R-19 у зоні); денне світло (`sun > 0,5`) знижує приймання/відвантаження на 20 %; сигнал `lighting/groups/<G>/level` і C:152 — у **%** (`100·level`, 0…100, `scale=1`; X-39); `p_now_W = n·126·level` (`level` — частка = % / 100); HelvarNet-команди (13/11/14) перекривають розклад до наступної зміни розкладу; `lighting_scene` сценарій — явна сцена | LT-CUT: 27 світильників, `level=1,0` → сигнал `100` %, 3,4 кВт; LT-FG: 12·126·0,6 = 0,9 кВт, сигнал `60` % |
+| R-25 | Пожежна панель | стани зон `quiet`; `fire_drill(zone, detector)`: t=0 `LSP(det)=test-alarm(9)`, `LSZ(zone)=test-alarm`, `LSZ:0=test-alarm`, `MSV:1=4 Test`, `PIV:1 += 1`; +3 с `BV:10=1` (сирени), `BV:11=0` (навчання не передається на пульт; реальна тривога `real=true` — `BV:11=1`) (BV/PIV — X-37); +6 с всі RV/AHU `BV:1=0`; +9 с `u85 DI4=1` (клапани), `DI5=0`; +12 с BioStar `20480` на всіх дверях, `u86` DO4 = 1 і DO5 = 1 (`fc1 pdu20`, `pdu21` — «тримати відкритим» обидва шлагбауми, окремі канали, X-47); +20 с РЦ зони → `ExternalEmergency=True` → ERROR; закінчення (`duration_s` або `stop`) → усе назад у зворотному порядку за 30 с; несправність (`fault(reason=sensor\|generic)` на зоні `FA-*` через API-12 — X-60, або сценарій) → `LSP` першого сповіщувача зони `reliability=unreliable-other`, `LSZ(zone)=fault(3)`, `LSZ:0=fault` (якщо немає тривоги), `MSV:1=3 Fault`, `PIV:2 += 1`, подія `fault` «Несправність сповіщувача 2.FAC.07 (зона FA-FAC, шлейф 2)»; **BV шлейфу не змінюється** — несправність лінії лише для `fault(reason=loop)`: тоді ще `BV:<loop>=1` і подія `fault` «Несправність шлейфу 2» (X-36); `clear` — усе назад, `PIV:2 −= 1`. Емулятор заявок не створює: споживач (fire) створює одну заявку на пристрій, несправність шлейфу, спричинена пристроєм, — подія без заявки (X-36); запиленість R-09 → `PIV:<id LSP>` (ціле %) і при `> 90` `reliability=unreliable-other`, подія `alarm` «Очистити сповіщувач 2.FAC.07 (запиленість 91 %)» | макет: подія 09:58 попередження 82 % |
 | R-26 | Іскрогасіння | фонові події: Пуассон із середнім 1 іскра/8 год у зміні, поки працюють SAW-*/NEST-1 (`det`-керований генератор, не випадковий); `spark` сценарій — негайно; DI0 імпульс 0,6 с, DI1 2 с, `count_today += 1`, подія WARNING «Іскрогасіння: іскру виявлено на магістралі аспірації над лінією A, гасіння 0,6 с»; `fault=true` → DI2=1, заявка | макет: 08:47 іскра |
 | R-27 | Димовидалення | `u85 DI4` = 1, якщо тривога/навчання (R-25) або `DO0` отримав імпульс (`SIM_WRITE_ACCEPT`); відкриття 60 с; закриття після скидання за 90 с; `blackout` → DI6=1 (АКБ), через 72 год DI5=1 | |
-| R-28 | СКУД | працівники з API-01 (`employees`, 35 з бейджами); вхід `06:40 + (det(code) mod 20) хв` (як `step_attendance` макета), подія 4102 (card) або 4867 (face) — чергуються за `det`; `tna_key=1`; вихід `15:30 + (det(code) mod 20)`, `tna_key=2`; під час зміни: електрик (`OP-W1` як черговий) → ACR-ELEC 09:51, комірники → ACR-PAINT (OP-W2 10:20), ACR-CHG (FL-C* повернення), ACR-SRV (адміністратор 1 раз/день); `access_event` сценарій — довільна подія (параметри `device`, `user`, `code`); `on_site = входи − виходи` за добу; `fire_drill` — R-25 | демо: 35 відміток входу 06:40–07:00 → `hr.attendance` у фазі 4 |
-| R-29 | Двір | фура з `bookings` (API-01) або розкладу макета: прибуття на GATE-W за `scheduled − 20 хв` (incoming) / на GATE-E `scheduled − 10 хв` (outgoing порожня → заїжджає через GATE-W; ПРИПУЩЕННЯ: в'їзд завжди через GATE-W, виїзд через GATE-E); послідовність incoming: `expected → at_gate` (LPR `new`, DI1=1 петля) → якщо бронювання є і (`SIM_YARD_AUTOGATE` або DO0 отримано) → `DI0=1` через 5 с → `weigh_in` (на вагах 60 с, брутто) → `to_dock` (3 хв) → `at_dock` (розвантаження за прогресом `stock.picking` у follow_odoo або 40 хв у scenario) → `to_exit` (2 хв) → `weigh_out` (тара) → GATE-E `at_gate → left` (LPR `CAM-06`); без бронювання → `rejected`: стоїть на петлі, LPR `plateList=none`, подія WARNING «Фура АА1234КТ без бронювання біля воріт в'їзду», через 10 хв їде (або `truck_arrival` з `booking=true` її впускає); `passes_today` — лічильник петлі | демо: TRUCK-IN-1 (`BATCH/IN/00001`, DOCK-W1, 06:30) → у знімку 10:30 стоїть `at_dock`, розвантажено 60 % |
+| R-28 | СКУД | працівники з API-01 (`employees`, 35 з бейджами); вхід `06:40 + (det(code) mod 20) хв` (як `step_attendance` макета), подія 4102 (Verify success — card), якщо `det(code) % 2 == 0`, інакше 4867 (Identify success — face) (`det` — FNV-1a 32, як `plant/odoo_demo.py:det`; X-50, access §13.1); `tna_key=1`; вихід `15:30 + (det(code) mod 20)`, `tna_key=2`; під час зміни: електрик (`OP-W1` як черговий) → ACR-ELEC 09:51, комірники → ACR-PAINT (OP-W2 10:20), ACR-CHG (FL-C* повернення), ACR-SRV (адміністратор 1 раз/день); `access_event` сценарій — довільна подія (параметри `device`, `user`, `code`); `on_site = входи − виходи` за добу; `fire_drill` — R-25 | демо: 35 відміток входу 06:40–07:00 → `hr.attendance` у фазі 4; OP-SAW-1 → 06:52, код за `det % 2` |
+| R-29 | Двір | фура з `bookings` (API-01) або розкладу макета: прибуття на GATE-W за `scheduled − 20 хв` (incoming) / на GATE-E `scheduled − 10 хв` (outgoing порожня → заїжджає через GATE-W; ПРИПУЩЕННЯ: в'їзд завжди через GATE-W, виїзд через GATE-E); послідовність incoming: `expected → at_gate` (LPR `new`, DI1=1 петля) → якщо бронювання є і (`SIM_YARD_AUTOGATE` або DO0 отримано) → `DI0=1` через 5 с → `weigh_in` (на вагах 60 с, брутто) → `to_dock` (3 хв) → `at_dock` (розвантаження за прогресом `stock.picking` у follow_odoo або 40 хв у scenario) → `to_exit` (2 хв) → `weigh_out` (тара) → GATE-E `at_gate → left` (LPR `CAM-06`); номер фури — `bookings[].plate` (API-01, `f3d_plate`), інакше генерується (§8.13.2, X-49); LPR з бронюванням — `plateList="f3d_bookings"`, `plateListMode="allow"` (X-48); без бронювання → `rejected`: стоїть на петлі, LPR `plateList=""`, `plateListMode="none"`, подія WARNING «Фура АА1234КТ без бронювання біля воріт в'їзду», через 10 хв їде (або `truck_arrival` з `booking=true` її впускає); `passes_today` — лічильник петлі | демо: TRUCK-IN-1 (`BATCH/IN/00001`, DOCK-W1, 06:30) → у знімку 10:30 стоїть `at_dock`, розвантажено 60 % |
 | R-30 | Ваги | `weight = 0 ± 20`; при `weigh_in/out`: протягом 3 с `D` (динамічно) лінійно до цільової, далі `S` ± 20 кг; брутто = `14 000 + Σ(qty·маса_од)`: аркуш ДСП 16 мм 2800×2070 — 56 кг, МДФ 18 — 70, ХДФ 3 — 12, палета ГП — 420, фурнітура/крайка/ЛФМ — за документом 0,02–1,2 кг/од; `> 60 000` → `S +` | WH/IN/00128: 120 ДСП16 + 80 ДСП16 → 200·56 = 11 200 → брутто 25 200 кг |
 
 ### 9.2 Пороги й статуси
@@ -1501,10 +1503,10 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 |---|---|---|---|---|---|---|
 | S-01 | `shift` | production | `date` (date, default сьогодні), `lines` (array of enum `A,B,C,D,F`, default усі), `speed` (number 0,5…3, default 1 — множник темпу завдань), `trucks` (bool, default true), `people` (bool, default true) | у режимі `scenario`: запускає планувальник на день — завдання за маршрутами макета на всіх РЦ обраних ліній, фури за розкладом, відмітки людей; `duration_s` default 0 | верстати WORKING/READY, OEE, потужність, фури біля воріт, заряд АКБ | `follow_odoo` → 409 |
 | S-02 | `machine_fault` | production | `device` (enum: 35 РЦ + GANTRY-1, required), `reason` (enum §2.11, default `generic`), `auto_clear_s` (int, default 0) | `fault(reason)` на пристрій; після `auto_clear_s` або `stop` — `clear()`; `duration_s` default 0 | OPC UA ERROR + подія E04xx, DI fault, `p_now=0`, червоне кільце в 3D, заявка ТО (фаза 2 / рівень 0 — ні, бо стан не сигнал) | той самий пристрій |
-| S-03 | `blackout` | energy | `duration_s` default 600, `genset` (bool, default true — чи стартує генератор), `restore_delay_s` (int, default 60) | R-22 | ATyS II, PM5560 вводи 0, PV 0x0303, освітлення аварійне, верстати ERROR, генератор у `td_genset` | усе енергетичне (`pv_cloudy`, `genset_test`) |
+| S-03 | `blackout` | energy | `duration_s` default 600, `genset` (bool, default true — чи стартує генератор), `restore_delay_s` (int, default 60 — повернення в запасному режимі §8.14), `amf_master` (enum `hgm`, `ats`; default `SIM_GENSET_AMF_MASTER` = `hgm`; CI-01, X-59), `genset_load_kw` (number 0…558, optional — явне навантаження генератора замість формули R-22; CI-01), `chp_island` (bool, default false — чи працює КГУ в острові; X-67) | R-22 (+ R-12, R-13 острів): API-F-01…F-04 `fake_relay` (td_genset §8.4/§8.6), `P_genset = min(558, max(0, P_crit − chp_kw − pv_now + bess_kw))` | ATyS u71 `20483 = 3` (II), `20486 = 0`, `20487 = 2`; варіант `ats` — `20484 = 1`; PM5560 вводи 0, PV 0x0303, освітлення аварійне до переключення, некритичні верстати ERROR; генератор у `td_genset` під навантаженням 348 кВт (`chp_island=false`) або 0 (`true`, день) | усе енергетичне (`pv_cloudy`, `genset_test`) |
 | S-04 | `filter_clogged` | bms | `device` (enum RV-01…RV-25, AHU-1, DUST-1, FA-FAC, required), `value` (number — цільове значення в одиницях сигналу; default: RV 285 Па, DUST-1 1,9 кПа, FA-FAC 92 %), `ramp_min` (int, default 2) | лінійно підводить сигнал фільтра/запиленості до `value` за `ramp_min` хв і тримає (R-09 продовжує), доки не закриють заявку або `stop` (→ `nominal`) | BACnet AI:4/BI:3, заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» (рівень 0 / фаза 2) | той самий пристрій |
-| S-05 | `truck_no_booking` | logistics | `plate` (string, default генерований), `gate` (enum GATE-W/GATE-E, default GATE-W), `wait_min` (int, default 10) | фура без бронювання за R-29 (`rejected`) | LPR `plateList=none`, петля DI1=1, шлагбаум закритий, подія WARNING | петля тих самих воріт |
-| S-06 | `truck_arrival` | logistics | `booking` (string — `batch` з API-01 або `picking`, required), `plate` (string, optional), `at` (datetime, default зараз), `unload_min` (int, default 40) | фура з бронюванням проходить повний цикл R-29 негайно | LPR `allow`, шлагбаум, ваги SICS, фура біля воріт у 3D, прогрес документа (лише scenario) | петля воріт |
+| S-05 | `truck_no_booking` | logistics | `plate` (string, default генерований), `gate` (enum GATE-W/GATE-E, default GATE-W), `wait_min` (int, default 10) | фура без бронювання за R-29 (`rejected`) | LPR `plateList=""`, `plateListMode="none"` (X-48), петля DI1=1, шлагбаум закритий, подія WARNING | петля тих самих воріт |
+| S-06 | `truck_arrival` | logistics | `booking` (string — `batch` з API-01 або `picking`, required), `plate` (string, optional), `at` (datetime, default зараз), `unload_min` (int, default 40) | фура з бронюванням проходить повний цикл R-29 негайно | LPR `plateList="f3d_bookings"`, `plateListMode="allow"`, номер з `bookings[].plate` (X-49), шлагбаум, ваги SICS, фура біля воріт у 3D, прогрес документа (лише scenario) | петля воріт |
 | S-07 | `fire_drill` | safety | `zone` (enum 33 зон FA-*, default FA-CNC), `detector` (string, default перший у зоні; демо `2.CNC.05`), `real` (bool, default false — справжня тривога замість навчальної), `duration_s` default 300 | R-25 | BACnet LSZ/LSP test-alarm/alarm, сирени, стоп вентиляції, димовидалення, двері, верстати ERROR, 3D: маршрути евакуації | усі safety/bms |
 | S-08 | `spark` | safety | `fault` (bool, default false), `count` (int 1…5, default 1), `interval_s` (int, default 30) | R-26 | u85 DI0/DI1, подія WARNING | — |
 | S-09 | `access_event` | access | `device` (enum ACR-*, default ACR-IN), `user` (string — `barcode`; default випадковий працівник), `code` (int, enum кодів §8.12, default 4102), `tna_key` (enum `1,2,""`, default `1`), `door_open` (bool, default true) | додає подію BioStar (+ `20480/20992/21248` дверей, якщо `door_open`) | `/api/events/search`, у фазі 4 — `hr.attendance` | — |
@@ -1512,7 +1514,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | S-11 | `compressor_fault` | energy | `kind` (enum `pressure_drop`, `overtemp`, `comm`, default `pressure_drop`), `duration_s` default 900 | R-08: `nominal=5,5` / `temp=115` / unit 70 недоступний | Modbus u70, тиск < 6,0 → alarm і заявка; `AIR-RING` тиск теж падає до 5,6 | COMPRESSOR, AIR-RING |
 | S-12 | `pv_cloudy` | energy | `cf` (number 0,05…1, default 0,3), `duration_s` default 1800 | R-11 `cf` | PV 32080 падає, баланс R-13: BESS розряд, `grid` росте | енергетичне |
 | S-13 | `boiler_refill` | bms | `level_pct` (number, default 95), `force_on` (int 0…2, default −1 = авто) | бункер → `level_pct`; `force_on ≥ 0` → примусово `boilers_on` | BACnet dev 140 AI:3, BI:1/2 | BOILER |
-| S-14 | `genset_test` | energy | `duration_s` default 900 | щотижневий тестовий пуск (07:30 у макеті): генератор працює без навантаження, ATyS лишається в `I`; через `td_genset` relay | P-12, подія INFO | blackout |
+| S-14 | `genset_test` | energy | `duration_s` default 900, `test_on_load` (bool, default false; CI-01, X-59) | щотижневий тестовий пуск (07:30 у макеті): API-F-03 `remote_start {"on": true}` на `duration_s`, далі `{"on": false}` (`fake_relay` фіксує `last_test`); `test_on_load=false` — генератор без навантаження, ATyS лишається в I (`20483 = 2`); `true` — ATyS переключає критичну шину на генератор (`20483` 2 → 1 → 3, назад після `duration_s`), навантаження за R-22 (API-F-04) | P-12, подія INFO | blackout |
 | S-15 | `lighting_scene` | bms | `group` (enum LT-* або `all`, default `all`), `scene` (int 1…16) або `level` (int 0…100), `fault_device` (string адреса `@c.r.s.d`, optional), `duration_s` default 600 | R-24: явна сцена/рівень; `fault_device` → C:110 біт1 | HelvarNet push, `lighting/groups/*/level`, 3D освітленість | група |
 
 Усі сценарії пишуть події `scenario` (`started`, `progress` з `payload.step`, `done|stopped|failed`); `result` для S-06: `{"gross_kg": 25200, "tare_kg": 14000, "dock": "DOCK-W1", "unloaded_pct": 100}`; для S-07: `{"alarm_latency_s": 0, "sounders_s": 3, "vent_stop_s": 6, "doors_s": 12}`.
@@ -1533,10 +1535,10 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | Фура | expected → at_gate → (weigh_in → to_dock → at_dock → to_exit → weigh_out → at_gate_out → left) \| rejected → left | R-29; S-05, S-06; DO шлагбаума | LPR події, DI/DO, SICS, події `yard` |
 | Запуск сценарію | queued → running → (stopping →) stopped \| done \| failed | API-13 start/stop, завершення `duration_s`, виняток | події `scenario`, API-03 → `f3d.sim.run` |
 | Сервіс | starting → running ⇄ degraded; running → locked (`stop-all`/`SIM_ENABLED=0`) → running (`resume`); → stopped | health §8.16 | `/health`, Docker HEALTHCHECK |
-| Зона пожежної (LSZ) | quiet → pre-alarm → alarm → quiet (reset); quiet → test-alarm → quiet; quiet ⇄ fault; quiet → not-ready (вимкнена) | R-25; S-07 | COV, EventNotification, каскад R-25 |
-| АВР (ATyS) | I (мережа) → 0 (перехід, 3 с) → II (генератор) → 0 → I | R-22 | 20480…20485 |
+| Зона пожежної (LSZ) | quiet → pre-alarm → alarm → quiet (reset); quiet → test-alarm → quiet; quiet ⇄ fault (API-12 `fault`/`clear` на `FA-*`, X-60); quiet → not-ready (вимкнена) | R-25; S-07; API-12 | COV, EventNotification, каскад R-25; `fault(reason=loop)` — ще й BV шлейфу (X-36) |
+| АВР (ATyS) | `20483`: 2 (I, мережа) → 1 (Position 0, ODT 3 с) → 3 (II, генератор) → 1 → 2 (Annexe III, X-41) | R-22 (варіант A — за `breaker` HGM з API-F-01; B — таймери ATyS) | `20482` режим, `20484` реле пуску (варіант B), `20486`/`20487` стани джерел, лічильник 20510 |
 | Котельня (MSV:1) | standby(1) ⇄ K1(2) ⇄ K1+K2(3); будь-який → fault(4) → standby (clear) | R-10, S-13 | BI:1/2, бункер |
-| Шлагбаум | closed → opening (5 с) → open → closing (після петлі + 15 с) → closed; open (held) при `DO4` | DO0/DO1, R-29, R-25 | DI0/DI2, лічильник проїздів |
+| Шлагбаум | closed → opening (5 с) → open → closing (після петлі + 15 с) → closed; open (held), поки свій канал «тримати» = 1: GATE-W — DO4 (`u86 fc1 pdu20`), GATE-E — DO5 (`pdu21`) (X-47) | DO0/DO1, R-29, R-25 | DI0/DI2, лічильник проїздів |
 | Пульт Odoo `f3d.sim.panel.state` | unconfigured → offline ⇄ online ⇄ degraded; online → locked (стоп-кран сервісу) | C-01, кнопки | `_sync_level0` |
 | Рівень 0 (`level0_state`) | auto_off ⇄ auto_on (за офлайном > N хв); → forced_on / forced_off (кнопки) → auto_* («авто») | C-01, кнопки | `cron_iot_sim.active` |
 
@@ -1575,55 +1577,70 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | ID | Given / When / Then | Тип | FR |
 |---|---|---|---|
 | AC-01 | Given `SIM_API_TOKEN` задано і compose запущено; When `GET /sim/v1/health`; Then 200, `status=ok`, усі 11 ключів `protocols` = `ok` протягом 60 с після старту | TC | FR-01, FR-22 |
-| AC-02 | Given каталог `signals.csv`; When `GET /sim/v1/signals?limit=1000` з токеном; Then `count=662`, усі коди з Додатка A присутні, у кожного `value` не `null`, `ts` ≤ 5 с тому | TC | FR-02 |
-| AC-03 | Given сигнал `energy/consumers/SAW-1/p_now`; When SAW-1 у WORKING; Then PM5560 unit 11 HR 3060 (F32) = значенню з `/signals` ± 0,01 і ∈ [10,9; 13,5] | TC | FR-02, FR-04 |
+| AC-02 | Given каталог `signals.csv`; When `GET /sim/v1/signals?limit=1000` з токеном; Then `count=1016` (усі коди Додатка A з протоколом; 149 рядків `protocol=none` відсутні — X-35), у кожного `value` не `null`, `ts` ≤ 5 с тому | TC | FR-02 |
+| AC-03 | Given сигнал `energy/consumers/SAW-1/p_now`; When SAW-1 у WORKING; Then PM5560 `u11 fc3 pdu3059+2` (документ 3060–3061, F32; X-42) = значенню з `/signals` ± 0,01 і ∈ [10,9; 13,5] | TC | FR-02, FR-04 |
 | AC-04 | Given `World(seed=20261012)` без Odoo, `SIM_SUN_MODEL=parabola`; When прокрутити 10 хвилинних кроків для `equipment/COMPRESSOR/pressure_bar`; Then ряд збігається з еталоном `golden_rng.json` (отриманим з формули `action_iot_tick`) з точністю 1e-6 | UT | FR-03, FR-21 |
-| AC-05 | Given два `World` з однаковим `seed` і однаковою послідовністю команд; When прокрутити 1 sim-годину; Then усі 662 значення рівні | UT | FR-21 |
+| AC-05 | Given два `World` з однаковим `seed` і однаковою послідовністю команд; When прокрутити 1 sim-годину; Then усі 1016 значень рівні | UT | FR-21 |
 | AC-06 | Given `factor=1` і `factor=10`; When прокрутити 1 sim-годину обома; Then `kwh_shift` SAW-1, `hours` FL-1, `pieces_out` SAW-1 рівні з точністю 0,1 % | UT | FR-17 |
-| AC-07 | Given режим `follow_odoo`, у Odoo `mrp.workorder` SAW-1 у `progress`, CNC-2 `working_state=blocked`; When пройшло 15 с; Then OPC UA `SAW-1.State.Machine.Overview.CurrentState=3`, `CNC-2…CurrentState=4`, `CNC-2.State.Machine.Flags.Error=True`, PM5560 u22 HR 3060 = 0 | TC | FR-04, FR-18 |
+| AC-07 | Given режим `follow_odoo`, у Odoo `mrp.workorder` SAW-1 у `progress`, CNC-2 `working_state=blocked`; When пройшло 15 с; Then OPC UA `SAW-1.State.Machine.Overview.CurrentState=3`, `CNC-2…CurrentState=4`, `CNC-2.State.Machine.Flags.Error=True`, PM5560 `u22 fc3 pdu3059+2` = 0 | TC | FR-04, FR-18 |
 | AC-08 | Given FL-2 `battery=21 %` у `busy`; When прокрутити sim-час до `≤ 20 %`; Then MQTT `telemetry.state` стає `to_charge`, потім `charging` у зоні `Z-CHG` (x,y у полігоні), заряд росте 0,6 %/хв до 95 → `idle` | UT+TC | FR-05 |
 | AC-09 | Given RV-05 `filter_dp_pa=285`; When `World.maintenance_closed.add("RV-05")` (або закрити MR/00035 в Odoo у follow_odoo); Then за ≤ 2 тіки BACnet dev 105 AI:4 = 120 ± 1, BI:3 = 0 | UT+TC | FR-06 |
 | AC-10 | Given бункер 16 %; When крок зі витратою; Then `silo_fill` → 95, подія `info` «Бункер поповнено» | UT | FR-07 |
-| AC-11 | Given `sim_now` = 12.10.2026 10:30 Київ, `cf=1`; When `SIM_SUN_MODEL=parabola`; Then `Σ 32080 (u61…u68)` = `765·0,826·(0,92…1,0)` ± 1 %; при 23:00 — 0 і 32089 = `0xA000` | UT | FR-08 |
-| AC-12 | Given усі 35 РЦ WORKING; When тік; Then u70 HR 3010 (load) ≥ 80; поріг `pressure < 6,0` не спрацьовує без сценарію | UT | FR-09 |
+| AC-11 | Given `sim_now` = 12.10.2026 10:30 Київ, `cf=1`; When `SIM_SUN_MODEL=parabola`; Then `Σ u61…u68 fc3 pdu32080+2` = `765·0,826·(0,92…1,0)` ± 1 %; при 23:00 — 0 і 32089 = `0xA000` | UT | FR-08 |
+| AC-12 | Given усі 35 РЦ WORKING; When тік; Then `u70 fc3 pdu3009` (load, документ 3010) ≥ 80; поріг `pressure < 6,0` не спрацьовує без сценарію | UT | FR-09 |
 | AC-13 | Given стос `PLT-04C qty=38`; When `POST /api/v1/jobs {type: feed, source: PLT-04C, target: SAW-1, sheets: 3}`; Then job → `active` → `done`, `qty=35`, `cycles_today += 3`, подій `sheet_placed` = 3 | TC | FR-10 |
-| AC-14 | Given `load=626`, `pv=468`, `chp=397`, `SOC=76`; When баланс; Then `bess_kw=200`, `export≈39`, u2 HR 3060 < 0, u69 HR 37001 = 200000, u71 HR 20480 = 1 | UT | FR-11 |
-| AC-15 | Given панель у `quiet`; When `POST /scenario/fire_drill/start {zone: FA-CNC}`; Then за 1 с LSZ:14 `present-value=test-alarm`, LSP:21405 `test-alarm`, за 3 с BI:10=1, за 6 с усі RV `BV:1=0`, за 9 с u85 DI4=1, за 12 с BioStar події 20480 на дверях 1–5, за 20 с CNC-1..4 `ExternalEmergency=True`; `WriteProperty` у LSZ:14 → `write-access-denied` | TC | FR-12 |
+| AC-14 | Given `load=626`, `pv=468`, `chp=397`, `SOC=76`; When баланс; Then `bess_kw=200`, `export≈39`, `u2 fc3 pdu3059+2` < 0, `u69 fc3 pdu37001+2` = 200000, `u71 fc3 pdu20483` = 2 (Position I, Annexe III; X-41) | UT | FR-11 |
+| AC-15 | Given панель у `quiet`; When `POST /scenario/fire_drill/start {zone: FA-CNC}`; Then за 1 с LSZ:14 `present-value=test-alarm`, LSP:21405 `test-alarm`, за 3 с BV:10=1 (X-37), за 6 с усі RV `BV:1=0`, за 9 с `u85 fc2 pdu4` = 1, за 12 с BioStar події 20480 на дверях 1–5 і `u86 fc1 pdu20` = `pdu21` = 1 (X-47), за 20 с CNC-1..4 `ExternalEmergency=True`; `WriteProperty` у LSZ:14 → `write-access-denied` | TC | FR-12 |
 | AC-16 | Given 35 працівників з бейджами (API-01); When sim-час проходить 06:40–07:00; Then `POST /api/events/search` за `device_id.id=5390001` повертає 35 подій з кодами 4102/4867, `tna_key="1"`, унікальні `user_id.user_id` | TC | FR-13 |
-| AC-17 | Given бронювання `BATCH/IN/00001` (DOCK-W1, 06:30); When `POST /scenario/truck_arrival/start {booking: "BATCH/IN/00001"}`; Then приймач LPR отримує POST з `plateList="allow"`, `GEOtarget="GATE-W"`; u86 DI1=1, DI0=1 (≤ 6 с); SICS `S` → `S S      25200 kg` (± 20) на етапі `weigh_in`; фура доходить до `at_dock`; на виїзді `CAM-06` POST, `S S      14000 kg` | TC | FR-14 |
-| AC-18 | Given `truck_no_booking`; When запущено; Then LPR `plateList=""`/`none`, DI0 лишається 0 протягом `wait_min`, подія WARNING, `GET /runs/{id}` → `done`, `result.rejected=true` | TC | FR-14 |
+| AC-17 | Given бронювання `BATCH/IN/00001` (DOCK-W1, 06:30); When `POST /scenario/truck_arrival/start {booking: "BATCH/IN/00001"}`; Then приймач LPR отримує POST з `plateList="f3d_bookings"`, `plateListMode="allow"`, `GEOtarget="GATE-W"`, `capture_timestamp` = `sim_now` (мс; X-48); `u86 fc2 pdu1` = 1, `pdu0` = 1 (≤ 6 с); SICS `S` → `S S      25200 kg` (± 20) на етапі `weigh_in`; фура доходить до `at_dock`; на виїзді `CAM-06` POST, `S S      14000 kg` | TC | FR-14 |
+| AC-18 | Given `truck_no_booking`; When запущено; Then LPR `plateList=""`, `plateListMode="none"` (X-48), DI0 лишається 0 протягом `wait_min`, подія WARNING, `GET /runs/{id}` → `done`, `result.rejected=true` | TC | FR-14 |
 | AC-19 | Given токен; When `POST /scenario/machine_fault/start {device: CNC-3, reason: spindle}`; Then 201, OPC UA подія `WwAlarmConditionType` з `MessageId=E0421`, `EventCategory=4`, `ActiveState=True`; `POST …/stop` → `ActiveState=False`, `CurrentState` повертається | TC | FR-15, FR-16 |
-| AC-20 | Given `/scenario/blackout/start {duration_s: 120}`; When 20 с; Then u71 HR 20480 = 2, HR 20481 = 0, HR 20482 = 1, u1/u2 HR 3060 = 0, u61 HR 32089 = 0x0303, LT-* рівні 0 крім G:40 = 100; через 120 + 60 с — усе відновлено, `transfer_counter` += 1 | TC | FR-16, FR-11 |
+| AC-20 | Given `/scenario/blackout/start {duration_s: 120}` (умовчання: `amf_master=hgm`, `chp_island=false`; `genset_relay` з профілем D700); When `breaker == "gen"` в API-F-01 (≈ 30 с; у запасному режимі — 15 с); Then `u71 fc3 pdu20483` = 3 (II), `pdu20486` = 0, `pdu20487` = 2, `pdu20482` = 32, `u1`/`u2 fc3 pdu3059+2` = 0, `u61 fc3 pdu32089` = 0x0303, до переключення LT-* рівні 0, крім G:40 = 100, після — групи LP-1..3 за розкладом; `fake_relay` отримав `load {"kw": 348 ± 1}` (X-67); через 120 с + повернення (`breaker == "mains"`) — `pdu20483` = 2, `pdu20486` = 2, усе відновлено, `transfer_counter` (`pdu20510+2`) += 1 | TC | FR-16, FR-11 |
 | AC-21 | Given `POST /time {factor: 10}`; When 6 реальних секунд; Then `sim_now` зріс на 60 ± 2 с; `POST /time {factor: 100}` → 422; у `follow_odoo` `{factor: 10}` → 409 | TC | FR-17 |
 | AC-22 | Given `SIM_CATALOG_SOURCE=odoo`, Odoo віддає API-01; When старт; Then `/status.odoo.catalog_source="odoo"`, `devices=273`; при недоступному Odoo — `"local"`, `devices ≥ 273` з yaml | TC | FR-19 |
 | AC-23 | Given `SIM_ALLOW_OUTBOUND=mosquitto`; When `SIM_LPR_PUSH_URL=http://10.0.0.1/`; Then жодного TCP-з'єднання до 10.0.0.1 (перевірка через `iot_sim_outbound_denied_total ≥ 1` і мок-сокет у юніт-тесті), подія `error` | UT+TC | FR-20 |
-| AC-24 | Given запущений сервіс; When `GET /sim/v1/metrics`; Then є `iot_sim_up 1`, `iot_sim_protocol_up{proto="opcua"} 1`, `iot_sim_signals_total 662` | TC | FR-22 |
-| AC-25 | Given копія демо-бази з data-модулем 19.0.1.0.0 (196 `x_f3d_signal`, N `x_f3d_reading`); When оновити модуль до 19.0.2.0.0; Then `x_f3d_signal` = 196 з тими самими `x_value`, `x_f3d_reading` = N, крон `cron_iot_sim` існує, меню «Рівень 0 (без сервісу)» під «Емулятор», `f3d.sim.panel` = 1, `f3d.sim.device` = 273, `f3d.sim.signal` = 662, `origin=mock` = 196 і всі мають `level0_code` з існуючим `x_code`, `f3d.sim.scenario` = 15 | UT (`test_migration`, з фікстурою data-модуля) + DEPLOY_TEST | FR-23, FR-25, FR-26 |
+| AC-24 | Given запущений сервіс; When `GET /sim/v1/metrics`; Then є `iot_sim_up 1`, `iot_sim_protocol_up{proto="opcua"} 1`, `iot_sim_signals_total 1016` | TC | FR-22 |
+| AC-25 | Given копія демо-бази з data-модулем 19.0.1.0.0 (196 `x_f3d_signal`, N `x_f3d_reading`); When оновити модуль до 19.0.2.0.0; Then `x_f3d_signal` = 196 з тими самими `x_value`, `x_f3d_reading` = N, крон `cron_iot_sim` існує, меню «Рівень 0 (без сервісу)» під «Емулятор», `f3d.sim.panel` = 1, `f3d.sim.device` = 273, `f3d.sim.signal` = 1 165 (з них `protocol=none` — 149), `origin=mock` = 196 і всі мають `level0_code` з існуючим `x_code`, `f3d.sim.scenario` = 15 | UT (`test_migration`, з фікстурою data-модуля) + DEPLOY_TEST | FR-23, FR-25, FR-26 |
 | AC-26 | Given сервіс онлайн, `read_enabled=True`; When C-01; Then `panel.state=online`, `version`, `mode`, `factor`, `sim_time` заповнені, `cron_iot_sim.active=False`, `level0_state=auto_off` | UT (мок HTTP) | FR-24, FR-28 |
 | AC-27 | Given сервіс офлайн 6 хв, `level0_enabled=True`, `level0_after_min=5`; When C-01; Then `cron_iot_sim.active=True`, `level0_state=auto_on`, чаттер пульта має запис | UT | FR-28 |
 | AC-28 | Given `write_enabled=False`; When `panel.action_apply_factor()`; Then `UserError` зі словами «стоп-краном», HTTP-запит не виконано (мок не викликано) | UT | FR-29 |
 | AC-29 | Given `write_enabled=True`, менеджер f3d; When майстер M-11 для `filter_clogged` з `device=RV-05`; Then `f3d.sim.run` створено `state=running`, `sim_run_id` з відповіді, подія `command` без токена в `payload` | UT (мок) | FR-24 |
 | AC-30 | Given API-03 з валідним `export_token`; When POST 2 події, одна з `payload.state=done` і `run_ref` існуючого запуску; Then 200 `accepted=2`, `f3d.sim.run.state=done`, повтор тих самих `event_id` → `accepted=0`, `rejected[*].reason=duplicate` | UT HttpCase | FR-24 |
-| AC-31 | Given `export_token` порожній; When `GET /f3d/sim/devices`; Then 503; з невірним токеном → 401; з вірним → 200, `devices` містить `SAW-1` з 7 сигналами (2 макет + 5 нових), `zones`, `docks` = 14, `shifts` = 1 («Зміна 1»), `employees` = 35, `bookings` = 6; `If-None-Match` з поточним ETag → 304 | UT HttpCase | FR-25, FR-26 |
+| AC-31 | Given `export_token` порожній; When `GET /f3d/sim/devices`; Then 503; з невірним токеном → 401; з вірним → 200, `devices` містить `SAW-1` з 8 сигналами `workcenters/SAW-1/*` (`state`, `mode`, `alarm`, `pieces_out`, `job`, `event`, `job_cmd`, `machine_state`) і `SAW-1-PM` з 3 (`energy/consumers/SAW-1/p_now`, `kwh_shift`, `kwh_total`; X-34), `bookings[]` з `truck` = `f3d_code`, `plate` = `f3d_plate` або `null` (X-15, X-49), `zones`, `docks` = 14, `shifts` = 1 («Зміна 1»), `employees` = 35, `bookings` = 6; `If-None-Match` з поточним ETag → 304 | UT HttpCase | FR-25, FR-26 |
 | AC-32 | Given користувач лише `group_f3d_user`; When відкриває пульт/пристрої/сигнали; Then читає; `write` на `f3d.sim.device` → `AccessError`; кнопки сценаріїв невидимі | UT | §4 |
 | AC-33 | Given обладнання CNC-2 з `f3d_code`; When відкрити форму; Then вкладка «Емулятор» показує `f3d_sim_state`; кнопка «Збій» (менеджер) → M-10 → запис `f3d.sim.device.state=fault` | UT | FR-27 |
 | AC-34 | Given `neutralize.sql` на копії; When виконано; Then усі крони модуля неактивні, параметри стоп-кранів `False`, url/токени порожні, `panel.state=unconfigured` | DEPLOY_TEST | FR-29 |
 | AC-35 | Given лог сервісу при `SIM_LOG_LEVEL=DEBUG`; When виконано запити з токенами/паролями; Then у логах жодного значення токена/пароля (grep за значенням = 0 збігів); `GET /status` не містить токенів | TC | FR-30 |
 | AC-36 | Given OPC UA клієнт `asyncua`; When читає `Objects/Machines`; Then 16 об'єктів типу `WwMachineType`, у `SAW-1` є `Identification.Manufacturer="HOMAG"`, `State.Machine.Flags.*` 26 булевих, `Values.RelativePiecesOut` UInt64, `JobManagement.JobOrderControl.JobOrderList` масив; анонімний `write` у `CurrentState` → `BadNotWritable` | TC | P-01 |
-| AC-37 | Given `pymodbus` клієнт; When читає unit 80 coils 1–12, HR 40001–40024; Then coil(1)=1 для SLIDE-1 WORKING, лічильник росте; unit 200 → виняток 0x0B; unit 11 HR 9999 → 0x02; HR 40211 u80 = 0x6050 | TC | P-02 |
+| AC-37 | Given `pymodbus` клієнт; When читає `u80 fc2 pdu0+12`, `u80 fc3 pdu0+24`; Then `u80 fc2 pdu0` = 1 для SLIDE-1 WORKING, лічильник `pdu0+2` росте (молодше слово першим); unit 200 → виняток 0x0B; `u11 fc3 pdu9998` → 0x02; `u80 fc3 pdu210` = 0x6050 | TC | P-02 |
 | AC-38 | Given `bacpypes3` клієнт; When `Who-Is`; Then `I-Am` від 99, 101–125, 130–133, 140, 200; `ReadProperty dev 105 AI:4 present-value` = число; `SubscribeCOV` на AI:4 → повідомлення при зміні ≥ 5 Па; `ReadPropertyMultiple` 25 пристроїв ≤ 2 с | TC | P-08, P-09 |
 | AC-39 | Given TCP-клієнт на 50000; When `>V:2,C:152,@1.2.1.1#`; Then `?V:2,C:152,@1.2.1.1=<0..100>#`; `>V:2,C:13,G:12,L:30,F:100#` → push усім клієнтам і `GET /signals/lighting/groups/LT-CUT/level` = 30; `>V:2,C:152,@1.2.1.99#` → `!V:2,C:152,@1.2.1.99=11#` | TC | P-08 |
 | AC-40 | Given `paho` підписник `f3d/mobile/#`; When 10 с; Then ≥ 8 різних `code`, кожен JSON валідний за схемою §8.8.1; `status` retained з `online=true`; після `fault comm` FL-3 → `online=false` | TC | P-06 |
 | AC-41 | Given `requests` на 8081; When `POST /api/login` з `SIM_BIOSTAR_USER/PASS`; Then 200 з `bs-session-id`; `POST /api/events/search` з ним → `EventCollection.rows`; без заголовка → 401 (`Response.code="10"`); невірний пароль → 401 `code="101"`; після 30 хв бездіяльності → 401 | TC | P-10 |
 | AC-42 | Given TCP на 4001; When `SI\r\n` без машини; Then `S S          0 kg\r\n` (або ± 20); `XYZ\r\n` → `ES\r\n`; `Z\r\n` → `Z A\r\n` | TC | P-11 |
 | AC-43 | Given `POST /jobs` з CSV 48 деталей (`tests/data/parts_48.csv`); When ≤ 10 с; Then `state=planned`, `plan.sheets` ∈ [6; 9], `waste_pct` < 20; `POST /jobs/{id}/release {machine: SAW-1}` → у OPC UA `JobOrderList` з'являється `JobOrderID=cj-…` у `AllowedToStart`; CSV з `Width=2500` → 422 | TC | P-04 |
-| AC-44 | Given `write_enabled` споживача (тест); When Modbus `write coil 00017 unit 86` (DO0); Then DI0 unit 86 = 1 через ≤ 6 с, подія `command`; `write register 3060 unit 11` → виняток 0x02 | TC | P-11, безпека |
+| AC-44 | Given `write_enabled` споживача (тест); When Modbus FC 05 `u86 pdu16` = 1 (DO0, документ 00017); Then `u86 fc2 pdu0` (DI0) = 1 через ≤ 6 с, подія `command`; FC 06 `u11 pdu3059` → виняток 0x02 | TC | P-11, безпека |
 | AC-45 | Given `SIM_ENABLED=0`; When будь-який POST `/sim/v1`; Then 423; `GET /health.status="locked"`; значення сигналів не змінюються 60 с | TC | FR-29 |
 | AC-46 | Given `factor=10`, усі протоколи, 3 клієнти (OPC UA підписка на 720 вузлів, Modbus опитування 78 unit × 1 с, BACnet COV 120 об'єктів); When 10 хв; Then `iot_sim_tick_lag_seconds` p95 < 0,5 с, CPU контейнера < 100 % одного ядра, RSS < 400 МБ | TC (ТП-01) | §2.7 ARCHITECTURE |
 | AC-47 | Given кожен сценарій S-01…S-15; When `start` з `params_default` → `stop` через 30 с; Then `state` відповідно `running→stopped` (або `done` для коротких), жодних винятків у логах, `cleanup` повернув змінені сигнали до моделі (значення через 2 хв у межах R-01/нормального ходу) | TC | FR-16 |
 | AC-48 | Given `SIM_RESTORE_SNAPSHOT=1`; When рестарт контейнера через 5 хв роботи; Then лічильники (`kwh`, `hours`, `pieces_out`) продовжуються з останнього знімка (різниця ≤ 60 с sim-часу), запуски сценаріїв відновлюються або закриваються як `stopped` з повідомленням | TC | §8.2.3 |
 | AC-49 | Given `GET /f3d/sim/devices` і `GET /sim/v1/catalog/signals.csv`; When порівняти; Then множини `code` і `address` рівні (хеш `catalog_hash` у `/status` = хеш CSV модуля) | TC (ТБ-05) | A-02 |
-| AC-50 | Given сигнал `fire/groups/FA-FAC/dust = 82`; When `PUT /signals/fire/groups/FA-FAC/dust {value: 91, hold_s: 120}`; Then BACnet AV:21607 = 91, LSP:21607 `reliability=unreliable-other`, подія `alarm` з текстом «…запиленість 91 % при нормі до 90»; через 120 с модель знову веде значення | TC | API-16, R-25 |
+| AC-50 | Given сигнал `fire/groups/FA-FAC/dust = 82`; When `PUT /signals/fire/groups/FA-FAC/dust {value: 91, hold_s: 120}`; Then BACnet PIV:21607 = 91 (X-37), LSP:21607 `reliability=unreliable-other`, подія `alarm` з текстом «…запиленість 91 % при нормі до 90»; через 120 с модель знову веде значення | TC | API-16, R-25 |
+| AC-51 | Given сервіс без активних сценаріїв, `SIM_GENSET_AMF_MASTER=hgm`; When `pymodbus` читає `u71 fc3 pdu20480+8`; Then `20480–20481` = `sim_now` (UNIX с), `20482` = 32 (Remote), `20483` = 2 (Position I), `20484` = 0, `20485` = 1, `20486` = 2 (Available), `20487` = 0 (Under threshold); з `SIM_GENSET_AMF_MASTER=ats` — `20482` = 16 (Auto); `u71 fc3 pdu20520` → виняток 0x02 (вилучено, X-41) | UT+TC | FR-11 |
+| AC-52 | Given клієнт `pymodbus`; When читає `u11 fc3 pdu3059+2`, `u61 fc3 pdu32080+2`, `u70 fc3 pdu3001`, `u72 fc3 pdu40001`; Then F32 = `energy/consumers/SAW-1/p_now`, I32 = `infra/pv/PV-INV-1/p_kw`·1000, U16 = `equipment/COMPRESSOR/pressure_bar`·1000, U16 = `infra/totals/chp_kw` (усі ± 1 %) — адреси за документом вендора без загального «− 1» (X-42); ADAM: лічильник `u80 fc3 pdu0+2` при 65 537 = `[0x0001, 0x0001]` (молодше слово першим, X-43); кожна Modbus-адреса Додатка A містить `u<unit> fc<n> pdu<addr>[+<count>]` (регулярка telemetry R-24 шаблон (0), X-72) | UT+TC | FR-02 |
+| AC-53 | Given `write_enabled` споживача (тест); When FC 05 `u86 pdu21` = 1 (DO5); Then GATE-E лишається відкритим, поки DO5 = 1 (`u86 fc2 pdu2` = 1 після звільнення петлі), GATE-W не змінюється; FC 05 `u86 pdu20` = 1 (DO4) тримає лише GATE-W; `fire_drill` +12 с → `u86 fc1 pdu20+2` = `[1, 1]` (X-47) | TC | FR-14, FR-12 |
+| AC-54 | Given API-01 `bookings` з `TRUCK-OUT-1` (`plate="АА4512КТ"`, `BATCH/OUT/00004`, DOCK-E2) і `TRUCK-IN-1` (`plate=null`), sim-час 14.10.2026 08:15:05,507 Київ; When `truck_arrival {"booking": "BATCH/OUT/00004"}`; Then POST LPR: `plateUnicode="АА4512КТ"`, `plateText="AA4512KT"`, `capture_timestamp="1791954905507"` (= `sim_now`, мс UTC), `datetime="20261014 081505507"`, `plateList="f3d_bookings"`, `plateListMode="allow"`, `plateListDescription` починається з `BATCH/OUT/00004` (X-48, X-49); для `TRUCK-IN-1` — згенерований детермінований номер ≠ `АА4512КТ` | UT | FR-14 |
+| AC-55 | Given 35 працівників (API-01); When sim-час 06:40–07:00; Then код події входу кожного = 4102, якщо `det(code) % 2 == 0`, інакше 4867 (X-50); When `POST /api/events/search` з `orders [{"column": "datetime", "descending": false}]`, `limit=10`, `offset=0`, далі `offset=10`; Then `datetime` не спадає в межах і між сторінками, 20 різних `id` без пропусків; запит з `hint` = `rows[-1].hint` першої сторінки (без `offset`) дає ту саму другу сторінку; `descending=true` — спадання | UT+TC | FR-13 |
+| AC-56 | Given панель у `quiet`; When `POST /sim/v1/device/FA-CUT/fault {"reason": "sensor"}`; Then 200, `LSZ:12` = fault(3), `LSZ:0` = fault, `MSV:1` = 3, `PIV:2` = 1, BV шлейфу FA-CUT = 0, подія `fault` (X-36, X-60); `POST …/clear` → `quiet`, `PIV:2` = 0; `{"reason": "loop"}` → ще й BV шлейфу = 1; `{"reason": "spindle"}` → 422; `fault` на `PV-ROOF` (пасивний без `lsz`) → 422 | TC | FR-12, FR-15 |
+| AC-57 | Given TCP-клієнт на 50000, `SIM_HELVAR_VERSION=2`; When `>V:2,C:13,G:19,L:50,F:200,A:1#`; Then відповідь відправнику `!V:2,C:13,G:19,L:50,F:200,A:1=0#` і push `>V:2,C:13,G:19,L:50,F:200#` усім клієнтам; без `A` — лише push; `>V:1,C:152,@1.3.1.20#` → `?V:1,C:152,@1.3.1.20=50#` (версія відповіді = версії запиту); `>V:2,C:164,G:16#` → кадр `?V:2,C:164,G:16=@1.2.3.1,…,@1.2.3.64$` і кадр `?V:2,C:164,G:16=@1.2.4.1,…,@1.2.4.27#`; `>V:2,C:191#` → `?V:2,C:191=2#`. Given `SIM_HELVAR_VERSION=1`; Then `>V:2,C:152,@1.2.1.1#` → `!V:2,C:152,@1.2.1.1=18#`, `>V:1,C:191#` → `?V:1,C:191=1#` (X-64) | TC | P-08 |
+| AC-58 | Given `factory3d.base.environment=prod`; When `post_init_hook`; Then `factory3d.iot_sim.read_enabled='False'`, `write_enabled` не змінено; Given `environment=test`; Then `read_enabled='True'`; повторний запуск хука — той самий результат (X-56) | UT | FR-29 |
+| AC-59 | Given модуль установлено; Then `menu_f3d_sim_root.parent_id` = `factory3d_base.menu_f3d_root`, `sequence` = 90; `menu_iot_root.parent_id` = `menu_f3d_sim_root`, `sequence` = 9; `menu_f3d_sim_settings.parent_id` = `factory3d_base.menu_f3d_config`, `sequence` = 90; серед дочірніх `maintenance.menu_maintenance_title` пунктів модуля немає (X-31) | UT | §3.14 |
+| AC-60 | Given мок `fake_relay` (API-F-01…F-09) і `blackout {"duration_s": 120}` з умовчаннями (`amf_master=hgm`, `chp_island=false`); When мок повертає `breaker="gen"`; Then емулятор викликав API-F-02 `mains {"available": false}` рівно раз, `u71 pdu20483` = 3, API-F-04 `load {"kw": 348 ± 1}` (`P_genset = P_crit − chp_kw − pv_now + bess_kw`, X-67); з `chp_island=true` (день) → `chp_kw = 348`, `load {"kw": 0}`; з `genset_load_kw=200` → `load {"kw": 200}`; з `amf_master=ats` → API-F-03 `remote_start {"on": true}` через 3 ± 1 с, API-F-02 не викликано, `20484` = 1, `20482` = 16; без `gen_ok` 30 с → подія «FAIL START», `20483` = 2; `genset_test {"test_on_load": false}` → `remote_start` on, через `duration_s` off, `20483` = 2 весь час; порожній `SIM_GENSET_RELAY_TOKEN` → запасний режим (переключення через 15 с), запуск не `failed` (X-59) | UT (мок HTTP) + TC | FR-16, FR-11 |
+| AC-61 | Given клієнт `bacpypes3`; When `ReadProperty dev 200 object-list`; Then типи об'єктів ⊂ {`device`, `life-safety-zone`, `life-safety-point`, `binary-value`, `multi-state-value`, `positive-integer-value`} — жодного AI/AV/BI (X-37); `BV:1…4` = 0, `BV:10` = 0, `BV:11` = 0, `PIV:1…3` = 0, `PIV:21607` = 82, `MSV:1` = 1 (`fire/totals/system_state`), `LSZ:0` = quiet (`fire/totals/state`, X-36); `WriteProperty` у BV/PIV/MSV → `write-access-denied` | TC | FR-12, P-09 |
+| AC-62 | Given `catalog/signals.csv`; Then 1 165 рядків, коди унікальні, № 1…662 — колишні коди без перенумерації; 149 рядків `protocol=none` (energy 55, machine_connect 35, bms 59) з адресою «обчислює <модуль> …» (X-34, X-35); рядки 663–680 — `energy/consumers/<X>/p_now\|kwh_shift` для unit 51…59 (X-61); рядки 644/646/654/656 — по одному входу; рядки 600–602 — агрегат роутера `@1.<r>.0.0`; 58 рядків `…/level`, `…/heating_valve` — `scale` ×1 (X-39); `GET /sim/v1/signals` → `count=1016`, жодного коду `protocol=none`, `GET /signals/energy/consumers/SAW-1/kwh_shift` → 404; `u51 fc3 pdu3059+2` = `p_now` OFFICE (17,6 ± 10 %) | UT+TC | FR-02, FR-26 |
+| AC-63 | Given `follow_odoo`, `mrp.workorder` id 13 на SAW-1 у `progress`; Then `SAW-1.JobManagement.JobOrderControl.JobOrderList[0].JobOrderID = "WO00013"`; When WO 13 → `done`; Then елемент лишається в `JobOrderList` зі станом `Ended/Completed` до початку наступної зміни; у `scenario` без Odoo — `SIM-00001`…; рядки каталогу `workcenters/*/state` (P-01) мають поріг «—» (заявки лише з `…/alarm`) (X-38) | UT+TC | FR-04 |
+| AC-64 | Given RV-05 `k=0,72`, режим AQ, `outdoor_c=9`; Then `heat_kw = 6,9 ± 0,1`, `heating_valve = 6` (%), BACnet dev 105 AO:1 = 6 (не 0,06); RV-01 (VE, `k=0,68`) → 17,3 кВт / 15 %; `lighting/groups/LT-CUT/level` = 100 при рівні 1,0 і C:152 = 100 (X-39, X-40); EF-CHG `BI:1=0 ∧ BI:7=1` 61 с → подія рівня `alarm`; S-15 `fault_device=@1.2.1.5` → `>V:2,C:110,@1.2.1.5#` = `=2#`; у `blackout` світильник групи EMERGENCY → `=1024#` | UT+TC | P-08 |
+| AC-65 | Given склад груп емулятора за правилом §8.10.4 (bms R-06); Then для кожної з 32 груп список адрес C:164 дорівнює `dali_devices` bms Додаток A.1 (копія `tests/data/bms_dali_devices.csv`): `LT-EB` `@1.2.1.28-54`, `LT-CNC` `@1.2.2.1-27`, `LT-FAC` `@1.2.3.1-64;@1.2.4.1-27`, `LT-OUT-1` `@1.3.1.59-62`, `LT-OUT-2` `@1.3.2.1-4`; разом 320 світильників; датчики 322 — адреси 65…70 кожної лінії (X-65) | UT | P-08 |
 
 ---
 
@@ -1638,55 +1655,58 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 | `test_rng.py` | `test_golden_sequence` | — | `Rng(20261012, "equipment/COMPRESSOR/pressure_bar")` перші 10 `r` = `golden_rng.json` (еталон згенеровано скриптом `tools/golden_from_mock.py`, який повторює формулу `action_iot_tick` у чистому Python) | AC-04 |
 | `test_clock.py` | `test_factor_monotonic`, `test_set_time`, `test_dst_transition` | `FakeRealTime` | `now()` росте на `dt·factor`; `set()` не ламає монотонність UTC; 26.10.2026 03:00 локальний повтор без дублів хвилинних кроків | AC-06, §11 |
 | `test_models_noise.py` | `test_noise_formula`, `test_noise_threshold_alarm` | сигнал compressor | значення за R-01 з точністю 1e-9; `alarm=below, threshold=6.0` → `status=alarm` при 5,99 | AC-04 |
-| `test_models_machine.py` | `test_state_logic_table` (параметризований 32 комбінації прапорів), `test_power_by_state`, `test_pieces_counter`, `test_fault_clear` | `machine("SAW-1")` | `CurrentState` за таблицею §7.7 стандарту; `p_now` R-02; `pieces_out` за 15 хв = 6; після `fault(spindle)` → ERROR, подія `E0421`; `clear` → WORKING, якщо завдання | AC-07, AC-19 |
+| `test_models_machine.py` | `test_state_logic_table` (параметризований 32 комбінації прапорів), `test_power_by_state`, `test_pieces_counter`, `test_fault_clear`, `test_job_order_id_format`, `test_completed_job_stays_in_list` | `machine("SAW-1")`, фейкові WO з Odoo (id 13) і синтетичні | `CurrentState` за таблицею §7.7 стандарту; `p_now` R-02; `pieces_out` за 15 хв = 6; після `fault(spindle)` → ERROR, подія `E0421`; `clear` → WORKING, якщо завдання; `JobOrderID == "WO00013"`, синтетичне `SIM-00001`; після `done` елемент у списку зі станом `Ended/Completed` до зміни (X-38) | AC-07, AC-19, AC-63 |
 | `test_models_mobile.py` | `test_drain_cycle`, `test_route_to_charge`, `test_hours_only_when_busy` | `mobile("FL-2")`, зони з `zones.json` | R-05 межі 20/95, швидкість зарядки 0,6 %/хв; точка (x,y) у полігоні Z-CHG; `hours` не росте в `charging` | AC-08 |
 | `test_models_drift.py` | `test_drift_rate`, `test_reset_on_maintenance_closed` | `roofvent("RV-05")` | +0,05·(1+0,5r)/хв; `maintenance_closed` → 120 | AC-09 |
 | `test_models_boiler.py` | `test_level_refill`, `test_boilers_on_logic` | | R-10 | AC-10 |
 | `test_models_pv.py` | `test_parabola_matches_mock`, `test_astral_zero_at_night`, `test_inverter_status_enum` | | AC-11 значення; 23:00 → `0xA000` | AC-11 |
 | `test_models_compressor.py` | `test_load_from_production`, `test_fault_pressure_drop` | 35 WORKING | load ≥ 80; `compressor_fault` → 5,5 за 15 хв | AC-12 |
-| `test_models_energy.py` | `test_balance`, `test_meter_aggregation`, `test_transformer_temp` | значення макета | AC-14; сума фідерів = ввід; `38 + 60·345/1000 = 58,7` | AC-14 |
-| `test_models_facp.py` | `test_drill_timeline`, `test_contamination_reliability` | `FakeClock` | кроки 0/3/6/9/12/20 с; `AV > 90` → `unreliable-other` | AC-15, AC-50 |
-| `test_models_access.py` | `test_checkin_schedule`, `test_event_codes` | 35 employees | 35 подій 06:40–07:00, коди ∈ {4102, 4867}, `tna_key=1` | AC-16 |
-| `test_models_yard.py` | `test_truck_state_machine`, `test_no_booking_rejected`, `test_scale_weights` | booking BATCH/IN/00001 | послідовність станів R-29; `rejected`; брутто 25 200 | AC-17, AC-18 |
+| `test_models_energy.py` | `test_balance`, `test_meter_aggregation`, `test_transformer_temp`, `test_ats_annexe3_registers`, `test_island_genset_load`, `test_island_chp_variants` | значення макета; `ats(amf_master=hgm\|ats)`; `P_crit=348`, `P_crit=600` | AC-14; сума фідерів = ввід; `38 + 60·345/1000 = 58,7`; регістри 20480…20487 за §8.9.4 (`20483=2`, `20482=32\|16`); острів: `P_genset` = 348 (`chp_island=false`), 0 (`true`, день), 558 (`P_crit=600`), до переключення `bess_kw=−200` (X-41, X-67) | AC-14, AC-51, AC-60 |
+| `test_models_facp.py` | `test_drill_timeline`, `test_contamination_reliability`, `test_zone_fault_sensor`, `test_zone_fault_loop`, `test_object_types` | `FakeClock`, пристрій `FA-CUT` (`lsz=12`) | кроки 0/3/6/9/12/20 с (на 12 с — `u86` DO4 і DO5); `PIV > 90` → `unreliable-other`; `fault(sensor)` → LSZ:12 `fault`, `PIV:2=1`, BV шлейфу 0; `fault(loop)` → BV шлейфу 1; об'єкти dev 200 лише LSZ/LSP/BV/MSV/PIV (X-36, X-37, X-60) | AC-15, AC-50, AC-56, AC-61 |
+| `test_models_access.py` | `test_checkin_schedule`, `test_event_codes`, `test_det_parity`, `test_search_order_offset_hint` | 35 employees | 35 подій 06:40–07:00, коди ∈ {4102, 4867}, `tna_key=1`; код = 4102 ⇔ `det(code) % 2 == 0`; сторінки за зростанням `datetime` через `offset` і через `hint` однакові (X-50) | AC-16, AC-55 |
+| `test_models_yard.py` | `test_truck_state_machine`, `test_no_booking_rejected`, `test_scale_weights`, `test_lpr_payload`, `test_plate_from_bookings`, `test_hold_channels` | booking BATCH/IN/00001, BATCH/OUT/00004 (`plate="АА4512КТ"`) | послідовність станів R-29; `rejected` з `plateListMode="none"`; брутто 25 200; `capture_timestamp` = `sim_now` мс, `plateList="f3d_bookings"`, `plateListMode="allow"`; номер `TRUCK-OUT-1` = `АА4512КТ`, `TRUCK-IN-1` — згенерований; DO4 тримає лише GATE-W, DO5 — лише GATE-E (X-47…X-49) | AC-17, AC-18, AC-53, AC-54 |
 | `test_world.py` | `test_determinism_two_worlds`, `test_factor_invariance`, `test_snapshot_roundtrip` | | AC-05, AC-06, AC-48 (без контейнера) | |
-| `test_scenarios.py` | `test_each_scenario_start_stop` (параметризований 15), `test_conflict_409`, `test_params_validation` | | AC-47 логіка, 409, 422 | AC-47 |
-| `test_registry.py` | `test_catalog_load_662`, `test_devices_yaml_fallback`, `test_catalog_hash` | `catalog/` | 662 сигнали, 273 пристрої, хеш стабільний | AC-22, AC-49 |
+| `test_scenarios.py` | `test_each_scenario_start_stop` (параметризований 15), `test_conflict_409`, `test_params_validation`, `test_blackout_relay_calls`, `test_genset_test_on_load`, `test_relay_fallback` | мок `fake_relay` (`respx` для `httpx`) | AC-47 логіка, 409, 422; послідовність викликів API-F-02/F-03/F-04 за варіантами `hgm`/`ats`, `load.kw` за R-22, `genset_load_kw`, `test_on_load`; без токена — запасний режим (X-59, X-67) | AC-47, AC-60 |
+| `test_registry.py` | `test_catalog_load_1165`, `test_computed_rows`, `test_modbus_pdu_form`, `test_devices_yaml_fallback`, `test_catalog_hash` | `catalog/` | 1 165 сигналів (1 016 емульованих, 149 `protocol=none`), 273 пристрої, хеш стабільний; кожна Modbus-адреса містить `u<unit> fc<n> pdu<addr>[+<count>]` (X-42, X-72); `/signals` без `protocol=none` (X-35) | AC-22, AC-49, AC-52, AC-62 |
 | `test_outbound_guard.py` | `test_denied_host` | мок `socket.create_connection` | `OutboundDenied`, метрика | AC-23 |
+| `test_models_hvac.py` | `test_heat_formula_bms_r13`, `test_valve_percent`, `test_ef_chg_alarm`, `test_lighting_level_percent`, `test_c110_bits` | `roofvent("RV-05")`, `roofvent("RV-01")`, `fan("EF-CHG")`, `lighting` | `heat` 6,9 / 17,3 кВт, `heating_valve` 6 / 15 %, AO:1 у %; `level` 100 %; EF-CHG `stopped_charging` 61 с → `alarm`; C:110 `=2#`, у `blackout` EMERGENCY `=1024#` (X-39, X-40) | AC-64 |
+| `test_lighting_layout.py` | `test_dali_layout_matches_bms` | `tests/data/bms_dali_devices.csv` (копія bms Додаток A.1) | склад 32 груп за правилом bms R-06 = таблиця bms A.1 дослівно (X-65) | AC-65 |
 
 Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install, f3d`, `SimCase` з `responses`-подібним моком `requests` через `unittest.mock.patch("requests.Session.request")`):
 
 | Файл | Тест | Фікстури | Assert | AC |
 |---|---|---|---|---|
-| `test_panel.py` | `test_poll_online_disables_level0`, `test_poll_offline_enables_level0_after_n_min`, `test_apply_factor_blocked_by_stop_crane`, `test_apply_factor_follow_odoo_409` | параметри url/токен, мок `/status` | AC-26, AC-27, AC-28; `UserError` тексти | AC-26…28 |
-| `test_device.py` | `test_fault_wizard_calls_api`, `test_clear`, `test_code_regex`, `test_unit_unique` | пристрій CNC-2 | `state=fault`, тіло запиту `{"reason":"spindle"}`, `ValidationError` для `cnc 2`, дубль unit → помилка | AC-33 |
-| `test_signal_catalog.py` | `test_csv_loaded_662`, `test_mock_signals_have_level0`, `test_unknown_device_creates_passive` | hook | 662, 196 з `level0_code`, WARNING | AC-25 |
+| `test_panel.py` | `test_poll_online_disables_level0`, `test_poll_offline_enables_level0_after_n_min`, `test_apply_factor_blocked_by_stop_crane`, `test_apply_factor_follow_odoo_409`, `test_menu_under_base_root` | параметри url/токен, мок `/status` | AC-26, AC-27, AC-28; `UserError` тексти; батьки й `sequence` меню (X-31) | AC-26…28, AC-59 |
+| `test_device.py` | `test_fault_wizard_calls_api`, `test_clear`, `test_code_regex`, `test_unit_unique`, `test_reason_loop_only_lsz` | пристрій CNC-2, пасивний `FA-CUT` (`params.lsz=12`) | `state=fault`, тіло запиту `{"reason":"spindle"}`, `ValidationError` для `cnc 2`, дубль unit → помилка; `reason=loop` для CNC-2 → `ValidationError`, для `FA-CUT` — запит `{"reason":"loop"}` (X-60) | AC-33, AC-56 |
+| `test_signal_catalog.py` | `test_csv_loaded_1165`, `test_mock_signals_have_level0`, `test_unknown_device_creates_passive`, `test_computed_protocol_none` | hook | 1 165, 196 з `level0_code`, WARNING; 149 записів `protocol='none'`, `action_read_now` на них → `UserError` без HTTP | AC-25, AC-62 |
 | `test_scenario_run.py` | `test_run_wizard_creates_run`, `test_validate_params`, `test_stop` | мок 201 | AC-29 | AC-29 |
-| `test_api_devices.py` (HttpCase) | `test_devices_401_503_200_304`, `test_events_post_dedup`, `test_health` | токен у параметрі | AC-30, AC-31 | AC-30, AC-31 |
+| `test_api_devices.py` (HttpCase) | `test_devices_401_503_200_304`, `test_events_post_dedup`, `test_health`, `test_bookings_truck_plate` | токен у параметрі; пакет з `f3d_code='TRUCK-OUT-1'` і (якщо yard) `f3d_plate` | AC-30, AC-31; `bookings[].truck` = `f3d_code`, `plate` = `f3d_plate` або `null`; `docks[].accepts` — назви категорій, `zones` Z-CUT за base C (X-15, X-49, X-54) | AC-30, AC-31 |
 | `test_security.py` | `test_user_readonly`, `test_manager_no_settings`, `test_token_fields_admin_only` | користувачі 3 груп | `AccessError`; поля токенів недоступні менеджеру (`fields_get` без них) | AC-32 |
-| `test_migration.py` | `test_upgrade_keeps_level0` | фікстура: встановити data-модуль з `odoo_addons/factory3d_iot_sim` 19.0.1.0.0 (копія в `tests/fixtures/level0/`), створити 196 `x_f3d_signal` через `signal_specs`, потім `upgrade` | AC-25 кількості | AC-25 |
+| `test_migration.py` | `test_upgrade_keeps_level0`, `test_hook_read_enabled_by_environment` | фікстура: встановити data-модуль з `odoo_addons/factory3d_iot_sim` 19.0.1.0.0 (копія в `tests/fixtures/level0/`), створити 196 `x_f3d_signal` через `signal_specs`, потім `upgrade`; параметр `factory3d.base.environment` = `test` / `prod` | AC-25 кількості; `read_enabled` = `'True'` / `'False'` після хука (X-56) | AC-25, AC-58 |
 
 ### 13.2 Стендові сценарії (ТК) — проти `docker compose --profile dev`
 
-Передумови для всіх: `.env` з токенами; `tests/stand/conftest.py` чекає `GET /health = ok`; клієнти: `asyncua` (ТК-01, 05), `pymodbus` (02, 06, 07, 09, 12), `bacpypes3` (03, 08), `paho-mqtt` (04), `requests` (10, 11, 13), `socket` (11). Після кожного ТК — `POST /reset`.
+Передумови для всіх: `.env` з токенами; `tests/stand/conftest.py` чекає `GET /health = ok`; клієнти: `asyncua` (ТК-01, 05), `pymodbus` (02, 06, 07, 09, 12), `bacpypes3` (03, 08), `paho-mqtt` (04), `requests` (10, 11, 13), `socket` (11, 17). Після кожного ТК — `POST /reset`.
 
 | ТК | Назва | Передумови (сценарій емулятора) | Кроки | Очікуваний результат | Де дивитися |
 |---|---|---|---|---|---|
 | ТК-01 | OPC UA: адресний простір і стани | `follow_odoo` з копією демо-бази (або `scenario` + `shift`) | 1) browse `Machines`; 2) read `SAW-1…CurrentState`, `CNC-2…CurrentState`, `Flags`, `Values`; 3) підписка DataChange на `RelativePiecesOut` 2 хв; 4) спроба write | AC-36, AC-07: 16 об'єктів, SAW-1=3, CNC-2=4, лічильник +6/15 хв, `BadNotWritable` | `/sim/v1/signals?prefix=workcenters/SAW-1`, UaExpert |
-| ТК-02 | Modbus: лічильники PM5560 і I/O | `shift` | 1) read u11 HR 3000–3111, 3204–3215; 2) read u1/u2; 3) read u80 coils/HR; 4) помилкові unit/адреси; 5) write DO u86 | AC-03, AC-37, AC-44; сума u3…u8 HR 3060 ≈ u1 + u2 (±1 %); INT64 росте | `/signals?prefix=energy` |
-| ТК-03 | BACnet: вентиляція й котельня | — | 1) Who-Is; 2) RPM 25 RV; 3) COV AI:4 dev 105; 4) write AO:1 dev 105 = 80 (пріоритет 8); 5) write MSV:1 = 7 (ST) | AC-38; AI:3 dev 105 → 0 після ST, BI:1=0; AO:1 утримується 10 хв | `/signals?prefix=ventilation/units/RV-05` |
+| ТК-02 | Modbus: лічильники PM5560 і I/O | `shift` | 1) read `u11 fc3 pdu2999+112`, `pdu3203+12`; 2) read `u1`/`u2`; 3) read `u80 fc2 pdu0+12`, `fc3 pdu0+24`; 4) помилкові unit/адреси; 5) write DO `u86` (FC 05 `pdu16`, `pdu20`, `pdu21`); 6) read `u51…u59 fc3 pdu3059+2` | AC-03, AC-37, AC-44, AC-52, AC-53, AC-62; сума `u3…u8 fc3 pdu3059+2` ≈ `u1` + `u2` (±1 %); INT64 росте; лічильник ADAM — молодше слово першим | `/signals?prefix=energy` |
+| ТК-03 | BACnet: вентиляція й котельня | — | 1) Who-Is; 2) RPM 25 RV; 3) COV AI:4 dev 105; 4) write AO:1 dev 105 = 80 (пріоритет 8); 5) write MSV:1 = 7 (ST) | AC-38, AC-64; AI:3 dev 105 → 0 після ST, BI:1=0; AO:1 у % (80 = 80 %) утримується 10 хв | `/signals?prefix=ventilation/units/RV-05` |
 | ТК-04 | MQTT: телематика | `shift`, `battery_low FL-2 level_pct=18` | 1) підписка `f3d/mobile/#`; 2) 3 хв; 3) `fault comm FL-3` | AC-08, AC-40 | mosquitto_sub, 3D (рух FL-2 у зарядну) |
 | ТК-05 | Портал: woodStore + OPC UA | `shift` (SAW-1 WORKING) | 1) `GET /api/v1/stacks`; 2) `POST /jobs feed 3 аркуші`; 3) `GET /api/v1/status` кожні 5 с; 4) read OPC UA `GANTRY-1…CurrentState` | AC-13; стан moving/picking/placing; `qty −3` | картка PLT-04C у переглядачі |
-| ТК-06 | Інженерія: компресор, аспірація, трансформатори, вода | `compressor_fault pressure_drop` | 1) read u70 3001–3030 до/після; 2) u90 AI0–AI3 raw+float; 3) u96 RTD; 4) u84 DI0/DI1, лічильник DI8 за 10 хв sim | AC-12; тиск < 6,0 через ≤ 15 хв → `status=alarm`, подія; AI масштаб R-20; вода +350 імп | `/signals?prefix=equipment/COMPRESSOR` |
-| ТК-07 | Енергетика: СЕС, BESS, КГУ, АВР, blackout | `pv_cloudy cf=0.3` потім `blackout duration_s=120` | 1) read u61–68 32080/32089/32114; 2) u69 37000–37050; 3) u72; 4) u71 до/під час/після blackout; 5) u1/u2 3060 | AC-11, AC-14, AC-20 | `/signals?prefix=infra` |
-| ТК-08 | Пожежна панель: навчання і несправність | `fire_drill FA-CNC` ; потім `filter_clogged FA-FAC value=92` | 1) COV на LSZ:14, BI:10, dev 105 BV:1; 2) читання LSP:21405; 3) write LSZ → denied; 4) AV:21607 після другого сценарію | AC-15, AC-50; BioStar події 20480 на 5 дверях; u85 DI4 | `/events?kind=fire`, журнал подій 3D |
-| ТК-09 | Іскрогасіння, димовидалення | `spark count=2 interval_s=30` | 1) опитування u85 coils 1–6 кожні 0,2 с; 2) лічильник 40001; 3) write DO0 | імпульси 0,6/2 с, `count_today += 2`, DI4 через 60 с після DO0 | — |
-| ТК-10 | СКУД: BioStar 2 | sim-час 06:30 (`POST /time {set}`), `factor=10` | 1) login; 2) 5 хв реального часу; 3) `events/search` за ACR-IN; 4) `access_event ACR-ELEC code=6400`; 5) logout, повтор запиту | AC-16, AC-41; `6400` з `user` і дверима 2; після logout → 401 | — |
-| ТК-11 | Двір: LPR, шлагбаум, ваги | `truck_arrival BATCH/IN/00001`, потім `truck_no_booking` | 1) приймач LPR (`/lpr-sink` або тестовий HTTP-сервер у `SIM_LPR_PUSH_URL`); 2) опитування u86; 3) SICS `SIR` потік; 4) події | AC-17, AC-18, AC-42 | 3D: фура біля воріт, `/events?kind=yard` |
-| ТК-12 | Верстати без інтерфейсу: цикли | `shift`, `machine_fault ASM-3 reason=emergency` | 1) u82/u83 coils, HR 40001…; 2) 10 хв sim; 3) fault/clear | AC-37; ASM-3 coil fault=1, run=0; лічильник ASM-1 += 1 за 6 хв | — |
+| ТК-06 | Інженерія: компресор, аспірація, трансформатори, вода | `compressor_fault pressure_drop` | 1) read `u70 fc3 pdu3000+30` до/після; 2) `u90 fc3 pdu0+4` (raw) і `pdu30+8` (float, молодше слово першим); 3) `u96 fc3 pdu0+6`; 4) `u84 fc2 pdu0+2`, лічильник `u84 fc3 pdu16+2` за 10 хв sim | AC-12; тиск < 6,0 через ≤ 15 хв → `status=alarm`, подія; AI масштаб R-20; вода +350 імп | `/signals?prefix=equipment/COMPRESSOR` |
+| ТК-07 | Енергетика: СЕС, BESS, КГУ, АВР, blackout | `pv_cloudy cf=0.3` потім `blackout duration_s=120` (умовчання `hgm`), потім `blackout {"duration_s": 120, "amf_master": "ats", "chp_island": true}` | 1) read `u61…u68 fc3 pdu32080+2`, `pdu32089`, `pdu32114+2`, `pdu32106+2`; 2) `u69 fc3 pdu37000+51` (без перекриттів, X-51); 3) `u72 fc3 pdu40000+21`; 4) `u71 fc3 pdu20480+8` до/під час/після blackout; 5) `u1`/`u2 fc3 pdu3059+2`; 6) журнал `fake_relay` API-F-09 / `load` | AC-11, AC-14, AC-20, AC-51, AC-60; `load.kw` 348 (варіант A, КГУ стоїть), 0 (`chp_island=true`, день) | `/signals?prefix=infra` |
+| ТК-08 | Пожежна панель: навчання і несправність | `fire_drill FA-CNC` ; потім `filter_clogged FA-FAC value=92` | 1) COV на LSZ:14, BV:10, dev 105 BV:1; 2) читання LSP:21405; 3) write LSZ/BV/PIV → denied; 4) PIV:21607 після другого сценарію; 5) `POST /device/FA-CUT/fault {"reason":"sensor"}` → `clear`, потім `{"reason":"loop"}`; 6) `object-list` dev 200 | AC-15, AC-50, AC-56, AC-61; BioStar події 20480 на 5 дверях; u85 DI4 | `/events?kind=fire`, журнал подій 3D |
+| ТК-09 | Іскрогасіння, димовидалення | `spark count=2 interval_s=30` | 1) опитування `u85 fc2 pdu0+7` кожні 0,2 с; 2) лічильник `u85 fc3 pdu0+2`; 3) write DO0 (FC 05 `pdu16`) | імпульси 0,6/2 с, `count_today += 2`, DI4 через 60 с після DO0 | — |
+| ТК-10 | СКУД: BioStar 2 | sim-час 06:30 (`POST /time {set}`), `factor=10` | 1) login; 2) 5 хв реального часу; 3) `events/search` за ACR-IN; 4) `access_event ACR-ELEC code=6400`; 5) logout, повтор запиту | AC-16, AC-41, AC-55; сторінки `descending=false` через `offset` і `hint` однакові; `6400` з `user` і дверима 2; після logout → 401 | — |
+| ТК-11 | Двір: LPR, шлагбаум, ваги | `truck_arrival BATCH/IN/00001`, потім `truck_no_booking` | 1) приймач LPR (`/lpr-sink` або тестовий HTTP-сервер у `SIM_LPR_PUSH_URL`); 2) опитування `u86 fc2 pdu0+6`, `fc1 pdu16+6`; 3) SICS `SIR` потік; 4) події; 5) `truck_arrival BATCH/OUT/00004` (номер з `f3d_plate`) | AC-17, AC-18, AC-42, AC-54 | 3D: фура біля воріт, `/events?kind=yard` |
+| ТК-12 | Верстати без інтерфейсу: цикли | `shift`, `machine_fault ASM-3 reason=emergency` | 1) `u82`/`u83 fc2 pdu0+12`, `fc3 pdu0+20`; 2) 10 хв sim; 3) fault/clear | AC-37; ASM-3 coil fault=1, run=0; лічильник ASM-1 += 1 за 6 хв | — |
 | ТК-13 | REST керування і стоп-крани | — | 1) усі ендпоінти API-10…API-19 з/без токена; 2) `stop-all` → POST → 423; `resume`; 3) `SIM_ENABLED=0` рестарт; 4) `PUT /signals/... hold` | AC-21, AC-24, AC-45, AC-50 | — |
 | ТК-14 | Прискорення часу | `factor=10`, `shift` | 1) 10 хв реального часу; 2) порівняти лічильники з ТК при `factor=1` за 100 хв sim | AC-06, AC-21; підписники бачать стрибки ≤ 10 с sim на 1 с реального | — |
-| ТК-15 | Odoo-пульт наскрізно | сервіс + копія демо-бази з модулем 19.0.2.0.0 | 1) Налаштування → url/токени → «Перевірити зв'язок»; 2) Пульт: прискорення 5 (у `scenario`), режим; 3) Сценарії → `filter_clogged RV-05` → запуск; 4) Обладнання CNC-2 → «Збій» → «Скинути»; 5) зупинити сервіс на 6 хв → рівень 0 увімкнувся; запустити → вимкнувся | AC-25…AC-29, AC-33; у `f3d.sim.event` — події запуску; заявка ТО від рівня 0 для RV-05 (якщо рівень 0 був активний) | Odoo UI, чаттер пульта |
+| ТК-15 | Odoo-пульт наскрізно | сервіс + копія демо-бази з модулем 19.0.2.0.0 | 1) Налаштування → url/токени → «Перевірити зв'язок»; 2) Пульт: прискорення 5 (у `scenario`), режим; 3) Сценарії → `filter_clogged` (`device=RV-05`, `value=285`) → запуск; 4) Обладнання CNC-2 → «Збій» → «Скинути»; 5) зупинити сервіс на 6 хв → рівень 0 увімкнувся; запустити → вимкнувся | AC-25…AC-29, AC-33, AC-58, AC-59; пульт — у меню «Завод 3D → Емулятор» (X-31); у `f3d.sim.event` — події запуску; заявка ТО від рівня 0 для RV-05 (якщо рівень 0 був активний) | Odoo UI, чаттер пульта |
 | ТК-16 | Відновлення після рестарту | `shift` 5 хв, `machine_fault CNC-3` | 1) `docker restart iot_sim`; 2) `/status`, лічильники, стан CNC-3 | AC-48: лічильники продовжені, CNC-3 у fault (запуск `running` або закритий `stopped` з повідомленням «restored») | лог «restored snapshot» |
+| ТК-17 | HelvarNet: версії, підтвердження, склад груп | `SIM_HELVAR_VERSION=2`, потім рестарт з `1`; `lighting_scene {"group": "LT-CUT", "fault_device": "@1.2.1.5"}` | 1) два TCP-клієнти на 50000; 2) C:13 з `A:1` і без; 3) C:152 з `V:1`/`V:2`; 4) C:164 для G:12, G:16 (кадри `$`); 5) C:110 `@1.2.1.5`; 6) C:191; 7) після рестарту з `1` — `V:2` → 18 | AC-39, AC-57, AC-64, AC-65; відповіді у версії запиту, `!…=0#` лише при `A:1`, склад груп = bms Додаток A.1 (X-64, X-65) | `/signals?prefix=lighting/groups/LT-CUT` |
 
 ### 13.3 Тести безпеки (ТБ)
 
@@ -1695,7 +1715,7 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТБ-01 | `docker compose --profile demo config` і `docker ps`: порти 502/4840/47808/… не опубліковані на хост; мережа `f3d_sim` internal; контейнер без capabilities, read-only FS | так |
 | ТБ-02 | REST без токена / з хибним / з токеном іншої довжини; 6 хибних за хвилину | 401; 429 на 60 с |
 | ТБ-03 | Ін'єкції: `POST /device/../etc/passwd/fault`, `code="CNC-2; DROP"`, 10 КБ `note`, `params` з вкладеністю 100 | 404/422, сервіс живий, лог без трасувань |
-| ТБ-04 | BACnet write у dev 200 (LSZ, LSP, AV, BI), `ReinitializeDevice`, `DeviceCommunicationControl`; OPC UA write у `State.*`; Modbus write у PM5560/Huawei RO; BioStar `DELETE /api/users/1` | усі відхилені, подія/лог WARNING, стан не змінився |
+| ТБ-04 | BACnet write у dev 200 (LSZ, LSP, PIV, BV, MSV), `ReinitializeDevice`, `DeviceCommunicationControl`; OPC UA write у `State.*`; Modbus write у PM5560/Huawei RO; BioStar `DELETE /api/users/1` | усі відхилені, подія/лог WARNING, стан не змінився |
 | ТБ-05 | Хеші каталогу: `services/iot_sim/catalog/signals.csv`, `odoo_addons/.../data/f3d_sim_signal.csv`, `GET /sim/v1/catalog/signals.csv`, `GET /f3d/sim/devices` (сигнали) | 4 однакові множини `code+address`; тест падає при розсинхроні |
 | ТБ-06 | Логи з `SIM_LOG_LEVEL=DEBUG` після 15 хв роботи і ТК-10/13 | `grep` за значеннями `SIM_API_TOKEN`, `SIM_BIOSTAR_PASS`, `SIM_ODOO_APIKEY`, `bs-session-id` → 0 збігів |
 | ТБ-07 | Allow-list: `SIM_LPR_PUSH_URL` і `SIM_ODOO_URL` на хост поза списком | жодного з'єднання (tcpdump у контейнері-спостерігачі), метрика `outbound_denied` |
@@ -1711,15 +1731,15 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТП-02 | 20 Modbus-клієнтів × 50 запитів/с (1 000 зап/с) по всіх unit | p99 відповіді < 50 мс, 0 помилок, tick lag < 1 с |
 | ТП-03 | BACnet: `ReadPropertyMultiple` усіх ~400 об'єктів щосекунди + 120 COV | відповіді < 2 с за цикл; CPU BACnet-таска < 30 % |
 | ТП-04 | OPC UA: 10 клієнтів × підписка на всі 720 вузлів, publishing 500 мс | DataChange затримка < 1 с; пам'ять стабільна 30 хв |
-| ТП-05 | `GET /sim/v1/signals` (662) 10 раз/с | p95 < 100 мс |
-| ТП-06 | Odoo: C-01 протягом 24 год, 2 000 подій/добу через API-03 | крон ≤ 1 с на прогін; `f3d.sim.event` ротація працює; `f3d.sim.signal` refresh 662 записів ≤ 5 с |
+| ТП-05 | `GET /sim/v1/signals` (1016) 10 раз/с | p95 < 100 мс |
+| ТП-06 | Odoo: C-01 протягом 24 год, 2 000 подій/добу через API-03 | крон ≤ 1 с на прогін; `f3d.sim.event` ротація працює; `f3d.sim.signal` refresh 1016 записів (без `protocol=none`) ≤ 5 с |
 | ТП-07 | `factor=60`, 8 год sim за 8 хв | лічильники збігаються з `factor=1` еталоном ± 0,5 %; жодних пропущених подій зміни (06:40 відмітки, 07:00 старт) |
 
 ### 13.5 Чек-лист DEPLOY_TEST
 
 1. Зняти копію демо-бази (`odoo` на timur-o19demo) → `odoo_test_sim`; зафіксувати: `x_f3d_signal`=196, `x_f3d_reading`=N, `maintenance.equipment`=208, стан крона рівня 0.
-2. Встановити/оновити `factory3d_base` (хвиля 1), потім `factory3d_iot_sim` 19.0.2.0.0 (`-u factory3d_iot_sim`), перевірити лог hook: `devices=273`, `signals=662`, `level0 matched=196/196`, `scenarios=15`.
-3. AC-25 кількості; відкрити меню Емулятор → усі 7 пунктів; «Рівень 0» — під ним успадковані.
+2. Встановити/оновити `factory3d_base` (хвиля 1), потім `factory3d_iot_sim` 19.0.2.0.0 (`-u factory3d_iot_sim`), перевірити лог hook: `devices=273`, `signals=1165` (`protocol=none` 149), `level0 matched=196/196`, `scenarios=15`, `read_enabled` за `factory3d.base.environment` (крок 1а).
+3. AC-25 кількості; відкрити меню «Завод 3D → Емулятор» → 7 пунктів (у «Обслуговуванні» пункту «Емулятор» немає; налаштування — «Завод 3D → Налаштування → Налаштування емулятора»); «Рівень 0» — під ним успадковані (AC-59).
 4. Підняти compose (`--profile dev`), заповнити Налаштування, «Перевірити зв'язок» → онлайн; переконатися, що крон рівня 0 вимкнувся (≤ 1 хв).
 5. ТК-15 повністю; ТК-13 стоп-крани.
 6. `neutralize.sql` на другій копії → ТБ-10.
@@ -1730,7 +1750,7 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 
 ## 14. Definition of Done
 
-- Усі AC-01…AC-50 мають зелену перевірку (UT у CI; TC/MAN — у `TEST_REPORT.md`); ТБ-01…ТБ-10 і ТП-01…ТП-07 пройдені.
+- Усі AC-01…AC-65 мають зелену перевірку (UT у CI; TC/MAN — у `TEST_REPORT.md`); ТБ-01…ТБ-10 і ТП-01…ТП-07 пройдені.
 - `pytest` сервісу: ≥ 90 % покриття `iot_sim/core` і `iot_sim/models`; `ruff`/`mypy --strict` без помилок; Odoo-тести з тегом `f3d` зелені; `pre-commit` (ruff, isort, xml lint) проходить.
 - Каталог сигналів: три копії CSV + API-01 мають один хеш (ТБ-05); Додаток A SPEC = `signals.csv` (скрипт `tools/gen_catalog.py --check`).
 - `docker compose --profile demo up` з чистого стану стартує за ≤ 60 с, `health=ok`; образ без root, read-only.
@@ -1743,15 +1763,15 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 
 ## 15. Відкриті питання
 
-Номери збігаються з `ARCHITECTURE.md` §5.1: **Q-01** OPC UA/JobManagement на верстатах HOMAG; **Q-02** woodStore API; **Q-03** Cerberus PRO — ключ S2 і склад BACnet-об'єктів; **Q-04** Hoval RoofVent — BACnet напряму чи Modbus-шлюз; **Q-05** карта Elektronikon Mk5; **Q-06** точки TEDOM; **Q-07** таблиця ATyS p; **Q-08** протокол індикатора автоваг; **Q-09** приймач LPR у колекторі; **Q-10** телематичний шлюз техніки; **Q-11** друга зміна/графік КПП; **Q-12** IP/unit id лічильників у проді; **Q-13** BioStar: картка/обличчя, `tna_key`; **Q-14** рівень 0 паралельно з сервісом (відповідь — ні, FR-28); **Q-15** команди `fake_relay.py` для `blackout`. Для кожного — рекомендована відповідь і тимчасове рішення в ARCHITECTURE §5.1; у коді всі місця з припущеннями позначені `# ASSUMPTION Q-xx`.
+Номери збігаються з `ARCHITECTURE.md` §5.1: **Q-01** OPC UA/JobManagement на верстатах HOMAG; **Q-02** woodStore API; **Q-03** Cerberus PRO — ключ S2 і склад BACnet-об'єктів (типи вже за BTL-лістингом: LSZ/LSP/BV/MSV/PIV — X-37; відкрито: PICS приладу і запиленість, CONSISTENCY «Питання до замовника» № 10); **Q-04** Hoval RoofVent — BACnet напряму чи Modbus-шлюз; **Q-05** карта Elektronikon Mk5; **Q-06** точки TEDOM; ~~**Q-07** таблиця ATyS p~~ — **закрито** X-41 / D-21: карта — Socomec 542 001 D, Annexe III (§8.9.4); звірка з прошивкою ATyS p 1600 — CONSISTENCY «Питання до замовника» № 2; **Q-08** протокол індикатора автоваг; ~~**Q-09** приймач LPR у колекторі~~ — **закрито** X-53: приймач `http_push` telemetry `POST /f3d/<route>[/<secret>]` (`/f3d/lpr`), у фазі 1 — `/sim/v1/lpr-sink`; **Q-10** телематичний шлюз техніки; **Q-11** друга зміна/графік КПП; **Q-12** IP/unit id лічильників у проді; **Q-13** BioStar: картка/обличчя, `tna_key` (коди емулятора уніфіковано — 4102/4867 за Device SDK, чергування `det % 2`, X-50; питання до замовника № 18 лишається); **Q-14** рівень 0 паралельно з сервісом (відповідь — ні, FR-28); ~~**Q-15** команди `fake_relay.py` для `blackout`~~ — **закрито** X-59: REST `fake_relay` API-F-01…F-09 (td_genset §8.4) і контракт CI-01 (§8.14, S-03, S-14, R-22); запасний режим без ретранслятора — §8.14. Для кожного відкритого — рекомендована відповідь і тимчасове рішення в ARCHITECTURE §5.1; у коді всі місця з припущеннями позначені `# ASSUMPTION Q-xx`.
 
 ---
 
 ## Додаток A. Каталог сигналів
 
-Джерело істини для `f3d.sim.signal` (Odoo), `services/iot_sim/catalog/signals.csv` і для `factory3d_telemetry M-02 f3d.signal` (міграція у фазі 2). Згенеровано `tools/gen_catalog.py` з `plant/odoo_flows.py:signal_specs` (рядки «макет», 196, значення «Номінал (старт)» = `x_value`/`x_nominal` демо-бази на 13.10.2026) і правил §5.2/§8 (рядки «новий», 466). Колонки: код-шлях (= `x_code` макета / шлях у даних переглядача §6.7 каркаса) | пристрій (код сцени; для лічильників споживачів фактичний пристрій емулятора — `<код>-PM`) | протокол P-xx | адреса в джерелі (Modbus `u<unit> HR/coil`, OPC UA NodeId `ns=2;s=…`, BACnet `dev <instance> <тип>:<instance>`, MQTT топік і JSON-шлях, REST шлях і JSON-шлях, HelvarNet команда) | тип | одиниця | масштаб (множник для переглядача/споживача; `R-20` — за формулою ADAM) | номінал (старт; у дужках `шум`/`швидкість` макета) | пороги (`>`/`<` поріг → `alarm`; «межа» — `x_limit`) | модель поведінки (R-xx) | статус (макет/новий).
+Джерело істини для `f3d.sim.signal` (Odoo), `services/iot_sim/catalog/signals.csv` і для `factory3d_telemetry M-02 f3d.signal` (міграція у фазі 2). Згенеровано `tools/gen_catalog.py` з `plant/odoo_flows.py:signal_specs` (рядки «макет», 196, значення «Номінал (старт)» = `x_value`/`x_nominal` демо-бази на 13.10.2026) і правил §5.2/§8 (рядки «новий» № 197…662, 466); рядки № 663…1 165 (503) — з додатків модулів-власників (X-34, X-61; джерело істини для цих рядків — додаток модуля): № 663–680 — споживачі unit 51…59 (energy Додаток C), 681–688 — fire_safety Додаток B, 689–698 — yard Додаток A, 699–807 — energy Додаток C, 808–873 — machine_connect Додаток C.2, 874–1 165 — bms Додаток B. Номери 1…662 не змінено (на них посилаються fire, yard, energy, telemetry); рядки 644, 646, 654, 656 звужено до одного входу, решта входів — нові рядки 684–698. Колонки: код-шлях (= `x_code` макета / шлях у даних переглядача §6.7 каркаса) | пристрій (код сцени; для лічильників споживачів фактичний пристрій емулятора — `<код>-PM`) | протокол P-xx (`—` = `protocol='none'`: величину обчислює модуль-власник, емулятор її не веде — X-35) | адреса в джерелі (Modbus — **PDU-форма** `Modbus u<unit> fc<n> pdu<addr>[+<count>] <type>[ little]` за документом вендора (§8.4.1; telemetry R-24 шаблон (0), Q-04; X-42, X-72), після `·` — номер і назва за документом вендора; OPC UA NodeId `ns=2;s=…`; BACnet `dev <instance> <тип>:<instance>`; MQTT топік і JSON-шлях; REST шлях і JSON-шлях; HelvarNet команда; для `—` — «обчислює <модуль> (<правило>) — без адреси») | тип | одиниця | масштаб (множник для переглядача/споживача; `R-20` — за формулою ADAM; відсоткові сигнали — ×1, частка лише в payload, X-39) | номінал (старт; у дужках `шум`/`швидкість` макета) | пороги (`>`/`<` поріг → `alarm`; «межа» — `x_limit`) | модель поведінки (R-xx або «обчислює <модуль>») | статус (макет/новий).
 
-Зведення: усього **662** сигнали; за протоколами — P-01: 75, P-02: 60, P-03: 5, P-05: 112, P-06: 40, P-07: 50, P-08: 259 (BACnet 192 + HelvarNet 67), P-09: 45, P-10: 7, P-11: 8, P-12: 1; макет — 196 (`noise` 73, `energy` 40, `machine` 35, `drift` 28, `hours` 9, `drain` 8, `counter` 1, `level` 1, `solar` 1), нові — 466 (для `machine_connect` 138, `energy` 63, `telemetry` 29, `bms` 176, `fire_safety` 44, `access` 7, `yard` 8, `td_genset` 1 — за колонкою P-xx і споживачем матриці §6.6).
+Зведення: усього **1 165** сигналів, з них емулятор веде **1 016**, обчислюють модулі-власники **149** (`protocol` «—»: energy 55 — `kwh_shift` ×49, `pv_now`, `grid_kw`, `export_kw`, `src1_ok`, `src2_ok`, `fail_start`; machine_connect 35 — `machine_state`; bms 59 — `check`); за протоколами — P-01: 105, P-02: 60, P-03: 6, P-05: 172, P-06: 40, P-07: 62, P-08: 492 (BACnet 329 + HelvarNet 163), P-09: 53, P-10: 7, P-11: 18, P-12: 1, «—»: 149; макет — 196 (`noise` 73, `energy` 40, `machine` 35, `drift` 28, `hours` 9, `drain` 8, `counter` 1, `level` 1, `solar` 1; з них 41 — обчислювані energy: `kwh_shift` ×40 і `pv_now`), нові — 969 (для `machine_connect` 204, `energy` 190, `telemetry` 29, `bms` 468, `fire_safety` 52, `access` 7, `yard` 18, `td_genset` 1 — за колонкою P-xx і споживачем матриці §6.6).
 
 | № | Код-шлях (`f3d.signal.code`) | Пристрій (код сцени) | P-xx | Адреса в джерелі | Тип | Одиниця | Масштаб | Номінал (старт) | Пороги | Модель поведінки | Статус |
 |---|---|---|---|---|---|---|---|---|---|---|---|

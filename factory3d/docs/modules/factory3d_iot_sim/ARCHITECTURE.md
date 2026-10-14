@@ -1,6 +1,8 @@
 # factory3d_iot_sim — технічне рішення
 
-Версія 0.1 · 13.10.2026 · автор: агент-архітектор модуля `factory3d_iot_sim` (хвиля 1) · статус: **чернетка — на погодження менеджера**.
+Версія 0.2 · 14.10.2026 (0.1 — 13.10.2026) · автор: агент-архітектор модуля `factory3d_iot_sim` (хвиля 1) · статус: **чернетка — на погодження менеджера**.
+
+Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: X-15 (`f3d_code`/`f3d_truck`/`f3d_plate` пакета), X-31 (меню під «Завод 3D», sequence 90), X-34/X-61 (каталог 1 165: +503 рядки з додатків модулів, +9 споживачів u51–59), X-35 (149 обчислюваних рядків не веде емулятор), X-37 (Cerberus — BV/PIV, Q-03), X-41 (ATyS p — Annexe III, Q-07 закрито), X-42/X-43/X-72 (Modbus — PDU за вендором, ADAM `little`), X-50 (BioStar 4102/4867, Q-13), X-56 (`read_enabled` за `factory3d.base.environment`), X-58 (`value` в інструкції 4.3), X-59 (CI-01 / API-F, Q-15 закрито), X-67 (навантаження генератора в острові); Q-09 закрито за X-53. Деталі решти рядків реєстру (X-36, X-38…X-40, X-47…X-49, X-51, X-54, X-60, X-64, X-65) — у SPEC v0.2.
 
 Модуль складається з двох частин: **сервіс емулятора `services/iot_sim`** (Python 3.12, поза Odoo; говорить із колектором реальними протоколами P-01…P-12) і **Odoo-модуль `factory3d_iot_sim` 19.0.2.0.0** (пульт сценаріїв, реєстр пристроїв, експорт конфігурації емулятору, «рівень 0» — успадкований data-модуль). Специфікація для розробника й тестувальника — `SPEC.md` поруч; протокольні карти — її §8 (додатки P-01…P-12), каталог сигналів — її Додаток A.
 
@@ -11,7 +13,7 @@
 | ТР | Протокольна матриця §6.6 каркаса, цей документ §1 | 16 |
 | Архітектура | `ARCHITECTURE.md`, `SPEC.md` з додатками P-01…P-12 і каталогом сигналів | 40 |
 | Розробка | сервіс `services/iot_sim` (ядро, 11 протокольних серверів, REST, сценарії, compose) — 180; Odoo-модуль (пульт, API, міграція) — 48 | 228 |
-| Тестування | юніт-тести моделей і протоколів, ТК-01…ТК-16, безпека, продуктивність, DEPLOY_TEST | 72 |
+| Тестування | юніт-тести моделей і протоколів, ТК-01…ТК-17, безпека, продуктивність, DEPLOY_TEST | 72 |
 | Інструкція | §4 цього документа + README сервісу | 8 |
 | **Разом** | | **364** |
 
@@ -42,8 +44,8 @@
 
 | Роль (група) | Що робить | Де |
 |---|---|---|
-| Адміністратор factory3d (`factory3d_base.group_f3d_admin`) | вводить адресу й токени сервісу, вмикає/вимикає стоп-крани, рівень 0, перевіряє здоров'я | Налаштування → Factory3D → Емулятор; Обслуговування → Емулятор → Пульт |
-| Менеджер factory3d (`group_f3d_manager`) | запускає/зупиняє сценарії, ставить прискорення часу, перемикає режим `scenario`/`follow_odoo`, ставить збій на пристрій | Обслуговування → Емулятор → Пульт, Сценарії, Пристрої; вкладка «Емулятор» на картці обладнання |
+| Адміністратор factory3d (`factory3d_base.group_f3d_admin`) | вводить адресу й токени сервісу, вмикає/вимикає стоп-крани, рівень 0, перевіряє здоров'я | Налаштування → Factory3D → Емулятор (або Завод 3D → Налаштування → Налаштування емулятора); Завод 3D → Емулятор → Пульт |
+| Менеджер factory3d (`group_f3d_manager`) | запускає/зупиняє сценарії, ставить прискорення часу, перемикає режим `scenario`/`follow_odoo`, ставить збій на пристрій | Завод 3D → Емулятор → Пульт, Сценарії, Пристрої (меню під коренем base, sequence 90 — X-31); вкладка «Емулятор» на картці обладнання |
 | Користувач factory3d (`group_f3d_user`) | бачить стан емулятора, журнал запусків, пристрої | ті самі меню, лише читання |
 | Розробник/тестувальник модулів хвилі 2 | керує емулятором напряму через `REST /sim/v1/*`, підключає клієнти протоколів | compose `iot_sim`, SPEC §7–§8 |
 | Колектор `services/collector` (фаза 2) | читає пристрої по P-01…P-11 | мережа `f3d_sim` |
@@ -55,7 +57,7 @@
 | ID | Вимога (перевірювана) |
 |---|---|
 | FR-01 | Сервіс підіймає серверну сторону всіх рядків P-01…P-11 протокольної матриці на портах із SPEC §8.1 одним процесом (compose: `iot_sim` + `mosquitto`); P-12 — існуючий `fake_relay.py` з `td_genset` окремим контейнером. |
-| FR-02 | Кожен із 196 сигналів макета доступний через свій протокол за адресою з Додатка A SPEC і через `GET /sim/v1/signals` під тим самим кодом-шляхом. |
+| FR-02 | Кожен сигнал каталогу з протоколом (1 016; з 196 сигналів макета — 155) доступний через свій протокол за адресою з Додатка A SPEC (Modbus — PDU за документом вендора, D-20, X-42) і через `GET /sim/v1/signals` під тим самим кодом-шляхом; 149 рядків, які обчислюють модулі-власники (зокрема 41 сигнал макета: `kwh_shift` ×40, `pv_now`), емулятор не веде (X-34, X-35). |
 | FR-03 | Поведінка кожного сигналу відтворює режим макета (R-01…R-11) безперервно в часі: значення не залежать від частоти опитування. |
 | FR-04 | Верстат бере потужність лише коли на ньому є завдання «в роботі» (R-02); у режимі `follow_odoo` стан береться з `mrp.workorder`/`mrp.workcenter.working_state` Odoo, у `scenario` — з власного планувальника змін. |
 | FR-05 | Навантажувач розряджається в роботі, на 20 % їде в зарядну (`CHARGING`), заряджається до 95 % і повертається (R-05); положення (x, y) рухається маршрутом між зонами (R-19). |
@@ -64,8 +66,8 @@
 | FR-08 | СЕС рахується за висотою сонця для Києва на час емулятора (R-11), 8 інверторів Huawei по 115 кВт, облік `kwh_today`. |
 | FR-09 | Компресор тримає тиск 6,5–7,0 бар: завантаження росте з кількістю працюючих верстатів (R-08). |
 | FR-10 | Портал виконує завдання з `woodStore API` (P-03): стоси ↔ залишки, лічильник циклів, вакуум; стан у OPC UA. |
-| FR-11 | Трансформатори: `p_kw` = сума секції, температура `38 + 60·S/Sн` (R-04); КГУ/BESS/ATS за балансом R-12, R-13, R-22. |
-| FR-12 | Пожежна панель віддає стан 33 зон (LSZ) і 4 шлейфів по BACnet **тільки читання**; сценарії `fire_drill`, `spark` генерують події та зміну Present_Value. |
+| FR-11 | Трансформатори: `p_kw` = сума секції, температура `38 + 60·S/Sн` (R-04); КГУ/BESS/ATS за балансом R-12, R-13, R-22; ATyS p — карта Annexe III (D-21, X-41); в острові генератор бере `Σ критичних − chp_kw − pv_now + bess_kw` (0…558 кВт, X-67). |
+| FR-12 | Пожежна панель віддає стан 33 зон (LSZ) і 4 шлейфів по BACnet **тільки читання** об'єктами LSZ/LSP/BV/MSV/PIV (BTL-лістинг FC726, X-37); сценарії `fire_drill`, `spark` і збій зони (API-12, X-60) генерують події та зміну Present_Value. |
 | FR-13 | СКУД: відмітки входу за розкладом зміни (06:40–07:00, вихід 15:30–15:50) для 35 працівників з бейджами з Odoo; `access_event` — довільна подія; BioStar 2 REST віддає їх у `/api/events/search`. |
 | FR-14 | Двір: фури прибувають за `stock.picking.batch.scheduled_date` (або розкладом макета), проходять LPR (HTTP POST), шлагбаум (DI/DO), автоваги (SICS), ворота; `truck_no_booking` — фура без броні. |
 | FR-15 | REST керування `/sim/v1/*` (SPEC API-10…API-19) з токеном `Bearer`: статус, пристрої, сигнали, сценарії, збої, час, режим, скидання, стоп-кран. |
@@ -79,10 +81,10 @@
 | FR-23 | Odoo-модуль 19.0.2.0.0 оновлює data-модуль без втрати 196 сигналів і журналу показань; x_-моделі лишаються «рівнем 0» до появи `factory3d_telemetry`. |
 | FR-24 | Пульт в Odoo: стан сервісу (онлайн, режим, час, прискорення, активні сценарії, тривоги), кнопки сценаріїв, прискорення, режим, скидання; журнал запусків із результатом. |
 | FR-25 | Реєстр пристроїв `f3d.sim.device` (208 записів із `maintenance.equipment` + 2 камери LPR + 5 рідерів) з протоколом P-xx, драйвером, адресою; експорт API-01. |
-| FR-26 | Каталог сигналів `f3d.sim.signal` (662 записи з Додатка A) завантажується з CSV модуля і віддається в API-01; один і той самий CSV лежить у сервісі. |
+| FR-26 | Каталог сигналів `f3d.sim.signal` (1 165 записів з Додатка A: 662 власні + 503 з додатків модулів-власників, X-34, X-61; 149 з `protocol=none`) завантажується з CSV модуля і віддається в API-01; один і той самий CSV лежить у сервісі. |
 | FR-27 | Вкладка «Емулятор» на картці обладнання: стан пристрою в емуляторі, кнопки «Збій»/«Скинути» (лише `write_enabled`). |
 | FR-28 | Крон пульта раз на хвилину опитує `GET /sim/v1/status` (лише коли `read_enabled`), пише стан і вимикає крон рівня 0, коли сервіс онлайн; при офлайні понад `level0_after_min` хвилин — вмикає рівень 0 назад. |
-| FR-29 | Стоп-крани `factory3d.iot_sim.read_enabled` / `write_enabled` + `neutralize.sql`: на проді після встановлення всі команди на емулятор вимкнено. |
+| FR-29 | Стоп-крани `factory3d.iot_sim.read_enabled` / `write_enabled` + `neutralize.sql`: на проді після встановлення всі команди на емулятор вимкнено; `read_enabled` хук ставить за `factory3d.base.environment` (`test` → True, інакше False; CB-10, X-56). |
 | FR-30 | Токени в `ir.config_parameter`, видимі лише `group_f3d_admin`, у логах і в `GET /sim/v1/status` не з'являються. |
 
 ### 1.4 Межі: що не входить
@@ -90,7 +92,7 @@
 - Клієнтська сторона протоколів (плагіни колектора) — `factory3d_telemetry` та модулі-власники (§6.5 каркаса).
 - Моделі показань `f3d.signal`/`f3d.reading`, заявки ТО з порогів у проді — `factory3d_telemetry` (фаза 2). У фазі 1 заявки створює лише рівень 0 (успадкована логіка).
 - P-13 (Odoo IoT Box: ваги PFA584, принтери, сканери) — поза емулятором.
-- Генератор: логіка SmartGen — `td_genset` (`fake_relay.py`, `relay_api.md`); тут лише запуск контейнера й сценарій `blackout`, що смикає його профіль.
+- Генератор: логіка SmartGen — `td_genset` (`fake_relay.py`, `relay_api.md`); тут лише запуск контейнера й оркестрація сценаріїв `blackout`/`genset_test` через REST `fake_relay` API-F-01…F-09 за контрактом CI-01 (td_genset §8.4/§8.6; X-59), навантаження в острові — R-22 SPEC (X-67).
 - Фізично точна модель (термодинаміка, аеродинаміка): використовуються формули макета, не CFD.
 - Емулятор не є тренажером безпеки: жодної кореляції зі справжньою пожежною панеллю; «тільки читання» по BACnet дотримано і на стороні емулятора (запис у LSZ/LSP відхиляється).
 
@@ -99,7 +101,7 @@
 ### 2.1 Місце в системі
 
 - `depends`: `factory3d_base` (коди сцени `f3d_code`, `f3d_kind`, паспорти `f3d_role`/`f3d_manufacturer`/`f3d_model`/`f3d_power_kw`, зони `f3d.zone`, ворота `stock.location.f3d_side/f3d_dock_no`, групи прав). Через нього — `maintenance`, `mrp`, `mrp_maintenance`, `hr`, `stock_picking_batch`.
-- Бере з Odoo стандарту (тільки читання, режим `follow_odoo`): `mrp.workorder` (`state`, `workcenter_id`, `production_id`, `qty_produced`, `duration`), `mrp.workcenter` (`code`, `working_state`), `stock.picking.batch` (`dock_id`, `scheduled_date`, `f3d_truck`, `state`), `hr.employee` (`barcode`, `resource_calendar_id`), `resource.calendar.attendance`, `maintenance.request` (`stage_id.done`, `f3d_signal_code` — поки немає телеметрії, рівень 0 читає своє `x_request_id`).
+- Бере з Odoo стандарту (тільки читання, режим `follow_odoo`): `mrp.workorder` (`state`, `workcenter_id`, `production_id`, `qty_produced`, `duration`), `mrp.workcenter` (`code`, `working_state`), `stock.picking.batch` (`dock_id`, `scheduled_date`, `f3d_code` — код фури в 3D, `f3d_truck` — опис/назва, `state`; `f3d_plate` — держномер, якщо встановлено `factory3d_yard`; X-15, X-49), `hr.employee` (`barcode`, `resource_calendar_id`), `resource.calendar.attendance`, `maintenance.request` (`stage_id.done`, `f3d_signal_code` — поки немає телеметрії, рівень 0 читає своє `x_request_id`).
 - Віддає іншим модулям: протокольні карти **P-01…P-12** (SPEC §8.3–§8.14), каталог сигналів **Додаток A** (код, пристрій, протокол, адреса, тип, масштаб, номінал, пороги), **API-01** `GET /f3d/sim/devices`, **API-10…API-19** `/sim/v1/*`, **API-20…API-27** woodStore, **API-30…API-34** `/jobs`, **API-40…API-46** BioStar 2, схема MQTT-телематики (P-06), формат HTTP POST LPR (P-11), SICS-діалог (P-11).
 - Споживачі за матрицею: `factory3d_machine_connect` (P-01…P-04), `factory3d_energy` (P-05, P-07), `factory3d_telemetry` (P-06, P-07, http_push LPR), `factory3d_bms` (P-08, HelvarNet), `factory3d_fire_safety` (P-09), `factory3d_access` (P-10), `factory3d_yard` (P-11), `td_genset` (P-12).
 
@@ -153,14 +155,14 @@
 | P-02 | SLIDE-1, VSAW-1, SAND-1, PRESS-1, GLUE-1, SPRAY-1, AUTOSPRAY-1, DRY-1, UV-1, HINGE-1, BOX-1, PACK-1, PACK-2, PACKLINE-1, ASM-1..6 (20) | Modbus TCP 502, ADAM-6050 ×4 (unit 80–83) | колектор опитує | 1 с | — |
 | P-03 | GANTRY-1 | REST `http://iot-sim:8082/api/v1/*` + OPC UA | колектор опитує; `machine_connect` пише завдання/коригування стосів | стан 5 с, стоси 60 с | 503 при `SIM_ENABLED=0` |
 | P-04 | карти розкрою | REST `http://iot-sim:8083/jobs` | `machine_connect` надсилає CSV, отримує план/MPR | за подією | 503/422 |
-| P-05 | Q1, Q2, QF-1..4, QF-C1, QF-C2, 49 споживачів | Modbus TCP 502, PM5560 unit 1–8, 11–59 | колектор опитує | 1–10 с | — |
+| P-05 | Q1, Q2, QF-1..4, QF-C1, QF-C2, 49 споживачів (unit 11–59, включно з OFFICE, LP-1..3, RV-ALL, AHU-1, EF-* — X-61) | Modbus TCP 502, PM5560 unit 1–8, 11–59; адреси — PDU `N − 1` (D-20) | колектор опитує | 1–10 с | — |
 | P-06 | FL-1..5, FL-C1, FL-C2, TUGGER-1 | MQTT → `mosquitto:1883`, `f3d/mobile/<code>/telemetry` (QoS 1), `…/status` (retained) | емулятор публікує | 5 с (у русі 1 с) | брокер офлайн → буфер 10 хв, потім втрата |
 | P-07 | COMPRESSOR (u70), DUST-1 (u90 AI, u84 DI), BOILER (BACnet 140), T1/T2 (u96 RTD), SPRINKLERS/AIR-RING (u90), WATER (u84), PV-INV-1..8 (u61–68), BESS (u69), CHP (u72), ATS-1 (u71) | Modbus TCP 502 / BACnet | колектор опитує | 1–10 с | — |
 | P-08 | RV-01..25 (dev 101–125), AHU-1 (130), EF-* (131–133), BOILER (140); LP-1..3 (HelvarNet @1.1–@1.3) | BACnet/IP UDP 47808 (роутер + віртуальна мережа 2); HelvarNet TCP 50000 / UDP 50001 | колектор читає (COV/опитування), пише AO/BV лише з `write_enabled` | 10 с | — |
-| P-09 | FACP-1 (dev 200: LSZ 0–33, LSP 1–251, BI 1–4, AV 1–3, AV 2xxx), SPARK-1 + SMOKE-CTRL (u85) | BACnet/IP **read-only**; Modbus TCP | колектор читає/підписується на події | COV; 10 с | запис у LSZ/LSP → `WriteAccessDenied` |
+| P-09 | FACP-1 (dev 200: LSZ 0–33, LSP, BV 1–4 / 10 / 11, PIV 1–3, PIV `<LSP>` — запиленість, MSV 1; X-37), SPARK-1 + SMOKE-CTRL (u85) | BACnet/IP **read-only**; Modbus TCP | колектор читає/підписується на події | COV; 10 с | запис у LSZ/LSP → `WriteAccessDenied` |
 | P-10 | ACR-IN, ACR-ELEC, ACR-CHG, ACR-PAINT, ACR-SRV; турнікет TURN-1 | REST `https://iot-sim:8443/api/*` (BioStar 2) | `factory3d_access` опитує з Odoo | 60 с | 401 після закінчення сесії (30 хв) |
 | P-11 | GATE-W, GATE-E (u86 ADAM-6060), CAM-05, CAM-06 (LPR), TRUCK-SCALE (SICS 4001) | Modbus TCP; HTTP POST → `SIM_LPR_PUSH_URL`; TCP ASCII | колектор опитує/приймає/запитує | 1 с; подія; за запитом | POST не доставлено → 3 повтори, журнал |
-| P-12 | GENSET | контейнер `genset_relay` (`td_genset/fake_relay.py`), порт з `relay_api.md` | `td_genset` | за його документом | — |
+| P-12 | GENSET | контейнер `genset_relay` (`td_genset/fake_relay.py`); емулятор керує ним REST API-F-01…F-09 (td_genset §8.4) за контрактом CI-01 у `blackout`/`genset_test` (X-59) | `td_genset`; емулятор — оркестратор | API-F-01 щосекунди під час сценарію | запасний режим: генератор «готовий» через 15 с |
 | API-01 | Odoo → емулятор (конфіг) | `GET https://odoo/f3d/sim/devices` (Bearer `export_token`) | емулятор читає при старті й щогодини | 1 год | fallback `catalog/devices.yaml` |
 | API-03 | емулятор → Odoo (події) | `POST /f3d/sim/events` | емулятор пише | за подією, пакет ≤ 100 | буфер 1 000, повтор 30 с |
 | follow_odoo | емулятор → Odoo XML-RPC | `search_read` моделей §8.9 SPEC | читання | 10 с завдання, 60 с фури/люди | режим деградує до `scenario` з прапором `odoo_stale` |
@@ -175,20 +177,20 @@
 4. Фаза 1 без колектора: (а) `GET /sim/v1/signals?prefix=ventilation/units/RV-05` повертає `{code, value: 287.2, unit: "Па", status: "alarm", ts}`; (б) рівень 0 (крон `cron_iot_sim`) веде ту саму формулу в Odoo незалежно (вимикається, коли сервіс онлайн).
 5. Переглядач: `plant/odoo_pull.sync_signals` (сьогодні) або `factory3d_viewer` (хвиля 1) кладе значення за шляхом `ventilation/units/RV-05/filter_dp_pa` у payload; картка RV-05 показує «Перепад на фільтрі 287 Па · Дані: імітація IoT · 10:31».
 
-Приклад 2: завдання на верстаті (режим `follow_odoo`). `odoo/follow.py` раз на 10 с читає `mrp.workorder` (`state in (progress, ready, done)`, `workcenter_id.code`) → `World.workcenters["SAW-1"].job = WO00013` → `models/machine.py` ставить `Flags.RecipeInRun=True` → `CurrentState=WORKING(3)` → споживання `p_now = P_inst·k_work` (R-02) → PM5560 unit 11 HR 3060; через 15 хв `WaitUnload`, `RelativePiecesOut += 1` на кожні `duration_expected/qty` хвилин.
+Приклад 2: завдання на верстаті (режим `follow_odoo`). `odoo/follow.py` раз на 10 с читає `mrp.workorder` (`state in (progress, ready, done)`, `workcenter_id.code`) → `World.workcenters["SAW-1"].job = WO00013` → `models/machine.py` ставить `Flags.RecipeInRun=True` → `CurrentState=WORKING(3)` → споживання `p_now = P_inst·k_work` (R-02) → PM5560 `u11 fc3 pdu3059+2` (документ 3060–3061); через 15 хв `WaitUnload`, `RelativePiecesOut += 1` на кожні `duration_expected/qty` хвилин.
 
 ### 2.6 Безпека
 
 - **Ізоляція мережі.** Compose-мережа `f3d_sim` з `internal: true`; емулятор не має маршруту в мережу цеху. У проді контейнер `iot_sim` запускається лише на тестовому контурі або з профілем `demo`; у прод-compose сервіс позначений `profiles: ["demo"]` і за замовчуванням не стартує.
 - **Allow-list вихідних з'єднань** (`SIM_ALLOW_OUTBOUND`, через список хостів): `mosquitto`, Odoo (`SIM_ODOO_URL`), приймач LPR (`SIM_LPR_PUSH_URL`), `genset_relay`. Будь-який інший адресат — відмова на рівні коду (`OutboundDenied`) і запис у лог. Емулятор не містить жодного Modbus/OPC UA/BACnet **клієнта** — лише сервери; отже навіть помилкова конфігурація не може «достукатись» до справжнього ПЛК.
 - **Токени.** `/sim/v1/*` — `Authorization: Bearer <SIM_API_TOKEN>` (мін. 32 символи, генерується `openssl rand -hex 32`); `GET /sim/v1/health` і `/metrics` — без токена, але лише з мережі `f3d_sim`. Токен експорту Odoo `factory3d.iot_sim.export_token` — окремий. BioStar 2 емулятор має власний логін/пароль (`SIM_BIOSTAR_USER/PASS`), сесія `bs-session-id` 30 хв. Жоден токен не потрапляє в логи (фільтр `SecretFilter` у `logging`), у `GET /sim/v1/status` і у відповіді помилок.
-- **Стоп-крани.** Сервіс: `SIM_ENABLED=0` — усі сервери відповідають, але значення заморожені, команди повертають `423 Locked`; `POST /sim/v1/stop-all` — те саме в рантаймі. Odoo: `factory3d.iot_sim.read_enabled` (опитування статусу, за замовчуванням `True` на тесті, `False` після встановлення на проді), `factory3d.iot_sim.write_enabled` (сценарії, збої, час, режим; за замовчуванням `False`), `neutralize.sql` вимикає крони модуля, стирає `url`/токени, ставить обидва прапори `False`, вимикає крон рівня 0.
+- **Стоп-крани.** Сервіс: `SIM_ENABLED=0` — усі сервери відповідають, але значення заморожені, команди повертають `423 Locked`; `POST /sim/v1/stop-all` — те саме в рантаймі. Odoo: `factory3d.iot_sim.read_enabled` (опитування статусу; `post_init_hook` ставить `True`, якщо `factory3d.base.environment == 'test'`, інакше `False` — CB-10, X-56), `factory3d.iot_sim.write_enabled` (сценарії, збої, час, режим; за замовчуванням `False`), `neutralize.sql` вимикає крони модуля, стирає `url`/токени, ставить обидва прапори `False`, вимикає крон рівня 0.
 - **Права.** Читання — `group_f3d_user`; запуск сценаріїв, час, режим, збої — `group_f3d_manager`; адреса, токени, стоп-крани, рівень 0, реєстр пристроїв (редагування) — `group_f3d_admin`. Запис у LSZ/LSP BACnet панелі заборонений у самому емуляторі (`WriteAccessDenied`), запис у ADAM-DO (шлагбауми, димовидалення) приймається, але логується як `command`.
 - **Ін'єкції.** Коди сцени в REST валідуються регулярним виразом `^[A-Z0-9][A-Z0-9\-\.]{0,31}$`; параметри сценаріїв — JSON-схемами (pydantic); XML-RPC до Odoo — лише дозволені методи (`search_read`, `read`, `search_count`, `fields_get`) окремим користувачем `f3d_sim_reader` без прав запису.
 
 ### 2.7 Продуктивність і обсяги
 
-- Сигналів: 662 у каталозі (196 макета + 466 нових), з них оновлюваних кожну секунду ≈ 420 (верстати, лічильники, рух техніки); решта — 10–60 с. Крок ядра — 1 с реального часу (при `factor > 1` внутрішній крок дрібніший: `dt_sim ≤ 10 с`).
+- Сигналів: 1 165 у каталозі (196 макета + 969 нових; 1 016 веде емулятор, 149 обчислюють модулі-власники — X-34, X-35), з них оновлюваних кожну секунду ≈ 500 (верстати, лічильники, рух техніки); решта — 10–60 с. Крок ядра — 1 с реального часу (при `factor > 1` внутрішній крок дрібніший: `dt_sim ≤ 10 с`).
 - OPC UA: 16 об'єктів × ~45 вузлів = ~720 вузлів, оновлення 1 с → 720 записів/с у адресний простір (`asyncua` витримує > 10 000/с); підписки до 50 клієнтів.
 - Modbus: один сервер, 78 unit id, ~2 000 регістрів; очікуване навантаження колектора ≤ 200 запитів/с — `pymodbus` async server (< 5 % CPU).
 - BACnet: 30 пристроїв, ~400 об'єктів (панель — 290), COV на ~120 об'єктах; `bacpypes3` ≤ 10 % CPU.
@@ -203,11 +205,12 @@
 Крок оновлення до 19.0.2.0.0 (рішення менеджера D-13, уточнення A-09):
 
 1. Маніфест нового модуля **зберігає в `data` ті самі файли** `data/models.xml`, `data/actions.xml`, `views/views.xml` першими в списку — Odoo не видалить записи `ir.model`/`ir.model.fields`/дії/меню (зміна власника xml-id не потрібна, модуль той самий). Очікувано: 196 `x_f3d_signal` і всі `x_f3d_reading` лишаються, `x_value`/`x_state`/`x_request_id` не торкаються.
-2. `data/level0.xml` (новий): `cron_iot_sim.active = False` через `noupdate=0`-запис **не робимо** — активність крона вирішує пульт у рантаймі (FR-28); у data лише перейменування крона в «Емулятор IoT: рівень 0 (без сервісу)» і перенесення старих меню під новий батьківський пункт `menu_f3d_sim_root` (`menu_iot_root` стає дочірнім «Рівень 0»).
+2. `data/level0.xml` (новий): `cron_iot_sim.active = False` через `noupdate=0`-запис **не робимо** — активність крона вирішує пульт у рантаймі (FR-28); у data лише перейменування крона в «Емулятор IoT: рівень 0 (без сервісу)» і перенесення старих меню під новий батьківський пункт `menu_f3d_sim_root` (`menu_iot_root` стає дочірнім «Рівень 0»); сам `menu_f3d_sim_root` — під коренем `factory3d_base.menu_f3d_root` («Завод 3D», зарезервований `sequence` 90, base CB-09; X-31), не в «Обслуговуванні».
 3. `post_init_hook` (ідемпотентний, повторний запуск нічого не дублює):
    - створює 1 запис `f3d.sim.panel`;
+   - ставить `factory3d.iot_sim.read_enabled` за `factory3d.base.environment` (`test` → `True`, інакше `False`; CB-10, X-56);
    - для кожного `maintenance.equipment` з `f3d_code` (base) створює `f3d.sim.device`: протокол/драйвер за таблицею ролей SPEC §5.2 (очікувано 208 + 2 камери LPR `CAM-05`, `CAM-06` + 5 рідерів `ACR-*` + турнікет `TURN-1` = 216, з них «поза емулятором» (P-13, пасивні: стелажі, двері, блискавкозахист…) — 62 зі статусом `passive`);
-   - завантажує `f3d.sim.signal` з `data/f3d_sim_signal.csv` (662), прив'язуючи `device_id` за кодом; для 196 рядків «макет» проставляє `level0_signal_id` → `x_f3d_signal` за `x_code` (очікувано 196 збігів, 0 без пари — інакше лог WARNING із переліком);
+   - завантажує `f3d.sim.signal` з `data/f3d_sim_signal.csv` (1 165, з них 149 `protocol=none` — X-34, X-35), прив'язуючи `device_id` за кодом; для 196 рядків «макет» проставляє `level0_signal_id` → `x_f3d_signal` за `x_code` (очікувано 196 збігів, 0 без пари — інакше лог WARNING із переліком);
    - створює 15 сценаріїв із `data/f3d_sim_scenario.xml` (xml-id `scenario_<name>`).
 4. Пізніше `factory3d_telemetry` (фаза 2) у своєму `post_init_hook` читає `f3d.sim.signal` (визначення, адреси) і `x_f3d_signal`/`x_f3d_reading` (значення, журнал) → `f3d.signal`/`f3d.reading`; після цього версія 19.0.3.0.0 цього модуля прибирає `data/models.xml` з маніфесту (data-файл переноситься в `migrations/19.0.3.0.0/` з перевіркою, що міграцію виконано).
 5. `uninstall_hook`: вимикає свої крони, стирає `ir.config_parameter` `factory3d.iot_sim.*`; **не** видаляє `f3d.sim.run`/`f3d.sim.event` як бізнес-дані? — видаляє (це журнал емулятора, не бізнес-дані; A-11), але `x_*`-моделі й сигнали не чіпає (їх видалить лише видалення data-файлів у наступній версії за планом п. 4).
@@ -219,7 +222,7 @@
 | `ir.config_parameter` | `factory3d.iot_sim.url` | `http://iot-sim:8090` | адреса REST `/sim/v1` з контейнера Odoo; порожнє = сервіс не налаштовано |
 | `ir.config_parameter` | `factory3d.iot_sim.token` | 64 hex | = `SIM_API_TOKEN` сервісу; лише `group_f3d_admin` |
 | `ir.config_parameter` | `factory3d.iot_sim.export_token` | 64 hex | токен для API-01/API-03 (емулятор → Odoo); = `SIM_ODOO_EXPORT_TOKEN` |
-| `ir.config_parameter` | `factory3d.iot_sim.read_enabled` | `True` (тест) / `False` (прод одразу після встановлення) | стоп-кран опитування статусу |
+| `ir.config_parameter` | `factory3d.iot_sim.read_enabled` | `True` (тест) / `False` (прод) — ставить `post_init_hook` за `factory3d.base.environment` (X-56) | стоп-кран опитування статусу |
 | `ir.config_parameter` | `factory3d.iot_sim.write_enabled` | `True` (тест) / `False` (прод) | стоп-кран команд (сценарії, збої, час, режим) |
 | `ir.config_parameter` | `factory3d.iot_sim.mode` | `follow_odoo` | режим за замовчуванням, який пульт ставить сервісу після старту; на стенді без `machine_connect` — `follow_odoo` |
 | `ir.config_parameter` | `factory3d.iot_sim.level0_enabled` | `True` | дозволити автоматичне вмикання рівня 0 при офлайні сервісу |
@@ -231,16 +234,16 @@
 | `ir.cron` | `factory3d_iot_sim.cron_iot_sim` (рівень 0) | 1 хв, **керується пультом** | активний лише коли сервіс офлайн або примусово з пульта |
 | `ir.cron` | `factory3d_iot_sim.cron_f3d_sim_gc` | 1 доба | ротація подій |
 | `f3d.sim.scenario` | 15 записів | з `data/f3d_sim_scenario.xml` | параметри за замовчуванням — SPEC §9.3 |
-| compose `iot_sim` env | `SIM_API_TOKEN`, `SIM_ODOO_URL=http://odoo19:8069`, `SIM_ODOO_DB=odoo`, `SIM_ODOO_USER=f3d_sim_reader`, `SIM_ODOO_APIKEY`, `SIM_ODOO_EXPORT_TOKEN`, `SIM_MODE=follow_odoo`, `SIM_FACTOR=1`, `SIM_SEED=20261012`, `SIM_TZ=Europe/Kyiv`, `SIM_MQTT_URL=mqtt://mosquitto:1883`, `SIM_LPR_PUSH_URL=http://collector:8080/f3d/lpr` (на стенді фази 1 — `http://iot-sim:8090/sim/v1/lpr-sink`), `SIM_ALLOW_OUTBOUND=mosquitto,odoo19,collector,genset_relay`, `SIM_BIOSTAR_USER=admin`, `SIM_BIOSTAR_PASS=…`, `SIM_LOG_LEVEL=INFO`, `SIM_ENABLED=1` | повний перелік — SPEC §8.2 | |
+| compose `iot_sim` env | `SIM_API_TOKEN`, `SIM_ODOO_URL=http://odoo19:8069`, `SIM_ODOO_DB=odoo`, `SIM_ODOO_USER=f3d_sim_reader`, `SIM_ODOO_APIKEY`, `SIM_ODOO_EXPORT_TOKEN`, `SIM_MODE=follow_odoo`, `SIM_FACTOR=1`, `SIM_SEED=20261012`, `SIM_TZ=Europe/Kyiv`, `SIM_MQTT_URL=mqtt://mosquitto:1883`, `SIM_LPR_PUSH_URL=http://collector:8080/f3d/lpr` (на стенді фази 1 — `http://iot-sim:8090/sim/v1/lpr-sink`), `SIM_ALLOW_OUTBOUND=mosquitto,odoo19,collector,genset_relay`, `SIM_GENSET_RELAY_TOKEN` (= `RELAY_SIM_TOKEN`), `SIM_GENSET_AMF_MASTER=hgm`, `SIM_GENSET_KW_MAX=558`, `SIM_HELVAR_VERSION=2`, `SIM_BIOSTAR_USER=admin`, `SIM_BIOSTAR_PASS=…`, `SIM_LOG_LEVEL=INFO`, `SIM_ENABLED=1` | повний перелік — SPEC §8.2 | |
 | compose порти | 4840, 502, 47808/udp, 50000, 50001/udp, 8443, 8081, 8082, 8083, 4001, 8090, 1883 (mosquitto) | публікуються лише в мережу `f3d_sim`; на хост — тільки 8090 і 4840 для розробника (профіль `dev`) | |
 
 ## 4. Інструкція
 
-**4.1 Увімкнути емулятор на тестовому сервері** (адміністратор factory3d). 1) `docker compose --profile demo up -d iot_sim mosquitto genset_relay`; 2) Налаштування → Factory3D → Емулятор: адреса `http://iot-sim:8090`, токен (той самий, що `SIM_API_TOKEN`), токен експорту, «Опитувати стан» = увімкнено, «Дозволити команди» = увімкнено; 3) Обслуговування → Емулятор → Пульт → «Перевірити зв'язок»: статус «онлайн», версія, режим; 4) переконатися, що «Рівень 0» показує «вимкнено автоматично (сервіс онлайн)».
+**4.1 Увімкнути емулятор на тестовому сервері** (адміністратор factory3d). 1) `docker compose --profile demo up -d iot_sim mosquitto genset_relay`; 2) Налаштування → Factory3D → Емулятор: адреса `http://iot-sim:8090`, токен (той самий, що `SIM_API_TOKEN`), токен експорту, «Опитувати стан» = увімкнено, «Дозволити команди» = увімкнено; 3) Завод 3D → Емулятор → Пульт → «Перевірити зв'язок»: статус «онлайн», версія, режим; 4) переконатися, що «Рівень 0» показує «вимкнено автоматично (сервіс онлайн)».
 
 **4.2 Прогнати демо-зміну з прискоренням** (менеджер factory3d). Пульт → Прискорення `10` → «Застосувати»; Сценарії → `shift` → «Запустити» (параметри: дата зміни — сьогодні, лінія — усі). Спостерігати: картки верстатів (потужність, стан), навантажувачі (заряд), фури (ворота), «Енергія» (профіль). Зупинити: «Зупинити сценарій»; повернути прискорення `1`.
 
-**4.3 Перевірити заявку ТО з порогу** (менеджер). Сценарії → `filter_clogged`, параметр `device=RV-05`, `dp_pa=285` → «Запустити». Через ≤ 2 хв: Обслуговування → Заявки — «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» (у фазі 1 — від рівня 0 або телеметрії фази 2). Закрити заявку (стадія «Відремонтовано») → через ≤ 2 хв показник повертається до 120 Па.
+**4.3 Перевірити заявку ТО з порогу** (менеджер). Завод 3D → Емулятор → Сценарії → `filter_clogged`, параметри `device=RV-05`, `value=285` (X-58) → «Запустити». Через ≤ 2 хв: Обслуговування → Заявки — «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» (у фазі 1 — від рівня 0 або телеметрії фази 2). Закрити заявку (стадія «Відремонтовано») → через ≤ 2 хв показник повертається до 120 Па.
 
 **4.4 Поставити й зняти збій на пристрої** (менеджер). Обслуговування → Обладнання → CNC-2 → вкладка «Емулятор» → «Збій» (причина — зі списку: `spindle`, `emergency`, `power`, `comm`). У 3D верстат — червоне кільце, OPC UA `Flags.Error=True`, `CurrentState=ERROR`. «Скинути» повертає стан.
 
@@ -256,31 +259,31 @@
 |---|---|---|---|---|
 | Q-01 | Чи мають верстати HOMAG на заводі ліцензію OPC UA (woodworking companion spec) і чи є `JobManagement`? | замовник / HOMAG | так, OPC 40550-1 + Machinery Jobs; без ліцензії — tapio (не в v1) | емулятор за стандартом v1.02.0; `JobManagement` — опційний профіль |
 | Q-02 | Інтерфейс woodStore/STORETEQ для стосів і завдань порталу | HOMAG | отримати опис API; якщо закритий — обмін файлами CSV | контракт «woodStore API v1» — ПРИПУЩЕННЯ (SPEC §8.5) |
-| Q-03 | Cerberus PRO FC726: який ключ BACnet (S2 FCA2034-A1 «monitoring only») і які об'єкти віддає (LSZ/LSP) | монтажник / Siemens | S2, об'єкти Life Safety Zone/Point за ASHRAE 135 | емулятор: LSZ на зону, LSP на сповіщувач, AV для запиленості (ПРИПУЩЕННЯ) |
+| Q-03 | Cerberus PRO FC726: який ключ BACnet (S2 FCA2034-A1 «monitoring only»), склад об'єктів (PICS/EPICS) і чи віддає запиленість | монтажник / Siemens (CONSISTENCY «Питання до замовника» № 10) | S2, типи об'єктів за BTL-лістингом 30841: LSZ, LSP, BV, MSV, PIV (X-37) | емулятор: LSZ на зону, LSP на сповіщувач, BV для шлейфів/сирен/пульта, PIV для лічильників і запиленості (запиленість — ПРИПУЩЕННЯ до PICS) |
 | Q-04 | Hoval RoofVent / TopTronic C: BACnet/IP напряму чи через шлюз Hoval (Modbus TCP)? | Hoval / замовник | якщо лише Modbus — колектор перемикає тип джерела, карта об'єктів емулятора лишається еталоном сигналів | BACnet (D-08); перелік сигналів — з мануалу RoofVent (режими VE/VEL/AQ/REC/EA/SA/ST, реле перепаду фільтра 250/350 Па) |
 | Q-05 | Карта регістрів Elektronikon Mk5 (Atlas Copco видає за серійним номером) | замовник / Atlas Copco | запросити; до того — ПРИПУЩЕННЯ SPEC §8.9.2 | наш макет регістрів 3000–3030 |
 | Q-06 | Точки даних TEDOM Quanto D800 (Modbus TCP ProCon) | TEDOM | запросити | ПРИПУЩЕННЯ §8.9.5 |
-| Q-07 | Таблиця Modbus ATyS p 1600 | Socomec | запросити «ATyS p communication table» | структура як в опублікованих ATyS g/C65 (блок 20480) — ПРИПУЩЕННЯ |
+| ~~Q-07~~ | Таблиця Modbus ATyS p 1600 — **закрито X-41** (D-21) | — | карта — Socomec «ATyS p Instruction manual 542 001 D», Annexe III: 20482 режим, 20483 положення (1 = 0, 2 = I, 3 = II), 20484 реле пуску, 20486/20487 стани джерел (SPEC §8.9.4) | звірка з прошивкою ATyS p 1600 — CONSISTENCY «Питання до замовника» № 2 |
 | Q-08 | Ваговий індикатор автоваг АКСІС 60-18-К-Е і його протокол | постачальник ваг | якщо не SICS — «Toledo 8217»-подібний ASCII; `factory3d_yard` змінює діалект плагіна | SICS Level 0 (`S`, `SI`, `SIR`, `Z`, `T`) |
-| Q-09 | Куди Axis LPV має POST-ити події: приймач `http_push` колектора (`/f3d/lpr`) з'явиться у фазі 2 | менеджер | так, `factory3d_telemetry` описує `/f3d/lpr`; емулятор у фазі 1 має власний приймач-заглушку | `SIM_LPR_PUSH_URL` → `/sim/v1/lpr-sink` |
+| ~~Q-09~~ | Куди Axis LPV має POST-ити події — **закрито X-53** | — | приймач `http_push` telemetry `POST /f3d/<route>[/<secret>]` (`/f3d/lpr`) | у фазі 1 — `SIM_LPR_PUSH_URL` → `/sim/v1/lpr-sink` |
 | Q-10 | Телематичний шлюз навантажувачів Linde/Jungheinrich (D-09) | замовник | шлюз із MQTT; схема P-06 — наша | ПРИПУЩЕННЯ |
 | Q-11 | Чи є друга зміна і графік охорони/КПП (для відміток і фур поза зміною 1)? | замовник | одна зміна 07:00–15:30 у демо; друга — параметр сценарію `shift` | календар з Odoo |
 | Q-12 | Unit id/IP для лічильників у проді (по IP на лічильник чи шлюз RS-485→TCP з unit id) | енергетик | шлюз Link150/IFE з unit id = адреса RS-485; каталог вже має унікальні unit id | один IP + unit id (A-03) |
-| Q-13 | BioStar 2: обличчя чи картки на прохідній; чи потрібні `tna_key` (T&A) у подіях | замовник | картка+обличчя; `tna_key` 1/2 вхід/вихід | емулятор дає і `Verify success (card)` 4096/0x06, і `Identify success (face)` 4864/0x03, `tna_key` |
+| Q-13 | BioStar 2: обличчя чи картки на прохідній; чи потрібні `tna_key` (T&A) у подіях | замовник | картка+обличчя; `tna_key` 1/2 вхід/вихід | емулятор дає і `Verify success (card)` **4102** (0x1006), і `Identify success (face)` **4867** (0x1303) за Device SDK — чергуються за `det(code) % 2` (0 → 4102, 1 → 4867), `tna_key`; події за зростанням часу з пагінацією `offset`/`hint` (X-50) |
 | Q-14 | Чи тримати рівень 0 паралельно із сервісом (два джерела значень) | менеджер | ні — автоматичне взаємовиключення (FR-28) | реалізовано як FR-28 |
-| Q-15 | `td_genset`: порт і адреса `fake_relay.py`, формат профілю D700 для сценарію `blackout` | автор `td_genset` | посилання на `relay_api.md`; сценарій викликає його REST | контейнер `genset_relay` як є; `blackout` лише перемикає ATyS і баланс |
+| ~~Q-15~~ | `td_genset`: REST `fake_relay.py` для сценарію `blackout` — **закрито X-59** | — | REST `fake_relay` `/sim/v1/*` API-F-01…F-09 (td_genset §8.4), контракт CI-01 (td_genset §8.6): параметри `amf_master`, `genset_load_kw`, `test_on_load` (SPEC §8.14, S-03, S-14, R-22) | без ретранслятора — запасний режим (генератор «готовий» через 15 с) |
 
 ### 5.2 Ризики
 
 | Ризик | Вплив | Пом'якшення |
 |---|---|---|
-| Карти регістрів вендорів без публічних документів (Elektronikon, TEDOM, ATyS p, NESTRO, Kalvis) не збігаються із залізом | при переході на живий пристрій колектор треба переналаштувати | адреси винесено в `f3d.signal.address` (телеметрія), не в код; у каталозі позначено ПРИПУЩЕННЯ; де можливо — стандартні I/O-модулі ADAM з опублікованими картами (A-05) |
+| Карти регістрів вендорів без публічних документів (Elektronikon, TEDOM, LUNA2000 C&I, NESTRO, Kalvis) не збігаються із залізом (ATyS p — уже за Annexe III, X-41) | при переході на живий пристрій колектор треба переналаштувати | адреси винесено в `f3d.signal.address` (телеметрія), не в код; у каталозі позначено ПРИПУЩЕННЯ; де можливо — стандартні I/O-модулі ADAM з опублікованими картами (A-05) |
 | `bacpypes3` з ~400 об'єктами й COV може їсти CPU | уповільнення всього процесу | BACnet у окремому asyncio-таску з власним циклом 10 с; тест продуктивності ТП-03; за потреби — окремий процес `bacnet_server` |
 | Прискорення часу ламає часові мітки протоколів (SourceTimestamp OPC UA, `datetime` BioStar) | споживачі бачать «майбутнє» | усі мітки — час емулятора `sim_now`; у `follow_odoo` `factor` фіксовано 1 (FR-17 обмеження), у `scenario` — споживачі отримують `sim_now` у `GET /sim/v1/status` |
 | Демо-годинник Odoo зупинено на 2026-10-12 10:30, а емулятор живе в реальному часі | у `follow_odoo` відкриті таймери завдань «добігають» | емулятор бере стан завдань, а не час; `shift` сценарій планує за календарем поточного дня |
 | Версії бібліотек (asyncua, pymodbus 3.x API, bacpypes3) змінюють API | збірка ламається | закріплені версії в `requirements.txt` (SPEC §8.1), CI з тестами протоколів |
 | Два джерела показань (рівень 0 і сервіс) розходяться | плутанина в заявках ТО | FR-28 взаємовиключення; при старті сервіс читає `x_value` (`SIM_LEVEL0_SYNC`) |
-| Обсяг каталогу (662 сигнали) важко підтримувати вручну | розсинхронізація SPEC/сервіс/Odoo | один CSV генерується скриптом `tools/gen_catalog.py` з правил SPEC; тест ТБ-05 порівнює хеші трьох копій |
+| Обсяг каталогу (1 165 сигналів, з них 503 — з додатків модулів-власників) важко підтримувати вручну | розсинхронізація SPEC/сервіс/Odoo | один CSV генерується скриптом `tools/gen_catalog.py` з правил SPEC і додатків модулів-власників (energy C, fire B, yard A, machine_connect C.2, bms B — X-34); тест ТБ-05 порівнює хеші трьох копій |
 
 ## 6. План сборки агентами
 
@@ -292,7 +295,7 @@
 | W3 (Modbus + BACnet + HelvarNet) | `protocols/modbus_server.py`, `protocols/bacnet_server.py`, `protocols/helvarnet_server.py`, відповідні тести | P-02, P-05, P-07, P-08, P-09 (панель), P-11 (шлагбауми) | W1 |
 | W4 (MQTT + BioStar + LPR + SICS + control REST + follow_odoo) | `protocols/mqtt_publisher.py`, `biostar_api.py`, `lpr_push.py`, `sics_server.py`, `rest/control_api.py`, `odoo/follow.py`, `odoo/devices_client.py`, тести | P-06, P-10, P-11 (LPR, ваги), API-10…API-19, режим `follow_odoo` | W1 |
 | W5 (Odoo-модуль) | `odoo_addons/factory3d_iot_sim/models/*`, `views/*`, `controllers/*`, `data/*`, `security/*`, `tests/*`, `migrations/`, `neutralize.sql` | M-01…M-09, V-01…V-12, API-01…API-03, крони, AC типу UT | W0 |
-| W6 (стенд і ТК) | `tests/stand/*` (клієнти pymodbus/asyncua/bacpypes3/paho/requests проти compose), `docs/modules/factory3d_iot_sim/TEST_REPORT.md` | ТК-01…ТК-16, ТБ, ТП, DEPLOY_TEST | W2–W5 |
+| W6 (стенд і ТК) | `tests/stand/*` (клієнти pymodbus/asyncua/bacpypes3/paho/requests проти compose), `docs/modules/factory3d_iot_sim/TEST_REPORT.md` | ТК-01…ТК-17, ТБ, ТП, DEPLOY_TEST | W2–W5 |
 
 Порядок злиття: W0 → W1 → (W2 ‖ W3 ‖ W4 ‖ W5) → W6. Інтерфейс між W1 і протокольними воркерами — `World.signals[code].value`, `World.devices[code]`, `World.events` (SPEC §8.2.3) — фіксується W1 першим комітом.
 
