@@ -22,6 +22,7 @@ X-16 (сигнали модуля — `origin='module'`, Додаток C.2, AC-
 Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: створення команд (`_f3d_mc_create_command`,
 `_f3d_mc_payload_supported`) винесено з `tools/commands.py` у `models/f3d_command.py` (M-20) — `tools/commands.py`
 без імпортів Odoo, побайтово = `cmdtext.py` (§0, M-13, M-20, §7.2, §13.0.1 п. 9, AC-58, AC-80, AC-102, AC-103, §13.1, DoD).
+Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-12, Q-14.
 
 Позначення: UT — `odoo.tests.TransactionCase`; HT — `HttpCase`; CT — pytest пакета плагінів із фейковими серверами;
 TC — стенд (емулятор + колектор + Odoo); MAN — ручна перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -2682,9 +2683,9 @@ HttpCase)`. Від батьківського класу використову�
 
 | ID | Поки немає відповіді |
 |---|---|
-| Q-01 | адреси OPC 40550-1 і `JobManagement` — з iot_sim §8.3 (ПРИПУЩЕННЯ), лише в даних (Додаток C); верстат без `JobManagement` — сигнал `job` без адреси, `auto_start_mode='job_or_single'` (правило «одне в черзі») |
-| Q-02 | адаптер `woodstore` за контрактом P-03 iot_sim; на проді `write_enabled=False`, команди порталу не надсилаються, звірка стосів працює лише на читання |
-| Q-03 | прод — `cutting_mode=manual` (CSV R-19 п. 5 вручну, план JSON API-32 — M-25); стенд — `collector`; формат CSV ізольовано в `tools/cutcsv.py` |
+| Q-01 | **Закрито 14.10 (відповідь № 6, CONSISTENCY):** за OPC 40550-1 і `JobManagement`; nodeset і серійні номери — вхідні дані ПНР. адреси OPC 40550-1 і `JobManagement` — з iot_sim §8.3 (ПРИПУЩЕННЯ), лише в даних (Додаток C); верстат без `JobManagement` — сигнал `job` без адреси, `auto_start_mode='job_or_single'` (правило «одне в черзі») |
+| Q-02 | **Закрито 14.10 (відповідь № 6, CONSISTENCY):** woodStore — контракт P-03, на проді — адаптер за описом HOMAG. адаптер `woodstore` за контрактом P-03 iot_sim; на проді `write_enabled=False`, команди порталу не надсилаються, звірка стосів працює лише на читання |
+| Q-03 | **Закрито 14.10 (відповідь № 6, CONSISTENCY):** CSV P-04 з CAD; на проді `cutting_mode=manual` до звірки з intelliDivide; MPR — з woodWOP. прод — `cutting_mode=manual` (CSV R-19 п. 5 вручну, план JSON API-32 — M-25); стенд — `collector`; формат CSV ізольовано в `tools/cutcsv.py` |
 | Q-04 | деталі — ручне введення й імпорт CSV Додатка E; у макеті деталей немає, ТК беруть `tests/stand/data/parts_*.csv` (у модуль не потрапляють) |
 | Q-05 | причини — Додаток B.2 + «Не вказано»; підтверджує `mrp.group_mrp_manager`; `micro_stop_s=120`, `pause_after_min=10` (§5.1) |
 | Q-06 | порядок вибору працівника R-09 п. 4; 7 РЦ без оператора — без працівника (`button_start`) |
@@ -2693,9 +2694,9 @@ HttpCase)`. Від батьківського класу використову�
 | Q-09 | **закрито X-03** (CR-01: telemetry 19.0.1.1.0 — `f3d.command.payload`/`result_data`, API-06 `payload`, API-07 `data`, `SourcePlugin.call`): команди — `payload` R-21 (M-20, §7.2, плагіни `call()`); текстова граматика CMD-01…03 (≤ 64 символи) — запасна (`write()` плагінів; Odoo — лише без поля `payload`); GET API-01 з одноразовим токеном лишається (CSV карти до 1 МБ більший за 64 КБ `payload`, A-14) |
 | Q-10 | `Q` — `stock.scrap` з `workorder_id`; без браку `Q=1` |
 | Q-11 | DI «в роботі» = сигнал циклу; паузи між циклами поглинає `micro_stop_s`; лічильник = деталі |
-| Q-12 | стенд — `security_mode=None`; параметри безпеки (`cert_ref`, `key_ref`, `server_cert_ref`, `username`, `password_ref`) уже в схемі й Додатку C.1; ТБ-07 перевіряє `SignAndEncrypt` |
+| Q-12 | **Закрито 14.10 (відповідь № 6, CONSISTENCY):** `SignAndEncrypt`, `Basic256Sha256`, сертифікат колектора, окремі облікові записи на читання й на методи. стенд — `security_mode=None`; параметри безпеки (`cert_ref`, `key_ref`, `server_cert_ref`, `username`, `password_ref`) уже в схемі й Додатку C.1; ТБ-07 перевіряє `SignAndEncrypt` |
 | Q-13 | плановий час = календар РЦ мінус відсутності `leave` мінус прості з причиною `f3d_planned` («Перерва») |
-| Q-14 | списання — при подачі порталом (`picked` рядки руху, R-17), проведення — при закритті МО |
+| Q-14 | **Закрито 14.10 (відповідь № 7, CONSISTENCY):** плита списується при подачі порталом (R-17). списання — при подачі порталом (`picked` рядки руху, R-17), проведення — при закритті МО |
 | Q-15 | **закрито**: ADAM — `wordorder=little` (**X-43**, D-20; A-28, ТК-05 перевіряє); заявку дає лише сигнал `alarm`, `state` — `create_request=False` (**X-38**); коди модуля (`workcenters/<C>/event`, `job_cmd`, `machine_state`, `equipment/GANTRY-1/cmd`, `equipment/CUTOPT/cmd`) каталог iot_sim доповнює з Додатка C.2 (**X-34**, X-76) — сигнал `workcenters/<C>/event` і далі створює хук. `default_capacity` у viewer замінено на `capacity_ids`/1 (**X-92**), `oee` перекриває провайдер цього модуля (R-25) |
 | Q-16 | **закрито X-52**: ключі-розширення `opcua` (`ns_uri`, `events`, `io`, `call`, `job_select`; `params.ns_uri`, `app_uri`, `heartbeat_s`) і `rest_vendor` (`cmd`, `default`, `io`; `params.vendor`, `events_period_s`, `stacks_period_s`, `jobs_period_s`) внесено в telemetry Додаток A як довідкові (власник — цей модуль, CM-06); `validate()` плагіна перевіряє їх схемами `schemas/*.ext.json` |
 | Q-17 | **закрито X-38**: емулятор формує `JobOrderID = "WO%05d"` (id `mrp.workorder`) у сценаріях і `follow_odoo`, завершені JobOrder лишаються в `JobOrderList` зі станом `Ended/Completed` — збігається з R-09 п. 1 і R-22 п. 3 без змін коду; ТК автостарту лишаються детермінованими (`Store` з Odoo, AC-101, + `Start` з пульта стенда — ТК-04, ТК-10) |
