@@ -1,0 +1,25 @@
+{
+    "name": "Завод 3D: база",
+    "summary": "Коди сцени, зони цеху, ворота-доки, паспорти обладнання, групи прав для factory3d",
+    "description": "Ядро factory3d: домішка f3d.scene.mixin, f3d.zone, ворота як доки Odoo 19, "
+                   "паспорти обладнання з макета, міграція демо-полів x_dock/x_truck/x_vehicle.",
+    "version": "19.0.1.0.0",
+    "category": "Manufacturing/Manufacturing",
+    "author": "ToDo",
+    "website": "https://todo.ltd",
+    "license": "LGPL-3",
+    "depends": ["stock", "stock_picking_batch", "stock_fleet", "fleet", "mrp", "maintenance",
+                "hr", "web"],
+    "data": [
+        "security/f3d_security.xml",
+        "security/ir.model.access.csv",
+        "data/ir_config_parameter.xml",
+        "views/f3d_menus.xml",
+    ],
+    "demo": [],
+    "post_init_hook": "post_init_hook",
+    "uninstall_hook": "uninstall_hook",
+    "external_dependencies": {"python": []},
+    "installable": True,
+    "application": True,
+}

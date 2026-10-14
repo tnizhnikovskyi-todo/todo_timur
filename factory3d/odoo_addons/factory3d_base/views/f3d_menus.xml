@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Пункти з діями (zone, dock, equipment, passport, spec, source, migration) додаються разом із моделями. -->
+    <record id="action_f3d_config_parameter" model="ir.actions.act_window">
+        <field name="name">Параметри системи</field>
+        <field name="res_model">ir.config_parameter</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('key', '=like', 'factory3d.%')]</field>
+    </record>
+
+    <menuitem id="menu_f3d_root" name="Завод 3D" sequence="75"
+              web_icon="factory3d_base,static/description/icon.png"
+              groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_plant" name="Завод" parent="menu_f3d_root" sequence="20"
+              groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_config" name="Налаштування" parent="menu_f3d_root" sequence="99"
+              groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_config_params" name="Параметри системи" parent="menu_f3d_config" sequence="95"
+              action="action_f3d_config_parameter" groups="factory3d_base.group_f3d_admin"/>
+</odoo>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="param_environment" model="ir.config_parameter">
+        <field name="key">factory3d.base.environment</field>
+        <field name="value">test</field>
+    </record>
+    <record id="param_plant_length" model="ir.config_parameter">
+        <field name="key">factory3d.base.plant_length_m</field>
+        <field name="value">150</field>
+    </record>
+    <record id="param_plant_width" model="ir.config_parameter">
+        <field name="key">factory3d.base.plant_width_m</field>
+        <field name="value">72</field>
+    </record>
+    <record id="param_plant_height" model="ir.config_parameter">
+        <field name="key">factory3d.base.plant_height_m</field>
+        <field name="value">9</field>
+    </record>
+    <record id="param_site_x0" model="ir.config_parameter">
+        <field name="key">factory3d.base.site_x0_m</field>
+        <field name="value">-32</field>
+    </record>
+    <record id="param_site_y0" model="ir.config_parameter">
+        <field name="key">factory3d.base.site_y0_m</field>
+        <field name="value">-30</field>
+    </record>
+    <record id="param_site_x1" model="ir.config_parameter">
+        <field name="key">factory3d.base.site_x1_m</field>
+        <field name="value">182</field>
+    </record>
+    <record id="param_site_y1" model="ir.config_parameter">
+        <field name="key">factory3d.base.site_y1_m</field>
+        <field name="value">100</field>
+    </record>
+    <record id="param_keep_x_fields" model="ir.config_parameter">
+        <field name="key">factory3d.base.keep_x_fields</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_uninstall_restore" model="ir.config_parameter">
+        <field name="key">factory3d.base.uninstall_restore_x_fields</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_migration_state" model="ir.config_parameter">
+        <field name="key">factory3d.base.migration_state</field>
+        <field name="value">pending</field>
+    </record>
+    <record id="param_migration_report" model="ir.config_parameter">
+        <field name="key">factory3d.base.migration_report</field>
+        <field name="value">{}</field>
+    </record>
+</odoo>
