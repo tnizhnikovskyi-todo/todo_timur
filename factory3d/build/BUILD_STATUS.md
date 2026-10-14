@@ -2,7 +2,7 @@
 
 Правит только менеджер (`factory3d/build/MANAGER.md`). Лидеры модулей пишут в `factory3d/build/modules/<m>.md`.
 
-Шаг 0: в работе (0.1 готов)
+Шаг 0: готов
 Ветка интеграции: `claude/factory3d-build`
 Документация заморожена на коммите: `9b5cbb5`
 BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth-8tq7jy`; интеграция — в отдельном worktree `claude/factory3d-build`.
@@ -13,7 +13,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 
 | # | Модуль | Фаза | Зависит от (factory3d) | Статус | Сессия | Старт | Готов | Тесты | DEC |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `factory3d_base` | 1 | — | TODO | | | | | |
+| 1 | `factory3d_base` | 1 | — | IN_PROGRESS | session_01QHzZ3cNyHZ2W6eBd43JJwn | 2026-10-14 22:04 UTC | | | |
 | 2 | `factory3d_iot_sim` | 1 | base | TODO | | | | | |
 | 3 | `factory3d_telemetry` | 2 | base | TODO | | | | | |
 | 4 | `factory3d_viewer` | 1 | base | TODO | | | | | |
@@ -31,24 +31,28 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 
 ## Среда
 
-Зависимости Odoo по модулям (из `docs/ARCHITECTURE.md` §3). Колонку «Ставится» заполняет шаг 0.
+Зависимости Odoo по модулям (из `docs/ARCHITECTURE.md` §3). Odoo 19.0 CE `bc77fac7`; скрипты `factory3d/tools/odoo/` (`setup.sh` с нуля ≈3 мин).
+Нет в среде: `mrp_maintenance`, `mrp_workorder`, `web_gantt` → решения ENV-1..4 в `factory3d/build/ENV_DECISIONS.md` (ветка интеграции).
 
 | Модуль | Зависимости Odoo | Ставится |
 |---|---|---|
-| base | stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet, fleet, web | |
-| viewer | bus, web | |
-| iot_sim | — | |
-| telemetry | maintenance, mail, web | |
-| machine_connect | mrp_workorder | |
-| energy | mrp_account, mrp_workorder, analytic, web_hierarchy | |
-| genset (мост) | td_genset | |
-| yard | stock_picking_batch, stock_fleet, delivery, stock_delivery, web_gantt, mail, bus | |
-| access | hr_attendance, mail | |
-| bms | web | |
-| fire_safety | hr_attendance | |
+| base | stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet, fleet, web | кроме mrp_maintenance → ENV-1 |
+| viewer | bus, web | да |
+| iot_sim | — | да |
+| telemetry | maintenance, mail, web | да |
+| machine_connect | mrp_workorder | нет → ENV-3 |
+| energy | mrp_account, mrp_workorder, analytic, web_hierarchy | кроме mrp_workorder → ENV-2 |
+| genset (мост) | td_genset | свой модуль, переносит лидер |
+| yard | stock_picking_batch, stock_fleet, delivery, stock_delivery, web_gantt, mail, bus | кроме web_gantt → ENV-4 |
+| access | hr_attendance, mail | да |
+| bms | web | да |
+| fire_safety | hr_attendance | да |
 
 ## Журнал менеджера
 
 Коротко, одна строка на событие: дата, модуль, что произошло.
 
 - 2026-10-14 менеджер: шаг 0.1 — создана `claude/factory3d-build` от `9b5cbb5`; решение: BUILD_STATUS живёт в ветке менеджера, чтобы продолжение после очистки контекста видело актуальное состояние.
+- 2026-10-14 менеджер: шаг 0.2–0.3 — скрипты Odoo 19 в `claude/factory3d-build` (`49decab`), смоук зелёный; нет mrp_maintenance, mrp_workorder, web_gantt.
+- 2026-10-14 менеджер: решение ENV-1..4 (`f0fbe9f`) — ядро на CE, Enterprise-часть в мосты auto_install; вместо BLOCKED-ENV для base/energy/machine_connect/yard.
+- 2026-10-14 22:04 UTC factory3d_base: запущена сессия session_01QHzZ3cNyHZ2W6eBd43JJwn (1/2 за 24 ч).
