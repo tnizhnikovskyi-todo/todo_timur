@@ -6,3 +6,5 @@ from . import test_passport
 from . import test_dock
 from . import test_batch
 from . import test_migration
+from . import test_hooks
+from . import test_security

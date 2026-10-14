@@ -217,7 +217,8 @@ class TestLocationKinds(F3DCase):
         with self.with_data_file('scene_locations.csv', self.rows):
             first = codes.locations(self.env)
             second = codes.locations(self.env)
-        self.assertEqual({k: first[k] for k in ('kinds', 'capacities')}, {k: second[k] for k in ('kinds', 'capacities')})
+        keys = ('kinds', 'capacities')
+        self.assertEqual({k: first[k] for k in keys}, {k: second[k] for k in keys})
         self.assertEqual(second['locations'], 0)
         self.assertEqual(self.plt.f3d_capacity, 60)
 

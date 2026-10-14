@@ -55,8 +55,9 @@ def register(env):
     elif missing:
         _logger.info("Локацій воріт у базі немає (чиста база): воріт 0")
     for wh in docks.mapped('warehouse_id'):
-        west = docks.filtered(lambda d: d.warehouse_id == wh and d.f3d_side == 'west')
-        east = docks.filtered(lambda d: d.warehouse_id == wh and d.f3d_side == 'east')
+        wh_docks = docks.filtered(lambda d, wh=wh: d.warehouse_id == wh)
+        west = wh_docks.filtered(lambda d: d.f3d_side == 'west')
+        east = wh_docks.filtered(lambda d: d.f3d_side == 'east')
         if west and wh.in_type_id:
             wh.in_type_id.sudo().dock_ids = [Command.set(west.ids)]
             res['in_type.dock_ids'] += len(west)

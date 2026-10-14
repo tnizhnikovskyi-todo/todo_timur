@@ -44,6 +44,7 @@ class F3DCase(TransactionCase):
     # --- хелперы (модели f3d.* появляются в следующих воркерах) ---
     def make_zone(self, code, polygon=None, **vals):
         vals.setdefault('name', f'Зона {code}')
+        vals.setdefault('zone_type', 'storage')
         vals['f3d_code'] = code
         if polygon is not None:
             vals['polygon_text'] = polygon

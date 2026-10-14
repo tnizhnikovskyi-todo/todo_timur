@@ -90,7 +90,7 @@ class F3dZone(models.Model):
     @staticmethod
     def _polygon_area(points):
         total = 0.0
-        for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1]):
+        for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1], strict=True):
             total += x1 * y2 - x2 * y1
         return abs(total) / 2.0
 
@@ -169,7 +169,7 @@ class F3dZone(models.Model):
         """Промінь; точка на ребрі вважається всередині."""
         eps = 1e-9
         inside = False
-        for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1]):
+        for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1], strict=True):
             cross = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1)
             if (abs(cross) <= eps and min(x1, x2) - eps <= x <= max(x1, x2) + eps
                     and min(y1, y2) - eps <= y <= max(y1, y2) + eps):

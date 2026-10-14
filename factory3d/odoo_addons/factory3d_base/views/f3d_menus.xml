@@ -29,4 +29,6 @@
               action="action_f3d_equipment_spec" groups="group_f3d_manager"/>
     <menuitem id="menu_f3d_config_source" name="Джерела паспортів" parent="menu_f3d_config" sequence="21"
               action="action_f3d_equipment_source" groups="group_f3d_manager"/>
+    <menuitem id="menu_f3d_config_migration" name="Повторити міграцію демо-даних" parent="menu_f3d_config"
+              sequence="96" action="action_f3d_run_migration" groups="factory3d_base.group_f3d_admin"/>
 </odoo>

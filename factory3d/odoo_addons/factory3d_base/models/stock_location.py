@@ -73,7 +73,7 @@ class StockLocation(models.Model):
     def f3d_register_dock(self):
         """Зареєструвати ворота в dock_ids типу приймання/відвантаження складу (R-10)."""
         ptypes = self.env['stock.picking.type']
-        for loc in self.filtered(lambda l: l.f3d_kind == 'dock'):
+        for loc in self.filtered(lambda loc: loc.f3d_kind == 'dock'):
             wh = loc.warehouse_id
             if not wh:
                 continue

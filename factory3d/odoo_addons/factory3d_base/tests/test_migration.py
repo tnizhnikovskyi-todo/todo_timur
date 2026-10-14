@@ -1,6 +1,6 @@
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_base.hooks import batches, x_fields
+from odoo.addons.factory3d_base.hooks import batches, uninstall_hook, x_fields
 
 from .common import F3DCase
 
@@ -118,11 +118,11 @@ class TestUninstall(MigrationCase):
         batches.migrate(self.env)
         x_fields.drop_demo(self.env, [])
         self.assertFalse(self._field_names())
-        res = x_fields.restore_on_uninstall(self.env)
-        self.assertEqual(res['fields_restored'], 3)
+        uninstall_hook(self.env)
         self.assertEqual(self._field_names(), {'x_dock', 'x_truck', 'x_vehicle'})
         read = x_fields.read_manual_field
         self.assertEqual(read(self.env, 'stock.picking', 'x_dock'),
                          {self.p1.id: 'DOCK-T1', self.p2.id: 'DOCK-T1', self.p3.id: 'DOCK-TE1'})
         self.assertEqual(read(self.env, 'stock.picking', 'x_truck'), {self.p3.id: 'TRUCK-OUT-T1'})
         self.assertEqual(read(self.env, 'stock.picking', 'x_vehicle'), {self.p4.id: 'FL-T'})
+        self.assertFalse(self.env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.base.%')]))

@@ -173,7 +173,7 @@ class F3dSceneMixin(models.AbstractModel):
         if not self.env.user.has_group('factory3d_base.group_f3d_admin'):
             raise AccessError("Запускати міграцію може лише адміністратор «Завод 3D».")
         from .. import hooks
-        report = hooks.run_all(self.env)
+        report = hooks.run_all(self.sudo().env)
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

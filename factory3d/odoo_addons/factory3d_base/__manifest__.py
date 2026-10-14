@@ -1,3 +1,4 @@
+# ruff: noqa: B018
 {
     "name": "Завод 3D: база",
     "summary": "Коди сцени, зони цеху, ворота-доки, паспорти обладнання, групи прав для factory3d",
@@ -18,6 +19,7 @@
         "data/f3d.equipment.spec.csv",
         "data/f3d.equipment.source.csv",
         "data/f3d_zone_data.xml",
+        "data/f3d_actions.xml",
         "views/stock_location_views.xml",
         "views/stock_picking_batch_views.xml",
         "views/stock_picking_views.xml",
