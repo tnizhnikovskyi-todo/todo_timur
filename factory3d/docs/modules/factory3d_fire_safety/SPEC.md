@@ -1,12 +1,13 @@
 # factory3d_fire_safety — специфікація
 
-Версія 0.1 · 14.10.2026 · технічне рішення: `docs/modules/factory3d_fire_safety/ARCHITECTURE.md` (далі «ARCH»;
+Версія 0.2 · 14.10.2026 (дописано §2 M-04…M-19, §3–§15, додатки A–D) · технічне рішення: `docs/modules/factory3d_fire_safety/ARCHITECTURE.md` (далі «ARCH»;
 FR-xx, A-xx, Q-xx — звідти). Контракти, на які спирається документ: `factory3d_base` CB-01, CB-03, CB-04,
 CB-07, CB-08, CB-09, CB-10, CB-12; `factory3d_viewer` M-01, M-03, API-03, Додаток A.13; `factory3d_telemetry`
-CT-01, CT-03, CT-05, CT-06, CT-07, CT-09 (ARCH telemetry §2.1; SPEC telemetry — паралельно, Q-06/Q-07);
+CT-01, CT-03, CT-05, CT-06, CT-07, CT-08, CT-09, CT-10 (ARCH telemetry §2.1; SPEC telemetry M-02, M-03, M-06, M-08, M-11,
+R-05, R-07, R-17, R-23 — Q-06/Q-07);
 `factory3d_iot_sim` SPEC §8.11 (P-09), §8.4.1 (unit 85), §9.1 R-25…R-27, §9.3 S-07/S-08, API-13, Додаток A
-(сигнали 189, 603–646); каркас `docs/ARCHITECTURE.md` §5, §6.4, §6.7, §6.8, D-07. Контракти, що задає модуль, —
-CF-01…CF-05 (ARCH §2.1). Усі рядки інтерфейсу — українською в коді (D-14), без `.po`; жодних `x_`-полів.
+(сигнали 189, 603–646); `factory3d_access` SPEC M-16, CA-03, CA-09 (джерело проходів, рішення менеджера 14.10);
+каркас `docs/ARCHITECTURE.md` §5, §6.4, §6.7, §6.8, D-07. Контракти, що задає модуль, — CF-01…CF-06 (ARCH §2.1). Усі рядки інтерфейсу — українською в коді (D-14), без `.po`; жодних `x_`-полів.
 
 Загальні правила моделей: `_description` українською; `Datetime` — UTC (стандарт Odoo), у payload — рядки за
 Києвом через `factory3d_viewer.tools.dates` (viewer R-02); `_log_access=True` всюди, крім `f3d.fire.event`;
@@ -36,7 +37,7 @@ odoo_addons/factory3d_fire_safety/
 │   ├── f3d_fire_smoke_zone.py           M-07
 │   ├── f3d_fire_exit.py                 M-09
 │   ├── f3d_fire_route.py                M-10
-│   ├── f3d_fire_drill.py                M-11, M-11a, M-11b, M-11c
+│   ├── f3d_fire_drill.py                M-11, M-11a, M-11b, M-11c, M-11e
 │   ├── passage_source.py                M-12, M-12a
 │   ├── f3d_zone.py                      M-13
 │   ├── maintenance_request.py           M-14
@@ -108,16 +109,16 @@ odoo_addons/factory3d_fire_safety/
 └── tests/
     ├── __init__.py
     ├── common.py                        FireCase(TransactionCase): фікстури, фейкові показання, помічник push_text()
-    ├── test_norms.py                    AC-05…AC-11, AC-69, AC-70 (R-01…R-04, R-08, R-23)
+    ├── test_norms.py                    AC-05…AC-11, AC-70 (R-01…R-04, R-08, R-23)
     ├── test_event.py                    AC-12…AC-16, AC-68 (M-05, R-14, M-18)
     ├── test_sync.py                     AC-17…AC-27, AC-67 (R-10…R-13, R-19)
     ├── test_security_readonly.py        AC-28…AC-31, AC-66, ТБ-01…ТБ-04 (FR-18)
     ├── test_requests.py                 AC-32 (зв'язок заявок)
     ├── test_evacuation.py               AC-33…AC-40 (R-05…R-09, звіт)
     ├── test_drill.py                    AC-41…AC-52 (R-15…R-18)
-    ├── test_passage_source.py           AC-53, AC-54 (CF-02)
+    ├── test_passage_source.py           AC-53, AC-54, AC-75 (CF-02, CF-06; потребує test_factory3d_fire_safety)
     ├── test_viewer_provider.py          AC-55…AC-57, AC-59 (R-20, R-21 — функції tools/payload без viewer)
-    ├── test_hooks.py                    AC-01…AC-04, AC-60…AC-62 (§5.4, §5.5)
+    ├── test_hooks.py                    AC-01…AC-04, AC-60…AC-62, AC-69 (§5.4, §5.5, перерахунок)
     ├── test_rights_ui.py                AC-63…AC-65 (меню, права, налаштування)
     ├── test_data_sync.py                AC-71 (pytest поза Odoo: генератор = data/*)
     └── stand/                           pytest -m stand (ТК-01…ТК-10) — поза odoo.tests
@@ -137,6 +138,17 @@ odoo_addons/factory3d_fire_safety_viewer/
 ├── models/__init__.py
 ├── models/viewer_provider.py            f3d.viewer.provider.fire (130), f3d.viewer.provider.evacuation (140)
 └── tests/test_provider.py              AC-58 (PayloadBuilder + DeltaBuilder viewer із провайдерами модуля)
+```
+
+### 0.3 Тестовий модуль `odoo_addons/test_factory3d_fire_safety` (лише для тестів, не ставиться на прод)
+
+```
+odoo_addons/test_factory3d_fire_safety/
+├── __manifest__.py                     depends [factory3d_fire_safety], LGPL-3, installable True, auto_install False
+├── __init__.py
+└── models/passage_source_test.py       AbstractModel f3d.fire.passage.source.zz_test БЕЗ _inherit: _f3d_priority = 5,
+                                        _f3d_available() → bool(env.context.get('f3d_test_passage_source')),
+                                        _f3d_passages(start, end) → env.context.get('f3d_test_passages', []) (без _f3d_on_site і _f3d_key)
 ```
 
 ## 1. Маніфест
@@ -353,7 +365,7 @@ class F3dFirePanel(models.Model):
 | `panel_id` | Many2one `f3d.fire.panel` | `required`, `ondelete='cascade'`, `index` |
 | `number` | Integer | `required`, `string="Номер"` (1…4) |
 | `name` | Char | `compute="_compute_name"`, `store=True`: «Шлейф 2» |
-| `x_from`, `x_to` | Float | `digits=(8,1)`, `string="X від, м"`/`"X до, м"` (0/42, 42/92, 92/122, 122/151 — `plant/fire.py:LOOPS`) |
+| `from_x_m`, `to_x_m` | Float | `digits=(8,1)`, `string="X від, м"`/`"X до, м"` (0/42, 42/92, 92/122, 122/151 — `plant/fire.py:LOOPS`) |
 | `detectors_count`, `mcp_count`, `sounders_count`, `flame_count` | Integer | `compute="_compute_device_counts"`, `store=True`: `search_count` пристроїв шлейфу за типами (`detectors` = smoke+multi+heat) |
 | `modules_count` | Integer | `string="Модулі вводу"`, з data (шлейф 2 — 4: 3 полум'я + 1 іскрогасіння; `fire.loops[2].modules`) |
 | `device_count` | Integer | compute: усі пристрої шлейфу |
@@ -364,7 +376,7 @@ class F3dFirePanel(models.Model):
 | `device_ids` | One2many `f3d.fire.device` `loop_id` | |
 
 Обмеження: `UNIQUE(panel_id, number)` «Номер шлейфу має бути унікальним у межах приладу»; `@api.constrains('number')`: 1 ≤ number ≤ 8 («Cerberus PRO FC726-ZA: до 8 кілець з розширенням; у макеті 4»), текст «Номер шлейфу: 1…8».
-Методи: `_set_state(new, ts)` — `ok`/`fault`, подія `loop_fault`/`loop_ok` (R-14), `fault_since`; `loop_of(x)` `@api.model` → шлейф, для якого `x_from ≤ x < x_to` (як `fire.loop_of`), інакше порожньо.
+Методи: `_set_state(new, ts)` — `ok`/`fault`, подія `loop_fault`/`loop_ok` (R-14), `fault_since`; `loop_of(x)` `@api.model` → шлейф, для якого `from_x_m ≤ x < to_x_m` (як `fire.loop_of`), інакше порожньо.
 
 ### M-03 `f3d.fire.zone` — зона виявлення (FR-03, FR-07)
 
@@ -775,6 +787,7 @@ class F3dFireDrill(models.Model):
 | `action_f3d_show(self)` | `zone_id.action_f3d_show()` |
 | `_tick(self)` | для `running`: R-16 п. 2–3 (проходи), R-17 (кроки), R-16 п. 7 (авто-стоп), `last_tick_ts=now`, шина `_notify('f3d.fire.drill', [name], 'state')`, якщо щось змінилось |
 | `@api.model _cron_tick(self)` | `drills = search([('state','=','running')])`; порожньо → вихід; інакше до `5` ітерацій: `drills._tick()`, `self.env.cr.commit()` (поза тестами: `not self.env.registry.in_test_mode()`), `time.sleep(10)`, `drills = drills.exists().filtered(lambda d: d.state == 'running')`; у тестовому режимі — одна ітерація без `sleep`/`commit` |
+| `@api.model _f3d_is_active_at(self, ts) -> bool` | CF-06 (для `factory3d_access` CA-09): `ts` — UTC naive `datetime`; `True`, якщо `self.sudo().search_count([('start_ts','!=',False), ('start_ts','<=',ts), '|', ('end_ts','=',False), ('end_ts','>=',ts), ('state','in',('running','evaluating','done','cancelled'))]) > 0` (будь-яка компанія; навчання в `draft`/`planned` не рахуються). Приклад: навчання 10:00:00–10:05:30 → `ts` 10:03 → `True`; 10:06 → `False`; `running` без `end_ts`, старт 10:00 → будь-який `ts ≥ 10:00` → `True`; `ts` до старту → `False` |
 | `@api.model _match_test_alarm(self, zone, device, ts, real=False)` | R-18 |
 | `_f3d_sim_start(self) -> record` / `_f3d_sim_stop(self)` | iot_sim bridge (FR-23, A-34), `models/iot_sim_bridge.py` |
 | `unlink(self)` | лише `draft`/`cancelled` → інакше `UserError("Видалити можна лише чернетку або скасоване навчання.")` |
@@ -858,23 +871,43 @@ Data (`data/f3d_fire_drill_template.xml`, xml-id `drill_template_default`, кр�
 
 ### M-12 `f3d.fire.passage.source` — хук проходів людей (CF-02, A-08, A-19)
 
+Контракт (узгоджено з `factory3d_access` SPEC M-16, CA-09, Q-13): **джерело — будь-яка модель реєстру, чиє `_name`
+починається з `f3d.fire.passage.source.`** (з крапкою); `_inherit` від бази не вимагається, бо інші модулі (access) не
+залежать від цього модуля. База `f3d.fire.passage.source` (AbstractModel) лише документує інтерфейс і дає реалізацію
+пошуку; власне джерело модуля (M-12a) її успадковує.
+
 ```python
 class F3dFirePassageSource(models.AbstractModel):
     _name = "f3d.fire.passage.source"
     _description = "Пожежна безпека: джерело даних про людей на об'єкті"
     _f3d_priority = 1000          # менше — пріоритетніше
-    _f3d_key = "none"             # пишеться в f3d.fire.drill.passage_source
+    PREFIX = "f3d.fire.passage.source."
 ```
 
-| Метод | Вхід → вихід | Поведінка бази |
+| Метод джерела | Вхід → вихід | Обов'язковий |
 |---|---|---|
-| `_f3d_available(self) -> bool` | — | `False` |
-| `_f3d_on_site(self, at: datetime) -> list[dict]` | UTC naive → `[{"employee_id": int, "since": datetime, "point": str}]` | `[]` |
-| `_f3d_passages(self, start, end) -> list[dict]` | UTC → `[{"employee_id": int, "ts": datetime, "point": str, "direction": "out"\|"in"}]` | `[]` |
-| `@api.model _f3d_get_source(self) -> model` | → модель-реалізація | кандидати: `self.env.registry.descendants(['f3d.fire.passage.source'], '_inherit')` мінус сама база; лишити ті, де `_f3d_available()`; повернути з найменшим `(_f3d_priority, _name)`; якщо жодної — `env['f3d.fire.passage.source.hr_attendance']` |
+| `_f3d_passages(self, start, end) -> list[dict]` | UTC naive → `[{"employee_id": int, "ts": datetime, "point": str, "direction": "out"\|"in"}]` | так (за ним модель визнається джерелом) |
+| `_f3d_on_site(self, at) -> list[dict]` | UTC naive → `[{"employee_id": int, "since": datetime, "point": str}]` | ні (немає — список людей на старті будується з `_f3d_passages(at − 24 год, at)`: останній прохід `in` без пізнішого `out`) |
+| `_f3d_available(self) -> bool` | — | ні (немає — джерело доступне) |
+| атрибути `_f3d_priority` (int, немає → 1000), `_f3d_key` (str, немає → суфікс імені після префікса: `access`) | — | ні |
+
+Метод бази:
+
+| Сигнатура | Алгоритм |
+|---|---|
+| `@api.model _f3d_source_names(self) -> list[str]` | `sorted(n for n in self.env.registry if n.startswith(PREFIX))` (як viewer M-01 знаходить провайдери); окремий метод — тести бачать реальний реєстр |
+| `@api.model _f3d_get_source(self) -> model` | для `n` з `_f3d_source_names()`: `m = self.env[n].sudo()`; пропустити, якщо `not hasattr(m, '_f3d_passages')`; пропустити, якщо `hasattr(m, '_f3d_available') and not m._f3d_available()`; кандидати сортуються за `(getattr(m, '_f3d_priority', 1000), n)`; повернути першого; порожньо → `self.env['f3d.fire.passage.source.hr_attendance'].sudo()` |
+| `@api.model _f3d_source_key(self, m) -> str` | `getattr(m, '_f3d_key', None) or m._name[len(PREFIX):]` |
+| `@api.model _f3d_people_at(self, m, at) -> list[dict]` | `m._f3d_on_site(at)`, якщо метод є; інакше — з `m._f3d_passages(at − 24 год, at)` (останній `in` на людину без пізнішого `out`, `since` = його `ts`, `point` = його `point`) |
+
+Відомі джерела: M-12a `hr_attendance` (пріоритет 100, цей модуль); `factory3d_access` M-16
+`f3d.fire.passage.source.access` (пріоритет 10, без `_inherit`, без `_f3d_available`/`_f3d_key` → ключ `access`;
+`_f3d_passages` повертає проходи периметра в обох напрямках, `point` = код дверей); тестове
+`f3d.fire.passage.source.zz_test` (пріоритет 5, лише в тестовому модулі §0.3).
 
 #### M-12a `f3d.fire.passage.source.hr_attendance` (пріоритет 100, `_f3d_key = "hr_attendance"`)
 
+`_inherit = "f3d.fire.passage.source"`.
 - `_f3d_available()` → `True`.
 - `_f3d_on_site(at)`: `env['hr.attendance'].sudo().search([('check_in','<=',at), '|', ('check_out','=',False),
   ('check_out','>',at)], order='check_in, id')`; на кожного працівника — перший запис: `{"employee_id": att.employee_id.id,
@@ -883,17 +916,13 @@ class F3dFirePassageSource(models.AbstractModel):
 - `_f3d_passages(start, end)`: `search([('check_out','>=',start), ('check_out','<=',end)], order='check_out')` →
   `{"employee_id", "ts": check_out, "point": "Відмітка виходу", "direction": "out"}`.
 
-#### M-12b `f3d.fire.passage.source.access` (пріоритет 10, `_f3d_key = "access"`, A-19)
+#### M-12b Джерело `factory3d_access` (зовнішній контракт, access M-16, CA-03, CA-09)
 
-- `_f3d_available()` → `'f3d.access.event' in self.env`.
-- `_f3d_access_model(self)` → `self.env['f3d.access.event'].sudo()` (окремий метод — тести підміняють його фейком).
-- `_f3d_on_site(at)`: `res = _f3d_access_model().f3d_on_site_at(at)` (access CA-03); для `emp in res['employees']`:
-  `{"employee_id": emp.id, "since": emp.f3d_access_last_in or at, "point": "СКУД"}`; відвідувачі
-  (`res['visitors']`) у список людей навчання не входять — їх кількість пишеться в чаттер навчання при старті
-  («На об'єкті також N відвідувачів (СКУД)»).
-- `_f3d_passages(start, end)`: `events = _f3d_access_model().f3d_passes_between(start, end, direction='out')`;
-  для подій з `employee_id` і (`door_id.is_perimeter`, якщо поле є, інакше всі): `{"employee_id",
-  "ts": ev.ts, "point": ev.door_id.code, "direction": "out"}`.
+Модель `f3d.fire.passage.source.access` визначає **access**; цей модуль її не створює й не успадковує. Використання:
+`_f3d_get_source()` знаходить її за префіксом, коли access встановлено (пріоритет 10 < 100); `passage_source='access'`;
+у R-16 беруться лише записи `direction='out'`; відвідувачі в джерело access не входять. Зворотний контракт (CF-06):
+access викликає `env['f3d.fire.drill']._f3d_is_active_at(ts)` (M-11), щоб вихід через турнікет під час навчання не
+закривав відмітку відвідуваності (fire Q-15, access CA-09).
 
 ### M-13 `f3d.zone` — розширення (FR-22)
 
@@ -1050,15 +1079,17 @@ viewer; дати — власна `tools/dates.local(dt)` = `Europe/Kyiv`, фо�
 `active`→danger, `fault/battery/low_pressure`→warning, `ok`→success); відповідність — `widget="badge"`
 `decoration-success="compliance == 'ok'"`, `decoration-warning="compliance == 'warn'"`,
 `decoration-danger="compliance == 'fail'"`. Json-поля — через `*_text` з `widget="ace"` `options="{'mode': 'json'}"`.
+Фільтри «Групувати за» в search-представленнях мають `name="group_<поле>"` (`group_state`, `group_type`, `group_group`) —
+на них посилаються `search_default_*` дій.
 Кнопка «Показати в 3D» — `icon="fa-cube"`, `invisible="not viewer_available"` (там, де поле є) — інакше CB-02
 сам повідомляє про відсутній переглядач. Жодна кнопка, дія чи пункт меню модуля не створює `f3d.command` і не
 викликає запис у пристрій (AC-31).
 
 | ID | XML-id (модуль `factory3d_fire_safety`) | Тип / модель | Структура |
 |---|---|---|---|
-| V-01 | `view_f3d_fire_panel_form` | form `f3d.fire.panel` | `<header>`: `action_recompute_compliance` («Перерахувати норми», `groups=group_f3d_manager`), `action_view_3d_alarm` («Тривога в 3D», `btn-danger`, `invisible="state not in ('alarm','prealarm') or not viewer_available"`), `action_f3d_show` («Показати в 3D»), `action_set_bacnet_device` («Змінити BACnet device», `groups=group_f3d_admin`), `action_add_comment` («Коментар у журнал», `groups=group_f3d_fire_drill`). Над `<sheet>`: `<div class="alert alert-danger" role="alert" invisible="state != 'alarm'">` з `state_text`; `alert-warning` `invisible="comm != 'lost'"` «Зв'язок із приладом втрачено з <last_seen>»; `alert-info` `invisible="read_enabled"` «Обробку сигналів вимкнено стоп-краном»; `alert-warning` `invisible="not compliance_dirty"` «Норми або пристрої змінено — перерахуйте відповідність». Статбокс: `action_view_zones` (`zone_count`, «Зони», `fa-th`), `action_view_devices` (`device_count`, «Пристрої»), `action_view_events` (`event_count`, «Події за 7 діб», `fa-list`), `warn_count` («Попередження», без дії, `invisible="not warn_count"`), `action_view_requests` («Заявки ТО», `fa-wrench`). `<sheet>`: `name` (title); група «Стан»: `state` (badge), `state_text`, `raw_state`, `system_state`, `state_ts`, `comm` (badge: `online` success, `stale` warning, `lost` danger, `off` muted), `last_seen`, `comm_since`, `alarms_count`, `faults_count`, `disabled_count`, `sounders_active`, `brigade_transmitted`, `alarm_zone_ids` (`many2many_tags`, `invisible="not alarm_zone_ids"`); група «Прилад»: `code`, `equipment_id`, `manufacturer`, `model`, `zone_id`, `x`, `y`, `company_id` (`groups="base.group_multi_company"`). `<notebook>`: «Шлейфи» (`loop_ids` list readonly: `number`, `x_from`, `x_to`, `detectors_count`, `mcp_count`, `sounders_count`, `flame_count`, `modules_count`, `state` badge, `request_id`); «Системи» (`system_ids` list readonly: `code`, `name`, `state` badge, `state_text`, `count_today`, `last_test_date`); «Відповідність нормам» (групи: «Розстановка» — `compliance_zones_ok`/`compliance_zones_total` («Зони відповідають»), `compliance_mcp_max_m`, `compliance_mcp_point`, `compliance_mcp_ok`, `compliance_sounder_max_m` з підказкою A-26, `compliance_missing_zones`; «Евакуація» — `compliance_routes_ok`/`compliance_routes_total`, `compliance_exits_ok`, `compliance_exit_pair_m`, `compliance_exit_l_m`, `evac_max_distance_m`, `evac_worst_x`, `evac_worst_y`; «Димовидалення» — `compliance_smoke_ok`/`compliance_smoke_total`; `compliance_ts`); «Сигнали» (`groups=group_f3d_manager`: `source_id`, `io_source_id`, `signal_state_id`, `signal_system_id`, `signal_alarms_id`, `signal_faults_id`, `signal_disabled_id`, `signal_sounders_id`, `signal_brigade_id`). Невидимі: `read_enabled`, `viewer_available`, `sim_available`, `compliance_dirty`. Чаттер (`mail.thread`, `mail.activity`) |
+| V-01 | `view_f3d_fire_panel_form` | form `f3d.fire.panel` | `<header>`: `action_recompute_compliance` («Перерахувати норми», `groups=group_f3d_manager`), `action_view_3d_alarm` («Тривога в 3D», `btn-danger`, `invisible="state not in ('alarm','prealarm') or not viewer_available"`), `action_f3d_show` («Показати в 3D»), `action_set_bacnet_device` («Змінити BACnet device», `groups=group_f3d_admin`), `action_add_comment` («Коментар у журнал», `groups=group_f3d_fire_drill`). Над `<sheet>`: `<div class="alert alert-danger" role="alert" invisible="state != 'alarm'">` з `state_text`; `alert-warning` `invisible="comm != 'lost'"` «Зв'язок із приладом втрачено з <last_seen>»; `alert-info` `invisible="read_enabled"` «Обробку сигналів вимкнено стоп-краном»; `alert-warning` `invisible="not compliance_dirty"` «Норми або пристрої змінено — перерахуйте відповідність». Статбокс: `action_view_zones` (`zone_count`, «Зони», `fa-th`), `action_view_devices` (`device_count`, «Пристрої»), `action_view_events` (`event_count`, «Події за 7 діб», `fa-list`), `warn_count` («Попередження», без дії, `invisible="not warn_count"`), `action_view_requests` («Заявки ТО», `fa-wrench`). `<sheet>`: `name` (title); група «Стан»: `state` (badge), `state_text`, `raw_state`, `system_state`, `state_ts`, `comm` (badge: `online` success, `stale` warning, `lost` danger, `off` muted), `last_seen`, `comm_since`, `alarms_count`, `faults_count`, `disabled_count`, `sounders_active`, `brigade_transmitted`, `alarm_zone_ids` (`many2many_tags`, `invisible="not alarm_zone_ids"`); група «Прилад»: `code`, `equipment_id`, `manufacturer`, `model`, `zone_id`, `x`, `y`, `company_id` (`groups="base.group_multi_company"`). `<notebook>`: «Шлейфи» (`loop_ids` list readonly: `number`, `from_x_m`, `to_x_m`, `detectors_count`, `mcp_count`, `sounders_count`, `flame_count`, `modules_count`, `state` badge, `request_id`); «Системи» (`system_ids` list readonly: `code`, `name`, `state` badge, `state_text`, `count_today`, `last_test_date`); «Відповідність нормам» (групи: «Розстановка» — `compliance_zones_ok`/`compliance_zones_total` («Зони відповідають»), `compliance_mcp_max_m`, `compliance_mcp_point`, `compliance_mcp_ok`, `compliance_sounder_max_m` з підказкою A-26, `compliance_missing_zones`; «Евакуація» — `compliance_routes_ok`/`compliance_routes_total`, `compliance_exits_ok`, `compliance_exit_pair_m`, `compliance_exit_l_m`, `evac_max_distance_m`, `evac_worst_x`, `evac_worst_y`; «Димовидалення» — `compliance_smoke_ok`/`compliance_smoke_total`; `compliance_ts`); «Сигнали» (`groups=group_f3d_manager`: `source_id`, `io_source_id`, `signal_state_id`, `signal_system_id`, `signal_alarms_id`, `signal_faults_id`, `signal_disabled_id`, `signal_sounders_id`, `signal_brigade_id`). Невидимі: `read_enabled`, `viewer_available`, `sim_available`, `compliance_dirty`. Чаттер (`mail.thread`, `mail.activity`) |
 | V-02 | `view_f3d_fire_panel_kanban` | kanban `f3d.fire.panel` (Огляд) | `create="false"`, картка `t-name="card"` на всю ширину: велика плашка стану (клас за `state`: `text-bg-danger` alarm/prealarm, `text-bg-warning` fault/disabled, `text-bg-info` test, `text-bg-success` normal, `text-bg-secondary` unknown) з `state_text`; рядок «Зв'язок: `comm` · останнє показання `last_seen`»; лічильники «Зон `zone_count` · у тривозі `alarm_zone_count` · попереджень `warn_count`»; `systems_text`; «Ручні: найбільша відстань `compliance_mcp_max_m` м»; кнопки `action_view_zones` («Зони»), `action_view_events` («Журнал»), `action_f3d_show` («3D»), `action_recompute_compliance` (manager); клік — форма V-01 |
-| V-01a | `view_f3d_fire_loop_list` / `_form` | `f3d.fire.loop` | list: `panel_id`, `number`, `name`, `x_from`, `x_to`, `device_count`, `detectors_count`, `mcp_count`, `sounders_count`, `flame_count`, `modules_count`, `state` (badge), `fault_since`, `request_id`; form: ті самі поля групами «Шлейф», «Пристрої», «Стан», вкладка `device_ids` (list readonly: `address`, `type`, `zone_id`, `state`) |
+| V-01a | `view_f3d_fire_loop_list` / `_form` | `f3d.fire.loop` | list: `panel_id`, `number`, `name`, `from_x_m`, `to_x_m`, `device_count`, `detectors_count`, `mcp_count`, `sounders_count`, `flame_count`, `modules_count`, `state` (badge), `fault_since`, `request_id`; form: ті самі поля групами «Шлейф», «Пристрої», «Стан», вкладка `device_ids` (list readonly: `address`, `type`, `zone_id`, `state`) |
 | V-03 | `view_f3d_fire_zone_kanban` | kanban `f3d.fire.zone` | `default_group_by="state"`, `records_draggable="false"`, `group_create="false"`, `quick_create="false"`, `create="false"`; картка: кольорова смуга `color` (`oe_kanban_color_<color>` через `kanban_color(record.color.raw_value)`), `code` (жирно), `name`, `kind_name`, «`detector_count` шт. · шлейф `loop_id`», плашка `state` (badge), `warn` → `<span class="text-warning">` з першими 120 символами `warning`, `dust_max_pct` % (`invisible="not dust_max_pct"`), `maintenance_request_name` (`text-danger`), плашка `compliance`, кнопка `action_f3d_show` («3D») |
 | V-04 | `view_f3d_fire_zone_list`, `view_f3d_fire_zone_search` | list / search `f3d.fire.zone` | list (`create="false"`): `lsz_instance`, `code`, `name`, `zone_id`, `kind`, `loop_id`, `detector_count`, `n_required`, `state` (badge), `warn` (boolean), `dust_max_pct` (optional show), `compliance` (badge), `maintenance_request_name` (optional show), `stale` (optional hide), `area_m2` (optional hide), `spacing_m` (optional hide); декорації рядка: `decoration-danger="state in ('alarm','prealarm')"`, `decoration-warning="warn or state in ('fault','disabled')"`, `decoration-muted="state == 'unknown'"`. search: поля `code`, `name`, `zone_id`; фільтри `filter_alarm` «Тривога» (`state in (alarm,prealarm)`), `filter_fault` «Несправність» (`state = fault`), `filter_warn` «Попередження» (`warn = True`), `filter_disabled` «Вимкнено», `filter_test` «Тест», `filter_unknown` «Немає даних» (`state = unknown` або `stale`), `filter_noncompliant` «Не відповідає нормам» (`compliance in (warn,fail)`), «Архівні»; group by `group_state` (`state`), `kind`, `loop_id`, `compliance` |
 | V-05 | `view_f3d_fire_zone_form` | form `f3d.fire.zone` | `<header>`: `action_recompute` («Перерахувати», manager), `action_create_device_signals` («Окремі сигнали пристроїв», manager, confirm «Створити сигнали стану й запиленості для всіх сповіщувачів зони?»), `action_f3d_show` («Показати в 3D»). Статбокс: `action_view_devices` (`detector_count`, «Сповіщувачі»), `action_view_events` (`event_count`, «Події 30 діб»), `action_view_requests` («Заявка», `invisible="not maintenance_request_id"`). `<sheet>`: `display` (title); група «Зона»: `code`, `name`, `zone_id`, `equipment_id`, `panel_id`, `loop_id`, `lsz_instance`, `kind`, `active`; група «Стан»: `state` (badge), `raw_state`, `state_ts`, `stale`, `warn`, `dust_max_pct`, `maintenance_request_id`; `warning` (full width, `invisible="not warning"`, клас `alert alert-warning`); група «Розстановка за ДБН»: `spacing_m`, `wall_m`, `x0`, `y0`, `x1`, `y1` (одна лінія «Контур, м»), `area_m2`, `z_m`, `detector_count`, `n_required`, `n_ok`, `cover_max_gap_m`, `cover_point`, `cover_ok`, `compliance` (badge); `compliance_note` (full width); `<div class="text-muted">` з довідкою README: «Цех понад 8 м: ДБН п. 7.2.10 рекомендує аспіраційні сповіщувачі; точкові під покрівлею — за табл. 7.2 до 12 м. Покриття — похідна перевірка A-06, не текст норми.» Вкладки: «Пристрої» (`device_ids` list readonly: `address`, `type`, `state`, `dust_pct`, `dust_state`, `monitor` (manager)), «Сигнали» (manager: `signal_id`, `dust_signal_id`) |
@@ -1262,7 +1293,7 @@ maintenance).
 | Файл | Рядків | XML-id (slug = `plant/odoo_rpc.key(...)`) | Зміст і джерело |
 |---|---|---|---|
 | `data/f3d_fire_norm.csv` | 27 | `norm_<key>` | `id,key,name,group,sequence,value,value_set,unit,ref,note,sources` — Додаток D; `sources` — URL через `\n` |
-| `data/f3d_fire_panel.xml` | 1 + 4 | `panel_facp_1`; `loop_1`…`loop_4` | прилад: `name` «Приймально-контрольний прилад», `code` `FACP-1`, `zone_id` ref `factory3d_base.zone_z_office`, `x` 97.2, `y` 58.25 (`FACP_POS`), `evac_max_distance_m` 45.3, `evac_worst_x` 32.25, `evac_worst_y` 33.75 (`evac_routes.json`); шлейфи: `number`, `x_from`/`x_to` з `LOOPS` (0/42, 42/92, 92/122, 122/151), `modules_count` 0/4/0/0 (`fire.loops[n].modules`) |
+| `data/f3d_fire_panel.xml` | 1 + 4 | `panel_facp_1`; `loop_1`…`loop_4` | прилад: `name` «Приймально-контрольний прилад», `code` `FACP-1`, `zone_id` ref `factory3d_base.zone_z_office`, `x` 97.2, `y` 58.25 (`FACP_POS`), `evac_max_distance_m` 45.3, `evac_worst_x` 32.25, `evac_worst_y` 33.75 (`evac_routes.json`); шлейфи: `number`, `from_x_m`/`to_x_m` з `LOOPS` (0/42, 42/92, 92/122, 122/151), `modules_count` 0/4/0/0 (`fire.loops[n].modules`) |
 | `data/f3d_fire_zone.csv` | 33 | `fire_zone_<slug(code)>` (`fire_zone_fa_cut`) | `id,code,name,panel_id:id,loop_id:id,zone_id:id,lsz_instance,kind,spacing_m,wall_m,x0,y0,x1,y1,z_m`; порядок і `lsz_instance` = порядок `fire.groups` (Додаток A.1); `zone_id:id` = `factory3d_base.zone_<slug(Z-…)>` (`FA-BOILER` → `factory3d_base.zone_z_boiler`); `wall_m` 4.4 (smoke/multi), 3.2 (heat); контур — `layout.ZONES`, для котельні — `BOILER_HOUSE` |
 | `data/f3d_fire_system.xml` | 3 | `system_spark_1`, `system_smoke_ctrl`, `system_sprinklers` | `code`, `name`, `sequence`, `system_type`, `panel_id`, `last_test_date`, `drive_current_a`/`panel_current_a`; `source_id` і `signal_*` тут **не** задаються — їх ставить блок прив'язок у кінці `f3d_signal_data.xml` (джерела й сигнали завантажуються пізніше за маніфестом §1) |
 | `data/f3d_fire_smoke_zone.csv` | 8 | `smoke_zone_<slug>` (`smoke_zone_sz_1`) | `id,code,name,system_id:id,x0,y0,x1,y1` з `infra.SMOKE_ZONES` |
@@ -1455,7 +1486,7 @@ DI0…DI6 (fc 2, PDU 0…6), HR 40001–40002 (fc 3, PDU 0, `count=2`, `u32`, `w
 1. `r = s/√2` (s з R-01): 6,22 м для 8,8; 4,53 м для 6,4. `tol = P('cover_tol_m')` (0,5).
 2. Сітка: `x = x0 + 0,5·i`, `i = 0…floor((x1 − x0)/0,5 + 1e−9)`; `y` так само; цикл `i` зовнішній, `j` внутрішній.
 3. Для кожної точки `d = min dist(точка, (x, y) активних детекторів зони)`; `cover_max_gap_m = round(max d, 2)`,
-   `cover_point` — перша точка з максимумом (строге `>`), формат `"(122.0, 54.1)"`; зона без детекторів → `gap = ∞`,
+   `cover_point` — перша точка з максимумом (строге `>`), формат `f"({round(x, 2)}, {round(y, 2)})"` (`"(122.0, 54.1)"`, `"(0.6, 10.15)"`); зона без детекторів → `gap = ∞`,
    `compliance='fail'`.
 4. `cover_ok = gap ≤ r + tol`. `compliance`: `fail`, якщо `not n_ok` або `gap > r + 2·tol`; `warn`, якщо
    `not cover_ok`; інакше `ok`.
@@ -1470,7 +1501,7 @@ DI0…DI6 (fc 2, PDU 0…6), HR 40001–40002 (fc 3, PDU 0, `count=2`, `u32`, `w
 
 Сітка 2 м по будівлі: `x = 2i`, `i = 0…floor(B('plant_length_m')/2)` (0…75), `y = 2j`, `j = 0…floor(B('plant_width_m')/2)`
 (0…36) — 2 812 точок; `d = min dist(точка, активні type='mcp')`; `compliance_mcp_max_m = round(max d, 1)`, точка — перша з
-максимумом; `compliance_mcp_ok = max ≤ N('mcp_spacing')`. Відстань по прямій без перешкод (як `fire.max_mcp_distance()`;
+максимумом (формат R-02: `"(60.0, 72.0)"`); `compliance_mcp_ok = max ≤ N('mcp_spacing')`. Відстань по прямій без перешкод (як `fire.max_mcp_distance()`;
 ДБН міряє шлях — зауваження у звіті). Макет: **26,9 м у (60.0, 72.0)** ≤ 30 → `ok`. Архівувати `1.MCP.08` (36, 59.75) →
 32,0 м у (32.0, 72.0) → `compliance_mcp_ok=False`. Архівувати `2.MCP.09` (60, 0.6) → без змін (26,9).
 
@@ -1709,9 +1740,9 @@ https://docs.elipse.com.br/documents/en-us/driver/bacnet/latest/generated_enum_b
 1. Перевірки: `state ∈ {draft, planned}`; `zone_id` заданий; немає іншого `running` у компанії (`UserError("Уже триває
    навчання %s.")`).
 2. `start_ts = ts or now`; `state='running'`; `steps` порожні → `_fill_steps()`; усі кроки `done=False`, `t_fact_s=0`.
-3. `src = env['f3d.fire.passage.source']._f3d_get_source()`; `passage_source = src._f3d_key`; люди =
-   `src._f3d_on_site(start_ts)`, сортування `(since, employee_id)`; `person_ids` = рядки `seq` 1…n, `source`
-   (`attendance`/`access`), `since`; для access — кількість відвідувачів у чаттер (M-12b).
+3. `base = env['f3d.fire.passage.source']`; `src = base._f3d_get_source()`; `passage_source = base._f3d_source_key(src)`;
+   люди = `base._f3d_people_at(src, start_ts)`, сортування `(since, employee_id)`; `person_ids` = рядки `seq` 1…n, `source`
+   (`attendance` для `hr_attendance`, `access` для `access`, інакше `manual`), `since`.
 4. Подія `drill_start`; чаттер «Почато о {HH:MM:SS}, на об'єкті {n}»; шина `_notify('f3d.fire.drill', [name], 'state')`.
 5. Приклад (юніт-тест): відмітки `hr.attendance` — 3 відкриті з `check_in` до старту, 1 закрита до старту, 1 з
    `check_in` після старту → `on_site_count = 3`. Демо-копія: 35.
@@ -1719,7 +1750,8 @@ https://docs.elipse.com.br/documents/en-us/driver/bacnet/latest/generated_enum_b
 ### R-16 Проходи, завершення, результат
 
 1. Виконується в `_tick()` і в `action_stop()`.
-2. `passages = src._f3d_passages(start_ts, min(now, end_ts or now))`, лише `direction='out'`, за зростанням `ts`; для
+2. `src` — та сама модель, що на старті (за `passage_source`: `PREFIX + passage_source`, якщо є в реєстрі, інакше
+   `_f3d_get_source()`); `passages = src._f3d_passages(start_ts, min(now, end_ts or now))`, лише `direction='out'`, за зростанням `ts`; для
    людини навчання без `exit_ts` → `exit_ts = ts`, `exit_point = point`; працівники поза списком ігноруються.
 3. Лічильники `on_site/evacuated/present/missing` і `evac_pct` — збережені compute (M-11).
 4. `action_stop(ts)`: `end_ts = ts or now`; п. 2 до `end_ts`; `evac_time_s = max(exit_s)` серед тих, хто вийшов
@@ -1932,7 +1964,8 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | Немає `factory3d_viewer` | `_notify` не викликається (`'f3d.viewer.event' in env`); провайдерів немає (міст не встановлено); `action_f3d_show` — повідомлення CB-02 |
 | Немає `factory3d_iot_sim` | `sim_available=False`, кнопка прихована; виклик методу → `UserError("Модуль емулятора не встановлено.")` |
 | Емулятор відхилив сценарій | `f3d.sim.run.state='failed'` → `UserError` з `message`; навчання лишається `draft/planned` |
-| Немає `factory3d_access` | M-12a (`hr.attendance`); кроки `doors` — вручну |
+| Немає `factory3d_access` | M-12a (`hr.attendance`); кроки `doors` — вручну; `_f3d_is_active_at` лишається доступним (його ніхто не викликає) |
+| Джерело проходів кидає виняток | `_tick` логує `_logger.exception`, проходи цієї ітерації пропускаються, навчання триває; на старті — `UserError("Джерело проходів <ключ> недоступне: …")` |
 | Норма не задана (`value_set=False`) | правило → `compliance='na'` з нотаткою; звіт показує «норма не задана» |
 | Невалідний payload `bacnet_event` | `ValueError` → telemetry `f3d.push.event.error`; модель не змінюється |
 | Невалідний `path`/контур/адреса | `ValidationError` з текстом (§2) — і в UI, і в data (установка падає — захист від зіпсованого генератора) |
@@ -2002,8 +2035,8 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-50 | FR-24 | `U` (без `D`/`H`) `f3d.fire.drill.person.search([])` → `AccessError`; `H` — читає; HTML протоколу без `print_names` не містить жодного `employee_id.name`, з `print_names` — містить | UT |
 | AC-51 | FR-13 | HTML звіту V-21 містить `name`, 8 рядків кроків, «Персональний список не друкується» | UT |
 | AC-52 | FR-13 | `_cron_tick()` без `running` нічого не змінює; з `running` у тестовому режимі виконує рівно одну ітерацію `_tick` | UT |
-| AC-53 | CF-02, M-12a | `_f3d_on_site`/`_f3d_passages` над синтетичними відмітками; `_f3d_get_source()` без access → `hr_attendance` | UT |
-| AC-54 | A-19, M-12b | `_f3d_available` → `True` і фейковий `_f3d_access_model` → `_f3d_get_source()` повертає `access`; `_f3d_on_site` бере `employees`; `_f3d_passages` відкидає двері з `is_perimeter=False` | UT |
+| AC-53 | CF-02, M-12, M-12a | `_f3d_on_site`/`_f3d_passages` над синтетичними відмітками; без access і без контексту тестового джерела `_f3d_get_source()` → `hr_attendance` (`_f3d_source_key` = `hr_attendance`); моделі `f3d.fire.passage.source.access` цей модуль не створює (`'f3d.fire.passage.source.access' not in env`, якщо access не встановлено) | UT |
+| AC-54 | A-19, M-12 | (тестовий модуль §0.3) модель `f3d.fire.passage.source.zz_test` **без** `_inherit` (пріоритет 5, без `_f3d_on_site` і `_f3d_key`): з контекстом `f3d_test_passage_source=True` `_f3d_get_source()` повертає її, ключ `zz_test`; `_f3d_people_at` будує людей із проходів (останній `in` без `out`); навчання з нею: `passage_source='zz_test'`, виходи `direction='out'` дають `exit_ts`, `in` ігноруються; без контексту (`_f3d_available()` → `False`) → `hr_attendance`; якщо в базі встановлено access — `'f3d.fire.passage.source.access'` знайдено за префіксом із пріоритетом 10 (`skipUnless`) | UT |
 | AC-55 | FR-15, R-20 | `build_fire()` (чиста база): порядок ключів, `rules` 10 ключів (`smoke_spacing_6_12m` 8.8, `mcp_spacing` 30, `smoke_area_6_12m` null), `loops` = R-20, 33 `groups` з ключами A.13, `totals` 212/36/41/26.9/3/4; `json.dumps` без помилок | UT |
 | AC-56 | FR-15, A-21 | `FA-CUT` `unknown` → `state="ok"`, `alarm_state="unknown"`, `stale`; `alarm` → `"alarm"`; запиленість 86,1 → `FA-FAC.state="warn"`, `dust=0.861`; відкрита заявка → `maintenance_request` = її `name` | UT |
 | AC-57 | FR-15, R-21 | `build_evacuation()`: 12 `exits`, 32 `routes` (`Z-CNC.exit="EX-S3"`), `norm_distance=240`, `norm_alt=50`, 8 `drill_steps`, `drill_active=null`, `drill_origin="FA-CNC"`; при `running` навчанні FA-CUT → `drill_active.zone_code="FA-CUT"`, `drill_origin="FA-CUT"` | UT |
@@ -2024,3 +2057,489 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-72 | FR-01, P-09 | стенд (ТК-01): колектор читає dev 200 і u85; за ≤ 2 хв `comm='online'`, 33 зони `normal`, `FA-FAC.warn` за запиленістю емулятора, подія `comm_restored` | TC |
 | AC-73 | FR-13, FR-23 | стенд (ТК-04): навчання «Запустити на емуляторі» → крок 1 `t_fact_s ≤ 15`, крок 2 ≤ 18, крок 5 ≤ 24; авто-стоп; протокол PDF | TC |
 | AC-74 | FR-18 | стенд (ТБ-05): за весь прогін ТК-01…ТК-10 у перехопленні UDP 47808 немає жодного `WriteProperty`, `WritePropertyMultiple`, `SubscribeCOV`, `AcknowledgeAlarm`, `LifeSafetyOperation`, `DeviceCommunicationControl`, `ReinitializeDevice` від колектора; на TCP 502 unit 85 — жодної функції 05/06/15/16 | TC |
+| AC-75 | CF-06 (access CA-09) | навчання `done` 10:00:00–10:05:30 → `_f3d_is_active_at(10:03)` = `True`, `(10:06)` = `False`, `(09:59)` = `False`; `running` зі стартом 10:00 → `(11:00)` = `True`; `planned` на 10:00 → `False`; виклик від користувача без прав на навчання (через `sudo` у методі) не кидає `AccessError` | UT |
+
+## 13. План тестування (для Opus)
+
+### 13.1 Юніт-тести (`odoo.tests`, теги `post_install`, `-at_install`, `f3d`, `f3d_fire`)
+
+Запуск: `odoo-bin -d f3d_fire_test -i factory3d_fire_safety,test_factory3d_fire_safety --test-tags /factory3d_fire_safety
+--stop-after-init --without-demo=all` (чиста база); міст-модуль — `-i factory3d_fire_safety_viewer --test-tags
+/factory3d_fire_safety_viewer`; `test_data_sync.py` — `pytest odoo_addons/factory3d_fire_safety/tests/test_data_sync.py`
+з кореня репозиторію. Час — `freezegun.freeze_time` (залежність тестів Odoo).
+
+`tests/common.py` — `class FireCase(TransactionCase)`, `setUpClass`:
+- записи data: `cls.panel = env.ref('factory3d_fire_safety.panel_facp_1')`, `cls.z_cut/z_eb/z_cnc/z_fac/z_fg/z_rcv1`
+  (`fire_zone_fa_*`), `cls.dev_fac07 = …dev_2_fac_07`, `cls.dev_cnc05`, `cls.loop2`, `cls.src_bac`, `cls.src_io`,
+  `cls.sys_spark`, `cls.sys_smoke`, `cls.sys_spr`, `cls.tpl = …drill_template_default`;
+- обладнання (чиста база не має демо): `maintenance.team` «Тестова команда ПБ» → `cls.team`; `maintenance.equipment`
+  з `f3d_code` `FACP-1`, `FA-CUT`, `FA-EB`, `FA-CNC`, `FA-FAC`, `SPARK-1`, `SMOKE-CTRL`, `SPRINKLERS` (команда
+  `cls.team`); потім `hooks.equipment.link(env)` — сигнали й моделі отримують `equipment_id`;
+- сигнал тиску спринклерів (якщо немає): `f3d.signal` `equipment/SPRINKLERS/pressure_bar`, `kind='gauge'`,
+  `alarm_low=6.5`, `alarm_low_on=True`, `module='telemetry'`, `equipment_id=SPRINKLERS`; знову `hooks.equipment.link`;
+- параметри: `read_enabled=True`, `team_id=cls.team.id`, `alert_group_xmlid` = тестова група `cls.g_alert`
+  (`res.groups` + `ir.model.data` `test_fire.group_alert`) з 2 користувачами `cls.guard1`, `cls.guard2`;
+- користувачі: `cls.u` (`base.group_user` + `group_f3d_user`), `cls.d` (+ `group_f3d_fire_drill`), `cls.m`
+  (`group_f3d_manager`), `cls.a` (`group_f3d_admin`), `cls.hr` (`hr.group_hr_user` + `group_f3d_user`);
+- хелпери: `T0 = datetime(2026, 10, 14, 7, 0, 0)` (UTC naive); `at(s)` = `T0 + timedelta(seconds=s)`;
+  `push_text(code, text, ts)` / `push_value(code, value, ts)` → `env['f3d.signal']._f3d_ingest([...], src='module')`
+  (з `freeze_time(ts + 1 с)`, щоб не спрацював `ts_future`); `sync()` → `panel._f3d_fire_sync(full=True)`;
+  `ev(etype, **dom)` → `search` подій; `make_employee(name, code=None)`; `make_att(emp, check_in, check_out=None)`;
+  `new_drill(**vals)` (від `cls.d`); `viewer_installed(flag)` (патч CB-02, як base `common.py`).
+
+| Файл / клас | Тести | AC | Фікстури | Що assert |
+|---|---|---|---|---|
+| `test_hooks.py::TestInstallData` | `test_counts`, `test_kinds`, `test_sources_readonly`, `test_signals_readonly`, `test_dust_created_clean` | AC-01, AC-04 | data | точні кількості §5.2; `f3d_fire_readonly`, `params['read_only']`; 53 сигнали `module='fire_safety'` з `write_enabled=False`; `ir.model.data` для сигналу запиленості відсутній; `migration_report.state == 'partial'`, `missing == 42` (до створення фікстур обладнання — тест читає звіт установки) |
+| `::TestRerun` | `test_run_all_idempotent` | AC-03 | — | `search_count` усіх моделей до/після двох `run_all`; подій `demo:*` 4 |
+| `::TestUninstallNeutralize` | `test_uninstall_hook`, `test_neutralize_sql` | AC-60, AC-61 | навчання `done` з людиною; активність тривоги | після `uninstall_hook(env)` — сигнал запиленості `source_id=False`, `address == {}`; параметрів 0; `cr.execute(open(neutralize.sql).read())` → значення AC-61 (через SQL `SELECT`) |
+| `::TestCompliance` | `test_after_install`, `test_notification` | AC-62, AC-69 | — | значення AC-62; рядок повідомлення AC-69 дослівно |
+| `test_norms.py::TestRequired` | `test_table`, `test_change_spacing` | AC-05, AC-06 | Додаток A.1 як Python-словник | `n_required`, `n_ok`; `compliance_dirty`; `FA-CUT` 24 / `fail` |
+| `::TestCoverage` | `test_gaps`, `test_tolerance_warn`, `test_no_detectors` | AC-07 | `set_param('cover_tol_m','0.03')`; архівація | `assertAlmostEqual(…, 6.26, 2)`, рядок точки; `compliance` |
+| `::TestMcpSounder` | `test_mcp`, `test_mcp_archived`, `test_sounder_informative` | AC-08, AC-09 | архівація `1.MCP.08` | 26.9/"(60.0, 72.0)"; 32.0/"(32.0, 72.0)"; 45.2 |
+| `::TestMissingZones`, `::TestNormModel` | `test_missing`, `test_get`, `test_key_regex`, `test_json_keys_present` | AC-10, AC-11 | зона для `Z-SOC` | рядки; значення; `ValidationError` |
+| `::TestAddresses` | `test_lsp_id`, `test_unique_lsp`, `test_address_loop_mismatch` | AC-70 | — | формули R-23; 292 / 51; `ValidationError` |
+| `test_event.py::TestEventLog` | `test_dedup_bucket`, `test_write_restricted`, `test_unlink_forbidden`, `test_manual_create`, `test_ack`, `test_sanitize_payload` | AC-12…AC-16 | `with_user(u/d/a)` | кількість записів; `AccessError`/`UserError`; поля підтвердження; довжина ≤ 500, `level='bad'` |
+| `::TestBacnetPush` | `test_attach_message`, `test_new_bacnet_event`, `test_invalid_payload`, `test_control_chars` | AC-68 | `env['f3d.push.handler.fire']._f3d_handle_push('bacnet_event', {...})` | `message_text`, `device_id`; нова подія `etype='bacnet'`; `ValueError` |
+| `test_sync.py::TestZones` | `test_alarm_cycle`, `test_states_table`, `test_loop_fault`, `test_stale_keeps_state`, `test_idempotent` | AC-17, AC-18, AC-23, AC-27 | `push_text` | стани, тексти подій, активності (`mail.activity` з `activity_type_id = mail_act_fire_alarm`, `user_id ∈ {guard1, guard2}`), 0 заявок для `alarm`; `changed == 0` |
+| `::TestPanel` | `test_priority`, `test_state_text_plural`, `test_read_disabled` | AC-19, AC-22 | — | стани/тексти R-10; `comm='off'` |
+| `::TestDust` | `test_dust_cycle` | AC-20 | `push_value` 82 → 90.1 → 79 | `dust_state`, `warning` (точний рядок), події, заявка (telemetry) з `f3d_fire_device_id`, `maintenance_team_id == team` |
+| `::TestComm` | `test_comm_sequence` | AC-21 | `freeze_time` по кроках | переходи, події, активність, одна заявка, назва з «(3 хв)» |
+| `::TestSystems` | `test_spark`, `test_smoke_sprinkler` | AC-24, AC-25 | коди Додатка B | стани, тексти, події |
+| `::TestIngestHook`, `::TestAlarmActivity` | `test_immediate_sync`, `test_non_fire_code_skipped`, `test_sync_exception_isolated`, `test_activity_per_guard`, `test_reset_closes` | AC-26, AC-67 | `patch('…tools.sync.FireSync.run')` | виклики/відсутність виклику; результат ingest; кількість активностей |
+| `test_security_readonly.py::TestReadonly` | `test_source_write_enabled_sudo`, `test_readonly_flag_sticky`, `test_params_read_only`, `test_signal_write_enabled_sudo`, `test_command_blocked_sudo`, `test_no_write_param_no_actions`, `test_device_signals_monitor` | AC-28…AC-31, AC-66 | `sudo()`, `with_user(m/u)` | `ValidationError`/`AccessError`; пошук `ir.ui.view.arch_db`/`ir.actions.server.code` модуля без `f3d.command`; сигнали M-04 |
+| `test_requests.py::TestRequests` | `test_zone_fault_request_linked`, `test_no_duplicate` | AC-32 | `push_text(FA-CUT, 'fault')` | поля заявки M-14, `description`, одна заявка |
+| `test_evacuation.py::TestRoutes` | `test_routes_ok`, `test_polymer`, `test_short_norm` | AC-33 | норми | 32/32; 26/32 і множина 6 зон |
+| `::TestExits` | `test_dispersal`, `test_two_close_exits`, `test_door_width`, `test_exit_on_wall` | AC-34, AC-35, AC-40 | архівація, `width_m=0.7` | значення R-06/R-07; `ValidationError` |
+| `::TestSmokeZones`, `::TestData`, `::TestReport`, `::TestPlantZone` | `test_need_table`, `test_vent_archived`, `test_area_fail`, `test_exit_route_data`, `test_path_validation`, `test_report_html`, `test_zone_fields`, `test_route_show_3d` | AC-36…AC-40 | `report._render_qweb_html(...)` | таблиця R-09; підрядки HTML; поля M-13; `params.code` |
+| `test_drill.py::TestDrill` | `test_name_and_steps`, `test_transitions`, `test_start_people`, `test_passages_rollcall_result`, `test_auto_steps`, `test_match_planned`, `test_auto_create`, `test_no_auto_create`, `test_real_alarm`, `test_auto_stop`, `test_tabletop_no_auto_stop`, `test_sim_bridge`, `test_privacy`, `test_report_drill`, `test_cron_tick` | AC-41…AC-52 | `make_att`, `freeze_time`, події через `_log` (для R-17), `patch.object(type(env['f3d.fire.drill']), '_f3d_sim_create_run')` | значення AC; `result_suggested`; `t_fact_s`; параметри виклику емулятора |
+| `test_passage_source.py::TestSources` | `test_hr_attendance`, `test_prefix_source_without_inherit`, `test_people_from_passages`, `test_unavailable_falls_back`, `test_access_if_installed` (`skipUnless('f3d.fire.passage.source.access' in env)`), `test_is_active_at` | AC-53, AC-54, AC-75 | тестовий модуль §0.3; `with_context(f3d_test_passage_source=True, f3d_test_passages=[…])` | ключ джерела; люди; `exit_ts`; булеві значення CF-06 |
+| `test_viewer_provider.py::TestPayload` | `test_fire_structure`, `test_group_states`, `test_evacuation_structure`, `test_devices_and_disabled` | AC-55…AC-57, AC-59 | `tools.payload.build_fire/build_evacuation(env, ctx)` (`ctx = {"now": T0}`) | ключі, порядок, значення; `json.dumps` |
+| `test_rights_ui.py::TestMenusRights` | `test_menus`, `test_acl_matrix`, `test_settings` | AC-63…AC-65 | `with_user(...)`; `env['res.config.settings'].create({...}).execute()` | меню/дії; `AccessError`; параметри й пороги сигналів |
+| `factory3d_fire_safety_viewer/tests/test_provider.py::TestProvider` | `test_registered_and_live`, `test_bus_and_delta` | AC-58 | viewer `PayloadBuilder`, `DeltaBuilder` | `meta.sections`, `f3d.viewer.event`, `patch.fire` |
+| `tests/test_data_sync.py` (pytest) | `test_generated_equals_repo` | AC-71 | `tools/gen_data.py --out <tmp>` | побайтова рівність |
+
+### 13.2 Стендові сценарії ТК-01…ТК-10 (`tests/stand/`, `pytest -m stand`)
+
+Передумови: compose `docker-compose.sim.yml` (iot_sim) + `docker-compose.collector.yml` (telemetry) + Odoo з
+`factory3d_base`, `factory3d_telemetry`, `factory3d_iot_sim`, `factory3d_viewer`, `factory3d_fire_safety`(+ міст) на
+копії демо; токен колектора видано; емулятор `factor=1`, режим `scenario`; `conftest.py` дає клієнти: XML-RPC Odoo
+(лише читання моделей + виклик кнопок як користувач `d`) і REST `/sim/v1` (токен з `.env`). Очікування з таймаутами
+опитування Odoo кожні 2 с.
+
+| ТК | Кроки | Очікуваний результат | Де дивитися | AC |
+|---|---|---|---|---|
+| ТК-01 Підключення | колектор стартує з джерелами `BACNET-FACP-1`, `MB-U85-IO6` | ≤ 120 с: `f3d.source` обидва `online`; `panel.comm='online'`, `state='normal'`; 33 зони `normal`; `FA-FAC.dust_max_pct` = значення емулятора (82…90), `warn=True`; подія `comm_restored`; `fire.totals.state` = «Норма, 1 попередження» | Пожежна безпека → Огляд; Журнал | AC-72 |
+| ТК-02 Запиленість | `PUT /sim/v1/signals/fire/groups/FA-FAC/dust {"value": 91, "hold_s": 600}` | ≤ 620 с (опитування 600 с): `2.FAC.07.dust_state='alarm'`, подія `dust_alarm`, заявка «Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість 91 % при нормі до 90» з `f3d_fire_device_id`; закрити заявку (стадія Repaired) → емулятор скидає (R-25 iot_sim) → `dust_ok` | Обслуговування → Заявки | AC-20 |
+| ТК-03 Несправність зони | `POST /sim/v1/device/FA-CUT/fault {"reason": "sensor"}`; через 60 с `POST /device/FA-CUT/clear` | ≤ 20 с: `FA-CUT.state='fault'`, `loop_2.state='fault'`, події `fault` і `loop_fault`, 2 заявки (зона, шлейф — A-28); `clear` → `fault_ok`, `loop_ok`; заявки відкриті | Зони; Шлейфи; Заявки | AC-23, AC-32 |
+| ТК-04 Навчання на емуляторі | `d` створює навчання (FA-CNC, 2.CNC.05, `mode='sim'`) → «Запустити на емуляторі» | `sim_run_ref` заповнено; кроки: 1 ≤ 15 с, 2 ≤ 18 с, 5 ≤ 24 с (`done_by='auto'`); `evacuation.drill_active` у `/f3d/viewer/data`; після `duration_s` 300 + повернення ≤ 30 с + `drill_auto_stop_s` 120 → `evaluating`; перекличка → «Закрити» → PDF протоколу | Навчальні тривоги; 3D | AC-73, AC-44, AC-45 |
+| ТК-05 Тест без плану | з пульту iot_sim `fire_drill` (`zone=FA-EB`) без навчання в Odoo | ≤ 20 с: навчання `origin='panel'`, «Тест приладу: Крайкооблицювання», `running`; подія `drill_auto`; авто-стоп після завершення сценарію | Навчальні тривоги | AC-46 |
+| ТК-06 Справжня тривога | `POST /sim/v1/scenario/fire_drill/start {"params": {"zone": "FA-CUT", "real": true, "duration_s": 120}}` | ≤ 15 с: `FA-CUT.state='alarm'`, `panel.state='alarm'`, активності охороні, подія `brigade_on` (BI:11=1), **жодної** заявки ТО за тривогу; після завершення — `reset`, активності закриті | Огляд (червона плашка); дзвіночок активностей | AC-17, AC-67 |
+| ТК-07 Іскрогасіння | `POST /sim/v1/scenario/spark/start {"params": {"count": 2, "interval_s": 30}}`; потім `{"fault": true}` | `count_today` +2, події `spark` (1–2 залежно від кошика опитування 10 с); `fault` → `SPARK-1.state='fault'`, `spark_fault`, заявка «Несправність іскрогасіння SPARK-1 (пульт GreCon BS 7)» | Системи; Журнал | AC-24 |
+| ТК-08 Втрата зв'язку | `POST /sim/v1/device/FACP-1/fault {"reason": "comm"}`; через 5 хв `POST /device/FACP-1/clear` | 90–100 с: `comm='stale'`; 180–190 с: `lost`, подія, активність, заявка «Втрата зв'язку з приладом FACP-1: …»; `fire.totals.state` = «Зв'язок із приладом втрачено»; `clear` → `comm_restored` ≤ 20 с, активність закрита, заявка відкрита | Огляд; Заявки | AC-21 |
+| ТК-09 Живлення щита D+H | `POST /sim/v1/scenario/blackout/start {"params": {"duration_s": 120, "genset": true}}` | `SMOKE-CTRL.state='battery'`, подія `smoke_battery`; після відновлення `smoke_mains` | Системи | AC-25 |
+| ТК-10 3D | при ТК-04 і ТК-06 відкрити Завод 3D | шар «Пожежна безпека»: картки груп, «Потребує уваги» з FA-FAC; під час навчання — `drill_active` (автозапуск сценарію — після Q-09, інакше кнопка «Сценарій пожежної тривоги»); `/f3d/viewer/delta` містить `fire` після зміни стану | 3D-переглядач | AC-58 (MAN-частина) |
+
+### 13.3 Тести безпеки
+
+| ТБ | Що | Як | AC |
+|---|---|---|---|
+| ТБ-01 | джерело пожежної сигналізації не вмикає запис навіть під `sudo` | UT `test_source_write_enabled_sudo`, `test_readonly_flag_sticky`, `test_params_read_only` | AC-28 |
+| ТБ-02 | сигнал `fire/*` не вмикає запис | UT `test_signal_write_enabled_sudo` | AC-29 |
+| ТБ-03 | команда на сигнал `fire/*` неможлива | UT `test_command_blocked_sudo`; стенд: `GET /f3d/telemetry/commands` колектора ніколи не містить кодів `fire/*` | AC-30 |
+| ТБ-04 | у модулі немає параметра/кнопки запису; емулятор відхиляє запис | UT `test_no_write_param_no_actions`; стенд: тестовий BACnet-клієнт (bacpypes3, поза колектором) `WriteProperty LSZ:14 present-value` → `write-access-denied` (iot_sim §8.11.2) | AC-31 |
+| ТБ-05 | колектор не надсилає жодного пакета зміни стану | стенд: `tcpdump -i any -w fire.pcap 'udp port 47808 or tcp port 502'` у мережі `f3d_sim` під час ТК-01…ТК-10; `tshark -r fire.pcap -Y 'bacapp.confirmed_service && !(bacapp.confirmed_service == 12 \|\| bacapp.confirmed_service == 14)' \| wc -l` = 0 (дозволені лише ReadProperty 12 і ReadPropertyMultiple 14; заборонені, зокрема, subscribeCOV 5, writeProperty 15, writePropertyMultiple 16, deviceCommunicationControl 17, reinitializeDevice 20, acknowledgeAlarm 0, lifeSafetyOperation 27); `tshark -Y 'mbtcp.unit_id == 85 && (modbus.func_code == 5 \|\| modbus.func_code == 6 \|\| modbus.func_code == 15 \|\| modbus.func_code == 16)'` = 0 | AC-74 |
+| ТБ-06 | доступи й ін'єкції | користувач без `group_f3d_user` → `AccessError` на всіх моделях модуля; `U` не читає людей навчань (AC-50); адреса `1.FAC.01'; DROP TABLE x;--` → `ValidationError`; `path` `[{"__class__": 1}]` → `ValidationError`; `message_text` `<script>alert(1)</script>` зберігається текстом і в HTML V-09/V-22 екранований (`&lt;script&gt;`) | AC-50, AC-64, AC-68 |
+
+### 13.4 Тести продуктивності
+
+| ТП | Обсяг | Межа | Як |
+|---|---|---|---|
+| ТП-01 | `build_fire` (33 зони, 20 подій) і `build_evacuation` | ≤ 100 мс кожен; JSON ≤ 60 КБ / ≤ 25 КБ; з `devices` ≤ 150 КБ | UT `test_payload_perf` (`time.perf_counter`, медіана з 5) |
+| ТП-02 | `action_recompute_compliance` (R-02 ≈ 43 000 точок, R-03 2 812 × 36) | ≤ 2 с | UT `test_compliance_perf` |
+| ТП-03 | `FireSync.run(full=True)` (53 сигнали) | ≤ 200 мс, ≤ 30 SQL-запитів без змін (`assertQueryCount`-подібний лічильник `cr.sql_log_count`) | UT `test_sync_perf` |
+| ТП-04 | журнал 10 000 подій | `search_read` 80 рядків `ts desc` ≤ 200 мс (індекси M-05); відкриття списку V-08 ≤ 1 с | UT генерує 10 000 подій через `_log` (`sudo`) + MAN |
+
+### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/factory3d_fire_safety/DEPLOY_TEST.md`, здає W6)
+
+1. Дамп бази `odoo` тестового сервера → `odoo_f3d_test`; знімки: `SELECT id, name, stage_id FROM maintenance_request
+   ORDER BY id`, `SELECT count(*) FROM hr_attendance`, `SELECT id, code, last_value, module FROM f3d_signal WHERE code LIKE 'fire/%'`.
+2. Установити `factory3d_base`, `factory3d_telemetry` (якщо ще ні), потім `factory3d_fire_safety` (+ міст за наявності
+   viewer); лог INFO хука — лічильники AC-02; `migration_report.state = 'done'`.
+3. Перевірити Огляд (прилад, 33 зони, `comm='lost'` до запуску колектора), звіт «Перевірка евакуації» (AC-38), демо-навчання.
+4. Юніт-тести `--test-tags /factory3d_fire_safety` на `odoo_f3d_test` → 0 падінь.
+5. Стенд ТК-01…ТК-10, ТБ-05 — протокол із фактичними часами.
+6. Перехід «на прод» на копії: `environment='prod'` → `BACNET-FACP-1.read_enabled=False`; спроба увімкнути без дозволу
+   → помилка (M-15 п. 3); заповнити дозвіл → увімкнути; змінити `params.host` на IP без мережі 2 — колектор знаходить
+   пристрій прямим Who-Is (на стенді — IP контейнера iot-sim).
+7. Повторне оновлення модуля (`-u factory3d_fire_safety`) → AC-03 (без дублікатів).
+8. Деінсталяція на копії → `maintenance_request` (знімок п. 1) незмінні, сигнал запиленості існує, `hr_attendance` незмінна;
+   повторна установка → п. 2 знову зелений.
+9. `neutralize.sql` на копії → AC-61.
+10. Записати фактичні кількості й часи в `CHANGELOG.md` (розділ «Установка на копію демо 14.10.2026»).
+
+## 14. Definition of Done
+
+- Юніт-тести §13.1 зелені на чистій базі й на копії демо (`--test-tags /factory3d_fire_safety`,
+  `/factory3d_fire_safety_viewer`); `test_data_sync.py` зелений (генератор = data).
+- ТК-01…ТК-10, ТБ-01…ТБ-06, ТП-01…ТП-04 пройдені; протокол із фактичними кількостями й часами — у `DEPLOY_TEST.md`.
+- Кожен AC-01…AC-75 має зелений тест або відмітку ТК/MAN у протоколі; кожен FR-01…FR-24 покритий AC (§12).
+- `ruff check` (конфіг проєкту; без нього — умовчання, довжина рядка 120) без помилок; XML валідний (`xmllint --noout`).
+- Жодного `x_`-поля; жодного параметра чи поля `write_enabled` модуля:
+  `grep -rn "x_\w*\s*=\s*fields\.\|fire_safety.write_enabled" odoo_addons/factory3d_fire_safety --include=*.py --include=*.xml`
+  — збіги лише в тестах і `neutralize.sql`.
+- `neutralize.sql` виконується без помилки (AC-61); стоп-кран `read_enabled` працює (AC-22).
+- Перегляд безпеки: §13.3 пройдено; SQL лише параметризований (сирий SQL — тільки в `neutralize.sql`); жодного виклику
+  `f3d.command`/`write()` плагіна з коду модуля; персональні дані навчань — лише групам `D`/`H` (AC-50).
+- `README.md` модуля (установка, параметри §5.1, інструкції ARCH §4.1–4.6, заборона запису), `CHANGELOG.md` (`19.0.1.0.0`).
+- Контракти CF-01…CF-06 реалізовані з точними іменами; зміна імен — лише через оновлення SPEC і повідомлення авторів
+  viewer, access, telemetry, iot_sim.
+
+## 15. Відкриті питання
+
+Ті самі Q-01…Q-17, що в ARCH §5.1 (нумерація спільна); тут — що робить код, поки відповіді немає:
+
+| ID | Поки немає відповіді |
+|---|---|
+| Q-01 | адреси й склад об'єктів — за емулятором (Додаток B); на проді `read_enabled=False` до дозволу монтажника (M-15 п. 3) |
+| Q-02 | `team_id` = «Служба головного механіка»; M-14 підставляє команду в заявки сигналів модуля |
+| Q-03 | `drill_time_limit_s=300`; перевищення дає `remarks`, не `failed` (R-16 п. 6) |
+| Q-04 | `polymer_panels=False` (норма 240 м); у звіті й payload — обидві норми |
+| Q-05 | 33 зони як у макеті; R-08 показує «Z-OFFICE, Z-SOC» як зауваження |
+| Q-06 | перевизначення `_f3d_ingest` (A-22) + крон 1 хв; без підтвердження telemetry затримка ≤ 75 с |
+| Q-07 | адреси за R-23 telemetry, `params.read_only`; без маршруту `bacnet_event` — події лише з переходів сигналів |
+| Q-08 | A-09 (адреси MCP/SND/FLM), A-23 (8 нових кодів), ТК-03 очікує дві заявки |
+| Q-09 | payload уже має `drill_active`, `alarm_state`, `devices`; без змін клієнта — «Попередження» замість «Тривога» в картці, сценарій 3D — кнопкою |
+| Q-10 | закрито (A-19): джерело access знаходиться за префіксом; на місці збору — перекличка (M-11d) |
+| Q-11 | у data 212 сповіщувачів (макет), README не правимо |
+| Q-12 | крани/вогнегасники/насосна не моделюються |
+| Q-13 | журнал без ротації (A-12); звіт V-22 — журнал за період |
+| Q-14 | ADAM u85 DI0–DI6 за iot_sim §8.11.3; зміна розкладки — лише дані сигналів |
+| Q-15 | закрито (CF-06 `_f3d_is_active_at`); модуль у `hr.attendance` не пише |
+| Q-16 | код приймає BI/BV і AV/PIV однаково; на проді адреси змінюються даними; сигнал запиленості архівується, якщо прилад її не віддає |
+| Q-17 | dev 200 лише опитуванням 10 с (A-20) |
+
+## Додаток A. Адреси пристроїв і зони виявлення (генерує `tools/gen_data.py` з `plant/fire.py`, `plant/infra.py`)
+
+### A.1 Зони виявлення (`data/f3d_fire_zone.csv`) і очікувані значення R-01/R-02
+
+`lsz` = BACnet LSZ instance (= порядок `fire.groups` макета, iot_sim §8.11.1); контур — `layout.ZONES` (котельня —
+`fire.BOILER_HOUSE`); `s` — крок R-01; `gap` / точка — R-02 (сітка 0,5 м, `r` = 6,22 м; котельня — 4,53 м).
+
+| lsz | code | f3d.zone | name | kind | loop | n | nx×ny | x0, y0, x1, y1 | area | z | адреси | LSP | gap, м | точка |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | FA-RCV-1 | Z-RCV-1 | Приймання плит · ворота 1 | smoke | 1 | 4 | 2×2 | 0.6, 0.6, 13.4, 9.85 | 118 | 8.85 | `1.RCV-1.01`…`1.RCV-1.04` | 10101…10104 | 3.95 | (0.6, 0.6) |
+| 2 | FA-RCV-2 | Z-RCV-2 | Приймання плит · ворота 2 | smoke | 1 | 4 | 2×2 | 0.6, 10.15, 13.4, 19.85 | 124 | 8.85 | `1.RCV-2.01`…`1.RCV-2.04` | 10201…10204 | 4.02 | (0.6, 10.15) |
+| 3 | FA-RCV-3 | Z-RCV-3 | Приймання плит · ворота 3 | smoke | 1 | 4 | 2×2 | 0.6, 20.15, 13.4, 29.85 | 124 | 8.85 | `1.RCV-3.01`…`1.RCV-3.04` | 10301…10304 | 4.02 | (0.6, 20.15) |
+| 4 | FA-RCV-4 | Z-RCV-4 | Приймання фурнітури, контроль і карантин · ворота 4 | smoke | 1 | 4 | 2×2 | 0.6, 30.15, 13.4, 39.85 | 124 | 8.85 | `1.RCV-4.01`…`1.RCV-4.04` | 10401…10404 | 4.02 | (0.6, 30.15) |
+| 5 | FA-RCV-5 | Z-RCV-5 | Приймання крайки · ворота 5 | smoke | 1 | 4 | 2×2 | 0.6, 40.15, 13.4, 49.85 | 124 | 8.85 | `1.RCV-5.01`…`1.RCV-5.04` | 10501…10504 | 4.02 | (0.6, 40.15) |
+| 6 | FA-RCV-6 | Z-RCV-6 | Приймання ЛФМ · ворота 6 | smoke | 1 | 4 | 2×2 | 0.6, 50.15, 13.4, 59.85 | 124 | 8.85 | `1.RCV-6.01`…`1.RCV-6.04` | 10601…10604 | 4.02 | (0.6, 50.15) |
+| 7 | FA-RCV-7 | Z-RCV-7 | Приймання пакматеріалів · ворота 7 | smoke | 1 | 4 | 2×2 | 0.6, 60.15, 13.4, 71.4 | 144 | 8.85 | `1.RCV-7.01`…`1.RCV-7.04` | 10701…10704 | 4.26 | (0.6, 60.15) |
+| 8 | FA-SHEETS | Z-SHEETS | Склад плит | smoke | 1 | 24 | 4×6 | 14.6, 0.6, 41.4, 45.4 | 1201 | 8.85 | `1.SHEETS.01`…`1.SHEETS.24` | 10801…10824 | 5.02 | (14.6, 0.6) |
+| 9 | FA-HW | Z-HW | Склад фурнітури | smoke | 1 | 6 | 2×3 | 14.6, 46, 28.4, 71.4 | 351 | 8.85 | `1.HW.01`…`1.HW.06` | 10901…10906 | 5.46 | (14.6, 46.0) |
+| 10 | FA-EDGE | Z-EDGE | Склад крайки | smoke | 1 | 3 | 1×3 | 28.8, 46, 35.4, 71.4 | 168 | 8.85 | `1.EDGE.01`…`1.EDGE.03` | 11001…11003 | 5.37 | (28.8, 46.0) |
+| 11 | FA-PKS | Z-PKS | Пакувальні матеріали | smoke | 1 | 3 | 1×3 | 35.8, 46, 41.4, 71.4 | 142 | 8.85 | `1.PKS.01`…`1.PKS.03` | 11101…11103 | 5.08 | (35.8, 46.0) |
+| 12 | FA-CUT | Z-CUT | Розкрій | multi | 2 | 12 | 2×6 | 41.8, 0.6, 55.4, 45.4 | 609 | 8.85 | `2.CUT.01`…`2.CUT.12` | 21201…21212 | 5.05 | (41.8, 0.6) |
+| 13 | FA-EB | Z-EB | Крайкооблицювання | multi | 2 | 12 | 2×6 | 55.8, 0.6, 68.4, 45.4 | 564 | 8.85 | `2.EB.01`…`2.EB.12` | 21301…21312 | 4.88 | (55.8, 0.6) |
+| 14 | FA-CNC | Z-CNC | Присадка | multi | 2 | 12 | 2×6 | 68.8, 0.6, 81.4, 45.4 | 564 | 8.85 | `2.CNC.01`…`2.CNC.12` | 21401…21412 | 5.44 | (68.8, 0.6) |
+| 15 | FA-SORT | Z-SORT | Сортування деталей | multi | 2 | 12 | 2×6 | 81.8, 0.6, 91.6, 45.4 | 439 | 8.85 | `2.SORT.01`…`2.SORT.12` | 21501…21512 | 4.95 | (81.8, 0.6) |
+| 16 | FA-FAC | Z-FAC | Дільниця фасадів МДФ | multi | 2 | 18 | 6×3 | 42.2, 46.4, 91.6, 71.4 | 1235 | 8.85 | `2.FAC.01`…`2.FAC.18` | 21601…21618 | 5.86 | (42.2, 71.4) |
+| 17 | FA-ASM | Z-ASM | Збирання | multi | 3 | 8 | 2×4 | 92.4, 0.6, 109.6, 29.6 | 499 | 8.85 | `3.ASM.01`…`3.ASM.08` | 31701…31708 | 5.62 | (92.4, 15.1) |
+| 18 | FA-PRE | Z-PRE | Буфер комплектів | smoke | 3 | 4 | 2×2 | 92.4, 30, 109.6, 45.6 | 268 | 8.85 | `3.PRE.01`…`3.PRE.04` | 31801…31804 | 5.81 | (92.4, 30.0) |
+| 19 | FA-MAINT | Z-MAINT | Ремонтна дільниця | multi | 3 | 4 | 2×2 | 92.4, 46.4, 103.6, 57.6 | 125 | 8.85 | `3.MAINT.01`…`3.MAINT.04` | 31901…31904 | 3.96 | (92.4, 46.4) |
+| 20 | FA-PACK | Z-PACK | Пакування | smoke | 3 | 8 | 2×4 | 110, 0.6, 121.6, 33.6 | 383 | 8.85 | `3.PACK.01`…`3.PACK.08` | 32001…32008 | 5.04 | (110.0, 0.6) |
+| 21 | FA-POST | Z-POST | Вихід з пакування | smoke | 3 | 6 | 2×3 | 110, 34, 121.6, 59.6 | 297 | 8.85 | `3.POST.01`…`3.POST.06` | 32101…32106 | 5.16 | (110.0, 34.0) |
+| 22 | FA-CMP | Z-CMP | Компресорна | multi | 3 | 2 | 1×2 | 110, 60, 115.6, 71.4 | 64 | 8.85 | `3.CMP.01`…`3.CMP.02` | 32201…32202 | 4.0 | (110.0, 60.0) |
+| 23 | FA-CHG | Z-CHG | Зарядна станція | multi | 3 | 2 | 1×2 | 116, 60, 121.6, 71.4 | 64 | 8.85 | `3.CHG.01`…`3.CHG.02` | 32301…32302 | 4.0 | (116.0, 60.0) |
+| 24 | FA-FG | Z-FG | Склад готової продукції | smoke | 4 | 14 | 2×7 | 122, 0.6, 135.6, 62 | 835 | 8.85 | `4.FG.01`…`4.FG.14` | 42401…42414 | 6.26 | (122.0, 54.1) |
+| 25 | FA-ELEC | Z-ELEC | Електрощитова | smoke | 4 | 4 | 2×2 | 122.4, 62.4, 135.6, 71.4 | 119 | 8.85 | `4.ELEC.01`…`4.ELEC.04` | 42501…42504 | 4.33 | (129.4, 62.4) |
+| 26 | FA-OUT-1 | Z-OUT-1 | Відвантаження · ворота 1 | smoke | 4 | 4 | 2×2 | 136, 0.6, 149.4, 9.85 | 124 | 8.85 | `4.OUT-1.01`…`4.OUT-1.04` | 42601…42604 | 4.07 | (136.0, 0.6) |
+| 27 | FA-OUT-2 | Z-OUT-2 | Відвантаження · ворота 2 | smoke | 4 | 4 | 2×2 | 136, 10.15, 149.4, 19.85 | 130 | 8.85 | `4.OUT-2.01`…`4.OUT-2.04` | 42701…42704 | 4.14 | (136.0, 10.15) |
+| 28 | FA-OUT-3 | Z-OUT-3 | Відвантаження · ворота 3 | smoke | 4 | 4 | 2×2 | 136, 20.15, 149.4, 29.85 | 130 | 8.85 | `4.OUT-3.01`…`4.OUT-3.04` | 42801…42804 | 4.14 | (136.0, 20.15) |
+| 29 | FA-OUT-4 | Z-OUT-4 | Відвантаження · ворота 4 | smoke | 4 | 4 | 2×2 | 136, 30.15, 149.4, 39.85 | 130 | 8.85 | `4.OUT-4.01`…`4.OUT-4.04` | 42901…42904 | 4.14 | (136.0, 30.15) |
+| 30 | FA-OUT-5 | Z-OUT-5 | Відвантаження · ворота 5 | smoke | 4 | 4 | 2×2 | 136, 40.15, 149.4, 49.85 | 130 | 8.85 | `4.OUT-5.01`…`4.OUT-5.04` | 43001…43004 | 4.14 | (136.0, 40.15) |
+| 31 | FA-OUT-6 | Z-OUT-6 | Відвантаження · ворота 6 | smoke | 4 | 4 | 2×2 | 136, 50.15, 149.4, 59.85 | 130 | 8.85 | `4.OUT-6.01`…`4.OUT-6.04` | 43101…43104 | 4.14 | (136.0, 50.15) |
+| 32 | FA-OUT-7 | Z-OUT-7 | Відвантаження · ворота 7 | smoke | 4 | 4 | 2×2 | 136, 60.15, 149.4, 71.4 | 151 | 8.85 | `4.OUT-7.01`…`4.OUT-7.04` | 43201…43204 | 4.37 | (136.0, 60.15) |
+| 33 | FA-BOILER | Z-BOILER | Котельня | heat | 2 | 2 | 2×1 | 67.6, 75, 79.6, 81 | 72 | 4.35 | `2.BOILER.01`…`2.BOILER.02` | 23301…23302 | 4.24 | (67.6, 75.0) |
+
+Координати 212 сповіщувачів — `fire.detectors()[zone].points` у порядку `nn` (округлення до 0,01 м); контрольні:
+`2.FAC.07` → (62.78, 50.57, 8.85);
+`2.CNC.05` → (72.75, 34.2, 8.85);
+`1.SHEETS.01` → (17.95, 4.33, 8.85);
+`2.BOILER.02` → (76.6, 78.0, 4.35);
+
+### A.2 Ручні сповіщувачі (`type='mcp'`, z = 1,35, обладнання `FA-MCP`; порядок `call_points()`)
+
+| # | address | LSP | x | y | side |
+|---|---|---|---|---|---|
+| 1 | `1.MCP.01` | 19001 | 0.04 | 7.3 | W |
+| 2 | `4.MCP.01` | 49001 | 149.96 | 7.3 | E |
+| 3 | `1.MCP.02` | 19002 | 0.04 | 17.3 | W |
+| 4 | `4.MCP.02` | 49002 | 149.96 | 17.3 | E |
+| 5 | `1.MCP.03` | 19003 | 0.04 | 27.3 | W |
+| 6 | `4.MCP.03` | 49003 | 149.96 | 27.3 | E |
+| 7 | `1.MCP.04` | 19004 | 0.04 | 37.3 | W |
+| 8 | `4.MCP.04` | 49004 | 149.96 | 37.3 | E |
+| 9 | `1.MCP.05` | 19005 | 0.04 | 47.3 | W |
+| 10 | `4.MCP.05` | 49005 | 149.96 | 47.3 | E |
+| 11 | `1.MCP.06` | 19006 | 0.04 | 57.3 | W |
+| 12 | `4.MCP.06` | 49006 | 149.96 | 57.3 | E |
+| 13 | `1.MCP.07` | 19007 | 0.04 | 67.3 | W |
+| 14 | `4.MCP.07` | 49007 | 149.96 | 67.3 | E |
+| 15 | `2.MCP.01` | 29001 | 50.5 | 45.88 | S |
+| 16 | `2.MCP.02` | 29002 | 68 | 45.88 | S |
+| 17 | `2.MCP.03` | 29003 | 91 | 45.88 | S |
+| 18 | `3.MCP.01` | 39001 | 98.6 | 58.37 | S |
+| 19 | `4.MCP.08` | 49008 | 131.3 | 62.37 | S |
+| 20 | `3.MCP.02` | 39002 | 114.5 | 59.88 | S |
+| 21 | `2.MCP.04` | 29004 | 48 | 29.75 | S |
+| 22 | `2.MCP.05` | 29005 | 60 | 29.75 | S |
+| 23 | `2.MCP.06` | 29006 | 84 | 29.75 | S |
+| 24 | `3.MCP.03` | 39003 | 96 | 29.75 | S |
+| 25 | `3.MCP.04` | 39004 | 108 | 29.75 | S |
+| 26 | `3.MCP.05` | 39005 | 120 | 14.75 | S |
+| 27 | `3.MCP.06` | 39006 | 120 | 44.75 | S |
+| 28 | `1.MCP.08` | 19008 | 36 | 59.75 | S |
+| 29 | `2.MCP.07` | 29007 | 84 | 59.75 | S |
+| 30 | `4.MCP.09` | 49009 | 132 | 59.75 | S |
+| 31 | `1.MCP.09` | 19009 | 28.22 | 9.5 | E |
+| 32 | `2.MCP.08` | 29008 | 44.48 | 9.5 | W |
+| 33 | `1.MCP.10` | 19010 | 30 | 0.6 | P |
+| 34 | `2.MCP.09` | 29009 | 60 | 0.6 | P |
+| 35 | `2.MCP.10` | 29010 | 90 | 0.6 | P |
+| 36 | `3.MCP.07` | 39007 | 118 | 0.6 | P |
+
+### A.3 Оповіщувачі (`type='sounder'`, z = 2,9, обладнання `FA-SND`; порядок `sounders()`)
+
+| # | address | LSP | x | y | side |
+|---|---|---|---|---|---|
+| 1 | `2.SND.01` | 29101 | 48 | 44.75 | S |
+| 2 | `2.SND.02` | 29102 | 60 | 44.75 | S |
+| 3 | `2.SND.03` | 29103 | 72 | 44.75 | S |
+| 4 | `2.SND.04` | 29104 | 84 | 44.75 | S |
+| 5 | `3.SND.01` | 39101 | 96 | 44.75 | S |
+| 6 | `3.SND.02` | 39102 | 108 | 44.75 | S |
+| 7 | `3.SND.03` | 39103 | 120 | 14.75 | S |
+| 8 | `3.SND.04` | 39104 | 120 | 59.75 | S |
+| 9 | `1.SND.01` | 19101 | 5 | 71.96 | N |
+| 10 | `1.SND.02` | 19102 | 15 | 71.96 | N |
+| 11 | `1.SND.03` | 19103 | 25 | 71.96 | N |
+| 12 | `1.SND.04` | 19104 | 35 | 71.96 | N |
+| 13 | `2.SND.05` | 29105 | 45 | 71.96 | N |
+| 14 | `2.SND.06` | 29106 | 55 | 71.96 | N |
+| 15 | `2.SND.07` | 29107 | 65 | 71.96 | N |
+| 16 | `2.SND.08` | 29108 | 75 | 71.96 | N |
+| 17 | `2.SND.09` | 29109 | 85 | 71.96 | N |
+| 18 | `3.SND.05` | 39105 | 95 | 71.96 | N |
+| 19 | `3.SND.06` | 39106 | 105 | 71.96 | N |
+| 20 | `3.SND.07` | 39107 | 115 | 71.96 | N |
+| 21 | `4.SND.01` | 49101 | 125 | 71.96 | N |
+| 22 | `4.SND.02` | 49102 | 135 | 71.96 | N |
+| 23 | `4.SND.03` | 49103 | 145 | 71.96 | N |
+| 24 | `1.SND.05` | 19105 | 0.04 | 10 | W |
+| 25 | `1.SND.06` | 19106 | 0.04 | 20 | W |
+| 26 | `1.SND.07` | 19107 | 0.04 | 30 | W |
+| 27 | `1.SND.08` | 19108 | 0.04 | 40 | W |
+| 28 | `1.SND.09` | 19109 | 0.04 | 50 | W |
+| 29 | `1.SND.10` | 19110 | 0.04 | 60 | W |
+| 30 | `1.SND.11` | 19111 | 0.04 | 70 | W |
+| 31 | `4.SND.04` | 49104 | 149.96 | 10 | E |
+| 32 | `4.SND.05` | 49105 | 149.96 | 20 | E |
+| 33 | `4.SND.06` | 49106 | 149.96 | 30 | E |
+| 34 | `4.SND.07` | 49107 | 149.96 | 40 | E |
+| 35 | `4.SND.08` | 49108 | 149.96 | 50 | E |
+| 36 | `4.SND.09` | 49109 | 149.96 | 60 | E |
+| 37 | `4.SND.10` | 49110 | 149.96 | 70 | E |
+| 38 | `2.SND.10` | 29110 | 45 | 45.88 | S |
+| 39 | `2.SND.11` | 29111 | 55 | 45.88 | S |
+| 40 | `2.SND.12` | 29112 | 75 | 45.88 | S |
+| 41 | `2.SND.13` | 29113 | 85 | 45.88 | S |
+
+### A.4 Полум'я та іскрогасіння
+
+| address | type | LSP | x | y | z | side / heading | система / обладнання |
+|---|---|---|---|---|---|---|---|
+| `2.FLM.01` | flame | 29201 | 46 | 71.8 | 5 | heading -90 | панель / `FA-FLAME` |
+| `2.FLM.02` | flame | 29202 | 64 | 71.8 | 5 | heading -90 | панель / `FA-FLAME` |
+| `2.FLM.03` | flame | 29203 | 76 | 71.8 | 5 | heading -90 | панель / `FA-FLAME` |
+| `0.SPK.01` | spark_detector | 0 | 47 | 18.5 | 7.98 | — | `SPARK-1` |
+| `0.SPK.02` | spark_detector | 0 | 66 | 18.5 | 7.98 | — | `SPARK-1` |
+| `0.SPK.03` | spark_detector | 0 | 79 | 18.5 | 7.98 | — | `SPARK-1` |
+| `0.SPK.04` | spark_detector | 0 | 55.6 | 60.5 | 7.98 | — | `SPARK-1` |
+| `0.NOZ.01` | spark_nozzle | 0 | 52.5 | 18.5 | 7.98 | X | `SPARK-1` |
+| `0.NOZ.02` | spark_nozzle | 0 | 60.5 | 18.5 | 7.98 | X | `SPARK-1` |
+| `0.NOZ.03` | spark_nozzle | 0 | 55.6 | 66 | 7.98 | Y | `SPARK-1` |
+
+### A.5 Люки димовидалення (`type='smoke_vent'`, z = 9,0, система `SMOKE-CTRL`, обладнання `SMOKE-VENTS`; 3D-об'єкти `SV-nn`)
+
+| address | 3D | smoke zone | x | y |
+|---|---|---|---|---|
+| `0.SV.01` | SV-01 | SZ-1 | 13.8 | 6 |
+| `0.SV.02` | SV-02 | SZ-1 | 13.8 | 18 |
+| `0.SV.03` | SV-03 | SZ-1 | 13.8 | 31.5 |
+| `0.SV.04` | SV-04 | SZ-1 | 13.8 | 42 |
+| `0.SV.05` | SV-05 | SZ-1 | 13.8 | 54 |
+| `0.SV.06` | SV-06 | SZ-1 | 13.8 | 66 |
+| `0.SV.07` | SV-07 | SZ-2 | 25.8 | 6 |
+| `0.SV.08` | SV-08 | SZ-2 | 25.8 | 18 |
+| `0.SV.09` | SV-09 | SZ-2 | 25.8 | 31.5 |
+| `0.SV.10` | SV-10 | SZ-2 | 25.8 | 42 |
+| `0.SV.11` | SV-11 | SZ-2 | 25.8 | 54 |
+| `0.SV.12` | SV-12 | SZ-2 | 25.8 | 66 |
+| `0.SV.13` | SV-13 | SZ-3 | 49.8 | 5.75 |
+| `0.SV.14` | SV-14 | SZ-3 | 49.8 | 17.25 |
+| `0.SV.15` | SV-15 | SZ-3 | 49.8 | 28.75 |
+| `0.SV.16` | SV-16 | SZ-3 | 49.8 | 40.25 |
+| `0.SV.17` | SV-17 | SZ-4 | 73.8 | 3.83 |
+| `0.SV.18` | SV-18 | SZ-4 | 73.8 | 11.5 |
+| `0.SV.19` | SV-19 | SZ-4 | 73.8 | 19.17 |
+| `0.SV.20` | SV-20 | SZ-4 | 73.8 | 26.83 |
+| `0.SV.21` | SV-21 | SZ-4 | 73.8 | 34.5 |
+| `0.SV.22` | SV-22 | SZ-4 | 73.8 | 42.17 |
+| `0.SV.23` | SV-23 | SZ-5 | 49.8 | 50.33 |
+| `0.SV.24` | SV-24 | SZ-5 | 49.8 | 59 |
+| `0.SV.25` | SV-25 | SZ-5 | 49.8 | 67.67 |
+| `0.SV.26` | SV-26 | SZ-5 | 73.8 | 52.5 |
+| `0.SV.27` | SV-27 | SZ-5 | 73.8 | 65.5 |
+| `0.SV.28` | SV-28 | SZ-6 | 97.8 | 6 |
+| `0.SV.29` | SV-29 | SZ-6 | 97.8 | 18 |
+| `0.SV.30` | SV-30 | SZ-6 | 97.8 | 31.5 |
+| `0.SV.31` | SV-31 | SZ-6 | 97.8 | 42 |
+| `0.SV.32` | SV-32 | SZ-6 | 97.8 | 54 |
+| `0.SV.33` | SV-33 | SZ-6 | 97.8 | 66 |
+| `0.SV.34` | SV-34 | SZ-7 | 121.8 | 6 |
+| `0.SV.35` | SV-35 | SZ-7 | 121.8 | 18 |
+| `0.SV.36` | SV-36 | SZ-7 | 121.8 | 31.5 |
+| `0.SV.37` | SV-37 | SZ-7 | 121.8 | 42 |
+| `0.SV.38` | SV-38 | SZ-7 | 121.8 | 54 |
+| `0.SV.39` | SV-39 | SZ-7 | 121.8 | 66 |
+| `0.SV.40` | SV-40 | SZ-8 | 145.8 | 7.2 |
+| `0.SV.41` | SV-41 | SZ-8 | 145.8 | 21.6 |
+| `0.SV.42` | SV-42 | SZ-8 | 145.8 | 36 |
+| `0.SV.43` | SV-43 | SZ-8 | 145.8 | 50.4 |
+| `0.SV.44` | SV-44 | SZ-8 | 145.8 | 64.8 |
+
+## Додаток B. Сигнали модуля (`data/f3d_signal_data.xml`, 52 + запиленість від хука; CF-03, A-23)
+
+Спільне для всіх 52: `module='fire_safety'`, `origin='catalog'`, `write_enabled=False`, `viewer_visible=False` (розділ
+`fire` будує M-17), `create_request` — `True` лише там, де є `alarm_states`/пороги, `alarm_priority='2'`, `decimals=0`,
+`store_period_s=3600` (крім позначених), `hysteresis=0`, `min_duration_s=0`. Напрямок — **R** (лише читання) для всіх;
+об'єкти dev 200 — iot_sim §8.11.1 (еталон ASHRAE 135 LSZ/LSP; склад об'єктів приладу — ПРИПУЩЕННЯ, Q-01/Q-16), u85 —
+iot_sim §8.11.3 (ПРИПУЩЕННЯ, Q-14). Джерела: `B` = `source_bacnet_facp_1`, `M` = `source_mb_u85_io6`. Обладнання —
+за R-24 (хук). Колонка «iot_sim №» — рядок Додатка A iot_sim (новий = A-23).
+
+| # | code | name | kind / unit | джерело / `address` | `period_s` | `states` / `map` | `alarm_states` · `alarm_title` | iot_sim № |
+|---|---|---|---|---|---|---|---|---|
+| 1–33 | `fire/groups/<FA>/state` (33 зони, Додаток A.1) | «Стан зони <FA> (<назва>)» | state / — | B · `{"device": 200, "object": "LSZ", "instance": <lsz>, "mode": "poll"}` | 10 | текст `BACnetLifeSafetyState` (R-11), `states` порожньо | `["fault", "tamper", "abnormal", "emergency-power", "supervisory"]` · «Несправність зони <FA> (<назва>): стан «{text}»» | 603–635 |
+| 34 | `fire/totals/state` | «Прилад FACP-1: стан (LSZ:0)» | state / — | B · `{"device": 200, "object": "LSZ", "instance": 0, "mode": "poll"}` | 10 | — | `[]`, `create_request=False` | 640 |
+| 35 | `fire/totals/system_state` | «Прилад FACP-1: системний стан (MSV:1)» | state / — | B · `{"device": 200, "object": "MSV", "instance": 1, "mode": "poll", "map": {"1": "normal", "2": "alarm", "3": "fault", "4": "test", "5": "disabled"}}` | 10 | `["normal", "alarm", "fault", "test", "disabled"]` | `[]`, `False` | новий |
+| 36 | `fire/totals/alarms` | «Прилад FACP-1: активні тривоги» | gauge / шт | B · `{"device": 200, "object": "AV", "instance": 1, "mode": "poll"}` | 10 | — | без порогів, `False` | 641 |
+| 37 | `fire/totals/faults` | «Прилад FACP-1: несправності» | gauge / шт | B · `AV` 2 | 10 | — | без порогів, `False` (заявки — від зон і шлейфів) | 642 |
+| 38 | `fire/totals/disabled` | «Прилад FACP-1: вимкнення» | gauge / шт | B · `AV` 3 | 10 | — | без порогів, `False` | 643 |
+| 39–42 | `fire/loops/<n>/state`, n = 1…4 | «Шлейф <n>: несправність» | state / — | B · `{"device": 200, "object": "BI", "instance": <n>, "mode": "poll", "map": {"0": "off", "1": "on"}}` | 10 | `["off", "on"]` | `["on"]` · «Несправність шлейфу <n> приладу FACP-1» | 636–639 |
+| 43 | `fire/totals/sounders_active` | «Оповіщувачі увімкнено (BI:10)» | state / — | B · `BI` 10, `map` off/on | 10 | `["off", "on"]` | `[]`, `False` | новий |
+| 44 | `fire/totals/brigade` | «Передано на пульт ДСНС (BI:11)» | state / — | B · `BI` 11, `map` off/on | 10 | `["off", "on"]` | `[]`, `False` | новий |
+| 45 | `fire/spark/SPARK-1/state` | «Іскрогасіння: іскра (DI0)» | state / — | M · `{"fc": 2, "addr": 0, "type": "bool", "unit": 85, "map": {"0": "off", "1": "on"}}` | 2 | `["off", "on"]` | `[]`, `False` (події — з лічильника, A-13) | 644 (звужено до DI0) |
+| 46 | `fire/spark/SPARK-1/extinguishing` | «Іскрогасіння: гасіння (DI1)» | state / — | M · `fc 2`, `addr 1`, `map` off/on | 2 | `["off", "on"]` | `[]`, `False` | новий |
+| 47 | `fire/spark/SPARK-1/fault` | «Іскрогасіння: несправність (DI2)» | state / — | M · `fc 2`, `addr 2`, `map` off/on | 2 | `["off", "on"]` | `["on"]` · «Несправність іскрогасіння SPARK-1 (пульт GreCon BS 7)» | новий |
+| 48 | `fire/spark/SPARK-1/water_ok` | «Іскрогасіння: тиск води (DI3)» | state / — | M · `fc 2`, `addr 3`, `map {"0": "low", "1": "ok"}` | 2 | `["low", "ok"]` | `["low"]` · «Іскрогасіння SPARK-1: немає тиску води гасіння» | новий |
+| 49 | `fire/spark/SPARK-1/count_today` | «Іскрогасіння: іскор за добу» | gauge / шт | M · `{"fc": 3, "addr": 0, "count": 2, "type": "u32", "wordorder": "little", "unit": 85}` | 10 | — | без порогів, `False`; `store_period_s=300` | 645 |
+| 50 | `fire/smoke/SMOKE-VENTS/state` | «Люки димовидалення відкриті (DI4)» | state / — | M · `fc 2`, `addr 4`, `map {"0": "closed", "1": "open"}` | 2 | `["closed", "open"]` | `[]`, `False` | 646 (звужено до DI4) |
+| 51 | `fire/smoke/SMOKE-CTRL/fault` | «Щит D+H: несправність (DI5)» | state / — | M · `fc 2`, `addr 5`, `map {"0": "ok", "1": "fault"}` | 2 | `["ok", "fault"]` | `["fault"]` · «Несправність щита димовидалення SMOKE-CTRL (D+H CPS-M1): АКБ або живлення» | новий |
+| 52 | `fire/smoke/SMOKE-CTRL/battery` | «Щит D+H: живлення від АКБ (DI6)» | state / — | M · `fc 2`, `addr 6`, `map {"0": "mains", "1": "battery"}` | 2 | `["mains", "battery"]` | `[]`, `False` | новий |
+| 53 | `fire/groups/FA-FAC/dust` (хук §5.4 п. 3, не в XML) | «Запиленість сповіщувача 2.FAC.07» | gauge / % | B · `{"device": 200, "object": "AV", "instance": 21607, "mode": "poll"}` | 600 | — | `warn_high` 80, `alarm_high` 90, `hysteresis` 1,8, `decimals` 1 · «Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}» | 189 (рівень 0) |
+
+Сигнали пристроїв за `monitor` (A-02, M-04 `action_create_signals`): `fire/devices/<address>/state` (LSP, 10 с) і
+`fire/devices/<address>/dust` (AV, 600 с) — не в data.
+
+## Додаток C. Приклад розділів payload (API-02, CF-01; копія демо після ТК-01: прилад онлайн, запиленість `2.FAC.07` = 82,5 % як у макеті)
+
+```json
+{
+ "fire": {
+  "rules": {"smoke_area_6_12m": null, "smoke_spacing_6_12m": 8.8, "smoke_wall_6_12m": 4.4, "heat_area": null,
+            "heat_spacing": 6.4, "mcp_spacing": 30, "mcp_height": null, "sounder_level": 65,
+            "spark_detection_required": null, "flame_detector_note": null},
+  "loops": {"1": {"detectors": 64, "mcp": 10, "sounders": 11, "flame": 0, "modules": 0, "state": "ok"},
+            "2": {"detectors": 68, "mcp": 10, "sounders": 13, "flame": 3, "modules": 4, "state": "ok"},
+            "3": {"detectors": 34, "mcp": 7, "sounders": 7, "flame": 0, "modules": 0, "state": "ok"},
+            "4": {"detectors": 46, "mcp": 9, "sounders": 10, "flame": 0, "modules": 0, "state": "ok"}},
+  "groups": {
+   "FA-RCV-1": {"zone": "Z-RCV-1", "zone_name": "Приймання плит · ворота 1", "kind": "smoke", "kind_name": "димові оптичні",
+                "n": 4, "spacing": 8.8, "area": 118, "loop": 1, "state": "ok", "alarm_state": "normal", "compliance": "ok", "stale": false},
+   "FA-FAC": {"zone": "Z-FAC", "zone_name": "Дільниця фасадів МДФ", "kind": "multi", "kind_name": "оптико-теплові (пил деревини)",
+              "n": 18, "spacing": 8.8, "area": 1235, "loop": 2, "state": "warn",
+              "warning": "Сповіщувач 2.FAC.07 біля шліфування: запиленість камери 82 % — очистити до кінця зміни, інакше прилад переведе його в несправність.",
+              "maintenance_request": "Очистити сповіщувач 2.FAC.07 (запиленість 82 %)", "dust": 0.825,
+              "alarm_state": "normal", "compliance": "ok", "stale": false},
+   "FA-BOILER": {"zone": "BOILER", "zone_name": "Котельня", "kind": "heat", "kind_name": "теплові", "n": 2, "spacing": 6.4,
+                 "area": 72, "loop": 2, "state": "ok", "alarm_state": "normal", "compliance": "ok", "stale": false}
+  },
+  "totals": {"detectors": 212, "mcp": 36, "sounders": 41, "mcp_max_m": 26.9, "flame": 3, "spark_detectors": 4,
+             "state": "Норма, 1 попередження", "sprinkler": "Спринклерна система в режимі очікування"},
+  "events": [
+   {"time": "2026-10-12 09:58", "level": "warn", "code": "FA-FAC", "text": "Попередження про запиленість: сповіщувач 2.FAC.07 (дільниця фасадів, шліфування)."},
+   {"time": "2026-10-12 08:47", "level": "warn", "code": "SPARK-1", "text": "Іскрогасіння: іскру виявлено на магістралі аспірації над лінією A, гасіння 0,6 с, лінію не зупиняли."},
+   {"time": "2026-10-12 07:00", "level": "info", "code": "FACP-1", "text": "Щотижнева перевірка оповіщувачів: усі 4 шлейфи — норма."},
+   {"time": "2026-10-11 23:10", "level": "info", "code": "SPARK-1", "text": "Самотест іскрогасіння: датчики й клапан гасіння — норма."}
+  ],
+  "panel": {"code": "FACP-1", "state": "normal", "state_text": "Норма, 1 попередження", "comm": "online",
+            "last_seen": "2026-10-14 10:15", "alarms": 0, "faults": 0, "disabled": 0, "sounders": false, "brigade": false},
+  "systems": {"SPARK-1": {"state": "ok", "text": "Норма, іскор за добу — 1", "count_today": 1},
+              "SMOKE-CTRL": {"state": "ok", "text": "Клапани закриті, живлення від мережі", "vents_open": false},
+              "SPRINKLERS": {"state": "ok", "text": "Спринклерна система в режимі очікування", "pressure_bar": 7.25}}
+ },
+ "evacuation": {
+  "exits": [{"code": "EX-S1", "x": 14.0, "y": 0.0, "side": "S", "width": 1.2, "ok": true}, "… 11 ще …"],
+  "routes": {"Z-CUT": {"name": "Розкрій", "exit": "EX-S2", "length": 22.5, "path": [[49.75, 22.25], [50.25, 0.25]], "ok": true, "norm": 240},
+             "…": "31 ще"},
+  "max_distance": 45.3, "worst_point": [32.25, 33.75],
+  "drill_origin": "FA-CNC", "drill_zone": "Присадка", "drill_detector": "2.CNC.05",
+  "norm_distance": 240, "norm_ref": "ДБН В.2.2-27:2025 «Промислові будівлі», п. 8.2.2, табл. 8.2 (…) + прим. 5",
+  "norm_alt": 50, "norm_alt_ref": "ДБН В.2.2-27:2025 п. 8.2.11 — якщо стінові й покрівельні панелі з полімерним утеплювачем; тупики — не довше 25 м (п. 8.2.9); ворота не рахуються виходами (п. 8.2.6).",
+  "drill_steps": [{"t": 0, "who": "Пожежна сигналізація", "text": "Сповіщувач 2.CNC.05 (Присадка): дим і тепло — тривога на приладі."},
+                  {"t": 3, "who": "Пожежна сигналізація", "text": "Увімкнено 41 сирен-маяків по всьому цеху."}, "… 6 ще …"],
+  "drill_active": null,
+  "compliance": {"routes_ok": 32, "routes_total": 32, "worst": 38.6, "norm": 240, "exits_ok": true, "smoke_ok": 8, "smoke_total": 8}
+ }
+}
+```
+
+Під час навчання `drill_active` = `{"name": "DRILL/2026/0003", "zone": "Присадка", "zone_code": "FA-CNC", "detector":
+"2.CNC.05", "started": "2026-10-14 10:20", "elapsed_s": 42, "steps_done": 4, "steps_total": 8, "on_site": 35,
+"evacuated": 3}`. Рядки `"… N ще …"` у прикладі — скорочення документа, не частина контракту.
+
+## Додаток D. Довідник норм (`data/f3d_fire_norm.csv`, 27 записів; A-27)
+
+`value_set = (value is not None)`; `note` і `sources` — дослівно з JSON макета (для авторських — колонка «ref» і `note`
+«Додано автором модуля: …», `sources` порожньо); `sequence` = 10·№ у межах групи; `unit` — коротка одиниця з таблиці
+(повний текст одиниці JSON дописується на початок `note` у дужках, бо `unit` — Char(64)). Ключі 1–27:
+
+| # | group | key | name | value | unit | ref |
+|---|---|---|---|---|---|---|
+| 1 | detection | `smoke_spacing_6_12m` | Відстань між димовими сповіщувачами (висота до 12 м) | 8,8 | м | ДБН В.2.5-56:2014 зі Зміною № 2, табл. 7.2 (висота приміщення до 12,0 м, квадратна схема) |
+| 2 | detection | `smoke_wall_6_12m` | Відстань від димового сповіщувача до стіни (висота до 12 м) | 4,4 | м | ДБН В.2.5-56:2014 зі Зміною № 2, табл. 7.2; мінімальна відстань — ДСТУ-Н CEN/TS 54-14:2009, А.6.5.1 c) |
+| 3 | detection | `smoke_area_6_12m` | Площа на один димовий сповіщувач (висота 6–12 м) | — | м² | ДБН В.2.5-56:2014 зі Зміною № 2, п. 7.2.11, табл. 7.2; ДСТУ-Н CEN/TS 54-14:2009, дод. А.6.5.1, табл. А.1 |
+| 4 | detection | `heat_spacing` | Відстань між тепловими сповіщувачами | 6,4 | м | ДБН В.2.5-56:2014 зі Зміною № 2, табл. 7.1 (квадратна схема) |
+| 5 | detection | `heat_wall` | Відстань від теплового сповіщувача до стіни | 3,2 | м | = `ref` `heat_spacing` |
+| 6 | detection | `heat_area` | Площа на один тепловий сповіщувач | — | м² | ДБН В.2.5-56:2014 зі Зміною № 2, табл. 7.1; ДСТУ-Н CEN/TS 54-14:2009, табл. А.1 |
+| 7 | detection | `mcp_spacing` | Найбільший шлях до ручного сповіщувача | 30 | м | ДБН В.2.5-56:2014 зі Зміною № 2, п. 7.2.11.3 (посилання на 6.5.1, 6.5.4 ДСТУ CEN/TS 54-14); ДСТУ-Н CEN/TS 54-14:2009, 6.5.4 та А.6.5.4; ДБН п. 7.2.21 |
+| 8 | detection | `mcp_height` | Висота встановлення ручного сповіщувача | — | м | ДСТУ-Н CEN/TS 54-14:2009, А.6.5.4 |
+| 9 | detection | `flame_detector_note` | Розміщення сповіщувачів полум'я | — | — | ДБН В.2.5-56:2014 зі Зміною № 2, п. 7.2.11.2, 7.2.25, 7.2.28, табл. А.2 п. 7.28–7.30; ДСТУ-Н CEN/TS 54-14:2009, 6.5.3, А.6.5.3 |
+| 10 | detection | `spark_detection_required` | Система виявлення й гасіння іскор | — | — | ДБН В.2.5-56:2014 зі Зміною № 2, дод. А, табл. А.2, п. 7.6–7.8; VdS 3845:2026-05; VdS 2106 |
+| 11 | alerting | `sounder_level` | Рівень звуку оповіщення, мінімум | 65 | дБА | ДБН В.2.5-56:2014 зі Зміною № 2, п. 9.3.1, 9.3.5, 9.3.8, 9.3.10; ДСТУ-Н CEN/TS 54-14:2009, А.6.6.2 a) |
+| 12 | alerting | `sounder_bg_production` | Фоновий шум: механічні цехи | 85 | дБА | ДБН В.2.5-56:2014 зі Зміною № 2, п. 9.3.10 |
+| 13 | alerting | `sounder_bg_storage` | Фоновий шум: виробничі приміщення | 80 | дБА | ДБН В.2.5-56:2014 зі Зміною № 2, п. 9.3.10 |
+| 14 | alerting | `sounder_bg_office` | Фоновий шум: офіси | 55 | дБА | ДБН В.2.5-56:2014 зі Зміною № 2, п. 9.3.10 |
+| 15 | evacuation | `evac_distance_prod_B` | Найбільша відстань до евакуаційного виходу (кат. В, ≥ 80 тис. м³) | 240 | м | ДБН В.2.2-27:2025 «Промислові будівлі», п. 8.2.2, табл. 8.2 (об'єм ≥80 тис. м³, кат. В, ступінь I, II, III, IIIа, щільність потоку до 1 ос/м²) + прим. 5 |
+| 16 | evacuation | `evac_distance_polymer` | Найбільша відстань до виходу при полімерному утеплювачі панелей | 50 | м | ДБН В.2.2-27:2025 п. 8.2.11 — якщо стінові й покрівельні панелі з полімерним утеплювачем; тупики — не довше 25 м (п. 8.2.9); ворота не рахуються виходами (п. 8.2.6). |
+| 17 | evacuation | `evac_exits_min` | Мінімальна кількість евакуаційних виходів | 2 | шт. | ДБН В.1.1-7:2016 п. 7.2.4; ДБН В.2.2-27:2025 п. 8.2.9 (приміщення кат. В площею >1000 м² — щонайменше два виходи (двері)) |
+| 18 | evacuation | `exit_width_min` | Мінімальна ширина шляху евакуації | 1,0 | м | ДБН В.1.1-7:2016 п. 7.3.6 (ширина шляхів евакуації ≥1,0 м, висота ≥2,0 м); ДБН В.2.2-27:2025 п. 8.2.13, табл. 8.4; п. 8.2.15 |
+| 19 | evacuation | `door_width_min` | Мінімальна ширина евакуаційних дверей у просвіті | 0,8 | м | ДБН В.1.1-7:2016 п. 7.2.7; ДБН В.2.2-27:2025 п. 8.2.14 |
+| 20 | evacuation | `exit_dispersal_k` | Коефіцієнт розосередженості виходів (L = k·√П) | 1,5 | — | ДБН В.1.1-7:2016 п. 7.2.6 |
+| 21 | smoke | `smoke_exhaust_required` | Обов'язковість димовидалення | 1 | так/ні | ДБН В.2.5-56:2014 (зі Змінами № 1, 2) п. 10.2.4 г); п. 10.5.1; ДБН В.2.2-27:2025 п. 8.1.20, п. 6.3.2 |
+| 22 | smoke | `smoke_zone_max_area` | Найбільша площа димової зони | 1600 | м² | ДБН В.2.5-56:2014 (зі Змінами № 1, 2) п. 10.4.2 |
+| 23 | smoke | `smoke_vent_area` | Аеродинамічна площа люків на 400 м² підлоги (орієнтир) | 1,5 | м² Aa | Muster-Industriebaurichtlinie (Німеччина) п. 5.7 — орієнтир; в Україні площу визначають розрахунком (ДСТУ CEN/TR 12101-5, ДСТУ EN 12101-2), нормованого відсотка не знайдено |
+| 24 | smoke | `smoke_vent_aa` | Аеродинамічна площа одного люка LAMILUX F100 | 1,02 | м² | Паспорт `smoke_vent` (`plant/equipment_specs.json`): LAMILUX Smoke Lift Glass Skylight F100 1200×1200, EN 12101-2 |
+| 25 | other | `lightning_class` | Клас (рівень) блискавкозахисту | 2 | клас | ДБН В.2.2-27:2025 п. 8.1.23 (→ ДСТУ EN 62305-1, ДСТУ IEC 62305-2, ДСТУ EN 62305-3, -4); ДСТУ Б В.2.5-38:2008 дод. А, пп. 2, 4 |
+| 26 | other | `eyewash_required` | Фонтан для промивання очей | — | так/ні | НПАОП 40.1-1.21-98 (ПБЕЕС) п. 6.6.5; ПТЕЕС (наказ Мінпаливенерго № 258) розд. 10 |
+| 27 | other | `pv_roof_fire` | Відстані для дахової ФЕС | — | м | Українських норм із відстанями для дахових ФЕС не знайдено (ДБН В.1.1-7:2016, ДБН В.2.5-56:2014, ДБН В.2.2-27:2025 — не містять). Орієнтир: Merkblatt Fachkommission Bauaufsicht «Hinweise zur Errichtung von PV-Anlagen» (08.05.2026); VdS 2098 (дод. S1) |
