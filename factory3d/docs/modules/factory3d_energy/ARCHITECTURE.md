@@ -17,7 +17,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-01, Q-02.
 Зміни: 14.10.2026 — закрито відповідями замовника № 20–24: Q-09, Q-10; пороги температури трансформаторів 130/140 °C.
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-11, Q-12.
-Зміни: 14.10.2026 — аудит 2: X-100 (CE-01: `genset_kva` — статика з паспорта, не ключ моста).
+Зміни: 14.10.2026 — аудит 2: X-100 (CE-01: `genset_kva` — ключ моста td_genset за T-10; без моста — статика паспорта).
 
 ## Загальна інформація
 
@@ -132,7 +132,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 
 | ID | Контракт | Споживачі |
 |---|---|---|
-| CE-01 | Провайдер `infra` (150) **не** пише `infra.cards.GENSET`, `infra.genset`, `infra.totals.genset_kw`/`genset_state`/`genset_fuel_pct`/`genset_autonomy_h`, `island`, `grid_ok` — це ключі моста; `infra.totals.genset_kva` — статика з паспорта (viewer A.13), energy його не пише й не змінює (SPEC AC-61), у перелік ключів моста він не входить (X-100) | `factory3d_genset` (155) |
+| CE-01 | Провайдер `infra` (150) **не** пише `infra.cards.GENSET`, `infra.genset`, `infra.totals.genset_kw`/`genset_state`/`genset_fuel_pct`/`genset_autonomy_h`, `genset_kva`, `island`, `grid_ok` — це ключі моста; `infra.totals.genset_kva` = `int(round(profile.kva_prp))` пише міст td_genset (T-10), без моста — статика паспорта (viewer A.13); energy його не пише й не змінює (SPEC AC-61) (X-100) | `factory3d_genset` (155) |
 | CE-02 | Сигнали АВР Socomec ATyS p за Annexe III (PDU 20482…20487): `infra/ats/position` (`kind='state'`, `last_value` = код 0 невідомо / 1 положення 0 / 2 положення I «мережа» / 3 положення II «генератор», `last_text` = `unknown/pos_0/pos_I/pos_II`), `infra/ats/mode` (`manual/locked/auto/remote/inhibit`), `infra/ats/gen_start` (`off/on`, `last_value` 0/1), `infra/ats/src1_state`, `src2_state` (`under/present/available` = 0/1/2), обчислені `infra/ats/src1_ok`, `src2_ok` (1 = `available`, інакше 0; оновлюються з тим самим `ts`, що й стан), `infra/ats/fail_start` (0/1); період 5 с | міст (R-05 td_genset), viewer, тести |
 | CE-03 | `infra.totals` (без ключів CE-01): `pv_now`, `pv_today`, `pv_kwp`, `chp_kw`, `chp_rated`, `chp_heat`, `chp_load`, `bess_kw` (+ заряд / − розряд), `bess_soc` (частка), `bess_kwh`, `load_kw`, `grid_kw`, `export_kw`, `critical_kw`, `n_modules`, `shed_kw`, `bess_mode` (`charge/discharge/idle`); в острові `grid_kw=0`, `export_kw=0`, `shed_kw = load_before − load_kw` | міст, viewer `backupSummary()` |
 | CE-04 | Критичні споживачі: `f3d.energy.node.is_critical` (LP-1…3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG і лінія BW-1 — `plant/infra.py:CRITICAL`); `infra.totals.critical_kw` = Σ `p_now` цих вузлів (макет 347,8 → 348); сигнали `energy/consumers/<код>/p_now` і `energy/lines/BW-1/p_now` існують для всіх 10 | міст: читає `is_critical` вузлів, параметр `critical_codes` — лише запасний (td_genset R-04, X-11, X-68) |

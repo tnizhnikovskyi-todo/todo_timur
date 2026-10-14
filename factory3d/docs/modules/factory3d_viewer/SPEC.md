@@ -19,6 +19,7 @@ X-28 (клієнт: навчальна тривога, стани й прист�
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-02, Q-05.
 Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: A.13 `fire.groups` 33 → 35, `fire.totals.detectors` 212 → 222; `passports` 205 → 207 (A.0, A.14); обладнання демо-бази 208 → 210 (M-04 крок 29, §5.4 крок 2: `FA-SOC`, `FA-OFFICE` з `manifest.parts[].codes` резолвляться в нове обладнання).
 Зміни: 14.10.2026 — аудит 2: X-94 (порожній `_f3d_sections = ()` — наскрізний провайдер; M-01, R-01 п. 4, R-14 п. 4, AC-68, `zz_through`), X-95 (A.10 і A.15: `equipment["BOILER"]` пише telemetry, `room_pressure_pa` bms доповнює через `deep_merge`), X-97 (§13.1a: тести для AC-01, 03, 04, 05, 10, 23, 28, 40, 48, 55).
+Зміни: 14.10.2026 — аудит 2 (доповнення): X-100 (A.13, A.15: `infra.totals.genset_kva` пише міст td_genset за T-10, без моста — статика паспорта), X-102 (легенда типів перевірок на початку §12).
 
 Позначення: UT — юніт-тест (`odoo.tests`), HT — HttpCase/тур, JT — HOOT-тест клієнта, MAN — ручна
 перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -1576,7 +1577,7 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 
 ## 12. Acceptance Criteria
 
-Формат: Given / When / Then; тип перевірки UT / HT / JT / MAN; посилання на FR.
+Формат: Given / When / Then; тип перевірки (легенда, DOC_STANDARD, X-102): **UT** — юніт-тест (`odoo.tests.TransactionCase`, §13.1), **HT** — `HttpCase`/тур (§13.1, §13.1a), **JT** — HOOT-тест клієнта (§13.1, §13.1a), **MAN** — ручна перевірка на тестовому сервері; посилання на FR.
 
 | ID | FR | Given | When | Then | Тип |
 |---|---|---|---|---|---|
@@ -2084,7 +2085,7 @@ spacing float, area int, loop int, state (`ok`/`warn`), warning str opt, mainten
 `PRN-PACK1`, `PRN-PACK2`, `PRN-OUT`, `SCALE-OUT1`, `SCALE-OUT2`, `SCALE-RCV`, `IOT-RCV`, `IOT-PACK`, `IOT-OUT`,
 `WIFI`, `SERVER`, `TURNSTILES`, `ACCESS`, `CCTV`, `TRUCK-SCALE`, `GATE-W`, `GATE-E`, `SMOKE-VENTS`, `SMOKE-CTRL`,
 `LPS`); `totals` {pv_kwp int, pv_now float, pv_today int, grid_kw, export_kw, bess_kw num, chp_kw float, chp_rated
-int, chp_heat int, chp_load float, load_kw int, bess_kwh int, bess_soc float, genset_kva int, critical_kw int, vents
+int, chp_heat int, chp_load float, load_kw int, bess_kwh int, bess_soc float, genset_kva int (пише міст td_genset за T-10; без моста — статика паспорта), critical_kw int, vents
 int, n_modules int, vent_area float}.
 `evacuation`: `exits` list[12 × {code `EX-S1`…, x float, y float, side str}]; `routes` dict[32 зони → {name, exit,
 length float, path list[[x, y]]}]; `max_distance` float; `worst_point` [x, y]; `drill_origin` str (`FA-CNC`);
@@ -2126,7 +2127,7 @@ num|null req; `sources` list[str] req; `units` list[dict тієї ж форми]
 | `factory3d_bms`, `ventilation` (120), CH-02, bms Додаток B.1/B.3 | `ventilation.units[*]`, `ventilation.totals`, `ventilation.boiler` | units: `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`, `room_pressure_pa` (лише `AHU-1`, з живого поля bms; bms доповнює розділ `ventilation` через `deep_merge`, не перезаписує — значення, записані telemetry за шляхами сигналів, зберігаються, X-95); totals: `heat_need_kw`, `boilers_on_calc`, `deficit_kw`, `chp_source`; `ventilation.boiler` {`state`, `supply_c`, `return_c`, `silo_fill`, `heat_kw`}; `equipment["BOILER"]` bms **не пише** (див. рядок telemetry) |
 | `factory3d_fire_safety`, `fire` (130), CF-01 | `fire` | `panel` {`code`, `state`, `state_text`, `comm`, `last_seen`, `alarms`, `faults`, `disabled`, `sounders`, `brigade`}; `systems` {`SPARK-1`, `SMOKE-CTRL`, `SPRINKLERS` → {`state`, `text`, …}}; `devices` {адреса → {`type`, `x`, `y`, `z`, `zone`, `state`, `dust`}} (лише за параметром fire `viewer_devices`); `groups[*]`: `alarm_state`, `compliance` (`ok`/`warn`/`fail`), `stale`, значення `state` + `alarm`, `prealarm`, `fault`, `disabled`, `test`; `loops[*].state` |
 | `factory3d_fire_safety`, `evacuation` (140), CF-01 | `evacuation` | `drill_active` (`null` або {`name`, `zone`, `zone_code`, `detector`, `started`, `elapsed_s`, `steps_done`, `steps_total`, `on_site`, `evacuated`}); `compliance` {`routes_ok`, `routes_total`, `worst`, `norm`, `exits_ok`, `smoke_ok`, `smoke_total`}; `exits[*]`: `width`, `ok`; `routes[*]`: `ok`, `norm` |
-| міст `factory3d_genset`, `genset` (155), CG-02 | `infra.genset`, `infra.totals`, `infra.cards` | `infra.genset[<код>]` (вузол генератора: показники, `updated`, `state_label`, `mode_label`, `breaker_label`, `alarm_label`); totals: `genset_kw`, `genset_state`, `genset_fuel_pct`, `genset_autonomy_h`, `island`, `grid_ok`; `rows` картки `GENSET` |
+| міст `factory3d_genset`, `genset` (155), CG-02 | `infra.genset`, `infra.totals`, `infra.cards` | `infra.genset[<код>]` (вузол генератора: показники, `updated`, `state_label`, `mode_label`, `breaker_label`, `alarm_label`); totals: `genset_kw`, `genset_state`, `genset_fuel_pct`, `genset_autonomy_h`, `genset_kva` (`int(round(profile.kva_prp))`, td_genset T-10; без моста — статика паспорта), `island`, `grid_ok`; `rows` картки `GENSET` |
 | `factory3d_yard`, `yard` (160), CY-06 | **новий верхній ключ `yard`**; `infra.cards` | `yard` = yard Додаток C (`updated`, `gates`, `scale`, `trucks`, `queue`, `kpp`, `stats`); `rows` карток `GATE-W`, `GATE-E`, `TRUCK-SCALE` |
 | `factory3d_access`, `access` (170), CA-05 | **новий верхній ключ `access`**; `employees[code]`, `zones[code]`, `infra.cards` | `access` = access R-12; employees: `present`, `zone`, `zone_since`, `last_event` {`ts`, `door`, `direction`, `type`}; zones: `people_now`; `rows` карток `TURNSTILES`, `ACCESS` |
 

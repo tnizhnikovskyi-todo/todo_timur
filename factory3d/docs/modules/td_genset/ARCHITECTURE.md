@@ -14,6 +14,7 @@ Annexe III: положення I/II = 2/3 без стендових винятк
 закрито також Q-09 (X-32), Q-21 (X-59), Q-23 (X-24).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-05, Q-06, Q-08, Q-22, Q-24.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-10, Q-11, Q-12, Q-13, Q-14, Q-15, Q-16, Q-17, Q-18, Q-19.
+Зміни: 14.10.2026 — аудит 2 (доповнення): X-100 (CG-02: `genset_kva` у переліку ключів моста, за SPEC T-10).
 
 Форма документа — **запит на зміни (change request) до ТР `td_genset` v1.2** (далі «ТР 1.2») плюс
 технічне рішення нового модуля-моста **`factory3d_genset`**. Рішення менеджера D-12 (каркас
@@ -220,7 +221,7 @@ factory3d перенесено з `td_genset` у міст (A-01). Циклів �
 | ID | Контракт | Споживач |
 |---|---|---|
 | CG-01 | Коди сигналів генератора `infra/genset/GENSET/<leaf>` (26, SPEC Додаток A), одиниці, kind, період 60 с; значення веде міст | `factory3d_telemetry` (каталог), `factory3d_iot_sim` (Додаток A — 1 довідковий рядок № 662 `infra/genset/GENSET/state`, X-62), `factory3d_viewer` |
-| CG-02 | `infra.cards.GENSET`, `infra.genset.GENSET`, `infra.totals.genset_kw`, `genset_state`, `genset_fuel_pct`, `genset_autonomy_h`, `island`, `grid_ok` — пише **тільки** провайдер моста (sequence 155) | `factory3d_energy` (не пише GENSET), `factory3d_viewer` (CV-01) |
+| CG-02 | `infra.cards.GENSET`, `infra.genset.GENSET`, `infra.totals.genset_kw`, `genset_state`, `genset_fuel_pct`, `genset_autonomy_h`, `genset_kva` (`int(round(profile.kva_prp))`, SPEC T-10), `island`, `grid_ok` — пише **тільки** провайдер моста (sequence 155) | `factory3d_energy` (не пише GENSET), `factory3d_viewer` (CV-01) |
 | CG-03 | REST `fake_relay` для емулятора: API-F-01…API-F-09 (`/sim/v1/state`, `/mains`, `/remote_start`, `/load`, `/fault`, `/clear`, `/fuel`, `/time`, `/reset`), токен `RELAY_SIM_TOKEN`, порт 8000, профіль `d700` | `factory3d_iot_sim` (сценарії `blackout`, `genset_test`; модель ATyS R-22) |
 | CG-04 | Тип джерела телеметрії `td_genset` (локальне, без колектора — через хук `f3d.source._f3d_local_types()`, CT-12/R-26; X-01) і сигнали без порогів | `factory3d_telemetry` |
 | CG-05 | Події шини `maintenance.equipment`/`GENSET`/`state` при зміні стану, режиму, тривоги, острова | `factory3d_viewer` |
