@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_f3d_sim_panel_form" model="ir.ui.view">
+    <field name="name">f3d.sim.panel.form</field>
+    <field name="model">f3d.sim.panel</field>
+    <field name="arch" type="xml">
+      <form string="Пульт емулятора" create="false" delete="false">
+        <header>
+          <field name="read_enabled" invisible="1"/>
+          <field name="write_enabled" invisible="1"/>
+          <button name="action_check" type="object" string="Перевірити зв'язок" class="btn-primary"/>
+          <button name="action_apply_factor" type="object" string="Застосувати прискорення"
+                  invisible="not write_enabled"/>
+          <button name="action_apply_mode" type="object" string="Застосувати режим"
+                  invisible="not write_enabled"/>
+          <button name="action_reset" type="object" string="Скинути світ" invisible="not write_enabled"
+                  confirm="Скинути стан емулятора до початкового?"/>
+          <button name="action_stop_all" type="object" string="Стоп-кран сервісу" class="btn-danger"
+                  invisible="not write_enabled" confirm="Зупинити всі сценарії й заблокувати емулятор?"/>
+          <button name="action_level0_force_on" type="object" string="Рівень 0: увімкнути"
+                  groups="factory3d_base.group_f3d_admin"/>
+          <button name="action_level0_force_off" type="object" string="Рівень 0: вимкнути"
+                  groups="factory3d_base.group_f3d_admin"/>
+          <button name="action_level0_auto" type="object" string="Рівень 0: авто"
+                  groups="factory3d_base.group_f3d_admin"/>
+          <field name="state" widget="statusbar" statusbar_visible="offline,online"/>
+        </header>
+        <sheet>
+          <div class="oe_title"><h1><field name="name"/></h1></div>
+          <group>
+            <group string="Сервіс">
+              <field name="version"/>
+              <field name="last_contact"/>
+              <field name="last_error"/>
+              <field name="uptime_s"/>
+              <field name="seed"/>
+              <field name="odoo_stale"/>
+            </group>
+            <group string="Час і режим">
+              <field name="mode"/>
+              <field name="mode_new"/>
+              <field name="factor"/>
+              <field name="factor_new"/>
+              <field name="sim_time"/>
+            </group>
+            <group string="Лічильники">
+              <label for="device_count"/>
+              <div class="d-flex align-items-center">
+                <field name="device_count" class="me-2"/>
+                <button name="action_open_devices" type="object" string="Пристрої" class="btn-link"/>
+              </div>
+              <label for="signal_count"/>
+              <div class="d-flex align-items-center">
+                <field name="signal_count" class="me-2"/>
+                <button name="action_open_signals" type="object" string="Сигнали" class="btn-link"/>
+              </div>
+              <field name="alarm_count"/>
+              <field name="level0_state"/>
+              <field name="level0_signal_count"/>
+            </group>
+          </group>
+          <notebook>
+            <page string="Активні запуски" name="runs">
+              <field name="active_run_ids" readonly="1">
+                <list>
+                  <field name="name"/>
+                  <field name="scenario_id"/>
+                  <field name="state"/>
+                  <field name="start_ts"/>
+                  <button name="action_stop" type="object" string="Зупинити" icon="fa-stop"/>
+                </list>
+              </field>
+            </page>
+            <page string="Протоколи" name="protocols">
+              <field name="protocol_status" widget="json"/>
+            </page>
+            <page string="Сценарії" name="scenarios">
+              <field name="scenario_ids" readonly="1">
+                <list>
+                  <field name="code"/>
+                  <field name="name"/>
+                  <field name="group"/>
+                  <field name="duration_s"/>
+                  <button name="action_start" type="object" string="Запустити" icon="fa-play"/>
+                </list>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+        <chatter/>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_f3d_sim_panel_list" model="ir.ui.view">
+    <field name="name">f3d.sim.panel.list</field>
+    <field name="model">f3d.sim.panel</field>
+    <field name="arch" type="xml">
+      <list string="Пульт емулятора">
+        <field name="name"/>
+        <field name="state"/>
+        <field name="last_contact"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="action_f3d_sim_panel" model="ir.actions.server">
+    <field name="name">Пульт емулятора</field>
+    <field name="model_id" ref="model_f3d_sim_panel"/>
+    <field name="state">code</field>
+    <field name="code">action = env['f3d.sim.panel'].get_panel().get_formview_action()</field>
+  </record>
+</odoo>
