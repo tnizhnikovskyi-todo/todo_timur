@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-12 -->
+    <record id="view_maintenance_equipment_form_f3d" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.f3d</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object"
+                            class="btn-primary" invisible="not f3d_code or not f3d_viewer_available"/>
+                </header>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="f3d" string="Завод 3D">
+                    <group name="f3d_scene" string="Код сцени">
+                        <field name="is_f3d_manager" invisible="1"/>
+                        <field name="f3d_viewer_available" invisible="1"/>
+                        <field name="f3d_code" readonly="not is_f3d_manager"/>
+                        <field name="f3d_alias" readonly="not is_f3d_manager"/>
+                        <field name="f3d_kind" readonly="not is_f3d_manager"/>
+                        <field name="f3d_zone_id"/>
+                    </group>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object"
+                            icon="fa-cube" class="btn-secondary" invisible="not f3d_code"/>
+                </page>
+                <page name="f3d_passport" string="Паспорт">
+                    <group>
+                        <group>
+                            <field name="f3d_passport_id"/>
+                            <field name="f3d_units"/>
+                        </group>
+                        <group>
+                            <field name="f3d_manufacturer"/>
+                            <field name="f3d_model"/>
+                            <field name="f3d_role"/>
+                            <field name="f3d_dimensions"/>
+                            <field name="f3d_power_kw"/>
+                            <field name="f3d_connected_kw"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="f3d_reason" colspan="2"/>
+                    </group>
+                    <separator string="Параметри"/>
+                    <field name="f3d_spec_ids" readonly="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="value_text"/>
+                            <field name="value_num"/>
+                            <field name="uom"/>
+                            <field name="kind"/>
+                        </list>
+                    </field>
+                    <separator string="Джерела"/>
+                    <field name="f3d_source_ids" readonly="1">
+                        <list>
+                            <field name="kind"/>
+                            <field name="name"/>
+                            <field name="url" widget="url"/>
+                        </list>
+                    </field>
+                    <separator string="У складі"/>
+                    <field name="f3d_component_passport_ids" readonly="not is_f3d_manager">
+                        <list>
+                            <field name="name"/>
+                            <field name="manufacturer"/>
+                            <field name="model"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- V-13 -->
+    <record id="view_maintenance_equipment_list_f3d" model="ir.ui.view">
+        <field name="name">maintenance.equipment.list.f3d</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="serial_no" position="after">
+                <field name="f3d_code" optional="show"/>
+                <field name="f3d_passport_id" optional="hide"/>
+                <field name="f3d_zone_id" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_maintenance_equipment_search_f3d" model="ir.ui.view">
+        <field name="name">maintenance.equipment.search.f3d</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_search"/>
+        <field name="arch" type="xml">
+            <field name="category_id" position="after">
+                <field name="f3d_code"/>
+            </field>
+            <filter name="my" position="before">
+                <filter string="З кодом сцени" name="f3d_with_code" domain="[('f3d_code', '!=', False)]"/>
+                <filter string="Без паспорта" name="f3d_no_passport" domain="[('f3d_passport_id', '=', False)]"/>
+                <separator/>
+            </filter>
+            <xpath expr="//search" position="inside">
+                <group>
+                    <filter string="Зона" name="group_f3d_zone" context="{'group_by': 'f3d_zone_id'}"/>
+                    <filter string="Паспорт" name="group_f3d_passport" context="{'group_by': 'f3d_passport_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- V-17: дія (пункт меню — у f3d_menus.xml) -->
+    <record id="action_f3d_equipment" model="ir.actions.act_window">
+        <field name="name">Обладнання зі сцени</field>
+        <field name="res_model">maintenance.equipment</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('f3d_code', '!=', False)]</field>
+        <field name="context">{'search_default_group_f3d_zone': 1}</field>
+    </record>
+</odoo>
