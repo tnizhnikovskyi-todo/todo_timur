@@ -557,6 +557,19 @@ access_f3d_genset_event_map_manager,f3d.genset.event.map manager,model_f3d_gense
 Правило перевірки після оновлення проду (MG-08): `SELECT g.id, count(*) FROM res_groups_users_rel r JOIN res_groups g
 ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і після — однакові числа.
 
+### 4.4 Стоп-крани й токени (ARCH §2.6)
+
+| Що | Де | Хто змінює | Умовчання | Перевірка |
+|---|---|---|---|---|
+| `factory3d.genset.read_enabled` | `ir.config_parameter`, V-07 | `group_f3d_admin` (`base.group_system` — «Параметри системи») | `True` на тесті, `False` на проді (CB-10, §5.3 крок 1) | AC-08, AC-09 |
+| `factory3d.genset.requests_enabled` | те саме | те саме | `True`; `neutralize.sql` → `False` | AC-16, AC-35 |
+| `factory3d.genset.write_enabled` | те саме; поле V-07 `readonly` | — (зарезервовано) | `False`; значення **ніде не читається** кодом моста — міст не має коду команд | AC-34, AC-58 |
+| Стоп-кран команд `td_genset` (ім'я — ЗВІРИТИ, Q-16) | `td_genset` | як у ТР 1.2 | як у ТР 1.2; на проді — вимкнено до етапу 2 §13.6 | AC-A15, ТБ-04 |
+| `RELAY_SIM_TOKEN` | env контейнера `genset_relay` (`.env` стенда, не в репозиторії) | адміністратор стенда | порожньо = `/sim/v1/*` вимкнено (404) | AC-A06, ТБ-05 |
+| Токен ретранслятора `td_genset` | параметри `td_genset` (як ТР 1.2) | адмін `td_genset` | після `neutralize.sql` — новий/порожній (FR-A07) | AC-A07 |
+
+Міст власних токенів і HTTP-ендпоінтів не має (§7).
+
 ## 5. Дані
 
 ### 5.1 `data/ir_config_parameter.xml` (`noupdate="1"`)
@@ -571,6 +584,8 @@ ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і п
 | `factory3d.genset.ats_position_code` | `infra/ats/position` | `param_ats_position_code` |
 | `factory3d.genset.ats_src1_code` | `infra/ats/src1_ok` | `param_ats_src1_code` |
 | `factory3d.genset.ats_src2_code` | `infra/ats/src2_ok` | `param_ats_src2_code` |
+| `factory3d.genset.ats_position_i_value` | `2` | `param_ats_position_i_value` — R-05: значення `infra/ats/position` для положення I (Annexe III ATyS p); на стенді, поки iot_sim §8.9.4 кодує I=1 (Q-07), — `1` |
+| `factory3d.genset.ats_position_ii_value` | `3` | `param_ats_position_ii_value` — положення II (генератор); на стенді до виправлення Q-07 — `2` |
 | `factory3d.genset.critical_codes` | `energy/consumers/LP-1/p_now,energy/consumers/LP-2/p_now,energy/consumers/LP-3/p_now,energy/consumers/DUST-1/p_now,energy/consumers/COMPRESSOR/p_now,energy/consumers/BOILER/p_now,energy/consumers/OFFICE/p_now,energy/consumers/EF-ELEC/p_now,energy/consumers/EF-CHG/p_now,energy/lines/BW-1/p_now` | `param_critical_codes` |
 | `factory3d.genset.publish_period_s` | `60` | `param_publish_period_s` |
 | `factory3d.genset.service_warn_h` | `50` | `param_service_warn_h` |
@@ -583,7 +598,7 @@ ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і п
 | Файл | Що створює | Джерело | XML-id | Ідемпотентність |
 |---|---|---|---|---|
 | `data/f3d_genset_profile.xml` | профіль `D700`: `code="D700"`, `name="KOHLER-SDMO D700 · SmartGen HGM6120N"`, `kva_prp=634`, `kw_prp=507`, `kva_esp=697`, `kw_esp=558`, `tank_l=610`, `fuel_lph_25=38.6`, `fuel_lph_50=71.2`, `fuel_lph_75=103.8`, `fuel_lph_100=136.4`, `fuel_lph_esp=149.5`, `oil_l=34`, `oil_pressure_min_bar=0.5`, `start_to_load_s=15`, `autonomy_warn_h=2.0`, `timer_preset="default"`, `note` з URL датасітів (ARCH §8); `passport_id` — хук прив'язує паспорт `role='genset'` (data не може посилатись на запис base, створений хуком) | `plant/equipment_specs.json[role=genset]`, датасіт SDMO D700, Doosan DP180LB | `profile_d700` | `noupdate="0"` — числа паспорта оновлюються з модулем; менеджерські зміни — у власних профілях (копія) |
-| `data/f3d_genset_event_map.xml` | 45 рядків: 17 попереджень Table 4, 24 аварійні зупинки Table 5 (Додаток B), `COMM_LOST` (comm → `request_corrective`, priority 2), `SERVICE_DUE` (service → `request_preventive`, 1), `DEFAULT_WARNING` (bus_only), `DEFAULT_SHUTDOWN` (request_corrective, 3), `DEFAULT_COMM` (request_corrective, 2), `DEFAULT_SERVICE` (request_preventive, 1), `DEFAULT_INFO` (ignore) | мануал HGM6100N §5.1, §5.2 | `evmap_<key_lower>` | `noupdate="0"`; `td_code` — порожній у data, заповнюється W1/менеджером (після `-u` **не** затирається: поле виключене з оновлення через окремий `<function>`? — простіше: `noupdate="1"` на `td_code`-записах неможливо по полю; рішення: data-файл не містить `td_code`, а хук після оновлення відновлює `td_code` з `migration_report["td_codes"]`, куди зберігає перед оновленням — див. §5.3 крок 0) |
+| `data/f3d_genset_event_map.xml` | 48 рядків (Додаток B): 17 попереджень Table 4, 24 аварійні зупинки Table 5, `COMM_LOST` (comm → `request_corrective`, priority 2; використовує R-12), `SERVICE_DUE` (service → `request_preventive`, 1; використовує R-09), `DEFAULT_WARNING` (bus_only), `DEFAULT_SHUTDOWN` (request_corrective, 3), `DEFAULT_COMM` (bus_only — заявку дає R-12 `COMM_LOST`), `DEFAULT_SERVICE` (bus_only — заявку дає R-09), `DEFAULT_INFO` (ignore); A-16 | мануал HGM6100N §5.1, §5.2 | `evmap_<key_lower>` | `noupdate="0"`; `td_code` — порожній у data, заповнюється W1/менеджером (після `-u` **не** затирається: поле виключене з оновлення через окремий `<function>`? — простіше: `noupdate="1"` на `td_code`-записах неможливо по полю; рішення: data-файл не містить `td_code`, а хук після оновлення відновлює `td_code` з `migration_report["td_codes"]`, куди зберігає перед оновленням — див. §5.3 крок 0) |
 | `data/ir_cron.xml` | 3 крони §6 | — | `cron_f3d_genset_publish`, `_events`, `_service` | `noupdate="1"` |
 
 ### 5.3 `post_init_hook(env)` — кроки, джерела, ідемпотентність, очікувані кількості
@@ -606,12 +621,13 @@ ON g.id=r.gid WHERE g.id IN (<ids груп td_genset>) GROUP BY g.id` до і п
    `report["link"]="skipped: ADP-01 не звірено"`); якщо `len(gens)==1` → `create f3d.genset.link {equipment_id, td_genset_ref:
    "%s,%d", profile_id: profile_d700, source_id}`; якщо `>1` → `skipped: кілька генераторів — зв'яжіть вручну`; `0` → `skipped: у
    td_genset немає генераторів`.
-7. **Лічильник ТО:** якщо `eq.f3d_meter_signal_id` порожнє і поле існує → поставити сигнал `hours`; інтервал телеметрії не чіпати (A-04).
-8. **Крони:** `active = read_enabled` для `publish`; `events`/`service` — `active = requests_enabled`.
+7. **Лічильник ТО:** не виконується (§2.0.3 T-7) — `eq.f3d_meter_signal_id` і `f3d_meter_interval` не змінюються; у звіт `"meter": "skipped: A-04"`.
+8. **Крони:** `active = read_enabled` для `publish`; `events`/`service` — `active = requests_enabled`; `cron_f3d_genset_service.nextcall` =
+   найближче 06:00 Europe/Kyiv, переведене в UTC naive (`zoneinfo`).
 9. Звіт → параметр; лог INFO «factory3d_genset: міграцію виконано: …».
 
 Очікувано на копії демо-бази timur-o19demo після `factory3d_base` + `factory3d_telemetry` + `td_genset`: 1 профіль, 1 джерело,
-26 сигналів, 45 рядків мапи, 3 крони, зв'язка — 1 або `skipped` (залежить від даних `td_genset` на копії), 0 заявок, 0 показань.
+26 сигналів, 48 рядків мапи, 3 крони, зв'язка — 1 або `skipped` (залежить від даних `td_genset` на копії), 0 заявок, 0 показань.
 
 ### 5.4 `uninstall_hook(env)`
 
@@ -665,7 +681,7 @@ relay/
 │   └── d700.json                 §8.2 (експорт M-02 `to_relay_profile()`)
 ├── Dockerfile                    python:3.12-slim, `pip install -r requirements.txt`, `CMD ["python", "fake_relay.py"]`
 ├── requirements.txt              як у fake_relay сьогодні (ЗВІРИТИ; очікувано stdlib/`aiohttp` або `flask`), версії закріплені
-└── tests/test_sim_api.py         §13.2 ТК-F
+└── tests/test_sim_api.py         §13.3.2 ТК-F01…ТК-F07
 ```
 
 Змінні середовища контейнера: `RELAY_PROFILE` (`office` \| `d700`, умовчання `office`), `RELAY_PORT` (8000), `RELAY_SIM_TOKEN`
@@ -679,12 +695,12 @@ relay/
  "tank_l": 610, "fuel_lph": {"25": 38.6, "50": 71.2, "75": 103.8, "100": 136.4, "esp": 149.5},
  "timers": {"mains_abnormal_s": 5, "start_delay_s": 1, "crank_s": 8, "crank_fire_s": 3, "crank_rest_s": 10, "start_times": 3,
             "safety_on_s": 10, "warming_s": 10, "transfer_s": 1.0, "mains_normal_s": 10, "stop_delay_s": 1,
-            "cooling_s": 10, "ets_hold_s": 20},
+            "cooling_s": 10, "ets_hold_s": 20, "over_current_delay_s": 30},
  "timers_plant": {"mains_abnormal_s": 2, "start_delay_s": 0, "safety_on_s": 5, "warming_s": 3},
  "sensors": {"coolant_idle_c": 22, "coolant_run_c": 85, "coolant_tau_s": 600, "oil_run_bar": 4.5, "oil_idle_bar": 0.0,
              "batt_v": 25.2, "charger_v": 27.6, "rpm_run": 1500, "u_v": 400, "f_hz": 50.0, "pf": 0.8},
  "alarms": {"low_fuel_warn_pct": 25, "low_fuel_sd_pct": 10, "coolant_high_c": 98, "oil_low_bar": 1.0, "batt_low_v": 23.0, "batt_high_v": 33.0},
- "start": {"hours": 1213.0, "starts": 184, "fuel_pct": 82, "kwh": 61250, "mode": "auto", "mains_ok": true, "last_test": "2026-10-12T07:30:00+03:00"}}
+ "start": {"hours": 1213.0, "starts": 184, "fuel_pct": 82, "kwh": 61250, "mode": "auto", "mains_ok": true, "load_kw": 348, "last_test": "2026-10-12T07:30:00+03:00"}}
 ```
 
 `timers` — умовчання Table 7 мануалу HGM6100N; `timers_plant` — пресет Q-06 (застосовується при `POST /sim/v1/preset {"name":"plant"}`
@@ -724,7 +740,7 @@ GENSET з макета (`plant/infra.py`: паливо 82 %, «сьогодні 
 | API-F-01 | `GET /sim/v1/state` | — | `{"profile":"D700","sim_time":"…","factor":1.0,"mode":"auto","state":"loaded","state_code":7,"engine":"running","mains_ok":false,"gen_ok":true,"breaker":"gen","remote_start":false,"p_kw":348.0,"load_pct":68.6,"u_v":400.2,"f_hz":50.0,"i_a":628.0,"pf":0.8,"kwh":61255.3,"fuel_l":497.4,"fuel_pct":81.5,"fuel_lph":95.5,"hours":1213.3,"starts":185,"coolant_c":84.1,"oil_bar":4.4,"batt_v":25.3,"charger_v":27.6,"rpm":1502,"alarms":[],"alarm_level":0,"timers":{"active":null,"remaining_s":0},"last_test":"…"}` | читають iot_sim (модель ATyS R-22: `gen_ok` → `src2_ok`, `breaker` у варіанті A) і тести |
 | API-F-02 | `POST /sim/v1/mains` | `{"available": false}` / `{"available": true, "u_v": 400, "f_hz": 50.0}` | `{"mains_ok": false, "state": "mains_abnormal"}` | варіант A: контролер бачить мережу сам; варіант B: лише для індикації `mains_ok` (перемиканням керує ATyS через API-F-03) |
 | API-F-03 | `POST /sim/v1/remote_start` | `{"on": true}` | `{"remote_start": true, "state": "starting"}` | вхід «Remote Start» (варіант B: контакт ATyS 71/74); у `mode != auto` → 409 |
-| API-F-04 | `POST /sim/v1/load` | `{"kw": 348}` | `{"load_kw": 348, "load_pct": 68.6}` | навантаження на шині генератора (iot_sim рахує з балансу R-06); `kw > kw_esp` → 422; `kw` між PRP і ESP → warning «Gen Over Current» після `over_current_delay_s`=30 |
+| API-F-04 | `POST /sim/v1/load` | `{"kw": 348}` | `{"load_kw": 348, "load_pct": 68.6}` | навантаження на шині генератора (iot_sim рахує з балансу R-06); `kw > kw_esp` → 422; `kw` між PRP і ESP → warning «Genset Over Current» (Table 4 № 2) після `over_current_delay_s`=30 |
 | API-F-05 | `POST /sim/v1/fault` / `POST /sim/v1/clear` | `{"alarm": "low_oil_pressure" \| "high_temp" \| "low_fuel" \| "start_fail" \| "batt_low" \| "comm_lost" \| "over_speed" \| "emergency_stop"}` / `{"alarm": "…"}` або `{}` (усі) | `{"alarms": [{"code","name","severity","since"}]}` | `comm_lost` — ретранслятор відповідає 503 на ендпоінти `relay_api.md` (не на `/sim/v1`) — для ТК офлайну; `clear` аварійної зупинки → стан `standby`, лічильник спроб скинуто |
 | API-F-06 | `POST /sim/v1/fuel` | `{"liters": 500}` або `{"pct": 82}` або `{"add_liters": 110}` | `{"fuel_l": 500.0, "fuel_pct": 82.0}` | заправка (ТК «Заправка»); > `tank_l` → 422 |
 | API-F-07 | `POST /sim/v1/time` | `{"factor": 10.0}` і/або `{"set": "2026-10-12T07:00:00+03:00"}` | `{"factor": 10.0, "sim_time": "…"}` | як iot_sim API-14; `factor` 0,1…60 |
@@ -759,9 +775,10 @@ http://localhost:8000/health` (існуючий health `relay_api.md` — ЗВІ
 ### 8.6 Контракт з емулятором `factory3d_iot_sim` (CI-01, P-12, сценарії `blackout`/`genset_test`)
 
 Напрямок: **iot_sim → fake_relay** (емулятор — оркестратор; `fake_relay` нічого не викликає сам). Параметри сценарію `blackout`
-(запит до iot_sim §9.3): `duration_min` (умовчання 30), `amf_master` ∈ {`hgm`, `ats`} (умовчання з `SIM_GENSET_AMF_MASTER=hgm`),
-`genset_load_kw` (умовчання — `critical_kw` з балансу емулятора, 348), `restore` (bool, умовчання true — повернути мережу по
-закінченні).
+(iot_sim §9.3 S-03; існуючі — `duration_s` (умовчання 600), `genset` (bool, true), `restore_delay_s` (60); запит CI-01 додає):
+`amf_master` ∈ {`hgm`, `ats`} (умовчання з `SIM_GENSET_AMF_MASTER=hgm`), `genset_load_kw` (умовчання — `critical_kw` з балансу
+емулятора, 348). Мережа повертається по закінченні `duration_s` або по `stop`. Поки CI-01 не прийнято (Q-21), послідовність
+нижче виконує тестовий оркестратор `tests/stand/orchestrator.py` (§13.3.0).
 
 Послідовність у iot_sim (варіант `hgm`): t0: мережа PM5560 unit 1/2 → 0 В, SUN2000 → `0x0303`, TEDOM → стоп, ATyS модель: `src1_ok=0`;
 `POST /sim/v1/mains {"available": false}`; кожну 1 с `GET /sim/v1/state`: коли `breaker == "gen"` → ATyS `position=3 (II)`,
@@ -769,9 +786,11 @@ http://localhost:8000/health` (існуючий health `relay_api.md` — ЗВІ
 {"available": true}`; коли `breaker == "mains"` → ATyS `position=2 (I)`; після `state == standby` — `src2_ok=0`.
 Варіант `ats`: iot_sim веде таймери ATyS p: `src1_ok=0` → 1FT 3 с → `POST /sim/v1/remote_start {"on": true}` (реєстр 20484=1) →
 опитування `gen_ok` → 2AT 5 с → `position` 2→1(0, ODT 3 с)→3 → `POST /sim/v1/load`; якщо `gen_ok` не настав за 2ST 30 с —
-подія iot_sim «FAIL START» (ТК-08); повернення: `src1_ok=1` → 1RT 180 с → `position` 3→1→2 → 2CT 180 с → `POST /sim/v1/remote_start
-{"on": false}`. Сценарій `genset_test`: `POST /sim/v1/remote_start {"on": true}` на `test_min` (15) без перемикання ATyS (`test_on_load=false`)
-або з перемиканням (`true`); `fake_relay` фіксує `last_test`.
+подія iot_sim «FAIL START» (ТК-G04); повернення: `src1_ok=1` → 1RT 180 с → `position` 3→1→2, `POST /sim/v1/load {"kw": 0}` → 2CT 180 с →
+`POST /sim/v1/remote_start {"on": false}`. У варіанті `ats` iot_sim **не** викликає API-F-02 (для HGM мережа «в нормі»; перемикає ATyS) —
+правило станів `fake_relay` для цього випадку в Додатку D.3. Сценарій `genset_test` (S-14): `POST /sim/v1/remote_start {"on": true}` на
+`duration_s` (умовчання 900 = 15 хв) без перемикання ATyS (`test_on_load=false`, новий параметр CI-01) або з перемиканням (`true`);
+по закінченні `{"on": false}`; `fake_relay` фіксує `last_test`.
 
 У каталозі iot_sim (Додаток A) 26 кодів CG-01 — довідкові рядки `source=td_genset`, емулятор їх не веде (значення — міст із `td_genset`).
 Якщо `RELAY_SIM_TOKEN` порожній (роутер вимкнений) — iot_sim застосовує запасний режим Q-15 (генератор «запущений» через 15 с).
@@ -821,7 +840,7 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 
 | Сигнал | Код → текст картки (`state_label` тощо) | Джерело (ADP-10, ЗВІРИТИ сирі значення `td_genset`) |
 |---|---|---|
-| `state` | 0 «немає даних»; 1 «очікування»; 2 «мережа втрачена, затримка»; 3 «пуск»; 4 «захисна затримка»; 5 «прогрів»; 6 «працює без навантаження»; 7 «під навантаженням»; 8 «охолодження»; 9 «зупинка»; 10 «аварійна зупинка» | `STATE_MAP[state_raw.lower()]`; очікувані сирі значення (англ./укр., HGM/`td_genset`): standby/очікування → 1; mains abnormal → 2; start/crank/запуск → 3; safety on → 4; warming → 5; running/робота → 6, але 7 якщо `breaker == 2`; cooling/охолодження → 8; stop idle/ets/зупинка → 9; alarm/shutdown/аварія → 10; невідомо → 0 + `last_publish_error` |
+| `state` | 0 «немає даних»; 1 «очікування»; 2 «мережа втрачена, затримка»; 3 «пуск»; 4 «захисна затримка»; 5 «прогрів»; 6 «працює без навантаження»; 7 «під навантаженням»; 8 «охолодження»; 9 «зупинка»; 10 «аварійна зупинка» | `STATE_MAP[state_raw.lower()]`; очікувані сирі значення (англ./укр., HGM/`td_genset`): standby/очікування → 1; mains abnormal → 2; start/crank/запуск → 3; safety on → 4; warming → 5; running/робота → 6, але 7 якщо `breaker == 2` **або** `p_kw ≥ 0.05·kw_prp` (25,35 кВт для D700; варіант B — навантаження перемикає ATyS, реле HGM не задіяне, A-16); cooling/охолодження → 8; stop idle/ets/зупинка → 9; alarm/shutdown/аварія → 10; невідомо → 0 + `last_publish_error` |
 | `mode` | 0 «стоп»; 1 «ручний»; 2 «авто»; 3 «тест» | `MODE_MAP` |
 | `breaker` | 0 «жодного»; 1 «мережа»; 2 «генератор» | `BREAKER_MAP` (у HGM — стан реле закриття мережі/генератора) |
 | `mains_ok` | 0/1 | `snap["mains_ok"]` |
@@ -838,8 +857,10 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 для наявних кодів (незалежно від `status`); `missing = [коди без запису]`. У картці — рядок «Критичні споживачі зараз: 348 кВт з 507 кВт»;
 `missing` — у `last_publish_error`? Ні — у `meta`? Ні: у `node["critical_missing"]` (list) провайдера (для діагностики) і в лог DEBUG. Приклад
 макета (12.10, 10:30): сума LP-1..3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG + лінія BW-1 = **348 кВт** (`infra.totals.critical_kw`).
-`items` картки — `f3d_resolve(<код обладнання з шляху>)`: для `energy/consumers/LP-1/p_now` код `LP-1` → `maintenance.equipment` «Щит освітлення LP-1»;
-для `energy/lines/BW-1/p_now` — `BW-1` → обладнання «Шинопровід BW-1» (назви — з бази; код, якщо не знайдено).
+`items` картки — назва обладнання за кодом з шляху (передостанній сегмент): для `energy/consumers/LP-1/p_now` код `LP-1` → `maintenance.equipment` «Щит освітлення LP-1»;
+для `energy/lines/BW-1/p_now` — `BW-1` → обладнання «Шинопровід BW-1» (назви — з бази; код, якщо не знайдено). Читання — **один**
+`maintenance.equipment.search_read([("f3d_code","in",codes)], ["f3d_code","name"])`; лише для не знайдених — `f3d_resolve(code)` (CB-01), щоб
+провайдер укладався в ТП-02 (≤ 8 SQL).
 
 ### R-05 Острів і наявність мережі (FR-09, FR-10)
 
@@ -874,7 +895,8 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 
 ### R-07 Подія контролера → заявка ТО (FR-05, §6.8 каркаса)
 
-1. `row = f3d.genset.event.map._match(ev)` (M-03): `td_code` → `hgm_name` → `match_regex` → `DEFAULT_<severity>`.
+1. `row = f3d.genset.event.map._match(ev)` (M-03): `td_code` → `hgm_name`+`severity` → `match_regex` → `DEFAULT_<severity>`; немає збігу → кінець.
+   Поля заявки в кроці 3 уточнено §2.0.3 T-8 (без `f3d_equipment_code`; з `f3d_value`, `f3d_threshold`).
 2. `row.action == "ignore"` → кінець; `"bus_only"` → подія шини `state` для GENSET; інакше крок 3.
 3. `name, description = row._render(ev, link)`; `vals = {"name": name, "description": description, "maintenance_for": "equipment",
    "equipment_id": eq.id, "maintenance_team_id": eq.maintenance_team_id.id or env["maintenance.team"].search([("company_id","in",(eq.company_id.id, False))], limit=1).id,
@@ -911,7 +933,9 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 5. R-07 з рядком мапи `SERVICE_DUE` (`request_preventive`), ключ `GENSET:SERVICE:<int(next_service_hours)>`, `f3d_signal_id = hours`,
    `name` «Генератор GENSET: планове ТО через 37 мотогодин (наступне на 1 250, зараз 1 213)» / «…прострочено на 12 мотогодин…».
    Приклад: `hours_now=1213`, `next=1250`, `avg=1.2` → `days=30.8` → `schedule_date` = 14.11.2026, пріоритет 1.
-6. `maintenance.equipment.f3d_meter_signal_id` = сигнал `hours` (виставляється один раз, §5.3 крок 7); поле інтервалу телеметрії — порожнє.
+6. `maintenance.equipment.f3d_meter_signal_id` мостом не заповнюється (§2.0.3 T-7); `f3d_signal_id` заявки = сигнал `hours`.
+7. Подія `td_genset` з `severity == "service"` (крон events): спершу дія рядка мапи (`MAINTENANCE_DUE_W`/`MAINTENANCE_DUE_SD`/`DEFAULT_SERVICE`,
+   Додаток B), потім кроки 1–5 цього правила для зв'язки — одна планова заявка на `next_service_hours` незалежно від кількості подій.
 
 ### R-10 Картка GENSET у payload (FR-07, CG-02)
 
@@ -941,13 +965,14 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 
 ### R-11 Округлення значень у payload (як viewer M-01h, `plant/odoo_pull.py`)
 
-`unit == "%"` → `round(v/100, 3)` (82 → 0.82); інакше `|v| < 20` → `round(v, 2)`, інакше `round(v, 1)`; `kind in (state, counter)` → `int(v)`.
-Правило однакове для провайдера (full) і для `signals` у `/delta` (telemetry) — тому після дельти значення не «стрибають».
+`unit == "%"` → `round(v/100, 3)` (82 → 0.82); інакше `|v| < 20` → `round(v, 2)`, інакше `round(v, 1)`; сигнали з колонкою
+«Payload» = `int` у Додатку A (коди стану й `starts`) → `int(v)`. Для `float`-сигналів правило однакове з viewer M-01h і telemetry R-12
+(провайдер full і `signals` у `/delta`) — значення не «стрибають»; для `int`-сигналів дельта дає те саме число (7 і 7.0 у JSON рівні).
 
 ### R-12 Застарілі дані й офлайн (FR-15)
 
-`fresh = snap["online"] and snap["ts"] and (now − snap["ts"]) ≤ offline_min`. Не `fresh` → `online=0`, `state=0`, `q=0` для всіх показань
-(TEL-03 ставить `status="stale"`), `fuel_lph=0`, `autonomy_h` — за останнім `fuel_l` при 75 %. Перехід `online 1→0`, що триває ≥ `offline_min`
+`fresh = snap["online"] and snap["ts"] and (now − snap["ts"]) ≤ offline_min`. Не `fresh` → публікуються `online=0`, `state=0`, `fuel_lph=0`,
+`autonomy_h` (за останнім `fuel_l` при 75 %) з `ts=now`; решта 22 сигнали → `status="stale"` через `_mark_stale` (точний механізм — §2.0.3 T-3). Перехід `online 1→0`, що триває ≥ `offline_min`
 (перевірка на кожному прогоні: `last_state_json.offline_since`) → одна подія `COMM_LOST` через R-07 (рядок мапи `COMM_LOST`), подія шини.
 Перехід `0→1` → `message_post` у відкриту заявку, подія шини. Часові пояси: усі `ts` у БД — UTC naive (Odoo); `snap["ts"]` з `td_genset`
 нормалізується в UTC (якщо aware → `astimezone(UTC).replace(tzinfo=None)`); картка показує Europe/Kyiv (`ctx["now_local"]`-стиль viewer R-02).
@@ -1032,16 +1057,16 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 | AC-08 | FR-03 | Given `factory3d.genset.read_enabled=False`; When `_cron_publish`; Then 0 показань; When `action_check`; Then `UserError` «Публікацію вимкнено стоп-краном factory3d.genset.read_enabled» | UT |
 | AC-09 | FR-03 | Given `environment='prod'` (base); When `post_init_hook`; Then `read_enabled='False'`, крон publish `active=False`; `environment='test'` → `True`/`True` | UT |
 | AC-10 | FR-03 | Given той самий знімок двічі (однаковий `ts`); When два прогони; Then 26 показань (не 52), `ingest` повернув `skipped=26` на другому | UT |
-| AC-11 | FR-04 | Then усі 26 сигналів GENSET мають порожні `warn_low/warn_high/alarm_low/alarm_high/alarm_state` | UT |
+| AC-11 | FR-04 | Then усі 26 сигналів GENSET мають `create_request=False`, `alarm_states` порожній; 25 з них — `warn_low_on = warn_high_on = alarm_low_on = alarm_high_on = False`; `infra/genset/GENSET/alarm_level` — лише `alarm_high_on=True`, `alarm_high=0.5` (§2.0.3 T-4); When сигнал `alarm_level` отримує 2; Then `status='alarm'` і telemetry заявки не створює (`maintenance_request_id=False`) | UT |
 | AC-12 | FR-05 | Given подія `{"code":"LOP_SD","severity":"shutdown","name":"Low Oil Pressure","value":0.8,"unit":"бар","threshold":1.0}` і рядок мапи з `hgm_name="Low Oil Pressure"`; When `_cron_events`; Then 1 `maintenance.request`: `maintenance_type='corrective'`, `priority='3'`, `maintenance_for='equipment'`, `equipment_id=GENSET`, `maintenance_team_id=команда обладнання`, `name="Генератор GENSET: аварійна зупинка — низький тиск оливи 0,8 бар при нормі ≥ 1,0 бар"`, `f3d_equipment_code='GENSET'`, `f3d_signal_id=сигнал alarm_level`, `f3d_genset_event_key='GENSET:LOW_OIL_PRESSURE_SD'`, `schedule_date` ≈ now | UT |
 | AC-13 | FR-05 | Given та сама подія повторно (новий `id`), заявка відкрита; When крон; Then заявок 1, у чаттері «Повтор: … о …»; When заявку переведено в «Repaired» і подія знову; Then заявок 2 | UT |
-| AC-14 | FR-05 | Given подія warning «Gen Over Current» з мапою `bus_only`; When крон; Then заявок 0, `f3d.viewer.event` з `model='maintenance.equipment'`, `codes=['GENSET']`, `kind='state'` | UT |
+| AC-14 | FR-05 | Given подія warning «Genset Over Current» (рядок `GENSET_OVER_CURRENT_W`, `bus_only`); When крон; Then заявок 0, `f3d.viewer.event` з `model='maintenance.equipment'`, `codes=['GENSET']`, `kind='state'` | UT |
 | AC-15 | FR-05 | Given подія з невідомими `code`/`name` і `severity='shutdown'`; Then рядок `DEFAULT_SHUTDOWN` → заявка `corrective`, пріоритет 3, назва «Генератор GENSET: аварійна зупинка — <name>» | UT |
 | AC-16 | FR-05 | Given `requests_enabled=False`; When крон events; Then 0 заявок, `last_event_ts` не зсувається | UT |
 | AC-17 | FR-05 | Given 250 подій; When один прогін; Then оброблено 200, `last_event_id` = id 200-ї; другий прогін — решта 50 | UT |
 | AC-18 | FR-06 | Given ADP-05 `{hours_now:1213, next_service_hours:1250, interval_h:250, due:False}`, показання `hours` 30 днів тому = 1177; When `_cron_service`; Then 1 заявка `preventive`, `priority='1'`, `name="Генератор GENSET: планове ТО через 37 мотогодин (наступне на 1 250, зараз 1 213)"`, `schedule_date` = now + 30,8 дня (±1 день), `f3d_genset_event_key='GENSET:SERVICE:1250'`, `f3d_signal_id=hours`; повторний прогін — заявок 1 | UT |
 | AC-19 | FR-06 | Given `hours_left=-12`; Then `priority='3'`, `schedule_date` ≈ now, назва «…прострочено на 12 мотогодин…»; Given `hours_left=120`, `due=False`; Then заявок 0 | UT |
-| AC-20 | FR-06 | Then `maintenance.equipment(GENSET).f3d_meter_signal_id.code == 'infra/genset/GENSET/hours'`, поле інтервалу ТО telemetry порожнє/0 | UT |
+| AC-20 | FR-06 | Given установка моста (хук) і 3 прогони `_cron_service` та `_cron_publish`; Then `maintenance.equipment(GENSET).f3d_meter_signal_id` порожнє, `f3d_meter_interval == 0`, `f3d_meter_request_id` порожнє; заявок з `f3d_origin='meter'` — 0 (§2.0.3 T-7, A-04) | UT |
 | AC-21 | FR-06 | Given `SERVICE_REQUESTS_BY_TD=True` і заявка `td_genset` для GENSET без `f3d_equipment_code`; When крон; Then у неї `f3d_equipment_code='GENSET'`, `f3d_signal_id=hours`; нових заявок 0 | UT |
 | AC-22 | FR-07 | Given зв'язка, сигнали з AC-07; When `PayloadBuilder.build(full=True)`; Then `infra.cards.GENSET.rows` = 14 рядків R-10 з очікуваними текстами («634 кВА / 507 кВт (основна)», «під навантаженням · 348 кВт (68,6 %)», «82 % · 500 л», «≈ 5,2 год при 69 %», «348 кВт з 507 кВт»…), `items` = 10 назв, `note` — стала; `infra.genset.GENSET.p_kw=348.0`, `fuel_pct=0.82`, `state=7`, `state_label="під навантаженням"`; `infra.totals.genset_kw=348.0`, `genset_state`, `island`, `grid_ok` | UT |
 | AC-23 | FR-07 | Given провайдер `zz_test` у `test_factory3d_viewer`? — ні: Given порядок; Then у `PayloadBuilder.providers` `f3d.viewer.provider.genset` стоїть після `f3d.viewer.provider.infra` (якщо energy встановлено) і після `…signals` (90), `…telemetry` (95); `_f3d_sequence == 155` | UT |
@@ -1059,16 +1084,16 @@ JSON-рядки: `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`; 
 | AC-35 | FR-13 | When `neutralize.sql`; Then крони моста `active=false`, `read_enabled='False'`, `requests_enabled='False'`, `last_publish_ts` NULL; When `uninstall_hook`; Then параметри `factory3d.genset.%` відсутні, `f3d.signal` GENSET (26) і заявки лишились, джерело `active=False` | UT/TC |
 | AC-36 | FR-14 | Given `docker compose --profile demo up genset_relay`; When `td_genset` адреса `http://genset_relay:8000`; Then `td_genset` показує показання профілю D700 (паливо 82 %, 500 л), міст публікує 26 сигналів | TC |
 | AC-37 | FR-14 | Given сценарій `blackout` (`amf_master=hgm`); When старт; Then у `fake_relay` через ≤ 35 с `state=loaded`, `breaker=gen`, `p_kw=348`; в Odoo через ≤ 2 хв `infra/genset/GENSET/state=7`, `infra/ats/position=3` (energy), картка «острів», подія шини; When стоп; Then повернення: `state` 8 → 9 → 1, `island=False` | TC |
-| AC-38 | FR-14 | Given сценарій `blackout` (`amf_master=ats`) з умовчаннями HGM; Then наказ пуску (`remote_start=true`) через 3 с після втрати мережі, `gen_ok` через ≈ 25 с, переключення через 2AT 5 с; `FAIL START` не виникає; Given пресет HGM `warming_s=60`; Then iot_sim фіксує «FAIL START» через 2ST 30 с (ТК-08) | TC |
+| AC-38 | FR-14 | Given сценарій `blackout` (`amf_master=ats`) з умовчаннями HGM; Then наказ пуску (`remote_start=true`) через 3 с після втрати мережі, `gen_ok` через ≈ 25 с, переключення через 2AT 5 с; `FAIL START` не виникає; Given пресет HGM `warming_s=60`; Then iot_sim фіксує «FAIL START» через 2ST 30 с (ТК-G04) | TC |
 | AC-39 | FR-14 | Given `genset_test` (15 хв, `test_on_load=false`); Then `fake_relay.last_test` оновлено, картка «Остання перевірка: <дата> — тест 15 хв, норма», ATyS не перемикався (`position=2`) | TC |
-| AC-40 | FR-15 | Given `POST /sim/v1/fault {"alarm":"comm_lost"}`; When ≥ `offline_min` (5 хв; на стенді `RELAY_TIME_FACTOR=10` або `offline_min=1`); Then `online=0`, усі 26 сигналів `stale`, заявка «Генератор GENSET: втрачено зв'язок з контролером (немає даних N хв)» з ключем `GENSET:COMM_LOST`; When `clear`; Then `online=1`, у заявці «Зв'язок відновлено о …», заявка відкрита | TC/UT |
+| AC-40 | FR-15 | Given `POST /sim/v1/fault {"alarm":"comm_lost"}`; When ≥ `offline_min` (5 хв; на стенді `offline_min=1`, `RELAY_TIME_FACTOR=1` — §13.3.0); Then `online=0` і `state=0` (`status='ok'`, `ts`≈now), решта 22 сигнали `stale` (§2.0.3 T-3), заявка «Генератор GENSET: втрачено зв'язок з контролером (немає даних N хв)» з ключем `GENSET:COMM_LOST`; When `clear`; Then `online=1`, у заявці «Зв'язок відновлено о …», заявка відкрита | TC/UT |
 | AC-41 | FR-16 | grep `models/`, `views/`, `data/`: усі `string=`, `help=`, тексти `UserError`/`ValidationError`, назви крона/меню — кирилицею (regex `[А-Яа-яІіЇїЄєҐґ]`), файлів `i18n/*.po` у модулі немає | UT (grep-тест) |
 | AC-42 | FR-02, CR-05 | When `action_export_relay_profile`; Then вкладення `d700.json` з ключами §8.2, `fuel_lph.75=103.8`, `timers.mains_abnormal_s=5`; When `action_apply_to_td` з мок ADP-09 → `True`; Then повідомлення «Записано в td_genset: 1 генераторів; пропущено: 0» | UT |
 | AC-43 | ADP | Given константи адаптера не заповнені; When `test_adapter_contract`; Then тест падає з переліком `ADP-01, ADP-03…`; Given заповнені (мок реєстру); Then усі `FIELD_*` є у `fields_get` відповідної моделі | UT |
 | AC-44 | R-03 | Given `fields_get` селекції стану `td_genset` (мок: 6 значень); Then кожне значення є ключем `STATE_MAP` (тест перелічує відсутні) | UT |
-| AC-45 | R-11 | When провайдер отримує `fuel_pct=82`, `p_kw=348.04`, `oil_bar=4.456`, `hours=1213.2`; Then `0.82`, `348.0`, `4.46`, `1213` | UT |
+| AC-45 | R-11 | When провайдер отримує `fuel_pct=82`, `p_kw=348.04`, `oil_bar=4.456`, `hours=1213.2`, `state=7.0`, `starts=185.0`; Then `0.82`, `348.0`, `4.46`, `1213.2`, `7` (`int`), `185` (`int`) | UT |
 | AC-46 | R-12 | Given `snap.ts` = now + 300 с (годинник ретранслятора попереду); Then показання з `ts=now`, `last_publish_error` містить «годинник ретранслятора попереду» | UT |
-| AC-47 | API-F | ТК-F (§13.2): `GET /sim/v1/state` без токена → 401; `POST /load {"kw": 600}` → 422; `POST /remote_start` у `mode=manual` → 409; `POST /fuel {"liters": 700}` → 422; `POST /reset {"preset":"plant"}` → таймери пресету | TC |
+| AC-47 | API-F | ТК-F01, ТК-F02 (§13.3.2): `GET /sim/v1/state` без токена → 401; `POST /load {"kw": 600}` → 422; `POST /remote_start` у `mode=manual` → 409; `POST /fuel {"liters": 700}` → 422; `POST /reset {"preset":"plant"}` → таймери пресету | TC |
 | AC-48 | §8.3 | Given профіль d700, `POST /mains {"available": false}`; Then послідовність станів `mains_abnormal`(5 с) → `starting` → `safety_on`(10) → `warming`(10) → `running` → `loaded` з `breaker=gen`, усього 29–32 с при `factor=1`; `starts` +1; з `preset=plant` — 13–16 с; `fuel_l` зменшується на 95,5/3600 л за секунду при 348 кВт (±2 %) | TC |
 | AC-49 | §8.3 | Given `POST /fault {"alarm":"start_fail"}` і `POST /mains {"available": false}`; Then 3 спроби по 8 с + 10 с пауза → `state=alarm_shutdown`, подія `Fail to Start` severity shutdown у `GET /sim/v1/events` | TC |
-| AC-50 | §5.3 | Given копія демо-бази з base + telemetry + td_genset; When установка моста; Then кількості §5.3 (1 профіль, 1 джерело, 26 сигналів, 45 рядків мапи, 3 крони); повторне `-u` — ті самі кількості, `td_code` рядків мапи збережені | TC |
+| AC-50 | §5.3 | Given копія демо-бази з base + telemetry + td_genset; When установка моста; Then кількості §5.3 (1 профіль, 1 джерело, 26 сигналів, 48 рядків мапи, 3 крони); повторне `-u` — ті самі кількості, `td_code` рядків мапи збережені | TC |
