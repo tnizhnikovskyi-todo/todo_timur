@@ -1,0 +1,22 @@
+# factory3d_base
+
+Ядро factory3d (Odoo 19): домішка `f3d.scene.mixin` (коди сцени), зони цеху `f3d.zone`, ворота як доки,
+паспорти обладнання, групи прав «Завод 3D», міграція демо-полів `x_dock/x_truck/x_vehicle` у пакети.
+
+## Установка
+`odoo-bin -d <db> -i factory3d_base`. Після установки `post_init_hook` виконує кроки 1–11 (SPEC §5.3):
+коди локацій/РЦ/працівників/обладнання, прив'язка паспортів і зон, міграція x_* у `stock.picking.batch`,
+звірка, видалення демо-полів. Результат: `factory3d.base.migration_state` (`skipped`/`partial`/`done`) і
+`migration_report` (JSON). Повтор: «Завод 3D → Налаштування → Повторити міграцію демо-даних» (адміністратор).
+
+## Параметри (`factory3d.base.*`)
+`environment`, `plant_length_m/width_m/height_m`, `site_x0_m/y0_m/x1_m/y1_m`, `keep_x_fields` (True — не видаляти
+x_* поля), `uninstall_restore_x_fields` (True — відновити x_* при деінсталяції), `migration_state`, `migration_report`.
+
+## Інструкції
+1. Перед установкою на копію демо-бази: зняти знімки S1–S5 (`DEPLOY_TEST.md`).
+2. Розбіжність звірки → стан `partial`, поля x_* лишаються; виправити дані й повторити міграцію.
+3. Для переглядача/`odoo_pull`: `x_dock` → `f3d_dock_code`, `x_truck` → `f3d_truck_code`, `x_vehicle` → `batch_id.f3d_vehicle_id.f3d_code`.
+4. Тестова база: `data/neutralize.sql` виставляє `environment='test'`.
+
+Міст із Enterprise `mrp_maintenance`: `factory3d_base_mrp_maintenance`.

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-15 -->
+    <record id="view_f3d_equipment_passport_form" model="ir.ui.view">
+        <field name="name">f3d.equipment.passport.form</field>
+        <field name="model">f3d.equipment.passport</field>
+        <field name="arch" type="xml">
+            <form string="Паспорт обладнання">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_equipment" type="object" class="oe_stat_button"
+                                icon="fa-cogs">
+                            <field name="unit_count" widget="statinfo" string="Одиниць"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="role"/>
+                            <field name="manufacturer"/>
+                            <field name="model"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Габарити й потужність">
+                            <field name="dim_l_mm"/>
+                            <field name="dim_w_mm"/>
+                            <field name="dim_h_mm"/>
+                            <field name="dimensions"/>
+                            <field name="power_kw"/>
+                            <field name="connected_kw"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="reason" colspan="2"/>
+                    </group>
+                    <notebook>
+                        <page name="specs" string="Параметри">
+                            <field name="spec_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="value_text"/>
+                                    <field name="value_num"/>
+                                    <field name="uom"/>
+                                    <field name="key"/>
+                                    <field name="kind"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="sources" string="Джерела">
+                            <field name="source_ids">
+                                <list editable="bottom">
+                                    <field name="kind"/>
+                                    <field name="name"/>
+                                    <field name="url" widget="url"/>
+                                    <field name="attachment_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="connected" string="Потужність підключення">
+                            <field name="connected_note"/>
+                        </page>
+                        <page name="note" string="Примітка">
+                            <field name="note"/>
+                        </page>
+                        <page name="units" string="Одиниці">
+                            <field name="equipment_ids" readonly="1">
+                                <list>
+                                    <field name="f3d_code"/>
+                                    <field name="name"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="components" string="У складі одиниць">
+                            <field name="component_of_ids" readonly="1">
+                                <list>
+                                    <field name="f3d_code"/>
+                                    <field name="name"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_equipment_passport_list" model="ir.ui.view">
+        <field name="name">f3d.equipment.passport.list</field>
+        <field name="model">f3d.equipment.passport</field>
+        <field name="arch" type="xml">
+            <list string="Паспорти обладнання">
+                <field name="manufacturer"/>
+                <field name="model"/>
+                <field name="role"/>
+                <field name="unit_count"/>
+                <field name="power_kw"/>
+                <field name="connected_kw"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_equipment_passport_search" model="ir.ui.view">
+        <field name="name">f3d.equipment.passport.search</field>
+        <field name="model">f3d.equipment.passport</field>
+        <field name="arch" type="xml">
+            <search string="Паспорти обладнання">
+                <field name="name"/>
+                <field name="role"/>
+                <field name="manufacturer"/>
+                <filter string="Архівні" name="inactive" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter string="Виробник" name="group_manufacturer"
+                            context="{'group_by': 'manufacturer'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- V-16 -->
+    <record id="view_f3d_equipment_spec_list" model="ir.ui.view">
+        <field name="name">f3d.equipment.spec.list</field>
+        <field name="model">f3d.equipment.spec</field>
+        <field name="arch" type="xml">
+            <list string="Параметри паспортів">
+                <field name="passport_id"/>
+                <field name="name"/>
+                <field name="value_text"/>
+                <field name="value_num"/>
+                <field name="uom"/>
+                <field name="key"/>
+                <field name="kind"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_equipment_source_list" model="ir.ui.view">
+        <field name="name">f3d.equipment.source.list</field>
+        <field name="model">f3d.equipment.source</field>
+        <field name="arch" type="xml">
+            <list string="Джерела паспортів">
+                <field name="passport_id"/>
+                <field name="kind"/>
+                <field name="name"/>
+                <field name="url" widget="url"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- V-17: дії (пункти меню — у f3d_menus.xml) -->
+    <record id="action_f3d_equipment_passport" model="ir.actions.act_window">
+        <field name="name">Паспорти обладнання</field>
+        <field name="res_model">f3d.equipment.passport</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_f3d_equipment_spec" model="ir.actions.act_window">
+        <field name="name">Параметри паспортів</field>
+        <field name="res_model">f3d.equipment.spec</field>
+        <field name="view_mode">list</field>
+    </record>
+    <record id="action_f3d_equipment_source" model="ir.actions.act_window">
+        <field name="name">Джерела паспортів</field>
+        <field name="res_model">f3d.equipment.source</field>
+        <field name="view_mode">list</field>
+    </record>
+</odoo>

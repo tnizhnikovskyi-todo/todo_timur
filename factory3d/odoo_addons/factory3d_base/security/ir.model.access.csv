@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_zone_user,f3d.zone user,model_f3d_zone,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_zone_manager,f3d.zone manager,model_f3d_zone,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_equipment_passport_user,f3d.equipment.passport user,model_f3d_equipment_passport,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_equipment_passport_manager,f3d.equipment.passport manager,model_f3d_equipment_passport,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_equipment_spec_user,f3d.equipment.spec user,model_f3d_equipment_spec,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_equipment_spec_manager,f3d.equipment.spec manager,model_f3d_equipment_spec,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_equipment_source_user,f3d.equipment.source user,model_f3d_equipment_source,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equipment_source,factory3d_base.group_f3d_manager,1,1,1,1

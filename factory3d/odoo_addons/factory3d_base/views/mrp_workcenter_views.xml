@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_mrp_workcenter_form_f3d" model="ir.ui.view">
+        <field name="name">mrp.workcenter.form.f3d</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object"
+                            class="btn-primary" invisible="not f3d_code or not f3d_viewer_available"/>
+                </header>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="f3d" string="Завод 3D">
+                    <group name="f3d_scene" string="Код сцени">
+                        <field name="is_f3d_manager" invisible="1"/>
+                        <field name="f3d_viewer_available" invisible="1"/>
+                        <field name="f3d_code" readonly="not is_f3d_manager"/>
+                        <field name="f3d_alias" readonly="not is_f3d_manager"/>
+                        <field name="f3d_kind" readonly="not is_f3d_manager"/>
+                        <field name="f3d_zone_id"/>
+                    </group>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object"
+                            icon="fa-cube" class="btn-secondary" invisible="not f3d_code"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_workcenter_list_f3d" model="ir.ui.view">
+        <field name="name">mrp.workcenter.list.f3d</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_workcenter_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="code" position="after">
+                <field name="f3d_code" optional="show"/>
+            </field>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,211 @@
+code,xmlid,legacy_serial,name,role,components,zone
+ACCESS,eq_access,,Зчитувачі СКУД,access_reader,,
+AHU-1,eq_ahu_1,,Припливна установка дільниці фасадів,make_up_ahu,fabric_duct,Z-FAC
+AIR-RING,eq_air_ring,,Пневмомагістраль,,,
+ASM-1,eq_asm_1,,Збирання 1,case_clamp_manual,,
+ASM-2,eq_asm_2,,Збирання 2,case_clamp_manual,,
+ASM-3,eq_asm_3,,Збирання 3,case_clamp_manual,,
+ASM-4,eq_asm_4,,Збирання 4,case_clamp_manual,,
+ASM-5,eq_asm_5,,Збирання 5,case_clamp_manual,,
+ASM-6,eq_asm_6,,Збирання 6,case_clamp_manual,,
+ASMLINE-1,eq_asmline_1,,Лінія збирання корпусів,case_clamp_auto,,
+ATS-1,eq_ats_1,,Автоматичне введення резерву,ats,,Z-ELEC
+AUTOSPRAY-1,eq_autospray_1,,Автомат фарбування,automatic_spraying,,
+BESS,eq_bess,,Накопичувач енергії,bess,,Z-ENERGY
+BOARD-RACKS,eq_board_racks,,Консольні стелажі плит (буфер перед порталом),board_rack,,Z-SHEETS
+BOILER,eq_boiler,,Котельня на відходах (2 × Kalvis K-500M),biomass_boiler,briquetting_press,Z-BOILER
+BORE-1,eq_bore_1,,Прохідна присадка C,throughfeed_drilling,,
+BOX-1,eq_box_1,,Розкрій гофрокартону,box_machine,,
+BW-1,eq_bw_1,,BW-1,busbar_dist,tapoff,
+BW-2,eq_bw_2,,BW-2,busbar_dist,tapoff,
+BW-3,eq_bw_3,,BW-3,busbar_dist,tapoff,
+BW-4,eq_bw_4,,BW-4,busbar_dist,tapoff,
+CCTV,eq_cctv,,Відеоспостереження,cctv_camera,nvr,
+CHARGING,eq_charging,,Зарядна станція,,,Z-CHG
+CHP,eq_chp,,Когенераційна установка,chp,,Z-ENERGY
+CNC-1,eq_cnc_1,,Присадка ЧПК A,ptp_cnc,,
+CNC-2,eq_cnc_2,,Присадка ЧПК B,ptp_cnc,,
+CNC-3,eq_cnc_3,,Присадка ЧПК D1,ptp_cnc,,
+CNC-4,eq_cnc_4,,Присадка ЧПК D2,ptp_cnc,,
+COMPRESSOR,eq_compressor,,Компресорна станція,compressor,,Z-CMP
+DOWEL-1,eq_dowel_1,,Шкантування C,dowel_inserting,,
+DRY-1,eq_dry_1,,Сушильна камера,drying,,
+DUST-1,eq_dust_1,,Аспірація,dust_extraction,,
+EDGE-1,eq_edge_1,,Крайкооблицювання A,edgebander_laser,robot_return,
+EDGE-2,eq_edge_2,,Крайкооблицювання B,edgebander,,
+EDGE-3,eq_edge_3,,Крайкооблицювання C,edgebander,,
+EF-CHG,eq_ef_chg,,Витяжка зарядної станції (Ex),ex_fan,,Z-CHG
+EF-CMP,eq_ef_cmp,,Витяжний вентилятор компресорної,wall_fan,,Z-CMP
+EF-ELEC,eq_ef_elec,,Витяжні вентилятори електрощитової,wall_fan,,Z-ELEC
+EMERGENCY,eq_emergency,,Аварійне освітлення,emergency,,
+EMS-1,eq_ems_1,,Лічильники енергії,power_meter,,Z-ELEC
+EXITS,eq_exits,,Евакуаційні двері,exit_door,panic_bar,
+EYE-CHG,eq_eye_chg,,Фонтанчик для очей: зарядна,eyewash,,Z-CHG
+EYE-PAINT,eq_eye_paint,,Фонтанчик для очей: фарбування,eyewash,,Z-FAC
+FA-ASM,eq_fa_asm,,Пожежна сигналізація: Збирання (оптико-теплові (пил деревини)),multi_detector,,Z-ASM
+FA-BOILER,eq_fa_boiler,,Пожежна сигналізація: Котельня (теплові),heat_detector,,Z-BOILER
+FA-CHG,eq_fa_chg,,Пожежна сигналізація: Зарядна станція (оптико-теплові (пил деревини)),multi_detector,,Z-CHG
+FA-CMP,eq_fa_cmp,,Пожежна сигналізація: Компресорна (оптико-теплові (пил деревини)),multi_detector,,Z-CMP
+FA-CNC,eq_fa_cnc,,Пожежна сигналізація: Присадка (оптико-теплові (пил деревини)),multi_detector,,Z-CNC
+FA-CUT,eq_fa_cut,,Пожежна сигналізація: Розкрій (оптико-теплові (пил деревини)),multi_detector,,Z-CUT
+FA-EB,eq_fa_eb,,Пожежна сигналізація: Крайкооблицювання (оптико-теплові (пил деревини)),multi_detector,,Z-EB
+FA-EDGE,eq_fa_edge,,Пожежна сигналізація: Склад крайки (димові оптичні),smoke_detector,,Z-EDGE
+FA-ELEC,eq_fa_elec,,Пожежна сигналізація: Електрощитова (димові оптичні),smoke_detector,,Z-ELEC
+FA-FAC,eq_fa_fac,,Пожежна сигналізація: Дільниця фасадів МДФ (оптико-теплові (пил деревини)),multi_detector,,Z-FAC
+FA-FG,eq_fa_fg,,Пожежна сигналізація: Склад готової продукції (димові оптичні),smoke_detector,,Z-FG
+FA-FLAME,eq_fa_flame,,Сповіщувачі полум'я (фарбування),flame_detector,,
+FA-HW,eq_fa_hw,,Пожежна сигналізація: Склад фурнітури (димові оптичні),smoke_detector,,Z-HW
+FA-MAINT,eq_fa_maint,,Пожежна сигналізація: Ремонтна дільниця (оптико-теплові (пил деревини)),multi_detector,,Z-MAINT
+FA-MCP,eq_fa_mcp,,Ручні пожежні сповіщувачі,mcp,,
+FA-OFFICE,eq_fa_office,,Пожежна сигналізація: Офіс (димові оптичні),smoke_detector,,Z-OFFICE
+FA-OUT-1,eq_fa_out_1,,Пожежна сигналізація: Відвантаження · ворота 1 (димові оптичні),smoke_detector,,Z-OUT-1
+FA-OUT-2,eq_fa_out_2,,Пожежна сигналізація: Відвантаження · ворота 2 (димові оптичні),smoke_detector,,Z-OUT-2
+FA-OUT-3,eq_fa_out_3,,Пожежна сигналізація: Відвантаження · ворота 3 (димові оптичні),smoke_detector,,Z-OUT-3
+FA-OUT-4,eq_fa_out_4,,Пожежна сигналізація: Відвантаження · ворота 4 (димові оптичні),smoke_detector,,Z-OUT-4
+FA-OUT-5,eq_fa_out_5,,Пожежна сигналізація: Відвантаження · ворота 5 (димові оптичні),smoke_detector,,Z-OUT-5
+FA-OUT-6,eq_fa_out_6,,Пожежна сигналізація: Відвантаження · ворота 6 (димові оптичні),smoke_detector,,Z-OUT-6
+FA-OUT-7,eq_fa_out_7,,Пожежна сигналізація: Відвантаження · ворота 7 (димові оптичні),smoke_detector,,Z-OUT-7
+FA-PACK,eq_fa_pack,,Пожежна сигналізація: Пакування (димові оптичні),smoke_detector,,Z-PACK
+FA-PKS,eq_fa_pks,,Пожежна сигналізація: Пакувальні матеріали (димові оптичні),smoke_detector,,Z-PKS
+FA-POST,eq_fa_post,,Пожежна сигналізація: Вихід з пакування (димові оптичні),smoke_detector,,Z-POST
+FA-PRE,eq_fa_pre,,Пожежна сигналізація: Буфер комплектів (димові оптичні),smoke_detector,,Z-PRE
+FA-RCV-1,eq_fa_rcv_1,,Пожежна сигналізація: Приймання плит · ворота 1 (димові оптичні),smoke_detector,,Z-RCV-1
+FA-RCV-2,eq_fa_rcv_2,,Пожежна сигналізація: Приймання плит · ворота 2 (димові оптичні),smoke_detector,,Z-RCV-2
+FA-RCV-3,eq_fa_rcv_3,,Пожежна сигналізація: Приймання плит · ворота 3 (димові оптичні),smoke_detector,,Z-RCV-3
+FA-RCV-4,eq_fa_rcv_4,,"Пожежна сигналізація: Приймання фурнітури, контроль і карантин · ворота 4 (димові оптичні)",smoke_detector,,Z-RCV-4
+FA-RCV-5,eq_fa_rcv_5,,Пожежна сигналізація: Приймання крайки · ворота 5 (димові оптичні),smoke_detector,,Z-RCV-5
+FA-RCV-6,eq_fa_rcv_6,,Пожежна сигналізація: Приймання ЛФМ · ворота 6 (димові оптичні),smoke_detector,,Z-RCV-6
+FA-RCV-7,eq_fa_rcv_7,,Пожежна сигналізація: Приймання пакматеріалів · ворота 7 (димові оптичні),smoke_detector,,Z-RCV-7
+FA-SHEETS,eq_fa_sheets,,Пожежна сигналізація: Склад плит (димові оптичні),smoke_detector,,Z-SHEETS
+FA-SND,eq_fa_snd,,Оповіщувачі світлозвукові,sounder_beacon,,
+FA-SOC,eq_fa_soc,,Пожежна сигналізація: Побутові приміщення (димові оптичні),smoke_detector,,Z-SOC
+FA-SORT,eq_fa_sort,,Пожежна сигналізація: Сортування деталей (оптико-теплові (пил деревини)),multi_detector,,Z-SORT
+FACP-1,eq_facp_1,,Приймально-контрольний прилад,facp,,Z-OFFICE
+FL-1,eq_fl_1,FL-4369,Навантажувач ГП 1,forklift,,
+FL-2,eq_fl_2,FL-4912,Навантажувач приймання,board_forklift,,
+FL-3,eq_fl_3,FL-4731,Навантажувач відвантаження,forklift,,
+FL-4,eq_fl_4,FL-4374,Навантажувач ГП 2,forklift,,
+FL-5,eq_fl_5,FL-4193,Навантажувач пакування,forklift,,
+FL-6,eq_fl_6,,Навантажувач плит 2,board_forklift,,
+FL-C1,eq_fl_c1,FL-4606,Навантажувач (резерв),forklift,,
+FL-C2,eq_fl_c2,FL-4787,Навантажувач (резерв),forklift,,
+GANTRY-1,eq_gantry_1,,Портальний склад плит,board_storage,,Z-SHEETS
+GATE-E,eq_gate_e,,Шлагбаум виїзду,barrier,,Z-GATE-E
+GATE-W,eq_gate_w,,Шлагбаум в'їзду,barrier,,Z-GATE-W
+GENSET,eq_genset,,Дизель-генератор,genset,,Z-ENERGY
+GLUE-1,eq_glue_1,,Кабіна нанесення клею,glue_spray_booth,,
+HINGE-1,eq_hinge_1,,Встановлення завіс,hinge_insertion,,
+IOT-OUT,eq_iot_out,,IoT Box: відвантаження,iot_box,,
+IOT-PACK,eq_iot_pack,,IoT Box: пакування,iot_box,,Z-PACK
+IOT-RCV,eq_iot_rcv,,IoT Box: приймання,iot_box,,
+LP-1,eq_lp_1,,Щит освітлення LP-1,lighting_control,,
+LP-2,eq_lp_2,,Щит освітлення LP-2,lighting_control,,
+LP-3,eq_lp_3,,Щит освітлення LP-3,lighting_control,,
+LPS,eq_lps,,Блискавкозахист,lightning_air,earthing,Z-ROOF
+LT-ASM,eq_lt_asm,,Освітлення: Збирання,highbay,lighting_control,Z-ASM
+LT-CHG,eq_lt_chg,,Освітлення: Зарядна станція,highbay,lighting_control,Z-CHG
+LT-CMP,eq_lt_cmp,,Освітлення: Компресорна,highbay,lighting_control,Z-CMP
+LT-CNC,eq_lt_cnc,,Освітлення: Присадка,highbay,lighting_control,Z-CNC
+LT-CUT,eq_lt_cut,,Освітлення: Розкрій,highbay,lighting_control,Z-CUT
+LT-EB,eq_lt_eb,,Освітлення: Крайкооблицювання,highbay,lighting_control,Z-EB
+LT-EDGE,eq_lt_edge,,Освітлення: Склад крайки,highbay_rack,lighting_control,Z-EDGE
+LT-ELEC,eq_lt_elec,,Освітлення: Електрощитова,highbay,lighting_control,Z-ELEC
+LT-FAC,eq_lt_fac,,Освітлення: Дільниця фасадів МДФ,highbay,lighting_control,Z-FAC
+LT-FG,eq_lt_fg,,Освітлення: Склад готової продукції,highbay_rack,lighting_control,Z-FG
+LT-HW,eq_lt_hw,,Освітлення: Склад фурнітури,highbay_rack,lighting_control,Z-HW
+LT-MAINT,eq_lt_maint,,Освітлення: Ремонтна дільниця,highbay,lighting_control,Z-MAINT
+LT-OUT-1,eq_lt_out_1,,Освітлення: Відвантаження · ворота 1,highbay,lighting_control,Z-OUT-1
+LT-OUT-2,eq_lt_out_2,,Освітлення: Відвантаження · ворота 2,highbay,lighting_control,Z-OUT-2
+LT-OUT-3,eq_lt_out_3,,Освітлення: Відвантаження · ворота 3,highbay,lighting_control,Z-OUT-3
+LT-OUT-4,eq_lt_out_4,,Освітлення: Відвантаження · ворота 4,highbay,lighting_control,Z-OUT-4
+LT-OUT-5,eq_lt_out_5,,Освітлення: Відвантаження · ворота 5,highbay,lighting_control,Z-OUT-5
+LT-OUT-6,eq_lt_out_6,,Освітлення: Відвантаження · ворота 6,highbay,lighting_control,Z-OUT-6
+LT-OUT-7,eq_lt_out_7,,Освітлення: Відвантаження · ворота 7,highbay,lighting_control,Z-OUT-7
+LT-PACK,eq_lt_pack,,Освітлення: Пакування,highbay,lighting_control,Z-PACK
+LT-PKS,eq_lt_pks,,Освітлення: Пакувальні матеріали,highbay,lighting_control,Z-PKS
+LT-POST,eq_lt_post,,Освітлення: Вихід з пакування,highbay,lighting_control,Z-POST
+LT-PRE,eq_lt_pre,,Освітлення: Буфер комплектів,highbay,lighting_control,Z-PRE
+LT-RCV-1,eq_lt_rcv_1,,Освітлення: Приймання плит · ворота 1,highbay,lighting_control,Z-RCV-1
+LT-RCV-2,eq_lt_rcv_2,,Освітлення: Приймання плит · ворота 2,highbay,lighting_control,Z-RCV-2
+LT-RCV-3,eq_lt_rcv_3,,Освітлення: Приймання плит · ворота 3,highbay,lighting_control,Z-RCV-3
+LT-RCV-4,eq_lt_rcv_4,,"Освітлення: Приймання фурнітури, контроль і карантин · ворота 4",highbay,lighting_control,Z-RCV-4
+LT-RCV-5,eq_lt_rcv_5,,Освітлення: Приймання крайки · ворота 5,highbay,lighting_control,Z-RCV-5
+LT-RCV-6,eq_lt_rcv_6,,Освітлення: Приймання ЛФМ · ворота 6,highbay,lighting_control,Z-RCV-6
+LT-RCV-7,eq_lt_rcv_7,,Освітлення: Приймання пакматеріалів · ворота 7,highbay,lighting_control,Z-RCV-7
+LT-SHEETS,eq_lt_sheets,,Освітлення: Склад плит,highbay,lighting_control,Z-SHEETS
+LT-SORT,eq_lt_sort,,Освітлення: Сортування деталей,highbay,lighting_control,Z-SORT
+NEST-1,eq_nest_1,,Нестинг ЧПК,nesting_cnc,,
+ODOO-SCANNERS,eq_odoo_scanners,,Сканери штрихкодів,handheld_scanner,,
+ODOO-TABLETS,eq_odoo_tablets,,Планшети робочих місць Odoo,shopfloor_tablet,,
+PACK-1,eq_pack_1,,Пакування 1,stretch_wrapper,,
+PACK-2,eq_pack_2,,Пакування 2,stretch_wrapper,,
+PACKLINE-1,eq_packline_1,,Термоусадка та обв'язка,shrink_line,strapping,
+PFC-1,eq_pfc_1,,PFC-1,pfc,,Z-ELEC
+PFC-2,eq_pfc_2,,PFC-2,pfc,,Z-ELEC
+PRESS-1,eq_press_1,,Мембранно-вакуумний прес,membrane_press,,
+PRN-OUT,eq_prn_out,,Принтер етикеток: відвантаження,label_printer,,
+PRN-PACK1,eq_prn_pack1,,Принтер етикеток: пакування 1,label_printer,,Z-PACK
+PRN-PACK2,eq_prn_pack2,,Принтер етикеток: пакування 2,label_printer,,Z-PACK
+PRN-RCV,eq_prn_rcv,,Принтер етикеток: приймання,label_printer,,
+PV-INV,eq_pv_inv,,Сонячна станція: інвертори,pv_inverter,,Z-ENERGY
+PV-ROOF,eq_pv_roof,,Сонячна станція: модулі,pv_module,pv_inverter,Z-ROOF
+Q1,eq_q1,,Q1,acb,power_meter,Z-ELEC
+Q2,eq_q2,,Q2,acb,power_meter,Z-ELEC
+QF-1,eq_qf_1,,QF-1,main_switchboard,power_meter,Z-ELEC
+QF-2,eq_qf_2,,QF-2,main_switchboard,power_meter,Z-ELEC
+QF-3,eq_qf_3,,QF-3,main_switchboard,power_meter,Z-ELEC
+QF-4,eq_qf_4,,QF-4,main_switchboard,power_meter,Z-ELEC
+QF-C1,eq_qf_c1,,QF-C1,main_switchboard,power_meter,Z-ELEC
+QF-C2,eq_qf_c2,,QF-C2,main_switchboard,power_meter,Z-ELEC
+QS,eq_qs,,QS,acb,,Z-ELEC
+RM6-1,eq_rm6_1,,КТП 10 кВ (комірки RM6),substation,,Z-ELEC
+RV-01,eq_rv_01,,Дахова установка RV-01,roofvent,,Z-RCV-2
+RV-02,eq_rv_02,,Дахова установка RV-02,roofvent,,Z-RCV-4
+RV-03,eq_rv_03,,Дахова установка RV-03,roofvent,,Z-RCV-7
+RV-04,eq_rv_04,,Дахова установка RV-04,roofvent,,Z-SHEETS
+RV-05,eq_rv_05,,Дахова установка RV-05,roofvent,,Z-SHEETS
+RV-06,eq_rv_06,,Дахова установка RV-06,roofvent,,Z-HW
+RV-07,eq_rv_07,,Дахова установка RV-07,roofvent,,Z-EDGE
+RV-08,eq_rv_08,,Дахова установка RV-08,roofvent,,Z-CUT
+RV-09,eq_rv_09,,Дахова установка RV-09,roofvent,,Z-CUT
+RV-10,eq_rv_10,,Дахова установка RV-10,roofvent,,Z-EB
+RV-11,eq_rv_11,,Дахова установка RV-11,roofvent,,Z-EB
+RV-12,eq_rv_12,,Дахова установка RV-12,roofvent,,Z-CNC
+RV-13,eq_rv_13,,Дахова установка RV-13,roofvent,,Z-CNC
+RV-14,eq_rv_14,,Дахова установка RV-14,roofvent,,Z-SORT
+RV-15,eq_rv_15,,Дахова установка RV-15,roofvent,,Z-SORT
+RV-16,eq_rv_16,,Дахова установка RV-16,roofvent,,Z-ASM
+RV-17,eq_rv_17,,Дахова установка RV-17,roofvent,,Z-PRE
+RV-18,eq_rv_18,,Дахова установка RV-18,roofvent,,Z-PACK
+RV-19,eq_rv_19,,Дахова установка RV-19,roofvent,,Z-PACK
+RV-20,eq_rv_20,,Дахова установка RV-20,roofvent,,Z-POST
+RV-21,eq_rv_21,,Дахова установка RV-21,roofvent,,Z-FG
+RV-22,eq_rv_22,,Дахова установка RV-22,roofvent,,Z-FG
+RV-23,eq_rv_23,,Дахова установка RV-23,roofvent,,Z-OUT-2
+RV-24,eq_rv_24,,Дахова установка RV-24,roofvent,,Z-OUT-4
+RV-25,eq_rv_25,,Дахова установка RV-25,roofvent,,Z-OUT-7
+SAND-1,eq_sand_1,,Шліфування фасадів,wide_belt_sander,,
+SAW-1,eq_saw_1,,Розкрій 1,beam_saw,,
+SAW-2,eq_saw_2,,Розкрій 2,beam_saw,,
+SAW-3,eq_saw_3,,Пакетний розкрій,beam_saw_book,,
+SCALE-OUT1,eq_scale_out1,,Палетні ваги: відвантаження 1,scale,,
+SCALE-OUT2,eq_scale_out2,,Палетні ваги: відвантаження 2,scale,,
+SCALE-RCV,eq_scale_rcv,,Палетні ваги: приймання,scale,,
+SERVER,eq_server,,Серверна шафа,server_rack,network_switch;nvr,
+SLIDE-1,eq_slide_1,,Форматно-розкрійний,sliding_table_saw,,
+SMOKE-CTRL,eq_smoke_ctrl,,Щит керування димовидаленням,smoke_control,,
+SMOKE-VENTS,eq_smoke_vents,,Люки димовидалення,smoke_vent,,Z-ROOF
+SORT-1,eq_sort_1,,Сортувальний робот,sorting_cell,,
+SPARK-1,eq_spark_1,,Іскрогасіння аспірації,spark_detection,,
+SPRAY-1,eq_spray_1,,Фарбувальна камера,manual_spray_booth,paint_pump,
+SPRINKLERS,eq_sprinklers,,Спринклерна система,,,
+SWB-1,eq_swb_1,,Головний розподільний щит ГРЩ,main_switchboard,acb;power_meter,Z-ELEC
+T1,eq_t1,,T1,transformer,busbar_main,Z-ELEC
+T2,eq_t2,,T2,transformer,busbar_main,Z-ELEC
+TRUCK-SCALE,eq_truck_scale,,Автомобільні ваги,truck_scale,,Z-GATE-E
+TUGGER-1,eq_tugger_1,,Електротягач,tugger,,
+TURNSTILES,eq_turnstiles,,Турнікети прохідної,turnstile,access_reader,Z-KPP
+UV-1,eq_uv_1,,УФ-лакування,uv_line,uv_oven,
+VSAW-1,eq_vsaw_1,,Вертикальна пила,vertical_panel_saw,,
+WATER,eq_water,,Водомірний вузол,water_meter,eyewash;wastewater,
+WIFI,eq_wifi,,Точки Wi-Fi,wifi_ap,,

@@ -1,0 +1,15 @@
+code,side,no,barcode,alias,x,y,accepts,zone
+DOCK-W1,west,1,UNLOAD-1,UNLOAD-1,0.0,5.0,Плитні матеріали,Z-RCV-1
+DOCK-W2,west,2,UNLOAD-2,UNLOAD-2,0.0,15.0,Плитні матеріали,Z-RCV-2
+DOCK-W3,west,3,UNLOAD-3,UNLOAD-3,0.0,25.0,Плитні матеріали,Z-RCV-3
+DOCK-W4,west,4,UNLOAD-4,UNLOAD-4,0.0,35.0,Фурнітура,Z-RCV-4
+DOCK-W5,west,5,UNLOAD-5,UNLOAD-5,0.0,45.0,Крайка,Z-RCV-5
+DOCK-W6,west,6,UNLOAD-6,UNLOAD-6,0.0,55.0,ЛФМ,Z-RCV-6
+DOCK-W7,west,7,UNLOAD-7,UNLOAD-7,0.0,65.0,Пакування,Z-RCV-7
+DOCK-E1,east,1,DOCK-E1,,150.0,5.0,,Z-OUT-1
+DOCK-E2,east,2,DOCK-E2,,150.0,15.0,,Z-OUT-2
+DOCK-E3,east,3,DOCK-E3,,150.0,25.0,,Z-OUT-3
+DOCK-E4,east,4,DOCK-E4,,150.0,35.0,,Z-OUT-4
+DOCK-E5,east,5,DOCK-E5,,150.0,45.0,,Z-OUT-5
+DOCK-E6,east,6,DOCK-E6,,150.0,55.0,,Z-OUT-6
+DOCK-E7,east,7,DOCK-E7,,150.0,65.0,,Z-OUT-7
