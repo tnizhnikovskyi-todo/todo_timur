@@ -1,16 +1,25 @@
 # factory3d_machine_connect — технічне рішення
 
-Версія 0.1 · 14.10.2026 · автор: агент-архітектор модуля (хвиля 2) · статус: **чернетка на погодження**.
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · автор: агент-архітектор модуля (хвиля 2) · статус: **чернетка на погодження**.
+Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: X-03 (канал команд — `f3d.command.payload` telemetry 19.0.1.1.0,
+CR-01: CM-08, A-14, §2.1, §2.2, §2.5 приклад 3, §2.6, ризики; текстова граматика — запасна; плагіни — `call()`, CM-06),
+X-16 (сигнали модуля — `origin='module'`, SPEC Додаток C.2), X-18 (код команд оптимізатора `equipment/CUTOPT/cmd`),
+X-27 (`machine_state` — `viewer_visible=False`, CM-02), X-32 (пункт «Налаштування верстатів» під «Завод 3D →
+Налаштування», sequence 40: §1.2, FR-31), X-57 (тіла запуску сценаріїв у ТК SPEC), X-76 (`equipment/CUTOPT/cmd` і
+`equipment/GANTRY-1/stacks` у каталозі iot_sim — `protocol=none`, §2.4); §5.1 — закрито Q-09 (X-03), Q-16 (X-52),
+Q-17 (X-38), частково Q-15 (X-34, X-38, X-43).
 Каркас: `docs/ARCHITECTURE.md` (далі «каркас»: §1 принцип, §3 `factory3d_machine_connect ← factory3d_telemetry,
 mrp_workorder`, §4 топологія, §5 конвенції й стоп-крани, §6.4 телеметрія, §6.5 плагіни `opcua` і `woodstore`,
 §6.6 P-01…P-04, §6.7 переглядач, §6.8 заявки ТО, рішення D-01, D-02, D-04, **D-05** (OPC 40550-1, tapio не в v1),
 D-11, §9 питання 2). Специфікація: `docs/modules/factory3d_machine_connect/SPEC.md`.
 Спирається на контракти `factory3d_base` CB-01 (домішка, коди `SAW-1`…), CB-03 (зони), CB-05 (`f3d_loc_kind`,
-`f3d_capacity` — стоси `PLT-*`), CB-07/CB-08 (паспорти, `get_num`), CB-09 (меню, sequence 40), CB-10 (групи,
+`f3d_capacity` — стоси `PLT-*`), CB-07/CB-08 (паспорти, `get_num`), CB-09 (меню, sequence 40; пункт налаштувань під
+`menu_f3d_config` — X-32), CB-10 (групи,
 `factory3d.base.environment`), Додаток B base (коди операторів `OP-<РЦ>`); `factory3d_telemetry` CT-01…CT-12
 (моделі, інтерфейс плагіна CT-02, схеми адрес CT-03 / Додаток A, API-01…07, правило заявок CT-05, `_f3d_ingest`
 CT-10, імпорт каталогу CT-11, локальні джерела CT-12, хук `f3d.push.handler` CT-08); `factory3d_viewer` M-01
-(провайдер), M-03 (шина), API-03 (дельта), Додаток A.4/A.5/A.10/A.14; «документацію вендора» `factory3d_iot_sim`
+(провайдер), M-03 (шина), API-03 (дельта), Додаток A.4/A.5/A.10/A.14; telemetry 19.0.1.1.0 — M-06 `f3d.command.payload`,
+`SourcePlugin.call` (CR-01, X-03); «документацію вендора» `factory3d_iot_sim`
 SPEC §8.3 (P-01 OPC UA), §8.4.2 (P-02 ADAM-6050), §8.5 (P-03 woodStore API-20…27), §8.6 (P-04 `/jobs`
 API-30…34), §9.1 R-14…R-18, §9.3 S-01/S-02, Додаток A (рядки 97–98, 197–334). Рішення автора — **A-xx** (§7),
 відкриті питання — **Q-xx** (§5.1), контракти цього модуля — **CM-xx** (§2.1).
@@ -82,7 +91,7 @@ Failure» на CNC-2 з 09:42 (опис «MR/00031»). Причин втрат 9
 | Комірник плит / оператор порталу (`stock.group_stock_user`; OP-W5 «Оператор порталу») | бачить стоси під порталом із залишком Odoo й порталу, розбіжності, завдання порталу; запускає поповнення під портал | Завод 3D → Верстати → Портал: стоси / завдання |
 | Начальник складу (`stock.group_stock_manager`) | приймає розбіжність стосу інвентаризацією або виправляє стос у woodStore | Портал: стоси → «Розбіжності» |
 | Інженер АСУ (`group_f3d_manager`) | налаштовує підключення верстата (джерело, сигнали, режим автостарту, поріг мікрозупинки), довідник повідомлень OPC UA → причина | Завод 3D → Верстати → Налаштування |
-| Адміністратор (`group_f3d_admin`) | стоп-крани читання/автостарту/запису, режим карт розкрою, міграція | Завод 3D → Налаштування → Параметри системи; Налаштування → Завод 3D → Верстати |
+| Адміністратор (`group_f3d_admin`) | стоп-крани читання/автостарту/запису, режим карт розкрою, міграція | Завод 3D → Налаштування → Налаштування верстатів (`res.config.settings`, sequence 40 — X-32), Параметри системи |
 | Колектор (технічний клієнт, токен telemetry) | плагіни `opcua`, `rest_vendor` читають верстати, портал, оптимізатор; виконують команди; беруть експорт карти розкрою (API-01) | `/f3d/telemetry/*` (telemetry), `/f3d/machine/cutmap/*` |
 | Модуль `factory3d_energy` (код) | бере інтервали роботи й налагодження завдань для кВт·год на завдання/МО | CM-03 |
 
@@ -120,7 +129,7 @@ Failure» на CNC-2 з 09:42 (опис «MR/00031»). Причин втрат 9
 | FR-28 | Плагін колектора `rest_vendor` з адаптерами `woodstore` (статус, стоси, завдання, події, команди) і `cutopt` (завантаження списку деталей, статус, план, MPR, випуск) та загальним опитуванням `path/json_path`. |
 | FR-29 | Дані: 35 верстатів, 22 джерела (15 OPC UA, 4 ADAM, 2 REST, 1 локальне), 207 сигналів (140 з каталогу емулятора + 67 нових), 10 повідомлень OPC UA → причини, причина «Не вказано», переклади причин uk, розміри 7 листових товарів. |
 | FR-30 | Міграція демо: 73 закриті простої й відкрита аварія CNC-2 стають простоями `f3d.downtime` без створення нових записів журналу часу; виправлення категорії двох демо-причин; прив'язка MR/00031; повторний запуск нічого не дублює. |
-| FR-31 | Меню «Завод 3D → Верстати» (`sequence=40`): Огляд, Простої, OEE, Журнал станів, Портал (стоси, завдання), Карти розкрою, Деталі виробів, Налаштування. |
+| FR-31 | Меню «Завод 3D → Верстати» (`sequence=40`): Огляд, Простої, OEE, Журнал станів, Портал (стоси, завдання), Карти розкрою, Деталі виробів, Налаштування (довідники); пункт параметрів модуля «Налаштування верстатів» (`res.config.settings`) — під «Завод 3D → Налаштування» (`factory3d_base.menu_f3d_config`, `sequence=40`, X-32). |
 | FR-32 | Права: читання — `group_f3d_user`; причини — `mrp.group_mrp_user`; підтвердження, неповні партії — `mrp.group_mrp_manager`; налаштування верстатів, карти розкрою, деталі — `group_f3d_manager`; стоп-крани — `group_f3d_admin`; розбіжності стосів — `stock.group_stock_manager`. |
 | FR-33 | Провайдер переглядача `f3d.viewer.provider.machines` (`_f3d_sequence=75`) доповнює `workcenters[код]` живим станом, OEE (A×P×Q), поточним простоєм і лічильником, `equipment["GANTRY-1"]` — станом порталу, `locations["PLT-*"]` — залишком порталу, `productions[]` — картою розкрою й завданням порталу, `sheet_chain` — завданнями порталу; не дублює полів вбудованих провайдерів. |
 | FR-34 | Контракт для energy: інтервали роботи й налагодження кожного завдання (`_f3d_wo_intervals`) і хвилини роботи/налагодження на `mrp.workorder`. |
@@ -160,10 +169,11 @@ Failure» на CNC-2 з 09:42 (опис «MR/00031»). Причин втрат 9
 Що **бере** модуль: CB-01 (`f3d_code` РЦ/обладнання/локацій/працівників, `search_f3d`), CB-03 (`f3d_zone_id` РЦ для
 групування дашборда), CB-05 (`f3d_loc_kind='stack'`, `f3d_capacity=60` стосів `PLT-*`), CB-09 (меню 40), CB-10
 (групи, `factory3d.base.environment` для умовчань стоп-кранів), Додаток B base (оператор `OP-<код>`);
-telemetry CT-01 (моделі), CT-02 (інтерфейс плагіна, entry points), CT-03/Додаток A (`opcua`: `nodeid`, `mode`,
+telemetry CT-01 (моделі), CT-02 (інтерфейс плагіна, entry points, `call()` — CR-01), CT-03/Додаток A (`opcua`: `nodeid`, `mode`,
 `sampling_ms`, `map`; `rest_vendor`: `method`, `path`, `json_path`, `query`, `map`; `modbus_tcp` для ADAM), CT-04
 (API-01…07 — колектор), CT-05 (заявки з тривог), CT-08 (`f3d.push.handler`), CT-10 (`_f3d_ingest`), CT-12
-(локальний тип джерела для обчислених станів), M-06 (`f3d.command` — канал команд), M-11 (маршрути подій);
+(локальний тип джерела для обчислених станів), M-06 (`f3d.command` — канал команд; з 19.0.1.1.0 — `payload`/`result_data`,
+CR-01, X-03), M-11 (маршрути подій);
 viewer M-01 (контракт провайдера), M-03 (`_notify`), Додаток A.4, A.5, A.10, A.14; iot_sim P-01…P-04 (адреси,
 формати), S-01/S-02 (стендові сценарії).
 
@@ -172,13 +182,13 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 | ID | Контракт | Споживачі |
 |---|---|---|
 | CM-01 | Моделі `f3d.machine` (M-01), `f3d.machine.state.log` (M-02), `f3d.downtime` (M-03), `f3d.machine.event` (M-04), `f3d.machine.message` (M-05), `f3d.oee.shift` (M-06), `f3d.gantry.stack` (M-07), `f3d.gantry.job` (M-08), `f3d.cut.part` (M-09), `f3d.cut.map` (M-10), `f3d.cut.map.line` (M-11) з іменами полів SPEC §2 | energy, viewer, звіти |
-| CM-02 | Нормалізовані стани верстата `working\|setup\|idle\|fault\|off\|nodata` (R-01) і часовий ряд у телеметрії — сигнал `workcenters/<код>/machine_state` (`kind='state'`, `states` = 6 значень, джерело `MC-DERIVED` локального типу `f3d_machine`, CT-12) | energy, viewer, звіти, bms (освітлення за роботою верстатів — за потреби) |
+| CM-02 | Нормалізовані стани верстата `working\|setup\|idle\|fault\|off\|nodata` (R-01) і часовий ряд у телеметрії — сигнал `workcenters/<код>/machine_state` (`kind='state'`, `states` = 6 значень, джерело `MC-DERIVED` локального типу `f3d_machine`, CT-12; `viewer_visible=False` — у payload переглядача `machine_state` ставить провайдер CM-05, X-27) | energy, viewer, звіти, bms (освітлення за роботою верстатів — за потреби) |
 | CM-03 | Енергія на завдання: `env['f3d.machine']._f3d_wo_intervals(workorders, date_from=None, date_to=None) -> dict[int, list[tuple[datetime, datetime, str]]]` (UTC naive, стани `working` і `setup`, обрізані вікном) і збережені `mrp.workorder.f3d_run_min`, `f3d_setup_min`; інтервали без завдання — `_f3d_wc_intervals(workcenter, date_from, date_to)` | `factory3d_energy` (кВт·год і вартість на завдання/МО = ∫ `energy/consumers/<код>/p_now` по інтервалах) |
 | CM-04 | OEE: `f3d.oee.shift` (поля `availability`, `performance`, `quality`, `oee`, хвилини за категоріями, `coverage`) і метод `f3d.machine._f3d_oee(date_from, date_to) -> dict` (R-13) | viewer, energy (питома енергія на придатну деталь — за потреби), звіти |
 | CM-05 | Провайдер переглядача `f3d.viewer.provider.machines` (`_f3d_sequence=75`, `_f3d_sections=()`): додаткові ключі `workcenters[код].machine_state/state_since/availability/performance/quality/downtime/pieces_shift/link/online`, перекриття `oee` і `status` (R-25); `equipment["GANTRY-1"].gantry`; `locations["PLT-*"].gantry`; `productions[].cut_map`, `productions[].supply.gantry`; `sheet_chain.steps[4].stock` | viewer |
-| CM-06 | Пакет плагінів колектора `f3d_collector_mc` (`services/collector_plugins/machine_connect`), entry points `factory3d_collector.plugins`: `opcua = f3d_collector_mc.opcua:OpcUaPlugin`, `rest_vendor = f3d_collector_mc.rest_vendor:RestVendorPlugin` (адаптери `woodstore`, `cutopt`, `generic`); ключі-розширення адрес/параметрів (CT-03 дозволяє): `opcua.address.ns_uri`, `events`, `io`, `call`; `opcua.params.ns_uri`; `rest_vendor.params.vendor`, `events_period_s`, `stacks_period_s`; `rest_vendor.address.cmd`, `default`, `io` | telemetry (колектор), access (може вживати `generic` адаптер) |
+| CM-06 | Пакет плагінів колектора `f3d_collector_mc` (`services/collector_plugins/machine_connect`), entry points `factory3d_collector.plugins`: `opcua = f3d_collector_mc.opcua:OpcUaPlugin`, `rest_vendor = f3d_collector_mc.rest_vendor:RestVendorPlugin` (адаптери `woodstore`, `cutopt`, `generic`); ключі-розширення адрес/параметрів (CT-03 дозволяє; довідково в telemetry Додатку A — X-52): `opcua.address.ns_uri`, `events`, `io`, `call`, `job_select`; `opcua.params.ns_uri`, `app_uri`, `heartbeat_s`; `rest_vendor.params.vendor`, `events_period_s`, `stacks_period_s`, `jobs_period_s`; `rest_vendor.address.cmd`, `default`, `io`; команди плагіни виконують методом `call(signal, payload) -> dict` (CR-01, X-03), `write()` — запасна текстова граматика CM-08 | telemetry (колектор), access (може вживати `generic` адаптер) |
 | CM-07 | Маршрути подій колектора → Odoo (telemetry API-05): `mc_opcua` (EV-01 — подія/тривога OPC UA), `mc_woodstore` (EV-02 — події, стоси, завдання порталу), `mc_cutopt` (EV-03 — стан, план, MPR оптимізатора); обробник `f3d.push.handler.machine_connect` | telemetry |
-| CM-08 | Граматика текстових команд `f3d.command.text` (≤ 64 символи, роздільник `;`): CMD-01 `JobOrderControl` верстата, CMD-02 портал, CMD-03 оптимізатор (R-21) — поки telemetry не має поля корисного навантаження команди (Q-09) | telemetry (колектор) |
+| CM-08 | Команди Odoo → пристрої — корисне навантаження `f3d.command.payload` (telemetry M-06, CR-01, 19.0.1.1.0, X-03): схеми CMD-01 `JobOrderControl` верстата (`{"method", "job", "qty", "ref", "priority"}`), CMD-02 портал (`{"op": "feed"\|"cancel"\|"stack", …}`), CMD-03 оптимізатор (`{"op": "upload"\|"status"\|"release"\|"mpr", …}`) і об'єкти результату `call()` → `f3d.command.result_data` (SPEC R-21); текстова граматика `f3d.command.text` (≤ 64 символи, роздільник `;`) — запасна: `write()` плагінів її приймає, Odoo створює текстову команду лише без поля `payload` | telemetry (колектор) |
 | CM-09 | Причини втрат: стандартні `mrp.block_reason0/1/2` з перекладами uk, `factory3d_machine_connect.loss_unknown` «Не вказано» (доступність), поле `mrp.workcenter.productivity.loss.f3d_planned` (плановий простій — не входить у плановий час); поля `mrp.workcenter.productivity.f3d_downtime_id`, `f3d_source`, `f3d_auto` | viewer (втрати в картці), energy |
 
 ### 2.2 Архітектурна схема
@@ -207,7 +217,7 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 │                                    mc_cutopt ─► f3d.cut.map (план, MPR — вкладення)                                        │
 │ mrp.workcenter.productivity.create (override) ─► R-06 злиття з причиною оператора                                         │
 │ maintenance.request (telemetry CT-05 з сигналу alarm) ─► R-08 прив'язка до простою, текст події                           │
-│ f3d.gantry.job / f3d.cut.map / JobOrder ─► f3d.command (текст CMD-01…03) ─► колектор (API-06) ─► пристрій               │
+│ f3d.gantry.job / f3d.cut.map / JobOrder ─► f3d.command (payload CMD-01…03) ─► колектор (API-06) ─► пристрій             │
 │ крони: такт 1 хв · OEE 5 хв (f3d.oee.shift) · портал 1 хв · карти 1 хв · ротація                                        │
 │ f3d.viewer.provider.machines (75) ─► payload переглядача; f3d.viewer.event._notify('mrp.workcenter', [код], 'state')     │
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -254,8 +264,8 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 |---|---|---|---|---|---|
 | P-01 | SAW-1…3, NEST-1, EDGE-1…3, CNC-1…4, BORE-1, DOWEL-1, SORT-1, ASMLINE-1 (15) | OPC UA `opc.tcp://iot-sim:4840/f3d/`, простір `http://todo.ltd/f3d/iot_sim/instances/` (індекс резолвиться за URI), вузли `<C>.State.Machine.Overview.CurrentState/CurrentMode`, `…Flags.Alarm`, `…Values.RelativePiecesOut`, `<C>.JobManagement.JobOrderControl.JobOrderList`, `<C>.Events` (iot_sim §8.3.2–8.3.3); 15 джерел `UA-<C>` (джерело = верстат, A-14 telemetry), одна сесія на endpoint | підписка DataChange (1 с) і Event; виклик методів (запис) | за зміною; `publishing_interval_ms=1000` | бекоф 1→60 с, повторне створення підписок; вузли з `Bad_*` → `q='bad'`; усі вузли джерела погані → джерело `error`; сигнали `stale` (telemetry R-07) → верстат `nodata` (R-03 SPEC) |
 | P-02 | SLIDE-1, VSAW-1, SAND-1, PRESS-1, GLUE-1, SPRAY-1, AUTOSPRAY-1, DRY-1, UV-1, HINGE-1, BOX-1, PACK-1, PACK-2, PACKLINE-1, ASM-1…6 (20) | Modbus TCP `iot-sim:502`, unit 80…83 (ADAM-6050 IO-1…IO-4): DI(2m) «в роботі», DI(2m+1) «аварія» (fc 2, PDU `2m`, `2m+1`), лічильник DI(2m) HR 40001+4m (fc 3, PDU `4m`, u32, `wordorder=little`) — iot_sim §8.4.2; плагін `modbus_tcp` telemetry | опитування | стан/аварія 1 с, лічильник 5 с | як у telemetry R-19; `stale` → `nodata` |
-| P-03 | GANTRY-1 + 27 стосів | REST `http://iot-sim:8082`, `X-Api-Key` (`F3D_WOODSTORE_KEY`): API-20 `/api/v1/status`, API-21 `/stacks`, API-24 `/jobs`, API-27 `/events?since=`; команди API-23 PATCH стос, API-25 POST завдання, API-26 DELETE | опитування + події + команди | статус 5 с, події 2 с, стоси 30 с (і лише при зміні хешу — подія) | бекоф; `error` джерела; стоси `unknown` через 10 хв без даних; завдання `sent` без підтвердження 10 хв → `error` |
-| P-04 | оптимізатор розкрою (intelliDivide) і програми (woodWOP MPR) | REST `http://iot-sim:8083`, `X-Api-Key` (`F3D_CUTOPT_KEY`): API-30 POST `/jobs` (multipart CSV), API-31 GET `/jobs/{id}`, API-32 `/plan`, API-33 `/release`, API-34 `/mpr` | лише команди (CMD-03) і події `mc_cutopt` | на запит (крон 1 хв для `optimizing`) | команда `failed` → карта `error` з текстом; ручний режим (FR-25) |
+| P-03 | GANTRY-1 + 27 стосів | REST `http://iot-sim:8082`, `X-Api-Key` (`F3D_WOODSTORE_KEY`): API-20 `/api/v1/status`, API-21 `/stacks`, API-24 `/jobs`, API-27 `/events?since=`; команди API-23 PATCH стос, API-25 POST завдання, API-26 DELETE (сигнал `equipment/GANTRY-1/cmd`); `equipment/GANTRY-1/stacks` обчислює модуль зі стосів API-21 на `MC-DERIVED` (у каталозі iot_sim — `protocol=none`, X-76) | опитування + події + команди | статус 5 с, події 2 с, стоси 30 с (і лише при зміні хешу — подія) | бекоф; `error` джерела; стоси `unknown` через 10 хв без даних; завдання `sent` без підтвердження 10 хв → `error` |
+| P-04 | оптимізатор розкрою (intelliDivide) і програми (woodWOP MPR) | REST `http://iot-sim:8083`, `X-Api-Key` (`F3D_CUTOPT_KEY`): API-30 POST `/jobs` (multipart CSV), API-31 GET `/jobs/{id}`, API-32 `/plan`, API-33 `/release`, API-34 `/mpr` | лише команди (CMD-03, сигнал `equipment/CUTOPT/cmd` — X-18; у каталозі iot_sim — `protocol=none`, X-76) і події `mc_cutopt` | на запит (крон 1 хв для `optimizing`) | команда `failed` → карта `error` з текстом; ручний режим (FR-25) |
 | telemetry API-02/03/05/06/07 | — | Bearer токен колектора `COL-MAIN` | колектор ↔ Odoo | push 5 с, події при надходженні, команди 5 с (лише при `write_enabled` telemetry) | буфер колектора (telemetry R-19) |
 | API-01 цього модуля | — | `GET /f3d/machine/cutmap/<id>/export?t=<одноразовий>` з Bearer токеном колектора | колектор → Odoo (читання) | на команду `upload` | `401/403/404/409/410` → команда `failed` |
 | Шина переглядача | — | `f3d.viewer.event._notify` (viewer M-03), `kind='state'` (РЦ), `'stock'` (стоси), `'doc'` (МО) | Odoo → переглядач | при зміні (одне повідомлення на транзакцію) | без viewer — нічого |
@@ -297,8 +307,9 @@ viewer M-01 (контракт провайдера), M-03 (`_notify`), Дода�
 Приклад 3 — завдання порталу для WH/MO/00233 (4 арк. DSP16-ANT зі стосу PLT-03C на SAW-1). Технолог натискає в МО
 «Подати плити порталом» (або карта розкрою випущена): `f3d.gantry.job` ПОРТ/00007 `feed`, стос `PLT-03C` (з
 резерву руху МО), ціль `SAW-1`, 4 арк., `external_ref=WH/MO/00233` → крон порталу створює `f3d.command` на сигналі
-`equipment/GANTRY-1/cmd` з текстом `feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233` (при всіх запобіжниках) →
-колектор `POST /api/v1/jobs` → результат `wj-00412` → завдання `queued`; події woodStore `job_started`,
+`equipment/GANTRY-1/cmd` з `payload` `{"op": "feed", "stack": "PLT-03C", "target": "SAW-1", "sheets": 4, "product":
+"DSP16-ANT", "priority": 5, "ref": "WH/MO/00233"}` (CR-01, X-03; при всіх запобіжниках) → колектор: `call()` плагіна
+`rest_vendor` → `POST /api/v1/jobs` → `result_data` `{"id": "wj-00412", "state": "queued"}` → завдання `queued`; події woodStore `job_started`,
 `sheet_placed` ×4, `job_finished` → `done=4`, `done`; списання: рядок руху МО 128 = `PLT-03C`, партія
 DSP16-ANT-2613-130, 4 арк., `picked=True` (R-17); стос: портал 21 → 17, Odoo 21 (не списано, МО не закрите),
 «подано не списано» 4 → очікуване 17, розбіжність 0 (R-15).
@@ -323,8 +334,10 @@ DSP16-ANT-2613-130, 4 арк., `picked=True` (R-17); стос: портал 21 �
 - **API-01**: `auth="public"`, `csrf=False`; Bearer токен колектора (`f3d.collector._authenticate`, telemetry) +
   одноразовий токен карти (`secrets.token_hex(8)`, у базі sha256, TTL 600 с, стирається після видачі); інакше
   `401/403/410`. Жодних інших даних (лише CSV однієї карти).
-- **Команди**: поля граматики CMD-xx валідуються регулярними виразами (заборонені `;`, керівні символи, довжина
-  ≤ 64); коди стосів/РЦ — лише наявні `f3d_code`; плагін повторно валідує і відмовляє (`failed: bad_command`).
+- **Команди**: поля `payload` CMD-xx (CR-01, X-03) валідуються за схемою й регулярними виразами SPEC R-21 (точний
+  набір ключів, керівні символи заборонені; у запасній текстовій граматиці — також `;` і довжина ≤ 64); коди
+  стосів/РЦ — лише наявні `f3d_code`; плагін повторно валідує і відмовляє (`failed: bad_command`) до будь-якого
+  мережевого виклику.
 - **Плагіни**: позаду allow-list `F3D_ALLOW_HOSTS` (telemetry); секрети лише з env (`F3D_OPCUA_PASSWORD`,
   `F3D_WOODSTORE_KEY`, `F3D_CUTOPT_KEY`, сертифікати за шляхами з env); OPC UA на проді — `SignAndEncrypt`
   `Basic256Sha256` з сертифікатом клієнта (Q-12); `nodeid` — лише формат CT-03, без `eval`; методи

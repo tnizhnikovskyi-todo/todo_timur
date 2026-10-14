@@ -1,6 +1,11 @@
 # factory3d_access — специфікація
 
-Версія 0.1 · 14.10.2026 · автор: агент-архітектор модуля (хвиля 2, фаза 4) · статус: **чернетка на погодження**.
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · автор: агент-архітектор модуля (хвиля 2, фаза 4) · статус: **чернетка на погодження**.
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-23 і X-87 (M-12, R-12 п. 7: дельта доповнює `patch` через `deep_merge` —
+картки `infra` і ключі CA-05 `employees`/`zones`; AC-51, AC-67), X-33 (міст `factory3d_access_telemetry` створює 7 сигналів
+`access/*`: §0, §1, M-17, §5.3, R-18, AC-53, AC-68), X-09 (A-21: `f3d_code` працівника тепер у `hr.employee.public`, base
+M-10a), X-89 (правило X-32: пункт «Налаштування СКУД» `menu_f3d_access_settings` під `factory3d_base.menu_f3d_config`,
+sequence 70, дія `action_f3d_access_settings`; §0, §3, AC-69); Q-10, Q-11 закрито.
 Технічне рішення: `docs/modules/factory3d_access/ARCHITECTURE.md` (далі ARCH; FR-01…FR-20, CA-01…CA-09,
 A-01…A-27, Q-01…Q-14). Каркас: `docs/ARCHITECTURE.md` §5 (конвенції, стоп-крани), §6.1 (код сцени), §6.2 (зони),
 §6.5 (рядок `biostar2` — опитування REST прямо з Odoo), §6.6 **P-10**, §6.7 (провайдер переглядача).
@@ -10,9 +15,9 @@ A-01…A-27, Q-01…Q-14). Каркас: `docs/ARCHITECTURE.md` §5 (конве�
 | Модуль | Ідентифікатори |
 |---|---|
 | `factory3d_base` | CB-01 `f3d.scene.mixin` (`f3d_code`, `f3d_alias`, `search_f3d`, `action_f3d_show`), M-10 `hr.employee` + Додаток B (35 кодів `OP-*`, бейдж = код без дефісів), CB-03 `f3d.zone` (`zone_at`, xml-id `factory3d_base.zone_<slug>`), Додаток C/C.2 (`Z-KPP`, `Z-ASM`, `Z-FG`, `Z-ELEC`, `Z-POST`, `Z-CHG`, `Z-FAC`, `Z-MAINT`…), Додаток F (`TURNSTILES → Z-KPP`, `ACCESS` без зони), CB-09 (меню `factory3d_base.menu_f3d_root`, sequence 70 зарезервовано), CB-10 (групи `group_f3d_user/manager/admin`, параметр `factory3d.base.environment`), §5.1 (читання булевих параметрів) |
-| `factory3d_viewer` | M-01 (хук `f3d.viewer.provider`: `_f3d_sequence`, `_f3d_sections`, `_f3d_group`, `_f3d_viewer_collect`, `_f3d_viewer_delta`; виклик за префіксом імені `f3d.viewer.provider.`), M-01f (провайдер `people` пише `employees[code].present` з `hr.attendance`), M-03 (`f3d.viewer.event._notify(model, codes, kind)`), R-02 (час «YYYY-MM-DD HH:MM» за Києвом), R-14 (delta копіює `_f3d_sections` провайдера цілком), Додаток A.11 (`employees[code]`, `zones[code]`) |
+| `factory3d_viewer` | M-01 (хук `f3d.viewer.provider`: `_f3d_sequence`, `_f3d_sections`, `_f3d_group`, `_f3d_viewer_collect`, `_f3d_viewer_delta`; виклик за префіксом імені `f3d.viewer.provider.`), M-01f (провайдер `people` пише `employees[code].present` з `hr.attendance`), M-03 (`f3d.viewer.event._notify(model, codes, kind)`), R-02 (час «YYYY-MM-DD HH:MM» за Києвом), R-14 (дельта: власний розділ — цілком, спільні `infra`/`employees`/`zones` — лише через `deep_merge`, хелпер `factory3d_viewer/tools/payload.py`; X-23, X-82), Додаток A.11 (`employees[code]`, `zones[code]`) |
 | `factory3d_iot_sim` | «документація вендора» P-10 §8.12: API-40 `POST /api/login`, API-41 `POST /api/logout`, API-42 `GET /api/users`, API-43 `GET /api/devices`, API-44 `GET /api/doors`, API-45 `POST /api/events/search`, API-46 `GET /api/event_types`; коди подій, `tna_key`; R-28 (розклад проходів), S-09 `access_event`, API-13 (запуск сценарію), API-14 (`POST /time`), Додаток A рядки 647–653 (7 сигналів `access/*`), §8.1.3 (порти 8443/8081) |
-| `factory3d_telemetry` | CT-09 (`access/*` → `module='access'`, SPEC R-15), CT-10 / SPEC M-03 `f3d.signal._f3d_ingest(readings, src='module')` |
+| `factory3d_telemetry` | CT-09 (`access/*` → `module='access'`, SPEC R-15), CT-10 / SPEC M-03 `f3d.signal._f3d_ingest(readings, src='module')`, M-03 `origin='module'` (X-16), R-07 (сигнали без джерела не стають `stale`); сигнали створює міст `factory3d_access_telemetry` (M-17, X-33) |
 | `factory3d_fire_safety` | ARCH CF-02 (джерело проходів для навчальної тривоги), Q-10, Q-15 (прапор «навчання триває») — відповідь цього модуля: CA-03, CA-09 |
 
 Odoo 19: SQL-обмеження — `models.Constraint`, індекси — `models.Index`, хуки — `post_init_hook(env)` /
@@ -89,7 +94,7 @@ odoo_addons/factory3d_access/
 │   ├── hr_employee_views.xml         V-10
 │   ├── hr_attendance_views.xml       V-11
 │   ├── f3d_zone_views.xml            V-12
-│   ├── res_config_settings_views.xml V-13
+│   ├── res_config_settings_views.xml V-13 + дія `action_f3d_access_settings` (X-89)
 │   └── menus.xml                     V-15 (дії й меню)
 └── tests/
     ├── __init__.py                   імпортує test_* (крім stand/)
@@ -110,11 +115,26 @@ odoo_addons/factory3d_access/
     ├── test_presence.py              AC-27…AC-30, AC-35…AC-38
     ├── test_cards.py                 AC-39…AC-43
     ├── test_visitors.py              AC-44…AC-48
-    ├── test_viewer_provider.py       AC-49…AC-52
+    ├── test_viewer_provider.py       AC-49…AC-52, AC-67
     ├── test_settings.py              AC-53…AC-55, AC-57
     ├── test_hooks.py                 AC-59…AC-61
-    ├── test_security.py              AC-62…AC-66
+    ├── test_security.py              AC-62…AC-66, AC-69
     └── stand/                        pytest -m stand (не імпортується Odoo): conftest.py, test_tk_*.py (ТК-01…ТК-10)
+```
+
+Міст до телеметрії (X-33, каркас §3) — окремий модуль-місток, ставиться автоматично, коли встановлені обидва модулі:
+
+```
+odoo_addons/factory3d_access_telemetry/
+├── __init__.py                       from . import models; from .hooks import post_init_hook
+├── __manifest__.py                   §1 (міст)
+├── hooks.py                          post_init_hook(env) → env['f3d.access.telemetry']._f3d_ensure_signals() (§5.3)
+├── models/
+│   ├── __init__.py                   f3d_access_telemetry
+│   └── f3d_access_telemetry.py       M-17: f3d.access.telemetry (+ _f3d_ensure_signals), f3d.access.device (create/write)
+└── tests/
+    ├── __init__.py
+    └── test_signals.py               AC-68
 ```
 
 Також W5 здає `docs/modules/factory3d_access/DEPLOY_TEST.md` і `TEST_REPORT.md` (§13.5).
@@ -170,7 +190,29 @@ odoo_addons/factory3d_access/
 читає хук (`odoo.tools.file_open`), другий виконує `odoo-bin neutralize`. Python-залежності: `requests` (входить
 у вимоги Odoo 19, перевірено ≥ 2.31), `pytz` (ядро Odoo); тести — `freezegun` (вимоги Odoo). Опційні модулі
 (`factory3d_viewer`, `factory3d_telemetry`, `factory3d_fire_safety`) у `depends` **не** входять: модуль
-перевіряє `'<model>' in self.env` (A-19, A-24).
+перевіряє `'<model>' in self.env` (A-19, A-24). Сигнали `access/*` у telemetry створює окремий міст
+`factory3d_access_telemetry` (M-17, X-33) — маніфест моста:
+
+```python
+{
+    "name": "Завод 3D: доступ — сигнали телеметрії",
+    "summary": "7 сигналів СКУД access/* у factory3d_telemetry",
+    "version": "19.0.1.0.0",
+    "category": "Hidden",
+    "author": "ToDo",
+    "website": "https://todo.ltd",
+    "license": "LGPL-3",
+    "depends": ["factory3d_access", "factory3d_telemetry"],
+    "data": [],
+    "post_init_hook": "post_init_hook",
+    "auto_install": True,
+    "installable": True,
+    "application": False,
+}
+```
+
+Міст не має власних моделей, прав, меню й даних XML: сигнали створює `post_init_hook` (§5.3), бо обладнання
+`ACCESS`/`TURNSTILES` шукається за кодом сцени (base CB-01), а не за xml-id.
 
 ## 2. Моделі
 
@@ -719,7 +761,7 @@ class F3dViewerProviderAccess(models.AbstractModel):
 | Метод | Алгоритм |
 |---|---|
 | `_f3d_viewer_collect(self, payload, ctx)` | R-12 кроки 1–5 |
-| `_f3d_viewer_delta(self, patch, ctx)` | `tmp = {}`; `self._f3d_viewer_collect(tmp, ctx)`; `patch["access"] = tmp.get("access", {})` (те саме, що базова реалізація viewer R-14 крок 5; ключі `employees`/`zones` у дельту **не** йдуть — Q-10, A-07) |
+| `_f3d_viewer_delta(self, patch, ctx)` | R-12 п. 7 (X-23, X-87): немає змін моделей `_f3d_viewer_bus_models()` у `ctx["changes"]` → нічого; інакше `tmp` із заготовками ключів CA-05 (змінені коди `hr.employee`, усі активні зони, картки `infra.cards.TURNSTILES`/`ACCESS`) → `self._f3d_viewer_collect(tmp, ctx)`; `patch["access"] = tmp["access"]` (власний розділ — цілком); `employees`, `zones`, `infra` — лише `deep_merge(patch.setdefault(k, {}), tmp[k])` (хелпер viewer M-01, імпорт усередині методу); присвоєння `patch["infra"]`/`patch["employees"]`/`patch["zones"] = …` заборонене |
 | `_f3d_viewer_bus_models(self)` | `["hr.employee", "f3d.access.door", "f3d.access.visitor"]` |
 
 ### M-13 `f3d.access.event.reprocess.wizard` — повторна обробка й опитування періоду (FR-19)
@@ -791,7 +833,8 @@ CREATE OR REPLACE VIEW f3d_access_presence AS (
 `AbstractModel`, `_description = "СКУД: публікація сигналів телеметрії"`. Методи:
 `@api.model _f3d_signal_model(self)` → `self.env['f3d.signal'].sudo()`, якщо `'f3d.signal' in self.env`, інакше `None`
 (окремий метод — тести підставляють фейкову модель); `@api.model _f3d_publish(self, server, events) -> dict | None` —
-R-18; `_f3d_signal_model()` повертає `None` → `None`.
+R-18; `_f3d_signal_model()` повертає `None` → `None`. Сигнали, у які пише R-18, створює міст `factory3d_access_telemetry`
+(M-17, X-33); сам `factory3d_access` від telemetry не залежить.
 
 ### M-16 `f3d.fire.passage.source.access` — джерело проходів для навчальної тривоги (CA-09, A-24)
 
@@ -810,6 +853,45 @@ class F3dFirePassageSourceAccess(models.AbstractModel):
 
 `factory3d_fire_safety` (CF-02) обирає джерело з найменшим `_f3d_priority` серед моделей реєстру з префіксом
 `f3d.fire.passage.source.` (Q-13).
+
+### M-17 Міст `factory3d_access_telemetry` — 7 сигналів СКУД (FR-15, X-33)
+
+Модуль-місток (§0, §1: `auto_install=True`, `depends=["factory3d_access", "factory3d_telemetry"]`) за зразком
+`factory3d_telemetry_viewer` (каркас §3). Нових моделей немає; файл `models/f3d_access_telemetry.py` розширює дві моделі:
+
+```python
+class F3dAccessTelemetry(models.AbstractModel):
+    _inherit = "f3d.access.telemetry"
+
+class F3dAccessDevice(models.Model):
+    _inherit = "f3d.access.device"
+```
+
+Сигнали (коди = iot_sim Додаток A 647–653; на демо — 7):
+
+| Код | `name` | `kind` | `unit` | `equipment_id` |
+|---|---|---|---|---|
+| `access/readers/<код пристрою>/last_event` — по одному на кожен `f3d.access.device` з кодом за R-01 (демо: `ACR-IN`, `ACR-ELEC`, `ACR-CHG`, `ACR-PAINT`, `ACR-SRV` — рядки 647–651) | `СКУД: остання подія <код>` | `event` | — | `device.equipment_id` (`TURNSTILES` для `ACR-IN`, `ACCESS` для решти — §5.3 крок 3) |
+| `access/turnstiles/TURNSTILES/on_site` (652) | `СКУД: на території зараз` | `gauge` | `осіб` | `maintenance.equipment.search_f3d('TURNSTILES')` (порожньо → без обладнання) |
+| `access/events` (653) | `СКУД: нові події за опитування` | `event` | — | `maintenance.equipment.search_f3d('ACCESS')` |
+
+Спільні значення всіх сигналів моста: `module='access'` (telemetry CT-09), `origin='module'` (сигнал модуля з власних
+даних, не імпорт каталогу — telemetry M-03, X-16), `source_id=False` і `address={}` (без джерела: не потрапляє в
+API-01 колектора, крон `stale` telemetry R-07 його не чіпає — показання лише через CT-10 `_f3d_ingest(src='module')`),
+`period_s=60` (крон опитування), `store_period_s=0` (кожне показання; ≤ 1 на опитування), `create_request=False`
+(порогів немає), `viewer_visible=False` (розділ `access` переглядача — власний розділ провайдера M-12, провайдер
+telemetry R-12 його не дублює), `active=True`.
+
+Методи:
+
+| Сигнатура | Алгоритм |
+|---|---|
+| `@api.model _f3d_ensure_signals(self, devices=None) -> dict` | `S = env['f3d.signal'].sudo().with_context(active_test=False)`; `devices = devices or env['f3d.access.device'].sudo().search([])`; рядки = по пристрою з кодом, що проходить `CODE_RE` (R-01), + 2 фіксовані (таблиця вище); для кожного: `S.search([('code','=',code)], limit=1)` знайдено → пропуск (наявний сигнал — архівний або створений інакше, напр. імпортом каталогу telemetry CT-11 — не змінюється); інакше `S.create(vals)`; INFO «Сигнали СКУД: створено %d, наявних %d»; повертає `{'created': n, 'existing': m}` |
+| `f3d.access.device.create(self, vals_list)` (`@api.model_create_multi`) | `records = super().create(vals_list)`; `env['f3d.access.telemetry']._f3d_ensure_signals(records)` (новий пристрій із R-19 `BS-<id>` отримує свій сигнал); повертає `records` |
+| `f3d.access.device.write(self, vals)` | `res = super().write(vals)`; `'code' in vals` → `_f3d_ensure_signals(self)` (сигнал старого коду лишається з історією показань); повертає `res` |
+
+Деінсталяція моста: `uninstall_hook` немає — сигнали й показання лишаються як історія telemetry (вони не дані
+модуля, стандартна деінсталяція їх не видаляє); R-18 без моста продовжує публікувати в наявні сигнали.
 
 ## 3. Представлення й меню
 
@@ -849,6 +931,7 @@ class F3dFirePassageSourceAccess(models.AbstractModel):
 | `action_f3d_access_user_link` | `f3d.access.user.link` | list,form | `context={'search_default_unlinked': 1}` |
 | `action_f3d_access_server` | `f3d.access.server` | list,form | — |
 | `action_f3d_access_reprocess_wizard` | M-13 | form | `target='new'` |
+| `action_f3d_access_settings` | `res.config.settings` | form | `target='inline'`, `context={'module': 'hr_attendance'}` — відкриває налаштування застосунку «Відвідування», де блок V-13 `f3d_access_block` (X-89; шаблон td_genset `action_f3d_genset_settings`); визначена у `views/res_config_settings_views.xml` |
 
 Меню (CB-09: sequence 70 під `factory3d_base.menu_f3d_root` зарезервовано):
 
@@ -866,8 +949,9 @@ class F3dFirePassageSourceAccess(models.AbstractModel):
 | `menu_f3d_access_server` | Сервери BioStar | `menu_f3d_access` | 90 | F | `action_f3d_access_server` |
 | `menu_f3d_access_att_report` | Проходи СКУД | `hr_attendance.menu_hr_attendance_reporting` | 20 | H, S | `action_f3d_access_event_report` |
 | `menu_f3d_access_att_server` | Сервери BioStar | `hr_attendance.menu_hr_attendance_configuration` | 50 | F | `action_f3d_access_server` |
+| `menu_f3d_access_settings` | Налаштування СКУД | `factory3d_base.menu_f3d_config` | 70 (резерв access CB-09; X-32, X-89) | F | `action_f3d_access_settings` |
 
-Блок налаштувань — V-13 (у застосунку «Відвідування», A-16).
+Блок налаштувань — V-13 (у застосунку «Відвідування», A-16); пункт `menu_f3d_access_settings` лише веде до нього (X-89).
 
 Імена фільтрів пошуку (`<filter name=…>`, на них посилаються дії й тести): V-04 — `unlinked`, `missing`, `disabled`,
 `visitors`, `group_match`; V-05 — `today`, `filter_pass`, `filter_in`, `filter_out`, `filter_denied`, `filter_apb`,
@@ -907,7 +991,7 @@ access_f3d_access_reprocess_wizard_admin,f3d.access.event.reprocess.wizard admin
 20 рядків. Охорона має `write` на двері лише для `action_ack_alarm` (поля дверей, крім `alarm`/`alarm_reason`,
 у формі readonly для S; `write` інших полів охороною блокує `F3dAccessDoor.write`: якщо користувач не A і
 `set(vals) - {'alarm','alarm_reason'}` → `AccessError("Змінювати двері може лише адміністратор СКУД.")`).
-Абстрактні M-12, M-15, M-16 рядків не потребують. Обробка подій, кронів і хуків іде від `sudo()` (крон —
+Абстрактні M-12, M-15, M-16 рядків не потребують; міст M-17 (`factory3d_access_telemetry`) нових моделей не має — без `ir.model.access.csv`. Обробка подій, кронів і хуків іде від `sudo()` (крон —
 `base.user_root`); кнопки перевіряють групу до `sudo()`. Стандартні моделі (`hr.attendance`, `hr.employee`) — права
 `hr_attendance`/`hr`; модуль у них пише лише через `sudo()` обробки.
 
@@ -1073,6 +1157,14 @@ OP-W7,Z-OUT-3
 Демо-відмітки 35 × `in_mode='manual'` за 2026-10-12 (`plant/odoo_flows.py:469–479`, xml-id `factory3d.att_op_*`)
 лишаються як є; дублювання з подіями емулятора виключає R-04 крок 3б (прив'язка в межах `dup_window_min`), а
 відкриті відмітки минулих днів закриває R-07 (крон господарства, §6).
+
+**Міст `factory3d_access_telemetry` (X-33, M-17).** Його `post_init_hook(env)` =
+`env['f3d.access.telemetry']._f3d_ensure_signals()` (усе `sudo`, без зовнішніх викликів). Ставиться автоматично після
+`factory3d_access`, коли встановлено `factory3d_telemetry` (або навпаки). Очікувано — на копії демо й на чистій базі
+однаково (5 пристроїв — data access, §5.2): `created: 7` (5 `access/readers/<ACR-*>/last_event`,
+`access/turnstiles/TURNSTILES/on_site`, `access/events`), `existing: 0`; повторний виклик — `created: 0`,
+`existing: 7`; на копії демо `equipment_id` заповнено у 7 сигналів (`TURNSTILES` — 2, `ACCESS` — 5), на чистій базі
+— у 0 (обладнання з кодами немає). Пристрої, що з'являться пізніше (R-19), отримують сигнал у `create` (M-17).
 
 ### 5.4 `uninstall_hook(env)`
 
@@ -1445,7 +1537,7 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 `_f3d_viewer_collect(payload, ctx)`; `is_sec = env.user.has_group('factory3d_access.group_f3d_access_security')`;
 усі часи — `to_local_str` (viewer R-02), «сьогодні» — доба `ctx['today']` за Києвом:
 1. `pres = env['hr.employee']._f3d_access_public_presence()` (sudo, лише непублічно-нечутливі поля, A-21);
-2. для кожного `code` у `payload.get('employees', {})`: `rec['present'] = bool(pres[code].present)` (перекриває
+2. для кожного `code` у `payload.get('employees', {})`, що є в `pres` (інші записи не змінюються): `rec['present'] = bool(pres[code].present)` (перекриває
    значення провайдера `people` з `hr.attendance`), `rec['zone']` = код зони або `None`, `rec['zone_since']` або
    `None`, `rec['last_event'] = {"ts", "door", "direction", "type"}` або `None` (двері — код, без осіб);
 3. для кожного `code` у `payload.get('zones', {})`: `["people_now"] = n` (0, якщо нікого);
@@ -1483,6 +1575,27 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 6. (обробка подій, не провайдер) після `_f3d_process` пакета: `'f3d.viewer.event' in env` → по одному виклику
    `_notify('hr.employee', коди працівників з presence_changed, 'state')`, `_notify('f3d.access.door', коди дверей зі
    зміною R-10, 'state')`, `_notify('f3d.access.visitor', ['V-<id>', …], 'state')`; без viewer — нічого.
+7. `_f3d_viewer_delta(patch, ctx)` (X-23, X-87; viewer R-14 п. 5, 7):
+   1) умова: `set(ctx.get('changes') or {}) & {'hr.employee', 'f3d.access.door', 'f3d.access.visitor'}` порожня →
+      `patch` не змінюється;
+   2) `tmp = {'employees': {c: {} for c in ctx['changes'].get('hr.employee', ())}, 'zones': {z: {} for z in
+      env['f3d.zone'].search([]).mapped('f3d_code')}, 'infra': {'cards': {'TURNSTILES': {}, 'ACCESS': {}}}}`;
+      `self._f3d_viewer_collect(tmp, ctx)` — кроки 1–5 заповнюють `employees[code]` (`present`, `zone`, `zone_since`,
+      `last_event`), `zones[code].people_now` (0 для зон без людей — так клієнт обнуляє зону, яку покинули), розділ
+      `access` і `infra.cards.TURNSTILES/ACCESS.rows`;
+   3) `from odoo.addons.factory3d_viewer.tools.payload import deep_merge` (імпорт усередині методу: метод викликає лише
+      встановлений viewer, A-19); `patch['access'] = tmp['access']` (власний розділ провайдера — цілком); для
+      `k in ('employees', 'zones', 'infra')` з непорожнім `tmp[k]` — `deep_merge(patch.setdefault(k, {}), tmp[k])`:
+      лише доповнення, ключі інших провайдерів (`employees[code].name/workcenter` від `people`, інші ключі
+      `zones[code]`, картки `infra.cards.PV-INV`/`GENSET`/`TRUCK-SCALE` energy/genset/yard) не змінюються;
+      присвоєння `patch['infra'] = …`, `patch['employees'] = …`, `patch['zones'] = …` заборонене;
+   4) клієнт viewer зливає дельту глибоко (viewer R-14 п. 7): рядки карток СКУД, присутність і «Людей зараз» у 3D
+      оновлюються без повного перечитування.
+   Приклад: `patch = {'infra': {'cards': {'PV-INV': {'rows': [['Зараз', '468 кВт']]}}}, 'employees': {'OP-SAW-1':
+   {'name': 'Олег Мельник', 'workcenter': 'SAW-1'}}}` (від energy і `people`), `ctx.changes = {'hr.employee':
+   {'OP-SAW-1'}, 'f3d.access.door': {'TURN-1'}}` → `patch.infra.cards` — `PV-INV`, `TURNSTILES`, `ACCESS`;
+   `patch.employees['OP-SAW-1']` — `name`, `workcenter`, `present: true`, `zone: 'Z-CUT'`, `zone_since`, `last_event`;
+   `patch.zones['Z-CUT'].people_now = 4`, зони без людей — 0; `patch.access` — повний розділ (AC-51, AC-67).
 Без групи `group_f3d_user` провайдер не викликається (viewer `_f3d_group`).
 
 ### R-13 Картки: запис у BioStar (FR-10)
@@ -1551,8 +1664,10 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 (без `user_id` — персональні дані в телеметрію не йдуть, A-28);
 `{"code": "access/turnstiles/TURNSTILES/on_site", "ts": now, "value": float(on_site.total)}`;
 `{"code": "access/events", "ts": now, "value": float(created), "text": "pass:%d denied:%d door:%d" % (…)}`.
-`env['f3d.signal'].sudo()._f3d_ingest(readings, src='module')` у `savepoint`; виняток → WARNING, опитування не падає;
-`rejected` (сигналу немає в каталозі) → DEBUG. 7 сигналів = iot_sim Додаток A 647–653.
+`env['f3d.signal'].sudo()._f3d_ingest(readings, src='module')` у `savepoint`; виняток → WARNING, опитування не падає.
+Сигнали створює міст `factory3d_access_telemetry` (M-17, X-33): 7 записів `f3d.signal` = iot_sim Додаток A 647–653
+(`module='access'`, `origin='module'`, без джерела; по одному `…/last_event` на кожен пристрій). Міст ставиться
+автоматично разом із telemetry, тож `rejected` (`unknown_code`) буває лише для архівного чи видаленого сигналу → DEBUG.
 
 ### R-19 Синхронізація довідників (FR-02, FR-03, FR-04)
 
@@ -1683,7 +1798,7 @@ https://kb.supremainc.com/bs2sdk/doku.php?id=en:log_management_api, iot_sim §8.
 
 Формат: Given / When / Then; тип: **UT** (юніт-тест, §13.1), **TC** (стенд на емуляторі, §13.2), **MAN** (вручну).
 Фікстури (`emp_a`, `FakeBioStar`, `make_row`…) — §13.1. Час — `freeze_time` (UTC). Діапазони — за ARCH §6:
-W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
+W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 
 | ID | FR | Given / When / Then | Тип |
 |---|---|---|---|
@@ -1737,9 +1852,9 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 | AC-48 | FR-11 | When `date_to ≤ date_from` або тривалість 8 діб → `ValidationError`; новий відвідувач без `date_to` → `date_to = date_from + 8 год`; `unlink()` у стані `expected` → `UserError`, у `draft` — видалено | UT |
 | AC-49 | FR-14 | Given `payload={'employees': {'OP-TST-A': {'name':'А','present':False}, 'OP-TST-B': {'name':'Б','present':True}}, 'zones': {'Z-CUT': {'name':'Розкрій'}}}`, `emp_a` у `Z-CUT` з 06:52, `emp_b` поза; When `env['f3d.viewer.provider.access']._f3d_viewer_collect(payload, ctx)` (`ctx` з `now`, `today`); Then `employees['OP-TST-A']` = `present=True`, `zone='Z-CUT'`, `zone_since='2026-10-12 06:52'`, `last_event` з ключами `ts, door, direction, type`; `OP-TST-B` → `present=False`, `zone=None`; `zones['Z-CUT']['people_now']=1`; нових ключів у `employees` немає | UT + TC (ТК-09) |
 | AC-50 | FR-14, FR-13 | Given AC-49 + відвідувач на території + подія ACR-PAINT; When як `user_f3d`; Then `access` має ключі R-12 (`updated, server, on_site, today, zones, people, visitors, readers, doors, cards, last_events`), `last_events == []`, у `visitors[0]` немає `name`, рядок «Останній доступ» без « — »; When як `user_security`; Then `last_events` непорожній з `person`, «Останній доступ» = «склад ЛФМ, HH:MM — <ім'я>». Given `payload['infra']['cards']['TURNSTILES']` зі статикою «146 працівників · 3 відвідувачі»; Then замінено на живі рядки | UT |
-| AC-51 | FR-14 | When `_f3d_viewer_delta(patch, ctx)`; Then `set(patch) == {'access'}`. Given `patch.object(F3dAccessEvent, '_f3d_bus')`; When опитування з 2 проходами TURN-1 (`emp_a`, `emp_b`); Then `_f3d_bus` викликано по разу з `('hr.employee', {'OP-TST-A','OP-TST-B'})` і `('f3d.access.door', {'TURN-1'})` | UT |
+| AC-51 | FR-14 | Given AC-49 (`emp_a` у `Z-CUT`, `emp_b` поза), `patch={}`, `ctx.changes={'hr.employee': {'OP-TST-A'}, 'f3d.access.door': {'TURN-1'}}`; When `_f3d_viewer_delta(patch, ctx)` (R-12 п. 7, X-87); Then `set(patch) == {'access', 'employees', 'zones', 'infra'}`, `patch['access']` — повний розділ R-12, `patch['employees'] == {'OP-TST-A': {'present': True, 'zone': 'Z-CUT', 'zone_since': …, 'last_event': …}}`, `patch['zones']` має всі активні зони (`Z-CUT.people_now=1`, решта 0), `set(patch['infra']['cards']) == {'TURNSTILES', 'ACCESS'}` з `rows` = `access.cards`; When `ctx.changes={'mrp.production': {'WH/MO/00231'}}`; Then `patch == {}`. Given `patch.object(F3dAccessEvent, '_f3d_bus')`; When опитування з 2 проходами TURN-1 (`emp_a`, `emp_b`); Then `_f3d_bus` викликано по разу з `('hr.employee', {'OP-TST-A','OP-TST-B'})` і `('f3d.access.door', {'TURN-1'})` | UT |
 | AC-52 | FR-14 | Given база без `factory3d_viewer` (`'f3d.viewer.event' not in env`); When обробка подій; Then без винятків, `_f3d_bus` повертає `None`; модель `f3d.viewer.provider.access` у реєстрі з `_f3d_sequence=170`, `_f3d_sections=('access',)`, `_f3d_group='factory3d_base.group_f3d_user'` | UT |
-| AC-53 | FR-15 | Given `patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal)`; When опитування з 3 новими подіями на ACR-IN і ACR-ELEC; Then `fake_signal.readings` коди = {`access/readers/ACR-IN/last_event`, `access/readers/ACR-ELEC/last_event`, `access/turnstiles/TURNSTILES/on_site`, `access/events`}, `src='module'`, жоден `text` не містить `TSTA1`. Given `publish_signals=False` або 0 нових подій або `_f3d_signal_model()` → `None`; Then не викликано | UT |
+| AC-53 | FR-15 | Given `patch.object(F3dAccessTelemetry, '_f3d_signal_model', return_value=fake_signal)`; When опитування з 3 новими подіями на ACR-IN і ACR-ELEC; Then `fake_signal.readings` коди = {`access/readers/ACR-IN/last_event`, `access/readers/ACR-ELEC/last_event`, `access/turnstiles/TURNSTILES/on_site`, `access/events`}, `src='module'`, жоден `text` не містить `TSTA1`. Given `publish_signals=False` або 0 нових подій або `_f3d_signal_model()` → `None`; Then не викликано. Реальні сигнали моста й прийом показань — AC-68 (X-33) | UT |
 | AC-54 | FR-16 | Given `user_f3d_admin`; When `res.config.settings` з `f3d_access_page_size=300`, `f3d_access_write_enabled=True` → `execute()`; Then параметри `300`, `True`. `page_size=3000` → `ValidationError`. `fields_get` для `user_admin` (без F) не містить `f3d_access_biostar_password` | UT |
 | AC-55 | FR-16 | Given `read_enabled=False`; When `_cron_poll()`, `_cron_sync_users()`, `_cron_sync_devices()`, `_cron_housekeeping()`; Then `fake.calls == []` (господарство без мережевого кроку 4 відпрацьовує). `action_poll_now()`, `action_sync_users()` → `UserError("Опитування BioStar вимкнено стоп-краном factory3d.access.read_enabled.")` | UT |
 | AC-56 | FR-16 | Given `BioStarClient(write_enabled=False, http=mock)`; When `create_card`, `update_user_cards`, `create_user`; Then `BioStarWriteDisabled`, `mock.request.call_count == 0` | UT |
@@ -1753,6 +1868,9 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 | AC-64 | FR-13 | Поля моделей модуля (`fields_get`) не мають імен із `photo`, `image`, `template`, `document`, `fingerprint_data`; `keep_raw=False` → `raw=False`; `keep_raw=True` → `raw` без `user_id.name`, `user_id.photo_exists`, `hint` | UT |
 | AC-65 | FR-12 | Меню з xml-id §3 існують з указаними батьками, `sequence` і групами; `menu_f3d_access.sequence=70`, батько `factory3d_base.menu_f3d_root`; `menu_f3d_access_att_report` під `hr_attendance.menu_hr_attendance_reporting` | UT |
 | AC-66 | FR-12 | `get_view` (адміністратор): форма `hr.employee` містить `page[@name='f3d_access']`; форма `hr.attendance` — `f3d_in_event_id`; налаштування — `block[@name='f3d_access_block']`; форма `f3d.zone` — кнопку `action_view_people`; kanban `f3d.access.presence` має `default_group_by="zone_id"`. MAN: ТК-09 крок 1–3 у браузері | UT + MAN |
+| AC-67 | FR-14 | Given `patch={'infra': {'cards': {'PV-INV': {'rows': [['Зараз', '468 кВт']]}}, 'totals': {'pv_now': 468}}, 'employees': {'OP-TST-A': {'name': 'А', 'workcenter': 'SAW-1'}}}` (як після energy 150 і `people`), `inf = patch['infra']`, `ctx.changes={'hr.employee': {'OP-TST-A'}}`; When `_f3d_viewer_delta(patch, ctx)` (X-23, X-87); Then `patch['infra'] is inf` (не присвоєно), `patch['infra']['cards']` має `PV-INV` (незмінна), `TURNSTILES`, `ACCESS`; `patch['infra']['totals'] == {'pv_now': 468}`; `patch['employees']['OP-TST-A']` має `name='А'`, `workcenter='SAW-1'` і `present`, `zone`, `zone_since`, `last_event`; `deep_merge` — з `factory3d_viewer.tools.payload` | UT |
+| AC-68 | FR-15 | Given установлені `factory3d_access` і `factory3d_telemetry` (міст `factory3d_access_telemetry` установлено автоматично: `ir.module.module` `state='installed'`), 5 пристроїв data; Then є рівно 7 сигналів `access/%` (M-17): 5 `access/readers/<ACR-*>/last_event` (`kind='event'`), `access/turnstiles/TURNSTILES/on_site` (`gauge`, `unit='осіб'`), `access/events` (`event`); у всіх `module='access'`, `origin='module'`, `source_id=False`, `viewer_visible=False`, `create_request=False`, `period_s=60`. When `_f3d_ensure_signals()` удруге; Then `{'created': 0, 'existing': 7}`. When створено `f3d.access.device` з `code='ACR-T9'`; Then з'явився `access/readers/ACR-T9/last_event`. When `env['f3d.signal'].sudo()._f3d_ingest([{'code': 'access/turnstiles/TURNSTILES/on_site', 'ts': now, 'value': 35.0, 'q': 'good'}], src='module')`; Then `accepted=1`, `rejected=[]`, `last_value=35`. When `freeze_time(now + 1 доба)` і `env['f3d.signal']._cron_stale()`; Then статус сигналу не `stale` (без джерела, telemetry R-07) (X-33) | UT |
+| AC-69 | FR-12, FR-16 | Given модуль установлено; Then `factory3d_access.menu_f3d_access_settings`: `parent_id` = `factory3d_base.menu_f3d_config`, `sequence=70`, `group_ids` = `factory3d_base.group_f3d_admin`, дія `action_f3d_access_settings` (`res_model='res.config.settings'`, `view_mode='form'`, `target='inline'`, `context` з `module='hr_attendance'`); `get_views` форми `res.config.settings` для адміністратора містить `block[@name='f3d_access_block']`; користувач `user_security` (без `group_f3d_admin`) пункту не бачить (`ir.ui.menu` `_visible_menu_ids`) (X-89) | UT |
 
 ## 13. План тестування (для Opus)
 
@@ -1812,10 +1930,11 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 | `test_presence.py::TestPresence` | `test_home_zone_and_fallback`, `test_exit_clears`, `test_internal_zone_and_dwell`, `test_dwell_zero`, `test_internal_without_entry`, `test_people_now`, `test_presence_view_rows`, `test_on_site_at`, `test_passes_between`, `test_drill`, `test_fire_source_dicts`, `test_housekeeping` | AC-27…AC-30, AC-35…AC-38 | `emp_a…d`, відвідувач, `patch.object(F3dAccessEvent, '_f3d_drill_active')` | поля працівника, представлення, словники CA-03/CA-09 |
 | `test_cards.py::TestCards` | `test_constraints`, `test_issue_local`, `test_mark_synced`, `test_block_synced`, `test_block_405`, `test_issue_creates_card_once`, `test_cron_retry_limits`, `test_cron_write_disabled` | AC-39…AC-43 | `FakeBioStar` (`write_enabled`), картки | `sync_state`, `fake.calls`, `biostar_card_id`, чаттер |
 | `test_visitors.py::TestVisitors` | `test_lifecycle`, `test_no_attendance_and_violation`, `test_closed_pass_logged`, `test_biostar_user_create`, `test_biostar_user_405`, `test_manual_user_conflict`, `test_register_from_yard`, `test_register_no_card`, `test_dates_and_unlink` | AC-44…AC-48 | відвідувач, пул карток `555`, `600` | стани, `zone_violation`, `hr.attendance` кількість, `fake.calls` |
-| `test_viewer_provider.py::TestProvider` | `test_employee_keys`, `test_zone_people_now`, `test_access_schema_user`, `test_access_schema_security`, `test_infra_cards_replaced`, `test_delta_only_access`, `test_bus_calls`, `test_no_viewer_ok`, `test_registry_attrs` | AC-49…AC-52 | `payload` dict, `ctx={'now': datetime(2026,10,12,7,30), 'now_local': '2026-10-12 10:30', 'today': '2026-10-12', 'user': …}`, `with_user` | ключі й значення JSON R-12 |
+| `test_viewer_provider.py::TestProvider` | `test_employee_keys`, `test_zone_people_now`, `test_access_schema_user`, `test_access_schema_security`, `test_infra_cards_replaced`, `test_delta_deep_merge`, `test_delta_no_changes`, `test_delta_keeps_foreign_keys`, `test_bus_calls`, `test_no_viewer_ok`, `test_registry_attrs` | AC-49…AC-52, AC-67 | `payload` dict, `ctx={'now': datetime(2026,10,12,7,30), 'now_local': '2026-10-12 10:30', 'today': '2026-10-12', 'user': …}` (для дельти — ще `changes`), `with_user`; для AC-51, AC-67 — код `factory3d_viewer` в `addons_path` (імпорт хелпера `deep_merge` без установки модуля, як yard AC-87) | ключі й значення JSON R-12; для дельти — склад `patch`, збереження чужих ключів, `patch['infra'] is inf` |
 | `test_settings.py::TestSettings` | `test_params_roundtrip`, `test_ranges`, `test_password_groups`, `test_read_disabled`, `test_neutralize_sql`, `test_telemetry_publish`, `test_telemetry_off` | AC-53…AC-55, AC-57 | `res.config.settings`, `patch.object(F3dAccessTelemetry, '_f3d_signal_model')` | параметри, `UserError` тексти, `fake.calls == []`, записи після SQL |
+| `factory3d_access_telemetry/tests/test_signals.py::TestAccessSignals` (теги `post_install`, `-at_install`, `f3d`, `f3d_access`) | `test_bridge_installed_signals`, `test_ensure_idempotent`, `test_new_device_signal`, `test_ingest_accepted`, `test_no_stale_without_source` | AC-68 | 5 пристроїв data, `freeze_time`; потребує встановленого `factory3d_telemetry` | кількість і поля сигналів, лічильники `_f3d_ensure_signals`, результат `_f3d_ingest`, `status` |
 | `test_hooks.py::TestHooks` | `test_demo_like_counts`, `test_idempotent`, `test_clean_db_skipped`, `test_read_enabled_default`, `test_uninstall_hook` | AC-59…AC-61 | `make_demo_like()` | звіт `json.loads(migration_report)`, поля |
-| `test_security.py::TestSecurity` | `test_acl_matrix`, `test_public_presence_fields`, `test_card_rules`, `test_company_rules`, `test_no_biometric_fields`, `test_keep_raw`, `test_menus`, `test_views_arch` | AC-62…AC-66 | користувачі `common.py` | `AccessError` через `with_user()`; `env.ref(menu).sequence/parent_id/group_ids`; `etree` arch |
+| `test_security.py::TestSecurity` | `test_acl_matrix`, `test_public_presence_fields`, `test_card_rules`, `test_company_rules`, `test_no_biometric_fields`, `test_keep_raw`, `test_menus`, `test_views_arch`, `test_settings_menu` | AC-62…AC-66, AC-69 | користувачі `common.py` | `AccessError` через `with_user()`; `env.ref(menu).sequence/parent_id/group_ids`; `etree` arch |
 
 ### 13.2 Стендові сценарії ТК-01…ТК-10 (емулятор)
 
@@ -1879,7 +1998,9 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 
 1. Зняти дамп бази `odoo` тестового сервера; відновити як `odoo_f3d_test`; знімки: `SELECT id, employee_id, check_in, check_out, in_mode, out_mode FROM hr_attendance ORDER BY id` (S1), `SELECT id, barcode FROM hr_employee ORDER BY id` (S2).
 2. Переконатися, що `factory3d_base` установлено (хвиля 1) і `factory3d.base.environment='test'`.
-3. Установити модуль (ТК-01); `S1` після установки = до (відмітки не змінені); звіт хука.
+3. Установити модуль (ТК-01); `S1` після установки = до (відмітки не змінені); звіт хука. Якщо встановлено
+   `factory3d_telemetry` — міст `factory3d_access_telemetry` установлюється автоматично, у лозі «Сигнали СКУД: створено 7»
+   (AC-68, X-33); `--test-tags /factory3d_access_telemetry` → 0 падінь.
 4. Підняти емулятор (iot_sim §8.1.4), ввести пароль BioStar, ТК-02…ТК-08; ТК-09 — якщо встановлено viewer; ТК-10.
 5. Юніт-тести на копії: `--test-tags /factory3d_access` → 0 падінь; на чистій базі — те саме.
 6. `odoo-bin neutralize -d odoo_f3d_test` → крони вимкнені, пароль стерто, `read_enabled='False'` (AC-57 на живій копії).
@@ -1889,7 +2010,8 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 
 ## 14. Definition of Done
 
-- Усі юніт-тести §13.1 зелені на чистій базі й на копії демо (`--test-tags /factory3d_access`), кожен AC-01…AC-66
+- Усі юніт-тести §13.1 зелені на чистій базі й на копії демо (`--test-tags /factory3d_access` і, з telemetry,
+  `/factory3d_access_telemetry`), кожен AC-01…AC-69
   типу UT має тест із назвою з таблиці §13.1; тести не звертаються в мережу (перевірка: `requests.Session.request`
   запатчено в `AccessCase.setUpClass` на `AssertionError`).
 - ТК-01…ТК-10 пройдені на стенді, протокол у `DEPLOY_TEST.md` з фактичними кількостями; ТБ-01…ТБ-08 зелені;
@@ -1921,8 +2043,8 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 | Q-07 | керування дверима з Odoo | ні у v1 | лише читання стану (R-10) |
 | Q-08 | строк зберігання журналу | 90 днів | `keep_days=90`; відвідувачі видаляються через 90 днів після візиту (R-20 крок 6) |
 | Q-09 | побутовий блок між входом і цехом; зони комор | не створювати | граф ARCH §2.3, `zone_to` = зона-контейнер, `dwell_min=30` для DOOR-PAINT/DOOR-SRV |
-| Q-10 | «людей зараз» у `zones[code]` чи лише в `access` | обидва в повному payload, у дельті — `access` | R-12; рядки карток людини/зони — автор viewer за CA-05 |
-| Q-11 | сигнатура `_f3d_ingest` і `module='access'` | закрито SPEC telemetry: M-03 `_f3d_ingest(readings, src='module', collector=None)`, R-15 `access/*` → `access` | R-18 з `src='module'`; без сигналу в каталозі — DEBUG |
+| Q-10 | «людей зараз» у `zones[code]` чи лише в `access` | **закрито X-87 (X-23)**: обидва в повному payload і в дельті | R-12 п. 7: дельта — `access` цілком, `employees`/`zones`/`infra.cards` через `deep_merge`; рядки карток людини/зони — автор viewer за CA-05 |
+| Q-11 | сигнатура `_f3d_ingest` і `module='access'` | закрито SPEC telemetry: M-03 `_f3d_ingest(readings, src='module', collector=None)`, R-15 `access/*` → `access`; хто створює сигнали — **закрито X-33**: міст `factory3d_access_telemetry` (M-17) | R-18 з `src='module'`; 7 сигналів створює міст; архівний/видалений сигнал — DEBUG |
 | Q-12 | емулятор: невідомий `user` у `access_event`, `POST /api/users` | невідомий → подія без `name`; `POST /api/users` у v1.1 | ТК-07 — ручне `biostar_user_id`; ТК-08 очікує 405 |
 | Q-13 | **нове.** `factory3d_fire_safety`: знаходити джерела CF-02 за префіксом `f3d.fire.passage.source.` (не через `_inherit`, бо access не залежить від fire) і надати `f3d.fire.drill._f3d_is_active_at(ts) -> bool` (fire Q-15) | так (A-24); автор fire_safety — M-12/M-12a SPEC fire | M-16 і `_f3d_drill_active` готові; без методу у fire — `False` (виходи під час навчань закривають відмітки, як сьогодні) |
 | Q-14 | **нове.** Формат блокування картки в BioStar 2 (`PUT /api/users/{id}` з `cards[].is_blocked` чи окремий ендпоінт блокування/чорного списку) | перевірити на тестовому BioStar замовника до вмикання `write_enabled` (Suprema, замовник) | API-08 за ПРИПУЩЕННЯМ; ручний шлях «Позначити синхронізованим»; на стенді — 405 |
@@ -1935,7 +2057,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-66.
 | A-18 | «Перевірити з'єднання» (лише F) працює і при `read_enabled=False`, з окремою сесією | адміністратор має перевірити доступ до вмикання опитування на проді |
 | A-19 | Провайдер переглядача — `AbstractModel` без `_inherit` (duck typing інтерфейсу viewer M-01) | `factory3d_viewer` не є залежністю (каркас §3); `_inherit` на відсутню модель зламав би установку |
 | A-20 | `max_shift_h=16`: вихід протягом 16 год після входу закриває відмітку навіть через північ; довше — R-07 | нічна робота без втрати відмітки; 16 год — поріг «Errors» стандартного фільтра `hr_attendance` |
-| A-21 | Провайдер читає присутність через `sudo()` лише нечутливих полів (`_f3d_access_public_presence`), особи — тільки для охорони | `f3d_code` працівника не входить у `hr.employee.public` (base); присутність/зона за ARCH §2.6 доступні всім внутрішнім |
+| A-21 | Провайдер читає присутність через `sudo()` лише нечутливих полів (`_f3d_access_public_presence`), особи — тільки для охорони | `f3d_access_last_event_id` (група охорони) не входить у `hr.employee.public`; `f3d_code`, `f3d_alias`, `f3d_kind` там є з base M-10a (X-09), поля присутності — з M-08a; присутність/зона за ARCH §2.6 доступні всім внутрішнім |
 | A-22 | Хук засіває присутність із відкритих відміток (35 на демо), відмітки не змінює | інакше після установки провайдер (170) перекрив би `present` провайдера `people` на `False` і 3D-картина демо зникла б |
 | A-23 | Зона пристрою — з data (зона «з» дверей), не `zone_at` | 3 з 5 зчитувачів стоять на стінах у зазорах між зонами (`ACR-IN y=0.12`, `ACR-ELEC y=62.25`, `ACR-CHG y=59.88`) — `zone_at` повертає порожньо |
 | A-24 | Джерело проходів для fire_safety — `AbstractModel` `f3d.fire.passage.source.access` (`_f3d_priority=10`) і прапор навчання через `_f3d_is_active_at` (CA-09) | обидва модулі не залежать один від одного; fire Q-10, Q-15 |
