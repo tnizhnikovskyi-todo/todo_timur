@@ -1,9 +1,18 @@
 # factory3d_yard — специфікація
 
-Версія 0.1 · 14.10.2026 · автор: агент-архітектор модуля (хвиля 2, фаза 4) · технічне рішення:
-`docs/modules/factory3d_yard/ARCHITECTURE.md` (далі ARCH, версія 0.2: FR-01…FR-28, CY-01…CY-08, A-01…A-14, Q-01…Q-14).
+Версія 0.2 · 14.10.2026 · автор: агент-архітектор модуля (хвиля 2, фаза 4) · технічне рішення:
+`docs/modules/factory3d_yard/ARCHITECTURE.md` (далі ARCH, версія 0.3: FR-01…FR-28, CY-01…CY-08, A-01…A-14, Q-01…Q-14).
 Цей документ додає рішення A-15…A-28 (§15.2), правила R-01…R-24 (§9), моделі M-01…M-18, представлення V-01…V-34,
 RPC/контракти API-01…API-06 (§7), критерії AC-01…AC-88 (§12), стендові сценарії ТК-01…ТК-08 (§13.2).
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-15 (M-07 `f3d_plate` — держномер, не код сцени), X-17 (джерела
+`MB-U86-IO7`, `SICS-TRUCK-SCALE`: §5.3, M-03, M-06, §13, Додаток A), X-23 (R-20 п. 7 — `infra` лише через `deep_merge`; AC-87),
+X-32 (§3: «Налаштування двору» під `factory3d_base.menu_f3d_config`, 60; AC-66), X-45 (§8.2 — спільна схема `sics`, власник
+двір; AC-48), X-46 (Додаток A: `pulse_ms` 1500 на `cmd_open`/`cmd_close`, `cmd_hold` — рівень; R-15, API-04, AC-84, ТК-04),
+X-47 (`GATE-E/cmd_hold` → DO5, PDU 21; AC-88), X-48 (R-07 п. 4 = telemetry R-22, `datetime` і `camera_tz` вилучено; API-03,
+§5.1, V-32, §11.5), X-57 (ТК-01, ТК-03 — тіло `{"params": …}`), X-70 (`scale`/`offset` в `address.sics.json`, §8.5, AC-52),
+X-73 (AC-23 за прикладом iot_sim: `plateList=f3d_bookings`, нове поле `plate_list_mode`, тести §13.1; ТК-02); закрито
+Q-01 (X-53), Q-02 (X-49), Q-04 (X-46), Q-14 (X-04), рішення Q-13 (X-47); §15.3 — посилання на X-xx; Додаток A — рядки каталогу
+iot_sim 689–698 (X-34).
 
 Спирається на контракти (посилання — лише за ідентифікаторами):
 - каркас `docs/ARCHITECTURE.md`: §5 (імена, стоп-крани, права, тести), §6.1–6.2 (код сцени, ворота = док),
@@ -23,7 +32,7 @@ RPC/контракти API-01…API-06 (§7), критерії AC-01…AC-88 (§
   плагіна CT-02), §8.5 (`modbus_tcp`), §8.7 (`http_push`: `POST /f3d/{route}`); ARCH telemetry CT-01…CT-11, Q-13;
 - `factory3d_iot_sim` SPEC: §8.4.1 (unit id 86), §8.4.2 (лічильники ADAM: молодше слово першим), **§8.13 P-11**
   (§8.13.1 ADAM-6060, §8.13.2 Axis LPV JSON, §8.13.3 SICS), R-29, R-30, S-05 `truck_no_booking`, S-06 `truck_arrival`,
-  API-01 `bookings[]`, Додаток A рядки 654–661;
+  API-01 `bookings[]`, Додаток A рядки 654–661 і 689–698;
 - `factory3d_access` ARCH: CA-07 (відвідувач з `origin='yard'`) — у v1 не викликається (межа ARCH §1.4).
 
 Позначення типів перевірки: **UT** — `odoo.tests.TransactionCase`; **HT** — `HttpCase` (у т. ч. тур OWL);
@@ -53,7 +62,7 @@ odoo_addons/factory3d_yard/
 ├── tools/
 │   ├── __init__.py
 │   ├── plate.py                      normalize_plate(), display_plate(), is_valid_plate_input(), LOOKALIKE — R-08
-│   ├── tz.py                         KYIV, to_local(dt), local_hm(dt), local_day(dt), day_bounds_utc(day), parse_axis_ts() — §11.5
+│   ├── tz.py                         KYIV, to_local(dt), local_hm(dt), local_day(dt), day_bounds_utc(day), parse_axis_ts() (`capture_timestamp` епоха мс → UTC naive; R-07 п. 4) — §11.5
 │   └── params.py                     PARAMS (ключ → умовчання), get_bool/get_int/get_float/get_str(env, name) — §5.1
 ├── models/
 │   ├── __init__.py                   порядок: f3d_yard_gate, f3d_yard_scale, f3d_yard_visit, f3d_yard_booking,
@@ -545,7 +554,8 @@ class F3dYardLprEvent(models.Model):
 | `plate_norm` | Char(16) | `idx`, `string="Номер"` |
 | `plate_country` | Char(8) | |
 | `confidence` | Float | `digits=(4,3)`, `string="Довіра"` (0…1) |
-| `plate_list` | Char(32) | `string="Список камери"` |
+| `plate_list` | Char(32) | `string="Список камери"`, `help="Назва списку Axis LPV, у який потрапив номер (plateList), напр. f3d_bookings"` |
+| `plate_list_mode` | Char(16) | `string="Режим списку"`, `help="plateListMode камери: allow / block / none"` (X-48, X-73) |
 | `plate_list_description` | Char(256) | `string="Опис у списку камери"` |
 | `image_attachment_id` | Many2one `ir.attachment` | `ondelete="set null"`, `string="Знімок"` |
 | `image_url` | Char(512) | `string="Посилання на знімок"` |
@@ -892,7 +902,7 @@ reason)`; є `visit_id` → `visit_id._do_reject(text)`; лише `event_id` →
 | V-12 | `view_f3d_yard_gate_form` | form `f3d.yard.gate` | `<header>` (`GRP_SEC`): `action_open` «Відкрити», `action_close` «Закрити», `action_hold` «Тримати відкритим» (`confirm="Тримати шлагбаум відкритим до 30 хв?"`), `action_release` «Зняти утримання» (`invisible="state != 'held' and not hold_until"`), `action_opened_manually` «Відкрито вручну», `action_reset_error` «Скинути помилку» (`invisible="not last_error"`); поле `state` badge у заголовку. `<div class="alert alert-warning" invisible="not command_block_reason">Команди недоступні: <field name="command_block_reason" nolabel="1"/></div>`; `<div class="alert alert-danger" invisible="not last_error"><field name="last_error" nolabel="1"/></div>`; button_box: `action_view_commands` («Команди», `fa-terminal`), «Показати в 3D» (домішка CB-01); `name` (title); група «КПП»: `f3d_code`, `direction`, `side`, `mode` (widget `radio`, `readonly` для не-`GRP_MGR` через `groups` дублем поля), `camera_code`, `scale_id`, `responsible_id`; група «Зараз» (readonly): `state_since`, `last_plate`, `last_plate_at`, `passes_today`, `admitted_today`, `tailgate_today`, `last_tailgate_at`, `hold_until`, `pending_visit_id`; вкладки «Обладнання й сигнали» (`groups=GRP_MGR`): `equipment_id`, `zone_id`, `camera_equipment_id`, `source_id`, `pos_x`, `pos_y`, `invert_di`, 7 полів сигналів; «Команди» (`command_ids` readonly: `requested_at`, `f3d_yard_kind`, `state`, `requested_by`, `done_at`, `error`); чаттер |
 | V-13 | `view_f3d_yard_gate_list` | list | `sequence` (handle), `f3d_code`, `name`, `direction`, `mode`, `state` (badge), `passes_today`, `admitted_today`, `tailgate_today` (optional hide), `last_plate` (groups `GRP_SEC`) |
 | V-14 | `view_f3d_yard_lpr_event_list` | list `f3d.yard.lpr.event` | `create="0"`, `edit="0"`, `delete="0"`; `ts`, `camera_code`, `gate_id`, `direction`, `car_state`, `plate_norm`, `confidence` (widget `percentage`), `match_state` (badge), `visit_id`, `kpp_alert` (widget `boolean`), `lost_at` (optional hide), `note` (optional hide); `decoration-warning="kpp_alert"`, `decoration-muted="match_state in ('ignored','expired','handled')"` |
-| V-15 | `view_f3d_yard_lpr_event_form` | form | readonly; `<header>`: `action_walk_in` «Створити рейс» (`invisible="match_state not in ('unmatched','low_confidence') or direction == 'out'"`), `action_reject` «Відхилити» (те саме), `action_dismiss` «Вирішено» (`invisible="not kpp_alert"`); групи: «Подія» (`ts`, `received_at`, `camera_code`, `gate_id`, `direction`, `car_state`, `car_id`, `packet_counter`, `push_event_id`), «Номер» (`plate_raw`, `plate_unicode`, `plate_norm`, `plate_country`, `confidence`, `plate_list`, `plate_list_description`), «Результат» (`match_state`, `visit_id`, `kpp_alert`, `note`, `lost_at`, `handled_by`, `handled_at`); `image` (widget `image`, `options="{'size': [640, 0]}"`), `image_url` (widget `url`) |
+| V-15 | `view_f3d_yard_lpr_event_form` | form | readonly; `<header>`: `action_walk_in` «Створити рейс» (`invisible="match_state not in ('unmatched','low_confidence') or direction == 'out'"`), `action_reject` «Відхилити» (те саме), `action_dismiss` «Вирішено» (`invisible="not kpp_alert"`); групи: «Подія» (`ts`, `received_at`, `camera_code`, `gate_id`, `direction`, `car_state`, `car_id`, `packet_counter`, `push_event_id`), «Номер» (`plate_raw`, `plate_unicode`, `plate_norm`, `plate_country`, `confidence`, `plate_list`, `plate_list_mode`, `plate_list_description`), «Результат» (`match_state`, `visit_id`, `kpp_alert`, `note`, `lost_at`, `handled_by`, `handled_at`); `image` (widget `image`, `options="{'size': [640, 0]}"`), `image_url` (widget `url`) |
 | V-16 | `view_f3d_yard_lpr_event_search` | search | поля `plate_norm`, `camera_code`, `visit_id`; фільтри `alert` «Потрібне рішення» (`kpp_alert = True`), `unmatched` «Без бронювання», `low` «Низька довіра», `today` «Сьогодні» (`ts >= (context_today()).strftime('%Y-%m-%d 00:00:00')`), `in` «В'їзд», `out` «Виїзд»; group by `gate_id`, `match_state`, `ts:day` |
 | V-17 | `view_f3d_yard_weighing_list` | list | `name`, `ts`, `scale_id`, `kind`, `role`, `weight_kg`, `plate`, `visit_id`, `picking_id`, `source`, `state` (badge); `decoration-warning="state == 'unassigned'"`, `decoration-muted="state == 'void'"` |
 | V-18 | `view_f3d_yard_weighing_form` | form | `<header>`: `action_assign_selected` «Призначити рейсу» (`invisible="state != 'unassigned'"`, `GRP_SEC`), `action_void` «Анулювати» (`invisible="state == 'void'"`, `GRP_SEC`, `confirm="Анулювати зважування?"`), статусбар `state`; група: `scale_id`, `ts`, `kind`, `weight_kg`, `stable`, `source` (readonly, якщо не новий запис), `visit_id` (`readonly="state not in ('unassigned',) and id"`), `role`, `picking_id`, `plate`, `user_id`, `note`; чаттер. Відкривається також як діалог із V-01 «Зважити» (`target='new'`, кнопки футера «Записати» (`special="save"`) і «Скасувати») |
@@ -909,7 +919,7 @@ reason)`; є `visit_id` → `visit_id._do_reject(text)`; лише `event_id` →
 | V-29 | `view_f3d_yard_walkin_wizard_form` | form `f3d.yard.walkin.wizard` | `<div class="alert alert-info">Залишилось рейсів без броні на сьогодні: <field name="walk_in_left" nolabel="1"/></div>`; група: `plate`, `gate_id`, `visit_type`, `partner_id`, `carrier_id`, `batch_id`, `driver_id`, `driver_phone`, `driver_doc`, `note`; футер: `action_create` «Створити рейс» (`btn-primary`), «Скасувати» (`special="cancel"`) |
 | V-30 | `view_f3d_yard_reject_wizard_form` | form `f3d.yard.reject.wizard` | `reason_code` (widget `radio`), `reason`; футер: `action_confirm` «Відхилити» (`btn-danger`), «Скасувати» |
 | V-31 | `view_f3d_command_list_f3d_yard` | list inherit `factory3d_telemetry.view_f3d_command_list` | після `signal_id`: `f3d_yard_gate_id` (optional show), `f3d_yard_kind` (optional show), `f3d_yard_visit_id` (optional show), `f3d_yard_reason` (optional hide); дія `action_f3d_yard_command` (`f3d.command`, list,form, `domain=[('f3d_yard_gate_id','!=',False)]`, `context={'create': 0}`) |
-| V-32 | `res_config_settings_view_form_f3d_yard` | form inherit `base.res_config_settings_view_form` | `//form` `inside`: `<app data-string="Двір" string="Двір" name="factory3d_yard" groups="factory3d_yard.group_f3d_yard_manager">` з блоками (`<block title="…">` + `<setting>`): «Стоп-крани» (`f3d_yard_read_enabled` «Обробляти показання й події двору», `f3d_yard_write_enabled` «Дозволяти команди на шлагбауми», `f3d_yard_antipassback` — перші два `groups=factory3d_base.group_f3d_admin`); «КПП і розпізнавання» (`walk_in_allowed`, `walk_in_limit_per_day`, `lpr_min_confidence`, `lpr_match_window_h`, `lpr_store_images`, `lpr_image_max_kb`, `camera_tz`, `kpp_refresh_s`); «Бронювання й черга» (`slot_default_min`, `dock_turnaround_min`, `enforce_calendar`, `calendar_id`, `early_min`, `late_min`, `auto_call_next`, `queue_slot_window_min`, `arrival_timeout_min`, `no_show_min`, `dock_shift_min`); «Шлагбауми» (`open_timeout_s`, `cmd_cooldown_s`, `cmd_expire_s`, `hold_max_min`, `signal_max_age_s`); «Зважування» (`net_tolerance_pct`, `net_tolerance_kg`, `weigh_max_age_s`, `scale_auto_capture`, `scale_dwell_s`, `weighing_policy_west`, `weighing_policy_east`); «Зберігання даних» (`lpr_keep_days`, `visit_pii_keep_days`, `weighing_unassigned_keep_days`); «Міграція» (`seed_product_weights`, кнопка `factory3d_yard.action_f3d_yard_run_migration` для admin). Мітки — як у лапках §5.1 |
+| V-32 | `res_config_settings_view_form_f3d_yard` | form inherit `base.res_config_settings_view_form` | `//form` `inside`: `<app data-string="Двір" string="Двір" name="factory3d_yard" groups="factory3d_yard.group_f3d_yard_manager">` з блоками (`<block title="…">` + `<setting>`): «Стоп-крани» (`f3d_yard_read_enabled` «Обробляти показання й події двору», `f3d_yard_write_enabled` «Дозволяти команди на шлагбауми», `f3d_yard_antipassback` — перші два `groups=factory3d_base.group_f3d_admin`); «КПП і розпізнавання» (`walk_in_allowed`, `walk_in_limit_per_day`, `lpr_min_confidence`, `lpr_match_window_h`, `lpr_store_images`, `lpr_image_max_kb`, `kpp_refresh_s`); «Бронювання й черга» (`slot_default_min`, `dock_turnaround_min`, `enforce_calendar`, `calendar_id`, `early_min`, `late_min`, `auto_call_next`, `queue_slot_window_min`, `arrival_timeout_min`, `no_show_min`, `dock_shift_min`); «Шлагбауми» (`open_timeout_s`, `cmd_cooldown_s`, `cmd_expire_s`, `hold_max_min`, `signal_max_age_s`); «Зважування» (`net_tolerance_pct`, `net_tolerance_kg`, `weigh_max_age_s`, `scale_auto_capture`, `scale_dwell_s`, `weighing_policy_west`, `weighing_policy_east`); «Зберігання даних» (`lpr_keep_days`, `visit_pii_keep_days`, `weighing_unassigned_keep_days`); «Міграція» (`seed_product_weights`, кнопка `factory3d_yard.action_f3d_yard_run_migration` для admin). Мітки — як у лапках §5.1 |
 | V-33 | `action_f3d_yard_kpp` (`views/f3d_yard_kpp_action.xml`) | `ir.actions.client` | `name="Екран КПП"`, `tag="f3d_yard.kpp"`, `target="current"`, `params="{}"`; клієнт — R-18 |
 | V-34 | меню й дії (`views/f3d_yard_menus.xml`, `data/f3d_yard_actions.xml`) | `ir.ui.menu`, `ir.actions.*` | таблиця нижче |
 
@@ -939,7 +949,9 @@ reason)`; є `visit_id` → `visit_id._do_reject(text)`; лише `event_id` →
   `action['domain'] = [('dock_id', '!=', False)]`; `action['context'] = {'search_default_in_progress': 1}`.
   Без `stock_fleet_enterprise` — список пакетів із доками (Gantt відсутній, без помилки).
 
-Меню (CB-09; батько `factory3d_base.menu_f3d_root`, sequence 60):
+Меню (CB-09; батько `factory3d_base.menu_f3d_root`, sequence 60). Пункт параметрів модуля (`res.config.settings`) — під
+`factory3d_base.menu_f3d_config` із sequence 60 (= резерв двору в CB-09; правило X-32); довідники воріт і ваг та
+«Повторити міграцію двору» лишаються в корені двору:
 
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
@@ -959,7 +971,7 @@ reason)`; є `visit_id` → `visit_id._do_reject(text)`; лише `event_id` →
 | `menu_f3d_yard_config` | Налаштування | `menu_f3d_yard` | 90 | `group_f3d_yard_manager` | — |
 | `menu_f3d_yard_config_gate` | КПП і шлагбауми | `menu_f3d_yard_config` | 10 | `group_f3d_yard_manager` | `action_f3d_yard_gate` |
 | `menu_f3d_yard_config_scale` | Автоваги | `menu_f3d_yard_config` | 20 | `group_f3d_yard_manager` | `action_f3d_yard_scale` |
-| `menu_f3d_yard_config_settings` | Параметри двору | `menu_f3d_yard_config` | 30 | `group_f3d_yard_manager` | `action_f3d_yard_settings` |
+| `menu_f3d_yard_config_settings` | Налаштування двору | `factory3d_base.menu_f3d_config` | 60 | `group_f3d_yard_manager` | `action_f3d_yard_settings` |
 | `menu_f3d_yard_config_migration` | Повторити міграцію двору | `menu_f3d_yard_config` | 90 | `factory3d_base.group_f3d_admin` | `action_f3d_yard_run_migration` |
 
 ## 4. Права
@@ -1071,7 +1083,6 @@ XML-id параметра — `param_<name>`; ключ — `factory3d.yard.<name
 | `lpr_store_images` | `True` | bool | Зберігати знімки номерів | R-07 |
 | `lpr_image_max_kb` | `1024` | int | Макс. розмір знімка, КБ | R-07 |
 | `lpr_keep_days` | `30` | int | Зберігати події LPR, діб | R-22 |
-| `camera_tz` | `Europe/Kyiv` | str | Часовий пояс камер | R-07 |
 | `kpp_refresh_s` | `10` | int | Оновлення екрана КПП, с | R-18 |
 | `slot_default_min` | `60` | int | Тривалість слоту за замовчуванням, хв | R-02, R-05 |
 | `dock_turnaround_min` | `15` | int | Буфер між слотами, хв | R-03 |
@@ -1104,6 +1115,7 @@ XML-id параметра — `param_<name>`; ключ — `factory3d.yard.<name
 
 Жодного токена, пароля чи URL з секретом серед параметрів немає (FR-25): токени маршруту `lpr` і колектора —
 у telemetry (`F3D_HTTP_PUSH_TOKEN_LPR`, `F3D_HTTP_PUSH_SECRET_LPR`, хеш токена колектора).
+Параметр `camera_tz` вилучено (X-48): час події LPR — лише `capture_timestamp` або час прийому (R-07 п. 4).
 
 ### 5.2 `data/ir_sequence.xml` (`noupdate="1"`)
 
@@ -1296,13 +1308,13 @@ id>` або `image_url` події. Обмеження: ≤ 50 рейсів у �
 | `carState` | str `new`/`update`/`lost` | `car_state` | інше → `new` |
 | `carID` | str/int | `car_id`, ключ дубліката | `str(...)[:32]` |
 | `packetCounter` | str/int | `packet_counter`, ключ дубліката | `str(...)[:32]` |
-| `capture_timestamp` | str/int, UNIX мс UTC | `ts` | не число / поза ±1 доба від `event.ts` → наступне джерело часу |
-| `datetime` | str `YYYYMMDD HHMMSSmmm` | `ts`, якщо немає `capture_timestamp` (часовий пояс `P.camera_tz`) | невалідний → `event.ts` |
+| `capture_timestamp` | str/int, UNIX мс UTC | `ts` (R-07 п. 4 = telemetry R-22, X-48) | немає / не число / > `now + 60 с` / < `now − factory3d.telemetry.keep_days` → час прийому, `note` |
+| `datetime` | str `YYYYMMDD HHMMSSmmm` | не використовується (X-48: час — лише `capture_timestamp` або час прийому) | — |
 | `plateText` | str (латиниця) | `plate_raw` | `[:32]` |
 | `plateUnicode` / `plateUTF8` | str | `plate_unicode` (перше непорожнє) | `[:32]` |
 | `plateCountry` | str | `plate_country` | `[:8]` |
 | `plateConfidence` | str/float 0…1 | `confidence` | нечислове → 0.0; обрізання до [0, 1] |
-| `plateList`, `plateListDescription` | str | `plate_list`, `plate_list_description` | `[:32]`, `[:256]` |
+| `plateList`, `plateListMode`, `plateListDescription` | str | `plate_list` (назва списку камери, напр. `f3d_bookings`), `plate_list_mode` (режим списку: `allow`/`block`/`none`…), `plate_list_description` (X-48, X-73) | `[:32]`, `[:16]`, `[:256]` |
 | `carMoveDirection` | str `in`/`out`/`unknown` | `direction` | інше → за `gate.direction` |
 | `GEOtarget` | str | лише контроль: ≠ `gate.f3d_code` → `note` «GEOtarget %s ≠ %s» (не блокує) | — |
 | `imageArray` | list/dict/str base64 | знімок (R-07 п. 7) | розмір ≤ `lpr_image_max_kb`; JPEG/PNG сигнатура |
@@ -1370,7 +1382,8 @@ f3d_collector_yard = ["schemas/*.json"]
 
 **Спільна схема `sics` — власник цей модуль** (каркас §6.5, X-45). telemetry Додаток A.1 `sics`, A.2 `sics` і файли
 `plugins/schemas/params.sics.json`, `address.sics.json` — дослівні копії двох схем нижче: адреса — `field*` ∈
-{`weight`, `stable`}, `cmd` ∈ {`SI`} з умовчанням `SI`, `write.cmd` ∈ {`Z`, `T`, `TAC`}, `doc`; `params` — `host*`,
+{`weight`, `stable`}, `cmd` ∈ {`SI`} з умовчанням `SI`, `write.cmd` ∈ {`Z`, `T`, `TAC`}, спільні ключі telemetry A.0
+`scale` (≠ 0, умовч. 1) і `offset` (умовч. 0; X-70), `doc`; `params` — `host*`,
 `port` (4001), `mode` (`stream`), `period_s` (1), `timeout_s` (**5** — єдине умовчання для валідатора telemetry M-02/M-03
 і плагіна), `unit` (`kg`), `dialect` (`mt_sics`), `reset_on_connect` (`true`); `additionalProperties: false` в обох.
 Валідація telemetry за цими схемами пропускає джерело `SICS-TRUCK-SCALE` (§5.3) і сигнали № 17–18 Додатка A
@@ -1402,6 +1415,8 @@ f3d_collector_yard = ["schemas/*.json"]
    "field": {"enum": ["weight", "stable"]},
    "write": {"type": "object", "required": ["cmd"], "additionalProperties": false,
              "properties": {"cmd": {"enum": ["Z", "T", "TAC"]}}},
+   "scale": {"type": "number", "not": {"const": 0}, "default": 1},
+   "offset": {"type": "number", "default": 0},
    "doc": {"type": "string", "maxLength": 128}}}
 ```
 
@@ -1476,7 +1491,9 @@ class SicsPlugin(SourcePlugin):
 | `S -` | `None`, `bad`, `text='underload'` | `None`, `bad` |
 | `S S      21380 oz` | `None`, `bad`, `text='unit oz'` | `1.0`, `good` |
 
-`value` множиться на `signal.scale` (telemetry R-02; у даних `scale=1.0`). `ts` показання — час прийому кадру
+Ключі адреси `scale`/`offset` (X-70, telemetry A.0) застосовує плагін до значення поля після перетворення в кг:
+`value = value_kg · address.scale + address.offset` (умовч. 1 і 0; `None` лишається `None`); `signal.scale` плагін не
+застосовує — множить ядро колектора (telemetry R-02, X-63; у даних `scale=1.0`). `ts` показання — час прийому кадру
 (UTC, `datetime.now(timezone.utc)`).
 
 ### 8.6 Таймінги й стан-машина (R-14)
@@ -1633,8 +1650,11 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
    подія `match_state='unknown_camera'`, `kpp_alert=False`, без зіставлення (п. 9 не виконується).
 3. Ключ дубліката: є `carID` і `packetCounter` → `"%s|%s|%s" % (camera, carID, packetCounter)`; інакше
    `"evt|" + event['event_id']`. Подія з таким ключем є → повернути її без змін (повтор камери/колектора).
-4. Час `ts`: `capture_timestamp` (мс UTC) у межах ±1 доба від `event['ts']` → інакше `datetime` (формат
-   `%Y%m%d %H%M%S%f`, перші 3 цифри — мс) у `P.camera_tz` → інакше `event['ts']`; `ts > now + 60 с` → `now`.
+4. Час `ts` — той самий порядок, що telemetry R-22 для показання `yard/lpr/<CAM>/plate` (X-48): `capture_timestamp`
+   (епоха мс UTC, `tools.tz.parse_axis_ts`); якщо ключа немає або значення невалідне (`ts_invalid`), пізніше за
+   `now + 60 с` (`ts_future`) чи раніше за `now − factory3d.telemetry.keep_days` (`ts_too_old`) — `ts` = час прийому
+   (`now` = `received_at`), `note` «Час камери відкинуто (<причина>) — узято час прийому». Поле `datetime` камери не
+   використовується (параметр `camera_tz` вилучено, X-48).
 5. `carState`: `lost` — шукати попередню подію `camera_code` + `car_id` за 2 год: є → `lost_at = ts`; якщо вона
    `kpp_alert` і `match_state ∈ (unmatched, low_confidence)` → `match_state='expired'`, `kpp_alert=False`, `note`
    «Фура поїхала без рішення»; якщо в неї рейс, напрям `out`, рейс ще не `left` і це `gate.pending_visit_id` →
@@ -1943,7 +1963,7 @@ CREATE OR REPLACE VIEW f3d_yard_dock_report AS (
    `deep_merge(patch.setdefault("infra", {}), {"cards": {code: {"rows": ...}} для трьох карток})` (без статичних
    полів); ключі `infra`, уже записані іншими провайдерами (energy 150, genset 155, access 170), і їхні картки не
    змінюються; присвоєння `patch["infra"] = …` заборонене. Хелпер імпортується всередині методу
-   (`from odoo.addons.factory3d_viewer.models.viewer_provider import deep_merge` — модуль M-01 viewer; провайдер
+   (`from odoo.addons.factory3d_viewer.tools.payload import deep_merge` — модуль хелпера за viewer M-01, як у td_genset R-13; провайдер
    викликає лише встановлений viewer, A-15). Немає змін — нічого.
 8. Помилка всередині провайдера — обробляє viewer R-01 (розділ `error`); провайдер не перехоплює винятки сам.
 
@@ -2059,8 +2079,8 @@ draft ──бронювання підтверджено / action_plan──►
    (`SELECT … FOR UPDATE` у `action_command` перед п. 6 R-15).
 4. **Застарілі дані.** Ворота/фотоелемент — `signal_max_age_s` (15 с); ваги — `weigh_max_age_s` (15 с); старіші
    показання оновлюють лише `last_*`, якщо новіші за збережені.
-5. **Часові пояси.** БД — UTC naive; камера: `capture_timestamp` — UTC мс; поле `datetime` камери — у `P.camera_tz`
-   (`Europe/Kyiv`); «сьогодні», добові лічильники, звіти, текст слотів — `Europe/Kyiv` (`zoneinfo`, перехід на
+5. **Часові пояси.** БД — UTC naive; камера: `capture_timestamp` — UTC мс, поза вікном telemetry R-22 — час прийому;
+   поле `datetime` камери не використовується (X-48); «сьогодні», добові лічильники, звіти, текст слотів — `Europe/Kyiv` (`zoneinfo`, перехід на
    зимовий час 25.10.2026 враховується автоматично; доба 25.10 має 25 год). Крони з фіксованим локальним часом
    — `nextcall` ставить хук у UTC з урахуванням поясу; після переходу DST час запуску зсувається на 1 год
    (прийнятно, Q не потрібне).
@@ -2083,8 +2103,8 @@ draft ──бронювання підтверджено / action_plan──►
     §8.5; невідома одиниця — `q='bad'`.
 12. **Перевантаження ваг** (`S +`, > 60 000 кг) — показання `bad`, не захоплюється; КПП показує «Перевантаження»
     (`kpp_data.scale.state='offline'` не ставиться; `weight_kg = null`).
-13. **Номери емулятора й макета.** iot_sim генерує номери сам (`bookings[].plate = null`) — R-08 п. 7 (опис) дає
-    збіг і заповнює номер рейсу (Q-02).
+13. **Номери емулятора й макета.** iot_sim бере номер з `stock.picking.batch.f3d_plate` (M-07), а для рейсу без номера
+    (`bookings[].plate = null`) генерує його сам (X-49) — тоді R-08 п. 7 (опис) дає збіг і заповнює номер рейсу.
 
 ## 12. Acceptance Criteria
 
@@ -2114,7 +2134,7 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-20 | R-09 | Given рейс `at_dock` з документом; When `stock.move.line.write({'quantity': 12})`; Then рейс `handling`, `handling_start_at` заповнено; проведення всіх документів пакета → `handling_end_at`; з контекстом `f3d_yard_no_auto` — без змін | UT |
 | AC-21 | FR-22, §10.1 | Then `user_reader.action_admit()` → `AccessError`; комірник: `action_start_handling` — так, `action_admit` — `AccessError`; охоронець: `action_admit`, `action_leave`, майстер відхилення — так, `action_cancel` — `AccessError`; диспетчер — `action_cancel` так | UT |
 | AC-22 | FR-01, M-17 | Then `unlink` рейсу в `draft`/`planned`/`cancelled` — так, в `arrived` — `UserError`; майстер M-17 (`no_booking`, «немає документів») → `rejected`, `reject_reason="Немає бронювання: немає документів"`, бронювання `cancelled`; другий активний рейс на той самий пакет → `ValidationError`; `visit_type='outgoing'` з пакетом приймання → `ValidationError` | UT |
-| AC-23 | FR-07, R-07 | When `_f3d_handle_push('lpr', event)` з тілом iot_sim §8.13.2 (дослівно) і `event.ts = 2026-10-14 05:15:05.507 UTC`; Then одна подія: `camera_code='CAM-05'`, `gate_id=GATE-W`, `direction='in'`, `car_state='new'`, `plate_raw='AA4512KT'`, `plate_unicode='АА4512КТ'`, `plate_norm='AA4512KT'`, `confidence=0.912`, `plate_list='allow'`, `dedup_key='CAM-05\|12891\|2117397'`, `ts = 2026-10-14 05:15:05.507` (`capture_timestamp` поза ±1 доба → поле `datetime` у Києві); з `capture_timestamp='1791785400000'` і `event.ts = 2026-10-12 06:10:00` → `ts = 2026-10-12 06:10:00` | UT |
+| AC-23 | FR-07, R-07 (X-48, X-73) | Given `freeze_time('2026-10-14 05:15:10')`; When `_f3d_handle_push('lpr', event)` з тілом iot_sim §8.13.2 (дослівно, `lpr_payload()`: `capture_timestamp='1791954905507'`); Then одна подія: `camera_code='CAM-05'`, `gate_id=GATE-W`, `direction='in'`, `car_state='new'`, `plate_raw='AA4512KT'`, `plate_unicode='АА4512КТ'`, `plate_norm='AA4512KT'`, `confidence=0.912`, `plate_list='f3d_bookings'`, `plate_list_mode='allow'`, `plate_list_description='BATCH/OUT/00004 DOCK-E2 Меблі Дім (демо)'`, `dedup_key='CAM-05\|12891\|2117397'`, `ts = 2026-10-14 05:15:05.507` (= `capture_timestamp`, той самий час, що показання `yard/lpr/CAM-05/plate` за telemetry R-22). When `capture_timestamp='1792391105507'` (19.10.2026, `ts_future`) → `ts = 2026-10-14 05:15:10` (час прийому), `note` містить «Час камери відкинуто»; без `capture_timestamp` (є `datetime`) → `ts` = час прийому, `datetime` ігнорується; `capture_timestamp` 31 добу тому (`ts_too_old` при `keep_days=30`) → час прийому | UT |
 | AC-24 | FR-07, R-07 | Then повтор того самого тіла → подій 1; `carState=update` того ж `carID` з вищою довірою → рядків 1, `confidence` оновлено; тіло без `carID` → `dedup_key = 'evt\|' + event_id` | UT |
 | AC-25 | FR-07, R-07 | Given `unmatched` подія з `kpp_alert`; When `carState=lost` того ж `carID`; Then `lost_at` заповнено, `match_state='expired'`, `kpp_alert=False`, нового рядка немає; `lost` без попередньої → рядок `ignored`; `_cron_queue` через 31 хв гасить інший `unmatched` → `expired` | UT |
 | AC-26 | FR-07, R-07 | Then `imageArray=["<base64 JPEG 2 КБ>"]` → `ir.attachment` (`mimetype='image/jpeg'`, `res_model='f3d.yard.lpr.event'`); 1,5 МБ → без вкладення, `note` містить «Знімок відхилено»; base64 тексту → відхилено; `lpr_store_images=False` → без вкладення; `imagesURI=["https://10.90.2.5/a.jpg"]` → `image_url`; `imageFile` ігнорується | UT |
@@ -2143,7 +2163,7 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-49 | FR-17, R-13 | `parse_line` і перетворення показань — усі рядки таблиці §8.5; `ES`/`ET`/`EL` → `error`; `g`/`t`/`lb` → кг | CT |
 | AC-50 | FR-17, R-14 | Given `FakeSicsServer` (кадри `S S 21380 kg`); Then `poll` у режимі `poll` → 2 показання (`21380.0`, `1.0`, `good`); режим `stream` → `SIR` надіслано, `poll` віддає останній кадр, наступний `poll` без нових кадрів → `[]`; `@` → `health().stats.device='FAKE-0001'`; сервер без `@` (`ES`) — підключення успішне | CT |
 | AC-51 | FR-17, R-14 | Then сервер не відповідає (`reply_delay_s=10`, `timeout_s=1`) → `PollError`; `drop_after=3` у `stream` → `PollError`, повторний `connect` відновлює кадри; 3 помилки поспіль → `health().state='error'`; `allowlist` відмовляє → `AllowlistDenied` до спроби з'єднання | CT |
-| AC-52 | FR-17 | Then `write` з `address.write.cmd='Z'` у `stream` → результат `"Z A"`, у `server.received` після `Z` знову `SIR`; `T` → `"T S …"`; `TAC` на сервері, що відповідає `ES` → `WriteError`; `cmd='TA'` → `NotSupported`; `settings.write_enabled=False` → `WriteError`; схеми §8.2 приймають приклади §5.3/Додатка A і відхиляють `{"field":"weight","write":{"cmd":"TA"}}` та невідомі ключі | CT |
+| AC-52 | FR-17 | Then `write` з `address.write.cmd='Z'` у `stream` → результат `"Z A"`, у `server.received` після `Z` знову `SIR`; `T` → `"T S …"`; `TAC` на сервері, що відповідає `ES` → `WriteError`; `cmd='TA'` → `NotSupported`; `settings.write_enabled=False` → `WriteError`; схеми §8.2 приймають приклади §5.3/Додатка A і `{"field":"weight","scale":0.001,"offset":0}` (X-70), відхиляють `{"field":"weight","write":{"cmd":"TA"}}`, `"scale": 0` та невідомі ключі; кадр `S S 21380 kg` з `scale=0.001` → `21.38` | CT |
 | AC-53 | FR-18 | Then `get_views` для `f3d.yard.visit` (kanban, list, form, pivot, graph, search) і `f3d.yard.booking` (gantt, calendar, list, form, search) без помилок; `read_group` kanban за `state` повертає 7 колонок `_group_expand_states` | UT |
 | AC-54 | FR-18 | Тур `f3d_yard_dispatch_tour`: меню «Двір → Диспетчерська», картка рейсу `arrived` → «Пропустити» → картка в колонці «У черзі»; форма рейсу показує кнопки лише свого стану | HT |
 | AC-55 | FR-18 | Then серверна дія «Диспетчеризація (стандарт)» на базі з `stock_fleet_enterprise` → `views[0]` = (`view_stock_picking_batch_gantt`, `gantt`), `domain=[('dock_id','!=',False)]`; без модуля (патч `env.ref` → `None`) → `view_mode` без `gantt` | UT |
@@ -2157,7 +2177,7 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-63 | FR-23, A-16 | Given `payload['infra']['cards']` з `GATE-W`, `TRUCK-SCALE`; Then рядки карток R-20 п. 6 («Стан», «Сьогодні проїздів», «Режим»; «Остання машина» = «АА 4512 КТ · брутто 21 380 кг · WH/OUT/00413»); payload без `infra` → ключ `infra` не створено | UT |
 | AC-64 | FR-23, R-21 | Given патч `_f3d_yard_viewer_event()` → `Mock`; When `action_admit`; Then `_notify('f3d.yard.visit', [name, scene_code, dock_code], 'doc')`; зміна стану воріт → `_notify('f3d.yard.gate', ['GATE-W'], 'state')`; 10 переходів у транзакції → один `bus.bus._sendone` на модель (`precommit`) | UT |
 | AC-65 | FR-23 | Then модель `f3d.viewer.provider.yard` є в реєстрі без `factory3d_viewer`, `_f3d_sequence=160`, `_f3d_sections=('yard',)`; `_f3d_viewer_delta(patch, {'changes': {}})` → `patch` порожній; з `{'changes': {'f3d.yard.visit': {...}}}` → `patch['yard']` | UT |
-| AC-66 | FR-22 | Then `menu_f3d_yard` (батько `factory3d_base.menu_f3d_root`, `sequence=60`) і 17 дочірніх пунктів із групами й sequence §3; ланцюжок `implied_ids` §4.2; `group_f3d_admin` ⊃ `group_f3d_yard_manager` | UT |
+| AC-66 | FR-22 | Then `menu_f3d_yard` (батько `factory3d_base.menu_f3d_root`, `sequence=60`) і 16 пунктів його дерева із групами й sequence §3; `menu_f3d_yard_config_settings` — батько `factory3d_base.menu_f3d_config`, `sequence=60` (X-32); ланцюжок `implied_ids` §4.2; `group_f3d_admin` ⊃ `group_f3d_yard_manager` | UT |
 | AC-67 | FR-22, §4.1 | Then для кожного рядка CSV `check_access` (read/write/create/unlink) користувачів `reader`, `stock`, `guard`, `dispatcher`, `manager` відповідає матриці (параметризований тест) | UT |
 | AC-68 | FR-24, §4.4 | Then `user_reader`: `visit.read(['driver_phone'])`, `gate.read(['last_plate'])` → `AccessError`; `search_read(fields=['name','plate'])` — так; охоронець читає `driver_doc` | UT |
 | AC-69 | FR-22, §4.3 | Given рейс компанії B; Then користувач лише компанії A не бачить його (`search_count = 0`) | UT |
@@ -2239,7 +2259,7 @@ draft ──бронювання підтверджено / action_plan──►
 | `::TestPartner` | `test_visit_count`, `test_driver_onchange`, `test_driver_doc_hidden` | AC-16 | `driver`, `carrier`, `Form(visit)` | лічильник; поля onchange; `AccessError` |
 | `::TestNetCheck` | `test_ok`, `test_deviation_activity_once`, `test_ok_within_tolerance`, `test_small_doc`, `test_no_reference`, `test_outgoing_shipping_weight`, `test_allocation_two_pickings`, `test_void_recompute` | AC-17…AC-19 | зважування `manual` через ORM | поля рейсу/документа; `mail.activity` count == 1 |
 | `::TestAutoHandling` | `test_move_line_starts`, `test_done_sets_end`, `test_no_auto_context` | AC-20 | рейс `at_dock` | стан, мітки |
-| `test_lpr.py::TestIntake` | `test_iot_sim_example_fields`, `test_capture_ts_consistent`, `test_dedup_same_body`, `test_update_merges`, `test_no_carid_key`, `test_lost_expires`, `test_lost_without_prior`, `test_cron_expire` | AC-23…AC-25 | `lpr_payload`, `freeze_time` | поля події; кількість рядків |
+| `test_lpr.py::TestIntake` | `test_iot_sim_example_fields`, `test_plate_list_mode`, `test_capture_ts_consistent`, `test_capture_ts_out_of_window`, `test_datetime_ignored`, `test_dedup_same_body`, `test_update_merges`, `test_no_carid_key`, `test_lost_expires`, `test_lost_without_prior`, `test_cron_expire` | AC-23…AC-25 | `lpr_payload`, `freeze_time` | поля події; кількість рядків |
 | `::TestImages` | `test_jpeg_saved`, `test_too_big`, `test_not_image`, `test_store_disabled`, `test_images_uri`, `test_image_file_ignored` | AC-26 | `jpeg_b64` | `ir.attachment` count/mimetype; `note` |
 | `::TestPlate` | `test_normalize_examples`, `test_display_examples` | AC-27 | — (чисті функції `tools/plate.py`) | рівність |
 | `::TestMatching` | `test_plate_match_arrive`, `test_window`, `test_repeat_note`, `test_exit_match`, `test_description_fills_plate`, `test_description_plate_conflict`, `test_ambiguous_by_doc`, `test_low_confidence`, `test_unknown_camera`, `test_read_disabled_ignored` | AC-28…AC-30 | рейси з бронюваннями на `dock_w2` | `match_state`, стан рейсу, `kpp_alert`, `note` |
@@ -2265,7 +2285,7 @@ draft ──бронювання підтверджено / action_plan──►
 | `test_migration.py::TestMigration` | `test_params_env_test_prod`, `test_read_disabled_effects`, `test_synthetic_run_all`, `test_rerun_idempotent`, `test_clean_skipped`, `test_product_weights`, `test_seed_disabled`, `test_manual_flow_no_telemetry` | AC-72, AC-76, AC-77, AC-79 | пакети `TRUCK-T-1/2` з `f3d_code` | звіт; стани; ваги товарів |
 | `test_contracts.py::TestContracts` | `test_telemetry_contract`, `test_base_contract`, `test_tags` | AC-78 | — | `inspect.signature`, `_fields`; теги всіх класів модуля |
 | `services/.../tests/test_sics_parse.py` | `test_frames_table`, `test_units`, `test_errors`, `test_garbage` | AC-49 | — | `Frame`, показання |
-| `services/.../tests/test_sics_plugin.py` | `test_poll_mode`, `test_stream_mode`, `test_stream_no_new`, `test_reset_device`, `test_reset_unsupported`, `test_poll_timeout`, `test_stream_drop_reconnect`, `test_health_states`, `test_allowlist`, `test_write_z_resumes_sir`, `test_write_t`, `test_write_tac_es`, `test_write_ta_not_supported`, `test_write_disabled`, `test_schemas` | AC-50…AC-52 | `fake_sics` (pytest-asyncio), `ctx` з `settings.write_enabled` | результати й винятки; `server.received` |
+| `services/.../tests/test_sics_plugin.py` | `test_poll_mode`, `test_stream_mode`, `test_stream_no_new`, `test_reset_device`, `test_reset_unsupported`, `test_poll_timeout`, `test_stream_drop_reconnect`, `test_health_states`, `test_allowlist`, `test_write_z_resumes_sir`, `test_write_t`, `test_write_tac_es`, `test_write_ta_not_supported`, `test_write_disabled`, `test_address_scale_offset`, `test_schemas` | AC-50…AC-52 | `fake_sics` (pytest-asyncio), `ctx` з `settings.write_enabled` | результати й винятки; `server.received` |
 
 Запуск плагіна: `cd services/collector_plugins/f3d_collector_yard && pip install -e ../../collector -e .[test] &&
 pytest -q` (без мережі, лише `127.0.0.1`).
@@ -2282,9 +2302,9 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 
 | ТК | Передумови | Кроки | Очікуваний результат | Де дивитися | AC |
 |---|---|---|---|---|---|
-| ТК-01 `truck_arrival` | `GATE-W`, `GATE-E` `mode='auto'`; `write_enabled` на модулі, `factory3d.telemetry.write_enabled`, джерелі `MB-U86-IO7`, cmd-сигналах; `F3D_WRITE_ENABLED=1`; рейс створено кнопкою «Створити рейс», бронювання підтверджено | 1) `POST /sim/v1/scenario/truck_arrival/start {"booking": "<пакет>", "unload_min": 2}`; 2) після «Біля воріт» комірник проводить документ; 3) чекати виїзду | ≤ 10 с: подія CAM-05 `matched` (номер рейсу заповнено з опису, Q-02), рейс `arrived → queued`, команда `auto_booking` `done`, `GATE-W` `open` ≤ 6 с; зважування `in` `auto` 25 200 ± 20 кг; «На ворота» (вручну або `auto_call_next`) → `at_dock` → `handling` (R-09) → `handling_end_at`; CAM-06 `matched` (виїзд); зважування `out` 14 000 ± 20 → `weighed`, нетто 11 200 ± 40, `weight_check='ok'`, документ «Двір»; команда `auto_exit`; петля GATE-E → `left` | Двір → Диспетчерська, Екран КПП, Журнали (LPR, Зважування, Команди), документ → вкладка «Двір», 3D | AC-81, AC-75 (картина даних) |
-| ТК-02 POST LPR | колектор з `F3D_HTTP_PUSH_TOKEN_LPR` | `curl -s -X POST http://collector:8080/f3d/lpr -H 'Content-Type: application/json' -H "X-F3D-Token: $TOK" -d @lpr_new.json` (тіло iot_sim §8.13.2 з `carID=777`, `packetCounter=1`, номер `АА5555КТ`); повтор того самого; без заголовка | 200 `{"received": true}`; ≤ 10 с — одна подія `unmatched` (повтор не дублює); без токена — 401, подій немає | Двір → Журнали → Розпізнавання номерів; Телеметрія → Події HTTP push | AC-82 |
-| ТК-03 `truck_no_booking` | `mode='auto'`, команди дозволені | `POST /sim/v1/scenario/truck_no_booking/start {"plate": "АА1234КТ", "gate": "GATE-W", "wait_min": 3}`; на КПП — «Створити рейс» (або нічого) | картка «Без бронювання» жовта; `f3d.command` для GATE-W не створено; DI0 = 0 весь час (сигнал `yard/gates/GATE-W/state` = 0); з «Створити рейс» — рейс `arrived`, `is_walk_in`; без дії — після `lost` подія `expired` | Екран КПП; Телеметрія → Сигнали | AC-83 |
+| ТК-01 `truck_arrival` | `GATE-W`, `GATE-E` `mode='auto'`; `write_enabled` на модулі, `factory3d.telemetry.write_enabled`, джерелі `MB-U86-IO7`, cmd-сигналах; `F3D_WRITE_ENABLED=1`; рейс створено кнопкою «Створити рейс», бронювання підтверджено | 1) `POST /sim/v1/scenario/truck_arrival/start {"params": {"booking": "<пакет>", "unload_min": 2}}` (iot_sim API-13, X-57); 2) після «Біля воріт» комірник проводить документ; 3) чекати виїзду | ≤ 10 с: подія CAM-05 `matched` (рейс без номера → емулятор генерує номер, збіг за описом заповнює номер рейсу; X-49), рейс `arrived → queued`, команда `auto_booking` `done`, `GATE-W` `open` ≤ 6 с; зважування `in` `auto` 25 200 ± 20 кг; «На ворота» (вручну або `auto_call_next`) → `at_dock` → `handling` (R-09) → `handling_end_at`; CAM-06 `matched` (виїзд); зважування `out` 14 000 ± 20 → `weighed`, нетто 11 200 ± 40, `weight_check='ok'`, документ «Двір»; команда `auto_exit`; петля GATE-E → `left` | Двір → Диспетчерська, Екран КПП, Журнали (LPR, Зважування, Команди), документ → вкладка «Двір», 3D | AC-81, AC-75 (картина даних) |
+| ТК-02 POST LPR | колектор з `F3D_HTTP_PUSH_TOKEN_LPR` | `curl -s -X POST http://collector:8080/f3d/lpr -H 'Content-Type: application/json' -H "X-F3D-Token: $TOK" -d @lpr_new.json` (тіло iot_sim §8.13.2 з `carID=777`, `packetCounter=1`, номер `АА5555КТ`, `capture_timestamp` = зараз у мс, `plateList=""`, `plateListMode="none"`, `plateListDescription=""` — як у фури без броні, X-48); повтор того самого; без заголовка | 200 `{"received": true}`; ≤ 10 с — одна подія `unmatched` (повтор не дублює); без токена — 401, подій немає | Двір → Журнали → Розпізнавання номерів; Телеметрія → Події HTTP push | AC-82 |
+| ТК-03 `truck_no_booking` | `mode='auto'`, команди дозволені | `POST /sim/v1/scenario/truck_no_booking/start {"params": {"plate": "АА1234КТ", "gate": "GATE-W", "wait_min": 3}}` (iot_sim API-13, X-57); на КПП — «Створити рейс» (або нічого) | картка «Без бронювання» жовта; `f3d.command` для GATE-W не створено; DI0 = 0 весь час (сигнал `yard/gates/GATE-W/state` = 0); з «Створити рейс» — рейс `arrived`, `is_walk_in`; без дії — після `lost` подія `expired` | Екран КПП; Телеметрія → Сигнали | AC-83 |
 | ТК-04 команда DO0 | як ТК-01, `mode='manual'` | охоронець «Відкрити» на GATE-W; потім `F3D_WRITE_ENABLED=0`, перезапуск колектора, «Відкрити» ще раз | 1-ша: команда `done` ≤ 10 с, coil 00017 (PDU 16) = 1 і через 1,5 с знову 0 (`pulse_ms`, X-46; журнал u86 емулятора), DI0 = 1 ≤ 6 с, ворота `open`, `admitted_today` +1; 2-га: команда `expired` через 30 с, ворота `error` «Команду «Відкрити» не виконано» | форма воріт; Журнали → Команди | AC-84 |
 | ТК-05 SICS | джерело `SICS-TRUCK-SCALE` `mode=stream` | запустити ТК-01 (етап ваг) або сценарій емулятора з фурою; паралельно `mode=poll` (змінити `params`) і повторити | сигнали `weight_kg`/`stable` оновлюються кожні ≤ 5 с; зважування `auto` одне на заїзд; у `poll` — те саме | Телеметрія → Сигнали; Двір → Зважування | AC-85 |
 | ТК-06 пристрої офлайн | — | змінити порт `SICS-TRUCK-SCALE` на 4999 і `MB-U86-IO7` на 503; через 2 хв — ручний цикл рейсу: «Прибула», «Пропустити», «Зважити» з введенням 25 200 / 14 000, «Виїхала»; повернути порти | ваги `offline`, ворота `unknown`, кнопки команд неактивні з поясненням; ручний цикл проходить, нетто пораховано; після повернення портів — `idle`/`closed` ≤ 2 хв | Екран КПП; форма рейсу | AC-85, AC-79 |
@@ -2345,24 +2365,24 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 
 ## 15. Відкриті питання, рішення автора, розбіжності
 
-### 15.1 Відкриті питання (номери — як у ARCH §5.1; Q-13, Q-14 додано в ARCH цим випуском)
+### 15.1 Відкриті питання (номери — як у ARCH §5.1; закриті рішеннями CONSISTENCY.md позначено X-xx)
 
 | ID | Питання | Кому | Рекомендована відповідь | Що робимо тим часом (у коді) |
 |---|---|---|---|---|
-| Q-01 | Маршрут приймача LPR | автори telemetry, iot_sim | **закрито SPEC telemetry §8.7**: колектор `POST /f3d/{route}` → `/f3d/lpr` (= iot_sim Додаток A 658–659); telemetry ARCH FR-22 ще пише `/f3d/push/<route>` — вирівняти | двір URL не знає; стенд — `SIM_LPR_PUSH_URL=http://collector:8080/f3d/lpr` |
-| Q-02 | Номер фури для емулятора: iot_sim API-01 `bookings[].plate=null`, номер генерується (`TRUCK-IN-1 → АА4512КТ`), хоча картка макета `infra.py:368` прив'язує «АА 4512 КТ» до `WH/OUT/00413` (`TRUCK-OUT-1`) | автор iot_sim | емулятор бере `stock.picking.batch.f3d_plate` (M-07), коли не `null`; інакше генерує і пише назву пакета/документа в `plateListDescription` | R-08 п. 7 (зіставлення за описом, заповнення номера); міграція ставить `АА4512КТ` лише `TRUCK-OUT-1` |
+| Q-01 | Маршрут приймача LPR | автори telemetry, iot_sim | **закрито (X-53)**: колектор `POST /f3d/<route>[/<secret>]` → `/f3d/lpr` (telemetry SPEC §8.7, ARCH FR-22 вирівняно; = iot_sim Додаток A 658–659) | двір URL не знає; стенд — `SIM_LPR_PUSH_URL=http://collector:8080/f3d/lpr` |
+| Q-02 | Номер фури для емулятора: iot_sim API-01 `bookings[].plate=null`, номер генерується, хоча картка макета `infra.py:368` прив'язує «АА 4512 КТ» до `WH/OUT/00413` (`TRUCK-OUT-1`) | автор iot_sim | **закрито (X-49)**: емулятор бере `stock.picking.batch.f3d_plate` (M-07), коли не `null`; інакше генерує і пише бронювання в `plateListDescription`; `АА4512КТ` — `TRUCK-OUT-1` | R-08 п. 7 (зіставлення за описом, заповнення номера); міграція ставить `АА4512КТ` лише `TRUCK-OUT-1` |
 | Q-03 | Автентифікація маршруту `lpr` (емулятор шле без токена) | автори telemetry, iot_sim, адміністратор мережі | за telemetry Q-13: `allow_ips` камер + секретний суфікс шляху (`/f3d/lpr/<secret>`, `secret_ref`) — працює і з Axis, і з емулятором без зміни коду; `X-F3D-Token` — для вебхуків | стенд: `allow_ips: ["iot-sim"]`; ТК-02 перевіряє 401 без токена, якщо `token_ref` задано |
-| Q-04 | Імпульс DO для CAME (≥ 1 с) | автор telemetry, монтажник | `pulse_ms` у адресі coil (`{"fc":5,"addr":16,"pulse_ms":1500}`) + апаратний pulse-режим ADAM | команда = одне значення `1`; емулятор трактує як імпульс (§8.13.1) |
+| Q-04 | Імпульс DO для CAME (≥ 1 с) | автор telemetry, монтажник | **закрито (X-46)**: `write.pulse_ms` у схемі `modbus_tcp` (telemetry A.1); `cmd_open`/`cmd_close` — `pulse_ms: 1500` (Додаток A); апаратний pulse-режим ADAM — додатково | — |
 | Q-05 | Протокол індикатора АКСІС ME-01 (RS-232), SICS-сумісність, шлюз | постачальник ваг | запросити опис; шлюз Moxa NPort/USR-TCP232; інший діалект — значення `params.dialect` | плагін лише `mt_sics` (§8.2) |
 | Q-06 | Хто бронює ворота для сторонніх фур | замовник | v1 — диспетчер; v1.1 — портал (`source='supplier'`, `requested`) | лише диспетчер |
 | Q-07 | Список дозволених номерів у камерах Axis (VAPIX) | замовник, інтегратор відео | після v1 | рішення лише в Odoo (R-08) |
 | Q-08 | Фури без коду сцени в 3D | автор viewer | спільний меш `truck` за `yard.trucks[].x/y/rz` | провайдер віддає координати (Додаток B) і `code` (якщо є) |
 | Q-09 | Маси товарів для звірки нетто (ДСП 18 мм — 63 кг ПРИПУЩЕННЯ) | замовник (технолог) | підтвердити маси аркушів/палет; інші — з накладних | плити — R-24 крок 3; решта — `no_reference` |
-| Q-10 | Пожежа: «тримати відкритим» — контролер чи Odoo | менеджер, автор fire_safety | апаратно (без Odoo) | стан `held` лише за власною командою або свіжим coil DO4 (R-16 п. 3) |
+| Q-10 | Пожежа: «тримати відкритим» — контролер чи Odoo | менеджер, автор fire_safety | апаратно (без Odoo) | стан `held` лише за власною командою або свіжим coil DO4/DO5 (`cmd_hold` своїх воріт, R-16 п. 3) |
 | Q-11 | Друга зміна / графік КПП | замовник | попередження (`enforce_calendar=False`) | так |
 | Q-12 | Розташування ваг для фур приймання | замовник | уточнити схему руху | стани не залежать від місця ваг; координата (172, −14) |
-| Q-13 | P-11 має один DO4 «тримати відкритим» на обидва шлагбауми (iot_sim §8.13.1, coil 00021) — на проді окремі канали? | монтажник CAME, автор iot_sim | окремі DO на кожен шлагбаум (DO4 → GATE-W, DO5 → GATE-E) | обидва `cmd_hold` адресують PDU 20; «Тримати відкритим» на одних воротах утримує обидва — форма воріт попереджає (`confirm`), чаттер обох воріт |
-| Q-14 | telemetry R-18 / ACL: `f3d.command.create` лише для `group_f3d_manager`; чи пропускає перевірку групи при `env.su`? | автор telemetry | так (як base R-04: `env.su` або група) | двір створює команди `sudo()` після власних перевірок R-15 (A-20); `test_contracts` перевіряє, що `sudo().create` охоронцем проходить |
+| Q-13 | P-11 мав один DO4 «тримати відкритим» на обидва шлагбауми (iot_sim §8.13.1, coil 00021) — на проді окремі канали? | монтажник CAME, автор iot_sim | **рішення X-47**: окремі канали DO4 (PDU 20) → GATE-W, DO5 (PDU 21) → GATE-E (iot_sim §8.13.1 виправлено); лишається підтвердження монтажника (CONSISTENCY «Питання до замовника» № 11) | `cmd_hold` GATE-W → PDU 20, GATE-E → PDU 21 (Додаток A № 7, 14; AC-88); утримання одних воріт інші не зачіпає |
+| Q-14 | telemetry R-18 / ACL: `f3d.command.create` лише для `group_f3d_manager`; чи пропускає перевірку групи при `env.su`? | автор telemetry | **закрито (X-04)**: так (як base R-04: `env.su` або група; решта запобіжників R-18 діють) | двір створює команди `sudo()` після власних перевірок R-15 (A-20); `test_contracts` перевіряє, що `sudo().create` охоронцем проходить |
 
 ### 15.2 Рішення автора SPEC (A-15…A-28; A-01…A-14 — ARCH §5.2)
 
@@ -2385,46 +2405,49 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 
 ### 15.3 Розбіжності з документами суміжних модулів (для менеджера)
 
+Стан на 14.10.2026 — після CONSISTENCY.md v0.3 (X-01…X-80).
+
 1. telemetry SPEC R-17 п. 7 (SQL-оновлення `last_value`) ↔ ARCH двору A-07 (`write()`) — виправлено в ARCH (A-17).
-2. telemetry ARCH FR-22 `/f3d/push/<route>` ↔ telemetry SPEC §8.7 `/f3d/{route}` (Q-01).
-3. telemetry SPEC посилається на «Додаток A» схем `address`/`params` для 8 типів, але додатка немає (файл
-   обривається на §11); схеми `sics` визначено тут (§8.2, CY-05) — telemetry має скопіювати.
-4. telemetry R-18: створення команди — лише `group_f3d_manager` (Q-14, A-20).
-5. iot_sim §8.4.1 («ADAM — старше слово першим») ↔ §8.4.2 («низьке слово — перший регістр»); двір і telemetry R-20/
-   R-24 беруть `wordorder: "little"` для лічильників ADAM.
-6. iot_sim §8.13.1: один DO4 на обидва шлагбауми (Q-13); каталог 654/656 об'єднує DI0, DI1, DO0 в одному рядку —
-   двір розділяє на 7 сигналів на ворота (ARCH A-08).
-7. iot_sim §8.13.2 приклад: `capture_timestamp=1792391105507` (19.10.2026 06:25 UTC) ≠ `datetime="20261014
-   081505507"` (14.10.2026 05:15 UTC) — R-07 п. 4 (±1 доба) бере `datetime`; просимо iot_sim вирівняти.
-8. iot_sim `plateList="allow"`: в Axis `plateList` — назва списку, режим — `plateListMode`; двір на `plateList` не
-   спирається (Q-07).
+2. telemetry ARCH FR-22 `/f3d/push/<route>` ↔ telemetry SPEC §8.7 `/f3d/{route}` (Q-01) — вирішено X-53
+   (`/f3d/<route>[/<secret>]`, правка в telemetry).
+3. Схеми `sics`: telemetry A.1/A.2 розходились з §8.2 — вирішено X-45 (власник — двір, telemetry копіює) і X-70
+   (`scale`/`offset` у `address.sics.json`).
+4. telemetry R-18: створення команди — лише `group_f3d_manager` (Q-14, A-20) — вирішено X-04 (`env.su` пропускає групу).
+5. iot_sim §8.4.1 («ADAM — старше слово першим») ↔ §8.4.2 — вирішено X-43 (молодше слово першим, `wordorder: "little"`).
+6. iot_sim §8.13.1: один DO4 на обидва шлагбауми (Q-13) — вирішено X-47 (DO5 → GATE-E, PDU 21); каталог 654/656
+   розділено, 10 сигналів двору — рядки каталогу 689–698 (X-34; адреси = Додаток A).
+7. iot_sim §8.13.2 приклад: `capture_timestamp` ≠ `datetime` — вирішено X-48: R-07 п. 4 = telemetry R-22
+   (`capture_timestamp`, поза вікном — час прийому), приклад iot_sim виправлено (AC-23 — X-73).
+8. iot_sim `plateList="allow"` — вирішено X-48/X-73: `plateList` — назва списку (`f3d_bookings`), режим —
+   `plateListMode` (поле `plate_list_mode`, M-04).
 9. Axis `imageFile` — шлях на камері, не base64 (developer.axis.com) — ARCH A-14 виправлено (лише `imageArray`,
    `imagesURI`).
 10. iot_sim §8.13.3 не перелічує `TAC` — плагін обробляє `ES` як `WriteError` (AC-52).
-11. Номер `АА4512КТ`: iot_sim → `TRUCK-IN-1`, макет → `TRUCK-OUT-1` (Q-02).
+11. Номер `АА4512КТ`: iot_sim → `TRUCK-IN-1`, макет → `TRUCK-OUT-1` (Q-02) — вирішено X-49.
 
 ## Додаток A. Сигнали двору (`data/f3d_yard_signals.csv`, 18 рядків; CY-04)
 
 Спільне: `module='yard'`, `viewer_visible=False`, `create_request=False`, `scale=1.0`, `decimals=0` (ваги — 0,
 стабільність — 0), обладнання за кодом сцени (CB-01). Адреси Modbus — PDU 0-based (telemetry CT-03/R-20; unit 86 —
-з `params` джерела). Колонка «Каталог» — рядок Додатка A iot_sim (8 «макетних» для двору) або «новий».
+з `params` джерела). Колонка «Каталог» — рядок Додатка A iot_sim: 654–661 (8 «макетних») і 689–698 (10 сигналів, доданих
+каталогом із цього додатка — X-34; адреси збігаються з iot_sim §8.13.1).
 
 | № | `code` | `name` | `kind` | `unit` | Обладн. | Джерело | `address` | `period_s` / `store_period_s` | Запис / пороги | Власник.роль | Каталог |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | `yard/gates/GATE-W/state` | GATE-W: стріла відкрита | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":0,"type":"bool","doc":"DI0 00001 стріла відкрита"}` | 1 / 60 | — / `warn_high_on`, `warn_high=0.5`, `min_duration_s=600` (відкрито > 10 хв) | gate_w.state | 654 |
-| 2 | `yard/gates/GATE-W/loop` | GATE-W: петля зайнята | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":1,"type":"bool","doc":"DI1 00002 індукційна петля"}` | 1 / 60 | — | gate_w.loop | новий |
-| 3 | `yard/gates/GATE-W/photocell` | GATE-W: фотоелемент перекритий | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":4,"type":"bool","doc":"DI4 00005 фотоелемент"}` | 1 / 60 | — | gate_w.photocell | новий |
+| 2 | `yard/gates/GATE-W/loop` | GATE-W: петля зайнята | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":1,"type":"bool","doc":"DI1 00002 індукційна петля"}` | 1 / 60 | — | gate_w.loop | 689 |
+| 3 | `yard/gates/GATE-W/photocell` | GATE-W: фотоелемент перекритий | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":4,"type":"bool","doc":"DI4 00005 фотоелемент"}` | 1 / 60 | — | gate_w.photocell | 690 |
 | 4 | `yard/gates/GATE-W/passes_today` | GATE-W: лічильник проїздів | counter | шт | GATE-W | MB-U86-IO7 | `{"fc":3,"addr":2,"count":2,"type":"u32","wordorder":"little","doc":"HR 40003–40004 лічильник DI1"}` | 10 / 300 | — | gate_w.passes | 655 |
-| 5 | `yard/gates/GATE-W/cmd_open` | GATE-W: команда «відкрити» | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":16,"type":"bool","write":{"fc":5,"addr":16,"pulse_ms":1500},"doc":"DO0 00017 відкрити (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_open | новий |
-| 6 | `yard/gates/GATE-W/cmd_close` | GATE-W: команда «закрити» | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":18,"type":"bool","write":{"fc":5,"addr":18,"pulse_ms":1500},"doc":"DO2 00019 закрити примусово (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_close | новий |
-| 7 | `yard/gates/GATE-W/cmd_hold` | GATE-W: тримати відкритим | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":20,"type":"bool","write":{"fc":5,"addr":20},"doc":"DO4 00021 тримати GATE-W (рівень)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_hold | новий |
+| 5 | `yard/gates/GATE-W/cmd_open` | GATE-W: команда «відкрити» | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":16,"type":"bool","write":{"fc":5,"addr":16,"pulse_ms":1500},"doc":"DO0 00017 відкрити (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_open | 691 |
+| 6 | `yard/gates/GATE-W/cmd_close` | GATE-W: команда «закрити» | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":18,"type":"bool","write":{"fc":5,"addr":18,"pulse_ms":1500},"doc":"DO2 00019 закрити примусово (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_close | 692 |
+| 7 | `yard/gates/GATE-W/cmd_hold` | GATE-W: тримати відкритим | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":20,"type":"bool","write":{"fc":5,"addr":20},"doc":"DO4 00021 тримати GATE-W (рівень)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_hold | 693 |
 | 8 | `yard/gates/GATE-E/state` | GATE-E: стріла відкрита | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":2,"type":"bool","doc":"DI2 00003 стріла відкрита"}` | 1 / 60 | — / як № 1 | gate_e.state | 656 |
-| 9 | `yard/gates/GATE-E/loop` | GATE-E: петля зайнята | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":3,"type":"bool","doc":"DI3 00004 індукційна петля"}` | 1 / 60 | — | gate_e.loop | новий |
-| 10 | `yard/gates/GATE-E/photocell` | GATE-E: фотоелемент перекритий | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":5,"type":"bool","doc":"DI5 00006 фотоелемент"}` | 1 / 60 | — | gate_e.photocell | новий |
+| 9 | `yard/gates/GATE-E/loop` | GATE-E: петля зайнята | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":3,"type":"bool","doc":"DI3 00004 індукційна петля"}` | 1 / 60 | — | gate_e.loop | 694 |
+| 10 | `yard/gates/GATE-E/photocell` | GATE-E: фотоелемент перекритий | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":5,"type":"bool","doc":"DI5 00006 фотоелемент"}` | 1 / 60 | — | gate_e.photocell | 695 |
 | 11 | `yard/gates/GATE-E/passes_today` | GATE-E: лічильник проїздів | counter | шт | GATE-E | MB-U86-IO7 | `{"fc":3,"addr":6,"count":2,"type":"u32","wordorder":"little","doc":"HR 40007–40008 лічильник DI3"}` | 10 / 300 | — | gate_e.passes | 657 |
-| 12 | `yard/gates/GATE-E/cmd_open` | GATE-E: команда «відкрити» | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":17,"type":"bool","write":{"fc":5,"addr":17,"pulse_ms":1500},"doc":"DO1 00018 відкрити (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_open | новий |
-| 13 | `yard/gates/GATE-E/cmd_close` | GATE-E: команда «закрити» | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":19,"type":"bool","write":{"fc":5,"addr":19,"pulse_ms":1500},"doc":"DO3 00020 закрити примусово (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_close | новий |
-| 14 | `yard/gates/GATE-E/cmd_hold` | GATE-E: тримати відкритим | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":21,"type":"bool","write":{"fc":5,"addr":21},"doc":"DO5 00022 тримати GATE-E (рівень)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_hold | новий |
+| 12 | `yard/gates/GATE-E/cmd_open` | GATE-E: команда «відкрити» | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":17,"type":"bool","write":{"fc":5,"addr":17,"pulse_ms":1500},"doc":"DO1 00018 відкрити (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_open | 696 |
+| 13 | `yard/gates/GATE-E/cmd_close` | GATE-E: команда «закрити» | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":19,"type":"bool","write":{"fc":5,"addr":19,"pulse_ms":1500},"doc":"DO3 00020 закрити примусово (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_close | 697 |
+| 14 | `yard/gates/GATE-E/cmd_hold` | GATE-E: тримати відкритим | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":21,"type":"bool","write":{"fc":5,"addr":21},"doc":"DO5 00022 тримати GATE-E (рівень)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_hold | 698 |
 | 15 | `yard/lpr/CAM-05/plate` | CAM-05: номер на в'їзді | event | — | CCTV | HTTP-PUSH (telemetry) | `{"route":"lpr","match":{"sensorProviderID":"CAM-05"},"path":"$.plateText","ts_path":"$.capture_timestamp"}` | 3600 / 0 | — | — | 658 |
 | 16 | `yard/lpr/CAM-06/plate` | CAM-06: номер на виїзді | event | — | CCTV | HTTP-PUSH (telemetry) | `{"route":"lpr","match":{"sensorProviderID":"CAM-06"},"path":"$.plateText","ts_path":"$.capture_timestamp"}` | 3600 / 0 | — | — | 659 |
 | 17 | `yard/scale/TRUCK-SCALE/weight_kg` | Автоваги: вага | gauge | кг | TRUCK-SCALE | SICS-TRUCK-SCALE | `{"cmd":"SI","field":"weight","doc":"SICS SI/SIR, дискретність 20 кг"}` | 1 / 60 | — | scale_truck.weight | 660 |
@@ -2456,7 +2479,7 @@ CSV-рядок (приклад №1): `yard/gates/GATE-W/state,GATE-W: стрі�
 | `weighed`, пізніше | біля воріт виїзду `(gate_out.pos_x, gate_out.pos_y + 8.0, 270)` | GATE-E → `(168.0, −22.0, 270)` | `Z-GATE-E` |
 | `draft`, `planned`, `left`, `rejected`, `cancelled` | у `trucks` не потрапляють | — | — |
 
-## Додаток C. Розділ `yard` payload переглядача (CY-06, `meta.schema` viewer «1.0» + новий ключ верхнього рівня)
+## Додаток C. Розділ `yard` payload переглядача (CY-06, `meta.schema` viewer «1.1» за каркасом §6.7 + новий ключ верхнього рівня)
 
 ```json
 {"yard": {
