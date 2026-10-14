@@ -1275,18 +1275,18 @@ def build_fire():
             continue
         m = Mesh()
         rows = {}
-        for x, y in d["points"]:
+        for k, (x, y) in enumerate(d["points"]):
             r = 0.05 if d["kind"] == "heat" else 0.06
-            z0 = d["z"]  # Cerberus PRO: Ø117 мм з базою
+            z0 = d["zs"][k] if "zs" in d else d["z"]  # Cerberus PRO: Ø117 мм з базою
             m.cyl((x, y, z0 + 0.115), 0.0585, 0.03, "phenolic", segs=14)  # база під покрівлею
             m.cyl((x, y, z0 + 0.075), 0.055, 0.05, "phenolic", segs=14)
             m.cyl((x, y, z0 + 0.045), r * 0.55, 0.012, "status_red" if d["kind"] == "heat" else "steel", segs=10)
             m.box((x + r * 0.7, y, z0 + 0.06), (0.012, 0.012, 0.01), "status_green")  # індикатор
-            rows.setdefault(round(y, 1), []).append(x)
-        for y, xs in rows.items():  # кабель шлейфа вздовж ряду
+            rows.setdefault((round(y, 1), z0), []).append(x)
+        for (y, z0), xs in rows.items():  # кабель шлейфа вздовж ряду
             xs.sort()
             if len(xs) > 1:
-                m.box(((xs[0] + xs[-1]) / 2, y, d["z"] + 0.135), (xs[-1] - xs[0], 0.012, 0.012), "fire_red")
+                m.box(((xs[0] + xs[-1]) / 2, y, z0 + 0.135), (xs[-1] - xs[0], 0.012, 0.012), "fire_red")
         code = "FA-" + zone[2:]
         m.build(code, "fire", code=code, kind="fire", **ex_pp(code), label=f"Сповіщувачі · {d['name']}",
                 desc=f"{len(d['points'])} адресних сповіщувачів: {FIRE_KIND[d['kind']]}; крок ≤ {d['spacing']} м.")

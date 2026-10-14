@@ -27,6 +27,11 @@ ZONE_DETECTOR = {
     "Z-CMP": "multi", "Z-CHG": "multi", "Z-FG": "smoke", "Z-ELEC": "smoke",
 }
 ZONE_DETECTOR.update({z[0]: "smoke" for z in ZONES if z[0].startswith(("Z-RCV-", "Z-OUT-"))})
+# Офіс і побутові — окремі приміщення з власними стелями (site.py): димові OP720 під стелею кожного поверху.
+# Табл. 7.2 ДБН дає ті самі 8,8 / 4,4 м для висоти до 12 м; ферми й дахові установки тут не заважають.
+ROOMS = {"Z-OFFICE": dict(rect=(92.6, 58.4, 107.8, 71.0), levels=(2.95, 6.15)),  # два поверхи по 3,0 м
+         "Z-SOC": dict(rect=(104.2, 46.6, 109.4, 57.4), levels=(3.35,))}
+ZONE_DETECTOR.update({z: "smoke" for z in ROOMS})
 BOILER_HOUSE = (67.6, D + 3.0, 79.6, D + 9.0)  # котельня має власне перекриття 4,5 м — теплові сповіщувачі
 Z_BOILER = 4.35
 KIND_NAME = {"multi": "оптико-теплові (пил деревини)", "smoke": "димові оптичні", "heat": "теплові"}
@@ -95,7 +100,7 @@ def _nudge(x, y, rect):
 def detectors(rules=None):
     """Сповіщувачі по зонах: {zone: dict(kind, points, spacing)}."""
     r = rules or load_rules()
-    out = {}
+    out, rooms = {}, []
     for code, name, (x0, y0, x1, y1), *_ in ZONES:
         kind = ZONE_DETECTOR.get(code)
         if not kind:
@@ -103,11 +108,16 @@ def detectors(rules=None):
         s = min(r["smoke_spacing_6_12m"], 2 * r["smoke_wall_6_12m"])
         if r.get("smoke_area_6_12m"):
             s = min(s, math.sqrt(r["smoke_area_6_12m"]))
+        room = ROOMS.get(code)
+        if room:  # приміщення — після котельні: номери груп (LSZ 1…33) не зсуваються
+            rooms.append((code, name))
+            continue
         nx, ny = max(1, math.ceil((x1 - x0) / s)), max(1, math.ceil((y1 - y0) / s))
         pts = []
         for i in range(nx):
             for j in range(ny):
-                p = _nudge(x0 + (x1 - x0) * (i + 0.5) / nx, y0 + (y1 - y0) * (j + 0.5) / ny, (x0, y0, x1, y1))
+                cx, cy = x0 + (x1 - x0) * (i + 0.5) / nx, y0 + (y1 - y0) * (j + 0.5) / ny
+                p = _nudge(cx, cy, (x0, y0, x1, y1))
                 if p:
                     pts.append(p)
         out[code] = dict(name=name, kind=kind, points=pts, spacing=round(s, 1), area=(x1 - x0) * (y1 - y0), z=Z_DET)
@@ -117,6 +127,14 @@ def detectors(rules=None):
     out["Z-BOILER"] = dict(name="Котельня", kind="heat", spacing=s, area=(x1 - x0) * (y1 - y0), z=Z_BOILER,
                            points=[(x0 + (x1 - x0) * (i + 0.5) / nx, y0 + (y1 - y0) * (j + 0.5) / ny)
                                    for i in range(nx) for j in range(ny)])
+    s = min(r["smoke_spacing_6_12m"], 2 * r["smoke_wall_6_12m"])
+    for code, name in rooms:  # однакова сітка на кожному поверсі; zs — висота кожної точки
+        (x0, y0, x1, y1), levels = ROOMS[code]["rect"], ROOMS[code]["levels"]
+        nx, ny = max(1, math.ceil((x1 - x0) / s)), max(1, math.ceil((y1 - y0) / s))
+        pts = [(x0 + (x1 - x0) * (i + 0.5) / nx, y0 + (y1 - y0) * (j + 0.5) / ny) for i in range(nx) for j in range(ny)]
+        out[code] = dict(name=name, kind=ZONE_DETECTOR[code], points=pts * len(levels),
+                         zs=[z for z in levels for _ in pts], spacing=round(s, 1),
+                         area=(x1 - x0) * (y1 - y0) * len(levels), z=levels[0])
     return out
 
 
