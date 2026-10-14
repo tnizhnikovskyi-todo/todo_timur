@@ -141,6 +141,8 @@ class TestCodesHooks(F3DCase):
 
     def test_locations(self):  # AC-10
         Loc = self.env['stock.location']
+        if 'f3d_code' not in Loc._fields:
+            self.skipTest("stock.location без домішки — W3")
         stock = self.wh.lot_stock_id
         stock.barcode = 'WHSTOCK'
         loc_a = Loc.create({'name': 'A', 'usage': 'internal', 'location_id': stock.id, 'barcode': 'A-1'})

@@ -1,7 +1,7 @@
 # factory3d_base
 Статус: IN_PROGRESS
 Тесты: —, ТК: ждут эмулятор
-Решений без заказчика: 8 (ниже)
+Решений без заказчика: 10 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: мост factory3d_base_mrp_maintenance не тестирован — нет Enterprise (ENV-1)
 
@@ -10,8 +10,8 @@
 | W0 | принят | 86ce45e | TestInstall OK |
 | W1 | принят | 0ee48e8 | /factory3d_base 26/26 |
 | W2 | принят | 0766b01 | /factory3d_base 42/42 (2 skip до W3/W4) |
-| W4 | в работе | | |
-| W3 | | | |
+| W4 | принят | 36a0877 | /factory3d_base 62/62 |
+| W3 | в работе | | |
 | W5 | | | |
 
 ## Решения без заказчика
@@ -27,3 +27,5 @@
 - DEC-7: описания надворных зон — краткие тексты воркера, не `desc` из `site2.py`; генератор зон не в репо (данные из `plant/layout.py`, `dist/odoo_demo.json`). — `data/f3d_zone_data.xml`
 - DEC-8: ENV-1 в `zones.bind`: без `workcenter_id` зона оборудования берётся у РЦ с тем же `f3d_code` (A-15); шаги для моделей без `f3d_code` пропускаются. Вызов `zones.bind` из `post_init_hook` — у W5. — `hooks/zones.py`
 - TODO W3/W4: в V-01 (форма зоны) дописать поля локаций/обладнання/ворот; `f3d_zone_id` в форму РЦ.
+- DEC-9: `mrp.workcenter.employee_ids` нет в CE — `codes.employees` не учитывает РЦ; данные макета: 60 единиц со складовыми (63 связи, не 61), зона в `scene_equipment_codes.csv` у 135 строк (не 121), FA-BOILER → Z-BOILER. — `hooks/codes.py`, `data/scene_equipment_codes.csv`
+- DEC-10: значение параметра паспорта «пусто» = `not value_text and not value_num` (Float без NULL в CE); `codes.locations` пропускается без домішки на `stock.location`. — `models/f3d_equipment_passport.py`, `hooks/codes.py`

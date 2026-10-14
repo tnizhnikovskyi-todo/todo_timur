@@ -48,6 +48,9 @@ def locations(env):
     """R-05 (а) код із штрихкоду; R-21 (б) вид і місткість із scene_locations.csv."""
     Loc = env['stock.location']
     res = {'locations': 0, 'kinds': 0, 'capacities': 0}
+    if 'f3d_code' not in Loc._fields:
+        _logger.info("stock.location без f3d_code — коди локацій пропущено")
+        return res
     for wh in env['stock.warehouse'].search([]):
         candidates = Loc.search([
             ('barcode', '!=', False), ('usage', '=', 'internal'), ('f3d_code', '=', False),

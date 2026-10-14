@@ -15,8 +15,16 @@
               groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_zone" name="Зони" parent="menu_f3d_plant" sequence="10"
               action="action_f3d_zone" groups="group_f3d_user"/>
+    <menuitem id="menu_f3d_equipment" name="Обладнання зі сцени" parent="menu_f3d_plant" sequence="30"
+              action="action_f3d_equipment" groups="group_f3d_user"/>
+    <menuitem id="menu_f3d_passport" name="Паспорти обладнання" parent="menu_f3d_plant" sequence="40"
+              action="action_f3d_equipment_passport" groups="group_f3d_user"/>
     <menuitem id="menu_f3d_config" name="Налаштування" parent="menu_f3d_root" sequence="99"
               groups="factory3d_base.group_f3d_manager"/>
     <menuitem id="menu_f3d_config_params" name="Параметри системи" parent="menu_f3d_config" sequence="95"
               action="action_f3d_config_parameter" groups="factory3d_base.group_f3d_admin"/>
+    <menuitem id="menu_f3d_config_spec" name="Параметри паспортів" parent="menu_f3d_config" sequence="20"
+              action="action_f3d_equipment_spec" groups="group_f3d_manager"/>
+    <menuitem id="menu_f3d_config_source" name="Джерела паспортів" parent="menu_f3d_config" sequence="21"
+              action="action_f3d_equipment_source" groups="group_f3d_manager"/>
 </odoo>
