@@ -1,12 +1,13 @@
 # td_genset (перенос 18 → 19) і factory3d_genset — специфікація
 
 Версія 0.1 · 14.10.2026 · технічне рішення: `docs/modules/td_genset/ARCHITECTURE.md` (далі ARCH: CR-01…CR-10,
-FR-A01…FR-A08, FR-01…FR-16, A-01…A-14, Q-01…Q-19). Контракти, на які спирається: каркас §5, §6.1–6.4, §6.7,
+FR-A01…FR-A08, FR-01…FR-16, A-01…A-17, Q-01…Q-24). Контракти, на які спирається: каркас §5, §6.1–6.4, §6.7,
 §6.8; `factory3d_base` CB-01, CB-02, CB-07…CB-10; `factory3d_viewer` C-02, C-03, C-07, M-01, M-03, R-01,
-Додаток A.13; `factory3d_iot_sim` P-07 (§8.9.4), P-12 (§8.14), API-13, §8.1.3–8.1.4, Q-07, Q-15; `factory3d_telemetry`
-— лише за каркасом §6.4 (SPEC telemetry пишеться паралельно; імена полів нижче — з §6.4, остаточні — через
-адаптер §2.0.2). Контракти, які задає цей документ: CG-01…CG-06 (ARCH §2.1), API-F-01…API-F-09 (§8), ADP-01…ADP-10
-(§2.0.1), TEL-01…TEL-04 (§2.0.2).
+Додаток A.13; `factory3d_iot_sim` P-07 (§8.9.4), P-12 (§8.14), API-13, API-16, S-03, S-14, §8.1.3–8.1.4, Q-07, Q-15;
+`factory3d_telemetry` — каркас §6.4 і SPEC telemetry v0.1 (14.10.2026: M-02 `f3d.source`, M-03 `f3d.signal`, M-04
+`f3d.reading`, M-07, M-08, CT-10 `_f3d_ingest`, R-03…R-07); розбіжності з припущеннями цього документа зведено в §2.0.3 і
+мають пріоритет над текстом §2.0.2. Контракти, які задає цей документ: CG-01…CG-06 (ARCH §2.1), API-F-01…API-F-09 (§8),
+ADP-01…ADP-10 (§2.0.1), TEL-01…TEL-04 (§2.0.2).
 
 Документ має дві частини: **§A — запит на зміни до `td_genset` (чек-лист переносу MG-01…MG-32 і профіль D700
 для `fake_relay.py`)** і **§0–§15 — специфікація модуля `factory3d_genset`** за `DOC_STANDARD.md`. Позначення
@@ -28,9 +29,9 @@ SQL-обмеження — `models.Constraint`, хуки `post_init_hook(env)`/`
 3. Запустити 176 юніт-тестів: `odoo -d test_td19 -i td_genset --test-enable --test-tags /td_genset --stop-after-init`
    на порожній базі **без демо-даних** (MG-16) і на копії демо-бази заводу.
 4. Стенд: `docker compose` `td_genset` з образом `odoo:19` (MG-31) + `fake_relay` профіль офісу → ТК-01…ТК-14 (45 сценаріїв);
-   потім профіль `d700` → ті самі ТК (очікувано ті самі результати, інші числа) + нові ТК §13.2.
-5. Матриця регресії AC-01…AC-69 ↔ тест/ТК (§13.0) — усі 69 позначені «зелено» або «змінено (MG-xx)».
-6. DEPLOY_TEST для 19.0 (§13.5), `neutralize.sql` (MG-30), CHANGELOG `19.0.1.0.0`.
+   потім профіль `d700` → ті самі ТК (очікувано ті самі результати, інші числа) + нові ТК §13.3.
+5. Матриця регресії AC-01…AC-69 ↔ тест/ТК (§13.2) — усі 69 позначені «зелено» або «змінено (MG-xx)».
+6. DEPLOY_TEST для 19.0 (§13.6), `neutralize.sql` (MG-30), CHANGELOG `19.0.1.0.0`.
 
 ### A.2 Чек-лист змін Odoo 18 → 19 (MG-xx)
 
@@ -138,7 +139,7 @@ odoo_addons/factory3d_genset/
 ├── static/description/icon.png      іконка (генератор)
 └── tests/
     ├── __init__.py
-    ├── common.py                    фікстури §13.1: обладнання GENSET з паспортом, профіль, мок адаптера td_genset
+    ├── common.py                    фікстури §13.0: обладнання GENSET з паспортом, профіль, мок адаптера td_genset
     ├── test_adapter_contract.py     ADP-xx: fields_get на константи (падає, поки імена не звірені)
     ├── test_rules.py                R-01…R-06, R-11
     ├── test_publish.py              крон publish, сигнали, stale/offline (R-12)
@@ -146,7 +147,10 @@ odoo_addons/factory3d_genset/
     ├── test_service.py              ТО за мотогодинами (R-09)
     ├── test_provider.py             провайдер 155, картка, тотали, шина (R-10, CG-02, CG-05)
     ├── test_access.py               права, стоп-крани
-    └── test_hooks.py                post_init/uninstall, neutralize
+    ├── test_hooks.py                post_init/uninstall, neutralize
+    ├── test_views.py                V-01…V-09: представлення завантажуються, меню й групи
+    ├── test_static.py               grep-тести коду модуля (AC-34, AC-41, §14)
+    └── stand/                       ТК-G01…ТК-G13 (pytest, §13.3): conftest.py, orchestrator.py, test_tk_g*.py
 ```
 
 Файли, яких торкається запит на зміни в репозиторії `td_genset` (W1, W4): `__manifest__.py`, `security/*.xml`,
@@ -232,6 +236,28 @@ odoo_addons/factory3d_genset/
 коментарем «за каркасом §6.4; звірити зі SPEC factory3d_telemetry M-xx». `test_adapter_contract.py` перевіряє їх через
 `fields_get` так само, як ADP.
 
+#### 2.0.3 Звірка з SPEC `factory3d_telemetry` v0.1 (14.10.2026) — рішення A-15 (обов'язкові для W2 і тестів)
+
+SPEC telemetry з'явився після §2.0.2; де він конкретніший, діє цей рядок (він має пріоритет над §2.0.2, M-04…M-06, R-09,
+R-12 у частині, що тут названа). Відкрите для автора telemetry — Q-20.
+
+| # | Припущення моста | Факт у telemetry v0.1 | Рішення для моста |
+|---|---|---|---|
+| T-1 | `f3d.source` без колектора, поле `address="local"` | M-02: `code` (req, `^[A-Z0-9][A-Z0-9\-\.]{0,31}$`), `collector_id` (req), `params` (Json, перевірка `validate_params(type, params)`), `module` ∈ … `genset`; поля `address` немає | TEL-01 створює `{"code": "GENSET-RELAY", "name": "Ретранслятор SmartGen (td_genset)", "type": "td_genset", "module": "genset", "equipment_id": eq.id, "params": {}, "read_enabled": True, "period_s_default": 60}`; пошук — `search([("code","=","GENSET-RELAY")], limit=1)`. M-04 перевизначає `collector_id = fields.Many2one(required=False)` і додає `@api.constrains("type","collector_id") _check_f3d_collector_required`: `type != "td_genset" and not collector_id` → `ValidationError("Джерело %s: вкажіть колектор.")` — для всіх інших типів поведінка telemetry не змінюється. Якщо `validate_params("td_genset", {})` telemetry повертає помилку — це блокер Q-20 (AC-01, AC-50 червоні), міст не обходить перевірку |
+| T-2 | `ingest` з `q` 0/1, повертає `skipped` | CT-10 `_f3d_ingest(readings, src="module")`, `readings=[{"code","ts","value","text","q"}]`, `q` ∈ `good/uncertain/bad`; повертає `{"accepted","stored","duplicates","rejected","changed_codes"}`; `q="bad"` статус не змінює (R-04); R-03 пише в `f3d.reading` лише за політикою `store_period_s` | TEL-03 викликає `_f3d_ingest(batch, src="module")` з `q="good"` і повертає `{"accepted": r["accepted"], "stored": r["stored"], "skipped": r["accepted"] - r["stored"]}` (ключ `skipped` у AC-10 — саме це число). Запасний шлях §2.0.2 не реалізується (метод є) |
+| T-3 | R-12: при застарілих даних «`q=0` → `status=stale`» | `q="bad"` статус не змінює; є `f3d.signal._mark_stale(reason)` (R-07) | Не `fresh` (R-12) → TEL-03 публікує лише 4 похідні сигнали з `ts=now`, `q="good"`: `online=0`, `state=0`, `fuel_lph=0`, `autonomy_h` (останній `fuel_l` при 75 %); решта 22 сигнали → `_mark_stale("td_genset: немає свіжих даних")` (ідемпотентно, чаттер — раз на перехід). Наступний свіжий знімок повертає статус за R-04 |
+| T-4 | Пороги «порожні» (`alarm_state`) | M-03: `warn_low/…/alarm_high` + прапори `warn_low_on/…/alarm_high_on` (default `False`), `alarm_states` (Json), `create_request` (**default `True`**) | TEL-02 для всіх 26: `create_request=False`, `alarm_states=[]`, усі `*_on=False`; виняток — `alarm_level`: `alarm_high_on=True`, `alarm_high=0.5` (статус `alarm` при значенні ≥ 1 — R-08 крок 4; заявку telemetry не створює, бо `create_request=False`) |
+| T-5 | `kind='state'` для кодів стану (A-10) | `kind='state'` — значення як індекс у `states`/текст, числові пороги заборонені constraint'ом | Коди `state`, `mode`, `breaker`, `mains_ok`, `alarm_level`, `alarm_count`, `online` — `kind='gauge'`; `kwh`, `hours`, `starts` — `counter`; решта — `gauge` (Додаток A). A-10 у частині `kind` замінено; числовий код 0…10 лишається |
+| T-6 | `period_s=60` | R-07: `stale_after = max(stale_periods·period_s, stale_min_s)` = `max(3·period_s, 60)` для сигналів із `source_id`; R-03: `store_period_s` default 300 | TEL-02: `period_s = max(60, offline_min·20)` (умовчання 100 → `stale_after` 300 с = `offline_min`), `store_period_s = 0` (кожна публікація моста зберігається: 26 × 1 440 = 37 440/добу, ARCH §2.7). Публікація лишається раз на 60 с |
+| T-7 | `f3d_meter_signal_id` = `hours` без інтервалу (A-04) | M-07: constraint «Задайте інтервал ТО за лічильником (> 0)»; з інтервалом telemetry R-11 сам створює планові заявки | Міст **не** ставить `f3d_meter_signal_id` (§5.3 крок 7 і R-09 крок 6 скасовано); ТО веде лише `td_genset` + R-09 моста (A-04 без змін за змістом) |
+| T-8 | Міст «заповнює» `f3d_equipment_code` | M-08: `f3d_equipment_code` = `related equipment_id.f3d_code`, `store=True`; є `f3d_value`, `f3d_threshold`, `f3d_origin` | R-07 vals **без** `f3d_equipment_code` (значення дає related); додати `f3d_value = ev["value"]`, `f3d_threshold = ev["threshold"]` (якщо не `None`); `f3d_origin` не задається (заявка не з порогу telemetry) |
+| T-9 | M-06 пише `status="ok"` при закритті | M-08 `write` при переході в `done` викликає `f3d_signal_id._on_request_closed()` (R-06: статус перераховується з `last_value`) | M-06 `_f3d_genset_on_closed` статус **не** пише; лише `link.message_post("Заявку … закрито")`. Ефект R-08 крок 4 дає telemetry R-06 (alarm_level 0 → `ok`, ≥ 1 → `alarm`) |
+| T-10 | `infra.totals.genset_kva`, `critical_kw` — Float | viewer Додаток A.13: `genset_kva int`, `critical_kw int` | провайдер пише `int(round(profile.kva_prp))` і `int(round(critical_kw))`; нові ключі `genset_*`, `island`, `grid_ok`, вузол `infra.genset` — запит до viewer Q-23 |
+
+Тестованість (обов'язково для коду): модулі моста викликають адаптери **через атрибут модуля** (`from ..adapters import
+td_genset as td` → `td.snapshot(...)`, `td.GENSET_MODEL`), а не `from ..adapters.td_genset import snapshot`, — інакше
+`unittest.mock.patch` фікстури §13.0 не діє; `_td_models()` читає `td.GENSET_MODEL` у момент виклику.
+
 ### M-01 `f3d.genset.link` — зв'язка генератора з моделлю заводу (FR-01, FR-03, FR-08, FR-09, FR-11, FR-15)
 
 ```python
@@ -258,6 +284,7 @@ class F3dGensetLink(models.Model):
 | `last_event_ts` | Datetime | `string="Остання оброблена подія"`, `readonly=True` |
 | `last_event_id` | Integer | `readonly=True`, `default=0` |
 | `last_state_json` | Json | `string="Останній знімок"`, `readonly=True` — dict з `state`, `mode`, `breaker`, `alarm_level`, `island`, `grid_ok`, `online` (коди R-03/R-05) |
+| `last_state_text` | Char | `compute="_compute_last_state_text"` (не зберігається), `string="Знімок (JSON)"` — `json.dumps(last_state_json or {}, ensure_ascii=False, indent=1)` (V-01) |
 | `online` | Boolean | `compute="_compute_live"`, `string="На зв'язку"` — з `last_state_json.online` |
 | `state_code` | Integer | `compute="_compute_live"` — `last_state_json.state` |
 | `state_label` | Char | `compute="_compute_live"` — текст за R-03 |
@@ -292,7 +319,7 @@ class F3dGensetLink(models.Model):
 | `_process_events_one(self)` | `events = adapters.td_genset.events_since(self.td_genset_ref, self.last_event_ts, 200)`; для кожної: `row = env["f3d.genset.event.map"]._match(ev)`; `self._apply_event(ev, row)` (R-07, R-08); після циклу `write({"last_event_ts": max ts, "last_event_id": max id})`; якщо `len(events)==200` → крон продовжить наступного разу |
 | `_apply_event(self, ev, row)` | за `row.action`: `ignore` → нічого; `bus_only` → `_notify_state_change`-подібна подія `kind="state"`; `request_*` → R-08: `key = "GENSET:%s" % row.key`; `open = env["maintenance.request"].search([("equipment_id","=",eq.id),("f3d_genset_event_key","=",key),("stage_id.done","=",False)], limit=1)`; якщо є → `open.message_post(body="Повтор: %s о %s" % (name, local_ts))`; інакше `create(R-07 vals)` |
 | `_cron_service(self)` (`@api.model`) | R-09 для кожної зв'язки |
-| `action_check(self)` | `ensure_one()`; `_publish_one()` незалежно від стоп-крана? — **ні**: якщо `_read_enabled()` False → `UserError("Публікацію вимкнено стоп-краном factory3d.genset.read_enabled")`; інакше виконати й повернути `display_notification` «Знімок: стан <label>, <p_kw> кВт, паливо <fuel_pct> % (<fuel_l> л), мотогодини <hours>; записано <accepted> показань» |
+| `action_check(self)` | `ensure_one()`; якщо `not self.env.user.has_group("factory3d_base.group_f3d_manager")` → `AccessError("Перевірку зв'язки може виконати лише менеджер «Завод 3D».")` (метод публічний — кнопка `groups` не захищає RPC, AC-60); `_publish_one()` незалежно від стоп-крана? — **ні**: якщо `_read_enabled()` False → `UserError("Публікацію вимкнено стоп-краном factory3d.genset.read_enabled")`; інакше виконати й повернути `display_notification` «Знімок: стан <label>, <p_kw> кВт, паливо <fuel_pct> % (<fuel_l> л), мотогодини <hours>; записано <accepted> показань» |
 | `action_open_td(self)` | `adapters.td_genset.open_action(self.td_genset_ref)` |
 | `action_open_signals(self)` | `act_window` `f3d.signal`, `domain=[("code","=like","infra/genset/%s/%%" % f3d_code)]`, list,form |
 | `action_open_requests(self)` | `act_window` `maintenance.request`, `domain=[("equipment_id","=",eq.id),("f3d_genset_event_key","!=",False)]` |
@@ -328,7 +355,8 @@ class F3dGensetProfile(models.Model):
 | `start_to_load_s` | Integer | `string="Пуск до навантаження, с"`, default 15 (ціль заводу; умовчання HGM ≈ 30 с — §9 Додаток D) |
 | `autonomy_warn_h` | Float | `string="Попередження про автономність, год"`, default 2.0 — лише для `warn` картки (R-10) |
 | `timer_preset` | Selection | `[("default","Умовчання HGM6120N (Table 7)"),("plant","Заводський пресет (Q-06)")]`, default `default` |
-| `timers_json` | Json | `string="Таймери"` — dict ключів §8.2 (`mains_abnormal_s`, `start_delay_s`, `crank_s`, `crank_rest_s`, `start_times`, `safety_on_s`, `warming_s`, `transfer_s`, `mains_normal_s`, `stop_delay_s`, `cooling_s`, `ets_hold_s`), compute `_compute_timers` з `timer_preset` (store=False): `default` = {5,1,8,10,3,10,10,1.0,10,1,10,20}; `plant` = {2,0,8,10,3,5,3,1.0,10,1,10,20} |
+| `timers_json` | Json | `string="Таймери"` — dict ключів §8.2 (`mains_abnormal_s`, `start_delay_s`, `crank_s`, `crank_rest_s`, `start_times`, `safety_on_s`, `warming_s`, `transfer_s`, `mains_normal_s`, `stop_delay_s`, `cooling_s`, `ets_hold_s`), compute `_compute_timers` з `timer_preset` (store=False): `default` = {5,1,8,10,3,10,10,1.0,10,1,10,20}; `plant` = {2,0,8,10,3,5,3,1.0,10,1,10,20}; плюс в обох пресетах `crank_fire_s=3`, `over_current_delay_s=30` (§8.2, Додаток D) |
+| `timers_text` | Char | `compute="_compute_timers_text"` (не зберігається), `string="Таймери (JSON)"` — `json.dumps(timers_json, ensure_ascii=False)` (V-03) |
 | `note` | Text | джерела (URL датасітів) |
 | `active` | Boolean | default True |
 
@@ -343,9 +371,9 @@ class F3dGensetProfile(models.Model):
 |---|---|
 | `fuel_lph(self, load_pct: float) -> float` | R-01 |
 | `autonomy_h(self, fuel_l: float, load_pct: float) -> float \| None` | R-02 |
-| `to_relay_profile(self) -> dict` | §8.2 JSON: `{"profile": code, "rated": {"kva_prp", "kw_prp", "kva_esp", "kw_esp"}, "tank_l", "fuel_lph": {"25": …, "50": …, "75": …, "100": …, "esp": …}, "timers": timers_json, "sensors": {"coolant_run_c": 85, "oil_run_bar": 4.5, "batt_v": 25.2, "charger_v": 27.6, "rpm": 1500}, "hours_start": 1213.0, "fuel_start_pct": 82}` (значення `sensors`/`hours_start`/`fuel_start_pct` — константи модуля з коментарем «макет: картка GENSET») |
+| `to_relay_profile(self) -> dict` | §8.2 JSON (ключі й вкладеність — **точно** як у §8.2, бо файл читає `fake_relay`): `{"profile": code, "rated": {"kva_prp", "kw_prp", "kva_esp", "kw_esp"}, "tank_l", "fuel_lph": {"25": …, "50": …, "75": …, "100": …, "esp": …}, "timers": timers_json, "timers_plant": {4 ключі пресету plant}, "sensors": {...}, "alarms": {...}, "start": {...}}`; значення `sensors`/`alarms`/`start` — константа модуля `RELAY_DEFAULTS` = словники §8.2 з коментарем «макет: картка GENSET; пороги — ПРИПУЩЕННЯ Q-06/Q-13» |
 | `action_export_relay_profile(self)` | `ir.actions.act_url` на `/web/content?...` — ні: простіше повернути `ir.actions.act_window` з `TransientModel`? Ні. Рішення: кнопка створює `ir.attachment` `d700.json` (`res_model=self._name, res_id=self.id`, `mimetype="application/json"`) і повертає `{"type":"ir.actions.act_url","url":"/web/content/%d?download=true" % att.id,"target":"self"}` |
-| `action_apply_to_td(self)` | для кожної `f3d.genset.link` з цим профілем: `adapters.td_genset.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75)` (ADP-09); повідомлення «Записано в td_genset: N генераторів; пропущено (крива/поля немає): M» |
+| `action_apply_to_td(self)` | не менеджер (`has_group("factory3d_base.group_f3d_manager")`) → `AccessError("Записувати в td_genset може лише менеджер «Завод 3D».")` (AC-60); для кожної `f3d.genset.link` з цим профілем: `adapters.td_genset.set_fuel_rate(link.td_genset_ref, self.fuel_lph_75)` (ADP-09); повідомлення «Записано в td_genset: N генераторів; пропущено (крива/поля немає): M» |
 
 ### M-03 `f3d.genset.event.map` — мапа подій контролера → дії (FR-04, FR-05)
 
@@ -377,7 +405,8 @@ class F3dGensetEventMap(models.Model):
 
 | Сигнатура | Алгоритм |
 |---|---|
-| `_match(self, ev) -> record` (`@api.model`) | R-07 крок 1: (а) `td_code` точно = `ev["code"]`; (б) `hgm_name` iequals `ev["name"]`; (в) `match_regex` `re.search(..., ev["name"], re.I)`; (г) `key == "DEFAULT_" + ev["severity"].upper()` (`DEFAULT_WARNING`, `DEFAULT_SHUTDOWN`, `DEFAULT_COMM`, `DEFAULT_SERVICE`, `DEFAULT_INFO`); порядок пошуку — `sequence, key`; перший збіг |
+| `_match(self, ev) -> record` (`@api.model`) | R-07 крок 1 (лише `active` рядки): (а) `td_code` точно = `ev["code"]`; (б) `hgm_name` iequals `ev["name"]` **і** `severity == ev["severity"]` (вісім назв є і в Table 4, і в Table 5 — Додаток B; A-16); (в) `match_regex` `re.search(..., ev["name"], re.I)`; (г) `key == "DEFAULT_" + ev["severity"].upper()` (`DEFAULT_WARNING`, `DEFAULT_SHUTDOWN`, `DEFAULT_COMM`, `DEFAULT_SERVICE`, `DEFAULT_INFO`); порядок пошуку — `sequence, key`; перший збіг; немає збігу (напр. `severity="command"`) → порожній recordset, `_apply_event` нічого не робить (рівнозначно `ignore`) |
+| `_check_templates(self)` (`@api.constrains("name_tpl","description_tpl")`) | `string.Formatter().parse(tpl)`: кожне ім'я поля ∈ {`code`, `name`, `value`, `unit`, `threshold`, `ts`, `text`, `td_link`} і без `.`/`[` (доступ до атрибутів/індексів заборонено), інакше `ValidationError("Шаблон: дозволені лише поля {code} {name} {value} {unit} {threshold} {ts} {text} {td_link}.")` (AC-61). Невідомий ключ у даних події під час рендерингу — «—» (SafeDict, §11 п. 9) |
 | `_render(self, ev, link) -> tuple[str, str]` | `fmt = {code, name, value (форматовано `%.1f` або "—"), unit or "", threshold (так само), ts (local Europe/Kyiv "DD.MM HH:MM"), text, td_link (URL запису `td_genset` `/odoo/action-…`? — простіше `"%s,%d" % (model, id)`)}`; `name = self.name_tpl.format_map(SafeDict(fmt))[:120]`; `description = html_escape(self.description_tpl or "").format_map(...)` з `<br/>` замість `\n` |
 
 ### M-04 `f3d.source` — розширення (CG-04)
@@ -389,7 +418,8 @@ class F3dSource(models.Model):
                             ondelete={"td_genset": "set default"})
 ```
 
-Перевизначення, якщо telemetry перевіряє `address` за типом: для `td_genset` `address="local"` допустимий (у
+Рішення за telemetry v0.1 — §2.0.3 T-1: `collector_id = fields.Many2one(required=False)` + `_check_f3d_collector_required`;
+абзац нижче — історія припущення, діє лише в частині «колектор цей тип ігнорує». Перевизначення, якщо telemetry перевіряє `address` за типом: для `td_genset` `address="local"` допустимий (у
 `_check_address` — пропуск для цього типу; реалізація: `if self.type == "td_genset": continue` — узгодити з telemetry,
 Q-04). Колектор цей тип ігнорує (`GET /f3d/telemetry/config` не віддає джерела типу `td_genset` — вимога до telemetry
 CT-02; поки її нема, `collector_id` лишається порожнім, тож джерело не потрапляє в конфіг жодного колектора).
@@ -403,8 +433,8 @@ CT-02; поки її нема, `collector_id` лишається порожні�
 | `f3d_is_genset` | Boolean, `compute="_compute_f3d_genset_link"` = `f3d_passport_id.role == "genset"` |
 | `action_open_f3d_genset(self)` | якщо `f3d_genset_link_id` → `act_window` форма зв'язки; інакше — `act_window` створення з `context={"default_equipment_id": self.id}` |
 
-`f3d_meter_signal_id` (поле telemetry §6.4) **не** перевизначається; його ставить `post_init_hook`/`_publish_one`
-(перший успішний прогін) на сигнал `hours`, якщо порожнє; поле інтервалу ТО telemetry лишається порожнім (A-04).
+`f3d_meter_signal_id` (поле telemetry M-07) **не** перевизначається і мостом **не заповнюється** (§2.0.3 T-7: telemetry
+вимагає інтервал > 0, а інтервал запустив би telemetry R-11 — друге джерело правди ТО); ТО за мотогодинами — лише R-09 (A-04).
 
 ### M-06 `maintenance.request` — розширення (R-08)
 
@@ -412,7 +442,7 @@ CT-02; поки її нема, `collector_id` лишається порожні�
 |---|---|
 | `f3d_genset_event_key` | Char(80), `index=True`, `string="Ключ події генератора"`, `readonly=True`, `copy=False` |
 | `write(self, vals)` | `res = super().write(vals)`; якщо `"stage_id" in vals`: для `self.filtered(lambda r: r.f3d_genset_event_key and r.stage_id.done)` → `r._f3d_genset_on_closed()`; `return res` |
-| `_f3d_genset_on_closed(self)` | R-08 крок 4: `link = env["f3d.genset.link"].search([("equipment_id","=",self.equipment_id.id)], limit=1)`; якщо `link.last_state_json.get("alarm_level", 0) == 0` і `f3d_signal_id` → `f3d_signal_id.write({"status": "ok"})`; `link.message_post(body="Заявку %s закрито" % self.name)` |
+| `_f3d_genset_on_closed(self)` | R-08 крок 4: `link = env["f3d.genset.link"].search([("equipment_id","=",self.equipment_id.id)], limit=1)`; `link.message_post(body="Заявку %s закрито" % self.name)`. Статус сигналу **не** пише — його перераховує telemetry M-08 → R-06 `_on_request_closed` (§2.0.3 T-9) |
 
 Поля `f3d_signal_id`, `f3d_equipment_code` — з telemetry (§6.8); міст їх заповнює, не оголошує.
 
