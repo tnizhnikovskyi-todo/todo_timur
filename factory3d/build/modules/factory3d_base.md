@@ -1,7 +1,7 @@
 # factory3d_base
 Статус: IN_PROGRESS
 Тесты: —, ТК: ждут эмулятор
-Решений без заказчика: 10 (ниже)
+Решений без заказчика: 13 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: мост factory3d_base_mrp_maintenance не тестирован — нет Enterprise (ENV-1)
 
@@ -11,8 +11,8 @@
 | W1 | принят | 0ee48e8 | /factory3d_base 26/26 |
 | W2 | принят | 0766b01 | /factory3d_base 42/42 (2 skip до W3/W4) |
 | W4 | принят | 36a0877 | /factory3d_base 62/62 |
-| W3 | в работе | | |
-| W5 | | | |
+| W3 | принят | f50bbfa | /factory3d_base 84/84 |
+| W5 | в работе | | |
 
 ## Решения без заказчика
 - DEC-1 (ENV-1): `mrp_maintenance` недоступен — убран из `depends`; связь оборудование↔РЦ по `f3d_code` (A-15);
@@ -29,3 +29,6 @@
 - TODO W3/W4: в V-01 (форма зоны) дописать поля локаций/обладнання/ворот; `f3d_zone_id` в форму РЦ.
 - DEC-9: `mrp.workcenter.employee_ids` нет в CE — `codes.employees` не учитывает РЦ; данные макета: 60 единиц со складовыми (63 связи, не 61), зона в `scene_equipment_codes.csv` у 135 строк (не 121), FA-BOILER → Z-BOILER. — `hooks/codes.py`, `data/scene_equipment_codes.csv`
 - DEC-10: значение параметра паспорта «пусто» = `not value_text and not value_num` (Float без NULL в CE); `codes.locations` пропускается без домішки на `stock.location`. — `models/f3d_equipment_passport.py`, `hooks/codes.py`
+- DEC-11: синтетика TestBatchMigration — 4 пакета на 4 документа, а не 3 как в §13.1: по R-11(б)/Q-02 «один пакет на документ», противоречие внутри SPEC, приоритет у правила. — `tests/test_migration.py`
+- DEC-12: `f3d_register_dock` пишет `dock_ids`/`dispatch_management` типа операции через `sudo()` (пользователь склада может не иметь прав на тип); черновики при миграции — `in_progress` напрямую, без `action_confirm`. — `models/stock_location.py:80`, `hooks/batches.py`
+- DEC-13: нет ворот на чистой базе — INFO, а не WARNING (чистый лог установки); колонка `zone` в `scene_docks.csv` игнорируется (зоны — `zones.bind`). — `hooks/docks.py`
