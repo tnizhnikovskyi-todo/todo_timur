@@ -1,6 +1,9 @@
 # factory3d_base — специфікація
 
-Версія 0.1 · 13.10.2026 · технічне рішення: `docs/modules/factory3d_base/ARCHITECTURE.md` (далі ARCH).
+Версія 0.2 · 14.10.2026 (0.1 — 13.10.2026) · технічне рішення: `docs/modules/factory3d_base/ARCHITECTURE.md` (далі ARCH).
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-09 (дзеркало `f3d_code`, `f3d_alias`, `f3d_kind` у `hr.employee.public`, M-10a, FR-14, AC-55),
+X-15 (`f3d_truck` — опис/назва фури, не держномер і не код; код фури в 3D — лише `f3d_code`), X-32 (резерв 55 genset, правило
+пункту «Налаштування <модуля>» під `menu_f3d_config`, власні пункти base поза резервом).
 Спирається на контракти каркаса `docs/ARCHITECTURE.md`: C-6.1 (код сцени), C-6.2 (зони й ворота),
 C-6.3 (паспорт), C-6.7 (кнопка «Показати в 3D»), рішення D-03 (ворота = `stock.location`-док),
 конвенції §5. Визначає власні контракти CB-01…CB-12 (ARCH §2.1). Протоколи P-xx не задіяні.
@@ -37,7 +40,7 @@ odoo_addons/factory3d_base/
 │   ├── stock_picking.py             M-11
 │   ├── mrp_workcenter.py            M-09
 │   ├── maintenance_equipment.py     M-08
-│   └── hr_employee.py               M-10
+│   └── hr_employee.py               M-10, M-10a (дзеркало в hr.employee.public; клас hr.employee — першим)
 ├── security/
 │   ├── f3d_security.xml             категорія, привілей, групи, implied, record rule (§4)
 │   └── ir.model.access.csv          §4.1
@@ -71,7 +74,7 @@ odoo_addons/factory3d_base/
     ├── __init__.py
     ├── common.py                    F3DCase(TransactionCase): фікстури §13.1
     ├── test_scene_mixin.py          AC-01…AC-09
-    ├── test_employee.py             AC-13, AC-39, AC-40
+    ├── test_employee.py             AC-13, AC-39, AC-40, AC-55
     ├── test_zone.py                 AC-15…AC-19
     ├── test_dock.py                 AC-11, AC-20…AC-24
     ├── test_batch.py                AC-22, AC-51, AC-52
@@ -150,7 +153,7 @@ class F3dSceneMixin(models.AbstractModel):
 |---|---|---|
 | `f3d_code` | Char(32) | `string="Код сцени"`, `idx`, `copy=False`, `help="Код об'єкта в 3D-моделі (glTF extras code), напр. SAW-1, FG-R1-B01-L1, DOCK-W1"` |
 | `f3d_alias` | Char(32) | `string="Другий код сцени"`, `idx`, `copy=False`, `help="Ще один код того самого запису в 3D, якщо модель малює його двома об'єктами (ворота DOCK-W1 і майданчик UNLOAD-1)"` |
-| `f3d_kind` | Selection | `[('location','Місце зберігання'),('workcenter','Робочий центр'),('equipment','Обладнання'),('employee','Працівник'),('dock','Ворота'),('zone','Зона'),('vehicle','Транспорт'),('other','Інше')]`, `string="Вид у сцені"`, `req`, `idx`, `default=lambda self: self._f3d_kind` |
+| `f3d_kind` | Selection | `[('location','Місце зберігання'),('workcenter','Робочий центр'),('equipment','Обладнання'),('employee','Працівник'),('dock','Ворота'),('zone','Зона'),('vehicle','Транспорт'),('other','Інше')]` — константа модуля `F3D_KIND_SELECTION` у `models/f3d_scene_mixin.py` (її ж бере дзеркало M-10a), `string="Вид у сцені"`, `req`, `idx`, `default=lambda self: self._f3d_kind` |
 | `f3d_viewer_available` | Boolean | `compute="_compute_f3d_viewer_available"`, не зберігається: `True`, якщо `_f3d_viewer_installed()` |
 | `is_f3d_manager` | Boolean | `compute="_compute_is_f3d_manager"`, не зберігається: `self.env.user.has_group('factory3d_base.group_f3d_manager')` — для `readonly` полів домішки у формах (§3) |
 
@@ -300,7 +303,7 @@ class StockPickingBatch(models.Model):
 
 | Поле | Тип | Параметри |
 |---|---|---|
-| `f3d_truck` | Char(64) | `string="Фура"`, `help="Держномер або назва фури; у демо — код об'єкта сцени (TRUCK-IN-1)"` |
+| `f3d_truck` | Char(64) | `string="Фура"`, `help="Опис або назва фури з макета (не держномер і не код сцени). Код фури в 3D — «Код фури в 3D» (f3d_code); держномер веде модуль двору (рейс, f3d_plate)."`. Після міграції демо дорівнює `x_truck` (R-12). Переглядач і резолвер код фури беруть лише з `f3d_code` (CB-06, X-15); держномер — `factory3d_yard` `f3d.yard.visit.plate` (на пакеті related `f3d_plate`, yard M-07) |
 | `f3d_vehicle_id` | Many2one `maintenance.equipment` | `string="Техніка"`, `domain="[('f3d_code','!=',False)]"`, `ondelete="set null"`, `help="Навантажувач або тягач, що виконує пакет (FL-2, FL-6, TUGGER-1)"` |
 | `f3d_dock_code` | Char | `related="dock_id.f3d_code"`, `string="Код воріт"`, readonly |
 | `f3d_dock_warning` | Char | `compute="_compute_f3d_dock_warning"`, не зберігається (R-19) |
@@ -464,6 +467,38 @@ class MaintenanceEquipment(models.Model):
 Приклади: `OPSAW1` → `OP-SAW-1` (таблиця); `OPASMLINE1` → `OP-ASMLINE-1`; `OPW3` → `OP-W3`;
 новий бейдж `OPNEST2` без таблиці і без РЦ → `False`; з РЦ `NEST-1` → `OP-NEST-1`.
 
+### M-10a `hr.employee.public` — дзеркало коду сцени (X-09)
+
+```python
+class HrEmployeePublic(models.Model):
+    _inherit = "hr.employee.public"
+```
+
+| Поле | Тип | Параметри |
+|---|---|---|
+| `f3d_code` | Char(32) | `readonly=True`, `string="Код сцени"` |
+| `f3d_alias` | Char(32) | `readonly=True`, `string="Другий код сцени"` |
+| `f3d_kind` | Selection | `selection=F3D_KIND_SELECTION` (той самий список, що M-01), `readonly=True`, `string="Вид у сцені"` |
+
+Без `compute`, `default`, `index`, обмежень і методів: `hr.employee.public` — SQL-представлення (`_auto = False`),
+стандарт будує його з колонок `hr_employee` за збереженими полями моделі (`hr/models/hr_employee_public.py:_get_fields`,
+`init`: `FROM hr_employee e JOIN hr_version v ON v.id = e.current_version_id`; колонки, яких немає в `hr.version`,
+беруться з `e.`). Домішку `f3d.scene.mixin` дзеркало **не** успадковує: її `UNIQUE`-обмеження, `_check_f3d_codes` і R-04
+`write`/`create` до представлення не застосовні. Не дзеркаляться не збережені `f3d_viewer_available`, `is_f3d_manager`
+і кнопка `action_f3d_show` (вона лише у формі `hr.employee`, V-14).
+
+Навіщо (Odoo 19, `hr/models/hr_employee.py`): для користувача без `hr.group_hr_user` `hr.employee.fetch()` і
+`search_fetch()` читають значення з `hr.employee.public` і викликають `_check_private_fields(field_names)`; поле, якого
+немає в публічній моделі, дає `AccessError`. Збережені поля домішки без `groups` потрапляють у prefetch, тож без
+дзеркала будь-яке читання працівника користувачем без прав HR (навіть `name`, `name_search` за `_rec_names_search`
+з `f3d_code`) падало б. Із дзеркалом провайдер переглядача `people` (viewer M-01f) і кіоск читають `f3d_code`,
+`f3d_alias`, `f3d_kind` працівника без `sudo()`.
+
+Порядок оголошення: у `models/hr_employee.py` клас M-10 (`hr.employee`) — **перед** класом M-10a: `Registry.init_models`
+виконує `_auto_init()` і `init()` у порядку оголошення, тож колонки `hr_employee.f3d_*` мають існувати до перебудови
+представлення `hr_employee_public` (той самий прийом — `factory3d_access` M-08a, A-17; access додає свої поля
+`f3d_access_*` до того самого представлення, імена не перетинаються).
+
 ## 3. Представлення й меню
 
 Усі вкладки домішки називаються **«Завод 3D»** і містять групу `group_f3d_scene`: `f3d_code`,
@@ -506,13 +541,21 @@ class MaintenanceEquipment(models.Model):
 | `menu_f3d_equipment` | Обладнання зі сцени | `menu_f3d_plant` | 30 | `group_f3d_user` | `action_f3d_equipment` (`maintenance.equipment`, list,form; `domain=[('f3d_code','!=',False)]`, `context={'search_default_group_f3d_zone':1}`) |
 | `menu_f3d_passport` | Паспорти обладнання | `menu_f3d_plant` | 40 | `group_f3d_user` | `action_f3d_equipment_passport` (list,form) |
 | `menu_f3d_config` | Налаштування | `menu_f3d_root` | 99 | `group_f3d_manager` | — |
-| `menu_f3d_config_spec` | Параметри паспортів | `menu_f3d_config` | 10 | `group_f3d_manager` | `action_f3d_equipment_spec` (list) |
-| `menu_f3d_config_source` | Джерела паспортів | `menu_f3d_config` | 20 | `group_f3d_manager` | `action_f3d_equipment_source` (list) |
-| `menu_f3d_config_params` | Параметри системи | `menu_f3d_config` | 80 | `group_f3d_admin` | `action_f3d_config_parameter` (`ir.config_parameter`, list,form; `domain=[('key','=like','factory3d.%')]`) |
-| `menu_f3d_config_migration` | Повторити міграцію демо-даних | `menu_f3d_config` | 90 | `group_f3d_admin` | `ir.actions.server` `action_f3d_run_migration`: `model_id=model_f3d_scene_mixin`, `state='code'`, `code="action = env['f3d.scene.mixin'].f3d_run_migration()"` (у `data/f3d_actions.xml`) |
+| `menu_f3d_config_spec` | Параметри паспортів | `menu_f3d_config` | 20 | `group_f3d_manager` | `action_f3d_equipment_spec` (list) |
+| `menu_f3d_config_source` | Джерела паспортів | `menu_f3d_config` | 21 | `group_f3d_manager` | `action_f3d_equipment_source` (list) |
+| `menu_f3d_config_params` | Параметри системи | `menu_f3d_config` | 95 | `group_f3d_admin` | `action_f3d_config_parameter` (`ir.config_parameter`, list,form; `domain=[('key','=like','factory3d.%')]`) |
+| `menu_f3d_config_migration` | Повторити міграцію демо-даних | `menu_f3d_config` | 96 | `group_f3d_admin` | `ir.actions.server` `action_f3d_run_migration`: `model_id=model_f3d_scene_mixin`, `state='code'`, `code="action = env['f3d.scene.mixin'].f3d_run_migration()"` (у `data/f3d_actions.xml`) |
 
 Зарезервовані sequence під `menu_f3d_root` для інших модулів: 10 viewer, 30 telemetry,
-40 machine_connect, 50 energy, 60 yard, 70 access, 80 bms, 85 fire_safety, 90 iot_sim.
+40 machine_connect, 50 energy, 55 genset (міст `factory3d_genset`, `td_genset`), 60 yard, 70 access, 80 bms,
+85 fire_safety, 90 iot_sim (X-32). Base займає 20 (`menu_f3d_plant`) і 99 (`menu_f3d_config`).
+
+Правило налаштувань модулів (X-32): пункт «Налаштування <модуля>» (дія `res.config.settings` модуля або підменю
+його параметрів) ставиться під `factory3d_base.menu_f3d_config` з `sequence` = резерв модуля з переліку вище
+(viewer 10, telemetry 30, machine_connect 40, energy 50, genset 55, yard 60, access 70, bms 80, fire_safety 85,
+iot_sim 90); довідники модуля (типи, правила, пристрої) можуть лишатися в його власному корені під `menu_f3d_root`.
+Власні пункти base під `menu_f3d_config` — поза чужим резервом: 20, 21 (довідники паспортів, резерв base) і 95, 96
+(системні, після всіх модулів).
 
 ## 4. Права
 
@@ -531,7 +574,9 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
 ```
 
 Абстрактна `f3d.scene.mixin` рядків не потребує. Доступ до стандартних моделей — їхні групи;
-поля `f3d_*` на них читає кожен, хто читає запис; запис — R-04.
+поля `f3d_*` на них читає кожен, хто читає запис; запис — R-04. `hr.employee` без `hr.group_hr_user` читається
+через `hr.employee.public` (стандарт): `f3d_code`, `f3d_alias`, `f3d_kind` там є завдяки дзеркалу M-10a (X-09);
+`hr.employee.public` рядків у CSV не потребує (права стандарту — `base.group_user`).
 
 ### 4.2 Групи (`security/f3d_security.xml`), Odoo 19 (`res.groups.privilege`)
 
@@ -868,10 +913,11 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | AC-48 | FR-11 | Given чиста база з установленим модулем і 1 зоною, 1 локацією з кодом; When `uninstall_hook(env)`; Then параметри `factory3d.base.*` відсутні, локація існує; `restore_manual_fields` створив `x_dock/x_truck/x_vehicle` | UT |
 | AC-49 | FR-11 | When виконати `data/neutralize.sql` (через `cr.execute(file content)`); Then `environment='test'`; файл виконується без помилки | UT |
 | AC-50 | FR-11 | Given користувач `group_f3d_manager` без `admin`; When `f3d_run_migration()`; Then `AccessError`; адміністратор → dict `display_notification` | UT |
-| AC-51 | FR-12 | Given пакет із `dock_id` (ворота `D-1`), `f3d_code='TRUCK-T-1'`, `f3d_truck='AA1234BB'`, `f3d_vehicle_id` (обладнання `FL-T`), документ у пакеті; Then на документі `f3d_dock_code='D-1'`, `f3d_truck_code='TRUCK-T-1'`, `f3d_truck='AA1234BB'`, `f3d_vehicle_id.f3d_code='FL-T'`; `search_read` з цими полями повертає значення; документ без пакета → `False` | UT |
+| AC-51 | FR-12 | Given пакет із `dock_id` (ворота `D-1`), `f3d_code='TRUCK-T-1'`, `f3d_truck='Фура плит (тест)'` (опис, не держномер — X-15), `f3d_vehicle_id` (обладнання `FL-T`), документ у пакеті; Then на документі `f3d_dock_code='D-1'`, `f3d_truck_code='TRUCK-T-1'`, `f3d_truck='Фура плит (тест)'`, `f3d_vehicle_id.f3d_code='FL-T'`; `search_read` з цими полями повертає значення; документ без пакета → `False` | UT |
 | AC-52 | FR-12 | Given копія демо; When `search_read('stock.picking', [], fields=['name','f3d_dock_code','f3d_truck_code','f3d_vehicle_id'])`; Then 21 документ із `f3d_dock_code` (= колишній `x_dock`), 6 із `f3d_truck_code`, 3 з `f3d_vehicle_id` | TC |
 | AC-53 | FR-13 | Given локації з кодами `PLT-T1`, `FUR-T1`, `UNLOAD-T1` (ворота з псевдонімом) і файл `scene_locations.csv`, підмінений тестом на 3 рядки (`PLT-T1,stack,60`; `FUR-T1,bin,66`; `UNLOAD-T1,area,`); When `codes.locations(env)`; Then `PLT-T1.f3d_loc_kind='stack'`, `f3d_capacity=60`; `FUR-T1` → `bin`/66; ворота → `area`/0 (знайдено за псевдонімом); повтор — без змін; `f3d_capacity=-1` → `IntegrityError`; `f3d_loc_kind='rack'` → `ValueError` селекції | UT |
 | AC-54 | FR-13 | Given копія демо; Then `f3d_loc_kind` заповнено на 689 локаціях (`pallet_cell` 360, `bin` 144, `stack` 123, `shelf` 24, `kit` 20, `area` 18), `f3d_capacity > 0` на 654; `PLT-01A`=60, `RCK-R1-1A`=55, `EB-U1-S1-L1`=2200, `FG-R1-B01-L1`=2, `PAL-1`=14, `FUR-R1-S01-L1`=66; `KIT-01` і `UNLOAD-1` = 0; `DOCK-E1`, `WH/Stock` — вид порожній | TC |
+| AC-55 | FR-14 | Given працівник `OP-SAW-T` (`f3d_code` записано `sudo()`), користувач `u` лише з `base.group_user` (без `hr.group_hr_user`); When `env['hr.employee.public'].with_user(u).search_read([('f3d_code','=','OP-SAW-T')], ['name','f3d_code','f3d_alias','f3d_kind'])`; Then 1 рядок, `f3d_code='OP-SAW-T'`, `f3d_alias=False`, `f3d_kind='employee'`. When `env['hr.employee'].with_user(u).browse(emp.id)` читає `name` і `f3d_code`; Then без `AccessError` (prefetch полів домішки проходить `_check_private_fields`), `f3d_code='OP-SAW-T'`; `env['hr.employee'].with_user(u).search([('f3d_code','=','OP-SAW-T')])` → цей працівник; `name_search('OP-SAW-T')` знаходить його. Then поля M-10a `readonly`, модель `hr.employee.public` не має обмеження `_f3d_code_uniq` | UT |
 
 ## 13. План тестування
 
@@ -896,6 +942,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | `::TestSearch` | `test_search_f3d_code_alias`, `test_search_empty`, `test_search_archived`, `test_resolve_order`, `test_resolve_all` | AC-05…07 | зона `X-1`, локація `X-1`, РЦ `X-1` | рівність recordset; `None`; порядок |
 | `::TestShow` | `test_show_with_viewer`, `test_show_without_viewer`, `test_show_no_code`, `test_viewer_detection_real` | AC-08, AC-09 | `viewer_installed(True/False)` | точна рівність усього dict дії (`assertEqual`); `tag`, `params.title`; `UserError`; без патча `_f3d_viewer_installed()` дорівнює `ir.module.module` `factory3d_viewer` `state=='installed'` |
 | `test_employee.py::TestEmployeeCode` | `test_from_table`, `test_from_workcenter`, `test_opw_rule`, `test_unknown`, `test_hook_employees` | AC-13, AC-40 | працівники 4 шт., РЦ `NEW-7` з `employee_ids` | значення M-10; після `codes.employees(env)` коди на місці; повтор не змінює |
+| `::TestEmployeePublic` | `test_public_mirror_read`, `test_private_read_without_hr_rights`, `test_search_by_code_without_hr_rights`, `test_mirror_readonly_no_constraint` | AC-55 | `cls.emp` з `f3d_code='OP-SAW-T'` (через `sudo()`), користувач `base.group_user` без `hr.group_hr_user` (`new_test_user(..., groups='base.group_user')`) | значення `search_read` з `hr.employee.public`; `with_user(u)` читання `name`/`f3d_code` на `hr.employee` без `AccessError`; `search`/`name_search` за кодом; `_fields['f3d_code'].readonly`; `'_f3d_code_uniq'` відсутнє серед обмежень `hr.employee.public` |
 | `test_zone.py::TestZoneData` | `test_45_zones_loaded`, `test_types_distribution`, `test_polygons_inside_site`, `test_indoor_inside_building`, `test_roof_flag` | AC-15 | data | кількості; усі зони в межах `[−32,182]×[−30,100]`; 34 цехових у межах `[0,150]×[0,72]`; `is_roof` лише `Z-ROOF`; `is_roof` на зоні типу `storage` → `ValidationError` |
 | `::TestGeometry` | `test_area_bbox`, `test_polygon_validation`, `test_polygon_text_inverse`, `test_zone_at` | AC-16, AC-17 | `make_zone` | `area_m2 == 63.8` (assertAlmostEqual, 1 знак); `ValidationError` 4 випадки; `zone_at` 4 точки |
 | `::TestCounters` | `test_counts_and_docks`, `test_archived_not_counted` | AC-18 | зона + 2 локації (`make_dock` одна) + РЦ + обладнання | лічильники; `dock_location_ids` |
@@ -941,6 +988,8 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 - Ін'єкції: `f3d_code` з `'; DROP TABLE --` → `ValidationError` R-01 (`test_code_injection_rejected`);
   `read_manual_field(env, 'stock.picking', 'x_dock; DROP')` → `ValueError` до будь-якого SQL
   (`test_manual_field_name_validated`); `polygon_text` з `{"__class__":…}` → `ValidationError`.
+- Публічний профіль працівника: користувач без `hr.group_hr_user` читає лише поля M-10a, а не `barcode` (стандартне
+  приватне поле) — `with_user(u).read(['barcode'])` → `AccessError` (`test_employee.py::TestEmployeePublic`, AC-55).
 - Record rule компанії (AC-45).
 - Токенів/стоп-кранів у base немає — `neutralize.sql` перевіряється AC-49.
 
@@ -969,7 +1018,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 - Усі юніт-тести §13.1 зелені на чистій базі й на копії демо (`--test-tags /factory3d_base`);
   `test_data_sync.py` зелений.
 - ТК-01…ТК-05 пройдені, протокол у `DEPLOY_TEST.md` з фактичними кількостями.
-- Кожен AC-01…AC-52 має зелений тест або відмітку ТК/MAN у протоколі.
+- Кожен AC-01…AC-55 має зелений тест або відмітку ТК/MAN у протоколі.
 - `ruff`/`flake8` без помилок (конфіг проєкту; якщо немає — `ruff check` з умовчаннями, довжина рядка 120).
 - Жодного `x_`-поля в коді модуля (крім рядкових імен у `hooks/batches.py`, `hooks/x_fields.py`,
   `hooks/__init__.py` для міграції) — `grep -rn "x_dock\|x_truck\|x_vehicle" models/ views/ data/` порожній.

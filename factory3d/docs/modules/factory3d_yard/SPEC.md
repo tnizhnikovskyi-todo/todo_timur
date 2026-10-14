@@ -3,14 +3,15 @@
 Версія 0.1 · 14.10.2026 · автор: агент-архітектор модуля (хвиля 2, фаза 4) · технічне рішення:
 `docs/modules/factory3d_yard/ARCHITECTURE.md` (далі ARCH, версія 0.2: FR-01…FR-28, CY-01…CY-08, A-01…A-14, Q-01…Q-14).
 Цей документ додає рішення A-15…A-28 (§15.2), правила R-01…R-24 (§9), моделі M-01…M-18, представлення V-01…V-34,
-RPC/контракти API-01…API-06 (§7), критерії AC-01…AC-86 (§12), стендові сценарії ТК-01…ТК-08 (§13.2).
+RPC/контракти API-01…API-06 (§7), критерії AC-01…AC-88 (§12), стендові сценарії ТК-01…ТК-08 (§13.2).
 
 Спирається на контракти (посилання — лише за ідентифікаторами):
 - каркас `docs/ARCHITECTURE.md`: §5 (імена, стоп-крани, права, тести), §6.1–6.2 (код сцени, ворота = док),
   §6.4–6.5 (телеметрія, плагіни; `sics` належить цьому модулю), §6.6 рядок **P-11**, §6.7 (переглядач), D-02, D-03;
 - `factory3d_base`: CB-01 (`f3d.scene.mixin`), CB-03 (`f3d.zone.zone_at`), CB-05 (ворота `stock.location`
   `f3d_kind='dock'`, `f3d_side`, `f3d_dock_no`, `f3d_accepts`, `f3d_x`, `f3d_y`; `stock.picking.type.dock_ids`),
-  CB-06 (`stock.picking.batch.f3d_code`, `f3d_truck`), CB-09 (меню, sequence 60), CB-10 (групи,
+  CB-06 (`stock.picking.batch.f3d_code` — єдиний код фури в 3D, `f3d_truck` — опис/назва з макета, не номер; X-15),
+  CB-09 (меню, sequence 60), CB-10 (групи,
   `factory3d.base.environment`), CB-12 (межі території), R-10/R-19 base, Додаток C.2 (надвірні зони), Додаток D (ворота),
   AC-25/AC-26 base (6 пакетів фур + 18 нових пакетів після міграції base);
 - `factory3d_viewer`: M-01 (`f3d.viewer.provider`, `_f3d_sequence=160` для yard), R-01 п. 3 (провайдери
@@ -122,11 +123,11 @@ odoo_addons/factory3d_yard/
     ├── test_booking.py               AC-04…AC-13
     ├── test_picking.py               AC-14…AC-20
     ├── test_lpr.py                   AC-23…AC-33 (+ TestInjection, ТБ-05)
-    ├── test_commands.py              AC-34…AC-37
+    ├── test_commands.py              AC-34…AC-37, AC-88
     ├── test_gate.py                  AC-38…AC-40, AC-46, AC-47
     ├── test_scale.py                 AC-41…AC-45, AC-48
     ├── test_kpp.py                   AC-53…AC-58 (TestTours — HttpCase)
-    ├── test_provider.py              AC-62…AC-65
+    ├── test_provider.py              AC-62…AC-65, AC-87
     ├── test_reports.py               AC-59…AC-61
     ├── test_migration.py             AC-72, AC-76, AC-77, AC-79
     ├── test_security.py              AC-66…AC-69, AC-73, AC-74
@@ -470,7 +471,7 @@ class F3dYardGate(models.Model):
 | `camera_code` | Char(32) | `idx`, `string="Камера LPR"`, `help="sensorProviderID камери Axis (CAM-05)"`; унікальний серед активних (`_check_camera`) |
 | `camera_equipment_id` | Many2one `maintenance.equipment` | `string="Обладнання камери"`, `ondelete="set null"` (`CCTV` — камери окремих одиниць не мають, base Додаток F) |
 | `scale_id` | Many2one `f3d.yard.scale` | `string="Ваги"`, `ondelete="set null"` |
-| `source_id` | Many2one `f3d.source` | `string="Модуль I/O"`, `ondelete="set null"` (`SRC-ADAM-IO7`) |
+| `source_id` | Many2one `f3d.source` | `string="Модуль I/O"`, `ondelete="set null"` (`MB-U86-IO7`) |
 | `state_signal_id`, `loop_signal_id`, `photocell_signal_id`, `passes_signal_id`, `cmd_open_signal_id`, `cmd_close_signal_id`, `cmd_hold_signal_id` | Many2one `f3d.signal` | `ondelete="set null"`, `string="Сигнал: стріла відкрита"` / `"…петля"` / `"…фотоелемент"` / `"…лічильник проїздів"` / `"Команда: відкрити"` / `"…закрити"` / `"…тримати"`; ставить хук (Додаток A) |
 | `invert_di` | Boolean | `default=False`, `string="Інверсія входів"`, `help="Контакти NC: 0 = активний стан (ризик монтажу ARCH §5.3)"` |
 | `mode` | Selection | `[('auto','Авто'),('manual','Ручний')]`, `req`, `default='manual'`, `tracking=True`, `string="Режим"` |
@@ -639,7 +640,7 @@ class F3dYardScale(models.Model):
 | `pos_x`, `pos_y` | Float | `digits=(8,2)` — `plant/infra.py:TRUCK_SCALE = (172.0, −14.0)` |
 | `equipment_id` | Many2one `maintenance.equipment` | `ondelete="set null"` |
 | `zone_id` | Many2one `f3d.zone` | `ondelete="set null"` (`Z-GATE-E`) |
-| `source_id` | Many2one `f3d.source` | `ondelete="set null"` (`SRC-TRUCK-SCALE`) |
+| `source_id` | Many2one `f3d.source` | `ondelete="set null"` (`SICS-TRUCK-SCALE`) |
 | `weight_signal_id`, `stable_signal_id` | Many2one `f3d.signal` | `ondelete="set null"` |
 | `max_kg` | Float | `default=60000`, `string="НПВ, кг"` (`equipment_specs.json[role=truck_scale]`) |
 | `min_kg` | Float | `default=400`, `string="НмПВ, кг"` |
@@ -673,7 +674,7 @@ class F3dYardScale(models.Model):
 | `f3d_visit_ids` | One2many `f3d.yard.visit` `batch_id` | `string="Рейси"` |
 | `f3d_visit_id` | Many2one `f3d.yard.visit` | `compute="_compute_f3d_visit"`, `store=True`, `idx`, `string="Активний рейс"`: рейс із `f3d_visit_ids`, стан ∉ {`left`,`rejected`,`cancelled`}, найбільший `id`; немає → останній `left` за `left_at`; немає → `False`. `@api.depends("f3d_visit_ids.state")` |
 | `f3d_visit_state` | Selection | `related="f3d_visit_id.state"`, `string="Стан рейсу"` |
-| `f3d_plate` | Char | `related="f3d_visit_id.plate"`, `string="Держномер (рейс)"` — читає емулятор (iot_sim API-01, Q-02) |
+| `f3d_plate` | Char | `related="f3d_visit_id.plate"`, `string="Держномер (рейс)"`, `help="Держномер активного рейсу двору (f3d.yard.visit.plate). Код фури в 3D — f3d_code; f3d_truck — опис/назва фури з макета, не номер."` — єдине місце держномера на пакеті (X-15: код сцени — лише base `f3d_code` CB-06, `f3d_truck` — опис); читає емулятор (iot_sim API-01 `bookings[].plate`, X-49) |
 | `f3d_visit_count` | Integer | `compute`, не зберігається |
 
 | Сигнатура | Права | Алгоритм |
@@ -795,7 +796,7 @@ class F3dViewerProviderYard(models.AbstractModel):
     _f3d_group = "factory3d_base.group_f3d_user"
 
     def _f3d_viewer_collect(self, payload, ctx): ...      # R-20
-    def _f3d_viewer_delta(self, patch, ctx): ...          # R-20 п. 7
+    def _f3d_viewer_delta(self, patch, ctx): ...          # R-20 п. 7 (infra — лише deep_merge, X-23)
     def _f3d_viewer_bus_models(self):
         return ["f3d.yard.visit", "f3d.yard.gate", "f3d.yard.scale"]
 ```
@@ -1127,12 +1128,14 @@ XML-id параметра — `param_<name>`; ключ — `factory3d.yard.<name
 відповідні записи належать base/telemetry і можуть бути відсутні на чистій базі.
 
 Джерела й сигнали — записи моделей telemetry; хук створює/оновлює їх за `code` **без** `ir.model.data`
-(A-19), тож деінсталяція двору їх не видаляє (ARCH §2.8). Джерела (константа `hooks/migrate.py:SOURCES`):
+(A-19), тож деінсталяція двору їх не видаляє (ARCH §2.8). Коди джерел — за єдиною схемою telemetry C.1/C.3
+(`MB-U<unit>-<NAME>` для Modbus, `SICS-<NAME>` для SICS; ключі `source_map` CT-11 `u86` → `MB-U86-IO7`, `sics` →
+`SICS-TRUCK-SCALE`; X-17). Джерела (константа `hooks/migrate.py:SOURCES`):
 
 | code | name | type | params (стенд) | Інше |
 |---|---|---|---|---|
-| `SRC-ADAM-IO7` | ADAM-6060 IO-7 (шлагбауми двору) | `modbus_tcp` | `{"host": "iot-sim", "port": 502, "unit": 86, "timeout_s": 2, "retries": 1, "max_block": 32}` | `collector_id` = `factory3d_telemetry.collector_main` (немає → перший активний `f3d.collector`; немає жодного → крок `skipped` з WARNING), `module='yard'`, `read_enabled=True`, `write_enabled=False`, `period_s_default=1`, `equipment_id` = `GATE-W` |
-| `SRC-TRUCK-SCALE` | Автоваги АКСІС (SICS) | `sics` | `{"host": "iot-sim", "port": 4001, "mode": "stream", "period_s": 1, "timeout_s": 5, "unit": "kg", "dialect": "mt_sics", "reset_on_connect": true}` | те саме, `equipment_id` = `TRUCK-SCALE` |
+| `MB-U86-IO7` | ADAM-6060 IO-7 (шлагбауми двору) | `modbus_tcp` | `{"host": "iot-sim", "port": 502, "unit": 86, "timeout_s": 2, "retries": 1, "max_block": 32}` | `collector_id` = `factory3d_telemetry.collector_main` (немає → перший активний `f3d.collector`; немає жодного → крок `skipped` з WARNING), `module='yard'`, `read_enabled=True`, `write_enabled=False`, `period_s_default=1`, `equipment_id` = `GATE-W` |
+| `SICS-TRUCK-SCALE` | Автоваги АКСІС (SICS) | `sics` | `{"host": "iot-sim", "port": 4001, "mode": "stream", "period_s": 1, "timeout_s": 5, "unit": "kg", "dialect": "mt_sics", "reset_on_connect": true}` | те саме, `equipment_id` = `TRUCK-SCALE` |
 
 Події LPR надходять через джерело telemetry `factory3d_telemetry.source_http_push` (`HTTP-PUSH`, `params.routes =
 ["lpr"]`, telemetry §5.2/API-01); двір свого `http_push`-джерела не створює (A-18). Якщо `HTTP-PUSH` на маршрут
@@ -1316,7 +1319,8 @@ id>` або `image_url` події. Обмеження: ≤ 50 рейсів у �
 `note = "%s %s · %s" % (kind, gate.f3d_code, visit.name or "")`, `requested_by` = користувач (`reason='manual'`)
 або `base.user_root` (`auto_*`), `f3d_yard_gate_id`, `f3d_yard_visit_id`, `f3d_yard_kind`, `f3d_yard_reason`.
 Колектор забирає її (API-06 telemetry) і пише coil (`modbus_tcp`, fc 5, `address.write.addr`: 16/18/20 для
-GATE-W, 17/19/20 для GATE-E — Додаток A). Результат (`done`/`failed`/`expired`) повертається через API-07 telemetry
+GATE-W, 17/19/21 для GATE-E — Додаток A, X-47); для `open`/`close` плагін сам повертає coil у 0 через
+`address.write.pulse_ms` = 1 500 мс (X-46), `hold`/`release` — рівень без імпульсу. Результат (`done`/`failed`/`expired`) повертається через API-07 telemetry
 і `f3d.command.write` (M-18 → R-16).
 
 ### API-05 Шина `f3d_yard` (екран КПП)
@@ -1363,6 +1367,14 @@ f3d_collector_yard = ["schemas/*.json"]
 `sics` отримує `Health(state='error', error='plugin sics not installed')` (telemetry §8.3.2).
 
 ### 8.2 Конфігурація: `params` джерела і `address` сигналу (CY-05; копії схем — у telemetry `plugins/schemas/`)
+
+**Спільна схема `sics` — власник цей модуль** (каркас §6.5, X-45). telemetry Додаток A.1 `sics`, A.2 `sics` і файли
+`plugins/schemas/params.sics.json`, `address.sics.json` — дослівні копії двох схем нижче: адреса — `field*` ∈
+{`weight`, `stable`}, `cmd` ∈ {`SI`} з умовчанням `SI`, `write.cmd` ∈ {`Z`, `T`, `TAC`}, `doc`; `params` — `host*`,
+`port` (4001), `mode` (`stream`), `period_s` (1), `timeout_s` (**5** — єдине умовчання для валідатора telemetry M-02/M-03
+і плагіна), `unit` (`kg`), `dialect` (`mt_sics`), `reset_on_connect` (`true`); `additionalProperties: false` в обох.
+Валідація telemetry за цими схемами пропускає джерело `SICS-TRUCK-SCALE` (§5.3) і сигнали № 17–18 Додатка A
+(№ 18 — `field: "stable"`); зміни схеми вносяться тут, telemetry їх копіює.
 
 `schemas/params.sics.json`:
 
@@ -1503,7 +1515,7 @@ reply_delay_s=0.0, reset_reply='I4 A "FAKE-0001"', support_reset=True)` — `asy
 Емулятор (iot_sim §8.13.3) реалізує `S`, `SI`, `SIR`, `Z`/`ZI`, `T`/`TI`, `TA`, `I0…I4`, `@`, `ES/EL/ET` — плагін
 використовує підмножину `@`, `SI`, `SIR`, `Z`, `T`, `TAC` (останню емулятор не перелічує — відповідь `ES` дає
 `WriteError("SICS: помилка ES на TAC")`, AC-52). Живий індикатор АКСІС ME-01: RS-232 → TCP-шлюз (ПРИПУЩЕННЯ,
-Q-05); перехід — зміна `params.host/port` джерела `SRC-TRUCK-SCALE` (каркас §1).
+Q-05); перехід — зміна `params.host/port` джерела `SICS-TRUCK-SCALE` (каркас §1).
 
 ## 9. Алгоритми й правила
 
@@ -1778,7 +1790,10 @@ V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без бро�
 6. Немає команди воріт у `queued`/`sent` з `requested_at > now − P.cmd_cooldown_s` → інакше `UserError("Попередня
    команда «%s» ще виконується (з %s).")`.
 7. `reason` авто і `gate.state == 'error'` → `UserError("Ворота %s у стані помилки — авто-відкриття вимкнено.")`.
-8. Створення `f3d.command` (API-04) під `sudo()`; виняток telemetry (R-18 telemetry) пробрасується як є.
+8. Створення `f3d.command` (API-04) під `sudo()`; виняток telemetry (R-18 telemetry) пробрасується як є. Значення:
+   `open`/`close`/`hold` — `1.0`, `release` — `0.0`; імпульс ≥ 1 с для CAME дає адреса сигналу (`write.pulse_ms =
+   1500` на `cmd_open`/`cmd_close`, Додаток A; плагін `modbus_tcp` пише 1, через `pulse_ms` — 0; X-46); `cmd_hold` —
+   рівень без `pulse_ms`; кожні ворота мають власний `cmd_hold` (GATE-W PDU 20, GATE-E PDU 21; X-47).
 9. Наслідки: `open` → `open_cmd_id = cmd`, `_f3d_yard_count_permit(visit)`; `hold` → `hold_until = now +
    P.hold_max_min`; `release` → `hold_until = False`; усі → `last_command_id`, чаттер воріт і рейсу «Команда «%s»
    %s (#%s) · %s», R-21.
@@ -1923,8 +1938,13 @@ CREATE OR REPLACE VIEW f3d_yard_dock_report AS (
    стабільно|динамічно|немає даних"]]`. Числа — цілі з пробілом-розділювачем тисяч (`21 380`). Картка макета
    `infra.py:368` після міграції: «АА 4512 КТ · брутто 21 380 кг · WH/OUT/00413», «Сьогодні зважувань» — за фактом.
 7. `_f3d_viewer_delta(patch, ctx)`: якщо `ctx["changes"]` містить `f3d.yard.visit`/`f3d.yard.gate`/`f3d.yard.scale` →
-   `patch["yard"]` = повний розділ; `patch["infra"] = {"cards": {code: {"rows": ...}}}` для трьох карток (без
-   статичних полів); інакше нічого.
+   `patch["yard"]` = повний розділ (власний розділ провайдера); спільний розділ `infra` лише доповнюється через
+   спільний хелпер viewer `deep_merge` (viewer M-01, X-23; рекурсивне злиття словників, списки — заміна):
+   `deep_merge(patch.setdefault("infra", {}), {"cards": {code: {"rows": ...}} для трьох карток})` (без статичних
+   полів); ключі `infra`, уже записані іншими провайдерами (energy 150, genset 155, access 170), і їхні картки не
+   змінюються; присвоєння `patch["infra"] = …` заборонене. Хелпер імпортується всередині методу
+   (`from odoo.addons.factory3d_viewer.models.viewer_provider import deep_merge` — модуль M-01 viewer; провайдер
+   викликає лише встановлений viewer, A-15). Немає змін — нічого.
 8. Помилка всередині провайдера — обробляє viewer R-01 (розділ `error`); провайдер не перехоплює винятки сам.
 
 Приклад (копія демо після міграції): `trucks` — 6 записів у стані `handling` з координатами макета
@@ -2119,7 +2139,7 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-45 | FR-13, R-11 | Then два кандидати `queued` → зважування `unassigned`, `kind='check'`; `action_assign(visit)` → `assigned`, `kind='in'`, `weighed_in_at`; рейс `handling` з `handling_end_at` і `in` → захоплення `out`, рейс `weighed` | UT |
 | AC-46 | FR-15 | Then після установки: `GATE-W` (`direction='in'`, `side='west'`, `camera_code='CAM-05'`, `pos=(−20,−30)`, `mode='manual'`), `GATE-E` (`out`, `east`, `CAM-06`, `scale_id=TRUCK-SCALE`), `TRUCK-SCALE` (`max_kg=60000`, `min_kg=400`, `division_kg=20`, `pos=(172,−14)`); друга активна брама з `CAM-05` → `ValidationError` | UT |
 | AC-47 | FR-15, R-16 | Then DI0 свіжий 1 → `open`; `invert_di=True` → `closed`; сигнал `stale` → `unknown`; `last_error` + свіжий DI → `error`; `read_enabled=False` → `unknown` | UT |
-| AC-48 | FR-16, M-13, R-24 к. 2 | Then 18 `f3d.signal` з кодами й адресами Додатка A, `module='yard'`; 2 джерела з `params` §5.3 (`module='yard'`); сигнали LPR на `HTTP-PUSH`; 16 полів-сигналів воріт/ваг заповнено; повторний крок → `signals_created=0`, `signals_updated=18`, `last_value` незмінний; `_f3d_ingest` пакета без кодів `yard/gates\|scale` додає 0 SQL-запитів (`assertQueryCount` різниці з викликом `super`) | UT |
+| AC-48 | FR-16, M-13, R-24 к. 2 | Then 18 `f3d.signal` з кодами й адресами Додатка A, `module='yard'`; 2 джерела з `params` §5.3 (`module='yard'`), валідація telemetry за схемою §8.2 без помилок (зокрема № 18 `field: "stable"`, X-45); сигнали LPR на `HTTP-PUSH`; 16 полів-сигналів воріт/ваг заповнено; повторний крок → `signals_created=0`, `signals_updated=18`, `last_value` незмінний; `_f3d_ingest` пакета без кодів `yard/gates\|scale` додає 0 SQL-запитів (`assertQueryCount` різниці з викликом `super`) | UT |
 | AC-49 | FR-17, R-13 | `parse_line` і перетворення показань — усі рядки таблиці §8.5; `ES`/`ET`/`EL` → `error`; `g`/`t`/`lb` → кг | CT |
 | AC-50 | FR-17, R-14 | Given `FakeSicsServer` (кадри `S S 21380 kg`); Then `poll` у режимі `poll` → 2 показання (`21380.0`, `1.0`, `good`); режим `stream` → `SIR` надіслано, `poll` віддає останній кадр, наступний `poll` без нових кадрів → `[]`; `@` → `health().stats.device='FAKE-0001'`; сервер без `@` (`ES`) — підключення успішне | CT |
 | AC-51 | FR-17, R-14 | Then сервер не відповідає (`reply_delay_s=10`, `timeout_s=1`) → `PollError`; `drop_after=3` у `stream` → `PollError`, повторний `connect` відновлює кадри; 3 помилки поспіль → `health().state='error'`; `allowlist` відмовляє → `AllowlistDenied` до спроби з'єднання | CT |
@@ -2155,9 +2175,11 @@ draft ──бронювання підтверджено / action_plan──►
 | AC-81 | FR-07, FR-08, FR-09, FR-13 | ТК-01: `truck_arrival` повний цикл на стенді (§13.2) | TC |
 | AC-82 | FR-07 | ТК-02: ручний POST LPR на колектор `/f3d/lpr` з токеном → подія в Odoo ≤ 10 с; без токена → 401, подій немає | TC |
 | AC-83 | FR-06 | ТК-03: `truck_no_booking` → картка «Без бронювання», DI0 = 0 весь `wait_min`, рейс без броні створено охоронцем | TC |
-| AC-84 | FR-09, FR-10 | ТК-04: команда `open` → coil 16 = 1, DI0 = 1 ≤ 6 с, ворота `open`; `F3D_WRITE_ENABLED=0` → команда `expired`, ворота `error` | TC |
+| AC-84 | FR-09, FR-10 | ТК-04: команда `open` → coil 16 = 1 і через 1,5 с — 0 (`pulse_ms`, X-46), DI0 = 1 ≤ 6 с, ворота `open`; `F3D_WRITE_ENABLED=0` → команда `expired`, ворота `error` | TC |
 | AC-85 | FR-11, FR-13, FR-28 | ТК-05/ТК-06: автозважування з емулятора (брутто 25 200 ± 20) і перехід на ручне при зупиненому SICS | TC |
 | AC-86 | FR-23 | ТК-08: `/f3d/viewer/data` містить `yard` з 6 фурами й `meta.sections.yard='live'`; картки `GATE-W`, `TRUCK-SCALE` з живими рядками | TC |
+| AC-87 | FR-23, R-20 п. 7 (X-23) | Given `patch = {"infra": {"totals": {"genset_kw": 348}, "cards": {"GENSET": {"rows": [["Стан", "резерв"]]}, "GATE-W": {"title": "КПП приймання"}}}}` (дельта інших провайдерів); When `_f3d_viewer_delta(patch, {"changes": {"f3d.yard.gate": {...}}})`; Then `patch["infra"]["totals"] == {"genset_kw": 348}`, картка `GENSET` незмінна, `GATE-W` має і `title`, і `rows` R-20 п. 6, `GATE-E` і `TRUCK-SCALE` мають `rows`; об'єкт `patch["infra"]` той самий (`is`, злиття, не присвоєння); `patch["yard"]` — повний розділ | UT |
+| AC-88 | FR-09, FR-15, R-15 (X-46, X-47) | Then сигнали хука: `cmd_open`/`cmd_close` — `address.write = {"fc": 5, "addr": 16/18 (GATE-W), 17/19 (GATE-E), "pulse_ms": 1500}`; `cmd_hold` — без `pulse_ms`, `GATE-W` `addr 20`, `GATE-E` `addr 21`; охоронець з `enable_writes()`: `gate_e.action_hold()` → `f3d.command.signal_id` = `yard/gates/GATE-E/cmd_hold`, `value=1.0`; `gate_w.action_hold()` → `yard/gates/GATE-W/cmd_hold` (різні сигнали й адреси) | UT |
 
 ## 13. План тестування (для Opus)
 
@@ -2192,7 +2214,7 @@ draft ──бронювання підтверджено / action_plan──►
 - Хелпери: `kyiv(hhmm, day='2026-10-12') -> datetime UTC`; `set_param(name, value)`; `set_signal(code, value,
   age_s=1, status='ok')` (запис `last_value`, `last_ts = now − age_s`, `status` під `sudo`); `fresh_gate(gate,
   open=0, loop=0, photocell=0)`; `enable_writes()` (параметри `factory3d.yard.write_enabled`,
-  `factory3d.telemetry.write_enabled` = `True`, `write_enabled=True` на `SRC-ADAM-IO7` і cmd-сигналах);
+  `factory3d.telemetry.write_enabled` = `True`, `write_enabled=True` на `MB-U86-IO7` і cmd-сигналах);
   `make_picking(ptype, lines, partner)` (підтверджений, `assigned`); `make_batch(pickings, dock=None, start=None,
   end=None, code=None)`; `make_visit(**vals)`; `make_booking(visit, dock, start, end, confirm=True)`;
   `lpr_payload(**over) -> dict` (тіло iot_sim §8.13.2 дослівно + перевизначення); `push_lpr(payload, ts=None,
@@ -2223,6 +2245,7 @@ draft ──бронювання підтверджено / action_plan──►
 | `::TestMatching` | `test_plate_match_arrive`, `test_window`, `test_repeat_note`, `test_exit_match`, `test_description_fills_plate`, `test_description_plate_conflict`, `test_ambiguous_by_doc`, `test_low_confidence`, `test_unknown_camera`, `test_read_disabled_ignored` | AC-28…AC-30 | рейси з бронюваннями на `dock_w2` | `match_state`, стан рейсу, `kpp_alert`, `note` |
 | `::TestWalkIn` | `test_unmatched_no_command`, `test_wizard_creates`, `test_limit_guard`, `test_dispatcher_over_limit`, `test_walk_in_disallowed`, `test_reject_event`, `test_reject_planned` | AC-31…AC-33 | `enable_writes`, `gate_w.mode='auto'` | `f3d.command` count == 0; стани |
 | `test_commands.py::TestCommandChecks` | `test_write_disabled`, `test_reader_access`, `test_guard_creates_command`, `test_release_value`, `test_auto_reason_needs_su`, `test_photocell_blocked`, `test_photocell_stale`, `test_cooldown`, `test_signal_write_disabled` | AC-34…AC-36 | `enable_writes`, `fresh_gate` | поля `f3d.command`; тексти помилок |
+| `::TestCommandAddresses` | `test_pulse_on_open_close`, `test_hold_level_separate_channels`, `test_hold_commands_per_gate` | AC-88 | сигнали хука (Додаток A), `enable_writes`, `fresh_gate` | `address.write` (`addr`, `pulse_ms`); `signal_id` команд `hold` |
 | `::TestAutoOpen` | `test_auto_in_window`, `test_auto_outside_window`, `test_manual_mode`, `test_late_event`, `test_auto_exit` | AC-37 | бронювання 13:00, `freeze_time` 12:40/11:50 | команда `auto_booking`/`auto_exit`; `note` |
 | `test_gate.py::TestTimeouts` | `test_open_confirmed`, `test_open_timeout_error`, `test_command_expired_error`, `test_reset_error`, `test_hold_and_release`, `test_hold_release_without_writes` | AC-38, AC-39 | команда з `state='done'`, `done_at` (запис під `sudo`) | `state`, `last_error`, `mail.activity` |
 | `::TestPasses` | `test_tailgate_example`, `test_antipassback_off`, `test_leave_by_loop`, `test_entry_loop_clears_pending`, `test_counter_reset` | AC-40 | `ingest` з кодами `passes`/`loop` | лічильники; стан рейсу |
@@ -2236,7 +2259,7 @@ draft ──бронювання підтверджено / action_plan──►
 | `::TestViews` | `test_get_views`, `test_kanban_columns`, `test_dispatch_std_action` | AC-53, AC-55 | — | без винятків; 7 колонок; `views[0][1]=='gantt'` |
 | `::TestTours` (`HttpCase`) | `test_dispatch_tour`, `test_kpp_tour`, `test_kpp_data_perf` | AC-54, AC-58 | тури `static/tests/tours/*.js` (у `web.assets_tests`) | тур успішний; час |
 | `test_reports.py::TestReports` | `test_journal_access`, `test_command_action_domain`, `test_pivot_avg_wait`, `test_dock_report_example`, `test_dock_shift_param` | AC-59…AC-61 | — | значення `read_group`/SQL-виду |
-| `test_provider.py::TestProvider` | `test_sections_and_coords`, `test_kiosk_and_rights`, `test_infra_cards`, `test_no_infra`, `test_notify_calls`, `test_bus_coalesced`, `test_registry_without_viewer`, `test_delta` | AC-62…AC-65 | рейси в різних станах, `viewer_mock` | dict payload; виклики `Mock` |
+| `test_provider.py::TestProvider` | `test_sections_and_coords`, `test_kiosk_and_rights`, `test_infra_cards`, `test_no_infra`, `test_notify_calls`, `test_bus_coalesced`, `test_registry_without_viewer`, `test_delta`, `test_delta_deep_merge_infra` | AC-62…AC-65, AC-87 | рейси в різних станах, `viewer_mock`; для AC-87 — `patch` з чужими ключами `infra` (код `factory3d_viewer` у `addons_path`, імпорт хелпера без установки модуля) | dict payload; виклики `Mock`; чужі ключі `infra` збережено |
 | `test_security.py::TestSecurity` | `test_menus_groups`, `test_implied_chain`, `test_acl_matrix`, `test_pii_fields`, `test_company_rule`, `test_neutralize_sql`, `test_no_secret_params`, `test_logs_without_pii` | AC-66…AC-69, AC-73, AC-74 | — | `env.ref`; `check_access`; `cr.execute(sql)`; `assertLogs` |
 | `test_cron.py::TestCron` | `test_gc_pii`, `test_gc_lpr_images`, `test_gc_weighings`, `test_day_reset`, `test_no_show`, `test_queue_refresh` | AC-70, AC-71, AC-80 | дати через `write` під `sudo` | поля після кронових методів |
 | `test_migration.py::TestMigration` | `test_params_env_test_prod`, `test_read_disabled_effects`, `test_synthetic_run_all`, `test_rerun_idempotent`, `test_clean_skipped`, `test_product_weights`, `test_seed_disabled`, `test_manual_flow_no_telemetry` | AC-72, AC-76, AC-77, AC-79 | пакети `TRUCK-T-1/2` з `f3d_code` | звіт; стани; ваги товарів |
@@ -2259,12 +2282,12 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 
 | ТК | Передумови | Кроки | Очікуваний результат | Де дивитися | AC |
 |---|---|---|---|---|---|
-| ТК-01 `truck_arrival` | `GATE-W`, `GATE-E` `mode='auto'`; `write_enabled` на модулі, `factory3d.telemetry.write_enabled`, джерелі `SRC-ADAM-IO7`, cmd-сигналах; `F3D_WRITE_ENABLED=1`; рейс створено кнопкою «Створити рейс», бронювання підтверджено | 1) `POST /sim/v1/scenario/truck_arrival/start {"booking": "<пакет>", "unload_min": 2}`; 2) після «Біля воріт» комірник проводить документ; 3) чекати виїзду | ≤ 10 с: подія CAM-05 `matched` (номер рейсу заповнено з опису, Q-02), рейс `arrived → queued`, команда `auto_booking` `done`, `GATE-W` `open` ≤ 6 с; зважування `in` `auto` 25 200 ± 20 кг; «На ворота» (вручну або `auto_call_next`) → `at_dock` → `handling` (R-09) → `handling_end_at`; CAM-06 `matched` (виїзд); зважування `out` 14 000 ± 20 → `weighed`, нетто 11 200 ± 40, `weight_check='ok'`, документ «Двір»; команда `auto_exit`; петля GATE-E → `left` | Двір → Диспетчерська, Екран КПП, Журнали (LPR, Зважування, Команди), документ → вкладка «Двір», 3D | AC-81, AC-75 (картина даних) |
+| ТК-01 `truck_arrival` | `GATE-W`, `GATE-E` `mode='auto'`; `write_enabled` на модулі, `factory3d.telemetry.write_enabled`, джерелі `MB-U86-IO7`, cmd-сигналах; `F3D_WRITE_ENABLED=1`; рейс створено кнопкою «Створити рейс», бронювання підтверджено | 1) `POST /sim/v1/scenario/truck_arrival/start {"booking": "<пакет>", "unload_min": 2}`; 2) після «Біля воріт» комірник проводить документ; 3) чекати виїзду | ≤ 10 с: подія CAM-05 `matched` (номер рейсу заповнено з опису, Q-02), рейс `arrived → queued`, команда `auto_booking` `done`, `GATE-W` `open` ≤ 6 с; зважування `in` `auto` 25 200 ± 20 кг; «На ворота» (вручну або `auto_call_next`) → `at_dock` → `handling` (R-09) → `handling_end_at`; CAM-06 `matched` (виїзд); зважування `out` 14 000 ± 20 → `weighed`, нетто 11 200 ± 40, `weight_check='ok'`, документ «Двір»; команда `auto_exit`; петля GATE-E → `left` | Двір → Диспетчерська, Екран КПП, Журнали (LPR, Зважування, Команди), документ → вкладка «Двір», 3D | AC-81, AC-75 (картина даних) |
 | ТК-02 POST LPR | колектор з `F3D_HTTP_PUSH_TOKEN_LPR` | `curl -s -X POST http://collector:8080/f3d/lpr -H 'Content-Type: application/json' -H "X-F3D-Token: $TOK" -d @lpr_new.json` (тіло iot_sim §8.13.2 з `carID=777`, `packetCounter=1`, номер `АА5555КТ`); повтор того самого; без заголовка | 200 `{"received": true}`; ≤ 10 с — одна подія `unmatched` (повтор не дублює); без токена — 401, подій немає | Двір → Журнали → Розпізнавання номерів; Телеметрія → Події HTTP push | AC-82 |
 | ТК-03 `truck_no_booking` | `mode='auto'`, команди дозволені | `POST /sim/v1/scenario/truck_no_booking/start {"plate": "АА1234КТ", "gate": "GATE-W", "wait_min": 3}`; на КПП — «Створити рейс» (або нічого) | картка «Без бронювання» жовта; `f3d.command` для GATE-W не створено; DI0 = 0 весь час (сигнал `yard/gates/GATE-W/state` = 0); з «Створити рейс» — рейс `arrived`, `is_walk_in`; без дії — після `lost` подія `expired` | Екран КПП; Телеметрія → Сигнали | AC-83 |
-| ТК-04 команда DO0 | як ТК-01, `mode='manual'` | охоронець «Відкрити» на GATE-W; потім `F3D_WRITE_ENABLED=0`, перезапуск колектора, «Відкрити» ще раз | 1-ша: команда `done` ≤ 10 с, сигнал `cmd_open` = 1, DI0 = 1 ≤ 6 с, ворота `open`, `admitted_today` +1; 2-га: команда `expired` через 30 с, ворота `error` «Команду «Відкрити» не виконано» | форма воріт; Журнали → Команди | AC-84 |
-| ТК-05 SICS | джерело `SRC-TRUCK-SCALE` `mode=stream` | запустити ТК-01 (етап ваг) або сценарій емулятора з фурою; паралельно `mode=poll` (змінити `params`) і повторити | сигнали `weight_kg`/`stable` оновлюються кожні ≤ 5 с; зважування `auto` одне на заїзд; у `poll` — те саме | Телеметрія → Сигнали; Двір → Зважування | AC-85 |
-| ТК-06 пристрої офлайн | — | змінити порт `SRC-TRUCK-SCALE` на 4999 і `SRC-ADAM-IO7` на 503; через 2 хв — ручний цикл рейсу: «Прибула», «Пропустити», «Зважити» з введенням 25 200 / 14 000, «Виїхала»; повернути порти | ваги `offline`, ворота `unknown`, кнопки команд неактивні з поясненням; ручний цикл проходить, нетто пораховано; після повернення портів — `idle`/`closed` ≤ 2 хв | Екран КПП; форма рейсу | AC-85, AC-79 |
+| ТК-04 команда DO0 | як ТК-01, `mode='manual'` | охоронець «Відкрити» на GATE-W; потім `F3D_WRITE_ENABLED=0`, перезапуск колектора, «Відкрити» ще раз | 1-ша: команда `done` ≤ 10 с, coil 00017 (PDU 16) = 1 і через 1,5 с знову 0 (`pulse_ms`, X-46; журнал u86 емулятора), DI0 = 1 ≤ 6 с, ворота `open`, `admitted_today` +1; 2-га: команда `expired` через 30 с, ворота `error` «Команду «Відкрити» не виконано» | форма воріт; Журнали → Команди | AC-84 |
+| ТК-05 SICS | джерело `SICS-TRUCK-SCALE` `mode=stream` | запустити ТК-01 (етап ваг) або сценарій емулятора з фурою; паралельно `mode=poll` (змінити `params`) і повторити | сигнали `weight_kg`/`stable` оновлюються кожні ≤ 5 с; зважування `auto` одне на заїзд; у `poll` — те саме | Телеметрія → Сигнали; Двір → Зважування | AC-85 |
+| ТК-06 пристрої офлайн | — | змінити порт `SICS-TRUCK-SCALE` на 4999 і `MB-U86-IO7` на 503; через 2 хв — ручний цикл рейсу: «Прибула», «Пропустити», «Зважити» з введенням 25 200 / 14 000, «Виїхала»; повернути порти | ваги `offline`, ворота `unknown`, кнопки команд неактивні з поясненням; ручний цикл проходить, нетто пораховано; після повернення портів — `idle`/`closed` ≤ 2 хв | Екран КПП; форма рейсу | AC-85, AC-79 |
 | ТК-07 міграція | свіжа копія демо-бази | установка base → telemetry → yard; «Повторити міграцію двору» | звіт і 6 рейсів §5.4; повтор нічого не дублює; журнал без ERROR | Налаштування → Параметри системи (`factory3d.yard.migration_report`); Двір → Рейси | AC-75, AC-76 |
 | ТК-08 переглядач | `factory3d_viewer` встановлено | відкрити «Завод 3D» (3D) і `GET /f3d/viewer/data` | `yard.trucks` — 6 фур у координатах макета; `meta.sections.yard = "live"`; картки `GATE-W`/`TRUCK-SCALE` з живими рядками; після «Пропустити» в ТК-01 — фура з'являється в черзі двору (delta) | 3D, вкладка «Логістика», картки | AC-86 |
 
@@ -2309,7 +2332,7 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 
 ## 14. Definition of Done
 
-- Усі AC-01…AC-86: UT/HT/CT — зелені в CI; TC — протокол ТК-01…ТК-08 з датою, стендом і результатом.
+- Усі AC-01…AC-88: UT/HT/CT — зелені в CI; TC — протокол ТК-01…ТК-08 з датою, стендом і результатом.
 - `pylint-odoo` / `ruff` без помилок; XML валідний (`xmllint`); JS — `eslint` за конфігом Odoo; `prettier` для SCSS.
 - Жодного `x_`-поля; рядки UI — українською; `README.md`, `CHANGELOG.md` (19.0.1.0.0), інструкції ARCH §4 перенесено
   в README.
@@ -2388,27 +2411,31 @@ pytest -q` (без мережі, лише `127.0.0.1`).
 
 | № | `code` | `name` | `kind` | `unit` | Обладн. | Джерело | `address` | `period_s` / `store_period_s` | Запис / пороги | Власник.роль | Каталог |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | `yard/gates/GATE-W/state` | GATE-W: стріла відкрита | gauge | — | GATE-W | SRC-ADAM-IO7 | `{"fc":2,"addr":0,"type":"bool","doc":"DI0 00001 стріла відкрита"}` | 1 / 60 | — / `warn_high_on`, `warn_high=0.5`, `min_duration_s=600` (відкрито > 10 хв) | gate_w.state | 654 |
-| 2 | `yard/gates/GATE-W/loop` | GATE-W: петля зайнята | gauge | — | GATE-W | SRC-ADAM-IO7 | `{"fc":2,"addr":1,"type":"bool","doc":"DI1 00002 індукційна петля"}` | 1 / 60 | — | gate_w.loop | новий |
-| 3 | `yard/gates/GATE-W/photocell` | GATE-W: фотоелемент перекритий | gauge | — | GATE-W | SRC-ADAM-IO7 | `{"fc":2,"addr":4,"type":"bool","doc":"DI4 00005 фотоелемент"}` | 1 / 60 | — | gate_w.photocell | новий |
-| 4 | `yard/gates/GATE-W/passes_today` | GATE-W: лічильник проїздів | counter | шт | GATE-W | SRC-ADAM-IO7 | `{"fc":3,"addr":2,"count":2,"type":"u32","wordorder":"little","doc":"HR 40003–40004 лічильник DI1"}` | 10 / 300 | — | gate_w.passes | 655 |
-| 5 | `yard/gates/GATE-W/cmd_open` | GATE-W: команда «відкрити» | gauge | — | GATE-W | SRC-ADAM-IO7 | `{"fc":1,"addr":16,"type":"bool","write":{"fc":5,"addr":16},"doc":"DO0 00017 відкрити (імпульс)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_open | новий |
-| 6 | `yard/gates/GATE-W/cmd_close` | GATE-W: команда «закрити» | gauge | — | GATE-W | SRC-ADAM-IO7 | `{"fc":1,"addr":18,"type":"bool","write":{"fc":5,"addr":18},"doc":"DO2 00019 закрити примусово"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_close | новий |
-| 7 | `yard/gates/GATE-W/cmd_hold` | GATE-W: тримати відкритим | gauge | — | GATE-W | SRC-ADAM-IO7 | `{"fc":1,"addr":20,"type":"bool","write":{"fc":5,"addr":20},"doc":"DO4 00021 тримати (спільний, Q-13)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_hold | новий |
-| 8 | `yard/gates/GATE-E/state` | GATE-E: стріла відкрита | gauge | — | GATE-E | SRC-ADAM-IO7 | `{"fc":2,"addr":2,"type":"bool","doc":"DI2 00003 стріла відкрита"}` | 1 / 60 | — / як № 1 | gate_e.state | 656 |
-| 9 | `yard/gates/GATE-E/loop` | GATE-E: петля зайнята | gauge | — | GATE-E | SRC-ADAM-IO7 | `{"fc":2,"addr":3,"type":"bool","doc":"DI3 00004 індукційна петля"}` | 1 / 60 | — | gate_e.loop | новий |
-| 10 | `yard/gates/GATE-E/photocell` | GATE-E: фотоелемент перекритий | gauge | — | GATE-E | SRC-ADAM-IO7 | `{"fc":2,"addr":5,"type":"bool","doc":"DI5 00006 фотоелемент"}` | 1 / 60 | — | gate_e.photocell | новий |
-| 11 | `yard/gates/GATE-E/passes_today` | GATE-E: лічильник проїздів | counter | шт | GATE-E | SRC-ADAM-IO7 | `{"fc":3,"addr":6,"count":2,"type":"u32","wordorder":"little","doc":"HR 40007–40008 лічильник DI3"}` | 10 / 300 | — | gate_e.passes | 657 |
-| 12 | `yard/gates/GATE-E/cmd_open` | GATE-E: команда «відкрити» | gauge | — | GATE-E | SRC-ADAM-IO7 | `{"fc":1,"addr":17,"type":"bool","write":{"fc":5,"addr":17},"doc":"DO1 00018 відкрити (імпульс)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_open | новий |
-| 13 | `yard/gates/GATE-E/cmd_close` | GATE-E: команда «закрити» | gauge | — | GATE-E | SRC-ADAM-IO7 | `{"fc":1,"addr":19,"type":"bool","write":{"fc":5,"addr":19},"doc":"DO3 00020 закрити примусово"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_close | новий |
-| 14 | `yard/gates/GATE-E/cmd_hold` | GATE-E: тримати відкритим | gauge | — | GATE-E | SRC-ADAM-IO7 | `{"fc":1,"addr":20,"type":"bool","write":{"fc":5,"addr":20},"doc":"DO4 00021 тримати (спільний, Q-13)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_hold | новий |
+| 1 | `yard/gates/GATE-W/state` | GATE-W: стріла відкрита | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":0,"type":"bool","doc":"DI0 00001 стріла відкрита"}` | 1 / 60 | — / `warn_high_on`, `warn_high=0.5`, `min_duration_s=600` (відкрито > 10 хв) | gate_w.state | 654 |
+| 2 | `yard/gates/GATE-W/loop` | GATE-W: петля зайнята | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":1,"type":"bool","doc":"DI1 00002 індукційна петля"}` | 1 / 60 | — | gate_w.loop | новий |
+| 3 | `yard/gates/GATE-W/photocell` | GATE-W: фотоелемент перекритий | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":2,"addr":4,"type":"bool","doc":"DI4 00005 фотоелемент"}` | 1 / 60 | — | gate_w.photocell | новий |
+| 4 | `yard/gates/GATE-W/passes_today` | GATE-W: лічильник проїздів | counter | шт | GATE-W | MB-U86-IO7 | `{"fc":3,"addr":2,"count":2,"type":"u32","wordorder":"little","doc":"HR 40003–40004 лічильник DI1"}` | 10 / 300 | — | gate_w.passes | 655 |
+| 5 | `yard/gates/GATE-W/cmd_open` | GATE-W: команда «відкрити» | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":16,"type":"bool","write":{"fc":5,"addr":16,"pulse_ms":1500},"doc":"DO0 00017 відкрити (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_open | новий |
+| 6 | `yard/gates/GATE-W/cmd_close` | GATE-W: команда «закрити» | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":18,"type":"bool","write":{"fc":5,"addr":18,"pulse_ms":1500},"doc":"DO2 00019 закрити примусово (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_close | новий |
+| 7 | `yard/gates/GATE-W/cmd_hold` | GATE-W: тримати відкритим | gauge | — | GATE-W | MB-U86-IO7 | `{"fc":1,"addr":20,"type":"bool","write":{"fc":5,"addr":20},"doc":"DO4 00021 тримати GATE-W (рівень)"}` | 5 / 300 | `write_enabled=True` | gate_w.cmd_hold | новий |
+| 8 | `yard/gates/GATE-E/state` | GATE-E: стріла відкрита | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":2,"type":"bool","doc":"DI2 00003 стріла відкрита"}` | 1 / 60 | — / як № 1 | gate_e.state | 656 |
+| 9 | `yard/gates/GATE-E/loop` | GATE-E: петля зайнята | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":3,"type":"bool","doc":"DI3 00004 індукційна петля"}` | 1 / 60 | — | gate_e.loop | новий |
+| 10 | `yard/gates/GATE-E/photocell` | GATE-E: фотоелемент перекритий | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":2,"addr":5,"type":"bool","doc":"DI5 00006 фотоелемент"}` | 1 / 60 | — | gate_e.photocell | новий |
+| 11 | `yard/gates/GATE-E/passes_today` | GATE-E: лічильник проїздів | counter | шт | GATE-E | MB-U86-IO7 | `{"fc":3,"addr":6,"count":2,"type":"u32","wordorder":"little","doc":"HR 40007–40008 лічильник DI3"}` | 10 / 300 | — | gate_e.passes | 657 |
+| 12 | `yard/gates/GATE-E/cmd_open` | GATE-E: команда «відкрити» | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":17,"type":"bool","write":{"fc":5,"addr":17,"pulse_ms":1500},"doc":"DO1 00018 відкрити (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_open | новий |
+| 13 | `yard/gates/GATE-E/cmd_close` | GATE-E: команда «закрити» | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":19,"type":"bool","write":{"fc":5,"addr":19,"pulse_ms":1500},"doc":"DO3 00020 закрити примусово (імпульс 1,5 с)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_close | новий |
+| 14 | `yard/gates/GATE-E/cmd_hold` | GATE-E: тримати відкритим | gauge | — | GATE-E | MB-U86-IO7 | `{"fc":1,"addr":21,"type":"bool","write":{"fc":5,"addr":21},"doc":"DO5 00022 тримати GATE-E (рівень)"}` | 5 / 300 | `write_enabled=True` | gate_e.cmd_hold | новий |
 | 15 | `yard/lpr/CAM-05/plate` | CAM-05: номер на в'їзді | event | — | CCTV | HTTP-PUSH (telemetry) | `{"route":"lpr","match":{"sensorProviderID":"CAM-05"},"path":"$.plateText","ts_path":"$.capture_timestamp"}` | 3600 / 0 | — | — | 658 |
 | 16 | `yard/lpr/CAM-06/plate` | CAM-06: номер на виїзді | event | — | CCTV | HTTP-PUSH (telemetry) | `{"route":"lpr","match":{"sensorProviderID":"CAM-06"},"path":"$.plateText","ts_path":"$.capture_timestamp"}` | 3600 / 0 | — | — | 659 |
-| 17 | `yard/scale/TRUCK-SCALE/weight_kg` | Автоваги: вага | gauge | кг | TRUCK-SCALE | SRC-TRUCK-SCALE | `{"cmd":"SI","field":"weight","doc":"SICS SI/SIR, дискретність 20 кг"}` | 1 / 60 | — | scale_truck.weight | 660 |
-| 18 | `yard/scale/TRUCK-SCALE/stable` | Автоваги: стабільно | gauge | — | TRUCK-SCALE | SRC-TRUCK-SCALE | `{"cmd":"SI","field":"stable","doc":"SICS статус S/D"}` | 1 / 60 | — | scale_truck.stable | 661 |
+| 17 | `yard/scale/TRUCK-SCALE/weight_kg` | Автоваги: вага | gauge | кг | TRUCK-SCALE | SICS-TRUCK-SCALE | `{"cmd":"SI","field":"weight","doc":"SICS SI/SIR, дискретність 20 кг"}` | 1 / 60 | — | scale_truck.weight | 660 |
+| 18 | `yard/scale/TRUCK-SCALE/stable` | Автоваги: стабільно | gauge | — | TRUCK-SCALE | SICS-TRUCK-SCALE | `{"cmd":"SI","field":"stable","doc":"SICS статус S/D"}` | 1 / 60 | — | scale_truck.stable | 661 |
 
 Значення DI/DO — 0/1 (`gauge` без одиниці): у Odoo `last_value ≥ 0.5` = «так» (з урахуванням `invert_di` воріт).
-CSV-рядок (приклад №1): `yard/gates/GATE-W/state,GATE-W: стріла відкрита,gauge,,GATE-W,SRC-ADAM-IO7,"{""fc"":2,""addr"":0,
+Команди «відкрити»/«закрити» (№ 5, 6, 12, 13) — імпульс для CAME (≥ 1 с): `write.pulse_ms = 1500` (схема `modbus_tcp`
+telemetry A.1, 100…10 000): плагін пише 1, через `pulse_ms` — 0 (X-46). «Тримати відкритим» (№ 7, 14) — рівень без
+`pulse_ms`: `hold` пише 1, `release` — 0 (імпульс зняв би утримання через 1,5 с). Канали утримання окремі: DO4
+(coil 00021, PDU 20) → GATE-W, DO5 (coil 00022, PDU 21) → GATE-E (X-47; підтвердження монтажника — Q-13).
+CSV-рядок (приклад №1): `yard/gates/GATE-W/state,GATE-W: стріла відкрита,gauge,,GATE-W,MB-U86-IO7,"{""fc"":2,""addr"":0,
 ""type"":""bool"",""doc"":""DI0 00001 стріла відкрита""}",1,60,0,0.5,600,0,0,gate_w,state` (колонки §5.3; `warn_high`
 порожній = порогу немає).
 

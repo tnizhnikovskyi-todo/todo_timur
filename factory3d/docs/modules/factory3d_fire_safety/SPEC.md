@@ -1,10 +1,16 @@
 # factory3d_fire_safety — специфікація
 
-Версія 0.2 · 14.10.2026 (дописано §2 M-04…M-19, §3–§15, додатки A–D) · технічне рішення: `docs/modules/factory3d_fire_safety/ARCHITECTURE.md` (далі «ARCH»;
-FR-xx, A-xx, Q-xx — звідти). Контракти, на які спирається документ: `factory3d_base` CB-01, CB-03, CB-04,
+Версія 0.3 · 14.10.2026 (0.2: дописано §2 M-04…M-19, §3–§15, додатки A–D) · технічне рішення: `docs/modules/factory3d_fire_safety/ARCHITECTURE.md` (далі «ARCH»;
+FR-xx, A-xx, Q-xx — звідти).
+Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md`: X-12 (R-17 крок `machines` за machine_connect CM-02
+`workcenters/<wc>/machine_state`), X-16 (`origin='module'` для сигналів модуля), X-17 (код джерела `BAC-200-FACP-1`),
+X-37 (адреси Cerberus BV/PIV замість BI/AV), X-44 (`params.device=200`, `network=2`; адреси без `device`; M-19 змінює
+`params.device`), X-60 (ТК-03 — `fault/clear` пасивної зони за iot_sim API-12, очікування за X-36), X-32 (пункт
+налаштувань під `factory3d_base.menu_f3d_config`); нові AC-76…AC-78; §15 — закрито Q-06, Q-07, Q-09, Q-17, частково Q-08, Q-16.
+Контракти, на які спирається документ: `factory3d_base` CB-01, CB-03, CB-04,
 CB-07, CB-08, CB-09, CB-10, CB-12; `factory3d_viewer` M-01, M-03, API-03, Додаток A.13; `factory3d_telemetry`
 CT-01, CT-03, CT-05, CT-06, CT-07, CT-08, CT-09, CT-10 (ARCH telemetry §2.1; SPEC telemetry M-02, M-03, M-06, M-08, M-11,
-R-05, R-07, R-17, R-23 — Q-06/Q-07);
+R-05, R-07, R-17, R-23, Додаток A.1/A.2 — Q-06/Q-07); `factory3d_machine_connect` CM-02 (необов'язково, R-17, X-12);
 `factory3d_iot_sim` SPEC §8.11 (P-09), §8.4.1 (unit 85), §9.1 R-25…R-27, §9.3 S-07/S-08, API-13, Додаток A
 (сигнали 189, 603–646); `factory3d_access` SPEC M-16, CA-03, CA-09 (джерело проходів, рішення менеджера 14.10);
 каркас `docs/ARCHITECTURE.md` §5, §6.4, §6.7, §6.8, D-07. Контракти, що задає модуль, — CF-01…CF-06 (ARCH §2.1). Усі рядки інтерфейсу — українською в коді (D-14), без `.po`; жодних `x_`-полів.
@@ -296,8 +302,8 @@ class F3dFirePanel(models.Model):
 | `io_source_id` | Many2one `f3d.source` | `string="Джерело вводів (ADAM)"`, domain `[('type','=','modbus_tcp')]` |
 | `signal_state_id` | Many2one `f3d.signal` | `string="Сигнал: стан приладу (LSZ:0)"` |
 | `signal_system_id` | Many2one `f3d.signal` | `"Сигнал: системний стан (MSV:1)"` |
-| `signal_alarms_id`, `signal_faults_id`, `signal_disabled_id` | Many2one `f3d.signal` | лічильники AV:1/2/3 |
-| `signal_sounders_id`, `signal_brigade_id` | Many2one `f3d.signal` | BI:10 / BI:11 |
+| `signal_alarms_id`, `signal_faults_id`, `signal_disabled_id` | Many2one `f3d.signal` | лічильники PIV:1/2/3 (X-37) |
+| `signal_sounders_id`, `signal_brigade_id` | Many2one `f3d.signal` | BV:10 / BV:11 (X-37) |
 | `state` | Selection | `[('unknown','Невідомо'),('normal','Норма'),('prealarm','Передтривога'),('alarm','ТРИВОГА'),('fault','Несправність'),('disabled','Вимкнення'),('test','Тест')]`, `default='unknown'`, `readonly`, `index`, `tracking=True` |
 | `raw_state` | Char(32) | `string="Стан LSZ:0"`, readonly (текст BACnet) |
 | `system_state` | Integer | `string="MSV:1"`, readonly (1…5) |
@@ -308,8 +314,8 @@ class F3dFirePanel(models.Model):
 | `comm_since` | Datetime | `string="Стан зв'язку з"` |
 | `comm_request_id` | Many2one `maintenance.request` | `string="Заявка про зв'язок"`, `ondelete='set null'` |
 | `alarm_activity_id` | Many2one `mail.activity` | `ondelete='set null'` (FR-11) |
-| `alarms_count`, `faults_count`, `disabled_count` | Integer | readonly, з AV:1/2/3 |
-| `sounders_active`, `brigade_transmitted` | Boolean | readonly, з BI:10/11 |
+| `alarms_count`, `faults_count`, `disabled_count` | Integer | readonly, з PIV:1/2/3 |
+| `sounders_active`, `brigade_transmitted` | Boolean | readonly, з BV:10/11 |
 | `loop_ids` | One2many `f3d.fire.loop` `panel_id` | |
 | `zone_ids` | One2many `f3d.fire.zone` `panel_id` | |
 | `zone_count`, `device_count`, `event_count`, `warn_count`, `alarm_zone_count` | Integer | `compute="_compute_counts"` (не зберігаються): `search_count` зон; пристроїв `[('panel_id','=',id)]`; подій за 7 діб; зон з `warn=True`; зон зі `state='alarm'` |
@@ -352,7 +358,7 @@ class F3dFirePanel(models.Model):
 | `action_f3d_show(self)` | `self.equipment_id.action_f3d_show()` якщо є, інакше `UserError("Прилад не прив'язаний до обладнання зі сцени.")` |
 | `action_view_zones/_devices/_events/_requests(self)` | `act_window` на відповідну модель з доменом за `panel_id` (заявки: `[('equipment_id','in', усі equipment зон+панелі), ('stage_id.done','=',False)]`) |
 | `action_view_3d_alarm(self)` | як `action_f3d_show`, але `params.code` = код першої тривожної зони (`alarm_zone_ids[:1].equipment_id.f3d_code`) |
-| `action_set_bacnet_device(self)` | `groups=group_f3d_admin`; відкриває майстер M-19 з `default_panel_id=self.id`, `default_old_instance` = `address['device']` сигналу `signal_state_id` |
+| `action_set_bacnet_device(self)` | `groups=group_f3d_admin`; `source_id` порожнє → `UserError("Прилад не має джерела BACnet.")`; відкриває майстер M-19 з `default_panel_id=self.id`, `default_old_instance` = `source_id.params['device']` (X-44; адреси сигналів `device` не містять) |
 | `_compute_systems_text(self)` | для `system_ids` у порядку `code`: `"%s: %s" % (SYS_LABEL[system_type], state_label)`, де `SYS_LABEL = {'spark':'Іскрогасіння','smoke':'Димовидалення','sprinkler':'Спринклери'}`, `state_label` — R-13 таблиця «короткий підпис» |
 | `@api.model _get_param(self, key, default)` | обгортка `ir.config_parameter.sudo().get_param('factory3d.fire_safety.'+key, default)` з приведенням типів (`'True'/'False'`, int, float) |
 
@@ -369,7 +375,7 @@ class F3dFirePanel(models.Model):
 | `detectors_count`, `mcp_count`, `sounders_count`, `flame_count` | Integer | `compute="_compute_device_counts"`, `store=True`: `search_count` пристроїв шлейфу за типами (`detectors` = smoke+multi+heat) |
 | `modules_count` | Integer | `string="Модулі вводу"`, з data (шлейф 2 — 4: 3 полум'я + 1 іскрогасіння; `fire.loops[2].modules`) |
 | `device_count` | Integer | compute: усі пристрої шлейфу |
-| `signal_id` | Many2one `f3d.signal` | `string="Сигнал несправності (BI)"` |
+| `signal_id` | Many2one `f3d.signal` | `string="Сигнал несправності (BV)"` |
 | `state` | Selection | `[('unknown','Невідомо'),('ok','Норма'),('fault','Несправність')]`, `default='unknown'`, readonly |
 | `fault_since` | Datetime | readonly |
 | `request_id` | Many2one `maintenance.request` | `related='signal_id.maintenance_request_id'`, readonly |
@@ -417,7 +423,7 @@ class F3dFireZone(models.Model):
 | `compliance` | Selection | `[('na','Не перевірено'),('ok','Відповідає'),('warn','Зауваження'),('fail','Не відповідає')]`, `default='na'`, readonly, `index` |
 | `compliance_note` | Text | readonly (текст R-01/R-02) |
 | `signal_id` | Many2one `f3d.signal` | `string="Сигнал стану (LSZ)"` |
-| `dust_signal_id` | Many2one `f3d.signal` | `string="Сигнал запиленості зони"` (лише `FA-FAC` з макета — AV:21607 за кодом `fire/groups/FA-FAC/dust`) |
+| `dust_signal_id` | Many2one `f3d.signal` | `string="Сигнал запиленості зони"` (лише `FA-FAC` з макета — PIV:21607 за кодом `fire/groups/FA-FAC/dust`, X-37) |
 | `state` | Selection | як у M-01 `state`, `default='unknown'`, readonly, `index`, `tracking` не потрібен (журнал — події) |
 | `raw_state` | Char(32) | readonly |
 | `state_ts` | Datetime | readonly |
@@ -487,7 +493,7 @@ class F3dFireDevice(models.Model):
 | `dust_state` | Selection | `[('na','—'),('ok','Норма'),('warn','Попередження'),('alarm','Очистити')]`, `compute="_compute_dust_state"`, `store=True` (R-13 п. 3) |
 | `monitor` | Boolean | `string="Окремі сигнали"`, `default=False`, `groups="factory3d_base.group_f3d_manager"` (A-02) |
 | `state_signal_id` | Many2one `f3d.signal` | `string="Сигнал стану (LSP)"`, `ondelete='set null'` |
-| `dust_signal_id` | Many2one `f3d.signal` | `string="Сигнал запиленості (AV)"`, `ondelete='set null'` |
+| `dust_signal_id` | Many2one `f3d.signal` | `string="Сигнал запиленості (PIV)"`, `ondelete='set null'` |
 | `maintenance_request_id` | Many2one `maintenance.request` | compute (не зберігається): відкрита заявка з `f3d_fire_device_id=self` або `f3d_signal_id in (state_signal_id, dust_signal_id)` |
 | `event_count` | Integer | compute |
 | `note` | Text | |
@@ -498,7 +504,7 @@ class F3dFireDevice(models.Model):
 | Сигнатура | Алгоритм |
 |---|---|
 | `_compute_name`, `_compute_plant_zone`, `_compute_dust_state` | за описом; `dust_state`: `na` якщо `dust_ts` порожній; `alarm` якщо `dust_pct ≥ dust_alarm_pct` (90); `warn` якщо `≥ dust_warn_pct` (80); інакше `ok` |
-| `action_create_signals(self)` | `groups=manager`; для `is_detector`/`mcp`/`sounder`/`flame` з `panel_id.source_id`: якщо `state_signal_id` порожній → `f3d.signal.create({code: "fire/devices/%s/state" % address, name: "%s: стан" % name, kind: 'state', unit: '', equipment_id: equipment_id, source_id: panel_id.source_id, address: {"device": <device панелі, R-23>, "object":"LSP","instance": lsp_instance, "mode":"poll"}, period_s: 10, store_period_s: 3600, viewer_visible: False, module: 'fire_safety', origin: 'catalog', write_enabled: False, alarm_states: FAULT_STATES (R-11: `["fault","tamper","abnormal","emergency-power","supervisory"]`), alarm_title: "Несправність пристрою %s (%s): стан {text}" % (address, zone)})`; для `is_detector` додатково `dust_signal_id` → `{code: "fire/devices/%s/dust" % address, kind: 'gauge', unit: '%', address: {"device": <device панелі>, "object":"AV","instance": lsp_instance, "mode":"poll"}, period_s: 600, store_period_s: 3600, decimals: 1, hysteresis: 1.8, warn_high_on/alarm_high_on: True, warn_high: dust_warn_pct, alarm_high: dust_alarm_pct, alarm_title: "Очистити сповіщувач %s (%s): запиленість {value} % при нормі до {threshold}"}`; `monitor=True`; повторний виклик — нічого (ключ `code` унікальний у telemetry). Повертає `display_notification` з кількістю створених |
+| `action_create_signals(self)` | `groups=manager`; для `is_detector`/`mcp`/`sounder`/`flame` з `panel_id.source_id`: якщо `state_signal_id` порожній → `f3d.signal.create({code: "fire/devices/%s/state" % address, name: "%s: стан" % name, kind: 'state', unit: '', equipment_id: equipment_id, source_id: panel_id.source_id, address: {"object":"LSP","instance": lsp_instance, "mode":"poll"} (без `device` — береться з `params.device` джерела, R-23, X-44), period_s: 10, store_period_s: 3600, viewer_visible: False, module: 'fire_safety', origin: 'module' (X-16), write_enabled: False, alarm_states: FAULT_STATES (R-11: `["fault","tamper","abnormal","emergency-power","supervisory"]`), alarm_title: "Несправність пристрою %s (%s): стан {text}" % (address, zone)})`; для `is_detector` додатково `dust_signal_id` → `{code: "fire/devices/%s/dust" % address, kind: 'gauge', unit: '%', address: {"object":"PIV","instance": lsp_instance, "mode":"poll"} (X-37), period_s: 600, store_period_s: 3600, decimals: 1, hysteresis: 1.8, warn_high_on/alarm_high_on: True, warn_high: dust_warn_pct, alarm_high: dust_alarm_pct, alarm_title: "Очистити сповіщувач %s (%s): запиленість {value} % при нормі до {threshold}"}`; `monitor=True`; повторний виклик — нічого (ключ `code` унікальний у telemetry). Повертає `display_notification` з кількістю створених |
 | `action_remove_signals(self)` | `groups=manager`; `monitor=False`; сигнали **не** видаляються (журнал показань), а `active=False` (поле telemetry M-03); `state_signal_id`/`dust_signal_id` лишаються (повторне `action_create_signals` знаходить сигнал за `code` з `active_test=False` і повертає `active=True`), крім `2.FAC.07` — його сигнал запиленості належить зоні й не архівується |
 | `action_f3d_show(self)` | `equipment_id.action_f3d_show()` (груповий 3D-об'єкт, Q-09); без обладнання → `plant_zone_id.action_f3d_show()` |
 | `_set_state(self, new_state, raw, ts, reliability=None)` | запис полів; подія R-14 рівня пристрою лише для `alarm`/`prealarm`/`fault`/`disabled`/`test` (перехід) і повернення; зона — через власний сигнал (не з пристрою) |
@@ -1047,12 +1053,25 @@ viewer; дати — власна `tools/dates.local(dt)` = `Europe/Kyiv`, фо�
 
 ### M-19 `f3d.fire.bacnet.device.wizard` — зміна BACnet device instance (TransientModel)
 
-Поля: `panel_id` (required), `old_instance` Integer (readonly, з `default_old_instance`), `new_instance` Integer
+Device instance задається **лише** в `params.device` джерела (`BAC-200-FACP-1`); адреси сигналів `device` не містять і
+успадковують його (telemetry Додаток A.1: `address.device` за замовчуванням = `params.device`, якщо задано — має
+дорівнювати; X-44).
+
+Поля: `panel_id` (required), `source_id` (Many2one `f3d.source`, `related='panel_id.source_id'`, readonly),
+`old_instance` Integer (readonly, з `default_old_instance` = `source_id.params['device']`), `new_instance` Integer
 `required` (0…4194302; constrains `"BACnet instance: 0…4194302"`), `signal_count` Integer (compute: сигнали
-`source_id == panel_id.source_id`, `module == 'fire_safety'`, `address.device == old_instance`). `action_apply()`:
-користувач без `factory3d_base.group_f3d_admin` → `AccessError`; для кожного такого сигналу
-`address = dict(address, device=new_instance)` (через `write`, щоб telemetry скинула ETag колектора); чаттер панелі
-«BACnet device змінено: 200 → <new>, сигналів <n>»; `display_notification`.
+`source_id == panel_id.source_id` — усі вони переходять на новий device), `explicit_count` Integer (compute: з них ті, у
+`address` яких явно є ключ `device`; для data модуля — 0). `action_apply()`:
+1. користувач без `factory3d_base.group_f3d_admin` → `AccessError`; `source_id` порожнє → `UserError("Прилад не має
+   джерела BACnet.")`; `new_instance == old_instance` → нічого, `display_notification` «Без змін»;
+2. `source_id.write({'params': dict(params, device=new_instance)})` — решта ключів (`host`, `port`, `network`,
+   `read_only`, …) без змін; перевірки M-15 і telemetry M-02 (`validate_params`) діють як завжди;
+3. код джерела за схемою `BAC-<device>-<NAME>` (X-17): якщо `code == "BAC-%d-FACP-1" % old_instance` → `code =
+   "BAC-%d-FACP-1" % new_instance` (xml-id `source_bacnet_facp_1` не змінюється); інший код (змінений вручну) — не чіпається;
+4. для сигналів з явним `address['device']` (`explicit_count`) — `address = dict(address, device=new_instance)` (через
+   `write`, щоб telemetry скинула ETag колектора), щоб `address.device == params.device`;
+5. чаттер панелі «BACnet device змінено: <old> → <new> (джерело <code>), сигналів <signal_count>, з явною адресою
+   <explicit_count>»; `display_notification`. Запис у прилад не виконується (D-07) — змінюються лише дані Odoo.
 
 ### iot_sim bridge (`models/iot_sim_bridge.py`, FR-23, A-34)
 
@@ -1114,7 +1133,7 @@ viewer; дати — власна `tools/dates.local(dt)` = `Europe/Kyiv`, фо�
 | V-24 | `view_f3d_source_form_fire` | form inherit `factory3d_telemetry.view_f3d_source_form` | `//sheet` inside (останнім): `<div class="alert alert-danger" invisible="not f3d_fire_readonly">Джерело пожежної сигналізації: лише читання (D-07). Запис у прилад неможливий.</div>`; `//notebook` inside: `<page name="f3d_fire" string="Пожежна сигналізація" invisible="not f3d_fire_readonly">`: `f3d_fire_readonly` (readonly), `f3d_fire_consent_date`, `f3d_fire_consent_person`, `f3d_fire_consent_doc`, `f3d_fire_consent_attachment_id` (many2one з `domain="[('res_model','=','f3d.source'),('res_id','=',id)]"` — скан спершу додається вкладенням у чаттер джерела, потім обирається тут); поле `write_enabled` отримує `readonly="f3d_fire_readonly"` (`xpath //field[@name='write_enabled']` `position="attributes"`) |
 | V-25 | `view_maintenance_request_form_fire` | form inherit `factory3d_telemetry.view_maintenance_request_form_f3d` | після `//field[@name='f3d_signal_id']`: `f3d_fire_zone_id`, `f3d_fire_device_id`, `f3d_fire_event_id` (усі `invisible="not f3d_fire_zone_id and not f3d_fire_device_id and not f3d_fire_event_id"`), кнопка `action_f3d_fire_open_zone` у `button_box` («Зона сигналізації», `invisible="not f3d_fire_zone_id"`) |
 | V-26 | `res_config_settings_view_form_f3d_fire` | inherit `base.res_config_settings_view_form` | `//form` inside: `<app data-string="Пожежна безпека" string="Пожежна безпека" name="factory3d_fire_safety" groups="factory3d_base.group_f3d_manager">`; блоки: «Обробка сигналів» (`f3d_fire_read_enabled` — `groups=group_f3d_admin`, `f3d_fire_comm_stale_after_s`, `f3d_fire_comm_lost_after_s`, текст «Запис у прилад не налаштовується — рішення D-07»), «Запиленість сповіщувачів» (`f3d_fire_dust_warn_pct`, `f3d_fire_dust_alarm_pct`), «Норми» (`f3d_fire_polymer_panels` з підказкою п. 8.2.11, `f3d_fire_cover_tol_m`), «Навчальні тривоги» (`f3d_fire_drill_time_limit_s`, `f3d_fire_drill_auto_create`, `f3d_fire_drill_match_window_min`, `f3d_fire_drill_auto_stop_s`, `f3d_fire_drill_sim_duration_s`), «Сповіщення й заявки» (`f3d_fire_alert_group_id`, `f3d_fire_event_ack_required`, `f3d_fire_team_id`), «3D» (`f3d_fire_viewer_devices`) |
-| V-27 | `view_f3d_fire_bacnet_device_wizard_form` | form `f3d.fire.bacnet.device.wizard` | `panel_id` (readonly), `old_instance`, `new_instance`, `signal_count`; `alert-warning` «Змінюються лише адреси сигналів; запис у прилад не виконується»; footer `action_apply` («Змінити», `btn-primary`, confirm), «Скасувати» |
+| V-27 | `view_f3d_fire_bacnet_device_wizard_form` | form `f3d.fire.bacnet.device.wizard` | `panel_id` (readonly), `source_id` (readonly), `old_instance`, `new_instance`, `signal_count`, `explicit_count`; `alert-warning` «Змінюється device instance у параметрах джерела (і явні адреси сигналів, якщо є); запис у прилад не виконується»; footer `action_apply` («Змінити», `btn-primary`, confirm), «Скасувати» |
 
 Меню й дії (`views/menus.xml`; CB-09: батько `factory3d_base.menu_f3d_root`, sequence 85). Дії `ir.actions.act_window`
 мають `context`/`domain`, як у таблиці; xml-id дій — `action_f3d_fire_<що>`.
@@ -1137,7 +1156,7 @@ viewer; дати — власна `tools/dates.local(dt)` = `Europe/Kyiv`, фо�
 | `menu_f3d_fire_config` | Налаштування | `menu_f3d_fire_root` | 90 | `group_f3d_manager` | — |
 | `menu_f3d_fire_template` | Шаблони навчань | `menu_f3d_fire_config` | 10 | `group_f3d_manager` | `action_f3d_fire_drill_template` (`list,form`) |
 | `menu_f3d_fire_loop` | Шлейфи | `menu_f3d_fire_config` | 20 | `group_f3d_manager` | `action_f3d_fire_loop` (`list,form`) |
-| `menu_f3d_fire_settings` | Параметри | `menu_f3d_fire_config` | 30 | `group_f3d_manager` | `action_f3d_fire_settings` (`res.config.settings`, `form`, `target='inline'`, `{'module': 'factory3d_fire_safety'}`) |
+| `menu_f3d_fire_settings` | Налаштування пожежної безпеки | `factory3d_base.menu_f3d_config` | 85 (резерв модуля CB-09; X-32) | `group_f3d_manager` | `action_f3d_fire_settings` (`res.config.settings`, `form`, `target='inline'`, `{'module': 'factory3d_fire_safety'}`) |
 
 Додатково: `menu_f3d_fire_maint_requests` «Заявки пожежної безпеки» під `maintenance.menu_m_request` (seq 50,
 `group_f3d_user`): `maintenance.request`, `list,form`, `domain=['|', ('f3d_fire_zone_id','!=',False), ('f3d_signal_id.module','=','fire_safety')]`.

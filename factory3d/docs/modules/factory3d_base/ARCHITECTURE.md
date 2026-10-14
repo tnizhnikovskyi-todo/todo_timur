@@ -1,6 +1,8 @@
 # factory3d_base — технічне рішення
 
-Версія 0.1 · 13.10.2026 · автор: агент-архітектор модуля (хвиля 1) · статус: **чернетка на погодження**.
+Версія 0.2 · 14.10.2026 (0.1 — 13.10.2026) · автор: агент-архітектор модуля (хвиля 1) · статус: **чернетка на погодження**.
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-09 (дзеркало коду сцени в `hr.employee.public`, CB-01, FR-14), X-15 (CB-06:
+`f3d_truck` — опис/назва фури, не держномер; код фури в 3D — `f3d_code`), X-32 (CB-09: резерв 55 genset, правило меню налаштувань).
 Каркас проєкту: `docs/ARCHITECTURE.md` (далі «каркас», контракти C-6.1…C-6.8, рішення D-xx).
 Специфікація для реалізації й тестування: `docs/modules/factory3d_base/SPEC.md`.
 Рішення автора, що відхиляються від каркаса або доповнюють його, позначені **A-xx** (§5.2); відкриті
@@ -62,7 +64,7 @@ data-модуль `factory3d_iot_sim` установлений (`x_f3d_signal`, 
 Меню: кореневе **«Завод 3D»** (`factory3d_base.menu_f3d_root`), під ним «Завод» → «Зони», «Ворота»,
 «Обладнання зі сцени», «Паспорти обладнання»; «Налаштування» → «Параметри» (посилання на
 `ir.config_parameter` з фільтром `factory3d.`). Інші модулі додають свої пункти під `menu_f3d_root`
-за зарезервованими `sequence` (§2.1, CB-09).
+за зарезервованими `sequence` (§2.1, CB-09), а пункт своїх налаштувань — під «Налаштування» з тим самим `sequence` (X-32).
 
 ### 1.3 Функціональні вимоги
 
@@ -81,6 +83,7 @@ data-модуль `factory3d_iot_sim` установлений (`x_f3d_signal`, 
 | FR-11 | Параметри `factory3d.base.*` створені зі значеннями за замовчуванням; `post_init_hook` ідемпотентний (повторний запуск не створює дублікатів); `uninstall_hook` не видаляє бізнес-дані; `neutralize.sql` переводить середовище в `test` | AC-46…AC-50 |
 | FR-12 | Переглядач/інші модулі отримують для кожного переміщення ворота, фуру й техніку через стандартні поля (`batch_id.dock_id.f3d_code`, `batch_id.f3d_code`, `batch_id.f3d_vehicle_id.f3d_code`) і пов'язані поля-довідки на `stock.picking` | AC-51, AC-52 |
 | FR-13 | `stock.location` має `f3d_loc_kind` (Selection із 6 видів `locations[*].kind` макета: `stack`, `bin`, `shelf`, `pallet_cell`, `kit`, `area`) і `f3d_capacity` (Float, місткість в одиницях товару, що там зберігається); після установки на копію демо вид заповнено на 689 локаціях, місткість — на 654; переглядач рахує заповненість як `qty / f3d_capacity` | AC-53, AC-54 |
+| FR-14 | Користувач без прав HR (`base.group_user` без `hr.group_hr_user`) читає й шукає `f3d_code`, `f3d_alias`, `f3d_kind` працівника без `sudo()` — через дзеркало в `hr.employee.public` (X-09); читання інших полів працівника таким користувачем не ламається | AC-55 |
 
 ### 1.4 Межі: що не входить
 
@@ -111,15 +114,15 @@ driver_id` (`stock_fleet`), `maintenance.equipment.workcenter_id` (`mrp_maintena
 
 | ID | Контракт | Для кого |
 |---|---|---|
-| CB-01 | Домішка `f3d.scene.mixin`: поля `f3d_code`, `f3d_alias`, `f3d_kind`, `f3d_viewer_available`; методи `search_f3d(code)`, `f3d_resolve(code)` (`@api.model`), `action_f3d_show()`, `f3d_codes()`; атрибут класу `_f3d_kind`. Носії: `stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `f3d.zone`, `stock.picking.batch` | усі |
+| CB-01 | Домішка `f3d.scene.mixin`: поля `f3d_code`, `f3d_alias`, `f3d_kind`, `f3d_viewer_available`; методи `search_f3d(code)`, `f3d_resolve(code)` (`@api.model`), `action_f3d_show()`, `f3d_codes()`; атрибут класу `_f3d_kind`. Носії: `stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `f3d.zone`, `stock.picking.batch`. Для `hr.employee` поля `f3d_code`, `f3d_alias`, `f3d_kind` продубльовано в `hr.employee.public` (SPEC M-10a, X-09): провайдери й кіоск читають їх без `sudo()` | усі |
 | CB-02 | Кнопка «Показати в 3D»: якщо модуль `factory3d_viewer` встановлений (`ir.module.module` `name='factory3d_viewer'`, `state='installed'`), `action_f3d_show()` повертає `{'type':'ir.actions.client','tag':'f3d_viewer.action','name':'Завод 3D','target':'current','params':{'code':<f3d_code>,'alias':<f3d_alias|False>,'model':<_name>,'res_id':<id>,'kind':<f3d_kind>}}` (переглядач читає `params.code`; решта ключів — довідкові); інакше `ir.actions.client` `display_notification` з заголовком «Модуль 3D-переглядача не встановлено» (рішення менеджера 13.10) | `factory3d_viewer` |
 | CB-03 | `f3d.zone`: поля `f3d_code` (= код зони, обов'язковий), `name`, `zone_type`, `polygon` (JSON `[[x,y],…]` у метрах), `area_m2`, `x_min/y_min/x_max/y_max`, `color`, `root_location_id`, `location_ids`, `workcenter_ids`, `equipment_ids`, `dock_location_ids`, лічильники; `f3d_zone_id` на `stock.location`, `mrp.workcenter`, `maintenance.equipment`; метод `zone_at(x, y)` | viewer, access (люди по зонах), bms, fire_safety, yard |
 | CB-04 | Система координат: метри, X уздовж будівлі (0 — західна стіна приймання, 150 — східна відвантаження), Y поперек (0 — південна стіна, 72 — північна), Z угору; збігається з `plant/layout.py` і glTF (там Y угору — конвертація `(x, y, z)→(x, z, −y)` лежить у переглядачі, не в base) | усі |
 | CB-05 | Ворота: `stock.location` з `f3d_kind='dock'`, `f3d_side` (`west`/`east`), `f3d_dock_no` (1–7), `f3d_accepts` (many2many `product.category`; порожньо = будь-що), `f3d_x`, `f3d_y`, `f3d_zone_id`; домен доків `[('f3d_kind','=','dock')]`; док присутній у `stock.picking.type.dock_ids` свого типу (`in_type_id` для `west`, `out_type_id` для `east`). Усі локації: `f3d_loc_kind`, `f3d_capacity` (FR-13) | yard, viewer |
-| CB-06 | Фура/техніка на переміщенні: `stock.picking.batch.f3d_code` (код об'єкта фури в сцені, напр. `TRUCK-IN-1`), `f3d_truck` (Char: держномер або назва), `f3d_vehicle_id` (`maintenance.equipment`, навантажувач/тягач); довідкові related на `stock.picking`: `f3d_dock_id`, `f3d_dock_code`, `f3d_truck`, `f3d_vehicle_id` | viewer, yard, `plant/odoo_pull.py` |
+| CB-06 | Фура/техніка на переміщенні: `stock.picking.batch.f3d_code` — **єдиний** код фури в 3D (код об'єкта сцени, напр. `TRUCK-IN-1`; резолвер — `search_f3d`), `f3d_truck` (Char: опис/назва фури з макета, не держномер і не код; X-15), `f3d_vehicle_id` (`maintenance.equipment`, навантажувач/тягач); довідкові related на `stock.picking`: `f3d_dock_id`, `f3d_dock_code`, `f3d_truck`, `f3d_truck_code`, `f3d_vehicle_id`. Держномер — не в base: `factory3d_yard` `f3d.yard.visit.plate` (на пакеті related `f3d_plate`, yard M-07) | viewer, yard, iot_sim, `plant/odoo_pull.py` |
 | CB-07 | Паспорт: `f3d.equipment.passport` (ключ `role`), `f3d.equipment.spec` (`key`, `name`, `value_text`, `value_num`, `uom`), `f3d.equipment.source` (`url`, `name`, `kind`); на `maintenance.equipment`: `f3d_passport_id`, `f3d_component_passport_ids` і related `f3d_role`, `f3d_manufacturer`, `f3d_model`, `f3d_reason`, `f3d_power_kw`, `f3d_connected_kw`, `f3d_dimensions`, `f3d_spec_ids`, `f3d_source_ids`, `f3d_units` (C-6.3). Числові параметри для розрахунків — `spec_ids` з `key` (`connected_kw`, `lumen`, `watt`, `airflow_m3h`, `heat_kw`, `kva`, `kwh`, `wp`, `kw_ac`, …) | energy, bms, fire_safety, telemetry |
 | CB-08 | Метод `f3d.equipment.passport.get_num(key)` → `float|None` (значення `value_num` специфікації за ключем) і `maintenance.equipment.f3d_get_num(key)` (з паспорта одиниці) | energy, bms |
-| CB-09 | Меню: `factory3d_base.menu_f3d_root` («Завод 3D», sequence 75 серед кореневих), діти з зарезервованими sequence: 10 viewer, 20 `menu_f3d_plant` (base), 30 telemetry, 40 machine_connect, 50 energy, 60 yard, 70 access, 80 bms, 85 fire_safety, 90 iot_sim (пульт), 99 `menu_f3d_config` (base) | усі |
+| CB-09 | Меню: `factory3d_base.menu_f3d_root` («Завод 3D», sequence 75 серед кореневих), діти з зарезервованими sequence: 10 viewer, 20 `menu_f3d_plant` (base), 30 telemetry, 40 machine_connect, 50 energy, 55 genset (міст `factory3d_genset`), 60 yard, 70 access, 80 bms, 85 fire_safety, 90 iot_sim (пульт), 99 `menu_f3d_config` (base). Правило (X-32): пункт «Налаштування <модуля>» (`res.config.settings` модуля або підменю його параметрів) — під `factory3d_base.menu_f3d_config` з `sequence` = резерв модуля; довідники модуля можуть лишатися в його корені під `menu_f3d_root`; власні пункти base під `menu_f3d_config` — 20, 21, 95, 96 (поза чужим резервом) | усі |
 | CB-10 | Групи `factory3d_base.group_f3d_user` ⊂ `group_f3d_manager` ⊂ `group_f3d_admin` ⊂ `base.group_system`; категорія `factory3d_base.module_category_factory3d`; параметр `factory3d.base.environment` ∈ {`test`,`prod`} — модулі зі стоп-кранами беруть з нього значення за замовчуванням (`read_enabled = environment == 'test'`); `neutralize.sql` base ставить `test` | усі |
 | CB-11 | Міграційні утиліти в `factory3d_base/hooks/`: `x_fields.read_manual_field(env, model, name)`, `drop_manual_fields(env, model, names)`, `restore_manual_fields(env, model, spec)` — для міграції `x_*` в інших модулях (telemetry: `x_f3d_signal*`) | telemetry |
 | CB-12 | Параметри `factory3d.base.plant_length_m=150`, `plant_width_m=72`, `plant_height_m=9` — будівля (перевірка координат воріт); `factory3d.base.site_x0_m=-32`, `site_y0_m=-30`, `site_x1_m=182`, `site_y1_m=100` — територія (`plant/infra.py:SITE`; перевірка контурів зон) | viewer, bms, fire_safety, yard |
@@ -161,6 +164,7 @@ driver_id` (`stock_fleet`), `maintenance.equipment.workcenter_id` (`mrp_maintena
 | `mrp.workcenter` | розширення | домішка + `f3d_zone_id` | hook; manager | viewer, machine_connect |
 | `maintenance.equipment` | розширення | домішка + паспорт (CB-07) + `f3d_zone_id` | hook; manager/equipment manager | усі |
 | `hr.employee` | розширення | домішка | hook; HR | viewer, access |
+| `hr.employee.public` | розширення (SQL-представлення стандарту) | дзеркало `f3d_code`, `f3d_alias`, `f3d_kind` (readonly, X-09) | — (з `hr_employee`) | viewer (`people`, кіоск), access, усі внутрішні |
 | `f3d.equipment.passport` | нова | паспорт ролі обладнання (93) | CSV data; manager | усі |
 | `f3d.equipment.spec` | нова | параметр паспорта (назва, значення, число, одиниця, ключ) | CSV data; manager | energy, bms, viewer |
 | `f3d.equipment.source` | нова | джерело паспорта (URL, назва, вид) | CSV data; manager | viewer |
@@ -195,6 +199,9 @@ driver_id` (`stock_fleet`), `maintenance.equipment.workcenter_id` (`mrp_maintena
   → implied `group_f3d_admin`). Операційні дії (пакети, переміщення, ТО) — стандартні групи.
 - Поля `f3d_code`/`f3d_alias`/`f3d_kind` на стандартних моделях редагує лише `group_f3d_manager`
   (`groups=` на полях у формах + `_check_f3d_write_rights` у `write()`; SPEC R-04).
+- Код сцени працівника — публічне поле: дзеркало в `hr.employee.public` (SPEC M-10a, X-09) читає кожен внутрішній
+  користувач; без дзеркала Odoo 19 (`hr.employee._check_private_fields`) відмовив би користувачам без `hr.group_hr_user`
+  у будь-якому читанні працівника. Інших полів працівника base не публікує.
 - Стоп-кранів, токенів, кронів, ендпоінтів у base немає. Параметр `factory3d.base.environment`
   читають інші модулі (CB-10). `factory3d.base.keep_x_fields='True'` блокує видалення `x_*`.
 - Коди валідуються регулярним виразом (R-01) — ін'єкцій через код у доменах/SQL немає: SQL у
@@ -274,7 +281,7 @@ driver_id` (`stock_fleet`), `maintenance.equipment.workcenter_id` (`mrp_maintena
 **4.3 Поставити фуру до воріт** (комірник, стандартний Odoo). Склад → Операції → Пакетні
 переміщення → створити → тип операції, «Док» = ворота, «Категорія транспорту» = Фура, додати
 документи приймання/відвантаження → вкладка «Завод 3D»: `Код фури в 3D` (якщо об'єкт є в сцені,
-напр. `TRUCK-IN-1`), `Фура` (держномер або назва), `Техніка` (навантажувач). Попередження
+напр. `TRUCK-IN-1`), `Фура` (опис або назва фури, не держномер — його веде рейс двору `factory3d_yard`), `Техніка` (навантажувач). Попередження
 «Категорія товару не відповідає воротам» — інформаційне, не блокує.
 
 **4.4 Виправити зону** (технолог). Завод 3D → Завод → Зони → відкрити → змінити контур
@@ -356,7 +363,7 @@ Base сам нічого не вмикає; значення читають мо
 | Воркер | Файли | Здає | Залежить від |
 |---|---|---|---|
 | W0 каркас | `__manifest__.py`, `__init__.py`, `models/__init__.py`, `hooks/__init__.py`, `security/f3d_security.xml`, `security/ir.model.access.csv`, `data/ir_config_parameter.xml`, `data/neutralize.sql`, `views/f3d_menus.xml`, `static/description/icon.png`, `tests/__init__.py`, `tests/common.py`, `README.md`, `CHANGELOG.md` | модуль встановлюється порожнім на чисту базу; групи, категорія, меню, параметри; `tests/common.py` з фікстурами (`F3DCase`) | SPEC §1, §3 (меню), §4, §5.1 |
-| W1 домішка | `models/f3d_scene_mixin.py`, `models/hr_employee.py`, `models/mrp_workcenter.py` (без зон), `views/hr_employee_views.xml`, `views/mrp_workcenter_views.xml`, `tests/test_scene_mixin.py`, `tests/test_employee.py` | M-01, M-09 (частина), M-10; AC-01…AC-09, AC-39, AC-40 | W0 |
+| W1 домішка | `models/f3d_scene_mixin.py`, `models/hr_employee.py`, `models/mrp_workcenter.py` (без зон), `views/hr_employee_views.xml`, `views/mrp_workcenter_views.xml`, `tests/test_scene_mixin.py`, `tests/test_employee.py` | M-01, M-09 (частина), M-10, M-10a (дзеркало `hr.employee.public`); AC-01…AC-09, AC-39, AC-40, AC-55 | W0 |
 | W2 зони | `models/f3d_zone.py`, `views/f3d_zone_views.xml`, `data/f3d_zone_data.xml`, `data/scene_zone_links.csv`, `hooks/zones.py`, `tests/test_zone.py` | M-02; поля `f3d_zone_id` на трьох моделях (у своїх файлах через `_inherit` у `f3d_zone.py`); AC-15…AC-19 | W1 (домішка) |
 | W3 ворота й пакети | `models/stock_location.py`, `models/stock_picking_batch.py`, `models/stock_picking.py`, `views/stock_location_views.xml`, `views/stock_picking_batch_views.xml`, `views/stock_picking_views.xml`, `data/scene_docks.csv`, `hooks/docks.py`, `hooks/batches.py`, `hooks/x_fields.py`, `tests/test_dock.py`, `tests/test_batch.py`, `tests/test_migration.py` | M-03, M-04, M-11; AC-20…AC-31, AC-51, AC-52; утиліти CB-11 | W1, W2 (поле зони на локації — W2 додає `f3d_zone_id` через `_inherit` у своєму файлі, W3 не чіпає) |
 | W4 паспорти | `models/f3d_equipment_passport.py` (passport, spec, source), `models/maintenance_equipment.py`, `views/f3d_equipment_passport_views.xml`, `views/maintenance_equipment_views.xml`, `data/f3d.equipment.passport.csv`, `data/f3d.equipment.spec.csv`, `data/f3d.equipment.source.csv`, `data/scene_equipment_codes.csv`, `data/scene_employee_codes.csv`, `data/scene_locations.csv`, `tools/gen_data.py`, `hooks/passports.py`, `hooks/codes.py`, `tests/test_passport.py`, `tests/test_data_sync.py` | M-05…M-08; генератор data-файлів з макета; AC-10…AC-14 (коди), AC-32…AC-38, AC-53, AC-54 (вид/місткість — поля в `stock_location.py` W3, дані й хук — W4) | W1 |
