@@ -8,7 +8,8 @@
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
 | W0 | принят | 670b3fb | unit 3/3, TestInstall OK |
-| W1 | в работе | — | — |
+| W1a | принят | e3023b2 | unit 79/79, core cov 99 %, ruff OK |
+| W1b | в работе (2 воркера ‖) | — | — |
 | W2 | ждёт | — | — |
 | W3 | ждёт | — | — |
 | W4 | ждёт | — | — |
@@ -19,3 +20,5 @@
 - DEC-1: `services/iot_sim` из SPEC §0.1 размещён в `factory3d/services/iot_sim` (как `factory3d/odoo_addons`).
 - DEC-2: `check-config` требует SIM_API_TOKEN ≥32 символов и пароли протоколов (exit 2/1); в W0 версии зависимостей не закреплены «==» — закрепить при добавлении библиотек протоколов (W2–W4). — `services/iot_sim/iot_sim/__main__.py`, `requirements.txt`
 - DEC-3: W1 разбит на W1a (ядро, World/Model/Event, сценарии) и W1b (машины поведения пристроїв) — объём; W5 зависит только от W0 и запущен параллельно с W1a.
+- DEC-4: переход на зимнее время — 25.10.2026 (последнее воскресенье октября), а не 26.10 из SPEC §11 — правка SPEC. — `tests/unit/test_clock.py`
+- DEC-5: допущения W1a (`# ASSUMPTION` в `core/scenarios.py`): blackout занимает dev:COMPRESSOR и dev:AIR-RING для конфликтов; календарь смен Пн–Пт 07:00–15:30; `ctx.cleanup` сбрасывает принудительные сигналы на номинал.
