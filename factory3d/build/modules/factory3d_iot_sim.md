@@ -13,7 +13,7 @@
 | W1b-1 | в работе (worktree) | — | — |
 | W2 | принят | 1348d5d | svc tests 98/98, ruff OK |
 | W3 | в работе (worktree) | — | — |
-| W4 | ждёт | — | — |
+| W4 | в работе (worktree) | — | — |
 | W5 | принят | 6e43f5b | Odoo /factory3d_iot_sim 40/40 |
 | W6 | ждёт | — | — |
 
