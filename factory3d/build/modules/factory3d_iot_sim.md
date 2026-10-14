@@ -10,7 +10,7 @@
 | W0 | принят | 670b3fb | unit 3/3, TestInstall OK |
 | W1a | принят | e3023b2 | unit 79/79, core cov 99 %, ruff OK |
 | W1b | в работе (2 воркера ‖) | — | — |
-| W2 | ждёт | — | — |
+| W2 | в работе (worktree) | — | — |
 | W3 | ждёт | — | — |
 | W4 | ждёт | — | — |
 | W5 | принят | 6e43f5b | Odoo /factory3d_iot_sim 40/40 |
