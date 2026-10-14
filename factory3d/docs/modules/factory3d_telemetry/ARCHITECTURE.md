@@ -47,7 +47,7 @@ Odoo 19.0+e; data-модуль `factory3d_iot_sim` 19.0.1.0.0 установле
 | `odoo_addons/factory3d_iot_sim/data/actions.xml` | `action_iot_tick`: формули режимів, тривога `x_alarm ∈ {below, above}` проти `x_threshold`, заявка ТО `maintenance_type='corrective'` з назвою «Сигнал: <назва> — <значення> <од.>», дедуплікація «поки `x_request_id` відкрита — нової немає», `drift` скидається до номіналу, коли `x_request_id.stage_id.done`; журнал раз на 10 хв; ротація `x_time < now − 2 доби` | правила R-04…R-07 SPEC відтворюють цю поведінку в проді (пороги, дедуплікація, скидання, ротація) |
 | `odoo_addons/factory3d_iot_sim/views/views.xml` | список сигналів з `decoration-danger`, форма з групами «Зараз/Звідки/Як поводиться/Тривога», графік показань `line` за годинами, вкладка «Сигнали» на обладнанні, меню «Обслуговування → Імітація IoT» | представлення V-xx SPEC замінюють їх без втрати функцій |
 | `plant/odoo_flows.py: signal_specs` (рядки 680–762) | 196 сигналів: шлях, обладнання, величина, одиниця, режим, стартове значення, номінал, шум, швидкість, межа, тривога/поріг, посилання на заявку (`request=mrs.get(code)`) | Додаток B SPEC: власник кожного сигналу за префіксом; стартові пороги |
-| `plant/odoo_pull.py: sync_signals` (рядки 270–296) | шлях → вузол payload; `%` → `/100` (3 знаки), інакше 2 знаки при `|v| < 20`, 1 знак інакше; `drain` + `x_charging` → `state=charging|busy`; `energy.totals.pv_kw/chp_kw` = `infra.totals`; `meta.iot` | R-12 SPEC (провайдер переглядача) |
+| `plant/odoo_pull.py: sync_signals` (рядки 270–296) | шлях → вузол payload; `%` → `/100` (3 знаки), інакше 2 знаки при `\|v\| < 20`, 1 знак інакше; `drain` + `x_charging` → `state=charging\|busy`; `energy.totals.pv_kw/chp_kw` = `infra.totals`; `meta.iot` | R-12 SPEC (провайдер переглядача) |
 | `factory3d_viewer` SPEC M-01h, Додаток C | 196 шляхів за групами (35+35 `energy/consumers/<WC>`, 10 інженерних споживачів, 16 техніки, 2 портал, 3 компресор, 2 аспірація, 2 котельня, 2 спринклери/пневмокільце, 81 вентиляція, 1 пожежна, 4 трансформатори, 3 генерація) | ті самі коди, те саме правило застосування |
 | `dist/odoo_demo.json: equipment` | `FL-1…FL-5, FL-C1, FL-C2, TUGGER-1` (`battery` 0,34…0,85, `hours` 921…4 594, `state` busy/charging, `next_maintenance`), `COMPRESSOR` (`pressure_bar` 6,81, `hours` 17 840,8, `load` 0,642), `DUST-1` (`filter_dp_kpa` 1,42, `airflow_m3h` 29 767,6), `BOILER` (`supply_c` 77,4, `silo_fill` 0,611), `GANTRY-1` (`cycles_today` 373, `vacuum_kpa` −71,9), `SPRINKLERS` 7,15 бар, `AIR-RING` 6,37 бар | номінали й приклади чисел у R-xx; ТО за лічильником (COMPRESSOR 17 840,8 → 18 000, заявка MR/00033) |
 | `dist/odoo_demo.json: energy.transformers`, `infra.totals`, `infra.cards.WATER` | T1 333,3 кВт / 59,1 °C, T2 296,0 кВт / 55,6 °C (`temp_c = 38 + 60·S/Sн`, `plant/energy.py:327`); `bess_soc` 0,761, `chp_kw` 397,3, `pv_now` 0; лічильник води 18 642 м³, 2,1 м³/год | адреси емулятора для T1/T2 (ADAM-6015 unit 96), лічильника води (ADAM-6050 unit 84, DI8) |
@@ -100,6 +100,7 @@ Odoo 19.0+e; data-модуль `factory3d_iot_sim` 19.0.1.0.0 установле
 | FR-28 | У data модуля — джерела й адреси стенда (емулятор) для сигналів моєї зони (P-06 техніка, P-07 компресор/аспірація/трансформатори/вода/спринклери/пневмокільце, P-08 котельня) та 29 нових сигналів `telemetry` з Додатка A iot_sim (№ 335–365: `equipment/<техніка>/state`, `/x`, `/y` ×8, `equipment/COMPRESSOR/state`, `/temp_c`, `equipment/DUST-1/state`, `infra/water/m3_total`, `/flow_m3h`); решта сигналів чекають прив'язки модулями-власниками через помічник CT-11. |
 | FR-29 | Плагін `bacnet_ip` (bacpypes3): адресація `device/object/instance/property`, режими `cov` (SubscribeCOV з поновленням) і `poll` (ReadPropertyMultiple), читання `present-value`, `priority-array`, `status-flags`; запис `present-value` з пріоритетом лише при `write_enabled`; пристрої пожежної панелі — лише читання (D-07). |
 | FR-30 | Помічник імпорту каталогу емулятора `env['f3d.signal']._f3d_import_sim_catalog(...)` (CT-11): створює/оновлює `f3d.signal` з `f3d.sim.signal` за кодами або модулем-споживачем, перетворюючи текстову адресу каталогу на JSON `address` (R-24); нерозібрані адреси — у звіт. |
+| FR-31 | Локальні джерела без колектора (рішення менеджера 14.10.2026 за td_genset Q-20): типи з `f3d.source._f3d_local_types()` (базово порожньо, модулі розширюють через `super()`; міст генератора — `td_genset`) не потребують колектора, не потрапляють у `GET /f3d/telemetry/config` і крони stale/офлайну колектора, показання надходять лише через CT-10 `_f3d_ingest`, команди на них неможливі (SPEC R-26). |
 
 ### 1.4 Межі: що не входить
 
@@ -118,8 +119,8 @@ Odoo 19.0+e; data-модуль `factory3d_iot_sim` 19.0.1.0.0 установле
 `depends`: `factory3d_base` (домішка CB-01 для кодів обладнання/РЦ, паспорти CB-07/CB-08, меню CB-09,
 групи й параметр середовища CB-10, утиліти міграції CB-11), `maintenance` (заявки, стадії, команди),
 `mail` (чаттер на сигналах і джерелах), `web`. Через base — `mrp`, `mrp_maintenance` (`workcenter_id`
-на обладнанні). `factory3d_viewer` — **optional**: провайдер реєструється умовно (`'f3d.viewer.provider' in
-env`, §2.5 п. 7); `factory3d_iot_sim` — optional: міграція рівня 0 виконується, якщо є `x_f3d_signal`.
+на обладнанні). `factory3d_viewer` — **optional**: провайдер живе в міст-модулі `factory3d_telemetry_viewer` (`depends`
+telemetry + viewer, `auto_install`, A-20); `factory3d_iot_sim` — optional: міграція рівня 0 виконується, якщо є `x_f3d_signal`.
 
 Контракти, які **задає** цей модуль (посилатися як `factory3d_telemetry CT-xx`):
 
@@ -136,6 +137,7 @@ env`, §2.5 п. 7); `factory3d_iot_sim` — optional: міграція рівн�
 | CT-09 | Класифікатор `module` сигналу (Selection) і правило R-15 (префікс шляху → модуль): `energy/*`, `infra/*` → `energy` (крім `infra/water/*` → `telemetry`); `ventilation/*`, `lighting/*` → `bms`; `fire/*` → `fire_safety`; `equipment/*` → `telemetry`; `workcenters/*` → `machine_connect`; `yard/*`, `access/*` → `yard`/`access`; `infra/genset/*` → `genset` | усі |
 | CT-10 | Службовий метод `env['f3d.signal']._f3d_ingest(readings: list[dict], src='module') -> dict` — єдиний вхід для показань не з колектора (energy з Modbus через колектор не потребує; `factory3d_access`/`td_genset` опитують з Odoo і пишуть через цей метод); та сама валідація, пороги, шина | access, td_genset, machine_connect (стани з OPC UA йдуть через колектор) |
 | CT-11 | Помічник `env['f3d.signal']._f3d_import_sim_catalog(codes=None, module=None, source_map=None, defaults=None) -> dict` — імпорт рядків каталогу емулятора `f3d.sim.signal` (iot_sim M-03, Додаток A) у `f3d.signal`: `code`, `name`, `kind`, `unit`, `scale`, `nominal`, пороги, `sim_mode/sim_params`, `address` (R-24 — парсер текстових адрес Додатка A), `source_id` за `source_map` (`{"u70": "MB-U70-COMPRESSOR", "dev105": "BAC-105-RV-05", "mqtt": "MQTT-MOBILE"}`); результат `{created, updated, unparsed: [codes]}` | energy, bms, fire_safety, machine_connect, yard |
+| CT-12 | Хук `f3d.source._f3d_local_types() -> list[str]` (базово `[]`, розширення через `super()`) і правило SPEC R-26: для локальних типів `collector_id` не обов'язковий, `params` перевіряється лише як об'єкт JSON без секретів, `address` не перевіряється; API-01 і крони R-07/R-25 їх не бачать; показання — лише CT-10; команди — `UserError` | td_genset (міст `factory3d_genset`, тип `td_genset`); інші модулі з даними, що вже є в Odoo |
 
 Що **бере** модуль: iot_sim M-03 `f3d.sim.signal` (поля `code`, `name`, `device_id.code`, `protocol`, `address`, `dtype`, `unit`,
 `scale`, `nominal`, `thresholds`, `model_rule`, `origin`, `level0_code`, `kind`) як джерело каталогу (optional); CB-01 (`f3d_code` обладнання/РЦ для текстів заявок і `f3d_equipment_code`),
@@ -187,7 +189,7 @@ CB-10 (групи, `factory3d.base.environment`), CB-11 (`read_manual_field`, `d
 | `f3d.reading.hour` (M-05) | годинні агрегати `v_min/v_avg/v_max/v_sum/v_count/v_first/v_last`; `(signal_id, hour)` унікальні | крон `cron_f3d_telemetry_hour` | зведена, energy (кВт·год за годину), звіти |
 | `f3d.command` (M-06) | команда на запис у пристрій: сигнал, значення, стан `queued→sent→done/failed/expired`, хто, результат | менеджер/модулі (`write_enabled`), API-06/07 | колектор, меню «Команди» |
 | `f3d.push.handler` (M-11, AbstractModel) | хук диспетчеризації подій `http_push` до модулів | — | API-05 |
-| `f3d.viewer.provider.telemetry` (M-10) | провайдер переглядача (95) — лише якщо viewer встановлено | — | переглядач |
+| `f3d.viewer.provider.telemetry` (M-10) | провайдер переглядача (95) у міст-модулі `factory3d_telemetry_viewer` (A-20, `auto_install`) | — | переглядач |
 | `maintenance.equipment` (+поля, M-07) | `f3d_signal_ids`, `f3d_signal_count`, `f3d_alarm_count`, `f3d_meter_signal_id`, `f3d_meter_interval`, `f3d_meter_last_value`, `f3d_meter_last_date`, `f3d_meter_next_value`, `f3d_meter_remaining`, `f3d_meter_lead_pct`, `f3d_meter_request_id`, `f3d_meter_unit` | менеджер, R-11 | вкладка «Сигнали», «ТО за лічильником» |
 | `maintenance.request` (+поля, M-08) | `f3d_signal_id`, `f3d_equipment_code`, `f3d_origin` (`threshold`/`meter`/`manual`), `f3d_value`, `f3d_threshold`; перевизначення `write` (закриття → R-06/R-11) | R-05, R-11 | механік, переглядач (`maintenance_requests`) |
 | `res.config.settings` (+поля, M-09) | стоп-крани, `keep_days`, `keep_hours_days`, `stale_periods`, `bus_min_interval_s`, `realarm_cooldown_s`, `default_store_period_s`, команда ТО за замовчуванням | адміністратор | модуль |
@@ -228,7 +230,7 @@ CB-10 (групи, `factory3d.base.environment`), CB-11 (`read_manual_field`, `d
 `f3d.viewer.event._notify('f3d.signal', codes, 'signal')` (R-13); 7) переглядач отримує з шини подію,
 запитує `/f3d/viewer/delta`, провайдер (95) віддає `signals: [{path: "equipment/COMPRESSOR/pressure_bar",
 value: 6.77}]`; картка COMPRESSOR показує «Тиск 6,77 бар». Якщо значення впаде до 5,9 → `status='alarm'`,
-заявка «Компресор: тиск 5,9 бар при нормі від 6,0» (R-05) на обладнанні COMPRESSOR, команда «Служба
+після 30 с утримання (`min_duration_s`) заявка «Компресорна станція: тиск 5,9 бар при нормі від 6» (R-05, A-21) на обладнанні COMPRESSOR, команда «Служба
 головного механіка».
 
 Приклад 2 — заряд АКБ резервного навантажувача (MQTT): телематичний шлюз (емулятор) публікує
@@ -313,14 +315,18 @@ value: 6.77}]`; картка COMPRESSOR показує «Тиск 6,77 бар».
    iot_sim 19.0.2.0.0 (`'f3d.sim.signal' in env`): для всіх 225 кодів моєї зони — `_f3d_import_sim_catalog`
    (CT-11) доповнює `address`/`sim_params` з каталогу, не змінюючи `last_*`; інакше адреси — з data модуля
    (Додаток C SPEC, ті самі значення).
+3а. ТО за лічильником (SPEC §5.3 крок 3а, Додаток C.4, A-22): COMPRESSOR — `equipment/COMPRESSOR/hours`, інтервал
+   2 000 год, останнє ТО 16 000; FL-*, TUGGER-1 — 1 000 год, останнє = `floor(мотогодини / 1000) · 1000`; наявні
+   відкриті планові заявки (демо: id 3, 7–14) прив'язуються як `f3d_meter_request_id`, нових хук не створює.
+   Очікувано: `meters: 9`, `meter_requests_linked: 9`.
 4. `x_f3d_reading` → `f3d.reading` батчами по 5 000 через `execute_values` (`signal_id` за `x_signal_id` →
    `f3d.signal`, `ts = x_time`, `value = x_value`, `quality='good'`, `src='sim_data'`), дублікати `(signal_id,
-   ts)` пропускаються. Очікувано: стільки, скільки в `x_f3d_reading` на момент установки (7 448 на 14.10 01:50;
-   ≤ 56 448 за повні 2 доби); потім `f3d.reading.hour` за цими показаннями (≈ 196 × 7 = 1 372 на 14.10).
+   ts)` пропускаються. Очікувано: стільки, скільки в `x_f3d_reading` на момент установки (7 448 на 14.10 01:50,
+   14 112 на 14.10 ≈07:30 UTC; ≤ 56 448 за повні 2 доби); потім `f3d.reading.hour` за цими показаннями (≈ 196 × 7 = 1 372 на 14.10).
 5. `maintenance.request` з `x_request_id`: проставити `f3d_signal_id`, `f3d_origin='threshold'`,
-   `f3d_equipment_code`; очікувано 2.
+   `f3d_value`, `f3d_threshold` (`f3d_equipment_code` — related); очікувано 2.
 6. Рівень 0: `cron_iot_sim.active=False`; `UPDATE x_f3d_signal SET x_active=false`; `ir.ui.menu`
-   `factory3d_iot_sim.menu_iot_signals/readings/tick/start/stop` → `active=False`; `ir.ui.view`
+   `factory3d_iot_sim.menu_iot_root` → `active=False` (діти ховаються разом із батьком); `ir.ui.view`
    `factory3d_iot_sim.view_equipment_form_signals` → `active=False`; якщо є параметр
    `factory3d.iot_sim.level0_enabled` → `False` (емулятор більше не вмикає рівень 0, iot_sim FR-28);
    `maintenance.equipment.x_f3d_signal_ids` не чіпається (його приберуть разом із моделями, A-07).
@@ -332,7 +338,8 @@ value: 6.77}]`; картка COMPRESSOR показує «Тиск 6,77 бар».
    рівень 0 **не** вимикається (крок 6 відкочується в межах транзакції через повторний `write`).
 9. Звіт у `factory3d.telemetry.level0_migrated` (JSON: лічильники, `ts`, `state ∈ {skipped, partial, done}`).
 
-Чиста база без рівня 0: кроки 2–8 `skipped`, 13 нових сигналів і джерела стенда з data.
+Чиста база без рівня 0: кроки 2–8 `skipped`, 29 нових сигналів (`origin='catalog'`) і 7 джерел стенда з data; ТО за
+лічильником — 0.
 
 `uninstall_hook`: крони модуля `active=False`; параметри `factory3d.telemetry.*` видалити; якщо є
 `x_f3d_signal` і крон `cron_iot_sim` — `x_active=True` повернути всім, крон не вмикати (адміністратор
@@ -360,7 +367,7 @@ iot_sim A-11); заявки ТО лишаються.
 | `ir.config_parameter` | `factory3d.telemetry.drop_level0` | `False` | видаляти `x_`-моделі при міграції (інакше — iot_sim 19.0.3.0.0) |
 | `ir.config_parameter` | `factory3d.telemetry.level0_migrated` | `{}` → звіт хука | стан міграції рівня 0 |
 | `f3d.collector` | `COL-MAIN` | токен згенерувати майстром; `push_interval_s=5`, `push_max=1000`, `status_interval_s=60` | один колектор на стенді |
-| `f3d.source` | `MQTT-MOBILE`, `MB-U70-COMPRESSOR`, `MB-U84-IO5`, `MB-U90-AI1`, `MB-U96-RTD1`, `HTTP-PUSH` | з data (SPEC Додаток C), `collector_id=COL-MAIN`, `read_enabled=True` | адреси контейнерів `iot-sim`, `mosquitto` |
+| `f3d.source` | 7: `MQTT-MOBILE`, `MB-U70-COMPRESSOR`, `MB-U84-IO5`, `MB-U90-AI1`, `MB-U96-RTD1`, `BAC-140-BOILER`, `HTTP-PUSH` | з data (SPEC Додаток C), `collector_id=COL-MAIN`, `read_enabled=True` | адреси контейнерів `iot-sim`, `mosquitto` |
 | `ir.cron` | `cron_f3d_telemetry_stale` | 1 хв, активний | R-07 |
 | `ir.cron` | `cron_f3d_telemetry_hour` | 10 хв, активний | R-09 (агрегати за закриті години) |
 | `ir.cron` | `cron_f3d_telemetry_rotate` | щодня 02:40 (Київ) | R-10 |
@@ -389,7 +396,7 @@ iot_sim A-11); заявки ТО лишаються.
 **4.3 Налаштувати поріг і перевірити заявку** (інженер АСУ, механік). На сигналі
 `ventilation/units/RV-05/filter_dp_pa`: «Тривога, вище» = 250, гістерезис 10, мін. тривалість 0, заголовок
 заявки «Заміна фільтрів: перепад тиску {value} Па при нормі до {threshold}». На стенді: пульт емулятора →
-сценарій `filter_clogged` (`device=RV-05`, `dp_pa=285`). Через ≤ 30 с сигнал червоний, у Обслуговування →
+сценарій `filter_clogged` (`device=RV-05`, `value=285`; Q-14) — після прив'язки RV-05 модулем bms або за SPEC ТК-06. Через ≤ 30 с сигнал червоний, у Обслуговування →
 Заявки — «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» (команда «Служба головного механіка»).
 Закрити заявку («Repaired») → на сигналі заявка зникає, стан перераховується; емулятор скидає перепад до
 120 Па (його FR-06) → «норма».
@@ -426,15 +433,19 @@ iot_sim A-11); заявки ТО лишаються.
 | Q-09 | Хто є «джерелом істини» для `energy/consumers/<X>/kwh_shift`: лічильник PM5560 (energy) чи інтеграл `p_now` у телеметрії? | автор energy | лічильник; `derived_from_id` з рівня 0 — лише довідка | сигнали `energy/*` чекають energy |
 | Q-10 | Частота опитування лічильників і термін зберігання сирих даних (каркас §9 п. 6) | замовник | 10 с / 30 днів сирих, 400 днів агрегатів | параметри §3 |
 | Q-11 | Сповіщення механіку про `stale` джерела (пристрій «мовчить» > 10 хв) — активність у чаттері джерела чи лише дашборд? | головний механік | активність `mail.activity` на джерелі для `maintenance_team_id.member_ids` після `stale_notify_min` (10) | лише дашборд і стан; параметр зарезервовано (`stale_notify_min=0` — вимкнено) |
-| Q-12 | Відсутній D-13 у каркасі (iot_sim посилається на «D-13» щодо рівня 0); §6.5 каркаса досі ставить `bacnet_ip` у bms (рішення 14.10 — telemetry) | менеджер | додати D-13 у `docs/ARCHITECTURE.md` §8: «рівень 0 живе до міграції телеметрією; після — вимкнений; видалення x_ — iot_sim 19.0.3.0.0»; оновити рядок `bacnet_ip` у §6.5 | діємо за iot_sim A-09/FR-28, цим документом §2.8 і рішенням 14.10 |
+| Q-12 | Відсутні D-13 і D-14 (рядки UI українською в коді, без `.po`) у каркасі (iot_sim посилається на «D-13» щодо рівня 0); §6.5 каркаса досі ставить `bacnet_ip` у bms (рішення 14.10 — telemetry) | менеджер | додати D-13 у `docs/ARCHITECTURE.md` §8: «рівень 0 живе до міграції телеметрією; після — вимкнений; видалення x_ — iot_sim 19.0.3.0.0»; оновити рядок `bacnet_ip` у §6.5 | діємо за iot_sim A-09/FR-28, цим документом §2.8 і рішенням 14.10 |
 | Q-13 | Axis LPV шле POST без автентифікації (iot_sim §8.13.2): обмежувати приймач `/f3d/lpr` за IP камер (`allow_ips`) чи вимагати секретний шлях `/f3d/lpr/<secret>`? | адміністратор мережі, автор yard | обидва: allow-list IP + секретний суфікс шляху, який камера має в URL | на стенді — allow-list `iot-sim`; суфікс підтримується (`F3D_HTTP_PUSH_SECRET_LPR`), порожній = вимкнено |
+| Q-14 | iot_sim §9.3 визначає параметр сценарію `filter_clogged` як `value`, а приклад §7.2 — `dp_pa`. Який ключ правильний? | автор iot_sim | `value` (схема §9.3 — джерело істини); виправити приклад §7.2 | SPEC ТК-05/ТК-06 передають `value`; якщо емулятор відповідає `422` — обидва ключі |
+| Q-15 | Приклад Axis LPV (iot_sim §8.13.2): `capture_timestamp` 1792391105507 = 19.10.2026 06:25:05 UTC, а `datetime` = «20261014 081505507». Яке поле — час події, і чи ставить емулятор `capture_timestamp = sim_now`? | автор iot_sim, автор yard | `capture_timestamp` (епоха мс UTC за Axis API), емулятор ставить `sim_now`; виправити приклад | `ts_path=$.capture_timestamp`; значення поза вікном (`ts_future`/`ts_too_old`) → час прийому з `q='uncertain'` (SPEC R-22) |
+| Q-16 | Чи є Docker у CI (тести колектора з mosquitto, `bacpypes3` на UDP, стенд)? | менеджер / DevOps | так: раннер із Docker; `pytest -m broker` у CI | `-m broker` пропускаються без `F3D_TEST_MQTT`/Docker; MQTT покривають фейковий клієнт (AC-79) і ТК-04 |
+| Q-17 | Де розгортається стенд ТК (емулятор + колектор + Odoo з копією демо): на timur-o19demo поруч з Odoo (`/opt/timur-o19`) чи на окремому хості? | менеджер, адміністратор сервера | на timur-o19demo, compose-профіль `dev`, окрема база-копія `odoo_f3d_tel` | ТК виконуються локально: compose iot_sim + колектор + контейнер Odoo 19 з дампом копії |
 
 ### 5.2 Ризики
 
 | Ризик | Вплив | Пом'якшення |
 |---|---|---|
 | Карти Modbus вендорів (Elektronikon, ADAM-канали) на заводі інші, ніж в емуляторі | після переходу на залізо значення сміттєві | адреси лише в даних (`address`), не в коді; ТК-11 «звірка з паспортом» перед увімкненням `read_enabled` джерела; `quality='bad'` при виході за фізичний діапазон (`range` в адресі) |
-| Два джерела значень для одного сигналу (рівень 0 і колектор) | стрибки, подвійні заявки | хук вимикає крон рівня 0 і ставить `factory3d.iot_sim.level0_enabled=False`; `x_active=False`; AC-40 |
+| Два джерела значень для одного сигналу (рівень 0 і колектор) | стрибки, подвійні заявки | хук вимикає крон рівня 0 і ставить `factory3d.iot_sim.level0_enabled=False`; `x_active=False`; AC-53, AC-58 |
 | Зростання `f3d_reading` при малих `store_period_s` | гальмування графіків, ротації | умовчання 300 с, поле на сигналі з підказкою обсягу, ротація батчами, індекси §2.7, Q-01 |
 | Відмова Odoo на годину — буфер колектора переповнюється | втрата історії | SQLite WAL до 200 МБ (≈ 4 М показань ≈ 3 доби при 12/с); найстаріші видаляються з лічильником у `/metrics` і `status.buffer_dropped` |
 | Паралельні push двох воркерів Odoo для одного сигналу | гонка `last_value` | `UPDATE … WHERE id=%s AND (last_ts IS NULL OR last_ts < %s)` — старіше показання не перезапише новіше (R-17); унікальний індекс на показаннях |
@@ -450,13 +461,13 @@ iot_sim A-11); заявки ТО лишаються.
 | Воркер | Файли | Здає | Залежить від |
 |---|---|---|---|
 | W0 каркас | Odoo: `__manifest__.py`, `__init__.py`, `models/__init__.py`, `security/ir.model.access.csv`, `security/security.xml`, `data/ir_config_parameter.xml`, `data/ir_cron.xml`, `data/neutralize.sql`, `views/menus.xml`, `tests/__init__.py`, `tests/common.py`, `README.md`, `CHANGELOG.md`; сервіс: `services/collector/pyproject.toml`, `requirements.txt`, `Dockerfile`, `docker-compose.collector.yml`, `collector/__init__.py`, `collector/core/types.py`, `collector/plugins/base.py`, `tests/conftest.py` | модуль встановлюється порожнім; меню «Телеметрія»; параметри; типи CT-02 зафіксовані | SPEC §0, §1, §3 (меню), §4, §5.1, §8.3 |
-| W1 моделі | `models/f3d_collector.py`, `models/f3d_source.py`, `models/f3d_signal.py`, `models/f3d_reading.py`, `models/f3d_reading_hour.py`, `models/f3d_command.py`, `tools/address.py`, `tools/thresholds.py`, `wizard/collector_token_wizard.py`, `views/f3d_collector_views.xml`, `views/f3d_source_views.xml`, `views/f3d_signal_views.xml`, `views/f3d_reading_views.xml`, `views/f3d_command_views.xml`, `tests/test_signal.py`, `tests/test_source.py`, `tests/test_thresholds.py`, `tests/test_readings.py` | M-01…M-06, M-12; R-01…R-04, R-08…R-10, R-13; AC-01…AC-18 | W0 |
-| W2 ТО й стандартні моделі | `models/maintenance_equipment.py`, `models/maintenance_request.py`, `models/res_config_settings.py`, `views/maintenance_equipment_views.xml`, `views/maintenance_request_views.xml`, `views/res_config_settings_views.xml`, `tests/test_requests.py`, `tests/test_meter.py` | M-07…M-09; R-05, R-06, R-11; AC-19…AC-27 | W1 |
-| W3 API і провайдер | `controllers/__init__.py`, `controllers/telemetry.py`, `models/viewer_provider.py`, `models/push_handler.py`, `tools/ingest.py`, `tests/test_api.py` (HttpCase), `tests/test_viewer_provider.py`, `tests/test_push_handler.py` | API-01…API-07, M-10, M-11, CT-10; R-12, R-14, R-16, R-17, R-18, R-22, R-23; AC-28…AC-39 | W1, W2 |
-| W4 міграція і хуки | `hooks.py`, `data/f3d_source_data.xml`, `data/f3d_signal_data.xml`, `data/f3d_signal_bind.csv`, `tools/gen_signal_data.py`, `tests/test_migration.py`, `tests/test_security.py`, `tests/test_hooks.py` | §5.2–§5.5, R-15; AC-40…AC-50; `neutralize.sql` перевірений | W1, W2 |
-| W5 колектор — ядро | `collector/core/{config,scheduler,buffer,odoo_client,commands,metrics,logging_conf,app}.py`, `collector/__main__.py`, `tests/unit/test_{scheduler,buffer,odoo_client,config}.py` | §8.1, §8.2, §8.4; R-19; AC-51…AC-58 | W0 |
-| W6 колектор — плагіни | `collector/plugins/{modbus_tcp,mqtt,http_push,bacnet_ip}.py`, `collector/plugins/schemas/*.json`, `tests/unit/test_plugin_{modbus,mqtt,http_push,bacnet}.py` (фейкові сервери: `pymodbus` server, фейковий paho-клієнт, aiohttp test client, `bacpypes3` тестовий пристрій) | §8.5–§8.8; R-20…R-23; AC-59…AC-70 | W5 |
-| W7 стенд і ТК | `tests/stand/*` (pytest -m stand проти compose iot_sim + collector + Odoo), `docs/modules/factory3d_telemetry/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-12, ТБ-01…ТБ-08, ТП-01…ТП-05, DEPLOY_TEST | W3, W4, W6 |
+| W1 моделі й інгест | `models/f3d_collector.py`, `models/f3d_source.py`, `models/f3d_signal.py`, `models/f3d_reading.py`, `models/f3d_reading_hour.py`, `models/f3d_command.py`, `tools/address.py`, `tools/thresholds.py`, `tools/titles.py`, `tools/ingest.py`, `wizard/collector_token_wizard.py`, `wizard/collector_token_wizard_views.xml`, `views/f3d_collector_views.xml`, `views/f3d_source_views.xml`, `views/f3d_signal_views.xml`, `views/f3d_reading_views.xml`, `views/f3d_reading_hour_views.xml`, `views/f3d_command_views.xml`, `tests/test_collector.py`, `tests/test_source.py`, `tests/test_signal.py`, `tests/test_readings.py`, `tests/test_thresholds.py` | M-01…M-06, M-12; CT-10, CT-12; R-01…R-04, R-07…R-10, R-13, R-14, R-16, R-17 (без HTTP), R-25, R-26; AC-01…AC-26, AC-91, AC-92 (частини AC-24/AC-25 про заявки — зелені після W2) | W0 |
+| W2 ТО й стандартні моделі | `models/maintenance_equipment.py`, `models/maintenance_request.py`, `models/res_config_settings.py`, `views/maintenance_equipment_views.xml`, `views/maintenance_request_views.xml`, `views/res_config_settings_views.xml`, `tests/test_requests.py`, `tests/test_meter.py` | M-07…M-09; R-05, R-06, R-11; AC-27…AC-34 | W1 |
+| W3 API, події, міст переглядача | `controllers/__init__.py`, `controllers/telemetry.py`, `models/push_handler.py`, `models/f3d_push_event.py`, `views/f3d_push_event_views.xml`, `tests/test_api.py` (HttpCase), `tests/test_commands.py`, `tests/test_push_handler.py`; модуль `odoo_addons/factory3d_telemetry_viewer/*` (M-10, `tests/test_viewer_provider.py`) | API-01…API-07, M-10, M-11, M-13; R-12, R-17 (HTTP), R-18, R-22; AC-35…AC-50, AC-68…AC-70 | W1, W2 |
+| W4 міграція, дані, права | `hooks.py`, `data/f3d_source_data.xml`, `data/signal_catalog.csv`, `data/f3d_actions.xml`, `tools/sim_catalog.py`, `tools/gen_signal_data.py`, `tests/test_migration.py`, `tests/test_sim_catalog.py`, `tests/test_security.py`, `tests/test_views.py`, `tests/test_hooks.py` | §5.2–§5.6, R-15, R-24, CT-11; Додатки B–D; AC-51…AC-57, AC-59…AC-67; `neutralize.sql` перевірений | W1, W2 |
+| W5 колектор — ядро | `collector/core/{config,registry,scheduler,buffer,odoo_client,commands,allowlist,metrics,logging_conf,app}.py`, `collector/util/{jsonpath,codec,timeutil}.py`, `collector/__main__.py` (фікстури `tests/conftest.py` SPEC §13.0.2 — через W0), `tests/unit/test_{config,scheduler,buffer,odoo_client,commands,registry,codec,jsonpath,allowlist,logging,cli,metrics}.py` | §8.1–§8.4, §8.9, §8.10; R-18 (колектор), R-19; AC-71…AC-77, AC-82, AC-83 | W0 |
+| W6 колектор — плагіни | `collector/plugins/{modbus_tcp,mqtt,http_push,bacnet_ip}.py`, `collector/plugins/schemas/*.json`, `tests/unit/test_plugin_{modbus,mqtt,http_push,bacnet}.py` (фейкові сервери: `pymodbus` server, фейковий paho-клієнт і mosquitto для `-m broker`, aiohttp test client, `bacpypes3` тестовий пристрій) | §8.5–§8.8; R-20…R-23; AC-78…AC-81 | W5 |
+| W7 стенд і ТК | `services/collector/tests/stand/*` (pytest -m stand проти compose iot_sim + collector + Odoo), `docs/modules/factory3d_telemetry/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-16, ТБ-01…ТБ-10, ТП-01…ТП-07, DEPLOY_TEST (SPEC §13.2–§13.5); AC-58, AC-84…AC-90 | W3, W4, W6 |
 
 Порядок злиття: W0 → (W1 ‖ W5) → (W2 ‖ W6) → W3 → W4 → W7. Кожен воркер здає зелені тести своїх файлів
 (`odoo-bin -d test --test-tags /factory3d_telemetry:<TestClass> --stop-after-init`; `pytest services/collector
@@ -486,3 +497,6 @@ iot_sim A-11); заявки ТО лишаються.
 | A-17 | Плагін `bacnet_ip` у ядрі (рішення менеджера 14.10): один BACnet-застосунок на колектор, `Who-Is` для резолву адреси пристрою через роутер (мережа 2 емулятора), `ReadPropertyMultiple` для опитування, `SubscribeCOV` (lifetime 300 с, поновлення на 2/3) для сигналів із `mode='cov'`, запис `WriteProperty` з пріоритетом 8 лише при `write_enabled`; для джерел із `params.read_only=true` (FACP-1) — запис неможливий у коді | один плагін обслуговує bms і fire_safety; правило D-07 закріплене в коді, а не лише в даних | замінює рядок §6.5 каркаса (`bacnet_ip` → telemetry) |
 | A-18 | Імпорт каталогу емулятора (CT-11, R-24): текстова адреса Додатка A розбирається регулярними виразами в JSON `address`; нерозібране не блокує імпорт, а повертається у `unparsed` | каталог має 662 рядки в людській нотації; без парсера кожен модуль переписував би адреси вручну | — |
 | A-19 | Поле `viewer_visible` на сигналі (default `True`): провайдер пропускає невидимі (x/y техніки, службові стани) | контракт viewer A.10 має фіксований набір ключів | — |
+| A-20 | Провайдер переглядача — в окремому міст-модулі `factory3d_telemetry_viewer` (`depends: factory3d_telemetry, factory3d_viewer`, `auto_install=True`), а не умовною реєстрацією в ядрі | `_inherit = "f3d.viewer.provider"` неможливий без залежності від viewer; умовний клас ламає реєстр, коли viewer установлюють пізніше; `auto_install` ставить міст сам | уточнює §6.7 каркаса (viewer optional) |
+| A-21 | Числа в заголовках заявок — `fmt_num(x, decimals)`: округлення до `decimals`, десяткова кома, зайві нулі дробової частини відкидаються, групи тисяч через пробіл при \|x\| ≥ 1 000; `{threshold}` — з тим самим `decimals` | приклади макета («285 Па при нормі до 250», «14,2 % при нормі від 15», «18 000 год») інакше суперечать один одному; тестам потрібні детерміновані рядки | уточнює §6.8 каркаса |
+| A-22 | Хук налаштовує ТО за лічильником для COMPRESSOR і техніки (SPEC Додаток C.4) і прив'язує наявні відкриті планові заявки обладнання як `f3d_meter_request_id` | у демо вже є «ТО на 18 000 мотогодин» (COMPRESSOR) і «Планове ТО» на FL-*/TUGGER-1 (id 3, 7–14); без прив'язки R-11 створив би дублікати | — |

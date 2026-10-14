@@ -1492,3 +1492,463 @@ reply_delay_s=0.0, reset_reply='I4 A "FAKE-0001"', support_reset=True)` — `asy
 використовує підмножину `@`, `SI`, `SIR`, `Z`, `T`, `TAC` (останню емулятор не перелічує — відповідь `ES` дає
 `WriteError("SICS: помилка ES на TAC")`, AC-52). Живий індикатор АКСІС ME-01: RS-232 → TCP-шлюз (ПРИПУЩЕННЯ,
 Q-05); перехід — зміна `params.host/port` джерела `SRC-TRUCK-SCALE` (каркас §1).
+
+## 9. Алгоритми й правила
+
+Час у прикладах — Київ (UTC+3) 12.10.2026, якщо не сказано інше. «Сьогодні» — доба за Києвом
+(`tools.tz.day_bounds_utc(local_day(now))` → `[00:00, 24:00)` Київ у UTC).
+
+### R-01 Номер і умовчання рейсу
+
+1. `name = ir.sequence.next_by_code('f3d.yard.visit')` → `YV/2026/00001`; унікальність у межах компанії (SQL).
+2. `side` (compute): `dock_id.f3d_side`, якщо є ворота; інакше `incoming`/`other` → `west`, `outgoing` → `east`.
+3. `weighing_policy` при створенні (якщо не передано): `west` → `P.weighing_policy_west`, `east` →
+   `P.weighing_policy_east` (обидва `in_out` на стенді). Змінюється диспетчером до пропуску (`readonly` у V-01).
+4. `plate` зберігається як `strip().upper()`; `plate_norm` — R-08 п. 1.
+
+Приклад: `create({'visit_type': 'outgoing', 'plate': ' аа 4512 кт '})` → `name='YV/2026/00007'`, `side='east'`,
+`weighing_policy='in_out'`, `plate='АА 4512 КТ'`, `plate_norm='AA4512KT'`.
+
+### R-02 Синхронізація бронювання ↔ пакет (A-01)
+
+1. **Прямий напрям** (`booking._sync_batch`, викликається з `action_confirm` і `write` підтвердженого
+   бронювання): якщо `visit_id.batch_id` і `batch.state ∉ ('done','cancel')`: `vals = {}`; `batch.dock_id != dock_id`
+   → `vals['dock_id']`; `batch.scheduled_date != slot_start` → `vals['scheduled_date']`; `batch.end_date != slot_end`
+   → `vals['end_date']`; непорожні `vals` → `batch.sudo().with_context(f3d_yard_sync=True).write(vals)`. Пишуться
+   лише змінені поля, бо запис `dock_id` змушує `stock_fleet` переписати локації рухів на док (base R-10 —
+   очікувана стандартна поведінка). `end_date` у `stock_fleet` — `readonly` лише в представленні; ORM-запис дозволений.
+2. **Зворотний напрям** (M-07 `write`): зміна `dock_id`/`scheduled_date`/`end_date` пакета (стандартний Gantt
+   диспетчеризації) без `context['f3d_yard_sync']` оновлює підтверджене бронювання активного рейсу
+   (`slot_end = end_date or scheduled_date + P.slot_default_min`) з тим самим контекстом; R-03 конфлікт → `ValidationError`
+   відкочує й запис пакета.
+3. Бронювання `requested`/`cancelled` пакет не змінюють. Скасування підтвердженого бронювання поля пакета не очищає.
+
+Приклад: пакет base для `WH/IN/00131` (`dock_id = WH/Вхід/Ворота 2`, `scheduled_date = 10:00 UTC`); диспетчер
+«Створити рейс» → бронювання `requested` 13:00–14:00 → «Підтвердити» → `vals = {}` (усе збігається, пакет не
+пишеться). Перетягування смуги в Gantt на 14:15–15:15 → `batch.scheduled_date = 11:15 UTC`, `end_date = 12:15 UTC`.
+
+### R-03 Конфлікти слотів
+
+1. Перетин підтверджених бронювань одних воріт: `[s1, e1) ∩ [s2, e2) ≠ ∅ ⇔ s1 < e2 ∧ s2 < e1` →
+   `ValidationError("Ворота %s уже заброньовані: %s (%s–%s).")` (код воріт, `name` чужого бронювання, локальні години).
+2. Дотик (`e1 == s2`) — дозволено. Бронювання `requested`/`cancelled` не блокують; перетин із `requested` → рядок
+   `warning` «Перетин із запитом %s».
+3. Підтвердження серіалізується блокуванням рядка воріт (`SELECT … FROM stock_location WHERE id=%s FOR UPDATE`) —
+   два паралельні підтвердження одного проміжку дають одне `ValidationError` (AC-07).
+4. Сторона: `visit_id.side != dock_id.f3d_side` → `ValidationError("Ворота %s на стороні «%s», а рейс — «%s».")`;
+   `batch.picking_type_id.dock_ids` непорожні і `dock_id` не серед них → `ValidationError("Ворота %s не належать
+   типу операцій %s.")`.
+5. Буфер (попередження): найближче підтверджене бронювання тих самих воріт до/після слоту з проміжком
+   `0 ≤ gap < P.dock_turnaround_min` → `warning` «Між слотами %s хв (буфер %s хв): %s».
+6. Календар (попередження; при `P.enforce_calendar` — `ValidationError` з тим самим текстом): календар
+   `P.calendar_id`; для локального дня тижня `slot_start` беруться `attendance_ids` з `dayofweek == str(weekday)`;
+   немає → «День без зміни «%s».»; інакше вікно `[min(hour_from), max(hour_to)]`; слот (локальний) має лежати в
+   одній добі всередині вікна → інакше «Слот поза зміною «%s» (%s–%s).». Обідня перерва не перевіряється.
+7. Тривалість слоту ≤ 24 год; `slot_end > slot_start` (SQL).
+
+Приклади (є підтверджене `DOCK-W2 · 12.10 13:00–14:00`; календар «Зміна 1 (07:00–15:30)»: Пн–Пт 07:00–11:30,
+12:00–15:30): 13:30–14:30 на `DOCK-W2` → `ValidationError` «Ворота DOCK-W2 уже заброньовані: DOCK-W2 · 12.10
+13:00–14:00 (13:00–14:00).»; 14:00–15:00 → підтверджено, `warning` «Між слотами 0 хв (буфер 15 хв): DOCK-W2 ·
+12.10 13:00–14:00»; 14:15–15:15 → без попереджень; 15:00–16:00 → підтверджено з `warning` «Слот поза зміною
+«Зміна 1 (07:00–15:30)» (07:00–15:30).», а при `enforce_calendar=True` — `ValidationError`; `DOCK-E1` для рейсу
+`incoming` → `ValidationError` «Ворота DOCK-E1 на стороні «Схід (відвантаження)», а рейс — «Захід (приймання)».».
+
+### R-04 Категорії воріт
+
+Алгоритм base R-19 для пари (ворота бронювання, товари документів пакета рейсу): `allowed = dock_id.f3d_accepts`;
+порожньо → без попередження; `bad` = категорії товарів рухів (`state != 'cancel'`), жодна з дозволених не є
+предком-або-самою (`categ.parent_path` починається з `allowed.parent_path`); непорожня → рядок `warning`
+«Ворота %s приймають: %s. У рейсі є: %s.» (назви через «, »). Не блокує ні підтвердження, ні виклик на ворота;
+`_f3d_yard_pick_dock` ставить ворота з попередженням у кінець списку (R-05 п. 2).
+Приклад: бронювання `DOCK-W1` під пакет `WH/IN/00132` (крайка `EB2-SON`, `EB2-WHT`) → «Ворота DOCK-W1 приймають:
+Плитні матеріали. У рейсі є: Крайка.»; `DOCK-W5` → без попередження.
+
+### R-05 Черга й виклик на ворота
+
+1. **Зайнятість** `_f3d_yard_dock_busy(dock, start, end, exclude)`: рейс ≠ `exclude` у станах `at_dock`/`handling` з
+   `dock_id == dock` (незалежно від часу) або підтверджене бронювання воріт, що перетинає `[start, end)`, рейс якого
+   порожній або в стані ∉ {`left`,`rejected`,`cancelled`} і ≠ `exclude`. Повертає рейс-зайняття (або бронювання
+   без рейсу — тоді повідомлення «запит постачальника»).
+2. **Вибір воріт для рейсу без броні** `_f3d_yard_pick_dock()`: ворота `f3d_kind='dock'`, `f3d_side == side`, активні,
+   компанія рейсу; якщо пакет має `picking_type_id.dock_ids` — перетин із ними; порядок: спершу без попередження
+   R-04, далі за `f3d_dock_no`; перші не зайняті на `[now, now + P.slot_default_min)`.
+3. **Порядок черги** `_f3d_yard_queue(side, dock=None)`: рейси `queued` цієї сторони; при `dock` — без тих, чиє
+   бронювання на інших воротах. Ключ сортування: `(rank, k1, arrived_at, id)`: `rank = 0` — `priority='1'`; `rank =
+   1` — є бронювання і `slot_start ≤ now + P.queue_slot_window_min` (`k1 = slot_start`); `rank = 2` — усі інші
+   (`k1 = arrived_at`).
+4. **Наступний на ворота** `_f3d_yard_call_next(dock)`: перший кандидат з п. 3, для якого
+   `_f3d_yard_dock_busy(dock, now, now + slot_default_min, exclude=кандидат)` порожнє (для рейсу з бронюванням —
+   його власне бронювання не заважає) → `action_call_to_dock(dock)`; інших пропустити. Викликається кнопкою
+   «Наступний» не передбачено — лише авто: з `action_end_handling`/`action_leave` і крону при `P.auto_call_next`.
+5. «На ворота» вручну — M-01 `action_call_to_dock`.
+
+Приклад (зараз 12:50; захід, черга): V1 без броні, прибула 12:20; V2 бронювання `DOCK-W2` 13:00, прибула 12:40;
+V3 бронювання `DOCK-W5` 14:00, прибула 12:30; V4 без броні, `priority='1'`, прибула 12:45. `_f3d_yard_queue('west')`
+→ `[V4, V2, V1, V3]`; `_f3d_yard_queue('west', DOCK-W2)` → `[V4, V2, V1]`; `_f3d_yard_call_next(DOCK-W2)` → V4
+пропущено (бронювання V2 13:00–14:00 перетинає `[12:50, 13:50)`), викликано V2 (`at_dock`).
+
+### R-06 Фура без броні
+
+1. Подія LPR на в'їзді без збігу (R-08) → `match_state='unmatched'`, `kpp_alert=True`; команда шлагбаума не
+   створюється ніколи (R-15 авто вимагає підтвердженого бронювання).
+2. `walk_in_today` = рейси `is_walk_in=True`, `state != 'rejected'`, `arrived_at` сьогодні.
+3. Майстер M-16 `action_create`: користувач без `GRP_DISP`: `P.walk_in_allowed == False` →
+   `UserError("Рейси без броні створює лише диспетчер.")`; `walk_in_today ≥ P.walk_in_limit_per_day` →
+   `UserError("Ліміт рейсів без броні на сьогодні (%s) вичерпано — зверніться до диспетчера.")`. Диспетчер — без
+   обох обмежень.
+4. Рейс створюється в стані `arrived` (`is_walk_in=True`, без бронювання); пропуск — лише кнопкою «Пропустити»
+   (у режимі `auto` теж), ворота — «На ворота» (R-05 п. 2, бронювання `source='walk_in'`, A-23).
+5. «Відхилити» (M-17) без рейсу — створює рейс `other` у стані `rejected` для журналу; подія `handled`.
+
+Приклад: сьогодні вже 5 рейсів без броні, охоронець → `UserError` з «(5)»; диспетчер → створено 6-й.
+
+### R-07 Приймання подій LPR і дублікати (`f3d.yard.lpr.event._f3d_from_push`)
+
+1. `payload` не `dict` → WARNING, `return False`.
+2. Камера: `camera_code` з `sensorProviderID` (API-03); ворота — активні з `camera_code == camera_code`; немає →
+   подія `match_state='unknown_camera'`, `kpp_alert=False`, без зіставлення (п. 9 не виконується).
+3. Ключ дубліката: є `carID` і `packetCounter` → `"%s|%s|%s" % (camera, carID, packetCounter)`; інакше
+   `"evt|" + event['event_id']`. Подія з таким ключем є → повернути її без змін (повтор камери/колектора).
+4. Час `ts`: `capture_timestamp` (мс UTC) у межах ±1 доба від `event['ts']` → інакше `datetime` (формат
+   `%Y%m%d %H%M%S%f`, перші 3 цифри — мс) у `P.camera_tz` → інакше `event['ts']`; `ts > now + 60 с` → `now`.
+5. `carState`: `lost` — шукати попередню подію `camera_code` + `car_id` за 2 год: є → `lost_at = ts`; якщо вона
+   `kpp_alert` і `match_state ∈ (unmatched, low_confidence)` → `match_state='expired'`, `kpp_alert=False`, `note`
+   «Фура поїхала без рішення»; якщо в неї рейс, напрям `out`, рейс ще не `left` і це `gate.pending_visit_id` →
+   `visit.action_leave(ts, note="виїзд за камерою %s")` (sudo); новий запис не створюється. Попередньої немає →
+   створити запис `car_state='lost'`, `match_state='ignored'`. `update` — попередня подія тієї ж машини за 30 хв:
+   новий номер з більшою довірою → оновити поля номера/довіри; якщо вона `unmatched/low_confidence` — повторити
+   R-08; новий запис не створюється; попередньої немає → як `new`. `new` → створити запис.
+6. `P.read_enabled == False` → запис із `match_state='ignored'`, без знімка, без зіставлення й змін воріт.
+7. Знімок (лише при створенні запису і `P.lpr_store_images`): `imageArray` — список → перший елемент; словник →
+   значення `image`/`data`/перше рядкове; рядок → base64 (префікс `data:image/...;base64,` відкидається);
+   `base64.b64decode(validate=True)`; розмір ≤ `P.lpr_image_max_kb × 1024`; сигнатура `FF D8 FF` (JPEG) або
+   `89 50 4E 47` (PNG) → `ir.attachment` (`name = "lpr-<camera>-<YYYYMMDD-HHMMSS>.jpg|png"`, `res_model =
+   'f3d.yard.lpr.event'`, `res_id`, `raw`, `mimetype`, `public=False`); інакше `note` «Знімок відхилено: <розмір|формат>».
+   `imagesURI[0]` (`http(s)://`, ≤ 512) → `image_url`.
+8. Ворота: `last_plate = plate_unicode or plate_raw`, `last_plate_at = ts` (лише для валідного номера).
+9. Зіставлення й дії — R-08; далі R-21 (шина).
+10. Крон: `kpp_alert=True`, `match_state ∈ (unmatched, low_confidence)`, `received_at < now − P.arrival_timeout_min`
+    → `expired`, `kpp_alert=False`.
+
+Приклад (S-05 `truck_no_booking`, `plate=АА1234КТ`): POST CAM-05 `carState=new`, `carID=501`, `packetCounter=9001`
+→ запис `dedup_key='CAM-05|501|9001'`, `unmatched`, `kpp_alert=True`; повтор того самого тіла → той самий запис;
+через 10 хв `carState=lost`, `carID=501` → `lost_at`, `match_state='expired'`, `kpp_alert=False`.
+
+### R-08 Нормалізація номера й зіставлення
+
+1. `normalize_plate(s)`: порожньо → `""`; `upper()`; видалити пробіли й `- . _ ·`; замінити кириличні двійники
+   латиницею `LOOKALIKE = {А:A, В:B, Е:E, І:I, Ї:I, К:K, М:M, Н:H, О:O, Р:P, С:C, Т:T, Х:X, У:Y}`; результат валідний,
+   якщо `^[A-Z0-9А-ЯІЇЄҐ]{2,12}$`. Приклади: `"АА 4512 КТ"` → `"AA4512KT"`; `"aa-4512-kt"` → `"AA4512KT"`;
+   `"КА 0001 ВХ"` → `"KA0001BX"`; `"ВІ 7777 ЕН"` → `"BI7777EH"`; `"ЖЖ1234"` → `"ЖЖ1234"` (валідний); `"A"` → невалідний.
+2. `display_plate(s)`: без пробілів, `upper()`; збіг `^([A-ZА-ЯІЇЄҐ]{2})(\d{4})([A-ZА-ЯІЇЄҐ]{2})$` → `"АА 4512 КТ"`;
+   інакше як є.
+3. Невалідний `plate_norm` → `match_state='low_confidence'`, `note` «Номер не розпізнано», `kpp_alert=True`.
+4. `confidence < P.lpr_min_confidence` → `low_confidence`, `note` «Довіра 0.62 < 0.80», `kpp_alert=True`.
+5. Напрям: `carMoveDirection ∈ (in, out)` → він; інакше `in` для воріт `in`/`both`, `out` для `out`.
+6. Кандидати за номером (`_find_by_plate`): `in` — рейси зі станами `planned`, `arrived`, `queued` і
+   `plate_norm == p`, для `planned` — `|planned_start − ts| ≤ P.lpr_match_window_h`; плюс `draft` з `day` = сьогодні;
+   `out` — стани `queued`, `at_dock`, `handling`, `weighed` без вікна. Порядок: `|planned_start − ts|` (порожній —
+   у кінець), далі `id`.
+7. Документи з опису: `tokens = re.findall(r"[A-Z]{2,}/[A-Z]{2,}/\d{3,}", plate_list_description or "")`;
+   `doc_visits` — рейси тих самих станів (п. 6, без вікна), у яких `batch_id.name ∈ tokens` або
+   `batch_id.picking_ids.name ∩ tokens ≠ ∅`.
+   - кандидатів за номером 1 → він;
+   - більше 1 → перетин із `doc_visits`, якщо рівно 1 — він; інакше перший за порядком, `note` «Кілька рейсів з
+     номером %s — обрано %s», `kpp_alert=True`;
+   - 0 → `doc_visits` рівно 1 → він; якщо `visit.plate` порожній — `visit.plate = plate_unicode or plate_raw`
+     (чаттер «Номер заповнено з камери %s»); якщо `visit.plate_norm != p` — `note` «Номер камери %s ≠ номер рейсу
+     %s», `kpp_alert=True`;
+   - інакше `unmatched`, `kpp_alert=True`, `note` «Номер не знайдено серед рейсів» (`in`) / «Фура виїжджає без
+     рейсу» (`out`).
+8. Збіг: `visit_id`, `match_state='matched'`. В'їзд: рейс `draft|planned` → `action_arrive(ts, gate, event)` (під
+   `sudo`); `arrived|queued` — без зміни стану, `note` «Повторне розпізнавання»; якщо `kpp_alert=False` →
+   `gate._f3d_yard_auto_open(visit, event)` (R-15 п. 10). Виїзд: `visit.gate_out_id = gate`; якщо `kpp_alert=False`
+   → `gate._f3d_yard_auto_open(visit, event)` (R-15 п. 11).
+
+Приклади: (а) рейс `YV/2026/00007` (`planned`, `DOCK-W2` 13:00–14:00, пакет документа `WH/IN/00131`, номер
+порожній); подія CAM-05 12:40 `plateText="AA7310KT"`, `plateUnicode="АА7310КТ"`, `plateConfidence="0.912340"`,
+`plateListDescription="WH/IN/00131 DOCK-W2 Плитсервіс (демо)"` → за номером 0 → за описом 1 → `matched`, номер
+рейсу ← `АА7310КТ`, рейс `arrived` (`arrived_at` 12:40). (б) Та сама подія без опису → `unmatched`, `kpp_alert`.
+(в) Номер `АА4512КТ` на CAM-06 (`out`) при рейсі `YV/2026/00004` у стані `handling` з `plate='АА4512КТ'` → `matched`
+(виїзд), `gate_out_id = GATE-E`. (г) `plateConfidence="0.62"` → `low_confidence`, рейс не змінюється.
+
+### R-09 Автостарт і кінець операції зі складу
+
+1. `stock.move.line` з `quantity > 0` (create/write, без `f3d_yard_no_auto`) → для `picking_id.batch_id.f3d_visit_id`
+   у стані `queued`/`at_dock` → `action_start_handling(auto=True)` (під `sudo`; з `queued` також `at_dock_at = now`).
+2. `stock.picking._action_done` → для кожного пакета проведених документів: усі документи пакета в `done`/`cancel`
+   → рейс у стані `handling` (або `at_dock` — спершу п. 1) отримує `handling_end_at = now` (якщо порожній),
+   чаттер «Документи проведено»; далі як `action_end_handling(auto=True)`.
+
+Приклад: комірник вносить 12 аркушів у рядок `WH/IN/00131` → `YV/2026/00007` `at_dock → handling`; проведення
+`WH/IN/00131` → `handling_end_at`; стан лишається `handling` до зважування на виїзді.
+
+### R-10 Придатність показання ваг
+
+Показання придатне для захоплення, якщо `q == 'good'`, `value is not None`, `ts ≥ now − P.weigh_max_age_s`
+(повтори з буфера колектора — лише оновлюють `last_*`, якщо новіші), `min_kg ≤ value ≤ max_kg`. `value < min_kg`
+— «порожні ваги». `value > max_kg` або `q='bad'` — ігнорується (капча `capture_state` не змінюється). Ваги
+`offline`, якщо сигнал ваги `stale`/`unknown` або `last_ts < now − 3 × weigh_max_age_s` (оновлює крон R-16 п. 6);
+тоді автозахоплення не працює, «Зважити» відкриває ручне введення (FR-28).
+Приклади: 25 200 кг, стабільно, 3 с тому → придатне; те саме 20 с тому → ні; 350 кг → порожньо; 61 000 → ігнор.
+
+### R-11 Автозахоплення й призначення зважування
+
+Працює, якщо `P.scale_auto_capture`, `scale.auto_capture` і `P.read_enabled`.
+1. Показання групуються за `ts`: вага `w` і стабільність `s` (немає `s` у групі → `last_stable`); група без `w` —
+   пропуск. `last_weight_kg/last_stable/last_ts` оновлюються, якщо `ts > last_ts`.
+2. Непридатне (R-10) і `w < min_kg` → `capture_state='idle'`, кандидат очищено.
+3. `idle`/`settling`: `s` і є кандидат і `|w − candidate_kg| ≤ 2 × division_kg` → **захоплення**:
+   `weight = floor(mean(candidate_kg, w) / division_kg + 0.5) × division_kg`, `capture_state='captured'`,
+   `captured_kg = weight`; `s` без кандидата або з більшою різницею → `candidate_kg = w`, `candidate_ts = ts`,
+   `settling`; не `s` → кандидат очищено, `settling`.
+4. `captured`: нові захоплення не створюються, доки `w ≥ min_kg` (та сама фура на вагах).
+5. Призначення в момент захоплення `ts`: `A_in` = рейси `weighing_policy='in_out'`, `state='queued'`, без
+   `assigned` зважування `in`, `admitted_at ≥ ts − 2 год`; `A_out_ready` = `in_out`, `state='handling'`,
+   `handling_end_at` заповнено, є `in`, немає `out`; `A_out_any` = `in_out`, стан `at_dock`/`handling`, є `in`, немає
+   `out`. `|A_in ∪ A_out_ready| == 1` → цей рейс (`kind='in'`, якщо з `A_in`, інакше `out`); `== 0` і `|A_out_any| == 1`
+   → `out`; інакше — **непризначене** зважування (`state='unassigned'`, `kind='check'`, `note` «Кандидатів: N»,
+   картка КПП червона). Охоронець призначає (`action_assign(visit, kind)`; `kind` за замовчуванням `in`, якщо
+   рейс без `in`, інакше `out`).
+
+Приклад (S-06, R-30 iot_sim: брутто 25 200 ± 20): кадри 12:44:00 `8 400 D`, :01 `17 600 D`, :02 `25 200 D`,
+:03 `25 200 S` (кандидат), :04 `25 180 S` → `|−20| ≤ 40` → зважування `floor(25 190 / 20 + 0.5) × 20 = 25 200`;
+єдиний кандидат `YV/2026/00007` (`queued`, пропущено 12:42) → `kind='in'`, роль `gross`, `weighed_in_at = 12:44:04`.
+Далі `25 200 S` — без нових записів; `300 S` → `idle`.
+
+### R-12 Нетто і звірка (FR-12)
+
+1. Роль зважування: `incoming`/`other`: `in` → `gross`, `out` → `tare`; `outgoing`: `in` → `tare`, `out` →
+   `gross`; `check` → `check`.
+2. Маса документа: Σ по рухах `state != 'cancel'`: `qty × weight_kg`, де `qty` = `move.product_uom._compute_quantity(
+   move.quantity, product.uom_id)` для проведеного документа, інакше `move.product_qty`; `weight_kg =
+   weight_uom._compute_quantity(product.weight, uom.product_uom_kgm)` (`weight_uom` =
+   `product.template._get_weight_uom_id_from_ir_config_parameter()`). Еталон є, якщо рухи є і в усіх `product.weight > 0`.
+   Рейс: Σ по документах пакета `state != 'cancel'`; еталон — якщо він є в кожному.
+3. Ваги рейсу: останнє `assigned` зважування `in` і `out` (за `ts`); `gross`, `tare` за ролями; `net = |gross − tare|`,
+   якщо є обидва, інакше `0`; `incoming` з `gross < tare` → чаттер «Брутто менше тари (%s < %s кг)».
+4. Звірка: немає обох зважувань → `none`; немає еталона або маса 0 → `no_reference`; `tol = max(expected ×
+   P.net_tolerance_pct / 100, P.net_tolerance_kg)`; `dev = net − expected`; `|dev| ≤ tol` → `ok`, інакше
+   `deviation`; `deviation_pct = round(dev / expected × 100, 2)` (expected > 0, інакше 0).
+5. Документи (`_f3d_yard_write_pickings`, `sudo`): документи пакета `state != 'cancel'` за `name`; один → уся `net`;
+   кілька → частки `expected_i / Σ expected` (Σ = 0 → порівну); на документі: `f3d_net_weight_kg`, `f3d_weight_check`
+   (п. 4 для частки й маси документа), `f3d_weight_deviation_pct`; для `outgoing` також `shipping_weight` (у
+   одиниці ваги компанії). `deviation` → активність `mail.mail_activity_data_warning` на документі для `user_id`
+   документа або пакета (немає обох — без активності), `summary` «Відхилення нетто», `note` «Нетто %s кг, за
+   документом %s кг, відхилення %+.0f кг (%+.2f %%) при допуску %s кг.»; повторно не створюється, поки відкрита.
+   Документ не блокується.
+
+Приклади (`WH/IN/00128`, маса 11 200 кг, `tol = max(224, 100) = 224`): брутто 25 200, тара 14 000 → нетто 11 200,
+`ok`, 0,00 %; брутто 25 520 → нетто 11 520, `+320 > 224` → `deviation`, +2,86 %; брутто 25 300 → +100 → `ok`
+(+0,89 %). `WH/IN/00129` (6 600 кг, `tol = max(132, 100) = 132`): нетто 6 700 → `ok`; 6 750 → `deviation` (+2,27 %).
+`WH/IN/00130` (фурнітура, вага 0) → `no_reference`. `TRUCK-OUT-1`: `in` 14 000 (тара), `out` 21 380 (брутто) → нетто
+7 380, `no_reference`, `WH/OUT/00413.shipping_weight = 7 380`.
+
+### R-13 Розбір SICS і одиниці — §8.5 (плагін)
+
+### R-14 Режими опитування SICS, таймаути, перепідключення — §8.3, §8.6 (плагін)
+
+### R-15 Команди шлагбаума (FR-09)
+
+`gate.action_command(kind, visit=None, reason='manual')`, перевірки строго в цьому порядку (перша невдала —
+`UserError`/`AccessError`, нічого не створюється):
+1. `kind ∈ {open, close, hold, release}` інакше `ValueError`.
+2. `reason='manual'` → `_f3d_yard_require(GRP_SEC)`; `reason ∈ {auto_booking, auto_exit, auto_hold_max}` → лише
+   при `env.su` (внутрішні виклики), інакше `AccessError("Автоматичні команди створює лише система.")`.
+3. `P.write_enabled` → інакше `UserError("Команди на шлагбаум вимкнено (factory3d.yard.write_enabled). Відкрийте
+   шлагбаум з пульта CAME і натисніть «Відкрито вручну».")`.
+4. Сигнал команди (`release` → `cmd_hold_signal_id`): є, `active`, `write_enabled`, `source_id.write_enabled` →
+   інакше `UserError("Сигнал команди «%s» для %s не налаштований або запис на сигналі/джерелі вимкнено.")`.
+5. Для `open`/`close`: сигнал фотоелемента є, `status ∉ (stale, unknown)`, `last_ts ≥ now − P.signal_max_age_s` →
+   інакше `UserError("Немає свіжих даних фотоелемента %s (останні: %s).")`; перекритий (`(last_value ≥ 0.5) xor
+   invert_di`) → `UserError("Під стрілою перешкода (фотоелемент %s) — команда заборонена.")`.
+6. Немає команди воріт у `queued`/`sent` з `requested_at > now − P.cmd_cooldown_s` → інакше `UserError("Попередня
+   команда «%s» ще виконується (з %s).")`.
+7. `reason` авто і `gate.state == 'error'` → `UserError("Ворота %s у стані помилки — авто-відкриття вимкнено.")`.
+8. Створення `f3d.command` (API-04) під `sudo()`; виняток telemetry (R-18 telemetry) пробрасується як є.
+9. Наслідки: `open` → `open_cmd_id = cmd`, `_f3d_yard_count_permit(visit)`; `hold` → `hold_until = now +
+   P.hold_max_min`; `release` → `hold_until = False`; усі → `last_command_id`, чаттер воріт і рейсу «Команда «%s»
+   %s (#%s) · %s», R-21.
+10. **Авто на в'їзді** (`_f3d_yard_auto_open`, ворота `in`/`both`, подія `in`): умови — `gate.mode == 'auto'`,
+    `P.write_enabled`, рейс щойно `arrived`, не `is_walk_in`, `booking_id.state == 'confirmed'`, `ts ∈ [planned_start −
+    P.early_min, planned_start + P.late_min]`; успіх → `action_command('open', visit, 'auto_booking')` і
+    `visit._set_state('queued', note="пропущено автоматично")`. Невиконана умова → команди немає; `event.note` з
+    причиною («Ворота в ручному режимі», «Команди вимкнено», «Поза вікном слоту 12:00–15:00», «Без броні»);
+    `kpp_alert=True` лише для «поза вікном» і «без броні» (решта — звичайна робота охорони кнопкою «Пропустити»);
+    `UserError` з п. 3–7 → `event.note` = текст, `kpp_alert=True`.
+11. **Авто на виїзді** (ворота `out`/`both`, подія `out`): `gate.mode == 'auto'`, `P.write_enabled`, рейс `weighed`
+    або (`weighing_policy == 'none'`, стан `at_dock`/`handling`, усі документи `done`/`cancel`) → `action_command('open',
+    visit, 'auto_exit')`; виїзд фіксує R-17.
+
+Приклад: бронювання 13:00, `early_min=60`, `late_min=120` → вікно 12:00–15:00; прибуття 12:40 → команда `open`
+на `yard/gates/GATE-W/cmd_open` (`value=1.0`, `expires_at = +30 с`), рейс `queued`; прибуття 11:50 → без команди,
+`note` «Поза вікном слоту 12:00–15:00», `kpp_alert=True`; фотоелемент 1 → `UserError` п. 5 (для ручної команди) /
+`note` з тим самим текстом (для авто).
+
+### R-16 Стан воріт, таймаути, утримання (`_f3d_yard_refresh_state`)
+
+Виклики: після обробки показань воріт (M-13), після зміни команди (M-18), крон щохвилини, дії M-03.
+1. Контроль команди «відкрити» (`open_cmd_id`): `failed`/`expired` → `last_error = "Команду «Відкрити» не виконано:
+   %s"` (`error` або підпис стану), `open_cmd_id = False`; `done`: DI «відкрито» спостерігалось з `done_at − 1 с`
+   (`opened_at ≥ done_at − 1 с` або зараз відкрито) → `open_cmd_id = False`; інакше `now − done_at > P.open_timeout_s`
+   → `last_error = "Немає підтвердження відкриття за %s с"`, `open_cmd_id = False`; `queued`/`sent` — чекати
+   (telemetry прострочить через `cmd_expire_s`).
+2. Утримання: `hold_until` і `now > hold_until` → якщо `P.write_enabled` — `action_command('release',
+   reason='auto_hold_max')` під `sudo` (`UserError` → чаттер), `hold_until = False`, чаттер «Утримання знято за
+   часом (%s хв)».
+3. Стан: є `last_error` → `error`; інакше немає `P.read_enabled` або сигнал стану відсутній/`stale`/`unknown`/
+   `last_ts < now − max(P.signal_max_age_s, 3 × period_s)` → `unknown`; інакше `open = (last_value ≥ 0.5) xor
+   invert_di`; `held = open and (hold_until > now or свіжий cmd_hold ≥ 0.5)`; стан `held` / `open` / `closed`.
+4. Зміна стану → `state_since = now`; перехід у `open` → `opened_at` = `ts` показання (з M-13) або `now`; R-21.
+5. Нова помилка → чаттер, активність `mail.mail_activity_data_warning` для `responsible_id` (одна відкрита), червона
+   плитка КПП. «Скинути помилку» / «Відкрито вручну» очищують.
+6. Ваги (у тому ж кроні): сигнал ваги `stale`/`unknown` або `last_ts < now − 3 × weigh_max_age_s` →
+   `capture_state='offline'`; свіже показання повертає `idle`.
+
+Приклад: команда #17 `done` о 10:00:02, DI0 = 1 о 10:00:06 → `open`, помилки немає; DI0 лишається 0 до 10:00:13 →
+`error` «Немає підтвердження відкриття за 10 с». ADAM вимкнено → сигнали `stale` (telemetry R-07) → ворота
+`unknown`, кнопки команд КПП неактивні з поясненням.
+
+### R-17 Антипрохід і виявлення виїзду (`_f3d_yard_on_readings`)
+
+Для показань воріт за зростанням `ts`:
+1. `loop`: `occ = (v ≥ 0.5) xor invert_di`; перехід `True → False` (машина проїхала) при `pending_visit_id`: ворота
+   `out`/`both` і рейс у стані `queued`/`at_dock`/`handling`/`weighed` → `visit.action_leave(ts, note="виїзд за
+   петлею %s")` (sudo); `pending_visit_id = False` для будь-якого напрямку; `loop_occupied = occ`.
+2. `photocell`: `photocell_blocked = (v ≥ 0.5) xor invert_di`.
+3. `passes`: `v = int(value)`; `v < passes_day_start` → `passes_day_start = 0` (лічильник ADAM скинуто);
+   `prev = passes_today`; `passes_today = v − passes_day_start`; `counter_value = v`; якщо `P.antipassback`,
+   `passes_today > admitted_today` і `passes_today > prev` → `tailgate_today += passes_today − max(prev,
+   admitted_today)`, `last_tailgate_at = ts`, чаттер «Проїзд без дозволу: проїздів %s, дозволів %s», червоний банер
+   КПП, R-21.
+4. `state`: перехід 0 → 1 запам'ятовує `opened_at = ts`.
+5. Після циклу — `_f3d_yard_refresh_state()`.
+
+Дозвіл (`admitted_today += 1`) дають: команда `open` (будь-яка причина), «Пропустити» без команди (команди вимкнені),
+«Відкрито вручну». Приклад: після добового скидання `passes_day_start = 7`, `admitted_today = 0`; «Пропустити» (1
+дозвіл), лічильник 8 → проїздів 1 ≤ 1 — норма; лічильник 9 без нового дозволу → 2 > 1 → `tailgate_today = 1`.
+Стенд з `SIM_YARD_AUTOGATE=1` (емулятор відкриває сам) дає хибні проїзди без дозволу — там `antipassback=False`.
+
+### R-18 Екран КПП: дані, кольори, дії (API-01, API-02, V-33)
+
+1. Колір картки рейсу: `green` — `arrived` з підтвердженим бронюванням у вікні R-15 п. 10 або рейс у дворі без
+   проблем; `yellow` — `is_walk_in`, поза вікном, `arrived` без броні; `red` — `weight_check == 'deviation'` або
+   незакрита помилка воріт рейсу; `blue` — `at_dock`/`handling`. Події: `yellow` — `kpp_alert`; `grey` — `handled`,
+   `expired`, `ignored`; `green` — `matched`; `red` — `unknown_camera`.
+2. Дії картки: `arrived` → `admit`, `reject`; `queued` → `call`, `weigh`, `leave`; `at_dock`/`handling` → `weigh`,
+   `leave`; `weighed` → `leave`; подія `unmatched`/`low_confidence` (`in`) → `walk_in`, `reject`, `link`, `dismiss`;
+   (`out`) → `link`, `dismiss`; ворота → `open`, `close`, `hold`, `release` (лише `can.command` і без
+   `command_block`), `opened_manually`; непризначене зважування → `assign_weighing`.
+3. `can.walk_in` = `P.walk_in_allowed` і `walk_in_left > 0`, або користувач — диспетчер; `can.command` =
+   `P.write_enabled`; `gates[].command_block` = текст першої невдалої перевірки R-15 п. 3–6 для `open` або `null`.
+4. Клієнт `F3dYardKpp` (OWL, `registry.category("actions").add("f3d_yard.kpp", F3dYardKpp)`): `setup()` —
+   `useService("orm")`, `"action"`, `"notification"`, `"bus_service"`; `useState({data: null, busy: false})`;
+   `onWillStart` → `load()`; `onMounted` → `setInterval(load, data.refresh_s × 1000)`,
+   `bus_service.addChannel("f3d_yard")`, `subscribe("f3d_yard/update", debounce(load, 2000))`; `onWillUnmount` —
+   очищення. `load()` → API-01 (помилка → сповіщення `danger`, попередні дані лишаються). `act(action, args)` →
+   API-02; `res.action` → `action.doAction(res.action, {onClose: load})`; інакше сповіщення `res.message` і `load()`.
+   Розмітка: верхня смуга — час, плитки воріт (стан кольором, останній номер, «проїздів/дозволів», кнопки команд
+   `disabled` з `title = command_block`), плитка ваг (вага великими цифрами, «стабільно/динамічно/немає даних»,
+   «сьогодні N»); три колонки «На КПП» (`at_gate` + події з `kpp_alert`), «У дворі» (`in_yard`, на картці — поле ваги
+   і «Записати» для ручного зважування), «Події LPR» (`events` з мініатюрою `image_url`). Кнопки ≥ 56 px заввишки;
+   усі підписи українською.
+
+### R-19 Тривалості, «не приїхала», звіти
+
+1. `wait_min = at_dock_at − arrived_at`; `dock_min = end − at_dock_at`, `end = handling_end_at or weighed_out_at or
+   left_at`; `total_min = left_at − arrived_at`; `late_min = arrived_at − planned_start` (зі знаком: від'ємне —
+   раніше). Хвилини, 1 знак; бракує мітки → `False` (NULL, не входить у середнє pivot).
+2. «Не приїхала»: крон — `planned`, `planned_start < now − P.no_show_min`, `is_no_show=False` → `True` + чаттер.
+3. Pivot V-05 — середні (`group_operator="avg"`) тривалостей і сума `net_kg` за перевізником/партнером/воротами/днем.
+4. SQL-вид M-15:
+
+```sql
+CREATE OR REPLACE VIEW f3d_yard_dock_report AS (
+  WITH p AS (
+    SELECT COALESCE((SELECT NULLIF(value, '')::numeric FROM ir_config_parameter
+                     WHERE key = 'factory3d.yard.dock_shift_min'), 480) AS shift_min),
+  v AS (
+    SELECT v.dock_id, v.company_id,
+           (v.at_dock_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Kyiv')::date AS day,
+           EXTRACT(EPOCH FROM (COALESCE(v.handling_end_at, v.weighed_out_at, v.left_at) - v.at_dock_at)) / 60.0 AS busy
+    FROM f3d_yard_visit v
+    WHERE v.dock_id IS NOT NULL AND v.at_dock_at IS NOT NULL
+      AND COALESCE(v.handling_end_at, v.weighed_out_at, v.left_at) IS NOT NULL)
+  SELECT row_number() OVER (ORDER BY v.day, v.dock_id) AS id, v.day, v.dock_id, l.f3d_side AS side, v.company_id,
+         count(*) AS visit_count, round(sum(v.busy)::numeric, 1) AS busy_min,
+         round(GREATEST(p.shift_min - sum(v.busy), 0)::numeric, 1) AS idle_min,
+         round((sum(v.busy) / NULLIF(p.shift_min, 0) * 100)::numeric, 1) AS occupancy_pct,
+         round((sum(v.busy) / count(*))::numeric, 1) AS avg_dock_min
+  FROM v JOIN stock_location l ON l.id = v.dock_id CROSS JOIN p
+  GROUP BY v.day, v.dock_id, l.f3d_side, v.company_id, p.shift_min)
+```
+
+Приклад: `YV/2026/00001` прибула 09:10, `at_dock` 09:30, кінець операції 10:50, зважена 11:00, виїхала 11:05 →
+`wait_min = 20`, `dock_min = 80`, `total_min = 115`, `late_min = −20`; звіт `DOCK-W1` 12.10: `busy_min = 80`,
+`idle_min = 400`, `occupancy_pct = 16.7`, `visit_count = 1`.
+
+### R-20 Провайдер переглядача (FR-23, CY-06, A-13, A-16)
+
+`_f3d_viewer_collect(payload, ctx)` (схема — Додаток C, координати — Додаток B):
+1. `gates`: активні ворота → `{code: {name, state, mode, error, passes_today, admitted_today, tailgate_today,
+   last_plate, last_plate_at, x, y}}`; `last_plate`/`last_plate_at` — лише якщо `ctx.user` у `GRP_SEC` і не
+   `ctx.kiosk` (інакше ключі зі значенням `null`); читання полів з `groups` — тільки за цієї умови.
+2. `scale`: `{code: {weight_kg, stable, state, today, last: {plate, weight_kg, kind, picking, ts}, x, y}}`.
+3. `trucks`: рейси в станах `arrived`, `queued`, `at_dock`, `handling`, `weighed` (компанії користувача) з полями
+   Додатка C; позиція — Додаток B; `zone = env['f3d.zone'].zone_at(x, y).f3d_code or null`; `plate = null` при
+   `ctx.kiosk`.
+4. `queue = {"west": [...], "east": [...]}` (назви рейсів `queued` за R-05 п. 3); `kpp = {"west": [...], "east":
+   [...]}` (рейси `arrived` за `arrived_at`).
+5. `stats`: `planned_today`, `arrived_today`, `on_site`, `at_dock`, `left_today`, `walk_in_today`, `unmatched`
+   (`kpp_alert=True`, лише для `GRP_SEC`, інакше `null`), `avg_wait_min` (середнє `wait_min` рейсів з `at_dock_at`
+   сьогодні або `null`), `weighings_today`; `updated` = `ctx.now_local`.
+6. `infra.cards` (A-16): якщо `payload.get("infra", {}).get("cards")` — `dict`: для `GATE-W`/`GATE-E` (ключ є)
+   `rows = [["Стан", <підпис стану з малої>], ["Сьогодні проїздів", str(passes_today)], ["Режим", "авто"|"ручний"]]`
+   + `["Останній номер", "АА 4512 КТ · 09:10"]` (умова п. 1); для `TRUCK-SCALE` — `[["Остання машина",
+   "<номер або —> · брутто <вага> кг · <документ>"], ["Сьогодні зважувань", str(today)], ["Зараз", "<вага> кг ·
+   стабільно|динамічно|немає даних"]]`. Числа — цілі з пробілом-розділювачем тисяч (`21 380`). Картка макета
+   `infra.py:368` після міграції: «АА 4512 КТ · брутто 21 380 кг · WH/OUT/00413», «Сьогодні зважувань» — за фактом.
+7. `_f3d_viewer_delta(patch, ctx)`: якщо `ctx["changes"]` містить `f3d.yard.visit`/`f3d.yard.gate`/`f3d.yard.scale` →
+   `patch["yard"]` = повний розділ; `patch["infra"] = {"cards": {code: {"rows": ...}}}` для трьох карток (без
+   статичних полів); інакше нічого.
+8. Помилка всередині провайдера — обробляє viewer R-01 (розділ `error`); провайдер не перехоплює винятки сам.
+
+Приклад (копія демо після міграції): `trucks` — 6 записів у стані `handling` з координатами макета
+(`plant/site.py:1425–1430`): `TRUCK-IN-1` (−7.3, 5.0, 0) `Z-YARD-W` `DOCK-W1` `WH/IN/00128` `progress=0.6`;
+`TRUCK-IN-2` (−7.3, 25.0, 0) `DOCK-W3` 0.2; `TRUCK-IN-3` (−7.3, 35.0, 0) `DOCK-W4` 0.31; `TRUCK-OUT-1`
+(157.3, 15.0, 180) `Z-YARD-E` `DOCK-E2` 0.7; `TRUCK-OUT-2` (157.3, 45.0, 180) `DOCK-E5` 0.28; `TRUCK-OUT-3`
+(157.3, 65.0, 180) `DOCK-E7` 0.08.
+
+### R-21 Сповіщення (шина viewer і `f3d_yard`)
+
+1. Рейс (`_f3d_yard_notify`): після `create`, `_set_state`, зміни `plate`/`batch_id`/`priority`, підтвердження/
+   скасування/перенесення бронювання, застосування зважування → `env['f3d.viewer.event'].sudo()._notify(
+   'f3d.yard.visit', [name, scene_code, dock_code], 'doc')` (лише якщо `'f3d.viewer.event' in env`; порожні коди
+   відкидає viewer M-03).
+2. Ворота: зміна `state`, `passes_today`, `admitted_today`, `tailgate_today`, `last_plate`, `last_error` →
+   `_notify('f3d.yard.gate', [f3d_code], 'state')`.
+3. Ваги: зміна `capture_state` або нове зважування → `_notify('f3d.yard.scale', [f3d_code], 'state')`; поточна вага
+   без зміни `capture_state` шину не будить (КПП опитує кожні 10 с).
+4. Канал `f3d_yard` (API-05): моделі й id збираються в `env.cr.precommit.data['f3d_yard.bus']` і відправляються одним
+   `_sendone` на модель у `precommit` (як viewer M-03) — пакет показань не породжує сотні повідомлень.
+
+### R-22 Ротація й персональні дані (крон `cron_f3d_yard_gc`, FR-24)
+
+1. Події LPR з `received_at < now − P.lpr_keep_days`: спершу `ir.attachment` (`res_model='f3d.yard.lpr.event'`,
+   `res_id in ids`), потім події; батчі по 1 000.
+2. Рейси з `COALESCE(left_at, rejected_at, cancelled_at) < now − P.visit_pii_keep_days`, `pii_cleared=False` →
+   `driver_phone=False`, `driver_doc=False`, `pii_cleared=True`; `plate`, `driver_id` лишаються (операційні дані,
+   ARCH §2.6).
+3. Непризначені зважування з `ts < now − P.weighing_unassigned_keep_days` → `unlink`.
+4. Звіт у лог INFO: `{"lpr_deleted": n, "images_deleted": n, "pii_cleared": n, "weighings_deleted": n}`.
+
+Приклад (запуск 14.10.2026 03:00): подія від 10.09.2026 (34 доби) видаляється зі знімком; рейс, що виїхав
+10.07.2026 (96 діб), — PII очищено; рейс від 20.07.2026 (86 діб) — ні.
+
+### R-23 Добове скидання лічильників (крон `cron_f3d_yard_day_reset`, 00:05 Київ)
+
+Для кожних воріт: `passes_day_start = counter_value`, `passes_today = 0`, `admitted_today = 0`, `tailgate_today = 0`;
+R-21. Якщо пристрій сам обнуляє лічильник опівночі (iot_sim: сигнал «passes_today»), R-17 п. 3 обробляє `v <
+passes_day_start`.
+
+### R-24 Міграція з демо-бази — §5.4 (кроки 0–8, правило «рейс із пакета», очікувані кількості)
