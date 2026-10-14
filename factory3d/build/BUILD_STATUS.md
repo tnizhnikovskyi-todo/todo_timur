@@ -13,8 +13,8 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 
 | # | Модуль | Фаза | Зависит от (factory3d) | Статус | Сессия | Старт | Готов | Тесты | DEC |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `factory3d_base` | 1 | — | IN_PROGRESS | session_01QHzZ3cNyHZ2W6eBd43JJwn | 2026-10-14 22:04 UTC | | | |
-| 2 | `factory3d_iot_sim` | 1 | base | TODO | | | | | |
+| 1 | `factory3d_base` | 1 | — | DONE | session_01QHzZ3cNyHZ2W6eBd43JJwn | 2026-10-14 22:04 UTC | 2026-10-14 23:17 UTC | 150/150 | 15 |
+| 2 | `factory3d_iot_sim` | 1 | base | IN_PROGRESS | session_019MFyhB78Wd7hgrNLzgRGkP | 2026-10-14 23:18 UTC | | | |
 | 3 | `factory3d_telemetry` | 2 | base | TODO | | | | | |
 | 4 | `factory3d_viewer` | 1 | base | TODO | | | | | |
 | 5 | `factory3d_access` | 4 | base | TODO | | | | | |
@@ -56,3 +56,5 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-14 менеджер: шаг 0.2–0.3 — скрипты Odoo 19 в `claude/factory3d-build` (`49decab`), смоук зелёный; нет mrp_maintenance, mrp_workorder, web_gantt.
 - 2026-10-14 менеджер: решение ENV-1..4 (`f0fbe9f`) — ядро на CE, Enterprise-часть в мосты auto_install; вместо BLOCKED-ENV для base/energy/machine_connect/yard.
 - 2026-10-14 22:04 UTC factory3d_base: запущена сессия session_01QHzZ3cNyHZ2W6eBd43JJwn (1/2 за 24 ч).
+- 2026-10-14 23:17 UTC factory3d_base: DONE — смержен в `claude/factory3d-build` (`298871a`), тесты 150/150, DEC 15. Не проверено: ТК-01…05 (нужна копия базы `odoo`), мост `factory3d_base_mrp_maintenance` (нет Enterprise, ENV-1).
+- 2026-10-14 23:18 UTC factory3d_iot_sim: запущена сессия session_019MFyhB78Wd7hgrNLzgRGkP (2/2 за 24 ч; следующий слот — 2026-10-15 22:04 UTC).
