@@ -11,14 +11,17 @@ API-03, Додаток A.4/A.5/A.10/A.14; `factory3d_iot_sim` §7.2 API-13 (ті
 (P-04, API-30…34), §9.1 R-14…R-18, §9.3 S-01, S-02, Додаток A (рядки 97, 98, 197–334).
 
 Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md` v0.3: X-03 (команди — `f3d.command.payload` telemetry 19.0.1.1.0,
-CR-01: схеми CMD-01…03 і результати `call()` — R-21, `create_command` — M-20, §7.2, плагіни §8.3–§8.4, R-15…R-24;
-текстова граматика R-21 лишається запасною; AC-53, 54, 57, 58, 62, 63, 65, 74, 77…79, 101, нові AC-102, AC-103),
+CR-01: схеми CMD-01…03 і результати `call()` — R-21, створення команд — M-20, §7.2, плагіни §8.3–§8.4, R-15…R-24;
+текстова граматика R-21 лишається запасною; AC-50, 53, 54, 57, 58, 62, 63, 65, 74, 77…79, 101, нові AC-102, AC-103;
+ТК-04, ТК-06, ТК-07, ТК-10; фікстура `cmd_done`),
 X-16 (сигнали модуля — `origin='module'`, Додаток C.2, AC-83), X-18 (код команд оптимізатора `equipment/CUTOPT/cmd`
 замість `mc/cutopt/cmd`), X-27 (`mc_state` — `viewer_visible=False`, AC-83), X-32 (пункт «Налаштування верстатів» під
 `factory3d_base.menu_f3d_config`, sequence 40; AC-89), X-57 (ТК-02, ТК-08, ТК-12, ТК-14 — тіло запуску сценарію
 `{"params": {…}}`), X-63 (плагін `opcua` не множить на `signal.scale` — R-22 п. 3), X-76 (`equipment/CUTOPT/cmd` і
 `equipment/GANTRY-1/stacks` — у каталозі iot_sim `protocol=none`, Додаток C.2); §15 — закрито Q-09 (X-03), Q-16 (X-52),
-Q-17 (X-38), частково Q-15 (X-34, X-38, X-43).
+Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: створення команд (`_f3d_mc_create_command`,
+`_f3d_mc_payload_supported`) винесено з `tools/commands.py` у `models/f3d_command.py` (M-20) — `tools/commands.py`
+без імпортів Odoo, побайтово = `cmdtext.py` (§0, M-13, M-20, §7.2, §13.0.1 п. 9, AC-58, AC-80, AC-102, AC-103, §13.1, DoD).
 
 Позначення: UT — `odoo.tests.TransactionCase`; HT — `HttpCase`; CT — pytest пакета плагінів із фейковими серверами;
 TC — стенд (емулятор + колектор + Odoo); MAN — ручна перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -64,7 +67,7 @@ odoo_addons/factory3d_machine_connect/
 │   ├── product_template.py          M-17
 │   ├── f3d_signal.py                M-18 (_f3d_ingest, _mark_stale)
 │   ├── f3d_source.py                M-19 (selection_add f3d_machine, _f3d_local_types)
-│   ├── f3d_command.py               M-20 (реакція на done/failed)
+│   ├── f3d_command.py               M-20: _f3d_mc_create_command, _f3d_mc_payload_supported (X-93), реакція на done/failed
 │   ├── push_handler.py              M-21 f3d.push.handler.machine_connect (EV-01…EV-03)
 │   ├── viewer_provider.py           M-22 f3d.viewer.provider.machines (R-25)
 │   ├── res_config_settings.py       M-23
@@ -85,7 +88,7 @@ odoo_addons/factory3d_machine_connect/
 │   ├── states.py                    normalize(protocol, raw: dict) -> str — R-01 (чиста функція)
 │   ├── ppt.py                       ppt_intervals(env, workcenter, dt_from, dt_to) / clip / union — R-26
 │   ├── oee.py                       compute_oee(inputs: dict) -> dict — R-13 (чиста функція)
-│   ├── commands.py                  build_payload / check_payload / cmd_label / result_text / build_cmd / parse_cmd — R-21 (payload CR-01 і запасна текстова граматика; чисті функції; той самий модуль копіюється в пакет плагінів); create_command(env, …), payload_supported(env) — M-20
+│   ├── commands.py                  build_payload / check_payload / cmd_label / result_text / build_cmd / parse_cmd — R-21 (payload CR-01 і запасна текстова граматика; чисті функції без `env` і без імпортів Odoo; той самий модуль копіюється в пакет плагінів, AC-80)
 │   ├── cutcsv.py                    build_parts_csv(lines) -> str / parse_plan(json) -> dict — R-19, R-20, Додаток D
 │   ├── payload.py                   build_machines(env, ctx) -> dict — фрагмент payload переглядача (M-22, R-25)
 │   └── gen_mc_data.py               генератор data/mc_machines.csv і data/mc_signals.csv з Додатка A iot_sim (Odoo його не вантажить)
@@ -251,7 +254,7 @@ services/collector_plugins/machine_connect/
 інше (через нього `factory3d_base`, `maintenance`, `mail`, `mrp`, `stock`, `hr`).
 Модуль розрахований на `factory3d_telemetry` 19.0.1.1.0 (CR-01, X-03: `f3d.command.payload`/`result_data`, API-06
 `payload`, API-07 `data`, `SourcePlugin.call`); з telemetry без поля `payload` команди йдуть запасною текстовою
-граматикою R-21 (M-20 `payload_supported`). Власна версія модуля — `19.0.1.0.0` (перший випуск).
+граматикою R-21 (M-20 `_f3d_mc_payload_supported`). Власна версія модуля — `19.0.1.0.0` (перший випуск).
 
 ## 2. Моделі
 
@@ -838,8 +841,8 @@ backorder — рішення МО при закритті); чатер МО «З
 `action_f3d_send_to_machine(self)` (FR-27, CMD-01 `Store`; права `mrp.group_mrp_user`): `ensure_one()`; немає
 `f3d_can_send` → `UserError("Робочий центр %s не приймає завдань з Odoo (немає OPC UA JobManagement).")`; стан ∉
 {`ready`, `blocked`} → `UserError("Завдання %s уже в роботі або завершене.")`; команда CMD-01 `Store`:
-`create_command(env, machine.sig_job_cmd_id, "Store", {"job": f"WO{id:05d}", "qty": max(1, ceil(qty_remaining)),
-"ref": production_id.name, "priority": 5}, {"f3d_machine_id": machine.id})` (payload R-21, X-03; поле не за R-21 →
+`env["f3d.command"]._f3d_mc_create_command(machine.sig_job_cmd_id, "Store", {"job": f"WO{id:05d}", "qty": max(1,
+ceil(qty_remaining)), "ref": production_id.name, "priority": 5}, {"f3d_machine_id": machine.id})` (payload R-21, X-03; поле не за R-21 →
 `UserError` з M-20; п'ять запобіжників, M-20); чатер МО «Завдання <назва> поставлено в чергу верстата <код>: <`text`
 команди>». Старт — з пульта верстата, далі R-09.
 Стандартні `button_start`, `button_finish`, `button_pending` **не перевизначаються**.
@@ -937,17 +940,19 @@ class F3dSource(models.Model):
 порожнє) — з рядка `result` (колонка «Запасний `result`» R-21). Те саме виконують крони R-16/R-20
 для команд, стан яких змінено не через ORM (A-14).
 
-Створення команд модулем — лише через `tools.commands.create_command(env, signal, op, fields: dict, links: dict | None
-= None) -> f3d.command`:
+Створення команд модулем — лише методом цього розширення (X-93: не в `tools/commands.py`, бо той модуль копіюється в
+пакет колектора й не імпортує Odoo) `@api.model _f3d_mc_create_command(self, signal, op, fields: dict, links: dict | None
+= None) -> f3d.command` (виклик — `env["f3d.command"]._f3d_mc_create_command(...)`; чисті функції R-21 — з
+`..tools.commands`):
 1. `param_bool("write_enabled")` — інакше `UserError("Запис на пристрої вимкнено: factory3d.machine_connect.write_enabled.")`.
 2. Вид команди — з адреси сигналу: `address.call == "job"` → `job`; `address.cmd` ∈ {`gantry`, `cutopt`} → той самий;
    інакше `UserError("Сигнал %s не є сигналом команд верстатів.")`.
 3. `payload = build_payload(kind, op, **fields)` (R-21); `ValueError` → `UserError("Команда «%s» не відповідає формату: %s")`.
-4. `payload_supported(env)` (= `'payload' in env['f3d.command']._fields`, telemetry 19.0.1.1.0) → `vals = {'payload':
+4. `self._f3d_mc_payload_supported()` (`@api.model`, = `'payload' in self._fields`, telemetry 19.0.1.1.0) → `vals = {'payload':
    payload, 'text': cmd_label(kind, payload)}` (`text` довідковий — для списку команд telemetry V-17 і чатера; плагін
    для команди з `payload` його не читає, telemetry M-06); інакше — запасний режим: `vals = {'text': build_cmd(kind, op,
    **fields)}` (> 64 символи → той самий `UserError`, що в п. 3).
-5. `env['f3d.command'].sudo().create({'signal_id': signal.id, **vals, 'origin': 'machine_connect', 'expires_at': now +
+5. `self.sudo().create({'signal_id': signal.id, **vals, 'origin': 'machine_connect', 'expires_at': now +
    10 хв, **(links or {})})` — решту запобіжників (telemetry `write_enabled`, джерело, сигнал) перевіряє telemetry R-18
    у `create`.
 
@@ -1358,7 +1363,7 @@ UPDATE ir_cron SET active = false
 
 ### 7.2 Команди Odoo → пристрої (telemetry M-06/API-06/07, CR-01, CM-08)
 
-Створюються лише `tools.commands.create_command` (M-20). Основний канал (X-03): `f3d.command.payload` — об'єкт R-21
+Створюються лише `f3d.command._f3d_mc_create_command` (M-20, X-93). Основний канал (X-03): `f3d.command.payload` — об'єкт R-21
 (telemetry 19.0.1.1.0), колектор виконує `call(signal, payload)` плагіна, повернений об'єкт → API-07 `data` →
 `f3d.command.result_data`; `text` команди — довідковий підпис `cmd_label` (R-21). Запасний канал — текст граматики
 R-21 без `payload` (`write()` плагіна; запасний `result` — R-21). Сигнали-адресати:
@@ -2321,7 +2326,7 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-47 | FR-18 | Given стос `PLT-T1` (квант 45), завдання порталу `done=7` для МО в роботі, `ws_qty=38`; When `_f3d_refresh()`; Then `fed_unconsumed=7`, `expected=38`, `diff=0`, `state='ok'` | UT |
 | AC-48 | FR-18 | When `ws_qty=36` → `pending`, `diff_since`; через 10 хв (`freeze_time`) → `diff`, одна діяльність для користувача `stock.group_stock_manager`; Given `ws_product='DSP16-SON'`, Odoo `DSP16-WNG` → `diff` одразу | UT |
 | AC-49 | FR-22 | When подія `mc_woodstore` `status` з `gantry_status` новим (`aisles[2].gate_open=true`, `alarms=["Вакуум"]`); Then параметр `gantry_status.aisles_open=[2]`, чатер GANTRY-1 «Тривога порталу: Вакуум»; When `stacks` з 23 стосами `qty>0` → сигнал `equipment/GANTRY-1/stacks.last_value=23` | UT |
-| AC-50 | FR-18 | Given `diff=−2` (AC-48); When `user_stock_manager` «Прийняти з порталу»; Then квант = 43, стан `ok`; `user_f3d` → `AccessError`; «Виправити портал» при `write_enabled=False` → `UserError`, при п'яти запобіжниках → команда `stack;PLT-T1;38;…` | UT |
+| AC-50 | FR-18 | Given `diff=−2` (AC-48); When `user_stock_manager` «Прийняти з порталу»; Then квант = 43, стан `ok`; `user_f3d` → `AccessError`; «Виправити портал» при `write_enabled=False` → `UserError`, при п'яти запобіжниках → команда з `payload` `{"op": "stack", "stack": "PLT-T1", "qty": 38, …}` (`text` `stack;PLT-T1;38;…`, X-03) | UT |
 | AC-51 | FR-21 | Given правило `min 10`, `ws_qty=9`, `gantry_auto_replenish=True`; When `_cron_gantry`; Then `action_replenish` викликано 1 раз (повтор крону за годину — ні; є відкрите переміщення — ні); When переміщення в `PLT-T1` виконано і запис вимкнено → діяльність «Оновіть стос PLT-T1 у woodStore» | UT |
 | AC-52 | FR-19 | Given МО з рухом плити (резерв у `PLT-T1`, партія L1) і завданням на SAW-T; When `action_f3d_feed_gantry()` двічі; Then одне завдання `feed`, `stack_id=PLT-T1`, `lot_id=L1`, `sheets` = к-сть руху; МО без завдання розкрою → `UserError` | UT |
 | AC-53 | FR-19 | Given `to_send`, запобіжники ввімкнено; When `_cron_gantry`; Then `f3d.command` на `equipment/GANTRY-1/cmd` з `payload == {"op": "feed", "stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "BOARD-T", "priority": 5, "ref": "WH/MO/T0001"}` і `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"` (X-03), стан `sent`; запис вимкнено → лишається `to_send`, `error` «Запис вимкнено…» | UT |
@@ -2329,7 +2334,7 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-55 | FR-19 | When EV-02 `jobs` з невідомим `wj-00500`, `external_ref="WH/MO/T0001"`; Then нове завдання `origin='machine'` з `production_id`; EV-02 `events` 3 × `sheet_placed` (одна повторно) → `done=2`... `len(sheet_log)=2`, `done=max(done, 2)` | UT |
 | AC-56 | FR-20 | Given завдання `done=4` з `PLT-T2` (резерв руху був у `PLT-T1`); When `_f3d_consume()`; Then рядок руху `PLT-T2` 4 `picked=True`, незібраний рядок `PLT-T1` зменшено на 4, `consumed_qty=4`; повторний виклик — без змін | UT |
 | AC-57 | CM-08 | Then приклади R-21 (`build_payload`, `check_payload`, `build_cmd`, `parse_cmd`, `cmd_label`, `result_text`) — рівно наведені об'єкти, тексти й помилки; для кожного рядка таблиці R-21 `parse_cmd(k, build_cmd(k, op, **f)) == build_payload(k, op, **f)` і `result_text` дає колонку «Запасний `result`» | UT, CT |
-| AC-58 | FR-15 | Given будь-який із п'яти запобіжників вимкнено (`machine_connect.write_enabled`, `telemetry.write_enabled`, джерело, сигнал); When `create_command`; Then `UserError` з назвою запобіжника, команди немає; поле не за R-21 (`product="DSP16 ANT"`) → `UserError` «… не відповідає формату …»; сигнал без `address.call`/`address.cmd` → `UserError` «… не є сигналом команд верстатів» | UT |
+| AC-58 | FR-15 | Given будь-який із п'яти запобіжників вимкнено (`machine_connect.write_enabled`, `telemetry.write_enabled`, джерело, сигнал); When `env['f3d.command']._f3d_mc_create_command(...)` (M-20); Then `UserError` з назвою запобіжника, команди немає; поле не за R-21 (`product="DSP16 ANT"`) → `UserError` «… не відповідає формату …»; сигнал без `address.call`/`address.cmd` → `UserError` «… не є сигналом команд верстатів» | UT |
 | AC-59 | FR-23 | Then `f3d.cut.part` з `length_mm=0` або `qty=0` → помилка БД; `material_role='product'` без плити → `ValidationError`; M-26 з CSV Додатка E (3 рядки, 1 з помилкою) → `UserError` з «рядок 3: width_mm…», деталей не додано; без помилок → 3 деталі, повторний імпорт без `replace` — upsert (3) | UT |
 | AC-60 | FR-24 | Given МО ×14, деталь `P001` 2 шт/виріб 720×560 текстура 1; When `_f3d_create_for(mo, 'main')`; Then рядок `qty=28`; деталь 2100×1500 текстура 1 на листі 2800×2070 → вміщується; 2100×2100 текстура 0 → `ValidationError` «не вміщується»; без деталей → `UserError` | UT |
 | AC-61 | FR-24 | When `action_export()`; Then вкладення `КР/…_parts.csv`, перший рядок — заголовок R-19 п. 5, рядок `P001;Боковина;BOARD-T;720;560;28;1;EB-T;;EB-T;;`, CRLF, без BOM; `;` у назві → `,` | UT |
@@ -2351,7 +2356,7 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-77 | FR-28 | When `call(g_cmd, {"op": "feed", "stack": "PLT-03C", "target": "SAW-1", "sheets": 4, "product": "DSP16-ANT", "priority": 5, "ref": "WH/MO/00233"})`; Then `POST /api/v1/jobs` з тілом R-23 п. 5, результат `{"id": "wj-…", "state": "queued"}`; `"stack": null` → `"source": null`; `409` → `WriteError("CONFLICT: …")`; `{"op": "cancel", "id": "wj-1"}` → `DELETE`; `{"op": "stack", "stack": "PLT-07C", "qty": 55, "product": "DSP16-SON", "lot": null}` → `PATCH` з `"lot": null` | CT |
 | AC-78 | FR-28 | Given фейкові Odoo API-01 і оптимізатор; When `call(cut_cmd, {"op": "upload", "map": 12, "token": t})`; Then GET API-01 з Bearer колектора, `POST /jobs` multipart з `parts.csv`, подія EV-03 `job`, результат `{"job_id": "cj-1", "state": "optimizing", "eta_s": 5}`; API-01 `410` → `WriteError("export 410")`; `422` → `WriteError("422: …")` | CT |
 | AC-79 | FR-28 | When `{"op": "status", "job": "cj-1"}` (стан `planned`) → дві події (`job`, `plan`), результат `{"job_id": "cj-1", "state": "planned", "sheets": 7, "waste_pct": 11.4}`; `{"op": "release", "job": "cj-1", "machine": "SAW-1", "priority": 5}` → `{"job_id": "cj-1", "state": "released", "job_order_id": "cj-1"}`; `{"op": "mpr", "job": "cj-1", "part": "P001"}` → подія `mpr`; `404` → `{"part": "P001", "size_kb": null}` | CT |
-| AC-80 | CM-08 | Then `f3d_collector_mc/cmdtext.py` побайтово дорівнює `odoo_addons/factory3d_machine_connect/tools/commands.py` (тест читає обидва файли) | CT |
+| AC-80 | CM-08 | Then `f3d_collector_mc/cmdtext.py` побайтово дорівнює `odoo_addons/factory3d_machine_connect/tools/commands.py` (тест читає обидва файли); `ast` файлу — жодного `import odoo`/`from odoo…`/відносного імпорту з `..models`, `cmdtext` імпортується в середовищі пакета без встановленого `odoo` (X-93) | CT |
 | AC-81 | FR-29 | Given копія демо; When хук; Then `block_reason0.with_context(lang='uk_UA').name == 'Очікування матеріалу'`; `factory3d.loss_tool.loss_type == 'availability'`; `loss_break.f3d_planned`; звіт `loss_translated=7`, `loss_category_fixed=2` | UT (на копії демо — TC) |
 | AC-82 | FR-29 | Then 7 листових товарів мають `2800/2070/16`, `…/18`, `…/3` за назвою; повтор хука нічого не змінює | UT |
 | AC-83 | FR-29 | Then 35 `f3d.machine` (15 `opcua`, 20 `io`), 28 з `employee_id`; 22 джерела; сигналів модуля 207 (`signals_created` 205 + `signals_bound` 2 на копії демо); кожен верстат має `sig_state_id`, `sig_machine_state_id`; створені сигнали — `origin='module'` (X-16), прив'язані 2 — `origin` без змін; `workcenters/<C>/machine_state` — `viewer_visible=False` (X-27); сигнал команд оптимізатора — `equipment/CUTOPT/cmd` (X-18), коду `mc/cutopt/cmd` немає | TC (копія демо), UT (фікстури) |
@@ -2373,8 +2378,8 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-99 | FR-27, FR-01 | Given ТП-01 (35 верстатів, показання щосекунди, 30 хв) і ТП-02 (ланцюг емулятор → колектор → Odoo); Then API-02 p95 ≤ 1,2 с без `5xx` і блокувань БД; «подія емулятора → простій в Odoo» p95 ≤ 10 с; буфер колектора не росте | TC |
 | AC-100 | FR-15 | Given ТК-03 і DEPLOY_TEST п. 6 «перший тиждень лише читання» (`auto_start_enabled=False`, `write_enabled=False`); Then за зміну журнал станів і прості є, `mrp.workorder`/`mrp.workcenter.productivity` автоматикою не змінені (`write_uid != user_f3d_machine`), команд модуля 0 | TC |
 | AC-101 | FR-27, FR-15 | Given `enable_write()`, `make_mo(wc_ua, qty=14, name='WH/MO/T0002')` (WO id N `ready`); When `user_mrp` `action_f3d_send_to_machine()`; Then `f3d.command` на `sig_ua_cmd` з `payload == {"method": "Store", "job": "WO%05d" % N, "qty": 14, "ref": "WH/MO/T0002", "priority": 5}` і `text == "Store;WO%05d;14;WH/MO/T0002;5" % N` (X-03), `f3d_machine_id = m_ua`, `origin='machine_connect'`, чатер МО; `cmd_done(cmd, data={"ReturnStatus": 0})` → чатер верстата «Команда …: done {"ReturnStatus": 0}»; WO у `progress` → `UserError`; WO на `wc_io` → `UserError` «не приймає завдань з Odoo»; `write_enabled=False` → `UserError` з назвою запобіжника | UT |
-| AC-102 | FR-15, FR-19, CM-08 | Given `enable_write()`; When `create_command(env, sig_g_cmd, "feed", {"stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "B" * 32, "priority": 5, "ref": "WH/MO/T0001"})`; Then команда з `payload` (усі поля без змін), `text` — перші 63 символи тексту R-21 + «…» (`len(text) == 64`). Given `tools.commands.payload_supported` підмінено на `False` (telemetry без CR-01); When той самий виклик; Then `UserError` «… length: 66 > 64», команди немає; When завдання AC-53 → `_cron_gantry`; Then команда без `payload`, `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"`; `cmd_done(cmd, "wj-00412")` (без `result_data`) → `ws_id="wj-00412"`, `queued` (X-03, запасна граматика) | UT |
-| AC-103 | FR-27, FR-28, CM-08 | Given `settings.write_enabled=True`; When `write(job_cmd, None, "Stop;WO00013")`; Then фейковий метод `Stop("WO00013", [])` — той самий виклик, що `call(job_cmd, {"method": "Stop", "job": "WO00013"})`, — і `result="ok ReturnStatus=0"`; `write(g_cmd, None, "feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233")` → те саме тіло `POST /api/v1/jobs`, що в AC-77, `result="wj-…"`; `call(g_cmd, {"op": "feed", "sheets": 4})` → `WriteError("bad_command: stack: відсутнє")`, HTTP-запитів 0; `call` на сигналі без `address.call`/`address.cmd` → `NotSupported` (X-03, запасна граматика) | CT |
+| AC-102 | FR-15, FR-19, CM-08 | Given `enable_write()`; When `env['f3d.command']._f3d_mc_create_command(sig_g_cmd, "feed", {"stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "B" * 32, "priority": 5, "ref": "WH/MO/T0001"})`; Then команда з `payload` (усі поля без змін), `text` — перші 63 символи тексту R-21 + «…» (`len(text) == 64`). Given `f3d.command._f3d_mc_payload_supported` підмінено на `False` (telemetry без CR-01, X-93); When той самий виклик; Then `UserError` «… length: 66 > 64», команди немає; When завдання AC-53 → `_cron_gantry`; Then команда без `payload`, `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"`; `cmd_done(cmd, "wj-00412")` (без `result_data`) → `ws_id="wj-00412"`, `queued` (X-03, запасна граматика) | UT |
+| AC-103 | FR-27, FR-28, CM-08 | Given `settings.write_enabled=True`; When `write(job_cmd, None, "Stop;WO00013")`; Then фейковий метод `Stop("WO00013", [])` — той самий виклик, що `call(job_cmd, {"method": "Stop", "job": "WO00013"})`, — і `result="ok ReturnStatus=0"`; `write(g_cmd, None, "feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233")` → те саме тіло `POST /api/v1/jobs`, що в AC-77, `result="wj-…"`; `call(g_cmd, {"op": "feed", "sheets": 4})` → `WriteError("bad_command: stack: відсутнє")`, HTTP-запитів 0; `call` на сигналі без `address.call`/`address.cmd` → `NotSupported`; плагіни беруть граматику лише з `cmdtext` (без Odoo, X-93) (X-03, запасна граматика) | CT |
 
 Покриття FR: FR-01 AC-01…03, 10, 93, 98, 99; FR-02 AC-05, 06; FR-03 AC-04, 07, 08, 93; FR-04 AC-11, 94; FR-05 AC-12…14;
 FR-06 AC-15…20; FR-07 AC-21…23, 94; FR-08 AC-24, 94; FR-09 AC-25…28, 95; FR-10 AC-25, 31; FR-11 AC-29, 30; FR-12 AC-38;
@@ -2413,7 +2418,7 @@ FR-33 AC-86…88; FR-34 AC-45, 46, 95; FR-35 AC-66…68; FR-36 AC-06, 44, 51, 63
 7. Діяльності модуля: тип `mail.mail_activity_data_todo`, `summary` = перші 64 символи тексту, `note` = повний текст
    (тести шукають за `res_model`, `res_id`, `summary`).
 8. `tools/payload.build_machines(env, ctx) -> dict` — без імпорту моделей viewer.
-9. `tools/states`, `tools/oee`, `tools/ppt` (крім `ppt_intervals`), `tools/commands` (крім `create_command`, `payload_supported`), `tools/cutcsv` — чисті функції без `env`.
+9. `tools/states`, `tools/oee`, `tools/ppt` (крім `ppt_intervals`), `tools/commands` (без імпортів Odoo, X-93), `tools/cutcsv` — чисті функції без `env`.
 
 `class F3DMachineMixin(F3DTelemetryMixin)` (`from odoo.addons.factory3d_telemetry.tests.common import
 F3DTelemetryMixin`); `F3DMachineCase(F3DMachineMixin, TransactionCase)`, `F3DMachineHttpCase(F3DMachineMixin,
@@ -2493,7 +2498,7 @@ HttpCase)`. Від батьківського класу використову�
 | `test_energy_contract.py::TestEnergyContract` | `test_wo_intervals_window`, `test_wc_intervals`, `test_run_setup_minutes` | AC-45, AC-46 | `make_log` з `wo`; закриття — через диспетчер (`ua(...)`) для AC-46 | повернення — `dict[int, list[tuple[datetime, datetime, str]]]`, naive UTC, відсортовано; відкритий інтервал обрізано `now` |
 | `test_gantry_stack.py::TestGantryStack` | `test_fed_unconsumed`, `test_pending_then_diff`, `test_product_mismatch`, `test_status_event`, `test_accept_portal`, `test_fix_portal_needs_write`, `test_replenish_once_per_hour` | AC-47…51 | `put_stock(board, loc_t1, 45, lot_l1)`; завдання порталу `done=7` з МО `make_mo(wc_saw)` у `progress`; EV-02 через `push_event('mc_woodstore', {"kind": "stacks", …}, 'REST-WOODSTORE-T')`; правило поповнення `stock.warehouse.orderpoint` на `loc_t1` (min 10, max 60) | AC-48: діяльність одна навіть після 3 кронів; AC-50: `stock.quant` `quantity` 43, `stock.move` інвентаризації `done` |
 | `test_gantry_job.py::TestGantryJob` | `test_from_production_no_dup`, `test_send_payload`, `test_command_results`, `test_mirror_and_sheets`, `test_consume_move_lines` | AC-52…56 | `make_mo(wc_saw, name='WH/MO/T0001', comps=((board, 4/14),))` (рух 4 арк., резерв у `PLT-T1`); `enable_write()` для AC-53/54 | AC-53: `f3d.command.payload` і `text`, `signal_id=sig_g_cmd`, `origin='machine_connect'`, `f3d_gantry_job_id`; AC-55: `sheet_log` без дубля за id події; AC-56: `stock.move.line` `PLT-T1` зменшено на 4, `PLT-T2` 4 `picked` |
-| `test_commands.py::TestCommands` | `test_build_parse_examples`, `test_five_fuses`, `test_payload_and_label`, `test_fallback_text_mode` | AC-57, AC-58, AC-102 | `enable_write()`, потім вимикати по одному; AC-102 — `patch('odoo.addons.factory3d_machine_connect.tools.commands.payload_supported', return_value=False)` | текст `UserError` містить ключ запобіжника (`factory3d.machine_connect.write_enabled`, `factory3d.telemetry.write_enabled`, код джерела, код сигналу) |
+| `test_commands.py::TestCommands` | `test_build_parse_examples`, `test_five_fuses`, `test_payload_and_label`, `test_fallback_text_mode` | AC-57, AC-58, AC-102 | `enable_write()`, потім вимикати по одному; AC-102 — `patch.object(type(env['f3d.command']), '_f3d_mc_payload_supported', return_value=False)` (X-93) | текст `UserError` містить ключ запобіжника (`factory3d.machine_connect.write_enabled`, `factory3d.telemetry.write_enabled`, код джерела, код сигналу) |
 | `test_cutmap.py::TestCutMap` | `test_part_constraints_and_import`, `test_create_lines_and_fit`, `test_export_csv`, `test_send_optimizer_token`, `test_apply_job_plan_mpr`, `test_sheets_warning_and_update_need`, `test_release_and_manual_plan`, `test_csv_formula_prefix_stripped` | AC-59…65 | BOM з `f3d.cut.part` `P001` (720×560, 2 шт, текстура 1, `edge_top=edge_left='EB-T'`); МО `make_mo(wc_saw, qty=14, comps=((board, 8/14),))`; `enable_write()` | AC-61: байти вкладення `== expected.encode()` (CRLF, без BOM); AC-62: `export_token_hash` недоступний `user_f3d_manager` (`AccessError` на `read`); `test_csv_formula_prefix_stripped`: назва `=SUM(A1)` → `Description` `SUM(A1)` (R-19 п. 5) |
 | `test_api_export.py::TestApiExport` (HttpCase) | `test_export_ok_once`, `test_errors`, `test_too_large` | AC-66…68 | карта в `exported` з токеном (`_f3d_new_export_token()` від `sudo`); 6 000 рядків — через `sudo().create` | порядок перевірок API-01 (без Bearer — `401` навіть з невірним `t`); тіло помилки `{"error": {"code", "message"}}` |
 | `test_migration.py::TestMigrationClean`, `::TestMigrationDemo` | `test_clean_db_zero`, `test_losses`, `test_sheets`, `test_machines_signals`, `test_stacks`, `test_demo_journal`, `test_idempotent` | AC-81…85 | `TestMigrationDemo` — лише на копії демо (`skipUnless`); `TestMigrationClean` — `with patch('odoo.addons.factory3d_machine_connect.hooks._csv_rows', side_effect=…)` на 2 РЦ фікстур | повтор `run_migration(env)` → `signals_created: 0`, `downtimes_created: 0`, кількості моделей незмінні; `migration_report.state == 'done'` |
@@ -2514,7 +2519,7 @@ HttpCase)`. Від батьківського класу використову�
 | `test_opcua_call.py` | `test_store_and_start`, `test_stop`, `test_return_status_error`, `test_write_disabled`, `test_bad_command`, `test_not_job_signal`, `test_write_text_fallback` | AC-74, AC-103 | `ctx.settings.write_enabled=True`, `ua_server.ret_status` | `ua_server.calls[-1]` — аргументи (`JobOrderID`, `Priority`, параметри `PlannedOrderQuantity=14.0`, `OrderNumbers=["WH/MO/00233"]`); при `write_enabled=False` викликів 0 |
 | `test_woodstore.py` | `test_poll_status`, `test_status_event_on_change`, `test_events_cursor`, `test_stacks_hash_and_resend`, `test_jobs_changed_only`, `test_commands`, `test_commands_text_fallback` | AC-75…77, AC-103 | `woodstore_app`, `tmp_path` курсорів | курсор переживає перезапуск плагіна (новий екземпляр читає файл); `401` → `health().error == "auth"` |
 | `test_cutopt.py` | `test_upload_flow`, `test_upload_export_gone`, `test_status_planned`, `test_release`, `test_mpr` | AC-78, AC-79 | `cutopt_app`, `fake_odoo_export` | `parts.csv` у multipart побайтово = `parts_csv` з API-01; токен колектора не потрапляє в лог (`caplog`) |
-| `test_cmdtext.py` | `test_identical_to_odoo_tool`, `test_examples` | AC-80, AC-57 | шлях до `odoo_addons/factory3d_machine_connect/tools/commands.py` відносно кореня репозиторію | `filecmp.cmp(..., shallow=False)` |
+| `test_cmdtext.py` | `test_identical_to_odoo_tool`, `test_no_odoo_imports`, `test_examples` | AC-80, AC-57 | шлях до `odoo_addons/factory3d_machine_connect/tools/commands.py` відносно кореня репозиторію | `filecmp.cmp(..., shallow=False)`; `ast.walk` — немає `Import`/`ImportFrom` з `odoo` (X-93) |
 
 ### 13.2 Стендові сценарії (ТК) — емулятор `factory3d_iot_sim` + колектор з пакетом + Odoo
 
@@ -2659,10 +2664,10 @@ HttpCase)`. Від батьківського класу використову�
   M-19 `_f3d_local_types`, M-20 `write`, M-27 `_action_done`, M-28 `create`):
   `grep -rnE "def (button_start|button_finish|button_pending|start_employee|stop_employee|_close|unblock|button_block)\("
   odoo_addons/factory3d_machine_connect` → 0.
-- `tools/commands.py` і `f3d_collector_mc/cmdtext.py` побайтово однакові (AC-80); `asyncua==1.1.6` закріплено; команди
+- `tools/commands.py` і `f3d_collector_mc/cmdtext.py` побайтово однакові й без імпортів Odoo (AC-80, X-93); `asyncua==1.1.6` закріплено; команди
   модуля — `f3d.command.payload` (telemetry 19.0.1.1.0, X-03), запасна текстова граматика R-21 перевірена (AC-102, AC-103).
 - `data/neutralize.sql` виконується без помилки (AC-92); `uninstall_hook` і повторна установка перевірені (§13.5 п. 11).
-- Перегляд безпеки §13.3 пройдено: запис на пристрої — лише через `create_command` і п'ять запобіжників, плагін не
+- Перегляд безпеки §13.3 пройдено: запис на пристрої — лише через `f3d.command._f3d_mc_create_command` і п'ять запобіжників, плагін не
   пише змінних OPC UA, секрети — лише `*_ref`, токен API-01 одноразовий і хешований, SQL лише параметризований.
 - Жива база `odoo` на timur-o19demo під час розробки й тестів не змінювалась (усі записи — на копіях).
 - Документація: `README.md` модуля (установка, параметри §5.1, інструкції ARCH §4), `README.md` пакета (env §8.2,
@@ -2691,7 +2696,7 @@ HttpCase)`. Від батьківського класу використову�
 | Q-12 | стенд — `security_mode=None`; параметри безпеки (`cert_ref`, `key_ref`, `server_cert_ref`, `username`, `password_ref`) уже в схемі й Додатку C.1; ТБ-07 перевіряє `SignAndEncrypt` |
 | Q-13 | плановий час = календар РЦ мінус відсутності `leave` мінус прості з причиною `f3d_planned` («Перерва») |
 | Q-14 | списання — при подачі порталом (`picked` рядки руху, R-17), проведення — при закритті МО |
-| Q-15 | **закрито частково**: ADAM — `wordorder=little` (**X-43**, D-20; A-28, ТК-05 перевіряє); заявку дає лише сигнал `alarm`, `state` — `create_request=False` (**X-38**); коди модуля (`workcenters/<C>/event`, `job_cmd`, `machine_state`, `equipment/GANTRY-1/cmd`, `equipment/CUTOPT/cmd`) каталог iot_sim доповнює з Додатка C.2 (**X-34**, X-76) — сигнал `workcenters/<C>/event` і далі створює хук. Відкрите (у реєстрі рядка немає): viewer читає `mrp.workcenter.default_capacity` (у Odoo 19 немає) — працюємо з `capacity_ids`/1, `oee` перекриває провайдер цього модуля (R-25) |
+| Q-15 | **закрито**: ADAM — `wordorder=little` (**X-43**, D-20; A-28, ТК-05 перевіряє); заявку дає лише сигнал `alarm`, `state` — `create_request=False` (**X-38**); коди модуля (`workcenters/<C>/event`, `job_cmd`, `machine_state`, `equipment/GANTRY-1/cmd`, `equipment/CUTOPT/cmd`) каталог iot_sim доповнює з Додатка C.2 (**X-34**, X-76) — сигнал `workcenters/<C>/event` і далі створює хук. `default_capacity` у viewer замінено на `capacity_ids`/1 (**X-92**), `oee` перекриває провайдер цього модуля (R-25) |
 | Q-16 | **закрито X-52**: ключі-розширення `opcua` (`ns_uri`, `events`, `io`, `call`, `job_select`; `params.ns_uri`, `app_uri`, `heartbeat_s`) і `rest_vendor` (`cmd`, `default`, `io`; `params.vendor`, `events_period_s`, `stacks_period_s`, `jobs_period_s`) внесено в telemetry Додаток A як довідкові (власник — цей модуль, CM-06); `validate()` плагіна перевіряє їх схемами `schemas/*.ext.json` |
 | Q-17 | **закрито X-38**: емулятор формує `JobOrderID = "WO%05d"` (id `mrp.workorder`) у сценаріях і `follow_odoo`, завершені JobOrder лишаються в `JobOrderList` зі станом `Ended/Completed` — збігається з R-09 п. 1 і R-22 п. 3 без змін коду; ТК автостарту лишаються детермінованими (`Store` з Odoo, AC-101, + `Start` з пульта стенда — ТК-04, ТК-10) |
 
