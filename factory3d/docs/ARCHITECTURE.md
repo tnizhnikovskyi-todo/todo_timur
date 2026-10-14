@@ -264,7 +264,7 @@ factory3d_access_telemetry       ← factory3d_access, factory3d_telemetry      
   без `_inherit` моделей viewer) або містком auto_install з `_inherit` (D-18). Контракт — за
   атрибутами (duck typing, viewer M-01): `_f3d_sequence`, `_f3d_sections`, `_f3d_group`,
   `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None`, `_f3d_viewer_delta(self, patch, ctx)`;
-  viewer читає їх через `getattr` з умовчаннями. Порядок: вбудовані 20…70, machine_connect 75,
+  viewer читає їх через `getattr` з умовчаннями. Порядок: вбудовані 20…70, machine_connect 75, вбудований `signals` 90,
   telemetry 95, energy 100, lighting 110, ventilation 120, fire 130, evacuation 140, infra 150,
   genset 155, yard 160, access 170. Без модуля — розділ лишається з моделі (статика) або порожній.
 - Спільні розділи (`infra`, `workcenters`, `employees`, `zones`) провайдери лише **доповнюють**

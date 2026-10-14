@@ -151,7 +151,7 @@ viewer/index.html                    статична сторінка: післ
 
 ```python
 {
-    "name": "3D-завод: переглядач",
+    "name": "Завод 3D: переглядач",
     "summary": "3D-переглядач заводу всередині Odoo: живі дані з ORM, «Показати в 3D», журнал станів, кіоск",
     "version": "19.0.1.0.0",
     "author": "ToDo",
@@ -228,8 +228,8 @@ viewer/index.html                    статична сторінка: післ
 
 **Контракт провайдера — duck-typing (X-22, каркас §6.7, D-18).** Провайдер — будь-яка модель реєстру з іменем
 `f3d.viewer.provider.<key>`. Дозволені два способи реєстрації: (а) `_inherit = "f3d.viewer.provider"` — вбудовані
-провайдери нижче й містки auto_install, що залежать від viewer (`factory3d_telemetry_viewer` A-20,
-`factory3d_fire_safety_viewer` A-35); (б) `AbstractModel` за префіксом імені **без** `_inherit` моделей viewer — модулі, для
+провайдери нижче й містки auto_install, що залежать від viewer (`factory3d_telemetry_viewer` — telemetry A-20,
+`factory3d_fire_safety_viewer` — fire_safety A-35); (б) `AbstractModel` за префіксом імені **без** `_inherit` моделей viewer — модулі, для
 яких viewer необов'язковий (energy, machine_connect, bms, yard, access, міст `factory3d_genset`). Провайдер способу (б)
 **обов'язково** визначає сам: `_f3d_sequence`, `_f3d_sections`, `_f3d_group`, `_f3d_viewer_collect`, `_f3d_viewer_delta`;
 `_f3d_viewer_bus_models` — необов'язковий. Збирач (R-01) і дельта (R-14) читають кожен атрибут через
@@ -523,7 +523,7 @@ SQL-constraint: `CHECK (size_kb >= 0)`. Методи:
 
 - `default_get` — створює 35 рядків `step_ids` (усі `selected`), `enabled` з параметра.
 - `action_run(self)` — якщо `not enabled` → `UserError("Заливка демо вимкнена на цій базі
-  (factory3d.viewer.demo_enabled). Увімкніть у 3D-завод → Налаштування → Налаштування переглядача лише на тестовому сервері.")`;
+  (factory3d.viewer.demo_enabled). Увімкніть у Завод 3D → Налаштування → Налаштування переглядача лише на тестовому сервері.")`;
   якщо крон уже `active` з `state='running'` → `UserError("Заливка вже виконується")`; записує
   `demo_clock` у параметр; `state='queued'`, зберігає обрані кроки в параметр
   `factory3d.viewer.demo_queue` (JSON: `{wizard_id, steps:[...]}`), вмикає крон «3D: заливка демо»
@@ -639,7 +639,7 @@ V-11 `mrp.workcenter`, V-12 `maintenance.equipment`, V-14 `hr.employee`; вид�
 
 `security/security.xml`: власний привілей `res.groups.privilege` `privilege_f3d_viewer` «Завод 3D: переглядач»
 (категорія `factory3d_base.module_category_factory3d`, sequence 10 = резерв viewer CB-09; X-19) і `res.groups`
-`group_f3d_kiosk` «3D-завод: кіоск» (`privilege_id` = `privilege_f3d_viewer`, sequence 10), `implied_ids`:
+`group_f3d_kiosk` «Завод 3D: кіоск» (`privilege_id` = `privilege_f3d_viewer`, sequence 10), `implied_ids`:
 `base.group_user`, `factory3d_base.group_f3d_user`, `stock.group_stock_user`, `mrp.group_mrp_user` (§4.3).
 `security/kiosk_user.xml` (`noupdate=1`):
 `res.users` `user_kiosk`: `login="f3d_kiosk"`, `name="Екран цеху (3D)"`, `group_ids=[group_f3d_kiosk]`,
@@ -664,7 +664,7 @@ Sequence (X-30, base CB-09): пункти viewer у корені `factory3d_base
 (резерв viewer; 20 — `menu_f3d_plant` base); пункт налаштувань — під `factory3d_base.menu_f3d_config` з sequence 10
 (= резерв viewer, правило X-32), а не другим пунктом «Налаштування» в корені.
 
-`data/actions.xml`: `action_f3d_viewer` — `ir.actions.client`, `name="3D-завод"`, `tag="f3d_viewer.action"`,
+`data/actions.xml`: `action_f3d_viewer` — `ir.actions.client`, `name="Завод 3D"`, `tag="f3d_viewer.action"`,
 `target="current"`, `params` порожні (параметри підставляє `action_f3d_show`).
 
 ### V-08a, V-08b, V-09 Кнопка «Показати в 3D» на документах (`views/show_in_3d_views.xml`; V-09 — міст `factory3d_viewer_sale`)
@@ -698,7 +698,7 @@ V-08, V-11, V-12, V-14) — viewer другої кнопки в ті самі ф
   `invisible="state in ('queued','running') or not enabled"`, `class="btn-primary"`), «Оновити»
   (`action_refresh`), «Усі кроки»/«Жодного» (`action_select_all`/`action_select_none`, `invisible="state != 'draft'"`);
 - `alert` (`role="alert"`, клас `alert-danger`, `invisible="enabled"`): «Заливка демо вимкнена на цій
-  базі. Увімкніть «Заливка демо дозволена» у 3D-завод → Налаштування → Налаштування переглядача лише на тестовому сервері.»;
+  базі. Увімкніть «Заливка демо дозволена» у Завод 3D → Налаштування → Налаштування переглядача лише на тестовому сервері.»;
 - група: `demo_clock`, `progress` (widget `progressbar`), `current_step`, `new_records`;
 - `step_ids` list editable bottom: `sequence` (handle), `selected` (boolean_toggle), `label`, `name`
   (readonly), `state` (badge: `todo` сірий, `running` синій, `done` зелений, `skipped` жовтий, `error`
@@ -735,7 +735,7 @@ readonly). `action_f3d_cycle_check`: form, `target="new"`.
 
 ### V-15 Налаштування (`views/res_config_settings_views.xml`)
 
-Успадкування `base.res_config_settings_view_form`, блок `app` з `data-string="3D-завод"`,
+Успадкування `base.res_config_settings_view_form`, блок `app` з `data-string="Завод 3D"`,
 `name="factory3d_viewer"`, `groups="factory3d_base.group_f3d_admin"`; секції:
 «Журнал станів» (`f3d_snapshot_minutes`, `f3d_snapshot_hours`, `f3d_snapshot_keep_days`,
 `f3d_event_keep_hours`), «Живі оновлення» (`f3d_bus_enabled`, `f3d_delta_debounce_ms`),
@@ -780,7 +780,7 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
     <field name="sequence">10</field>
 </record>
 <record id="group_f3d_kiosk" model="res.groups">
-    <field name="name">3D-завод: кіоск</field><field name="privilege_id" ref="privilege_f3d_viewer"/><field name="sequence">10</field>
+    <field name="name">Завод 3D: кіоск</field><field name="privilege_id" ref="privilege_f3d_viewer"/><field name="sequence">10</field>
     <field name="implied_ids" eval="[Command.link(ref('base.group_user')), Command.link(ref('factory3d_base.group_f3d_user')),
                                      Command.link(ref('stock.group_stock_user')), Command.link(ref('mrp.group_mrp_user'))]"/>
 </record>
@@ -788,7 +788,7 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
 
 | XML-id | Назва | Привілей | implied_ids | Призначення |
 |---|---|---|---|---|
-| `factory3d_viewer.group_f3d_kiosk` | 3D-завод: кіоск | `factory3d_viewer.privilege_f3d_viewer` (категорія `factory3d_base.module_category_factory3d`, sequence 10; X-19 — власний привілей модуля, не категорія `base.module_category_manufacturing_manufacturing` і не привілей base `privilege_f3d`) | `base.group_user`, `factory3d_base.group_f3d_user`, `stock.group_stock_user`, `mrp.group_mrp_user` | технічний користувач екранів; **не** входить у `sales_team.*`, `purchase.*`, `hr.group_hr_user`, `factory3d_energy.group_f3d_energy_cost`; драбину base `group_f3d_user ⊂ manager ⊂ admin` (CB-10) не змінює |
+| `factory3d_viewer.group_f3d_kiosk` | Завод 3D: кіоск | `factory3d_viewer.privilege_f3d_viewer` (категорія `factory3d_base.module_category_factory3d`, sequence 10; X-19 — власний привілей модуля, не категорія `base.module_category_manufacturing_manufacturing` і не привілей base `privilege_f3d`) | `base.group_user`, `factory3d_base.group_f3d_user`, `stock.group_stock_user`, `mrp.group_mrp_user` | технічний користувач екранів; **не** входить у `sales_team.*`, `purchase.*`, `hr.group_hr_user`, `factory3d_energy.group_f3d_energy_cost`; драбину base `group_f3d_user ⊂ manager ⊂ admin` (CB-10) не змінює |
 
 ### 4.4 Розділи payload за групами (перевіряє `tools/payload.access_ok` і `_f3d_group`)
 
@@ -1032,7 +1032,7 @@ registry.category("actions").add("f3d_viewer.action", F3dViewerAction);
 створює розмітку макета (`#stage`, `#labels`, `header.bar`, `#side`, `#card`, `#flow`, `#help`) усередині
 кореня з класами з префіксом `o_f3d_` (стилі в `viewer.scss` — рядки 5–312 макета з перейменуванням
 селекторів `#id → .o_f3d_<id>`), щоб не конфліктувати з DOM Odoo. Заголовок дії (`breadcrumb`) —
-`props.action.name` («3D-завод» або «3D: WH/MO/00231»).
+`props.action.name` («Завод 3D» або «3D: WH/MO/00231»).
 
 `applyParams(p)` (порядок): `layers` (`prod` → увімкнути шар «Замовлення в роботі»; інакше список ключів
 шарів, решта вимкнути) → `mode` (`setMode`) → `tab` (`openTab`) → `snapshot` (R-17) → один із `mo`
@@ -1177,7 +1177,7 @@ python3 plant/export_viewer_assets.py odoo_addons/factory3d_viewer [--dist dist]
 ### 8.6 Сторінка кіоска (`views/templates_kiosk.xml`, `static/src/kiosk/kiosk.js`)
 
 QWeb `factory3d_viewer.kiosk_page`: `<!DOCTYPE html><html lang="uk"><head>` `meta viewport`
-(`width=device-width, initial-scale=1, viewport-fit=cover`), `<title>3D-завод</title>`,
+(`width=device-width, initial-scale=1, viewport-fit=cover`), `<title>Завод 3D</title>`,
 `t-call-assets="factory3d_viewer.assets_kiosk"`, `<body class="o_f3d_kiosk">` з
 `<div id="f3d-kiosk" t-att-data-token="token" t-att-data-params="json.dumps(params)"/>` і `<script>odoo = {csrf_token, debug: "", session_info: {…}}</script>`.
 `kiosk.js` (`/** @odoo-module */`): після `whenReady` — `new DataClient({base: "/f3d/kiosk/" + token, kiosk: true,
@@ -1476,8 +1476,9 @@ round(Σ product_uom_qty), available: Σ quantity (зарезервовано) �
 
 ### R-16 Резолвер (`tools/payload.resolve(env, code=None, name=None)`)
 
-За `code`: по черзі `stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `f3d.zone`,
-`stock.picking.batch` — `env[m].search_f3d(code)` домішки base (M-01: `f3d_code` або `f3d_alias`, 0 або 1 запис; без
+За `code`: по черзі моделі з `f3d.scene.mixin._f3d_resolve_order` base (M-01, R-03; X-85): `f3d.zone`,
+`stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `stock.picking.batch` — список береться з
+домішки, а не дублюється у viewer; `env[m].search_f3d(code)` домішки base (M-01: `f3d_code` або `f3d_alias`, 0 або 1 запис; без
 `sudo`; модель пропускається, якщо `has_access('read')` хибне); код фури `TRUCK-*` знаходиться тим самим шляхом —
 `stock.picking.batch.search_f3d(code)` за `f3d_code` (base CB-06, X-15; поле `f3d_truck` — опис, не код, у пошуку не
 бере участі); спеціальні випадки до пошуку: `OP-<wc>` без запису → співробітник оператора
@@ -1567,7 +1568,7 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 
 | ID | FR | Given | When | Then | Тип |
 |---|---|---|---|---|---|
-| AC-01 | FR-01 | модуль встановлено, користувач у `group_f3d_user` | відкриває меню «3D-завод → Переглядач» | виконується `ir.actions.client` з `tag="f3d_viewer.action"`, у DOM є `.o_f3d_viewer canvas` і `.o_f3d_card` | HT |
+| AC-01 | FR-01 | модуль встановлено, користувач у `group_f3d_user` | відкриває меню «Завод 3D → Переглядач» | виконується `ir.actions.client` з `tag="f3d_viewer.action"`, у DOM є `.o_f3d_viewer canvas` і `.o_f3d_card` | HT |
 | AC-02 | FR-02 | дія з `params={"code":"SAW-1","tab":"production","mode":"oee"}` | `applyParams` | `getState()` = `{selected:"SAW-1", tab:"production", mode:"oee"}`; з `code:"NOPE"` — повідомлення `warning`, `selected=null`, дія відкрита | JT |
 | AC-03 | FR-03 | бандл `static/lib/three/three-bundle.esm.js` у модулі | `mount()` | жодного запиту на хост поза `window.location.origin` (перехоплення `fetch`/`import` у HOOT); `THREE.REVISION === "160"` | JT |
 | AC-04 | FR-04 | `GET /factory3d_viewer/static/model/parts/core.glb` | перший і повторний запит з `If-None-Match` | 200 з `ETag`, потім 304; `manifest.parts[0].file` містить `?v=` з 12 hex | HT |
@@ -1588,7 +1589,7 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 | AC-19 | FR-19 | 5 повідомлень шини за 500 мс | `DataClient` | один `GET /delta` через 1,5 с з об'єднаними `codes`; друге повідомлення під час польоту → ще один запит після відповіді | JT |
 | AC-20 | FR-20 | крон сигналів, `x_updated` змінився у 3 сигналів | `_cron_signal_bus` | одна подія `kind=signal`, `codes` = 3 шляхи; повторний запуск без змін — подій немає | UT |
 | AC-21 | FR-21 | емуляція `BUS:DISCONNECT` | 30 с | `client.state="polling"`, індикатор `.off` з текстом «немає зв'язку», `GET /delta` раз на 30 с; `BUS:RECONNECT` → `live` і негайний delta | JT |
-| AC-22 | FR-22 | 3 форми документів (V-08a `mrp.production`, V-08b `stock.picking`, V-09 `sale.order` у містку) і 6 форм носіїв домішки (`stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `f3d.zone`, `stock.picking.batch`) | відкрити форму запису | на формах документів кнопка `button[name=action_f3d_show]` (viewer) видима для `group_f3d_user`, невидима без групи і при `f3d_has_3d=False`; на кожній із 6 форм носіїв — **рівно одна** така кнопка (base CB-02; viewer другої не додає, X-08), клік відкриває переглядач з `params.code` | HT (тур) |
+| AC-22 | FR-22 | 3 форми документів (V-08a `mrp.production`, V-08b `stock.picking`, V-09 `sale.order` у містку) і 6 форм носіїв домішки (`stock.location`, `mrp.workcenter`, `maintenance.equipment`, `hr.employee`, `f3d.zone`, `stock.picking.batch`) | відкрити форму запису | на формах документів кнопка `button[name=action_f3d_show]` (viewer) видима для `group_f3d_user`, невидима без групи і при `f3d_has_3d=False`; для 6 моделей носіїв модуль `factory3d_viewer` не має жодного успадкованого `ir.ui.view` (`ir.model.data` модуля з `model='ir.ui.view'` → `model` представлення ∉ 6 моделей) — кнопки там лише з base CB-02 (X-08); клік по кнопці base у шапці відкриває переглядач з `params.code` | HT (тур) |
 | AC-23 | FR-22 | форма `WH/MO/00231` | клік «Показати в 3D» | дія `f3d_viewer.action` з `params.mo="WH/MO/00231"`; у переглядачі картка МО, `hl.markers.length ≥ 6` | HT (тур `show_in_3d_tour`) |
 | AC-24 | FR-24 | коди `PLT-04C`, `SAW-1`, `FL-1`, `OP-SAW-1`, `Z-CUT`, `TRUCK-IN-1`, `DOCK-W1`, `WO00013`; назви `WH/MO/00231`, `WH/IN/00128`, `S00087`, `MR/00031` | `resolve` | відповідні `model`/`res_id`; `OP-W9` → `not_found`; без прав на `hr.employee` — `OP-SAW-1` → `not_found`; `TRUCK-IN-1` → `stock.picking.batch` через `search_f3d` за `f3d_code` (X-15) | UT |
 | AC-25 | FR-25 | `snapshot_hours="06:30-16:00"`, час 10:00 Київ | `_cron_snapshot` | знімок `kind=periodic`, `size_kb` 80…200, payload розпаковується, `cycle_check` OK; о 20:00 — знімка немає; два виклики за 30 с — один знімок | UT |
@@ -1680,7 +1681,7 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 | `test_snapshot.py` | `TestSnapshot` | `test_cron_window` (AC-25, `freezegun` недоступний → `patch("...dates.now")`), `test_idempotent_60s`, `test_rotate_keeps_install` (AC-27), `test_list_mode` (AC-26), `test_company_rule`, `test_read_payload_gzip` | — | — |
 | `test_delta.py` | `TestDelta` | `test_quant_change_patch` (AC-16), `test_full_when_old_since`, `test_workorder_done_patch` (AC-46), `test_removed_cancelled_mo`, `test_default_delta_deep_merge` (AC-58: `zz_duck` без `_f3d_viewer_delta` → дельта за замовчуванням зливає `infra` через `deep_merge`, ключі energy в `patch.infra` не затерто), `test_opt_key_null` (зниклий `blocked` → `null` у патчі), `test_empty_delta` | демо | ключі `patch`, `removed`, `events` |
 | `test_delta.py` | `TestDeepMerge` (`odoo.tests.BaseCase`, без бази) | `test_semantics` (AC-56: 6 випадків), `test_import_path` (`from odoo.addons.factory3d_viewer.tools.payload import deep_merge` — той самий об'єкт, що `tools.payload.deep_merge`) | — | результат і `id(dst)` |
-| `test_show_in_3d.py` | `TestShowIn3D` | `test_base_action_opens_viewer` (дія base CB-02 для 6 моделей домішки при встановленому viewer → `tag="f3d_viewer.action"`, `params.code`; viewer метод не перевизначає, X-08), `test_mo_action`, `test_picking_action`, `test_has_3d_compute`, `test_button_in_views` (AC-22: парсинг об'єднаного `arch` — 2 форми документів мають кнопку viewer з `groups`; 6 форм носіїв мають рівно одну `button[name=action_f3d_show]`) | демо | — |
+| `test_show_in_3d.py` | `TestShowIn3D` | `test_base_action_opens_viewer` (дія base CB-02 для 6 моделей домішки при встановленому viewer → `tag="f3d_viewer.action"`, `params.code`; viewer метод не перевизначає, X-08), `test_mo_action`, `test_picking_action`, `test_has_3d_compute`, `test_button_in_views` (AC-22: парсинг `arch` — 2 форми документів мають кнопку viewer з `groups`; серед представлень модуля `factory3d_viewer` немає жодного для 6 моделей носіїв) | демо | — |
 | `test_kiosk.py` | `TestKiosk` | `test_token_generated_32hex`, `test_new_token_admin_only` (AC-50), `test_kiosk_disabled_param`, `test_kiosk_ctx_hides_costs` | — | — |
 | `test_demo_wizard.py` | `TestDemoWizard` (тег `f3d_demo`, повільний, окремий прогін) | `test_blocked_on_prod` (AC-35), `test_steps_default_35`, `test_run_all_on_empty_db` (AC-33: окрема порожня база з `factory3d_base`+`factory3d_viewer`+`factory3d_iot_sim`; перевірка кількостей: 689 локацій, 35 центрів, 32 МО, 199 завдань, 42 переміщення, 6 батчів, 196 сигналів), `test_idempotent_rerun`, `test_demo_steps_diff` (diff `wizard/demo_steps.py` проти `plant/odoo_push.py`+`odoo_flows.py` ≤ 80 рядків, крім шапки) | — | — |
 | `test_cycle_check.py` | `TestCycleCheck` | `test_ok_on_demo` (AC-36), `test_issue_after_cancel_delivery`, `test_html_links` | демо | — |
@@ -1703,7 +1704,7 @@ DOCK-E1, TRUCK-OUT-1]`. `R21`: `startDrill()` → `drill.curves.length=32`, ма
 | ТК-02 Зупинка верстата | як ТК-01 | Виробництво → Робочі центри → `CNC-3` → «Заблокувати» з причиною «Поломка» | ≤ 3 с: `CNC-3` червоний, у «Огляд → Потребує уваги» рядок «Присадка ЧПК C — зупинено»; знімок `kind=event` НЕ створюється (без заявки ТО); створити заявку ТО на обладнання `CNC-3` і перевести в «В роботі» → знімок `event` з'явився в «Журнал станів» | 3D, «Огляд», «Знімки» |
 | ТК-03 Сигнали IoT | `factory3d_iot_sim` увімкнена, «Оновити зараз» | «Обслуговування → Імітація IoT → Оновити зараз» | ≤ 70 с (крон щохвилини): картка `FL-1` показує новий заряд, `meta.iot.updated` оновився, індикатор «Odoo» показав час | картка `FL-1`, «Огляд → Дані» |
 | ТК-04 Приймання на воротах | демо | Склад → Приймання `WH/IN/00131` → додати у батч із доком «Ворота 2» → підтвердити батч | ≤ 3 с: у «Логістика» рядок 00131 показує «Ворота 2», у 3D клік по `DOCK-W2` → «Документ на воротах» 00131 | «Логістика», картка воріт |
-| ТК-05 Показати в 3D ×9 | демо | по черзі кнопка на 9 формах (локація `PLT-04C`, центр `SAW-1`, обладнання `FL-1`, співробітник оператор SAW-1, зона `Z-CUT`, батч `TRUCK-IN-1` — кнопки base CB-02; МО 00231, переміщення `WH/OUT/00412`, SO `S00087` — кнопки viewer) | кожна відкриває переглядач з потрібним об'єктом/маршрутом; на кожній формі одна кнопка «Показати в 3D» (X-08); «← Назад» повертає на форму | переглядач |
+| ТК-05 Показати в 3D ×9 | демо | по черзі кнопка на 9 формах (локація `PLT-04C`, центр `SAW-1`, обладнання `FL-1`, співробітник оператор SAW-1, зона `Z-CUT`, батч `TRUCK-IN-1` — кнопки base CB-02; МО 00231, переміщення `WH/OUT/00412`, SO `S00087` — кнопки viewer) | кожна відкриває переглядач з потрібним об'єктом/маршрутом; на формах носіїв — лише кнопки base (шапка й вкладка «Завод 3D»), дубля від viewer немає (X-08); «← Назад» повертає на форму | переглядач |
 | ТК-06 Зворотний перехід | переглядач | клік по `SAW-1` → «Відкрити в Odoo»; клік по `RV-05` → «Відкрити в Odoo» | форма робочого центру; для `RV-05` — форма обладнання (після міграції base) | форми |
 | ТК-07 Кіоск на планшеті | Samsung Galaxy Tab Active5 Pro, Wi-Fi цеху, URL кіоска з `tab=production&lite=1` | відкрити, 10 хв спостереження; вимкнути Wi-Fi на 1 хв; увімкнути | ≥ 30 кадр/с (Chrome `chrome://` FPS-метр або `getState().fps` — ядро рахує середній FPS за 10 с), без навігації Odoo; банер «немає зв'язку» → зникає, дані оновились | планшет |
 | ТК-08 Новий токен | адміністратор | «Новий токен кіоска» | стара адреса → 404 одразу; нова працює | браузер |
@@ -2016,10 +2017,10 @@ req; `workcenters` list[str] req; `pickings` list[str] opt (14); `zone_type` str
 | `meta` | dict | `source` str, `u_kv` str (`"10 / 0,4"`), `tariff_uah` float (8.4), `note` str |
 | `totals` | dict | `p_inst` int, `p_now` num, `s_now` num, `cos_before` float, `cos_after` float, `kwh_today` int, `peak_kw` int, `peak_time` str `"09:15"`, `cost_today` int, `capacity_kva` int, `pv_kw` float, `grid_kw` num, `pv_today` int, `chp_kw` float, `export_kw` num, `bess_kw` num |
 | `transformers` | dict[`T1`,`T2` → dict] | `name` str, `rating_kva` int, `section` int, `p_kw` float, `s_kva` int, `load` float, `i_a` int, `temp_c` float, `cos_phi` float, `incomer` str (`"Q1"`) |
-| `cells` | dict[11 → dict] | `name` str, `type` str (`incomer`, `feeder`, `coupler`, `pfc`), `section` int|null, `feeds` str|null, `rating_a` int opt, `state` str opt (`"on"`), `line` str opt (`"BW-3"`), `i_now` int opt, `p_now` float opt, `rating_kvar` int opt, `q_now` int opt, `steps` str opt, `cos_before`/`cos_after` float opt, `note` str opt. Коди: `PFC-1`, `Q1`, `QF-3`, `QF-2`, `QF-C1`, `QS`, `QF-1`, `QF-4`, `QF-C2`, `Q2`, `PFC-2` |
+| `cells` | dict[11 → dict] | `name` str, `type` str (`incomer`, `feeder`, `coupler`, `pfc`), `section` int\|null, `feeds` str\|null, `rating_a` int opt, `state` str opt (`"on"`), `line` str opt (`"BW-3"`), `i_now` int opt, `p_now` float opt, `rating_kvar` int opt, `q_now` int opt, `steps` str opt, `cos_before`/`cos_after` float opt, `note` str opt. Коди: `PFC-1`, `Q1`, `QF-3`, `QF-2`, `QF-C1`, `QS`, `QF-1`, `QF-4`, `QF-C2`, `Q2`, `PFC-2` |
 | `lines` | dict[`BW-1…BW-4`,`C1`,`C2` → dict] | `kind` str (`busway`, `cable`; X-26, як energy R-16 п. 5), `name` str, `cell` str, `rating_a` int, `consumers` list[str], `p_inst` num, `p_now` float, `cos_phi` float, `i_now` int, `load` float |
-| `consumers` | dict[49 → dict] | `name` str, `feeder` str, `bus` str|null, `p_inst` num, `p_now` float, `cos_phi` float, `source` str (`passport`, `estimate`, `mixed`), `status` str (`work`/`idle`/`stop`), `i_now` int, `line` str, `kwh_shift` float, `note` str opt (9), `group` str opt (8, `"light"`) |
-| `profile` | list[24 × int|null] | кВт·год по годинах сьогодні (null — ще не настала) |
+| `consumers` | dict[49 → dict] | `name` str, `feeder` str, `bus` str\|null, `p_inst` num, `p_now` float, `cos_phi` float, `source` str (`passport`, `estimate`, `mixed`), `status` str (`work`/`idle`/`stop`), `i_now` int, `line` str, `kwh_shift` float, `note` str opt (9), `group` str opt (8, `"light"`) |
+| `profile` | list[24 × int\|null] | кВт·год по годинах сьогодні (null — ще не настала) |
 | `typical` | list[24 × int] | типовий день |
 | `events` | list[{time: str, level: str (`info`/`warn`/`bad`), code: str, text: str}] | 6 |
 
