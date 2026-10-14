@@ -16,9 +16,10 @@ CB-01, CB-03, CB-04, CB-07, CB-08, CB-09, CB-10, CB-12; `factory3d_viewer` M-01 
 CT-09 (ARCHITECTURE telemetry §2.1, SPEC telemetry 19.0.1.1.0 — Q-06/Q-07 закрито X-02/X-05); `factory3d_machine_connect` CM-02
 (необов'язково, крок навчання «верстати», X-12);
 «документацію вендора» `factory3d_iot_sim` SPEC §8.11 (P-09), §8.4.1 (unit 85), §9.1 R-25…R-27, §9.3
-S-07/S-08, Додаток A (сигнали 603–646). Рішення автора — **A-xx** (§7), відкриті питання — **Q-xx** (§5.1).
+S-07/S-08, Додаток A (сигнали 603–646, 1 167–1 168). Рішення автора — **A-xx** (§7), відкриті питання — **Q-xx** (§5.1).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-12, Q-13, Q-14, Q-16.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-11.
+Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: зон 33 → 35, сповіщувачів 212 → 222 (шлейф 3: 34 → 44), пристроїв 343 → 353, LSP 292 → 302, сигналів data 52 → 54 (iot_sim № 1 167–1 168), обладнання base 208 → 210 (пожежних кодів 41 → 43, прив'язок хука 42 → 44); §1.1, FR-03, FR-04, FR-20, CF-03, §2.2, §2.3, §2.7, §2.8, §3, §4, A-01, A-02, A-15, A-17, A-21, A-23; Q-05 — виконано, зон без сигналізації немає.
 
 ## Загальна інформація
 
@@ -32,8 +33,8 @@ S-07/S-08, Додаток A (сигнали 603–646). Рішення авто�
 | **Разом** | | **142** |
 
 Факти про тестовий сервер timur-o19demo, база `odoo` (перевірено 14.10.2026, лише читання): Odoo 19.0+e;
-`maintenance.equipment` — 208, з них пожежних кодів 41 (`FACP-1`, `FA-MCP`, `FA-SND`,
-`FA-FLAME`, `SPARK-1`, `FA-<зона>` ×32, `FA-BOILER`, `SMOKE-VENTS`, `SMOKE-CTRL`, `EXITS`; 40 у категорії «Пожежна безпека», `FA-FAC` id 51 — у «Безпека»), `SPRINKLERS`
+`maintenance.equipment` — 210 (208 + `FA-SOC`, `FA-OFFICE`, створені 14.10 за № 12г), з них пожежних кодів 43 (`FACP-1`, `FA-MCP`, `FA-SND`,
+`FA-FLAME`, `SPARK-1`, `FA-<зона>` ×34, `FA-BOILER`, `SMOKE-VENTS`, `SMOKE-CTRL`, `EXITS`; 42 у категорії «Пожежна безпека», `FA-FAC` id 51 — у «Безпека»), `SPRINKLERS`
 у категорії «Безпека» (id 49, сигнал `equipment/SPRINKLERS/pressure_bar` = 7,25 бар, поріг `< 6.5`), `LPS`
 у «Електропостачання»; сигнал рівня 0 `fire/groups/FA-FAC/dust` (id 189) = 86,1 % (`drift`, поріг `> 90`,
 обладнання `FA-FAC` id 51), заявка ТО id 5 «Очистити сповіщувач 2.FAC.07 (запиленість 82 %)» на `FA-FAC`
@@ -49,7 +50,7 @@ data-файлами base і макетом.
 
 | Джерело | Що саме | Як використовується |
 |---|---|---|
-| `plant/fire.py` | `ZONE_DETECTOR` (тип сповіщувача на зону: `multi` 9 зон, `smoke` 24, `heat` котельня), `LOOPS` (4 шлейфи за X: 0–42, 42–92, 92–122, 122–151), `detectors()` (сітка `s = min(smoke_spacing, 2·smoke_wall)` = 8,8 м, `nx = ceil(W/s)`, `ny = ceil(D/s)`, `_nudge` обходить ферми/прогони/дахові установки), `call_points()` (36 ручних), `sounders()` (41 оповіщувач), `max_mcp_distance()` (сітка 2 м → 26,9 м), `FLAME` (3 полум'я, (46/64/76, 71,8, 5,0)), `SPARK_DETECTORS` (4), `SPARK_EXTINGUISH` (3), `SPARK_PANEL` (52,0, 71,75), `FACP_POS` (97,2, 58,25), `Z_DET` 8,85, `Z_BOILER` 4,35, `fire_data()` (loops, groups, totals, events), `FIRE_ROLES` | генератор `tools/gen_data.py` → data-файли (M-02…M-04); правила R-01…R-04; адреси LSP (Додаток A SPEC) |
+| `plant/fire.py` | `ZONE_DETECTOR` (тип сповіщувача на зону: `multi` 9 зон, `smoke` 25 — з них `Z-SOC`, `Z-OFFICE` (приміщення `ROOMS`: власні стелі, офіс — 2 поверхи 2,95/6,15 м, побутові — 3,35 м; групи після котельні), `heat` котельня), `LOOPS` (4 шлейфи за X: 0–42, 42–92, 92–122, 122–151), `detectors()` (сітка `s = min(smoke_spacing, 2·smoke_wall)` = 8,8 м, `nx = ceil(W/s)`, `ny = ceil(D/s)`, `_nudge` обходить ферми/прогони/дахові установки), `call_points()` (36 ручних), `sounders()` (41 оповіщувач), `max_mcp_distance()` (сітка 2 м → 26,9 м), `FLAME` (3 полум'я, (46/64/76, 71,8, 5,0)), `SPARK_DETECTORS` (4), `SPARK_EXTINGUISH` (3), `SPARK_PANEL` (52,0, 71,75), `FACP_POS` (97,2, 58,25), `Z_DET` 8,85, `Z_BOILER` 4,35, `fire_data()` (loops, groups, totals, events), `FIRE_ROLES` | генератор `tools/gen_data.py` → data-файли (M-02…M-04); правила R-01…R-04; адреси LSP (Додаток A SPEC) |
 | `plant/fire_rules.json` | 10 норм: `smoke_spacing_6_12m` 8,8 м, `smoke_wall_6_12m` 4,4 м, `heat_spacing` 6,4 м, `mcp_spacing` 30 м, `sounder_level` 65 дБА, решта `null` з `ref`/`note`/`sources` (ДБН В.2.5-56:2014 зі Зміною № 2, ДСТУ-Н CEN/TS 54-14:2009, VdS 3845) | довідник норм `f3d.fire.norm` (M-08), формули R-01…R-04, тексти посилань у звітах |
 | `plant/evacuation.py` | `EXITS` (12: `EX-S1…S6`, `EX-N1…N5`, `EX-IN`), `WALLS`, `STEP` 0,5 м, `DOOR_W` 1,2 м, `compute()` (Дейкстра по сітці) → `evac_routes.json` | виходи (M-09), маршрути (M-10) — імпорт готового `evac_routes.json` (A-05) |
 | `plant/evac_routes.json` | 32 маршрути зона → вихід (`exit`, `length`, `path`), `max_distance` 45,3 м, `worst_point` (32,25, 33,75) | дані M-10; R-05 (норма довжини) |
@@ -59,10 +60,10 @@ data-файлами base і макетом.
 | `plant/site2.py` | `build_evacuation()` (двері 1,2 м, антипаніка, покажчик «Вихід», маршрути `EVAC-<зона>`), `build_smoke()` (люки `SV-01…44`, 5 щитів D+H `n = ceil(44·7,5/80)`, завіси), `build_lightning()` (LPS — лише довідка) | коди 3D-об'єктів для «Показати в 3D»: `EXITS`, `EVAC-<зона>`, `SMOKE-VENTS`, `SMOKE-CTRL`, `LPS` |
 | `plant/site.py:build_fire()` (1271–1335) | сповіщувачі — один 3D-об'єкт на зону `FA-<зона>`; ручні — `FA-MCP`; оповіщувачі — `FA-SND`; полум'я — `FA-FLAME`; прилад `FACP-1`; іскрогасіння `SPARK-1` | «Показати в 3D» для пристрою показує груповий об'єкт (Q-09 — маркери окремих пристроїв) |
 | `plant/equipment_specs.json` | паспорти `facp` (FC726-ZA, 1 512 адрес, 4 кільця, журнал 13 000 подій), `multi_detector` OOH740, `smoke_detector` OP720, `heat_detector` HI720 (A2S/A2R ≤ 6 м), `flame_detector` SharpEye 40/40C-I (100°×95°, 65 м), `mcp` FDM225-RP, `sounder_beacon` FDS226-RW (75–99 дБА, W-3.2-10), `spark_detection` GreCon BS 7 (FM 1/8, HUNTER IEM, 4–6 м до форсунки, гасіння ≈ 5 с), `smoke_vent` LAMILUX F100 (Aa 1,02 м², < 60 с), `smoke_control` D+H CPS-M1-080-1010-B (80 А, 72 год), `exit_door` Hörmann STU + `panic_bar` dormakaba PHA 2000, `fire_hydrant_cabinet` (лише довідник) | через base CB-07/CB-08: `f3d_get_num`, тексти карток |
-| `dist/odoo_demo.json` ключі `fire`, `evacuation` | `fire.rules` (10), `fire.loops` {1: 64/10/11/0/0, 2: 68/10/13/3/4, 3: 34/7/7/0/0, 4: 46/9/10/0/0}, `fire.groups` (33 `FA-*`: zone, kind, n, spacing, area, loop, state; `FA-FAC` `warn`, `dust` 0,825, `maintenance_request` `MR/00036`), `fire.totals` {detectors 212, mcp 36, sounders 41, mcp_max_m 26,9, flame 3, spark_detectors 4, state «Норма, 1 попередження», sprinkler «…в режимі очікування»}, `fire.events` (4), `evacuation.*` (A.13 viewer) | контракт payload (CF-01); очікувані кількості §2.8; демо-події (M-05) |
+| `dist/odoo_demo.json` ключі `fire`, `evacuation` | `fire.rules` (10), `fire.loops` {1: 64/10/11/0/0, 2: 68/10/13/3/4, 3: 44/7/7/0/0, 4: 46/9/10/0/0}, `fire.groups` (35 `FA-*`: zone, kind, n, spacing, area, loop, state; `FA-FAC` `warn`, `dust` 0,825, `maintenance_request` `MR/00036`), `fire.totals` {detectors 222, mcp 36, sounders 41, mcp_max_m 26,9, flame 3, spark_detectors 4, state «Норма, 1 попередження», sprinkler «…в режимі очікування»}, `fire.events` (4), `evacuation.*` (A.13 viewer) | контракт payload (CF-01); очікувані кількості §2.8; демо-події (M-05) |
 | `viewer/index.html` | шар `fire` «Пожежна сигналізація» (рядок 428), `fireSummary()` (2243), `fireHtml()` (2254: картки зони/приладу/MCP/SND/FLAME/SPARK-1 — зона, тип, кількість, шлейф, стан, попередження, заявка; таблиця шлейфів; журнал приладу; текст норм), «Потребує уваги» з `fire.groups[*].state != ok` (1453), `startDrill()/renderDrill()` (2561–2605: маршрути, маркери виходів, блимання `FA-SND`, `SMOKE-VENTS`, зони й `EXITS`, кроки з `drill_steps` за секундами, таблиця маршрутів із нормами) | що саме має віддавати провайдер, щоб картки не змінились (CF-01); сценарій навчання в 3D (FR-15) |
-| `README.md` «Пожежна сигналізація», «Евакуація, димовидалення, блискавкозахист» | опис системи, норми, застереження (аспіраційні сповіщувачі > 8 м, акустичний розрахунок, збіг двох сповіщувачів для АСПГ, іскрогасіння — страхова вимога) | тексти підказок у формах; Q-11 (README пише 192 сповіщувачі, макет дає 212) |
-| `factory3d_iot_sim` SPEC §8.11, Додаток A | BACnet device 200: LSZ:0 панель, LSZ:1…33 зони (порядок = `fire.groups`), LSP id = `loop·10000 + ordinal·100 + nn` (`2.FAC.07` → 21607, `2.CNC.05` → 21405), PIV:<id> запиленість (ціле %, до PICS), BV:1…4 шлейфи (лише `fault(reason=loop)`), PIV:1/2/3 лічильники, BV:10 сирени, BV:11 передача на пульт, MSV:1 системний стан (`fire/totals/system_state`) — X-37, X-36; ADAM-6050 unit 85 (DI0–DI6, DO0/DO1, HR 40001); R-25 (хронологія навчання 0/3/6/9/12/20 с), R-26 (іскра 0,6 с/2 с), R-27 (клапани 60 с); сценарії `fire_drill`, `spark`; усі записи → `write-access-denied` | адреси сигналів (SPEC Додаток B), стенд ТК-01…ТК-08 |
+| `README.md` «Пожежна сигналізація», «Евакуація, димовидалення, блискавкозахист» | опис системи, норми, застереження (аспіраційні сповіщувачі > 8 м, акустичний розрахунок, збіг двох сповіщувачів для АСПГ, іскрогасіння — страхова вимога) | тексти підказок у формах; Q-11 (README писав 192 сповіщувачі, макет — 212; після № 12г README і макет — 222) |
+| `factory3d_iot_sim` SPEC §8.11, Додаток A | BACnet device 200: LSZ:0 панель, LSZ:1…35 зони (порядок = `fire.groups`; 34 `FA-SOC`, 35 `FA-OFFICE`), LSP id = `loop·10000 + ordinal·100 + nn` (`2.FAC.07` → 21607, `2.CNC.05` → 21405), PIV:<id> запиленість (ціле %, до PICS), BV:1…4 шлейфи (лише `fault(reason=loop)`), PIV:1/2/3 лічильники, BV:10 сирени, BV:11 передача на пульт, MSV:1 системний стан (`fire/totals/system_state`) — X-37, X-36; ADAM-6050 unit 85 (DI0–DI6, DO0/DO1, HR 40001); R-25 (хронологія навчання 0/3/6/9/12/20 с), R-26 (іскра 0,6 с/2 с), R-27 (клапани 60 с); сценарії `fire_drill`, `spark`; усі записи → `write-access-denied` | адреси сигналів (SPEC Додаток B), стенд ТК-01…ТК-08 |
 | Odoo стандарт | `maintenance` (заявки, стадії `done`, команди), `hr_attendance` (`check_in`/`check_out`/`in_mode`), `mail` (чаттер, активності, вкладення), `web` (звіт QWeb) | заявки через telemetry CT-05; журнал навчань; сповіщення охороні |
 
 ### 1.2 Ролі й сценарії використання
@@ -83,8 +84,8 @@ data-файлами base і макетом.
 |---|---|
 | FR-01 | Модель `f3d.fire.panel` описує прилад `FACP-1` (код сцени, обладнання base, джерело BACnet `f3d.source` типу `bacnet_ip`, device 200) і обчислює стан `normal/prealarm/alarm/fault/disabled/test` з об'єктів LSZ:0 і MSV:1 та стан зв'язку `online/stale/lost` з часу останнього показання. |
 | FR-02 | Модель `f3d.fire.loop` містить 4 шлейфи (межі по X з макета, лічильники пристроїв за типами, модулі) зі станом несправності з BV:1…4 (X-37). |
-| FR-03 | Модель `f3d.fire.zone` містить 33 зони виявлення `FA-*` ↔ `f3d.zone` (обов'язково) з номером LSZ, типом сповіщувачів, кроком, площею, шлейфом, кількістю пристроїв і станом `normal/prealarm/alarm/fault/disabled/test` з LSZ:n; попередження `warn` — із запиленості пристроїв. |
-| FR-04 | Модель `f3d.fire.device` містить 343 пристрої (212 сповіщувачів, 36 ручних, 41 оповіщувач, 3 полум'я, 4 датчики іскор, 3 форсунки, 44 люки) з адресою `<шлейф>.<ЗОНА>.<nn>`, типом, координатами CB-04, паспортом (CB-07 через обладнання групи), станом, запиленістю; сигнали пристрою створюються лише за прапором `monitor` (A-02). |
+| FR-03 | Модель `f3d.fire.zone` містить 35 зон виявлення `FA-*` ↔ `f3d.zone` (обов'язково) з номером LSZ, типом сповіщувачів, кроком, площею, шлейфом, кількістю пристроїв і станом `normal/prealarm/alarm/fault/disabled/test` з LSZ:n; попередження `warn` — із запиленості пристроїв. |
+| FR-04 | Модель `f3d.fire.device` містить 353 пристрої (222 сповіщувачі, 36 ручних, 41 оповіщувач, 3 полум'я, 4 датчики іскор, 3 форсунки, 44 люки) з адресою `<шлейф>.<ЗОНА>.<nn>`, типом, координатами CB-04, паспортом (CB-07 через обладнання групи), станом, запиленістю; сигнали пристрою створюються лише за прапором `monitor` (A-02). |
 | FR-05 | Модель `f3d.fire.event` веде журнал подій приладу й систем лише для читання: `alarm/prealarm/fault/dust/disabled/test/reset/comm/spark/smoke/sprinkler/loop/drill`; джерело — переходи станів сигналів (первинно) і BACnet-повідомлення (вторинно); дедуплікація за ключем; записи не видаляються користувачем. |
 | FR-06 | Модель `f3d.fire.system` описує іскрогасіння `SPARK-1` (ADAM u85 DI0–DI3, лічильник), димовидалення `SMOKE-CTRL` (DI4–DI6; 44 люки, 5 щитів, 8 димових зон) і спринклери `SPRINKLERS` (тиск з telemetry u90 AI2) зі станом `ok/active/fault/battery/low_pressure`. |
 | FR-07 | Правила розстановки за ДБН обчислюються з даних: потрібна кількість сповіщувачів на зону (R-01), покриття зони (R-02), найбільша відстань до ручного сповіщувача ≤ 30 м (R-03), рівень оповіщення (R-04); результат — поля відповідності на зоні/приладі та звіт. |
@@ -100,7 +101,7 @@ data-файлами base і макетом.
 | FR-17 | Права: читання всього — `group_f3d_user`; створення/редагування навчань — `group_f3d_fire_drill`; норми, параметри, прапори `monitor` — `group_f3d_manager`; стоп-кран — `group_f3d_admin`; жодна група не має дії, що пише в пристрій. |
 | FR-18 | Параметра `factory3d.fire_safety.write_enabled` не існує; джерела модуля створюються з `write_enabled=False` і прапором `f3d_fire_readonly=True`; спроба увімкнути запис на такому джерелі, на сигналі `module='fire_safety'` або створити `f3d.command` для нього → `ValidationError` незалежно від групи, включно з `sudo`. |
 | FR-19 | Стоп-кран `factory3d.fire_safety.read_enabled` (умовчання за CB-10) вимикає обробку сигналів (стан приладу й зон не оновлюється, події не пишуться, провайдер віддає статику з позначкою); `neutralize.sql` вимикає крони, джерела модуля, прапор і прив'язку до емулятора. |
-| FR-20 | Data-файли генеруються з макета (`tools/gen_data.py`): 4 шлейфи, 33 зони, 343 пристрої, 12 виходів, 32 маршрути, 8 димових зон, 3 системи, 27 записів норм (20 ключів макета + 7 авторських, SPEC M-08), 52 сигнали, шаблон навчання (8 кроків); `post_init_hook` прив'язує 42 одиниці обладнання base і сигнал запиленості рівня 0, 4 демо-події, навчання-демо; повторний запуск нічого не дублює. |
+| FR-20 | Data-файли генеруються з макета (`tools/gen_data.py`): 4 шлейфи, 35 зон, 353 пристрої, 12 виходів, 32 маршрути, 8 димових зон, 3 системи, 27 записів норм (20 ключів макета + 7 авторських, SPEC M-08), 54 сигнали, шаблон навчання (8 кроків); `post_init_hook` прив'язує 44 одиниці обладнання base і сигнал запиленості рівня 0, 4 демо-події, навчання-демо; повторний запуск нічого не дублює. |
 | FR-21 | `res.config.settings` містить стоп-кран читання, `comm_lost_after_s`, пороги запиленості `dust_warn_pct`/`dust_alarm_pct`, `polymer_panels` (норма 50 м замість 240), `drill_time_limit_s`, `drill_auto_create`, `drill_match_window_min`, групу сповіщення, команду ТО; без `write_enabled`. |
 | FR-22 | `f3d.zone` отримує поля `f3d_fire_zone_ids`, `f3d_fire_kind`, `f3d_fire_state`, `f3d_evac_route_id`, `f3d_evac_exit_code`, `f3d_evac_length_m` і статкнопку «Сигналізація». |
 | FR-23 | Якщо встановлено `factory3d_iot_sim`, навчання з режимом «емулятор» запускає сценарій `fire_drill` через пульт (S-07) з параметрами зони/сповіщувача/тривалості і зберігає `run_ref`; без модуля кнопка прихована. |
@@ -134,7 +135,7 @@ Optional (перевірка `'<model>' in env`/`ir.module.module`): `factory3d_
 |---|---|---|
 | CF-01 | Розділи payload переглядача `fire` і `evacuation` строго за viewer A.13 плюс додаткові ключі: `fire.panel` {code, state, state_text, comm, last_seen, alarms, faults, disabled, sounders, brigade}, `fire.groups[*].alarm_state` (сирий стан LSZ), `fire.groups[*].compliance` (`ok`/`warn`/`fail`), `fire.systems` {SPARK-1, SMOKE-CTRL, SPRINKLERS → {state, text, count_today, pressure_bar}}, `fire.devices` (лише за параметром `viewer_devices`, A-02), `evacuation.drill_active` {name, zone, detector, started, elapsed_s, steps_done} або `null`, `evacuation.compliance` {routes_ok, routes_total, worst, norm} | viewer (Q-09), кіоск |
 | CF-02 | Джерела людей на об'єкті й проходів для навчань: **будь-яка модель реєстру з `_name`, що починається з `f3d.fire.passage.source.`** (без вимоги `_inherit`; рішення менеджера, access Q-13): обов'язковий `_f3d_passages(start, end) -> list[dict(employee_id, ts, point, direction)]` (UTC), необов'язкові `_f3d_on_site(at) -> list[dict(employee_id, since, point)]`, `_f3d_available() -> bool`, атрибути `_f3d_priority` (int, умовчання 1000), `_f3d_key` (умовчання — суфікс імені); береться доступне джерело з найменшим `(_f3d_priority, _name)`; модуль дає `…hr_attendance` (100); `factory3d_access` — `…access` (10, access M-16) | access |
-| CF-03 | Коди сигналів `fire/*` (52, SPEC Додаток B) і коди пристроїв `<шлейф>.<ЗОНА>.<nn>`; сигнали мають `module='fire_safety'`, `write_enabled=False`, джерела з `f3d_fire_readonly=True` | telemetry (CT-09), iot_sim (каталог), bms |
+| CF-03 | Коди сигналів `fire/*` (54, SPEC Додаток B) і коди пристроїв `<шлейф>.<ЗОНА>.<nn>`; сигнали мають `module='fire_safety'`, `write_enabled=False`, джерела з `f3d_fire_readonly=True` | telemetry (CT-09), iot_sim (каталог), bms |
 | CF-04 | Події шини `f3d.viewer.event._notify('f3d.fire.zone', [FA-коди], 'state')`, `_notify('f3d.fire.panel', ['FACP-1'], 'state')`, `_notify('f3d.fire.drill', [name], 'state')` | viewer |
 | CF-05 | `f3d.fire.event` як журнал для читання іншими модулями (`kind`, `level`, `object_code`, `ts`); bms/access можуть посилатися на `event_id` у своїх журналах | bms, access, yard |
 | CF-06 | `@api.model f3d.fire.drill._f3d_is_active_at(ts: datetime UTC) -> bool` — чи триває (тривала) навчальна тривога в момент `ts` (`start_ts ≤ ts ≤ end_ts` або `running`); виконується з `sudo` | access (CA-09: вихід через турнікет під час навчання не закриває відмітку) |
@@ -155,19 +156,19 @@ machine_connect CM-02 (необов'язково, X-12).
 ┌──────────────────────────────┐  BACnet/IP UDP 47808  ┌──────────── services/collector (telemetry) ─────────────┐
 │ Siemens Cerberus PRO FC726   │◄── Who-Is, Read- ─────│ plugins/bacnet_ip  (bacpypes3; read_only: write → помилка│
 │ (емулятор: device 200)       │    PropertyMultiple   │   до мережі; LSZ/LSP/BV/PIV/MSV → текст/число)           │
-│  LSZ:0 панель, LSZ:1…33 зони │─── відповіді RPM ───►│ plugins/modbus_tcp (ADAM-6050 unit 85: DI0–DI6, HR40001) │
+│  LSZ:0 панель, LSZ:1…35 зони │─── відповіді RPM ───►│ plugins/modbus_tcp (ADAM-6050 unit 85: DI0–DI6, HR40001) │
 │  LSP:<id> елементи, PIV dust │   Notification        │ core: буфер, push ≤ 5 с                                   │
 │  BV:1…4 шлейфи, BV:10/11     │                       └───────────────┬──────────────────────────────────────────┘
 │  MSV:1 стан                  │  Modbus TCP 502                       │ POST /f3d/telemetry/push, /event
 │ GreCon BS 7 + D+H CPS-M1 ──► ADAM-6050 u85 (сухі контакти)           ▼
 └──────────────────────────────┘                ┌──────────── Odoo 19 + factory3d_telemetry ────────────────────┐
    жодного пакета у зворотний бік:              │ f3d.source BAC-200-FACP-1 (f3d_fire_readonly) · MB-U85-IO6     │
-   write_enabled=False на джерелі й сигналах,   │ f3d.signal fire/* (52) → last_text/last_value/status          │
+   write_enabled=False на джерелі й сигналах,   │ f3d.signal fire/* (54) → last_text/last_value/status          │
    f3d.command для fire/* → ValidationError     │ пороги/alarm_states → maintenance.request (CT-05)             │
                                                 └──────┬──────────────────────────┬─────────────────────────────┘
                                                        │ хук зміни стану (Q-06)   │ крон-звірка 1 хв (fallback)
 ┌──────────────────────────────── factory3d_fire_safety ┴──────────────────────────┴─────────────────────────────┐
-│ f3d.fire.panel ─1:4─ f3d.fire.loop ─1:N─ f3d.fire.zone (33, ↔ f3d.zone) ─1:N─ f3d.fire.device (343)            │
+│ f3d.fire.panel ─1:4─ f3d.fire.loop ─1:N─ f3d.fire.zone (35, ↔ f3d.zone) ─1:N─ f3d.fire.device (353)            │
 │ f3d.fire.system (SPARK-1, SMOKE-CTRL, SPRINKLERS) · f3d.fire.smoke.zone (8) · f3d.fire.norm (20)               │
 │ R-10…R-14: стан панелі/зон/систем із сигналів → f3d.fire.event (журнал, дедуплікація) → активність охороні     │
 │ R-01…R-09: норми (розстановка, MCP, виходи, маршрути, димові зони) → поля compliance, звіт PDF                 │
@@ -190,8 +191,8 @@ machine_connect CM-02 (необов'язково, X-12).
 |---|---|---|---|
 | `f3d.fire.panel` (M-01) | прилад: код, обладнання, джерело, стан, зв'язок, лічильники, активна тривога | хук/крон R-10, R-12; дані | дашборд, провайдер, охорона |
 | `f3d.fire.loop` (M-02) | шлейфи 1–4: межі X, лічильники, стан | дані; R-11 | форма приладу, provider `fire.loops` |
-| `f3d.fire.zone` (M-03) | 33 зони виявлення: LSZ, зона цеху, тип, крок, площа, n, стан, відповідність R-01/R-02 | дані; R-11; R-01/02 (compute) | kanban/список, провайдер `fire.groups`, `f3d.zone` |
-| `f3d.fire.device` (M-04) | 343 пристрої: адреса, тип, шлейф, зона, x/y/z, стан, запиленість, `monitor` | дані; R-11 (device-level), R-13 | список/форма, R-02/R-03, провайдер (`fire.devices` opt) |
+| `f3d.fire.zone` (M-03) | 35 зон виявлення: LSZ, зона цеху, тип, крок, площа, n, стан, відповідність R-01/R-02 | дані; R-11; R-01/02 (compute) | kanban/список, провайдер `fire.groups`, `f3d.zone` |
+| `f3d.fire.device` (M-04) | 353 пристрої: адреса, тип, шлейф, зона, x/y/z, стан, запиленість, `monitor` | дані; R-11 (device-level), R-13 | список/форма, R-02/R-03, провайдер (`fire.devices` opt) |
 | `f3d.fire.event` (M-05) | журнал подій лише для читання | R-14 (з переходів), M-17 (BACnet notify), навчання | журнал, картки, провайдер `fire.events` |
 | `f3d.fire.system` (M-06) | іскрогасіння, димовидалення, спринклери | дані; R-13 | список/форма, провайдер `fire.systems` |
 | `f3d.fire.smoke.zone` (M-07) | 8 димових зон: контур, площа, потреба люків, фактично, відповідність | дані; R-09 | Евакуація → Димові зони, звіт |
@@ -303,41 +304,41 @@ MSV:1 → 4; колектор → push; telemetry: `fire/groups/FA-CNC/state` `l
 
 | Клас | Сигнали | `period_s` | `store_period_s` | Показань/добу (сирих) | Збережених/добу |
 |---|---|---|---|---|---|
-| LSZ:0…33, BV:1…4, BV:10/11, MSV:1 (`kind='state'`) | 41 | 10 (опитування, A-20) | 3600 (+ кожна зміна) | 354 240 (один RPM на 44 об'єкти = 8 640 запитів) | ≈ 1 000 (переважно зміни під час навчань) |
+| LSZ:0…35, BV:1…4, BV:10/11, MSV:1 (`kind='state'`) | 43 | 10 (опитування, A-20) | 3600 (+ кожна зміна) | 371 520 (один RPM на 46 об'єктів = 8 640 запитів) | ≈ 1 000 (переважно зміни під час навчань) |
 | PIV:1…3 лічильники | 3 | 10 | 3600 | 25 920 | 72 + зміни |
-| PIV запиленості (макет 1; `monitor` до 212) | 1 (до 213) | 600 | 3600 | 144 (до 30 700) | 24 (до 5 100) |
+| PIV запиленості (макет 1; `monitor` до 222) | 1 (до 223) | 600 | 3600 | 144 (до 32 100) | 24 (до 5 400) |
 | ADAM u85 DI0–DI6 | 7 | 2 | 3600 (+ зміни) | 302 400 (один блок-запит на 7 сигналів = 43 200 запитів) | ≈ 200 |
 | ADAM HR 40001 лічильник | 1 | 10 | 300 | 8 640 | 288 |
-| **Разом** | **53** | | | ≈ 691 000 через API (≈ 8/с, пакет раз на 5 с ≈ 40 показань) | **≈ 1 600/добу** |
+| **Разом** | **55** | | | ≈ 709 000 через API (≈ 8/с, пакет раз на 5 с ≈ 40 показань) | **≈ 1 600/добу** |
 
 `f3d.fire.event`: у нормі 5–20 подій/добу, під час навчання ≈ 60; 400 днів ≈ 10 000 рядків — ротація не
 потрібна (A-12; індекс `(ts, kind)`, `(object_code, ts)`). Правила R-01…R-03 (сітки 0,5 м по зоні й 2 м по
 будівлі) рахуються лише при зміні даних пристроїв/норм (`@api.depends` + кнопка «Перерахувати»), не на
 кожне показання: R-03 — 76×37 = 2 812 точок × 36 ручних = 101 232 відстаней, < 0,2 с; R-02 по всіх зонах —
-≈ 43 000 точок × ≤ 24 сповіщувачів, < 1 с. Провайдер 130/140: `search_read` 33 зон + 4 шлейфи + 3 системи +
+≈ 43 000 точок × ≤ 24 сповіщувачів, < 1 с. Провайдер 130/140: `search_read` 35 зон + 4 шлейфи + 3 системи +
 12 виходів + 32 маршрути + 50 останніх подій ≈ 40 КБ, < 100 мс; дельта — розділи цілком (viewer R-14 п. 5,
-ліміт 200 КБ — укладаємось із запасом). Крон-звірка 1 хв: один `search_read` 53 сигналів.
+ліміт 200 КБ — укладаємось із запасом). Крон-звірка 1 хв: один `search_read` 55 сигналів.
 
 ### 2.8 Міграція з демо-бази і деінсталяція
 
 `post_init_hook` (SPEC §5.4), ідемпотентно, у транзакції установки:
 
-1. Data (порядок маніфесту): норми 27, шлейфи 4, зони 33, пристрої 343, системи 3, димові зони 8, виходи 12,
+1. Data (порядок маніфесту): норми 27, шлейфи 4, зони 35, пристрої 353, системи 3, димові зони 8, виходи 12,
    маршрути 32, шаблон навчання 1 (8 кроків), джерела 2 (`BAC-200-FACP-1` з `params.device=200`, `network=2`, `MB-U85-IO6`;
-   `read_enabled` за середовищем), сигнали 52 (`origin='module'` — X-16, `module='fire_safety'`, `write_enabled=False`, адреси BACnet
+   `read_enabled` за середовищем), сигнали 54 (`origin='module'` — X-16, `module='fire_safety'`, `write_enabled=False`, адреси BACnet
    без `device` — X-44), параметри,
    крони, послідовність `f3d.fire.drill` (`DRILL/%(year)s/`), групи.
-2. Прив'язка обладнання base за `search_f3d`: `FACP-1` → панель; 33 `FA-<зона>` → `f3d.fire.zone.equipment_id`
-   (`FA-BOILER` теж); `FA-MCP`, `FA-SND`, `FA-FLAME` → `equipment_id` пристроїв відповідних типів; `SPARK-1`,
+2. Прив'язка обладнання base за `search_f3d`: `FACP-1` → панель; 35 `FA-<зона>` → `f3d.fire.zone.equipment_id`
+   (`FA-BOILER`, `FA-SOC`, `FA-OFFICE` теж); `FA-MCP`, `FA-SND`, `FA-FLAME` → `equipment_id` пристроїв відповідних типів; `SPARK-1`,
    `SMOKE-CTRL`, `SMOKE-VENTS`, `SPRINKLERS` → системи (вентиляційні люки — `SMOKE-VENTS`); `EXITS` → виходи;
-   `LPS` — не чіпається. Очікувано: `linked: 42` (41 пожежний код base + `SPRINKLERS`), `missing: 0` на копії
-   демо; на чистій базі без base-міграції — `missing: 42` з WARNING,
+   `LPS` — не чіпається. Очікувано: `linked: 44` (43 пожежні коди base + `SPRINKLERS`), `missing: 0` на копії
+   демо; на чистій базі без base-міграції — `missing: 44` з WARNING,
    модуль працює (обладнання — лише посилання).
 3. Сигнал рівня 0/telemetry `fire/groups/FA-FAC/dust`: якщо `f3d.signal` з таким `code` уже існує (міграція
    telemetry, `origin='sim_data'`) — **не** створюється дубль, а дописуються `source_id=BAC-200-FACP-1`, `address` (PIV:21607, без `device`),
    `module='fire_safety'`, `warn_high=80`, `alarm_high=90`, `alarm_title`, `write_enabled=False` (`origin='sim_data'` лишається); інакше
    створюється хуком з `origin='module'`. Пристрій `2.FAC.07`: `dust_signal_id` = цей сигнал, `monitor=True`, `dust_pct = last_value` (86,1 на
-   14.10). Очікувано: `signals_data: 52`, `dust_signal: reused` (на чистій базі — `created`), разом сигналів модуля 53.
+   14.10). Очікувано: `signals_data: 54`, `dust_signal: reused` (на чистій базі — `created`), разом сигналів модуля 55.
 4. Заявка ТО з `f3d_signal_id` = цей сигнал (телеметрія проставила при своїй міграції; на демо id 5) →
    `f3d_fire_device_id = 2.FAC.07`, `f3d_fire_zone_id = FA-FAC`; очікувано `requests_linked: 1`.
 5. Демо-події `fire.events` макета (4: `SPARK-1` 12.10 08:47 іскра, `FA-FAC` 09:58 запиленість, `FACP-1` 07:00
@@ -349,8 +350,8 @@ MSV:1 → 4; колектор → push; telemetry: `fire/groups/FA-CNC/state` `l
    «Демо-запис: показує структуру протоколу навчання»; очікувано `drills_demo: 1`.
 7. Стани: панель/зони/системи — перший прогін крона-звірки R-19 одразу в хуку (`_f3d_fire_sync(full=True)`):
    без показань — усі `unknown`, панель `comm='lost'` **без** події/заявки (перший старт, `first_sync=True`).
-8. Перерахунок норм R-01…R-09 (`action_recompute_compliance` для всіх) → очікувано: зони `ok: 33`
-   (R-01 усі 33 збігаються з потрібною кількістю, R-02 усі в межах 6,22 м + допуск 0,5: найгірше `Z-FG`
+8. Перерахунок норм R-01…R-09 (`action_recompute_compliance` для всіх) → очікувано: зони `ok: 35`
+   (R-01 усі 35 збігаються з потрібною кількістю, R-02 усі в межах 6,22 м + допуск 0,5: найгірше `Z-FG`
    6,26 м у точці (122,0, 54,1)); MCP `max_m: 26.9` ≤ 30 (точка (60, 72)); маршрути `ok: 32` (макс. 38,6 м
    `Z-PRE`; `max_distance` 45,3 ≤ 240 і ≤ 50); виходи `ok` (12 ≥ 2; L = 31,6 м виконується для пар на різних
    стінах); димові зони `ok: 8` (усі ≤ 1 600; люків 44 = потреба 44).
@@ -364,7 +365,7 @@ MSV:1 → 4; колектор → push; telemetry: `fire/groups/FA-CNC/state` `l
 модуля → `read_enabled=False` (лишаються — належать telemetry за даними, але xml-id модуля → Odoo видалить
 записи data разом із модулем; тому хук попередньо **відв'язує** `fire/groups/FA-FAC/dust` від джерела й
 повертає йому `module` за CT-09 (`fire_safety` лишається — класифікатор telemetry) — сигнал макета
-переживає деінсталяцію; решта 52 сигнали модуля (`origin='module'`) видаляються як data); `maintenance.request.f3d_fire_*`
+переживає деінсталяцію; решта 54 сигнали модуля (`origin='module'`) видаляються як data); `maintenance.request.f3d_fire_*`
 зникають з полями, заявки лишаються; `f3d.fire.event`, `f3d.fire.drill*` видаляються з моделями —
 застереження в чаттері панелі й у логах WARNING перед видаленням (журнал навчань — юридично значущий
 документ; перед деінсталяцією на проді експортувати звіти PDF, інструкція 4.6).
@@ -388,12 +389,12 @@ MSV:1 → 4; колектор → push; telemetry: `fire/groups/FA-CNC/state` `l
 | `ir.config_parameter` | `factory3d.fire_safety.drill_sim_duration_s` | `300` | `duration_s` для `fire_drill` емулятора |
 | `ir.config_parameter` | `factory3d.fire_safety.alert_group_xmlid` | `factory3d_base.group_f3d_user` | кому активність «Пожежна тривога» (на проді — група охорони) |
 | `ir.config_parameter` | `factory3d.fire_safety.team_id` | id «Служба головного механіка» (демо id 2) | команда заявок із пожежних сигналів (Q-02); порожньо → `factory3d.telemetry.default_team_id` |
-| `ir.config_parameter` | `factory3d.fire_safety.viewer_devices` | `False` | віддавати `fire.devices` (343) у payload (Q-09) |
+| `ir.config_parameter` | `factory3d.fire_safety.viewer_devices` | `False` | віддавати `fire.devices` (353) у payload (Q-09) |
 | `ir.config_parameter` | `factory3d.fire_safety.event_ack_required` | `True` | події рівня `alarm` потребують підтвердження охорони (`ack`) |
 | `ir.config_parameter` | `factory3d.fire_safety.migration_report` | `{}` → звіт хука | §2.8 |
 | `f3d.source` | `BAC-200-FACP-1` (xml-id `source_bacnet_facp_1`) | тип `bacnet_ip`, `collector_id=COL-MAIN`, `params` §2.4 (`device` 200, `network` 2), `read_enabled=True` (тест), `write_enabled=False`, `f3d_fire_readonly=True`, `f3d_fire_consent_*` порожні на тесті (вимагаються лише при `environment='prod'`) | прилад |
 | `f3d.source` | `MB-U85-IO6` | тип `modbus_tcp`, `{"host":"iot-sim","port":502,"unit":85}`, `read_enabled=True`, `write_enabled=False`, `f3d_fire_readonly=True` | GreCon + D+H |
-| `f3d.signal` | 52 сигнали `fire/*` | з data (SPEC Додаток B), `write_enabled=False`, `origin='module'`, адреси BACnet без `device` | |
+| `f3d.signal` | 54 сигнали `fire/*` | з data (SPEC Додаток B), `write_enabled=False`, `origin='module'`, адреси BACnet без `device` | |
 | `f3d.fire.norm` | 27 записів (20 ключів макета + 7 авторських) | з data (`fire_rules.json`, `evac_rules.json`, SPEC Додаток D) | менеджер може змінити значення; `ref` обов'язковий |
 | `ir.cron` | `cron_f3d_fire_sync` | 1 хв, активний | R-19 звірка станів (fallback до хука Q-06), зв'язок R-12 |
 | `ir.cron` | `cron_f3d_fire_drill_tick` | 1 хв, активний (працює лише при `running` навчанні; усередині — цикл до 50 с з кроком 10 с) | R-16/R-17 |
@@ -412,7 +413,7 @@ Q-01) і IP/порт/instance приладу; 2) Завод 3D → Телеме�
 сигналізація» — заповнити «Дозвіл монтажника: дата, особа, документ» (вкладення PDF); `params.host` =
 IP приладу, `network` прибрати, якщо прямий IP; 3) увімкнути «Читати» на джерелі (без дозволу — помилка);
 4) Завод 3D → Налаштування → Налаштування пожежної безпеки (X-32) → «Обробляти сигнали» = увімкнено; 5) через ≤ 2 хв Огляд:
-прилад «Норма», зв'язок «онлайн», 33 зони зелені; у журналі — подія `comm_restored`; 6) якщо BACnet device
+прилад «Норма», зв'язок «онлайн», 35 зон зелені; у журналі — подія `comm_restored`; 6) якщо BACnet device
 instance приладу ≠ 200 — Огляд → прилад → «Змінити BACnet device» (адміністратор, SPEC M-01
 `action_set_bacnet_device`, M-19: змінює `params.device` джерела і код `BAC-<device>-FACP-1`; адреси сигналів
 `device` не містять — X-44); якщо прилад не віддає запиленість (Q-16) — архівувати сигнали `…/dust`. Запис у
@@ -463,13 +464,13 @@ instance приладу ≠ 200 — Огляд → прилад → «Зміни
 | Q-02 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** окрема команда ТО «Пожежна сигналізація (підрядник)» з e-mail підрядника; до призначення — «Служба головного механіка». Хто виконує ТО сигналізації (підрядник) і чи потрібна окрема `maintenance.team` «Пожежна сигналізація (підрядник)» замість «Служба головного механіка» | замовник / головний механік | окрема команда з e-mail підрядника; заявки підписує механік | параметр `team_id` = «Служба головного механіка» |
 | Q-03 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** розрахунковий час із проєкту СПЗ; до нього `drill_time_limit_s=300`. Нормативний час евакуації для оцінки навчання (у макеті немає; ДСТУ 8828 — розрахунок) | інженер ПБ / проєктант | взяти розрахунковий час із проєкту СПЗ; інакше — внутрішній норматив підприємства | `drill_time_limit_s=300` (ПРИПУЩЕННЯ), результат `remarks` замість `failed` при перевищенні |
 | Q-04 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** `polymer_panels=False`, у звіті обидві норми (50 і 240 м). Чи стінові/покрівельні панелі з полімерним утеплювачем (норма 50 м за п. 8.2.11 замість 240 м) | замовник / проєктант | за проєктом будівлі | `polymer_panels=False`; обидві норми в звіті (як у переглядачі) |
-| Q-05 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** у макет додати 2 групи сповіщувачів (OP720) у `Z-OFFICE` і `Z-SOC` і перегенерувати дані (окреме завдання макета). Зони `Z-OFFICE` і `Z-SOC` у макеті без сповіщувачів (`ZONE_DETECTOR` їх не містить), хоча ДБН вимагає СПС в офісах | автор макета / проєктант | додати в макет 2 групи (OP720), перегенерувати data | 33 зони як у макеті; звіт показує «зони без сигналізації: Z-OFFICE, Z-SOC» як зауваження |
+| Q-05 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** у макет додати 2 групи сповіщувачів (OP720) у `Z-OFFICE` і `Z-SOC` і перегенерувати дані (окреме завдання макета). Зони `Z-OFFICE` і `Z-SOC` у макеті без сповіщувачів (`ZONE_DETECTOR` їх не містить), хоча ДБН вимагає СПС в офісах | автор макета / проєктант | додати в макет 2 групи (OP720), перегенерувати data | **виконано в макеті 14.10 (№ 12г):** групи `FA-SOC` (LSZ 34, 2 × OP720) і `FA-OFFICE` (LSZ 35, 8 × OP720, по 4 на поверх); 35 зон, 222 сповіщувачі; звіт «зони без сигналізації» — «немає» |
 | Q-06 | **Закрито 14.10 (X-02):** telemetry API-02/API-05 викликають `env['f3d.signal'].sudo()._f3d_ingest(..., src='collector')`, перевизначення з `super()` першим дозволене. Було: **Узгодити з telemetry:** модуль отримує зміни через перевизначення `f3d.signal._f3d_ingest` (CT-10; A-22). Потрібно підтвердити контракт: API-02 і API-05 викликають саме `env['f3d.signal']._f3d_ingest(...)` (а не `Ingester` напряму), результат містить `changed_codes` — коди зі зміненим `last_value/last_text/status`, а `last_*` уже інвалідовані в кеші (telemetry R-17 п. 8) | автор telemetry | так: записати в telemetry SPEC R-17 «API-02 = `_f3d_ingest(src='collector')`, перевизначення дозволене з `super()`» | перевизначення `_f3d_ingest` (A-22) — основний шлях; крон-звірка 1 хв (R-19) — запасний |
 | Q-07 | **Закрито 14.10 (X-05, X-44):** telemetry §8.8 ретранслює `bacnet_event` за схемою SPEC API-01 і для `read_only` ініціює лише Who-Is/ReadProperty/ReadPropertyMultiple; схема `params` — з обов'язковим `device` (+ `network`), адреси без `device`. Було: **Узгодити з telemetry:** (а) у SPEC telemetry Додаток A — схема `params` `bacnet_ip` з ключем `read_only` (bool) і адреса `{device, object, instance, property?, mode?}` (R-23) — модуль спирається саме на них; (б) `UnconfirmedEventNotification` від dev 200 → `POST /f3d/telemetry/event` з `route="bacnet_event"` (SPEC API-01, п. 7 вимог §2.4); (в) для джерел з `read_only` плагін не надсилає жодних сервісів, крім Who-Is/ReadProperty/ReadPropertyMultiple (зокрема ні `SubscribeCOV`, ні `AcknowledgeAlarm`, ні `LifeSafetyOperation`, ні `WriteProperty*`, ні `DeviceCommunicationControl`/`ReinitializeDevice`) | автор telemetry, менеджер | внести в telemetry SPEC §8.8 і Додаток A | адреси за telemetry Додатком A.1 без `device`, `params` з `device`/`network`/`read_only` (SPEC §5.3); події — з переходів сигналів і `bacnet_event`; (в) перевіряє ТБ-05 |
 | Q-08 | **Закрито частково 14.10:** (б) X-34 — 8 кодів A-23 у каталозі iot_sim (№ 681–688), № 644/646 звужено; (г) X-36 — шлейф лише при `fault(reason=loop)`, одна заявка на пристрій; (д) X-37; (в) підтверджено iot_sim R-25. Відкрите лише (а). Було: **Узгодити з iot_sim:** (а) адреси LSP для ручних/оповіщувачів/полум'я (`<loop>.<ZONE>.<nn>` визначено лише для сповіщувачів зон) — пропозиція A-09; (б) у каталозі немає 8 сигналів: MSV:1 (№ 640 `fire/totals/state` = LSZ:0, а §8.11.1 приписує той самий код MSV:1), BI:10, BI:11, DI1, DI2, DI3, DI5, DI6 (№ 644 і № 646 об'єднують кілька входів в одну адресу) — пропозиція 8 кодів (SPEC Додаток B, A-23); (в) `fire_drill real=true` → BI:11=1 і LSZ `alarm` — підтвердити; (г) R-25 при несправності сповіщувача ставить і LSZ `fault`, і BI шлейфу = 1 — у приладі несправність елемента ≠ несправність лінії; пропозиція: BI шлейфу лише для `fault(reason=loop)` (A-28); (д) типи об'єктів — Q-16 | автор iot_sim | прийняти A-09, A-23 і (г) у Додаток A/R-25 iot_sim | (а) працюємо за A-09 (у реєстрі розбіжності немає, iot_sim адрес LSP ручних/оповіщувачів/полум'я не визначає); ТК-03 очікує одну заявку на зону, заявку шлейфу — лише для `reason=loop` |
 | Q-09 | **Закрито 14.10 (X-28):** клієнт viewer реалізує автостарт/автостоп сценарію навчання, червоний колір для `alarm`/`fault`, маркери `fire.devices`. Було: **Узгодити з viewer:** (а) автозапуск `startDrill()` при `evacuation.drill_active != null` і авто-стоп; (б) значення `fire.groups[*].state = "alarm"`/`"fault"` рендерити червоним (зараз усе, що не `ok`, — «Попередження»); (в) маркери окремих пристроїв із `fire.devices` (x, y, z) замість підсвітки групи `FA-<зона>` | автор viewer | так, у наступній версії клієнта; контракт CF-01 вже містить ключі | контракт CF-01 вже містить ключі; до випуску клієнта viewer — навчання запускається кнопкою, тривога показується як «Попередження» + текст |
 | Q-10 | **Закрито рішенням менеджера 14.10** (access M-16, CA-09, Q-13): access реалізує джерело `f3d.fire.passage.source.access` без `_inherit`, модуль знаходить його за префіксом (A-19) і дає CF-06. Лишається відкритим лише: чи буде зчитувач на місці збору; люди виходять через аварійні двері без бейджів — СКУД їх не бачить | автор access, замовник | так; на місці збору — мобільний зчитувач або перекличка | перекличка вручну (майстер), `hr.attendance`, якщо access не встановлено |
-| Q-11 | **Закрито 14.10 (рішення менеджера):** README макета виправлено на 212. README (розділ «Пожежна сигналізація») каже 192 сповіщувачі, макет (`fire.totals.detectors`, сума `groups`) — 212 | автор макета | виправити README на 212 | у data 212 |
+| Q-11 | **Закрито 14.10 (рішення менеджера):** README макета виправлено на 212. README (розділ «Пожежна сигналізація») каже 192 сповіщувачі, макет (`fire.totals.detectors`, сума `groups`) — 212 | автор макета | виправити README на 212 | у data 212; після № 12г (14.10) — 222 |
 | Q-12 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** поза v1; далі — стандартний `maintenance` з категоріями. Пожежні крани, вогнегасники, насосна й резервуари (`Z-FIREWATER`) — у макеті лише паспорт шафи `fire_hydrant_cabinet` без позицій; чи потрібен облік (перевірки, перезарядка) | замовник | фаза 6 або стандартний `maintenance` з категоріями | не входить (1.4) |
 | Q-13 | **Закрито 14.10 (відповідь № 12, CONSISTENCY):** журнал подій — безстроково, форма — PDF «Журнал подій за період». Термін зберігання журналу подій і форма журналу (чи потрібна відповідність «Журналу обліку перевірок СПЗ» за правилами ПБ) | інженер ПБ | зберігати безстроково; форма — звіт PDF «Журнал подій за період» | ротації немає (A-12), звіт за період є |
 | Q-14 | **Закрито 14.10 (відповідь № 11, CONSISTENCY):** розкладка iot_sim §8.11.3 до схеми монтажника; D+H через Modbus-шлюз — окремий плагін. Реальна розкладка сухих контактів GreCon BS 7 (Mission Control) і D+H CPS-M1 (TMA/AM цифрові виходи) на ADAM — iot_sim §8.11.3 позначено ПРИПУЩЕННЯ; D+H публікує KNX/Modbus-шлюзи (CPS-M1-S) і BACnet (CPS-M1-MSE) | монтажник / D+H / GreCon | з'ясувати після вибору; якщо Modbus-шлюз D+H — змінюється лише джерело/адреси | адреси ADAM з емулятора в `address` |
@@ -513,8 +514,8 @@ instance приладу ≠ 200 — Огляд → прилад → «Зміни
 
 | ID | Рішення | Обґрунтування | Що змінює відносно каркаса |
 |---|---|---|---|
-| A-01 | Два провайдери: `f3d.viewer.provider.fire` (130, `fire`) і `.evacuation` (140, `evacuation`) зі спільним помічником | §6.7 каркаса і viewer M-01 резервують два sequence і два ключі; окремі розділи — окремі дельти (навчання не тягне 33 зони) | — |
-| A-02 | Сигнали рівня зони (LSZ, 33) і системні (19) — обов'язкові в data; сигнали окремих пристроїв (LSP state, PIV dust — X-37) — за прапором `monitor` на пристрої (дія «Створити сигнали»), крім `2.FAC.07` з макета | 343 × 2 сигнали без потреби навантажують telemetry (§2.7); прилад сам агрегує стан елементів у LSZ; запиленість цікава там, де пил (менеджер вмикає для FA-FAC/FA-CUT) | уточнює D-04: показання лише через `f3d.signal`, але не всі об'єкти BACnet стають сигналами |
+| A-01 | Два провайдери: `f3d.viewer.provider.fire` (130, `fire`) і `.evacuation` (140, `evacuation`) зі спільним помічником | §6.7 каркаса і viewer M-01 резервують два sequence і два ключі; окремі розділи — окремі дельти (навчання не тягне 35 зон) | — |
+| A-02 | Сигнали рівня зони (LSZ, 35) і системні (19) — обов'язкові в data; сигнали окремих пристроїв (LSP state, PIV dust — X-37) — за прапором `monitor` на пристрої (дія «Створити сигнали»), крім `2.FAC.07` з макета | 353 × 2 сигнали без потреби навантажують telemetry (§2.7); прилад сам агрегує стан елементів у LSZ; запиленість цікава там, де пил (менеджер вмикає для FA-FAC/FA-CUT) | уточнює D-04: показання лише через `f3d.signal`, але не всі об'єкти BACnet стають сигналами |
 | A-03 | Параметра `write_enabled` для модуля **немає**; заборона — constrains на `f3d.source`/`f3d.signal`/`f3d.command` (діють під `sudo`) + `readonly` у плагіні | §5 каркаса вимагає `write_enabled` «за замовчуванням False» — для сигналізації сама наявність вимикача суперечить D-07 | відхилення від §5 (стоп-крани), погоджене з D-07 |
 | A-04 | Події журналу виводяться з переходів `last_text` сигналів (первинно) і з BACnet-повідомлень (вторинно); ключ дедуплікації `kind:object:ts_floor(2 с)` | COV/push доставляють стан надійно й без залежності від intrinsic reporting приладу; повідомлення дають текст приладу, коли є | — |
 | A-05 | Маршрути евакуації імпортуються з `evac_routes.json` (Дейкстра лишається в макеті); Odoo перевіряє норми й рахує покриття MCP/сповіщувачів сам | перешкоди (`layout.OBST`) існують лише в сцені; переносити 3D-геометрію в Odoo — поза межами; норми й покриття потребують лише координат, які є | уточнює «усе, що є в макеті, має з'явитися в Odoo»: результат — так, алгоритм пошуку шляху — ні |
@@ -527,15 +528,15 @@ instance приладу ≠ 200 — Огляд → прилад → «Зміни
 | A-12 | Журнал подій без ротації й без `unlink`; `_log_access=False` | обсяг ≈ 10 000/рік; журнал — документ з обліку СПЗ (Q-13) | — |
 | A-13 | Події іскрогасіння — з приросту лічильника ADAM HR 40001 (`count_today`), а не з імпульсу DI0 0,6 с; DI0/DI1 опитуються 2 с як індикатор «зараз» | 0,6 с імпульс не ловиться опитуванням ≥ 1 с; лічильник ADAM апаратний | — |
 | A-14 | `test-alarm` без запланованого навчання у вікні 30 хв → навчання створюється автоматично (`origin='panel'`, стан `running`) | тест монтажника — теж подія, яку треба запротоколювати; інженер потім заповнить або скасує | — |
-| A-15 | `f3d.fire.device.equipment_id` = обладнання групи base (`FA-<зона>`, `FA-MCP`, `FA-SND`, `FA-FLAME`, `SPARK-1`, `SMOKE-VENTS`); 343 окремих `maintenance.equipment` не створюються | base зафіксував 208 одиниць; заявки ТО йдуть на групу з текстом адреси пристрою (як MR/00036 у демо) | — |
+| A-15 | `f3d.fire.device.equipment_id` = обладнання групи base (`FA-<зона>`, `FA-MCP`, `FA-SND`, `FA-FLAME`, `SPARK-1`, `SMOKE-VENTS`); 353 окремих `maintenance.equipment` не створюються | base зафіксував 210 одиниць (з `FA-SOC`, `FA-OFFICE`); заявки ТО йдуть на групу з текстом адреси пристрою (як MR/00036 у демо) | — |
 | A-16 | Втрата зв'язку → заявка ТО на `FACP-1` створюється **модулем** (єдиний виняток із CT-05), бо «немає показань» — не поріг сигналу; дедуплікація своя (одна відкрита заявка з `f3d_origin='fire_comm'`) | telemetry FR-12 дає лише `stale`, без заявки | уточнює §6.8 |
-| A-17 | Стан зони при `stale`/`lost` — останній відомий + прапор `stale=True` у моделі й `fire.groups[*].stale` у payload; не скидається в `unknown` | охорона має бачити останній стан, а не «невідомо» на всіх 33 зонах | — |
+| A-17 | Стан зони при `stale`/`lost` — останній відомий + прапор `stale=True` у моделі й `fire.groups[*].stale` у payload; не скидається в `unknown` | охорона має бачити останній стан, а не «невідомо» на всіх 35 зонах | — |
 | A-18 | Демо-навчання в хуку (один запис `done`) | показує структуру протоколу й дає виміряні AC для провайдера `drill_active=null` і списку навчань | — |
 | A-19 | Джерела людей/проходів шукаються за префіксом імені моделі `f3d.fire.passage.source.` (як провайдери viewer M-01), без вимоги `_inherit`; access реалізує `f3d.fire.passage.source.access` сам (access M-16, пріоритет 10); власного адаптера над access модуль не має; для `factory3d_access` модуль дає CF-06 `_f3d_is_active_at` | access не залежить від fire_safety і не може успадкувати його модель (рішення менеджера 14.10, access Q-13/CA-09) | змінює CF-02 |
 | A-20 | Усі об'єкти dev 200 читаються опитуванням (`mode="poll"`, ReadPropertyMultiple, `period_s=10`, запиленість — 600 с), без `SubscribeCOV` | telemetry R-07 дає хибний `stale` для COV у спокої (Q-17); опитування не створює підписок на приладі — інтеграція не змінює жодного стану приладу; затримка тривоги в Odoo ≤ 10 с + push 5 с (первинне оповіщення — сам прилад) | замінює «COV, резерв 30 с» у §2.2/§2.4/§2.7 |
-| A-21 | У payload `fire.groups[*].state` стан `unknown` (немає даних) віддається як `"ok"` + `alarm_state:"unknown"` + `stale:true`; зведений `fire.totals.state` пояснює причину («Зв'язок із приладом втрачено», «Обробка вимкнена») | клієнт переглядача все, що не `ok`, показує «Попередженням» — 33 хибних пункти «Потребує уваги» після установки | доповнює CF-01 |
+| A-21 | У payload `fire.groups[*].state` стан `unknown` (немає даних) віддається як `"ok"` + `alarm_state:"unknown"` + `stale:true`; зведений `fire.totals.state` пояснює причину («Зв'язок із приладом втрачено», «Обробка вимкнена») | клієнт переглядача все, що не `ok`, показує «Попередженням» — 35 хибних пунктів «Потребує уваги» після установки | доповнює CF-01 |
 | A-22 | Миттєва обробка змін — перевизначення `f3d.signal._f3d_ingest` (CT-10) з фільтром кодів модуля після `super()`; окремого хука telemetry не потрібно | метод уже публічний контракт telemetry і повертає `changed_codes`; крон R-19 — запасний шлях | закриває Q-06 після підтвердження |
-| A-23 | 52 сигнали = 44 коди каталогу iot_sim (№ 603–646, складені № 644/646 звужено до DI0/DI4) + 8 нових: `fire/totals/system_state` (MSV:1), `fire/totals/sounders_active` (BV:10), `fire/totals/brigade` (BV:11), `fire/spark/SPARK-1/extinguishing` (DI1), `/fault` (DI2), `/water_ok` (DI3), `fire/smoke/SMOKE-CTRL/fault` (DI5), `/battery` (DI6) | одна адреса — один сигнал (telemetry `states[]` дав би один текст замість трьох незалежних станів); MSV:1 і LSZ:0 — різні об'єкти | уточнює iot_sim Додаток A (Q-08); внесено в каталог iot_sim № 681–688 (X-34) |
+| A-23 | 54 сигнали = 46 кодів каталогу iot_sim (№ 603–646, складені № 644/646 звужено до DI0/DI4; № 1 167–1 168 — зони `FA-SOC`, `FA-OFFICE`, № 12г) + 8 нових: `fire/totals/system_state` (MSV:1), `fire/totals/sounders_active` (BV:10), `fire/totals/brigade` (BV:11), `fire/spark/SPARK-1/extinguishing` (DI1), `/fault` (DI2), `/water_ok` (DI3), `fire/smoke/SMOKE-CTRL/fault` (DI5), `/battery` (DI6) | одна адреса — один сигнал (telemetry `states[]` дав би один текст замість трьох незалежних станів); MSV:1 і LSZ:0 — різні об'єкти | уточнює iot_sim Додаток A (Q-08); внесено в каталог iot_sim № 681–688 (X-34) |
 | A-24 | Журнал подій має дрібний тип `etype` (41 значення, SPEC R-14) і категорію `kind` (13 категорій FR-05 + `manual`, `info`); рівні `info/warn/alarm`, у payload `alarm` → `bad` | FR-05 задає категорії, а дедуплікація й тексти потребують точного типу переходу; CSS переглядача знає лише `info/warn/bad` | — |
 | A-25 | Мінімальна ширина маршруту евакуації = мінімум з ширини дверей виходу (`DOOR_W` 1,2 м) і прорізів перегородок `evacuation.WALLS`, які перетинає шлях (обчислює генератор) | у макеті немає ширини шляху; прорізи — єдині звуження, відомі геометрично | дає R-07 для шляхів |
 | A-26 | R-04 (оповіщувачі) — лише довідкова величина «найбільша відстань до оповіщувача» (45,2 м), без висновку відповідає/ні | норма — рівень звуку (65 дБА або фон + 5), її дає акустичний розрахунок, якого в макеті немає (README) | — |

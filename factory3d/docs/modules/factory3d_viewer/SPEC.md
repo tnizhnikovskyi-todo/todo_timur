@@ -17,6 +17,7 @@ X-28 (клієнт: навчальна тривога, стани й прист�
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-06, Q-08.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-10, Q-11.
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-02, Q-05.
+Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: A.13 `fire.groups` 33 → 35, `fire.totals.detectors` 212 → 222; `passports` 205 → 207 (A.0, A.14); обладнання демо-бази 208 → 210 (M-04 крок 29, §5.4 крок 2: `FA-SOC`, `FA-OFFICE` з `manifest.parts[].codes` резолвляться в нове обладнання).
 
 Позначення: UT — юніт-тест (`odoo.tests`), HT — HttpCase/тур, JT — HOOT-тест клієнта, MAN — ручна
 перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -514,7 +515,7 @@ SQL-constraint: `CHECK (size_kb >= 0)`. Методи:
 | 26 | `losses` | 73 простої за зміну | `step_losses` | ensure |
 | 27 | `quality` | Точки й перевірки контролю | `step_quality` | ensure |
 | 28 | `maintenance` | Команда, 6 заявок | `step_maintenance` | ensure |
-| 29 | `equipment` | 208 одиниць обладнання з паспортами | `step_equipment` (поля `f3d_*` з C-09, а не `note`) | ensure |
+| 29 | `equipment` | 210 одиниць обладнання з паспортами | `step_equipment` (поля `f3d_*` з C-09, а не `note`) | ensure |
 | 30 | `preventive` | Планове ТО | `step_preventive` | ensure |
 | 31 | `iot_module` | Імпорт data-модуля імітації IoT | `base.import.module` з zip `odoo_addons/factory3d_iot_sim` — у майстрі **пропускається**, якщо модуль уже встановлено; інакше повідомлення «встановіть `factory3d_iot_sim` з Застосунків» (`skipped`) | стан модуля |
 | 32 | `signals` | 196 сигналів імітації | `step_signals` (лише якщо `x_f3d_signal` є) | ensure `sig_<code>` |
@@ -846,7 +847,7 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
 | Крок | Дія | Очікувано на демо-базі |
 |---|---|---|
 | 1 | параметри `kiosk_token`, `demo_enabled`, `demo_clock` | `demo_enabled=True`, `demo_clock="2026-10-12 10:30"` (бо `factory3d_iot_sim` встановлений і компанія «Меблева фабрика (демо)») |
-| 2 | перевірка кодів: для кожного коду з `manifest.parts[].codes` (1 089 унікальних) — резолвер R-16 | знайдено: локації 697 (зі штрихкодом; після міграції base `f3d_code` = штрихкод), робочі центри 35, обладнання до 208, співробітники 35, зони 34 (коди з `manifest.parts[].codes`; payload `zones` віддає всі 45 активних `f3d.zone`, зокрема 11 надвірних base C.2 — X-29), батчі 6; у лог одна стрічка підсумку |
+| 2 | перевірка кодів: для кожного коду з `manifest.parts[].codes` (усі унікальні коди; 1 078 після перебудови 14.10 — +`FA-SOC`, `FA-OFFICE`) — резолвер R-16 | знайдено: локації 697 (зі штрихкодом; після міграції base `f3d_code` = штрихкод), робочі центри 35, обладнання до 210, співробітники 35, зони 34 (коди з `manifest.parts[].codes`; payload `zones` віддає всі 45 активних `f3d.zone`, зокрема 11 надвірних base C.2 — X-29), батчі 6; у лог одна стрічка підсумку |
 | 3 | знімок `kind=install` | 1 запис, `size_kb` 100…160 |
 | 4 | якщо `x_f3d_signal` є — увімкнути крон «3D: сигнали імітації в шину» | крон `active=True` |
 
@@ -1822,7 +1823,7 @@ Q-01…Q-08 — у ARCHITECTURE §5 (ті самі номери). Додатко
 | `ship_chain` | dict | — | M-01g | ланцюжок відвантаження |
 | `material_paths` | list[dict] | 6 | M-01g | типові шляхи матеріалів |
 | `full_cycle_mo` | str | — | M-01g | назва МО для кнопки «Весь цикл» |
-| `passports` | dict[code→dict] | 205 | статика | паспорти обладнання |
+| `passports` | dict[code→dict] | 207 | статика | паспорти обладнання |
 | `yard` | dict | — | `factory3d_yard` (160, CY-06) | лише з модулем; після 26 базових (A.15) |
 | `access` | dict | — | `factory3d_access` (170, CA-05) | лише з модулем; після `yard` (A.15) |
 
@@ -2045,9 +2046,9 @@ design_heat_kw int, chp_heat_kw int, chp_heat_now int, chp_heat_rated int}; `hea
 list[{name, kw int}], total int, capacity int, chp_kw int, reserve float, note str}.
 `fire`: `rules` dict (10 ключів: `smoke_spacing_6_12m` 8.8, `smoke_wall_6_12m` 4.4, `heat_spacing` 6.4,
 `mcp_spacing` 30, `sounder_level` 65, решта null); `loops` dict[`"1"…"4"` → {detectors, mcp, sounders, flame,
-modules int}]; `groups` dict[33 `FA-*` → {zone, zone_name, kind (`smoke`/`multi`/`heat`), kind_name, n int,
+modules int}]; `groups` dict[35 `FA-*` → {zone, zone_name, kind (`smoke`/`multi`/`heat`), kind_name, n int,
 spacing float, area int, loop int, state (`ok`/`warn`), warning str opt, maintenance_request str opt, dust float opt}];
-`totals` {detectors 212, mcp 36, sounders 41, mcp_max_m 26.9, flame 3, spark_detectors 4, state str, sprinkler str};
+`totals` {detectors 222, mcp 36, sounders 41, mcp_max_m 26.9, flame 3, spark_detectors 4, state str, sprinkler str};
 `events` list[{time, level, code, text}] (4).
 `infra`: `cards` dict[30 кодів → {rows list[[str, str]], note str opt, items list[str] opt, warn str opt}]
 (`PV-ROOF`, `PV-INV`, `CHP`, `GENSET`, `ATS-1`, `BESS`, `WATER`, `ODOO-TABLETS`, `ODOO-SCANNERS`, `PRN-RCV`,
@@ -2071,7 +2072,7 @@ list[6 × {code, label}] (`label` виду `"1 · фура"`).
 `ship_chain`: `steps` list[5 × {n, title, codes, stock, desc}] (без `docs`).
 `material_paths`: list[6 × {kind str, product str, mo str, steps list[{code, label}]}].
 `full_cycle_mo`: str.
-`passports[code]` (205 кодів, у т.ч. `LT-*`, `RV-*`, `FA-*`, `Q1`, `BW-1`…): `role` str req; `manufacturer`,
+`passports[code]` (207 кодів, у т.ч. `LT-*`, `RV-*`, `FA-*`, `Q1`, `BW-1`…): `role` str req; `manufacturer`,
 `model`, `reason` str req; `specs` dict[str → str] req; `dimensions_mm` {L, W, H: int|null} req; `power_kw`
 num|null req; `sources` list[str] req; `units` list[dict тієї ж форми] req (може `[]`); `connected_kw` num|null opt (39);
 `connected_note` str opt (39); `connected_sources` list[str] opt (39); решта числових ключів (`lumen`, `watt`,
