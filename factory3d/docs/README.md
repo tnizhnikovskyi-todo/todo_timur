@@ -1,7 +1,7 @@
 # Документація factory3d — індекс
 
 Проєктна документація модулів Odoo 19 для 3D-моделі меблевого підприємства: прод-модулі, які на стенді
-працюють з емулятором обладнання `factory3d_iot_sim` замість реальних пристроїв. Стан на 14.10.2026.
+працюють з емулятором обладнання `factory3d_iot_sim` замість реальних пристроїв. Стан на 14.10.2026 (після відповідей замовника й правки макета 12г).
 
 ## Спільні документи
 
@@ -18,17 +18,17 @@
 
 | # | Модуль | Фаза | Технічне рішення | Специфікація |
 |---|---|---|---|---|
-| 1 | `factory3d_base` | 1 | [v0.2, 376 р.](modules/factory3d_base/ARCHITECTURE.md) | [v0.2, 1 341 р.](modules/factory3d_base/SPEC.md) |
-| 2 | `factory3d_viewer` | 1 | [v0.2, 519 р.](modules/factory3d_viewer/ARCHITECTURE.md) | [v0.2, 2 146 р.](modules/factory3d_viewer/SPEC.md) |
-| 3 | `factory3d_iot_sim` | 1 | [v0.3, 320 р.](modules/factory3d_iot_sim/ARCHITECTURE.md) | [v0.3, 2 958 р.](modules/factory3d_iot_sim/SPEC.md) |
-| 4 | `factory3d_telemetry` | 2 | [v0.3, 520 р.](modules/factory3d_telemetry/ARCHITECTURE.md) | [v0.3, 2 407 р.](modules/factory3d_telemetry/SPEC.md) |
-| 5 | `factory3d_machine_connect` | 2 | [v0.2, 565 р.](modules/factory3d_machine_connect/ARCHITECTURE.md) | [v0.2, 2 881 р.](modules/factory3d_machine_connect/SPEC.md) |
-| 6 | `factory3d_energy` | 3 | [v0.2, 458 р.](modules/factory3d_energy/ARCHITECTURE.md) | [v0.2, 2 441 р.](modules/factory3d_energy/SPEC.md) |
-| 7 | `td_genset` (міст `factory3d_genset`) | 3 | [v0.3, 587 р.](modules/td_genset/ARCHITECTURE.md) | [v0.3, 1 718 р.](modules/td_genset/SPEC.md) |
-| 8 | `factory3d_yard` | 4 | [v0.3, 496 р.](modules/factory3d_yard/ARCHITECTURE.md) | [v0.2, 2 514 р.](modules/factory3d_yard/SPEC.md) |
-| 9 | `factory3d_access` | 4 | [v0.2, 503 р.](modules/factory3d_access/ARCHITECTURE.md) | [v0.2, 2 067 р.](modules/factory3d_access/SPEC.md) |
-| 10 | `factory3d_bms` | 5 | [v0.2, 443 р.](modules/factory3d_bms/ARCHITECTURE.md) | [v0.2, 1 811 р.](modules/factory3d_bms/SPEC.md) |
-| 11 | `factory3d_fire_safety` | 5 | [v0.3, 547 р.](modules/factory3d_fire_safety/ARCHITECTURE.md) | [v0.3, 2 582 р.](modules/factory3d_fire_safety/SPEC.md) |
+| 1 | `factory3d_base` | 1 | [v0.2, 378 р.](modules/factory3d_base/ARCHITECTURE.md) | [v0.2, 1 343 р.](modules/factory3d_base/SPEC.md) |
+| 2 | `factory3d_viewer` | 1 | [v0.2, 522 р.](modules/factory3d_viewer/ARCHITECTURE.md) | [v0.2, 2 152 р.](modules/factory3d_viewer/SPEC.md) |
+| 3 | `factory3d_iot_sim` | 1 | [v0.3, 323 р.](modules/factory3d_iot_sim/ARCHITECTURE.md) | [v0.3, 2 964 р.](modules/factory3d_iot_sim/SPEC.md) |
+| 4 | `factory3d_telemetry` | 2 | [v0.3, 522 р.](modules/factory3d_telemetry/ARCHITECTURE.md) | [v0.3, 2 409 р.](modules/factory3d_telemetry/SPEC.md) |
+| 5 | `factory3d_machine_connect` | 2 | [v0.2, 567 р.](modules/factory3d_machine_connect/ARCHITECTURE.md) | [v0.2, 2 883 р.](modules/factory3d_machine_connect/SPEC.md) |
+| 6 | `factory3d_energy` | 3 | [v0.2, 463 р.](modules/factory3d_energy/ARCHITECTURE.md) | [v0.2, 2 445 р.](modules/factory3d_energy/SPEC.md) |
+| 7 | `td_genset` (міст `factory3d_genset`) | 3 | [v0.3, 589 р.](modules/td_genset/ARCHITECTURE.md) | [v0.3, 1 720 р.](modules/td_genset/SPEC.md) |
+| 8 | `factory3d_yard` | 4 | [v0.3, 498 р.](modules/factory3d_yard/ARCHITECTURE.md) | [v0.2, 2 516 р.](modules/factory3d_yard/SPEC.md) |
+| 9 | `factory3d_access` | 4 | [v0.2, 506 р.](modules/factory3d_access/ARCHITECTURE.md) | [v0.2, 2 070 р.](modules/factory3d_access/SPEC.md) |
+| 10 | `factory3d_bms` | 5 | [v0.2, 444 р.](modules/factory3d_bms/ARCHITECTURE.md) | [v0.2, 1 812 р.](modules/factory3d_bms/SPEC.md) |
+| 11 | `factory3d_fire_safety` | 5 | [v0.3, 551 р.](modules/factory3d_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/factory3d_fire_safety/SPEC.md) |
 
 ## Як читати
 
