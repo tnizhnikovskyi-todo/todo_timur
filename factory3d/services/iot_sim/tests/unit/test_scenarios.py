@@ -245,19 +245,27 @@ async def test_signal_driven_scenarios(world, runner):
 
 
 async def test_posted_commands(world, runner):
+    posted: dict[str, list] = {}
+    orig = world.post
+
+    def spy(topic, payload):  # моделі двору/СКУД/іскрогасіння самі забирають inbox — фіксуємо виклики
+        posted.setdefault(topic, []).append(payload)
+        orig(topic, payload)
+
+    world.post = spy
     runner.start("spark", {"count": 3, "interval_s": 10, "fault": True})
     await settle()
     for _ in range(3):
         world.advance(10)
         await settle()
-    sparks = world.drain("spark")
+    sparks = posted["spark"]
     assert [m["index"] for m in sparks] == [0, 1, 2] and sparks[0]["fault"] is True
     run = runner.start("access_event", {"user": "U1", "code": 4867})
     await settle()
-    assert run.state == "done" and world.drain("access")[0]["code"] == 4867
+    assert run.state == "done" and posted["access"][0]["code"] == 4867
     runner.start("truck_no_booking", {"plate": "AA1234KT", "wait_min": 1})
     await settle()
-    msg = world.drain("yard")[0]
+    msg = posted["yard"][0]
     assert msg["kind"] == "truck_no_booking" and msg["plate"] == "AA1234KT"
     world.advance(61)
     await settle()

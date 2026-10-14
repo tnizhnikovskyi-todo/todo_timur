@@ -1,0 +1,1637 @@
+{
+ "passports": {
+  "SAW-1": {
+   "role": "beam_saw",
+   "manufacturer": "HOMAG",
+   "model": "SAWTEQ S-310 з підйомним столом (S-310/43/22)",
+   "power_kw": 11,
+   "connected_kw": null,
+   "p_inst": 24,
+   "cos_phi": 0.84,
+   "feeder": "QF-1",
+   "p_now": 12.19
+  },
+  "SAW-2": {
+   "role": "beam_saw",
+   "manufacturer": "HOMAG",
+   "model": "SAWTEQ S-310 з підйомним столом (S-310/43/22)",
+   "power_kw": 11,
+   "connected_kw": null,
+   "p_inst": 24,
+   "cos_phi": 0.84,
+   "feeder": "QF-1",
+   "p_now": 11.3
+  },
+  "SAW-3": {
+   "role": "beam_saw_book",
+   "manufacturer": "HOMAG",
+   "model": "SAWTEQ S-510 з підйомним столом (S-510/43/22)",
+   "power_kw": 30,
+   "connected_kw": null,
+   "p_inst": 45,
+   "cos_phi": 0.84,
+   "feeder": "QF-2",
+   "p_now": 3.67
+  },
+  "SLIDE-1": {
+   "role": "sliding_table_saw",
+   "manufacturer": "Altendorf",
+   "model": "F 45",
+   "power_kw": 5.5,
+   "connected_kw": null,
+   "p_inst": 7.5,
+   "cos_phi": 0.82,
+   "feeder": "QF-2",
+   "p_now": 3.34
+  },
+  "VSAW-1": {
+   "role": "vertical_panel_saw",
+   "manufacturer": "Striebig",
+   "model": "EVOLUTION 4224",
+   "power_kw": 5.5,
+   "connected_kw": 7.3,
+   "p_inst": 7.3,
+   "cos_phi": 0.82,
+   "feeder": "QF-2",
+   "p_now": 0.57
+  },
+  "NEST-1": {
+   "role": "nesting_cnc",
+   "manufacturer": "HOMAG",
+   "model": "CENTATEQ N-510 /32/22, автоматизація Concept 2H+",
+   "power_kw": 10,
+   "connected_kw": 39,
+   "p_inst": 39,
+   "cos_phi": 0.9,
+   "feeder": "QF-2",
+   "p_now": 19.59
+  },
+  "GANTRY-1": {
+   "role": "board_storage",
+   "manufacturer": "HOMAG",
+   "model": "STORETEQ P-500, вакуумна траверса ST71 X",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 15,
+   "cos_phi": 0.86,
+   "feeder": "QF-2",
+   "p_now": 5.12
+  },
+  "EDGE-1": {
+   "role": "edgebander_laser",
+   "manufacturer": "HOMAG",
+   "model": "EDGETEQ S-500 (airTec, серія 2480–2484)",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 67.5,
+   "cos_phi": 0.9,
+   "feeder": "QF-1",
+   "p_now": 43.0
+  },
+  "EDGE-2": {
+   "role": "edgebander",
+   "manufacturer": "HOMAG",
+   "model": "EDGETEQ S-380 Model 1660 HF",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 28,
+   "cos_phi": 0.9,
+   "feeder": "QF-1",
+   "p_now": 18.59
+  },
+  "EDGE-3": {
+   "role": "edgebander",
+   "manufacturer": "HOMAG",
+   "model": "EDGETEQ S-380 Model 1660 HF",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 28,
+   "cos_phi": 0.9,
+   "feeder": "QF-2",
+   "p_now": 2.31
+  },
+  "CNC-1": {
+   "role": "ptp_cnc",
+   "manufacturer": "HOMAG",
+   "model": "CENTATEQ P-110 /31",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 22,
+   "cos_phi": 0.9,
+   "feeder": "QF-1",
+   "p_now": 10.38
+  },
+  "CNC-2": {
+   "role": "ptp_cnc",
+   "manufacturer": "HOMAG",
+   "model": "CENTATEQ P-110 /31",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 22,
+   "cos_phi": 0.9,
+   "feeder": "QF-1",
+   "p_now": 0.0
+  },
+  "CNC-3": {
+   "role": "ptp_cnc",
+   "manufacturer": "HOMAG",
+   "model": "CENTATEQ P-110 /31",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 22,
+   "cos_phi": 0.9,
+   "feeder": "QF-2",
+   "p_now": 12.36
+  },
+  "CNC-4": {
+   "role": "ptp_cnc",
+   "manufacturer": "HOMAG",
+   "model": "CENTATEQ P-110 /31",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 22,
+   "cos_phi": 0.9,
+   "feeder": "QF-2",
+   "p_now": 9.64
+  },
+  "BORE-1": {
+   "role": "throughfeed_drilling",
+   "manufacturer": "HOMAG",
+   "model": "DRILLTEQ H-600 (конфігурація 0037)",
+   "power_kw": 19.5,
+   "connected_kw": 19.5,
+   "p_inst": 19.5,
+   "cos_phi": 0.88,
+   "feeder": "QF-2",
+   "p_now": 9.65
+  },
+  "DOWEL-1": {
+   "role": "dowel_inserting",
+   "manufacturer": "HOMAG",
+   "model": "DRILLTEQ D-510 (2500 мм)",
+   "power_kw": 11,
+   "connected_kw": 11,
+   "p_inst": 11,
+   "cos_phi": 0.86,
+   "feeder": "QF-2",
+   "p_now": 5.13
+  },
+  "HINGE-1": {
+   "role": "hinge_insertion",
+   "manufacturer": "Blum",
+   "model": "MINIPRESS P (M53.2000EU)",
+   "power_kw": 1.1,
+   "connected_kw": 1.1,
+   "p_inst": 1.1,
+   "cos_phi": 0.85,
+   "feeder": "QF-3",
+   "p_now": 0.31
+  },
+  "SORT-1": {
+   "role": "sorting_cell",
+   "manufacturer": "HOMAG",
+   "model": "SORTBOT R-300",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 20,
+   "cos_phi": 0.9,
+   "feeder": "QF-1",
+   "p_now": 8.95
+  },
+  "SAND-1": {
+   "role": "wide_belt_sander",
+   "manufacturer": "SCM (DMC)",
+   "model": "dmc sd 60 135, 2 агрегати",
+   "power_kw": 11,
+   "connected_kw": null,
+   "p_inst": 30,
+   "cos_phi": 0.85,
+   "feeder": "QF-3",
+   "p_now": 18.1
+  },
+  "PRESS-1": {
+   "role": "membrane_press",
+   "manufacturer": "Orma",
+   "model": "AIR SYSTEM ECO 30/14",
+   "power_kw": 28,
+   "connected_kw": 28,
+   "p_inst": 28,
+   "cos_phi": 0.97,
+   "feeder": "QF-3",
+   "p_now": 17.47
+  },
+  "GLUE-1": {
+   "role": "glue_spray_booth",
+   "manufacturer": "Ardesia",
+   "model": "AMBER 3 (суха фільтрація) + поворотний візок Criart CBC/9",
+   "power_kw": 2.2,
+   "connected_kw": 2.2,
+   "p_inst": 2.2,
+   "cos_phi": 0.85,
+   "feeder": "QF-3",
+   "p_now": 1.51
+  },
+  "SPRAY-1": {
+   "role": "manual_spray_booth",
+   "manufacturer": "Ardesia",
+   "model": "DOUBLE 4 (подвійна водяна завіса)",
+   "power_kw": 5.1,
+   "connected_kw": 5.1,
+   "p_inst": 5.1,
+   "cos_phi": 0.85,
+   "feeder": "QF-3",
+   "p_now": 3.48
+  },
+  "AUTOSPRAY-1": {
+   "role": "automatic_spraying",
+   "manufacturer": "Cefla Finishing",
+   "model": "EASY 2000 DUO D",
+   "power_kw": 18,
+   "connected_kw": 18,
+   "p_inst": 18,
+   "cos_phi": 0.88,
+   "feeder": "QF-3",
+   "p_now": 9.3
+  },
+  "DRY-1": {
+   "role": "drying",
+   "manufacturer": "Cefla Finishing",
+   "model": "вертикальна двозонна сушка до лінії EASY 2000 (наступник — Omnidry)",
+   "power_kw": 17,
+   "connected_kw": 17,
+   "p_inst": 17,
+   "cos_phi": 0.95,
+   "feeder": "QF-3",
+   "p_now": 12.83
+  },
+  "UV-1": {
+   "role": "uv_line",
+   "manufacturer": "Cefla Finishing (Sorbini)",
+   "model": "Smartcoater MF-EVO + УФ-сушка UV-R/3",
+   "power_kw": 2.9,
+   "connected_kw": 2.9,
+   "p_inst": 58.9,
+   "cos_phi": 0.95,
+   "feeder": "QF-3",
+   "p_now": 4.48
+  },
+  "ASMLINE-1": {
+   "role": "case_clamp_auto",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ T-200",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 8,
+   "cos_phi": 0.86,
+   "feeder": "QF-4",
+   "p_now": 3.5
+  },
+  "BOX-1": {
+   "role": "box_machine",
+   "manufacturer": "Panotec",
+   "model": "Nextmode 2.5 (поточний наступник — Nextpro 2.5)",
+   "power_kw": 10,
+   "connected_kw": 10,
+   "p_inst": 10,
+   "cos_phi": 0.88,
+   "feeder": "QF-4",
+   "p_now": 5.07
+  },
+  "PACK-1": {
+   "role": "stretch_wrapper",
+   "manufacturer": "Robopac",
+   "model": "Rotoplat 508 PDS",
+   "power_kw": 1.9,
+   "connected_kw": 1.9,
+   "p_inst": 1.9,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.68
+  },
+  "PACK-2": {
+   "role": "stretch_wrapper",
+   "manufacturer": "Robopac",
+   "model": "Rotoplat 508 PDS",
+   "power_kw": 1.9,
+   "connected_kw": 1.9,
+   "p_inst": 1.9,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.85
+  },
+  "PACKLINE-1": {
+   "role": "shrink_line",
+   "manufacturer": "Smipack",
+   "model": "FP8000CS (L-зварювач) + T652 (тунель)",
+   "power_kw": 19.75,
+   "connected_kw": 19.75,
+   "p_inst": 19.9,
+   "cos_phi": 0.97,
+   "feeder": "QF-4",
+   "p_now": 12.75
+  },
+  "COMPRESSOR": {
+   "role": "compressor",
+   "manufacturer": "Atlas Copco",
+   "model": "GA 37 VSD+ FF (×2) + ресивер LV911 900 л",
+   "power_kw": 37,
+   "connected_kw": 37,
+   "p_inst": 74,
+   "cos_phi": 0.95,
+   "feeder": "QF-C1",
+   "p_now": 46.3
+  },
+  "DUST-1": {
+   "role": "dust_extraction",
+   "manufacturer": "NESTRO Lufttechnik",
+   "model": "Kompakt-JET-Filter NKJ (32 000 м³/год)",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 150,
+   "cos_phi": 0.88,
+   "feeder": "QF-C1",
+   "p_now": 130.2
+  },
+  "BOILER": {
+   "role": "biomass_boiler",
+   "manufacturer": "Kalvis",
+   "model": "K-500M (серія M, шнекова подача)",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 25,
+   "cos_phi": 0.85,
+   "feeder": "QF-C1",
+   "p_now": 9.85
+  },
+  "TUGGER-1": {
+   "role": "tugger",
+   "manufacturer": "Jungheinrich",
+   "model": "EZS 350",
+   "power_kw": 2.8,
+   "connected_kw": null
+  },
+  "BOARD-RACKS": {
+   "role": "board_rack",
+   "manufacturer": "SSI Schäfer",
+   "model": "PR 600 (фронтальний палетний стелаж), конфігурація під стоси ДСП/МДФ: подвійна рама 2×850 мм + розпірки D 300 F (глибина 2000 мм), балки INP 120 TRV1-330-12-I (просвіт 3300 мм), стійки P 95 (90 мм)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FL-2": {
+   "role": "board_forklift",
+   "manufacturer": "Linde Material Handling",
+   "model": "X50/600 (серія 1254), електричний фронтальний навантажувач 4,99 т, Li-ion 90 В, стандартна щогла h3 = 4400 мм, вила 2000 мм з позиціонером",
+   "power_kw": 30,
+   "connected_kw": null
+  },
+  "FL-6": {
+   "role": "board_forklift",
+   "manufacturer": "Linde Material Handling",
+   "model": "X50/600 (серія 1254), електричний фронтальний навантажувач 4,99 т, Li-ion 90 В, стандартна щогла h3 = 4400 мм, вила 2000 мм з позиціонером",
+   "power_kw": 30,
+   "connected_kw": null
+  },
+  "ASM-1": {
+   "role": "case_clamp_manual",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ S-250",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 1.5,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.52
+  },
+  "ASM-2": {
+   "role": "case_clamp_manual",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ S-250",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 1.5,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.59
+  },
+  "ASM-3": {
+   "role": "case_clamp_manual",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ S-250",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 1.5,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.47
+  },
+  "ASM-4": {
+   "role": "case_clamp_manual",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ S-250",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 1.5,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.51
+  },
+  "ASM-5": {
+   "role": "case_clamp_manual",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ S-250",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 1.5,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.12
+  },
+  "ASM-6": {
+   "role": "case_clamp_manual",
+   "manufacturer": "HOMAG",
+   "model": "CABTEQ S-250",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 1.5,
+   "cos_phi": 0.85,
+   "feeder": "QF-4",
+   "p_now": 0.65
+  },
+  "FL-1": {
+   "role": "forklift",
+   "manufacturer": "Jungheinrich",
+   "model": "EFG 216",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FL-3": {
+   "role": "forklift",
+   "manufacturer": "Jungheinrich",
+   "model": "EFG 216",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FL-4": {
+   "role": "forklift",
+   "manufacturer": "Jungheinrich",
+   "model": "EFG 216",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FL-5": {
+   "role": "forklift",
+   "manufacturer": "Jungheinrich",
+   "model": "EFG 216",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FL-C1": {
+   "role": "forklift",
+   "manufacturer": "Jungheinrich",
+   "model": "EFG 216",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FL-C2": {
+   "role": "forklift",
+   "manufacturer": "Jungheinrich",
+   "model": "EFG 216",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "RM6-1": {
+   "role": "substation",
+   "manufacturer": "Schneider Electric",
+   "model": "RM6 NE-QIQI 24 кВ (моноблок РУ 10 кВ: 2 лінійні вимикачі навантаження I + 2 трансформаторні запобіжники-вимикачі Q)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "T1": {
+   "role": "transformer",
+   "manufacturer": "Schneider Electric",
+   "model": "Trihal 1000 кВА 10/0,4 кВ, Dyn11, у кожусі IP31 (2 шт.)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "T2": {
+   "role": "transformer",
+   "manufacturer": "Schneider Electric",
+   "model": "Trihal 1000 кВА 10/0,4 кВ, Dyn11, у кожусі IP31 (2 шт.)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "SWB-1": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "Q1": {
+   "role": "acb",
+   "manufacturer": "Schneider Electric",
+   "model": "MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "Q2": {
+   "role": "acb",
+   "manufacturer": "Schneider Electric",
+   "model": "MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QS": {
+   "role": "acb",
+   "manufacturer": "Schneider Electric",
+   "model": "MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "PFC-1": {
+   "role": "pfc",
+   "manufacturer": "Schneider Electric",
+   "model": "PowerLogic VarSet 350 квар, з антирезонансними дроселями 3,8 (190 Гц), верхній ввід, з автоматом (VLVAF5P03517AK) — по одній на секцію шин",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "PFC-2": {
+   "role": "pfc",
+   "manufacturer": "Schneider Electric",
+   "model": "PowerLogic VarSet 350 квар, з антирезонансними дроселями 3,8 (190 Гц), верхній ввід, з автоматом (VLVAF5P03517AK) — по одній на секцію шин",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "EMS-1": {
+   "role": "power_meter",
+   "manufacturer": "Schneider Electric",
+   "model": "PowerLogic PM5560 (METSEPM5560)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "GENSET": {
+   "role": "genset",
+   "manufacturer": "KOHLER-SDMO",
+   "model": "D700 (шумозахисне виконання M230)",
+   "power_kw": 507,
+   "connected_kw": null
+  },
+  "BW-1": {
+   "role": "busbar_dist",
+   "manufacturer": "Schneider Electric",
+   "model": "Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QF-1": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "BW-2": {
+   "role": "busbar_dist",
+   "manufacturer": "Schneider Electric",
+   "model": "Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QF-2": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "BW-3": {
+   "role": "busbar_dist",
+   "manufacturer": "Schneider Electric",
+   "model": "Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QF-3": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "BW-4": {
+   "role": "busbar_dist",
+   "manufacturer": "Schneider Electric",
+   "model": "Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QF-4": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QF-C1": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "QF-C2": {
+   "role": "main_switchboard",
+   "manufacturer": "Schneider Electric",
+   "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "LT-RCV-1": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-RCV-2": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-RCV-3": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-RCV-4": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-RCV-5": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-RCV-6": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-RCV-7": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-SHEETS": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-HW": {
+   "role": "highbay_rack",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-EDGE": {
+   "role": "highbay_rack",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-PKS": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-CUT": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-EB": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-CNC": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-SORT": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-FAC": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-ASM": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-PRE": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-MAINT": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-PACK": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-POST": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-CMP": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-CHG": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-FG": {
+   "role": "highbay_rack",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-ELEC": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-1": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-2": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-3": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-4": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-5": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-6": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LT-OUT-7": {
+   "role": "highbay",
+   "manufacturer": "Signify (Philips)",
+   "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+   "power_kw": 0.126,
+   "connected_kw": null
+  },
+  "LP-1": {
+   "role": "lighting_control",
+   "manufacturer": "Helvar",
+   "model": "Imagine 950 DALI-2 Router (4 лінії DALI) + високоповісний мультисенсор 322",
+   "power_kw": 0.035,
+   "connected_kw": null,
+   "p_inst": 6.3,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 5.6
+  },
+  "LP-2": {
+   "role": "lighting_control",
+   "manufacturer": "Helvar",
+   "model": "Imagine 950 DALI-2 Router (4 лінії DALI) + високоповісний мультисенсор 322",
+   "power_kw": 0.035,
+   "connected_kw": null,
+   "p_inst": 23.2,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 23.2
+  },
+  "LP-3": {
+   "role": "lighting_control",
+   "manufacturer": "Helvar",
+   "model": "Imagine 950 DALI-2 Router (4 лінії DALI) + високоповісний мультисенсор 322",
+   "power_kw": 0.035,
+   "connected_kw": null,
+   "p_inst": 10.8,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 9.5
+  },
+  "EMERGENCY": {
+   "role": "emergency",
+   "manufacturer": "Zemper",
+   "model": "Spazio High Bay LUE4700LX (біла RAL9003)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "RV-01": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-02": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-03": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-04": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-05": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-06": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-07": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-08": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-09": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-10": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-11": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-12": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-13": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-14": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-15": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-16": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-17": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-18": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-19": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-20": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-21": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-22": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-23": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-24": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "RV-25": {
+   "role": "roofvent",
+   "manufacturer": "Hoval",
+   "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+   "power_kw": 8.6,
+   "connected_kw": null
+  },
+  "AHU-1": {
+   "role": "make_up_ahu",
+   "manufacturer": "VTS Group",
+   "model": "VENTUS VVS180 (припливно-витяжний секційний агрегат)",
+   "power_kw": null,
+   "connected_kw": null,
+   "p_inst": 15.0,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 9.3
+  },
+  "EF-ELEC": {
+   "role": "wall_fan",
+   "manufacturer": "VENTS (Вентс, Україна)",
+   "model": "OV 4E 500 (осьовий настінний вентилятор, код 1009611)",
+   "power_kw": 0.42,
+   "connected_kw": null,
+   "p_inst": 0.84,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 0.84
+  },
+  "EF-CMP": {
+   "role": "wall_fan",
+   "manufacturer": "VENTS (Вентс, Україна)",
+   "model": "OV 4E 500 (осьовий настінний вентилятор, код 1009611)",
+   "power_kw": 0.42,
+   "connected_kw": null,
+   "p_inst": 0.42,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 0.0
+  },
+  "EF-CHG": {
+   "role": "ex_fan",
+   "manufacturer": "Systemair",
+   "model": "EX 140A-4 (арт. SA135277), 3~ 400 В, вибухозахищений канальний відцентровий вентилятор",
+   "power_kw": 0.178,
+   "connected_kw": null,
+   "p_inst": 0.178,
+   "cos_phi": 0.95,
+   "feeder": "QF-C2",
+   "p_now": 0.107
+  },
+  "FACP-1": {
+   "role": "facp",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO FC726-ZA (модульний, корпус Large)",
+   "power_kw": 0.25,
+   "connected_kw": null
+  },
+  "FA-MCP": {
+   "role": "mcp",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO FDM225-RP (з пластиковою вставкою, що відновлюється)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-SND": {
+   "role": "sounder_beacon",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO FDS226-RW (сирена-маяк настінна, червоний корпус, біле світло)",
+   "power_kw": 0.00044,
+   "connected_kw": null
+  },
+  "FA-FLAME": {
+   "role": "flame_detector",
+   "manufacturer": "Spectrex (Emerson)",
+   "model": "SharpEye 40/40C-I (Multi-Spectrum QuadSense, IR3)",
+   "power_kw": 0.0075,
+   "connected_kw": null
+  },
+  "SPARK-1": {
+   "role": "spark_detection",
+   "manufacturer": "Fagus-GreCon Greten GmbH & Co. KG",
+   "model": "GreCon BS 7: пульт Mission Control + іскрові сповіщувачі FM 1/8 + гасильний модуль HUNTER IEM",
+   "power_kw": 0.5,
+   "connected_kw": null
+  },
+  "FA-SHEETS": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-HW": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-EDGE": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-PKS": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-CUT": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-EB": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-CNC": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-SORT": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-FAC": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-ASM": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-PRE": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-MAINT": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-PACK": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-POST": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-CMP": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-CHG": {
+   "role": "multi_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-FG": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-ELEC": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-1": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-2": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-3": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-4": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-5": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-6": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-RCV-7": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-1": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-2": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-3": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-4": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-5": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-6": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OUT-7": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-OFFICE": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-SOC": {
+   "role": "smoke_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "FA-BOILER": {
+   "role": "heat_detector",
+   "manufacturer": "Siemens (Smart Infrastructure)",
+   "model": "Cerberus PRO HI720 (тепловий максимально-диференційний)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "ATS-1": {
+   "role": "ats",
+   "manufacturer": "Socomec",
+   "model": "ATyS p 1600 A 4P (арт. 95734160), Advanced Integrated Logic",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "BESS": {
+   "role": "bess",
+   "manufacturer": "Huawei",
+   "model": "LUNA2000-200KWH-2H1 (Smart String ESS) з PCS LUNA2000-100KTL-M1",
+   "power_kw": 100,
+   "connected_kw": null
+  },
+  "PV-ROOF": {
+   "role": "pv_module",
+   "manufacturer": "LONGi",
+   "model": "Hi-MO 6 Explorer LR5-72HTH-580M",
+   "power_kw": 0.58,
+   "connected_kw": null
+  },
+  "PV-INV": {
+   "role": "pv_inverter",
+   "manufacturer": "Huawei",
+   "model": "SUN2000-115KTL-M2",
+   "power_kw": 115,
+   "connected_kw": null
+  },
+  "CHP": {
+   "role": "chp",
+   "manufacturer": "TEDOM a.s. (Чехія), двигун MWM TCG 3016 V16 (Caterpillar Energy Solutions)",
+   "model": "Quanto D800 NG (природний газ, 400 В / 50 Гц; виконання Indoor Canopy / Outdoor Container)",
+   "power_kw": 800,
+   "connected_kw": null
+  },
+  "SMOKE-VENTS": {
+   "role": "smoke_vent",
+   "manufacturer": "LAMILUX Heinrich Strunz GmbH",
+   "model": "Smoke Lift Glass Skylight F100 (F100G-S1-S, 1200×1200 мм, привод 24 В)",
+   "power_kw": 0.18,
+   "connected_kw": null
+  },
+  "SMOKE-CTRL": {
+   "role": "smoke_control",
+   "manufacturer": "D+H Mechatronic AG",
+   "model": "CPS-M1-080-1010-B (модульна панель керування СДТВ 24 В, 80 А)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "EXITS": {
+   "role": "exit_door",
+   "manufacturer": "Hörmann KG",
+   "model": "STU (сталеві багатофункціональні двері для зовнішніх стін) + штанга «антипаніка» Hörmann push bar EN 1125",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "LPS": {
+   "role": "lightning_air",
+   "manufacturer": "DEHN SE",
+   "model": "Система зовнішнього блискавкозахисту: стрижень 103 231 + дріт RD 8 AlMgSi 840 008 + роз'єм FIX 453 100",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "WATER": {
+   "role": "water_meter",
+   "manufacturer": "Apator Powogaz S.A.",
+   "model": "MWN50-G NK (турбінний Вольтмана DN50, IP65, імпульсний вихід NK)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "ODOO-TABLETS": {
+   "role": "shopfloor_tablet",
+   "manufacturer": "Samsung",
+   "model": "Galaxy Tab Active5 Pro 5G (SM-X356B)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "ODOO-SCANNERS": {
+   "role": "handheld_scanner",
+   "manufacturer": "Zebra Technologies",
+   "model": "TC22 (Wi-Fi 6E, SE4710 / SE55)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "WIFI": {
+   "role": "wifi_ap",
+   "manufacturer": "Cisco",
+   "model": "Catalyst CW9166D1 (Wi-Fi 6E, спрямована антена)",
+   "power_kw": 0.0305,
+   "connected_kw": null
+  },
+  "SERVER": {
+   "role": "server_rack",
+   "manufacturer": "APC (Schneider Electric)",
+   "model": "NetShelter SX Gen 2 AR3100B2 (42U, 600 × 1070 мм) + Smart-UPS SRT 10 кВА SRT10KRMXLI",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "TURNSTILES": {
+   "role": "turnstile",
+   "manufacturer": "Gunnebo Entrance Control",
+   "model": "SlimStile EV (трипод, одинарний)",
+   "power_kw": 0.05,
+   "connected_kw": null
+  },
+  "ACCESS": {
+   "role": "access_reader",
+   "manufacturer": "Suprema",
+   "model": "BioEntry W3 (BEW3-APB)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "CCTV": {
+   "role": "cctv_camera",
+   "manufacturer": "Axis Communications",
+   "model": "AXIS P1488-LE",
+   "power_kw": 0.013,
+   "connected_kw": null
+  },
+  "TRUCK-SCALE": {
+   "role": "truck_scale",
+   "manufacturer": "Ваги Аксіс Україна (Львів)",
+   "model": "АКСІС 60-18-К-Е",
+   "power_kw": 0.008,
+   "connected_kw": null
+  },
+  "GATE-W": {
+   "role": "barrier",
+   "manufacturer": "CAME",
+   "model": "GARD LS6 (803BB-0490, GLS60AGS)",
+   "power_kw": 0.19,
+   "connected_kw": null
+  },
+  "GATE-E": {
+   "role": "barrier",
+   "manufacturer": "CAME",
+   "model": "GARD LS6 (803BB-0490, GLS60AGS)",
+   "power_kw": 0.19,
+   "connected_kw": null
+  },
+  "PRN-RCV": {
+   "role": "label_printer",
+   "manufacturer": "Zebra Technologies",
+   "model": "ZT411 (4\", 203/300/600 dpi)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "PRN-PACK1": {
+   "role": "label_printer",
+   "manufacturer": "Zebra Technologies",
+   "model": "ZT411 (4\", 203/300/600 dpi)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "PRN-PACK2": {
+   "role": "label_printer",
+   "manufacturer": "Zebra Technologies",
+   "model": "ZT411 (4\", 203/300/600 dpi)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "PRN-OUT": {
+   "role": "label_printer",
+   "manufacturer": "Zebra Technologies",
+   "model": "ZT411 (4\", 203/300/600 dpi)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "SCALE-OUT1": {
+   "role": "scale",
+   "manufacturer": "METTLER TOLEDO",
+   "model": "PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "SCALE-OUT2": {
+   "role": "scale",
+   "manufacturer": "METTLER TOLEDO",
+   "model": "PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "SCALE-RCV": {
+   "role": "scale",
+   "manufacturer": "METTLER TOLEDO",
+   "model": "PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "IOT-RCV": {
+   "role": "iot_box",
+   "manufacturer": "Odoo S.A.",
+   "model": "Odoo IoT Box (на базі Raspberry Pi 4)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "IOT-PACK": {
+   "role": "iot_box",
+   "manufacturer": "Odoo S.A.",
+   "model": "Odoo IoT Box (на базі Raspberry Pi 4)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "IOT-OUT": {
+   "role": "iot_box",
+   "manufacturer": "Odoo S.A.",
+   "model": "Odoo IoT Box (на базі Raspberry Pi 4)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "EYE-CHG": {
+   "role": "eyewash",
+   "manufacturer": "Haws Corporation",
+   "model": "8300-8309 (комбінований аварійний душ + фонтан для очей/обличчя AXION MSR)",
+   "power_kw": null,
+   "connected_kw": null
+  },
+  "EYE-PAINT": {
+   "role": "eyewash",
+   "manufacturer": "Haws Corporation",
+   "model": "8300-8309 (комбінований аварійний душ + фонтан для очей/обличчя AXION MSR)",
+   "power_kw": null,
+   "connected_kw": null
+  }
+ }
+}
