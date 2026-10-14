@@ -1,6 +1,6 @@
 # factory3d_iot_sim
 Статус: IN_PROGRESS
-Тесты: W0 OK (unit 3/3, Odoo 2/2, 2026-10-14), ТК: ждут стенд
+Тесты: unit 79/79 + Odoo 40/40 (2026-10-14), ТК: ждут стенд
 Решений без заказчика: 0 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
@@ -13,7 +13,7 @@
 | W2 | ждёт | — | — |
 | W3 | ждёт | — | — |
 | W4 | ждёт | — | — |
-| W5 | в работе (worktree) | — | — |
+| W5 | принят | 6e43f5b | Odoo /factory3d_iot_sim 40/40 |
 | W6 | ждёт | — | — |
 
 ## Решения без заказчика
@@ -22,3 +22,7 @@
 - DEC-3: W1 разбит на W1a (ядро, World/Model/Event, сценарии) и W1b (машины поведения пристроїв) — объём; W5 зависит только от W0 и запущен параллельно с W1a.
 - DEC-4: переход на зимнее время — 25.10.2026 (последнее воскресенье октября), а не 26.10 из SPEC §11 — правка SPEC. — `tests/unit/test_clock.py`
 - DEC-5: допущения W1a (`# ASSUMPTION` в `core/scenarios.py`): blackout занимает dev:COMPRESSOR и dev:AIR-RING для конфликтов; календарь смен Пн–Пт 07:00–15:30; `ctx.cleanup` сбрасывает принудительные сигналы на номинал.
+- DEC-6 (W5): полный прогон всех odoo_addons не стартует — мост `factory3d_base_mrp_maintenance` требует Enterprise (ENV-1 base); тестируем `F3D_TEST_INSTALL=factory3d_base,factory3d_iot_sim`.
+- DEC-7 (W5): перенос меню рівня 0 — в `views/menus.xml` (в level0.xml ref ещё не разрешим по порядку §1). Уникальность unit_id — по (unit_id, driver), ADAM-драйверы исключены (§5.2 кладёт несколько пристроїв на один ADAM-unit). — `models/sim_device.py`
+- DEC-8 (W5): CSV каталога W0 без name/kind/origin — загрузчик выводит origin из `status`, kind из dtype/model, name «пристрій · лист»; `energy/consumers/X/*` → пристрій `X-PM`. На шаблоне без демо-данных 180 пристроїв каталога создаются пассивными. — `hooks.py`
+- DEC-9 (W5): test_migration упрощён (нет фикстуры data-модуля 19.0.1.0.0): повтор хука сохраняет x_f3d_signal/меню; uninstall удаляет и x_-данные рівня 0 (их файлы принадлежат модулю) — предупреждение в логе. icon.png — не сделан.
