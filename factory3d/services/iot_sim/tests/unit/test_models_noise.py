@@ -89,4 +89,4 @@ def test_model_helpers_and_fault(world: World):
     d = m.to_dict()
     m.clear()
     m.from_dict(d)
-    assert dev.fault == "generic" and d["extra"] == {}
+    assert dev.fault == "generic" and d["extra"] == m.get_state()

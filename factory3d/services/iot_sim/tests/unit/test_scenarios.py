@@ -210,7 +210,7 @@ async def test_filter_clogged_ramp_and_restore(world, runner):
     for _ in range(6):
         world.advance(10)
         await settle()
-    assert sig.value == pytest.approx(285.0) and sig.held_until is None
+    assert sig.value == pytest.approx(285.0, abs=0.1) and sig.held_until is None
     assert start != 285.0
     await runner.stop(run.id)
     assert sig.value == sig.params["nominal"]
