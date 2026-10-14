@@ -1,6 +1,7 @@
 # factory3d_yard — технічне рішення
 
-Версія 0.1 · 14.10.2026 · автор: агент-архітектор модуля `factory3d_yard` (хвиля 2, фаза 4) · статус: **чернетка на погодження**.
+Версія 0.2 · 14.10.2026 · автор: агент-архітектор модуля `factory3d_yard` (хвиля 2, фаза 4) · статус: **чернетка на погодження**.
+0.2 — точкові виправлення під SPEC: FR-16, CY-03…CY-05, §2.1–§2.8, §3, Q-01, Q-03, Q-13, Q-14, A-07, A-14, §6 (SPEC §15.2–15.3).
 Каркас: `docs/ARCHITECTURE.md` (далі «каркас»: §3 залежності, §5 конвенції, §6.1–6.2 код сцени й ворота,
 §6.4–6.5 телеметрія й плагіни, §6.6 рядок **P-11**, §6.7 провайдер переглядача, §6.8 заявки ТО, §9 п. 7).
 Специфікація: `docs/modules/factory3d_yard/SPEC.md`. Спирається на контракти `factory3d_base` CB-01…CB-06,
@@ -97,11 +98,11 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `factory3d_viewer`
 | FR-09 | Команда шлагбауму (відкрити/закрити/тримати) створюється як `f3d.command` телеметрії на сигнал `yard/gates/<G>/cmd_*` лише якщо: `factory3d.yard.write_enabled=True`, користувач — охорона/диспетчер (або авторежим за збігом із бронню), фотоелемент не перекритий, немає незавершеної команди за `cmd_cooldown_s`; інакше `UserError` з причиною (R-15). |
 | FR-10 | Безпека шлагбаума: після команди очікується `DI open=1` за `open_timeout_s` (10 с), інакше помилка воріт і активність охороні; «тримати відкритим» не довше `hold_max_min`; режим `manual` вимикає авто-відкриття; антипрохід — проїзд петлі без дозволу (лічильник `passes_today` > виданих дозволів) → тривога `tailgate`; друга поява номера після `left` — новий рейс/подія, не повтор (R-16, R-17). |
 | FR-11 | Зважування `f3d.yard.weighing`: вид (`in`/`out`/`check`), ваги, брутто/тара/нетто, час, стабільність, джерело (`auto`/`manual`), рейс, документ; значення береться з сигналів `yard/scale/<S>/weight_kg` і `stable` не старіших `weigh_max_age_s`, ≥ `min_kg` і ≤ `max_kg` (R-10, R-11). |
-| FR-12 | Нетто рейсу = |брутто − тара|; для приймання брутто — на в'їзді, тара — на виїзді; для відвантаження навпаки. Нетто пишеться в `stock.picking.f3d_net_weight_kg`; очікувана маса = Σ `product_uom_qty × product.weight` (кг); звірка `ok` / `deviation` (> max(`net_tolerance_pct`, `net_tolerance_kg`)) / `no_reference` (маса документа 0) — попередження комірнику, не блокування (R-12). |
+| FR-12 | Нетто рейсу = \|брутто − тара\|; для приймання брутто — на в'їзді, тара — на виїзді; для відвантаження навпаки. Нетто пишеться в `stock.picking.f3d_net_weight_kg`; очікувана маса = Σ `product_uom_qty × product.weight` (кг); звірка `ok` / `deviation` (> max(`net_tolerance_pct`, `net_tolerance_kg`)) / `no_reference` (маса документа 0) — попередження комірнику, не блокування (R-12). |
 | FR-13 | Автозахоплення зважування: два послідовні стабільні показання ≥ `min_kg` з різницею ≤ 2 дискретності → запис; прив'язка до єдиного рейсу, що чекає зважування; інакше «непризначене» зважування для охорони (R-11). |
 | FR-14 | Розширення `stock.picking`: рейс (через пакет), нетто, очікувана маса, звірка, кнопка «Рейс»; `stock.picking.batch`: рейси, активний рейс, стан, держномер, кнопка «Створити рейс»; `res.partner`: ознаки перевізника/водія, документ водія, типовий держномер, лічильник рейсів; `delivery.carrier.f3d_partner_id` — контакт перевізника. |
 | FR-15 | Довідник воріт/КПП `f3d.yard.gate`: код сцени (`GATE-W`, `GATE-E`), напрямок, обладнання, зона, камера LPR, джерело ADAM і PDU-адреси DI/DO (з P-11 §8.13.1), режим `auto`/`manual`, стан (із сигналів), лічильники, останній номер; ваги `f3d.yard.scale` (`TRUCK-SCALE`): джерело `sics`, межі, останнє показання, стан захоплення. |
-| FR-16 | Сигнали двору (8 з каталогу iot_sim 654–661 + 10 нових: петля, фотоелемент, 3 команди на ворота) і 3 джерела (`modbus_tcp` ADAM unit 86, `sics` ваги, `http_push` маршрут `lpr`) створюються data-файлами модуля з `module='yard'` (CT-09), ідемпотентно за `code`. |
+| FR-16 | Сигнали двору (8 з каталогу iot_sim 654–661 + 10 нових: петля, фотоелемент, 3 команди на ворота) і 2 джерела (`modbus_tcp` ADAM unit 86, `sics` ваги) створює хук модуля з `module='yard'` (CT-09), ідемпотентно за `code` і без xml-id (SPEC A-19); події LPR надходять через джерело telemetry `HTTP-PUSH` (маршрут `lpr`, SPEC A-18). |
 | FR-17 | Плагін колектора `sics` (`services/collector_plugins/f3d_collector_yard`): TCP ASCII MT-SICS Level 0/1 (`SI` опитування або `SIR` потік, `S`, `Z`, `T`, `TA`, `TAC`, `I2`, `I4`, `@`), розбір формату «ID␣статус␣вага(10)␣одиниця», одиниці `kg`/`t`/`lb` → кг, стабільність `S`/`D`, перевантаження `+`/`−` → якість `bad`; `write()` лише `Z`/`T`/`TAC`/`TA` при `write_enabled`; health. |
 | FR-18 | Диспетчерська: kanban рейсів за станами (сьогодні), Gantt бронювань за воротами (`web_gantt`), календар бронювань, посилання на стандартний Gantt диспетчеризації `stock_fleet_enterprise`; форма рейсу з кнопками «Прибула», «Пропустити», «На ворота», «Початок/кінець операції», «Зважити», «Виїхала», «Відхилити», «Показати в 3D». |
 | FR-19 | Екран КПП — клієнтська дія для планшета: три колонки (на КПП / у дворі / останні події LPR), великі кнопки «Пропустити», «Відхилити», «Створити рейс», «Зважити», «Відкрити шлагбаум», оновлення кожні `kpp_refresh_s` (10 с) і за шиною. |
@@ -135,7 +136,7 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `factory3d_viewer`
 
 `depends`: `factory3d_base`, `factory3d_telemetry`, `stock_picking_batch`, `stock_fleet` (поля `dock_id`,
 `driver_id`, `vehicle_category_id`, `end_date` — живуть у `stock_fleet`, не в `stock_picking_batch`; A-02),
-`delivery`, `web_gantt`, `mail`. `factory3d_viewer` — optional (провайдер і шина через перевірку реєстру).
+`delivery`, `stock_delivery` (поле `stock.picking.carrier_id`), `web_gantt`, `mail`, `bus` (SPEC A-27). `factory3d_viewer` — optional (провайдер і шина через перевірку реєстру).
 `stock_fleet_enterprise` — не в `depends` (бере участь лише як посилання на стандартний Gantt, якщо
 встановлений).
 
@@ -164,9 +165,9 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `factory3d_viewer`
 |---|---|---|
 | CY-01 | `f3d.yard.visit` (SPEC M-01): поля `name`, `state`, `visit_type`, `plate`, `plate_norm`, `partner_id`, `carrier_id`, `driver_id`, `batch_id`, `dock_id`, `planned_start`, `planned_end`, часові мітки `*_at`, `gross_kg`/`tare_kg`/`net_kg`, `scene_code`; методи `action_arrive`, `action_admit`, `action_call_to_dock`, `action_reject`, `action_leave`; пошук `_find_by_plate(plate_norm, ts)` | access (водій на прохідній), viewer, звіти |
 | CY-02 | `stock.picking.batch.f3d_visit_id`, `f3d_visit_state`, `f3d_plate`; `stock.picking.f3d_visit_id`, `f3d_net_weight_kg`, `f3d_expected_weight_kg`, `f3d_weight_check` | viewer (`pickings[].truck` лишається base CB-06), stock |
-| CY-03 | `f3d.yard.gate` (`code`, `direction`, `state`, `mode`, `last_plate`, `passes_today`) і метод `action_command(kind)` (`open`/`close`/`hold`/`release`) з усіма перевірками R-15 | access (евакуація — Q-10), viewer |
-| CY-04 | Сигнали `yard/gates/<G>/{state,loop,photocell,passes_today,cmd_open,cmd_close,cmd_hold}`, `yard/lpr/<CAM>/plate`, `yard/scale/<S>/{weight_kg,stable}`; джерела `SRC-ADAM-IO7`, `SRC-TRUCK-SCALE`, `SRC-LPR` (xml-id SPEC §5) | telemetry (каталог), iot_sim (звірка адрес) |
-| CY-05 | Плагін `sics` (SPEC §8): тип джерела `sics`, `params` `{host, port, mode, period_s, timeout_s, unit}`, адреса сигналу `{"cmd": "SI", "field": "weight"|"stable"}`, запис `{"cmd": "Z"|"T"|"TAC"|"TA", "value": kg}` | telemetry (реєстр плагінів), колектор |
+| CY-03 | `f3d.yard.gate` (`f3d_code`, `direction`, `state`, `mode`, `last_plate`, `passes_today`) і метод `action_command(kind)` (`open`/`close`/`hold`/`release`) з усіма перевірками R-15 | access (евакуація — Q-10), viewer |
+| CY-04 | Сигнали `yard/gates/<G>/{state,loop,photocell,passes_today,cmd_open,cmd_close,cmd_hold}`, `yard/lpr/<CAM>/plate`, `yard/scale/<S>/{weight_kg,stable}`; джерела `SRC-ADAM-IO7`, `SRC-TRUCK-SCALE` (коди SPEC §5.3, без xml-id) і `HTTP-PUSH` telemetry для LPR | telemetry (каталог), iot_sim (звірка адрес) |
+| CY-05 | Плагін `sics` (SPEC §8): тип джерела `sics`, `params` `{host, port, mode, period_s, timeout_s, unit}`, адреса сигналу `{"cmd": "SI", "field": "weight"\|"stable"}`, запис `{"write": {"cmd": "Z"\|"T"\|"TAC"}}` (`TA` у v1 заборонено, §2.6; схеми — SPEC §8.2) | telemetry (реєстр плагінів), колектор |
 | CY-06 | Розділ `yard` payload переглядача (SPEC §9 R-20): `gates{}`, `scale{}`, `trucks[]` (з `x`, `y`, `rz`, `zone`, `state`, `dock`, `picking`), `queue{west[],east[]}`, `stats{}`; шина: `_notify('f3d.yard.visit', [name, scene_code, dock_code], 'doc')`, `_notify('f3d.yard.gate', [code], 'state')` | viewer (клієнт малює фури без коду сцени за `x/y` — Q-08) |
 | CY-07 | `res.partner.f3d_is_driver`, `f3d_is_carrier`, `f3d_carrier_id`; `f3d.yard.visit.driver_id` — єдине місце «водій рейсу» | access (пропуск водія на КПП-пішохідній — поза v1) |
 | CY-08 | `f3d.command.f3d_yard_gate_id`, `f3d_yard_visit_id` (M-18) — журнал команд шлагбаума в стандартному журналі телеметрії | telemetry (меню «Команди» показує й двір) |
@@ -182,21 +183,21 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `factory3d_viewer`
         │                 DI0..5 / DO0..5                    │
         ▼                        │ Modbus TCP :502           │
 ┌───────────────────────────── services/collector (telemetry) ───────────────────────────────────────────┐
-│ plugins/http_push  POST /f3d/push/lpr ──► event ──► Odoo API-05 /f3d/telemetry/event                   │
+│ plugins/http_push  POST /f3d/lpr ──► event ──► Odoo API-05 /f3d/telemetry/event                        │
 │ plugins/modbus_tcp  poll 1 с: DI (fc 2), passes (fc 3); write coil (fc 5) ◄── commands API-06/07       │
 │ plugins_yard: sics  SI/SIR 1–2 Гц → weight_kg, stable; write Z/T (лише F3D_WRITE_ENABLED=1)            │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
         │ push показань (API-02)        ▲ config (API-01)       │ event (API-05)         │ commands (API-06/07)
         ▼                               │                        ▼                        ▼
 ┌──────────────────────────────────────── Odoo 19 (factory3d_telemetry) ─────────────────────────────────┐
-│ f3d.source (3 двору) · f3d.signal (18 двору, module=yard) · f3d.reading · f3d.command (черга)          │
+│ f3d.source (2 двору + HTTP-PUSH) · f3d.signal (18 двору, module=yard) · f3d.reading · f3d.command (черга)          │
 │ f3d.push.handler ──route 'lpr'──► factory3d_yard                                                        │
 └───────────────┬───────────────────────────────┬────────────────────────────────┬───────────────────────┘
                 ▼                               ▼                                ▼
 ┌───────────────────────────────────────── factory3d_yard ───────────────────────────────────────────────┐
 │ f3d.yard.lpr.event ──R-08 зіставлення──► f3d.yard.visit (стани §10) ◄── f3d.yard.booking (слоти, R-03)  │
 │        │ незбіг → екран КПП (walk-in R-06)        │ admit → f3d.yard.gate.action_command('open') R-15  │
-│ f3d.signal(write last_value) ──► f3d.yard.scale ──R-11──► f3d.yard.weighing ──R-12──► stock.picking     │
+│ f3d.signal._f3d_ingest (M-13) ──► f3d.yard.scale ──R-11──► f3d.yard.weighing ──R-12──► stock.picking     │
 │ stock.picking.batch (dock_id/scheduled_date/end_date ⇐ booking) · res.partner (перевізник, водій)      │
 │ f3d.viewer.provider.yard (160) → payload.yard · f3d.viewer.event._notify → bus f3d_viewer              │
 │ Екран КПП (OWL client action, RPC kpp_data/kpp_action) · Диспетчерська (kanban/gantt/calendar)         │
@@ -222,7 +223,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | `res.partner` (M-09), `delivery.carrier` (M-10) | розширення | перевізник/водій, документ водія, контакт перевізника | диспетчер | рейс |
 | `res.config.settings` (M-11) | розширення | стоп-крани, допуски, ліміти, строки зберігання | адміністратор/менеджер | модуль |
 | `f3d.push.handler.yard` (M-12) | реалізація хука CT-08 | маршрут `lpr` → `f3d.yard.lpr.event` | telemetry API-05 | — |
-| `f3d.signal` (M-13) | розширення `write()` | `yard/scale/*` → `f3d.yard.scale._on_reading` | telemetry push | — |
+| `f3d.signal` (M-13) | перевизначення `_f3d_ingest()` (SPEC A-17) | `yard/gates/*`, `yard/scale/*` → ворота й ваги | telemetry push | — |
 | `f3d.viewer.provider.yard` (M-14) | провайдер (160) | розділ `yard` | — | viewer |
 | `f3d.yard.dock.report` (M-15) | SQL-вид | зайнятість/простій воріт за день | — | звіти |
 | `f3d.yard.walkin.wizard` (M-16), `f3d.yard.reject.wizard` (M-17) | transient | створення рейсу без броні з події LPR; причина відхилення | охорона/диспетчер | — |
@@ -233,7 +234,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | Пристрій/система | Код | Протокол (P-xx) | Напрямок | Частота | При недоступності |
 |---|---|---|---|---|---|
 | Шлагбауми CAME GARD LS6 через ADAM-6060 | GATE-W, GATE-E | P-11 §8.13.1: Modbus TCP, unit 86: DI0/DI2 «стріла відкрита», DI1/DI3 «петля», DI4/DI5 «фотоелемент», лічильники DI1/DI3 (HR 40003–40004 / 40007–40008, u32, молодше слово перше — ADAM); DO0/DO1 «відкрити» (імпульс ≥ 1 с), DO2/DO3 «закрити», DO4 «тримати»; плагін `modbus_tcp` telemetry; PDU-адреси в `f3d.signal.address.addr` (CT-03) | читання DI/лічильників; запис DO лише при 4 запобіжниках `write` (telemetry §2.6) | опитування 1 с (DI), 10 с (лічильники); команди — за подією, `expires_at` 30 с | сигнали `stale` → ворота `state='unknown'`, кнопки команд неактивні, охорона відкриває стрілу з пульта CAME вручну; рейси ведуться вручну (FR-28) |
-| Камери Axis P1488-LE + License Plate Verifier | CAM-05 (GATE-W, `carMoveDirection=in`), CAM-06 (GATE-E, `out`) | P-11 §8.13.2: HTTP POST JSON (Axis «License plate verifier API», developer.axis.com, переглянуто 14.10.2026: `carState` `new`/`update`/`lost`, `plateText`, `plateUnicode`, `plateConfidence`, `plateList`, `plateListDescription`, `capture_timestamp` UNIX мс, `sensorProviderID`, `GEOtarget`, `imageFile`/`imageArray` base64 за `skip_image_in_post=false`; автентифікація `x_auth_key`/basic) → колектор `POST /f3d/push/lpr` (telemetry §2.4) → Odoo API-05 → хук `lpr` | пристрій → Odoo | за подією (≈ 2–3 POST на фуру) | камера буферизує (`use_event_buffer`); колектор — буфер SQLite; дублікати відкидаються (R-07); без камери — охорона вводить номер вручну |
+| Камери Axis P1488-LE + License Plate Verifier | CAM-05 (GATE-W, `carMoveDirection=in`), CAM-06 (GATE-E, `out`) | P-11 §8.13.2: HTTP POST JSON (Axis «License plate verifier API», developer.axis.com, переглянуто 14.10.2026: `carState` `new`/`update`/`lost`, `plateText`, `plateUnicode`, `plateConfidence`, `plateList`, `plateListDescription`, `capture_timestamp` UNIX мс, `sensorProviderID`, `GEOtarget`, `imageArray` base64 (`imageFile` — шлях на камері, не base64), `imagesURI`; автентифікація `x_auth_key`/basic) → колектор `POST /f3d/lpr` (telemetry SPEC §8.7) → Odoo API-05 → хук `lpr` | пристрій → Odoo | за подією (≈ 2–3 POST на фуру) | камера буферизує (`use_event_buffer`); колектор — буфер SQLite; дублікати відкидаються (R-07); без камери — охорона вводить номер вручну |
 | Автоваги АКСІС 60-18-К-Е, термінал ME-01 | TRUCK-SCALE | P-11 §8.13.3: ASCII MT-SICS по TCP :4001 (METTLER TOLEDO «MT-SICS Reference Manual IND400», 30881805 A, 2024, mt.com, переглянуто 14.10.2026: §2.2.1 формат відповіді з вагою, §4.7 `S`, §4.8 `SI`, §4.9 `SIR`, §4.10 `Z`, §4.11 `ZI`, §4.12 `@`, §5.6 `T`, §5.7 `TA`, §5.8 `TAC`); плагін `sics` цього модуля; ПРИПУЩЕННЯ: індикатор АКСІС підтримує SICS або RS-232→TCP-шлюз із SICS-сумісним діалектом (Q-05) | читання; запис `Z`/`T` лише `write_enabled` (не використовується модулем у v1 — нетто рахуємо в Odoo) | `SI` 1 с (режим `poll`) або `SIR` ≈ 2 Гц (режим `stream`); показання в Odoo — пакет 5 с | ваги `offline` → кнопка «Зважити» бере ручне введення (`manual_weight_kg`, `source='manual'`), активність менеджеру; автозахоплення вимкнене |
 | Емулятор `factory3d_iot_sim` | ті самі коди | ті самі протоколи; сценарії S-05 `truck_no_booking`, S-06 `truck_arrival`; API-01 `bookings[]` ← `stock.picking.batch` (+ `f3d_plate`, Q-02) | як вище | — | — |
 | `factory3d_telemetry` (Odoo) | — | ORM: `f3d.source`, `f3d.signal`, `f3d.command`, хук `f3d.push.handler` | обидва | — | без телеметрії модуль не встановлюється (`depends`) |
@@ -246,15 +247,15 @@ Odoo ніколи не ходить у мережу двору сам (карк�
    `WH/IN/00128`) і підтвердив бронювання `DOCK-W1` 09:30–10:30 (Київ) → `stock.picking.batch.dock_id=
    WH/Вхід/Ворота 1`, `scheduled_date=2026-10-12 06:30 UTC`, `end_date=07:30 UTC`; стан рейсу `planned`.
 2. 09:10 камера `CAM-05` надсилає POST (`carState=new`, `plateText="AA4512KT"`, `plateUnicode="АА4512КТ"`,
-   `plateConfidence="0.912340"`, `GEOtarget="GATE-W"`, `capture_timestamp="1791961800000"`); колектор →
-   `POST /f3d/telemetry/event {route:'lpr', body:{…}}` → telemetry викликає
+   `plateConfidence="0.912340"`, `GEOtarget="GATE-W"`, `capture_timestamp="1791785400000"`); колектор →
+   `POST /f3d/telemetry/event {events:[{event_id, route:'lpr', ts, remote, headers, payload:{…}}]}` → telemetry викликає
    `env['f3d.push.handler.yard']._f3d_handle_push('lpr', event)`.
 3. M-12 створює `f3d.yard.lpr.event` (`plate_norm="AA4512KT"`, `gate_id=GATE-W`, `direction='in'`,
    `confidence=0.912`), R-08 знаходить рейс за `plate_norm` (або за `plateListDescription="BATCH/IN/00001 …"`)
    → `event.visit_id`, `match_state='matched'`; рейс `planned → arrived` (`arrived_at` = час камери).
 4. Ворота `GATE-W` у режимі `auto`, `write_enabled=True`: R-15 перевіряє фотоелемент (`yard/gates/GATE-W/photocell`
    `last_value=0`, не `stale`), відсутність команди за 30 с, рейс `arrived` з підтвердженим бронюванням, час
-   у вікні [`planned_start − early_min`, `planned_end + late_min`] → `f3d.command` на `yard/gates/GATE-W/cmd_open`
+   у вікні [`planned_start − early_min`, `planned_start + late_min`] (SPEC A-25) → `f3d.command` на `yard/gates/GATE-W/cmd_open`
    (`value=1`, `expires_at=+30 с`, `f3d_yard_gate_id`, `f3d_yard_visit_id`); рейс → `queued`
    (`admitted_at`), `gate.admitted_today += 1`.
 5. Колектор забирає команду (API-06), `modbus_tcp.write` coil PDU 16 unit 86 = 1 (імпульс), звіт `done`
@@ -264,7 +265,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 6. Петля DI1 → лічильник `passes_today` 7→8; R-17: `passes_today − passes_day_start (7) = 1 ≤ admitted_today (1)`
    — норма.
 7. На вагах: `SIR` потік → `yard/scale/TRUCK-SCALE/weight_kg` 0 → 25 200 (`S D` 3 с, далі `S S`);
-   M-13 передає кожен `last_value` у `f3d.yard.scale._on_reading`; R-11: два стабільні показання ≥ 400 кг
+   M-13 (`_f3d_ingest`) передає показання ваг у `f3d.yard.scale._f3d_yard_on_readings`; R-11: два стабільні показання ≥ 400 кг
    із різницею ≤ 40 кг → `f3d.yard.weighing` (`kind='in'`, `gross_kg=25200`, `source='auto'`) → єдиний рейс
    у `queued` з політикою `in_out` і без зважування `in` → `visit.gross_kg=25200`, `weighed_in_at`.
 8. Диспетчер/авторежим: ворота `DOCK-W1` вільні → «На ворота» → `at_dock` (`at_dock_at`); комірник
@@ -319,7 +320,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
   для незбігу/без броні; відкриття при перекритому фотоелементі; `sudo()` у контролерах (контролерів немає);
   видалення рейсів зі станом ≥ `arrived` (лише `cancelled` через кнопку).
 - `neutralize.sql`: `write_enabled=False`, усі крони модуля `active=false`, `f3d_yard_gate.mode='manual'`
-  (SPEC §5.5).
+  (SPEC §5.6).
 
 ### 2.7 Продуктивність і обсяги
 
@@ -331,7 +332,7 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 - Індекси: `f3d_yard_visit (state, planned_start)`, `(plate_norm)`, `(batch_id)`; `f3d_yard_booking
   (dock_id, slot_start, slot_end)` + `(state)`; `f3d_yard_lpr_event (ts)`, `(plate_norm, ts)`,
   `(dedup_key)` unique; `f3d_yard_weighing (scale_id, ts)`, `(visit_id)`.
-- Гарячий шлях: `f3d.signal.write()` (M-13) виконується на кожному push телеметрії (18 сигналів, 5 с) —
+- Гарячий шлях: `f3d.signal._f3d_ingest()` (M-13) виконується на кожному push телеметрії (18 сигналів, 5 с) —
   перевірка префікса в Python без запитів, ORM-читання ваг лише для `yard/scale/*` (2 сигнали).
 - Екран КПП: RPC `kpp_data` ≤ 50 мс (сьогоднішні рейси ≤ 50, події ≤ 20); оновлення 10 с → ≤ 0,1 запиту/с
   на планшет. Провайдер `yard` ≤ 20 КБ, ≤ 30 мс.
@@ -345,13 +346,15 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | # | Крок | Джерело | Результат | Очікувано (копія демо після base) |
 |---|---|---|---|---|
 | 1 | `gates_and_scale` | data-файли (`GATE-W`, `GATE-E`, `TRUCK-SCALE`) + `maintenance.equipment.search_f3d` | `equipment_id`, `zone_id` (`Z-GATE-W`, `Z-GATE-E`), `camera_equipment_id` (`CAM-05`/`CAM-06` або `CCTV`) | `gates: 2`, `scales: 1`, `linked_equipment: 3` |
-| 2 | `signals_and_sources` | data `f3d.source` (3), `f3d.signal` (18) з upsert за `code` (якщо telemetry уже імпортувала каталог iot_sim — оновлюються `address`, `module='yard'`, `source_id`) | сигнали прив'язані до джерел і обладнання | `signals: 18` (8 оновлених або створених + 10 нових), `sources: 3` |
+| 2 | `signals_and_sources` | хук: `f3d.source` (2) і `f3d.signal` (18, `data/f3d_yard_signals.csv`) з upsert за `code` без xml-id; LPR — на `HTTP-PUSH` telemetry (якщо telemetry уже імпортувала каталог iot_sim — оновлюються `address`, `module='yard'`, `source_id`) | сигнали прив'язані до джерел і обладнання | `signals: 18` (8 оновлених або створених + 10 нових), `sources: 2`, `http_push_reused: 1` |
 | 3 | `product_weights` | iot_sim R-30 маси (ДСП16 56 кг, ДСП18 — 63 кг за пропорцією товщини 16→18 ПРИПУЩЕННЯ, МДФ18 70, ХДФ3 12) → `product.product.weight` **лише якщо 0** і `factory3d.yard.seed_product_weights=True` (умовчання `True` на тесті, `False` на проді) | звірка нетто має еталон для плит | `products_weighted: 7` (DSP16-SON, DSP16-WHT, DSP16-ANT, DSP16-WNG, DSP18-CON, MDF18-RAW, HDF3-WHT) — A-11, Q-09 |
-| 4 | `visits_from_batches` | `stock.picking.batch` з `f3d_code` виду `TRUCK-*` (CB-06; 6) | рейс на пакет: `visit_type` за `picking_type_code` (`incoming`/`outgoing`), `partner_id` = `picking_ids[0].partner_id`, `carrier_id`: incoming → `partner_id`; outgoing → `delivery.carrier.f3d_partner_id` (крок 5) або партнер з такою ж назвою («Нова Пошта Вантаж (демо)» id 11) або партнер компанії для «Власний транспорт»; `plate='АА4512КТ'` лише для `TRUCK-OUT-1` (картка макета `infra.py:368`), решта порожні; `scene_code=f3d_code`; `state='handling'`, `arrived_at = scheduled_date − 20 хв`, `admitted_at = −15 хв`, `at_dock_at = scheduled_date`, `handling_start_at = scheduled_date`; `weighing_policy` за стороною | `visits: 6` (3 `incoming`, 3 `outgoing`), `with_plate: 1` |
-| 5 | `carrier_partners` | `delivery.carrier` «Нова Пошта Вантаж (демо)» → `f3d_partner_id` = партнер id 11 (за назвою); «Власний транспорт» → партнер компанії; `res.partner.f3d_is_carrier=True` для них | | `carriers_linked: 2` |
+| 5 | `visits_from_batches` | `stock.picking.batch` з `f3d_code` виду `TRUCK-*` (CB-06; 6) | рейс на пакет: `visit_type` за `picking_type_code` (`incoming`/`outgoing`), `partner_id` = `picking_ids[0].partner_id`, `carrier_id`: incoming → `partner_id`; outgoing → `delivery.carrier.f3d_partner_id` (крок 4) або партнер з такою ж назвою («Нова Пошта Вантаж (демо)» id 11) або партнер компанії для «Власний транспорт»; `plate='АА4512КТ'` лише для `TRUCK-OUT-1` (картка макета `infra.py:368`), решта порожні; `scene_code=f3d_code`; `state='handling'`, `arrived_at = scheduled_date − 20 хв`, `admitted_at = −15 хв`, `at_dock_at = scheduled_date`, `handling_start_at = scheduled_date`; `weighing_policy` за стороною | `visits: 6` (3 `incoming`, 3 `outgoing`), `with_plate: 1` |
+| 4 | `carrier_partners` | `delivery.carrier` «Нова Пошта Вантаж (демо)» → `f3d_partner_id` = партнер id 11 (за назвою); «Власний транспорт» → партнер компанії; `res.partner.f3d_is_carrier=True` для них | | `carriers_linked: 2` |
 | 6 | `bookings_from_batches` | `scheduled_date`, `end_date`, `dock_id` пакета | `f3d.yard.booking` `confirmed`, `source='migration'`; `visit.planned_start/end`, `dock_id` | `bookings: 6`, `conflicts: 0` |
 | 7 | `weighing_from_card` | `infra.py:368` «АА 4512 КТ · брутто 21 380 кг · WH/OUT/00413» | `f3d.yard.weighing` `kind='check'`, `gross_kg=21380`, `source='migration'`, `visit` = рейс `TRUCK-OUT-1`, `picking_id=WH/OUT/00413`, `ts = scheduled_date` пакета; стан рейсу не змінюється | `weighings: 1` |
 | 8 | `report` | — | `factory3d.yard.migration_report` JSON, `migration_state=done/skipped` | `done` |
+
+Крок 0 `params` (`read_enabled` за CB-10, `calendar_id`), порядок і точні лічильники — SPEC §5.4 (крок 4 `carrier_partners` виконується до кроку 5, бо рейс бере `f3d_partner_id`).
 
 Без base-міграції (пакети без `f3d_code`) крок 4 бере пакети з `description` виду `TRUCK-… · DOCK-…`
 (формат `odoo_flows.step_docks`) — запасний шлях, `by_description: n`. Повторний запуск — «Повторити міграцію
@@ -382,10 +385,10 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | `f3d.yard.gate` | `GATE-E`: `direction=out`, `mode`, `scale_id` | `auto`, `TRUCK-SCALE` | |
 | `f3d.source` | `SRC-ADAM-IO7` (`modbus_tcp`): `params` | `{"host":"iot-sim","port":502,"unit":86,"timeout_s":2}` | у проді — IP модуля ADAM |
 | `f3d.source` | `SRC-TRUCK-SCALE` (`sics`): `params` | `{"host":"iot-sim","port":4001,"mode":"stream","period_s":1,"timeout_s":5,"unit":"kg"}` | `mode=poll` для індикаторів без `SIR` |
-| `f3d.source` | `SRC-LPR` (`http_push`): `params` | `{"route":"lpr"}` | токен маршруту — в env колектора (telemetry) |
-| compose `iot_sim` env | `SIM_LPR_PUSH_URL` / `SIM_YARD_AUTOGATE` | `http://collector:8080/f3d/push/lpr` / `0` | `0` — шлагбаум чекає DO від Odoo (інакше ТК-04 не перевіряє команду) |
+| `f3d.source` | `HTTP-PUSH` (telemetry, `http_push`): `params` | `{"routes":["lpr"],"allow_ips":["iot-sim"],"token_ref":"F3D_HTTP_PUSH_TOKEN_LPR","secret_ref":"F3D_HTTP_PUSH_SECRET_LPR"}` | джерело telemetry; двір свого не створює (SPEC A-18); секрети — в env колектора |
+| compose `iot_sim` env | `SIM_LPR_PUSH_URL` / `SIM_YARD_AUTOGATE` | `http://collector:8080/f3d/lpr` / `0` | `0` — шлагбаум чекає DO від Odoo (інакше ТК-04 не перевіряє команду) |
 | compose `collector` env | `F3D_WRITE_ENABLED` / `F3D_ALLOW_HOSTS` | `1` на стенді ТК-04 / `iot-sim,mosquitto` | telemetry §3 |
-| `ir.cron` | `cron_f3d_yard_queue` / `cron_f3d_yard_gc` / `cron_f3d_yard_day_reset` | 5 хв / 1 доба 03:00 / 1 доба 00:05 | §SPEC 6 |
+| `ir.cron` | `cron_f3d_yard_queue` / `cron_f3d_yard_gc` / `cron_f3d_yard_day_reset` | 1 хв / 1 доба 03:00 / 1 доба 00:05 | SPEC §6 |
 | `res.users` | `f3d_yard_kpp` (планшет КПП) | групи: `group_f3d_yard_security`, `base.group_user` | створює адміністратор уручну; не в data |
 
 ## 4. Інструкція
@@ -429,9 +432,9 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 
 | ID | Питання | Кому | Рекомендована відповідь | Поки відповіді немає |
 |---|---|---|---|---|
-| Q-01 | Маршрут приймача LPR: iot_sim Додаток A (658–659) пише `<collector>/f3d/lpr`, telemetry §2.4 — `POST /f3d/push/lpr` (`http_push` з маршрутом `lpr`). Зафіксувати один | менеджер, автори telemetry та iot_sim | `/f3d/push/<route>` telemetry; iot_sim виправляє рядки 658–659 і `SIM_LPR_PUSH_URL` у compose | модуль реалізує лише хук CT-08 для маршруту `lpr`; URL — справа колектора |
+| Q-01 | Маршрут приймача LPR: iot_sim Додаток A (658–659) пише `<collector>/f3d/lpr`, telemetry §2.4 — `POST /f3d/push/lpr` (`http_push` з маршрутом `lpr`). Зафіксувати один | менеджер, автори telemetry та iot_sim | **закрито SPEC telemetry §8.7**: `POST /f3d/{route}` → `/f3d/lpr` (= iot_sim 658–659); telemetry ARCH FR-22 вирівняти | модуль реалізує лише хук CT-08 для маршруту `lpr`; URL — справа колектора |
 | Q-02 | Держномер для емулятора: API-01 iot_sim віддає `bookings[].plate=null` і генерує номер сам (`AA`+det(code)); Odoo їх не знає. Чи бере емулятор `plate` з `stock.picking.batch.f3d_plate` (CY-02), коли не null? | автор iot_sim | так; при `null` — генерує, як зараз, і пише назву пакета в `plateListDescription` | резервне зіставлення R-08 за `plateListDescription` заповнює номер рейсу |
-| Q-03 | Токен на маршруті `lpr`: telemetry вимагає `X-F3D-Token`/Bearer, емулятор шле POST без автентифікації (§8.13.2). Додати `SIM_LPR_PUSH_TOKEN` у емулятор чи allow-list за IP у колекторі? | автори telemetry та iot_sim | емулятор додає заголовок `X-F3D-Token` (Axis LPV так само вміє `x_auth_key`); IP allow-list — другий запобіжник | ТК-02 запускається з токеном, виставленим у env обох сервісів; без токена — 401 і ТК не проходить |
+| Q-03 | Токен на маршруті `lpr`: telemetry вимагає `X-F3D-Token`/Bearer, емулятор шле POST без автентифікації (§8.13.2). Додати `SIM_LPR_PUSH_TOKEN` у емулятор чи allow-list за IP у колекторі? | автори telemetry та iot_sim | за telemetry Q-13: `allow_ips` камер + секретний суфікс шляху `/f3d/lpr/<secret>` (`secret_ref`) — без змін в емуляторі й камері; `X-F3D-Token` — для вебхуків | стенд: `allow_ips: ["iot-sim"]`; ТК-02 перевіряє 401, якщо задано `token_ref` |
 | Q-04 | Імпульс на DO: CAME очікує імпульс ≥ 1 с; плагін `modbus_tcp` telemetry пише одне значення. Додати `pulse_ms` у схему адреси coil (`write 1 → sleep → 0`) чи налаштувати ADAM-6060 DO у режим «pulse output»? | автор telemetry, монтажник | `pulse_ms` у схемі (`{"fc":5,"addr":16,"pulse_ms":1500}`); у проді ADAM DO також у pulse-режимі як апаратний запобіжник | команда = одне значення `1`; емулятор трактує як імпульс (§8.13.1); ТК-04 проходить |
 | Q-05 | Протокол індикатора АКСІС ME-01 (RS-232): чи є SICS-сумісний режим або «Toledo»-подібний ASCII; чи буде RS-232→Ethernet-шлюз | постачальник ваг (vagi-axis.ua) | запросити опис протоколу; шлюз Moxa NPort/USR-TCP232; якщо не SICS — другий діалект у плагіні `sics` (`dialect` у `params`) | плагін `sics` за MT-SICS (iot_sim Q-08 те саме); діалект-заглушка не пишеться |
 | Q-06 | Хто бронює ворота для сторонніх фур (каркас §9 п. 7): (а) лише диспетчер; (б) постачальник через портал `/my/yard` за своїми замовленнями; (в) e-mail-посилання без входу | замовник | (а) у v1; (б) у v1.1 — модель уже має `source='supplier'`, стан `requested`, диспетчер підтверджує; (в) ні (безпека) | (а) |
@@ -441,6 +444,8 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | Q-10 | Пожежа/евакуація: «тримати відкритим» для шлагбаумів — робить контролер/емулятор (DO4) чи Odoo за сигналом `fire_safety`? | менеджер, автор fire_safety | контролер (апаратно, без Odoo); Odoo лише показує `held` | модуль читає DO4 як стан `held` через DI? ні — DO4 без зворотного зв'язку; стан `held` лише за власною командою |
 | Q-11 | Друга зміна/графік КПП (iot_sim Q-11): рейси поза «Зміна 1 (07:00–15:30)» — попередження чи заборона | замовник | попередження (`enforce_calendar=False`) | так і зроблено |
 | Q-12 | Де фізично ваги для фур приймання: макет ставить `TRUCK-SCALE` у `Z-GATE-E` (виїзд), емулятор R-29 зважує incoming одразу після `GATE-W`. Чи є проїзд від GATE-W до ваг? | замовник | уточнити схему руху; для v1 — ваги спільні, порядок станів від геометрії не залежить | стани не залежать від місця ваг; координата ваг — (172, −14) |
+| Q-13 | P-11 має один DO4 «тримати відкритим» на обидва шлагбауми (iot_sim §8.13.1) — на проді окремі канали? | монтажник CAME, автор iot_sim | окремі DO (DO4 → GATE-W, DO5 → GATE-E) | обидва `cmd_hold` адресують PDU 20; утримання одних воріт утримує обидва (попередження у формі) |
+| Q-14 | telemetry R-18/ACL: `f3d.command.create` лише `group_f3d_manager`; чи пропускається перевірка при `env.su`? | автор telemetry | так (як base R-04) | двір створює команди `sudo()` після власних перевірок R-15 (SPEC A-20) |
 
 ### 5.2 Рішення автора A-xx (відхилення/уточнення каркаса)
 
@@ -452,14 +457,14 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 | A-04 | Перевізник і водій — `res.partner` (водій — контакт-особа з `f3d_is_driver`, перевізник — компанія з `f3d_is_carrier`); `delivery.carrier` отримує `f3d_partner_id` | `delivery.carrier` — спосіб доставки, не контрагент; стандартний `stock.picking.batch.driver_id` теж `res.partner` — узгоджено |
 | A-05 | `fleet.vehicle` для сторонніх фур не створюється; держномер — Char `plate` на рейсі | `fleet` веде власний парк; сторонніх машин сотні, їх облік — PII й сміття в Fleet |
 | A-06 | Команди на ворота — тільки через `f3d.command` telemetry; власної черги/контролера немає | telemetry A-08 (Odoo не ходить у мережу цеху); журнал команд єдиний (CY-08) |
-| A-07 | Автозахоплення зважування — через перевизначення `f3d.signal.write()` для `yard/scale/*`, а не крон | показання приходять пакетом раз на 5 с, фура стоїть на вагах 60 с; крон раз на хвилину пропускав би; `f3d.reading` зберігається лише раз на `store_period_s` (telemetry A-04), тому гачок потрібен на `last_value` |
+| A-07 | Автозахоплення зважування — через перевизначення `f3d.signal._f3d_ingest()` (CT-10) для `yard/gates/*`, `yard/scale/*`, а не крон (виправлено 0.2: telemetry R-17 оновлює `last_value` сирим SQL, `write()` не викликається — SPEC A-17) | показання приходять пакетом раз на 5 с, фура стоїть на вагах 60 с; крон раз на хвилину пропускав би; `f3d.reading` зберігається лише раз на `store_period_s` (telemetry A-04), тому гачок потрібен на вхідних показаннях |
 | A-08 | Сигнал каталогу 654/656 об'єднує DI0 і DI1 в одному рядку; модуль розділяє: `state` ← DI0, нові `loop` ← DI1, `photocell` ← DI4, команди `cmd_open/close/hold` ← DO0/DO2/DO4 (PDU 0/1/4/16/18/20 для W; 2/3/5/17/19/20 для E) | один сигнал = одна адреса (telemetry CT-03); розбіжність — у звіті менеджеру |
 | A-09 | Ваги — окрема модель `f3d.yard.scale`, не поле воріт | одні ваги обслуговують обидва напрямки (Q-12); у воріт лише посилання `scale_id` |
 | A-10 | Екран КПП — OWL client action з двома RPC (`kpp_data`, `kpp_action`), без власних HTTP-маршрутів | планшет під логіном `f3d_yard_kpp`; стандартна сесія і права; тестується `HttpCase` без контролерів |
 | A-11 | Крок 3 міграції заповнює `product.weight` плит за масами R-30 iot_sim лише коли вага 0 і параметр увімкнений | інакше FR-12 не має еталона на демо; на проді вимкнено (Q-09) |
 | A-12 | Антипрохід — за лічильником петлі ADAM (`passes_today`), без окремого датчика | лічильник є в P-11 і каталозі (655/657); точність — 1 проїзд |
 | A-13 | Провайдер `yard` додає **новий** розділ верхнього рівня `yard` у payload, не змінюючи `pickings[].truck`/`docks` | viewer A.0 має 26 ключів; `yard` зарезервований у viewer C-02 (160); сумісність зі статичною сторінкою |
-| A-14 | Знімок LPR — `ir.attachment` на події (base64 з `imageArray`/`imageFile`, якщо надіслано) або URL `imagesURI[0]`; відеоархів поза Odoo | мінімум PII і обсягу; NVR уже є (Axis S3016) |
+| A-14 | Знімок LPR — `ir.attachment` на події (base64 з `imageArray`, якщо надіслано; `imageFile` в Axis — шлях на камері, не використовується) або URL `imagesURI[0]`; відеоархів поза Odoo | мінімум PII і обсягу; NVR уже є (Axis S3016) |
 
 ### 5.3 Ризики
 
@@ -475,12 +480,12 @@ Odoo ніколи не ходить у мережу двору сам (карк�
 
 | Воркер | Файли (межі) | Здає | Залежить від |
 |---|---|---|---|
-| W0 каркас | `__manifest__.py`, `__init__.py`, `models/__init__.py`, `security/f3d_yard_security.xml`, `security/ir.model.access.csv`, `data/ir_config_parameter.xml`, `data/ir_sequence.xml`, `views/f3d_yard_menus.xml` (порожні дії-заглушки), `tests/common.py`, `README.md`, `CHANGELOG.md` | модуль встановлюється на копію демо після base і telemetry; групи, меню, параметри | base, telemetry (ARCH CT-xx) |
-| W1 рейси й бронювання | `models/f3d_yard_visit.py`, `models/f3d_yard_booking.py`, `models/stock_picking_batch.py`, `models/stock_picking.py`, `models/res_partner.py`, `models/delivery_carrier.py`, `wizard/f3d_yard_reject_wizard.py`, `views/f3d_yard_visit_views.xml`, `views/f3d_yard_booking_views.xml`, `views/stock_picking_batch_views.xml`, `views/stock_picking_views.xml`, `views/res_partner_views.xml`, `tests/test_visit.py`, `tests/test_booking.py`, `tests/test_picking.py` | M-01, M-02, M-07…M-10, M-17; R-01…R-05, R-09, R-12 (звірка за даними ваг), §10; AC-01…AC-22 | W0 |
-| W2 ворота, LPR, команди | `models/f3d_yard_gate.py`, `models/f3d_yard_lpr_event.py`, `models/f3d_push_handler.py`, `models/f3d_command.py`, `wizard/f3d_yard_walkin_wizard.py`, `data/f3d_yard_gate_data.xml`, `data/f3d_signal_data.xml` (частина воріт і LPR), `views/f3d_yard_gate_views.xml`, `views/f3d_yard_lpr_event_views.xml`, `tests/test_lpr.py`, `tests/test_gate.py`, `tests/test_commands.py` | M-03, M-04, M-12, M-16, M-18; R-06…R-08, R-15…R-17; AC-23…AC-40 | W0, W1 (рейс) |
-| W3 ваги й плагін `sics` | `models/f3d_yard_scale.py`, `models/f3d_yard_weighing.py`, `models/f3d_signal.py`, `data/f3d_yard_scale_data.xml`, `data/f3d_signal_data.xml` (частина ваг), `views/f3d_yard_weighing_views.xml`, `views/f3d_yard_scale_views.xml`, `tests/test_scale.py`; `services/collector_plugins/f3d_collector_yard/` (`pyproject.toml`, `f3d_collector_yard/sics.py`, `schemas/sics_source.json`, `schemas/sics_address.json`, `tests/test_sics.py`, `tests/fake_sics_server.py`) | M-05, M-06, M-13; R-10…R-14; §8; AC-41…AC-52 | W0, W1 |
-| W4 диспетчерська, КПП, провайдер, звіти | `static/src/kpp/*` (OWL), `views/f3d_yard_kpp_action.xml`, `views/f3d_yard_dashboard_views.xml` (kanban/gantt/calendar), `report/f3d_yard_dock_report.py`, `report/f3d_yard_report_views.xml`, `models/f3d_viewer_provider.py`, `tests/test_kpp.py`, `tests/test_provider.py`, `tests/test_reports.py` | V-xx, M-14, M-15; R-18…R-21; AC-53…AC-66 | W1, W2, W3 |
-| W5 міграція, крони, безпека, DEPLOY_TEST | `hooks/__init__.py`, `hooks/migrate.py`, `data/ir_cron.xml`, `data/neutralize.sql`, `models/res_config_settings.py`, `views/res_config_settings_views.xml`, `tests/test_migration.py`, `tests/test_security.py`, `tests/test_cron.py`, `docs/modules/factory3d_yard/DEPLOY_TEST.md` | M-11; §5, §6; AC-67…AC-80; ТК на стенді | усі |
+| W0 каркас | `__manifest__.py`, `__init__.py`, `models/__init__.py`, `security/f3d_yard_security.xml`, `security/ir.model.access.csv`, `data/ir_config_parameter.xml`, `data/ir_sequence.xml`, `views/f3d_yard_menus.xml` (порожні дії-заглушки), `tools/__init__.py`, `tools/plate.py`, `tools/tz.py`, `tools/params.py`, `tests/common.py`, `README.md`, `CHANGELOG.md` | модуль встановлюється на копію демо після base і telemetry; групи, меню, параметри | base, telemetry (ARCH CT-xx) |
+| W1 рейси й бронювання | `models/f3d_yard_visit.py`, `models/f3d_yard_booking.py`, `models/stock_picking_batch.py`, `models/stock_picking.py`, `models/res_partner.py`, `models/delivery_carrier.py`, `wizard/f3d_yard_reject_wizard.py`, `wizard/f3d_yard_wizard_views.xml`, `views/f3d_yard_visit_views.xml`, `views/f3d_yard_booking_views.xml`, `views/stock_picking_batch_views.xml`, `views/stock_picking_views.xml`, `views/res_partner_views.xml`, `tests/test_visit.py`, `tests/test_booking.py`, `tests/test_picking.py` | M-01, M-02, M-07…M-10, M-17; R-01…R-05, R-09, R-12 (звірка за даними ваг), §10; AC-01…AC-22 | W0 |
+| W2 ворота, LPR, команди | `models/f3d_yard_gate.py`, `models/f3d_yard_lpr_event.py`, `models/f3d_push_handler.py`, `models/f3d_command.py`, `wizard/f3d_yard_walkin_wizard.py`, `data/f3d_yard_gate_data.xml`, `data/f3d_yard_signals.csv` (рядки воріт і LPR), `views/f3d_yard_gate_views.xml`, `views/f3d_yard_lpr_event_views.xml`, `views/f3d_command_views.xml`, `tests/test_lpr.py`, `tests/test_gate.py`, `tests/test_commands.py` | M-03, M-04, M-12, M-16, M-18; R-06…R-08, R-15…R-17; AC-23…AC-40, AC-46, AC-47 | W0, W1 (рейс) |
+| W3 ваги й плагін `sics` | `models/f3d_yard_scale.py`, `models/f3d_yard_weighing.py`, `models/f3d_signal.py`, `data/f3d_yard_signals.csv` (рядки ваг; запис ваг — у `data/f3d_yard_gate_data.xml`), `views/f3d_yard_weighing_views.xml`, `views/f3d_yard_scale_views.xml`, `tests/test_scale.py`; `services/collector_plugins/f3d_collector_yard/` (`pyproject.toml`, `f3d_collector_yard/sics.py`, `schemas/params.sics.json`, `schemas/address.sics.json`, `tests/test_sics_parse.py`, `tests/test_sics_plugin.py`, `tests/fake_sics_server.py`, `tests/conftest.py`) | M-05, M-06, M-13; R-10…R-14; §8; AC-41…AC-45, AC-48…AC-52 | W0, W1 |
+| W4 диспетчерська, КПП, провайдер, звіти | `static/src/kpp/*` (OWL), `static/tests/tours/*`, `views/f3d_yard_kpp_action.xml` (kanban/gantt/calendar — у файлах представлень W1), `report/f3d_yard_dock_report.py`, `report/f3d_yard_report_views.xml`, `models/f3d_viewer_provider.py`, `tests/test_kpp.py`, `tests/test_provider.py`, `tests/test_reports.py` | V-xx, M-14, M-15; R-18…R-21; AC-53…AC-65 | W1, W2, W3 |
+| W5 міграція, крони, безпека, DEPLOY_TEST | `hooks/__init__.py`, `hooks/migrate.py`, `data/ir_cron.xml`, `data/f3d_yard_actions.xml`, `data/neutralize.sql`, `models/res_config_settings.py`, `views/res_config_settings_views.xml`, `tests/test_migration.py`, `tests/test_security.py`, `tests/test_cron.py`, `tests/test_contracts.py`, `docs/modules/factory3d_yard/DEPLOY_TEST.md` | M-11; §5, §6; AC-66…AC-86; ТК-01…ТК-08 на стенді | усі |
 
 Порядок злиття: W0 → W1 → (W2 ∥ W3) → W4 → W5. Кожен воркер здає зелені тести свого файлу з тегом
 `f3d_yard`; W5 проганяє повний набір і ТК-01…ТК-08 на стенді з емулятором і колектором.
