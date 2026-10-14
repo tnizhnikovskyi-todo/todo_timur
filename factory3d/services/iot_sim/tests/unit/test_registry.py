@@ -94,6 +94,6 @@ def test_driver_rules_and_unknown_is_passive(registry, world):
     assert driver_for(["infra/pv/PV-INV-1/p_kw"]) == "pv"
     assert registry.devices["COMPRESSOR"].driver == "compressor"
     # драйвер без зареєстрованого класу -> пасивна модель, що тримає номінал
-    dev = world.devices["COMPRESSOR"]
+    dev = world.devices["OFFICE"]
     assert isinstance(dev.model, PassiveModel)
-    assert dev.signals["pressure_bar"].value == pytest.approx(6.81)
+    assert dev.signals["p_now"].value == pytest.approx(dev.signals["p_now"].params["nominal"])
