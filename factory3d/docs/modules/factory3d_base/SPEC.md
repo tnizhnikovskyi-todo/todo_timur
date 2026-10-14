@@ -2,8 +2,9 @@
 
 Версія 0.2 · 14.10.2026 (0.1 — 13.10.2026) · технічне рішення: `docs/modules/factory3d_base/ARCHITECTURE.md` (далі ARCH).
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-09 (дзеркало `f3d_code`, `f3d_alias`, `f3d_kind` у `hr.employee.public`, M-10a, FR-14, AC-55),
-X-15 (`f3d_truck` — опис/назва фури, не держномер і не код; код фури в 3D — лише `f3d_code`), X-32 (резерв 55 genset, правило
-пункту «Налаштування <модуля>» під `menu_f3d_config`, власні пункти base поза резервом).
+X-15 (`f3d_truck` — опис/назва фури, не держномер і не код; код фури в 3D — лише `f3d_code`), X-32 і сторона base у X-69 (§3: резерв
+55 genset, правило пункту «Налаштування <модуля>» під `menu_f3d_config`, власні пункти base поза резервом), сторона base у X-19
+(§4.2: у `privilege_f3d` лише групи base).
 Спирається на контракти каркаса `docs/ARCHITECTURE.md`: C-6.1 (код сцени), C-6.2 (зони й ворота),
 C-6.3 (паспорт), C-6.7 (кнопка «Показати в 3D»), рішення D-03 (ворота = `stock.location`-док),
 конвенції §5. Визначає власні контракти CB-01…CB-12 (ARCH §2.1). Протоколи P-xx не задіяні.
@@ -609,6 +610,10 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
     <field name="implied_ids" eval="[Command.link(ref('group_f3d_user'))]"/>
 </record>
 ```
+
+Привілей `privilege_f3d` містить лише три групи base (драбина CB-10). Інші модулі додають групи
+`group_f3d_<модуль>_<роль>` у власний `res.groups.privilege` з `category_id=factory3d_base.module_category_factory3d`,
+не в `privilege_f3d` (X-19).
 
 ### 4.3 Record rules
 

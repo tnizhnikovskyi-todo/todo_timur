@@ -2,7 +2,9 @@
 
 Версія 0.2 · 14.10.2026 (0.1 — 13.10.2026) · автор: агент-архітектор модуля (хвиля 1) · статус: **чернетка на погодження**.
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-09 (дзеркало коду сцени в `hr.employee.public`, CB-01, FR-14), X-15 (CB-06:
-`f3d_truck` — опис/назва фури, не держномер; код фури в 3D — `f3d_code`), X-32 (CB-09: резерв 55 genset, правило меню налаштувань).
+`f3d_truck` — опис/назва фури, не держномер; код фури в 3D — `f3d_code`; `f3d_truck_code` у §2.3 і A-14), X-32 і сторона base у X-69
+(CB-09: резерв 55 genset, правило «Налаштування <модуля>» під `menu_f3d_config` з sequence резерву), сторона base у X-19
+(CB-10: у `privilege_f3d` лише групи base, групи модулів — у власних привілеях категорії).
 Каркас проєкту: `docs/ARCHITECTURE.md` (далі «каркас», контракти C-6.1…C-6.8, рішення D-xx).
 Специфікація для реалізації й тестування: `docs/modules/factory3d_base/SPEC.md`.
 Рішення автора, що відхиляються від каркаса або доповнюють його, позначені **A-xx** (§5.2); відкриті
@@ -123,7 +125,7 @@ driver_id` (`stock_fleet`), `maintenance.equipment.workcenter_id` (`mrp_maintena
 | CB-07 | Паспорт: `f3d.equipment.passport` (ключ `role`), `f3d.equipment.spec` (`key`, `name`, `value_text`, `value_num`, `uom`), `f3d.equipment.source` (`url`, `name`, `kind`); на `maintenance.equipment`: `f3d_passport_id`, `f3d_component_passport_ids` і related `f3d_role`, `f3d_manufacturer`, `f3d_model`, `f3d_reason`, `f3d_power_kw`, `f3d_connected_kw`, `f3d_dimensions`, `f3d_spec_ids`, `f3d_source_ids`, `f3d_units` (C-6.3). Числові параметри для розрахунків — `spec_ids` з `key` (`connected_kw`, `lumen`, `watt`, `airflow_m3h`, `heat_kw`, `kva`, `kwh`, `wp`, `kw_ac`, …) | energy, bms, fire_safety, telemetry |
 | CB-08 | Метод `f3d.equipment.passport.get_num(key)` → `float|None` (значення `value_num` специфікації за ключем) і `maintenance.equipment.f3d_get_num(key)` (з паспорта одиниці) | energy, bms |
 | CB-09 | Меню: `factory3d_base.menu_f3d_root` («Завод 3D», sequence 75 серед кореневих), діти з зарезервованими sequence: 10 viewer, 20 `menu_f3d_plant` (base), 30 telemetry, 40 machine_connect, 50 energy, 55 genset (міст `factory3d_genset`), 60 yard, 70 access, 80 bms, 85 fire_safety, 90 iot_sim (пульт), 99 `menu_f3d_config` (base). Правило (X-32): пункт «Налаштування <модуля>» (`res.config.settings` модуля або підменю його параметрів) — під `factory3d_base.menu_f3d_config` з `sequence` = резерв модуля; довідники модуля можуть лишатися в його корені під `menu_f3d_root`; власні пункти base під `menu_f3d_config` — 20, 21, 95, 96 (поза чужим резервом) | усі |
-| CB-10 | Групи `factory3d_base.group_f3d_user` ⊂ `group_f3d_manager` ⊂ `group_f3d_admin` ⊂ `base.group_system`; категорія `factory3d_base.module_category_factory3d`; параметр `factory3d.base.environment` ∈ {`test`,`prod`} — модулі зі стоп-кранами беруть з нього значення за замовчуванням (`read_enabled = environment == 'test'`); `neutralize.sql` base ставить `test` | усі |
+| CB-10 | Групи `factory3d_base.group_f3d_user` ⊂ `group_f3d_manager` ⊂ `group_f3d_admin` ⊂ `base.group_system`; категорія `factory3d_base.module_category_factory3d`; у привілеї `factory3d_base.privilege_f3d` — лише ці три групи base, групи інших модулів — `group_f3d_<модуль>_<роль>` у власному `res.groups.privilege` цієї категорії (X-19); параметр `factory3d.base.environment` ∈ {`test`,`prod`} — модулі зі стоп-кранами беруть з нього значення за замовчуванням (`read_enabled = environment == 'test'`); `neutralize.sql` base ставить `test` | усі |
 | CB-11 | Міграційні утиліти в `factory3d_base/hooks/`: `x_fields.read_manual_field(env, model, name)`, `drop_manual_fields(env, model, names)`, `restore_manual_fields(env, model, spec)` — для міграції `x_*` в інших модулях (telemetry: `x_f3d_signal*`) | telemetry |
 | CB-12 | Параметри `factory3d.base.plant_length_m=150`, `plant_width_m=72`, `plant_height_m=9` — будівля (перевірка координат воріт); `factory3d.base.site_x0_m=-32`, `site_y0_m=-30`, `site_x1_m=182`, `site_y1_m=100` — територія (`plant/infra.py:SITE`; перевірка контурів зон) | viewer, bms, fire_safety, yard |
 
@@ -160,7 +162,7 @@ driver_id` (`stock_fleet`), `maintenance.equipment.workcenter_id` (`mrp_maintena
 | `f3d.zone` | нова | зона цеху: контур, тип, прив'язки, лічильники | data-файл + hook; manager | viewer, access, bms, fire, yard |
 | `stock.location` | розширення | `f3d_*` домішки + `f3d_zone_id` + вид/місткість місця + поля воріт | hook; manager | viewer, yard, stock |
 | `stock.picking.batch` | розширення | домішка (фура), `f3d_truck`, `f3d_vehicle_id`, `f3d_dock_warning` | hook; stock user (стандартно) | viewer, yard |
-| `stock.picking` | розширення | related-довідки `f3d_dock_id`, `f3d_dock_code`, `f3d_truck`, `f3d_vehicle_id` (readonly) | — | viewer, `odoo_pull`, списки |
+| `stock.picking` | розширення | related-довідки `f3d_dock_id`, `f3d_dock_code`, `f3d_truck`, `f3d_truck_code` (= `batch_id.f3d_code`, код фури в 3D — X-15), `f3d_vehicle_id` (readonly) | — | viewer, `odoo_pull`, списки |
 | `mrp.workcenter` | розширення | домішка + `f3d_zone_id` | hook; manager | viewer, machine_connect |
 | `maintenance.equipment` | розширення | домішка + паспорт (CB-07) + `f3d_zone_id` | hook; manager/equipment manager | усі |
 | `hr.employee` | розширення | домішка | hook; HR | viewer, access |
@@ -337,7 +339,7 @@ Base сам нічого не вмикає; значення читають мо
 | A-11 | `mrp_workorder` не в `depends` (каркас §3 згадує лише для machine_connect); `fleet` доданий явно | base використовує лише `mrp.workcenter`; `stock.picking.batch.vehicle_id → fleet.vehicle` потребує `fleet` |
 | A-12 | Параметр `factory3d.base.environment` і правило для стоп-кранів інших модулів (CB-10) | каркас §5 вимагає різні умовчання на тесті/проді, але не каже, звідки модуль знає середовище |
 | A-13 | `neutralize.sql` містить один `UPDATE` (`environment='test'`), не порожній файл | psycopg2 відхиляє порожній запит; нейтралізована копія проду — тестова |
-| A-14 | На `stock.picking` додано related-довідки `f3d_dock_id`, `f3d_dock_code`, `f3d_truck`, `f3d_vehicle_id` (readonly, не збережені) | повертають у список/форму переміщень колонки «Ворота/Фура/Техніка», які демо давало через `x_*`; `odoo_pull` і viewer читають без join'ів |
+| A-14 | На `stock.picking` додано related-довідки `f3d_dock_id`, `f3d_dock_code`, `f3d_truck`, `f3d_truck_code`, `f3d_vehicle_id` (readonly, не збережені) | повертають у список/форму переміщень колонки «Ворота/Фура/Техніка», які демо давало через `x_*`; `odoo_pull` і viewer читають без join'ів |
 | A-15 | Крос-модельні однакові коди дозволені (РЦ `SAW-1` і обладнання `SAW-1`): унікальність лише в межах моделі; `f3d_resolve` повертає перший за порядком `_f3d_resolve_order` | так у макеті: 35 РЦ = 35 одиниць обладнання з тим самим кодом, зв'язок — `workcenter_id` |
 | A-16 | `f3d_loc_kind` — рівно 6 значень ключа `locations[*].kind` макета (`stack`, `bin`, `shelf`, `pallet_cell`, `kit`, `area`), не дрібніший перелік («стос під порталом» ↔ «стос у стелажі», «вивантаження» ↔ «карантин») | менеджер попросив узяти з ключа `kind`; дрібніший поділ у макеті виражений префіксом коду (`PLT-`/`RCK-`, `UNLOAD-`/`QC-`) і зоною `f3d_zone_id`, тож він доступний без другого довідника; нічого не вигадуємо |
 | A-17 | `f3d_accepts` (назва з C-6.2) реалізовано як many2many до `product.category` | у макеті ворота приймають «категорії товарів» (1–3 плити, 4 фурнітура…); категорії демо вже є в базі; Selection довелося б дублювати довідник |
