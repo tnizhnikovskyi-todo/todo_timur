@@ -271,7 +271,7 @@ class F3dBmsLightPanel(models.Model):
 | `source_id` | Many2one `f3d.source` | `string="Джерело HelvarNet"`, `domain="[('type','=','helvarnet')]"`, `ondelete="set null"` |
 | `cluster` | Integer | `req`, `default=1`, `string="Кластер"` (1…253) |
 | `router` | Integer | `req`, `string="Роутер"` (1…254; `LP-1` → 1) |
-| `x`, `y` | Float | `digits=(8,2)`, `string="X, м"`/`"Y, м"` (північна стіна: y = 71,6) |
+| `x`, `y` | Float | `digits=(8,2)`, `string="X, м"`/`"Y, м"` (північна стіна: y = 71,0) |
 | `zone_id` | Many2one `f3d.zone` | `string="Зона розміщення"`, `ondelete="set null"` |
 | `group_ids` | One2many `f3d.bms.light.group` `panel_id` | `string="Групи"` |
 | `group_count` | Integer | `compute="_compute_totals"`, `store=True` |
@@ -1389,3 +1389,408 @@ FR-06 AC-26, AC-27, AC-39; FR-07 AC-19, AC-24; FR-08 AC-20…AC-22; FR-09 AC-31,
 AC-36; FR-11 AC-36; FR-12 AC-40; FR-13 AC-37, AC-38; FR-14 AC-46, AC-47; FR-15 MAN (ТК-10) + AC-12; FR-16 AC-62;
 FR-17 AC-61, AC-62; FR-18 AC-57…AC-60; FR-19 AC-54, AC-56; FR-20 AC-42…AC-45; FR-21 AC-48…AC-55; FR-22 AC-26, AC-30;
 FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-11, AC-15, AC-23, AC-33.
+
+## 13. План тестування (для Opus)
+
+### 13.0 Фікстури й вимоги до тестованості
+
+**Odoo `tests/common.py`** — `class F3DBmsCase(TransactionCase)` (теги `post_install`, `-at_install`, `f3d`, `f3d_bms`),
+`setUpClass`:
+- `cls.zone_cut = env.ref('factory3d_base.zone_z_cut')`, `cls.zone_sheets = env.ref('factory3d_base.zone_z_sheets')`;
+  `cls.group_cut = env.ref('factory3d_bms.group_lt_cut')`, `cls.group_sheets`, `cls.group_eb`, `cls.group_maint`;
+  `cls.panel2 = env.ref('factory3d_bms.panel_lp_2')`; `cls.rv05 = env.ref('factory3d_bms.unit_rv_05')`, `cls.rv07`,
+  `cls.ahu`, `cls.ef_elec`, `cls.ef_chg`; `cls.balance = env['f3d.bms.heat.balance']._f3d_bms_get()`;
+- обладнання для заявок: якщо `search_f3d('LT-CUT')` порожньо (чиста база) — тест створює `maintenance.equipment`
+  `name="Освітлення: Розкрій"`, `serial_no` і `f3d_code` `LT-CUT`, команду `cls.team = maintenance.team «Служба головного
+  механіка (тест)»` і прив'язує `group_cut.equipment_id`, сигнали (`equipment_id`); те саме для `RV-05`, `RV-07`,
+  `EF-ELEC`, `EF-CHG`, `AHU-1`, `BOILER`;
+- користувачі: `cls.user_reader` (`base.group_user` + `group_f3d_user`), `cls.user_operator` (+ `group_f3d_bms_operator`),
+  `cls.user_manager` (+ `group_f3d_manager`), `cls.user_admin` (+ `group_f3d_admin`);
+- календар `cls.cal_shift` — копія «Зміна 1» (пн–пт 07:00–11:30, 12:00–15:30, `tz='Europe/Kyiv'`), параметр
+  `factory3d.bms.calendar_id = cal_shift.id`; `cls.cal_24` (7 × 00:00–24:00) для ТК-подібних тестів;
+- хелпери: `ingest(code, value=None, text=None, ts=None)` → `env['f3d.signal'].sudo()._f3d_ingest([{...}], src='module')`
+  (`ts` за замовчуванням — `fields.Datetime.now()`, у тестах — `freezegun`/`odoo.tests.freeze_time`); `run_check(at)` —
+  `with freeze_time(at): env['f3d.bms.check']._cron_check()`; `set_sql(signal, **vals)` — пряме `UPDATE f3d_signal`
+  (`last_value`, `last_text`, `last_ts`, `status`) + `invalidate_model`; `kyiv(y, m, d, hh, mm)` → UTC naive; `make_signal(code,
+  **vals)` (для сигналів energy/fire_safety у тестах: `infra/ats/src1_ok`, `infra/chp/heat_kw`, `infra/totals/chp_kw`,
+  `energy/consumers/LP-2/p_now`, `fire/totals/system_state`, без джерела);
+- `cls.static = json.load(file_open('factory3d_bms/tests/data/static_bms.json'))` — розділи `lighting` і
+  `ventilation` з `dist/odoo_demo.json` (генерує `tools/gen_data.py`, файл у репозиторії);
+- `ctx(static=None, changes=None)` → словник `ctx` viewer M-01 (`user`, `now`, `static={'lighting':…, 'ventilation':…}`,
+  `changes`).
+
+**Плагін `tests/conftest.py`** (`pytest-asyncio`, `asyncio_mode=auto`):
+- `fake_router` → `FakeHelvarRouter` на `127.0.0.1:<вільний порт>` зі складом груп LP-1…3 (Додаток A.1), рівні 100,
+  вати 126, без несправностей; параметри фікстури: `version`, `push`, `ack`, `delay_s`, `drop_after`, `partial`;
+- `plugin_ctx` → фейковий `PluginContext`: `allowlist` (дозволяє `127.0.0.1`, може кидати), `emit` (список), `metrics`
+  (заглушка з лічильниками), `log`;
+- `source_cfg(router=2, signals=[...])` → `SourceCfg` з `params={"host":"127.0.0.1","port":<порт>,"cluster":1,"router":2,
+  "version":2,"rate_per_s":100,"push":true,"timeout_s":0.5}` і сигналами з Додатка B (`SignalCfg`).
+
+### 13.1 Юніт-тести
+
+#### 13.1.1 Odoo (`odoo-bin -d f3d_test -i factory3d_base,factory3d_telemetry,factory3d_bms --test-tags /factory3d_bms --stop-after-init`)
+
+| Файл / клас | Тести | AC | Фікстури | Що саме assert |
+|---|---|---|---|---|
+| `test_lighting_calc.py::TestNorms` | `test_13_norms_effective_lux`, `test_norm_constraints` | AC-01 | дані | значення `lux` (dict 13), `ref_en`; `IntegrityError` у `mute_logger` + `cr.savepoint()`; `ValidationError` |
+| `::TestGroupDesign` | `test_32_groups_match_macro` (параметризований рядками Додатка A.1, жорстко вписаними в тест як таблиця), `test_totals_320_fixtures`, `test_formula_synthetic`, `test_min_one`, `test_zone_without_polygon` | AC-02, AC-03 | дані; синтетична зона `Z-T1` 10×10 м | рівність полів; `assertAlmostEqual(p_inst_kw, …, 2)`; `ValidationError` |
+| `::TestFixture` | `test_passport_values`, `test_defaults_without_passport`, `test_manual_override` | AC-04 | паспорт-заглушка без специфікацій | `lumen`/`watt` |
+| `::TestDali` | `test_devices_match_appendix`, `test_pack_dali_function`, `test_count_mismatch`, `test_wrong_router`, `test_injection_rejected`, `test_unique_dali_group`, `test_code_and_checks` | AC-05, AC-06, AC-63 | дані | рядки `dali_devices`; тексти `ValidationError` |
+| `test_lighting_live.py::TestLive` | `test_design_fallback`, `test_live_values`, `test_sheets_design`, `test_plan_state_table` | AC-07, AC-10 | `ingest` | поля M-03 |
+| `::TestPanel` | `test_design_sums`, `test_dali_sum`, `test_meter_priority`, `test_state` | AC-08, AC-09 | `make_signal('energy/consumers/LP-2/p_now')`, `set_sql` джерела `HN-LP-2.state='error'` | `p_now_kw`, `p_source`, `state` |
+| `::TestContracts` | `test_light_power`, `test_kwh_from_hours`, `test_search_deviation` | AC-11, AC-12 | `f3d.reading.hour` створюються ORM у тесті | dict рівність; `search` |
+| `test_heat_balance.py::TestDesign` | `test_macro_753`, `test_param_change_recompute`, `test_internal_gains`, `test_reset_macro`, `test_constraints`, `test_rights` | AC-13, AC-14, AC-18 | `cls.balance` | `kw_round` рядків, `total_kw`, `reserve`, `note`; `AccessError` для `user_reader` |
+| `::TestLive` | `test_chp_heat_table`, `test_live_balance_table`, `test_totals_static` | AC-15…AC-17 | чисті функції `tools.heat`; `build_ventilation` | таблиці значень |
+| `test_hvac_live.py::TestNominals` | `test_nominals`, `test_coordinates`, `test_constraints` | AC-19, AC-24 | дані | значення |
+| `::TestState` | `test_mode_labels_states` (таблиця AC-20), `test_fallback_formulas`, `test_live_precedence`, `test_heat_now_contract` | AC-20…AC-23 | `ingest`, статика | значення, `stale` |
+| `test_rules_lighting.py::TestSchedule` | `test_work_interval` | AC-25 | `cal_shift`, leave | кортежі/`None` |
+| `::TestLightRules` | `test_off_in_work_delay`, `test_off_since_yesterday`, `test_lunch_and_after_shift`, `test_check_off_false`, `test_below_norm`, `test_tolerance_zero`, `test_presence_not_checked`, `test_no_data`, `test_mains_suppression` | AC-26…AC-28 | `run_check`, `ingest`, `make_signal('infra/ats/src1_ok')` | `check_signal_id.last_text`, `status`, кількість `maintenance.request` з `f3d_signal_id` |
+| `::TestIngestHook` | `test_since_from_reading_ts`, `test_internal_context_skips`, `test_exception_isolated`, `test_read_disabled_skips` | AC-29 | `unittest.mock.patch.object(type(env['f3d.bms.check']), '_f3d_bms_on_ingest')` | виклики mock; `res` `_f3d_ingest`; `off_since` |
+| `::TestDerivedSource` | `test_local_source`, `test_not_stale_by_telemetry`, `test_foreign_push_rejected`, `test_heartbeat` | AC-30 | `env['f3d.signal']._cron_stale()`, `f3d.collector` тесту з токеном і `_config_payload()` | стани, кількість `f3d.reading` сигналу `check` |
+| `test_rules_hvac.py::TestUnitRules` | `test_not_running`, `test_vel_ok`, `test_fault_separate`, `test_fans_no_check`, `test_cold_work`, `test_cold_off_hours`, `test_fire_suppression_signal`, `test_fire_suppression_drill_mock`, `test_mains` | AC-31…AC-33 | `run_check`, `ingest`, `make_signal('fire/totals/system_state')` | тексти, заявки |
+| `::TestThresholds` | `test_filter_supply_rv05`, `test_filter_extract`, `test_unit_fault_frost`, `test_ef_chg_charging`, `test_ef_elec_overheat`, `test_ahu_pressure`, `test_boiler_fault`, `test_heat_deficit` | AC-34…AC-36 | `ingest` | `name`, `f3d_bms_rule`, кількість заявок |
+| `test_requests.py::TestEnrichment` | `test_light_off_title`, `test_titles_table`, `test_faults_description`, `test_idempotent` | AC-37…AC-39 | після правил | `name`, `f3d_value`, `f3d_threshold`, `description`, `f3d_bms_enriched` |
+| `::TestJournal` | `test_open_update_close`, `test_new_episode`, `test_cooldown_new_request` | AC-40, AC-41 | `freeze_time` | поля епізодів, кількості |
+| `test_viewer_provider.py::TestLightingSection` | `test_static_equals_macro`, `test_live_values` | AC-42, AC-44 | `cls.static`, `ctx()` | порівняння словників A.13 з `cls.static` (точна рівність) |
+| `::TestVentilationSection` | `test_static_equals_macro`, `test_maintenance_request_key`, `test_live_values` | AC-43, AC-44 | ті самі | порівняння |
+| `::TestProviderContract` | `test_names_without_inherit`, `test_delta_relevance`, `test_access_denied_keeps_static` | AC-45 | `ctx(changes=…)` | `_inherit`, вміст `patch` |
+| `test_overview.py::TestOverview` | `test_structure_counts`, `test_access_partial`, `test_action_open` | AC-46, AC-47, AC-63 | користувачі | ключі, кількості, `AccessError` |
+| `test_hooks.py::TestInstall` | `test_counts_clean`, `test_signal_definitions`, `test_reinstall_idempotent`, `test_params_environment`, `test_uninstall_hook`, `test_neutralize` | AC-48, AC-51, AC-53…AC-56 | `hooks.run_install(env)`, `uninstall_hook(env)` у транзакції тесту | кількості, `install_report`, поля сигналів, `validate_address` |
+| `test_commands.py::TestWriteFlags` | `test_enable_disable`, `test_manager_rpc_denied` | AC-57 | `res.config.settings` | кількості прапорів |
+| `::TestWizards` | `test_light_scene`, `test_light_level_multi`, `test_refusals`, `test_hvac_mode_setpoint`, `test_forbidden_write_flags` | AC-58…AC-60 | `user_operator`, `set_param('factory3d.telemetry.write_enabled','True')` | поля `f3d.command`, тексти `UserError`/`ValidationError` |
+| `test_security.py::TestRights` | `test_acl_matrix`, `test_groups_chain`, `test_menus`, `test_reinstall_admin_only` | AC-61…AC-63 | користувачі | `AccessError`; `env.ref(menu).sequence` |
+| `static/tests/overview.test.js` (hoot, `--test-tags /factory3d_bms` через `HttpCase.start_tour`-незалежний `web.assets_unit_tests`) | `F3dBmsOverview renders plan`, `click opens form` | AC-47 | `mockService("orm", …)` з фіктивною відповіддю R-28 | кількість `polygon`/`circle`, класи, виклик `orm.call` |
+
+#### 13.1.2 Плагін (`pytest services/collector_plugins/f3d_collector_bms -q`)
+
+| Файл | Тести | AC | Що assert |
+|---|---|---|---|
+| `test_protocol.py` | `test_build_query`, `test_build_command`, `test_build_invalid`, `test_parse_reply_error_push_partial`, `test_split_stream`, `test_frame_too_long`, `test_decode_level`, `test_expand_devices`, `test_schemas`, `test_allowed_commands` | AC-64…AC-67, AC-73 | точні рядки; `Frame`; винятки; `jsonschema.validate` (бібліотека є в колекторі) |
+| `test_plugin_helvarnet.py` | `test_level_sample_median`, `test_membership_cache_fallback`, `test_power_scene`, `test_faults_faulty_router`, `test_push_emit`, `test_write_ack_verify_fail`, `test_write_not_supported`, `test_version_fallback`, `test_reconnect_offline_allowlist`, `test_rate_limit_timeouts`, `test_shared_connection`, `test_entry_point` | AC-68…AC-72, AC-74…AC-78 | `Reading`; лічильники кадрів фейка; час виконання (`time.monotonic`); `health()` |
+
+#### 13.1.3 Синхронізація даних з макетом (`pytest odoo_addons/factory3d_bms/tests/test_data_sync.py`, поза Odoo)
+
+`test_generated_files_match`: `gen_data.py --out <tmp>` → файли побайтово = `data/*` і `tests/data/static_bms.json`;
+`test_groups_vs_macro`: для 32 груп `plant.lighting.layout(...)` → `n`, `e_calc`, `p_inst`, `area` = Додаток A.1;
+`test_balance_vs_macro`: `plant.ventilation.heat_balance(...)` = `tools.heat.design_balance(...)` (4 рядки, 753);
+`test_signal_count`: CSV 549 рядків, коди унікальні, 142 `writable=1`, 81 `new=0`.
+
+### 13.2 Стендові сценарії ТК-01…ТК-12 (емулятор + колектор + Odoo)
+
+Передумови (усі ТК): `docker compose -f docker-compose.sim.yml --profile dev up -d` (iot_sim, mosquitto); образ колектора
+з `f3d-collector-bms` (`requirements-extra.txt`), `F3D_ALLOW_HOSTS=iot-sim,mosquitto`, `F3D_WRITE_ENABLED=0`; Odoo 19 з
+копією демо (`odoo_f3d_bms`), установлені `factory3d_base`, `factory3d_telemetry`, `factory3d_bms` (і `factory3d_viewer`
+для ТК-10); токен колектора; змінна `SIM=http://127.0.0.1:8090/sim/v1`, `AUTH="Authorization: Bearer $SIM_API_TOKEN"`.
+Для ТК з перевірками робочого часу менеджер створює календар «Цілодобово (ТК)» (7 × 00:00–24:00) і ставить його в
+`factory3d.bms.calendar_id`, затримки `light_check_delay_min=1`, `hvac_check_delay_min=1`, `cold_delay_min=1`,
+`heat_deficit_delay_min=1`; telemetry `realarm_cooldown_s=60`. Час очікування — з запасом на опитування 30/60 с, push 5 с
+і крон 60 с.
+
+| ТК | Кроки | Очікуваний результат | Де дивитися |
+|---|---|---|---|
+| ТК-01 Підключення | запустити колектор; 3 хв | Завод 3D → Телеметрія → Огляд: 32 джерела bms `online`, `BMS-DERIVED` `online`; Будівля → Огляд: 32 групи з `level_source=live`, 29 установок без `stale`; сигнали `module=bms`: `ok` усі, крім `ventilation/units/RV-05/filter_dp_pa` (`alarm`, емулятор стартує з 285) | Огляд, список сигналів (фільтр «Мій модуль» = bms) |
+| ТК-02 `filter_clogged` RV-05 | 1) заявку id 6 перевести в «Repaired»; `curl -X POST $SIM/reset -H "$AUTH" -d '{"keep_time":true}'` → RV-05 120 Па, сигнал `ok` ≤ 2 хв; 2) `curl -X POST $SIM/scenario/filter_clogged/start -H "$AUTH" -H 'Content-Type: application/json' -d '{"run_ref":"RUN/TK02","params":{"device":"RV-05","value":285,"dp_pa":285,"ramp_min":2}}'`; 3) чекати 4 хв; 4) закрити нову заявку, `POST $SIM/scenario/filter_clogged/stop` | 3) сигнал `filter_dp_pa` 285 ± 5, `alarm`; нова заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на RV-05, команда «Служба головного механіка», `f3d_bms_rule=filter_supply`; епізод журналу `open`; картка RV-05 у переглядачі «Фільтр 285 Па · замінити»; огляд — RV-05 червоний; 4) ≤ 3 хв сигнал `ok`, епізод `closed` | Обслуговування → Заявки; Будівля → Відхилення; 3D |
+| ТК-03 Освітлення вимкнене / нижче норми | календар «Цілодобово (ТК)»; 1) `POST $SIM/scenario/lighting_scene/start` `{"run_ref":"RUN/TK03A","params":{"group":"LT-CUT","level":0,"duration_s":900}}`; 2) `…/start` `{"run_ref":"RUN/TK03B","params":{"group":"LT-EB","level":60,"duration_s":900}}`; чекати 3 хв | 1) `lighting/groups/LT-CUT/level=0` ≤ 10 с (push); ≤ 2,5 хв заявка «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі 500 лк»; 2) LT-EB `e_now = 329` → заявка «Освітлення LT-EB (Крайкооблицювання): ≈ 329 лк при нормі 500 лк (рівень 60 %)»; огляд: Z-CUT сірий/червоний, Z-EB червоний; після `stop` — «норма», епізоди `closed` | Заявки, Відхилення, Огляд |
+| ТК-04 Аварія світильника | менеджер ставить сигналам `lighting/groups/LT-CUT/faults` і `/faulty` `period_s=60`; `POST $SIM/scenario/lighting_scene/start` `{"run_ref":"RUN/TK04","params":{"group":"LT-CUT","scene":1,"fault_device":"@1.2.1.5","duration_s":900}}`; 3 хв | `faults=1`, `faulty='1.2.1.5'`; заявка «Аварія світильників LT-CUT: несправних 1 шт. при нормі 0», в описі «Несправні світильники: 1.2.1.5; щит LP-2, DALI-група G:12.»; щит LP-2 `state=fault`; після `stop` — `faults=0` | форма групи, щита; заявка |
+| ТК-05 Нічне зниження | менеджер створює календар «Без робочого часу (ТК)» (без інтервалів) і ставить його в параметр; `POST $SIM/time` `{"set":"<сьогодні>T23:00:00+03:00"}`; 3 хв | RV/AHU: `mode=ST`, `state=stopped` → `state=standby`, `mode_label` «Очікування»; `heat_kw` → 0, `heat_need_kw` падає до 0; `setpoint_night_c=14.0`; перевірки «поза робочим часом»; **жодної** нової заявки й епізоду; потім календар «Цілодобово (ТК)» → ≤ 3 хв заявки «Установка RV-xx (…): не працює в робочий час — режим «Очікування»» (перевірка контрасту, 26 заявок) — закрити масово; повернути `POST $SIM/time {"set":"<сьогодні>T10:00:00+03:00"}` | Установки (kanban), Тепловий баланс, Заявки |
+| ТК-06 Аварія котельні | `POST $SIM/device/BOILER/fault` `{"reason":"generic"}`; 2 хв; `POST $SIM/device/BOILER/clear` | `equipment/BOILER/state=fault`; заявка «Котельня на відходах (2 × Kalvis K-500M): аварія котельні (стан «fault»)», `boiler_fault`; баланс: `boilers_on=0`, `boiler_state=fault`; дефіциту немає (потреба < КГУ); `clear` → `standby`, епізод `closed` | Тепловий баланс, Заявки |
+| ТК-07 HelvarNet недоступний | менеджер: `HN-LP-2.params.port = 50999`; 4 хв; повернути 50000 | ≤ 2 хв `HN-LP-2.state=error` («Connection refused»); ≤ 3 хв 5 груп LP-2 `stale`, перевірки «немає даних», щит LP-2 `offline`; нових заявок 0; огляд — Z-CUT…Z-FAC заштриховані; після повернення ≤ 2 хв `online`, значення живі, «норма» | Телеметрія → Огляд; Будівля → Огляд |
+| ТК-08 BACnet-пристрій мовчить | `POST $SIM/device/RV-07/fault` `{"reason":"comm"}`; 3 хв; `clear` | `BAC-107-RV-07` `error`, сигнали RV-07 `stale` ≤ 90 с після помилки; перевірка RV-07 «немає даних»; заявок немає; `clear` → `online`, «норма» | Телеметрія → Джерела |
+| ТК-09 Керування | адміністратор: Будівля «Дозволити керування», Телеметрія «Дозволяти команди», колектор `F3D_WRITE_ENABLED=1` (перезапуск); оператор: LT-MAINT → «Керування» → сцена 3; RV-05 → режим `VEL`; потім адміністратор вимикає керування | команда LT-MAINT `done` ≤ 15 с (`result` містить `ack` або `verified`), рівень групи 50 % ≤ 60 с; RV-05 команда `done`, `mode=VEL` ≤ 60 с; після вимкнення — майстер не відкривається (`UserError`), прапори `write_enabled` 0/0 | Телеметрія → Команди; форми |
+| ТК-10 Інтерфейс і 3D | з `factory3d_viewer`: Будівля → Огляд — план, KPI, вкладки; група LT-CUT → «Показати в 3D»; переглядач: картка LT-CUT, RV-05, «Теплова мережа» | картки показують ті самі числа, що форми (`e_now`, режим, витрата, фільтр, «Зима −15 °C ≈ 753 кВт з 990 кВт двох котлів і 856 кВт КГУ»); живе оновлення ≤ 15 с після зміни рівня (ТК-03) | UI, 3D |
+| ТК-11 Пожежне навчання (з `factory3d_fire_safety`, інакше MAN-пропуск) | календар «Цілодобово (ТК)»; `POST $SIM/scenario/fire_drill/start` `{"run_ref":"RUN/TK11","params":{"zone":"FA-CNC","duration_s":300}}`; 8 хв | ≤ 1 хв RV/AHU `ST`; `fire/totals/system_state=test`; перевірки «зупинено пожежною сигналізацією»; заявок «не працює…» 0; після завершення установки запускаються, перевірки «норма» | Установки, Заявки |
+| ТК-12 Звірка з пристроєм | `curl -s "$SIM/signals?device=RV-08" -H "$AUTH"`; `printf '>V:2,C:152,@1.2.1.1#' \| nc -q1 iot-sim 50000` (з контейнера колектора) | значення в Odoo (форма RV-08, LT-CUT) збігаються з емулятором (± шум за 30 с; рівень — точно) | термінал, форми |
+
+### 13.3 Тести безпеки (ТБ)
+
+| ТБ | Перевірка | Як |
+|---|---|---|
+| ТБ-01 | користувач без `group_f3d_user` не читає моделі модуля, меню «Будівля» невидиме | UT `test_acl_matrix` |
+| ТБ-02 | оператор не змінює налаштування груп/установок/балансу; не видаляє журнал | AC-61 |
+| ТБ-03 | команда неможлива без будь-якого з п'яти запобіжників; з `F3D_WRITE_ENABLED=0` колектор не забирає команди → `expired` за 10 хв | AC-57…AC-59, ТК-09 (варіант з `F3D_WRITE_ENABLED=0`) |
+| ТБ-04 | заборонені записи: EF-*, котельня, AO:1/AO:2/BV:1, G:40, інші команди HelvarNet | AC-60, AC-73 |
+| ТБ-05 | ін'єкції: `dali_devices` з `#`, `;DROP`, адреси з `>`; JSON `address` з ключем `_x` (telemetry A.0) → `ValidationError`; плагін не формує кадр із нецілих значень | AC-05, AC-63, AC-64 |
+| ТБ-06 | allow-list колектора блокує роутер поза списком | AC-75 |
+| ТБ-07 | `neutralize.sql` вимикає читання, запис, крон | AC-56 |
+| ТБ-08 | у `params` джерел модуля немає секретів (усі 32 проходять `validate_params` telemetry без помилок про секрети) | UT `test_signal_definitions` |
+| ТБ-09 | `action_open` огляду приймає лише 4 моделі | AC-63 |
+| ТБ-10 | логи колектора на INFO не містять кадрів HelvarNet; на DEBUG — лише кадри без секретів | PT `caplog` у `test_power_scene` |
+
+### 13.4 Тести продуктивності (ТП)
+
+| ТП | Обсяг | Норма | Як виміряти |
+|---|---|---|---|
+| ТП-01 | 29 BACnet-пристроїв + котельня telemetry, ≈ 380 об'єктів, `period_s=30` | цикл опитування пристрою p95 ≤ 2 с, `collector_poll_overrun_total` = 0 за 30 хв | метрики колектора `/metrics` |
+| ТП-02 | 3 роутери, 32 групи, 320 пристроїв | обхід несправностей ≤ 30 с при `rate_per_s=20`; рівень/потужність/сцена 32 груп ≤ 10 с за хвилину | лог плагіна (`sweep done in …`), PT з фейком 320 пристроїв і `rate_per_s=100` ≤ 5 с |
+| ТП-03 | ≈ 12 показань/с від bms у push | API-02 telemetry p95 ≤ 1 с на пакет 1 000 | метрика `collector_push_latency_seconds` |
+| ТП-04 | крон перевірок 61 об'єкт + журнал 549 сигналів | ≤ 2 с на прогін; провайдери ≤ 300 мс; `get_overview_data` ≤ 500 мс | UT `test_perf_check` (`time.perf_counter`, демо-дані), лог крона |
+| ТП-05 | доба роботи стенда | ≤ 60 000 нових рядків `f3d.reading` сигналів `module='bms'` | SQL `SELECT count(*) FROM f3d_reading r JOIN f3d_signal s ON s.id=r.signal_id WHERE s.module='bms' AND r.ts > now() - interval '1 day'` |
+
+### 13.5 Чек-лист DEPLOY_TEST (`docs/modules/factory3d_bms/DEPLOY_TEST.md`, здає W7) — «одна зона → усі»
+
+1. Дамп бази `odoo` тестового сервера → `odoo_f3d_bms`; знімок `SELECT code, last_value, status, maintenance_request_id
+   FROM f3d_signal WHERE code LIKE 'ventilation/%'` (після установки telemetry).
+2. Установити `factory3d_bms`; лог без ERROR; `install_report.state='done'`, лічильники §5.3 (468/81, 65 обладнання).
+3. Прогнати `--test-tags /factory3d_bms` на `odoo_f3d_bms` → 0 падінь; `pytest` плагіна й `test_data_sync.py` → 0 падінь.
+4. **Одна зона:** параметр `read_enabled=True`, але всім джерелам модуля `read_enabled=False`, крім `BAC-108-RV-08`,
+   `BAC-109-RV-09`, `HN-LP-2`; запустити колектор; ТК-12 для RV-08, RV-09, LT-CUT; переконатися, що інші джерела
+   `disabled`, заявок по інших об'єктах немає; ТК-03 (лише LT-CUT).
+5. **Усі:** увімкнути решту джерел (список джерел → «Читати» масово); ТК-01, ТК-02, ТК-04…ТК-08.
+6. ТК-09 (керування) — лише на стенді з емулятором; на копії проду керування не вмикається.
+7. Відкат: `neutralize.sql` → крон і джерела вимкнені; деінсталяція модуля → §5.4 (сигнали деактивовані, заявки на
+   місці); база `odoo` не змінювалася.
+8. Записати фактичні числа в `CHANGELOG.md` («Установка на копію демо 14.10.2026»).
+
+## 14. Definition of Done
+
+- Усі UT §13.1.1 зелені на чистій базі й копії демо; PT §13.1.2 і `test_data_sync.py` зелені; hoot-тест огляду зелений.
+- ТК-01…ТК-10, ТК-12 пройдені на стенді (ТК-11 — за наявності fire_safety), протокол у `TEST_REPORT.md` з фактичними
+  числами; ТБ-01…ТБ-10, ТП-01…ТП-05 виконані.
+- Кожен AC-01…AC-78 має зелений тест або відмітку ТК/MAN у протоколі; покриття FR — таблиця під §12.
+- `ruff check` (довжина рядка 120) без помилок для `odoo_addons/factory3d_bms` і `services/collector_plugins/f3d_collector_bms`;
+  `eslint`/`prettier` проєкту — для `static/src`.
+- Жодного `x_`-поля; `grep -rn "x_f3d" odoo_addons/factory3d_bms` порожній.
+- `neutralize.sql` перевірений (AC-56); стоп-крани описані в README; `write_enabled` за замовчуванням `False`.
+- README модуля (установка, параметри, 6 інструкцій ARCH §4), README плагіна (встановлення в образ, `params`/`address`,
+  обмеження), `CHANGELOG.md` `19.0.1.0.0`.
+- Перегляд безпеки §13.3 пройдено; SQL лише параметризований; плагін — whitelist команд.
+- Контракти CH-01…CH-06 реалізовані з точними іменами; зміна імен — лише через SPEC і повідомлення авторів viewer,
+  energy, fire_safety, telemetry.
+- `DEPLOY_TEST.md` заповнений за §13.5.
+
+## 15. Відкриті питання
+
+Ті самі Q-01…Q-14, що в ARCH §5.1 (нумерація спільна); тут — що робить код, поки відповіді немає.
+
+| ID | Поки немає відповіді |
+|---|---|
+| Q-01 | читаємо напряму: 29 джерел BACnet (dev 101…133) і 3 HelvarNet; перехід на BMS — лише `params`/`address` (Додатки B, C) |
+| Q-02 | адреси BACnet за iot_sim §8.10.2 (ПРИПУЩЕННЯ); Modbus-шлюз Hoval — нові джерела `modbus_tcp` з тими самими кодами сигналів |
+| Q-03 | норми — `lux_norms.json` (EN 12464-1:2021); `ref_dbn` — «звірити (Q-03)»; правка — менеджер у формі норми |
+| Q-04 | `version=2` з фолбеком на 1; склад групи — C:164 з фолбеком `devices`; підтвердження запису — ack/push/перевірка; маска несправностей `0x0800000E` за документом Helvar |
+| Q-05 | календар компанії «Зміна 1»; поле `calendar_id` на групі/установці для винятків |
+| Q-06 | аварійне освітлення не моніториться модулем |
+| Q-07 | групи «присутність» — лише «вимкнено в робочий час» |
+| Q-08 | група «Будівля: оператор» без користувачів; керування вимкнено |
+| Q-09 | дані bms самодостатні (Додаток B — 549 сигналів); ТК передають `value` і `dp_pa`; стан щита — агрегат R-34 |
+| Q-10 | усі BACnet-сигнали `mode="poll"` |
+| Q-11 | `internal_gains_kw = 0` |
+| Q-12 | пороги — §3 ARCH / §5.1 |
+| Q-13 | втрата зв'язку — лише огляд/переглядач/«немає даних» |
+| Q-14 | придушення R-21 за сигналами fire_safety/energy; після відбою — звичайні затримки |
+
+## Додаток A. Дані з макета
+
+### A.0 Норми освітленості (`data/f3d_bms_light_norm_data.xml`, з `plant/lux_norms.json`, R-01)
+
+| key | name | lux | UGR | Ra | ref_en |
+|---|---|---|---|---|---|
+| `woodworking_machine` | верстатна обробка деревини | 500 | 19 | 80 | EN 12464-1:2021, табл. 33, реф. 33.6 (ред. 2011 — 5.25.6) |
+| `woodworking_bench` | збирання, верстакові роботи | 300 | 25 | 80 | табл. 33, реф. 33.4 (5.25.4) |
+| `spraying` | фарбування, оздоблення | 750 | 22 | 80 | табл. 33, реф. 33.5 (5.25.5) |
+| `sanding` | шліфування, оздоблення фасадів | 750 | 22 | 80 | табл. 33, реф. 33.5 (5.25.5) |
+| `quality_control` | контроль якості | 1000 | 19 | 90 | табл. 33, реф. 33.9 (5.25.9) |
+| `storage_racks` | стелажні проходи з персоналом | **150** | 22 | 60 | табл. 13, реф. 13.2 (5.5.2) |
+| `storage_floor` | складування | 100 | 25 | 60 | табл. 12, реф. 12.1 (5.4.1) |
+| `packing_dispatch` | пакування й відвантаження | 300 | 25 | 60 | табл. 12, реф. 12.2 (5.4.2) |
+| `loading_ramps` | рампи завантаження | 150 | 25 | 40 | табл. 9, реф. 9.4 (5.1.4) |
+| `switchgear_room` | електрощитова | 200 | 25 | 60 | табл. 11, реф. 11.1 (5.3.1) |
+| `compressor_room` | компресорна | 200 | 25 | 60 | табл. 11, реф. 11.1 (5.3.1) |
+| `battery_charging` | заряджання акумуляторів | **200** | 25 | 60 | табл. 11, реф. 11.1 (5.3.1) — за аналогією |
+| `corridors_traffic` | проходи й проїзди | 150 | 28 | 40 | табл. 9, реф. 9.1 (5.1.1) |
+
+`ref_en` у даних — повний рядок `ref` json («EN 12464-1:2021, …»); `note`, `sources` — з json; `ref_dbn` — умовчання M-01.
+
+### A.1 Групи освітлення (`data/f3d_bms_light_data.xml`; перевірка R-03/R-04/R-06; Φ = 20 500 лм, W = 126 Вт для всіх)
+
+Колонки: № (= `dali_group`, `sequence` = № × 10) | `code` | зона | назва зони | `norm` (task) | `fixture_kind` | `panel` | `n_fixtures` | `area_m2` | `E_н` | `n_required` | `e_calc` | `level_design` | `control_mode` | G | `dali_devices` | `p_inst_kw`.
+
+| № | code | zone | назва | task | kind | panel | n | A | E_н | n_req | e_calc | level | control | G | dali_devices | p_inst |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | LT-RCV-1 | Z-RCV-1 | Приймання плит · ворота 1 | packing_dispatch | highbay | LP-1 | 4 | 118.4 | 300 | 4 | 388 | 1.0 | shift | 1 | @1.1.1.1-4 | 0.5 |
+| 2 | LT-RCV-2 | Z-RCV-2 | Приймання плит · ворота 2 | packing_dispatch | highbay | LP-1 | 4 | 124.2 | 300 | 4 | 370 | 1.0 | shift | 2 | @1.1.1.5-8 | 0.5 |
+| 3 | LT-RCV-3 | Z-RCV-3 | Приймання плит · ворота 3 | packing_dispatch | highbay | LP-1 | 4 | 124.2 | 300 | 4 | 370 | 1.0 | shift | 3 | @1.1.1.9-12 | 0.5 |
+| 4 | LT-RCV-4 | Z-RCV-4 | Приймання фурнітури, контроль і карантин · ворота 4 | packing_dispatch | highbay | LP-1 | 4 | 124.2 | 300 | 4 | 370 | 1.0 | shift | 4 | @1.1.1.13-16 | 0.5 |
+| 5 | LT-RCV-5 | Z-RCV-5 | Приймання крайки · ворота 5 | packing_dispatch | highbay | LP-1 | 4 | 124.2 | 300 | 4 | 370 | 1.0 | shift | 5 | @1.1.1.17-20 | 0.5 |
+| 6 | LT-RCV-6 | Z-RCV-6 | Приймання ЛФМ · ворота 6 | packing_dispatch | highbay | LP-1 | 4 | 124.2 | 300 | 4 | 370 | 1.0 | shift | 6 | @1.1.1.21-24 | 0.5 |
+| 7 | LT-RCV-7 | Z-RCV-7 | Приймання пакматеріалів · ворота 7 | packing_dispatch | highbay | LP-1 | 4 | 144.0 | 300 | 4 | 319 | 1.0 | shift | 7 | @1.1.1.25-28 | 0.5 |
+| 8 | LT-SHEETS | Z-SHEETS | Склад плит | storage_floor | highbay | LP-1 | 12 | 1200.6 | 100 | 11 | 115 | 0.8 | presence | 8 | @1.1.1.29-40 | 1.51 |
+| 9 | LT-HW | Z-HW | Склад фурнітури | storage_racks | highbay_rack | LP-1 | 5 | 350.5 | 150 | 5 | 164 | 0.7 | presence | 9 | @1.1.1.41-45 | 0.63 |
+| 10 | LT-EDGE | Z-EDGE | Склад крайки | storage_racks | highbay_rack | LP-1 | 3 | 167.6 | 150 | 3 | 205 | 0.7 | presence | 10 | @1.1.1.46-48 | 0.38 |
+| 11 | LT-PKS | Z-PKS | Пакувальні матеріали | storage_floor | highbay | LP-1 | 2 | 142.2 | 100 | 2 | 161 | 0.6 | presence | 11 | @1.1.1.49-50 | 0.25 |
+| 12 | LT-CUT | Z-CUT | Розкрій | woodworking_machine | highbay | LP-2 | 27 | 609.3 | 500 | 27 | 509 | 1.0 | shift | 12 | @1.2.1.1-27 | 3.4 |
+| 13 | LT-EB | Z-EB | Крайкооблицювання | woodworking_machine | highbay | LP-2 | 27 | 564.5 | 500 | 25 | 549 | 1.0 | shift | 13 | @1.2.1.28-54 | 3.4 |
+| 14 | LT-CNC | Z-CNC | Присадка | woodworking_machine | highbay | LP-2 | 27 | 564.5 | 500 | 25 | 549 | 1.0 | shift | 14 | @1.2.2.1-27 | 3.4 |
+| 15 | LT-SORT | Z-SORT | Сортування деталей | woodworking_bench | highbay | LP-2 | 12 | 439.0 | 300 | 12 | 314 | 1.0 | shift | 15 | @1.2.2.28-39 | 1.51 |
+| 16 | LT-FAC | Z-FAC | Дільниця фасадів МДФ | spraying | highbay | LP-2 | 91 | 1235.0 | 750 | 81 | 846 | 1.0 | shift | 16 | @1.2.3.1-64;@1.2.4.1-27 | 11.47 |
+| 17 | LT-ASM | Z-ASM | Збирання | woodworking_bench | highbay | LP-3 | 15 | 498.8 | 300 | 14 | 345 | 1.0 | shift | 17 | @1.3.1.1-15 | 1.89 |
+| 18 | LT-PRE | Z-PRE | Буфер комплектів | storage_racks | highbay | LP-3 | 4 | 268.3 | 150 | 4 | 171 | 0.8 | presence | 18 | @1.3.1.16-19 | 0.5 |
+| 19 | LT-MAINT | Z-MAINT | Ремонтна дільниця | woodworking_bench | highbay | LP-3 | 4 | 125.4 | 300 | 4 | 366 | 1.0 | shift | 19 | @1.3.1.20-23 | 0.5 |
+| 20 | LT-PACK | Z-PACK | Пакування | packing_dispatch | highbay | LP-3 | 12 | 382.8 | 300 | 11 | 360 | 1.0 | shift | 20 | @1.3.1.24-35 | 1.51 |
+| 21 | LT-POST | Z-POST | Вихід з пакування | storage_floor | highbay | LP-3 | 3 | 297.0 | 100 | 3 | 116 | 0.8 | presence | 21 | @1.3.1.36-38 | 0.38 |
+| 22 | LT-CMP | Z-CMP | Компресорна | compressor_room | highbay | LP-3 | 2 | 63.8 | 200 | 2 | 360 | 0.5 | presence | 22 | @1.3.1.39-40 | 0.25 |
+| 23 | LT-CHG | Z-CHG | Зарядна станція | battery_charging | highbay | LP-3 | 2 | 63.8 | 200 | 2 | 360 | 0.5 | presence | 23 | @1.3.1.41-42 | 0.25 |
+| 24 | LT-FG | Z-FG | Склад готової продукції | storage_racks | highbay_rack | LP-3 | 12 | 835.0 | 150 | 11 | 165 | 0.6 | presence | 24 | @1.3.1.43-54 | 1.51 |
+| 25 | LT-ELEC | Z-ELEC | Електрощитова | switchgear_room | highbay | LP-3 | 4 | 118.8 | 200 | 3 | 387 | 0.5 | presence | 25 | @1.3.1.55-58 | 0.5 |
+| 26 | LT-OUT-1 | Z-OUT-1 | Відвантаження · ворота 1 | packing_dispatch | highbay | LP-3 | 4 | 124.0 | 300 | 4 | 370 | 1.0 | shift | 26 | @1.3.1.59-62 | 0.5 |
+| 27 | LT-OUT-2 | Z-OUT-2 | Відвантаження · ворота 2 | packing_dispatch | highbay | LP-3 | 4 | 130.0 | 300 | 4 | 353 | 1.0 | shift | 27 | @1.3.2.1-4 | 0.5 |
+| 28 | LT-OUT-3 | Z-OUT-3 | Відвантаження · ворота 3 | packing_dispatch | highbay | LP-3 | 4 | 130.0 | 300 | 4 | 353 | 1.0 | shift | 28 | @1.3.2.5-8 | 0.5 |
+| 29 | LT-OUT-4 | Z-OUT-4 | Відвантаження · ворота 4 | packing_dispatch | highbay | LP-3 | 4 | 130.0 | 300 | 4 | 353 | 1.0 | shift | 29 | @1.3.2.9-12 | 0.5 |
+| 30 | LT-OUT-5 | Z-OUT-5 | Відвантаження · ворота 5 | packing_dispatch | highbay | LP-3 | 4 | 130.0 | 300 | 4 | 353 | 1.0 | shift | 30 | @1.3.2.13-16 | 0.5 |
+| 31 | LT-OUT-6 | Z-OUT-6 | Відвантаження · ворота 6 | packing_dispatch | highbay | LP-3 | 4 | 130.0 | 300 | 4 | 353 | 1.0 | shift | 31 | @1.3.2.17-20 | 0.5 |
+| 32 | LT-OUT-7 | Z-OUT-7 | Відвантаження · ворота 7 | packing_dispatch | highbay | LP-3 | 4 | 150.8 | 300 | 4 | 305 | 1.0 | shift | 32 | @1.3.2.21-24 | 0.5 |
+
+Разом 320 світильників, `p_inst` 40,32 кВт; режим «зміна» — 22 групи, «присутність» — 10. `name` групи = «Освітлення:
+<назва зони>» (як обладнання демо). `passport_id` = `factory3d_base.passport_highbay_rack` для `highbay_rack`, інакше
+`passport_highbay`.
+
+### A.2 Щити освітлення (`panel_lp_<n>`)
+
+| code | name | router | x | y | zone | source | групи / n / p_inst / p_now (проєкт) |
+|---|---|---|---|---|---|---|---|
+| LP-1 | Щит освітлення ЩО-1 · склади сировини, приймання | 1 | 40,0 | 71,0 | Z-PKS | HN-LP-1 | 11 / 50 / 6,3 / 5,6 |
+| LP-2 | Щит освітлення ЩО-2 · лінії й дільниця фасадів | 2 | 90,6 | 71,0 | Z-FAC | HN-LP-2 | 5 / 184 / 23,2 / 23,2 |
+| LP-3 | Щит освітлення ЩО-3 · збирання, пакування, склад ГП, відвантаження | 3 | 135,0 | 71,0 | Z-ELEC | HN-LP-3 | 16 / 86 / 10,8 / 9,5 |
+
+`x` — `plant/lighting.py:PANELS`; `y = 71,0` — біля північної стіни всередині зони (план); `cluster = 1`.
+
+### A.3 Установки (`data/f3d_bms_hvac_data.xml`, `unit_<slug>`; з `plant/ventilation.py`, паспортів і `dist/odoo_demo.json`)
+
+| code | name | kind | device | x | y | zone | mode_design | airflow_nom | heat_nom | p_inst | fan_count | required_in_work | статика макета (витрата / тепло / клапан / p_now / фільтр / стан) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| RV-01 | Дахова установка RV-01 | roofvent | 101 | 7,0 | 12,0 | Z-RCV-2 | VE | 8 000 | 116,8 | 8,6 | 1 | так | 5467,5 / 17,3 / 0,15 / 2,8 / 210,1 / on |
+| RV-02 | Дахова установка RV-02 | roofvent | 102 | 7,0 | 36,0 | Z-RCV-4 | VE | 8 000 | 116,8 | 8,6 | 1 | так | 5387,4 / 17,1 / 0,15 / 2,69 / 177,3 / on |
+| RV-03 | Дахова установка RV-03 | roofvent | 103 | 7,0 | 62,5 | Z-RCV-7 | VE | 8 000 | 116,8 | 8,6 | 1 | так | 5205,5 / 16,8 / 0,14 / 2,57 / 144,5 / on |
+| RV-04 | Дахова установка RV-04 | roofvent | 104 | 21,5 | 12,0 | Z-SHEETS | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5878,7 / 7,0 / 0,06 / 3,45 / 207,4 / on |
+| RV-05 | Дахова установка RV-05 | roofvent | 105 | 21,5 | 33,5 | Z-SHEETS | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5912,6 / 6,9 / 0,06 / 3,31 / 287,2 / on |
+| RV-06 | Дахова установка RV-06 | roofvent | 106 | 21,5 | 58,5 | Z-HW | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5713,8 / 6,8 / 0,06 / 3,18 / 201,1 / on |
+| RV-07 | Дахова установка RV-07 | roofvent | 107 | 35,0 | 62,5 | Z-EDGE | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5407,6 / 6,7 / 0,06 / 3,05 / 126,2 / on |
+| RV-08 | Дахова установка RV-08 | roofvent | 108 | 50,0 | 23,0 | Z-CUT | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 6047,7 / 7,2 / 0,06 / 3,73 / 207,5 / on |
+| RV-09 | Дахова установка RV-09 | roofvent | 109 | 51,5 | 36,5 | Z-CUT | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 6000,0 / 7,1 / 0,06 / 3,58 / 138,3 / on |
+| RV-10 | Дахова установка RV-10 | roofvent | 110 | 67,0 | 23,0 | Z-EB | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 6575,6 / 7,8 / 0,07 / 4,84 / 176,5 / on |
+| RV-11 | Дахова установка RV-11 | roofvent | 111 | 66,5 | 36,5 | Z-EB | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5575,6 / 6,6 / 0,06 / 2,93 / 209,2 / on |
+| RV-12 | Дахова установка RV-12 | roofvent | 112 | 77,0 | 23,0 | Z-CNC | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5667,1 / 6,7 / 0,06 / 3,05 / 194,3 / on |
+| RV-13 | Дахова установка RV-13 | roofvent | 113 | 77,0 | 36,5 | Z-CNC | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5601,5 / 6,8 / 0,06 / 3,18 / 205,4 / on |
+| RV-14 | Дахова установка RV-14 | roofvent | 114 | 87,0 | 8,0 | Z-SORT | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5615,6 / 6,9 / 0,06 / 3,31 / 124,4 / on |
+| RV-15 | Дахова установка RV-15 | roofvent | 115 | 87,0 | 36,5 | Z-SORT | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5768,3 / 7,0 / 0,06 / 3,45 / 209,3 / on |
+| RV-16 | Дахова установка RV-16 | roofvent | 116 | 101,0 | 8,0 | Z-ASM | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5879,3 / 7,1 / 0,06 / 3,58 / 138,1 / on |
+| RV-17 | Дахова установка RV-17 | roofvent | 117 | 101,0 | 31,0 | Z-PRE | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5943,6 / 7,2 / 0,06 / 3,73 / 149,4 / on |
+| RV-18 | Дахова установка RV-18 | roofvent | 118 | 114,0 | 8,0 | Z-PACK | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 5947,3 / 7,1 / 0,06 / 3,58 / 208,2 / on |
+| RV-19 | Дахова установка RV-19 | roofvent | 119 | 114,0 | 31,0 | Z-PACK | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 6137,6 / 7,2 / 0,06 / 3,73 / 151,2 / on |
+| RV-20 | Дахова установка RV-20 | roofvent | 120 | 114,0 | 52,0 | Z-POST | AQ | 8 000 | 116,8 | 8,6 | 1 | так | 6423,0 / 7,7 / 0,07 / 4,67 / 169,2 / on |
+| RV-21 | Дахова установка RV-21 | roofvent | 121 | 125,4 | 57,0 | Z-FG | REC | 8 000 | 116,8 | 8,6 | 1 | так | 3650,6 / 11,5 / 0,1 / 0,88 / 150,4 / on |
+| RV-22 | Дахова установка RV-22 | roofvent | 122 | 130,9 | 57,0 | Z-FG | REC | 8 000 | 116,8 | 8,6 | 1 | так | 3601,1 / 11,5 / 0,1 / 0,88 / 167,2 / on |
+| RV-23 | Дахова установка RV-23 | roofvent | 123 | 142,5 | 12,0 | Z-OUT-2 | VE | 8 000 | 116,8 | 8,6 | 1 | так | 6393,1 / 20,9 / 0,18 / 4,84 / 202,2 / on |
+| RV-24 | Дахова установка RV-24 | roofvent | 124 | 142,5 | 36,0 | Z-OUT-4 | VE | 8 000 | 116,8 | 8,6 | 1 | так | 6269,0 / 19,6 / 0,17 / 4,03 / 135,2 / on |
+| RV-25 | Дахова установка RV-25 | roofvent | 125 | 142,5 | 62,5 | Z-OUT-7 | VE | 8 000 | 116,8 | 8,6 | 1 | так | 5937,4 / 19,4 / 0,17 / 3,88 / 150,2 / on |
+| AHU-1 | Припливна установка дільниці фасадів | ahu | 130 | 66,0 | 56,5 | Z-FAC | VE | 20 000 | 0 | 15,0 | 1 | так | 16959,1 / 68,0 / 0,46 / 9,3 / 162,2 / on |
+| EF-ELEC | Витяжні вентилятори електрощитової | fan | 131 | 124,9 | 71,4 | Z-ELEC | thermostat | 14 120 | 0 | 0,84 | 2 | ні | 14183,7 / — / — / 0,84 / — / on |
+| EF-CMP | Витяжний вентилятор компресорної | fan | 132 | 111,0 | 71,4 | Z-CMP | thermostat | 7 060 | 0 | 0,42 | 1 | ні | 0,0 / — / — / 0,0 / — / standby |
+| EF-CHG | Витяжка зарядної станції (Ex) | exfan | 133 | 119,0 | 70,5 | Z-CHG | charging | 644 | 0 | 0,178 | 1 | ні | 159,7 / — / — / 0,107 / — / on |
+
+`t_supply_design` AHU-1 = 21,0; `required_m3h` EF-CHG = 158,4; `note` AHU-1, EF-ELEC, EF-CMP, EF-CHG — тексти `note`
+макета (`plant/ventilation.py`). Координати вентиляторів EF-ELEC/EF-CMP — точки `(x, z)` на північній стіні
+(`WALL_FANS`, `site.py:1233`), на плані `y = 71,4`; EF-CHG — `CHG_EXHAUST`; AHU-1 — `AHU_POS`. Статика — значення
+`dist/odoo_demo.json` (база провайдера без живих даних, AC-43).
+
+### A.4 Тепловий баланс (`heat_balance_main`, R-14)
+
+| Параметр | Значення | Рядок | кВт | `formula` |
+|---|---|---|---|---|
+| `t_out_design` / `t_in_set` | −15,0 / 18,0 | Тепловтрати через стіни, покрівлю й підлогу | 189 (188,71) | (3 996·0,35 + 10 800·0,25 + 10 800·0,15)·33/1000 |
+| `length_m` × `width_m` × `height_m` | 150 × 72 × 9 | Інфільтрація крізь ворота (0,1 обміну/год) | 109 (109,06) | 97 200·0,1·0,34·33/1000 |
+| `u_wall` / `u_roof` / `u_floor` | 0,35 / 0,25 / 0,15 | Дахові установки: 50 % зовнішнього повітря, рекуперація 78 % | 247 (246,84) | 200 000·0,5·0,34·33·(1 − 0,78)/1000 |
+| `infiltration_ach`, `winter_oa_share`, `heat_recovery`, `air_wh_m3k` | 0,1; 0,5; 0,78; 0,34 | Приплив дільниці фасадів (без рекуперації — витяжка з фарбування) | 208 (208,08) | 20 000·0,85·0,34·(21 − (−15))/1000 |
+| `ahu_design_share`, `ahu_supply_c`, `internal_gains_kw` | 0,85; 21,0; 0 | **Разом** | **753** (752,69) | |
+| `boilers` × `boiler_kw`, `boiler_stage_share` | 2 × 495; 0,85 | Котли | 990 | |
+| `chp_el_kw`, `chp_heat_kw`/`_75`/`_50`, `chp_min_load` | 800; 856 / 676 / 497; 0,5 | Запас із КГУ / котлів | 1,45 / 0,32 | (990 + 856)/752,69 − 1; 990/752,69 − 1 |
+
+## Додаток B. Сигнали модуля (`data/bms_signals.csv`, 549; CH-01)
+
+Шаблони розгортає генератор; `<U>` — код установки, `<d>` — BACnet device (RV-NN → 100 + NN, AHU-1 → 130, EF-ELEC 131,
+EF-CMP 132, EF-CHG 133), `<G>` — код групи, `<g>` — DALI-група (Додаток A.1), `<r>` — роутер щита групи, `<devs>` —
+`dali_devices` групи як список елементів. Усі: `module='bms'`, `write_enabled=False`, `create_request=True` (крім
+вказаних), `equipment` = `<U>`/`<G>`/`LP-<r>`/`BOILER` (для `outdoor_c` — `RV-01`), `scale=1` (крім вказаних).
+Адреси BACnet мають `"property": "present-value"`, `"mode": "poll"` і `"doc": "<об'єкт> <U>_<object-name iot_sim>"`
+(нижче скорочено). `new` 0 — сигнал рівня 0 (оновлення прив'язки), 1 — створення. `origin`: `sim_data` / `catalog` /
+`module`.
+
+### B.1 Дахові установки й AHU-1 (26 × 13 + 2 = 340), джерело `BAC-<d>-<U>`
+
+| role | code | new / origin | name | quantity | kind / unit | address | period / store; decimals | пороги, стани, заголовок | vis. | writable |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `airflow` | `ventilation/units/<U>/airflow_m3h` | 0 / sim_data | «<U>: витрата повітря» | Витрата | gauge / м³/год | `{"object":"AI","instance":3}` (SupplyAirFlow) | 30 / 600; 0 | — | так | 0 |
+| `supply` | `…/supply_c` | 0 / sim_data | «<U>: температура припливу» | Температура | gauge / °C | AI:1 (SupplyAirTemp) | 30 / 600; 1 | — | так | 0 |
+| `filter` | `…/filter_dp_pa` | 0 / sim_data | «<U>: перепад на фільтрі припливу» | Перепад | gauge / Па | AI:4 (FreshAirFilterDp) | 30 / 600; 0 | `alarm_high=250`, `hysteresis=5`; «Заміна фільтрів: перепад тиску {value} Па при нормі до {threshold}» | так | 0 |
+| `indoor` | `…/indoor_c` | 1 / catalog | «<U>: температура в зоні» | Температура | gauge / °C | AI:2 (ExtractAirTemp) | 30 / 600; 1 | — | так | 0 |
+| `valve` | `…/heating_valve` | 1 / catalog | «<U>: клапан нагрівача» | Положення | gauge / % | AO:1 (HeatingValve) | 30 / 600; 0 | — | так | 0 |
+| `mode` | `…/mode` | 1 / catalog | «<U>: режим роботи» | Режим | state / — | `{"object":"MSV","instance":1,"map":{"1":"VE","2":"VEL","3":"AQ","4":"REC","5":"EA","6":"SA","7":"ST","8":"Off"}}` | 30 / 3600; 0 | `states=["VE","VEL","AQ","REC","EA","SA","ST","Off"]`, `alarm_states=[]`, `create_request=False` | ні | 1 |
+| `state` | `…/state` | 1 / catalog | «<U>: стан установки» | Стан | state / — | `{"object":"BI","instance":1,"states":[{"object":"BI","instance":2,"eq":1,"text":"fault"},{"object":"BI","instance":5,"eq":1,"text":"frost"},{"object":"BI","instance":1,"eq":1,"text":"running"},{"object":"BI","instance":1,"eq":0,"text":"stopped"}]}` | 30 / 3600; 0 | `states=["running","stopped","fault","frost"]`, `alarm_states=["fault","frost"]`; «{equipment}: аварія установки (стан «{text}»)» | ні | 0 |
+| `filter_extract` | `…/filter_extract_dp_pa` | 1 / module | «<U>: перепад на фільтрі витяжки» | Перепад | gauge / Па | AI:5 (ExtractAirFilterDp) | 30 / 600; 0 | `alarm_high=350`, `hysteresis=10`; «Заміна фільтрів витяжки: перепад тиску {value} Па при нормі до {threshold}» | так | 0 |
+| `heat` | `…/heat_kw` | 1 / module | «<U>: теплова потужність» | Потужність | gauge / кВт | AI:7 (HeatOutput) | 30 / 600; 1 | — | так | 0 |
+| `power` | `…/p_now` | 1 / module | «<U>: потужність вентиляторів» | Потужність | gauge / кВт | AI:8 (FanPower) | 30 / 600; 2 | — | так | 0 |
+| `sp_day` | `…/setpoint_day_c` | 1 / module | «<U>: уставка день» | Температура | gauge / °C | AV:1 (RoomSetpointDay) | 300 / 3600; 1 | — | так | 1 |
+| `sp_night` | `…/setpoint_night_c` | 1 / module | «<U>: уставка ніч» | Температура | gauge / °C | AV:2 (RoomSetpointNight) | 300 / 3600; 1 | — | так | 1 |
+| `check` | `…/check` | 1 / module | «<U>: перевірка роботи» | Перевірка | state / — | джерело `BMS-DERIVED`, `address={}` | 60 / 3600; 0 | `states` = 7 текстів R-23, `alarm_states=["не працює в робочий час","холодно в зоні"]`; «{equipment}: {text}» | ні | 0 |
+| `pressure` (лише AHU-1) | `ventilation/units/AHU-1/room_pressure_pa` | 1 / module | «AHU-1: тиск у дільниці фасадів» | Тиск | gauge / Па | AI:9 (RoomPressure) | 30 / 600; 0 | `alarm_high=0`, `hysteresis=1`, `min_duration_s=300`; «Дільниця фасадів: тиск {value} Па при нормі до {threshold} (має бути розрідження)» | так | 0 |
+| `interlock` (лише AHU-1) | `ventilation/units/AHU-1/booth_interlock` | 1 / module | «AHU-1: витяжка фарбувальних камер працює» | Стан | state / — | `{"object":"BI","instance":6,"map":{"0":"off","1":"on"}}` | 30 / 3600; 0 | `states=["off","on"]`, `create_request=False` | ні | 0 |
+
+### B.2 Вентилятори (3 × 3 = 9), джерело `BAC-<d>-<U>`
+
+| role | code | new / origin | name | kind / unit | address | period / store; dec. | пороги, стани, заголовок | vis. |
+|---|---|---|---|---|---|---|---|---|
+| `airflow` | `ventilation/units/<U>/airflow_m3h` | 0 / sim_data | «<U>: витрата повітря» | gauge / м³/год | AI:3 (AirFlow) | 30 / 600; 0 | — | так |
+| `state` (EF-ELEC, EF-CMP) | `…/state` | 1 / catalog | «<U>: стан вентилятора» | state / — | `{"object":"BI","instance":1,"map":{"0":"stopped","1":"running"}}` | 30 / 3600; 0 | `states=["running","stopped"]`, `create_request=False` | ні |
+| `state` (EF-CHG) | `ventilation/units/EF-CHG/state` | 1 / catalog | «EF-CHG: стан витяжки» | state / — | `{"object":"BI","instance":1,"states":[{"object":"BI","instance":1,"eq":1,"text":"running"},{"object":"BI","instance":7,"eq":1,"text":"stopped_charging"},{"object":"BI","instance":1,"eq":0,"text":"stopped"}]}` | 30 / 3600; 0 | `states=["running","stopped","stopped_charging"]`, `alarm_states=["stopped_charging"]`, `min_duration_s=60`; «{equipment}: не працює під час заряджання — водень!» | ні |
+| `indoor` | `…/indoor_c` | 1 / module | «<U>: температура приміщення» | gauge / °C | AI:2 (RoomTemp) | 30 / 600; 0 | EF-ELEC: `alarm_high=35`, `hysteresis=1`, `min_duration_s=600`, «Електрощитова: температура {value} °C при нормі до {threshold}»; EF-CMP: `warn_high=35`; EF-CHG: — | так |
+
+### B.3 Зовнішня температура й котельня (5)
+
+| code | new / origin | джерело | name | kind / unit | address | period / store; dec. | пороги, стани, заголовок | vis. |
+|---|---|---|---|---|---|---|---|---|
+| `ventilation/totals/outdoor_c` | 1 / module | `BAC-101-RV-01` | «Зовнішня температура (RV-01)» | gauge / °C | AI:6 (RV-01_OutdoorTemp) | 60 / 900; 1 | — | так |
+| `equipment/BOILER/return_c` | 1 / catalog | `BAC-140-BOILER` (telemetry) | «Котельня: температура зворотної води» | gauge / °C | AI:2 (BOILER_ReturnTemp) | 30 / 600; 1 | — | так |
+| `equipment/BOILER/state` | 1 / catalog | `BAC-140-BOILER` | «Котельня: стан» | state / — | `{"object":"MSV","instance":1,"map":{"1":"standby","2":"K1","3":"K1+K2","4":"fault"}}` | 30 / 3600; 0 | `states=["standby","K1","K1+K2","fault"]`, `alarm_states=["fault"]`; «{equipment}: аварія котельні (стан «{text}»)» | ні |
+| `equipment/BOILER/heat_kw` | 1 / module | `BAC-140-BOILER` | «Котельня: теплова потужність» | gauge / кВт | AI:5 (BOILER_HeatOutput) | 30 / 600; 1 | — | так |
+| `ventilation/heat_plant/check` | 1 / module | `BMS-DERIVED` | «Котельня: перевірка теплового балансу» | state / — | `{}` | 60 / 3600; 0 | `states=["норма","дефіцит тепла","немає даних"]`, `alarm_states=["дефіцит тепла"]`; «Котельня: {text}» | ні |
+
+### B.4 Групи освітлення (32 × 6 = 192), джерело `HN-LP-<r>`
+
+| role | code | new / origin | name | quantity | kind / unit | address | period / store; dec. | пороги, стани, заголовок | vis. | writable |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `level` | `lighting/groups/<G>/level` | 1 / catalog | «<G>: рівень освітлення» | Рівень | gauge / % | `{"group":<g>,"query":"level","devices":<devs>,"sample":3,"fade_s":2.0}` | 60 / 900; 0 | — | так | 1 |
+| `power` | `…/p_now` | 1 / catalog | «<G>: потужність» | Потужність | gauge / кВт | `{"group":<g>,"query":"power","scale":0.001}` | 60 / 900; 2 | — | так | 0 |
+| `faults` | `…/faults` | 1 / module | «<G>: несправних світильників» | Кількість | gauge / шт | `{"group":<g>,"query":"faults","devices":<devs>,"mask":134217742}` | 300 / 3600; 0 | `alarm_high=0`; «Аварія світильників {code}: несправних {value} шт. при нормі {threshold}» | так | 0 |
+| `faulty` | `…/faulty` | 1 / module | «<G>: адреси несправних світильників» | Адреси | state / — | `{"group":<g>,"query":"faulty","devices":<devs>,"mask":134217742}` | 300 / 3600; 0 | `states=[]` (будь-який текст), `create_request=False` | ні | 0 |
+| `scene` | `…/scene` | 1 / module | «<G>: остання сцена» | Сцена | gauge / — | `{"group":<g>,"query":"scene","block":1,"fade_s":2.0}` | 60 / 3600; 0 | — | так | 1 |
+| `check` | `…/check` | 1 / module | «<G>: перевірка освітлення» | Перевірка | state / — | джерело `BMS-DERIVED`, `{}` | 60 / 3600; 0 | `states` = 6 текстів R-19, `alarm_states=["вимкнено в робочий час","нижче норми"]`; «{equipment}: {text}» | ні | 0 |
+
+### B.5 Щити (3), джерело `HN-LP-<r>`
+
+| code | new / origin | name | kind | address | period / store | стани | vis. |
+|---|---|---|---|---|---|---|---|
+| `lighting/panels/LP-<r>/state` | 1 / catalog | «LP-<r>: стан щита (роутер Imagine 950)» | state | `{"device":"@1.<r>.0.0","query":"router"}` (A-17; каталог iot_sim — C:110 `@1.<r>.1.1`) | 60 / 3600 | `states=["ok","fault","offline"]`, `create_request=False` | ні |
+
+Підсумок: 549 = B.1 340 + B.2 9 + B.3 5 + B.4 192 + B.5 3; `new=0` — 81 (`airflow` 29, `supply` 26, `filter` 26);
+`origin='catalog'` — 176 (`indoor`, `valve`, `mode`, `state` × 26; `state` EF × 3; `level`, `power` × 32; щити 3;
+`BOILER` `return_c`, `state`); `origin='module'` — 292; `writable=1` — 142; на `BMS-DERIVED` — 59; BACnet — 327;
+HelvarNet — 163.
+
+## Додаток C. Джерела модуля (`data/f3d_bms_source_data.xml`; `collector_id = factory3d_telemetry.collector_main`, `module='bms'`, `write_enabled=False`)
+
+| xml-id | `code` | `type` | `name` | `params` | `period_s_default` |
+|---|---|---|---|---|---|
+| `source_hn_lp_1` | `HN-LP-1` | `helvarnet` | Helvar Imagine 950 · щит LP-1 | `{"host": "iot-sim", "port": 50000, "protocol": "tcp", "timeout_s": 3, "cluster": 1, "router": 1, "version": 2, "rate_per_s": 20, "push": true, "membership_ttl_s": 3600}` | 60 |
+| `source_hn_lp_2` | `HN-LP-2` | `helvarnet` | Helvar Imagine 950 · щит LP-2 | те саме, `"router": 2` | 60 |
+| `source_hn_lp_3` | `HN-LP-3` | `helvarnet` | Helvar Imagine 950 · щит LP-3 | те саме, `"router": 3` | 60 |
+| `source_bac_101` … `source_bac_125` | `BAC-101-RV-01` … `BAC-125-RV-25` | `bacnet_ip` | Hoval RoofVent RV-NN (BACnet dev 1NN) | `{"host": "iot-sim", "port": 47808, "device": <d>, "network": 2, "timeout_s": 5, "rpm": true, "rpm_max": 50, "cov_lifetime_s": 300}` | 30 |
+| `source_bac_130` | `BAC-130-AHU-1` | `bacnet_ip` | VTS VENTUS AHU-1 (BACnet dev 130) | те саме, `"device": 130` | 30 |
+| `source_bac_131` | `BAC-131-EF-ELEC` | `bacnet_ip` | Вентилятори електрощитової EF-ELEC (dev 131) | `"device": 131` | 30 |
+| `source_bac_132` | `BAC-132-EF-CMP` | `bacnet_ip` | Вентилятор компресорної EF-CMP (dev 132) | `"device": 132` | 30 |
+| `source_bac_133` | `BAC-133-EF-CHG` | `bacnet_ip` | Витяжка зарядної EF-CHG (dev 133) | `"device": 133` | 30 |
+| `source_bms_derived` (хук) | `BMS-DERIVED` | `f3d_bms` | Будівля: обчислені перевірки | `{}`, без колектора | 60 |
+
+На проді `host` — IP контролера RoofVent/роутера Helvar (`params.address` — BACnet-адреса, якщо пристрій за
+маршрутизатором), `network` — номер мережі BACnet об'єкта (Q-01, Q-02). Котельня — джерело telemetry `BAC-140-BOILER`
+(telemetry Додаток C.1), модуль його не змінює.
