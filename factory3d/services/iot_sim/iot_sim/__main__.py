@@ -40,7 +40,7 @@ def cmd_run(settings: Settings) -> int:
 
     from iot_sim.protocols.control_api import create_app
 
-    uvicorn.run(create_app(settings), host="0.0.0.0", port=settings.port_control)  # noqa: S104
+    uvicorn.run(create_app(settings), host="0.0.0.0", port=settings.port_control)
     return 0
 
 

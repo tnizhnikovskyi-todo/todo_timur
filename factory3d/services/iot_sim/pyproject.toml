@@ -22,5 +22,5 @@ dependencies = { file = ["requirements.txt"] }
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 60
-markers = ["stand: тести проти compose-стенду"]
+markers = ["stand: тести проти compose-стенду", "unit: юніт-тести без мережі"]
 addopts = "-m 'not stand'"
