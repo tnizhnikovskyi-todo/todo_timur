@@ -1,6 +1,6 @@
 # factory3d_iot_sim
 Статус: IN_PROGRESS
-Тесты: svc 98/98 + Odoo 40/40 (2026-10-14), ТК: ждут стенд
+Тесты: svc 156/156 + Odoo 40/40 (2026-10-14), ТК: ждут стенд
 Решений без заказчика: 0 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
@@ -9,7 +9,8 @@
 |---|---|---|---|
 | W0 | принят | 670b3fb | unit 3/3, TestInstall OK |
 | W1a | принят | e3023b2 | unit 79/79, core cov 99 %, ruff OK |
-| W1b | в работе (2 воркера ‖) | — | — |
+| W1b-2 | принят | d2fdc56 | svc 156/156, models cov 99 % |
+| W1b-1 | в работе (worktree) | — | — |
 | W2 | принят | 1348d5d | svc tests 98/98, ruff OK |
 | W3 | в работе (worktree) | — | — |
 | W4 | ждёт | — | — |
@@ -28,3 +29,5 @@
 - DEC-9 (W5): test_migration упрощён (нет фикстуры data-модуля 19.0.1.0.0): повтор хука сохраняет x_f3d_signal/меню; uninstall удаляет и x_-данные рівня 0 (их файлы принадлежат модулю) — предупреждение в логе. icon.png — не сделан.
 - DEC-10 (W2): JobOrderList — String[] JobOrderID (без nodeset ISA-95), события — BaseEventType; Call-запросы OPC UA разрешены только SIM_OPCUA_USER; follow_odoo auto-feed портала и состояния running/done в /jobs не реализованы (TODO W4/W6). — `protocols/opcua_server.py`, `jobs_api.py`
 - TODO `__main__ run`: регистрация серверов W2–W4 и цикл world.tick_real — после W4 (лидер).
+- DEC-11 (W1b-2): R-11 по формуле даёт коэффициент 0,84…1,0 (r ∈ [−1,1)), AC-11 пишет 0,92…1,0 — реализовано по формуле, правка SPEC. Хук ретранслятора genset — `models/ats.py` (relay_cb; без ответа — запасной режим §8.14). Нет в каталоге: AIR-RING, ATyS 20490+, датчики освещения 322.
+- TODO ядро: коллизия коротких ключей `World.devices[code].signals` (AHU-1/p_now из ventilation и energy/consumers) — один сигнал теряется; модели читают по полному коду. — `core/world.py` `_build`
