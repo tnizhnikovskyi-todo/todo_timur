@@ -18,6 +18,7 @@ X-28 (клієнт: навчальна тривога, стани й прист�
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-10, Q-11.
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-02, Q-05.
 Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: A.13 `fire.groups` 33 → 35, `fire.totals.detectors` 212 → 222; `passports` 205 → 207 (A.0, A.14); обладнання демо-бази 208 → 210 (M-04 крок 29, §5.4 крок 2: `FA-SOC`, `FA-OFFICE` з `manifest.parts[].codes` резолвляться в нове обладнання).
+Зміни: 14.10.2026 — аудит 2: X-94 (порожній `_f3d_sections = ()` — наскрізний провайдер; M-01, R-01 п. 4, R-14 п. 4, AC-68, `zz_through`), X-95 (A.10 і A.15: `equipment["BOILER"]` пише telemetry, `room_pressure_pa` bms доповнює через `deep_merge`), X-97 (§13.1a: тести для AC-01, 03, 04, 05, 10, 23, 28, 40, 48, 55).
 
 Позначення: UT — юніт-тест (`odoo.tests`), HT — HttpCase/тур, JT — HOOT-тест клієнта, MAN — ручна
 перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -106,7 +107,8 @@ odoo_addons/factory3d_viewer/
 │   │       ├── kiosk.js             точка входу сторінки кіоска (§8.6)
 │   │       └── kiosk.scss
 │   └── tests/
-│       ├── tours/show_in_3d_tour.js      §13.1 тури
+│       ├── tours/open_viewer_tour.js     §13.1a (AC-01)
+│       ├── tours/show_in_3d_tour.js      §13.1 тури (AC-23; гілка sale — AC-55)
 │       ├── tours/click_open_record_tour.js
 │       ├── tours/kiosk_tour.js
 │       └── hoot/*.test.js                JT-тести панелі на demo_payload.json
@@ -124,7 +126,7 @@ odoo_addons/factory3d_viewer/
 │   ├── test_kiosk.py
 │   ├── test_demo_wizard.py
 │   ├── test_cycle_check.py
-│   ├── test_controllers.py          HttpCase для API-01…API-10
+│   ├── test_controllers.py          HttpCase для API-01…API-10 (+ TestSecurity: AC-28, AC-40, AC-48; §13.1a)
 │   ├── test_tours.py                HttpCase start_tour
 │   └── test_perf.py
 └── i18n/uk_UA.po                    рядки інтерфейсу (інтерфейс первинно українською, en — технічний)
@@ -144,7 +146,8 @@ odoo_addons/test_factory3d_viewer/
 └── models/providers.py              f3d.viewer.provider.zz_test (seq 5, пише zones["Z-TEST"]), f3d.viewer.provider.zz_fail (seq 6, ValueError("boom"), sections fire),
                                      f3d.viewer.provider.zz_duck (AbstractModel за префіксом без _inherit, seq 152, sections ("infra", "zz_duck"),
                                      без _f3d_viewer_delta і _f3d_viewer_bus_models, пише infra.cards["ZZ-DUCK"] і zz_duck = {"ok": true};
-                                     AC-57…AC-59)
+                                     AC-57…AC-59), f3d.viewer.provider.zz_through (seq 7, sections (), пише equipment["ZZ-THRU"] = {"ok": true}
+                                     і має _f3d_viewer_delta; AC-68)
 
 Поза модулем (репозиторій):
 plant/export_viewer_assets.py        збирає static/data/*, static/model/*, static/lib/three/* (§8.5)
@@ -243,7 +246,7 @@ viewer/index.html                    статична сторінка: післ
 | Атрибут/метод | Тип | Обов'язковий для (б) | Умовчання (`getattr` / успадкування) | Призначення |
 |---|---|---|---|---|
 | `_f3d_sequence` | int | так | `1000` | порядок виклику (менше — раніше): вбудовані 20…70 (`stock` 20, `production` 30, `logistics` 40, `quality` 45, `maintenance` 50, `people` 60, `chains` 70), machine_connect `machines` 75, вбудований `signals` 90, telemetry 95, energy 100, lighting 110, ventilation 120, fire 130, evacuation 140, infra 150, genset 155, yard 160, access 170 (X-27; 75 — після `chains` 70, бо доповнює `supply`/`sheet_chain`) |
-| `_f3d_sections` | tuple[str] | так | `()` | ключі верхнього рівня payload, які провайдер записує; для `meta.sections` і для дельти за замовчуванням |
+| `_f3d_sections` | tuple[str] | так | `()` | ключі верхнього рівня payload, які провайдер записує; для `meta.sections`, для фільтра `sections` (R-01 п. 4) і для дельти за замовчуванням. **Порожній `()` — «наскрізний» провайдер** (X-94): викликається завжди, незалежно від параметра `sections`; `meta.sections` для нього не позначається (так оголошені machine_connect `f3d.viewer.provider.machines` 75 і telemetry `f3d.viewer.provider.telemetry` 95: вони пишуть у `workcenters`, `equipment`, `locations`, `productions`, `sheet_chain` і в вузли за шляхами сигналів, тож мають власний `_f3d_viewer_delta`; `default_delta` для них порожній) |
 | `_f3d_group` | str | так | `"factory3d_base.group_f3d_user"` | xml-id групи; якщо користувач не в групі або групи немає в базі — провайдер пропускається, розділи `denied` |
 | `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None` | метод | так | нічого не робить; відсутній у (б) → провайдер пропускається з WARNING у лог | заповнює/доповнює `payload` на місці; чужі й спільні розділи (`infra`, `workcenters`, `employees`, `zones`) лише доповнює (`setdefault`/`deep_merge`), не присвоює цілком |
 | `_f3d_viewer_delta(self, patch: dict, ctx: dict) -> None` | метод | так | `tools.payload.default_delta(provider, patch, ctx)`: `tmp = {}`; `provider._f3d_viewer_collect(tmp, ctx)`; `deep_merge(patch, {k: tmp[k] for k in _f3d_sections if k in tmp})` (R-14 крок 5) | заповнює `patch` лише для `ctx["changes"]`; спільні розділи — лише через `deep_merge` (X-23), присвоєння `patch["infra"] = …` заборонене |
@@ -1226,7 +1229,9 @@ F3dViewer(document.getElementById("app"), {client: new FileClient("odoo_demo.jso
    умовчаннями M-01: `seq = getattr(p, "_f3d_sequence", 1000)`, `secs = tuple(getattr(p, "_f3d_sections", ()))`,
    `grp = getattr(p, "_f3d_group", "factory3d_base.group_f3d_user")`, `collect = getattr(p, "_f3d_viewer_collect", None)`;
    `collect is None` → WARNING «провайдер <name> без _f3d_viewer_collect» і пропуск (розділи не позначаються).
-4. Для кожного `p`: якщо `sections` задано і `set(secs) ∩ sections == ∅` — пропустити; якщо група `grp`
+4. Для кожного `p`: якщо `sections` задано **і `secs` не порожній** і `set(secs) ∩ sections == ∅` — пропустити (порожній
+   `secs == ()` — «наскрізний» провайдер, X-94: викликається завжди, незалежно від `sections`; `meta.sections` для нього
+   не позначається — немає розділів, які можна позначити); якщо група `grp`
    відсутня в базі (`env.ref(grp, raise_if_not_found=False)` — `None`) або `not env.user.has_group(grp)` —
    `meta.sections[k]="denied"` для його розділів, пропустити;
    інакше `try: with env.cr.savepoint(): collect(payload, ctx)` → `meta.sections[k]="live"`
@@ -1441,7 +1446,8 @@ round(Σ product_uom_qty), available: Σ quantity (зарезервовано) �
 2. `codes = ∪ changes.values() ∪ codes_param`; якщо `codes` порожні і подій немає → `{"ts": now, "patch": {}, "removed": {}, "events": 0}`.
 3. `ctx.changes = changes`, `ctx.codes = codes`; `patch = {}`, `removed = {}`.
 4. Провайдери — у тому самому порядку й з тими самими перевірками (`getattr`, група, `sections`, `savepoint`,
-   `meta.errors`), що R-01 п. 3–4 (X-22); для кожного `delta = getattr(p, "_f3d_viewer_delta", None)`, `None` →
+   `meta.errors`), що R-01 п. 3–4 (X-22), зокрема правило «порожній `_f3d_sections = ()` — наскрізний провайдер: викликається
+   завжди, незалежно від `sections`; `meta.sections` для нього не позначається» (X-94); для кожного `delta = getattr(p, "_f3d_viewer_delta", None)`, `None` →
    п. 5. Вбудовані провайдери: `stock` — локації з кодів + локації з подій
    `stock.quant`/`stock.move.line` (повні записи за R-03/R-04); `production` — завдання `WO*` з кодів, їхні МО,
    МО з кодів, робочі центри з кодів **і** центри цих завдань (повні записи); `logistics` — переміщення з назв
@@ -1640,6 +1646,7 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 | AC-65 | R-04, M-01a (X-14) | `PLT-04C` з `f3d_loc_kind='stack'`, `f3d_capacity=60`; `KIT-01` з порожнім `f3d_loc_kind` і `f3d_capacity=0` | `/data` | `locations["PLT-04C"]`: `kind="stack"`, `capacity=60`; після `f3d_capacity=80` → `capacity=80`, `fill` перераховано; `KIT-01`: `kind`, `capacity` — зі статики (`"kit"`, `null`); grep `f3d_kind_loc` у `models/`, `tools/` — 0 збігів | UT |
 | AC-66 | M-01f, §4.4 (X-09) | `user_mrp_only` (без `hr.group_hr_user`), співробітник `OP-SAW-1` | `/data` | `employees["OP-SAW-1"]` = `{name, job, department, shift, workcenter, current_workorder}` без `AccessError`; `search_read` провайдера `people` викликано на `hr.employee.public` (`patch.object`), не на `hr.employee`; `sudo` не викликався (AC-14) | UT |
 | AC-67 | M-10, §4.3 (X-19) | модуль встановлено | читання груп | `group_f3d_kiosk.privilege_id` = `factory3d_viewer.privilege_f3d_viewer`; його `category_id` = `factory3d_base.module_category_factory3d`, `sequence=10`; група кіоска не в `factory3d_base.privilege_f3d`; `implied_ids` = 4 групи §4.3 | UT |
+| AC-68 | FR-12, FR-43, M-01, R-01 п. 4, R-14 п. 4 (X-94) | тестовий модуль: `zz_through` (`AbstractModel` за префіксом, `_f3d_sequence=7`, `_f3d_sections=()`, пише `equipment["ZZ-THRU"] = {"ok": true}`, має `_f3d_viewer_delta`, що зливає те саме через `deep_merge` у `patch["equipment"]`) і `zz_test` (`_f3d_sections=("zones",)`) | `PayloadBuilder(env, sections={"zones"}).build()`; потім `DeltaBuilder` з `sections={"zones"}` і будь-якою подією в `ctx.changes` | провайдер із `_f3d_sections=()` викликано при `sections={"zones"}`: `payload["equipment"]["ZZ-THRU"] == {"ok": True}`; `zz_test` також викликано (`zones["Z-TEST"]`, `meta.sections.zones="live"`); провайдери з непорожнім `_f3d_sections` поза `{"zones"}` (`stock`, `zz_fail`) пропущено (`"locations" not in meta.sections`, `meta.errors == []`); `"equipment" not in meta.sections` (наскрізний провайдер `meta.sections` не позначає); у дельті `patch["equipment"]["ZZ-THRU"] == {"ok": True}` | UT |
 
 (AC-34 навмисно немає — об'єднано з AC-33.)
 
@@ -1662,8 +1669,10 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 
 Тестові провайдери для AC-12/13 не можна оголосити у файлі тесту (моделі реєструються лише при
 завантаженні модуля), тому вони живуть у допоміжному модулі `odoo_addons/test_factory3d_viewer/` (§0;
-`depends: factory3d_viewer`, `installable: True`, не для проду) з трьома провайдерами: `zz_test` (sequence 5,
-пише `zones["Z-TEST"]`), `zz_fail` (sequence 6, кидає `ValueError("boom")`, `_f3d_sections=("fire",)`) і `zz_duck`
+`depends: factory3d_viewer`, `installable: True`, не для проду) з чотирма провайдерами: `zz_test` (sequence 5,
+пише `zones["Z-TEST"]`), `zz_fail` (sequence 6, кидає `ValueError("boom")`, `_f3d_sections=("fire",)`), `zz_through` (sequence 7,
+`_f3d_sections=()` — наскрізний провайдер X-94; пише `equipment["ZZ-THRU"] = {"ok": true}` у `collect` і в `_f3d_viewer_delta`;
+не пише ключів верхнього рівня, тож AC-59 його не зачіпає) і `zz_duck`
 (sequence 152, спосіб (б) M-01 — за префіксом без `_inherit`, без `_f3d_viewer_delta`/`_f3d_viewer_bus_models`; пише
 `infra.cards["ZZ-DUCK"] = {"rows": [["Тест", "так"]]}` через `deep_merge` і ключ верхнього рівня `zz_duck = {"ok": true}`).
 Модуль встановлюється лише в CI і на тестовому сервері; тести, що його потребують, роблять `skipTest`,
@@ -1680,7 +1689,7 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 | `test_payload_logistics.py` | `TestLogistics` | `test_dock_from_batch` і `test_dock_from_location` (AC-41), `test_types_mapping` (6 типів, лічильники 13/12/8/4/3/2), `test_progress_lines`, `test_docks_dict_14`, `test_sale_purchase_optional` (мок `env` без `sale.order` → `[]`, `sections.sale_orders="missing"`), `test_note_waiting` | демо | — |
 | `test_payload_chains.py` | `TestChains` | `test_supply_mo231` (AC-44), `test_components_paths_kinds` (200 компонентів, усі з `door`, `path[0]=GATE-W`), `test_delivery_fronts_via`, `test_full_cycle_mo` (AC-45), `test_sheet_chain_ship_chain_material_paths`, `test_cycle_check_ok` (AC-11), `test_zones_45_outdoor_polygon_roof` (AC-61) | демо | `tools.cycle_check.check(payload)==[]` |
 | `test_payload_signals.py` | `TestSignals` | `test_paths_applied` (AC-17), `test_percent_to_fraction`, `test_drain_state`, `test_meta_iot`, `test_missing_model` | демо + `x_f3d_signal` | — |
-| `test_providers.py` | `TestProviders` | `test_order_and_sections` (AC-12), `test_failed_provider_isolated` (AC-13), `test_group_denied` (`_f3d_group` невідомий xml-id → провайдер пропущено з `denied`), `test_sections_filter`, `test_duck_typed_provider_getattr` (AC-57: `zz_duck` без `_inherit` викликано, порядок 20…70, 90, 152), `test_top_level_order_schema_11` (AC-59) | `test_factory3d_viewer` | `meta.sections`, `meta.errors`, `list(payload)` |
+| `test_providers.py` | `TestProviders` | `test_order_and_sections` (AC-12), `test_failed_provider_isolated` (AC-13), `test_group_denied` (`_f3d_group` невідомий xml-id → провайдер пропущено з `denied`), `test_sections_filter`, `test_through_provider_ignores_sections` (AC-68: `zz_through` з `_f3d_sections=()` викликано при `sections={"zones"}` у `build()` і в `DeltaBuilder`, `meta.sections` ним не позначено), `test_duck_typed_provider_getattr` (AC-57: `zz_duck` без `_inherit` викликано, порядок 20…70, 90, 152), `test_top_level_order_schema_11` (AC-59) | `test_factory3d_viewer` | `meta.sections`, `meta.errors`, `list(payload)` |
 | `test_access.py` | `TestAccess` | `test_mrp_denied` (AC-14), `test_stock_denied`, `test_nobody_gets_static_only`, `test_kiosk_user_sections` (AC-29 через `PayloadBuilder` з `kiosk=True`), `test_no_sudo_lint` (grep файлів `tools/*.py`, `controllers/*.py`, `models/viewer_provider.py`: кожне входження `.sudo(` має бути в рядку з `ir.config_parameter`), `test_amount_requires_all_leads`, `test_people_reads_public_without_sudo` (AC-66) | користувачі | — |
 | `test_resolver.py` | `TestResolver` | `test_codes` (AC-24, параметризовано 8 кодів), `test_names` (4), `test_not_found`, `test_respects_access`, `test_bad_code_regex` | демо | `model`, `res_id` = `env.ref`/пошук |
 | `test_bus.py` | `TestBus` | `test_coalesce_action_assign` (AC-18), `test_workorder_finish_codes`, `test_maintenance_event_snapshot` (AC-49), `test_bus_disabled_param` (події є, повідомлень немає), `test_signal_cron` (AC-20), `test_codes_cap_500` | `patch.object(BusBus, "_sendone")` | кількість і вміст |
@@ -1701,6 +1710,25 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 перед `confirmed`, потім назва). `R12`: `showMO("WH/MO/00231")` → `hl.path` не null, маркери = `supply.steps
 (6) + workorders (6) + delivery.steps (9)`. `R16`: `showPicking("WH/OUT/00412")` → маршрут `[cells..., Z-OUT-1,
 DOCK-E1, TRUCK-OUT-1]`. `R21`: `startDrill()` → `drill.curves.length=32`, маркерів виходів 12.
+
+### 13.1a HttpCase і HOOT-тести (HT/JT) — AC, яких немає в таблиці 13.1 (X-97)
+
+HT-тести — `odoo.tests.HttpCase` (теги `post_install`, `-at_install`, `f3d`, `f3d_viewer`), фікстури й користувачі — як у §13.0;
+турами керує `test_tours.py` (`self.start_tour("/odoo", "<tour>", login="user_f3d")`). JT — HOOT-тести клієнта на `demo_payload.json`
+(`testMode=true`, §8.7).
+
+| Файл | Клас | Тест | Фікстури | Що assert |
+|---|---|---|---|---|
+| `test_tours.py` | `TestTours` (HT) | `test_open_viewer_tour` (AC-01; тур `static/tests/tours/open_viewer_tour.js`) | `user_f3d`, демо | клік меню «Завод 3D → Переглядач» → у DOM `.o_f3d_viewer canvas` і `.o_f3d_card`; `ir.actions.client.tag == "f3d_viewer.action"` |
+| `test_tours.py` | `TestTours` (HT) | `test_show_in_3d_tour` (AC-23; тур `show_in_3d_tour.js`) | демо, форма `WH/MO/00231` | кнопка «Показати в 3D» → `params.mo="WH/MO/00231"`, у переглядачі картка МО, `hl.markers.length ≥ 6` |
+| `test_controllers.py` | `TestControllers` (HT) | `test_static_etag_304` (AC-10) | `user_f3d` | `GET /f3d/viewer/static`: 200 + `ETag`, ключі `passports`, `energy`, `layout`, `path_templates`, `meta.schema == "1.1"`; повтор з `If-None-Match` → 304 |
+| `test_controllers.py` | `TestControllers` (HT) | `test_core_glb_etag_304` (AC-04) | `user_f3d` | `GET /factory3d_viewer/static/model/parts/core.glb`: 200 + `ETag`; повтор з `If-None-Match` → 304; `manifest.parts[0].file` збігається з `\?v=[0-9a-f]{12}` |
+| `test_controllers.py` | `TestSecurity` (HT) | `test_kiosk_token` (AC-28) | `kiosk_token` з параметрів, без сесії | `GET /f3d/kiosk/<token>?tab=production` → 200 HTML без `o_navbar`/`o_main_navbar`, є `#f3d-kiosk[data-token]`; невірний токен → 404; `kiosk_enabled=False` → 404 |
+| `test_controllers.py` | `TestSecurity` (HT) | `test_code_injection` (AC-40) | `user_f3d` | `GET /f3d/viewer/resolve?code=PLT-04C'; DROP` → 400 `bad_request`; жодного SQL з цим значенням: `patch.object(env.cr, "execute")` не викликано з `PLT-04C'; DROP` ні в тексті, ні в параметрах (відхилено regex до звернення до бази) |
+| `test_controllers.py` | `TestSecurity` (HT) | `test_kiosk_rate_limit` (AC-48) | токен кіоска; годинник лічильника API-09 (вікно 1 с, `deque` міток за IP) підмінено через `patch` | 11 запитів за 1 с з одного IP до `/f3d/kiosk/<token>/delta`: перші 10 → 200, 11-й → 429; після 1 с — знову 200 |
+| `test_sale_show.py` | `TestSaleShow` (UT) / `TestSaleShowHttp` (HT) | `test_auto_installed` (AC-55, UT); `test_sale_button_tour` (AC-55, HT; гілка `sale` туру `show_in_3d_tour.js`) | база з `sale` | `factory3d_viewer_sale` у стані `installed` без ручного встановлення; кнопка на `S00087` відкриває дію `f3d_viewer.action` з `params.mo` |
+| `static/tests/hoot/core.test.js` | — (JT) | `three_bundle_local` (AC-03) | мок `fetch`, перехоплення динамічного `import` | після `mount()` жодного запиту на хост поза `window.location.origin`; `THREE.REVISION === "160"` |
+| `static/tests/hoot/core.test.js` | — (JT) | `parts_lazy_load` (AC-05) | мок `fetch` частин, `testMode=true` | після `mount()` `items.has("SAW-1")` одразу після `core`, `items.has("RV-05")` — лише після `loadPart("engineering")`; `setLayer("fire", true)` вантажить `fire` |
 
 ### 13.2 Стендові сценарії ТК (емулятор `factory3d_iot_sim` + браузер)
 
@@ -1723,8 +1751,9 @@ DOCK-E1, TRUCK-OUT-1]`. `R21`: `startDrill()` → `drill.curves.length=32`, ма
 
 - Без групи `group_f3d_user`: `/f3d/viewer/static|data|delta|resolve|snapshots` → 403 (HT `test_controllers.py::test_forbidden_without_group`).
 - Без сесії: ті самі → редирект на `/web/login` (303) або 401 для JSON.
-- Токен кіоска: невірний/порожній/зі спецсимволами → 404; `compare_digest` (перевірка, що порівняння не через `==` — grep у `kiosk.py`).
-- `code`/`codes`/`since`/`date` з ін'єкціями (`' OR 1=1`, `../`, `%00`, 10 000 символів) → 400.
+- Токен кіоска: невірний/порожній/зі спецсимволами → 404; `compare_digest` (перевірка, що порівняння не через `==` — grep у `kiosk.py`); HT `test_controllers.py::TestSecurity::test_kiosk_token` (AC-28).
+- Ліміт запитів кіоска: 11 запитів за 1 с з одного IP → 429 на 11-му — HT `test_controllers.py::TestSecurity::test_kiosk_rate_limit` (AC-48).
+- `code`/`codes`/`since`/`date` з ін'єкціями (`' OR 1=1`, `../`, `%00`, 10 000 символів, `PLT-04C'; DROP`) → 400 — HT `test_controllers.py::TestSecurity::test_code_injection` (AC-40).
 - `sudo`-lint (AC-14), `with_user` лише в `kiosk.py`.
 - `sale_orders[].amount` відсутній для кіоска й користувачів без `group_sale_salesman_all_leads`; `productions[].energy_cost` відсутній для кіоска й користувачів без `factory3d_energy.group_f3d_energy_cost` (X-25, AC-60).
 - Користувач без `hr.group_hr_user` отримує `employees` без `AccessError` і без `sudo` — читання `hr.employee.public` (X-09, AC-66).
@@ -1759,7 +1788,7 @@ DOCK-E1, TRUCK-OUT-1]`. `R21`: `startDrill()` → `drill.curves.length=32`, ма
 
 ## 14. Definition of Done
 
-- Усі AC-01…AC-67 покриті тестами §13.1 (UT/JT/HT) або ТК §13.2; прогін зелений на копії демо-бази; `f3d_demo` і `f3d_perf_big` — окремим прогоном.
+- Усі AC-01…AC-68 покриті тестами §13.1/§13.1a (UT/JT/HT) або ТК §13.2; прогін зелений на копії демо-бази; `f3d_demo` і `f3d_perf_big` — окремим прогоном.
 - `ruff` (конфіг репозиторію) і `eslint` (конфіг Odoo) без помилок; жодного `x_` поля, `TBD`, `print` у модулі; `sudo` лише в дозволених місцях (AC-14).
 - `neutralize.sql` перевірений (ТК-12); `CHANGELOG.md` з версією `19.0.1.0.0`; `README.md` модуля; інструкції ARCHITECTURE §4 відтворені в `static/description/index.html`.
 - Перегляд безпеки §13.3 підписаний менеджером; Q-01…Q-08 закриті або мають рішення «тим часом».
@@ -1999,8 +2028,8 @@ float opt (права §4.4; у файлі req); `delivery` str req (назва 
 `filter_dp_kpa` (1), `airflow_m3h` (1), `supply_c` (1), `silo_fill` (0…1, 1), `briquettes_today_kg` int (1),
 `busy` int, `total` int (1 — `CHARGING`), `boilers` str (1), `last_inspection` str `"YYYY-MM-DD"` (1),
 `leak_check` str (1). Коди у файлі: `FL-1…FL-5`, `FL-C1`, `FL-C2`, `TUGGER-1`, `GANTRY-1`, `COMPRESSOR`, `DUST-1`,
-`BOILER`, `CHARGING`, `SPRINKLERS`, `AIR-RING`. Додаткові ключі модулів (`GANTRY-1.gantry`, `BOILER.heat_kw`/`return_c`) —
-A.15. Координат техніки `x`, `y` у схемі 1.1 **немає** — фаза 4: сигнали `equipment/<code>/x`, `/y` telemetry зберігає з
+`BOILER`, `CHARGING`, `SPRINKLERS`, `AIR-RING`. Додаткові ключі модулів: `GANTRY-1.gantry` (machine_connect) — A.15; `BOILER.heat_kw`/`return_c`/`state` —
+значення сигналів `equipment/BOILER/*`, їх пише telemetry (CT-07/R-12), не bms (A.15, X-95). Координат техніки `x`, `y` у схемі 1.1 **немає** — фаза 4: сигнали `equipment/<code>/x`, `/y` telemetry зберігає з
 `viewer_visible=False`, у payload вони не потрапляють (X-28, telemetry Q-08).
 
 ### A.11 `employees[code]`, `docks`, `zones[code]`
@@ -2090,11 +2119,11 @@ num|null req; `sources` list[str] req; `units` list[dict тієї ж форми]
 | `factory3d_machine_connect`, `machines` (75), CM-05 | `workcenters[code]` | `machine_state`, `state_since`, `availability`, `performance`, `quality`, `downtime`, `pieces_shift`, `link`, `online`; перекриває `oee`, `status` (machine_connect R-25) |
 | те саме | `equipment["GANTRY-1"]`, `locations["PLT-*"]` | `gantry` |
 | те саме | `productions[]`, `sheet_chain` | `cut_map`, `supply.gantry`; перекриває `sheet_chain.steps[4].stock` |
-| `factory3d_telemetry`, `telemetry` (95), CT-07 | вузли за шляхами сигналів (C-07) | значення в наявних вузлах (нових вузлів не створює); `meta.iot.stale` int |
+| `factory3d_telemetry`, `telemetry` (95), CT-07 | вузли за шляхами сигналів (C-07) | значення в наявних вузлах (нових вузлів не створює), зокрема `equipment["BOILER"].heat_kw`, `.return_c`, `.state` (сигнали `equipment/BOILER/*`, bms Додаток B.3; пише telemetry CT-07/R-12, не bms; X-95); `meta.iot.stale` int |
 | `factory3d_energy`, `energy` (100), CE-08 | `energy`, `workcenters[*].energy`, `productions[]` | розділ `energy` за A.12; `productions[]`: `energy_kwh`, `energy_cost` (лише з групою вартості, X-25), `energy_quality` |
 | `factory3d_energy`, `infra` (150), CE-03 | `infra.totals`, `infra.cards` | `shed_kw`, `bess_mode` (`charge`/`discharge`/`idle`) + ключі CE-03 з A.13; `rows` карток `PV-ROOF`, `PV-INV`, `CHP`, `ATS-1`, `BESS` |
 | `factory3d_bms`, `lighting` (110), CH-02 | `lighting.groups[*]`, `lighting.panels[*]` | groups: `dali_group`, `faults`, `faulty`, `scene`, `deviation`, `deviation_text`, `stale`, `level_source`; panels: `state`, `p_source` |
-| `factory3d_bms`, `ventilation` (120), CH-02, bms Додаток B.1/B.3 | `ventilation.units[*]`, `ventilation.totals`, `ventilation.boiler`, `equipment["BOILER"]` | units: `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`, `room_pressure_pa` (`AHU-1`); totals: `heat_need_kw`, `boilers_on_calc`, `deficit_kw`, `chp_source`; `ventilation.boiler` {`state`, `supply_c`, `return_c`, `silo_fill`, `heat_kw`}; `equipment["BOILER"]`: `heat_kw`, `return_c` |
+| `factory3d_bms`, `ventilation` (120), CH-02, bms Додаток B.1/B.3 | `ventilation.units[*]`, `ventilation.totals`, `ventilation.boiler` | units: `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`, `room_pressure_pa` (лише `AHU-1`, з живого поля bms; bms доповнює розділ `ventilation` через `deep_merge`, не перезаписує — значення, записані telemetry за шляхами сигналів, зберігаються, X-95); totals: `heat_need_kw`, `boilers_on_calc`, `deficit_kw`, `chp_source`; `ventilation.boiler` {`state`, `supply_c`, `return_c`, `silo_fill`, `heat_kw`}; `equipment["BOILER"]` bms **не пише** (див. рядок telemetry) |
 | `factory3d_fire_safety`, `fire` (130), CF-01 | `fire` | `panel` {`code`, `state`, `state_text`, `comm`, `last_seen`, `alarms`, `faults`, `disabled`, `sounders`, `brigade`}; `systems` {`SPARK-1`, `SMOKE-CTRL`, `SPRINKLERS` → {`state`, `text`, …}}; `devices` {адреса → {`type`, `x`, `y`, `z`, `zone`, `state`, `dust`}} (лише за параметром fire `viewer_devices`); `groups[*]`: `alarm_state`, `compliance` (`ok`/`warn`/`fail`), `stale`, значення `state` + `alarm`, `prealarm`, `fault`, `disabled`, `test`; `loops[*].state` |
 | `factory3d_fire_safety`, `evacuation` (140), CF-01 | `evacuation` | `drill_active` (`null` або {`name`, `zone`, `zone_code`, `detector`, `started`, `elapsed_s`, `steps_done`, `steps_total`, `on_site`, `evacuated`}); `compliance` {`routes_ok`, `routes_total`, `worst`, `norm`, `exits_ok`, `smoke_ok`, `smoke_total`}; `exits[*]`: `width`, `ok`; `routes[*]`: `ok`, `norm` |
 | міст `factory3d_genset`, `genset` (155), CG-02 | `infra.genset`, `infra.totals`, `infra.cards` | `infra.genset[<код>]` (вузол генератора: показники, `updated`, `state_label`, `mode_label`, `breaker_label`, `alarm_label`); totals: `genset_kw`, `genset_state`, `genset_fuel_pct`, `genset_autonomy_h`, `island`, `grid_ok`; `rows` картки `GENSET` |

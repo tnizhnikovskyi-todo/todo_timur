@@ -17,6 +17,7 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `factory3d_viewer`
 Додаток A рядки 654–661. Рішення автора — **A-xx** (§5.2), відкриті питання — **Q-xx** (§5.1).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-05, Q-06, Q-07, Q-09, Q-11, Q-12, Q-13.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-03, Q-08, Q-10.
+Зміни: 14.10.2026 — аудит 2: X-99 (CY-06: у розділ `yard` дописано `kpp{west[],east[]}` і `updated`).
 
 ## Загальна інформація
 
@@ -175,7 +176,7 @@ CB-09, CB-10, CB-12 (SPEC base §2, Додатки C.2 і D), `factory3d_viewer`
 | CY-03 | `f3d.yard.gate` (`f3d_code`, `direction`, `state`, `mode`, `last_plate`, `passes_today`) і метод `action_command(kind)` (`open`/`close`/`hold`/`release`) з усіма перевірками R-15 | access (евакуація — Q-10), viewer |
 | CY-04 | Сигнали `yard/gates/<G>/{state,loop,photocell,passes_today,cmd_open,cmd_close,cmd_hold}`, `yard/lpr/<CAM>/plate`, `yard/scale/<S>/{weight_kg,stable}`; джерела `MB-U86-IO7`, `SICS-TRUCK-SCALE` (коди SPEC §5.3, без xml-id) і `HTTP-PUSH` telemetry для LPR | telemetry (каталог), iot_sim (звірка адрес) |
 | CY-05 | Плагін `sics` (SPEC §8): тип джерела `sics`, `params` `{host, port, mode, period_s, timeout_s, unit, dialect, reset_on_connect}` (`timeout_s` за замовчуванням 5), адреса сигналу `{"cmd": "SI", "field": "weight"\|"stable"}`, запис `{"write": {"cmd": "Z"\|"T"\|"TAC"}}` (`TA` у v1 заборонено, §2.6); схеми — SPEC §8.2, власник — цей модуль, telemetry Додаток A.1/A.2 і `plugins/schemas/` копіюють їх дослівно (X-45) | telemetry (реєстр плагінів, валідація адрес/params), колектор |
-| CY-06 | Розділ `yard` payload переглядача (SPEC §9 R-20): `gates{}`, `scale{}`, `trucks[]` (з `x`, `y`, `rz`, `zone`, `state`, `dock`, `picking`), `queue{west[],east[]}`, `stats{}`; рядки карток `infra.cards` `GATE-W`/`GATE-E`/`TRUCK-SCALE` — у collect лише `rows` наявних карток (A-16), у дельті — лише доповненням спільного розділу `infra` через `deep_merge` viewer M-01 (X-23); шина: `_notify('f3d.yard.visit', [name, scene_code, dock_code], 'doc')`, `_notify('f3d.yard.gate', [code], 'state')` | viewer (клієнт малює фури без коду сцени за `x/y` — Q-08) |
+| CY-06 | Розділ `yard` payload переглядача (SPEC §9 R-20): `gates{}`, `scale{}`, `trucks[]` (з `x`, `y`, `rz`, `zone`, `state`, `dock`, `picking`), `queue{west[],east[]}`, `kpp{west[],east[]}`, `stats{}`, `updated` (X-99; повний перелік — SPEC Додаток C, viewer A.15); рядки карток `infra.cards` `GATE-W`/`GATE-E`/`TRUCK-SCALE` — у collect лише `rows` наявних карток (A-16), у дельті — лише доповненням спільного розділу `infra` через `deep_merge` viewer M-01 (X-23); шина: `_notify('f3d.yard.visit', [name, scene_code, dock_code], 'doc')`, `_notify('f3d.yard.gate', [code], 'state')` | viewer (клієнт малює фури без коду сцени за `x/y` — Q-08) |
 | CY-07 | `res.partner.f3d_is_driver`, `f3d_is_carrier`, `f3d_carrier_id`; `f3d.yard.visit.driver_id` — єдине місце «водій рейсу» | access (пропуск водія на КПП-пішохідній — поза v1) |
 | CY-08 | `f3d.command.f3d_yard_gate_id`, `f3d_yard_visit_id` (M-18) — журнал команд шлагбаума в стандартному журналі телеметрії | telemetry (меню «Команди» показує й двір) |
 

@@ -20,6 +20,7 @@ S-07/S-08, Додаток A (сигнали 603–646, 1 167–1 168). Ріше�
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-12, Q-13, Q-14, Q-16.
 Зміни: 14.10.2026 — закрито рішеннями менеджера: Q-11.
 Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: зон 33 → 35, сповіщувачів 212 → 222 (шлейф 3: 34 → 44), пристроїв 343 → 353, LSP 292 → 302, сигналів data 52 → 54 (iot_sim № 1 167–1 168), обладнання base 208 → 210 (пожежних кодів 41 → 43, прив'язок хука 42 → 44); §1.1, FR-03, FR-04, FR-20, CF-03, §2.2, §2.3, §2.7, §2.8, §3, §4, A-01, A-02, A-15, A-17, A-21, A-23; Q-05 — виконано, зон без сигналізації немає.
+Зміни: 14.10.2026 — аудит 2: X-98 (CF-01: перелік ключів `fire`/`evacuation` замінено посиланням на SPEC R-20/R-21 і viewer A.15).
 
 ## Загальна інформація
 
@@ -133,7 +134,7 @@ Optional (перевірка `'<model>' in env`/`ir.module.module`): `factory3d_
 
 | ID | Контракт | Споживачі |
 |---|---|---|
-| CF-01 | Розділи payload переглядача `fire` і `evacuation` строго за viewer A.13 плюс додаткові ключі: `fire.panel` {code, state, state_text, comm, last_seen, alarms, faults, disabled, sounders, brigade}, `fire.groups[*].alarm_state` (сирий стан LSZ), `fire.groups[*].compliance` (`ok`/`warn`/`fail`), `fire.systems` {SPARK-1, SMOKE-CTRL, SPRINKLERS → {state, text, count_today, pressure_bar}}, `fire.devices` (лише за параметром `viewer_devices`, A-02), `evacuation.drill_active` {name, zone, detector, started, elapsed_s, steps_done} або `null`, `evacuation.compliance` {routes_ok, routes_total, worst, norm} | viewer (Q-09), кіоск |
+| CF-01 | Розділи payload переглядача `fire` і `evacuation` строго за viewer A.13 плюс додаткові ключі: `fire.panel`, `fire.groups[*].alarm_state` (сирий стан LSZ), `fire.groups[*].compliance` (`ok`/`warn`/`fail`), `fire.systems` (`SPARK-1`, `SMOKE-CTRL`, `SPRINKLERS`), `fire.devices` (лише за параметром `viewer_devices`, A-02), `evacuation.drill_active` (або `null`), `evacuation.compliance`, `evacuation.exits[*]`/`routes[*]` (`width`, `ok`, `norm`); повні переліки ключів і типи — SPEC R-20/R-21 і viewer A.15 (X-98) | viewer (Q-09), кіоск |
 | CF-02 | Джерела людей на об'єкті й проходів для навчань: **будь-яка модель реєстру з `_name`, що починається з `f3d.fire.passage.source.`** (без вимоги `_inherit`; рішення менеджера, access Q-13): обов'язковий `_f3d_passages(start, end) -> list[dict(employee_id, ts, point, direction)]` (UTC), необов'язкові `_f3d_on_site(at) -> list[dict(employee_id, since, point)]`, `_f3d_available() -> bool`, атрибути `_f3d_priority` (int, умовчання 1000), `_f3d_key` (умовчання — суфікс імені); береться доступне джерело з найменшим `(_f3d_priority, _name)`; модуль дає `…hr_attendance` (100); `factory3d_access` — `…access` (10, access M-16) | access |
 | CF-03 | Коди сигналів `fire/*` (54, SPEC Додаток B) і коди пристроїв `<шлейф>.<ЗОНА>.<nn>`; сигнали мають `module='fire_safety'`, `write_enabled=False`, джерела з `f3d_fire_readonly=True` | telemetry (CT-09), iot_sim (каталог), bms |
 | CF-04 | Події шини `f3d.viewer.event._notify('f3d.fire.zone', [FA-коди], 'state')`, `_notify('f3d.fire.panel', ['FACP-1'], 'state')`, `_notify('f3d.fire.drill', [name], 'state')` | viewer |

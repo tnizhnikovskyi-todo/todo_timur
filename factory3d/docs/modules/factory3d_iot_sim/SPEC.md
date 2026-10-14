@@ -8,6 +8,7 @@
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-08, Q-10, Q-11, Q-12, Q-13.
 Зміни: 14.10.2026 — у макеті додано групи FA-SOC (LSZ 34) і FA-OFFICE (LSZ 35), відповідь № 12г: Додаток A — нові рядки 1 167 `fire/groups/FA-SOC/state` (dev 200 LSZ:34) і 1 168 `fire/groups/FA-OFFICE/state` (LSZ:35), дописані в кінець без перенумерації; каталог 1 166 → 1 168 (веде емулятор 1 015 → 1 017, власні 662 → 664, P-09: 53 → 55, нові 970 → 972, з них fire_safety 52 → 54); §8.11.1 — LSZ:1…35, LSP 292 → 302 (сповіщувачів 212 → 222, усі нові — шлейф 3), PIV запиленості до 222; пристроїв 274 → 276 (обладнання base 208 → 210); §5.1, §5.3, API-01, API-02, API-10, API-16, S-07, AC-02, AC-05, AC-22, AC-24, AC-25, AC-62, AC-66, §13 (ТК-08, ТП-05, ТП-06, DEPLOY_TEST).
 Зміни: 14.10.2026 — R-04: поріг тривоги температури трансформатора 140 °C (відповідь № 24).
+Зміни: 14.10.2026 — аудит 2: X-101 (§5.1a: таблиця успадкованих xml-id рівня 0), X-103 (TC-AC 01, 02, 34, 35, 43 прив'язано до ТК/чек-листа §13.2/§13.5).
 
 Контракти, на які спирається документ: `docs/ARCHITECTURE.md` §5 (конвенції імен сигналів, стоп-крани, права), §6.1–6.3 (`f3d.scene.mixin.f3d_code`, `f3d.zone`, ворота-`stock.location`, паспорт `maintenance.equipment.f3d_*`), §6.6 (протокольна матриця P-01…P-13, REST `/sim/v1/*`, режими `scenario`/`follow_odoo`), §6.7 (шляхи даних переглядача), §6.8 (заявки ТО), рішення D-01, D-05…D-09, D-13, D-20 (адреси Modbus — PDU за вендором, ADAM — молодше слово першим), D-21 (ATyS p — Annexe III), D-23 (AMF — варіант A); реєстр `docs/CONSISTENCY.md` (X-xx); рішення автора A-01…A-12 (`ARCHITECTURE.md` §7).
 
@@ -520,6 +521,30 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 | `ir_cron.xml` | C-01, C-02 (§6) | — | `cron_f3d_sim_status`, `cron_f3d_sim_gc` | так |
 | `f3d_sim_scenario.xml` | 15 сценаріїв S-01…S-15 (§9.3) з `code`, `name`, `group`, `params_schema`, `params_default`, `duration_s` | §9.3 | `scenario_<code>` | `noupdate="0"` (схеми можуть оновлюватись) |
 | `f3d_sim_signal.csv` | 1 168 рядків каталогу (1 017 з протоколом + 151 з `protocol` `—` = `none`, X-34, X-35, X-61, X-76); колонки: `code,name,device,protocol,address,dtype,unit,scale,nominal,thresholds,model_rule,origin,level0_code,kind` | Додаток A (`tools/gen_catalog.py`; рядки 663…1 166 — з додатків модулів-власників; 1 167–1 168 — власні, зони LSZ 34–35) | — (завантажує hook, ключ `code`) | upsert за `code` |
+
+### 5.1a Успадковані xml-id рівня 0 (X-101)
+
+Звірено з файлами репозиторію `odoo_addons/factory3d_iot_sim/` (`data/models.xml`, `data/actions.xml`, `views/views.xml`,
+data-модуль 19.0.1.0.0; у v0.2 лишаються без змін, §0.2). Усі xml-id — у просторі `factory3d_iot_sim.`; власник — цей
+модуль. Інші модулі (telemetry §5.3 кроки 9–10, §5.4) звертаються до них лише через
+`env.ref("factory3d_iot_sim.<id>", raise_if_not_found=False)`: відсутній id — пропуск із записом у лог, без винятку.
+Представлення `view_f3d_sim_*` (V-01…V-13, §3) — нові, до рівня 0 не належать.
+
+| Тип | xml-id | Що це | Використовує |
+|---|---|---|---|
+| `ir.model` | `model_x_f3d_signal` (`x_f3d_signal`), `model_x_f3d_reading` (`x_f3d_reading`) | дві моделі рівня 0 (поля — рядок нижче) | telemetry кроки 2, 5, 8, 10; AC-58 |
+| `ir.model.fields` | `field_x_f3d_signal__x_<n>` (22: `x_name`, `x_code`, `x_sequence`, `x_active`, `x_equipment_id`, `x_workcenter_id`, `x_source_id`, `x_kind`, `x_unit`, `x_mode`, `x_value`, `x_nominal`, `x_noise`, `x_rate`, `x_limit`, `x_alarm`, `x_threshold`, `x_state`, `x_charging`, `x_seed`, `x_updated`, `x_request_id`); `field_x_f3d_reading__x_<n>` (6: `x_name`, `x_signal_id`, `x_equipment_id`, `x_value`, `x_unit`, `x_time`); `field_maintenance_equipment__x_f3d_signal_ids` (one2many → `x_f3d_signal` за `x_equipment_id`) | поля моделей; manual-поле на `maintenance.equipment` | telemetry кроки 2, 5, 10 (`drop_manual_fields`, CB-11) |
+| `ir.model.access` | `access_x_f3d_signal_user`, `access_x_f3d_reading_user` | `base.group_user`, повні права (§4.1) | — |
+| `ir.cron` | `cron_iot_sim` | «Імітація IoT: щохвилини», 1 хв, `action_iot_tick`; `level0.xml` перейменовує (§5.1) | telemetry крок 9 (`active=False`), §5.4 (лишається вимкненим); пульт §6 |
+| `ir.actions.server` | `action_iot_tick`, `action_iot_start`, `action_iot_stop`, `action_iot_tick_now` | крок імітації; увімкнути/зупинити крон; «Оновити зараз» (`model_id` = `x_f3d_signal`) | пункти меню нижче |
+| `ir.actions.act_window` | `action_signals`, `action_readings` | «Сигнали обладнання» (`list,form`), «Журнал показань» (`graph,list`) | меню нижче |
+| `ir.ui.menu` | `menu_iot_root` («Імітація IoT»; у v0.2 — під `menu_f3d_sim_root`, §3.14) | корінь рівня 0 | telemetry крок 9 (`active=False`), крок 10, §5.4 (`active=True`) |
+| те саме | `menu_iot_signals`, `menu_iot_readings`, `menu_iot_tick`, `menu_iot_start`, `menu_iot_stop` | діти `menu_iot_root` (sequence 1, 2, 10, 11, 12) | telemetry крок 10 (`unlink`) |
+| `ir.ui.view` (7) | `view_signal_list`, `view_signal_form`, `view_signal_search` (модель `x_f3d_signal`); `view_reading_list`, `view_reading_graph`, `view_reading_search` (модель `x_f3d_reading`) | представлення моделей рівня 0 | telemetry крок 10 (`unlink` усіх 7) |
+| те саме | `view_equipment_form_signals` (inherit `maintenance.hr_equipment_view_form`, сторінка «Сигнали» з `x_f3d_signal_ids`) | єдине з 7, що вставлене у чужу форму | telemetry крок 9 (`active=False`), крок 10, §5.4 (`active=True`) |
+
+Усього 7 `ir.ui.view`, 6 `ir.ui.menu`, 1 `ir.cron`, 4 `ir.actions.server`, 2 `ir.actions.act_window`, 2 `ir.model`.
+xml-id цих записів у v0.2 незмінні (`level0.xml` змінює лише `name` крона та `name`, `parent_id`, `sequence`, `groups_id` меню `menu_iot_root`); виключення файлів рівня 0 з маніфесту видалило б записи при оновленні (§1, коментар маніфесту).
 
 ### 5.2 Таблиця «роль паспорта → протокол/драйвер» (для `post_init_hook`)
 
@@ -1582,7 +1607,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 
 ## 12. Acceptance Criteria
 
-Тип перевірки: **UT** — юніт-тест (сервіс `pytest`, Odoo `TransactionCase`/`HttpCase`), **TC** — стенд на емуляторі (compose, клієнти протоколів), **MAN** — ручна.
+Тип перевірки: **UT** — юніт-тест (сервіс `pytest`, Odoo `TransactionCase`/`HttpCase`), **TC** — стенд на емуляторі (compose, клієнти протоколів), **MAN** — ручна, **DEPLOY_TEST** — чек-лист §13.5 на копії демо-бази.
 
 | ID | Given / When / Then | Тип | FR |
 |---|---|---|---|
@@ -1699,7 +1724,7 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 
 ### 13.2 Стендові сценарії (ТК) — проти `docker compose --profile dev`
 
-Передумови для всіх: `.env` з токенами; `tests/stand/conftest.py` чекає `GET /health = ok`; клієнти: `asyncua` (ТК-01, 05), `pymodbus` (02, 06, 07, 09, 12), `bacpypes3` (03, 08), `paho-mqtt` (04), `requests` (10, 11, 13), `socket` (11, 17). Після кожного ТК — `POST /reset`.
+Передумови для всіх: `.env` з токенами; `tests/stand/conftest.py` чекає `GET /health = ok` (саму перевірку AC-01 виконує ТК-13); клієнти: `asyncua` (ТК-01, 05), `pymodbus` (02, 06, 07, 09, 12), `bacpypes3` (03, 08), `paho-mqtt` (04), `requests` (10, 11, 13), `socket` (11, 17). Після кожного ТК — `POST /reset`.
 
 | ТК | Назва | Передумови (сценарій емулятора) | Кроки | Очікуваний результат | Де дивитися |
 |---|---|---|---|---|---|
@@ -1707,7 +1732,7 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТК-02 | Modbus: лічильники PM5560 і I/O | `shift` | 1) read `u11 fc3 pdu2999+112`, `pdu3203+12`; 2) read `u1`/`u2`; 3) read `u80 fc2 pdu0+12`, `fc3 pdu0+24`; 4) помилкові unit/адреси; 5) write DO `u86` (FC 05 `pdu16`, `pdu20`, `pdu21`); 6) read `u51…u59 fc3 pdu3059+2` | AC-03, AC-37, AC-44, AC-52, AC-53, AC-62; сума `u3…u8 fc3 pdu3059+2` ≈ `u1` + `u2` (±1 %); INT64 росте; лічильник ADAM — молодше слово першим | `/signals?prefix=energy` |
 | ТК-03 | BACnet: вентиляція й котельня | — | 1) Who-Is; 2) RPM 25 RV; 3) COV AI:4 dev 105; 4) write AO:1 dev 105 = 80 (пріоритет 8); 5) write MSV:1 = 7 (ST) | AC-38, AC-64; AI:3 dev 105 → 0 після ST, BI:1=0; AO:1 у % (80 = 80 %) утримується 10 хв | `/signals?prefix=ventilation/units/RV-05` |
 | ТК-04 | MQTT: телематика | `shift`, `battery_low FL-2 level_pct=18` | 1) підписка `f3d/mobile/#`; 2) 3 хв; 3) `fault comm FL-3` | AC-08, AC-40 | mosquitto_sub, 3D (рух FL-2 у зарядну) |
-| ТК-05 | Портал: woodStore + OPC UA | `shift` (SAW-1 WORKING) | 1) `GET /api/v1/stacks`; 2) `POST /jobs feed 3 аркуші`; 3) `GET /api/v1/status` кожні 5 с; 4) read OPC UA `GANTRY-1…CurrentState`; 5) `GET /sim/v1/signals/equipment/GANTRY-1/stacks` | AC-13, AC-67; стан moving/picking/placing; `qty −3`; крок 5 → 404 (сигнал обчислює machine_connect, X-76) | картка PLT-04C у переглядачі |
+| ТК-05 | Портал: woodStore + OPC UA | `shift` (SAW-1 WORKING) | 1) `GET /api/v1/stacks`; 2) `POST /jobs feed 3 аркуші`; 3) `GET /api/v1/status` кожні 5 с; 4) read OPC UA `GANTRY-1…CurrentState`; 5) `GET /sim/v1/signals/equipment/GANTRY-1/stacks`; 6) P-04: `POST /jobs` з `tests/data/parts_48.csv`, чекати ≤ 10 с, `POST /jobs/{id}/release {machine: SAW-1}`, потім CSV з `Width=2500` | AC-13, AC-43, AC-67; стан moving/picking/placing; `qty −3`; крок 5 → 404 (сигнал обчислює machine_connect, X-76); крок 6 (AC-43): `state=planned`, `plan.sheets` ∈ [6; 9], `waste_pct` < 20, у OPC UA `JobOrderList` з'являється `JobOrderID=cj-…` у `AllowedToStart`, CSV з `Width=2500` → 422 | картка PLT-04C у переглядачі |
 | ТК-06 | Інженерія: компресор, аспірація, трансформатори, вода | `compressor_fault pressure_drop` | 1) read `u70 fc3 pdu3000+30` до/після; 2) `u90 fc3 pdu0+4` (raw) і `pdu30+8` (float, молодше слово першим); 3) `u96 fc3 pdu0+6`; 4) `u84 fc2 pdu0+2`, лічильник `u84 fc3 pdu16+2` за 10 хв sim | AC-12; тиск < 6,0 через ≤ 15 хв → `status=alarm`, подія; AI масштаб R-20; вода +350 імп | `/signals?prefix=equipment/COMPRESSOR` |
 | ТК-07 | Енергетика: СЕС, BESS, КГУ, АВР, blackout | `pv_cloudy cf=0.3` потім `blackout duration_s=120` (умовчання `hgm`), потім `blackout {"duration_s": 120, "amf_master": "ats", "chp_island": true}` | 1) read `u61…u68 fc3 pdu32080+2`, `pdu32089`, `pdu32114+2`, `pdu32106+2`; 2) `u69 fc3 pdu37000+51` (без перекриттів, X-51); 3) `u72 fc3 pdu40000+21`; 4) `u71 fc3 pdu20480+8` до/під час/після blackout; 5) `u1`/`u2 fc3 pdu3059+2`; 6) журнал `fake_relay` API-F-09 / `load` | AC-11, AC-14, AC-20, AC-51, AC-60; `load.kw` 348 (варіант A, КГУ стоїть), 0 (`chp_island=true`, день) | `/signals?prefix=infra` |
 | ТК-08 | Пожежна панель: навчання і несправність | `fire_drill FA-CNC` ; потім `filter_clogged FA-FAC value=92` | 1) COV на LSZ:14, BV:10, dev 105 BV:1; 2) читання LSP:21405; 3) write LSZ/BV/PIV → denied; 4) PIV:21607 після другого сценарію; 5) `POST /device/FA-CUT/fault {"reason":"sensor"}` → `clear`, потім `{"reason":"loop"}`; 6) `object-list` dev 200; 7) RPM `object-name` LSP:19001, 29113, 29201 | AC-15, AC-50, AC-56, AC-61, AC-66 (302 LSP, `1.MCP.01`/`2.SND.13`/`2.FLM.01`, X-79); BioStar події 20480 на 5 дверях; u85 DI4 | `/events?kind=fire`, журнал подій 3D |
@@ -1715,7 +1740,7 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТК-10 | СКУД: BioStar 2 | sim-час 06:30 (`POST /time {set}`), `factor=10` | 1) login; 2) 5 хв реального часу; 3) `events/search` за ACR-IN; 4) `access_event ACR-ELEC code=6400`; 5) logout, повтор запиту | AC-16, AC-41, AC-55; сторінки `descending=false` через `offset` і `hint` однакові; `6400` з `user` і дверима 2; після logout → 401 | — |
 | ТК-11 | Двір: LPR, шлагбаум, ваги | `truck_arrival BATCH/IN/00001`, потім `truck_no_booking` | 1) приймач LPR (`/lpr-sink` або тестовий HTTP-сервер у `SIM_LPR_PUSH_URL`); 2) опитування `u86 fc2 pdu0+6`, `fc1 pdu16+6`; 3) SICS `SIR` потік; 4) події; 5) `truck_arrival BATCH/OUT/00004` (номер з `f3d_plate`) | AC-17, AC-18, AC-42, AC-54 | 3D: фура біля воріт, `/events?kind=yard` |
 | ТК-12 | Верстати без інтерфейсу: цикли | `shift`, `machine_fault ASM-3 reason=emergency` | 1) `u82`/`u83 fc2 pdu0+12`, `fc3 pdu0+20`; 2) 10 хв sim; 3) fault/clear | AC-37; ASM-3 coil fault=1, run=0; лічильник ASM-1 += 1 за 6 хв | — |
-| ТК-13 | REST керування і стоп-крани | — | 1) усі ендпоінти API-10…API-19 з/без токена; 2) `stop-all` → POST → 423; `resume`; 3) `SIM_ENABLED=0` рестарт; 4) `PUT /signals/... hold` | AC-21, AC-24, AC-45, AC-50 | — |
+| ТК-13 | REST керування і стоп-крани | — | 1) усі ендпоінти API-10…API-19 з/без токена, зокрема `GET /sim/v1/health` (AC-01: 200, `status=ok`, 11 ключів `protocols` = `ok` ≤ 60 с після старту) і `GET /sim/v1/signals?limit=1000` (AC-02: `count=1017`, `value` не `null`, `ts` ≤ 5 с тому); 2) `stop-all` → POST → 423; `resume`; 3) `SIM_ENABLED=0` рестарт; 4) `PUT /signals/... hold` | AC-01, AC-02, AC-21, AC-24, AC-45, AC-50 | — |
 | ТК-14 | Прискорення часу | `factor=10`, `shift` | 1) 10 хв реального часу; 2) порівняти лічильники з ТК при `factor=1` за 100 хв sim | AC-06, AC-21; підписники бачать стрибки ≤ 10 с sim на 1 с реального | — |
 | ТК-15 | Odoo-пульт наскрізно | сервіс + копія демо-бази з модулем 19.0.2.0.0 | 1) Налаштування → url/токени → «Перевірити зв'язок»; 2) Пульт: прискорення 5 (у `scenario`), режим; 3) Сценарії → `filter_clogged` (`device=RV-05`, `value=285`) → запуск; 4) Обладнання CNC-2 → «Збій» → «Скинути»; 5) зупинити сервіс на 6 хв → рівень 0 увімкнувся; запустити → вимкнувся | AC-25…AC-29, AC-33, AC-58, AC-59; пульт — у меню «Завод 3D → Емулятор» (X-31); у `f3d.sim.event` — події запуску; заявка ТО від рівня 0 для RV-05 (якщо рівень 0 був активний) | Odoo UI, чаттер пульта |
 | ТК-16 | Відновлення після рестарту | `shift` 5 хв, `machine_fault CNC-3` | 1) `docker restart iot_sim`; 2) `/status`, лічильники, стан CNC-3 | AC-48: лічильники продовжені, CNC-3 у fault (запуск `running` або закритий `stopped` з повідомленням «restored») | лог «restored snapshot» |
@@ -1731,7 +1756,7 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 | ТБ-03 | Ін'єкції: `POST /device/../etc/passwd/fault`, `code="CNC-2; DROP"`, 10 КБ `note`, `params` з вкладеністю 100 | 404/422, сервіс живий, лог без трасувань |
 | ТБ-04 | BACnet write у dev 200 (LSZ, LSP, PIV, BV, MSV), `ReinitializeDevice`, `DeviceCommunicationControl`; OPC UA write у `State.*`; Modbus write у PM5560/Huawei RO; BioStar `DELETE /api/users/1` | усі відхилені, подія/лог WARNING, стан не змінився |
 | ТБ-05 | Хеші каталогу: `services/iot_sim/catalog/signals.csv`, `odoo_addons/.../data/f3d_sim_signal.csv`, `GET /sim/v1/catalog/signals.csv`, `GET /f3d/sim/devices` (сигнали) | 4 однакові множини `code+address`; тест падає при розсинхроні |
-| ТБ-06 | Логи з `SIM_LOG_LEVEL=DEBUG` після 15 хв роботи і ТК-10/13 | `grep` за значеннями `SIM_API_TOKEN`, `SIM_BIOSTAR_PASS`, `SIM_ODOO_APIKEY`, `bs-session-id` → 0 збігів |
+| ТБ-06 (AC-35) | Логи з `SIM_LOG_LEVEL=DEBUG` після 15 хв роботи і ТК-10/13 | `grep` за значеннями `SIM_API_TOKEN`, `SIM_BIOSTAR_PASS`, `SIM_ODOO_APIKEY`, `bs-session-id` → 0 збігів; `GET /status` без токенів |
 | ТБ-07 | Allow-list: `SIM_LPR_PUSH_URL` і `SIM_ODOO_URL` на хост поза списком | жодного з'єднання (tcpdump у контейнері-спостерігачі), метрика `outbound_denied` |
 | ТБ-08 | Odoo: користувач `group_f3d_user` — спроби `write/create/unlink` на всіх моделях модуля; менеджер — доступ до `res.config.settings` полів токенів; `f3d_sim_reader` — спроба `write` через XML-RPC | `AccessError`; поля відсутні; `AccessError` |
 | ТБ-09 | API-01/03 з `export_token` ≠ `token` (переплутані) | 401; жоден з токенів не приймається «навхрест» |
@@ -1755,8 +1780,8 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 2. Встановити/оновити `factory3d_base` (хвиля 1), потім `factory3d_iot_sim` 19.0.2.0.0 (`-u factory3d_iot_sim`), перевірити лог hook: `devices=276`, `signals=1168` (`protocol=none` 151), `level0 matched=196/196`, `scenarios=15`, `read_enabled` за `factory3d.base.environment` (крок 1а).
 3. AC-25 кількості; відкрити меню «Завод 3D → Емулятор» → 7 пунктів (у «Обслуговуванні» пункту «Емулятор» немає; налаштування — «Завод 3D → Налаштування → Налаштування емулятора»); «Рівень 0» — під ним успадковані (AC-59).
 4. Підняти compose (`--profile dev`), заповнити Налаштування, «Перевірити зв'язок» → онлайн; переконатися, що крон рівня 0 вимкнувся (≤ 1 хв).
-5. ТК-15 повністю; ТК-13 стоп-крани.
-6. `neutralize.sql` на другій копії → ТБ-10.
+5. ТК-15 повністю; ТК-13 стоп-крани (разом з AC-01, AC-02); ТБ-06 — логи `SIM_LOG_LEVEL=DEBUG` після ТК-10/13: жодного значення токена/пароля, `GET /status` без токенів (AC-35).
+6. `neutralize.sql` на другій копії → ТБ-10 (AC-34, тип DEPLOY_TEST: усі крони модуля неактивні, параметри стоп-кранів `False`, url/токени порожні, `panel.state=unconfigured`).
 7. Відкат: `-u` назад не підтримується Odoo — відновити копію з п. 1; перевірити, що x_-дані не змінилися (порівняти `x_value` 196 записів — очікувано відрізняються лише ті, що оновив крон рівня 0 за час тесту).
 8. Записати результати в `docs/modules/factory3d_iot_sim/TEST_REPORT.md` (ТК/ТБ/ТП таблиця зелене/червоне, версії образів, хеш каталогу).
 

@@ -24,6 +24,7 @@ Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: 
 без імпортів Odoo, побайтово = `cmdtext.py` (§0, M-13, M-20, §7.2, §13.0.1 п. 9, AC-58, AC-80, AC-102, AC-103, §13.1, DoD).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-12, Q-14.
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-04…Q-08, Q-10, Q-11, Q-13.
+Зміни: 14.10.2026 — аудит 2: X-96 (M-18: блок після `super()` у `_f3d_ingest` — `try`/`savepoint`/`_logger.exception`; AC-104, §13.1.1).
 
 Позначення: UT — `odoo.tests.TransactionCase`; HT — `HttpCase`; CT — pytest пакета плагінів із фейковими серверами;
 TC — стенд (емулятор + колектор + Odoo); MAN — ручна перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -894,14 +895,18 @@ AND f3d_thickness_mm >= 0)`; `@api.constrains`: довжина > 0 ⇔ шири�
     @api.model
     def _f3d_ingest(self, readings, src="module", collector=None):
         res = super()._f3d_ingest(readings, src=src, collector=collector)
-        if self.env.context.get("f3d_mc_internal") or not param_bool(self.env, "read_enabled", _env_default(self.env)):
-            return res
-        # unknown_state telemetry приймає (q='bad') і лише повідомляє — такі показання модуль обробляє сам (R-01)
-        rejected = {r["i"] for r in res.get("rejected", ()) if r.get("reason") != "unknown_state"}
-        code_map = self.env["f3d.machine"]._f3d_code_map()
-        mine = [dict(r, i=i) for i, r in enumerate(readings) if i not in rejected and r.get("code") in code_map]
-        if mine:
-            self.env["f3d.machine"].sudo()._f3d_dispatch(mine, src)
+        try:  # X-96: усе після super() — у savepoint, виняток логується й не відкочує показання (як yard M-13, bms M-13, fire M-15, energy M-15)
+            with self.env.cr.savepoint():
+                if self.env.context.get("f3d_mc_internal") or not param_bool(self.env, "read_enabled", _env_default(self.env)):
+                    return res
+                # unknown_state telemetry приймає (q='bad') і лише повідомляє — такі показання модуль обробляє сам (R-01)
+                rejected = {r["i"] for r in res.get("rejected", ()) if r.get("reason") != "unknown_state"}
+                code_map = self.env["f3d.machine"]._f3d_code_map()
+                mine = [dict(r, i=i) for i, r in enumerate(readings) if i not in rejected and r.get("code") in code_map]
+                if mine:
+                    self.env["f3d.machine"].sudo()._f3d_dispatch(mine, src)
+        except Exception:
+            _logger.exception("factory3d_machine_connect: dispatch after ingest")
         return res
 
     def _mark_stale(self, reason):
@@ -913,7 +918,10 @@ AND f3d_thickness_mm >= 0)`; `@api.constrains`: довжина > 0 ⇔ шири�
 ```
 
 `_f3d_dispatch` ловить винятки на рівні верстата (`savepoint` на верстат, `logger.exception`, лічильник
-`errors`), тож помилка диспетчера не відкочує показань telemetry і не дає `5xx` колектору.
+`errors`), тож помилка диспетчера не відкочує показань telemetry і не дає `5xx` колектору. Зовнішній `try`/`savepoint`
+у `_f3d_ingest` (X-96, AC-104) ловить решту — виняток у `_f3d_code_map()`, у групуванні R-04 п. 0 чи в читанні параметра:
+`_f3d_ingest` повертає результат `super()`, показання збережено, колектор не отримує `5xx`, у лог іде
+`factory3d_machine_connect: dispatch after ingest` (як telemetry M-03/CT-10 вимагає від усіх перевизначень).
 
 ### M-19 `f3d.source` — локальний тип (A-17, CT-12)
 
@@ -2382,8 +2390,9 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-101 | FR-27, FR-15 | Given `enable_write()`, `make_mo(wc_ua, qty=14, name='WH/MO/T0002')` (WO id N `ready`); When `user_mrp` `action_f3d_send_to_machine()`; Then `f3d.command` на `sig_ua_cmd` з `payload == {"method": "Store", "job": "WO%05d" % N, "qty": 14, "ref": "WH/MO/T0002", "priority": 5}` і `text == "Store;WO%05d;14;WH/MO/T0002;5" % N` (X-03), `f3d_machine_id = m_ua`, `origin='machine_connect'`, чатер МО; `cmd_done(cmd, data={"ReturnStatus": 0})` → чатер верстата «Команда …: done {"ReturnStatus": 0}»; WO у `progress` → `UserError`; WO на `wc_io` → `UserError` «не приймає завдань з Odoo»; `write_enabled=False` → `UserError` з назвою запобіжника | UT |
 | AC-102 | FR-15, FR-19, CM-08 | Given `enable_write()`; When `env['f3d.command']._f3d_mc_create_command(sig_g_cmd, "feed", {"stack": "PLT-T1", "target": "SAW-T", "sheets": 4, "product": "B" * 32, "priority": 5, "ref": "WH/MO/T0001"})`; Then команда з `payload` (усі поля без змін), `text` — перші 63 символи тексту R-21 + «…» (`len(text) == 64`). Given `f3d.command._f3d_mc_payload_supported` підмінено на `False` (telemetry без CR-01, X-93); When той самий виклик; Then `UserError` «… length: 66 > 64», команди немає; When завдання AC-53 → `_cron_gantry`; Then команда без `payload`, `text="feed;PLT-T1;SAW-T;4;BOARD-T;5;WH/MO/T0001"`; `cmd_done(cmd, "wj-00412")` (без `result_data`) → `ws_id="wj-00412"`, `queued` (X-03, запасна граматика) | UT |
 | AC-103 | FR-27, FR-28, CM-08 | Given `settings.write_enabled=True`; When `write(job_cmd, None, "Stop;WO00013")`; Then фейковий метод `Stop("WO00013", [])` — той самий виклик, що `call(job_cmd, {"method": "Stop", "job": "WO00013"})`, — і `result="ok ReturnStatus=0"`; `write(g_cmd, None, "feed;PLT-03C;SAW-1;4;DSP16-ANT;5;WH/MO/00233")` → те саме тіло `POST /api/v1/jobs`, що в AC-77, `result="wj-…"`; `call(g_cmd, {"op": "feed", "sheets": 4})` → `WriteError("bad_command: stack: відсутнє")`, HTTP-запитів 0; `call` на сигналі без `address.call`/`address.cmd` → `NotSupported`; плагіни беруть граматику лише з `cmdtext` (без Odoo, X-93) (X-03, запасна граматика) | CT |
+| AC-104 | FR-01, M-18 (X-96) | Given `patch.object(type(env['f3d.machine']), '_f3d_code_map', side_effect=RuntimeError('boom'))`; пакет із двох показань: `workcenters/UA-T/state` (верстат модуля) і сигнал іншого модуля (напр. `energy/consumers/SAW-1/p_now`); When `env['f3d.signal']._f3d_ingest(readings, src='collector')`; Then виклик не кидає винятку і повертає той самий результат, що `super()` (`accepted == 2`, `rejected == []`); обидва показання збережено (`f3d.reading`, `last_value` сигналів); `f3d.machine.state` не змінився; ERROR `factory3d_machine_connect: dispatch after ingest` (`assertLogs('odoo.addons.factory3d_machine_connect', 'ERROR')`); без патча той самий пакет змінює стан `M-UA` | UT |
 
-Покриття FR: FR-01 AC-01…03, 10, 93, 98, 99; FR-02 AC-05, 06; FR-03 AC-04, 07, 08, 93; FR-04 AC-11, 94; FR-05 AC-12…14;
+Покриття FR: FR-01 AC-01…03, 10, 93, 98, 99, 104; FR-02 AC-05, 06; FR-03 AC-04, 07, 08, 93; FR-04 AC-11, 94; FR-05 AC-12…14;
 FR-06 AC-15…20; FR-07 AC-21…23, 94; FR-08 AC-24, 94; FR-09 AC-25…28, 95; FR-10 AC-25, 31; FR-11 AC-29, 30; FR-12 AC-38;
 FR-13 AC-33, 34; FR-14 AC-35…37; FR-15 AC-32, 58, 90, 92, 100…102; FR-16 AC-09, 39…43; FR-17 AC-44; FR-18 AC-47, 48, 50;
 FR-19 AC-52…55, 96, 102; FR-20 AC-56, 96; FR-21 AC-51; FR-22 AC-49; FR-23 AC-59; FR-24 AC-60, 61, 97; FR-25 AC-62…64, 97;
@@ -2489,7 +2498,7 @@ HttpCase)`. Від батьківського класу використову�
 | Файл::клас | Тести | AC | Особливі фікстури | Перевірити також |
 |---|---|---|---|---|
 | `test_normalize.py::TestNormalize` | `test_examples_r01` (11 `subTest`), `test_unknown_text_nodata_warns_once`, `test_io_alarm_wins` | AC-01…03 | — (чисті функції) + `m_io` для AC-03 | AC-02: другий виклик тієї ж години — без WARNING (`assertNoLogs`), о `+1 год` — знову WARNING |
-| `test_state_log.py::TestStateLog` | `test_transition_closes_and_opens`, `test_micro_stop_absorbed`, `test_pending_committed_by_cron`, `test_late_reading_ignored`, `test_machine_state_signal`, `test_collector_cannot_feed_derived` | AC-04…08 | `make_log(m_ua, 'idle', kt('09:50'))` + `m_ua.current_log_id`, `state='idle'` через `set_sql` | `duration_min` закритого інтервалу = 5,0; `in_ppt_min` = 5,0; інтервали не перекриваються; `sig_ua_mstate.last_text` |
+| `test_state_log.py::TestStateLog` | `test_transition_closes_and_opens`, `test_micro_stop_absorbed`, `test_pending_committed_by_cron`, `test_late_reading_ignored`, `test_machine_state_signal`, `test_collector_cannot_feed_derived`, `test_code_map_exception_isolated` (AC-104) | AC-04…08, AC-104 | `make_log(m_ua, 'idle', kt('09:50'))` + `m_ua.current_log_id`, `state='idle'` через `set_sql` | `duration_min` закритого інтервалу = 5,0; `in_ppt_min` = 5,0; інтервали не перекриваються; `sig_ua_mstate.last_text` |
 | `test_ppt.py::TestPpt` | `test_ppt_monday`, `test_ppt_dst`, `test_ppt_saturday`, `test_leave_subtracted`, `test_stale_to_nodata`, `test_bad_quality_nodata` | AC-09, AC-10 | `resource.calendar.leaves` на `wc_ua.resource_id` 10:00–11:00 (`time_type='leave'`) і слот `time_type='other'` | `ppt_intervals` повертає список пар naive UTC, відсортований; AC-10: `current_downtime_id` закрито `now`, таймери завдання не змінені |
 | `test_downtime.py::TestDowntime` | `test_fault_blocks_wc`, `test_idle_no_timelog_until_close`, `test_idle_lunch_and_after_shift`, `test_day_boundary`, `test_set_reason_rights`, `test_confirm_rights` | AC-11…16 | `make_mo(wc_ua)`; WO стартує `start_employee(emp_ua)` від `user_mrp` о 09:29 | AC-11: `wo.time_ids` закритий запис має `date_end=09:42:00` (не `now`); AC-12: `mrp.workcenter.productivity.search_count([('f3d_downtime_id','=',d.id)])` 0 → 1; AC-14: крон 15:30:30 не відкриває нового до 07:00 вівторка (`at('07:00:30', day=D0+1)`) |
 | `test_merge_operator.py::TestMerge` | `test_operator_block_during_fault`, `test_operator_block_before_stop`, `test_working_closes_operator_record`, `test_unblock_reopens_fault_record` | AC-17…20 | записи оператора — `mrp.workcenter.productivity.with_user(user_mrp).create({...})` без `workorder_id` | жоден запис оператора не видалено (`exists()`); `f3d_source` (`operator`/`master`) за групою творця |
@@ -2653,7 +2662,7 @@ HttpCase)`. Від батьківського класу використову�
 
 - Юніт-тести §13.1.1 зелені на чистій базі (`--without-demo=all`) і на шаблоні копії демо `odoo_f3d_mc_t0`
   (`TestMigrationDemo` — лише там); тести пакета §13.1.2 зелені (`pytest -m "not stand"`), без мережі й Docker.
-- Кожен AC-01…AC-103 має зелений тест (UT/HT/CT) або відмітку ТК/MAN з датою й фактичними значеннями в
+- Кожен AC-01…AC-104 має зелений тест (UT/HT/CT) або відмітку ТК/MAN з датою й фактичними значеннями в
   `TEST_REPORT.md`; ТК-01…ТК-16, ТБ-01…ТБ-10, ТП-01…ТП-04 пройдені на стенді.
 - `ruff check` і `ruff format --check` (довжина рядка 120) для модуля й пакета; `pylint-odoo` (якщо є в репозиторії)
   без помилок рівня error; жодного `TODO`/`TBD`/`print(`.

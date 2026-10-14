@@ -16,6 +16,7 @@ factory3d, §4.2, AC-62), X-58 (ТК-02 — параметр сценарію л
 X-06 (§11 п. 4: COV допустимий, у v1 лишається опитування A-02), X-32 (§3: `menu_f3d_bms_config` під `menu_f3d_config`
 з sequence резерву 80); закрито Q-09 (X-34, X-40, X-58) і Q-10 (X-06).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-07, Q-08, Q-11, Q-12, Q-13, Q-14.
+Зміни: 14.10.2026 — аудит 2: X-95 (R-27, M-11: розділ `ventilation` доповнюється через `deep_merge`, ключ `units[AHU-1].room_pressure_pa`; AC-79), X-103 (TC-AC 49, 50, 52 прив'язано до ТК/чек-листа §13.2/§13.5).
 
 Позначення: **UT** — юніт-тест `odoo.tests`; **PT** — pytest плагіна з фейковим роутером Helvar; **TC** — стенд
 (емулятор + колектор + Odoo); **MAN** — ручна перевірка. Odoo 19: SQL-обмеження — `models.Constraint`; хуки
@@ -673,13 +674,15 @@ class F3dViewerProviderVentilation(models.AbstractModel):
 
 | Метод | `.lighting` | `.ventilation` |
 |---|---|---|
-| `_f3d_viewer_collect(self, payload, ctx)` | `payload["lighting"] = tools.payload.build_lighting(self.env, ctx, payload.get("lighting") or ctx["static"].get("lighting") or {})` (R-26) | `payload["ventilation"] = tools.payload.build_ventilation(self.env, ctx, payload.get("ventilation") or ctx["static"].get("ventilation") or {})` (R-27) |
-| `_f3d_viewer_delta(self, patch, ctx)` | якщо в `ctx["changes"]` є модель `f3d.bms` або коди `f3d.signal` з префіксом `lighting/` чи `energy/consumers/LP-` → `tmp = {}`; `self._f3d_viewer_collect(tmp, ctx)`; `patch["lighting"] = tmp["lighting"]`; інакше нічого | те саме для префіксів `ventilation/`, `equipment/BOILER/`, `infra/chp/`, `infra/totals/chp_kw`, `fire/totals/system_state`, `infra/ats/src1_ok` → `patch["ventilation"]` |
+| `_f3d_viewer_collect(self, payload, ctx)` | `payload["lighting"] = tools.payload.build_lighting(self.env, ctx, payload.get("lighting") or ctx["static"].get("lighting") or {})` (R-26) | `deep_merge(payload.setdefault("ventilation", {}), tools.payload.build_ventilation(self.env, ctx, payload.get("ventilation") or ctx["static"].get("ventilation") or {}))` (R-27); `from odoo.addons.factory3d_viewer.tools.payload import deep_merge` — імпорт усередині методу (провайдер викликає лише встановлений viewer); **не присвоювати** `payload["ventilation"] = …` (X-95) |
+| `_f3d_viewer_delta(self, patch, ctx)` | якщо в `ctx["changes"]` є модель `f3d.bms` або коди `f3d.signal` з префіксом `lighting/` чи `energy/consumers/LP-` → `tmp = {}`; `self._f3d_viewer_collect(tmp, ctx)`; `patch["lighting"] = tmp["lighting"]`; інакше нічого | те саме для префіксів `ventilation/`, `equipment/BOILER/`, `infra/chp/`, `infra/totals/chp_kw`, `fire/totals/system_state`, `infra/ats/src1_ok` → `deep_merge(patch.setdefault("ventilation", {}), tmp["ventilation"])` (X-95; той самий імпорт у методі) |
 | `_f3d_viewer_bus_models(self)` | `["f3d.signal", "f3d.bms"]` | `["f3d.signal", "f3d.bms"]` |
 
 Провайдер telemetry (95) уже записав `last_value` у вузли `lighting.groups[*]`/`ventilation.units[*]` (R-12
-telemetry); провайдери модуля замінюють розділи повністю тими самими значеннями (те саме округлення R-12) плюс
-обчисленими. Права: читання від користувача запиту; без доступу до моделей модуля — розділ лишається статичним.
+telemetry); провайдер `lighting` замінює розділ цілком тими самими значеннями (те саме округлення R-12) плюс
+обчисленими, а провайдер `ventilation` **доповнює** розділ через спільний `deep_merge` (viewer M-01), а не перезаписує
+(X-95): значення, записані telemetry за шляхами сигналів (напр. `units["AHU-1"].room_pressure_pa`, `units[*].supply_c`),
+не губляться, а ключі `units[*]`, відомі bms, перекриваються обчисленими. Права: читання від користувача запиту; без доступу до моделей модуля — розділ лишається статичним.
 Без `factory3d_viewer` моделі не викликаються.
 
 ### M-12 `f3d.source` — локальний тип `f3d_bms` (CT-12, A-01)
@@ -1210,7 +1213,7 @@ class HelvarNetPlugin(SourcePlugin):
 | ID | Правило | Алгоритм | Приклад |
 |---|---|---|---|
 | R-26 | **Розділ `lighting`** (`tools.payload.build_lighting(env, ctx, static)`) | `groups = {}`: для активних груп за `sequence`: `rec = dict(static.get('groups', {}).get(code, {}))`; `rec.update({zone: zone_code, zone_name, task: norm.key, task_name: norm.name, kind: fixture_kind, panel: panel.code, n: n_fixtures, lumen, watt, area: round(area_m2), e_norm, e_calc, level: round(level_pct/100, 3), e_now, p_inst: p_inst_kw, p_now: round(p_now_kw, 2), control: label(control_mode)})` + `dali_group`, `faults`, `faulty`, `scene`, `deviation`, `deviation_text`, `stale`, `level_source`; групи статики без запису ORM — як є. `panels`: `{code: {name, groups: [коди за sequence], n, p_inst: round(Σ, 1), p_now: round(p_now_kw, 1), state, p_source}}`. `uf`/`mf` — параметри (0,7 / 0,8); `norms_ref = {key: ref_en}` для активних норм. Ключі верхнього рівня — `groups`, `panels`, `uf`, `mf`, `norms_ref` (A.13) | без живих даних: `groups["LT-CUT"]` = `{"zone": "Z-CUT", "zone_name": "Розкрій", "task": "woodworking_machine", "task_name": "верстатна обробка деревини", "kind": "highbay", "panel": "LP-2", "n": 27, "lumen": 20500, "watt": 126, "area": 609, "e_norm": 500, "e_calc": 509, "level": 1.0, "e_now": 509, "p_inst": 3.4, "p_now": 3.4, "control": "DALI: зміна, 100 %", …}`; `panels["LP-1"]` = `{"n": 50, "p_inst": 6.3, "p_now": 5.6, …}` |
-| R-27 | **Розділ `ventilation`** (`build_ventilation`) | `units`: для активних установок: база — статика `units[code]`; оновлення: `name`, `kind` (`roofvent`/`ahu`/`fan`/`exfan`), `zone` (код), `mode` (`mode_label`), `airflow_m3h`, `airflow_nom` (ціле), `supply_c`, `indoor_c`, `heating_valve`, `heat_kw` (лише RV/AHU), `p_inst`, `p_now`, `filter_dp_pa` (RV/AHU), `state` (R-11), `maintenance_request` (назва найстарішої відкритої заявки на сигналах установки, інакше ключ видаляється), `note` + `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`; значення — R-12 з округленням telemetry R-12. `totals` — R-17. `heat_balance` = `{t_out: t_out_design, items: [{name, kw: kw_round}], total: total_kw, capacity: capacity_kw, chp_kw: round(chp_heat_kw), reserve, note}`. `boiler` = `{state, supply_c, return_c, silo_fill (частка), heat_kw}` | без живих даних: `units`, `totals`, `heat_balance` = `dist/odoo_demo.json.ventilation` (крім ключа `maintenance_request`, що береться з живих заявок: «MR/…» заявки id 6 для RV-05) |
+| R-27 | **Розділ `ventilation`** (`build_ventilation`) | `units`: для активних установок: база — статика `units[code]`; оновлення: `name`, `kind` (`roofvent`/`ahu`/`fan`/`exfan`), `zone` (код), `mode` (`mode_label`), `airflow_m3h`, `airflow_nom` (ціле), `supply_c`, `indoor_c`, `heating_valve`, `heat_kw` (лише RV/AHU), `p_inst`, `p_now`, `filter_dp_pa` (RV/AHU), `state` (R-11), `maintenance_request` (назва найстарішої відкритої заявки на сигналах установки, інакше ключ видаляється), `note` + `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`, `room_pressure_pa` (лише `AHU-1`: живе поле моделі M-05, `digits=(5,1)`, тобто 1 знак); значення — R-12 з округленням telemetry R-12. Розділ **доповнюється** через `deep_merge` (`from odoo.addons.factory3d_viewer.tools.payload import deep_merge`, імпорт усередині методу), а не присвоюється: значення, записані раніше telemetry R-12 (95) за шляхами сигналів, не губляться (X-95). `totals` — R-17. `heat_balance` = `{t_out: t_out_design, items: [{name, kw: kw_round}], total: total_kw, capacity: capacity_kw, chp_kw: round(chp_heat_kw), reserve, note}`. `boiler` = `{state, supply_c, return_c, silo_fill (частка), heat_kw}` | без живих даних: `units`, `totals`, `heat_balance` = `dist/odoo_demo.json.ventilation` (крім ключа `maintenance_request`, що береться з живих заявок: «MR/…» заявки id 6 для RV-05) |
 | R-28 | **Огляд будівлі** (`f3d.bms.overview.get_overview_data`) | Відповідь: `{"ts": ISO UTC "Z", "work_time": bool (R-18 для календаря компанії), "plan": {"width": plant_length_m, "depth": plant_width_m}, "zones": [{"id", "code", "name", "polygon", "group": код|null, "state": plan_state|null}] (зони `zone_type != 'outdoor'`), "groups": [{"id", "code", "zone", "e_now", "e_norm", "level", "faults", "state", "deviation_text"}], "panels": [{"id", "code", "x", "y", "state", "p_now"}], "units": [{"id", "code", "kind", "x", "y", "zone", "mode_label", "state", "plan_state", "airflow", "filter_dp", "deviation_text"}], "kpi": {"groups_ok", "groups_total", "lighting_kw", "units_on", "units_total", "airflow", "heat_need", "chp_heat", "boilers_on", "deficit", "open_deviations", "open_requests"}, "heat": {<R-16 поля>, "design": {"total", "capacity", "chp", "reserve", "lines": [{"name", "kw"}]}}, "deviations": [≤ 50 відкритих: {"id", "started" (Київ "YYYY-MM-DD HH:MM"), "object_code", "rule", "name", "request"}]}`. `plan_state` установки: `alarm_count > 0` або `deviation ∈ {not_running, cold}` → `alarm`; `stale` → `nodata`; `state ∈ {on}` → `on`; інакше `standby`. `groups_ok` — групи з `plan_state ∈ {ok}` | на демо без живих даних: 34 зони, 32 групи (`groups_ok` 32: 22 групи «зміни» з рівнем 100 % і 10 груп «присутності» без перевірки норми), 3 щити, 29 установок, `heat_need 322`, `chp_heat 497`, `boilers_on 0`, `deficit 0`, `open_deviations 1` і `open_requests 1` (RV-05, заявка id 6) |
 
 ### 9.6 Плагін `helvarnet`
@@ -1399,11 +1402,12 @@ class HelvarNetPlugin(SourcePlugin):
 | AC-76 | R-31 | `rate_per_s=10`, 40 запитів → тривалість ≥ 3,0 с; фейк `delay_s=5`, `timeout_s=0.5` → відповідний сигнал `q='bad'`, 3 таймаути поспіль → `PollError` | PT |
 | AC-77 | A-03, R-31 | 3 джерела `HN-LP-1…3` на одному `host:port` → фейк бачить 1 TCP-з'єднання; `disconnect` двох — з'єднання живе; третього — закрито | PT |
 | AC-78 | FR-23 | `importlib.metadata.entry_points(group="factory3d_collector.plugins")` містить `helvarnet`; `load_plugins()["helvarnet"] is HelvarNetPlugin`; `HelvarNetPlugin.validate(source)` на даних Додатка C/B → `[]` | PT |
+| AC-79 | FR-20, R-27, M-11, CH-02 (X-95) | Given `ctx` з `static_bms.json`; перед викликом у `payload["ventilation"]["units"]["AHU-1"]` уже лежать значення telemetry (R-12, 95): `room_pressure_pa=12.3` і пробний ключ `probe=1`; поле моделі `AHU-1.room_pressure_pa=12.3` (`digits=(5,1)`); `RV-05` — не AHU; When `_f3d_viewer_collect` провайдера `ventilation` (120), потім `_f3d_viewer_delta` з `patch["ventilation"]`, що вже містить значення telemetry; Then `payload["ventilation"]["units"]["AHU-1"]["room_pressure_pa"] == 12.3` (живе значення моделі, 1 знак), `probe == 1` лишився (не перезаписано); у `units["RV-05"]` ключа `room_pressure_pa` немає; ті самі дві перевірки для `patch["ventilation"]["units"]["AHU-1"]`; `payload["ventilation"] is` той самий об'єкт, що до виклику (`id` не змінився) | UT |
 
 Покриття FR: FR-01 AC-01; FR-02 AC-08, AC-09; FR-03 AC-02, AC-04…AC-06; FR-04 AC-02, AC-03; FR-05 AC-07, AC-10;
 FR-06 AC-26, AC-27, AC-39; FR-07 AC-19, AC-24; FR-08 AC-20…AC-22; FR-09 AC-31, AC-32, AC-34, AC-35; FR-10 AC-13…AC-18,
 AC-36; FR-11 AC-36; FR-12 AC-40; FR-13 AC-37, AC-38; FR-14 AC-46, AC-47; FR-15 MAN (ТК-10) + AC-12; FR-16 AC-62;
-FR-17 AC-61, AC-62; FR-18 AC-57…AC-60; FR-19 AC-54, AC-56; FR-20 AC-42…AC-45; FR-21 AC-48…AC-55; FR-22 AC-26, AC-30;
+FR-17 AC-61, AC-62; FR-18 AC-57…AC-60; FR-19 AC-54, AC-56; FR-20 AC-42…AC-45, AC-79; FR-21 AC-48…AC-55; FR-22 AC-26, AC-30;
 FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-11, AC-15, AC-23, AC-33.
 
 ## 13. План тестування (для Opus)
@@ -1469,7 +1473,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | `test_requests.py::TestEnrichment` | `test_light_off_title`, `test_titles_table`, `test_faults_description`, `test_idempotent` | AC-37…AC-39 | після правил | `name`, `f3d_value`, `f3d_threshold`, `description`, `f3d_bms_enriched` |
 | `::TestJournal` | `test_open_update_close`, `test_new_episode`, `test_cooldown_new_request` | AC-40, AC-41 | `freeze_time` | поля епізодів, кількості |
 | `test_viewer_provider.py::TestLightingSection` | `test_static_equals_macro`, `test_live_values` | AC-42, AC-44 | `cls.static`, `ctx()` | порівняння словників A.13 з `cls.static` (точна рівність) |
-| `::TestVentilationSection` | `test_static_equals_macro`, `test_maintenance_request_key`, `test_live_values` | AC-43, AC-44 | ті самі | порівняння |
+| `::TestVentilationSection` | `test_static_equals_macro`, `test_maintenance_request_key`, `test_live_values`, `test_deep_merge_keeps_telemetry` (AC-79: `room_pressure_pa` лише AHU-1; значення telemetry в `payload`/`patch` не затерто) | AC-43, AC-44, AC-79 | ті самі | порівняння; `id(payload["ventilation"])` до й після |
 | `::TestProviderContract` | `test_names_without_inherit`, `test_delta_relevance`, `test_access_denied_keeps_static` | AC-45 | `ctx(changes=…)` | `_inherit`, вміст `patch` |
 | `test_overview.py::TestOverview` | `test_structure_counts`, `test_access_partial`, `test_action_open` | AC-46, AC-47, AC-63 | користувачі | ключі, кількості, `AccessError` |
 | `test_hooks.py::TestInstall` | `test_counts_clean`, `test_signal_definitions`, `test_reinstall_idempotent`, `test_params_environment`, `test_uninstall_hook`, `test_neutralize` | AC-48, AC-51, AC-53…AC-56 | `hooks.run_install(env)`, `uninstall_hook(env)` у транзакції тесту | кількості, `install_report`, поля сигналів, `validate_address` |
@@ -1548,6 +1552,11 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 1. Дамп бази `odoo` тестового сервера → `odoo_f3d_bms`; знімок `SELECT code, last_value, status, maintenance_request_id
    FROM f3d_signal WHERE code LIKE 'ventilation/%'` (після установки telemetry).
 2. Установити `factory3d_bms`; лог без ERROR; `install_report.state='done'`, лічильники §5.3 (468/81, 65 обладнання).
+   Перевірки AC типу TC на копії демо (X-103): **AC-49** — `created: 468`, `updated: 81`; 81 сигнал `ventilation/*` зберіг
+   `origin='sim_data'`, `last_value`, `status` (звірка зі знімком п. 1), `source_id`/адреси за Додатком B,
+   `maintenance_request_id` RV-05 `filter_dp_pa` = заявка id 6; 176 нових `origin='catalog'`, 292 `origin='module'`;
+   **AC-50** — `equipment_id` у 32 груп, 3 щитів, 29 установок, баланс → `BOILER`/`CHP`, 32 джерела з обладнанням;
+   **AC-52** — 1 епізод журналу `open` (`rule='filter_supply'`, `object_code='RV-05'`, `request_id` = id 6).
 3. Прогнати `--test-tags /factory3d_bms` на `odoo_f3d_bms` → 0 падінь; `pytest` плагіна й `test_data_sync.py` → 0 падінь.
 4. **Одна зона:** параметр `read_enabled=True`, але всім джерелам модуля `read_enabled=False`, крім `BAC-108-RV-08`,
    `BAC-109-RV-09`, `HN-LP-2`; запустити колектор; ТК-12 для RV-08, RV-09, LT-CUT; переконатися, що інші джерела
@@ -1563,7 +1572,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 - Усі UT §13.1.1 зелені на чистій базі й копії демо; PT §13.1.2 і `test_data_sync.py` зелені; hoot-тест огляду зелений.
 - ТК-01…ТК-10, ТК-12 пройдені на стенді (ТК-11 — за наявності fire_safety), протокол у `TEST_REPORT.md` з фактичними
   числами; ТБ-01…ТБ-10, ТП-01…ТП-05 виконані.
-- Кожен AC-01…AC-78 має зелений тест або відмітку ТК/MAN у протоколі; покриття FR — таблиця під §12.
+- Кожен AC-01…AC-79 має зелений тест або відмітку ТК/MAN у протоколі; покриття FR — таблиця під §12.
 - `ruff check` (довжина рядка 120) без помилок для `odoo_addons/factory3d_bms` і `services/collector_plugins/f3d_collector_bms`;
   `eslint`/`prettier` проєкту — для `static/src`.
 - Жодного `x_`-поля; `grep -rn "x_f3d" odoo_addons/factory3d_bms` порожній.
