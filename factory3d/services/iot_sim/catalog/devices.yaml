@@ -1,371 +1,2665 @@
-# Резервний реєстр пристроїв (W0: мінімум, виведений з catalog/signals.csv).
-# Повний реєстр генерує tools/gen_devices.py (пізніші воркери).
+# Реєстр пристроїв (генерує tools/gen_devices.py з dist/odoo_demo.json + plant/*; не правити вручну).
+# 276 пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.
 devices:
-  - code: "ACCESS"
-    protocols: [P-10]
-  - code: "ACR-CHG"
-    protocols: [P-10]
-  - code: "ACR-ELEC"
-    protocols: [P-10]
-  - code: "ACR-IN"
-    protocols: [P-10]
-  - code: "ACR-PAINT"
-    protocols: [P-10]
-  - code: "ACR-SRV"
-    protocols: [P-10]
-  - code: "AHU-1"
-    protocols: [P-05, P-08]
-  - code: "AIR-RING"
-    protocols: [P-07]
-  - code: "ASM-1"
-    protocols: [P-02, P-05]
-  - code: "ASM-2"
-    protocols: [P-02, P-05]
-  - code: "ASM-3"
-    protocols: [P-02, P-05]
-  - code: "ASM-4"
-    protocols: [P-02, P-05]
-  - code: "ASM-5"
-    protocols: [P-02, P-05]
-  - code: "ASM-6"
-    protocols: [P-02, P-05]
-  - code: "ASMLINE-1"
-    protocols: [P-01, P-05]
-  - code: "ATS-1"
-    protocols: [P-07]
-  - code: "AUTOSPRAY-1"
-    protocols: [P-02, P-05]
-  - code: "BESS"
-    protocols: [P-07]
-  - code: "BOILER"
-    protocols: [P-05, P-08]
-  - code: "BORE-1"
-    protocols: [P-01, P-05]
-  - code: "BOX-1"
-    protocols: [P-02, P-05]
-  - code: "CAM-05"
-    protocols: [P-11]
-  - code: "CAM-06"
-    protocols: [P-11]
-  - code: "CHARGING"
-    protocols: [P-05]
-  - code: "CHP"
-    protocols: [P-07]
-  - code: "CNC-1"
-    protocols: [P-01, P-05]
-  - code: "CNC-2"
-    protocols: [P-01, P-05]
-  - code: "CNC-3"
-    protocols: [P-01, P-05]
-  - code: "CNC-4"
-    protocols: [P-01, P-05]
-  - code: "COMPRESSOR"
-    protocols: [P-05, P-07]
-  - code: "CUTOPT"
-    protocols: []
-  - code: "DOWEL-1"
-    protocols: [P-01, P-05]
-  - code: "DRY-1"
-    protocols: [P-02, P-05]
-  - code: "DUST-1"
-    protocols: [P-05, P-07]
-  - code: "EDGE-1"
-    protocols: [P-01, P-05]
-  - code: "EDGE-2"
-    protocols: [P-01, P-05]
-  - code: "EDGE-3"
-    protocols: [P-01, P-05]
-  - code: "EF-CHG"
-    protocols: [P-05, P-08]
-  - code: "EF-CMP"
-    protocols: [P-05, P-08]
-  - code: "EF-ELEC"
-    protocols: [P-05, P-08]
-  - code: "EMS-1"
-    protocols: []
-  - code: "FA-ASM"
-    protocols: [P-09]
-  - code: "FA-BOILER"
-    protocols: [P-09]
-  - code: "FA-CHG"
-    protocols: [P-09]
-  - code: "FA-CMP"
-    protocols: [P-09]
-  - code: "FA-CNC"
-    protocols: [P-09]
-  - code: "FA-CUT"
-    protocols: [P-09]
-  - code: "FA-EB"
-    protocols: [P-09]
-  - code: "FA-EDGE"
-    protocols: [P-09]
-  - code: "FA-ELEC"
-    protocols: [P-09]
-  - code: "FA-FAC"
-    protocols: [P-09]
-  - code: "FA-FG"
-    protocols: [P-09]
-  - code: "FA-HW"
-    protocols: [P-09]
-  - code: "FA-MAINT"
-    protocols: [P-09]
-  - code: "FA-OFFICE"
-    protocols: [P-09]
-  - code: "FA-OUT-1"
-    protocols: [P-09]
-  - code: "FA-OUT-2"
-    protocols: [P-09]
-  - code: "FA-OUT-3"
-    protocols: [P-09]
-  - code: "FA-OUT-4"
-    protocols: [P-09]
-  - code: "FA-OUT-5"
-    protocols: [P-09]
-  - code: "FA-OUT-6"
-    protocols: [P-09]
-  - code: "FA-OUT-7"
-    protocols: [P-09]
-  - code: "FA-PACK"
-    protocols: [P-09]
-  - code: "FA-PKS"
-    protocols: [P-09]
-  - code: "FA-POST"
-    protocols: [P-09]
-  - code: "FA-PRE"
-    protocols: [P-09]
-  - code: "FA-RCV-1"
-    protocols: [P-09]
-  - code: "FA-RCV-2"
-    protocols: [P-09]
-  - code: "FA-RCV-3"
-    protocols: [P-09]
-  - code: "FA-RCV-4"
-    protocols: [P-09]
-  - code: "FA-RCV-5"
-    protocols: [P-09]
-  - code: "FA-RCV-6"
-    protocols: [P-09]
-  - code: "FA-RCV-7"
-    protocols: [P-09]
-  - code: "FA-SHEETS"
-    protocols: [P-09]
-  - code: "FA-SOC"
-    protocols: [P-09]
-  - code: "FA-SORT"
-    protocols: [P-09]
-  - code: "FACP-1"
-    protocols: [P-09]
-  - code: "FL-1"
-    protocols: [P-06]
-  - code: "FL-2"
-    protocols: [P-06]
-  - code: "FL-3"
-    protocols: [P-06]
-  - code: "FL-4"
-    protocols: [P-06]
-  - code: "FL-5"
-    protocols: [P-06]
-  - code: "FL-C1"
-    protocols: [P-06]
-  - code: "FL-C2"
-    protocols: [P-06]
-  - code: "GANTRY-1"
-    protocols: [P-03, P-05]
-  - code: "GATE-E"
-    protocols: [P-11]
-  - code: "GATE-W"
-    protocols: [P-11]
-  - code: "GENSET"
-    protocols: [P-12]
-  - code: "GLUE-1"
-    protocols: [P-02, P-05]
-  - code: "HINGE-1"
-    protocols: [P-02, P-05]
-  - code: "LP-1"
-    protocols: [P-05, P-08]
-  - code: "LP-2"
-    protocols: [P-05, P-08]
-  - code: "LP-3"
-    protocols: [P-05, P-08]
-  - code: "LT-ASM"
-    protocols: [P-08]
-  - code: "LT-CHG"
-    protocols: [P-08]
-  - code: "LT-CMP"
-    protocols: [P-08]
-  - code: "LT-CNC"
-    protocols: [P-08]
-  - code: "LT-CUT"
-    protocols: [P-08]
-  - code: "LT-EB"
-    protocols: [P-08]
-  - code: "LT-EDGE"
-    protocols: [P-08]
-  - code: "LT-ELEC"
-    protocols: [P-08]
-  - code: "LT-FAC"
-    protocols: [P-08]
-  - code: "LT-FG"
-    protocols: [P-08]
-  - code: "LT-HW"
-    protocols: [P-08]
-  - code: "LT-MAINT"
-    protocols: [P-08]
-  - code: "LT-OUT-1"
-    protocols: [P-08]
-  - code: "LT-OUT-2"
-    protocols: [P-08]
-  - code: "LT-OUT-3"
-    protocols: [P-08]
-  - code: "LT-OUT-4"
-    protocols: [P-08]
-  - code: "LT-OUT-5"
-    protocols: [P-08]
-  - code: "LT-OUT-6"
-    protocols: [P-08]
-  - code: "LT-OUT-7"
-    protocols: [P-08]
-  - code: "LT-PACK"
-    protocols: [P-08]
-  - code: "LT-PKS"
-    protocols: [P-08]
-  - code: "LT-POST"
-    protocols: [P-08]
-  - code: "LT-PRE"
-    protocols: [P-08]
-  - code: "LT-RCV-1"
-    protocols: [P-08]
-  - code: "LT-RCV-2"
-    protocols: [P-08]
-  - code: "LT-RCV-3"
-    protocols: [P-08]
-  - code: "LT-RCV-4"
-    protocols: [P-08]
-  - code: "LT-RCV-5"
-    protocols: [P-08]
-  - code: "LT-RCV-6"
-    protocols: [P-08]
-  - code: "LT-RCV-7"
-    protocols: [P-08]
-  - code: "LT-SHEETS"
-    protocols: [P-08]
-  - code: "LT-SORT"
-    protocols: [P-08]
-  - code: "NEST-1"
-    protocols: [P-01, P-05]
-  - code: "OFFICE"
-    protocols: [P-05]
-  - code: "PACK-1"
-    protocols: [P-02, P-05]
-  - code: "PACK-2"
-    protocols: [P-02, P-05]
-  - code: "PACKLINE-1"
-    protocols: [P-02, P-05]
-  - code: "PRESS-1"
-    protocols: [P-02, P-05]
-  - code: "PV-INV"
-    protocols: [P-07]
-  - code: "Q1"
-    protocols: [P-05]
-  - code: "Q2"
-    protocols: [P-05]
-  - code: "QF-1"
-    protocols: [P-05]
-  - code: "QF-2"
-    protocols: [P-05]
-  - code: "QF-3"
-    protocols: [P-05]
-  - code: "QF-4"
-    protocols: [P-05]
-  - code: "QF-C1"
-    protocols: [P-05]
-  - code: "QF-C2"
-    protocols: [P-05]
-  - code: "RV-01"
-    protocols: [P-08]
-  - code: "RV-02"
-    protocols: [P-08]
-  - code: "RV-03"
-    protocols: [P-08]
-  - code: "RV-04"
-    protocols: [P-08]
-  - code: "RV-05"
-    protocols: [P-08]
-  - code: "RV-06"
-    protocols: [P-08]
-  - code: "RV-07"
-    protocols: [P-08]
-  - code: "RV-08"
-    protocols: [P-08]
-  - code: "RV-09"
-    protocols: [P-08]
-  - code: "RV-10"
-    protocols: [P-08]
-  - code: "RV-11"
-    protocols: [P-08]
-  - code: "RV-12"
-    protocols: [P-08]
-  - code: "RV-13"
-    protocols: [P-08]
-  - code: "RV-14"
-    protocols: [P-08]
-  - code: "RV-15"
-    protocols: [P-08]
-  - code: "RV-16"
-    protocols: [P-08]
-  - code: "RV-17"
-    protocols: [P-08]
-  - code: "RV-18"
-    protocols: [P-08]
-  - code: "RV-19"
-    protocols: [P-08]
-  - code: "RV-20"
-    protocols: [P-08]
-  - code: "RV-21"
-    protocols: [P-08]
-  - code: "RV-22"
-    protocols: [P-08]
-  - code: "RV-23"
-    protocols: [P-08]
-  - code: "RV-24"
-    protocols: [P-08]
-  - code: "RV-25"
-    protocols: [P-08]
-  - code: "RV-ALL"
-    protocols: [P-05]
-  - code: "SAND-1"
-    protocols: [P-02, P-05]
-  - code: "SAW-1"
-    protocols: [P-01, P-05]
-  - code: "SAW-2"
-    protocols: [P-01, P-05]
-  - code: "SAW-3"
-    protocols: [P-01, P-05]
-  - code: "SLIDE-1"
-    protocols: [P-02, P-05]
-  - code: "SMOKE-CTRL"
-    protocols: [P-09]
-  - code: "SORT-1"
-    protocols: [P-01, P-05]
-  - code: "SPARK-1"
-    protocols: [P-09]
-  - code: "SPRAY-1"
-    protocols: [P-02, P-05]
-  - code: "SPRINKLERS"
-    protocols: [P-07]
-  - code: "T1"
-    protocols: [P-05, P-07]
-  - code: "T2"
-    protocols: [P-05, P-07]
-  - code: "TRUCK-SCALE"
-    protocols: [P-11]
-  - code: "TUGGER-1"
-    protocols: [P-06]
-  - code: "TURNSTILES"
-    protocols: [P-10]
-  - code: "UV-1"
-    protocols: [P-02, P-05]
-  - code: "VSAW-1"
-    protocols: [P-02, P-05]
-  - code: "WATER"
-    protocols: [P-07]
+- code: SAW-1
+  name: Розкрій 1
+  role: beam_saw
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 11
+  driver: machine
+  params:
+    zone: Z-CUT
+    per_unit: 2.2
+    p_inst: 24
+    address: ns=2;s=SAW-1
+- code: SAW-2
+  name: Розкрій 2
+  role: beam_saw
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 12
+  driver: machine
+  params:
+    zone: Z-CUT
+    per_unit: 2.2
+    p_inst: 24
+    address: ns=2;s=SAW-2
+- code: SAW-3
+  name: Пакетний розкрій
+  role: beam_saw_book
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 13
+  driver: machine
+  params:
+    zone: Z-CUT
+    per_unit: 0.9
+    p_inst: 45
+    address: ns=2;s=SAW-3
+- code: SLIDE-1
+  name: Форматно-розкрійний
+  role: sliding_table_saw
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 14
+  driver: io_machine
+  params:
+    zone: Z-CUT
+    per_unit: 2.2
+    p_inst: 7.5
+    unit: 80
+    di_run: 0
+    di_fault: 1
+    counter: 0
+- code: VSAW-1
+  name: Вертикальна пила
+  role: vertical_panel_saw
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 15
+  driver: io_machine
+  params:
+    zone: Z-CUT
+    per_unit: 2.2
+    p_inst: 7.3
+    unit: 80
+    di_run: 2
+    di_fault: 3
+    counter: 4
+- code: NEST-1
+  name: Нестинг ЧПК
+  role: nesting_cnc
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 16
+  driver: machine
+  params:
+    zone: Z-CUT
+    per_unit: 1.5
+    p_inst: 39
+    address: ns=2;s=NEST-1
+- code: GANTRY-1
+  name: Портальний склад плит
+  role: board_storage
+  protocols:
+  - P-05
+  - P-03
+  unit_id: 46
+  driver: gantry
+  params:
+    per_unit: 2.2
+    address: http://iot-sim:8082/api/v1
+    aisles: 9
+    stacks:
+    - id: PLT-01B
+      row: 1
+      col: 2
+      product: DSP16-WNG
+      lot: DSP16-WNG-2610-114
+      qty: 45
+      max: 60
+      reserved: 22
+    - id: PLT-01C
+      row: 1
+      col: 3
+      product: HDF3-WHT
+      lot: HDF3-WHT-2611-128
+      qty: 25
+      max: 60
+      reserved: 25
+    - id: PLT-02A
+      row: 2
+      col: 1
+      product: MDF18-RAW
+      lot: MDF18-RAW-2610-101
+      qty: 25
+      max: 60
+      reserved: 20
+    - id: PLT-02B
+      row: 2
+      col: 2
+      product: DSP16-WHT
+      lot: DSP16-WHT-2611-115
+      qty: 60
+      max: 60
+      reserved: 22
+    - id: PLT-02C
+      row: 2
+      col: 3
+      product: DSP18-CON
+      lot: DSP18-CON-2612-129
+      qty: 10
+      max: 60
+      reserved: 10
+    - id: PLT-03A
+      row: 3
+      col: 1
+      product: DSP16-WNG
+      lot: DSP16-WNG-2611-102
+      qty: 40
+      max: 60
+      reserved: 0
+    - id: PLT-03B
+      row: 3
+      col: 2
+      product: HDF3-WHT
+      lot: HDF3-WHT-2612-116
+      qty: 20
+      max: 60
+      reserved: 12
+    - id: PLT-03C
+      row: 3
+      col: 3
+      product: DSP16-ANT
+      lot: DSP16-ANT-2613-130
+      qty: 55
+      max: 60
+      reserved: 14
+    - id: PLT-04A
+      row: 4
+      col: 1
+      product: DSP16-WHT
+      lot: DSP16-WHT-2612-103
+      qty: 55
+      max: 60
+      reserved: 0
+    - id: PLT-04C
+      row: 4
+      col: 3
+      product: DSP16-SON
+      lot: DSP16-SON-2609-131
+      qty: 15
+      max: 60
+      reserved: 15
+    - id: PLT-05A
+      row: 5
+      col: 1
+      product: HDF3-WHT
+      lot: HDF3-WHT-2613-104
+      qty: 15
+      max: 60
+      reserved: 0
+    - id: PLT-05B
+      row: 5
+      col: 2
+      product: DSP16-ANT
+      lot: DSP16-ANT-2609-118
+      qty: 50
+      max: 60
+      reserved: 0
+    - id: PLT-05C
+      row: 5
+      col: 3
+      product: MDF18-RAW
+      lot: MDF18-RAW-2610-132
+      qty: 30
+      max: 60
+      reserved: 0
+    - id: PLT-06A
+      row: 6
+      col: 1
+      product: DSP18-CON
+      lot: DSP18-CON-2609-105
+      qty: 10
+      max: 60
+      reserved: 7
+    - id: PLT-06B
+      row: 6
+      col: 2
+      product: DSP16-SON
+      lot: DSP16-SON-2610-119
+      qty: 10
+      max: 60
+      reserved: 10
+    - id: PLT-06C
+      row: 6
+      col: 3
+      product: DSP16-WNG
+      lot: DSP16-WNG-2611-133
+      qty: 45
+      max: 60
+      reserved: 0
+    - id: PLT-07A
+      row: 7
+      col: 1
+      product: DSP16-ANT
+      lot: DSP16-ANT-2610-106
+      qty: 45
+      max: 60
+      reserved: 0
+    - id: PLT-07B
+      row: 7
+      col: 2
+      product: MDF18-RAW
+      lot: MDF18-RAW-2611-120
+      qty: 25
+      max: 60
+      reserved: 0
+    - id: PLT-08B
+      row: 8
+      col: 2
+      product: MDF18-RAW
+      lot: MDF18-RAW-2612-121
+      qty: 40
+      max: 60
+      reserved: 0
+    - id: PLT-08C
+      row: 8
+      col: 3
+      product: MDF18-RAW
+      lot: MDF18-RAW-2613-135
+      qty: 20
+      max: 60
+      reserved: 0
+    - id: PLT-09A
+      row: 9
+      col: 1
+      product: MDF18-RAW
+      lot: MDF18-RAW-2612-108
+      qty: 20
+      max: 60
+      reserved: 0
+    - id: PLT-09B
+      row: 9
+      col: 2
+      product: MDF18-RAW
+      lot: MDF18-RAW-2613-122
+      qty: 55
+      max: 60
+      reserved: 0
+    - id: PLT-09C
+      row: 9
+      col: 3
+      product: MDF18-RAW
+      lot: MDF18-RAW-2609-136
+      qty: 35
+      max: 60
+      reserved: 0
+- code: EDGE-1
+  name: Крайкооблицювання A
+  role: edgebander_laser
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 17
+  driver: machine
+  params:
+    zone: Z-EB
+    per_unit: 1.6
+    p_inst: 67.5
+    address: ns=2;s=EDGE-1
+- code: EDGE-2
+  name: Крайкооблицювання B
+  role: edgebander
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 18
+  driver: machine
+  params:
+    zone: Z-EB
+    per_unit: 1.6
+    p_inst: 28
+    address: ns=2;s=EDGE-2
+- code: EDGE-3
+  name: Крайкооблицювання C
+  role: edgebander
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 19
+  driver: machine
+  params:
+    zone: Z-EB
+    per_unit: 1.6
+    p_inst: 28
+    address: ns=2;s=EDGE-3
+- code: CNC-1
+  name: Присадка ЧПК A
+  role: ptp_cnc
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 21
+  driver: machine
+  params:
+    zone: Z-CNC
+    per_unit: 2.0
+    p_inst: 22
+    address: ns=2;s=CNC-1
+- code: CNC-2
+  name: Присадка ЧПК B
+  role: ptp_cnc
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 22
+  driver: machine
+  params:
+    zone: Z-CNC
+    per_unit: 2.0
+    p_inst: 22
+    address: ns=2;s=CNC-2
+- code: CNC-3
+  name: Присадка ЧПК D1
+  role: ptp_cnc
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 20
+  driver: machine
+  params:
+    zone: Z-EB
+    per_unit: 2.0
+    p_inst: 22
+    address: ns=2;s=CNC-3
+- code: CNC-4
+  name: Присадка ЧПК D2
+  role: ptp_cnc
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 24
+  driver: machine
+  params:
+    zone: Z-CNC
+    per_unit: 2.0
+    p_inst: 22
+    address: ns=2;s=CNC-4
+- code: BORE-1
+  name: Прохідна присадка C
+  role: throughfeed_drilling
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 23
+  driver: machine
+  params:
+    zone: Z-CNC
+    per_unit: 0.8
+    p_inst: 19.5
+    address: ns=2;s=BORE-1
+- code: DOWEL-1
+  name: Шкантування C
+  role: dowel_inserting
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 25
+  driver: machine
+  params:
+    zone: Z-CNC
+    per_unit: 1.0
+    p_inst: 11
+    address: ns=2;s=DOWEL-1
+- code: HINGE-1
+  name: Встановлення завіс
+  role: hinge_insertion
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 30
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 1.1
+    unit: 81
+    di_run: 8
+    di_fault: 9
+    counter: 16
+- code: SORT-1
+  name: Сортувальний робот
+  role: sorting_cell
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 26
+  driver: machine
+  params:
+    zone: Z-SORT
+    per_unit: 0.5
+    p_inst: 20
+    address: ns=2;s=SORT-1
+- code: SAND-1
+  name: Шліфування фасадів
+  role: wide_belt_sander
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 27
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 30
+    unit: 80
+    di_run: 4
+    di_fault: 5
+    counter: 8
+- code: PRESS-1
+  name: Мембранно-вакуумний прес
+  role: membrane_press
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 32
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 28
+    unit: 80
+    di_run: 6
+    di_fault: 7
+    counter: 12
+- code: GLUE-1
+  name: Кабіна нанесення клею
+  role: glue_spray_booth
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 31
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 2.2
+    unit: 80
+    di_run: 8
+    di_fault: 9
+    counter: 16
+- code: SPRAY-1
+  name: Фарбувальна камера
+  role: manual_spray_booth
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 33
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 5.1
+    unit: 81
+    di_run: 0
+    di_fault: 1
+    counter: 0
+- code: AUTOSPRAY-1
+  name: Автомат фарбування
+  role: automatic_spraying
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 28
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 18
+    unit: 81
+    di_run: 2
+    di_fault: 3
+    counter: 4
+- code: DRY-1
+  name: Сушильна камера
+  role: drying
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 34
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 17
+    unit: 81
+    di_run: 4
+    di_fault: 5
+    counter: 8
+- code: UV-1
+  name: УФ-лакування
+  role: uv_line
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 29
+  driver: io_machine
+  params:
+    zone: Z-FAC
+    per_unit: 1.5
+    p_inst: 58.9
+    unit: 81
+    di_run: 6
+    di_fault: 7
+    counter: 12
+- code: ASMLINE-1
+  name: Лінія збирання корпусів
+  role: case_clamp_auto
+  protocols:
+  - P-05
+  - P-01
+  unit_id: 35
+  driver: machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 8
+    address: ns=2;s=ASMLINE-1
+- code: BOX-1
+  name: Розкрій гофрокартону
+  role: box_machine
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 44
+  driver: io_machine
+  params:
+    zone: Z-PACK
+    per_unit: 3.0
+    p_inst: 10
+    unit: 82
+    di_run: 0
+    di_fault: 1
+    counter: 0
+- code: PACK-1
+  name: Пакування 1
+  role: stretch_wrapper
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 42
+  driver: io_machine
+  params:
+    zone: Z-PACK
+    per_unit: 3.0
+    p_inst: 1.9
+    unit: 82
+    di_run: 2
+    di_fault: 3
+    counter: 4
+- code: PACK-2
+  name: Пакування 2
+  role: stretch_wrapper
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 43
+  driver: io_machine
+  params:
+    zone: Z-PACK
+    per_unit: 3.0
+    p_inst: 1.9
+    unit: 82
+    di_run: 4
+    di_fault: 5
+    counter: 8
+- code: PACKLINE-1
+  name: Термоусадка та обв'язка
+  role: shrink_line
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 45
+  driver: io_machine
+  params:
+    zone: Z-PACK
+    per_unit: 3.0
+    p_inst: 19.9
+    unit: 82
+    di_run: 6
+    di_fault: 7
+    counter: 12
+- code: COMPRESSOR
+  name: Компресорна (2 × GA 37 VSD+, осушувач)
+  role: compressor
+  protocols:
+  - P-05
+  - P-07
+  unit_id: 47
+- code: DUST-1
+  name: Вентилятори аспірації
+  role: dust_extraction
+  protocols:
+  - P-05
+  - P-07
+  unit_id: 48
+- code: BOILER
+  name: Котельня (2 котли), шнеки, брикетування
+  role: biomass_boiler
+  protocols:
+  - P-05
+  - P-08
+  unit_id: 49
+- code: TUGGER-1
+  name: Електротягач
+  role: tugger
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-HW
+    - Z-PRE
+    - Z-ASM
+    home: Z-CHG
+    address: f3d/mobile/TUGGER-1
+- code: BOARD-RACKS
+  name: 'PR 600 (фронтальний палетний стелаж), конфігурація під стоси ДСП/МДФ: подвійна рама 2×850 мм + розпірки D 300 F (глибина
+    2000 мм), балки INP 120 TRV1-330-12-I (просвіт 3300 мм), стійки P 95 (90 мм)'
+  role: board_rack
+- code: FL-2
+  name: Навантажувач приймання
+  role: board_forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-RCV-1
+    - Z-SHEETS
+    home: Z-CHG
+    address: f3d/mobile/FL-2
+- code: FL-6
+  name: X50/600 (серія 1254), електричний фронтальний навантажувач 4,99 т, Li-ion 90 В, стандартна щогла h3 = 4400 мм, вила
+    2000 мм з позиціонером
+  role: board_forklift
+  driver: passive
+- code: ASM-1
+  name: Збирання 1
+  role: case_clamp_manual
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 36
+  driver: io_machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 1.5
+    unit: 82
+    di_run: 8
+    di_fault: 9
+    counter: 16
+- code: ASM-2
+  name: Збирання 2
+  role: case_clamp_manual
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 37
+  driver: io_machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 1.5
+    unit: 83
+    di_run: 0
+    di_fault: 1
+    counter: 0
+- code: ASM-3
+  name: Збирання 3
+  role: case_clamp_manual
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 38
+  driver: io_machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 1.5
+    unit: 83
+    di_run: 2
+    di_fault: 3
+    counter: 4
+- code: ASM-4
+  name: Збирання 4
+  role: case_clamp_manual
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 39
+  driver: io_machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 1.5
+    unit: 83
+    di_run: 4
+    di_fault: 5
+    counter: 8
+- code: ASM-5
+  name: Збирання 5
+  role: case_clamp_manual
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 40
+  driver: io_machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 1.5
+    unit: 83
+    di_run: 6
+    di_fault: 7
+    counter: 12
+- code: ASM-6
+  name: Збирання 6
+  role: case_clamp_manual
+  protocols:
+  - P-05
+  - P-02
+  unit_id: 41
+  driver: io_machine
+  params:
+    zone: Z-ASM
+    per_unit: 6.0
+    p_inst: 1.5
+    unit: 83
+    di_run: 8
+    di_fault: 9
+    counter: 16
+- code: FL-1
+  name: Навантажувач ГП 1
+  role: forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-POST
+    - Z-FG
+    home: Z-CHG
+    address: f3d/mobile/FL-1
+- code: FL-3
+  name: Навантажувач відвантаження
+  role: forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-FG
+    - Z-OUT-2
+    home: Z-CHG
+    address: f3d/mobile/FL-3
+- code: FL-4
+  name: Навантажувач ГП 2
+  role: forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-FG
+    - Z-OUT-5
+    home: Z-CHG
+    address: f3d/mobile/FL-4
+- code: FL-5
+  name: Навантажувач пакування
+  role: forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-PACK
+    - Z-POST
+    home: Z-CHG
+    address: f3d/mobile/FL-5
+- code: FL-C1
+  name: Навантажувач (резерв)
+  role: forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-CHG
+    home: Z-CHG
+    address: f3d/mobile/FL-C1
+- code: FL-C2
+  name: Навантажувач (резерв)
+  role: forklift
+  protocols:
+  - P-06
+  driver: mobile
+  params:
+    route:
+    - Z-CHG
+    home: Z-CHG
+    address: f3d/mobile/FL-C2
+- code: RM6-1
+  name: 'RM6 NE-QIQI 24 кВ (моноблок РУ 10 кВ: 2 лінійні вимикачі навантаження I + 2 трансформаторні запобіжники-вимикачі
+    Q)'
+  role: substation
+- code: T1
+  name: Trihal 1000 кВА 10/0,4 кВ, Dyn11, у кожусі IP31 (2 шт.)
+  role: transformer
+  protocols:
+  - P-05
+  - P-07
+  unit_id: 1
+- code: T2
+  name: Trihal 1000 кВА 10/0,4 кВ, Dyn11, у кожусі IP31 (2 шт.)
+  role: transformer
+  protocols:
+  - P-05
+  - P-07
+  unit_id: 2
+- code: SWB-1
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+- code: Q1
+  name: MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X
+  role: acb
+  protocols:
+  - P-05
+  unit_id: 1
+- code: Q2
+  name: MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X
+  role: acb
+  protocols:
+  - P-05
+  unit_id: 2
+- code: QS
+  name: MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X
+  role: acb
+- code: PFC-1
+  name: PowerLogic VarSet 350 квар, з антирезонансними дроселями 3,8 (190 Гц), верхній ввід, з автоматом (VLVAF5P03517AK)
+    — по одній на секцію шин
+  role: pfc
+- code: PFC-2
+  name: PowerLogic VarSet 350 квар, з антирезонансними дроселями 3,8 (190 Гц), верхній ввід, з автоматом (VLVAF5P03517AK)
+    — по одній на секцію шин
+  role: pfc
+- code: EMS-1
+  name: PowerLogic PM5560 (METSEPM5560)
+  role: power_meter
+- code: GENSET
+  name: D700 (шумозахисне виконання M230)
+  role: genset
+  protocols:
+  - P-12
+- code: BW-1
+  name: Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)
+  role: busbar_dist
+- code: QF-1
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+  protocols:
+  - P-05
+  unit_id: 3
+- code: BW-2
+  name: Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)
+  role: busbar_dist
+- code: QF-2
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+  protocols:
+  - P-05
+  unit_id: 4
+- code: BW-3
+  name: Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)
+  role: busbar_dist
+- code: QF-3
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+  protocols:
+  - P-05
+  unit_id: 5
+- code: BW-4
+  name: Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)
+  role: busbar_dist
+- code: QF-4
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+  protocols:
+  - P-05
+  unit_id: 6
+- code: QF-C1
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+  protocols:
+  - P-05
+  unit_id: 7
+- code: QF-C2
+  name: PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А
+  role: main_switchboard
+  protocols:
+  - P-05
+  unit_id: 8
+- code: LT-RCV-1
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-RCV-2
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-RCV-3
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-RCV-4
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-RCV-5
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-RCV-6
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-RCV-7
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-SHEETS
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-HW
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)
+  role: highbay_rack
+  protocols:
+  - P-08
+- code: LT-EDGE
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)
+  role: highbay_rack
+  protocols:
+  - P-08
+- code: LT-PKS
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-CUT
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-EB
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-CNC
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-SORT
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-FAC
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-ASM
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-PRE
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-MAINT
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-PACK
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-POST
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-CMP
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-CHG
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-FG
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)
+  role: highbay_rack
+  protocols:
+  - P-08
+- code: LT-ELEC
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-1
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-2
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-3
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-4
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-5
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-6
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LT-OUT-7
+  name: CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)
+  role: highbay
+  protocols:
+  - P-08
+- code: LP-1
+  name: Щит освітлення ЩО-1 · склади сировини, приймання
+  role: lighting_control
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 52
+- code: LP-2
+  name: Щит освітлення ЩО-2 · лінії й дільниця фасадів
+  role: lighting_control
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 53
+- code: LP-3
+  name: Щит освітлення ЩО-3 · збирання, пакування, склад ГП, відвантаження
+  role: lighting_control
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 54
+- code: EMERGENCY
+  name: Spazio High Bay LUE4700LX (біла RAL9003)
+  role: emergency
+- code: RV-01
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-02
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-03
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-04
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-05
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-06
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-07
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-08
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-09
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-10
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-11
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-12
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-13
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-14
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-15
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-16
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-17
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-18
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-19
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-20
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-21
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-22
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-23
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-24
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: RV-25
+  name: RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)
+  role: roofvent
+  protocols:
+  - P-08
+- code: AHU-1
+  name: Припливна установка дільниці фасадів
+  role: make_up_ahu
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 56
+- code: EF-ELEC
+  name: Витяжні вентилятори електрощитової
+  role: wall_fan
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 57
+- code: EF-CMP
+  name: Витяжний вентилятор компресорної
+  role: wall_fan
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 58
+- code: EF-CHG
+  name: Витяжка зарядної станції (Ex)
+  role: ex_fan
+  protocols:
+  - P-08
+  - P-05
+  unit_id: 59
+- code: FACP-1
+  name: Cerberus PRO FC726-ZA (модульний, корпус Large)
+  role: facp
+  protocols:
+  - P-09
+  driver: facp
+  instance: '200'
+  params:
+    detectors: 222
+    mcp:
+    - 1.MCP.01
+    - 4.MCP.01
+    - 1.MCP.02
+    - 4.MCP.02
+    - 1.MCP.03
+    - 4.MCP.03
+    - 1.MCP.04
+    - 4.MCP.04
+    - 1.MCP.05
+    - 4.MCP.05
+    - 1.MCP.06
+    - 4.MCP.06
+    - 1.MCP.07
+    - 4.MCP.07
+    - 2.MCP.01
+    - 2.MCP.02
+    - 2.MCP.03
+    - 3.MCP.01
+    - 4.MCP.08
+    - 3.MCP.02
+    - 2.MCP.04
+    - 2.MCP.05
+    - 2.MCP.06
+    - 3.MCP.03
+    - 3.MCP.04
+    - 3.MCP.05
+    - 3.MCP.06
+    - 1.MCP.08
+    - 2.MCP.07
+    - 4.MCP.09
+    - 1.MCP.09
+    - 2.MCP.08
+    - 1.MCP.10
+    - 2.MCP.09
+    - 2.MCP.10
+    - 3.MCP.07
+    sounders:
+    - 2.SND.01
+    - 2.SND.02
+    - 2.SND.03
+    - 2.SND.04
+    - 3.SND.01
+    - 3.SND.02
+    - 3.SND.03
+    - 3.SND.04
+    - 1.SND.01
+    - 1.SND.02
+    - 1.SND.03
+    - 1.SND.04
+    - 2.SND.05
+    - 2.SND.06
+    - 2.SND.07
+    - 2.SND.08
+    - 2.SND.09
+    - 3.SND.05
+    - 3.SND.06
+    - 3.SND.07
+    - 4.SND.01
+    - 4.SND.02
+    - 4.SND.03
+    - 1.SND.05
+    - 1.SND.06
+    - 1.SND.07
+    - 1.SND.08
+    - 1.SND.09
+    - 1.SND.10
+    - 1.SND.11
+    - 4.SND.04
+    - 4.SND.05
+    - 4.SND.06
+    - 4.SND.07
+    - 4.SND.08
+    - 4.SND.09
+    - 4.SND.10
+    - 2.SND.10
+    - 2.SND.11
+    - 2.SND.12
+    - 2.SND.13
+    flame:
+    - 2.FLM.01
+    - 2.FLM.02
+    - 2.FLM.03
+    loops:
+    - 1
+    - 2
+    - 3
+    - 4
+- code: FA-MCP
+  name: Cerberus PRO FDM225-RP (з пластиковою вставкою, що відновлюється)
+  role: mcp
+- code: FA-SND
+  name: Cerberus PRO FDS226-RW (сирена-маяк настінна, червоний корпус, біле світло)
+  role: sounder_beacon
+- code: FA-FLAME
+  name: SharpEye 40/40C-I (Multi-Spectrum QuadSense, IR3)
+  role: flame_detector
+- code: SPARK-1
+  name: 'GreCon BS 7: пульт Mission Control + іскрові сповіщувачі FM 1/8 + гасильний модуль HUNTER IEM'
+  role: spark_detection
+  protocols:
+  - P-09
+  unit_id: 85
+  driver: spark
+  params:
+    di_spark: 0
+    di_ext: 1
+    di_fault: 2
+- code: FA-SHEETS
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:8
+  params:
+    lsz: 8
+    detectors:
+    - 1.SHEETS.01
+    - 1.SHEETS.02
+    - 1.SHEETS.03
+    - 1.SHEETS.04
+    - 1.SHEETS.05
+    - 1.SHEETS.06
+    - 1.SHEETS.07
+    - 1.SHEETS.08
+    - 1.SHEETS.09
+    - 1.SHEETS.10
+    - 1.SHEETS.11
+    - 1.SHEETS.12
+    - 1.SHEETS.13
+    - 1.SHEETS.14
+    - 1.SHEETS.15
+    - 1.SHEETS.16
+    - 1.SHEETS.17
+    - 1.SHEETS.18
+    - 1.SHEETS.19
+    - 1.SHEETS.20
+    - 1.SHEETS.21
+    - 1.SHEETS.22
+    - 1.SHEETS.23
+    - 1.SHEETS.24
+- code: FA-HW
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:9
+  params:
+    lsz: 9
+    detectors:
+    - 1.HW.01
+    - 1.HW.02
+    - 1.HW.03
+    - 1.HW.04
+    - 1.HW.05
+    - 1.HW.06
+- code: FA-EDGE
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:10
+  params:
+    lsz: 10
+    detectors:
+    - 1.EDGE.01
+    - 1.EDGE.02
+    - 1.EDGE.03
+- code: FA-PKS
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:11
+  params:
+    lsz: 11
+    detectors:
+    - 1.PKS.01
+    - 1.PKS.02
+    - 1.PKS.03
+- code: FA-CUT
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:12
+  params:
+    lsz: 12
+    detectors:
+    - 2.CUT.01
+    - 2.CUT.02
+    - 2.CUT.03
+    - 2.CUT.04
+    - 2.CUT.05
+    - 2.CUT.06
+    - 2.CUT.07
+    - 2.CUT.08
+    - 2.CUT.09
+    - 2.CUT.10
+    - 2.CUT.11
+    - 2.CUT.12
+- code: FA-EB
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:13
+  params:
+    lsz: 13
+    detectors:
+    - 2.EB.01
+    - 2.EB.02
+    - 2.EB.03
+    - 2.EB.04
+    - 2.EB.05
+    - 2.EB.06
+    - 2.EB.07
+    - 2.EB.08
+    - 2.EB.09
+    - 2.EB.10
+    - 2.EB.11
+    - 2.EB.12
+- code: FA-CNC
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:14
+  params:
+    lsz: 14
+    detectors:
+    - 2.CNC.01
+    - 2.CNC.02
+    - 2.CNC.03
+    - 2.CNC.04
+    - 2.CNC.05
+    - 2.CNC.06
+    - 2.CNC.07
+    - 2.CNC.08
+    - 2.CNC.09
+    - 2.CNC.10
+    - 2.CNC.11
+    - 2.CNC.12
+- code: FA-SORT
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:15
+  params:
+    lsz: 15
+    detectors:
+    - 2.SORT.01
+    - 2.SORT.02
+    - 2.SORT.03
+    - 2.SORT.04
+    - 2.SORT.05
+    - 2.SORT.06
+    - 2.SORT.07
+    - 2.SORT.08
+    - 2.SORT.09
+    - 2.SORT.10
+    - 2.SORT.11
+    - 2.SORT.12
+- code: FA-FAC
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:16
+  params:
+    lsz: 16
+    detectors:
+    - 2.FAC.01
+    - 2.FAC.02
+    - 2.FAC.03
+    - 2.FAC.04
+    - 2.FAC.05
+    - 2.FAC.06
+    - 2.FAC.07
+    - 2.FAC.08
+    - 2.FAC.09
+    - 2.FAC.10
+    - 2.FAC.11
+    - 2.FAC.12
+    - 2.FAC.13
+    - 2.FAC.14
+    - 2.FAC.15
+    - 2.FAC.16
+    - 2.FAC.17
+    - 2.FAC.18
+    dust_detector: 2.FAC.07
+    dust_initial: 82
+- code: FA-ASM
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:17
+  params:
+    lsz: 17
+    detectors:
+    - 3.ASM.01
+    - 3.ASM.02
+    - 3.ASM.03
+    - 3.ASM.04
+    - 3.ASM.05
+    - 3.ASM.06
+    - 3.ASM.07
+    - 3.ASM.08
+- code: FA-PRE
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:18
+  params:
+    lsz: 18
+    detectors:
+    - 3.PRE.01
+    - 3.PRE.02
+    - 3.PRE.03
+    - 3.PRE.04
+- code: FA-MAINT
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:19
+  params:
+    lsz: 19
+    detectors:
+    - 3.MAINT.01
+    - 3.MAINT.02
+    - 3.MAINT.03
+    - 3.MAINT.04
+- code: FA-PACK
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:20
+  params:
+    lsz: 20
+    detectors:
+    - 3.PACK.01
+    - 3.PACK.02
+    - 3.PACK.03
+    - 3.PACK.04
+    - 3.PACK.05
+    - 3.PACK.06
+    - 3.PACK.07
+    - 3.PACK.08
+- code: FA-POST
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:21
+  params:
+    lsz: 21
+    detectors:
+    - 3.POST.01
+    - 3.POST.02
+    - 3.POST.03
+    - 3.POST.04
+    - 3.POST.05
+    - 3.POST.06
+- code: FA-CMP
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:22
+  params:
+    lsz: 22
+    detectors:
+    - 3.CMP.01
+    - 3.CMP.02
+- code: FA-CHG
+  name: Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)
+  role: multi_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:23
+  params:
+    lsz: 23
+    detectors:
+    - 3.CHG.01
+    - 3.CHG.02
+- code: FA-FG
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:24
+  params:
+    lsz: 24
+    detectors:
+    - 4.FG.01
+    - 4.FG.02
+    - 4.FG.03
+    - 4.FG.04
+    - 4.FG.05
+    - 4.FG.06
+    - 4.FG.07
+    - 4.FG.08
+    - 4.FG.09
+    - 4.FG.10
+    - 4.FG.11
+    - 4.FG.12
+    - 4.FG.13
+    - 4.FG.14
+- code: FA-ELEC
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:25
+  params:
+    lsz: 25
+    detectors:
+    - 4.ELEC.01
+    - 4.ELEC.02
+    - 4.ELEC.03
+    - 4.ELEC.04
+- code: FA-RCV-1
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:1
+  params:
+    lsz: 1
+    detectors:
+    - 1.RCV-1.01
+    - 1.RCV-1.02
+    - 1.RCV-1.03
+    - 1.RCV-1.04
+- code: FA-RCV-2
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:2
+  params:
+    lsz: 2
+    detectors:
+    - 1.RCV-2.01
+    - 1.RCV-2.02
+    - 1.RCV-2.03
+    - 1.RCV-2.04
+- code: FA-RCV-3
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:3
+  params:
+    lsz: 3
+    detectors:
+    - 1.RCV-3.01
+    - 1.RCV-3.02
+    - 1.RCV-3.03
+    - 1.RCV-3.04
+- code: FA-RCV-4
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:4
+  params:
+    lsz: 4
+    detectors:
+    - 1.RCV-4.01
+    - 1.RCV-4.02
+    - 1.RCV-4.03
+    - 1.RCV-4.04
+- code: FA-RCV-5
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:5
+  params:
+    lsz: 5
+    detectors:
+    - 1.RCV-5.01
+    - 1.RCV-5.02
+    - 1.RCV-5.03
+    - 1.RCV-5.04
+- code: FA-RCV-6
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:6
+  params:
+    lsz: 6
+    detectors:
+    - 1.RCV-6.01
+    - 1.RCV-6.02
+    - 1.RCV-6.03
+    - 1.RCV-6.04
+- code: FA-RCV-7
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:7
+  params:
+    lsz: 7
+    detectors:
+    - 1.RCV-7.01
+    - 1.RCV-7.02
+    - 1.RCV-7.03
+    - 1.RCV-7.04
+- code: FA-OUT-1
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:26
+  params:
+    lsz: 26
+    detectors:
+    - 4.OUT-1.01
+    - 4.OUT-1.02
+    - 4.OUT-1.03
+    - 4.OUT-1.04
+- code: FA-OUT-2
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:27
+  params:
+    lsz: 27
+    detectors:
+    - 4.OUT-2.01
+    - 4.OUT-2.02
+    - 4.OUT-2.03
+    - 4.OUT-2.04
+- code: FA-OUT-3
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:28
+  params:
+    lsz: 28
+    detectors:
+    - 4.OUT-3.01
+    - 4.OUT-3.02
+    - 4.OUT-3.03
+    - 4.OUT-3.04
+- code: FA-OUT-4
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:29
+  params:
+    lsz: 29
+    detectors:
+    - 4.OUT-4.01
+    - 4.OUT-4.02
+    - 4.OUT-4.03
+    - 4.OUT-4.04
+- code: FA-OUT-5
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:30
+  params:
+    lsz: 30
+    detectors:
+    - 4.OUT-5.01
+    - 4.OUT-5.02
+    - 4.OUT-5.03
+    - 4.OUT-5.04
+- code: FA-OUT-6
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:31
+  params:
+    lsz: 31
+    detectors:
+    - 4.OUT-6.01
+    - 4.OUT-6.02
+    - 4.OUT-6.03
+    - 4.OUT-6.04
+- code: FA-OUT-7
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:32
+  params:
+    lsz: 32
+    detectors:
+    - 4.OUT-7.01
+    - 4.OUT-7.02
+    - 4.OUT-7.03
+    - 4.OUT-7.04
+- code: FA-OFFICE
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:35
+  params:
+    lsz: 35
+    detectors:
+    - 3.OFFICE.01
+    - 3.OFFICE.02
+    - 3.OFFICE.03
+    - 3.OFFICE.04
+    - 3.OFFICE.05
+    - 3.OFFICE.06
+    - 3.OFFICE.07
+    - 3.OFFICE.08
+- code: FA-SOC
+  name: Cerberus PRO OP720 (точковий оптичний димовий)
+  role: smoke_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:34
+  params:
+    lsz: 34
+    detectors:
+    - 3.SOC.01
+    - 3.SOC.02
+- code: FA-BOILER
+  name: Cerberus PRO HI720 (тепловий максимально-диференційний)
+  role: heat_detector
+  protocols:
+  - P-09
+  driver: facp_zone
+  instance: LSZ:33
+  params:
+    lsz: 33
+    detectors:
+    - 2.BOILER.01
+    - 2.BOILER.02
+- code: ATS-1
+  name: ATyS p 1600 A 4P (арт. 95734160), Advanced Integrated Logic
+  role: ats
+  protocols:
+  - P-07
+  unit_id: 71
+- code: BESS
+  name: LUNA2000-200KWH-2H1 (Smart String ESS) з PCS LUNA2000-100KTL-M1
+  role: bess
+  protocols:
+  - P-07
+  unit_id: 69
+- code: PV-ROOF
+  name: Hi-MO 6 Explorer LR5-72HTH-580M
+  role: pv_module
+  driver: passive
+- code: PV-INV
+  name: SUN2000-115KTL-M2
+  role: pv_inverter
+  protocols:
+  - P-07
+  unit_id: 61
+- code: CHP
+  name: Quanto D800 NG (природний газ, 400 В / 50 Гц; виконання Indoor Canopy / Outdoor Container)
+  role: chp
+  protocols:
+  - P-07
+  unit_id: 72
+- code: SMOKE-VENTS
+  name: Smoke Lift Glass Skylight F100 (F100G-S1-S, 1200×1200 мм, привод 24 В)
+  role: smoke_vent
+  driver: passive
+- code: SMOKE-CTRL
+  name: CPS-M1-080-1010-B (модульна панель керування СДТВ 24 В, 80 А)
+  role: smoke_control
+  protocols:
+  - P-09
+  unit_id: 85
+  driver: smoke
+  params:
+    di_open: 4
+    di_fault: 5
+    do_open: 0
+- code: EXITS
+  name: STU (сталеві багатофункціональні двері для зовнішніх стін) + штанга «антипаніка» Hörmann push bar EN 1125
+  role: exit_door
+- code: LPS
+  name: 'Система зовнішнього блискавкозахисту: стрижень 103 231 + дріт RD 8 AlMgSi 840 008 + роз''єм FIX 453 100'
+  role: lightning_air
+- code: WATER
+  name: MWN50-G NK (турбінний Вольтмана DN50, IP65, імпульсний вихід NK)
+  role: water_meter
+  protocols:
+  - P-07
+  unit_id: 84
+- code: ODOO-TABLETS
+  name: Galaxy Tab Active5 Pro 5G (SM-X356B)
+  role: shopfloor_tablet
+- code: ODOO-SCANNERS
+  name: TC22 (Wi-Fi 6E, SE4710 / SE55)
+  role: handheld_scanner
+- code: WIFI
+  name: Catalyst CW9166D1 (Wi-Fi 6E, спрямована антена)
+  role: wifi_ap
+- code: SERVER
+  name: NetShelter SX Gen 2 AR3100B2 (42U, 600 × 1070 мм) + Smart-UPS SRT 10 кВА SRT10KRMXLI
+  role: server_rack
+- code: TURNSTILES
+  name: SlimStile EV (трипод, одинарний)
+  role: turnstile
+  protocols:
+  - P-10
+  driver: access
+- code: ACCESS
+  name: BioEntry W3 (BEW3-APB)
+  role: access_reader
+  protocols:
+  - P-10
+  driver: access
+- code: CCTV
+  name: AXIS P1488-LE
+  role: cctv_camera
+- code: TRUCK-SCALE
+  name: АКСІС 60-18-К-Е
+  role: truck_scale
+  protocols:
+  - P-11
+  driver: yard
+  params:
+    address: iot-sim:4001
+- code: GATE-W
+  name: GARD LS6 (803BB-0490, GLS60AGS)
+  role: barrier
+  protocols:
+  - P-11
+  unit_id: 86
+  driver: yard
+  params:
+    di_open: 0
+    di_loop: 1
+    di_photo: 4
+    do_open: 0
+    do_close: 2
+    do_hold: 4
+- code: GATE-E
+  name: GARD LS6 (803BB-0490, GLS60AGS)
+  role: barrier
+  protocols:
+  - P-11
+  unit_id: 86
+  driver: yard
+  params:
+    di_open: 2
+    di_loop: 3
+    di_photo: 5
+    do_open: 1
+    do_close: 3
+    do_hold: 5
+- code: PRN-RCV
+  name: ZT411 (4", 203/300/600 dpi)
+  role: label_printer
+- code: PRN-PACK1
+  name: ZT411 (4", 203/300/600 dpi)
+  role: label_printer
+- code: PRN-PACK2
+  name: ZT411 (4", 203/300/600 dpi)
+  role: label_printer
+- code: PRN-OUT
+  name: ZT411 (4", 203/300/600 dpi)
+  role: label_printer
+- code: SCALE-OUT1
+  name: PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB
+  role: scale
+- code: SCALE-OUT2
+  name: PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB
+  role: scale
+- code: SCALE-RCV
+  name: PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB
+  role: scale
+- code: IOT-RCV
+  name: Odoo IoT Box (на базі Raspberry Pi 4)
+  role: iot_box
+- code: IOT-PACK
+  name: Odoo IoT Box (на базі Raspberry Pi 4)
+  role: iot_box
+- code: IOT-OUT
+  name: Odoo IoT Box (на базі Raspberry Pi 4)
+  role: iot_box
+- code: EYE-CHG
+  name: 8300-8309 (комбінований аварійний душ + фонтан для очей/обличчя AXION MSR)
+  role: eyewash
+- code: EYE-PAINT
+  name: 8300-8309 (комбінований аварійний душ + фонтан для очей/обличчя AXION MSR)
+  role: eyewash
+- code: CHARGING
+  name: Зарядна станція (3 зарядні пристрої)
+  role: equipment
+  protocols:
+  - P-05
+  unit_id: 50
+- code: SPRINKLERS
+  name: Спринклерна система
+  role: equipment
+  protocols:
+  - P-07
+  unit_id: 90
+- code: AIR-RING
+  name: Пневмомагістраль
+  role: equipment
+  protocols:
+  - P-07
+  unit_id: 90
+- code: ACR-IN
+  name: Зчитувач ACR-IN
+  driver: access
+  protocols:
+  - P-10
+  params:
+    biostar_device_id: 5390001
+    door: 1
+- code: ACR-ELEC
+  name: Зчитувач ACR-ELEC
+  driver: access
+  protocols:
+  - P-10
+  params:
+    biostar_device_id: 5390002
+    door: 2
+- code: ACR-CHG
+  name: Зчитувач ACR-CHG
+  driver: access
+  protocols:
+  - P-10
+  params:
+    biostar_device_id: 5390003
+    door: 3
+- code: ACR-PAINT
+  name: Зчитувач ACR-PAINT
+  driver: access
+  protocols:
+  - P-10
+  params:
+    biostar_device_id: 5390004
+    door: 4
+- code: ACR-SRV
+  name: Зчитувач ACR-SRV
+  driver: access
+  protocols:
+  - P-10
+  params:
+    biostar_device_id: 5390005
+    door: 5
+- code: TURN-1
+  name: Турнікет TURN-1
+  driver: access
+  protocols:
+  - P-10
+  params:
+    reader: ACR-IN
+- code: CAM-05
+  name: Камера LPR CAM-05
+  driver: yard
+  protocols:
+  - P-11
+  params:
+    gate: GATE-W
+    direction: in
+- code: CAM-06
+  name: Камера LPR CAM-06
+  driver: yard
+  protocols:
+  - P-11
+  params:
+    gate: GATE-E
+    direction: out
+- code: PV-INV-1
+  name: Інвертор PV-INV-1
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 61
+  params:
+    inverter: 1
+- code: PV-INV-2
+  name: Інвертор PV-INV-2
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 62
+  params:
+    inverter: 2
+- code: PV-INV-3
+  name: Інвертор PV-INV-3
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 63
+  params:
+    inverter: 3
+- code: PV-INV-4
+  name: Інвертор PV-INV-4
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 64
+  params:
+    inverter: 4
+- code: PV-INV-5
+  name: Інвертор PV-INV-5
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 65
+  params:
+    inverter: 5
+- code: PV-INV-6
+  name: Інвертор PV-INV-6
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 66
+  params:
+    inverter: 6
+- code: PV-INV-7
+  name: Інвертор PV-INV-7
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 67
+  params:
+    inverter: 7
+- code: PV-INV-8
+  name: Інвертор PV-INV-8
+  driver: passive
+  protocols:
+  - P-07
+  unit_id: 68
+  params:
+    inverter: 8
+- code: AHU-1-PM
+  name: PM5560 AHU-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: AHU-1
+  unit_id: 56
+- code: ASM-1-PM
+  name: PM5560 ASM-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASM-1
+  unit_id: 36
+- code: ASM-2-PM
+  name: PM5560 ASM-2
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASM-2
+  unit_id: 37
+- code: ASM-3-PM
+  name: PM5560 ASM-3
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASM-3
+  unit_id: 38
+- code: ASM-4-PM
+  name: PM5560 ASM-4
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASM-4
+  unit_id: 39
+- code: ASM-5-PM
+  name: PM5560 ASM-5
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASM-5
+  unit_id: 40
+- code: ASM-6-PM
+  name: PM5560 ASM-6
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASM-6
+  unit_id: 41
+- code: ASMLINE-1-PM
+  name: PM5560 ASMLINE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: ASMLINE-1
+  unit_id: 35
+- code: AUTOSPRAY-1-PM
+  name: PM5560 AUTOSPRAY-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: AUTOSPRAY-1
+  unit_id: 28
+- code: BOILER-PM
+  name: PM5560 BOILER
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: BOILER
+  unit_id: 49
+- code: BORE-1-PM
+  name: PM5560 BORE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: BORE-1
+  unit_id: 23
+- code: BOX-1-PM
+  name: PM5560 BOX-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: BOX-1
+  unit_id: 44
+- code: CHARGING-PM
+  name: PM5560 CHARGING
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: CHARGING
+  unit_id: 50
+- code: CNC-1-PM
+  name: PM5560 CNC-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: CNC-1
+  unit_id: 21
+- code: CNC-2-PM
+  name: PM5560 CNC-2
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: CNC-2
+  unit_id: 22
+- code: CNC-3-PM
+  name: PM5560 CNC-3
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: CNC-3
+  unit_id: 20
+- code: CNC-4-PM
+  name: PM5560 CNC-4
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: CNC-4
+  unit_id: 24
+- code: COMPRESSOR-PM
+  name: PM5560 COMPRESSOR
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: COMPRESSOR
+  unit_id: 47
+- code: DOWEL-1-PM
+  name: PM5560 DOWEL-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: DOWEL-1
+  unit_id: 25
+- code: DRY-1-PM
+  name: PM5560 DRY-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: DRY-1
+  unit_id: 34
+- code: DUST-1-PM
+  name: PM5560 DUST-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: DUST-1
+  unit_id: 48
+- code: EDGE-1-PM
+  name: PM5560 EDGE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: EDGE-1
+  unit_id: 17
+- code: EDGE-2-PM
+  name: PM5560 EDGE-2
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: EDGE-2
+  unit_id: 18
+- code: EDGE-3-PM
+  name: PM5560 EDGE-3
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: EDGE-3
+  unit_id: 19
+- code: EF-CHG-PM
+  name: PM5560 EF-CHG
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: EF-CHG
+  unit_id: 59
+- code: EF-CMP-PM
+  name: PM5560 EF-CMP
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: EF-CMP
+  unit_id: 58
+- code: EF-ELEC-PM
+  name: PM5560 EF-ELEC
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: EF-ELEC
+  unit_id: 57
+- code: GANTRY-1-PM
+  name: PM5560 GANTRY-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: GANTRY-1
+  unit_id: 46
+- code: GLUE-1-PM
+  name: PM5560 GLUE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: GLUE-1
+  unit_id: 31
+- code: HINGE-1-PM
+  name: PM5560 HINGE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: HINGE-1
+  unit_id: 30
+- code: LP-1-PM
+  name: PM5560 LP-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: LP-1
+  unit_id: 52
+- code: LP-2-PM
+  name: PM5560 LP-2
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: LP-2
+  unit_id: 53
+- code: LP-3-PM
+  name: PM5560 LP-3
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: LP-3
+  unit_id: 54
+- code: NEST-1-PM
+  name: PM5560 NEST-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: NEST-1
+  unit_id: 16
+- code: OFFICE-PM
+  name: PM5560 OFFICE
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: OFFICE
+  unit_id: 51
+- code: PACK-1-PM
+  name: PM5560 PACK-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: PACK-1
+  unit_id: 42
+- code: PACK-2-PM
+  name: PM5560 PACK-2
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: PACK-2
+  unit_id: 43
+- code: PACKLINE-1-PM
+  name: PM5560 PACKLINE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: PACKLINE-1
+  unit_id: 45
+- code: PRESS-1-PM
+  name: PM5560 PRESS-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: PRESS-1
+  unit_id: 32
+- code: RV-ALL-PM
+  name: PM5560 RV-ALL
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: RV-ALL
+  unit_id: 55
+- code: SAND-1-PM
+  name: PM5560 SAND-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SAND-1
+  unit_id: 27
+- code: SAW-1-PM
+  name: PM5560 SAW-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SAW-1
+  unit_id: 11
+- code: SAW-2-PM
+  name: PM5560 SAW-2
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SAW-2
+  unit_id: 12
+- code: SAW-3-PM
+  name: PM5560 SAW-3
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SAW-3
+  unit_id: 13
+- code: SLIDE-1-PM
+  name: PM5560 SLIDE-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SLIDE-1
+  unit_id: 14
+- code: SORT-1-PM
+  name: PM5560 SORT-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SORT-1
+  unit_id: 26
+- code: SPRAY-1-PM
+  name: PM5560 SPRAY-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: SPRAY-1
+  unit_id: 33
+- code: UV-1-PM
+  name: PM5560 UV-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: UV-1
+  unit_id: 29
+- code: VSAW-1-PM
+  name: PM5560 VSAW-1
+  driver: passive
+  protocols:
+  - P-05
+  params:
+    consumer: VSAW-1
+  unit_id: 15
+- code: CUTOPT
+  name: Оптимізатор розкрою
+  driver: passive
+  protocols: []
+  params:
+    protocol: none
