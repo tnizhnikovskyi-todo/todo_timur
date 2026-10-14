@@ -1,6 +1,6 @@
 # factory3d для Odoo 19 — архітектурний каркас
 
-Версія 0.1 · 13.10.2026 · менеджер проєкту документації. Цей файл — спільна основа для
+Версія 0.2 · 14.10.2026 (зведення після хвилі 2, див. `docs/CONSISTENCY.md`) · менеджер проєкту документації. Цей файл — спільна основа для
 документів усіх модулів (`docs/modules/<module>/ARCHITECTURE.md` і `SPEC.md`). Правила
 оформлення модульних документів — у `docs/DOC_STANDARD.md`.
 
@@ -43,18 +43,28 @@
 ## 3. Граф залежностей (manifest `depends`)
 
 ```
-factory3d_base          ← stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet
-factory3d_viewer        ← factory3d_base, bus, web          (решта модулів — optional через хук, §6.7)
+factory3d_base          ← stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet, fleet, web
+factory3d_viewer        ← factory3d_base, bus, web          (решта модулів — optional, §6.7)
 factory3d_iot_sim       ← factory3d_base                    (пульт сценаріїв; сам емулятор — поза Odoo)
-factory3d_telemetry     ← factory3d_base, maintenance
+factory3d_telemetry     ← factory3d_base, maintenance, mail, web
 factory3d_machine_connect ← factory3d_telemetry, mrp_workorder
-factory3d_energy        ← factory3d_telemetry, mrp_account
-td_genset               ← (власні) + factory3d_base, factory3d_energy   (зв'язка з GENSET і балансом)
-factory3d_yard          ← factory3d_base, stock_picking_batch, delivery, factory3d_telemetry
-factory3d_access        ← factory3d_base, hr_attendance
-factory3d_bms           ← factory3d_telemetry
+factory3d_energy        ← factory3d_telemetry, mrp_account, mrp_workorder, analytic, web_hierarchy
+factory3d_genset (міст) ← td_genset, factory3d_base, factory3d_telemetry, factory3d_energy   (без viewer — X-20)
+factory3d_yard          ← factory3d_base, factory3d_telemetry, stock_picking_batch, stock_fleet, delivery,
+                          stock_delivery, web_gantt, mail, bus
+factory3d_access        ← factory3d_base, hr_attendance, mail
+factory3d_bms           ← factory3d_telemetry, web
 factory3d_fire_safety   ← factory3d_telemetry, hr_attendance
+
+Містки auto_install (необов'язкові зв'язки без жорсткої залежності):
+factory3d_viewer_sale            ← factory3d_viewer, sale
+factory3d_telemetry_viewer       ← factory3d_telemetry, factory3d_viewer
+factory3d_fire_safety_viewer     ← factory3d_fire_safety, factory3d_viewer
+factory3d_access_telemetry       ← factory3d_access, factory3d_telemetry        (7 сигналів СКУД — X-33)
 ```
+
+Необов'язкові зв'язки між модулями — або провайдер/джерело за префіксом імені моделі без `_inherit`
+(`f3d.viewer.provider.*`, `f3d.fire.passage.source.*`), або `env.get(...)`, або місток auto_install (D-18).
 
 Циклів немає. Усе, що пишеться на стандартні моделі (`stock.location`, `mrp.workcenter`,
 `maintenance.equipment`, `hr.employee`, `stock.picking.batch`), робить **тільки** `factory3d_base`
@@ -203,9 +213,9 @@ factory3d_fire_safety   ← factory3d_telemetry, hr_attendance
 | `modbus_tcp` | Modbus TCP (pymodbus) | `factory3d_telemetry` |
 | `mqtt` | MQTT 3.1.1/5 (paho) | `factory3d_telemetry` |
 | `http_push` | приймач HTTP POST від пристроїв (Axis, tapio webhooks) | `factory3d_telemetry` |
+| `bacnet_ip` | BACnet/IP (bacpypes3); `read_only` для пожежної панелі | `factory3d_telemetry` (рішення 14.10, D-16) |
 | `opcua` | OPC UA клієнт (asyncua), companion spec Woodworking | `factory3d_machine_connect` |
-| `woodstore` | REST HOMAG woodStore/STORETEQ (завдання порталу, стоси) | `factory3d_machine_connect` |
-| `bacnet_ip` | BACnet/IP (bacpypes3) | `factory3d_bms` |
+| `rest_vendor` | REST вендорів: адаптери `woodstore` (портал STORETEQ), `cutopt` (карти розкрою), `generic` | `factory3d_machine_connect` |
 | `helvarnet` | HelvarNet TCP (освітлення DALI) | `factory3d_bms` |
 | `sics` | METTLER TOLEDO SICS (TCP) для автоваг | `factory3d_yard` |
 | `biostar2` | REST Suprema BioStar 2 (опитування з Odoo, без колектора) | `factory3d_access` |
@@ -230,7 +240,7 @@ factory3d_fire_safety   ← factory3d_telemetry, hr_attendance
 | P-08 | Вентиляція й опалення RV-01..25, AHU-1, котельня; освітлення LP-1..3 (групи LT-*) | Hoval RoofVent RH-9C, VTS VENTUS, Helvar Imagine 950 DALI-2 | BACnet/IP (вентустановки, опалення); HelvarNet TCP (освітлення DALI: групи, сцени, рівень, стан) | BACnet об'єкти AI/AO/BI/BO/MSV; HelvarNet 2.x (опубліковано Helvar) | `factory3d_bms` |
 | P-09 | Пожежна сигналізація FACP, шлейфи 1–4, групи FA-*, іскрогасіння GreCon BS 7, димовидалення D+H CPS-M1 | Siemens Cerberus PRO FC726-ZA | BACnet/IP **тільки читання** (стан зон/сповіщувачів, події: тривога, несправність, запиленість, вимкнення); GreCon і D+H — дискретні входи через I/O (як P-02) | BACnet-інтерфейс Cerberus PRO (звірити назву модуля в Siemens); ПРИПУЩЕННЯ для GreCon/D+H | `factory3d_fire_safety` |
 | P-10 | СКУД: зчитувачі ACC-*, турнікети TURN-*, користувачі | Suprema BioEntry W3 + BioStar 2; Gunnebo SlimStile EV | REST BioStar 2 API (підмножина: `/api/login`, `/api/users`, `/api/devices`, `/api/events/search`, `/api/doors`) | опублікований BioStar 2 API | `factory3d_access` |
-| P-11 | Двір: шлагбауми GATE-IN/OUT (CAME GARD LS6), камери LPR (Axis P1488-LE + License Plate Verifier), автоваги SCALE-TRUCK (АКСІС 60-18-К-Е), КПП | — | шлагбауми — Modbus TCP I/O (коїли «відкрити», входи «відкрито/перешкода»); LPR — HTTP POST JSON від Axis LPV на колектор; ваги — ASCII по TCP (SICS-сумісний діалект) | Axis LPV event format (опубліковано); SICS (METTLER TOLEDO); АКСІС — ПРИПУЩЕННЯ | `factory3d_yard` |
+| P-11 | Двір: шлагбауми GATE-W/GATE-E (CAME GARD LS6), камери LPR (Axis P1488-LE + License Plate Verifier), автоваги TRUCK-SCALE (АКСІС 60-18-К-Е), КПП | — | шлагбауми — Modbus TCP I/O (коїли «відкрити», входи «відкрито/перешкода»); LPR — HTTP POST JSON від Axis LPV на колектор; ваги — ASCII по TCP (SICS-сумісний діалект) | Axis LPV event format (опубліковано); SICS (METTLER TOLEDO); АКСІС — ПРИПУЩЕННЯ | `factory3d_yard` |
 | P-12 | Генератор GENSET | KOHLER-SDMO D700 + SmartGen HGM6120N + CMM366B-4G | API ретранслятора SmartGen — існуючий `fake_relay.py` з профілем D700 | `relay_api.md` у `td_genset` | `td_genset` |
 | P-13 | Ваги PFA584, принтери ZT411, сканери TC22, планшети | Odoo IoT Box | стандартний Odoo IoT — **поза емулятором** | — | — |
 
@@ -250,11 +260,18 @@ factory3d_fire_safety   ← factory3d_telemetry, hr_attendance
   `lighting`, `ventilation`, `fire`, `infra`, `evacuation`, `sheet_chain`, `ship_chain`,
   `material_paths`, `full_cycle_mo`, `passports`). Еталон побудови з живої бази —
   `plant/odoo_pull.py` (`LiveDemo`); статична частина (розкладка, маршрути, норми) — з моделі.
-- Хук постачальника даних: абстрактна модель `f3d.viewer.provider` з методом
-  `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None`; кожен модуль реєструє свій
-  провайдер (`energy`, `lighting`, `ventilation`, `fire`, `infra`, `evacuation`, `yard`, `access`),
-  переглядач збирає `payload` послідовно за `sequence`. Без модуля — розділ лишається з
-  моделі (статика) або порожній.
+- Хук постачальника даних: модель з префіксом імені `f3d.viewer.provider.<key>` (`AbstractModel`
+  без `_inherit` моделей viewer) або містком auto_install з `_inherit` (D-18). Контракт — за
+  атрибутами (duck typing, viewer M-01): `_f3d_sequence`, `_f3d_sections`, `_f3d_group`,
+  `_f3d_viewer_collect(self, payload: dict, ctx: dict) -> None`, `_f3d_viewer_delta(self, patch, ctx)`;
+  viewer читає їх через `getattr` з умовчаннями. Порядок: вбудовані 20…70, machine_connect 75,
+  telemetry 95, energy 100, lighting 110, ventilation 120, fire 130, evacuation 140, infra 150,
+  genset 155, yard 160, access 170. Без модуля — розділ лишається з моделі (статика) або порожній.
+- Спільні розділи (`infra`, `workcenters`, `employees`, `zones`) провайдери лише **доповнюють**
+  через спільний `deep_merge`; клієнт зливає дельту глибоко (viewer R-14, X-23).
+- Схема даних `meta.schema = "1.1"`: 26 базових ключів у фіксованому порядку + додаткові ключі
+  модулів (перелік — viewer Додаток A); нові ключі верхнього рівня (`yard`, `access`) — після
+  базових за `_f3d_sequence` (X-24). `zones` = усі активні `f3d.zone` base (45, з надвірними).
 - Живі оновлення: канал шини `f3d_viewer` (`bus.bus`), повідомлення `{model, codes, kind}`;
   переглядач дозапитує лише змінені об'єкти (`/f3d/viewer/delta`).
 - «Показати в 3D» — `action_f3d_show()` домішки (§6.1); кнопка на формах `stock.location`,
@@ -296,15 +313,29 @@ factory3d_fire_safety   ← factory3d_telemetry, hr_attendance
 | D-10 | Документація модулів — українською, два файли на модуль (`ARCHITECTURE.md`, `SPEC.md`) | стандарт ToDo; SPEC має вистачати Sonnet для коду, Opus для тестів |
 | D-11 | Сирі ряди — поза Odoo за потреби (TimescaleDB), в Odoo — агрегати й останні значення | обсяг даних (35 верстатів × 1 с) не для PostgreSQL Odoo |
 | D-12 | `td_genset` переносять як є; у цьому проєкті — лише запит на зміни і зв'язка з моделлю | модуль пройшов 10 етапів і стоїть на проді |
+| D-13 | `factory3d_iot_sim` у демо-базі (data-модуль) лишається «рівнем 0»; новий модуль-пульт 19.0.2.0.0 + сервіс; крон рівня 0 взаємовиключний із сервісом | плавний перехід без втрати демо |
+| D-14 | Рядки UI українською прямо в коді, без `.po` у v1 (усі модулі) | один мовний ринок замовника |
+| D-15 | `plant/odoo_pull.py` і `cycle_check` макета правлять окремим завданням; до того `keep_x_fields=True` | не ламати живий переглядач під час міграції |
+| D-16 | Плагін `bacnet_ip` — у telemetry (ним користуються bms і fire_safety) | спільне ядро протоколу |
+| D-17 | Локальні джерела без колектора — хук `f3d.source._f3d_local_types()` (telemetry CT-12); модулі додають свої типи (`td_genset`, `f3d_energy`, `f3d_machine`, `f3d_bms`) | дані, що вже є в Odoo, не ходять через колектор |
+| D-18 | Необов'язкові зв'язки між модулями — за префіксом імені моделі без `_inherit`, `env.get` або місток auto_install; жорсткі `depends` лише за §3 | модулі ставляться в будь-якому порядку фаз |
+| D-19 | Вхід показань у модулі — перевизначення `f3d.signal._f3d_ingest` з `super()` першим; API колектора викликає саме його | telemetry пише `last_value` SQL-ом, `write()` не бачить показань |
+| D-20 | Адреси Modbus — PDU за документом вендора, без загального «номер − 1»; ADAM — молодше слово першим | інакше емулятор і споживачі розійдуться на регістр |
+| D-21 | ATyS p — за Socomec Annexe III (положення 20483, коди 1/2/3) | опублікована карта вендора |
+| D-22 | Odoo лише ставить завдання в чергу верстата; пуск — тільки з пульта верстата | безпека людей біля верстатів |
+| D-23 | AMF: робочий варіант A (HGM6120N веде, ATyS p у Remote control) до відповіді замовника | рекомендація td_genset |
+| D-24 | Розподіл спільних споживачів на МО — драйвер на пул (повітря/аспірація/портал — за прямими кВт·год, світло/вентиляція — за часом, решта — накладні) | змінюється даними без коду |
+| D-25 | Реєстр розбіжностей між модулями — `docs/CONSISTENCY.md` (X-01…X-62), усі рішення затверджені 14.10 | джерело правок модулів одним проходом |
 
 ## 9. Відкриті питання до замовника (зведені)
 
-1. Генератор: хто веде логіку мережа/генератор — HGM6120N (AMF) чи АВР ATyS p? Впливає на
-   `td_genset` і `factory3d_energy`.
-2. Доступ до інтерфейсів HOMAG: OPC UA на верстатах, woodStore API, формат intelliDivide.
-3. Модуль BACnet на Cerberus PRO FC726 і дозвіл монтажника на читання.
-4. Є на заводі система управління будівлею, чи ми читаємо з установок напряму?
-5. Телематика навантажувачів: який шлюз.
-6. Частота опитування лічильників і термін зберігання сирих даних.
-7. Хто бронює ворота для сторонніх фур (портал постачальника?), що з фурою без броні.
-8. Тариф на електроенергію й зони, правило розподілу енергії на МО.
+Повний зведений перелік (19 питань, без дублів, з модулями й тим, що робимо до відповіді) —
+`docs/CONSISTENCY.md`, розділ «Питання до замовника». Найважливіші:
+
+1. Генератор: хто веде AMF — HGM6120N чи ATyS p; репозиторій `td_genset` 18.0 і `relay_api.md`.
+2. HOMAG: OPC UA (OPC 40550-1, JobManagement) на верстатах, woodStore API, формат intelliDivide.
+3. Cerberus PRO FC726: ключ BACnet, склад об'єктів (PICS), запиленість, дозвіл монтажника.
+4. Будівля: чи є BMS; Hoval — BACnet чи Modbus-шлюз.
+5. Енергія: тариф і зони, договірна потужність, метод оцінки ГП (рекомендація AVCO).
+6. Двір: протокол індикатора автоваг АКСІС, маси аркушів, хто бронює ворота.
+7. СКУД: формат блокування картки в BioStar 2.
