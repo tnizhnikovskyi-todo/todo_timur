@@ -118,13 +118,13 @@ odoo_addons/factory3d_fire_safety/
     ├── test_norms.py                    AC-05…AC-11, AC-70 (R-01…R-04, R-08, R-23)
     ├── test_event.py                    AC-12…AC-16, AC-68 (M-05, R-14, M-18)
     ├── test_sync.py                     AC-17…AC-27, AC-67 (R-10…R-13, R-19)
-    ├── test_security_readonly.py        AC-28…AC-31, AC-66, ТБ-01…ТБ-04 (FR-18)
+    ├── test_security_readonly.py        AC-28…AC-31, AC-66, AC-77, ТБ-01…ТБ-04 (FR-18, M-19)
     ├── test_requests.py                 AC-32 (зв'язок заявок)
     ├── test_evacuation.py               AC-33…AC-40 (R-05…R-09, звіт)
-    ├── test_drill.py                    AC-41…AC-52 (R-15…R-18)
+    ├── test_drill.py                    AC-41…AC-52, AC-78 (R-15…R-18)
     ├── test_passage_source.py           AC-53, AC-54, AC-75 (CF-02, CF-06; потребує test_factory3d_fire_safety)
     ├── test_viewer_provider.py          AC-55…AC-57, AC-59 (R-20, R-21 — функції tools/payload без viewer)
-    ├── test_hooks.py                    AC-01…AC-04, AC-60…AC-62, AC-69 (§5.4, §5.5, перерахунок)
+    ├── test_hooks.py                    AC-01…AC-04, AC-60…AC-62, AC-69, AC-76 (§5.3–§5.5, перерахунок)
     ├── test_rights_ui.py                AC-63…AC-65 (меню, права, налаштування)
     ├── test_data_sync.py                AC-71 (pytest поза Odoo: генератор = data/*)
     └── stand/                           pytest -m stand (ТК-01…ТК-10) — поза odoo.tests
@@ -1336,10 +1336,12 @@ maintenance).
 
 | XML-id | `code` | `name` | `type` | `params` | Інше |
 |---|---|---|---|---|---|
-| `source_bacnet_facp_1` | `BACNET-FACP-1` | «Cerberus PRO FACP-1 (BACnet, лише читання)» | `bacnet_ip` | `{"host": "iot-sim", "port": 47808, "read_only": true, "timeout_s": 5, "rpm": true, "rpm_max": 50}` | `collector_id` ref `factory3d_telemetry.collector_main`; `module='fire_safety'`; `read_enabled=True` (хук → CB-10); `write_enabled=False`; `f3d_fire_readonly=True`; `period_s_default=10` |
+| `source_bacnet_facp_1` | `BAC-200-FACP-1` (схема `BAC-<dev>-<NAME>`, X-17) | «Cerberus PRO FACP-1 (BACnet dev 200, лише читання)» | `bacnet_ip` | `{"host": "iot-sim", "port": 47808, "device": 200, "network": 2, "read_only": true, "timeout_s": 5, "rpm": true, "rpm_max": 50}` (X-44: `device` обов'язковий за telemetry Додатком A.2; dev 200 емулятора — у віртуальній мережі 2 за роутером, iot_sim §8.11.1; `events` не задано → `true` за `read_only`, telemetry §8.8) | `collector_id` ref `factory3d_telemetry.collector_main`; `module='fire_safety'`; `read_enabled=True` (хук → CB-10); `write_enabled=False`; `f3d_fire_readonly=True`; `period_s_default=10` |
 | `source_mb_u85_io6` | `MB-U85-IO6` | «ADAM-6050 IO-6: GreCon BS 7 і D+H (лише читання)» | `modbus_tcp` | `{"host": "iot-sim", "port": 502, "unit": 85, "timeout_s": 3, "retries": 1}` | те саме; `period_s_default=2` |
 
-На проді (інструкція ARCH 4.1) змінюються лише `params.host`/`port` (і device instance — M-19); код не змінюється.
+Адреси сигналів джерела `B` не містять `device` — він береться з `params.device` (telemetry Додаток A.1; X-44). На проді
+(інструкція ARCH 4.1) змінюються лише `params.host`/`port`, `params.network` (прибрати для прямого IP) і device instance —
+`params.device` через майстер M-19; код модуля не змінюється.
 
 ### 5.4 `post_init_hook(env)` — кроки, ідемпотентність, очікувані кількості
 
@@ -1351,8 +1353,8 @@ maintenance).
 | # | Функція | Що робить | Ідемпотентність | Копія демо (14.10) | Чиста база |
 |---|---|---|---|---|---|
 | 1 | `params(env)` | лише якщо `migration_report == '{}'` (перша установка): `read_enabled = (factory3d.base.environment == 'test')`; `team_id` = id `maintenance.team` з `name='Служба головного механіка'` або порожньо | повтор — нічого | `read_enabled=True`, `team_id=2` | `True`, порожньо |
-| 2 | `equipment.link(env)` | `E = env['maintenance.equipment'].search_f3d`; прилад ← `FACP-1`; кожна зона ← `E(code)`; пристрої: детектори ← обладнання своєї зони, `mcp` ← `FA-MCP`, `sounder` ← `FA-SND`, `flame` ← `FA-FLAME`, `spark_*` ← `SPARK-1`, `smoke_vent` ← `SMOKE-VENTS`; системи ← `SPARK-1`, `SMOKE-CTRL` (+ `vents_equipment_id` ← `SMOKE-VENTS`), `SPRINKLERS`; виходи ← `EXITS`; джерела: `BACNET-FACP-1.equipment_id` ← `FACP-1`, `MB-U85-IO6` ← `SPARK-1`; сигнали — R-24 (правило коду → обладнання); `pressure_signal_id` спринклерів ← `f3d.signal` з `code='equipment/SPRINKLERS/pressure_bar'` (якщо є). `LPS` не чіпається | перезапис тими ж значеннями | `linked: 42` (різних одиниць), `missing: 0`, `devices_linked: 343`, `signals_linked: 52`, `pressure_signal: True` | `linked: 0`, `missing: 42` (WARNING зі списком кодів), `pressure_signal: False` |
-| 3 | `signals.dust(env)` | `sig = f3d.signal.search([('code','=','fire/groups/FA-FAC/dust')], active_test=False)`; є (telemetry, `origin='sim_data'`) → `write({source_id: BACNET-FACP-1, address: {"device":200,"object":"AV","instance":21607,"mode":"poll"}, period_s: 600, store_period_s: 3600, module: 'fire_safety', kind: 'gauge', unit: '%', warn_high: 80, warn_high_on: True, alarm_high: 90, alarm_high_on: True, hysteresis: 1.8, decimals: 1, alarm_title: "Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}", write_enabled: False, equipment_id: FA-FAC})` без зміни `last_*`; немає → `create` з тими самими полями, `code`, `name` «Запиленість сповіщувача 2.FAC.07», `origin='catalog'` (**без** xml-id — сигнал переживає деінсталяцію); далі `fire_zone_fa_fac.dust_signal_id = dev_2_fac_07.dust_signal_id = sig`, `dev_2_fac_07.monitor = True`, `dev_2_fac_07._set_dust(sig.last_value, sig.last_ts)` якщо `last_ts` | за `code` | `dust_signal: reused`, `dust_pct: 86.1` (стан `warn`) | `dust_signal: created`, `dust_pct: None` |
+| 2 | `equipment.link(env)` | `E = env['maintenance.equipment'].search_f3d`; прилад ← `FACP-1`; кожна зона ← `E(code)`; пристрої: детектори ← обладнання своєї зони, `mcp` ← `FA-MCP`, `sounder` ← `FA-SND`, `flame` ← `FA-FLAME`, `spark_*` ← `SPARK-1`, `smoke_vent` ← `SMOKE-VENTS`; системи ← `SPARK-1`, `SMOKE-CTRL` (+ `vents_equipment_id` ← `SMOKE-VENTS`), `SPRINKLERS`; виходи ← `EXITS`; джерела: `BAC-200-FACP-1.equipment_id` ← `FACP-1`, `MB-U85-IO6` ← `SPARK-1`; сигнали — R-24 (правило коду → обладнання); `pressure_signal_id` спринклерів ← `f3d.signal` з `code='equipment/SPRINKLERS/pressure_bar'` (якщо є). `LPS` не чіпається | перезапис тими ж значеннями | `linked: 42` (різних одиниць), `missing: 0`, `devices_linked: 343`, `signals_linked: 52`, `pressure_signal: True` | `linked: 0`, `missing: 42` (WARNING зі списком кодів), `pressure_signal: False` |
+| 3 | `signals.dust(env)` | `sig = f3d.signal.search([('code','=','fire/groups/FA-FAC/dust')], active_test=False)`; є (telemetry, `origin='sim_data'` — не змінюється) → `write({source_id: BAC-200-FACP-1, address: {"object":"PIV","instance":21607,"mode":"poll"} (X-37, X-44), period_s: 600, store_period_s: 3600, module: 'fire_safety', kind: 'gauge', unit: '%', warn_high: 80, warn_high_on: True, alarm_high: 90, alarm_high_on: True, hysteresis: 1.8, decimals: 1, alarm_title: "Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}", write_enabled: False, equipment_id: FA-FAC})` без зміни `last_*`; немає → `create` з тими самими полями, `code`, `name` «Запиленість сповіщувача 2.FAC.07», `origin='module'` (X-16; **без** xml-id — сигнал переживає деінсталяцію); далі `fire_zone_fa_fac.dust_signal_id = dev_2_fac_07.dust_signal_id = sig`, `dev_2_fac_07.monitor = True`, `dev_2_fac_07._set_dust(sig.last_value, sig.last_ts)` якщо `last_ts` | за `code` | `dust_signal: reused`, `dust_pct: 86.1` (стан `warn`) | `dust_signal: created`, `dust_pct: None` |
 | 4 | `requests.link(env)` | заявки з `f3d_signal_id` ∈ сигналів модуля і порожнім `f3d_fire_zone_id` → R-22 | за порожнім полем | `requests_linked: 1` (id 5 → `FA-FAC`, `2.FAC.07`) | 0 |
 | 5 | `events.demo(env)` | 4 події макета (`fire.events`) — таблиця нижче — через `f3d.fire.event._log(..., source='demo', key='demo:<n>')` | за `dedup_key` | `events_demo: 4` (повторно 0) | 4 |
 | 6 | `drills.demo(env)` | якщо немає навчання з `origin='demo'`: `create({title: "Навчальна тривога — демо (Присадка)", origin: 'demo', mode: 'tabletop', zone_id: FA-CNC, device_id: 2.CNC.05, planned_ts = start_ts: 2026-09-30 07:00:00 UTC (10:00 Київ), end_ts: +300 с, state: 'done', result: 'ok', conclusions: "Демо-запис: показує структуру протоколу навчання.", passage_source: 'demo', evac_time_s: 240})`; кроки з шаблону з `done=True`, `t_fact_s=t_plan_s`, `done_by='auto'`; люди (A-30): працівники з `f3d_code` (сортування за `f3d_code`), `k`-й (1…N) — `since = start − 3 год`, `exit_ts = start + round(240·k/N)` с, `exit_point="Демо"`, `source='demo'` | за `origin='demo'` | `drills_demo: 1`, людей 35, `evac_time_s 240`, `evac_pct 100.0` | `drills_demo: 1`, людей 0 (`evac_pct 100.0`, `data_quality='partial'`) |
@@ -1375,7 +1377,7 @@ maintenance).
 
 1. `_logger.warning("Видаляються журнал подій (%d) і навчання (%d) пожежної безпеки; експортуйте протоколи (інструкція 4.6)")`.
 2. Сигнал запиленості (крок 3; на демо — xml-id telemetry, на чистій базі — без xml-id): `write({'source_id': False,
-   'address': {}})` — переживає деінсталяцію (джерело `BACNET-FACP-1` видаляється з даними модуля), `module` лишається
+   'address': {}})` — переживає деінсталяцію (джерело `BAC-200-FACP-1` видаляється з даними модуля), `module` лишається
    `fire_safety` (класифікатор telemetry CT-09); 52 сигнали з xml-id модуля Odoo видаляє як data (показання — каскадом
    telemetry).
 3. `ir.config_parameter` `factory3d.fire_safety.*` → `unlink`.
@@ -1426,15 +1428,16 @@ Odoo 19: `ir.cron` з `model_id`, `state='code'`, `code`, `interval_number`, `in
 {"device": 200, "object": "LSZ", "instance": 14, "event_type": "change-of-life-safety",
  "from_state": "quiet", "to_state": "test-alarm", "mode": "on",
  "message_text": "Тест: сповіщувач 2.CNC.05, Присадка", "ts": "2026-10-14T07:10:02Z",
- "notification_class": 1, "priority": 1}
+ "notification_class": 1, "priority": 1, "ack_required": false}
 ```
 
-Схема: `device*` int; `object*` ∈ {`LSZ`, `LSP`, `BI`, `BV`, `AV`, `MSV`, `PIV`} (повні назви ASHRAE теж приймаються —
-нормалізація як telemetry R-23); `instance*` int ≥ 0; `event_type*` str ≤ 64; `from_state`, `to_state` str ≤ 32
+Схема: `device*` int; `object*` str (≤ 40; повні назви ASHRAE і скорочення нормалізуються як telemetry R-23; відомі — `LSZ`, `LSP`, `BI`, `BV`,
+`AV`, `MSV`, `PIV`, будь-який інший тип → подія приладу за R-14 п. 5, X-80); `instance*` int ≥ 0; `event_type*` str ≤ 64; `from_state`, `to_state` str ≤ 32
 (текст `BACnetLifeSafetyState` або `normal/offnormal/fault`); `message_text` str ≤ 500 (обрізається); `ts*` ISO з зоною;
-інші ключі ігноруються. Обробка: R-14 п. 5. Помилки: відсутнє обов'язкове поле / невідомий `object` →
+`mode` str, `notification_class` int, `priority` int, `ack_required` bool — необов'язкові, довідково (склад полів —
+telemetry §8.8 і перелік маршрутів API-05); інші ключі ігноруються. Обробка: R-14 п. 5. Помилки: відсутнє обов'язкове поле →
 `ValueError("bacnet_event: <поле>")` (telemetry пише в `f3d.push.event.error`, відповідь API-05 лишається 200);
-`device` ≠ device панелі (адреса `signal_state_id`) → подія ігнорується з DEBUG. Ідемпотентність — `event_id`
+`device` ≠ `params['device']` джерела панелі (`panel.source_id`, X-44) → подія ігнорується з DEBUG. Ідемпотентність — `event_id`
 telemetry + `dedup_key` журналу. Ліміти — API-05 telemetry (≤ 100 подій, ≤ 1 МБ).
 
 ### API-02 Розділи `fire` і `evacuation` payload переглядача (вихід, viewer API-02/API-03, CF-01)
@@ -1452,19 +1455,19 @@ M-17 за R-20/R-21. Повна схема з прикладом — Додат�
 
 | # | Вимога до `bacnet_ip` (telemetry §8.8) | Як перевіряється |
 |---|---|---|
-| 1 | Типи об'єктів `LSZ`, `LSP`, `AV`, `BI`, `BV`, `MSV`, `PIV` (Q-16: реальний прилад — BV/PIV замість BI/AV) | ТК-01 на емуляторі; на проді — звірка за EPICS (Q-01) |
-| 2 | `present-value` LSZ/LSP → `text` = назва переліку `BACnetLifeSafetyState` (`quiet`, `test-alarm`, …; R-11 таблиця), `value` = індекс; BI/BV → `map` адреси; MSV → `map` (1-based) | ТК-01, ТК-04 |
+| 1 | Типи об'єктів `LSZ`, `LSP`, `BV`, `MSV`, `PIV` (X-37: BTL-лістинг FC726 і емулятор iot_sim §8.11.1; telemetry Додаток A.1/R-23 приймає `positive-integer-value`/`PIV`); `AV`/`BI` у даних модуля не вживаються (код R-10/R-11 читає їх так само — Q-16) | ТК-01 на емуляторі; на проді — звірка за EPICS (Q-01) |
+| 2 | `present-value` LSZ/LSP → `text` = назва переліку `BACnetLifeSafetyState` (`quiet`, `test-alarm`, …; R-11 таблиця), `value` = індекс; BV → `map` адреси; PIV → число (ціле); MSV → `map` (1-based) | ТК-01, ТК-04 |
 | 3 | Лише опитування `ReadPropertyMultiple` блоками ≤ `rpm_max` (A-20); жодних `SubscribeCOV` для джерел із `read_only` | ТБ-05 (перехоплення) |
 | 4 | `params.read_only=true` → `write()` кидає `NotSupported` до будь-якого мережевого виклику; заборонені й інші сервіси зміни стану: `WriteProperty`, `WritePropertyMultiple`, `AcknowledgeAlarm`, `LifeSafetyOperation`, `DeviceCommunicationControl`, `ReinitializeDevice`, `CreateObject`, `DeleteObject` | ТБ-05; юніт-тести telemetry |
-| 5 | Маршрутизована мережа (роутер емулятора, мережа 2) і прямий IP | ТК-01 (стенд), DEPLOY_TEST п. 6 (прод) |
-| 6 | Опційно: `UnconfirmedEventNotification` → API-01 | ТК-04 (подія `bacnet` з `message_text`, якщо плагін реалізує) |
+| 5 | Маршрутизована мережа (роутер емулятора, `params.network=2`) і прямий IP (`params.network` відсутній); device instance — лише `params.device` (адреси без `device`, X-44) | ТК-01 (стенд), DEPLOY_TEST п. 6 (прод) |
+| 6 | `UnconfirmedEventNotification` → API-01 (telemetry §8.8 реалізує, X-05; `params.events` за умовчанням = `read_only` = `true`) | ТК-04 (подія `bacnet` або `message_text` у події `test`) |
 
 Таймінги контуру (для ТК і ТП):
 
 | Ланка | Значення | Джерело |
 |---|---|---|
-| Опитування LSZ/LSP/BI/MSV/AV лічильників | 10 с | Додаток B `period_s` (A-20) |
-| Опитування AV запиленості | 600 с | Додаток B |
+| Опитування LSZ/LSP/BV/MSV/PIV лічильників | 10 с | Додаток B `period_s` (A-20) |
+| Опитування PIV запиленості | 600 с | Додаток B |
 | Опитування ADAM DI0–DI6 / HR 40001 | 2 с / 10 с | Додаток B |
 | Відправка колектора | ≤ 5 с | telemetry `F3D_PUSH_INTERVAL_S` |
 | Затримка тривоги до події в Odoo (хук A-22) | ≤ 15 с; без хука — ≤ 75 с (крон 1 хв) | R-19 |
@@ -1473,7 +1476,8 @@ M-17 за R-20/R-21. Повна схема з прикладом — Додат�
 | Імпульс іскри DI0 | 0,6 с — опитуванням не ловиться, події з лічильника HR 40001 (A-13) | iot_sim R-26 |
 
 Емулятор (iot_sim §8.11) ↔ сигнали модуля: LSZ:1…33 — порядок `fire.groups` (Додаток A.1); LSP:<id> — R-23
-(`2.FAC.07` → 21607); AV:21607 — запиленість `2.FAC.07`; BI:1…4, BI:10, BI:11, AV:1…3, MSV:1 — Додаток B; ADAM u85 —
+(`2.FAC.07` → 21607); PIV:21607 — запиленість `2.FAC.07` (ціле %, до PICS приладу); BV:1…4, BV:10, BV:11, PIV:1…3,
+MSV:1 — Додаток B (X-37); dev 200 — `params.device` джерела, мережа 2 — `params.network` (X-44); ADAM u85 —
 DI0…DI6 (fc 2, PDU 0…6), HR 40001–40002 (fc 3, PDU 0, `count=2`, `u32`, `wordorder="little"` — «низьке слово перше,
 за ADAM», iot_sim §8.4.2). Логування модуля: `odoo.addons.factory3d_fire_safety.sync` (INFO — переходи станів зон/
 панелі/зв'язку, DEBUG — пакети кодів), `.hooks`, `.drill`; тексти без персональних даних (у логах — `employee_id`, не ПІБ).
@@ -1589,8 +1593,9 @@ N('exit_width_min')` (1,0). Макет: виходи 1,2 м, найвужче м
    за `map` або `int(last_value)`), `s1 = {1:'normal', 2:'alarm', 3:'fault', 4:'test', 5:'disabled'}.get(v)`.
 2. `PRIORITY = {alarm: 6, prealarm: 5, fault: 4, disabled: 3, test: 2, normal: 1, unknown: 0}`;
    `state = max((s0, s1), key=PRIORITY)` серед відомих; обидва невідомі → `unknown`.
-3. `raw_state = t0`, `system_state = v`; лічильники `alarms_count/faults_count/disabled_count = int(round(AV:1/2/3))`;
-   `sounders_active = (BI:10 text == 'on')`, `brigade_transmitted = (BI:11 text == 'on')`.
+3. `raw_state = t0`, `system_state = v`; лічильники `alarms_count/faults_count/disabled_count = int(round(PIV:1/2/3))`;
+   `sounders_active = (BV:10 text == 'on')`, `brigade_transmitted = (BV:11 text == 'on')` (X-37; для AV/BI на проді —
+   те саме, Q-16).
 4. Зміна `state` → `_set_state` (події R-14, активність FR-11 при вході в `alarm`/`prealarm` без тривожних зон,
    закриття активності при виході в `normal`).
 5. Сигнал зі `status='stale'` — значення не змінюється (A-17), панель стає `comm='stale'` за R-12.
@@ -1640,13 +1645,13 @@ https://docs.elipse.com.br/documents/en-us/driver/bacnet/latest/generated_enum_b
 стан не змінюється; інакше `stale=False`; `t = last_text`; `t == raw_state` → нічого; інакше
 `_set_state(ZONE_MAP[t], t, last_ts, device)`, де `device` — детектор зони з окремим сигналом у тому ж класі стану
 (`DEVICE_MAP` збігається), інакше пристрій, знайдений у `message_text` BACnet (R-14 п. 5), інакше `None`. Пристрій
-(`state_signal_id`) — те саме з `DEVICE_MAP`. Шлейф (`signal_id`, BI/BV з `map {"0":"off","1":"on"}`): `on` → `fault`,
+(`state_signal_id`) — те саме з `DEVICE_MAP`. Шлейф (`signal_id`, BV з `map {"0":"off","1":"on"}`; BI читається так само): `on` → `fault`,
 `off` → `ok`. `warn` зони (M-03) — перерахунок через `@api.depends`.
 
 ### R-12 Зв'язок із приладом (FR-12, A-16)
 
 1. `P('read_enabled') == False` або `source_id.read_enabled == False` → `comm='off'`, вихід (подій немає).
-2. `last_seen = max(last_ts)` сигналів панелі (LSZ:0, MSV:1, AV:1…3, BI:1…4, BI:10, BI:11, LSZ:1…33) з `status ≠ 'unknown'`
+2. `last_seen = max(last_ts)` сигналів панелі (LSZ:0, MSV:1, PIV:1…3, BV:1…4, BV:10, BV:11, LSZ:1…33) з `status ≠ 'unknown'`
    і `last_quality ≠ 'bad'`.
 3. Немає `last_seen` → `new = 'lost'`; інакше `age = now − last_seen`: `age ≤ P('comm_stale_after_s')` (90) →
    `online`; `≤ P('comm_lost_after_s')` (180) → `stale`; інакше `lost`.
@@ -1717,11 +1722,11 @@ https://docs.elipse.com.br/documents/en-us/driver/bacnet/latest/generated_enum_b
 | `dust_warn` | dust | warn | R-13 п. 3 | «Попередження про запиленість: сповіщувач {d} ({zone name}{, note}) — {floor(pct)} %» |
 | `dust_alarm` | dust | warn | R-13 п. 3 | «Запиленість сповіщувача {d} ({zone name}) {floor(pct)} % понад {alarm} %» |
 | `dust_ok` | dust | info | R-13 п. 3 | «Сповіщувач {d}: запиленість {floor(pct)} % — у нормі» |
-| `loop_fault` | loop | warn | BI шлейфу `off → on` (і `unknown → on`) | «Несправність шлейфу {n} приладу FACP-1» |
+| `loop_fault` | loop | warn | BV шлейфу `off → on` (і `unknown → on`) | «Несправність шлейфу {n} приладу FACP-1» |
 | `loop_ok` | loop | info | `on → off` | «Шлейф {n}: несправність усунено» |
-| `sounders_on` | alarm | warn | BI:10 `off → on` | «Оповіщувачі увімкнено ({sounders} шт.)» |
+| `sounders_on` | alarm | warn | BV:10 `off → on` | «Оповіщувачі увімкнено ({sounders} шт.)» |
 | `sounders_off` | alarm | info | `on → off` | «Оповіщувачі вимкнено» |
-| `brigade_on` | alarm | alarm | BI:11 `off → on` | «Сигнал «Пожежа» передано на пульт ДСНС» |
+| `brigade_on` | alarm | alarm | BV:11 `off → on` | «Сигнал «Пожежа» передано на пульт ДСНС» |
 | `brigade_off` | alarm | info | `on → off` | «Передачу на пульт завершено» |
 | `comm_stale` | comm | warn | R-12 | «Дані приладу FACP-1 застарілі: немає показань {age} с» |
 | `comm_lost` | comm | alarm (системи — warn) | R-12 | «Зв'язок із приладом FACP-1 втрачено: немає даних з {HH:MM} ({m} хв)» / «Немає даних від модуля вводу {source}: {system}» |
@@ -1794,16 +1799,18 @@ start_ts)`, `done_by='auto'`:
 |---|---|---|
 | `detector` | подія `test`/`alarm`/`prealarm` з `zone_id = drill.zone_id` | її `ts` |
 | `sounders` | подія `sounders_on` | її `ts` |
-| `brigade` | подія `brigade_on` (у навчанні S-07 `BI:11=0` → лишається вручну) | її `ts` |
+| `brigade` | подія `brigade_on` (у навчанні S-07 `BV:11=0` → лишається вручну) | її `ts` |
 | `smoke` | подія `smoke_open` | її `ts` |
 | `evacuation` | є людина з `exit_ts` | `min(exit_ts)` |
 | `ventilation` | є активні `f3d.signal` з `code =like 'ventilation/units/%/mode'` і `source_id`; усі мають `last_text ∈ {ST, Off}` і `last_ts ≥ start_ts` | `max(last_ts)` |
 | `doors` | `'f3d.access.door' in env`; двері (лише `is_perimeter`, якщо поле є) усі в `state ∈ {unlocked, open}` | `now` |
-| `machines` | для `wc ∈ drill.zone_id.zone_id.workcenter_ids` є сигнали `workcenters/<wc.code>/state` із джерелом; усі `last_text ∈ {ERROR, error, stopped}` і `last_ts ≥ start_ts` | `max(last_ts)` |
+| `machines` | контракт machine_connect CM-02 (X-12): для `wc ∈ drill.zone_id.zone_id.workcenter_ids` є активні сигнали `workcenters/<wc.f3d_code>/machine_state` (код сцени CB-01 — той самий, що `f3d.machine.code` machine_connect) (`kind='state'`; у machine_connect — джерело `MC-DERIVED`, тут не перевіряється); усі мають `last_text ∈ {fault, off, idle}` («зупинено»); `working`, `setup`, `nodata`, порожній `last_text` — не зупинено; сирі `workcenters/<wc.f3d_code>/state` (`io_state` тощо) не читаються | `max(start_ts, max(last_ts))` — сигнал CM-02 пишеться лише на зміну стану, тож верстат, що стояв до старту, зараховується від `start_ts` |
 
-Без потрібних модулів/сигналів крок лишається для ручної відмітки (`action_done_now`). Емулятор S-07 (iot_sim R-25):
+Без потрібних модулів/сигналів крок лишається для ручної відмітки (`action_done_now`); зона без РЦ (`workcenter_ids`
+порожньо) або без жодного сигналу `…/machine_state` — теж вручну. Емулятор S-07 (iot_sim R-25):
 `detector` 0…5 с, `sounders` ≈ 3 с, `smoke` ≈ 9 с (+ затримка опитування ≤ 10 с і push ≤ 5 с), `ventilation` ≈ 6 с і
-`doors` ≈ 12 с — лише з bms/access, `machines` ≈ 20 с — з machine_connect.
+`doors` ≈ 12 с — лише з bms/access, `machines` ≈ 20 с — з machine_connect (`ExternalEmergency` → `ERROR` → `fault` одразу,
+machine_connect R-01/R-02; `idle` I/O-верстата фіксується заднім числом після `micro_stop_s`).
 
 ### R-18 Зіставлення тесту приладу з навчанням (FR-14, A-14)
 
@@ -1886,12 +1893,14 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
    «fault»»; шлейф — «Несправність шлейфу 2 приладу FACP-1»; запиленість — «Очистити сповіщувач 2.FAC.07 (Дільниця
    фасадів МДФ): запиленість 90,1 % при нормі до 90»; іскрогасіння — «Несправність іскрогасіння SPARK-1 (пульт GreCon BS
    7)», «Іскрогасіння SPARK-1: немає тиску води гасіння»; щит — «Несправність щита димовидалення SMOKE-CTRL (D+H
-   CPS-M1): АКБ або живлення». Емулятор при несправності сповіщувача дає дві заявки — зони й шлейфу (A-28).
+   CPS-M1): АКБ або живлення». Емулятор (iot_sim R-25, API-12 після X-36/X-60): несправність сповіщувача/зони
+   (`reason=sensor|generic`) змінює лише LSZ зони → одна заявка зони; шлейф (BV) — лише `fault(reason=loop)` → ще заявка
+   шлейфу (A-28: модуль заявок не пригнічує).
 3. Втрата зв'язку (R-12 п. 4): якщо `comm_request_id` відкрита (`stage_id.done=False`) — нічого; без `equipment_id`
    приладу — WARNING і без заявки; інакше `create({name: «Втрата зв'язку з приладом FACP-1: немає даних з {HH:MM} ({m}
    хв)», equipment_id, maintenance_type: 'corrective', maintenance_team_id: P('team_id') або команда обладнання або
    `factory3d.telemetry.default_team_id`, priority: '3', f3d_origin: 'fire_comm', request_date: today, schedule_date: now,
-   description: «Автоматично: немає показань приладу FACP-1 (джерело BACNET-FACP-1) з {дата час Київ}; поріг
+   description: «Автоматично: немає показань приладу FACP-1 (джерело {source_id.code}, на стенді BAC-200-FACP-1) з {дата час Київ}; поріг
    {comm_lost_after_s} с.»})` → `comm_request_id`; подія `comm_lost.request_id`.
 
 ### R-23 Адреси пристроїв і BACnet LSP (A-09)
@@ -1906,7 +1915,8 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 
 `@api.model lsp_id(loop, ordinal, nn)`: `1 ≤ loop ≤ 8`, `1 ≤ ordinal ≤ 99`, `1 ≤ nn ≤ 99`, інакше
 `ValueError("LSP: шлейф 1…8, номер групи 1…99, номер 1…99")`; повертає `loop·10000 + ordinal·100 + nn`.
-`device` в адресах сигналів = 200 (емулятор; прод — M-19).
+Адреси сигналів `device` не містять: device instance — `params.device` джерела `BAC-200-FACP-1` (200 на емуляторі;
+прод — майстер M-19), мережа — `params.network` (2 на емуляторі; X-44).
 
 ### R-24 Обладнання сигналу за кодом (хук §5.4 п. 2)
 
@@ -2029,7 +2039,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-25 | FR-06, R-13 п. 6–7 | DI4 `open` → `SMOKE-CTRL.state='active'`, `smoke_open` «(44 шт.)»; DI6 `battery` → `battery`; DI5 `fault` → `fault`; тиск спринклерів 6,2 (`alarm_low` 6,5) → `low_pressure`, текст «тиск 6,2 бар нижче норми 6,5 бар»; 7,2 → `ok`, `sprinkler_ok` | UT |
 | AC-26 | R-19, A-22 | `env['f3d.signal']._f3d_ingest([{code:'fire/groups/FA-EB/state', ts, text:'fault'}], src='module')` → у тій самій транзакції `FA-EB.state='fault'`, подія `fault`; ingest коду `equipment/COMPRESSOR/pressure_bar` → `FireSync.run` не викликано (mock); `FireSync.run` кидає виняток → `_f3d_ingest` повертає результат без винятку | UT |
 | AC-27 | R-19, A-17 | `run(full=True)` двічі → другий раз `changed=0`, `events=0`; сигнал зони `status='stale'` → `stale=True`, `state` незмінний | UT |
-| AC-28 | FR-18, M-15 | `BACNET-FACP-1.sudo().write({'write_enabled': True})` → `ValidationError`; `write({'f3d_fire_readonly': False})` → `ValidationError`; `params` без `read_only` → `ValidationError`; `create` джерела з `f3d_fire_readonly` і `write_enabled` → `ValidationError` | UT |
+| AC-28 | FR-18, M-15 | `BAC-200-FACP-1.sudo().write({'write_enabled': True})` → `ValidationError`; `write({'f3d_fire_readonly': False})` → `ValidationError`; `params` без `read_only` → `ValidationError`; `create` джерела з `f3d_fire_readonly` і `write_enabled` → `ValidationError` | UT |
 | AC-29 | FR-18 | сигнал `module='fire_safety'` `sudo().write({'write_enabled': True})` → `ValidationError`; сигнал іншого модуля з джерелом `f3d_fire_readonly` → `ValidationError` | UT |
 | AC-30 | FR-18 | `f3d.command.sudo().create({'signal_id': <сигнал fire>})` → `ValidationError`; команда для сигналу не пожежного джерела не блокується цим модулем | UT |
 | AC-31 | FR-18, A-03 | параметра `factory3d.fire_safety.write_enabled` немає; жодне `ir.ui.view`, `ir.actions.server`, `ir.cron` модуля (за `ir.model.data` `module='factory3d_fire_safety'`) не містить `f3d.command`, `action_request_write`, `write_enabled` у значенні `True`; у `res.config.settings` немає поля з `write` у назві з префіксом `f3d_fire_` | UT |
@@ -2064,10 +2074,10 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-60 | §5.5 | `uninstall_hook(env)` → сигнал запиленості існує з `source_id=False`, `address={}`; параметрів `factory3d.fire_safety.*` 0 | UT |
 | AC-61 | FR-19, FR-24 | `neutralize.sql` виконується без помилки; `read_enabled='False'`, крони модуля `active=False`, джерела модуля `read_enabled=False`, `employee_id` людей навчань NULL, `sim_run_ref` NULL, активностей «Пожежна тривога» 0, `comm='off'` | UT |
 | AC-62 | FR-07, §5.4 п. 8 | після установки: `compliance_zones_ok=33`, `compliance_mcp_max_m=26.9`, `compliance_routes_ok=32`, `compliance_exits_ok=True`, `compliance_smoke_ok=8`, `compliance_missing_zones="Z-OFFICE, Z-SOC"`, `compliance_dirty=False` | UT |
-| AC-63 | FR-16 | меню §3: `menu_f3d_fire_root` (батько `factory3d_base.menu_f3d_root`, `sequence=85`, група `U`) і 16 дочірніх із sequence/групами таблиці; дії відкривають вказані моделі | UT |
+| AC-63 | FR-16 | меню §3: `menu_f3d_fire_root` (батько `factory3d_base.menu_f3d_root`, `sequence=85`, група `U`) і 15 дочірніх із sequence/групами таблиці; `menu_f3d_fire_settings` — батько `factory3d_base.menu_f3d_config`, `sequence=85`, група `M`, дія `action_f3d_fire_settings` (X-32); дії відкривають вказані моделі | UT |
 | AC-64 | FR-17 | матриця §4.1: `U` читає зони, `write` → `AccessError`; `U` `create` навчання → `AccessError`; `D` створює навчання й читає людей; `M` пише норму, `unlink` норми → `AccessError`; `A` — успіх; `H` читає людей; `unlink` події будь-ким → помилка; `M` має групу `D` через `implied_ids` | UT |
 | AC-65 | FR-21 | `res.config.settings`: збереження/читання 16 параметрів; `dust_warn ≥ dust_alarm` → `UserError`; зміна порогів запиленості → `warn_high/alarm_high` сигналів `…/dust`; група сповіщення зберігається як xml-id; полів із `write` у назві немає | UT |
-| AC-66 | FR-04, A-02 | `M`: `2.CUT.01.action_create_signals()` → 2 сигнали `fire/devices/2.CUT.01/state` і `/dust` з адресами `{"device":200,"object":"LSP","instance":21201,"mode":"poll"}` / `AV`, `write_enabled=False`, `module='fire_safety'`; повтор → створено 0; `U` → `AccessError`; `action_remove_signals` → сигнали `active=False`, `monitor=False` | UT |
+| AC-66 | FR-04, A-02 | `M`: `2.CUT.01.action_create_signals()` → 2 сигнали `fire/devices/2.CUT.01/state` і `/dust` з адресами `{"object":"LSP","instance":21201,"mode":"poll"}` / `{"object":"PIV","instance":21201,"mode":"poll"}` (без ключа `device`, X-44), `source_id=BAC-200-FACP-1`, `write_enabled=False`, `module='fire_safety'`, `origin='module'`; повтор → створено 0; `U` → `AccessError`; `action_remove_signals` → сигнали `active=False`, `monitor=False` | UT |
 | AC-67 | FR-11 | 2 користувачі групи сповіщення → по одній активності на тривогу; друга зона в тривозі при відкритій активності → нових активностей 0; скидання приладу → усі закриті (`action_feedback` «Прилад скинуто») | UT |
 | AC-68 | M-18, R-14 п. 5 | payload API-01 (LSZ 14, `test-alarm`, «Тест: сповіщувач 2.CNC.05, Присадка») за 3 с від події `test` FA-CNC → `message_text` дописано, `device_id=2.CNC.05`; без події → нова подія `bacnet`; без `instance` → `ValueError`; керівні символи в `message_text` видалено | UT |
 | AC-69 | FR-07 | `action_recompute_compliance()` повертає `display_notification` з текстом «Перераховано: зони 33/33, ручні max 26,9 м, маршрути 32/32, димові зони 8/8»; `compliance_ts` заповнено; `_cron_compliance()` дає ті самі значення | UT |
@@ -2077,6 +2087,9 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-73 | FR-13, FR-23 | стенд (ТК-04): навчання «Запустити на емуляторі» → крок 1 `t_fact_s ≤ 15`, крок 2 ≤ 18, крок 5 ≤ 24; авто-стоп; протокол PDF | TC |
 | AC-74 | FR-18 | стенд (ТБ-05): за весь прогін ТК-01…ТК-10 у перехопленні UDP 47808 немає жодного `WriteProperty`, `WritePropertyMultiple`, `SubscribeCOV`, `AcknowledgeAlarm`, `LifeSafetyOperation`, `DeviceCommunicationControl`, `ReinitializeDevice` від колектора; на TCP 502 unit 85 — жодної функції 05/06/15/16 | TC |
 | AC-75 | CF-06 (access CA-09) | навчання `done` 10:00:00–10:05:30 → `_f3d_is_active_at(10:03)` = `True`, `(10:06)` = `False`, `(09:59)` = `False`; `running` зі стартом 10:00 → `(11:00)` = `True`; `planned` на 10:00 → `False`; виклик від користувача без прав на навчання (через `sudo` у методі) не кидає `AccessError` | UT |
+| AC-76 | FR-01, FR-20, §5.3, Додаток B (X-16, X-17, X-37, X-44) | Given чиста база; When модуль встановлено; Then джерело xml-id `source_bacnet_facp_1` має `code='BAC-200-FACP-1'`, `params` = `{"host": "iot-sim", "port": 47808, "device": 200, "network": 2, "read_only": true, "timeout_s": 5, "rpm": true, "rpm_max": 50}`, `validate_params('bacnet_ip', params) == []` (telemetry `tools/address.py`); 44 сигнали джерела `B` (Додаток B № 1–44; № 45–52 — ADAM `M`): жоден `address` не містить ключа `device`, `validate_address('bacnet_ip', address) == []`, `address['object'] ∈ {LSZ, MSV, BV, PIV}` (LSZ — № 1–34, MSV — № 35, PIV — № 36–38, BV — № 39–44), жодного `AV`/`BI`; усі 52 сигнали data — `origin='module'`; сигнал запиленості (`dust_signal=created`) — `origin='module'`, `address == {"object": "PIV", "instance": 21607, "mode": "poll"}`; установка не дає `ValidationError` telemetry M-02/M-03 | UT |
+| AC-77 | M-01 `action_set_bacnet_device`, M-19 (X-44, X-17) | Given `A`; `panel.action_set_bacnet_device()` → контекст майстра `default_old_instance=200`; `signal_count=45` (44 data + запиленість; + сигнали `monitor`, якщо є), `explicit_count=0`; додати фікстуру — сигнал джерела з явним `address={"device": 200, "object": "LSP", "instance": 21201}`; When `new_instance=1234`, `action_apply()`; Then `BAC-1234-FACP-1` (той самий запис, xml-id `source_bacnet_facp_1`) з `params['device']=1234` і незмінними `host`, `port`, `network`, `read_only`; адреси сигналів без `device` не змінено; фіксований сигнал — `address['device']=1234`; чаттер панелі містить «BACnet device змінено: 200 → 1234 (джерело BAC-1234-FACP-1)»; `new_instance=4194303` → `ValidationError`; `M` → `AccessError`; панель без `source_id` → `UserError`; `new_instance == old_instance` → нічого не змінено | UT |
+| AC-78 | FR-13, R-17 `machines` (X-12, machine_connect CM-02) | Given навчання `running` (`start_ts=T0`) у зоні, чия `f3d.zone` має РЦ `wc1`, `wc2` (фікстури) і сигнали `workcenters/<wc1.f3d_code>/machine_state`, `…/<wc2.f3d_code>/machine_state` (`kind='state'`, `states` = 6 значень CM-02); When `wc1` → `fault` о `T0+20`, `wc2` має `idle` з `last_ts = T0−600`; Then після `_tick` крок `machines` `done`, `done_by='auto'`, `t_fact_s=20`; When `wc1` → `working`; Then крок (у новому навчанні) не відмічено; `nodata` → не відмічено; лише сирий `workcenters/<wc1.f3d_code>/state` з `last_text='ERROR'` без `…/machine_state` → не відмічено; обидва `idle` до старту → `t_fact_s=0` | UT |
 
 ## 13. План тестування (для Opus)
 
@@ -2108,7 +2121,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 
 | Файл / клас | Тести | AC | Фікстури | Що assert |
 |---|---|---|---|---|
-| `test_hooks.py::TestInstallData` | `test_counts`, `test_kinds`, `test_sources_readonly`, `test_signals_readonly`, `test_dust_created_clean` | AC-01, AC-04 | data | точні кількості §5.2; `f3d_fire_readonly`, `params['read_only']`; 53 сигнали `module='fire_safety'` з `write_enabled=False`; `ir.model.data` для сигналу запиленості відсутній; `migration_report.state == 'partial'`, `missing == 42` (до створення фікстур обладнання — тест читає звіт установки) |
+| `test_hooks.py::TestInstallData` | `test_counts`, `test_kinds`, `test_sources_readonly`, `test_signals_readonly`, `test_dust_created_clean`, `test_bacnet_params_addresses` | AC-01, AC-04, AC-76 | data | точні кількості §5.2; `f3d_fire_readonly`, `params['read_only']`; 53 сигнали `module='fire_safety'` з `write_enabled=False`; `ir.model.data` для сигналу запиленості відсутній; `migration_report.state == 'partial'`, `missing == 42` (до створення фікстур обладнання — тест читає звіт установки); AC-76: `params` джерела, `validate_params`/`validate_address` telemetry, відсутність ключа `device`, типи об'єктів, `origin` |
 | `::TestRerun` | `test_run_all_idempotent` | AC-03 | — | `search_count` усіх моделей до/після двох `run_all`; подій `demo:*` 4 |
 | `::TestUninstallNeutralize` | `test_uninstall_hook`, `test_neutralize_sql` | AC-60, AC-61 | навчання `done` з людиною; активність тривоги | після `uninstall_hook(env)` — сигнал запиленості `source_id=False`, `address == {}`; параметрів 0; `cr.execute(open(neutralize.sql).read())` → значення AC-61 (через SQL `SELECT`) |
 | `::TestCompliance` | `test_after_install`, `test_notification` | AC-62, AC-69 | — | значення AC-62; рядок повідомлення AC-69 дослівно |
@@ -2126,11 +2139,12 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | `::TestSystems` | `test_spark`, `test_smoke_sprinkler` | AC-24, AC-25 | коди Додатка B | стани, тексти, події |
 | `::TestIngestHook`, `::TestAlarmActivity` | `test_immediate_sync`, `test_non_fire_code_skipped`, `test_sync_exception_isolated`, `test_activity_per_guard`, `test_reset_closes` | AC-26, AC-67 | `patch('…tools.sync.FireSync.run')` | виклики/відсутність виклику; результат ingest; кількість активностей |
 | `test_security_readonly.py::TestReadonly` | `test_source_write_enabled_sudo`, `test_readonly_flag_sticky`, `test_params_read_only`, `test_signal_write_enabled_sudo`, `test_command_blocked_sudo`, `test_no_write_param_no_actions`, `test_device_signals_monitor` | AC-28…AC-31, AC-66 | `sudo()`, `with_user(m/u)` | `ValidationError`/`AccessError`; пошук `ir.ui.view.arch_db`/`ir.actions.server.code` модуля без `f3d.command`; сигнали M-04 |
+| `::TestBacnetDeviceWizard` | `test_wizard_defaults`, `test_apply_params_device`, `test_explicit_address_updated`, `test_code_renamed`, `test_bounds_rights_no_source` | AC-77 | `with_user(a/m)`; фікстура сигналу з явним `address.device` | `params`, `code`, `address`, чаттер, `ValidationError`/`AccessError`/`UserError` |
 | `test_requests.py::TestRequests` | `test_zone_fault_request_linked`, `test_no_duplicate` | AC-32 | `push_text(FA-CUT, 'fault')` | поля заявки M-14, `description`, одна заявка |
 | `test_evacuation.py::TestRoutes` | `test_routes_ok`, `test_polymer`, `test_short_norm` | AC-33 | норми | 32/32; 26/32 і множина 6 зон |
 | `::TestExits` | `test_dispersal`, `test_two_close_exits`, `test_door_width`, `test_exit_on_wall` | AC-34, AC-35, AC-40 | архівація, `width_m=0.7` | значення R-06/R-07; `ValidationError` |
 | `::TestSmokeZones`, `::TestData`, `::TestReport`, `::TestPlantZone` | `test_need_table`, `test_vent_archived`, `test_area_fail`, `test_exit_route_data`, `test_path_validation`, `test_report_html`, `test_zone_fields`, `test_route_show_3d` | AC-36…AC-40 | `report._render_qweb_html(...)` | таблиця R-09; підрядки HTML; поля M-13; `params.code` |
-| `test_drill.py::TestDrill` | `test_name_and_steps`, `test_transitions`, `test_start_people`, `test_passages_rollcall_result`, `test_auto_steps`, `test_match_planned`, `test_auto_create`, `test_no_auto_create`, `test_real_alarm`, `test_auto_stop`, `test_tabletop_no_auto_stop`, `test_sim_bridge`, `test_privacy`, `test_report_drill`, `test_cron_tick` | AC-41…AC-52 | `make_att`, `freeze_time`, події через `_log` (для R-17), `patch.object(type(env['f3d.fire.drill']), '_f3d_sim_create_run')` | значення AC; `result_suggested`; `t_fact_s`; параметри виклику емулятора |
+| `test_drill.py::TestDrill` | `test_name_and_steps`, `test_transitions`, `test_start_people`, `test_passages_rollcall_result`, `test_auto_steps`, `test_match_planned`, `test_auto_create`, `test_no_auto_create`, `test_real_alarm`, `test_auto_stop`, `test_tabletop_no_auto_stop`, `test_sim_bridge`, `test_privacy`, `test_report_drill`, `test_cron_tick`, `test_auto_step_machines` | AC-41…AC-52, AC-78 | `make_att`, `freeze_time`, події через `_log` (для R-17), `patch.object(type(env['f3d.fire.drill']), '_f3d_sim_create_run')` | значення AC; `result_suggested`; `t_fact_s`; параметри виклику емулятора |
 | `test_passage_source.py::TestSources` | `test_hr_attendance`, `test_prefix_source_without_inherit`, `test_people_from_passages`, `test_unavailable_falls_back`, `test_access_if_installed` (`skipUnless('f3d.fire.passage.source.access' in env)`), `test_is_active_at` | AC-53, AC-54, AC-75 | тестовий модуль §0.3; `with_context(f3d_test_passage_source=True, f3d_test_passages=[…])` | ключ джерела; люди; `exit_ts`; булеві значення CF-06 |
 | `test_viewer_provider.py::TestPayload` | `test_fire_structure`, `test_group_states`, `test_evacuation_structure`, `test_devices_and_disabled` | AC-55…AC-57, AC-59 | `tools.payload.build_fire/build_evacuation(env, ctx)` (`ctx = {"now": T0}`) | ключі, порядок, значення; `json.dumps` |
 | `test_rights_ui.py::TestMenusRights` | `test_menus`, `test_acl_matrix`, `test_settings` | AC-63…AC-65 | `with_user(...)`; `env['res.config.settings'].create({...}).execute()` | меню/дії; `AccessError`; параметри й пороги сигналів |
@@ -2147,12 +2161,12 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 
 | ТК | Кроки | Очікуваний результат | Де дивитися | AC |
 |---|---|---|---|---|
-| ТК-01 Підключення | колектор стартує з джерелами `BACNET-FACP-1`, `MB-U85-IO6` | ≤ 120 с: `f3d.source` обидва `online`; `panel.comm='online'`, `state='normal'`; 33 зони `normal`; `FA-FAC.dust_max_pct` = значення емулятора (82…90), `warn=True`; подія `comm_restored`; `fire.totals.state` = «Норма, 1 попередження» | Пожежна безпека → Огляд; Журнал | AC-72 |
+| ТК-01 Підключення | колектор стартує з джерелами `BAC-200-FACP-1` (`params.device=200`, `network=2`), `MB-U85-IO6` | ≤ 120 с: `f3d.source` обидва `online`; `panel.comm='online'`, `state='normal'`; 33 зони `normal`; `FA-FAC.dust_max_pct` = значення емулятора (82…90), `warn=True`; подія `comm_restored`; `fire.totals.state` = «Норма, 1 попередження» | Пожежна безпека → Огляд; Журнал | AC-72 |
 | ТК-02 Запиленість | `PUT /sim/v1/signals/fire/groups/FA-FAC/dust {"value": 91, "hold_s": 600}` | ≤ 620 с (опитування 600 с): `2.FAC.07.dust_state='alarm'`, подія `dust_alarm`, заявка «Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість 91 % при нормі до 90» з `f3d_fire_device_id`; закрити заявку (стадія Repaired) → емулятор скидає (R-25 iot_sim) → `dust_ok` | Обслуговування → Заявки | AC-20 |
-| ТК-03 Несправність зони | `POST /sim/v1/device/FA-CUT/fault {"reason": "sensor"}`; через 60 с `POST /device/FA-CUT/clear` | ≤ 20 с: `FA-CUT.state='fault'`, `loop_2.state='fault'`, події `fault` і `loop_fault`, 2 заявки (зона, шлейф — A-28); `clear` → `fault_ok`, `loop_ok`; заявки відкриті | Зони; Шлейфи; Заявки | AC-23, AC-32 |
-| ТК-04 Навчання на емуляторі | `d` створює навчання (FA-CNC, 2.CNC.05, `mode='sim'`) → «Запустити на емуляторі» | `sim_run_ref` заповнено; кроки: 1 ≤ 15 с, 2 ≤ 18 с, 5 ≤ 24 с (`done_by='auto'`); `evacuation.drill_active` у `/f3d/viewer/data`; після `duration_s` 300 + повернення ≤ 30 с + `drill_auto_stop_s` 120 → `evaluating`; перекличка → «Закрити» → PDF протоколу | Навчальні тривоги; 3D | AC-73, AC-44, AC-45 |
+| ТК-03 Несправність зони | (X-60: iot_sim API-12 приймає `fault`/`clear` для пасивних пристроїв P-09 з LSZ, `reason` ∈ {`sensor`, `generic`, `loop`}; поведінка — iot_sim R-25 за X-36) 1) `POST /sim/v1/device/FA-CUT/fault {"reason": "sensor"}`; через 60 с `POST /sim/v1/device/FA-CUT/clear`; 2) `POST /sim/v1/device/FA-CUT/fault {"reason": "loop"}`; через 60 с `clear` | крок 1, ≤ 20 с: `FA-CUT.state='fault'`, `panel.state='fault'` (LSZ:0 `fault`, MSV:1 = 3), `faults_count=1` (PIV:2), подія `fault`, **одна** заявка «Несправність зони FA-CUT (Розкрій): стан «fault»» (зона); `loop_2.state='ok'` (BV:2 = 0), заявки шлейфу немає; `clear` → `fault_ok`, `panel.state='normal'`, `faults_count=0`; заявка відкрита. Крок 2: те саме для зони + `loop_2.state='fault'` (BV:2 = 1), подія `loop_fault`, заявка «Несправність шлейфу 2 приладу FACP-1» (A-28 — окремий сигнал); `clear` → `loop_ok`; обидві заявки відкриті. `fault` з іншим `reason` → 422 емулятора (крок тесту падає з повідомленням) | Зони; Шлейфи; Огляд; Заявки | AC-23, AC-32 |
+| ТК-04 Навчання на емуляторі | `d` створює навчання (FA-CNC, 2.CNC.05, `mode='sim'`) → «Запустити на емуляторі» | `sim_run_ref` заповнено; кроки: 1 ≤ 15 с, 2 ≤ 18 с, 5 ≤ 24 с (`done_by='auto'`); якщо на стенді встановлено `factory3d_machine_connect` — крок 8 `machines` автоматично за CM-02 (`…/machine_state` РЦ зони Z-CNC ∈ {fault, off, idle}), 20 ≤ `t_fact_s` ≤ 90 (iot_sim R-25 +20 с; machine_connect R-02), інакше — вручну (X-12); `evacuation.drill_active` у `/f3d/viewer/data`; після `duration_s` 300 + повернення ≤ 30 с + `drill_auto_stop_s` 120 → `evaluating`; перекличка → «Закрити» → PDF протоколу | Навчальні тривоги; 3D | AC-73, AC-44, AC-45, AC-78 |
 | ТК-05 Тест без плану | з пульту iot_sim `fire_drill` (`zone=FA-EB`) без навчання в Odoo | ≤ 20 с: навчання `origin='panel'`, «Тест приладу: Крайкооблицювання», `running`; подія `drill_auto`; авто-стоп після завершення сценарію | Навчальні тривоги | AC-46 |
-| ТК-06 Справжня тривога | `POST /sim/v1/scenario/fire_drill/start {"params": {"zone": "FA-CUT", "real": true, "duration_s": 120}}` | ≤ 15 с: `FA-CUT.state='alarm'`, `panel.state='alarm'`, активності охороні, подія `brigade_on` (BI:11=1), **жодної** заявки ТО за тривогу; після завершення — `reset`, активності закриті | Огляд (червона плашка); дзвіночок активностей | AC-17, AC-67 |
+| ТК-06 Справжня тривога | `POST /sim/v1/scenario/fire_drill/start {"params": {"zone": "FA-CUT", "real": true, "duration_s": 120}}` | ≤ 15 с: `FA-CUT.state='alarm'`, `panel.state='alarm'`, активності охороні, подія `brigade_on` (BV:11=1), **жодної** заявки ТО за тривогу; після завершення — `reset`, активності закриті | Огляд (червона плашка); дзвіночок активностей | AC-17, AC-67 |
 | ТК-07 Іскрогасіння | `POST /sim/v1/scenario/spark/start {"params": {"count": 2, "interval_s": 30}}`; потім `{"fault": true}` | `count_today` +2, події `spark` (1–2 залежно від кошика опитування 10 с); `fault` → `SPARK-1.state='fault'`, `spark_fault`, заявка «Несправність іскрогасіння SPARK-1 (пульт GreCon BS 7)» | Системи; Журнал | AC-24 |
 | ТК-08 Втрата зв'язку | `POST /sim/v1/device/FACP-1/fault {"reason": "comm"}`; через 5 хв `POST /device/FACP-1/clear` | 90–100 с: `comm='stale'`; 180–190 с: `lost`, подія, активність, заявка «Втрата зв'язку з приладом FACP-1: …»; `fire.totals.state` = «Зв'язок із приладом втрачено»; `clear` → `comm_restored` ≤ 20 с, активність закрита, заявка відкрита | Огляд; Заявки | AC-21 |
 | ТК-09 Живлення щита D+H | `POST /sim/v1/scenario/blackout/start {"params": {"duration_s": 120, "genset": true}}` | `SMOKE-CTRL.state='battery'`, подія `smoke_battery`; після відновлення `smoke_mains` | Системи | AC-25 |
@@ -2187,9 +2201,10 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 3. Перевірити Огляд (прилад, 33 зони, `comm='lost'` до запуску колектора), звіт «Перевірка евакуації» (AC-38), демо-навчання.
 4. Юніт-тести `--test-tags /factory3d_fire_safety` на `odoo_f3d_test` → 0 падінь.
 5. Стенд ТК-01…ТК-10, ТБ-05 — протокол із фактичними часами.
-6. Перехід «на прод» на копії: `environment='prod'` → `BACNET-FACP-1.read_enabled=False`; спроба увімкнути без дозволу
-   → помилка (M-15 п. 3); заповнити дозвіл → увімкнути; змінити `params.host` на IP без мережі 2 — колектор знаходить
-   пристрій прямим Who-Is (на стенді — IP контейнера iot-sim).
+6. Перехід «на прод» на копії: `environment='prod'` → `BAC-200-FACP-1.read_enabled=False`; спроба увімкнути без дозволу
+   → помилка (M-15 п. 3); заповнити дозвіл → увімкнути; змінити `params.host` на IP і прибрати `params.network` (прямий IP,
+   без мережі 2) — колектор знаходить пристрій прямим Who-Is за `params.device` (на стенді — IP контейнера iot-sim); майстер
+   M-19 200 → 200 нічого не змінює (AC-77).
 7. Повторне оновлення модуля (`-u factory3d_fire_safety`) → AC-03 (без дублікатів).
 8. Деінсталяція на копії → `maintenance_request` (знімок п. 1) незмінні, сигнал запиленості існує, `hr_attendance` незмінна;
    повторна установка → п. 2 знову зелений.
@@ -2201,7 +2216,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 - Юніт-тести §13.1 зелені на чистій базі й на копії демо (`--test-tags /factory3d_fire_safety`,
   `/factory3d_fire_safety_viewer`); `test_data_sync.py` зелений (генератор = data).
 - ТК-01…ТК-10, ТБ-01…ТБ-06, ТП-01…ТП-04 пройдені; протокол із фактичними кількостями й часами — у `DEPLOY_TEST.md`.
-- Кожен AC-01…AC-75 має зелений тест або відмітку ТК/MAN у протоколі; кожен FR-01…FR-24 покритий AC (§12).
+- Кожен AC-01…AC-78 має зелений тест або відмітку ТК/MAN у протоколі; кожен FR-01…FR-24 покритий AC (§12).
 - `ruff check` (конфіг проєкту; без нього — умовчання, довжина рядка 120) без помилок; XML валідний (`xmllint --noout`).
 - Жодного `x_`-поля; жодного параметра чи поля `write_enabled` модуля:
   `grep -rn "x_\w*\s*=\s*fields\.\|fire_safety.write_enabled" odoo_addons/factory3d_fire_safety --include=*.py --include=*.xml`
@@ -2224,18 +2239,18 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | Q-03 | `drill_time_limit_s=300`; перевищення дає `remarks`, не `failed` (R-16 п. 6) |
 | Q-04 | `polymer_panels=False` (норма 240 м); у звіті й payload — обидві норми |
 | Q-05 | 33 зони як у макеті; R-08 показує «Z-OFFICE, Z-SOC» як зауваження |
-| Q-06 | перевизначення `_f3d_ingest` (A-22) + крон 1 хв; без підтвердження telemetry затримка ≤ 75 с |
-| Q-07 | адреси за R-23 telemetry, `params.read_only`; без маршруту `bacnet_event` — події лише з переходів сигналів |
-| Q-08 | A-09 (адреси MCP/SND/FLM), A-23 (8 нових кодів), ТК-03 очікує дві заявки |
-| Q-09 | payload уже має `drill_active`, `alarm_state`, `devices`; без змін клієнта — «Попередження» замість «Тривога» в картці, сценарій 3D — кнопкою |
+| Q-06 | **закрито X-02** (telemetry API-02/API-05 викликають `env['f3d.signal']._f3d_ingest(..., src='collector')`, перевизначення з `super()` першим дозволене): перевизначення (A-22) — основний шлях, крон 1 хв — запасний |
+| Q-07 | **закрито X-05, X-44**: telemetry ретранслює `UnconfirmedEventNotification` маршрутом `bacnet_event` за схемою API-01 і для `read_only` ініціює лише Who-Is/ReadProperty/ReadPropertyMultiple (telemetry §8.8, Додаток A.2); адреси — за telemetry Додатком A.1/R-23 без `device`, device instance і мережа — у `params` (§5.3) |
+| Q-08 | (б) **закрито X-34** — 8 кодів A-23 у каталозі iot_sim (№ 681–688, Додаток B), № 644/646 — по одному входу; (г) **закрито X-36** — шлейф лише при `fault(reason=loop)`, ТК-03 очікує одну заявку на зону; (д) **закрито X-37** (Q-16); (в) підтверджено iot_sim R-25 (`real=true` → BV:11 = 1); (а) відкрите — адреси LSP ручних/оповіщувачів/полум'я iot_sim не визначає, працюємо за A-09 |
+| Q-09 | **закрито X-28** (клієнт viewer: автостарт/автостоп за `evacuation.drill_active`, червоний для `alarm`/`fault`, маркери `fire.devices`); payload модуля вже має ці ключі (CF-01); до випуску клієнта — «Попередження» в картці, сценарій 3D — кнопкою |
 | Q-10 | закрито (A-19): джерело access знаходиться за префіксом; на місці збору — перекличка (M-11d) |
 | Q-11 | у data 212 сповіщувачів (макет), README не правимо |
 | Q-12 | крани/вогнегасники/насосна не моделюються |
 | Q-13 | журнал без ротації (A-12); звіт V-22 — журнал за період |
 | Q-14 | ADAM u85 DI0–DI6 за iot_sim §8.11.3; зміна розкладки — лише дані сигналів |
 | Q-15 | закрито (CF-06 `_f3d_is_active_at`); модуль у `hr.attendance` не пише |
-| Q-16 | код приймає BI/BV і AV/PIV однаково; на проді адреси змінюються даними; сигнал запиленості архівується, якщо прилад її не віддає |
-| Q-17 | dev 200 лише опитуванням 10 с (A-20) |
+| Q-16 | **закрито X-37** щодо типів: емулятор і дані модуля — BV (шлейфи, сирени, пульт) і PIV (лічильники, запиленість), telemetry приймає `PIV`; код приймає BI/BV і AV/PIV однаково. Відкрито лише питання до замовника (CONSISTENCY «Питання до замовника» № 10): чи віддає прилад запиленість (PICS); якщо ні — сигнал запиленості архівується |
+| Q-17 | **закрито X-06** (telemetry: `stale` для `mode=cov` — від інтервалу контрольного читання); dev 200 лишається на опитуванні 10 с (A-20): для `read_only` telemetry однаково діє як `poll` |
 
 ## Додаток A. Адреси пристроїв і зони виявлення (генерує `tools/gen_data.py` з `plant/fire.py`, `plant/infra.py`)
 
@@ -2439,38 +2454,41 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 
 ## Додаток B. Сигнали модуля (`data/f3d_signal_data.xml`, 52 + запиленість від хука; CF-03, A-23)
 
-Спільне для всіх 52: `module='fire_safety'`, `origin='catalog'`, `write_enabled=False`, `viewer_visible=False` (розділ
+Спільне для всіх 52: `module='fire_safety'`, `origin='module'` (X-16: сигнали, які модуль створює з власних даних; `catalog` —
+лише імпорт рядків каталогу iot_sim), `write_enabled=False`, `viewer_visible=False` (розділ
 `fire` будує M-17), `create_request` — `True` лише там, де є `alarm_states`/пороги, `alarm_priority='2'`, `decimals=0`,
 `store_period_s=3600` (крім позначених), `hysteresis=0`, `min_duration_s=0`. Напрямок — **R** (лише читання) для всіх;
-об'єкти dev 200 — iot_sim §8.11.1 (еталон ASHRAE 135 LSZ/LSP; склад об'єктів приладу — ПРИПУЩЕННЯ, Q-01/Q-16), u85 —
-iot_sim §8.11.3 (ПРИПУЩЕННЯ, Q-14). Джерела: `B` = `source_bacnet_facp_1`, `M` = `source_mb_u85_io6`. Обладнання —
-за R-24 (хук). Колонка «iot_sim №» — рядок Додатка A iot_sim (новий = A-23).
+об'єкти dev 200 — iot_sim §8.11.1 (еталон ASHRAE 135 LSZ/LSP; типи LSZ, LSP, BV, MSV, PIV — за BTL-лістингом FC726, X-37;
+склад об'єктів приладу — ПРИПУЩЕННЯ, Q-01/Q-16), u85 — iot_sim §8.11.3 (ПРИПУЩЕННЯ, Q-14). Джерела: `B` =
+`source_bacnet_facp_1` (код `BAC-200-FACP-1`, X-17), `M` = `source_mb_u85_io6`. Адреси `B` **без** ключа `device` — device
+instance 200 і мережа 2 беруться з `params` джерела (§5.3, X-44). Обладнання — за R-24 (хук). Колонка «iot_sim №» — рядок
+Додатка A iot_sim (№ 681–688 — коди A-23, внесені в каталог за X-34).
 
 | # | code | name | kind / unit | джерело / `address` | `period_s` | `states` / `map` | `alarm_states` · `alarm_title` | iot_sim № |
 |---|---|---|---|---|---|---|---|---|
-| 1–33 | `fire/groups/<FA>/state` (33 зони, Додаток A.1) | «Стан зони <FA> (<назва>)» | state / — | B · `{"device": 200, "object": "LSZ", "instance": <lsz>, "mode": "poll"}` | 10 | текст `BACnetLifeSafetyState` (R-11), `states` порожньо | `["fault", "tamper", "abnormal", "emergency-power", "supervisory"]` · «Несправність зони <FA> (<назва>): стан «{text}»» | 603–635 |
-| 34 | `fire/totals/state` | «Прилад FACP-1: стан (LSZ:0)» | state / — | B · `{"device": 200, "object": "LSZ", "instance": 0, "mode": "poll"}` | 10 | — | `[]`, `create_request=False` | 640 |
-| 35 | `fire/totals/system_state` | «Прилад FACP-1: системний стан (MSV:1)» | state / — | B · `{"device": 200, "object": "MSV", "instance": 1, "mode": "poll", "map": {"1": "normal", "2": "alarm", "3": "fault", "4": "test", "5": "disabled"}}` | 10 | `["normal", "alarm", "fault", "test", "disabled"]` | `[]`, `False` | новий |
-| 36 | `fire/totals/alarms` | «Прилад FACP-1: активні тривоги» | gauge / шт | B · `{"device": 200, "object": "AV", "instance": 1, "mode": "poll"}` | 10 | — | без порогів, `False` | 641 |
-| 37 | `fire/totals/faults` | «Прилад FACP-1: несправності» | gauge / шт | B · `AV` 2 | 10 | — | без порогів, `False` (заявки — від зон і шлейфів) | 642 |
-| 38 | `fire/totals/disabled` | «Прилад FACP-1: вимкнення» | gauge / шт | B · `AV` 3 | 10 | — | без порогів, `False` | 643 |
-| 39–42 | `fire/loops/<n>/state`, n = 1…4 | «Шлейф <n>: несправність» | state / — | B · `{"device": 200, "object": "BI", "instance": <n>, "mode": "poll", "map": {"0": "off", "1": "on"}}` | 10 | `["off", "on"]` | `["on"]` · «Несправність шлейфу <n> приладу FACP-1» | 636–639 |
-| 43 | `fire/totals/sounders_active` | «Оповіщувачі увімкнено (BI:10)» | state / — | B · `BI` 10, `map` off/on | 10 | `["off", "on"]` | `[]`, `False` | новий |
-| 44 | `fire/totals/brigade` | «Передано на пульт ДСНС (BI:11)» | state / — | B · `BI` 11, `map` off/on | 10 | `["off", "on"]` | `[]`, `False` | новий |
+| 1–33 | `fire/groups/<FA>/state` (33 зони, Додаток A.1) | «Стан зони <FA> (<назва>)» | state / — | B · `{"object": "LSZ", "instance": <lsz>, "mode": "poll"}` | 10 | текст `BACnetLifeSafetyState` (R-11), `states` порожньо | `["fault", "tamper", "abnormal", "emergency-power", "supervisory"]` · «Несправність зони <FA> (<назва>): стан «{text}»» | 603–635 |
+| 34 | `fire/totals/state` | «Прилад FACP-1: стан (LSZ:0)» | state / — | B · `{"object": "LSZ", "instance": 0, "mode": "poll"}` | 10 | — | `[]`, `create_request=False` | 640 |
+| 35 | `fire/totals/system_state` | «Прилад FACP-1: системний стан (MSV:1)» | state / — | B · `{"object": "MSV", "instance": 1, "mode": "poll", "map": {"1": "normal", "2": "alarm", "3": "fault", "4": "test", "5": "disabled"}}` | 10 | `["normal", "alarm", "fault", "test", "disabled"]` | `[]`, `False` | 681 |
+| 36 | `fire/totals/alarms` | «Прилад FACP-1: активні тривоги» | gauge / шт | B · `{"object": "PIV", "instance": 1, "mode": "poll"}` | 10 | — | без порогів, `False` | 641 |
+| 37 | `fire/totals/faults` | «Прилад FACP-1: несправності» | gauge / шт | B · `PIV` 2 | 10 | — | без порогів, `False` (заявки — від зон і шлейфів) | 642 |
+| 38 | `fire/totals/disabled` | «Прилад FACP-1: вимкнення» | gauge / шт | B · `PIV` 3 | 10 | — | без порогів, `False` | 643 |
+| 39–42 | `fire/loops/<n>/state`, n = 1…4 | «Шлейф <n>: несправність» | state / — | B · `{"object": "BV", "instance": <n>, "mode": "poll", "map": {"0": "off", "1": "on"}}` | 10 | `["off", "on"]` | `["on"]` · «Несправність шлейфу <n> приладу FACP-1» | 636–639 |
+| 43 | `fire/totals/sounders_active` | «Оповіщувачі увімкнено (BV:10)» | state / — | B · `BV` 10, `map` off/on | 10 | `["off", "on"]` | `[]`, `False` | 682 |
+| 44 | `fire/totals/brigade` | «Передано на пульт ДСНС (BV:11)» | state / — | B · `BV` 11, `map` off/on | 10 | `["off", "on"]` | `[]`, `False` | 683 |
 | 45 | `fire/spark/SPARK-1/state` | «Іскрогасіння: іскра (DI0)» | state / — | M · `{"fc": 2, "addr": 0, "type": "bool", "unit": 85, "map": {"0": "off", "1": "on"}}` | 2 | `["off", "on"]` | `[]`, `False` (події — з лічильника, A-13) | 644 (звужено до DI0) |
-| 46 | `fire/spark/SPARK-1/extinguishing` | «Іскрогасіння: гасіння (DI1)» | state / — | M · `fc 2`, `addr 1`, `map` off/on | 2 | `["off", "on"]` | `[]`, `False` | новий |
-| 47 | `fire/spark/SPARK-1/fault` | «Іскрогасіння: несправність (DI2)» | state / — | M · `fc 2`, `addr 2`, `map` off/on | 2 | `["off", "on"]` | `["on"]` · «Несправність іскрогасіння SPARK-1 (пульт GreCon BS 7)» | новий |
-| 48 | `fire/spark/SPARK-1/water_ok` | «Іскрогасіння: тиск води (DI3)» | state / — | M · `fc 2`, `addr 3`, `map {"0": "low", "1": "ok"}` | 2 | `["low", "ok"]` | `["low"]` · «Іскрогасіння SPARK-1: немає тиску води гасіння» | новий |
+| 46 | `fire/spark/SPARK-1/extinguishing` | «Іскрогасіння: гасіння (DI1)» | state / — | M · `fc 2`, `addr 1`, `map` off/on | 2 | `["off", "on"]` | `[]`, `False` | 684 |
+| 47 | `fire/spark/SPARK-1/fault` | «Іскрогасіння: несправність (DI2)» | state / — | M · `fc 2`, `addr 2`, `map` off/on | 2 | `["off", "on"]` | `["on"]` · «Несправність іскрогасіння SPARK-1 (пульт GreCon BS 7)» | 685 |
+| 48 | `fire/spark/SPARK-1/water_ok` | «Іскрогасіння: тиск води (DI3)» | state / — | M · `fc 2`, `addr 3`, `map {"0": "low", "1": "ok"}` | 2 | `["low", "ok"]` | `["low"]` · «Іскрогасіння SPARK-1: немає тиску води гасіння» | 686 |
 | 49 | `fire/spark/SPARK-1/count_today` | «Іскрогасіння: іскор за добу» | gauge / шт | M · `{"fc": 3, "addr": 0, "count": 2, "type": "u32", "wordorder": "little", "unit": 85}` | 10 | — | без порогів, `False`; `store_period_s=300` | 645 |
 | 50 | `fire/smoke/SMOKE-VENTS/state` | «Люки димовидалення відкриті (DI4)» | state / — | M · `fc 2`, `addr 4`, `map {"0": "closed", "1": "open"}` | 2 | `["closed", "open"]` | `[]`, `False` | 646 (звужено до DI4) |
-| 51 | `fire/smoke/SMOKE-CTRL/fault` | «Щит D+H: несправність (DI5)» | state / — | M · `fc 2`, `addr 5`, `map {"0": "ok", "1": "fault"}` | 2 | `["ok", "fault"]` | `["fault"]` · «Несправність щита димовидалення SMOKE-CTRL (D+H CPS-M1): АКБ або живлення» | новий |
-| 52 | `fire/smoke/SMOKE-CTRL/battery` | «Щит D+H: живлення від АКБ (DI6)» | state / — | M · `fc 2`, `addr 6`, `map {"0": "mains", "1": "battery"}` | 2 | `["mains", "battery"]` | `[]`, `False` | новий |
-| 53 | `fire/groups/FA-FAC/dust` (хук §5.4 п. 3, не в XML) | «Запиленість сповіщувача 2.FAC.07» | gauge / % | B · `{"device": 200, "object": "AV", "instance": 21607, "mode": "poll"}` | 600 | — | `warn_high` 80, `alarm_high` 90, `hysteresis` 1,8, `decimals` 1 · «Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}» | 189 (рівень 0) |
+| 51 | `fire/smoke/SMOKE-CTRL/fault` | «Щит D+H: несправність (DI5)» | state / — | M · `fc 2`, `addr 5`, `map {"0": "ok", "1": "fault"}` | 2 | `["ok", "fault"]` | `["fault"]` · «Несправність щита димовидалення SMOKE-CTRL (D+H CPS-M1): АКБ або живлення» | 687 |
+| 52 | `fire/smoke/SMOKE-CTRL/battery` | «Щит D+H: живлення від АКБ (DI6)» | state / — | M · `fc 2`, `addr 6`, `map {"0": "mains", "1": "battery"}` | 2 | `["mains", "battery"]` | `[]`, `False` | 688 |
+| 53 | `fire/groups/FA-FAC/dust` (хук §5.4 п. 3, не в XML) | «Запиленість сповіщувача 2.FAC.07» | gauge / % | B · `{"object": "PIV", "instance": 21607, "mode": "poll"}` (ціле %, до PICS — Q-16) | 600 | — | `warn_high` 80, `alarm_high` 90, `hysteresis` 1,8, `decimals` 1 · «Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}» | 189 (рівень 0) |
 
 Сигнали пристроїв за `monitor` (A-02, M-04 `action_create_signals`): `fire/devices/<address>/state` (LSP, 10 с) і
-`fire/devices/<address>/dust` (AV, 600 с) — не в data.
+`fire/devices/<address>/dust` (PIV, 600 с) — не в data; адреси теж без `device`, `origin='module'`.
 
-## Додаток C. Приклад розділів payload (API-02, CF-01; копія демо після ТК-01: прилад онлайн, запиленість `2.FAC.07` = 82,5 % як у макеті)
+## Додаток C. Приклад розділів payload (API-02, CF-01; копія демо після ТК-01: прилад онлайн, запиленість `2.FAC.07` = 82 % — PIV віддає ціле число, X-37; у макеті 0,825)
 
 ```json
 {
@@ -2488,7 +2506,7 @@ iot_sim §8.11.3 (ПРИПУЩЕННЯ, Q-14). Джерела: `B` = `source_bac
    "FA-FAC": {"zone": "Z-FAC", "zone_name": "Дільниця фасадів МДФ", "kind": "multi", "kind_name": "оптико-теплові (пил деревини)",
               "n": 18, "spacing": 8.8, "area": 1235, "loop": 2, "state": "warn",
               "warning": "Сповіщувач 2.FAC.07 біля шліфування: запиленість камери 82 % — очистити до кінця зміни, інакше прилад переведе його в несправність.",
-              "maintenance_request": "Очистити сповіщувач 2.FAC.07 (запиленість 82 %)", "dust": 0.825,
+              "maintenance_request": "Очистити сповіщувач 2.FAC.07 (запиленість 82 %)", "dust": 0.82,
               "alarm_state": "normal", "compliance": "ok", "stale": false},
    "FA-BOILER": {"zone": "BOILER", "zone_name": "Котельня", "kind": "heat", "kind_name": "теплові", "n": 2, "spacing": 6.4,
                  "area": 72, "loop": 2, "state": "ok", "alarm_state": "normal", "compliance": "ok", "stale": false}
