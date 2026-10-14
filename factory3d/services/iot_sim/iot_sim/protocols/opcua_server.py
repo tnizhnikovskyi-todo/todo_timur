@@ -4,8 +4,8 @@
 типи вузлів — ``BaseObjectType``; ``JobOrderList`` — ``String[]`` з ``JobOrderID``
 (повний ``ISA95JobOrderAndStateDataType`` — ПРИПУЩЕННЯ на наступну ітерацію); події —
 ``BaseEventType`` з ``Message``/``Severity``/``SourceName``. Методи ``JobOrderControl.*`` приймають
-``JobOrderID`` і ставлять команду ``world.post("opc_joborder", {...})``; авторизація методів
-користувачем ``SIM_OPCUA_USER`` не перевіряється (ПРИПУЩЕННЯ), логін/пароль перевіряються при вході.
+``JobOrderID`` і ставлять команду ``world.post("opc_joborder", {...})``; виклик методів — лише
+під ``SIM_OPCUA_USER`` (анонім -> BadUserAccessDenied).
 
 Дані читаються лише через ``World``: ``workcenters/<C>/{state,mode,alarm,pieces_out,job}``,
 ``energy/consumers/<C>/p_now``, ``equipment/GANTRY-1/*``. Нові ``JobOrder`` від ``/jobs`` (API-33)
@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from asyncua import Server, ua, uamethod
+from asyncua.crypto.permission_rules import PermissionRuleset, SimpleRoleRuleset
 from asyncua.server.user_managers import UserManager
 from asyncua.server.users import User, UserRole
 
@@ -69,6 +70,21 @@ def _u64(v: Any) -> int:
         return max(0, int(v))
     except (TypeError, ValueError):
         return 0
+
+
+class _Rules(PermissionRuleset):
+    """Анонім (роль User) читає/підписується, але не викликає методи (SPEC §8.3.1)."""
+
+    def __init__(self) -> None:
+        self._base = SimpleRoleRuleset()
+
+    def check_validity(self, user, action_type, body):
+        call_id = ua.NodeId(ua.ObjectIds.CallRequest_Encoding_DefaultBinary)
+        if action_type == call_id and user.role != UserRole.Admin:
+            return False
+        if user.role == UserRole.Admin:
+            return True
+        return self._base.check_validity(user, action_type, body)
 
 
 class _Users(UserManager):
@@ -127,7 +143,7 @@ class OpcUaServer(ProtocolServer):
             await srv.load_certificate(self.cert_dir / "server.der")
             await srv.load_private_key(self.cert_dir / "server.key")
             policies.append(ua.SecurityPolicyType.Basic256Sha256_SignAndEncrypt)
-        srv.set_security_policy(policies)
+        srv.set_security_policy(policies, permission_ruleset=_Rules())
         for uri in NS_URIS:
             await srv.register_namespace(uri)
         self.ns = await srv.get_namespace_index(NS_URIS[0])

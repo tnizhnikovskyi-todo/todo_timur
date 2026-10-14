@@ -82,7 +82,10 @@ async def test_user_login(opc):
 async def test_joborder_list_and_method(opc, world):
     world.post("opc_joborders", {"machine": "SAW-1", "job_order_id": "cj-00077"})
     await opc.refresh()
-    async with Client(url(opc)) as c:
+    c = Client(url(opc))
+    c.set_user("collector")
+    c.set_password("pw")
+    async with c:
         ns = await c.get_namespace_index(NS_INST)
         lst = c.get_node(f"ns={ns};s=SAW-1.JobManagement.JobOrderControl.JobOrderList")
         assert "cj-00077" in await lst.read_value()
@@ -91,3 +94,18 @@ async def test_joborder_list_and_method(opc, world):
         await opc.refresh()
         assert "WO00013" in await lst.read_value()
     assert world.drain("opc_joborder")[0]["job_order_id"] == "WO00013"
+
+
+async def test_methods_require_login(opc):
+    async with Client(url(opc)) as c:
+        ns = await c.get_namespace_index(NS_INST)
+        ctl = c.get_node(f"ns={ns};s=SAW-1.JobManagement.JobOrderControl")
+        with pytest.raises(ua.UaStatusCodeError) as exc:
+            await ctl.call_method(f"{ns}:Store", "WO00099", "")
+        assert exc.value.code == ua.StatusCodes.BadUserAccessDenied
+    c = Client(url(opc))
+    c.set_user("collector")
+    c.set_password("pw")
+    async with c:
+        ctl = c.get_node(f"ns={ns};s=SAW-1.JobManagement.JobOrderControl")
+        assert await ctl.call_method(f"{ns}:Store", "WO00099", "") == 0
