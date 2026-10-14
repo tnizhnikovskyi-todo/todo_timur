@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="res_config_settings_view_form_f3d_sim" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.f3d.sim</field>
+    <field name="model">res.config.settings</field>
+    <field name="priority" eval="40"/>
+    <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//form" position="inside">
+        <app data-string="Factory3D" string="Factory3D" name="factory3d_iot_sim"
+             groups="factory3d_base.group_f3d_admin">
+          <block title="Емулятор обладнання" name="f3d_sim_block">
+            <setting string="Сервіс емулятора" help="Адреса й токен доступу до /sim/v1">
+              <div class="content-group">
+                <div class="row mt8"><label class="col-lg-4" for="f3d_sim_url"/><field name="f3d_sim_url"/></div>
+                <div class="row mt8"><label class="col-lg-4" for="f3d_sim_token"/>
+                  <field name="f3d_sim_token" password="True"/></div>
+                <div class="row mt8"><label class="col-lg-4" for="f3d_sim_export_token"/>
+                  <field name="f3d_sim_export_token" password="True"/></div>
+                <div class="mt8">
+                  <button name="action_f3d_sim_check" type="object" string="Перевірити зв'язок" class="btn-link"/>
+                  <button name="action_f3d_sim_generate_export_token" type="object"
+                          string="Згенерувати токен експорту" class="btn-link"/>
+                </div>
+              </div>
+            </setting>
+            <setting string="Опитування стану" help="Стоп-кран: фонове опитування сервісу">
+              <field name="f3d_sim_read_enabled"/>
+            </setting>
+            <setting string="Команди" help="Стоп-кран: сценарії, збої, час">
+              <field name="f3d_sim_write_enabled"/>
+            </setting>
+            <setting string="Режим за замовчуванням">
+              <field name="f3d_sim_mode"/>
+            </setting>
+            <setting string="Рівень 0 при офлайні" help="Вмикати імітацію без сервісу">
+              <field name="f3d_sim_level0_enabled"/>
+              <div class="content-group mt8">
+                <label for="f3d_sim_level0_after_min"/> <field name="f3d_sim_level0_after_min"/>
+              </div>
+            </setting>
+            <setting string="Таймаут і зберігання">
+              <div class="content-group">
+                <div class="row mt8"><label class="col-lg-4" for="f3d_sim_timeout_s"/><field name="f3d_sim_timeout_s"/></div>
+                <div class="row mt8"><label class="col-lg-4" for="f3d_sim_keep_days"/><field name="f3d_sim_keep_days"/></div>
+              </div>
+            </setting>
+          </block>
+        </app>
+      </xpath>
+    </field>
+  </record>
+</odoo>

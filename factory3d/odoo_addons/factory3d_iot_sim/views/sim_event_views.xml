@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_f3d_sim_event_list" model="ir.ui.view">
+    <field name="name">f3d.sim.event.list</field>
+    <field name="model">f3d.sim.event</field>
+    <field name="arch" type="xml">
+      <list string="Події емулятора" create="false" edit="false"
+            decoration-danger="kind in ('error', 'alarm')" decoration-warning="kind == 'fault'">
+        <field name="ts"/>
+        <field name="kind"/>
+        <field name="device_code"/>
+        <field name="device_id"/>
+        <field name="run_id"/>
+        <field name="message"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_f3d_sim_event_search" model="ir.ui.view">
+    <field name="name">f3d.sim.event.search</field>
+    <field name="model">f3d.sim.event</field>
+    <field name="arch" type="xml">
+      <search string="Події">
+        <field name="device_code"/>
+        <field name="message"/>
+        <filter name="kind_scenario" string="Сценарій" domain="[('kind', '=', 'scenario')]"/>
+        <filter name="kind_fault" string="Збій" domain="[('kind', '=', 'fault')]"/>
+        <filter name="kind_alarm" string="Тривога" domain="[('kind', '=', 'alarm')]"/>
+        <filter name="kind_error" string="Помилка" domain="[('kind', '=', 'error')]"/>
+        <filter name="kind_command" string="Команда" domain="[('kind', '=', 'command')]"/>
+        <separator/>
+        <filter name="today" string="Сьогодні" domain="[('ts', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00'))]"/>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_f3d_sim_event" model="ir.actions.act_window">
+    <field name="name">Події емулятора</field>
+    <field name="res_model">f3d.sim.event</field>
+    <field name="view_mode">list</field>
+  </record>
+</odoo>

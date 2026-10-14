@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_maintenance_equipment_form_f3d_sim" model="ir.ui.view">
+    <field name="name">maintenance.equipment.form.f3d.sim</field>
+    <field name="model">maintenance.equipment</field>
+    <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//notebook" position="inside">
+        <page string="Емулятор" name="f3d_sim" invisible="not f3d_sim_device_id">
+          <group>
+            <field name="f3d_sim_device_id"/>
+            <field name="f3d_sim_protocol"/>
+            <field name="f3d_sim_state"/>
+            <field name="f3d_sim_fault_reason"/>
+          </group>
+          <button name="action_f3d_sim_fault" type="object" string="Збій" class="btn-danger"
+                  invisible="f3d_sim_state == 'fault'" groups="factory3d_base.group_f3d_manager"/>
+          <button name="action_f3d_sim_clear" type="object" string="Скинути"
+                  invisible="f3d_sim_state != 'fault'" groups="factory3d_base.group_f3d_manager"/>
+        </page>
+      </xpath>
+    </field>
+  </record>
+</odoo>

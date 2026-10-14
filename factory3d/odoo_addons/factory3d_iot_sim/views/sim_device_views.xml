@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_f3d_sim_device_list" model="ir.ui.view">
+    <field name="name">f3d.sim.device.list</field>
+    <field name="model">f3d.sim.device</field>
+    <field name="arch" type="xml">
+      <list string="Пристрої емулятора" default_order="protocol, code"
+            decoration-danger="state == 'fault'" decoration-muted="state == 'passive'">
+        <field name="code"/>
+        <field name="name"/>
+        <field name="protocol"/>
+        <field name="driver"/>
+        <field name="unit_id"/>
+        <field name="instance"/>
+        <field name="address"/>
+        <field name="state"/>
+        <field name="equipment_id"/>
+        <field name="workcenter_id"/>
+        <field name="signal_count"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_f3d_sim_device_form" model="ir.ui.view">
+    <field name="name">f3d.sim.device.form</field>
+    <field name="model">f3d.sim.device</field>
+    <field name="arch" type="xml">
+      <form string="Пристрій емулятора">
+        <header>
+          <field name="write_enabled" invisible="1"/>
+          <button name="action_fault" type="object" string="Збій" class="btn-danger"
+                  invisible="state == 'fault' or not write_enabled"/>
+          <button name="action_clear" type="object" string="Скинути" invisible="state != 'fault'"/>
+          <field name="state" widget="statusbar" statusbar_visible="unknown,ok,fault"/>
+        </header>
+        <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button name="action_open_signals" type="object" class="oe_stat_button" icon="fa-signal">
+              <field name="signal_count" widget="statinfo" string="Сигнали"/>
+            </button>
+          </div>
+          <group>
+            <group string="Пристрій">
+              <field name="code"/>
+              <field name="name"/>
+              <field name="equipment_id"/>
+              <field name="workcenter_id"/>
+              <field name="zone_id"/>
+              <field name="role"/>
+              <field name="model"/>
+            </group>
+            <group string="Протокол">
+              <field name="protocol"/>
+              <field name="driver"/>
+              <field name="unit_id"/>
+              <field name="instance"/>
+              <field name="address"/>
+              <field name="params" widget="json"/>
+              <field name="enabled"/>
+            </group>
+            <group string="Стан">
+              <field name="fault_reason"/>
+              <field name="last_update"/>
+            </group>
+          </group>
+          <notebook>
+            <page string="Сигнали" name="signals">
+              <field name="signal_ids" readonly="1">
+                <list>
+                  <field name="code"/>
+                  <field name="address"/>
+                  <field name="dtype"/>
+                  <field name="unit"/>
+                  <field name="last_value"/>
+                  <field name="last_status"/>
+                  <field name="last_ts"/>
+                </list>
+              </field>
+            </page>
+            <page string="Примітка" name="note">
+              <field name="note"/>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_f3d_sim_device_search" model="ir.ui.view">
+    <field name="name">f3d.sim.device.search</field>
+    <field name="model">f3d.sim.device</field>
+    <field name="arch" type="xml">
+      <search string="Пристрої">
+        <field name="code"/>
+        <field name="name"/>
+        <field name="address"/>
+        <filter name="filter_fault" string="У збої" domain="[('state', '=', 'fault')]"/>
+        <filter name="filter_enabled" string="Активні" domain="[('enabled', '=', True)]"/>
+        <separator/>
+        <filter name="p01" string="P-01" domain="[('protocol', '=', 'P-01')]"/>
+        <filter name="p02" string="P-02" domain="[('protocol', '=', 'P-02')]"/>
+        <filter name="p03" string="P-03" domain="[('protocol', '=', 'P-03')]"/>
+        <filter name="p05" string="P-05" domain="[('protocol', '=', 'P-05')]"/>
+        <filter name="p06" string="P-06" domain="[('protocol', '=', 'P-06')]"/>
+        <filter name="p07" string="P-07" domain="[('protocol', '=', 'P-07')]"/>
+        <filter name="p08" string="P-08" domain="[('protocol', '=', 'P-08')]"/>
+        <filter name="p09" string="P-09" domain="[('protocol', '=', 'P-09')]"/>
+        <filter name="p10" string="P-10" domain="[('protocol', '=', 'P-10')]"/>
+        <filter name="p11" string="P-11" domain="[('protocol', '=', 'P-11')]"/>
+        <filter name="p12" string="P-12" domain="[('protocol', '=', 'P-12')]"/>
+        <group>
+          <filter name="group_protocol" string="Протокол" context="{'group_by': 'protocol'}"/>
+          <filter name="group_driver" string="Драйвер" context="{'group_by': 'driver'}"/>
+          <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_f3d_sim_device" model="ir.actions.act_window">
+    <field name="name">Пристрої емулятора</field>
+    <field name="res_model">f3d.sim.device</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{'search_default_group_protocol': 1}</field>
+  </record>
+</odoo>
