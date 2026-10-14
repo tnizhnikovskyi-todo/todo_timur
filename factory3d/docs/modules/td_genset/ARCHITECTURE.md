@@ -1,8 +1,11 @@
 # td_genset — технічне рішення: запит на зміни (перенос 18 → 19) і міст `factory3d_genset`
 
-Версія 0.2 · 14.10.2026 · автор: агент-архітектор (Claude) · статус: **чернетка на погодження**.
+Версія 0.3 · 14.10.2026 (0.2 — 14.10.2026) · автор: агент-архітектор (Claude) · статус: **чернетка на погодження**.
 
-Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md`: X-01 (джерело `GENSET-RELAY` локальне лише через хук telemetry
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-69 (пункт «Налаштування генератора» під `factory3d_base.menu_f3d_config`, sequence 55 —
+§1.2, §2.1 CB-09, A-06; поля значень положень АВР і перерахунок `period_s` — SPEC M-07) (v0.3).
+
+Зміни (v0.2): 14.10.2026 — правки за `docs/CONSISTENCY.md`: X-01 (джерело `GENSET-RELAY` локальне лише через хук telemetry
 `_f3d_local_types()`, без перевизначення `collector_id` — A-15, Q-20 закрито), X-10 (КГУ в острові — виміряне `infra/totals/chp_kw`,
 §2.5.3, Q-02), X-11 (критичні споживачі — `f3d.energy.node.is_critical`, `critical_codes` запасний, `critical_kw` пише лише energy —
 FR-11, §3), X-13 (`stale` сигналів GENSET ставить лише міст), X-20 (`depends` за каркасом §3 без `factory3d_viewer`, провайдер за
@@ -128,7 +131,7 @@ Generator relay State** (0/1), 20485 Priority, **20486 Source 1 State** (0 Under
 | Головний енергетик (менеджер `td_genset` — ЗВІРИТИ; `group_f3d_manager`) | налаштовує розклад, пороги, профіль D700, прив'язку GENSET ↔ генератор, мапу подій → заявки ТО, дивиться баланс при блекауті | `td_genset` (як є); «Завод 3D → Генератор → Зв'язка / Профіль / Події → ТО» |
 | Служба головного механіка (`maintenance.group_equipment_manager`) | отримує заявки ТО від моста (аварійні — з тривог, планові — за мотогодинами), закриває їх | Обслуговування → Заявки (стандарт) |
 | Диспетчер / керівник (`group_f3d_user`) | бачить стан генератора, АВР, накопичувача і баланс у 3D | «Завод 3D → Переглядач», вкладка «Енергія», картка GENSET |
-| Адміністратор factory3d (`group_f3d_admin`) | стоп-крани моста, джерело телеметрії, емулятор, `neutralize.sql`, токени стенда | «Завод 3D → Налаштування → Параметри системи»; compose |
+| Адміністратор factory3d (`group_f3d_admin`) | стоп-крани моста, джерело телеметрії, емулятор, `neutralize.sql`, токени стенда | «Завод 3D → Налаштування → Налаштування генератора» (X-69) і «… → Параметри системи»; compose |
 | Автор `td_genset` | звіряє адаптер (ADP-xx), профіль D700 для `fake_relay.py`, REST для емулятора, регресію | репозиторій `td_genset`, гілка `19.0` |
 
 Сценарії: (1) щоденно — показання генератора в 3D і в телеметрії; (2) блекаут — АВР/генератор,
@@ -203,7 +206,7 @@ factory3d перенесено з `td_genset` у міст (A-01). Циклів �
 |---|---|---|
 | CB-01, CB-02 | `factory3d_base` | `maintenance.equipment.f3d_code='GENSET'`, `f3d_resolve('GENSET')`, кнопка «Показати в 3D» |
 | CB-07, CB-08 | `factory3d_base` | паспорт ролі `genset` (`f3d_passport_id`), `f3d_get_num('kva')`, `('tank_l')`, `('fuel_lph_75')` — числа профілю з паспорта, якщо є в `spec_ids` |
-| CB-09, CB-10 | `factory3d_base` | меню під `menu_f3d_root` (sequence 55, A-06), групи `group_f3d_*`, `factory3d.base.environment` для умовчань стоп-кранів |
+| CB-09, CB-10 | `factory3d_base` | меню під `menu_f3d_root` (sequence 55, A-06), пункт «Налаштування генератора» під `menu_f3d_config` (sequence 55, правило X-32; X-69), групи `group_f3d_*`, `factory3d.base.environment` для умовчань стоп-кранів |
 | C-6.4 (каркас), CT-10, CT-12 | `factory3d_telemetry` | `f3d.source` (тип додаємо `selection_add` і оголошуємо локальним хуком `_f3d_local_types()` — CT-12, R-26, X-01; `collector_id` не перевизначаємо), `f3d.signal` (`code`, `equipment_id`, `source_id`, `unit`, `kind`, `period_s`, `last_value`, `last_ts`, `status`), `f3d.reading`, `maintenance.equipment.f3d_meter_signal_id`, `maintenance.request.f3d_signal_id`/`f3d_equipment_code`; метод прийому показань CT-10 `_f3d_ingest`, `_mark_stale` |
 | C-6.8 (каркас) | `factory3d_telemetry` | правило заявок ТО (поля, дедуплікація, тексти) |
 | C-02, C-03, C-07 (необов'язково, X-20) | `factory3d_viewer` | хук провайдера за префіксом `f3d.viewer.provider.*` (duck-typing M-01, без `_inherit`), шина `f3d.viewer.event._notify` (M-03) — якщо модель є в реєстрі, хелпер `deep_merge` (M-01, X-23), шляхи сигналів у payload, Додаток A.13 `infra` (схема 1.1, X-24) |
@@ -545,7 +548,7 @@ environment=prod`; 4) `factory3d.genset.read_enabled=True` лише після �
 | A-03 | **Вилучено (X-20)** — замінено A-18. Було: залежність від `factory3d_viewer` явна (`depends`), провайдер — `_inherit` абстрактної моделі viewer | каркас v0.2 §3 і D-18: жорсткі `depends` лише за §3, viewer необов'язковий (§6.7) | — |
 | A-04 | ТО за мотогодинами веде `td_genset`; telemetry-інтервал (`f3d_meter_signal_id` + інтервал) не задається; міст створює планову заявку за даними `td_genset` | одне джерело правди; `td_genset` уже має інтервали й регламент замовника | §6.4 «ТО за лічильником» для GENSET не використовується |
 | A-05 | Пороги в `f3d.signal` генератора порожні; тривоги — лише з контролера через мапу подій | контролер має власні пороги (Table 7), `td_genset` — ескалацію; третій набір порогів дав би подвійні заявки | §6.4 «пороги → заявка» для GENSET замінено на «події → заявка» (§6.8 дотримано) |
-| A-06 | Меню «Генератор» під `menu_f3d_root` з sequence 55 | слот «55 genset» резервує base CB-09 (X-32; Q-09 закрито) | CB-09 |
+| A-06 | Меню «Генератор» під `menu_f3d_root` з sequence 55; «Налаштування генератора» — під `factory3d_base.menu_f3d_config` з тим самим sequence 55 (X-32, X-69) | слот «55 genset» резервує base CB-09 (X-32; Q-09 закрито) | CB-09 |
 | A-07 | Провайдер `f3d.viewer.provider.genset` sequence **155**, не 150 | viewer сортує за `(sequence, name)`: при 150 `…genset` ішов би перед `…infra` і energy затирав би картку; 155 гарантує, що картка/тотали генератора записуються після energy | C-02 (`td_genset`/`factory3d_energy` (`infra` 150)) |
 | A-08 | Рекомендований варіант AMF — HGM6120N веде (варіант A); обидва реалізовані | один контролер, один пульт, менше узгоджень таймерів | §9 п. 1 (Q-01 відкрите) |
 | A-09 | Усі звернення до `td_genset` — через `adapters/td_genset.py` (ADP-01…ADP-10); жодних `_inherit` моделей `td_genset` | імен не знаємо; зміни `td_genset` заборонені; адаптер — єдине місце звірки | — |

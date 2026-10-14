@@ -1,6 +1,6 @@
 # td_genset (перенос 18 → 19) і factory3d_genset — специфікація
 
-Версія 0.2 · 14.10.2026 · технічне рішення: `docs/modules/td_genset/ARCHITECTURE.md` (далі ARCH: CR-01…CR-10,
+Версія 0.3 · 14.10.2026 (0.2 — 14.10.2026) · технічне рішення: `docs/modules/td_genset/ARCHITECTURE.md` (далі ARCH: CR-01…CR-10,
 FR-A01…FR-A08, FR-01…FR-17, A-01…A-18, Q-01…Q-24). Контракти, на які спирається: каркас v0.2 §3, §5, §6.1–6.4, §6.7,
 §6.8, D-17, D-18, D-21; `factory3d_base` CB-01, CB-02, CB-07…CB-10; `factory3d_viewer` (необов'язково, X-20) C-02, C-03,
 C-07, M-01 (duck-typing, хелпер `deep_merge`), M-03, R-01, R-14, Додаток A.13; `factory3d_energy` CE-01…CE-04, R-14 п. 9;
@@ -10,7 +10,11 @@ C-07, M-01 (duck-typing, хелпер `deep_merge`), M-03, R-01, R-14, Дода�
 цього документа зведено в §2.0.3 і мають пріоритет над текстом §2.0.2. Контракти, які задає цей документ: CG-01…CG-06
 (ARCH §2.1), API-F-01…API-F-09 (§8), ADP-01…ADP-10 (§2.0.1), TEL-01…TEL-04 (§2.0.2).
 
-Зміни: 14.10.2026 — правки за `docs/CONSISTENCY.md`: X-01 (локальне джерело лише через хук telemetry `_f3d_local_types()`,
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-69 (§3: пункт «Налаштування генератора» `menu_f3d_genset_settings` під
+`factory3d_base.menu_f3d_config`, sequence 55, дія `action_f3d_genset_settings`; M-07: поля `f3d_genset_ats_position_i_value`/`ii_value`,
+`set_values` перевіряє I ≠ II і перераховує `period_s` 26 сигналів при зміні `offline_min` за T-6; V-07; нова AC-73) (v0.3).
+
+Зміни (v0.2): 14.10.2026 — правки за `docs/CONSISTENCY.md`: X-01 (локальне джерело лише через хук telemetry `_f3d_local_types()`,
 без перевизначення `collector_id` — M-04, §2.0.3 T-1, TEL-01), X-10 (КГУ в острові — виміряне `infra/totals/chp_kw`, R-06,
 AC-56), X-11 (критичні споживачі — `f3d.energy.node.is_critical`, `critical_codes` запасний, `critical_kw` пише лише energy —
 R-04, M-08, §5.1), X-13 (T-6 без telemetry R-07, TEL-02 `address={"leaf": …}`), X-20 (`depends` без `factory3d_viewer` і `bus`,
@@ -137,7 +141,7 @@ odoo_addons/factory3d_genset/
 │   ├── genset_profile_views.xml     V-03, V-04
 │   ├── genset_event_map_views.xml   V-05
 │   ├── maintenance_views.xml        V-06 (equipment), V-09 (request)
-│   ├── res_config_settings_views.xml V-07
+│   ├── res_config_settings_views.xml V-07 + дія `action_f3d_genset_settings` (X-69)
 │   └── menus.xml                    V-08
 ├── security/
 │   └── ir.model.access.csv          §4.1
@@ -485,10 +489,12 @@ AC-50, AC-69). Поля адреси на `f3d.source` немає; адреси 
 | `f3d_genset_ats_position_code` | Char | `factory3d.genset.ats_position_code` |
 | `f3d_genset_ats_src1_code` | Char | `factory3d.genset.ats_src1_code` |
 | `f3d_genset_ats_src2_code` | Char | `factory3d.genset.ats_src2_code` |
+| `f3d_genset_ats_position_i_value` | Integer (`string="Положення I (мережа): значення сигналу"`, `default=2`, `help="Значення сигналу положення АВР для положення I «мережа» (Socomec ATyS p, Annexe III: 2)"`) | `factory3d.genset.ats_position_i_value` (X-69, R-05) |
+| `f3d_genset_ats_position_ii_value` | Integer (`string="Положення II (генератор): значення сигналу"`, `default=3`, `help="Значення сигналу положення АВР для положення II «генератор» (Socomec ATyS p, Annexe III: 3)"`) | `factory3d.genset.ats_position_ii_value` (X-69, R-05) |
 | `f3d_genset_critical_codes` | Char | `factory3d.genset.critical_codes` |
 | `f3d_genset_publish_period_s` | Integer | `factory3d.genset.publish_period_s` |
 
-`set_values()`: після `super()` — якщо змінився `publish_period_s` → `env.ref("factory3d_genset.cron_f3d_genset_publish").write({"interval_number": max(1, period//60) if period >= 60 else 1, "interval_type": "minutes"})`.
+`set_values()`: перед `super()` — якщо `f3d_genset_ats_position_i_value == f3d_genset_ats_position_ii_value` → `ValidationError("Значення положень I і II АВР мають відрізнятися.")` (R-05 інакше не розрізнить острів; X-69); після `super()` — якщо змінився `publish_period_s` → `env.ref("factory3d_genset.cron_f3d_genset_publish").write({"interval_number": max(1, period//60) if period >= 60 else 1, "interval_type": "minutes"})`; якщо змінився `offline_min` → перерахувати `period_s = max(60, offline_min·20)` у 26 сигналах GENSET кожної активної зв'язки (`f3d.signal` з `code =like "infra/genset/<f3d_code>/%"`, `sudo()`, один `write`) — §2.0.3 T-6, AC-62 (X-69); значення положень I/II R-05 читає з параметрів у момент виклику (перерахунку не потребують).
 
 ### M-08 `f3d.viewer.provider.genset` — провайдер переглядача (FR-07, FR-09, CG-02)
 
@@ -531,11 +537,11 @@ class F3dViewerProviderGenset(models.AbstractModel):
 | V-04 | `factory3d_genset.view_f3d_genset_profile_list` | list | `f3d.genset.profile` | `code`, `name`, `kw_prp`, `tank_l`, `fuel_lph_75`, `timer_preset` |
 | V-05 | `factory3d_genset.view_f3d_genset_event_map_list` / `_form` | list (`editable="bottom"`), form | `f3d.genset.event.map` | list: `sequence` (handle), `key`, `hgm_name`, `hgm_table`, `severity`, `td_code`, `action`, `priority`, `active` (`boolean_toggle`); form: ті самі + `name_tpl`, `description_tpl`, `match_regex`; search: фільтри «Заявка ТО» (`action like 'request_%'`), «Аварійні» (`severity='shutdown'`), групування за `severity`, `action` |
 | V-06 | `factory3d_genset.view_maintenance_equipment_form_f3d_genset` | form inherit `maintenance.view_equipment_form` | `maintenance.equipment` | у `div[@name='button_box']` — stat-кнопка «Генератор» (`action_open_f3d_genset`, `fa-bolt`, `invisible="not f3d_is_genset"`); поля `f3d_is_genset`, `f3d_genset_link_id` — `invisible="1"` |
-| V-07 | `factory3d_genset.res_config_settings_view_form` | form inherit `base.res_config_settings_view_form` | `res.config.settings` | блок `app_settings_block` `data-string="Завод 3D: генератор"` `data-key="factory3d_genset"` (у 19 — `<app data-string=… string=… name="factory3d_genset">` / `<block>` / `<setting>`): setting «Публікувати показання в телеметрію» (`f3d_genset_read_enabled`), «Створювати заявки ТО» (`f3d_genset_requests_enabled`), «Команди на генератор (зарезервовано)» (`f3d_genset_write_enabled`, readonly), «Логіка AMF» (`f3d_genset_amf_master`), «Офлайн через, хв» (`f3d_genset_offline_min`), «Період публікації, с» (`f3d_genset_publish_period_s`), «Сигнали АВР» (три коди), «Критичні споживачі — запасний список (коди сигналів через кому)» (`f3d_genset_critical_codes`, widget `char` з `placeholder`; `help` «Використовується, лише якщо в energy немає жодного вузла з ознакою «Критичний» (`f3d.energy.node.is_critical`)»; X-11) |
+| V-07 | `factory3d_genset.res_config_settings_view_form` | form inherit `base.res_config_settings_view_form` | `res.config.settings` | блок `app_settings_block` `data-string="Завод 3D: генератор"` `data-key="factory3d_genset"` (у 19 — `<app data-string=… string=… name="factory3d_genset">` / `<block>` / `<setting>`): setting «Публікувати показання в телеметрію» (`f3d_genset_read_enabled`), «Створювати заявки ТО» (`f3d_genset_requests_enabled`), «Команди на генератор (зарезервовано)» (`f3d_genset_write_enabled`, readonly), «Логіка AMF» (`f3d_genset_amf_master`), «Офлайн через, хв» (`f3d_genset_offline_min`), «Період публікації, с» (`f3d_genset_publish_period_s`), «Сигнали АВР» (три коди і значення положень I/II — `f3d_genset_ats_position_i_value`, `f3d_genset_ats_position_ii_value`, X-69), «Критичні споживачі — запасний список (коди сигналів через кому)» (`f3d_genset_critical_codes`, widget `char` з `placeholder`; `help` «Використовується, лише якщо в energy немає жодного вузла з ознакою «Критичний» (`f3d.energy.node.is_critical`)»; X-11) |
 | V-08 | `views/menus.xml` | menu | — | таблиця нижче |
 | V-09 | `factory3d_genset.view_maintenance_request_form_f3d_genset` | form inherit `maintenance.hr_equipment_request_view_form` | `maintenance.request` | після поля `equipment_id`: `f3d_genset_event_key` (readonly, `invisible="not f3d_genset_event_key"`, `groups="factory3d_base.group_f3d_user"`) |
 
-Меню (CB-09, A-06):
+Меню (CB-09, A-06; пункт налаштувань за правилом X-32 — X-69):
 
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
@@ -544,6 +550,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
 | `menu_f3d_genset_profile` | Профілі | `menu_f3d_genset` | 20 | `group_f3d_manager` | `action_f3d_genset_profile` (list,form) |
 | `menu_f3d_genset_event_map` | Події → ТО | `menu_f3d_genset` | 30 | `group_f3d_manager` | `action_f3d_genset_event_map` (list,form; `context={"search_default_group_severity": 1}`) |
 | `menu_f3d_genset_requests` | Заявки ТО генератора | `menu_f3d_genset` | 40 | `group_f3d_user` | `action_f3d_genset_requests` (`maintenance.request`, kanban,list,form; `domain=[("f3d_genset_event_key","!=",False)]`) |
+| `menu_f3d_genset_settings` | Налаштування генератора | `factory3d_base.menu_f3d_config` | 55 (резерв genset CB-09; X-32, X-69) | `group_f3d_admin` | `action_f3d_genset_settings` (`res.config.settings`, `form`, `target='inline'`, `context={'module': 'factory3d_genset'}`; визначена в `views/res_config_settings_views.xml`) |
 
 Дії (`ir.actions.act_window`): `view_mode` лише `list`/`form`/`kanban` (MG-04). Пульт і меню `td_genset` — без змін.
 
@@ -798,9 +805,8 @@ HTTP/1.1 200 OK
 
 У `services/iot_sim/docker-compose.sim.yml` сервіс `genset_relay` уже описаний (`build: ${TD_GENSET_PATH}/relay`, профілі
 `demo`/`dev`, мережа `f3d_sim`). Запит на зміни до iot_sim (CI-02): додати `environment: {RELAY_PROFILE: d700, RELAY_PORT: "8000",
-RELAY_SIM_TOKEN: "${RELAY_SIM_TOKEN}", RELAY_TIME_FACTOR: "1", RELAY_TZ: Europe/Kyiv}`, `healthcheck: curl -fsS
-http://localhost:8000/health` (існуючий health `relay_api.md` — ЗВІРИТИ шлях; інакше `GET /sim/v1/state` без токена → 401 вважати
-«живий»), `networks: [f3d_sim, odoo_default]` — другий потрібен, щоб Odoo (`td_genset`) достукався до `genset_relay:8000`
+RELAY_SIM_TOKEN: "${RELAY_SIM_TOKEN}", RELAY_TIME_FACTOR: "1", RELAY_TZ: Europe/Kyiv}`, `healthcheck: {test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 3)"]}`
+(TCP-перевірка порту: образ `python:3.12-slim` (§8.1) без `curl`, шлях health `relay_api.md` не потрібен; X-90), `networks: [f3d_sim, odoo_default]` — другий потрібен, щоб Odoo (`td_genset`) достукався до `genset_relay:8000`
 (allow-list iot_sim §2.6 стосується вихідних з'єднань емулятора, не Odoo). Стенд `td_genset` (власний compose) лишається для
 регресії ТК-01…ТК-14 з профілем `office` і `d700`.
 
@@ -809,8 +815,8 @@ http://localhost:8000/health` (існуючий health `relay_api.md` — ЗВІ
 Напрямок: **iot_sim → fake_relay** (емулятор — оркестратор; `fake_relay` нічого не викликає сам). Параметри сценарію `blackout`
 (iot_sim §9.3 S-03; існуючі — `duration_s` (умовчання 600), `genset` (bool, true), `restore_delay_s` (60); запит CI-01 додає):
 `amf_master` ∈ {`hgm`, `ats`} (умовчання з `SIM_GENSET_AMF_MASTER=hgm`), `genset_load_kw` (умовчання — `critical_kw` з балансу
-емулятора, 348). Мережа повертається по закінченні `duration_s` або по `stop`. Поки параметри CI-01 не внесено в SPEC iot_sim (X-59, Q-21), послідовність
-нижче виконує тестовий оркестратор `tests/stand/orchestrator.py` (§13.3.0).
+емулятора, 348). Мережа повертається по закінченні `duration_s` або по `stop`. Параметри CI-01 внесено в SPEC iot_sim (X-59; Q-21 закрито) — послідовність
+нижче виконує емулятор; тестовий оркестратор `tests/stand/orchestrator.py` (§13.3.0) лишається для регресії на власному стенді td_genset (X-91).
 
 Послідовність у iot_sim (варіант `hgm`): t0: мережа PM5560 unit 1/2 → 0 В, SUN2000 → `0x0303`, TEDOM — за моделлю iot_sim R-12
 (острівний режим — Q-02; міст і energy беруть `infra/totals/chp_kw` виміряним, X-10), ATyS модель: `src1_ok=0`;
@@ -1198,11 +1204,12 @@ PE/I, паралель з ДГУ) — питання до замовника (Q-
 | AC-70 | FR-11 | Given вузли energy `is_critical` скинуто (`is_critical=False` у всіх, `sudo`) і `critical_codes` за §5.1; Then `_critical_kw()` рахує за параметром (запасний шлях R-04 п. 2), `items` — назви обладнання за кодом; Given знову 10 критичних вузлів; Then — за вузлами (п. 1). При обох шляхах `PayloadBuilder.build()` не змінює `infra.totals.critical_kw`, записаний провайдером `infra` energy (міст не пише ключ, X-11) | UT |
 | AC-71 | FR-17 | Given `__manifest__.py` моста; Then `depends == ["td_genset", "factory3d_base", "factory3d_telemetry", "factory3d_energy"]` (без `factory3d_viewer`, `bus`); `models/viewer_provider.py` не містить `_inherit` (grep-тест), `"f3d.viewer.provider"` не входить у `type(env["f3d.viewer.provider.genset"])._inherit`. Given база **без** `factory3d_viewer` (§13.0 прогін 2); When `-i factory3d_genset`, хук, `_cron_publish` зі зміною стану 1 → 7, `_cron_events` з подією `bus_only`; Then установка без помилок, 26 показань, `last_state_json.state=7`, повідомлення «Стан: …» у чаттері, винятків немає, `"f3d.viewer.event" not in env` | UT |
 | AC-72 | FR-07, FR-17 | Given `patch={"infra": {"cards": {"PV-INV": {"rows": [["Стан", "усі в мережі"]]}}, "totals": {"pv_now": 468, "chp_kw": 400, "critical_kw": 348}}}` і `ctx.changes={"f3d.signal": {"infra/genset/GENSET/state"}}`; When `_f3d_viewer_delta(patch, ctx)`; Then `patch.infra.cards` має `PV-INV` (незмінна) і `GENSET`; `patch.infra.totals` зберіг `pv_now=468`, `chp_kw=400`, `critical_kw=348` і отримав `genset_kw`, `island`, `grid_ok`, `genset_kva=634` (R-13, X-23); When `ctx.changes={"f3d.signal": {"infra/ats/position"}}`; Then те саме злиття; When `ctx.changes={"f3d.signal": {"energy/totals/p_now"}}`; Then `patch` не змінився | UT |
+| AC-73 | FR-09, FR-15 | Given модуль установлено; Then `menu_f3d_genset_settings`: `parent_id` = `factory3d_base.menu_f3d_config`, `sequence=55`, `group_ids` = `factory3d_base.group_f3d_admin`, дія `action_f3d_genset_settings` (`res_model='res.config.settings'`, `target='inline'`, `context.module='factory3d_genset'`); When адміністратор у налаштуваннях ставить `f3d_genset_ats_position_i_value=1`, `f3d_genset_ats_position_ii_value=4` і `execute()`; Then `factory3d.genset.ats_position_i_value='1'`, `…_ii_value='4'`, R-05 з `pos=4` свіжим → `island=True`, з `pos=3` → не острів; When обидва значення 3; Then `ValidationError` «Значення положень I і II АВР мають відрізнятися.», параметри не змінені; When `f3d_genset_offline_min=10`; Then `period_s=200` у 26 сигналах GENSET (T-6, як AC-62) (X-69) | UT |
 
 Частина A, продовження — регресія `td_genset` на 19.0 (CR-09). Позначення «ТР 1.2 AC-xx» — acceptance criteria SPEC `td_genset`
 v1.2 (AC-01…AC-69); їхній зміст тут не повторюється й не вигадується: матриця `docs/REGRESSION_19.md` (репозиторій `td_genset`)
 зв'язує кожен з тестом/ТК ТР 1.2. У цьому документі номери AC `td_genset` завжди пишемо з префіксом «ТР 1.2», щоб не плутати з
-AC-01…AC-72 моста.
+AC-01…AC-73 моста.
 
 | AC | FR | Given / When / Then | Тип |
 |---|---|---|---|
@@ -1216,8 +1223,8 @@ AC-01…AC-72 моста.
 | AC-A16 | FR-A07 | Given копія проду після оновлення платформи до 19 (§13.6 етап 2, Q-24); When `psql -f neutralize.sql` `td_genset`, потім моста; Then 0 помилок SQL, preflight повідомляє версію сервера `19.0`, крони обох модулів `active=false`, адреса ретранслятора — не прод (MG-30) | REG/TC |
 
 Покриття FR: FR-01 — AC-01…03; FR-02 — AC-04…06, 42, 51; FR-03 — AC-07…10, 51…54, 62, 69; FR-04 — AC-11, 63; FR-05 — AC-12…17, 52, 55,
-61, 63; FR-06 — AC-18…21, 64; FR-07 — AC-22…26, 52, 66, 72; FR-08 — AC-27, 28, 53…55; FR-09 — AC-29, 30, 56; FR-10 — AC-31, 38, 57;
-FR-11 — AC-32, 70; FR-12 — AC-33, 34, 58…60, 67; FR-13 — AC-35, 67; FR-14 — AC-36…39, 68; FR-15 — AC-40; FR-16 — AC-41, 61; FR-17 — AC-26, 71, 72;
+61, 63; FR-06 — AC-18…21, 64; FR-07 — AC-22…26, 52, 66, 72; FR-08 — AC-27, 28, 53…55; FR-09 — AC-29, 30, 56, 73; FR-10 — AC-31, 38, 57;
+FR-11 — AC-32, 70; FR-12 — AC-33, 34, 58…60, 67; FR-13 — AC-35, 67; FR-14 — AC-36…39, 68; FR-15 — AC-40, 73; FR-16 — AC-41, 61; FR-17 — AC-26, 71, 72;
 FR-A01 — AC-A01, A10, A14; FR-A02 — AC-A02, A09, A11; FR-A03 — AC-A03, A09, A12, A13; FR-A04 — AC-A04, A14, AC-53; FR-A05 — AC-A05,
 A15; FR-A06 — AC-A06, AC-47…49, 68; FR-A07 — AC-A07, A15, A16; FR-A08 — AC-A08. Блекаут: варіант A (HGM6120N веде AMF) — AC-37, 48,
 56; варіант B (ATyS p головний) — AC-38, 57, 65; обидва — AC-29, 31 (UT, без стенда).
@@ -1310,7 +1317,7 @@ A15; FR-A06 — AC-A06, AC-47…49, 68; FR-A07 — AC-A07, A15, A16; FR-A08 — 
 | | | `test_nobody`, `test_actions_manager_only` | `user_nobody`, `user_reader`, `user_manager` | AC-59, AC-60 | AC-59, AC-60 |
 | `test_no_viewer.py` | `TestWithoutViewer` (лише прогін 2 §13.0; інакше `SkipTest`) | `test_install_publish_events` | `link`, `snap()`, `ev(…,"Genset Over Current","warning")` | AC-71: `"f3d.viewer.event" not in env`; хук → 1/1/26/48/3; `_cron_publish` зі зміною стану 1 → 7 — 26 показань, повідомлення «Стан: …», винятків немає; `_cron_events` з `bus_only` — 0 заявок, винятків немає | AC-71 |
 | `test_adapter_contract.py` | `TestAdapterContract` (без моків) | `test_constants_filled`, `test_fields_exist`, `test_maps_complete`, `test_telemetry_contract` | реальні `td_genset` і telemetry | AC-43: жодна константа ADP не `None` (інакше `fail` з переліком ADP-xx); кожне `FIELD_*` ∈ `env[model]._fields`; AC-44: кожне значення селекцій стану/режиму/вимикача `td_genset` (`fields_get`) у нижньому регістрі ∈ `STATE_MAP`/`MODE_MAP`/`BREAKER_MAP`; telemetry: `hasattr(env["f3d.signal"], "_f3d_ingest")`, `"_mark_stale"`, поля `create_request`, `alarm_high_on`, `store_period_s`, `module`; `"td_genset" in env["f3d.source"]._f3d_local_types()` і `validate_params("td_genset", {}, local_types) == []` (CT-12, R-26; X-01) | AC-43, AC-44, AC-69, §2.0.3 |
-| `test_views.py` | `TestViews` | `test_views_load`, `test_menus`, `test_settings_readonly`, `test_actions_view_mode` | — | V-01…V-09: `env.ref(xml_id)` існує, `get_views` без помилки; меню §3 (батько, `sequence`, `group_ids`); у V-07 `f3d_genset_write_enabled` з `readonly="1"`; жодна дія модуля не має `tree` у `view_mode` | AC-33, AC-58 |
+| `test_views.py` | `TestViews` | `test_views_load`, `test_menus`, `test_settings_readonly`, `test_actions_view_mode`, `test_settings_menu_and_ats_values` | — | V-01…V-09: `env.ref(xml_id)` існує, `get_views` без помилки; меню §3 (батько, `sequence`, `group_ids`); у V-07 `f3d_genset_write_enabled` з `readonly="1"`; жодна дія модуля не має `tree` у `view_mode`; `menu_f3d_genset_settings` під `factory3d_base.menu_f3d_config` з `sequence=55`; `res.config.settings` зі значеннями 1/4 → параметри `'1'`/`'4'` і `link._island_state_from_signals(…)` з `pos=4` → `island is True`; 3/3 → `ValidationError` (X-69) | AC-33, AC-58, AC-73 |
 | `test_static.py` | `TestStatic` (читає файли модуля через `odoo.modules.get_module_path`) | `test_no_commands_grep`, `test_ukrainian_strings`, `test_no_i18n`, `test_no_x_fields`, `test_no_deprecated`, `test_adapter_import_style`, `test_manifest_depends`, `test_provider_no_inherit`, `test_source_no_collector_override` | — | AC-34 (жоден `models/*.py`, `adapters/*.py` не містить `.action_start`, `.action_stop`, `command`-викликів на `GENSET_MODEL`, `write(`/`create(` на моделях `td_genset` поза ADP-09); AC-41 (усі `string=`, `help=`, тексти `UserError/ValidationError/AccessError`, назви меню й кронів містять `[А-Яа-яІіЇїЄєҐґ]`; теки `i18n/` немає); `grep -rn "x_[a-z]" models/ views/ data/` порожньо; 0 входжень `odoo.osv`, `<tree`, `_sql_constraints`, `name_get`, `read_group(`, `self._cr`; немає `from ..adapters.td_genset import` (§2.0.3); `__manifest__.py` `depends` = 4 модулі AC-71 (без `factory3d_viewer`, `bus`); `models/viewer_provider.py` без `_inherit` і без імпорту `factory3d_viewer` на рівні модуля; `models/f3d_source.py` без `collector_id` і `_check_f3d_collector_required` (X-01) | AC-34, AC-41, AC-69, AC-71, §14 |
 
 ### 13.2 Регресія `td_genset` на Odoo 19 (176 UT + 45 ТК, ТР 1.2 AC-01…AC-69)
@@ -1446,7 +1453,7 @@ R3 office | R3 d700 | MG-xx (якщо змінено) | коментар`. До�
 
 | AC | Перевірка |
 |---|---|
-| AC-01…AC-35, AC-41…AC-46, AC-58…AC-66, AC-69…AC-72 | UT §13.1 (файл/тест — у колонці AC таблиці §13.1; AC-71 — прогін 2 без viewer) |
+| AC-01…AC-35, AC-41…AC-46, AC-58…AC-66, AC-69…AC-73 | UT §13.1 (файл/тест — у колонці AC таблиці §13.1; AC-71 — прогін 2 без viewer) |
 | AC-36…AC-40, AC-47…AC-57, AC-68 | ТК-G01…ТК-G13, ТК-F01…ТК-F07 (§13.3, колонка AC) |
 | AC-67 | MAN, §13.6 етапи 2–3 |
 | AC-A01, AC-A02, AC-A09…AC-A11 | REG §13.2 (R1, R2, матриця) |
@@ -1470,7 +1477,7 @@ R3 office | R3 d700 | MG-xx (якщо змінено) | коментар`. До�
   моків — тобто константи ADP заповнені).
 - ТК-G01…ТК-G13 пройдені на стенді §13.3.0, протокол у `TEST_REPORT.md` (дата, версії образів, профіль, результат, скриншоти карток).
 - ТБ-01…ТБ-10, ТП-01…ТП-06 пройдені.
-- Кожен AC-01…AC-72 зелений або позначений «блокер X-59» (параметри CI-01 в iot_sim) чи «блокер X-24» (схема 1.1 у viewer Додаток A) з
+- Кожен AC-01…AC-73 зелений або позначений «блокер X-59» (параметри CI-01 в iot_sim) чи «блокер X-24» (схема 1.1 у viewer Додаток A) з
   письмовим рішенням менеджера (інші блокери неприпустимі; Q-20 закрито X-01 — AC-01, AC-50, AC-69 мають бути зелені).
 - `ruff check` (довжина рядка 120) і XML-lint без помилок; жодного `x_`-поля; рядки UI українською, без `i18n/` (AC-41).
 - `neutralize.sql` виконується без помилки (AC-35); `uninstall_hook` не видаляє бізнес-даних.

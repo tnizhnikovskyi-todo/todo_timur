@@ -1,17 +1,22 @@
 # factory3d_energy — специфікація
 
-Версія 0.1 · 14.10.2026 · технічне рішення: `docs/modules/factory3d_energy/ARCHITECTURE.md` (далі ARCH: FR-01…FR-29,
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · технічне рішення: `docs/modules/factory3d_energy/ARCHITECTURE.md` (далі ARCH: FR-01…FR-29,
 CE-01…CE-09, A-01…A-22, Q-01…Q-20). Спирається на: каркас §5, §6.4–§6.8, D-04, D-06, D-11; `factory3d_base` CB-01,
 CB-07…CB-10; `factory3d_telemetry` CT-01 (M-01…M-06), CT-03 (Додаток A.1 `modbus_tcp`), CT-05 (R-04…R-06), CT-10
 (`_f3d_ingest`, R-17), CT-12 (R-26 локальні джерела), R-03 (зберігання), R-07 (stale), R-13 (шина); `factory3d_iot_sim`
 §8.4.1, §8.7 (P-05), §8.9.1–§8.9.5 (P-07), Додаток A № 1–80, 190–196, 366–428, S-01, S-03, S-12, API-16;
 `factory3d_viewer` M-01, M-03, R-01, R-07, R-14, A.5, A.12, A.13; `factory3d_machine_connect` CM-02, CM-03 (R-28);
 `td_genset`/`factory3d_genset` R-04…R-06, AC-23, AC-30, AC-56, ТК-G04.
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-16 (M-15 без `selection_add` поля `origin` — значення `module` у базовому
+selection telemetry M-03; §5.4), X-19 (групи `group_f3d_energy_user/cost/manager` у власному привілеї `privilege_f3d_energy`:
+§4, усі посилання), X-23 (R-18 п. 3, M-20: спільний хелпер `deep_merge` viewer), X-25 (R-16 п. 2, 8: ключі вартості без
+групи видаляються — підтверджено), X-41/X-42 (Q-08 закрито: ТК-05…ТК-08 не блоковані); X-77 перевірено — total LUNA2000
+37014/37016 без змін.
 
 Позначення: UT — юніт-тест `odoo.tests` (`TransactionCase`), TC — стенд (емулятор + колектор + Odoo), MAN — ручна
 перевірка на копії демо-бази. Odoo 19: `models.Constraint`, `post_init_hook(env)`/`uninstall_hook(env)`, `fields.Json`,
 `Command`. Усі `Datetime` — UTC naive; «Київ» — `Europe/Kyiv` через `zoneinfo`. Рядки UI — українською в коді (D-14).
-`req` = `required=True`; `idx` = `index=True`; `cost` у колонці «Параметри» = `groups="factory3d_energy.group_energy_cost"`.
+`req` = `required=True`; `idx` = `index=True`; `cost` у колонці «Параметри» = `groups="factory3d_energy.group_f3d_energy_cost"`.
 
 ## 0. Дерево файлів модуля
 
@@ -40,7 +45,7 @@ odoo_addons/factory3d_energy/
 │   ├── mrp_production.py           M-12 (_cal_price, _get_backorder_mo_vals — R-10)
 │   ├── mrp_workcenter.py            M-13
 │   ├── maintenance_equipment.py     M-14
-│   ├── f3d_signal.py                M-15 (_f3d_ingest, origin += module, обмеження A-15)
+│   ├── f3d_signal.py                M-15 (_f3d_ingest, обмеження A-15)
 │   ├── f3d_source.py                M-16 (type += f3d_energy, _f3d_local_types)
 │   ├── maintenance_request.py       M-17
 │   ├── res_config_settings.py       M-18
@@ -554,7 +559,7 @@ company_id.id, "ref": production_id.name, "category": "manufacturing_order"}`.
 | `_f3d_energy_finalize(self)` | `ensure_one()`; якщо `f3d_energy_locked` — нічого; `days` = місцеві дати з першої до останньої хвилини інтервалів завдань МО (R-08 п. 1) обмежені `now`; `env['f3d.energy.alloc']._f3d_alloc_days(days, now=now)` (перерахунок діб включно з поточною до `now`); `self.f3d_energy_alloc_ids.write({'locked': True})`; `f3d_energy_locked=True`; аналітика R-10 п. 5; чаттер «Енергію зафіксовано: N кВт·год (прямі X, спільні Y), вартість Z грн, якість <мітка>» (сума пишеться завжди — чаттер МО бачать користувачі з правами на МО; бухгалтерський зміст — у полях з `groups`) |
 | `_f3d_energy_apply_extra_cost(self)` | R-10 п. 3–4 |
 | `_get_backorder_mo_vals(self)` | `res = super()._get_backorder_mo_vals()`; `res['extra_cost'] = max(0.0, self.extra_cost - self.f3d_energy_applied_unit)`; `return res` (енергія не переходить у дозамовлення) |
-| `action_f3d_energy_recompute(self)` | лише `group_energy_manager` (`AccessError`), лише незафіксовані: `_f3d_alloc_days(days)`; `display_notification` «Перераховано: N кВт·год» |
+| `action_f3d_energy_recompute(self)` | лише `group_f3d_energy_manager` (`AccessError`), лише незафіксовані: `_f3d_alloc_days(days)`; `display_notification` «Перераховано: N кВт·год» |
 | `action_f3d_view_alloc(self)` | `act_window` `f3d.energy.alloc` (`domain=[('production_id','=',id)]`, вид list/pivot) |
 
 ### M-13 `mrp.workcenter` — розширення
@@ -573,12 +578,13 @@ company_id.id, "ref": production_id.name, "category": "manufacturing_order"}`.
 `f3d_energy_node_ids` One2many `f3d.energy.node` `equipment_id` (`string="Вузли мережі"`), `f3d_energy_node_count`
 Integer `compute`; `action_f3d_energy_nodes(self)` — `act_window` вузлів обладнання.
 
-### M-15 `f3d.signal` — розширення: вхід показань, походження, заборона запису (A-15)
+### M-15 `f3d.signal` — розширення: вхід показань, заборона запису (A-15)
 
 `_inherit = "f3d.signal"`.
 
-- `origin` — `selection_add=[('module', 'Дані модуля')]`, `ondelete={'module': 'set default'}` (147 власних сигналів
-  енергетики — Додаток C, колонка «Походження»).
+- `origin` **не** розширюється (X-16): значення `('module', 'Дані модуля')` є в базовому selection telemetry M-03; 147
+  власних сигналів енергетики (Додаток C, колонка «Походження») створюються з `origin='module'`, рядки каталогу iot_sim —
+  з `origin='catalog'`.
 - `@api.constrains("write_enabled", "module")` `_check_f3d_energy_write`: `module == 'energy' and write_enabled` →
   `ValidationError("Запис уставок у пристрої енергетики заборонено у v1 (factory3d.energy.write_enabled).")`.
 - Перевизначення входу (`super()` **першим**, результат не змінюється; як machine_connect M-18):
@@ -619,7 +625,7 @@ Integer `compute`; `action_f3d_energy_nodes(self)` — `act_window` вузлів
 ### M-17 `maintenance.request` — розширення
 
 `create(self, vals_list)`: `records = super().create(vals_list)`; для записів з `f3d_signal_id.module == 'energy'` —
-`message_subscribe(partner_ids=users(group_energy_manager).partner_id.ids)` (енергетики отримують повідомлення про
+`message_subscribe(partner_ids=users(group_f3d_energy_manager).partner_id.ids)` (енергетики отримують повідомлення про
 заявки з енергетики, FR-12); `return records`.
 
 ### M-18 `res.config.settings` — розширення
@@ -655,7 +661,7 @@ Integer `compute`; `action_f3d_energy_nodes(self)` — `act_window` вузлів
 | `meter_ids` | Many2many `f3d.energy.meter` | порожньо — усі |
 | `result` | Text | readonly |
 
-`action_run(self)`: користувач без `group_energy_manager` → `AccessError("Перерахунок енергії доступний енергетику.")`;
+`action_run(self)`: користувач без `group_f3d_energy_manager` → `AccessError("Перерахунок енергії доступний енергетику.")`;
 `date_to − date_from > 31 доба` → `UserError("Перерахунок — не більше 31 доби за раз.")`; `intervals` →
 `f3d.energy.interval._f3d_rebuild(meters, d0, d1)`; `alloc` → `_f3d_alloc_days(days)` (зафіксовані рядки не змінюються,
 R-23); `result` = «Інтервалів: N (нових M), діб розподілу: K, зафіксованих рядків пропущено: L».
@@ -681,7 +687,7 @@ class F3dViewerProviderInfra(models.AbstractModel):
 | Метод | `f3d.viewer.provider.energy` | `f3d.viewer.provider.infra` |
 |---|---|---|
 | `_f3d_viewer_collect(self, payload, ctx)` | `tools.payload.build_energy(self.env, ctx, payload)` (R-16): пише `payload["energy"]` (заміна вмісту ключів A.12, решта ключів статики лишається), `payload["workcenters"][wc]["energy"]` для наявних РЦ, `energy_kwh/energy_cost/energy_quality` у `payload["productions"]` | `tools.payload.build_infra(self.env, ctx, payload)` (R-17): `payload.setdefault("infra", {})`; оновлює `cards` лише `PV-ROOF`, `PV-INV`, `CHP`, `ATS-1`, `BESS`; `totals.update(<ключі CE-03>)` |
-| `_f3d_viewer_delta(self, patch, ctx)` | R-18: якщо `ctx["changes"]` має `f3d.energy` або коди `f3d.signal` з префіксами `energy/`, `infra/` (крім `infra/genset/`, `infra/water/`) → `tmp = {}`; `build_energy(env, ctx, tmp)`; `patch["energy"] = tmp["energy"]`; для записів `patch.get("productions", [])` — ключі МО (R-16 п. 8) | те саме для `infra`, але **глибоке злиття** `deep_merge(patch.setdefault("infra", {}), tmp["infra"])` (A-22) |
+| `_f3d_viewer_delta(self, patch, ctx)` | R-18: якщо `ctx["changes"]` має `f3d.energy` або коди `f3d.signal` з префіксами `energy/`, `infra/` (крім `infra/genset/`, `infra/water/`) → `tmp = {}`; `build_energy(env, ctx, tmp)`; `patch["energy"] = tmp["energy"]`; для записів `patch.get("productions", [])` — ключі МО (R-16 п. 8) | те саме для `infra`, але **глибоке злиття** `deep_merge(patch.setdefault("infra", {}), tmp["infra"])` (A-22; хелпер — спільний viewer M-01 `factory3d_viewer/tools/payload.py`, імпорт усередині методу — R-18 п. 3, X-23) |
 | `_f3d_viewer_bus_models(self)` | `["f3d.signal", "f3d.energy", "mrp.production", "mrp.workorder"]` | `["f3d.signal", "f3d.energy"]` |
 
 Виклики ORM — від імені користувача запиту (без `sudo`), крім читання параметрів. Відсутність прав на модель
@@ -689,27 +695,27 @@ class F3dViewerProviderInfra(models.AbstractModel):
 
 ## 3. Представлення й меню
 
-Спільне: рядки UI українською; грошові поля — `groups="factory3d_energy.group_energy_cost"`; стани — `widget="badge"` з
+Спільне: рядки UI українською; грошові поля — `groups="factory3d_energy.group_f3d_energy_cost"`; стани — `widget="badge"` з
 `decoration-success` (`ok`/`measured`/`closed`), `decoration-warning` (`gap`/`interpolated`/`deviation`/`warn`),
 `decoration-danger` (`stale`/`missing`/`bad`/`open`), `decoration-muted` (`no_data`/`skipped`/`none`).
 
 | ID | XML-id (`factory3d_energy.`) | Тип / модель | Структура |
 |---|---|---|---|
 | V-01 | `view_f3d_energy_node_hierarchy` | hierarchy `f3d.energy.node` | `parent_field="parent_id"`, `child_field="child_ids"`, `draggable="0"`, `icon="fa-bolt"`; картка: `name`, `code` (badge), `kind`, `p_now` («кВт зараз»), `rating_a`/`rating_kva`, `live_status` (badge), `is_critical` (іконка `fa-shield` якщо так); `<templates>` з `t-name="hierarchy-box"`; дія за замовчуванням меню «Схема мережі» з `context={'hierarchy_res_id': id GRID-10KV}` |
-| V-02 | `view_f3d_energy_node_form` | form | `<header>`: «Показати в 3D» (`action_f3d_show`, `invisible="not equipment_id"`). Статбокс: `action_view_meters` (`fa-tachometer`, кількість), `action_view_intervals` («Профіль»), `action_view_balance` («Баланс», `invisible="kind not in ('cell')"`). `name` (title), `code`; група «Схема»: `kind`, `cell_type` (`invisible="kind != 'cell'"`), `line_kind` (`invisible="kind != 'line'"`), `gen_kind` (`invisible="kind != 'generator'"`), `parent_id`, `cabinet_id`, `peer_id` (`invisible="cell_type != 'coupler'"`), `section`, `sequence`, `active`; група «Прив'язка»: `equipment_id`, `workcenter_id` (`invisible="kind != 'consumer'"`), `zone_id`, `unit_id`; група «Номінали»: `voltage_kv`, `rating_a`, `rating_kva`, `rating_kvar`, `p_inst_kw`, `p_inst_source`, `load_factor`, `idle_factor`, `cos_phi_nominal`; група «Розподіл»: `alloc_role`, `pool_id` (`invisible="alloc_role != 'shared'"`), `is_critical`, `group`; група «Зараз» (readonly): `p_now`, `kwh_today`, `live_status`; вкладки «Живить» (`child_ids` list readonly: `code`, `name`, `kind`, `p_now`), «Лічильники» (`meter_ids`: `code`, `model`, `role`, `data_state`, `last_value`, `p_now`), «Примітка»; чаттер. Редагування — лише `group_energy_manager` (ACL) |
+| V-02 | `view_f3d_energy_node_form` | form | `<header>`: «Показати в 3D» (`action_f3d_show`, `invisible="not equipment_id"`). Статбокс: `action_view_meters` (`fa-tachometer`, кількість), `action_view_intervals` («Профіль»), `action_view_balance` («Баланс», `invisible="kind not in ('cell')"`). `name` (title), `code`; група «Схема»: `kind`, `cell_type` (`invisible="kind != 'cell'"`), `line_kind` (`invisible="kind != 'line'"`), `gen_kind` (`invisible="kind != 'generator'"`), `parent_id`, `cabinet_id`, `peer_id` (`invisible="cell_type != 'coupler'"`), `section`, `sequence`, `active`; група «Прив'язка»: `equipment_id`, `workcenter_id` (`invisible="kind != 'consumer'"`), `zone_id`, `unit_id`; група «Номінали»: `voltage_kv`, `rating_a`, `rating_kva`, `rating_kvar`, `p_inst_kw`, `p_inst_source`, `load_factor`, `idle_factor`, `cos_phi_nominal`; група «Розподіл»: `alloc_role`, `pool_id` (`invisible="alloc_role != 'shared'"`), `is_critical`, `group`; група «Зараз» (readonly): `p_now`, `kwh_today`, `live_status`; вкладки «Живить» (`child_ids` list readonly: `code`, `name`, `kind`, `p_now`), «Лічильники» (`meter_ids`: `code`, `model`, `role`, `data_state`, `last_value`, `p_now`), «Примітка»; чаттер. Редагування — лише `group_f3d_energy_manager` (ACL) |
 | V-03 | `view_f3d_energy_node_list` | list | `code`, `name`, `kind`, `cell_type` (optional hide), `parent_id`, `section`, `equipment_id` (optional show), `workcenter_id` (optional show), `p_inst_kw`, `p_now`, `kwh_today` (optional hide), `alloc_role` (optional hide), `pool_id` (optional hide), `is_critical` (optional hide), `live_status` (badge) |
 | V-04 | `view_f3d_energy_node_search` | search | поля `code`, `name`, `equipment_id`, `workcenter_id`; фільтри за `kind` (12), «Критичні» (`is_critical`), «Прямі», «Спільні», «Накладні», «Без лічильника» (`meter_ids = False`), «Немає даних» (`meter_ids.data_state in (stale, gap, no_data)`); group by `kind`, `section`, `parent_id`, `pool_id` |
 | V-05 | `view_f3d_energy_meter_list` / `_form` / `_search` | `f3d.energy.meter` | list: `code`, `node_id`, `model`, `role`, `p_now`, `last_value`, `last_ts`, `data_state` (badge), `data_state_since`, `last_interval_start` (optional hide), `source_id` (optional hide); form: `<header>` статусбар `data_state`; група: `code`, `name`, `node_id`, `model`, `role`, `ct_ratio`, `unit_id`, `active`; група «Сигнали»: `source_id`, `p_signal_id`, `e_import_signal_id`, `e_export_signal_id`; група «Стан» (readonly): `last_value`, `last_ts`, `p_now`, `counter_offset`, `counter_offset_export`, `data_state_since`, `last_interval_start`; кнопка `action_view_intervals`; чаттер; search: фільтри за `data_state`, `role`, `model`; group by `role`, `model` |
 | V-06 | `view_f3d_energy_meter_kanban` | kanban (у «Огляд») | `default_group_by="role"`; картка: `code`, `node_id`, `p_now` кВт, `last_value` кВт·год, бейдж `data_state` |
 | V-07 | `view_f3d_energy_interval_graph` / `_pivot` | graph / pivot `f3d.energy.interval` | graph: `type="bar"`, `<field name="ts_start" interval="hour"/>`, `<field name="kwh" type="measure"/>`, `stacked="1"` за `role`; pivot: рядки `node_id`, стовпці `day`, міри `kwh`, `cost`, `kw_avg` (avg) |
 | V-08 | `view_f3d_energy_interval_list` / `_search` | list / search | list (`create="false" edit="false"`): `ts_start`, `meter_id`, `node_id`, `kwh`, `kwh_export` (optional hide), `kw_avg`, `zone_id`, `price`, `cost`, `quality` (badge); search: `meter_id`, `node_id`; фільтри «Сьогодні», «Вчора», «7 днів», «Не виміряно» (`quality != measured`), «Вводи», «Фідери», «Споживачі», «Генерація»; group by `day`, `hour_local`, `node_id`, `zone_id` |
-| V-09 | `view_f3d_energy_tariff_list` / `_form` | `f3d.energy.tariff` | list: `name`, `date_from`, `date_to`, `contract_kw`, `active`; form: `name`; група «Договір»: `date_from`, `date_to`, `company_id` (multi-company), `currency_id`, `contract_kw`, `peak_warn_pct`, `export_price`, `active`; вкладка «Зони» (`zone_ids` editable list: `sequence` handle, `name`, `code`, `weekdays`, `hour_from` (`float_time`), `hour_to` (`float_time`), `price`); «Примітка»; чаттер. Доступ — `group_energy_cost` читання, `group_energy_manager` запис |
+| V-09 | `view_f3d_energy_tariff_list` / `_form` | `f3d.energy.tariff` | list: `name`, `date_from`, `date_to`, `contract_kw`, `active`; form: `name`; група «Договір»: `date_from`, `date_to`, `company_id` (multi-company), `currency_id`, `contract_kw`, `peak_warn_pct`, `export_price`, `active`; вкладка «Зони» (`zone_ids` editable list: `sequence` handle, `name`, `code`, `weekdays`, `hour_from` (`float_time`), `hour_to` (`float_time`), `price`); «Примітка»; чаттер. Доступ — `group_f3d_energy_cost` читання, `group_f3d_energy_manager` запис |
 | V-10 | `view_f3d_energy_pool_list` / `_form` | `f3d.energy.pool` | list: `sequence` handle, `code`, `name`, `driver`, `kwh_today`, `active`; form: `code`, `name`, `driver`, `workcenter_ids` (`many2many_tags`), `node_ids` (list readonly: `code`, `name`, `p_now`), `note`; чаттер |
 | V-11 | `view_f3d_energy_alloc_pivot` / `_list` / `_search` / `_graph` | `f3d.energy.alloc` | pivot: рядки `production_id`, стовпці `kind`, міри `kwh`, `cost`; list (readonly): `day`, `production_id`, `workorder_id`, `workcenter_id`, `kind`, `pool_id`, `kwh`, `minutes`, `cost`, `quality`, `locked`; search: фільтри за `kind`, «Зафіксовані», «Сьогодні», «Тиждень»; group by `day`, `production_id`, `workcenter_id`, `kind`, `pool_id`; graph bar `day`/`kwh` stacked `kind` |
 | V-12 | `view_f3d_energy_balance_list` / `_search` | `f3d.energy.balance` | list (readonly): `hour`, `node_id`, `measured_kwh`, `expected_kwh`, `diff_kwh`, `diff_pct`, `state` (badge), `reason`; search: фільтри «Відхилення» (default у дії), «Сьогодні»; group by `node_id`, `day` |
 | V-13 | `view_f3d_energy_event_list` / `_search` | `f3d.energy.event` | list (readonly): `ts`, `level` (badge: `info` — muted, `warn` — warning, `bad` — danger), `kind`, `code`, `text`; search: фільтри за `level`, `kind`; group by `kind`, `code` |
 | V-14 | `view_f3d_energy_outage_list` / `_form` | `f3d.energy.outage` | list: `name`, `ts_start`, `ts_end`, `duration_min`, `state` (badge), `amf_master`, `transfer_s`, `shed_kw`, `fail_start`; form readonly (крім `note`): групи «Час», «Генератор і АВР», «Навантаження», вкладка «Події» (`event_ids`); чаттер |
-| V-15 | `view_mrp_production_form_f3d_energy` | form inherit `mrp.mrp_production_form_view` | статкнопка в `//div[@name='button_box']`: `action_f3d_view_alloc` (`fa-bolt`, поле `f3d_energy_kwh` з підписом «кВт·год»); у `//notebook` нова `<page name="f3d_energy" string="Енергія">`: група «Енергія»: `f3d_energy_direct_kwh`, `f3d_energy_shared_kwh`, `f3d_energy_kwh`, `f3d_energy_state` (badge), `f3d_energy_locked`; група «Вартість» (`groups=cost`): `f3d_energy_cost`, `f3d_energy_unit_cost`, `f3d_energy_applied_unit`; кнопка `action_f3d_energy_recompute` («Перерахувати», `groups="factory3d_energy.group_energy_manager"`, `invisible="f3d_energy_locked"`); `f3d_energy_alloc_ids` (list readonly: `day`, `workorder_id`, `kind`, `pool_id`, `kwh`, `cost` (cost), `quality`) |
+| V-15 | `view_mrp_production_form_f3d_energy` | form inherit `mrp.mrp_production_form_view` | статкнопка в `//div[@name='button_box']`: `action_f3d_view_alloc` (`fa-bolt`, поле `f3d_energy_kwh` з підписом «кВт·год»); у `//notebook` нова `<page name="f3d_energy" string="Енергія">`: група «Енергія»: `f3d_energy_direct_kwh`, `f3d_energy_shared_kwh`, `f3d_energy_kwh`, `f3d_energy_state` (badge), `f3d_energy_locked`; група «Вартість» (`groups=cost`): `f3d_energy_cost`, `f3d_energy_unit_cost`, `f3d_energy_applied_unit`; кнопка `action_f3d_energy_recompute` («Перерахувати», `groups="factory3d_energy.group_f3d_energy_manager"`, `invisible="f3d_energy_locked"`); `f3d_energy_alloc_ids` (list readonly: `day`, `workorder_id`, `kind`, `pool_id`, `kwh`, `cost` (cost), `quality`) |
 | V-16 | `view_mrp_workorder_form_f3d_energy` / `_list` | inherit `mrp.mrp_production_workorder_form_view_inherit` (form), `mrp.mrp_production_workorder_tree_editable_view` (list) | form: після `duration` — `f3d_energy_kwh`, `f3d_energy_cost` (cost), `f3d_energy_quality` (badge); list: `f3d_energy_kwh` (optional show, `sum="Разом"`), `f3d_energy_cost` (optional hide, cost) |
 | V-17 | `view_mrp_workcenter_form_f3d_energy`, `view_maintenance_equipment_form_f3d_energy` | inherit `mrp.mrp_workcenter_view`, `maintenance.hr_equipment_view_form` | РЦ: статкнопка `action_f3d_energy_view` (`fa-bolt`, `f3d_kwh_today` «кВт·год сьогодні»), поля `f3d_energy_node_id`, `f3d_energy_p_now`, `f3d_kwh_idle_today` на вкладці «Завод 3D»; обладнання: статкнопка `action_f3d_energy_nodes` (`f3d_energy_node_count`, «Вузли мережі», `invisible="not f3d_energy_node_count"`) |
 | V-18 | `res_config_settings_view_form_f3d_energy` | inherit `base.res_config_settings_view_form` | блок `<app string="Завод 3D: енергетика" name="factory3d_energy">`: «Стоп-крани» (`read_enabled`, `write_enabled` readonly з підказкою «заборонено у v1», `costing_enabled`, `analytic_enabled`), «Профіль і баланс» (`balance_tol_pct`, `balance_tol_kwh`, `gap_alarm_min`, `max_wait_h`, `typical_days`, `shift_calendar_id`), «Зберігання» (`keep_interval_days`, `keep_event_days`), «АВР і накопичувач» (`ats_fail_start_s`, `peak_shave_kw`), «Встановлення» (`install_state` readonly, кнопка «Повторити прив'язку даних» — `action_f3d_energy_rebind`, `groups="factory3d_base.group_f3d_admin"`) |
@@ -721,19 +727,19 @@ class F3dViewerProviderInfra(models.AbstractModel):
 
 | XML-id | Назва | Батько | sequence | Групи | Дія |
 |---|---|---|---|---|---|
-| `menu_f3d_energy` | Енергетика | `factory3d_base.menu_f3d_root` | 50 | `group_energy_user` | — |
-| `menu_f3d_energy_overview` | Огляд | `menu_f3d_energy` | 10 | `group_energy_user` | `action_f3d_energy_overview` |
-| `menu_f3d_energy_scheme` | Схема мережі | `menu_f3d_energy` | 20 | `group_energy_user` | `action_f3d_energy_node_tree` (`f3d.energy.node`, views `hierarchy,list,form`) |
-| `menu_f3d_energy_meter` | Лічильники | `menu_f3d_energy` | 30 | `group_energy_user` | `action_f3d_energy_meter` (list,kanban,form) |
-| `menu_f3d_energy_profile` | Профіль доби | `menu_f3d_energy` | 40 | `group_energy_user` | `action_f3d_energy_profile` (graph,pivot,list; `context={'search_default_today': 1, 'search_default_role_feeder': 1}`) |
-| `menu_f3d_energy_alloc` | Енергія на виробництво | `menu_f3d_energy` | 50 | `group_energy_user` | `action_f3d_energy_alloc_pivot` (pivot,graph,list) |
-| `menu_f3d_energy_balance` | Баланс обліку | `menu_f3d_energy` | 60 | `group_energy_user` | `action_f3d_energy_balance` (`context={'search_default_deviation': 1}`) |
-| `menu_f3d_energy_outage` | Відключення мережі | `menu_f3d_energy` | 70 | `group_energy_user` | `action_f3d_energy_outage` |
-| `menu_f3d_energy_event` | Події | `menu_f3d_energy` | 80 | `group_energy_user` | `action_f3d_energy_event` |
-| `menu_f3d_energy_config` | Налаштування | `menu_f3d_energy` | 90 | `group_energy_cost` | — |
-| `menu_f3d_energy_tariff` | Тарифи й договір | `menu_f3d_energy_config` | 10 | `group_energy_cost` | `action_f3d_energy_tariff` |
-| `menu_f3d_energy_pool` | Пули спільних споживачів | `menu_f3d_energy_config` | 20 | `group_energy_manager` | `action_f3d_energy_pool` |
-| `menu_f3d_energy_recompute` | Перерахувати | `menu_f3d_energy_config` | 30 | `group_energy_manager` | `action_f3d_energy_recompute_wizard` (`target='new'`) |
+| `menu_f3d_energy` | Енергетика | `factory3d_base.menu_f3d_root` | 50 | `group_f3d_energy_user` | — |
+| `menu_f3d_energy_overview` | Огляд | `menu_f3d_energy` | 10 | `group_f3d_energy_user` | `action_f3d_energy_overview` |
+| `menu_f3d_energy_scheme` | Схема мережі | `menu_f3d_energy` | 20 | `group_f3d_energy_user` | `action_f3d_energy_node_tree` (`f3d.energy.node`, views `hierarchy,list,form`) |
+| `menu_f3d_energy_meter` | Лічильники | `menu_f3d_energy` | 30 | `group_f3d_energy_user` | `action_f3d_energy_meter` (list,kanban,form) |
+| `menu_f3d_energy_profile` | Профіль доби | `menu_f3d_energy` | 40 | `group_f3d_energy_user` | `action_f3d_energy_profile` (graph,pivot,list; `context={'search_default_today': 1, 'search_default_role_feeder': 1}`) |
+| `menu_f3d_energy_alloc` | Енергія на виробництво | `menu_f3d_energy` | 50 | `group_f3d_energy_user` | `action_f3d_energy_alloc_pivot` (pivot,graph,list) |
+| `menu_f3d_energy_balance` | Баланс обліку | `menu_f3d_energy` | 60 | `group_f3d_energy_user` | `action_f3d_energy_balance` (`context={'search_default_deviation': 1}`) |
+| `menu_f3d_energy_outage` | Відключення мережі | `menu_f3d_energy` | 70 | `group_f3d_energy_user` | `action_f3d_energy_outage` |
+| `menu_f3d_energy_event` | Події | `menu_f3d_energy` | 80 | `group_f3d_energy_user` | `action_f3d_energy_event` |
+| `menu_f3d_energy_config` | Налаштування | `menu_f3d_energy` | 90 | `group_f3d_energy_cost` | — |
+| `menu_f3d_energy_tariff` | Тарифи й договір | `menu_f3d_energy_config` | 10 | `group_f3d_energy_cost` | `action_f3d_energy_tariff` |
+| `menu_f3d_energy_pool` | Пули спільних споживачів | `menu_f3d_energy_config` | 20 | `group_f3d_energy_manager` | `action_f3d_energy_pool` |
+| `menu_f3d_energy_recompute` | Перерахувати | `menu_f3d_energy_config` | 30 | `group_f3d_energy_manager` | `action_f3d_energy_recompute_wizard` (`target='new'`) |
 | `menu_f3d_energy_settings` | Енергетика | `factory3d_base.menu_f3d_config` | 50 | `factory3d_base.group_f3d_admin` | `action_f3d_energy_settings` (`res.config.settings`, `context={'module': 'factory3d_energy'}`) |
 
 ## 4. Права
@@ -742,40 +748,40 @@ class F3dViewerProviderInfra(models.AbstractModel):
 
 ```csv
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_f3d_energy_node_user,f3d.energy.node user,model_f3d_energy_node,factory3d_energy.group_energy_user,1,0,0,0
-access_f3d_energy_node_manager,f3d.energy.node manager,model_f3d_energy_node,factory3d_energy.group_energy_manager,1,1,1,1
+access_f3d_energy_node_user,f3d.energy.node user,model_f3d_energy_node,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_node_manager,f3d.energy.node manager,model_f3d_energy_node,factory3d_energy.group_f3d_energy_manager,1,1,1,1
 access_f3d_energy_node_f3d_user,f3d.energy.node f3d user,model_f3d_energy_node,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_meter_user,f3d.energy.meter user,model_f3d_energy_meter,factory3d_energy.group_energy_user,1,0,0,0
-access_f3d_energy_meter_manager,f3d.energy.meter manager,model_f3d_energy_meter,factory3d_energy.group_energy_manager,1,1,1,1
+access_f3d_energy_meter_user,f3d.energy.meter user,model_f3d_energy_meter,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_meter_manager,f3d.energy.meter manager,model_f3d_energy_meter,factory3d_energy.group_f3d_energy_manager,1,1,1,1
 access_f3d_energy_meter_f3d_user,f3d.energy.meter f3d user,model_f3d_energy_meter,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_interval_user,f3d.energy.interval user,model_f3d_energy_interval,factory3d_energy.group_energy_user,1,0,0,0
+access_f3d_energy_interval_user,f3d.energy.interval user,model_f3d_energy_interval,factory3d_energy.group_f3d_energy_user,1,0,0,0
 access_f3d_energy_interval_f3d_user,f3d.energy.interval f3d user,model_f3d_energy_interval,factory3d_base.group_f3d_user,1,0,0,0
 access_f3d_energy_interval_admin,f3d.energy.interval admin,model_f3d_energy_interval,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_tariff_user,f3d.energy.tariff user,model_f3d_energy_tariff,factory3d_energy.group_energy_user,1,0,0,0
-access_f3d_energy_tariff_manager,f3d.energy.tariff manager,model_f3d_energy_tariff,factory3d_energy.group_energy_manager,1,1,1,1
-access_f3d_energy_tariff_zone_user,f3d.energy.tariff.zone user,model_f3d_energy_tariff_zone,factory3d_energy.group_energy_user,1,0,0,0
-access_f3d_energy_tariff_zone_manager,f3d.energy.tariff.zone manager,model_f3d_energy_tariff_zone,factory3d_energy.group_energy_manager,1,1,1,1
-access_f3d_energy_pool_user,f3d.energy.pool user,model_f3d_energy_pool,factory3d_energy.group_energy_user,1,0,0,0
-access_f3d_energy_pool_manager,f3d.energy.pool manager,model_f3d_energy_pool,factory3d_energy.group_energy_manager,1,1,1,1
-access_f3d_energy_alloc_user,f3d.energy.alloc user,model_f3d_energy_alloc,factory3d_energy.group_energy_user,1,0,0,0
+access_f3d_energy_tariff_user,f3d.energy.tariff user,model_f3d_energy_tariff,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_tariff_manager,f3d.energy.tariff manager,model_f3d_energy_tariff,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_tariff_zone_user,f3d.energy.tariff.zone user,model_f3d_energy_tariff_zone,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_tariff_zone_manager,f3d.energy.tariff.zone manager,model_f3d_energy_tariff_zone,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_pool_user,f3d.energy.pool user,model_f3d_energy_pool,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_pool_manager,f3d.energy.pool manager,model_f3d_energy_pool,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_alloc_user,f3d.energy.alloc user,model_f3d_energy_alloc,factory3d_energy.group_f3d_energy_user,1,0,0,0
 access_f3d_energy_alloc_mrp,f3d.energy.alloc mrp user,model_f3d_energy_alloc,mrp.group_mrp_user,1,0,0,0
 access_f3d_energy_alloc_admin,f3d.energy.alloc admin,model_f3d_energy_alloc,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_balance_user,f3d.energy.balance user,model_f3d_energy_balance,factory3d_energy.group_energy_user,1,0,0,0
+access_f3d_energy_balance_user,f3d.energy.balance user,model_f3d_energy_balance,factory3d_energy.group_f3d_energy_user,1,0,0,0
 access_f3d_energy_balance_admin,f3d.energy.balance admin,model_f3d_energy_balance,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_event_user,f3d.energy.event user,model_f3d_energy_event,factory3d_energy.group_energy_user,1,0,0,0
+access_f3d_energy_event_user,f3d.energy.event user,model_f3d_energy_event,factory3d_energy.group_f3d_energy_user,1,0,0,0
 access_f3d_energy_event_f3d_user,f3d.energy.event f3d user,model_f3d_energy_event,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_event_manager,f3d.energy.event manager,model_f3d_energy_event,factory3d_energy.group_energy_manager,1,1,1,0
+access_f3d_energy_event_manager,f3d.energy.event manager,model_f3d_energy_event,factory3d_energy.group_f3d_energy_manager,1,1,1,0
 access_f3d_energy_event_admin,f3d.energy.event admin,model_f3d_energy_event,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_outage_user,f3d.energy.outage user,model_f3d_energy_outage,factory3d_energy.group_energy_user,1,0,0,0
+access_f3d_energy_outage_user,f3d.energy.outage user,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_user,1,0,0,0
 access_f3d_energy_outage_f3d_user,f3d.energy.outage f3d user,model_f3d_energy_outage,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_energy_outage_manager,f3d.energy.outage manager,model_f3d_energy_outage,factory3d_energy.group_energy_manager,1,1,0,0
+access_f3d_energy_outage_manager,f3d.energy.outage manager,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_manager,1,1,0,0
 access_f3d_energy_outage_admin,f3d.energy.outage admin,model_f3d_energy_outage,factory3d_base.group_f3d_admin,1,1,1,1
-access_f3d_energy_recompute_wizard_manager,f3d.energy.recompute.wizard manager,model_f3d_energy_recompute_wizard,factory3d_energy.group_energy_manager,1,1,1,1
+access_f3d_energy_recompute_wizard_manager,f3d.energy.recompute.wizard manager,model_f3d_energy_recompute_wizard,factory3d_energy.group_f3d_energy_manager,1,1,1,1
 ```
 
 Пояснення: `group_f3d_user` (переглядач, кіоск) читає вузли, лічильники, інтервали, події, відключення — провайдер
-`infra` (група `group_f3d_user`) і картки. Провайдер `energy` вимагає `group_energy_user`. Тарифи читає
-`group_energy_user`, але поля цін — `cost` (без групи вартості поля не видно). Абстрактні провайдери рядків не потребують.
+`infra` (група `group_f3d_user`) і картки. Провайдер `energy` вимагає `group_f3d_energy_user`. Тарифи читає
+`group_f3d_energy_user`, але поля цін — `cost` (без групи вартості поля не видно). Абстрактні провайдери рядків не потребують.
 Крони працюють від `base.user_root` (`sudo()` на власних моделях і `f3d.signal`/`f3d.reading` лише для читання й CT-10).
 
 ### 4.2 Групи (`security/f3d_energy_security.xml`)
@@ -786,32 +792,32 @@ access_f3d_energy_recompute_wizard_manager,f3d.energy.recompute.wizard manager,m
     <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
     <field name="sequence">50</field>
 </record>
-<record id="group_energy_user" model="res.groups">
+<record id="group_f3d_energy_user" model="res.groups">
     <field name="name">Енергетика: перегляд</field><field name="privilege_id" ref="privilege_f3d_energy"/><field name="sequence">10</field>
     <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
 </record>
-<record id="group_energy_cost" model="res.groups">
+<record id="group_f3d_energy_cost" model="res.groups">
     <field name="name">Енергетика: вартість</field><field name="privilege_id" ref="privilege_f3d_energy"/><field name="sequence">20</field>
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_user'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_user'))]"/>
 </record>
-<record id="group_energy_manager" model="res.groups">
+<record id="group_f3d_energy_manager" model="res.groups">
     <field name="name">Енергетика: енергетик</field><field name="privilege_id" ref="privilege_f3d_energy"/><field name="sequence">30</field>
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_cost')), Command.link(ref('factory3d_base.group_f3d_manager'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost')), Command.link(ref('factory3d_base.group_f3d_manager'))]"/>
 </record>
 <record id="mrp.group_mrp_user" model="res.groups">
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_user'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_user'))]"/>
 </record>
 <record id="mrp.group_mrp_manager" model="res.groups">
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_cost'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost'))]"/>
 </record>
 <record id="account.group_account_readonly" model="res.groups">
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_cost'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost'))]"/>
 </record>
 <record id="account.group_account_invoice" model="res.groups">
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_cost'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost'))]"/>
 </record>
 <record id="factory3d_base.group_f3d_admin" model="res.groups">
-    <field name="implied_ids" eval="[Command.link(ref('group_energy_manager'))]"/>
+    <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_manager'))]"/>
 </record>
 ```
 
@@ -831,7 +837,7 @@ access_f3d_energy_recompute_wizard_manager,f3d.energy.recompute.wizard manager,m
 
 ### 4.4 Захист полів і дій
 
-- Грошові поля (§2: позначка `cost`) — невидимі й не читаються без `group_energy_cost` (`groups=` на полі; `read` дає
+- Грошові поля (§2: позначка `cost`) — невидимі й не читаються без `group_f3d_energy_cost` (`groups=` на полі; `read` дає
   `AccessError` для явного запиту поля).
 - `f3d.energy.alloc`, `f3d.energy.interval`, `f3d.energy.balance` — запис лише кроном/майстром (`sudo`), у формах
   `create/edit="false"`; ручне виправлення — адміністратор.
@@ -929,8 +935,8 @@ action_f3d_energy_rebind(self)` M-01: без `group_f3d_admin` → `AccessError(
 
 1. Коди з `energy_signals.csv`: `f3d.signal` з цими кодами → `write({'source_id': False})`; з `origin in ('catalog',
    'module')` і створені хуком (xml-id `factory3d_energy.sig_<slug>`, ставиться при створенні) → `active=False`;
-   мігровані рівня 0 (`origin='sim_data'`) лишаються активними. Значення `origin='module'` зникає з селекції —
-   `ondelete='set default'` → `manual`.
+   мігровані рівня 0 (`origin='sim_data'`) лишаються активними. Значення `origin` не змінюється: `module` належить
+   базовому selection telemetry M-03 (X-16), модуль його не додавав.
 2. `f3d.source` модуля (`module='energy'`) → `active=False`; `EN-DERIVED` видаляється з моделлю типу (`ondelete=cascade`
    на селекції — сигнали на ньому вже без джерела з п. 1).
 3. `ir.config_parameter` `factory3d.energy.*` → `unlink`.
@@ -1336,7 +1342,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
    (factory3d_energy)», `u_kv` «10 / 0,4», `tariff_uah` — ціна поточної зони (8.4), `note` — як макет + «Енергія на МО —
    за лічильниками; «оцінка» — за паспортом і журналом часу.».
 2. `totals`: `p_inst`, `p_now` (ціле), `s_now`, `cos_before`, `cos_after` (R-06), `kwh_today`, `peak_kw`, `peak_time`,
-   `cost_today` (лише `group_energy_cost` і не кіоск), `capacity_kva`, `pv_kw` (= `pv_now`), `grid_kw`, `pv_today`,
+   `cost_today` (лише `group_f3d_energy_cost` і не кіоск — інакше ключ видаляється, разом зі значенням статики; X-25), `capacity_kva`, `pv_kw` (= `pv_now`), `grid_kw`, `pv_today`,
    `chp_kw`, `export_kw`, `bess_kw` (R-06), новий `contract_kw` (опційний ключ).
 3. `transformers` T1/T2: `name`, `rating_kva`, `section`, `p_kw` (1 знак), `s_kva` (ціле), `load` (3 знаки), `i_a`
    (ціле), `temp_c` (1 знак), `cos_phi` (2 знаки), `incomer` (`Q1`/`Q2`).
@@ -1357,7 +1363,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
    `code`, `text`).
 8. `workcenters[<код>].energy = {"p_now", "line"}` для РЦ, що є в payload; `productions[]`: за `name` МО з ORM
    (`search_read` полів `name`, `f3d_energy_kwh`, `f3d_energy_cost`, `f3d_energy_state`) — `energy_kwh = round(kwh, 1)`,
-   `energy_cost = round(cost)` (лише з `group_energy_cost` і не кіоск — інакше ключ видаляється), `energy_quality` =
+   `energy_cost = round(cost)` (лише з `group_f3d_energy_cost` і не кіоск — інакше ключ видаляється, X-25), `energy_quality` =
    `f3d_energy_state`.
 9. Сигнали без свіжих даних — ключ лишається зі значенням статики (не `null`).
 
@@ -1387,7 +1393,9 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
    `infra/pv/`, `infra/bess/`, `infra/chp/`, `infra/ats/`, `infra/totals/`, або `mrp.production`/`mrp.workorder` → розділ
    будується цілком (≈ 30 КБ) і `patch['productions']` доповнюється R-16 п. 8.
 3. Дельта `infra`: та сама умова (без `mrp.*`) → `deep_merge(patch.setdefault('infra', {}), tmp['infra'])` —
-   рекурсивне злиття словників (списки — заміна).
+   рекурсивне злиття словників (списки — заміна); присвоєння `patch['infra'] = …` заборонене. Хелпер — спільний
+   `deep_merge` viewer M-01 (X-23, X-82), імпорт усередині методу: `from odoo.addons.factory3d_viewer.tools.payload
+   import deep_merge` (провайдер викликає лише встановлений viewer).
 
 ### R-19 Ротація (`cron_f3d_energy_rotate`, FR-25)
 
@@ -1481,7 +1489,7 @@ CT-10, і telemetry рахує статус і заявки.
     подвоєння).
 13. **Запис уставок** — `ValidationError` (A-15); `f3d.command` на сигнали енергетики неможливі, бо `write_enabled`
     не може стати `True`.
-14. **Нотація адрес на стенді не відповідає (Q-08)** — ТК-11 показує розбіжність (значення поза `range` → `q='bad'`,
+14. **Нотація адрес на стенді не відповідає** (Q-08 закрито X-42; перевірка лишається) — ТК-11 показує розбіжність (значення поза `range` → `q='bad'`,
     або `0x02` емулятора → джерело `error`); виправлення — у даних (`address`), не в коді.
 
 ## 12. Acceptance Criteria
@@ -1523,7 +1531,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-31 | FR-07 | Given слот споживача лінії `missing` → `skipped`, `reason` містить код лічильника; година з відключенням → `skipped` «відключення мережі»; `imbalance_pct` для `skipped` не пишеться | UT |
 | AC-32 | FR-07, FR-12 | Given BW-1 `deviation` 3,26 % і 5,4 % у дві години поспіль; Then сигнал `energy/lines/BW-1/imbalance_pct` `warn` після першої, `alarm` після другої (`min_duration_s=3600`), одна заявка з назвою, що починається з «Небаланс обліку QF-1: 5,4» (шаблон R-07 п. 3, `decimals=2`), на обладнанні QF-1 | UT |
 | AC-33 | FR-12, FR-13 | Given сигнал `energy/transformers/T1/s_kva` (`warn_high=900`, `alarm_high=1000`); When показання 950, 1 020, 880 через `_f3d_ingest`; Then події `warn`, `bad`, `info` з текстами R-13 п. 1; заявка «Перевантаження трансформатора T1: 1020 кВА при номіналі 1000» (telemetry R-05) | UT |
-| AC-34 | FR-12 | Given демо-тариф 800 кВт; When `grid15_kw` = 812,4; Then заявка «Перевищення договірної потужності: 812,4 кВт при ліміті 800 кВт» на SWB-1, енергетики (`group_energy_manager`) — підписники заявки (M-17) | UT |
+| AC-34 | FR-12 | Given демо-тариф 800 кВт; When `grid15_kw` = 812,4; Then заявка «Перевищення договірної потужності: 812,4 кВт при ліміті 800 кВт» на SWB-1, енергетики (`group_f3d_energy_manager`) — підписники заявки (M-17) | UT |
 | AC-35 | FR-12 | Given фазні струми 171/180/168 і 140/180/150 на QF-T; When `_cron_live` о хвилині, кратній 5; Then `i_unbal_pct` = 4,05 і 14,89 (`warn`); `I_avg=3` А → не пишеться | UT |
 | AC-36 | FR-13 | Then: (а) `pfc_q_now` PFC-T 50 → 100 → подія «Компенсація секції 1: увімкнено ще один ступінь 50 квар, cos φ 0,97.»; повтор за 10 хв — без нової; (б) `workcenters/CNC-T/machine_state` → `fault`, `p_now` 0,7 → «CNC-T: аварійна зупинка, споживання впало до 0,7 кВт.»; (в) перший прогін після півночі → «Пік 15-хвилинної потужності за 12.10: 654 кВт о 09:15; ліміт договірної потужності (800 кВт) не перевищено.» | UT |
 | AC-37 | FR-08 | Given WO SAW-T з журналом часу 01:36–02:54 і ряд AC-15; When `_f3d_alloc_days([12.10])`; Then рядок `direct` `kwh=17,160`, `minutes=78,0`, `cost=144,14`, `quality='measured'`; `wo.f3d_energy_direct_kwh=17,160` | UT |
@@ -1541,9 +1549,9 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-49 | FR-10 | Given AVCO, МО 26 шт, `qty_producing=10`, створення дозамовлення; Then дозамовлення `extra_cost` = `extra_cost` МО до закриття (без енергії); на закритому МО енергія = енергія його завдань | UT |
 | AC-50 | FR-10 | Given РЦ SAW-T з `analytic_distribution={"<acc>": 100}`, `analytic_enabled=True`; When закриття; Then аналітичний рядок «[EN] <завдання>» з `amount=-144,14`, `unit_amount=17,16`, `product_uom_id=uom.product_uom_kwh`, `category='manufacturing_order'`, прив'язаний до `analytic_line_ids`; повторне закриття не дублює | UT |
 | AC-51 | FR-10 | When `_cal_price` викликається двічі (два готові рухи); Then `extra_cost` збільшено один раз | UT |
-| AC-52 | FR-10, FR-16 | Given AC-38; When провайдер `energy` на payload з `productions=[{"name": МО-231-Т…}]` для користувача з `group_energy_cost`; Then `energy_kwh=86.2`, `energy_cost=724`, `energy_quality='estimate'` | UT |
+| AC-52 | FR-10, FR-16 | Given AC-38; When провайдер `energy` на payload з `productions=[{"name": МО-231-Т…}]` для користувача з `group_f3d_energy_cost`; Then `energy_kwh=86.2`, `energy_cost=724`, `energy_quality='estimate'` | UT |
 | AC-53 | FR-08 | Given копія демо; When крон розподілу за 12.10; Then `WH/MO/00231`: WO00001…WO00004 прямі 17,160 / 46,069 / 13,567 / 4,350 (`estimate`), WO00005 = 8 × 0,4 × хв/60 до `now` | TC |
-| AC-54 | FR-22 | Given майстер (`mrp.group_mrp_user`, без `group_energy_cost`); When `read` МО полів `f3d_energy_kwh`, `f3d_energy_cost`; Then kWh повертається, `f3d_energy_cost` → `AccessError`; у формі вкладка «Енергія» без групи «Вартість» | UT |
+| AC-54 | FR-22 | Given майстер (`mrp.group_mrp_user`, без `group_f3d_energy_cost`); When `read` МО полів `f3d_energy_kwh`, `f3d_energy_cost`; Then kWh повертається, `f3d_energy_cost` → `AccessError`; у формі вкладка «Енергія» без групи «Вартість» | UT |
 | AC-55 | FR-14, CE-02 | When `_f3d_ingest([{infra/ats/src1_state, ts=T, text='available'}])`; Then `infra/ats/src1_ok` `last_value=1`, `last_ts=T`; `text='under'` → 0; `position` `pos_II` → `last_value=3`, `last_text='pos_II'` | UT |
 | AC-56 | FR-14 | Given мережа, `mode='remote'`; When послідовно `src1_state=under` (T), `position=pos_II` (T+14 с), `src1_state=available` (T+600), `position=pos_I` (T+660); Then одне відключення: `amf_master='hgm'`, `transfer_s=14`, `return_s=60`, `duration_min=11,0`, `state='closed'`; події «Зникла напруга мережі…», «АВР: переключено на генератор за 14 с.», «Мережу відновлено… через 60 с; відключення тривало 11 хв.» | UT |
 | AC-57 | FR-14 | Given `mode='auto'`, відключення відкрите, `gen_start=on` о T, `src2_state=under` до T+40 с, `ats_fail_start_s=35`; Then `infra/ats/fail_start=1` (заявка «АВР: генератор не запустився (FAIL START)» на ATS-1), `outage.fail_start=True`, подія `bad`; `src2_state=available` → `fail_start=0` | UT |
@@ -1554,7 +1562,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-62 | FR-14 | Given параметр `factory3d.genset.amf_master='hgm'` і `mode='auto'`; Then одна подія `warn` на добу «Режим АВР «Авто» не відповідає налаштуванню моста генератора «hgm».» | UT |
 | AC-63 | FR-16 | Given мережа з даних і свіжі сигнали за макетом; When `build_energy`; Then ключі A.12: `meta` (4), `totals` (16 + `contract_kw`), `transformers` (2 × 10 ключів), `cells` 11 у порядку `SWB_CELLS`, `lines` 6, `consumers` 49, `profile` 24, `typical` 24, `events` ≤ 6; `totals.p_now=626`, `cos_after=0.97`, `capacity_kva=2000`, `p_inst=1201` | UT |
 | AC-64 | FR-16 | Then `cells['QS']` = `{type:'coupler', section: None, state:'off', rating_a:1600, note:…}`; `cells['PFC-2'].q_now=50`; `cells['Q1'].state='on'` (сигнал `closed`), `'tripped'` при `tripped`; `consumers['CNC-T'].status='stop'` при `machine_state='fault'`; `consumers['SAW-1'].i_now=22` при 12,18 кВт / 0,84 | UT |
-| AC-65 | FR-16, FR-22 | Given `ctx.kiosk=True` або користувач без `group_energy_cost`; Then `totals.cost_today` і `productions[].energy_cost` відсутні, `energy_kwh` присутній | UT |
+| AC-65 | FR-16, FR-22 | Given `ctx.kiosk=True` або користувач без `group_f3d_energy_cost`; Then `totals.cost_today` і `productions[].energy_cost` відсутні, `energy_kwh` присутній | UT |
 | AC-66 | FR-16 | Then `workcenters['SAW-1'].energy == {"p_now": 12.18, "line": "BW-1"}` | UT |
 | AC-67 | FR-17 | Given макетні сигнали (pv 468 = 8 × 58,5, chp 400, bess +200, soc 76,1 %, Q1 334,7, Q2 −376,7); When `build_infra`; Then `totals.export_kw=42`, `grid_kw=0`, `bess_mode='charge'`, `critical_kw=348`, `n_modules=1552`; `cards['BESS'].rows` містить `["Зараз", "заряджається 200 кВт (надлишок СЕС і КГУ)"]` і `["Тримає критичні", "≈ 51 хв"]`; `cards['PV-INV'].rows` `["Стан", "усі в мережі"]`; картки `WATER`, `SERVER` незмінні | UT |
 | AC-68 | FR-18, A-22 | Given `patch['infra']={'totals': {'genset_kw': 348}}` від іншого провайдера; When `_f3d_viewer_delta` провайдера `infra`; Then `patch['infra']['totals']` має і `genset_kw`, і `export_kw` | UT |
@@ -1566,7 +1574,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-74 | FR-24 | When `uninstall_hook(env)`; Then параметрів `factory3d.energy.*` немає; сигнали з CSV без `source_id`; створені модулем — `active=False`; 87 мігрованих — активні; джерела `MB-U*` — `active=False` | UT |
 | AC-75 | FR-21 | Then меню §3 з xml-id, `sequence`, батьками й групами (`menu_f3d_energy.sequence=50`, батько `factory3d_base.menu_f3d_root`) | UT |
 | AC-76 | FR-19, FR-20 | Then усі представлення §3 завантажуються (`get_views` для кожної дії без помилок), вид `hierarchy` на `f3d.energy.node` існує; ручна перевірка: Енергетика → Схема мережі показує дерево GRID-10KV → RM6-1 → T1/T2 → Q1/Q2 → … | UT + MAN |
-| AC-77 | FR-22 | Given користувачі: майстер, бухгалтер (`account.group_account_readonly`), енергетик, `group_f3d_user`; Then майстер має `group_energy_user`, не `group_energy_cost`; бухгалтер — `group_energy_cost`; енергетик — `group_f3d_manager`; `group_f3d_user` без енергетичних груп не бачить меню «Енергетика» | UT |
+| AC-77 | FR-22 | Given користувачі: майстер, бухгалтер (`account.group_account_readonly`), енергетик, `group_f3d_user`; Then майстер має `group_f3d_energy_user`, не `group_f3d_energy_cost`; бухгалтер — `group_f3d_energy_cost`; енергетик — `group_f3d_manager`; `group_f3d_user` без енергетичних груп не бачить меню «Енергетика» | UT |
 | AC-78 | FR-22 | Then ACL §4.1: майстер не може `write` вузол (`AccessError`), енергетик може; інтервали/розподіл — лише читання для всіх, крім адміністратора | UT |
 | AC-79 | FR-22 | Given 2 компанії; Then вузли й тарифи компанії B не видно користувачу компанії A | UT |
 | AC-80 | FR-23 | Given `read_enabled=True`; When `set_values` з `f3d_energy_read_enabled=False`; Then 68 джерел `read_enabled=False`, крони `_cron_live/_cron_build/_cron_alloc/_cron_balance` нічого не пишуть | UT |
@@ -1614,7 +1622,7 @@ CT-10, і telemetry рахує статус і заявки.
   type(env['f3d.energy.alloc']), '_f3d_machine_intervals', return_value=intervals)` (метод M-07, обгортка над CM-03);
   `patch_viewer()` — фейкова модель шини не потрібна: `_notify` викликається лише за наявності моделі;
   `users`: `u_master` (`mrp.group_mrp_user`), `u_account` (`account.group_account_readonly`), `u_energy`
-  (`group_energy_manager`), `u_viewer` (`group_f3d_user`), `u_admin` (`group_f3d_admin`).
+  (`group_f3d_energy_manager`), `u_viewer` (`group_f3d_user`), `u_admin` (`group_f3d_admin`).
 
 Тестованість: усі формули — чисті функції `tools/*.py` (без ORM) з тестами на числах §9; ORM-тести перевіряють
 інтеграцію (поля, рядки, події, заявки).
@@ -1649,7 +1657,7 @@ CT-10, і telemetry рахує статус і заявки.
 Передумови: `docker compose -f services/iot_sim/docker-compose.sim.yml --profile dev up -d iot_sim mosquitto
 genset_relay` + колектор telemetry (`COL-MAIN`, токен) + копія демо `odoo_energy_test` з `factory3d_base`,
 `factory3d_viewer`, `factory3d_iot_sim`, `factory3d_telemetry` (міграція `done`); для ТК-05/06 — `td_genset` 19.0 і
-`factory3d_genset`; для ТК-05…ТК-08 — iot_sim з виправленням Q-08 (нотація Huawei/ATyS/TEDOM). Тести — `tests/stand/`
+`factory3d_genset`; для ТК-05…ТК-08 — iot_sim з адресами PDU за вендором і ATyS за Annexe III (X-41, X-42; Q-08 закрито). Тести — `tests/stand/`
 (`pytest -m stand`, клієнти: XML-RPC Odoo від користувача `u_energy`, REST емулятора з `SIM_API_TOKEN`).
 
 | ТК | Назва | Кроки | Очікуваний результат | Де дивитися | AC |
@@ -1711,8 +1719,8 @@ genset_relay` + колектор telemetry (`COL-MAIN`, токен) + копія
 ## 14. Definition of Done
 
 - Усі UT §13.1 зелені на чистій базі й на копії демо (`--test-tags /factory3d_energy`); `test_data_sync.py` зелений.
-- ТК-01…ТК-12 пройдені (ТК-05…ТК-08 — після виправлення iot_sim Q-08; до того — протокол з відміткою «блокер Q-08»
-  за рішенням менеджера), протокол у `TEST_REPORT.md`; DEPLOY_TEST виконано.
+- ТК-01…ТК-12 пройдені (ТК-05…ТК-08 — на iot_sim з адресами за X-41, X-42; Q-08 закрито), протокол у `TEST_REPORT.md`;
+  DEPLOY_TEST виконано.
 - Кожен AC-01…AC-92 має зелений тест або відмітку ТК/MAN у протоколі.
 - `ruff check` без помилок (довжина рядка 120); жодного `x_`-поля; рядки UI українською.
 - `neutralize.sql` виконується (AC-82); стоп-крани перевірені (AC-80, AC-81).
@@ -1734,7 +1742,7 @@ genset_relay` + колектор telemetry (`COL-MAIN`, токен) + копія
 | Q-05 | ціна — тариф мережі (R-05) |
 | Q-06 | `extra_cost` лише для FIFO/AVCO; для `standard` — чаттер |
 | Q-07 | енергія простою — рядки `idle`, не на МО |
-| Q-08 | адреси за документами вендорів (A-06); ТК-05…ТК-08 блоковані до виправлення iot_sim |
+| Q-08 | **закрито X-42, X-41** (D-20, D-21): iot_sim §8.4.1 — PDU за документом вендора, ATyS p за Annexe III; energy — адреси за документами вендорів (A-06) без змін; ТК-05…ТК-08 не блоковані |
 | Q-09 | стан вимикачів — регістр 2018 PM5560 (ПРИПУЩЕННЯ) |
 | Q-10 | пороги температури трансформаторів 100/110 °C |
 | Q-11 | допуск балансу 3 % / 2 кВт·год |
@@ -1779,7 +1787,7 @@ A.1: `{"fc": n, "addr": addr, "type": type, "scale": scale?, "map": <карта 
 | ATyS p | 20483 | 20483 | u16 | map `ats_position` | — | `infra/ats/position` | те саме |
 | ATyS p | 20484 | 20484 | u16 | map `onoff` | — | `infra/ats/gen_start` | те саме |
 | ATyS p | 20486 / 20487 | 20486 / 20487 | u16 | map `ats_source` | — | `infra/ats/src1_state` / `src2_state` | те саме |
-| TEDOM | 40000 | 40000 | u16 | map `chp_state` | — | `infra/chp/state` | iot_sim §8.9.5 (ПРИПУЩЕННЯ, Q-08) |
+| TEDOM | 40000 | 40000 | u16 | map `chp_state` | — | `infra/chp/state` | iot_sim §8.9.5 (ПРИПУЩЕННЯ; нотація — X-42) |
 | TEDOM | 40001 / 40002 | 40001 / 40002 | u16 | 1 | кВт | `infra/totals/chp_kw` / `infra/chp/heat_kw` | те саме |
 | TEDOM | 40003 | 40003 | u16 | 0,1 | м³/год | `infra/chp/gas_m3h` | те саме |
 | TEDOM | 40010–40011 | 40010 | u32 | 1 | год | `infra/chp/hours` | те саме |

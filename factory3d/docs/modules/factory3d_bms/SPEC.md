@@ -1,6 +1,6 @@
 # factory3d_bms — специфікація
 
-Версія 0.1 · 14.10.2026 · технічне рішення: `docs/modules/factory3d_bms/ARCHITECTURE.md` (далі ARCH: FR-01…FR-26,
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · технічне рішення: `docs/modules/factory3d_bms/ARCHITECTURE.md` (далі ARCH: FR-01…FR-26,
 CH-01…CH-06, A-01…A-21, Q-01…Q-14). Спирається на: каркас §5 (імена, стоп-крани, права), §6.4, §6.5 (рішення менеджера
 14.10: `bacnet_ip` — telemetry, `helvarnet` — bms), §6.6 P-08, §6.7, §6.8, D-08; `factory3d_base` CB-01, CB-03, CB-04,
 CB-07…CB-10, CB-12, Додаток C (зони); `factory3d_telemetry` M-02 `f3d.source`, M-03 `f3d.signal`, M-05
@@ -10,6 +10,11 @@ A (схеми `bacnet_ip`, `helvarnet`), CT-05 (R-04…R-06), CT-07, CT-09, CT-1
 R-14, Додаток A.13; `factory3d_energy` CE-02, CE-03, CE-06, A-19; `factory3d_fire_safety` A-20, CF-06, сигнал
 `fire/totals/system_state`; `factory3d_iot_sim` §8.10 (P-08), §9.1 R-22…R-24, §9.3 S-04, S-13, S-15, §7.2 API-12…API-16,
 Додаток A.
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-16 (M-13 без `selection_add` поля `origin` — значення `module` у базовому
+selection telemetry M-03), X-19 (група `group_f3d_bms_operator` — у власному привілеї `privilege_f3d_bms` категорії
+factory3d, §4.2, AC-62), X-58 (ТК-02 — параметр сценарію лише `value`), X-71 (§8.9: запис MSV:1 за зворотним `map`),
+X-06 (§11 п. 4: COV допустимий, у v1 лишається опитування A-02), X-32 (§3: `menu_f3d_bms_config` під `menu_f3d_config`
+з sequence резерву 80); закрито Q-09 (X-34, X-40, X-58) і Q-10 (X-06).
 
 Позначення: **UT** — юніт-тест `odoo.tests`; **PT** — pytest плагіна з фейковим роутером Helvar; **TC** — стенд
 (емулятор + колектор + Odoo); **MAN** — ручна перевірка. Odoo 19: SQL-обмеження — `models.Constraint`; хуки
@@ -33,7 +38,7 @@ odoo_addons/factory3d_bms/
 │   │                                f3d_bms_deviation, f3d_bms_check, f3d_bms_overview, viewer_provider,
 │   │                                maintenance_request, maintenance_equipment, f3d_zone, res_config_settings
 │   ├── f3d_source.py                M-12 (тип f3d_bms, _f3d_local_types)
-│   ├── f3d_signal.py                M-13 (origin 'module', constraint запису, _f3d_ingest R-20)
+│   ├── f3d_signal.py                M-13 (constraint запису, _f3d_ingest R-20)
 │   ├── f3d_bms_light_norm.py        M-01
 │   ├── f3d_bms_light_panel.py       M-02
 │   ├── f3d_bms_light_group.py       M-03 (R-01…R-06, CH-03)
@@ -688,8 +693,8 @@ telemetry); провайдери модуля замінюють розділи 
 ### M-13 `f3d.signal` — розширення (A-01, R-20)
 
 `_inherit = "f3d.signal"`:
-1. `origin` — `selection_add=[('module', 'Дані модуля')]`, `ondelete={'module': 'set default'}` (той самий ключ
-   додає energy; Odoo об'єднує однакові значення selection з різних модулів).
+1. `origin` **не** розширюється (X-16): значення `('module', 'Дані модуля')` є в базовому selection telemetry M-03;
+   292 власні сигнали модуля (Додаток B) створюються з `origin='module'`, 176 рядків каталогу iot_sim — `catalog`.
 2. `@api.constrains("write_enabled")`: для `module == 'bms'` і `write_enabled=True`: код не закінчується на
    `/level`, `/scene`, `/mode`, `/setpoint_day_c`, `/setpoint_night_c` або належить `EF-*`/`BOILER` →
    `ValidationError("Сигнал %s модуля «Будівля» не керується (ARCH §1.4).")`.
@@ -795,7 +800,7 @@ telemetry); провайдери модуля замінюють розділи 
 | `menu_f3d_bms_hvac_unit` | Установки | `menu_f3d_bms_hvac` | 10 | `group_f3d_user` | `action_f3d_bms_hvac_unit` (list,kanban,form) |
 | `menu_f3d_bms_heat_balance` | Тепловий баланс | `menu_f3d_bms_hvac` | 20 | `group_f3d_user` | `action_f3d_bms_heat_balance_open` (`ir.actions.server`, `code="action = env['f3d.bms.heat.balance']._f3d_bms_get().get_formview_action()"`) |
 | `menu_f3d_bms_deviation` | Відхилення | `menu_f3d_bms` | 40 | `group_f3d_user` | `action_f3d_bms_deviation` (list,graph,pivot,form; `context={'search_default_open': 1}`) |
-| `menu_f3d_bms_config` | Будівля | `factory3d_base.menu_f3d_config` | 40 | `group_f3d_manager` | — |
+| `menu_f3d_bms_config` | Будівля | `factory3d_base.menu_f3d_config` | 80 | `group_f3d_manager` | — |
 | `menu_f3d_bms_config_scene` | Сцени DALI | `menu_f3d_bms_config` | 10 | `group_f3d_manager` | `action_f3d_bms_light_scene` |
 | `menu_f3d_bms_config_settings` | Налаштування будівлі | `menu_f3d_bms_config` | 20 | `group_f3d_admin` | `action_f3d_bms_settings` (`res.config.settings`, `context={'module': 'factory3d_bms'}`) |
 | `menu_f3d_bms_config_reinstall` | Повторити установку даних будівлі | `menu_f3d_bms_config` | 90 | `group_f3d_admin` | `ir.actions.server` `action_f3d_bms_reinstall`: `code="action = env['f3d.bms.check'].f3d_bms_reinstall_data()"` |
@@ -834,10 +839,15 @@ access_f3d_bms_hvac_command_wizard_operator,f3d.bms.hvac.command.wizard operator
 ### 4.2 Групи (`security/security.xml`)
 
 ```xml
+<record id="privilege_f3d_bms" model="res.groups.privilege">
+    <field name="name">Завод 3D: будівля</field>
+    <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
+    <field name="sequence">80</field>
+</record>
 <record id="group_f3d_bms_operator" model="res.groups">
     <field name="name">Будівля: оператор</field>
-    <field name="privilege_id" ref="factory3d_base.privilege_f3d"/>
-    <field name="sequence">15</field>
+    <field name="privilege_id" ref="privilege_f3d_bms"/>
+    <field name="sequence">10</field>
     <field name="comment">Енергетик, головний механік: керування освітленням і вентиляцією (якщо дозволено), журнал відхилень.</field>
     <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
 </record>
@@ -847,6 +857,9 @@ access_f3d_bms_hvac_command_wizard_operator,f3d.bms.hvac.command.wizard operator
 ```
 
 Ланцюжок: `group_f3d_user` ⊂ `group_f3d_bms_operator` ⊂ `group_f3d_manager` ⊂ `group_f3d_admin` ⊂ `base.group_system`.
+Група — у власному привілеї `privilege_f3d_bms` (sequence 80 = резерв меню bms) категорії
+`factory3d_base.module_category_factory3d` (X-19); драбина base `privilege_f3d` (Користувач/Менеджер/Адміністратор, CB-10)
+не змінюється — base лише отримує implied-зв'язок `group_f3d_manager` → `group_f3d_bms_operator`.
 
 ### 4.3 Record rules
 
@@ -1126,7 +1139,8 @@ class HelvarNetPlugin(SourcePlugin):
   "doc": "AI:4 RV-05_FreshAirFilterDp"}`; складені стани — `states[]` (перший збіг); MSV — `map`/`states`.
 - Періоди: вимірювання й стани — 30 с, уставки — 300 с; ядро telemetry групує сигнали джерела з однаковим `period_s`
   в один RPM (≤ 50 пар; з `status-flags` — ≤ 25 сигналів на RPM, тож RV-05 з 13 сигналами 30 с — 1 RPM).
-- Запис (лише з п'ятьма запобіжниками, R-25): MSV:1 (`text` → індекс за `states`), AV:1, AV:2 — `WriteProperty`
+- Запис (лише з п'ятьма запобіжниками, R-25): MSV:1 (`text` → значення за зворотним `map` адреси: `"VEL"` → 2;
+  telemetry R-23, X-66, X-71), AV:1, AV:2 — `WriteProperty`
   `priority=8` (telemetry R-23); AO:1, AO:2, BV:1 і котельня — без `write_enabled` (constraint M-13).
 
 ## 9. Алгоритми й правила
@@ -1276,8 +1290,9 @@ class HelvarNetPlugin(SourcePlugin):
    опитування з тим самим значенням → R-03 telemetry зберігає не частіше `store_period_s`.
 4. **BACnet: пристрій не відповідає** (Who-Is/RPM таймаут) → джерело `error`, сигнали `stale` через `max(3·30, 60) =
    90 с`; `reliability`/`status-flags` `fault` → `q='uncertain'`/`bad` (telemetry R-23) — значення не оновлюють
-   `last_value`; перевірки установки → «немає даних». **COV не використовується** (A-02): втрата підписки неможлива;
-   якщо адміністратор змінить `mode` на `cov`, хибні `stale` у спокої — відомий ефект telemetry (Q-10).
+   `last_value`; перевірки установки → «немає даних». **COV у v1 не використовується** (A-02): втрата підписки
+   неможлива. Зміна `mode` на `cov` в адресі допустима без коду: telemetry рахує `stale_after` для COV від інтервалу
+   контрольного читання `max(period_s·10, 300)` с (telemetry R-07, X-06), хибних `stale` у спокої немає.
 5. **Сигналу немає** (energy/fire_safety не встановлені, сигнал видалено) — поле `*_signal_id` порожнє → фолбек R-05,
    R-12, R-15, придушення R-21 вимкнене; WARNING лише в хуку.
 6. **Календар без робочих інтервалів / не заданий** — `work_interval_at` → `None` → «поза робочим часом» (заявок «у
@@ -1366,7 +1381,7 @@ class HelvarNetPlugin(SourcePlugin):
 | AC-59 | R-25 | користувач `group_f3d_user` → `AccessError`; `factory3d.bms.write_enabled=False` → `UserError` «Керування вимкнено: модуль «Будівля» (factory3d.bms.write_enabled).»; telemetry вимкнено → відповідний текст; `HN-LP-3.write_enabled=False` → «Запис вимкнено на: LT-MAINT (джерело HN-LP-3)»; рівень 120 → `ValidationError` | UT |
 | AC-60 | FR-18, M-13 | майстер установок: RV-05 режим `VEL` → команда `text='VEL'`; уставка ніч 12,0 → `value=12.0` на `…/setpoint_night_c`; EF-ELEC у майстрі → домен виключає; `write_enabled=True` на `ventilation/units/EF-ELEC/state`, `equipment/BOILER/return_c` або `ventilation/units/RV-05/heating_valve` → `ValidationError` «…не керується» | UT |
 | AC-61 | FR-17 | `user` (лише `group_f3d_user`): читає всі моделі, `write` групи → `AccessError`; оператор: `write({'note'})` епізоду — ок, `write({'state'})` → `AccessError`; менеджер: редагує групи/установки/баланс/норми; `unlink` епізоду — лише адмін | UT |
-| AC-62 | FR-16, FR-17 | групи: `group_f3d_bms_operator.implied_ids ∋ group_f3d_user`, `group_f3d_manager.implied_ids ∋ group_f3d_bms_operator`; меню §3 з xml-id, `sequence` (`menu_f3d_bms` = 80 під `menu_f3d_root`), групами | UT |
+| AC-62 | FR-16, FR-17 | групи: `group_f3d_bms_operator.implied_ids ∋ group_f3d_user`, `group_f3d_manager.implied_ids ∋ group_f3d_bms_operator`; меню §3 з xml-id, `sequence` (`menu_f3d_bms` = 80 під `menu_f3d_root`, `menu_f3d_bms_config` = 80 під `menu_f3d_config` — X-32), групами; `group_f3d_bms_operator.privilege_id` = `factory3d_bms.privilege_f3d_bms`, його `category_id` = `factory3d_base.module_category_factory3d`; `group_f3d_bms_operator` не входить у групи `factory3d_base.privilege_f3d` (X-19) | UT |
 | AC-63 | §4.4, §13.3 | `f3d_bms_reinstall_data()` менеджером → `AccessError`; `action_open('res.partner', …)` → `AccessError`; `dali_devices="@1.2.1.1-27;DROP"` → `ValidationError` | UT |
 | AC-64 | R-31 | `build_query(2, 152, address='@1.2.1.5')` == `">V:2,C:152,@1.2.1.5#"`; `build_query(2, 161, group=12)` == `">V:2,C:161,G:12#"`; `build_query(2, 102, address='@1')` == `">V:2,C:102,@1#"`; `build_command(2, 13, 12, level=60, fade_cs=100)` == `">V:2,C:13,G:12,L:60,F:100,A:1#"`; `build_command(2, 11, 12, scene=3, block=1, fade_cs=200)` == `">V:2,C:11,G:12,B:1,S:3,F:200,A:1#"`; `group=0`/`level=101`/адреса `@1.2.1` → `ValueError` | PT |
 | AC-65 | R-31 | `parse_frame("?V:2,C:152,@1.2.1.5=75#")` → `reply`, `cmd=152`, `address='@1.2.1.5'`, `answer='75'`; `"!V:2,C:104,@2.2.1.1=11#"` → `error`, `answer='11'`; `">V:2,C:13,G:12,L:60,F:100#"` → `push`, `params={'G':'12','L':'60','F':'100'}`; `"?V:2,C:164,G:16=@1.2.3.1,@1.2.3.2$"` → `partial`; `"hello#"` → `ProtocolError`; `split_stream(b'xx?V:2,C:191=2#>V:2,C:13,G:1,L:5#?V:2')` → 2 кадри, залишок `b'?V:2'`; кадр 1 600 байт → `ProtocolError` | PT |
@@ -1459,7 +1474,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | `test_hooks.py::TestInstall` | `test_counts_clean`, `test_signal_definitions`, `test_reinstall_idempotent`, `test_params_environment`, `test_uninstall_hook`, `test_neutralize` | AC-48, AC-51, AC-53…AC-56 | `hooks.run_install(env)`, `uninstall_hook(env)` у транзакції тесту | кількості, `install_report`, поля сигналів, `validate_address` |
 | `test_commands.py::TestWriteFlags` | `test_enable_disable`, `test_manager_rpc_denied` | AC-57 | `res.config.settings` | кількості прапорів |
 | `::TestWizards` | `test_light_scene`, `test_light_level_multi`, `test_refusals`, `test_hvac_mode_setpoint`, `test_forbidden_write_flags` | AC-58…AC-60 | `user_operator`, `set_param('factory3d.telemetry.write_enabled','True')` | поля `f3d.command`, тексти `UserError`/`ValidationError` |
-| `test_security.py::TestRights` | `test_acl_matrix`, `test_groups_chain`, `test_menus`, `test_reinstall_admin_only` | AC-61…AC-63 | користувачі | `AccessError`; `env.ref(menu).sequence` |
+| `test_security.py::TestRights` | `test_acl_matrix`, `test_groups_chain`, `test_own_privilege`, `test_menus`, `test_reinstall_admin_only` | AC-61…AC-63 | користувачі | `AccessError`; `env.ref(menu).sequence`; `privilege_id`/`category_id` групи оператора, група оператора поза `factory3d_base.privilege_f3d` (X-19) |
 | `static/tests/overview.test.js` (hoot, `--test-tags /factory3d_bms` через `HttpCase.start_tour`-незалежний `web.assets_unit_tests`) | `F3dBmsOverview renders plan`, `click opens form` | AC-47 | `mockService("orm", …)` з фіктивною відповіддю R-28 | кількість `polygon`/`circle`, класи, виклик `orm.call` |
 
 #### 13.1.2 Плагін (`pytest services/collector_plugins/f3d_collector_bms -q`)
@@ -1490,7 +1505,7 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | ТК | Кроки | Очікуваний результат | Де дивитися |
 |---|---|---|---|
 | ТК-01 Підключення | запустити колектор; 3 хв | Завод 3D → Телеметрія → Огляд: 32 джерела bms `online`, `BMS-DERIVED` `online`; Будівля → Огляд: 32 групи з `level_source=live`, 29 установок без `stale`; сигнали `module=bms`: `ok` усі, крім `ventilation/units/RV-05/filter_dp_pa` (`alarm`, емулятор стартує з 285) | Огляд, список сигналів (фільтр «Мій модуль» = bms) |
-| ТК-02 `filter_clogged` RV-05 | 1) заявку id 6 перевести в «Repaired»; `curl -X POST $SIM/reset -H "$AUTH" -d '{"keep_time":true}'` → RV-05 120 Па, сигнал `ok` ≤ 2 хв; 2) `curl -X POST $SIM/scenario/filter_clogged/start -H "$AUTH" -H 'Content-Type: application/json' -d '{"run_ref":"RUN/TK02","params":{"device":"RV-05","value":285,"dp_pa":285,"ramp_min":2}}'`; 3) чекати 4 хв; 4) закрити нову заявку, `POST $SIM/scenario/filter_clogged/stop` | 3) сигнал `filter_dp_pa` 285 ± 5, `alarm`; нова заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на RV-05, команда «Служба головного механіка», `f3d_bms_rule=filter_supply`; епізод журналу `open`; картка RV-05 у переглядачі «Фільтр 285 Па · замінити»; огляд — RV-05 червоний; 4) ≤ 3 хв сигнал `ok`, епізод `closed` | Обслуговування → Заявки; Будівля → Відхилення; 3D |
+| ТК-02 `filter_clogged` RV-05 | 1) заявку id 6 перевести в «Repaired»; `curl -X POST $SIM/reset -H "$AUTH" -d '{"keep_time":true}'` → RV-05 120 Па, сигнал `ok` ≤ 2 хв; 2) `curl -X POST $SIM/scenario/filter_clogged/start -H "$AUTH" -H 'Content-Type: application/json' -d '{"run_ref":"RUN/TK02","params":{"device":"RV-05","value":285,"ramp_min":2}}'` (лише `value` — iot_sim S-04, X-58); 3) чекати 4 хв; 4) закрити нову заявку, `POST $SIM/scenario/filter_clogged/stop` | 3) сигнал `filter_dp_pa` 285 ± 5, `alarm`; нова заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на RV-05, команда «Служба головного механіка», `f3d_bms_rule=filter_supply`; епізод журналу `open`; картка RV-05 у переглядачі «Фільтр 285 Па · замінити»; огляд — RV-05 червоний; 4) ≤ 3 хв сигнал `ok`, епізод `closed` | Обслуговування → Заявки; Будівля → Відхилення; 3D |
 | ТК-03 Освітлення вимкнене / нижче норми | календар «Цілодобово (ТК)»; 1) `POST $SIM/scenario/lighting_scene/start` `{"run_ref":"RUN/TK03A","params":{"group":"LT-CUT","level":0,"duration_s":900}}`; 2) `…/start` `{"run_ref":"RUN/TK03B","params":{"group":"LT-EB","level":60,"duration_s":900}}`; чекати 3 хв | 1) `lighting/groups/LT-CUT/level=0` ≤ 10 с (push); ≤ 2,5 хв заявка «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі 500 лк»; 2) LT-EB `e_now = 329` → заявка «Освітлення LT-EB (Крайкооблицювання): ≈ 329 лк при нормі 500 лк (рівень 60 %)»; огляд: Z-CUT сірий/червоний, Z-EB червоний; після `stop` — «норма», епізоди `closed` | Заявки, Відхилення, Огляд |
 | ТК-04 Аварія світильника | менеджер ставить сигналам `lighting/groups/LT-CUT/faults` і `/faulty` `period_s=60`; `POST $SIM/scenario/lighting_scene/start` `{"run_ref":"RUN/TK04","params":{"group":"LT-CUT","scene":1,"fault_device":"@1.2.1.5","duration_s":900}}`; 3 хв | `faults=1`, `faulty='1.2.1.5'`; заявка «Аварія світильників LT-CUT: несправних 1 шт. при нормі 0», в описі «Несправні світильники: 1.2.1.5; щит LP-2, DALI-група G:12.»; щит LP-2 `state=fault`; після `stop` — `faults=0` | форма групи, щита; заявка |
 | ТК-05 Нічне зниження | менеджер створює календар «Без робочого часу (ТК)» (без інтервалів) і ставить його в параметр; `POST $SIM/time` `{"set":"<сьогодні>T23:00:00+03:00"}`; 3 хв | RV/AHU: `mode=ST`, `state=stopped` → `state=standby`, `mode_label` «Очікування»; `heat_kw` → 0, `heat_need_kw` падає до 0; `setpoint_night_c=14.0`; перевірки «поза робочим часом»; **жодної** нової заявки й епізоду; потім календар «Цілодобово (ТК)» → ≤ 3 хв заявки «Установка RV-xx (…): не працює в робочий час — режим «Очікування»» (перевірка контрасту, 26 заявок) — закрити масово; повернути `POST $SIM/time {"set":"<сьогодні>T10:00:00+03:00"}` | Установки (kanban), Тепловий баланс, Заявки |
@@ -1573,8 +1588,8 @@ FR-23 AC-64…AC-78; FR-24 AC-51, ТК-02; FR-25 AC-28, AC-33; FR-26 AC-08, AC-1
 | Q-06 | аварійне освітлення не моніториться модулем |
 | Q-07 | групи «присутність» — лише «вимкнено в робочий час» |
 | Q-08 | група «Будівля: оператор» без користувачів; керування вимкнено |
-| Q-09 | дані bms самодостатні (Додаток B — 549 сигналів); ТК передають `value` і `dp_pa`; стан щита — агрегат R-34 |
-| Q-10 | усі BACnet-сигнали `mode="poll"` |
+| Q-09 | **закрито X-34, X-40, X-58**: каталог iot_sim доповнюється з Додатка B (джерело — bms); стан щита — агрегат роутера (R-34), R-23 iot_sim `heat_nom = 116,8`, біти C:110 за документом Helvar, рівень EF-CHG — за A-20; ТК передають лише `value` |
+| Q-10 | **закрито X-06**: telemetry R-07 рахує `stale_after` для COV від інтервалу контрольного читання; у v1 усі BACnet-сигнали лишаються `mode="poll"` (A-02), перехід на COV — даними |
 | Q-11 | `internal_gains_kw = 0` |
 | Q-12 | пороги — §3 ARCH / §5.1 |
 | Q-13 | втрата зв'язку — лише огляд/переглядач/«немає даних» |

@@ -1,6 +1,9 @@
 # factory3d_energy — технічне рішення
 
-Версія 0.1 · 14.10.2026 · автор: агент-архітектор модуля (хвиля 2) · статус: **чернетка на погодження**.
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · автор: агент-архітектор модуля (хвиля 2) · статус: **чернетка на погодження**.
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-16 (власні сигнали — `origin='module'` базового selection telemetry, без
+`selection_add`; §2.8), X-19 (групи `group_f3d_energy_user/cost/manager`: §1.2, FR-22, §2.6, §3), X-68 (CE-04: посилання на
+td_genset R-04 і X-11 замість Q-13), X-23 (A-22 закрито: спільний `deep_merge` viewer), X-41/X-42 (Q-08 закрито).
 Каркас: `docs/ARCHITECTURE.md` (далі «каркас»: §3 `factory3d_energy ← factory3d_telemetry, mrp_account`, §5 конвенції,
 §6.4–§6.5 телеметрія й колектор, §6.6 P-05/P-07, §6.7 контракт переглядача, §6.8 заявки ТО, D-04, D-06, D-11, §9 п. 1, 6,
 8). Специфікація: `docs/modules/factory3d_energy/SPEC.md`. Спирається на: `factory3d_base` CB-01, CB-03, CB-07…CB-10;
@@ -56,10 +59,10 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 
 | Роль (групи) | Що робить | Де в меню |
 |---|---|---|
-| Головний енергетик (`group_energy_manager` ⊃ `factory3d_base.group_f3d_manager`) | веде схему мережі, прив'язку лічильників, тарифи й договірну потужність, пули спільних споживачів, пороги; дивиться баланс, події, відключення; запускає перерахунок | Завод 3D → Енергетика (усе) |
-| Черговий електрик (`group_energy_user`) | дивиться схему, живі значення, події, журнал відключень, заявки ТО з енергетики | Енергетика → Огляд / Схема / Лічильники / Події / Відключення; Обслуговування → Заявки |
-| Майстер / технолог (`mrp.group_mrp_user` ⇒ `group_energy_user`) | бачить кВт·год на завданні й МО (без гривень), енергію простою РЦ | форма МО → вкладка «Енергія», форма завдання, робочий центр |
-| Бухгалтер / керівник виробництва (`group_energy_cost`, неявно з `account.group_account_readonly`, `account.group_account_invoice`, `mrp.group_mrp_manager`) | бачить вартість енергії на МО/завданні, тарифи, вартість за добу, нерозподілене й накладні | форма МО, «Розподіл на виробництво», дашборд |
+| Головний енергетик (`group_f3d_energy_manager` ⊃ `factory3d_base.group_f3d_manager`) | веде схему мережі, прив'язку лічильників, тарифи й договірну потужність, пули спільних споживачів, пороги; дивиться баланс, події, відключення; запускає перерахунок | Завод 3D → Енергетика (усе) |
+| Черговий електрик (`group_f3d_energy_user`) | дивиться схему, живі значення, події, журнал відключень, заявки ТО з енергетики | Енергетика → Огляд / Схема / Лічильники / Події / Відключення; Обслуговування → Заявки |
+| Майстер / технолог (`mrp.group_mrp_user` ⇒ `group_f3d_energy_user`) | бачить кВт·год на завданні й МО (без гривень), енергію простою РЦ | форма МО → вкладка «Енергія», форма завдання, робочий центр |
+| Бухгалтер / керівник виробництва (`group_f3d_energy_cost`, неявно з `account.group_account_readonly`, `account.group_account_invoice`, `mrp.group_mrp_manager`) | бачить вартість енергії на МО/завданні, тарифи, вартість за добу, нерозподілене й накладні | форма МО, «Розподіл на виробництво», дашборд |
 | Адміністратор (`factory3d_base.group_f3d_admin`) | стоп-крани, повтор прив'язки даних, `neutralize` | Налаштування → Завод 3D → Енергетика |
 | Переглядач/кіоск (`group_f3d_user`) | вкладка «Енергія», картки ГРЩ, ліній, трансформаторів, СЕС/КГУ/BESS/АВР, кВт·год у картці МО (без грн у кіоску) | 3D-переглядач |
 | Міст `factory3d_genset` (код) | читає `infra/ats/*`, `energy/consumers/*/p_now`, `infra.totals`, журнал відключень | CE-01…CE-04 |
@@ -89,7 +92,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 | FR-19 | Представлення: схема мережі (ієрархія), вузли, лічильники, профіль (графік/зведена), баланс, розподіл на виробництво (зведена), відключення, події, тарифи, пули, вкладка «Енергія» на МО й завданні, статбокс на РЦ і обладнанні. |
 | FR-20 | Дашборд «Огляд»: kanban ліній і трансформаторів з живими значеннями, графік профілю доби, KPI доби (кВт·год, пік, вартість, власна генерація), стандартні graph/pivot. |
 | FR-21 | Меню «Завод 3D → Енергетика» (`sequence=50`) і «Налаштування → Енергетика». |
-| FR-22 | Права: перегляд кВт·год — `group_energy_user`; вартість — `group_energy_cost` (поля `groups=`, payload без грн для кіоску й без групи); редагування — `group_energy_manager`; стоп-крани — `group_f3d_admin`. |
+| FR-22 | Права: перегляд кВт·год — `group_f3d_energy_user`; вартість — `group_f3d_energy_cost` (поля `groups=`, payload без грн для кіоску й без групи); редагування — `group_f3d_energy_manager`; стоп-крани — `group_f3d_admin`. |
 | FR-23 | Стоп-крани `factory3d.energy.read_enabled`, `factory3d.energy.write_enabled` (запис уставок у пристрої заборонено у v1 обмеженням), `factory3d.energy.costing_enabled`; `neutralize.sql`. |
 | FR-24 | `post_init_hook` будує мережу, лічильники, джерела, сигнали, тариф і пули з data-файлів, згенерованих з макета; повторний запуск нічого не дублює; `uninstall_hook` не видаляє бізнес-даних. |
 | FR-25 | Ротація: інтервали й баланс — 400 діб, події — 90 діб; розподіл на МО не ротується. |
@@ -127,7 +130,7 @@ M-01 (хук провайдера), M-03 (шина), R-01, R-07, R-14, Дода�
 | CE-01 | Провайдер `infra` (150) **не** пише `infra.cards.GENSET`, `infra.genset`, `infra.totals.genset_*`, `island`, `grid_ok`, `genset_kva` | `factory3d_genset` (155) |
 | CE-02 | Сигнали АВР Socomec ATyS p за Annexe III (PDU 20482…20487): `infra/ats/position` (`kind='state'`, `last_value` = код 0 невідомо / 1 положення 0 / 2 положення I «мережа» / 3 положення II «генератор», `last_text` = `unknown/pos_0/pos_I/pos_II`), `infra/ats/mode` (`manual/locked/auto/remote/inhibit`), `infra/ats/gen_start` (`off/on`, `last_value` 0/1), `infra/ats/src1_state`, `src2_state` (`under/present/available` = 0/1/2), обчислені `infra/ats/src1_ok`, `src2_ok` (1 = `available`, інакше 0; оновлюються з тим самим `ts`, що й стан), `infra/ats/fail_start` (0/1); період 5 с | міст (R-05 td_genset), viewer, тести |
 | CE-03 | `infra.totals` (без ключів CE-01): `pv_now`, `pv_today`, `pv_kwp`, `chp_kw`, `chp_rated`, `chp_heat`, `chp_load`, `bess_kw` (+ заряд / − розряд), `bess_soc` (частка), `bess_kwh`, `load_kw`, `grid_kw`, `export_kw`, `critical_kw`, `n_modules`, `shed_kw`, `bess_mode` (`charge/discharge/idle`); в острові `grid_kw=0`, `export_kw=0`, `shed_kw = load_before − load_kw` | міст, viewer `backupSummary()` |
-| CE-04 | Критичні споживачі: `f3d.energy.node.is_critical` (LP-1…3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG і лінія BW-1 — `plant/infra.py:CRITICAL`); `infra.totals.critical_kw` = Σ `p_now` цих вузлів (макет 347,8 → 348); сигнали `energy/consumers/<код>/p_now` і `energy/lines/BW-1/p_now` існують для всіх 10 | міст (параметр `critical_codes` дублює список — Q-13 td_genset/R-04) |
+| CE-04 | Критичні споживачі: `f3d.energy.node.is_critical` (LP-1…3, DUST-1, COMPRESSOR, BOILER, OFFICE, EF-ELEC, EF-CHG і лінія BW-1 — `plant/infra.py:CRITICAL`); `infra.totals.critical_kw` = Σ `p_now` цих вузлів (макет 347,8 → 348); сигнали `energy/consumers/<код>/p_now` і `energy/lines/BW-1/p_now` існують для всіх 10 | міст: читає `is_critical` вузлів, параметр `critical_codes` — лише запасний (td_genset R-04, X-11, X-68) |
 | CE-05 | Моделі `f3d.energy.node`, `meter`, `interval`, `tariff`, `pool`, `alloc`, `balance`, `event`, `outage` з іменами полів SPEC §2 — лише читання для інших модулів | viewer, звіти, міст, bms (за потреби) |
 | CE-06 | Метод `env['f3d.energy.meter']._f3d_kwh(meter, date_from, date_to) -> tuple[float, str]` (кВт·год і найгірша якість) і `env['f3d.energy.node']._f3d_kwh_by_code(code, date_from, date_to)` | machine_connect (питома енергія CM-04 — за потреби), bms |
 | CE-07 | Поля `mrp.production.f3d_energy_kwh`, `f3d_energy_direct_kwh`, `f3d_energy_shared_kwh`, `f3d_energy_cost`, `f3d_energy_state`, `f3d_energy_locked`; `mrp.workorder.f3d_energy_kwh`, `f3d_energy_cost`; `mrp.workcenter.f3d_energy_node_id`, `f3d_kwh_today` | viewer, звіти |
@@ -205,7 +208,7 @@ CT-03 (схема `modbus_tcp`: `fc`, `addr` PDU, `type` `f32/i64/u32/i32/u16`, 
 | P-05 | PM5560 вводів Q1/Q2 (u1, u2), фідерів QF-1…4, QF-C1/C2 (u3–u8), 49 споживачів (u11–u59) | Modbus TCP `iot-sim:502`, джерело = пристрій (`MB-U01-PM-Q1`…); регістри iot_sim §8.7 (1-based) → PDU = N − 1: P 3060 → `addr 3059 f32`; енергія 3204–3207 → `addr 3203 i64 ×0,001` (Вт·год → кВт·год); експорт 3208 → `3207`; I 3010 → `3009`; фази 3000/3002/3004; Q 3068; S 3076; PF 3084; стан вимикача 2018 → `2017 u16 map` (ПРИПУЩЕННЯ iot_sim, Q-09) | опитування | P 10/300; лічильники 60/60; струми фаз 30/300; стани 10/300 | плагін бекоф; сигнали `stale` (telemetry R-07); інтервали чекають до 6 год, далі `missing` (R-04); енергія через пропуск не губиться (R-03) |
 | P-07 СЕС | SUN2000-115KTL-M2 PV-INV-1…8 (u61–u68) | Huawei «SUN2000MB Modbus Interface Definitions» — адреса документа **є PDU** (A-06): P 32080 `i32 ×0,001`; стан 32089 `u16 map`; добовий 32114 `u32 ×0,01`; накопичений 32106 `u32 ×0,01` | опитування | 10/300; лічильники 60/300 | як вище; аварійний стан → заявка (CT-05) |
 | P-07 BESS | LUNA2000 (u69) | 37000 стан, 37001 `i32 ×0,001` кВт (+ заряд), 37004 SOC `u16 ×0,1`, 37014/37016 заряд/розряд `u32 ×0,01` (ПРИПУЩЕННЯ iot_sim §8.9.2) | опитування | 10–30/300 | як вище |
-| P-07 КГУ | TEDOM Quanto D800 (u72) | 40000 стан, 40001 P ел., 40002 тепло, 40003 газ `×0,1`, 40010 мотогодини `u32`, 40014 енергія `u32` — PDU = номер (ПРИПУЩЕННЯ, Q-08) | опитування | 10–300/300 | як вище |
+| P-07 КГУ | TEDOM Quanto D800 (u72) | 40000 стан, 40001 P ел., 40002 тепло, 40003 газ `×0,1`, 40010 мотогодини `u32`, 40014 енергія `u32` — PDU = номер (ПРИПУЩЕННЯ iot_sim §8.9.5; нотація — X-42) | опитування | 10–300/300 | як вище |
 | P-07 АВР | Socomec ATyS p (u71) | Annexe III: 20482 режим, 20483 положення, 20484 реле пуску ДГУ, 20486/20487 стан джерел — PDU = номер (A-06, CE-02) | опитування | 5/300 (зміни стану — завжди) | без свіжих даних АВР острів визначається за вводами (R-14 п. 3) |
 | P-07 температура T1/T2 | ADAM-6015 u96 | прив'язує telemetry (Додаток C.2); energy лише ставить пороги (CT-05) | — | 30/300 | — |
 | CT-10 | 75 обчислених сигналів | `_f3d_ingest(src='module')` на джерелі `EN-DERIVED` (`type='f3d_energy'`, локальне) | з Odoo | 10 с…1 год | крони неактивні → енергія сама ставить `stale` (R-21) |
@@ -242,12 +245,13 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 
 ### 2.6 Безпека
 
-- **Групи** (`security/f3d_energy_security.xml`): `group_energy_user` («Енергетика: перегляд», неявно з
-  `mrp.group_mrp_user` і `group_energy_manager`; implied `group_f3d_user`), `group_energy_cost` («Енергетика: вартість»,
+- **Групи** (`security/f3d_energy_security.xml`; власний привілей `privilege_f3d_energy` «Завод 3D: енергетика» категорії
+  `factory3d_base.module_category_factory3d`, імена `group_f3d_<модуль>_<роль>` — X-19): `group_f3d_energy_user` («Енергетика: перегляд», неявно з
+  `mrp.group_mrp_user` і `group_f3d_energy_manager`; implied `group_f3d_user`), `group_f3d_energy_cost` («Енергетика: вартість»,
   неявно з `account.group_account_readonly`, `account.group_account_invoice`, `mrp.group_mrp_manager`,
-  `group_energy_manager`), `group_energy_manager` («Енергетика: енергетик», implied `group_energy_user`,
-  `group_energy_cost`, `factory3d_base.group_f3d_manager`). Стоп-крани й повтор хука — `factory3d_base.group_f3d_admin`.
-- **Вартість**: усі грошові поля (`cost`, `price`, `f3d_energy_cost`, тарифні ціни) — `groups="factory3d_energy.group_energy_cost"`;
+  `group_f3d_energy_manager`), `group_f3d_energy_manager` («Енергетика: енергетик», implied `group_f3d_energy_user`,
+  `group_f3d_energy_cost`, `factory3d_base.group_f3d_manager`). Стоп-крани й повтор хука — `factory3d_base.group_f3d_admin`.
+- **Вартість**: усі грошові поля (`cost`, `price`, `f3d_energy_cost`, тарифні ціни) — `groups="factory3d_energy.group_f3d_energy_cost"`;
   у payload `energy.totals.cost_today`, `productions[].energy_cost` — лише для користувача з групою і не в кіоску (`ctx.kiosk`).
 - **Стоп-крани**: `factory3d.energy.read_enabled` (умовчання `environment == 'test'`, CB-10) — `read_enabled` 68 джерел
   енергетики і робота кронів; `factory3d.energy.write_enabled` — `False`; у v1 обмеження на `f3d.signal`: сигнал
@@ -305,7 +309,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 
 `uninstall_hook`: параметри `factory3d.energy.*` видалити; сигнали належать моделям telemetry і лишаються: хук ставить
 `source_id=False` усім сигналам зони енергетики, `active=False` — створеним модулем (`origin='catalog'` з каталогу й
-`'manual'` власні, за списком кодів з `energy_signals.csv`), мігровані 87 лишаються активними без джерела (як після
+`'module'` власні — X-16, за списком кодів з `energy_signals.csv`), мігровані 87 лишаються активними без джерела (як після
 міграції рівня 0); джерела `MB-U*` і `EN-DERIVED` — `active=False`; моделі `f3d.energy.*` видаляються з модулем, поля на
 МО/завданнях зникають, `extra_cost` закритих МО не змінюється (бізнес-дані стандарту).
 
@@ -333,7 +337,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | `ir.cron` | `cron_f3d_energy_alloc` | 15 хв | розподіл сьогодні (і вчора до 02:00) (R-08, R-09) |
 | `ir.cron` | `cron_f3d_energy_balance` | 1 год (хв 07) | баланс (R-07) |
 | `ir.cron` | `cron_f3d_energy_rotate` | щодня 03:10 (Київ) | ротація (R-19) |
-| `res.groups` | енергетик, бухгалтер, майстер | користувачам демо: енергетик — `group_energy_manager`; бухгалтер — через `account.group_account_readonly` | |
+| `res.groups` | енергетик, бухгалтер, майстер | користувачам демо: енергетик — `group_f3d_energy_manager`; бухгалтер — через `account.group_account_readonly` | |
 | `maintenance.team` | «Служба головного механіка» | команда обладнання енергетики (у демо вже) | заявки CT-05 |
 
 ## 4. Інструкція
@@ -381,7 +385,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | Q-05 | Ціна енергії для собівартості: тариф мережі чи середньозважена (мережа + газ КГУ + СЕС ≈ 0) | бухгалтер | **тариф у v1** (консервативно, як макет); середньозважена — v2 з даними газу | тариф |
 | Q-06 | Метод оцінки ГП: усі категорії `standard` → `extra_cost` на вартість не впливає (Odoo 19 `_cal_price` — лише FIFO/AVCO) | бухгалтер | AVCO для готової продукції й напівфабрикатів або періодичне оновлення `standard_price` з кошторисом енергії | поля й звіт працюють; `extra_cost` змінюється лише для FIFO/AVCO |
 | Q-07 | Енергія простою прямих РЦ (верстат увімкнений без завдання) — на МО чи накладні | бухгалтер | накладні РЦ (рядки `idle`), щоб МО не платило за простій сусіда | так і зроблено |
-| Q-08 | Нотація Modbus-адрес у iot_sim: правило §8.4.1 (−1 / −40001) хибне для Huawei (документ уже в PDU), Socomec (Annexe III — PDU) і TEDOM (40000 і 40001 після правила збігаються з іншими адресами); карта ATyS p §8.9.4 не збігається з Annexe III (td_genset Q-07) | автор iot_sim, менеджер | iot_sim приймає «PDU = номер» для Huawei, ATyS p, TEDOM і карту ATyS за Annexe III (20482…20487, коди положення 1/2/3) | energy пише адреси за документами вендорів (A-06); ТК із СЕС/АВР/КГУ блоковані до виправлення iot_sim (ризик) |
+| Q-08 | Нотація Modbus-адрес у iot_sim: правило §8.4.1 (−1 / −40001) хибне для Huawei (документ уже в PDU), Socomec (Annexe III — PDU) і TEDOM (40000 і 40001 після правила збігаються з іншими адресами); карта ATyS p §8.9.4 не збігається з Annexe III (td_genset Q-07) | автор iot_sim, менеджер | iot_sim приймає «PDU = номер» для Huawei, ATyS p, TEDOM і карту ATyS за Annexe III (20482…20487, коди положення 1/2/3) | **закрито X-42, X-41** (D-20, D-21): iot_sim §8.4.1 — PDU за документом вендора, ATyS p за Annexe III; energy пише адреси за документами вендорів (A-06) без змін |
 | Q-09 | Стан вимикачів MasterPact MTZ2 (MicroLogic X, модуль IFE) — регістри | енергетик / Schneider | окреме джерело IFE (Modbus TCP) з картою MicroLogic X | регістр 2018 PM5560 (ПРИПУЩЕННЯ iot_sim §8.7) |
 | Q-10 | Уставки температури Trihal (PT100: попередження/вимкнення) | енергетик | за паспортом класу F: 140 °C попередження, 150 °C вимкнення; у Odoo — 130/140 | 100/110 °C (макет і каталог) |
 | Q-11 | Допуск балансу обліку | енергетик | 3 % і 2 кВт·год за годину (клас 0,2S + втрати кабелів) | так |
@@ -399,7 +403,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 
 | Ризик | Вплив | Пом'якшення |
 |---|---|---|
-| iot_sim не виправить нотацію Huawei/ATyS/TEDOM (Q-08) | на стенді СЕС на 1 регістр зсунута (сміття), АВР без острова, КГУ сміття | адреси лише в даних; ТК-11 «звірка адрес» до решти ТК; запасне визначення острова за вводами (R-14 п. 3) |
+| ~~iot_sim не виправить нотацію Huawei/ATyS/TEDOM (Q-08)~~ — знято: iot_sim виправлено за X-41, X-42 | на стенді СЕС на 1 регістр зсунута (сміття), АВР без острова, КГУ сміття | адреси лише в даних; ТК-11 «звірка адрес» до решти ТК; запасне визначення острова за вводами (R-14 п. 3) |
 | Карта PM5560 на заводі інша (прошивка), порядок слів INT64 | неправильні кВт·год → неправильна собівартість | ТК-11 (звірка з Float32 2700 і з дисплеєм), баланс R-07 ловить системні помилки |
 | Розподіл «на ходу» змінюється після закриття МО (слот ще не закритий) | невелика розбіжність між зафіксованим МО і добою | зафіксовані рядки не перераховуються; залишок слоту — іншим завданням/нерозподіленому; звірка за добу на дашборді |
 | Стандартна оцінка (`standard`) — енергія не доходить до вартості складу | очікування замовника «енергія в собівартості» не виконане | Q-06; поля МО, звіт «Розподіл», аналітика працюють незалежно від методу |
@@ -420,7 +424,7 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | W3 розподіл і собівартість | `tools/alloc.py`, `models/f3d_energy_alloc.py`, `mrp_workorder.py`, `mrp_production.py`, `mrp_workcenter.py`, `maintenance_equipment.py`, `maintenance_request.py`, `wizard/recompute_wizard.py`, `views/mrp_*_views.xml`, `…alloc…`, `wizard/…xml`, `tests/test_alloc.py`, `test_costing.py`, `test_mo231.py` | M-07, M-11…M-14, M-17, M-19; R-08…R-10, R-23; AC-37…AC-54, AC-85 | W2 |
 | W4 АВР, відключення, генерація | `models/f3d_energy_outage.py`, `tools/ats.py`, `views/…outage…`, `tests/test_ats.py`, `test_island.py` | M-10; R-14; CE-01…CE-04; AC-55…AC-62 | W2 (паралельно з W3) |
 | W5 переглядач і налаштування | `models/viewer_provider.py`, `tools/payload.py`, `models/res_config_settings.py`, `views/res_config_settings_views.xml`, `views/dashboard_views.xml`, `tests/test_payload.py`, `test_security.py` | M-18, M-20; R-16…R-18; AC-63…AC-69, AC-75…AC-82 | W3, W4 |
-| W6 стенд і звіти | `tests/stand/*` (pytest `-m stand`), `docs/modules/factory3d_energy/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-12, ТБ-01…ТБ-06, ТП-01…ТП-06, DEPLOY_TEST; AC-13, AC-53, AC-73, AC-88…AC-92 | W5; iot_sim з виправленням Q-08 для ТК-05…ТК-08 |
+| W6 стенд і звіти | `tests/stand/*` (pytest `-m stand`), `docs/modules/factory3d_energy/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-12, ТБ-01…ТБ-06, ТП-01…ТП-06, DEPLOY_TEST; AC-13, AC-53, AC-73, AC-88…AC-92 | W5; iot_sim з адресами за X-41, X-42 для ТК-05…ТК-08 |
 
 Порядок злиття: W0 → W1 → W2 → (W3 ‖ W4) → W5 → W6. Кожен воркер здає зелені тести своїх файлів
 (`odoo-bin -d test --test-tags /factory3d_energy:<TestClass> --stop-after-init`); після W5 — повний прогін
@@ -451,4 +455,4 @@ ATyS p (Remote control) за наказом HGM6120N переходить у II;
 | A-19 | 9 споживачів без сигналів у каталозі iot_sim (OFFICE, LP-1…3, RV-ALL, AHU-1, EF-*) отримують `p_now`, `kwh_total`, `kwh_shift` (u51–u59 у iot_sim §8.4.1 існують) | баланс лінії C2 і пули без них неможливі | доповнює каталог iot_sim |
 | A-20 | `kwh_shift` — обчислений сигнал (різниця лічильника з початку зміни), а не адреса PM5560 | регістр 3204 — накопичувальний; «різниця за зміну» з каталогу iot_sim у пристрої немає | змінює прив'язку 40 сигналів рівня 0 |
 | A-21 | Схема мережі — вид `hierarchy` (`web_hierarchy`, встановлений) на `f3d.energy.node` | стандартний Odoo 19, дерево ГРЩ без власного JS | — |
-| A-22 | Власний `_f3d_viewer_delta` з глибоким злиттям `infra` (не копіювання розділу) | базова дельта viewer R-14 п. 5 копіює розділ цілком — затерла б частину моста (155) або навпаки | запит до viewer/міст |
+| A-22 | Власний `_f3d_viewer_delta` з глибоким злиттям `infra` (не копіювання розділу) | базова дельта viewer R-14 п. 5 копіювала розділ цілком — затерла б частину моста (155) або навпаки | закрито X-23: viewer R-14 зливає дельту глибоко, міст — власна дельта; хелпер `deep_merge` — спільний viewer (`factory3d_viewer/tools/payload.py`, X-82) |
