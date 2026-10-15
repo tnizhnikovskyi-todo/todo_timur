@@ -16,3 +16,5 @@ from . import f3d_signal
 from . import f3d_yard_notify
 from . import f3d_yard_visit_kpp
 from . import f3d_viewer_provider
+from . import f3d_yard_visit_cron
+from . import res_config_settings

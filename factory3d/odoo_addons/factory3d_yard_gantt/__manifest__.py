@@ -1,3 +1,4 @@
+# ruff: noqa: B018
 {
     "name": "Завод 3D: двір — Gantt (міст)",
     "summary": "Gantt-представлення бронювання воріт (потрібен web_gantt, Enterprise)",

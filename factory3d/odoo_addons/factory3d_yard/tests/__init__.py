@@ -9,3 +9,7 @@ from . import test_scale
 from . import test_kpp
 from . import test_provider
 from . import test_reports
+from . import test_migration
+from . import test_security
+from . import test_cron
+from . import test_contracts

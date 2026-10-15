@@ -1,0 +1,11 @@
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "title": "params.sics", "type": "object",
+ "required": ["host"], "additionalProperties": false,
+ "properties": {
+   "host": {"type": "string", "minLength": 1, "maxLength": 253},
+   "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 4001},
+   "mode": {"enum": ["stream", "poll"], "default": "stream"},
+   "period_s": {"type": "number", "minimum": 0.2, "maximum": 60, "default": 1},
+   "timeout_s": {"type": "number", "minimum": 0.5, "maximum": 30, "default": 5},
+   "unit": {"enum": ["kg", "t", "lb", "g"], "default": "kg"},
+   "dialect": {"enum": ["mt_sics"], "default": "mt_sics"},
+   "reset_on_connect": {"type": "boolean", "default": true}}}
