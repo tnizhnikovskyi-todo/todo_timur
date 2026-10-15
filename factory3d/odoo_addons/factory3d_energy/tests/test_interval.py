@@ -172,6 +172,37 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         prev = dates.to_utc(datetime.combine(day - timedelta(days=1), time(7, 0)))
         self.assertEqual(dates.shift_start(early, {d: 7 for d in range(7)}), prev)
 
+    def test_kwh_shift_counter_started_mid_shift(self):  # E-4
+        """Лічильник звітує лише частину зміни (стенд, новий вузол): kwh_shift — від першого показання, `uncertain`;
+        з показанням на початок зміни — як раніше (AC-83), `good`."""
+        self.env["ir.config_parameter"].sudo().set_param("factory3d.energy.shift_calendar_id", "")
+        meter = self.mk_meter("PM-OFFICE-T")
+        total = meter.e_import_signal_id
+        shift = self.mk_signal(
+            "energy/consumers/OFFICE-T/kwh_shift", "counter", "кВт·год", derived_from_id=total.id, decimals=2
+        )
+        day = dates.local_day(self.at(12))
+        start = dates.local_day_bounds(day)[0]  # календаря зміни немає — місцева північ
+        now = start + timedelta(hours=3, minutes=30)
+        self.feed(total, [(start + timedelta(hours=1), 500.0), (start + timedelta(hours=2), 505.0), (now, 507.5)])
+        self.Interval._f3d_shift_kwh(now)
+        self.assertEqual(shift.last_ts, now)
+        self.assertAlmostEqual(shift.last_value, 7.5, places=2)
+        self.assertEqual(shift.last_quality, "uncertain")
+        # з показанням на початок зміни — повна зміна, `good`
+        other = self.mk_meter("PM-OFFICE-T2")
+        shift2 = self.mk_signal(
+            "energy/consumers/OFFICE-T2/kwh_shift",
+            "counter",
+            "кВт·год",
+            derived_from_id=other.e_import_signal_id.id,
+            decimals=2,
+        )
+        self.feed(other.e_import_signal_id, [(start, 100.0), (now, 112.0)])
+        self.Interval._f3d_shift_kwh(now)
+        self.assertAlmostEqual(shift2.last_value, 12.0, places=2)
+        self.assertEqual(shift2.last_quality, "good")
+
     def test_day_profile(self):  # AC-86
         m1, m2 = self.mk_meter("PM-F1-T", role="feeder"), self.mk_meter("PM-F2-T", role="feeder")
         d0, _d1 = dates.local_day_bounds(dates.local_day(self.at(12)))
