@@ -64,9 +64,9 @@ class CutOptAdapter(GenericAdapter):
     # --- upload ---
     async def _export(self, map_id: int, token: str) -> dict:
         settings = self.plugin.ctx.settings
-        url = f"{settings.odoo_url.rstrip('/')}/f3d/machine/cutmap/{map_id}/export"
+        url = f"{settings.odoo_url.rstrip('/')}/f3d/machine/cutmap/{map_id}/export"  # токен — лише в заголовку (DEC-20)
         try:
-            async with self._odoo_session() as sess, sess.get(url, params={"t": token}) as r:
+            async with self._odoo_session() as sess, sess.get(url, headers={"X-F3D-Token": token}) as r:
                 status = r.status
                 body = await r.read()
         except (aiohttp.ClientError, TimeoutError, OSError) as exc:

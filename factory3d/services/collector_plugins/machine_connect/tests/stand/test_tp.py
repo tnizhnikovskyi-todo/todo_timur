@@ -277,8 +277,8 @@ def test_tp04_gantry_and_maps(fresh, sim):
     t = time.time()
     stt, txt, hd = http(
         "GET",
-        f"http://127.0.0.1:18070/f3d/machine/cutmap/{mid}/export?t={cmd['token']}",
-        headers={"Authorization": "Bearer " + token},
+        f"http://127.0.0.1:18070/f3d/machine/cutmap/{mid}/export",
+        headers={"Authorization": "Bearer " + token, "X-F3D-Token": cmd["token"]},
     )
     res.update(api01_status=stt, api01_s=round(time.time() - t, 2), api01_bytes=len(txt.encode()))
     (STAND_DIR / "tp04.json").write_text(json.dumps(res, ensure_ascii=False, indent=1))

@@ -134,16 +134,16 @@ def test_tb03_export_api01(fresh, sim):
     t = o.search_read("f3d.command", [("f3d_cut_map_id", "=", mid)], ["payload"])[0]["payload"]["token"]
     url = f"http://127.0.0.1:18070/f3d/machine/cutmap/{mid}/export"
     hdr = {"Authorization": "Bearer " + token}
-    codes = {http("GET", f"{url}?t={secrets.token_hex(8)}", headers=hdr)[0] for _ in range(100)}
+    codes = {http("GET", url, headers={**hdr, "X-F3D-Token": secrets.token_hex(8)})[0] for _ in range(100)}
     assert codes == {403}, codes
-    assert http("GET", f"{url}?t={t}", headers={"Authorization": "Bearer " + "0" * 40})[0] == 401
-    st, body, h = http("GET", f"{url}?t={t}", headers=hdr)
+    assert http("GET", url, headers={"Authorization": "Bearer " + "0" * 40, "X-F3D-Token": t})[0] == 401
+    st, body, h = http("GET", url, headers={**hdr, "X-F3D-Token": t})
     assert st == 200 and h.get("Cache-Control") == "no-store", (st, h)
     csv_text = json.loads(body)["parts_csv"]
     assert not re.search(r";=HYPERLINK", csv_text) and "HYPERLINK" in csv_text, (
         csv_text
     )  # ТБ-06: формула нейтралізована
-    assert http("GET", f"{url}?t={t}", headers=hdr)[0] == 403  # одноразовий
+    assert http("GET", url, headers={**hdr, "X-F3D-Token": t})[0] == 403  # одноразовий
     leaks = {
         "chatter": any(t in b for b in o.chatter("f3d.cut.map", mid)),
         "result": any(t in json.dumps(c.get("result_data") or {}) + (c.get("error") or "") for c in commands(o)),
@@ -152,10 +152,7 @@ def test_tb03_export_api01(fresh, sim):
     (STAND_DIR / "tb03_token").write_text(t)
     log_hits = [ln for ln in odoo_log().splitlines() if t in ln]
     print("ТБ-03: рядків лога Odoo з токеном `t`:", len(log_hits), [ln[-120:] for ln in log_hits[:2]])
-    if (
-        log_hits
-    ):  # відома розбіжність зі SPEC (див. TEST_REPORT): токен одноразовий і вже витрачений, але лог Odoo його містить
-        pytest.xfail("токен `t` потрапив у access-log werkzeug (URL із query-рядком); SPEC ТБ-03 вимагає 0 збігів")
+    assert not log_hits, log_hits  # DEC-20: токен — у заголовку X-F3D-Token, у access-log його немає
 
 
 # --- ТБ-04 ---------------------------------------------------------------------------------------------------------------

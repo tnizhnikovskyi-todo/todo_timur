@@ -1,4 +1,7 @@
-"""API-01: `GET /f3d/machine/cutmap/<id>/export` — одноразова видача списку деталей колектору (FR-35)."""
+"""API-01: `GET /f3d/machine/cutmap/<id>/export` — одноразова видача списку деталей колектору (FR-35).
+
+Одноразовий токен експорту — лише в заголовку `X-F3D-Token` (query `t` не приймається: URL потрапляє в access-log).
+"""
 
 import logging
 import re
@@ -12,6 +15,7 @@ _logger = logging.getLogger(__name__)
 
 TOKEN_RE = re.compile(r"^[0-9a-f]{16}$")
 BODY_MAX = 1024 * 1024
+EXPORT_TOKEN_HEADER = "X-F3D-Token"
 NO_STORE = [("Cache-Control", "no-store")]
 
 
@@ -21,14 +25,15 @@ def _error(status, code, message):
 
 class F3dCutMapController(http.Controller):
     @http.route("/f3d/machine/cutmap/<int:map_id>/export", type="http", auth="public", csrf=False, methods=["GET"])
-    def cutmap_export(self, map_id, t="", **_kw):
+    def cutmap_export(self, map_id, **_kw):
         header = request.httprequest.headers.get("Authorization", "")
         token = header[7:].strip() if header[:7].lower() == "bearer " else ""
         collector = request.env["f3d.collector"].sudo()._authenticate(token) if token and len(token) <= 256 else None
         if not collector:
             return _error(401, "unauthorized", "Невірний токен колектора")
-        if not TOKEN_RE.match(t or ""):
-            return _error(400, "bad_token", "Невірний формат токена експорту")
+        t = request.httprequest.headers.get(EXPORT_TOKEN_HEADER, "").strip()
+        if not TOKEN_RE.match(t):
+            return _error(400, "bad_token", "Невірний формат токена експорту (заголовок %s)" % EXPORT_TOKEN_HEADER)
         env = request.env(user=SUPERUSER_ID, context=dict(request.env.context, tz="UTC"))
         CutMap = env["f3d.cut.map"]
         try:

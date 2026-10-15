@@ -36,11 +36,14 @@ class TestApiExport(F3DMachineHttpCase):
         self.map.action_export()
         self.t = self.map.sudo()._f3d_new_export_token()
 
-    def _get(self, map_id=None, t="default", token="default"):
+    def _get(self, map_id=None, t="default", token="default", query=""):
+        """`t` — одноразовий токен у заголовку `X-F3D-Token` (DEC-20); `None` — без заголовка."""
         t = self.t if t == "default" else t
         token = self.token if token == "default" else token
         headers = {"Authorization": "Bearer %s" % token} if token else {}
-        return self.url_open("/f3d/machine/cutmap/%d/export?t=%s" % (map_id or self.map.id, t), headers=headers)
+        if t is not None:
+            headers["X-F3D-Token"] = t
+        return self.url_open("/f3d/machine/cutmap/%d/export%s" % (map_id or self.map.id, query), headers=headers)
 
     def test_export_ok_once(self):
         resp = self._get()
@@ -57,6 +60,23 @@ class TestApiExport(F3DMachineHttpCase):
         self.assertEqual(self._get().status_code, 403)  # одноразовий
         self.assertTrue(self.map.message_ids.filtered(lambda m: "COL-T" in (m.body or "")))
 
+    def test_token_header_only(self):
+        """DEC-20: токен `t` — лише в заголовку; у query не приймається; без заголовка — 400."""
+        resp = self._get(t=None, query="?t=%s" % self.t)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()["error"]["code"], "bad_token")
+        self.assertEqual(self._get(t=None).status_code, 400)
+        self.assertEqual(self._get(t="XYZ").status_code, 400)
+        self.assertTrue(self.map.sudo().export_token_hash)  # токен не витрачено
+        self.assertEqual(self._get(query="?t=%s" % ("0" * 16)).status_code, 200)  # query ігнорується
+
+    def test_token_not_in_access_log(self):
+        """DEC-20 / ТБ-03: токен не потрапляє в рядок access-log (URL без query)."""
+        with self.assertLogs("werkzeug", level="INFO") as cm:
+            self.assertEqual(self._get().status_code, 200)
+        self.assertTrue(cm.output)
+        self.assertFalse([ln for ln in cm.output if self.t in ln], cm.output)
+
     def test_errors(self):
         cases = [
             ("no bearer", dict(token=None), 401),
@@ -65,6 +85,7 @@ class TestApiExport(F3DMachineHttpCase):
             ("wrong t", dict(t="0" * 16), 403),
             ("missing map", dict(map_id=self.map.id + 10000), 404),
             ("no bearer wrong t", dict(token=None, t="xyz"), 401),
+            ("no t header", dict(t=None), 400),
         ]
         for label, kw, status in cases:
             with self.subTest(case=label):

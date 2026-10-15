@@ -33,7 +33,8 @@ async def test_upload_flow(ctx, cutopt_app, fake_odoo_export, rest_plugin, caplo
     result = await plugin.call(cmd(plugin), UPLOAD)
     assert result == {"job_id": "cj-1", "state": "optimizing", "eta_s": 5}
     path, query, auth = fake_odoo_export.calls[0]
-    assert path == "/f3d/machine/cutmap/12/export" and query == {"t": TOKEN}
+    assert path == "/f3d/machine/cutmap/12/export" and query == {}
+    assert fake_odoo_export.export_tokens == [TOKEN]  # DEC-20: токен експорту — у заголовку X-F3D-Token
     assert auth == f"Bearer {ctx.settings.collector_token}"
     up = cutopt_app.uploads[0]
     assert up["parts"].decode("utf-8") == fake_odoo_export.body["parts_csv"]  # побайтово
@@ -49,6 +50,18 @@ async def test_upload_flow(ctx, cutopt_app, fake_odoo_export, rest_plugin, caplo
     assert jobs[0]["source"] == "REST-CUTOPT-T"
     assert ctx.settings.collector_token not in caplog.text
     assert fake_odoo_export.body["parts_csv"] not in caplog.text
+    await plugin.disconnect()
+
+
+async def test_export_url_has_no_token(ctx, cutopt_app, fake_odoo_export, rest_plugin, caplog):
+    """DEC-20 / ТБ-03: токен експорту не в URL (access-log werkzeug), не в query, не в логах колектора."""
+    caplog.set_level(logging.DEBUG)
+    plugin = await connect(rest_plugin, cutopt_app)
+    await plugin.call(cmd(plugin), UPLOAD)
+    assert fake_odoo_export.urls == ["/f3d/machine/cutmap/12/export"]
+    assert all(TOKEN not in u for u in fake_odoo_export.urls)
+    assert fake_odoo_export.export_tokens == [TOKEN]
+    assert TOKEN not in caplog.text
     await plugin.disconnect()
 
 

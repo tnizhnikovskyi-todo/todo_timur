@@ -164,6 +164,8 @@ class FakeOdooExport:
             "P002;Полиця;DSP16-ANT;560;300;1;0;;;;;\r\n",
         }
         self.calls: list[tuple[str, dict, str | None]] = []
+        self.urls: list[str] = []  # повні URL запитів (як їх бачить access-log)
+        self.export_tokens: list[str | None] = []
         self.server: TestServer | None = None
 
     @property
@@ -174,6 +176,8 @@ class FakeOdooExport:
     async def _export(self, request: web.Request) -> web.Response:
         auth = request.headers.get("Authorization")
         self.calls.append((request.path, dict(request.query), auth))
+        self.urls.append(str(request.rel_url))
+        self.export_tokens.append(request.headers.get("X-F3D-Token"))
         if auth != f"Bearer {self.token}":
             return web.json_response({"error": {"code": "unauthorized"}}, status=401)
         if self.status != 200:
