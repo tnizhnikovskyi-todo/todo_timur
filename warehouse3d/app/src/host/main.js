@@ -78,7 +78,7 @@ async function start() {
         else model.notify("ok", "n.odooRefreshed", { n: places });
       },
     };
-    mountApp(root, { model, i18n, host: { odoo: hostOdoo || null } });
+    mountApp(root, { model, i18n, host: { storage, bases, reload: () => location.reload(), odoo: hostOdoo || null } });
     if (odoo) {
       setInterval(() => model.locks.renew(), LOCK_RENEW_MS);
       addEventListener("pagehide", () => { if (model.locks.held().length) storage.unlock({ project: model.project.id }, { keepalive: true }).catch(() => {}); });

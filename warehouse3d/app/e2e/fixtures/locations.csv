@@ -1,0 +1,9 @@
+Full Location Name,Location Type,Barcode,Product,Quantity
+WH,View,,,
+WH/Stock,View,,,
+WH/Stock/Shelf A,Internal Location,SH-A,[P1] Plate,10
+WH/Stock/Shelf B,Internal Location,SH-B,,
+WH/Stock/Shelf C,Internal Location,SH-C,,
+Vendors,Vendor Location,,,
+,,,,
+Lonely,Internal Location,,,

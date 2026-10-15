@@ -5,14 +5,15 @@ export function createNotifier({ i18n, root = document.body }) {
   const box = document.createElement("div");
   box.id = "o_notifs"; box.setAttribute("aria-live", "polite"); root.append(box);
 
-  // act — { label, run }: кнопка в уведомлении («Поставити все одно»); такое уведомление живёт дольше и закрывается после нажатия
+  // act — { label, run }: кнопка в уведомлении («Поставити все одно»); такое уведомление не скрывается по таймеру и закрывается после нажатия
   function show(text, kind = "ok", sub = "", act = null) {
     const n = document.createElement("div"); n.className = `o_notif ${kind}`; n.setAttribute("role", "status");
     n.innerHTML = `<span class="ic" aria-hidden="true">${kind === "ok" ? "✓" : kind === "bad" ? "!" : "i"}</span><div><b>${esc(text)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}${act ? `<button class="btn btn-secondary act" data-force>${esc(act.label)}</button>` : ""}</div><button class="x" aria-label="${esc(i18n.t("common.close"))}">×</button>`;
     n.querySelector(".x").onclick = () => n.remove();
     if (act) { n.dataset.force = "1"; n.querySelector("[data-force]").onclick = () => { n.remove(); act.run(); }; }
     box.append(n);
-    setTimeout(() => { n.classList.add("out"); setTimeout(() => n.remove(), 300); }, act ? 20000 : kind === "bad" ? 6000 : 3200);
+    // уведомление с действием не гаснет само: его закрывают нажатием, крестиком или следующей правкой (dropForce)
+    if (!act) setTimeout(() => { n.classList.add("out"); setTimeout(() => n.remove(), 300); }, kind === "bad" ? 6000 : 3200);
     return n;
   }
   // событие ядра { type: "notify", kind, key, params, sub: { key, params } | null, force }; force — есть что повторить без проверок (onForce)

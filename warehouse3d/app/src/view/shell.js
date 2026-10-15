@@ -18,6 +18,10 @@ const HTML = `
     <select class="whsw" id="wh-switch" data-i18n-attr="aria-label:top.warehouse,title:top.warehouse"></select>
     <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" data-i18n="top.building"></button></div>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
+    <div class="filemenu"><button class="btn btn-secondary" id="file-btn" aria-haspopup="menu" aria-expanded="false" data-i18n="top.file"></button>
+      <div class="o_menu" id="file-list" role="menu" hidden data-i18n-attr="aria-label:file.menu">
+        <button role="menuitem" id="fm-imp-loc" data-i18n="file.impLoc"></button><button role="menuitem" id="fm-exp-loc" data-i18n="file.expLoc"></button>
+        <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button></div></div>
     <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
     <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
     <span class="sp"></span>
@@ -155,7 +159,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
 
   // ---------- события модели
   model.on((ev) => {
-    if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); return; }
+    if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); probs?.render(); return; }
     if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); side.render(); paintBars(); refresh(); probs?.render(); return; }
     if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.paint(); three.fit(); } }
@@ -189,6 +193,18 @@ export function mountApp(root, { model, i18n, host = {} }) {
   }
   q("#ed-saveall").onclick = () => model.save("WH");
   q("#ed-discall").onclick = () => model.discard("WH");
+
+  // ---------- меню «Файл» (W-10): окна импорта и экспорта грузятся при первом обращении
+  const fileList = q("#file-list"), fileBtn = q("#file-btn");
+  const fileMenu = (open) => { fileList.hidden = !open; fileBtn.setAttribute("aria-expanded", String(open)); };
+  const fileDo = (fn) => { fileMenu(false); import("./files.js").then((f) => f[fn]({ model, i18n, host })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); };
+  fileBtn.onclick = (ev) => { ev.stopPropagation(); fileMenu(fileList.hidden); };
+  document.addEventListener("click", (ev) => { if (!fileList.hidden && !fileList.contains(ev.target)) fileMenu(false); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !fileList.hidden) { fileMenu(false); fileBtn.focus(); } });
+  q("#fm-imp-loc").onclick = () => fileDo("openImportLocations");
+  q("#fm-exp-loc").onclick = () => fileDo("openExportLocations");
+  q("#fm-exp-proj").onclick = () => fileDo("exportProjectFile");
+  q("#fm-imp-proj").onclick = () => fileDo("openImportProject");
 
   // ---------- инструкция
   function showView(v) {

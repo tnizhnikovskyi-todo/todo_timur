@@ -802,6 +802,94 @@ export default {
       <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is a check error: a new change that takes a place beyond the outline is cancelled (there is “Place anyway”), and current cases are listed in “Problems”.</li>
       <li><b>In 3D</b> you see the floor outline, walls, columns (instanced), gates, docks, doors, office, charging area and aisles; the upper orange line is the sprinkler level. Editing is done in 2D.</li>
     </ul>`,
+  "top.file": "File",
+  "file.menu": "File menu",
+  "file.impLoc": "Import locations…",
+  "file.expLoc": "Export locations…",
+  "file.expProj": "Export project",
+  "file.impProj": "Import project…",
+  "file.readonly": "View only: import is not available",
+  "file.err.empty": "The file is empty",
+  "file.err.xlsx": "Could not read the XLSX (is the file damaged?)",
+  "file.err.read": "Could not read the file",
+  "file.err.write": "Could not create the file",
+  "file.err.save": "Could not save the project",
+  "file.exp.title": "Export locations",
+  "file.exp.scope": "Warehouse {code}: places as shown in the model (including unsaved changes).",
+  "file.exp.mode": "What to export",
+  "file.exp.all": "All places ({n})",
+  "file.exp.changed": "New and changed only ({n})",
+  "file.exp.format": "Format",
+  "file.exp.go": "Download",
+  "file.exp.sum": "In the file: places — {places}, structure rows (type \"view\") — {structure}.",
+  "file.exp.note": "Columns follow the Odoo stock.location import: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level). Applying changes to Odoo is a separate step (the full change plan).",
+  "file.imp.title": "Import locations from a file",
+  "file.imp.pick": "XLSX or CSV file",
+  "file.imp.hint": "Columns as in the standard Odoo stock.location export: Full Location Name, Location Type, Barcode, Parent Location; optionally stock: Product, Quantity, Lot.",
+  "file.imp.map": "Column mapping",
+  "file.imp.codeFrom": "Place code",
+  "file.imp.code.auto": "Barcode if present, otherwise name",
+  "file.imp.code.name": "Always the name",
+  "file.imp.preview": "Preview",
+  "file.imp.stats": "Places: {places}; structure rows: {structure}; stock lines: {quants}.",
+  "file.imp.unrec": "Rows not recognized: {n}; skipped (other location types: customers, vendors…): {skipped}; duplicates: {dup}.",
+  "file.imp.wh": "Warehouses: {list}",
+  "file.imp.nodata": "No places found in the file: check the column mapping.",
+  "file.imp.issues": "Which rows were not recognized",
+  "file.imp.name": "Project name",
+  "file.imp.note": "A new project will be created (source — the file, load date — today) and opened instead of the current one; the current project stays in storage.",
+  "file.imp.apply": "Create project from file",
+  "file.role.path": "Full name (path)",
+  "file.role.name": "Name",
+  "file.role.parent": "Parent location",
+  "file.role.usage": "Location type",
+  "file.role.barcode": "Barcode",
+  "file.role.posx": "Corridor (X)",
+  "file.role.posy": "Shelves (Y)",
+  "file.role.posz": "Height (Z)",
+  "file.role.product": "Product",
+  "file.role.qty": "Quantity",
+  "file.role.lot": "Lot",
+  "file.role.none": "— not used —",
+  "file.issue.empty": "row {row}: no location name",
+  "file.issue.noparent": "row {row}: place without a parent location (warehouse)",
+  "file.issue.usage": "row {row}: unknown location type",
+  "file.issue.dupcode": "row {row}: this code already belongs to another place",
+  "file.issue.qty": "row {row}: quantity not recognized (place taken without stock)",
+  "pf.title": "Import project",
+  "pf.pick": "Project file (.whproj.json)",
+  "pf.info": "id {id}, warehouses: {wh} ({codes})",
+  "pf.migrated": "The file is in an older format: it will be converted to the current version.",
+  "pf.exists": "A project with id {id} already exists. What to do?",
+  "pf.copy": "Import as a copy (new id)",
+  "pf.replace": "Replace the existing project",
+  "pf.go": "Import",
+  "pf.notJson": "The file is not valid JSON",
+  "pf.notProject": "This is not a warehouse constructor project file",
+  "pf.newer": "The file was created by a newer version of the app (version {v}): update the app",
+  "pf.noWarehouses": "The project has no warehouses",
+  "pf.badWarehouse": "Warehouse {code} in the file is damaged",
+  "pf.dupWarehouse": "Warehouse id {id} is repeated in the file",
+  "n.fileSaved": "File saved: {name}",
+  "n.fileFail": "Could not open the files window",
+  "help.file.title": "Files: import and export",
+  "help.file.html": `
+    <p>The <b>"File"</b> menu in the top bar. Files are read and created in the browser itself; nothing is sent to a server.</p>
+    <ul>
+      <li><b>Import locations…</b> — XLSX or CSV (UTF-8 or Windows-1251, comma, semicolon or tab separated). Columns follow the standard Odoo export of <span class="code">stock.location</span>:
+        Full Location Name (<span class="code">complete_name</span>), Location Type (<span class="code">usage</span>), Barcode, Parent Location; optionally Corridor / Shelves / Height (<span class="code">posx / posy / posz</span>) and stock: Product, Quantity, Lot.
+        Headers are recognized automatically in English, Ukrainian and Russian; any column can be assigned by hand in the "Column mapping" block.</li>
+      <li><b>Preview.</b> Before the project is created you see how many places, structure rows (type "view") and stock lines were found, which warehouses are in the file (a warehouse is the first segment of the full name) and how many rows were not recognized and why
+        (no name, no parent location, unknown type, repeated code). Locations of non-warehouse types (customers, vendors, production…) are skipped. The place code is the barcode if there is one, otherwise the name (can be changed).
+        If name and parent are separate columns, the full name is built as "parent/name".</li>
+      <li><b>Result</b> — a new project "from a file" (source — the file, load date): each warehouse keeps its snapshot inside the project, and everything then works as with Odoo data. The new project opens instead of the current one; the current one stays in storage.</li>
+      <li><b>Export locations…</b> — the active warehouse in the Odoo <span class="code">stock.location</span> import format: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level numbers where they exist).
+        Choose <b>all places</b> (with structure rows of type "view") or <b>new and changed only</b> (with the parents that do not exist in Odoo yet); XLSX or CSV. This is the basis for applying changes by file; the full change plan (ids, archiving, write order) is a separate step.</li>
+      <li><b>Export project</b> — a <span class="code">.whproj.json</span> file: the whole project (warehouses, saved and unsaved changes, building, addressing, types). The shared library of types and templates is not included.
+        Warehouse snapshots that the app takes from outside (not the built-in demo data) are put into the file so a warehouse is not empty on another computer.</li>
+      <li><b>Import project…</b> — the file is checked (format, version, warehouses) and converted to the current version if needed. If a project with the same id already exists, choose: <b>replace</b> it or <b>import as a copy</b> (new id, name marked "copy").
+        A file from a newer version of the app is not opened. After the import the page reloads and opens the project.</li>
+    </ul>`,
   // ---------- checks and problems panel (W-07)
   "n.chkBlock": "Change cancelled: {what}",
   "n.chkBlockSub": "Violations: {n}. If this is intended, use “Place anyway”.",
@@ -825,6 +913,7 @@ export default {
   "prob.title": "Project problems",
   "prob.count": "Errors: {e} · warnings: {w}",
   "prob.none": "No problems",
+  "prob.rejected": "The last change was rejected by a check (overlap or another prohibition).",
   "prob.more": "Showing the first {n} of {m}",
   "prob.filter": "Show",
   "prob.fAll": "All",
@@ -861,7 +950,7 @@ export default {
   "help.checks.title": "Checks and problems",
   "help.checks.html": `
     <ul>
-      <li><b>Overlaps are forbidden.</b> Rows, floor places, columns, walls and the office cannot overlap, and places cannot go beyond the building outline. Touching edges is not an overlap. If a drag, a number in the panel, mass creation, paste, a copy or a rotation causes an overlap, the change is <b>cancelled</b> and the notification has a <b>“Place anyway”</b> button that repeats the action and keeps it. Such an override is marked in the change itself and shows in “Problems” as the warning “placed despite the ban”.</li>
+      <li><b>Overlaps are forbidden.</b> Rows, floor places, columns, walls and the office cannot overlap, and places cannot go beyond the building outline. Touching edges is not an overlap. If a drag, a number in the panel, mass creation, paste, a copy or a rotation causes an overlap, the change is <b>cancelled</b> and the notification (it does not disappear by itself until closed or the next change) and the top of the “Problems” panel have a <b>“Place anyway”</b> button that repeats the action and keeps it. Such an override is marked in the change itself and shows in “Problems” as the warning “placed despite the ban”.</li>
       <li><b>Aisle width.</b> The “Problems” panel (top) lets you choose the <b>warehouse equipment</b>: hand cart, stacker, reach truck, narrow-aisle truck or forklift; a zone can be set separately in its panel (“Zone equipment”). Every equipment has a <b>minimum aisle width</b> (editable). Building-plan aisles and gaps between rows narrower than the minimum are highlighted in 2D and 3D and listed. Rows closer than 0.3 m count as one block.</li>
       <li><b>Height and load.</b> The height of a row (top level plus cargo) is compared with the ceiling and sprinkler heights of the building plan (a building plan is required). The weight of goods on a level (or a stack section) is compared with the level load from the type parameters; if goods weights are unknown in the snapshot, the type maximum is assumed, so there is no complaint.</li>
       <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
