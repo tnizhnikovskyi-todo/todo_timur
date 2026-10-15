@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_signal_list" model="ir.ui.view">
+        <field name="name">f3d.signal.list</field>
+        <field name="model">f3d.signal</field>
+        <field name="arch" type="xml">
+            <list string="Сигнали" default_order="sequence, code" multi_edit="1"
+                  decoration-danger="status == 'alarm'" decoration-warning="status == 'warn'"
+                  decoration-muted="status in ('stale', 'unknown')">
+                <field name="equipment_id"/>
+                <field name="name"/>
+                <field name="quantity" optional="hide"/>
+                <field name="last_value"/>
+                <field name="unit"/>
+                <field name="last_text" optional="hide"/>
+                <field name="status" widget="badge"/>
+                <field name="last_ts"/>
+                <field name="maintenance_request_id" optional="show"/>
+                <field name="source_id" optional="show"/>
+                <field name="code" optional="hide"/>
+                <field name="kind" optional="hide"/>
+                <field name="module" optional="hide"/>
+                <field name="period_s" optional="hide"/>
+                <field name="origin" optional="hide"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_signal_form" model="ir.ui.view">
+        <field name="name">f3d.signal.form</field>
+        <field name="model">f3d.signal</field>
+        <field name="arch" type="xml">
+            <form string="Сигнал">
+                <header>
+                    <button name="action_view_readings" type="object" string="Показання"/>
+                    <button name="action_test_address" type="object" string="Перевірити адресу"/>
+                    <button name="action_open_request" type="object" string="Заявка"
+                            invisible="not maintenance_request_id"/>
+                    <button name="action_request_write" type="object" string="Записати в пристрій"
+                            invisible="not write_enabled" groups="factory3d_base.group_f3d_manager"/>
+                    <field name="status" widget="statusbar" statusbar_visible="ok,warn,alarm,stale"/>
+                </header>
+                <sheet>
+                    <field name="is_f3d_manager" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_readings" type="object" class="oe_stat_button" icon="fa-line-chart">
+                            <field name="reading_count" widget="statinfo" string="Показань за 2 доби"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва сигналу"/></h1>
+                    </div>
+                    <group>
+                        <group string="Зараз">
+                            <field name="last_value" readonly="1"/>
+                            <field name="unit"/>
+                            <field name="last_text" readonly="1"/>
+                            <field name="last_ts" readonly="1"/>
+                            <field name="last_quality" readonly="1"/>
+                            <field name="status_since" readonly="1"/>
+                            <field name="maintenance_request_id" readonly="1"/>
+                        </group>
+                        <group string="Звідки">
+                            <field name="code" readonly="not is_f3d_manager"/>
+                            <field name="equipment_id"/>
+                            <field name="workcenter_id"/>
+                            <field name="source_id" readonly="not is_f3d_manager"/>
+                            <field name="source_type" readonly="1"/>
+                            <field name="collector_id" readonly="1"/>
+                            <field name="kind"/>
+                            <field name="quantity"/>
+                            <field name="states_text"/>
+                            <field name="active"/>
+                            <field name="viewer_visible"/>
+                            <field name="module"/>
+                            <field name="origin" readonly="1"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group string="Опитування">
+                            <field name="period_s"/>
+                            <field name="store_period_s"/>
+                            <field name="scale"/>
+                            <field name="decimals"/>
+                            <field name="nominal"/>
+                            <field name="write_enabled" readonly="not is_f3d_manager"/>
+                        </group>
+                        <group string="Пороги">
+                            <label for="warn_low_on" string="Увага, нижче"/>
+                            <div class="o_row">
+                                <field name="warn_low_on" readonly="not is_f3d_manager"/>
+                                <field name="warn_low" invisible="not warn_low_on" readonly="not is_f3d_manager"/>
+                            </div>
+                            <label for="warn_high_on" string="Увага, вище"/>
+                            <div class="o_row">
+                                <field name="warn_high_on" readonly="not is_f3d_manager"/>
+                                <field name="warn_high" invisible="not warn_high_on" readonly="not is_f3d_manager"/>
+                            </div>
+                            <label for="alarm_low_on" string="Тривога, нижче"/>
+                            <div class="o_row">
+                                <field name="alarm_low_on" readonly="not is_f3d_manager"/>
+                                <field name="alarm_low" invisible="not alarm_low_on" readonly="not is_f3d_manager"/>
+                            </div>
+                            <label for="alarm_high_on" string="Тривога, вище"/>
+                            <div class="o_row">
+                                <field name="alarm_high_on" readonly="not is_f3d_manager"/>
+                                <field name="alarm_high" invisible="not alarm_high_on" readonly="not is_f3d_manager"/>
+                            </div>
+                            <field name="hysteresis" readonly="not is_f3d_manager"/>
+                            <field name="min_duration_s" readonly="not is_f3d_manager"/>
+                            <field name="alarm_states_text" invisible="kind != 'state'" readonly="not is_f3d_manager"/>
+                            <field name="alarm_title"/>
+                            <field name="alarm_priority"/>
+                            <field name="create_request"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Адреса" name="address">
+                            <field name="address_text" widget="ace" options="{'mode': 'json'}"
+                                   readonly="not is_f3d_manager"/>
+                            <div class="text-muted">Схема адреси залежить від типу джерела (modbus_tcp: fc, addr, type; mqtt: topic, path; bacnet_ip: object, instance; http_push: route, path, match).</div>
+                        </page>
+                        <page string="Похідна" name="derived">
+                            <group>
+                                <field name="derived_from_id"/>
+                                <field name="derive_rule"/>
+                            </group>
+                        </page>
+                        <page string="Макет" name="sim">
+                            <group>
+                                <field name="sim_mode"/>
+                                <field name="sim_params_text" widget="ace" options="{'mode': 'json'}" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="ТО за лічильником" name="meter">
+                            <field name="meter_equipment_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_signal_graph" model="ir.ui.view">
+        <field name="name">f3d.signal.graph</field>
+        <field name="model">f3d.signal</field>
+        <field name="arch" type="xml">
+            <graph string="Сигнали" type="bar">
+                <field name="equipment_id"/>
+                <field name="last_value" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_signal_pivot" model="ir.ui.view">
+        <field name="name">f3d.signal.pivot</field>
+        <field name="model">f3d.signal</field>
+        <field name="arch" type="xml">
+            <pivot string="Сигнали">
+                <field name="equipment_id" type="row"/>
+                <field name="status" type="col"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_signal_search" model="ir.ui.view">
+        <field name="name">f3d.signal.search</field>
+        <field name="model">f3d.signal</field>
+        <field name="arch" type="xml">
+            <search string="Сигнали">
+                <field name="name" string="Сигнал" filter_domain="['|', ('name', 'ilike', self), ('code', 'ilike', self)]"/>
+                <field name="code"/>
+                <field name="equipment_id"/>
+                <field name="source_id"/>
+                <filter name="alarm" string="Тривога" domain="[('status', '=', 'alarm')]"/>
+                <filter name="warn" string="Увага" domain="[('status', '=', 'warn')]"/>
+                <filter name="stale" string="Немає даних" domain="[('status', '=', 'stale')]"/>
+                <filter name="no_source" string="Без джерела" domain="[('source_id', '=', False)]"/>
+                <filter name="active" string="Увімкнені" domain="[('active', '=', True)]"/>
+                <group>
+                    <filter name="group_equipment" string="Обладнання" context="{'group_by': 'equipment_id'}"/>
+                    <filter name="group_source" string="Джерело" context="{'group_by': 'source_id'}"/>
+                    <filter name="group_module" string="Модуль" context="{'group_by': 'module'}"/>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                    <filter name="group_status" string="Статус" context="{'group_by': 'status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_signal" model="ir.actions.act_window">
+        <field name="name">Сигнали</field>
+        <field name="res_model">f3d.signal</field>
+        <field name="view_mode">list,form,graph,pivot</field>
+        <field name="context">{'search_default_active': 1, 'search_default_group_equipment': 1}</field>
+    </record>
+
+    <record id="action_f3d_signal_alarm" model="ir.actions.act_window">
+        <field name="name">Телеметрія</field>
+        <field name="res_model">f3d.signal</field>
+        <field name="view_mode">list,form,graph,pivot</field>
+        <field name="context">{'search_default_active': 1, 'search_default_alarm': 1}</field>
+    </record>
+</odoo>

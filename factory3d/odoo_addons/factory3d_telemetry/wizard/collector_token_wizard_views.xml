@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_collector_token_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.collector.token.wizard.form</field>
+        <field name="model">f3d.collector.token.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Токен колектора">
+                <div class="alert alert-warning" role="alert">
+                    Токен показується один раз. Збережіть його в .env колектора.
+                </div>
+                <group>
+                    <field name="collector_id"/>
+                    <field name="token" widget="CopyClipboardChar"/>
+                    <field name="env_line" widget="CopyClipboardText"/>
+                </group>
+                <footer>
+                    <button string="Закрити" special="cancel" class="btn-primary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
