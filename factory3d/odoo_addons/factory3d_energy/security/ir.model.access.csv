@@ -24,3 +24,7 @@ access_f3d_energy_outage_user,f3d.energy.outage user,model_f3d_energy_outage,fac
 access_f3d_energy_outage_f3d_user,f3d.energy.outage f3d user,model_f3d_energy_outage,factory3d_base.group_f3d_user,1,0,0,0
 access_f3d_energy_outage_manager,f3d.energy.outage manager,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_manager,1,1,0,0
 access_f3d_energy_outage_admin,f3d.energy.outage admin,model_f3d_energy_outage,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_energy_alloc_user,f3d.energy.alloc user,model_f3d_energy_alloc,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_alloc_mrp,f3d.energy.alloc mrp user,model_f3d_energy_alloc,mrp.group_mrp_user,1,0,0,0
+access_f3d_energy_alloc_admin,f3d.energy.alloc admin,model_f3d_energy_alloc,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_energy_recompute_wizard_manager,f3d.energy.recompute.wizard manager,model_f3d_energy_recompute_wizard,factory3d_energy.group_f3d_energy_manager,1,1,1,1

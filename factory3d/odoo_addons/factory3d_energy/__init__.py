@@ -2,4 +2,4 @@ from . import models  # noqa: F401
 from . import tools  # noqa: F401
 from .hooks import post_init_hook, uninstall_hook  # noqa: F401
 
-# W5: from . import wizard
+from . import wizard  # noqa: F401  (W3)

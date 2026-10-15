@@ -18,7 +18,7 @@
         "data/ir_cron.xml",  # W2: live/intervals/balance/rotate; крон alloc — W3
         "data/f3d_energy_tariff_data.xml",
         "data/f3d_energy_actions.xml",
-        # W5: "wizard/recompute_wizard_views.xml",
+        "wizard/recompute_wizard_views.xml",  # W3
         "views/f3d_energy_node_views.xml",
         "views/f3d_energy_meter_views.xml",
         "views/f3d_energy_interval_views.xml",
@@ -26,9 +26,11 @@
         "views/f3d_energy_event_views.xml",
         "views/f3d_energy_tariff_views.xml",
         "views/f3d_energy_pool_views.xml",
-        # W3: "views/f3d_energy_alloc_views.xml",
+        "views/f3d_energy_alloc_views.xml",  # W3
         "views/f3d_energy_outage_views.xml",  # W4
-        # W3: "views/mrp_production_views.xml",
+        "views/mrp_production_views.xml",  # W3
+        "views/mrp_workorder_views.xml",  # W3
+        "views/mrp_workcenter_views.xml",  # W3
         # "views/mrp_workorder_views.xml", "views/mrp_workcenter_views.xml";
         # W5: "views/res_config_settings_views.xml", "views/dashboard_views.xml",
         "views/menus.xml",
