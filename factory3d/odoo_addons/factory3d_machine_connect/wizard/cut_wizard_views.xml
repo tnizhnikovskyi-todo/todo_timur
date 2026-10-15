@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-27, V-28: майстри імпорту плану (M-25) і деталей (M-26). -->
+<odoo>
+    <record id="view_f3d_cut_plan_import_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.cut.plan.import.wizard.form</field>
+        <field name="model">f3d.cut.plan.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Імпорт плану розкрою">
+                <group>
+                    <field name="map_id"/>
+                    <field name="file" filename="filename"/>
+                    <field name="filename" invisible="1"/>
+                </group>
+                <footer>
+                    <button name="action_import" type="object" string="Імпортувати" class="btn-primary"/>
+                    <button string="Скасувати" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_cut_part_import_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.cut.part.import.wizard.form</field>
+        <field name="model">f3d.cut.part.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Імпорт деталей виробу">
+                <group>
+                    <field name="bom_id"/>
+                    <field name="file" filename="filename"/>
+                    <field name="filename" invisible="1"/>
+                    <field name="replace"/>
+                </group>
+                <div class="text-muted">
+                    CSV (UTF-8, роздільник «;», перший рядок — заголовок): part_code;name;length_mm;width_mm;qty;
+                    material_role;material;grain;edge_top;edge_bottom;edge_left;edge_right;program;note.
+                    Обов'язкові: part_code, name, length_mm, width_mm, qty.
+                </div>
+                <footer>
+                    <button name="action_import" type="object" string="Імпортувати" class="btn-primary"/>
+                    <button string="Скасувати" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_cut_part_import" model="ir.actions.act_window">
+        <field name="name">Імпорт CSV</field>
+        <field name="res_model">f3d.cut.part.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_f3d_cut_part"/>
+        <field name="binding_view_types">list</field>
+    </record>
+</odoo>

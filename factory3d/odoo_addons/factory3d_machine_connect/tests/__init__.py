@@ -7,3 +7,5 @@ from . import test_merge_operator
 from . import test_hints
 from . import test_gantry_stack
 from . import test_gantry_job
+from . import test_cutmap
+from . import test_api_export
