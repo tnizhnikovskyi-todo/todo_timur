@@ -166,8 +166,10 @@ class TestInstall(F3DBmsCase):
     def test_signal_count_and_origins(self):
         sigs = self._module_signals()
         by_origin = {o: len(sigs.filtered(lambda s, o=o: s.origin == o)) for o in ("sim_data", "catalog", "module")}
-        self.assertEqual(by_origin["catalog"], 176)
-        self.assertEqual(by_origin["module"] + by_origin["sim_data"], 373)
+        # CSV: catalog 176 + sim_data 81 (створюються як catalog, DEC-7; на демо-копії — можливо вже sim_data);
+        # module 292
+        self.assertEqual(by_origin["catalog"] + by_origin["sim_data"], 257)
+        self.assertEqual(by_origin["module"], 292)
         self.assertEqual(len(sigs.filtered("source_id.module")), 549)
         self.assertEqual(len(sigs.filtered(lambda s: s.source_id.code == "BMS-DERIVED")), 59)
         self.assertFalse(sigs.filtered("write_enabled"))

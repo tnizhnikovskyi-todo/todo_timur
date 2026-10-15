@@ -319,7 +319,9 @@ def signals(env):
                     **_definition_vals(row),
                     **vals,
                     "code": code,
-                    "origin": row.get("origin") or "module",
+                    # DEC-7: `sim_data` з CSV створюємо як `catalog` — інакше verify() міграції telemetry
+                    # (рівень 0) рахує їх як перенесені з x_f3d_signal і лишає міграцію `partial`
+                    "origin": "catalog" if row.get("origin") == "sim_data" else (row.get("origin") or "module"),
                     "write_enabled": False,
                 }
             )
