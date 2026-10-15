@@ -17,12 +17,13 @@
         <field name="implied_ids" eval="[Command.link(ref('group_f3d_fire_drill'))]"/>
     </record>
 
-    <!-- SPEC §4.3: глобальні record rules. Розкоментувати разом із моделями f3d.fire.panel / .drill / .drill.person.
+    <!-- SPEC §4.3: глобальні record rules. Правило приладу — W1; навчання й люди — розкоментувати з моделями W4. -->
     <record id="f3d_fire_panel_rule_company" model="ir.rule">
         <field name="name">Пожежна безпека: прилад, компанія</field>
         <field name="model_id" ref="model_f3d_fire_panel"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
+    <!--
     <record id="f3d_fire_drill_rule_company" model="ir.rule">
         <field name="name">Пожежна безпека: навчання, компанія</field>
         <field name="model_id" ref="model_f3d_fire_drill"/>

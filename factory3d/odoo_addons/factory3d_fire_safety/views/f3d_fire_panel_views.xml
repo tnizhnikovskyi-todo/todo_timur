@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-01: форма приладу -->
+    <record id="view_f3d_fire_panel_form" model="ir.ui.view">
+        <field name="name">f3d.fire.panel.form</field>
+        <field name="model">f3d.fire.panel</field>
+        <field name="arch" type="xml">
+            <form string="Прилад пожежної сигналізації">
+                <header>
+                    <button name="action_recompute_compliance" type="object" string="Перерахувати норми"
+                            groups="factory3d_base.group_f3d_manager"/>
+                    <button name="action_view_3d_alarm" type="object" string="Тривога в 3D" class="btn-danger"
+                            invisible="state not in ('alarm','prealarm') or not viewer_available"/>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                            invisible="not viewer_available"/>
+                    <button name="action_set_bacnet_device" type="object" string="Змінити BACnet device"
+                            groups="factory3d_base.group_f3d_admin"/>
+                    <button name="action_add_comment" type="object" string="Коментар у журнал"
+                            groups="factory3d_fire_safety.group_f3d_fire_drill"/>
+                </header>
+                <div class="alert alert-danger" role="alert" invisible="state != 'alarm'">
+                    <field name="state_text" readonly="1"/>
+                </div>
+                <div class="alert alert-warning" role="alert" invisible="comm != 'lost'">
+                    Зв'язок із приладом втрачено з <field name="last_seen" readonly="1"/>
+                </div>
+                <div class="alert alert-info" role="alert" invisible="read_enabled">
+                    Обробку сигналів вимкнено стоп-краном
+                </div>
+                <div class="alert alert-warning" role="alert" invisible="not compliance_dirty">
+                    Норми або пристрої змінено — перерахуйте відповідність
+                </div>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_zones" type="object" class="oe_stat_button" icon="fa-th">
+                            <field name="zone_count" widget="statinfo" string="Зони"/>
+                        </button>
+                        <button name="action_view_devices" type="object" class="oe_stat_button" icon="fa-microchip">
+                            <field name="device_count" widget="statinfo" string="Пристрої"/>
+                        </button>
+                        <button name="action_view_events" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="event_count" widget="statinfo" string="Події за 7 діб"/>
+                        </button>
+                        <div class="oe_stat_button" invisible="not warn_count">
+                            <field name="warn_count" widget="statinfo" string="Попередження"/>
+                        </div>
+                        <button name="action_view_requests" type="object" class="oe_stat_button" icon="fa-wrench"
+                                string="Заявки ТО"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва приладу"/></h1>
+                    </div>
+                    <group>
+                        <group string="Стан">
+                            <field name="state" widget="badge" decoration-danger="state in ('alarm','prealarm')"
+                                   decoration-warning="state in ('fault','disabled')" decoration-info="state == 'test'"
+                                   decoration-success="state == 'normal'" decoration-muted="state == 'unknown'"/>
+                            <field name="state_text"/>
+                            <field name="raw_state"/>
+                            <field name="system_state"/>
+                            <field name="state_ts"/>
+                            <field name="comm" widget="badge" decoration-success="comm == 'online'"
+                                   decoration-warning="comm == 'stale'" decoration-danger="comm == 'lost'"
+                                   decoration-muted="comm == 'off'"/>
+                            <field name="last_seen"/>
+                            <field name="comm_since"/>
+                            <field name="alarms_count"/>
+                            <field name="faults_count"/>
+                            <field name="disabled_count"/>
+                            <field name="sounders_active"/>
+                            <field name="brigade_transmitted"/>
+                            <field name="alarm_zone_ids" widget="many2many_tags" invisible="not alarm_zone_ids"/>
+                        </group>
+                        <group string="Прилад">
+                            <field name="code"/>
+                            <field name="equipment_id"/>
+                            <field name="manufacturer"/>
+                            <field name="model"/>
+                            <field name="zone_id"/>
+                            <field name="x"/>
+                            <field name="y"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <field name="read_enabled" invisible="1"/>
+                    <field name="viewer_available" invisible="1"/>
+                    <field name="sim_available" invisible="1"/>
+                    <field name="compliance_dirty" invisible="1"/>
+                    <notebook>
+                        <page string="Шлейфи" name="loops">
+                            <field name="loop_ids" readonly="1">
+                                <list>
+                                    <field name="number"/>
+                                    <field name="from_x_m"/>
+                                    <field name="to_x_m"/>
+                                    <field name="detectors_count"/>
+                                    <field name="mcp_count"/>
+                                    <field name="sounders_count"/>
+                                    <field name="flame_count"/>
+                                    <field name="modules_count"/>
+                                    <field name="state" widget="badge" decoration-danger="state == 'fault'"
+                                           decoration-success="state == 'ok'" decoration-muted="state == 'unknown'"/>
+                                    <field name="request_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Системи" name="systems">
+                            <field name="system_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="state" widget="badge" decoration-danger="state == 'active'"
+                                           decoration-warning="state in ('fault','battery','low_pressure')"
+                                           decoration-success="state == 'ok'" decoration-muted="state == 'unknown'"/>
+                                    <field name="state_text"/>
+                                    <field name="count_today"/>
+                                    <field name="last_test_date"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Відповідність нормам" name="compliance">
+                            <group>
+                                <group string="Розстановка">
+                                    <label for="compliance_zones_ok" string="Зони відповідають"/>
+                                    <div>
+                                        <field name="compliance_zones_ok" class="oe_inline"/> /
+                                        <field name="compliance_zones_total" class="oe_inline"/>
+                                    </div>
+                                    <field name="compliance_mcp_max_m"/>
+                                    <field name="compliance_mcp_point"/>
+                                    <field name="compliance_mcp_ok"/>
+                                    <field name="compliance_sounder_max_m"
+                                           help="Довідково (A-26): висновку «відповідає/ні» немає — рівень звуку визначає акустичний розрахунок."/>
+                                    <field name="compliance_missing_zones"/>
+                                </group>
+                                <group string="Евакуація">
+                                    <label for="compliance_routes_ok" string="Маршрути відповідають"/>
+                                    <div>
+                                        <field name="compliance_routes_ok" class="oe_inline"/> /
+                                        <field name="compliance_routes_total" class="oe_inline"/>
+                                    </div>
+                                    <field name="compliance_exits_ok"/>
+                                    <field name="compliance_exit_pair_m"/>
+                                    <field name="compliance_exit_l_m"/>
+                                    <field name="evac_max_distance_m"/>
+                                    <field name="evac_worst_x"/>
+                                    <field name="evac_worst_y"/>
+                                </group>
+                                <group string="Димовидалення">
+                                    <label for="compliance_smoke_ok" string="Димові зони відповідають"/>
+                                    <div>
+                                        <field name="compliance_smoke_ok" class="oe_inline"/> /
+                                        <field name="compliance_smoke_total" class="oe_inline"/>
+                                    </div>
+                                    <field name="compliance_ts"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Сигнали" name="signals" groups="factory3d_base.group_f3d_manager">
+                            <group>
+                                <field name="source_id"/>
+                                <field name="io_source_id"/>
+                                <field name="signal_state_id"/>
+                                <field name="signal_system_id"/>
+                                <field name="signal_alarms_id"/>
+                                <field name="signal_faults_id"/>
+                                <field name="signal_disabled_id"/>
+                                <field name="signal_sounders_id"/>
+                                <field name="signal_brigade_id"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- V-02: огляд (kanban) -->
+    <record id="view_f3d_fire_panel_kanban" model="ir.ui.view">
+        <field name="name">f3d.fire.panel.kanban</field>
+        <field name="model">f3d.fire.panel</field>
+        <field name="arch" type="xml">
+            <kanban create="false">
+                <field name="state"/>
+                <field name="comm"/>
+                <templates>
+                    <t t-name="card">
+                        <div t-attf-class="p-2 fs-3 text-center #{record.state.raw_value in ('alarm','prealarm') ? 'text-bg-danger' : record.state.raw_value in ('fault','disabled') ? 'text-bg-warning' : record.state.raw_value == 'test' ? 'text-bg-info' : record.state.raw_value == 'normal' ? 'text-bg-success' : 'text-bg-secondary'}">
+                            <field name="state_text"/>
+                        </div>
+                        <div class="mt-2">Зв'язок: <field name="comm"/> · останнє показання <field name="last_seen"/></div>
+                        <div>Зон <field name="zone_count"/> · у тривозі <field name="alarm_zone_count"/> · попереджень <field name="warn_count"/></div>
+                        <div><field name="systems_text"/></div>
+                        <div>Ручні: найбільша відстань <field name="compliance_mcp_max_m"/> м</div>
+                        <div class="mt-2 d-flex gap-2">
+                            <button name="action_view_zones" type="object" class="btn btn-sm btn-secondary">Зони</button>
+                            <button name="action_view_events" type="object" class="btn btn-sm btn-secondary">Журнал</button>
+                            <button name="action_f3d_show" type="object" class="btn btn-sm btn-secondary">3D</button>
+                            <button name="action_recompute_compliance" type="object" class="btn btn-sm btn-secondary"
+                                    groups="factory3d_base.group_f3d_manager">Перерахувати</button>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_f3d_fire_overview" model="ir.actions.act_window">
+        <field name="name">Огляд пожежної сигналізації</field>
+        <field name="res_model">f3d.fire.panel</field>
+        <field name="view_mode">kanban,form</field>
+    </record>
+
+    <!-- V-01a: шлейфи -->
+    <record id="view_f3d_fire_loop_list" model="ir.ui.view">
+        <field name="name">f3d.fire.loop.list</field>
+        <field name="model">f3d.fire.loop</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="panel_id"/>
+                <field name="number"/>
+                <field name="name"/>
+                <field name="from_x_m"/>
+                <field name="to_x_m"/>
+                <field name="device_count"/>
+                <field name="detectors_count"/>
+                <field name="mcp_count"/>
+                <field name="sounders_count"/>
+                <field name="flame_count"/>
+                <field name="modules_count"/>
+                <field name="state" widget="badge" decoration-danger="state == 'fault'"
+                       decoration-success="state == 'ok'" decoration-muted="state == 'unknown'"/>
+                <field name="fault_since"/>
+                <field name="request_id"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_f3d_fire_loop_form" model="ir.ui.view">
+        <field name="name">f3d.fire.loop.form</field>
+        <field name="model">f3d.fire.loop</field>
+        <field name="arch" type="xml">
+            <form string="Шлейф">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Шлейф">
+                            <field name="panel_id"/>
+                            <field name="number"/>
+                            <field name="from_x_m"/>
+                            <field name="to_x_m"/>
+                            <field name="signal_id" groups="factory3d_base.group_f3d_manager"/>
+                        </group>
+                        <group string="Пристрої">
+                            <field name="device_count"/>
+                            <field name="detectors_count"/>
+                            <field name="mcp_count"/>
+                            <field name="sounders_count"/>
+                            <field name="flame_count"/>
+                            <field name="modules_count"/>
+                        </group>
+                        <group string="Стан">
+                            <field name="state" widget="badge" decoration-danger="state == 'fault'"
+                                   decoration-success="state == 'ok'" decoration-muted="state == 'unknown'"/>
+                            <field name="fault_since"/>
+                            <field name="request_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Пристрої" name="devices">
+                            <field name="device_ids" readonly="1">
+                                <list>
+                                    <field name="address"/>
+                                    <field name="type"/>
+                                    <field name="zone_id"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_f3d_fire_loop" model="ir.actions.act_window">
+        <field name="name">Шлейфи</field>
+        <field name="res_model">f3d.fire.loop</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

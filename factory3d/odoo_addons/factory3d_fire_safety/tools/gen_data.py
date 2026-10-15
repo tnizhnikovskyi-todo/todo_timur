@@ -628,13 +628,13 @@ def build(root, counts=None):
         if counts is not None:
             counts[name] = pair[1]
 
-    put('f3d_fire_norm.csv', (norm, n_norm))
+    put('f3d.fire.norm.csv', (norm, n_norm))
     put('f3d_fire_panel.xml', f_panel(m, root))
-    put('f3d_fire_zone.csv', f_zone(m))
+    put('f3d.fire.zone.csv', f_zone(m))
     put('f3d_fire_system.xml', f_system())
-    put('f3d_fire_smoke_zone.csv', f_smoke_zone(m))
-    put('f3d_fire_device.csv', f_device(m, devs))
-    put('f3d_fire_exit.csv', f_exit(m, exits))
+    put('f3d.fire.smoke.zone.csv', f_smoke_zone(m))
+    put('f3d.fire.device.csv', f_device(m, devs))
+    put('f3d.fire.exit.csv', f_exit(m, exits))
     put('f3d_fire_route.xml', f_route(m, routes))
     put('f3d_fire_drill_template.xml', f_template(m))
     put('f3d_source_data.xml', f_source())
