@@ -5,9 +5,10 @@
 //     (файл, «с нуля»);
 //     saved / pending — слой правок: сохранённое (SAVED) и несохранённое (PENDING) этого склада; глубина локаций склада — saved.depth
 //     (null — "level", иначе "cell") и переопределение по зонам saved.depthZones [{ id узла, d }], как и ячейки яруса saved.cells; типы мест склада — saved.types
-//     (null — общий справочник BASE_TYPES, иначе свой список поверх него, D-12); building — заготовка под W-04 (пока null).
+//     (null — общий справочник BASE_TYPES, иначе свой список поверх него, D-12); building — сохранённый план здания и проходы (W-04, building.js; null — здания нет; правки — через слой правок, saved.building).
 //   Узлы склада (nodes) — производные: дерево строится из снимка и слоя правок (tree.js) и выгружается как nodesOf(tree, data).
 import { DEPTHS, normEdit } from "./types.js";
+import { normBuilding } from "./building.js";
 
 export const PROJECT_SCHEMA = 2;
 export const SOURCE_KINDS = ["odoo", "file", "scratch"];
@@ -22,8 +23,10 @@ export function createWarehouse(o = {}, i = 0) {
   // проекты, записанные до того, как глубина перешла в слой правок: настройки склада переносятся в слой
   if (!saved.depth && DEPTHS.includes(o.depth) && o.depth !== "level") saved.depth = o.depth;
   if (o.depthZones && typeof o.depthZones === "object" && !Array.isArray(o.depthZones)) for (const [id, d] of Object.entries(o.depthZones)) if (DEPTHS.includes(d) && !saved.depthZones.some((z) => z.id === id)) saved.depthZones.push({ id, d });
+  // план здания (W-04) живёт в слое правок (saved.building); поле building склада — его сохранённая копия для чтения проектом
+  if (o.building && !saved.building) saved.building = normBuilding(o.building);
   return { id: o.id || `wh-${i + 1}`, code, name: o.name || code, company: o.company || "", baseRef: o.baseRef ?? null, base: o.base ?? null,
-    saved, pending: normPending(o.pending), building: o.building ?? null };
+    saved, pending: normPending(o.pending), building: saved.building ?? null };
 }
 
 export function createProject(o = {}) {
@@ -87,8 +90,8 @@ export function nodesOf(tree, data) {
   for (const n of tree.nodes.values()) {
     const floor = n.type === "group" && !!n.loc && !n.kids.length;
     out.push({ id: n.id, parent: n.parent, level: floor ? "floor" : LEVEL_OF[n.type], tp: n.tp || null, form: n.tp ? tree.TY(n.tp).form : null,
-      x: n.x, y: n.y, rot: n.rot ? 90 : 0, w: n.w, d: n.d, h: n.h ?? 0, code: n.loc || null, odoo_id: n.draft ? null : odoo(n.loc),
-      status: n.draft ? "new" : tree.changed.has(n.id) ? "changed" : "existing", is_location: !!n.loc, cells: n.type === "level" ? n.cells : null });
+      x: n.x, y: n.y, rot: n.rotDeg || 0, w: n.w, d: n.d, h: n.h ?? 0, code: n.loc || null, odoo_id: n.draft && !n.from ? null : odoo(n.loc),
+      status: n.draft && !n.from ? "new" : tree.changed.has(n.id) ? "changed" : "existing", is_location: !!n.loc, cells: n.type === "level" ? n.cells : null });
   }
   for (const r of tree.removed) out.push({ id: r.id, parent: r.parent, level: LEVEL_OF[r.type] || "zone", tp: r.tp || null, form: null, x: null, y: null, rot: 0, w: null, d: null, h: null,
     code: r.loc || null, odoo_id: odoo(r.loc), status: "archived", is_location: !!r.loc, cells: null });

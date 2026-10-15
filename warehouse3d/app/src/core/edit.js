@@ -2,7 +2,7 @@
 // Все функции принимают состояние s (его создаёт createModel в model.js):
 //   s = { data, storage, words, saved, pending, redo, edit, tree, ui, clip, listeners, emit }
 // Подписи изменений хранятся как данные { k, p } (ключ словаря и параметры) — текст собирает i18n на экране.
-import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, r1 } from "./types.js";
+import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, ROTS, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, num, r1, r2 } from "./types.js";
 import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
 import { hhmm } from "./locks.js";
 import { layout } from "./layout.js";
@@ -13,15 +13,21 @@ import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
 // ---------- diff / apply
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
-  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), cfg: kv(a.cfg, b.cfg), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
-    types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null };
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), cfg: kv(a.cfg, b.cfg), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+    types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null,
+    // план здания (W-04): общие поля (контур, высоты) одним значением, объекты и узлы проходов — по id, как остальные списки
+    bld: JSON.stringify(bldMeta(a.building)) !== JSON.stringify(bldMeta(b.building)) ? { v: bldMeta(b.building) } : null, bi: kv(a.building?.items, b.building?.items), bn: kv(a.building?.nodes, b.building?.nodes) };
 }
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types;
+const bldMeta = (b) => (b ? { v: b.v, contour: b.contour, hCeil: b.hCeil, hSpr: b.hSpr } : null);
+const kvEmpty = (x) => !x || (!x.rm.length && !x.put.length);
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
-  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v;
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v;
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
+  if (d.bld) s.building = d.bld.v ? { ...clone(d.bld.v), items: s.building?.items || [], nodes: s.building?.nodes || [] } : null;
+  if (s.building) { if (d.bi) s.building.items = kv(s.building.items, d.bi); if (d.bn) s.building.nodes = kv(s.building.nodes, d.bn); }
   return s;
 }
 
@@ -29,7 +35,7 @@ export function applyDiff(s, d) {
 export function recompute(s) { s.edit = s.pending.reduce((e, p) => applyDiff(e, p.diff), clone(s.saved)); }
 export function rebuild(s) { s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(s.wh))); Object.assign(s.ui, reconcile(s.tree, s.ui)); }
 // слой правок и несохранённое активного склада переходят в проект; проект целиком уходит в хранилище (Promise со статусом записи)
-export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; }
+export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; s.wh.building = s.saved.building ?? null; }
 // commit — явное «Зберегти»: общее хранилище (Odoo) при нём заводит версию проекта, черновик (несохранённое) версий не плодит
 export function persist(s, commit = false) {
   sync(s);
@@ -57,7 +63,7 @@ function withDeps(s, sel) {
   const set = new Set(sel); let grow = true;
   while (grow) {
     grow = false;
-    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.cfg ? p.diff.cfg.put.map((x) => x.id) : [])]);
+    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.prop ? p.diff.prop.put.map((x) => x.id) : []), ...(p.diff.cfg ? p.diff.cfg.put.map((x) => x.id) : []), ...(p.diff.rot ? p.diff.rot.put.map((x) => x.id) : [])]);
     for (const q of s.pending) if (!set.has(q) && q.diff.add.put.some((a) => need.some((id) => inNode(id, a.id)))) { set.add(q); grow = true; }
   }
   return s.pending.filter((p) => set.has(p));
@@ -66,7 +72,7 @@ function withDeps(s, sel) {
 export function saveObj(s, id) {
   if (s.storage.readonly) return Promise.resolve(null);
   const sel = withDeps(s, pendFor(s, id)); if (!sel.length) return Promise.resolve(null);
-  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : refById(s.tree, id);
+  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
   const done = persist(s, true).then((r) => {
@@ -170,6 +176,66 @@ function freeSpot(src, P, placed) {
   return { x: r1(src.ox + sx), y: r1(src.oy + sy) };
 }
 
+// ---------- правки слоя: положение, поворот, свойства, удаление узла (все — внутри change)
+const setPosE = (e, id, x, y) => { e.pos = e.pos.filter((p) => p.id !== id); e.pos.push({ id, x: r2(x), y: r2(y) }); };
+const setRotE = (e, id, deg) => { e.rot = (e.rot || []).filter((x) => x.id !== id); if (deg) e.rot.push({ id, r: deg }); };
+// patch: значение undefined убирает поле; пустая запись пропадает
+function setPropE(e, id, patch) {
+  const cur = { ...(e.prop || []).find((p) => p.id === id), ...patch, id };
+  for (const k of Object.keys(cur)) if (cur[k] === undefined) delete cur[k];
+  e.prop = (e.prop || []).filter((p) => p.id !== id);
+  if (Object.keys(cur).length > 1) e.prop.push(cur);
+}
+// убрать узел вместе с тем, что внутри: добавленный пропадает из слоя, узел из Odoo попадает в del
+function removeNode(e, x) {
+  const id = x.id, not = (q) => !inNode(q.id, id);
+  e.add = e.add.filter(not); e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not);
+  if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
+}
+// число секций и ярусов ряда: лишние секции / верхние ярусы убираются, недостающие добавляются
+function resizeRack(s, e, r, nb, nl) {
+  const stack = s.tree.TY(r.tp).form === "stack", bays = r.kids.filter((k) => k.type === "bay" || k.type === "bayleaf");
+  if (!stack) for (const b of bays.slice(0, nb)) {
+    for (let l = b.nLv || 0; l < nl; l++) addLevel(s, e, b.id, r.tp, l);
+    for (const k of b.kids.filter((k) => k.type === "level" && k.lvl >= nl)) removeNode(e, k);
+  }
+  bays.slice(nb).forEach((b) => removeNode(e, b));
+  for (let i = bays.length; i < nb; i++) addBay(s, e, r.id, r.tp, nl);
+}
+
+// план массового создания рядов (D-13): сколько рядов, секций и ярусов, габариты блока; чистая функция — её же показывает форма до «Показати»
+export function massPlan(TY, f) {
+  const t = TY(f.tp), stack = t.form === "stack", v = f.orient === "v", g = stack ? 0.6 : 0.08;
+  const nr = clampN(f.nr, 1, 30, 1), nb = clampN(f.nb, 1, 40, 1), nl = stack ? 1 : clampN(f.nl, 1, 12, t.lv || 1), gap = Math.min(20, r2(num(f.gap) ?? 1.2));
+  const along = nb * t.w + (nb - 1) * g, across = t.d;
+  return { t, stack, v, nr, nb, nl, gap, rowW: v ? across : along, rowD: v ? along : across, places: nr * nb * nl,
+    w: v ? nr * across + (nr - 1) * gap : along, d: v ? along : nr * across + (nr - 1) * gap };
+}
+
+// перенос поддерева src в новый родитель pid с положением pos ({ x, y } от угла родителя). Адресация (коды мест) не меняется:
+// узлы из Odoo получают записи add с теми же кодами (from — прежний id), прежний корень уходит в del; добавленные и все слои правок получают новые id.
+function reparent(s, e, src, pid, pos) {
+  // id убранного узла Odoo можно занять снова (вернуть объект на прежнее место): дерево сначала убирает старый (tree.js, reborn)
+  let name = lastSeg(src.id); for (let i = 0; i < 500 && (s.tree.nodes.has(`${pid}/${name}`) || e.add.some((a) => a.id === `${pid}/${name}`)); i++) name = bumpNum(name);
+  const u = { id: `${pid}/${name}`, name }, nid = (id) => u.id + id.slice(src.id.length), sub = [];
+  const walk = (n) => { sub.push(n); n.kids.forEach(walk); }; walk(src);
+  const have = new Set(e.add.map((a) => a.id));
+  for (const n of sub) {
+    if (n.type === "cell" || have.has(n.id)) continue;
+    const kind = n.type === "group" ? (isZoneLeaf(n) ? "zone" : "group") : n.type === "rackset" ? "group" : n.type, id = nid(n.id);
+    const a = { id, parent: n.id === src.id ? pid : nid(n.parent), name: lastSeg(id), kind, tp: n.tp || null, from: n.id };
+    if (n.type === "level") { a.lvl = n.lvl; a.code = n.loc || (n.codes[0] || "").replace(/-1$/, ""); } else if (n.loc) a.code = n.loc;
+    e.add.push(a);
+  }
+  e.add = e.add.map((a) => (inNode(a.id, src.id) ? { ...a, id: nid(a.id), parent: a.id === src.id ? pid : nid(a.parent), name: a.id === src.id ? u.name : a.name } : a));
+  for (const k of ["set", "rot", "cells", "prop", "depthZones", "pos"]) e[k] = (e[k] || []).map((x) => (inNode(x.id, src.id) ? { ...x, id: nid(x.id) } : x));
+  setPosE(e, u.id, pos.x, pos.y);
+  if (!src.draft && !e.del.includes(src.id)) e.del.push(src.id);
+  return u.id;
+}
+const GROUPS = ["group", "rackset"];
+export const ALIGNS = ["left", "right", "top", "bottom", "cx", "cy"];
+
 // ---------- операции
 export const OPS = {
   rack(s, gid, f, key) {
@@ -211,21 +277,29 @@ export const OPS = {
     if (!s.tree.types.has(f.tp)) return;
     change(s, rid, { k: "op.settp", p: { type: s.tree.TY(f.tp) } }, (e) => { e.set = e.set.filter((x) => x.id !== rid); e.set.push({ id: rid, tp: f.tp }); }, key, f);
   },
-  move(s, list) {
+  // lbl — своя подпись (выравнивание, распределение): положение точное (до сантиметра) и без склейки с прошлым сдвигом
+  move(s, list, lbl = null) {
     list = list.filter((p) => s.tree.nodes.has(p.id)); if (!list.length) return;
-    const ids = list.map((p) => p.id), one = ids.length === 1, refs = ids.map((id) => refById(s.tree, id));
-    change(s, one ? ids[0] : lca(ids), one ? { k: "op.move", p: { ref: refs[0] } } : { k: "op.moveMany", p: { refs } }, (e) => {
-      e.pos = e.pos.filter((p) => !ids.includes(p.id)); list.forEach((p) => e.pos.push({ id: p.id, x: r1(p.x), y: r1(p.y) }));
-    }, `move@${ids.slice().sort().join("|")}`, null, ids);
+    const ids = list.map((p) => p.id), one = ids.length === 1, refs = ids.map((id) => refById(s.tree, id)), rd = lbl ? r2 : r1;
+    change(s, one ? ids[0] : lca(ids), lbl || (one ? { k: "op.move", p: { ref: refs[0] } } : { k: "op.moveMany", p: { refs } }), (e) => {
+      e.pos = e.pos.filter((p) => !ids.includes(p.id)); list.forEach((p) => e.pos.push({ id: p.id, x: rd(p.x), y: rd(p.y) }));
+    }, lbl ? null : `move@${ids.slice().sort().join("|")}`, null, ids);
   },
-  rotate(s, ids) {
-    const rs = [...new Set([].concat(ids))].map((id) => s.tree.nodes.get(id)).filter((r) => r && r.type === "rack"); if (!rs.length) return;
-    const rid = rs.map((r) => r.id), key = `rot@${rid.slice().sort().join("|")}`, last = s.pending[s.pending.length - 1];
+  // deg не задан — как раньше: поворот на 90° (второй подряд отменяет первый); задан — угол 0 / 90 / 180 / 270 (ряды и места на полу)
+  rotate(s, ids, deg = null) {
+    const rs = [...new Set([].concat(ids))].map((id) => s.tree.nodes.get(id)).filter((r) => r && (r.type === "rack" || isZoneLeaf(r))); if (!rs.length) return;
+    const rid = rs.map((r) => r.id), refs = rid.map((id) => refById(s.tree, id)), last = s.pending[s.pending.length - 1];
+    if (deg != null) {
+      const d = ROTS.includes(+deg) ? +deg : 0;
+      change(s, rs.length > 1 ? lca(rid) : rid[0], { k: "op.rotTo", p: { ref: refs, deg: d } }, (e) => { for (const id of rid) setRotE(e, id, d); }, `rotto@${rid.slice().sort().join("|")}`, null, rid);
+      return;
+    }
+    const key = `rot@${rid.slice().sort().join("|")}`;
     if (last && last.key === key) { s.pending.pop(); recompute(s); savePend(s); applyEdit(s); return; } // второй поворот подряд отменяет первый
-    const r = rs[0], refs = rid.map((id) => refById(s.tree, id));
-    const lbl = rs.length > 1 ? { k: "op.rotMany", p: { refs } } : r.rot ? { k: "op.rotBack", p: { ref: refs[0] } } : { k: "op.rot", p: { ref: refs[0] } };
+    const r = rs[0];
+    const lbl = rs.length > 1 ? { k: "op.rotMany", p: { refs } } : r.rot || r.rotDeg ? { k: "op.rotBack", p: { ref: refs[0] } } : { k: "op.rot", p: { ref: refs[0] } };
     change(s, rs.length > 1 ? lca(rid) : r.id, lbl, (e) => {
-      for (const id of rid) { const on = (e.rot || []).some((x) => x.id === id); e.rot = (e.rot || []).filter((x) => x.id !== id); if (!on) e.rot.push({ id, r: 90 }); }
+      for (const id of rid) { const on = (e.rot || []).some((x) => x.id === id); setRotE(e, id, on ? 0 : 90); }
     }, key, null, rid);
   },
   // копия рядом (target не задан) или вставка в target; та же постройка, места новые и пустые; несколько объектов — одним изменением
@@ -336,6 +410,114 @@ export const OPS = {
       else { e.depthZones = e.depthZones.filter((z) => z.id !== id); if (d !== "inherit") e.depthZones.push({ id, d }); }
     }, key, f);
   },
+  // панель свойств (D-13): числа X, Y (от угла родителя), поворот, размеры, секции и ярусы, имя; применяются только изменённые поля
+  props(s, id, f, key) {
+    if (!s.tree.nodes.has(id) || id === "WH" || s.tree.nodes.get(id).type === "cell") return;
+    const ref = refById(s.tree, id), what = [];
+    change(s, id, () => ({ k: "op.props", p: { ref, what } }), (e) => {
+      what.length = 0;
+      const n = s.tree.nodes.get(id), par = n.parent && s.tree.nodes.get(n.parent), differs = (v, cur) => v != null && Math.abs(v - cur) > 0.004;
+      const leaf = isZoneLeaf(n), rack = n.type === "rack", zone = GROUPS.includes(n.type) && !leaf, clamp = (v, a, b) => Math.min(b, Math.max(a, r2(v)));
+      const nm = String(f.name ?? "").trim().replace(/\//g, "-").slice(0, 40);
+      if (nm && nm !== n.name) { setPropE(e, id, { name: nm === lastSeg(id) ? undefined : nm }); what.push({ k: "prop.name" }); }
+      const x = num(f.x), y = num(f.y);
+      if (par && GROUPS.includes(par.type) && (differs(x, n.ox) || differs(y, n.oy))) { setPosE(e, id, x ?? n.ox, y ?? n.oy); what.push({ k: "prop.pos" }); }
+      const rt = num(f.rot);
+      if ((leaf || rack) && ROTS.includes(rt) && rt !== (n.rotDeg || 0)) { setRotE(e, id, rt); what.push({ k: "prop.rot" }); }
+      if (leaf || zone) {
+        const cur = leaf ? (n.rot ? [n.d, n.w] : [n.w, n.d]) : [n.w, n.d], pat = {};
+        [["w", num(f.w), cur[0]], ["d", num(f.d), cur[1]]].forEach(([k, v, c]) => { if (differs(v, c)) pat[k] = clamp(v, 0.1, 200); });
+        if (leaf && differs(num(f.h), n.h)) pat.h = clamp(num(f.h), 0.1, 30);
+        if (Object.keys(pat).length) { setPropE(e, id, pat); what.push({ k: "prop.size" }); }
+      }
+      if (rack) {
+        const stack = s.tree.TY(n.tp).form === "stack", cb = n.kids.length, cl = Math.max(0, ...n.kids.map((k) => k.nLv || 0));
+        const nb = num(f.nb) == null ? cb : clampN(f.nb, 1, 40, cb), nl = stack || num(f.nl) == null ? cl : clampN(f.nl, 1, 12, cl);
+        if (nb !== cb || (!stack && nl !== cl)) { resizeRack(s, e, n, nb, stack ? 1 : nl || 1); what.push({ k: "prop.sections" }); }
+      }
+    }, key, f);
+  },
+  // массовое создание (D-13): N рядов × M секций × K ярусов с проходом между рядами; ориентация f.orient: "h" (ряд вдоль X) или "v" (повёрнуты на 90°)
+  mass(s, gid, f, key) {
+    const P = s.tree.nodes.get(gid);
+    if (!P || !GROUPS.includes(P.type) || isZoneLeaf(P) || !s.tree.types.has(f.tp) || ![...RACKED, "stack"].includes(s.tree.TY(f.tp).form)) return;
+    const pl = massPlan(s.tree.TY, f), names = [];
+    change(s, gid, () => ({ k: "op.mass", p: { names, type: pl.t, nr: pl.nr, nb: pl.nb, nl: pl.nl, places: places(pl.places) } }), (e) => {
+      names.length = 0;
+      const g = s.tree.nodes.get(gid), x0 = g.kids.length ? Math.min(...g.kids.map((k) => k.ox)) : 1, y0 = g.kids.length ? Math.max(...g.kids.map((k) => k.oy + k.d)) + 2.4 : 1.6;
+      for (let i = 0; i < pl.nr; i++) {
+        const used = g.kids.filter((k) => k.type === "rack").map((k) => k.name).concat(e.add.filter((a) => a.parent === gid && a.kind === "rack").map((a) => a.name));
+        const u = uniqId(s, gid, nextNum(used, pl.stack ? "01" : "R1"), bumpNum); names.push(u.name);
+        e.add.push({ id: u.id, parent: gid, name: u.name, kind: "rack", tp: f.tp });
+        for (let b = 0; b < pl.nb; b++) addBay(s, e, u.id, f.tp, pl.nl);
+        setPosE(e, u.id, pl.v ? x0 + i * (pl.rowW + pl.gap) : x0, pl.v ? y0 : y0 + i * (pl.rowD + pl.gap));
+        if (pl.v) setRotE(e, u.id, 90);
+      }
+    }, key, f);
+  },
+  // массив мест на полу по сетке (D-13): nx × ny копий с шагом sx, sy (м, от начала до начала); исходное место остаётся на своём
+  grid(s, id, f, key) {
+    const n = s.tree.nodes.get(id); if (!n || !isZoneLeaf(n) || !n.parent) return;
+    const nx = clampN(f.nx, 1, 50, 1), ny = clampN(f.ny, 1, 50, 1); if (nx * ny < 2 || nx * ny > 500) return;
+    const sx = r2(num(f.sx) ?? n.w + 0.2), sy = r2(num(f.sy) ?? n.d + 0.2);
+    change(s, n.parent, { k: "op.grid", p: { ref: refOf(n), nx, ny, places: places(nx * ny) } }, (e) => {
+      const src = s.tree.nodes.get(id), P = src.parent && s.tree.nodes.get(src.parent);
+      setPosE(e, id, src.ox, src.oy);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        if (!i && !j) continue;
+        let c = src.loc; for (let k = 0; k < 999 && codeTaken(s, c); k++) c = nextNum([c], `${c}-2`);
+        const u = uniqId(s, P.id, c, bumpNum);
+        e.add.push({ id: u.id, parent: P.id, name: u.name, kind: "zone", tp: src.tp, code: c });
+        setPosE(e, u.id, src.ox + i * sx, src.oy + j * sy);
+        if (src.rotDeg) setRotE(e, u.id, src.rotDeg);
+        if (src.prop && (src.prop.w || src.prop.d || src.prop.h)) setPropE(e, u.id, { w: src.prop.w, d: src.prop.d, h: src.prop.h });
+      }
+    }, key, f);
+  },
+  // выравнивание нескольких объектов: left | right | top | bottom | cx | cy (по рамке всех выделенных)
+  align(s, ids, mode) {
+    const T = moveTargets(s.tree, s.ui, [].concat(ids)); if (T.length < 2 || !ALIGNS.includes(mode)) return;
+    const L = Math.min(...T.map((n) => n.x)), R = Math.max(...T.map((n) => n.x + n.w)), U = Math.min(...T.map((n) => n.y)), B = Math.max(...T.map((n) => n.y + n.d));
+    const to = { left: (n) => [L, n.y], right: (n) => [R - n.w, n.y], cx: (n) => [(L + R) / 2 - n.w / 2, n.y], top: (n) => [n.x, U], bottom: (n) => [n.x, B - n.d], cy: (n) => [n.x, (U + B) / 2 - n.d / 2] }[mode];
+    OPS.move(s, T.map((n) => { const [x, y] = to(n), P = s.tree.nodes.get(n.parent); return { id: n.id, x: x - P.x, y: y - P.y }; }), { k: "op.align", p: { mode: { k: `align.${mode}` }, refs: T.map((n) => refOf(n)) } });
+  },
+  // распределение с равными промежутками по оси "x" или "y" (крайние объекты остаются на местах; нужно три и больше)
+  distribute(s, ids, axis) {
+    const T = moveTargets(s.tree, s.ui, [].concat(ids)); if (T.length < 3 || !["x", "y"].includes(axis)) return;
+    const X = axis === "x", pos = (n) => (X ? n.x : n.y), len = (n) => (X ? n.w : n.d), S = T.slice().sort((a, b) => pos(a) - pos(b) || len(a) - len(b));
+    const first = pos(S[0]), span = Math.max(...S.map((n) => pos(n) + len(n))) - first, gap = (span - S.reduce((a, n) => a + len(n), 0)) / (S.length - 1);
+    let cur = first;
+    OPS.move(s, S.map((n) => { const v = cur; cur += len(n) + gap; const P = s.tree.nodes.get(n.parent); return X ? { id: n.id, x: v - P.x, y: n.y - P.y } : { id: n.id, x: n.x - P.x, y: v - P.y }; }),
+      { k: "op.distribute", p: { axis: { k: `align.m${axis}` }, refs: S.map((n) => refOf(n)) } });
+  },
+  // «Згрупувати»: объекты одного родителя уходят в новую зону (подзону), положение сохраняется; коды мест не меняются
+  groupSel(s, ids, f, key) {
+    const T = moveTargets(s.tree, s.ui, [].concat(ids)), par = [...new Set(T.map((n) => n.parent))], P = par.length === 1 ? s.tree.nodes.get(par[0]) : null;
+    if (!T.length || !P || !GROUPS.includes(P.type) || isZoneLeaf(P)) { say(s, "bad", "n.groupParents", {}, { key: "n.groupParentsSub" }); return null; }
+    const nm = String((f && f.name) || "").trim().replace(/\//g, "-").slice(0, 40) || s.words().newZone; let got = nm, gid = null;
+    change(s, P.id, () => ({ k: "op.groupSel", p: { name: got, refs: T.map((n) => refOf(n)) } }), (e) => {
+      const u = uniqId(s, P.id, nm, bumpNum); got = u.name; gid = u.id;
+      e.add.push({ id: u.id, parent: P.id, name: u.name, kind: "group" });
+      const gx = Math.max(0, Math.min(...T.map((n) => n.x)) - 1 - P.x), gy = Math.max(0, Math.min(...T.map((n) => n.y)) - 1.6 - P.y);
+      setPosE(e, u.id, gx, gy);
+      for (const n of T) reparent(s, e, n, u.id, { x: n.x - P.x - gx, y: n.y - P.y - gy });
+    }, key || null, null, T.map((n) => n.id));
+    if (gid && s.tree.nodes.has(gid)) { s.ui.msel = []; s.ui.esel = gid; s.emit({ type: "select" }); }
+    return gid;
+  },
+  // «Розгрупувати»: содержимое зоны возвращается в её родителя на прежние места, пустая зона убирается
+  ungroup(s, id) {
+    const G = s.tree.nodes.get(id), P = G && G.parent && s.tree.nodes.get(G.parent);
+    if (!G || !P || !GROUPS.includes(G.type) || isZoneLeaf(G) || G.loc || !GROUPS.includes(P.type)) return;
+    const kids = G.kids.slice();
+    change(s, P.id, { k: "op.ungroup", p: { ref: refOf(G) } }, (e) => {
+      for (const k of kids) reparent(s, e, k, P.id, { x: k.x - P.x, y: k.y - P.y });
+      const own = (q) => q.id !== G.id;
+      e.add = e.add.filter(own); e.pos = e.pos.filter(own); e.rot = (e.rot || []).filter(own); e.prop = (e.prop || []).filter(own); e.set = e.set.filter(own); e.depthZones = e.depthZones.filter(own);
+      if (!G.draft) e.del.push(G.id);
+    }, null, null, [G.id]);
+    s.ui.msel = []; s.ui.esel = s.tree.nodes.has(P.id) ? P.id : s.ui.focus; s.emit({ type: "select" });
+  },
   unpos(s, rid) { change(s, rid, { k: "op.unpos", p: { ref: refById(s.tree, rid) } }, (e) => { e.pos = e.pos.filter((p) => p.id !== rid); }); },
   del(s, ids) {
     const ui = s.ui, tree = s.tree;
@@ -346,14 +528,11 @@ export const OPS = {
     const f = ns.find((x) => inNode(ui.focus, x.id)); if (f) ui.focus = f.parent;
     const lbl = ns.length > 1 ? { k: k > 1 ? "op.delManyN" : "op.delMany", p: { refs, places: places(k) } } : { k: k > 1 ? "op.delN" : "op.del", p: { ref: refs[0], places: places(k) } };
     change(s, ns.length > 1 ? lca(par) : n.parent, lbl, (e) => {
-      for (const x of ns) {
-        const id = x.id;
-        e.add = e.add.filter((a) => !inNode(a.id, id)); e.set = e.set.filter((q) => !inNode(q.id, id)); e.pos = e.pos.filter((p) => !inNode(p.id, id)); e.cells = e.cells.filter((c) => !inNode(c.id, id)); e.cfg = e.cfg.filter((c) => !inNode(c.id, id));
-        if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
-      }
+      for (const x of ns) removeNode(e, x);
     }, null, null, [...new Set(par)]);
   },
-  reset(s) { change(s, "WH", { k: "op.reset" }, (e) => Object.assign(e, emptyEdit())); },
+  // план здания — не данные Odoo, сброс его не трогает
+  reset(s) { change(s, "WH", { k: "op.reset" }, (e) => Object.assign(e, emptyEdit(), { building: e.building })); },
 };
 
 // сдвиг выделенного перетаскиванием (dx, dy — метры)

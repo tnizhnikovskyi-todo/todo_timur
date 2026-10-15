@@ -3,6 +3,7 @@
 // esel — выделенный узел, msel — несколько выделенных (Ctrl+клик), edit — режим редактирования, pick — «Клік виділяє».
 import { PICKS, inNode } from "./types.js";
 import { nearest } from "./tree.js";
+import { rect2d } from "./layout.js";
 
 export const newUi = (pick) => ({ focus: "WH", sel: null, esel: null, msel: [], edit: false, pick: PICKS.includes(pick) ? pick : "place" });
 
@@ -20,12 +21,33 @@ export function reconcile(tree, ui) {
     sel: ui.sel && !tree.byCode.has(ui.sel) ? null : ui.sel };
 }
 
+// что выделяет «Клік виділяє»: место / секция / ряд / зона
+const PICK_IS = { place: (x) => !x.kids.length || x.type === "level" || x.type === "bayleaf", bay: (x) => x.type === "bay" || x.type === "bayleaf",
+  rack: (x) => x.type === "rack", zone: (x) => (x.type === "group" || x.type === "rackset") && x.kids.length > 0 };
+
+// выделение рамкой (метры плана, r = { x0, y0, x1, y1 }): объекты показанного уровня, целиком попавшие в рамку, того типа, что выбран в «Клік виділяє»
+export function inRect(tree, ui, r) {
+  const F = ui.focus, is = PICK_IS[ui.pick], out = [];
+  for (const n of tree.nodes.values()) {
+    if (n.id === "WH" || n.id === F || !inNode(n.id, F) || !is(n)) continue;
+    const b = rect2d(tree, n), e = 1e-6;
+    if (b.x >= r.x0 - e && b.y >= r.y0 - e && b.x + b.w <= r.x1 + e && b.y + b.d <= r.y1 + e) out.push(n.id);
+  }
+  return out.filter((id) => !out.some((o) => o !== id && inNode(id, o)));
+}
+// рамка: новое выделение или (add) добавление к текущему
+export function marqueePick(tree, ui, r, add) {
+  let S = inRect(tree, ui, r);
+  if (add) { const cur = selIds(ui); S = [...cur.filter((x) => !S.some((id) => inNode(x, id) || inNode(id, x))), ...S]; }
+  if (!S.length) return add ? null : { msel: [], esel: ui.edit ? ui.focus : null };
+  return { msel: S.length > 1 ? S : [], esel: S[S.length - 1], sel: null };
+}
+
 // выбор кликом: что именно выделять (место / стеллаж / ряд / зона); повторный клик по выделенному — уровень выше
 export function resolvePick(tree, ui, id, climb = true) {
   const n = tree.nodes.get(id); if (!n) return null;
   const F = ui.focus, up = (x) => x.parent && tree.nodes.get(x.parent);
-  const is = { place: (x) => !x.kids.length || x.type === "level" || x.type === "bayleaf", bay: (x) => x.type === "bay" || x.type === "bayleaf",
-    rack: (x) => x.type === "rack", zone: (x) => (x.type === "group" || x.type === "rackset") && x.kids.length > 0 }[ui.pick];
+  const is = PICK_IS[ui.pick];
   let x = n; while (x && !is(x)) x = up(x);
   if (!x || (x.id !== F && inNode(F, x.id))) x = n;
   const S = ui.esel;

@@ -13,7 +13,7 @@
 //   storage.read(name)            → сохранённое значение (уже разобранное) или null
 //   storage.write(name, value)    → "local" | "shared" | "fail"
 //   storage.readonly              → true: сохранять нельзя (кнопки «Зберегти» скрываются)
-// Имена настроек: "pick" (что выделяет клик), "mode" (2d/3d), "lang", "wh" (активный склад), "project" (активный проект).
+// Имена настроек: "pick" (что выделяет клик), "mode" (2d/3d), "lang", "wh" (активный склад), "project" (активный проект), "bgrid" (шаг сетки плана здания).
 import { migrateProject, summaryOf } from "./project.js";
 import { LIBRARY_KEY, normLibrary } from "./library.js";
 

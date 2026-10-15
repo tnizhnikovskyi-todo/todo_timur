@@ -6,6 +6,8 @@ import { hhmm } from "../core/locks.js";
 import { DEFAULTS } from "../core/params.js";
 import { esc, fillCls, isLow, modKey, pbar } from "./util.js";
 import { openTypes } from "./types.js";
+import { createBldPanel } from "./bldpanel.js";
+import { createTools } from "./tools.js";
 
 const KINDS = ["stack", "bin", "shelf", "pallet_cell", "kit", "area"];
 
@@ -44,6 +46,7 @@ export function createSidePanel({ model, i18n, root }) {
       ${num("gap", 0.01, 0, 3, e.gap ?? DEFAULTS.gap)}${num("rg", 0.01, 0, 1.5, e.rg ?? DEFAULTS.rg)}${num("bt", 0.01, 0.02, 0.3, e.bt ?? DEFAULTS.bt)}${num("cap", 10, 10, 5000)}${btns(ro)}</form>
       <div class="acts" style="margin-top:6px"><button class="btn btn-secondary" data-cfgreset>${T("side.cfgReset")}</button></div><p class="ed-note">${T("side.cfgNote", { type: tname(model.tree.TY(n.tp)) })}</p>`;
   };
+  const tools = createTools({ model, i18n, btns, typeOpts, fv }); // свойства, массовое создание, выравнивание, группировка (D-13)
 
   // ---------- просмотр
   function browse(side) {
@@ -89,6 +92,7 @@ export function createSidePanel({ model, i18n, root }) {
       <div class="ed-info">${esc(places(k))}${mv.length ? ` · ${T("side.dragAll", { names: mv.map((x) => label(x)) })}` : ` · ${T("side.noDrag")}`}</div>
       <div class="acts"><button class="btn btn-secondary" data-dup title="${esc(mod)}+D">⧉ ${T("side.dupAll")}</button><button class="btn btn-secondary" data-copy title="${esc(mod)}+C">${T("side.copy")}</button>${rk.length ? `<button class="btn btn-secondary" data-rot title="R">⟳ ${T(rk.length > 1 ? "side.rotRacks" : "side.rotRack")}</button>` : ""}<button class="btn btn-danger" data-delall>${T("side.delAll", { places: places(k) })}</button></div>
       ${pendBox(pend, t("side.saveSel"), ro)}
+      ${tools.multiHtml(S)}
       <div class="sec">${T("side.selectedHead", { n: S.length })}</div><ul class="lowlist ed-kids">${ns.map((x) => `<li><button data-esel="${esc(x.id)}" title="${T("side.onlyThis")}"><span class="t">${esc(label(x))}${nameTag(x)}</span><span class="mut" style="font-size:12px">${x.codes.length}</span>
         <span class="m">${esc(pathOf(tree, x).slice(1, -1).map(label).join(" › ") || "WH")}</span></button><button class="x" data-unpick="${esc(x.id)}" aria-label="${T("side.unpickLabel", { name: label(x) })}" title="${T("side.unpick")}">×</button></li>`).join("")}</ul>
       <div class="acts"><button class="btn btn-link" data-unsel>${T("side.unselect")}</button></div>
@@ -100,6 +104,7 @@ export function createSidePanel({ model, i18n, root }) {
     side.querySelector("[data-copy]").onclick = () => model.copy();
     side.querySelector("[data-rot]")?.addEventListener("click", () => model.ops.rotate(rk));
     side.querySelector("[data-delall]").onclick = () => model.ops.del(S);
+    tools.bindMulti(side, S);
     side.querySelector("[data-save]")?.addEventListener("click", () => model.save(S));
     side.querySelector("[data-discard]")?.addEventListener("click", () => model.discard(S));
   }
@@ -117,6 +122,8 @@ export function createSidePanel({ model, i18n, root }) {
     const clip = model.clip, dest = clip.length ? model.dropInto(tree.nodes.get(clip[0]), n.id) : null;
     if (n.id !== "WH" || clip.length) h += `<div class="acts">${n.id === "WH" || isCell ? "" : `<button class="btn btn-secondary" data-dup title="${esc(mod)}+D">⧉ ${T("side.dup", { name: label(n) })}</button><button class="btn btn-secondary" data-copy title="${esc(mod)}+C">${T("side.copy")}</button>`}${clip.length ? `<button class="btn btn-secondary" data-paste title="${esc(mod)}+V">${T("side.paste", { names: clip.map((id) => label(tree.nodes.get(id))) })}${dest ? ` → ${esc(label(dest))}` : ""}</button>` : ""}${n.id === "WH" || isCell ? "" : `<button class="btn btn-danger" data-del="${esc(n.id)}">${T("side.del", { name: label(n) })}${n.codes.length > 1 ? ` · ${esc(places(n.codes.length))}` : ""}</button>`}</div>`;
     h += pendBox(model.pendFor(pid), t(n.id === "WH" ? "side.saveAll" : "side.saveObj", { name: label(isCell ? tree.nodes.get(pid) : n) }), ro);
+    h += tools.propsHtml(n, ro);
+    if (zoneLeaf) h += tools.gridHtml(n, K, ro);
     if (isGroup && !zoneLeaf) {
       const rk = n.kids.filter((k) => k.type === "rack"), tp0 = fv(K("rack"), "tp", rk.length ? rk[rk.length - 1].tp : "FUR"), st0 = tree.TY(tp0).form === "stack";
       h += `<div class="sec">${T("side.addRack")}</div><form class="ed-form" data-op="rack">
@@ -129,6 +136,7 @@ export function createSidePanel({ model, i18n, root }) {
         ${tplForm("rack", false, ro)}<div class="acts"><button class="btn btn-secondary" data-catalog="${esc(n.id)}">${T("side.catalog")}</button></div>
         <div class="sec">${T("side.addGroup")}</div><form class="ed-form" data-op="group">
           <label class="wide">${T("form.name")}<input name="name" value="${esc(fv(K("group"), "name", t("word.newZone")))}" maxlength="40"></label>${btns(ro)}</form>`;
+      h += tools.massHtml(n, K, ro);
       // глубина локаций: склад целиком или зона (как другие правки: «Показати» / «Зберегти», отменяется Ctrl+Z)
       const di = model.depthInfo(n.id), dopts = n.id === "WH" ? ["level", "cell"] : ["inherit", "level", "cell"], d0 = di.own; // значение берётся из модели (с учётом показанного), а не из памяти формы
       h += `<div class="sec">${T("side.depthTitle")}</div><form class="ed-form" data-op="depth"><label class="wide"><span class="sr">${T("side.depthTitle")}</span><select name="depth">${dopts.map((o) => `<option value="${o}"${o === d0 ? " selected" : ""}>${T(`depth.${o}`)}</option>`).join("")}</select></label>${btns(ro)}</form>
@@ -166,7 +174,8 @@ export function createSidePanel({ model, i18n, root }) {
     side.querySelector("[data-dup]")?.addEventListener("click", () => model.ops.dup(n.id));
     side.querySelector("[data-copy]")?.addEventListener("click", () => model.copy());
     side.querySelector("[data-paste]")?.addEventListener("click", () => model.paste());
-    side.querySelectorAll("form.ed-form").forEach((f) => {
+    tools.bindSingle(side, n);
+    side.querySelectorAll("form.ed-form[data-op]").forEach((f) => {
       const op = f.dataset.op, k = K(op), tid = f.dataset.target || n.id, val = () => Object.fromEntries(new FormData(f));
       f.querySelector("[data-show]").onclick = () => { FORMV[k] = val(); model.ops[op](tid, val(), k); };
       f.onsubmit = (ev) => {
@@ -178,7 +187,8 @@ export function createSidePanel({ model, i18n, root }) {
     });
   }
 
-  return { render() { const side = root; if (model.ui.edit) edit(side); else browse(side); } };
+  const bld = createBldPanel({ model, i18n });
+  return { render() { const side = root; if (model.bld.state.on) bld.render(side); else if (model.ui.edit) edit(side); else browse(side); } };
 }
 
 // ---------- панель уровней: на каждом уровне пути — список соседей, в конце — уровень ниже
@@ -197,12 +207,12 @@ export function renderLevelBar(bar, { model, i18n }) {
 
 // ---------- панель режима редактирования: счётчики, кнопки, статус хранилища
 export function updateEditBar(root, { model, i18n }) {
-  const ui = model.ui, on = ui.edit, s = model.stats(), q = (x) => root.querySelector(x), ro = model.readonly;
-  q("#editbar").hidden = !on && !s.pending;
-  q("#ed-title").textContent = i18n.t(on ? "bar.editing" : "bar.hasPending");
+  const ui = model.ui, on = ui.edit, bld = model.bld.state.on, s = model.stats(), q = (x) => root.querySelector(x), ro = model.readonly;
+  q("#editbar").hidden = !on && !bld && !s.pending;
+  q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
-  q("#ed-undo").hidden = q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
   q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");

@@ -22,7 +22,7 @@ test("словари uk и en содержат одинаковые ключи �
 });
 
 test("каждый ключ, который код просит у t(), есть в словаре", () => {
-  const prefixes = ["app", "bar", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type"];
+  const prefixes = ["app", "bar", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
   for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
@@ -41,6 +41,10 @@ test("каждый ключ, который код просит у t(), есть
   for (const k of [0, 1, 2]) used.add(`types.fac.${k}`);
   for (const k of ["catalog", "project", "lib"]) used.add(`types.tab.${k}`);
   for (const c of CATALOG) { used.add(`cat.${c.id}`); used.add(`catd.${c.id}`); }
+  for (const k of ["col", "wall", "gate", "dock", "door", "office", "charge", "aisle", "contour"]) used.add(`bld.kind.${k}`);
+  for (const k of ["select", "vertex", "ruler"]) used.add(`bld.tool.${k}`);
+  for (const k of ["select", "put", "line", "rect", "vertex", "ruler"]) used.add(`bld.hint.${k}`);
+  for (const k of ["x", "y", "s", "x1", "y1", "x2", "y2", "t", "w", "d", "name", "link", "noLink"]) used.add(`bld.f.${k}`);
   for (const id of HELP_SECTIONS) { used.add(`help.${id}.title`); used.add(`help.${id}.html`); }
   assert.ok(used.size > 100);
   for (const k of used) { assert.ok(k in uk, `нет в uk: ${k}`); assert.ok(k in en, `нет в en: ${k}`); }

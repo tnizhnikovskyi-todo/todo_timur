@@ -1,4 +1,5 @@
 // Константи и мелкие чистые помощники ядра (без DOM).
+import { normBuilding } from "./building.js";
 
 // Конструкции мест; подписи — в словаре i18n (form.<id>).
 export const FORM_IDS = ["shelf", "rolls", "pallet", "stack", "zone"];
@@ -24,13 +25,15 @@ export const NODE_TYPE_LABELED = ["rack", "bay", "level", "bayleaf", "cell"];
 // глубина локаций (D-11): последний уровень дерева, который становится локацией Odoo
 export const DEPTHS = ["level", "cell"];
 export const MAX_CELLS = 12;
+// поворот ряда / места на полу, градусы: 90 и 270 меняют ширину с глубиной, 180 и 270 — порядок секций обратный
+export const ROTS = [0, 90, 180, 270];
 // порядок зон по ходу потока (данные Odoo на украинском)
 export const FLOW = ["Вхід", "Приймання", "Контроль якості", "Сировина", "Стелажі", "Портал", "Плити", "Фурнітура", "Крайка", "Пакування", "ЛФМ", "Передвиробництво", "Фасади", "Пост-виробництво", "Готова продукція", "Відвантаження"];
 export const KIND_TYPE = { group: "group", zone: "group", rack: "rack", bay: "bay", level: "level", bayleaf: "bayleaf" };
 
 export const clone = (x) => JSON.parse(JSON.stringify(x));
-export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], depth: null, depthZones: [], cfg: [] });
-export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], cfg: (d.cfg || []).filter((c) => c && c.id), depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)) } : emptyEdit();
+export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], prop: [], cfg: [], depth: null, depthZones: [], building: null });
+export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], prop: d.prop || [], cfg: (d.cfg || []).filter((c) => c && c.id), depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)), building: normBuilding(d.building) } : emptyEdit();
 export const zoneTp = (c) => /^PAL-/.test(c) ? "PAL" : /^(KIT|FRONTS)-/.test(c) ? "CART" : /^(POST|OUT)-/.test(c) ? "BIG" : /^UNLOAD-/.test(c) ? "DOCK" : "ZONE";
 
 export const inNode = (id, f) => id === f || id.startsWith(`${f}/`);
@@ -45,3 +48,6 @@ export function nextNum(names, fb) {
 export const bumpNum = (s) => nextNum([s], `${s} 2`);
 export const clampN = (v, a, b, d) => { const n = Math.round(+v); return Number.isFinite(n) ? Math.min(b, Math.max(a, n)) : d; };
 export const r1 = (v) => Math.max(0, Math.round(v * 10) / 10);
+export const r2 = (v) => Math.max(0, Math.round(v * 100) / 100); // числовой ввод — до сантиметра
+// число из поля формы: "" / нет → null; запятая допустима
+export const num = (v) => { if (v === "" || v == null) return null; const n = +String(v).replace(",", "."); return Number.isFinite(n) ? n : null; };

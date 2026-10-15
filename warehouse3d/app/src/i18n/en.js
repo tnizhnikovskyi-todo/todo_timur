@@ -35,7 +35,7 @@ export default {
   "legend.idle": "zone without capacity",
   "legend.new": "new · model only",
   "legend.pend": "not saved",
-  "status.hintEdit": "Click — select · {mod}+click — several · drag — move · R — rotate row · {mod}+C / {mod}+V — copy / paste · {mod}+D — duplicate · {mod}+Z — undo",
+  "status.hintEdit": "Click — select · {mod}+click — several · drag — move · Shift+drag — marquee · R — rotate row · {mod}+C / {mod}+V — copy / paste · {mod}+D — duplicate · {mod}+Z — undo",
   "status.hint2d": "Click — select (again — level up) · wheel — zoom",
   "status.hint3d": "Click — select (again — level up) · left button — orbit · right button — pan",
   "status.local": "Saved changes are kept in this browser only",
@@ -141,6 +141,65 @@ export default {
   "op.dupN": "Copied: {pairs} ({places})",
   "op.paste": "Pasted into {to}: {pairs}",
   "op.pasteN": "Pasted into {to}: {pairs} ({places})",
+  "op.props": "Properties of {ref}: {what}",
+  "op.rotTo": "{ref}: rotation {deg}°",
+  "op.mass": "Added rows {names}: {type}, {nr} × {nb} × {nl} ({places})",
+  "op.grid": "Grid of places {ref}: {nx} × {ny} ({places})",
+  "op.align": "Aligned “{mode}”: {refs}",
+  "op.distribute": "Distributed {axis}: {refs}",
+  "op.groupSel": "Grouped into “{name}”: {refs}",
+  "op.ungroup": "Ungrouped {ref}",
+  "n.groupParents": "Only objects of one zone can be grouped",
+  "n.groupParentsSub": "Select rows or floor places that stand in the same zone",
+  "prop.name": "name",
+  "prop.pos": "position",
+  "prop.rot": "rotation",
+  "prop.size": "size",
+  "prop.sections": "bays and levels",
+  "props.title": "Properties",
+  "props.x": "X, m",
+  "props.y": "Y, m",
+  "props.rot": "Rotation",
+  "props.w": "Width, m",
+  "props.d": "Depth, m",
+  "props.h": "Height, m",
+  "props.wMin": "Zone width, m",
+  "props.dMin": "Zone depth, m",
+  "props.bays": "Bays",
+  "props.noteLeaf": "X, Y are measured from the corner of the zone the place stands in. Width and depth are the place's own (before rotation); 90° and 270° swap them. Only changed fields are applied.",
+  "props.noteRack": "X, Y are measured from the zone corner. Rotation 180° and 270° puts the bays in reverse order. Bays and levels: extra ones are removed (last bays, top levels), missing ones are added.",
+  "props.noteZone": "X, Y are measured from the parent zone corner. A zone cannot be smaller than its contents.",
+  "mass.title": "Mass create",
+  "mass.rows": "Rows",
+  "mass.bays": "Bays",
+  "mass.gap": "Aisle between rows, m",
+  "mass.orient": "Orientation",
+  "mass.orientH": "along X",
+  "mass.orientV": "along Y (rotated 90°)",
+  "mass.sum": "Will create: {nr} rows, {nb} bays per row, {nl} levels; {places} in total; block {w} × {d} m. “Show” displays them in the model.",
+  "mass.sumStack": "Will create: {nr} rows, {nb} stacks per row; {places} in total; block {w} × {d} m. “Show” displays them in the model.",
+  "grid.title": "Grid array",
+  "grid.nx": "Along X, pcs",
+  "grid.ny": "Along Y, pcs",
+  "grid.sx": "Step X, m",
+  "grid.sy": "Step Y, m",
+  "grid.note": "Copies stand in the same zone and get the next free codes; the step is the distance from the start of one place to the start of the next.",
+  "align.title": "Align and distribute",
+  "align.left": "Left",
+  "align.right": "Right",
+  "align.top": "Top",
+  "align.bottom": "Bottom",
+  "align.cx": "Center X",
+  "align.cy": "Center Y",
+  "align.distx": "Distribute along X",
+  "align.disty": "Distribute along Y",
+  "align.mx": "along X",
+  "align.my": "along Y",
+  "group.title": "Grouping",
+  "group.group": "Group",
+  "group.ungroup": "Ungroup",
+  "group.ungroupTitle": "Return the zone contents to its parent zone; the zone disappears",
+  "group.note": "The selected objects of one zone move into a new zone with this name. Place codes do not change.",
   "op.unpos": "{ref}: automatic position",
   "op.del": "Removed {ref}",
   "op.delN": "Removed {ref} ({places})",
@@ -305,15 +364,25 @@ export default {
       <li><b>Drag</b> a row or a floor place with the mouse (in 2D and 3D). A zone can be dragged if you select it first. You can drag what stands inside the visible level: to move a row, open its zone, not the row itself.</li>
       <li>The zone grows to fit the object. If a row overlaps a neighbor, the panel shows a warning.</li>
       <li><b>“Automatic position”</b> in the row panel puts the row back to where the layout places it.</li>
-      <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back.</li>
+      <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back. Other angles (180° and 270°) and exact coordinates are in “Properties” (see “Editing tools”).</li>
     </ul>`,
   "help.multi.title": "Several objects at once",
   "help.multi.html": `
     <ul>
       <li><kbd>{mod}</kbd>+<kbd>click</kbd> in the model adds an object to the selection, another <kbd>{mod}</kbd>+<kbd>click</kbd> removes it. All selected objects are highlighted together.</li>
       <li>Drag <b>any selected object</b> — everything selected moves, keeping the relative layout. A selected level or bay drags its row.</li>
-      <li><kbd>R</kbd> rotates all selected rows.</li>
+      <li><kbd>R</kbd> rotates all selected rows. Marquee selection (<kbd>Shift</kbd> + drag), align, distribute and grouping are described in “Editing tools”.</li>
       <li>The “N objects selected” panel: the list (× removes from the selection), “Duplicate all”, “Copy”, “Rotate rows”, “Remove all”, “Save selection”, “Clear selection”.</li>
+    </ul>`,
+  "help.tools.title": "Editing tools",
+  "help.tools.html": `
+    <ul>
+      <li><b>Properties</b> (panel of a row, zone or floor place): name, <b>X and Y</b> in meters from the parent zone corner, <b>rotation</b> 0 / 90 / 180 / 270°, width, depth and height, and for a row the <b>number of bays and levels</b>. Only changed fields are applied — through “Show” / “Save”, undone with {mod}+Z. Rotation 90° and 270° swaps width and depth; 180° and 270° put the bays in reverse order.</li>
+      <li><b>Mass create</b> (zone panel): type, rows × bays × levels, aisle between rows (m) and orientation (along X or Y). Under the form there is a summary: how many places and what block you get; “Show” draws the rows in the model before saving. Rows are placed below the existing contents of the zone.</li>
+      <li><b>Grid array</b> (floor place panel): N × M copies with the step along X and Y (start to start), new codes are the next free ones.</li>
+      <li><b>Marquee selection</b> in 2D: hold <kbd>Shift</kbd> and drag — objects that fall entirely inside the frame are selected; what exactly (place, bay, row, zone) is decided by the “Click selects” switch. <kbd>Shift</kbd>+<kbd>{mod}</kbd> adds to the selection. Without <kbd>Shift</kbd> the mouse still drags an object or pans.</li>
+      <li><b>Align</b> (the “N objects selected” panel): by left, right, top, bottom edge and by center X / Y; <b>distribute</b> with equal gaps along X or Y (three objects or more, the outer ones stay in place).</li>
+      <li><b>Grouping:</b> “Group” moves the selected objects of one zone into a new zone with the given name (positions are kept); “Ungroup” in the panel of such a zone returns the contents to the parent zone and the zone disappears. Place codes do not change. Everything is undone with {mod}+Z.</li>
     </ul>`,
   "help.copy.title": "Copying",
   "help.copy.html": `
@@ -354,13 +423,16 @@ export default {
     <p class="mut">They work in edit mode when the cursor is not in an input field; the Ukrainian keyboard layout works too. On Mac use ⌘ instead of Ctrl.</p>
     <table class="hl-t"><tbody>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>click</kbd></td><td>add to / remove from the selection</td></tr>
+      <tr><td class="first"><kbd>Shift</kbd>+drag (2D)</td><td>marquee select; with <kbd>{mod}</kbd> — add to the selection</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>C</kbd></td><td>copy the selection</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>V</kbd></td><td>paste the copied objects</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>D</kbd></td><td>duplicate the selection next to it</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>Z</kbd></td><td>undo the last unsaved change</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> · <kbd>{mod}</kbd>+<kbd>Y</kbd></td><td>redo an undone change</td></tr>
       <tr><td class="first"><kbd>R</kbd></td><td>rotate the selected rows by 90°</td></tr>
-      <tr><td class="first"><kbd>Esc</kbd></td><td>clear the selection (it also closes the place types window)</td></tr>
+      <tr><td class="first"><kbd>Esc</kbd></td><td>clear the selection (it also closes the place types window); in “Building” mode — cancel the line, then the tool, then the selection</td></tr>
+      <tr><td class="first"><kbd>Delete</kbd></td><td>in “Building” mode: delete the selection (or the selected outline vertex)</td></tr>
+      <tr><td class="first"><kbd>Alt</kbd></td><td>in “Building” mode: move without snapping while held</td></tr>
     </tbody></table>`,
 
   // ---- W-05: type catalog, construction parameters, templates and library
@@ -521,4 +593,113 @@ export default {
   "cat.MB5": "Shelf trolley",
   "catd.MB5": "Mini rack on wheels: shelves on a cart",
 
+  // ---------- W-04: building plan and aisles
+  "top.building": "Building",
+  "status.hintBld": "Pick a tool in the side panel · Alt — no snapping · Esc — cancel line or tool · Delete — remove · {mod}+Z — undo",
+  "what.building": "building plan",
+  "unit.m2": "m²",
+  "op.bldCreate": "Created the building plan from the warehouse size",
+  "op.bldRemove": "Removed the building plan",
+  "op.bldContour": "Changed the building outline",
+  "op.bldVertex": "Changed outline vertex {n}",
+  "op.bldVertexAdd": "Added an outline vertex",
+  "op.bldVertexDel": "Removed outline vertex {n}",
+  "op.bldHeights": "Changed the building heights",
+  "op.bldAdd": "Added: {kind}",
+  "op.bldGrid": "Columns on a grid: {n}",
+  "op.bldMove": "Moved: {kind}",
+  "op.bldMoveN": "Moved objects: {n}",
+  "op.bldNode": "Changed an aisle end",
+  "op.bldSet": "Changed: {kind}",
+  "op.bldDel": "Removed objects: {n}",
+  "bld.mode": "Building mode",
+  "bld.title": "Building plan",
+  "bld.none": "This warehouse has no building plan yet: outline, columns, walls, gates, aisles.",
+  "bld.noneNote": "The outline will be a rectangle around the layout plus a margin; you can edit it, drag its vertices or turn it into a polygon. The building plan is geometry, not Odoo locations.",
+  "bld.margin": "Margin around the layout, m",
+  "bld.create": "Create building from warehouse size",
+  "bld.remove": "Delete the building",
+  "bld.save": "Save the building plan",
+  "bld.tools": "Tools",
+  "bld.tool.select": "Select",
+  "bld.tool.vertex": "+ Vertex",
+  "bld.tool.ruler": "Ruler",
+  "bld.kind.col": "Column",
+  "bld.kind.wall": "Wall",
+  "bld.kind.gate": "Gate",
+  "bld.kind.dock": "Dock",
+  "bld.kind.door": "Door",
+  "bld.kind.office": "Office",
+  "bld.kind.charge": "Charging area",
+  "bld.kind.aisle": "Aisle",
+  "bld.kind.contour": "Outline",
+  "bld.hint.select": "Click — select, drag — move, {mod}/Shift+click — add to selection. A selected outline shows draggable vertices.",
+  "bld.hint.put": "Click to place the object at the point (with snapping).",
+  "bld.hint.line": "Two clicks (or a drag) — start and end. An aisle end on another aisle joins them.",
+  "bld.hint.rect": "Click — default size, drag — your own size.",
+  "bld.hint.vertex": "Click an outline edge to add a vertex (the outline becomes a polygon).",
+  "bld.hint.ruler": "Two clicks — distance between the points (with snapping).",
+  "bld.hint.second": "Now the second point.",
+  "bld.gridLabel": "Grid step",
+  "bld.snap": "Snap to grid and objects",
+  "bld.ruler.result": "Distance: {d} m",
+  "bld.ruler.delta": "Δx {dx}, Δy {dy}",
+  "bld.ruler.clear": "Clear measurement",
+  "bld.out.title": "Outside the building outline: {n}",
+  "bld.out.note": "Warning: rows and zones that go beyond the outline. The plan check (W-07) will forbid it.",
+  "bld.selected": "Selected",
+  "bld.selectedN": "Selected objects: {n}",
+  "bld.del": "Delete selected",
+  "bld.contour": "Outline and heights",
+  "bld.area": "Area",
+  "bld.perim": "Perimeter",
+  "bld.vAdd": "Add vertex",
+  "bld.vDel": "Remove vertex {n}",
+  "bld.hCeil": "Height to ceiling, m",
+  "bld.hSpr": "Height to sprinklers, m",
+  "bld.f.x": "X, m",
+  "bld.f.y": "Y, m",
+  "bld.f.s": "Side, m",
+  "bld.f.x1": "X1, m",
+  "bld.f.y1": "Y1, m",
+  "bld.f.x2": "X2, m",
+  "bld.f.y2": "Y2, m",
+  "bld.f.t": "Thickness, m",
+  "bld.f.w": "Width, m",
+  "bld.f.d": "Depth, m",
+  "bld.f.name": "Name",
+  "bld.f.link": "Link to location",
+  "bld.f.noLink": "— no link —",
+  "bld.f.linkNote": "The link is optional: without it the object is just geometry.",
+  "bld.f.linkLost": "Location {code} no longer exists in the warehouse — the link is stale.",
+  "bld.grid.title": "Columns on a grid",
+  "bld.grid.nx": "Count along X",
+  "bld.grid.ny": "Count along Y",
+  "bld.grid.sx": "Step along X, m",
+  "bld.grid.sy": "Step along Y, m",
+  "bld.grid.inside": "Inside the outline only",
+  "bld.grid.go": "Add columns",
+  "bld.items": "Building objects: {n}",
+  "bld.more": "… and {n} more",
+  "bld.noItems": "No objects yet: pick a tool and click on the plan.",
+  "bld.aisles": "Aisles: {n}, separate connected groups: {g}",
+  "bld.len": "Length",
+  "bld.aisle.endA": "Start",
+  "bld.aisle.endB": "End",
+  "bld.aisle.links": "Neighbouring aisles",
+  "bld.aisle.none": "none",
+  "bld.aisle.width": "width {w} m",
+  "help.building.title": "Building plan and aisles",
+  "help.building.html": `
+    <ul>
+      <li><b>What it is.</b> The <b>“Building”</b> button next to 2D / 3D turns on the building plan mode: outline, columns, walls, gates, aisles. This is <b>geometry</b>, not Odoo locations; it is stored in the project with the warehouse (each warehouse has its own plan) and goes through the same “Show / Save” flow with <kbd>{mod}</kbd>+<kbd>Z</kbd> undo. “Building” and “Edit” modes exclude each other.</li>
+      <li><b>Create.</b> If there is no plan yet, <b>“Create building from warehouse size”</b> makes a rectangular outline around the layout plus a margin (2 m by default). At first it is an unsaved (teal) change; save it with <b>“Save the building plan”</b> or “Save all”.</li>
+      <li><b>Outline.</b> A rectangle (X, Y, width, depth as numbers) or a polygon: drag vertices with the mouse (select the outline by clicking its line), the <b>“+ Vertex”</b> tool adds a vertex on an edge, “Add vertex” splits the longest edge, <kbd>Delete</kbd> removes the selected vertex (three at least). The same place has the height to the ceiling and to the sprinklers, the area and the perimeter.</li>
+      <li><b>Objects.</b> <b>Column</b> (click; or <b>“Columns on a grid”</b>: start, count and X / Y step — one change), <b>wall</b> (a segment with thickness, two clicks), <b>gate, dock, door, office, charging area</b> (rectangles: click — default size, drag — your own). A selected object is moved with the mouse; its numbers (coordinates, size, name) are edited in the panel. A gate or dock can be <b>linked to an Odoo location</b> (the “Link to location” field picks among floor places and zones of the warehouse); without a link it is just geometry.</li>
+      <li><b>Aisles.</b> An aisle is a strip with a width, drawn with two clicks (start and end). Aisle ends are graph nodes: when the end of a new aisle lands on a node or on the line of another aisle, they join (an aisle that is crossed splits in two). The aisle panel shows its length, width and <b>neighbouring aisles</b>. Moving an aisle drags its neighbours through the shared node; an end can be dragged on its own (it shows as a circle when selected) or typed in. Aisle width is needed for the plan checks (W-07); there are no routes yet.</li>
+      <li><b>Snapping.</b> The grid step <b>0.1 / 0.5 / 1 m</b> is chosen in the panel; points snap to vertices and corners of neighbouring objects, to corners of rows and places of the layout and to aisle ends (and align to their axes). The “Snap” checkbox turns it off, <kbd>Alt</kbd> while moving does it temporarily. The grid step is remembered.</li>
+      <li><b>Rulers and the ruler tool.</b> Along the top and left edges of 2D are rulers in metres (with a cursor mark); the bottom shows the cursor coordinates. The <b>“Ruler”</b> tool: two clicks — the distance (and Δx, Δy) is shown on the plan and in the panel; <b>“Clear measurement”</b> or Esc removes it. The measurement is not stored in the project.</li>
+      <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is only a warning; the plan check (W-07) will forbid it.</li>
+      <li><b>In 3D</b> you see the floor outline, walls, columns (instanced), gates, docks, doors, office, charging area and aisles; the upper orange line is the sprinkler level. Editing is done in 2D.</li>
+    </ul>`,
 };
