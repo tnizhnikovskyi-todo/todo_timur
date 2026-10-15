@@ -21,6 +21,7 @@ from bacpypes3.local.device import DeviceObject  # type: ignore[import-untyped]
 from bacpypes3.local.networkport import NetworkPortObject  # type: ignore[import-untyped]
 from bacpypes3.pdu import Address  # type: ignore[import-untyped]
 from bacpypes3.primitivedata import Null, ObjectIdentifier  # type: ignore[import-untyped]
+from bacpypes3.settings import settings as bp_settings  # type: ignore[import-untyped]
 
 from collector.core.errors import ConnectError, NotSupported, PollError, WriteError
 from collector.core.types import Health, PushEvent, Reading, SignalCfg, SourceCfg
@@ -316,7 +317,12 @@ class BacnetIpPlugin(SourcePlugin):
         if configured:
             self.addr = Address(configured)
             return
-        target = Address(f"{await self._resolve_host()}:{self.port}")
+        host = f"{await self._resolve_host()}:{self.port}"
+        network = self.source.params.get("network")
+        # пристрій за BACnet-роутером: Who-Is як remote broadcast у мережу DNET через host:port (params.network)
+        if network:
+            bp_settings.route_aware = True
+        target = Address(f"{int(network)}:*@{host}" if network else host)
         try:
             iams = await self.bapp._request(self, "who-is", self.device, self.device, target)
         except (TimeoutError, ErrorRejectAbortNack, OSError):
