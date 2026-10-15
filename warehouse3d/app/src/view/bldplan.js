@@ -28,11 +28,11 @@ export function createBldPlan({ model, i18n, svg, vp, view, toWorld }) {
   }
   function renderAisles(b = model.building, nodes = b && b.nodes) {
     if (!b) { gAisle.innerHTML = ""; return; }
-    const S = sels(), N = new Map(nodes.map((n) => [n.id, n]));
+    const S = sels(), N = new Map(nodes.map((n) => [n.id, n])), pm = model.checks.marks().bld;
     gAisle.innerHTML = b.items.filter((i) => i.k === "aisle").map((i) => {
       const A = N.get(i.a), C = N.get(i.b); if (!A || !C) return "";
       const tt = `${kindName("aisle")}${i.name ? ` «${i.name}»` : ""} · ${i18n.m(i.w)} ${t("unit.m")}`;
-      return `<g data-bid="${esc(i.id)}" class="bd-ai${S.has(i.id) ? " sel" : ""}"><line class="bd-aisle" x1="${A.x}" y1="${A.y}" x2="${C.x}" y2="${C.y}" stroke-width="${i.w}"/><line class="bd-axis" x1="${A.x}" y1="${A.y}" x2="${C.x}" y2="${C.y}"/><title>${esc(tt)}</title></g>`;
+      return `<g data-bid="${esc(i.id)}" class="bd-ai${S.has(i.id) ? " sel" : ""}${pm.has(i.id) ? " prob" : ""}"><line class="bd-aisle" x1="${A.x}" y1="${A.y}" x2="${C.x}" y2="${C.y}" stroke-width="${i.w}"/><line class="bd-axis" x1="${A.x}" y1="${A.y}" x2="${C.x}" y2="${C.y}"/><title>${esc(tt)}</title></g>`;
     }).join("");
   }
   function renderItems(b = model.building) {

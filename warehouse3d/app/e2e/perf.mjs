@@ -7,6 +7,10 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { createModel } from "../src/core/model.js";
+import { createMemoryStorage } from "../src/core/storage.js";
+import { syntheticBase, syntheticProject, SYNTHETIC_REF } from "../src/core/synthetic.js";
+import { runChecks } from "../src/core/checks.js";
 
 const dist = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "dist");
 if (!fs.existsSync(path.join(dist, "index.html"))) { console.error("FAIL: нет dist/ — сначала npm run build"); process.exit(1); }
@@ -27,7 +31,17 @@ const server = http.createServer((req, res) => {
 await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
 const base = `http://127.0.0.1:${server.address().port}/`;
 
-const FRAMES = 60, LIMITS = { calls: 200, buildMs: 3000 };
+const FRAMES = 60, LIMITS = { calls: 200, buildMs: 3000, checksMs: 200 };
+
+// проверки W-07 (core/checks.js): полный прогон на синтетике 10 000 мест со зданием и техникой (ядро без DOM — считаем в Node)
+function measureChecks() {
+  const base = syntheticBase(10000), bases = { [SYNTHETIC_REF]: base }, m = createModel(syntheticProject(bases), createMemoryStorage(), { bases });
+  m.ops.tech("WH", { t: "reach" }); m.bld.ops.create({ margin: 5 }); m.bld.ops.grid({ x: -4, y: -4, nx: 40, ny: 2, sx: 3, sy: 1 });
+  const inp = { tree: m.tree, edit: m.edit, data: m.data }; runChecks(inp);
+  const ts = []; for (let i = 0; i < 7; i++) { const t = performance.now(); runChecks(inp); ts.push(performance.now() - t); }
+  ts.sort((a, b) => a - b);
+  return { places: Object.keys(base.locations).length, ms: ts[3], max: ts[ts.length - 1], problems: runChecks(inp).problems.length };
+}
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const errors = [];
 
@@ -88,8 +102,9 @@ async function measure(name, query, prep = null) {
 
 // план здания (W-04): здание и ~1500 колонн сеткой, чтобы проверить инстансинг и освобождение при перестройке
 async function buildingPrep(page) {
-  await page.click('#seg-mode [data-m="bld"]'); await page.click("#bld-create"); await page.waitForSelector("#bld-grid-go");
-  for (const [k, v] of [["nx", 60], ["ny", 25], ["sx", 1.5], ["sy", 1.5]]) await page.fill(`form[data-bf="grid"] input[name="${k}"]`, String(v));
+  // колонны не могут стоять на рядах (W-07): контур с большим отступом, сетка колонн — в полосе выше склада
+  await page.click('#seg-mode [data-m="bld"]'); await page.waitForSelector("#bld-create"); await page.fill('form[data-bf="create"] input[name="margin"]', "40"); await page.click("#bld-create"); await page.waitForSelector("#bld-grid-go");
+  for (const [k, v] of [["x", -38], ["y", -38], ["nx", 60], ["ny", 25], ["sx", 1.5], ["sy", 1.5]]) await page.fill(`form[data-bf="grid"] input[name="${k}"]`, String(v));
   await page.click("#bld-grid-go");
   await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length >= 1000);
 }
@@ -97,6 +112,9 @@ const fmt = (v, n = 0) => (v == null ? "—" : Number(v).toFixed(n));
 const show = (m) => console.log(`${m.name}: построение 3D ${fmt(m.buildMs)} мс, до готовности ${m.ready} мс, draw calls ${m.calls}, треугольников ${m.tris}, кадр при вращении ${fmt(m.orbitMs, 1)} мс (${fmt(1000 / m.orbitMs, 1)} к/с, swiftshader), наведение ${fmt(m.hoverMs, 1)} мс, перестройка ${fmt(m.rebuildMs)} мс (утечка ${m.leak}), групп ${m.groups}, 2D: ${m.rects} элементов, выбор ${fmt(m.selectMs)} мс`);
 let bad = [];
 try {
+  const chk = measureChecks();
+  console.log(`проверки: ${chk.places} мест, полный прогон ${fmt(chk.ms, 1)} мс (максимум ${fmt(chk.max, 1)} мс), проблем ${chk.problems}`);
+  if (!(chk.ms <= LIMITS.checksMs)) bad.push(`полный прогон проверок ${fmt(chk.ms, 1)} мс > ${LIMITS.checksMs} мс`);
   const wh = await measure("WH", "");
   show(wh);
   const syn = await measure("synthetic 10000", "?synthetic=10000");

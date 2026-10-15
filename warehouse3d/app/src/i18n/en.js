@@ -350,11 +350,11 @@ export default {
   "help.edit.html": `
     <p>The <b>“✎ Edit”</b> button turns edit mode on, <b>“Done”</b> turns it off. Select an object — the right panel shows the actions for it:</p>
     <table class="hl-t"><thead><tr><th class="first">Selected</th><th>What you can do</th></tr></thead><tbody>
-      <tr><td class="first">Warehouse or zone</td><td>“Add a row” (place type, number of bays and levels), “Add a floor place”, “Add a zone”</td></tr>
+      <tr><td class="first">Warehouse or zone</td><td>“Add a row” (place type, number of bays and levels), “Add a floor place”, “Add a zone”, “Zone equipment” (aisle width)</td></tr>
       <tr><td class="first">Row</td><td>change the row type, “Add a bay” (for boards — “Add a stack”), rotate, put back to the automatic position</td></tr>
       <tr><td class="first">Bay</td><td>“Add a level on top”</td></tr>
       <tr><td class="first">Level or cell</td><td>“Cells per level” — split a level into cells (see “Warehouses, cells and the project”)</td></tr>
-      <tr><td class="first">Anything</td><td>“⧉ Duplicate”, “Copy”, “Remove” (together with everything inside); × in the “Inside” list removes one nested object</td></tr>
+      <tr><td class="first">Anything</td><td>“⧉ Duplicate”, “Copy”, “Remove” (together with everything inside; places with stock cannot be removed); × in the “Inside” list removes one nested object</td></tr>
     </tbody></table>
     <p><b>Place types</b> (the button above the model in edit mode) is the catalog of constructions: code, name, kind (shelf bay, roll rack, pallet rack, floor stack, floor place), width, depth, level height, levels in a new bay. Changing a size rebuilds all places of this type at once; you can add your own type. It is saved with the “Save types” button in the window.</p>
     <p>New places get codes modeled on their neighbors (<span class="code">FUR-R7-S01-L1</span>) and are shown in blue.</p>`,
@@ -362,7 +362,7 @@ export default {
   "help.move.html": `
     <ul>
       <li><b>Drag</b> a row or a floor place with the mouse (in 2D and 3D). A zone can be dragged if you select it first. You can drag what stands inside the visible level: to move a row, open its zone, not the row itself.</li>
-      <li>The zone grows to fit the object. If a row overlaps a neighbor, the panel shows a warning.</li>
+      <li>The zone grows to fit the object. If a row overlaps a neighbor, a column, a wall, the office or goes beyond the building outline, the change is cancelled with a “Place anyway” button (see “Checks and problems”).</li>
       <li><b>“Automatic position”</b> in the row panel puts the row back to where the layout places it.</li>
       <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back. Other angles (180° and 270°) and exact coordinates are in “Properties” (see “Editing tools”).</li>
     </ul>`,
@@ -646,7 +646,7 @@ export default {
   "bld.ruler.delta": "Δx {dx}, Δy {dy}",
   "bld.ruler.clear": "Clear measurement",
   "bld.out.title": "Outside the building outline: {n}",
-  "bld.out.note": "Warning: rows and zones that go beyond the outline. The plan check (W-07) will forbid it.",
+  "bld.out.note": "Error: rows and zones that go beyond the outline. A new such change is cancelled (see “Problems”).",
   "bld.selected": "Selected",
   "bld.selectedN": "Selected objects: {n}",
   "bld.del": "Delete selected",
@@ -696,10 +696,73 @@ export default {
       <li><b>Create.</b> If there is no plan yet, <b>“Create building from warehouse size”</b> makes a rectangular outline around the layout plus a margin (2 m by default). At first it is an unsaved (teal) change; save it with <b>“Save the building plan”</b> or “Save all”.</li>
       <li><b>Outline.</b> A rectangle (X, Y, width, depth as numbers) or a polygon: drag vertices with the mouse (select the outline by clicking its line), the <b>“+ Vertex”</b> tool adds a vertex on an edge, “Add vertex” splits the longest edge, <kbd>Delete</kbd> removes the selected vertex (three at least). The same place has the height to the ceiling and to the sprinklers, the area and the perimeter.</li>
       <li><b>Objects.</b> <b>Column</b> (click; or <b>“Columns on a grid”</b>: start, count and X / Y step — one change), <b>wall</b> (a segment with thickness, two clicks), <b>gate, dock, door, office, charging area</b> (rectangles: click — default size, drag — your own). A selected object is moved with the mouse; its numbers (coordinates, size, name) are edited in the panel. A gate or dock can be <b>linked to an Odoo location</b> (the “Link to location” field picks among floor places and zones of the warehouse); without a link it is just geometry.</li>
-      <li><b>Aisles.</b> An aisle is a strip with a width, drawn with two clicks (start and end). Aisle ends are graph nodes: when the end of a new aisle lands on a node or on the line of another aisle, they join (an aisle that is crossed splits in two). The aisle panel shows its length, width and <b>neighbouring aisles</b>. Moving an aisle drags its neighbours through the shared node; an end can be dragged on its own (it shows as a circle when selected) or typed in. Aisle width is needed for the plan checks (W-07); there are no routes yet.</li>
+      <li><b>Aisles.</b> An aisle is a strip with a width, drawn with two clicks (start and end). Aisle ends are graph nodes: when the end of a new aisle lands on a node or on the line of another aisle, they join (an aisle that is crossed splits in two). The aisle panel shows its length, width and <b>neighbouring aisles</b>. Moving an aisle drags its neighbours through the shared node; an end can be dragged on its own (it shows as a circle when selected) or typed in. Aisle width is compared with the minimum for the warehouse equipment (see “Checks and problems”); there are no routes yet.</li>
       <li><b>Snapping.</b> The grid step <b>0.1 / 0.5 / 1 m</b> is chosen in the panel; points snap to vertices and corners of neighbouring objects, to corners of rows and places of the layout and to aisle ends (and align to their axes). The “Snap” checkbox turns it off, <kbd>Alt</kbd> while moving does it temporarily. The grid step is remembered.</li>
       <li><b>Rulers and the ruler tool.</b> Along the top and left edges of 2D are rulers in metres (with a cursor mark); the bottom shows the cursor coordinates. The <b>“Ruler”</b> tool: two clicks — the distance (and Δx, Δy) is shown on the plan and in the panel; <b>“Clear measurement”</b> or Esc removes it. The measurement is not stored in the project.</li>
-      <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is only a warning; the plan check (W-07) will forbid it.</li>
+      <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is a check error: a new change that takes a place beyond the outline is cancelled (there is “Place anyway”), and current cases are listed in “Problems”.</li>
       <li><b>In 3D</b> you see the floor outline, walls, columns (instanced), gates, docks, doors, office, charging area and aisles; the upper orange line is the sprinkler level. Editing is done in 2D.</li>
+    </ul>`,
+  // ---------- checks and problems panel (W-07)
+  "n.chkBlock": "Change cancelled: {what}",
+  "n.chkBlockSub": "Violations: {n}. If this is intended, use “Place anyway”.",
+  "n.chkForce": "Place anyway",
+  "n.delStock": "Not removed: places with stock ({codes})",
+  "n.delStockSub": "A place with stock cannot be removed: move the goods first, then archive the empty place.",
+  "n.stockMoved": "{a} with stock moved to another zone ({to})",
+  "n.stockMovedSub": "The stock stays under the same place code; check the addressing.",
+  "chk.overlap": "Overlap: {a} and {b}",
+  "chk.overlapBld": "{a} overlaps a building object: {item} {id}",
+  "chk.outside": "{a} goes beyond the building outline",
+  "chk.gap": "Narrow gap {w} m between {a} and {b}: “{tech}” needs at least {min} m",
+  "chk.aisle": "Aisle {name} of {w} m is narrower than {min} m (“{tech}”)",
+  "chk.heightCeil": "{a}: height {h} m is above the ceiling ({lim} m)",
+  "chk.heightSpr": "{a}: height {h} m reaches the sprinklers ({lim} m)",
+  "chk.overload": "{a}: goods weigh {w} kg per level, allowed {cap} kg",
+  "chk.stockMoved": "{a} with stock moved from zone {from} to {to}",
+  "chk.forced": "placed despite the ban",
+  "prob.button": "Problems",
+  "prob.title": "Project problems",
+  "prob.count": "Errors: {e} · warnings: {w}",
+  "prob.none": "No problems",
+  "prob.more": "Showing the first {n} of {m}",
+  "prob.filter": "Show",
+  "prob.fAll": "All",
+  "prob.fError": "Errors",
+  "prob.fWarn": "Warnings",
+  "prob.fType": "All types",
+  "prob.sev.error": "Error",
+  "prob.sev.warn": "Warning",
+  "prob.type.overlap": "Overlap",
+  "prob.type.overlapBld": "Overlap with building",
+  "prob.type.outside": "Outside the outline",
+  "prob.type.gap": "Narrow gap",
+  "prob.type.aisle": "Narrow aisle",
+  "prob.type.heightCeil": "Above the ceiling",
+  "prob.type.heightSpr": "Sprinklers",
+  "prob.type.overload": "Load",
+  "prob.type.stockMoved": "Place with stock moved",
+  "prob.go": "Show on the model",
+  "prob.tech": "Warehouse equipment",
+  "prob.techNote": "Aisles and gaps between rows narrower than the equipment minimum are marked on the plan and listed here. The minimum width can be changed (it goes through “Show / Save”).",
+  "prob.minw": "Minimum aisle width, m",
+  "tech.handcart": "Hand cart",
+  "tech.stacker": "Stacker",
+  "tech.reach": "Reach truck",
+  "tech.vna": "Narrow-aisle truck",
+  "tech.forklift": "Forklift",
+  "tech.none": "Do not check",
+  "tech.inherit": "Same as warehouse",
+  "op.tech": "{ref}: equipment — {tech}",
+  "op.techMin": "Minimum aisle width ({tech}): {w} m",
+  "side.techTitle": "Zone equipment",
+  "side.techNote": "Aisle widths in this zone are checked for the chosen equipment; “Same as warehouse” uses the warehouse equipment.",
+  "help.checks.title": "Checks and problems",
+  "help.checks.html": `
+    <ul>
+      <li><b>Overlaps are forbidden.</b> Rows, floor places, columns, walls and the office cannot overlap, and places cannot go beyond the building outline. Touching edges is not an overlap. If a drag, a number in the panel, mass creation, paste, a copy or a rotation causes an overlap, the change is <b>cancelled</b> and the notification has a <b>“Place anyway”</b> button that repeats the action and keeps it. Such an override is marked in the change itself and shows in “Problems” as the warning “placed despite the ban”.</li>
+      <li><b>Aisle width.</b> The “Problems” panel (top) lets you choose the <b>warehouse equipment</b>: hand cart, stacker, reach truck, narrow-aisle truck or forklift; a zone can be set separately in its panel (“Zone equipment”). Every equipment has a <b>minimum aisle width</b> (editable). Building-plan aisles and gaps between rows narrower than the minimum are highlighted in 2D and 3D and listed. Rows closer than 0.3 m count as one block.</li>
+      <li><b>Height and load.</b> The height of a row (top level plus cargo) is compared with the ceiling and sprinkler heights of the building plan (a building plan is required). The weight of goods on a level (or a stack section) is compared with the level load from the type parameters; if goods weights are unknown in the snapshot, the type maximum is assumed, so there is no complaint.</li>
+      <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
+      <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
     </ul>`,
 };

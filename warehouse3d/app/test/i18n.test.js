@@ -7,6 +7,7 @@ import { BASE_TYPES, FORM_IDS, PICKS } from "../src/core/types.js";
 import { HELP_SECTIONS } from "../src/view/help.js";
 import { CATALOG, CATALOG_GROUPS } from "../src/core/catalog.js";
 import { SHAPES, SHAPE_KEYS, VARIANTS } from "../src/core/params.js";
+import { TECH, TYPES as CHECK_TYPES } from "../src/core/checks.js";
 
 const SHAPE_KEYS_ALL = Object.values(SHAPE_KEYS).flat();
 import { fresh, node, FUR } from "./helpers.js";
@@ -22,7 +23,7 @@ test("словари uk и en содержат одинаковые ключи �
 });
 
 test("каждый ключ, который код просит у t(), есть в словаре", () => {
-  const prefixes = ["app", "bar", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld"];
+  const prefixes = ["app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
   for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
@@ -37,6 +38,10 @@ test("каждый ключ, который код просит у t(), есть
   for (const k of VARIANTS) used.add(`var.${k}`);
   for (const k of "NESW") used.add(`dir.${k}`);
   for (const k of SHAPES) used.add(`shape.${k}`);
+  for (const k of CHECK_TYPES) { used.add(`chk.${k}`); used.add(`prob.type.${k}`); }
+  for (const k of [...TECH.map((x) => x.id), "none", "inherit"]) used.add(`tech.${k}`);
+  for (const k of ["All", "Error", "Warn"]) used.add(`prob.f${k}`);
+  for (const k of ["error", "warn"]) used.add(`prob.sev.${k}`);
   for (const k of ["all", ...CATALOG_GROUPS]) used.add(`types.grp.${k}`);
   for (const k of [0, 1, 2]) used.add(`types.fac.${k}`);
   for (const k of ["catalog", "project", "lib"]) used.add(`types.tab.${k}`);

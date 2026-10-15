@@ -196,13 +196,13 @@ test("числа прототипа сохраняются при глубине
 });
 
 test("миграция: правки формата W-01 / прототипа дают то же дерево, что прежняя логика", async () => {
-  const a = fresh().model;
+  const a = fresh({}, { noStock: true }).model;
   a.ops.rack(FUR, { tp: "FUR", nb: 2, nl: 3 });
   a.ops.rotate(`${GP}/R1`); a.ops.del(`${GP}/R2`); a.ops.move([{ id: `${FUR}/R1`, x: 5, y: 5 }]);
   await a.save("WH");
   a.ops.dup(`${FUR}/R3`); a.ops.rack(GP, { tp: "FG", nb: 1, nl: 1 });
-  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; delete old.prop; delete old.building; delete old.cfg; // слой прежнего формата — без ячеек, глубины, свойств, здания и параметров рядов
-  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.bld; delete p.diff.bi; delete p.diff.bn; delete p.diff.cfg; });
+  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; delete old.prop; delete old.building; delete old.cfg; delete old.chk; // слой прежнего формата — без ячеек, глубины, свойств, здания и параметров рядов
+  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.bld; delete p.diff.bi; delete p.diff.bn; delete p.diff.cfg; delete p.diff.chk; });
   assert.deepEqual(Object.keys(old).sort(), ["add", "del", "pos", "rot", "set", "types", "v"]);
   assert.equal(a.pending.length, 2);
   const storage = createMemoryStorage({}, { legacy: { edit: old, pending: pend } });
@@ -249,7 +249,7 @@ test("версии формата проекта: нормализация, по
 });
 
 test("узлы склада в виде v2: уровень, тип, геометрия, код, odoo_id, статус, флаг локации", () => {
-  const { model: m } = fresh();
+  const { model: m } = fresh({}, { noStock: true });
   m.ops.rack(FUR, { tp: "FUR", nb: 1, nl: 2 }); m.ops.rotate(`${GP}/R1`); m.ops.del(`${GP}/R2`);
   m.ops.depth("WH", { depth: "cell" }); m.ops.cells(LV, { n: 3 });
   const ns = m.nodes(), by = Object.fromEntries(ns.map((n) => [n.id, n]));
@@ -268,7 +268,7 @@ test("узлы склада в виде v2: уровень, тип, геомет
 });
 
 test("ячейки: копирование яруса переносит число ячеек, отдельную ячейку не копируют и не убирают", () => {
-  const { model: m } = fresh(), BAY = `${FUR}/R2/S02`;
+  const { model: m } = fresh({}, { noStock: true }), BAY = `${FUR}/R2/S02`;
   m.ops.depth("WH", { depth: "cell" }); m.ops.cells(LV, { n: 3 });
   const n0 = m.pending.length;
   assert.deepEqual(m.ops.dup(`${LV}/2`), []); m.ops.del(`${LV}/2`);
