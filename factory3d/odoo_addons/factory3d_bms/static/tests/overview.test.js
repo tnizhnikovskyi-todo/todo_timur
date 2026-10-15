@@ -4,9 +4,12 @@ import { describe, expect, test } from "@odoo/hoot";
 import { click, queryAll, queryOne } from "@odoo/hoot-dom";
 import { animationFrame } from "@odoo/hoot-mock";
 import { mountWithCleanup, mockService, onRpc } from "@web/../tests/web_test_helpers";
+import { defineMailModels } from "@mail/../tests/mail_test_helpers";
 import { F3dBmsOverview } from "@factory3d_bms/overview/overview";
 
 describe.current.tags("desktop");
+
+defineMailModels();
 
 const DATA = {
     ts: "2026-10-14T08:00:00Z",
