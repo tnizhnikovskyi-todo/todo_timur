@@ -1,7 +1,7 @@
 # factory3d_bms
 Статус: DONE (юнит-DoD); вне среды: копия демо-базы (AC-49/50/52, DEPLOY_TEST шаги 1, 8), ТК-11, 3D-часть ТК-10
-Тесты: Odoo 139/139 /factory3d_bms чистая база вкл. hoot 2 (2026-10-15), плагин helvarnet 28/28, collector unit 173+1 известный env-fail; ruff OK; ТК: 01–07, 09, 12 ✅, 08 частично, 10 числа, 11 ⏭; ТБ 10/10; ТП 01–05 (TEST_REPORT.md)
-Решений без заказчика: 6 (ниже)
+Тесты: интеграция 16 модулей 1344/1344 (0859a61+bms); Odoo 139/139 /factory3d_bms чистая база вкл. hoot 2 (2026-10-15), плагин helvarnet 28/28, collector unit 173+1 известный env-fail; ruff OK; ТК: 01–07, 09, 12 ✅, 08 частично, 10 числа, 11 ⏭; ТБ 10/10; ТП 01–05 (TEST_REPORT.md)
+Решений без заказчика: 7 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: прогон на копии демо (AC-49/50/52); ТК-11 с fire_safety; дефекты эмулятора iot_sim D-1…D-3, O-1/O-2 (TEST_REPORT.md); group_f3d_admin ⊄ base.group_system (DEC-5); подпись security-review §13.3
 
@@ -31,3 +31,5 @@
 - DEC-6 (W5): значения установок в payload — из живых сигналов (без округления digits), статика макета как есть;
   площадь групп — по контуру зоны; totals.airflow без живых = итог статики (AC-17). Чаттер failed/expired — дедуп
   по тексту за 2 суток. — `tools/payload.py`, `models/f3d_bms_check.py`
+- DEC-7: сигналы CSV с origin=sim_data (81) хук создаёт как catalog (как energy DEC-3): иначе verify() миграции
+  telemetry level 0 считает их перенесёнными из x_f3d_signal и оставляет миграцию partial. — `hooks.py` (_signals)
