@@ -1,6 +1,9 @@
 import ast
 
+from lxml import etree
+
 from odoo.exceptions import ValidationError
+from odoo.fields import Domain
 from odoo.tests import Form, tagged
 
 from .common import F3DTelemetryCase
@@ -81,6 +84,34 @@ class TestViewsLoad(F3DTelemetryCase):
         form.params_text = '{"host": '
         with self.assertRaises(ValidationError):
             form.save()
+
+    def _default_filters_domain(self, action):
+        """Домен типових фільтрів дії, як його будує клієнт: фільтри одного блоку — OR, блоки (між `separator`) — AND."""
+        ctx = ast.literal_eval(action.context)
+        arch = self.env["f3d.signal"].get_views([(False, "search")])["views"]["search"]["arch"]
+        blocks, current = [], []
+        for node in etree.fromstring(arch):
+            if node.tag == "separator":
+                blocks.append(current)
+                current = []
+            elif node.tag == "filter" and node.get("domain"):
+                if ctx.get("search_default_" + node.get("name")):
+                    current.append(Domain(ast.literal_eval(node.get("domain"))))
+        blocks.append(current)
+        return Domain.AND([Domain.OR(b) for b in blocks if b])
+
+    def test_alarm_action_shows_only_alarms(self):
+        """T-4: дія «Телеметрія» (`search_default_alarm`) показує лише тривоги, а не всі сигнали."""
+        action = self.env.ref("factory3d_telemetry.action_f3d_signal_alarm")
+        self.set_sql(self.sig_press, status="alarm")
+        self.set_sql(self.sig_bat, status="ok")
+        signals = self.env["f3d.signal"].search(self._default_filters_domain(action))
+        self.assertIn(self.sig_press, signals)
+        self.assertNotIn(self.sig_bat, signals)
+        self.assertEqual(set(signals.mapped("status")), {"alarm"})
+        # типова дія «Сигнали» лишає всі увімкнені сигнали
+        base = self.env.ref("factory3d_telemetry.action_f3d_signal")
+        self.assertIn(self.sig_bat, self.env["f3d.signal"].search(self._default_filters_domain(base)))
 
     def test_reading_action_context(self):
         action = self.env.ref("factory3d_telemetry.action_f3d_reading")

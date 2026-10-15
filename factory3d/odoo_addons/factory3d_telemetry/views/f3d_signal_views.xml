@@ -183,7 +183,9 @@
                 <filter name="alarm" string="Тривога" domain="[('status', '=', 'alarm')]"/>
                 <filter name="warn" string="Увага" domain="[('status', '=', 'warn')]"/>
                 <filter name="stale" string="Немає даних" domain="[('status', '=', 'stale')]"/>
+                <separator/>
                 <filter name="no_source" string="Без джерела" domain="[('source_id', '=', False)]"/>
+                <separator/>
                 <filter name="active" string="Увімкнені" domain="[('active', '=', True)]"/>
                 <group>
                     <filter name="group_equipment" string="Обладнання" context="{'group_by': 'equipment_id'}"/>
