@@ -1,7 +1,10 @@
 import json
 from datetime import datetime
 
+from psycopg2 import IntegrityError
+
 from odoo.tests import tagged
+from odoo.tools import mute_logger
 
 from .. import hooks
 from ..tools import params as P
@@ -105,6 +108,27 @@ class TestHooks(AccessCase):
         icp.set_param('factory3d.base.environment', 'prod')
         hooks.run_all(self.env)
         self.assertEqual(P.get_str(self.env, 'read_enabled'), 'False')
+
+    def test_uninstall_hook_cards_before_server(self):  # O-1: деінсталяція з картками не падає на FK card.server_id
+        server = self.server
+        cards = self.env['f3d.access.card'].create([
+            {'number': '88000001', 'server_id': server.id, 'holder_type': 'employee', 'employee_id': self.emp_a.id},
+            {'number': '88000002', 'server_id': server.id, 'holder_type': 'pool'}])
+        visitor = self.env['f3d.access.visitor'].create(
+            {'name': 'Гість', 'host_employee_id': self.emp_a.id, 'server_id': server.id, 'card_id': cards[1].id})
+        visitor.write({'state': 'expected'})  # не чернетка: звичайний unlink заборонений, хук обходить через f3d_housekeeping
+        # звичайна робота не змінилась: сервер із картками видалити не можна (SPEC: ondelete='restrict')
+        with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.env.cr.savepoint():
+            server.unlink()
+            server.flush_recordset()
+        hooks.uninstall_hook(self.env)
+        self.assertFalse(cards.exists())
+        self.assertFalse(visitor.exists())
+        self.assertFalse(self.env['f3d.access.card'].with_context(active_test=False).search([]))
+        # те, що робить стандартна деінсталяція далі: сервер (з пристроями, дверима, подіями) видаляється без FK
+        server.unlink()
+        server.flush_recordset()
+        self.assertFalse(server.exists())
 
     def test_uninstall_hook(self):  # AC-61
         emp = self.env['hr.employee'].sudo().create({'name': 'Хук', 'f3d_code': 'OP-HOOK'})

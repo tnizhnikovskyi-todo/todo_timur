@@ -168,5 +168,12 @@ def post_init_hook(env):
 
 
 def uninstall_hook(env):
-    """SPEC §5.4: параметри factory3d.access.*; решту прибирає стандартна деінсталяція."""
+    """SPEC §5.4: параметри factory3d.access.*; решту прибирає стандартна деінсталяція.
+
+    Візити і картки — першими: ``visitor.server_id`` (required) і ``card.server_id`` (``ondelete='restrict'``, SPEC:
+    сервер із картками користувач не видалить) блокують ``DELETE`` сервера, тож стандартна деінсталяція, що знищує
+    сервер із демо-даних, падала б на FK (ERROR у лозі). Хук виконується до ``module_uninstall``, моделі ще в реєстрі.
+    """
+    env['f3d.access.visitor'].sudo().with_context(active_test=False, f3d_housekeeping=True).search([]).unlink()
+    env['f3d.access.card'].sudo().with_context(active_test=False).search([]).unlink()
     env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.access.%')]).unlink()
