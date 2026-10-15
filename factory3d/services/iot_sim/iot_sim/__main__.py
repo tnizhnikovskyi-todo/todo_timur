@@ -4,8 +4,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
-import importlib
-import inspect
 import logging
 import signal
 import sys
@@ -19,14 +17,6 @@ from iot_sim import __version__
 from iot_sim.config import Settings
 
 log = logging.getLogger("iot_sim")
-
-# Протоколи W3: підключаються, якщо модуль є (ImportError -> пропуск). (модуль, імена класів, порт-поле)
-OPTIONAL_SERVERS = (
-    ("iot_sim.protocols.modbus_server", ("ModbusServer", "ModbusTcpServer"), "port_modbus"),
-    ("iot_sim.protocols.bacnet_server", ("BacnetServer", "BACnetServer"), "port_bacnet"),
-    ("iot_sim.protocols.helvarnet_server", ("HelvarNetServer", "HelvarnetServer"), "port_helvar_tcp"),
-)
-
 
 def cmd_check_config(settings: Settings) -> int:
     errors = settings.validate_required()
@@ -48,31 +38,17 @@ def cmd_dump_catalog(settings: Settings) -> int:
     return 0
 
 
-def _optional_server(world: Any, settings: Settings, module: str, names: tuple[str, ...], port_attr: str) -> Any:
+def _local_bip() -> str:
+    """Адреса BACnet/IP ``<ip>/<prefix>`` (локальний інтерфейс; без мережі — loopback)."""
+    import socket
+
     try:
-        mod = importlib.import_module(module)
-    except ImportError:
-        log.info("протокол %s ще не доступний (немає модуля), пропускаю", module)
-        return None
-    cls = next((getattr(mod, n) for n in names if hasattr(mod, n)), None)
-    if cls is None:
-        log.warning("у %s немає жодного з класів %s", module, names)
-        return None
-    params = inspect.signature(cls).parameters
-    kw: dict[str, Any] = {}
-    if "port" in params:
-        kw["port"] = getattr(settings, port_attr)
-    if "udp_port" in params:
-        kw["udp_port"] = settings.port_helvar_udp
-    if "version" in params:
-        kw["version"] = settings.helvar_version
-    if "settings" in params:
-        kw["settings"] = settings
-    try:
-        return cls(world, **kw)
-    except Exception:
-        log.exception("не вдалося створити сервер %s", cls.__name__)
-        return None
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sk:
+            sk.connect(("10.255.255.255", 1))
+            ip = sk.getsockname()[0]
+    except OSError:
+        ip = "127.0.0.1"
+    return f"{ip}/24" if ip != "127.0.0.1" else "127.0.0.1/8"
 
 
 class Service:
@@ -86,10 +62,13 @@ class Service:
         from iot_sim.core.world import World
         from iot_sim.odoo.devices_client import DevicesClient, EventForwarder
         from iot_sim.odoo.follow import FollowOdoo, OdooReadOnly
+        from iot_sim.protocols.bacnet_server import BacnetServer
         from iot_sim.protocols.biostar_api import BioStarApi
         from iot_sim.protocols.control_api import create_app
+        from iot_sim.protocols.helvarnet_server import HelvarServer
         from iot_sim.protocols.jobs_api import JobsApi
         from iot_sim.protocols.lpr_push import LprPusher
+        from iot_sim.protocols.modbus_server import ModbusServer
         from iot_sim.protocols.mqtt_publisher import MqttPublisher
         from iot_sim.protocols.opcua_server import OpcUaServer
         from iot_sim.protocols.sics_server import SicsServer
@@ -123,10 +102,12 @@ class Service:
         add(MqttPublisher(w, url=s.mqtt_url, prefix=s.mqtt_prefix, guard=self.guard))
         add(BioStarApi(w, port_http=s.port_biostar_http, port_https=s.port_biostar_https,
                        user=s.biostar_user, password=s.biostar_pass, cert_dir=s.opcua_cert_dir))
-        add(SicsServer(w, port=s.port_sics))
+        add(SicsServer(w, port=s.port_sics, write_accept=s.write_accept))
         add(LprPusher(w, url=s.lpr_push_url, guard=self.guard))
-        for module, names, port_attr in OPTIONAL_SERVERS:
-            add(_optional_server(w, s, module, names, port_attr))
+        add(ModbusServer(w, port=s.port_modbus))
+        add(BacnetServer(w, address=f"{_local_bip()}:{s.port_bacnet}"))
+        add(HelvarServer(w, tcp_port=s.port_helvar_tcp, udp_port=s.port_helvar_udp,
+                         version=s.helvar_version))
 
         self.odoo = OdooReadOnly(s.odoo_url, s.odoo_db, s.odoo_user, s.odoo_apikey, guard=self.guard)
         self.follow = FollowOdoo(w, self.odoo, follow_s=s.odoo_follow_s, slow_s=s.odoo_follow_slow_s,

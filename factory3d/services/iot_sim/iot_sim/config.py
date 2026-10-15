@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     opcua_user: str = "collector"
     opcua_pass: str = ""
     yard_autogate: bool = True
+    write_accept: bool = True  # SIM_WRITE_ACCEPT: приймати команди запису (Modbus DO/FC06, BACnet, SICS TA)
     log_level: str = "INFO"
     log_json: bool = True
 

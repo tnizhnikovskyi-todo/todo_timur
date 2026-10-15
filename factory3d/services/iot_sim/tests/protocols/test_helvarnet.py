@@ -27,7 +27,11 @@ class Client:
     async def ask(self, msg: str) -> str:
         self.w.write(msg.encode())
         await self.w.drain()
-        return await self.frame()
+        while True:
+            f = await self.frame()
+            # unsolicited push C:13 від моделі освітлення не є відповіддю на запит
+            if not (f.startswith(">") and ",C:13," in f and ",C:13," not in msg):
+                return f
 
     async def close(self):
         self.w.close()
@@ -189,9 +193,14 @@ async def test_recall_scene_and_device_commands(helvar, world):
 async def test_push_on_world_level_change(helvar, world):
     world.force("lighting/groups/LT-HW/level", 35, hold_s=600)
     world.advance(1)
-    frame = await helvar.c.frame()
     g = helvar.layout.by_code["LT-HW"].g
-    assert frame == f">V:2,C:13,G:{g},L:35,F:100#"
+    want = f">V:2,C:13,G:{g},L:35,F:100#"
+    frames = []
+    for _ in range(len(helvar.layout.groups) + 1):  # модель може змінити й інші групи
+        frames.append(await helvar.c.frame())
+        if want in frames:
+            break
+    assert want in frames
 
 
 async def test_emergency_function_test(helvar, world):

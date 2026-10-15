@@ -32,6 +32,9 @@ from iot_sim.models.base import AGGREGATE, Model
 
 log = logging.getLogger("iot_sim.world")
 
+# теми команд, які протоколи вже застосували самі (force/flag) і ніхто з моделей не drain-ить: ліміт черги
+BOUNDED_TOPICS = {"ats": 256, "hvac": 256, "boiler": 256, "meter": 256, "modbus_cmd": 256,
+                  "opc_joborder": 256}
 STATUSES = ("ok", "warn", "alarm", "stale")
 HOOK_STAGES = ("planner", "balance", "post")
 
@@ -110,6 +113,7 @@ class Device:
         self.state = "ok"
         self.fault: str | None = None
         self.signals: dict[str, Signal] = {}
+        self.by_code: dict[str, Signal] = {}  # усі сигнали пристрою за повним кодом (без втрат при колізіях)
 
 
 @dataclass
@@ -183,13 +187,19 @@ class World:
                          dict(ds.params))
             leaves: dict[str, list[Signal]] = defaultdict(list)
             for code in ds.signals:
+                dev.by_code[code] = self.signals[code]
                 leaves[code.rsplit("/", 1)[-1]].append(self.signals[code])
             for leaf, sigs in leaves.items():
                 if len(sigs) == 1:
                     dev.signals[leaf] = sigs[0]
                 else:  # колізія листів (PV-INV-1…8): ключ ``<інстанс>/<лист>``
                     for s in sigs:
-                        dev.signals[f"{s.code.split('/')[-2]}/{leaf}"] = s
+                        short = f"{s.code.split('/')[-2]}/{leaf}"
+                        if short in dev.signals and dev.signals[short] is not s:
+                            log.warning("колізія коротких ключів %s.signals[%r]: лишається %s, %s лише за повним кодом",
+                                        ds.code, short, dev.signals[short].code, s.code)
+                            continue
+                        dev.signals[short] = s
             dev.model = model_class(ds.driver)(dev, self)
             self.devices[ds.code] = dev
         for dev in self.devices.values():
@@ -227,7 +237,10 @@ class World:
 
     def post(self, topic: str, payload: dict[str, Any]) -> None:
         """Команда моделі (``yard``, ``spark``, ``access``, ``lighting``…); модель забирає ``drain``."""
-        self.inbox[topic].append(payload)
+        q = self.inbox.get(topic)
+        if q is None:  # команди без споживача-моделі (ats/hvac/meter/…) не мають рости безмежно
+            q = self.inbox[topic] = deque(maxlen=BOUNDED_TOPICS.get(topic))
+        q.append(payload)
 
     def drain(self, topic: str) -> list[dict[str, Any]]:
         q = self.inbox[topic]

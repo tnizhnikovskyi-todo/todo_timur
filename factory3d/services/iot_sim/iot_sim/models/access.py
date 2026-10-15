@@ -70,9 +70,11 @@ class AccessCtl:
             self.on_site += 1
         elif device == "ACR-IN" and tna == "2" and not no_dev:
             self.on_site = max(0, self.on_site - 1)
-        if code == EV_DENIED:
-            self.world.events.emit("access", f"Доступ заборонено: {device}", device=device,
-                                   payload={"code": code, "user": ev["user_id"]})
+        # контракт з BioStar (protocols/biostar_api): payload {user_id,event_code,door,tna_key}
+        self.world.events.emit(
+            "access", f"Доступ {code}: {device}", device=device,
+            payload={"user_id": ev["user_id"], "event_code": code, "door": str(ev["door_id"] or ""),
+                     "tna_key": tna, "ts": when.isoformat(), "code": code, "user": ev["user_id"]})
         return ev
 
     def _doors(self, when: datetime, device: str) -> None:

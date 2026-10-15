@@ -90,8 +90,14 @@ class BioStarStore:
         p = ev.payload if isinstance(ev.payload, dict) else {}
         if ev.kind != "access" or "event_code" not in p:
             return
+        ts = ev.ts
+        if p.get("ts"):
+            try:
+                ts = dt.datetime.fromisoformat(str(p["ts"]))
+            except ValueError:
+                pass
         self.add_event(p.get("user_id"), p.get("device") or ev.device or "ACR-IN", int(p["event_code"]),
-                       door=p.get("door"), tna_key=p.get("tna_key", ""), ts=ev.ts)
+                       door=p.get("door"), tna_key=p.get("tna_key", ""), ts=ts)
 
     def _user(self, user_id: str | None) -> dict[str, Any] | None:
         if not user_id:

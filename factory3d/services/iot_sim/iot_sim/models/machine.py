@@ -200,7 +200,7 @@ class Machine(Model):
         blackout = w.flags.get("blackout")
         power = not (isinstance(blackout, dict) and blackout.get("phase") == "outage") \
             and self.device.fault != "power"
-        blocked = wc.get("working_state") == "blocked"
+        blocked = wc.get("working_state") == "blocked" or bool(wc.get("blocked"))  # follow_odoo: blocked
         view = drill_view(w)
         ext_emergency = bool(view and view["steps"]["machines"]
                              and view["zone"] == zone_of_machine(self.zone))

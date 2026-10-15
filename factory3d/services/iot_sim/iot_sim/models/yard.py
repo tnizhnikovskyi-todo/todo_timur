@@ -134,7 +134,7 @@ class YardCtl:
                    unload_min: float | None = None, run_id: str | None = None, wait_min: float = 10,
                    plate: str | None = None) -> dict[str, Any]:
         self.seq += 1
-        code = booking.get("truck") or f"TRUCK-{'OUT' if booking.get('type') == 'outgoing' else 'IN'}-{self.seq}"
+        code = booking.get("truck") or booking.get("code") or f"TRUCK-{'OUT' if booking.get('type') == 'outgoing' else 'IN'}-{self.seq}"
         incoming = booking.get("type", "incoming") != "outgoing"
         cargo = cargo_kg(booking)
         t = {"seq": self.seq, "id": code, "batch": booking.get("batch", ""), "picking": booking.get("picking"),
@@ -276,6 +276,9 @@ class YardCtl:
         cam = CAMS[gate]
         payload = lpr_payload(cam, gate, truck, car_state, self.now_dt(epoch))
         self.lpr_out[cam].append(payload)
+        # контракт з LprPusher: подія yard з payload["lpr"] (тіло Axis LPV)
+        self.world.events.emit("yard", f"LPR {payload['plateText']} {car_state}", device=cam,
+                               payload={"lpr": payload, "truck": truck["id"]})
         dev = self.world.devices.get(cam)
         if dev is not None and car_state == "new" and "plate" in dev.signals:
             dev.signals["plate"].set(payload["plateText"], self.world.now())

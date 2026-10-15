@@ -420,6 +420,7 @@ class SimGuard:
 
     _point: Point | None = None
     _on_write: Callable[[], None] | None = None
+    _accept: Callable[[], bool] | None = None  # SIM_WRITE_ACCEPT
 
     async def write_property(self, attr, value, index=None, priority=None):  # type: ignore[no-untyped-def]
         name = self._property_identifier_class(attr).attr if isinstance(attr, int) else attr  # type: ignore[attr-defined]
@@ -427,6 +428,8 @@ class SimGuard:
         if name != "presentValue" or p is None or p.write is None:
             raise PropertyError("writeAccessDenied")
         if priority is not None and not 8 <= priority <= 16:
+            raise PropertyError("writeAccessDenied")
+        if self._accept is not None and not self._accept():
             raise PropertyError("writeAccessDenied")
         await super().write_property(attr, value, index, priority)  # type: ignore[misc]
         p.write(_py(value, p))
@@ -590,6 +593,7 @@ class BacnetServer(ProtocolServer):
             for p in d.points:
                 o = make_object(p)
                 o._on_write = self.sync
+                o._accept = self._write_accept
                 self.objects.append(o)
                 objs.append(o)
             app = SimApp.from_object_list(objs)
@@ -607,6 +611,9 @@ class BacnetServer(ProtocolServer):
     def _on_tick(self, _world: World) -> None:
         if self.up:
             self.sync()
+
+    def _write_accept(self) -> bool:
+        return bool(getattr(self.world.settings, "write_accept", True))
 
     def sync(self) -> None:
         """Переносить значення World у локальні об'єкти (викликає COV-детектори)."""
