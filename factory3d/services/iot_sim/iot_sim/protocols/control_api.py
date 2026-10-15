@@ -461,7 +461,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
     def signal_put(code: str, body: SignalPut) -> dict[str, Any]:
         s = _sig(code)
         if body.release:
-            s.held_until = None
+            W().release(s.code)
         else:
             if body.value is None:
                 raise HTTPException(422, "value or release required")
