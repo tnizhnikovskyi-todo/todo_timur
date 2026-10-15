@@ -63,6 +63,25 @@ class Metrics:
         self.collector_sics_errors_total = Counter(
             "collector_sics_errors", "Помилки SICS", [*sics_labels, "kind"], registry=r
         )
+        # плагін helvarnet (factory3d_bms §8.6): лише оголошення, значення змінює плагін через getattr
+        self.collector_helvarnet_queries_total = Counter(
+            "collector_helvarnet_queries", "Запити HelvarNet", ["source", "cmd"], registry=r
+        )
+        self.collector_helvarnet_errors_total = Counter(
+            "collector_helvarnet_errors", "Помилки HelvarNet", ["source", "code"], registry=r
+        )
+        self.collector_helvarnet_push_total = Counter(
+            "collector_helvarnet_push", "Push-кадри HelvarNet", ["source", "cmd"], registry=r
+        )
+        self.collector_helvarnet_push_ignored_total = Counter(
+            "collector_helvarnet_push_ignored", "Відкинуті push-кадри HelvarNet", ["source"], registry=r
+        )
+        self.collector_helvarnet_latency_seconds = Histogram(
+            "collector_helvarnet_latency_seconds", "Затримка запиту HelvarNet", ["source"], registry=r
+        )
+        self.collector_helvarnet_faulty_devices = Gauge(
+            "collector_helvarnet_faulty_devices", "Несправні пристрої DALI", ["source"], registry=r
+        )
         # стан для /health
         self._odoo_fail_since: float | None = None
         self._source_error_since: dict[str, float] = {}
