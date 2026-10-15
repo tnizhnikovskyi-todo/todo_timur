@@ -16,7 +16,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 1 | `factory3d_base` | 1 | — | DONE | session_01QHzZ3cNyHZ2W6eBd43JJwn | 2026-10-14 22:04 UTC | 2026-10-14 23:17 UTC | 150/150 | 15 |
 | 2 | `factory3d_iot_sim` | 1 | base | DONE | session_019MFyhB78Wd7hgrNLzgRGkP | 2026-10-14 23:18 UTC | 2026-10-15 04:30 UTC | Odoo 140/140, svc 451/451 | 18 |
 | 3 | `factory3d_telemetry` | 2 | base | DONE | session_01NF5Tuhsrpzgd1SMkYaMG8N | 2026-10-15 06:47 UTC | 2026-10-15 11:43 UTC | Odoo 541/541 (6 модулей), collector 174+2 skip | 16 |
-| 4 | `factory3d_viewer` | 1 | base | IN_PROGRESS | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | | | |
+| 4 | `factory3d_viewer` | 1 | base | DONE | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | 2026-10-15 13:27 UTC | Odoo 711/711 (9 модулей), демо f3d_demo_tpl 211/211 | 20 |
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
 | 7 | `factory3d_energy` | 3 | telemetry | IN_PROGRESS | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | | | |
@@ -72,3 +72,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 12:20 UTC factory3d_yard: запущена сессия session_01D3xkbVgCSWZFh4E4Agha1H по указанию пользователя сверх лимита одновременных (3: machine_connect, energy, yard); viewer DONE по отчёту (12:06), идёт мерж.
 - 2026-10-15 12:36 UTC factory3d_viewer: мерж откатан (интеграция красная): 4 failed/671 из-за совместной установки с access (провайдер access в тестах viewer; тест access ждёт отсутствия viewer) и 24 failed+10 errors при установленном iot_sim (is_demo_db() истинно без демо-данных). Лидеру отправлено send_message с задачей; статус IN_PROGRESS.
 - 2026-10-15 13:03 UTC пользователь: с 14:30 UTC (17:30 Киев, после сброса 5-часового лимита в 14:20 UTC) запустить все модули с готовыми зависимостями и дальше запускать без ограничений по числу (раздел «Темп» MANAGER.md отменён пользователем с 14:30 UTC). Будильник на 14:30 UTC поставлен.
+- 2026-10-15 13:27 UTC factory3d_viewer: DONE — со второй попытки смержен в `claude/factory3d-build` (`848580c`), Odoo 711/711 (все модули с iot_sim), демо 211/211, DEC 20 (DEC-20 — демо-детект по наличию демо-данных). Правки SPEC DEC-5/12/15 — `be809aa`. Не проверено: копия базы `odoo`, ТК-07 планшет, AC-38 dist (Blender), access/telemetry на демо-шаблоне.
