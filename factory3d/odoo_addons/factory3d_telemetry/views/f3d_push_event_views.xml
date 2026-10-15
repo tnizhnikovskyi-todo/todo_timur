@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_push_event_list" model="ir.ui.view">
+        <field name="name">f3d.push.event.list</field>
+        <field name="model">f3d.push.event</field>
+        <field name="arch" type="xml">
+            <list string="Події HTTP push" create="false" edit="false" decoration-danger="error">
+                <field name="ts"/>
+                <field name="route"/>
+                <field name="remote"/>
+                <field name="handled_by"/>
+                <field name="signal_count"/>
+                <field name="error"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_push_event_form" model="ir.ui.view">
+        <field name="name">f3d.push.event.form</field>
+        <field name="model">f3d.push.event</field>
+        <field name="arch" type="xml">
+            <form string="Подія HTTP push" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="event_id"/>
+                            <field name="route"/>
+                            <field name="ts"/>
+                            <field name="collector_id"/>
+                            <field name="remote"/>
+                        </group>
+                        <group>
+                            <field name="handled_by"/>
+                            <field name="signal_count"/>
+                            <field name="error"/>
+                        </group>
+                    </group>
+                    <field name="payload" widget="json" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_push_event" model="ir.actions.act_window">
+        <field name="name">Події HTTP push</field>
+        <field name="res_model">f3d.push.event</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

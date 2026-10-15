@@ -1,1 +1,1 @@
-from . import models, tools, wizard  # noqa: F401
+from . import controllers, models, tools, wizard  # noqa: F401
