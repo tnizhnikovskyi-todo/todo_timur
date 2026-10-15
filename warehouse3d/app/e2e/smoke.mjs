@@ -29,7 +29,7 @@ await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
 const url = `http://127.0.0.1:${server.address().port}/`;
 
 const steps = [], errors = [];
-const step = async (name, fn) => { try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n")[0]}`); errors.push(name); } };
+const step = async (name, fn) => { try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n").slice(0, 4).join(" ").trim()}`); errors.push(name); } };
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
@@ -213,6 +213,53 @@ try {
     await page.click('#seg-mode [data-m="3d"]'); // 3D с ячейками строится без ошибок
     await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
     await page.click("#ed-tg"); // выйти из режима редактирования
+  });
+  await step("план будівлі: створити за розміром складу, колона, прохід, рулетка, Ctrl+Z, зберегти, перезавантаження", async () => {
+    const toScreen = (x, y) => page.evaluate(([x, y]) => { const svg = document.querySelector("#vp svg"), p = svg.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(svg.getScreenCTM()); return { x: q.x, y: q.y, k: svg.getScreenCTM().a }; }, [x, y]);
+    const click = async (x, y, mods = []) => { const p = await toScreen(x, y); for (const m of mods) await page.keyboard.down(m); await page.mouse.click(p.x, p.y); for (const m of mods) await page.keyboard.up(m); return p; };
+    const tool = (k) => page.click(`#plan-side [data-tool="${k}"]`);
+    const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0]);
+    await page.click('#seg-mode [data-m="bld"]');
+    await page.waitForSelector("#bld-create");
+    expect(await page.locator("#vp svg:not([hidden])").count() === 1 && await page.locator("#vp canvas").isHidden(), "режим «Будівля» не показав 2D");
+    expect(await page.locator("#vp .rulers:not([hidden]) .rx b").count() > 3, "нет линеек по краям 2D");
+    await page.click("#bld-create");
+    await page.waitForSelector("#vp svg .bd-contour");
+    await page.waitForSelector("#plan-side .ed-pend");
+    expect((await saved()).building === null, "здание сохранилось без «Зберегти»");
+    await tool("col"); await click(14.3, 9.7);
+    await page.waitForSelector("#vp svg rect.bd-col");
+    await tool("aisle"); await click(6, 4); await click(36, 4);
+    await page.waitForSelector("#vp svg .bd-ai");
+    expect((await text("#plan-side")).includes("Прохід"), "в панелі нет проходу");
+    await tool("ruler");
+    const a = await click(8, 12, ["Alt"]), b = await click(33, 17, ["Alt"]);
+    await page.waitForSelector("#bld-ruler");
+    const shown = parseFloat((await text("#bld-ruler b")).replace(/[^\d,]/g, "").replace(",", "."));
+    const want = Math.hypot(b.x - a.x, b.y - a.y) / a.k;
+    expect(Math.abs(shown - want) < 0.02, `рулетка: ${shown} м, ожидалось ${want.toFixed(2)} м`);
+    await tool("select"); await tool("col"); await click(22.4, 14.2); // вторая колона — её отменим
+    await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 2);
+    await page.keyboard.press("Control+KeyZ");
+    await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 1);
+    expect(await page.locator("#vp svg .bd-ai").count() === 1, "Ctrl+Z убрал и проход");
+    await tool("select");
+    await page.click('#plan-side .bld-list [data-bsel="c1"]'); // выделить колонну из списка и поправить координату числом
+    await page.waitForSelector('#plan-side [data-item] input[data-f="x"]');
+    await page.fill('#plan-side [data-item] input[data-f="x"]', "20");
+    await page.keyboard.press("Tab"); // число фиксируется при выходе из поля (change)
+    await page.waitForFunction(() => Math.abs(+document.querySelector("#vp svg rect.bd-col").getAttribute("x") - 19.8) < 0.01);
+    await page.click("#plan-side [data-save]");
+    await page.waitForFunction(() => { const b = JSON.parse(localStorage.getItem("wh-app-project-demo") || "null")?.warehouses[0]; return b && b.saved.building && !b.pending.some((p) => p.obj === "building"); });
+    const wh = await saved();
+    expect(wh.building.items.filter((i) => i.k === "col").length === 1 && wh.building.items.filter((i) => i.k === "aisle").length === 1 && wh.building.nodes.length === 2, "в проекте нет колонны и прохода");
+    await page.reload(); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="bld"]');
+    await page.waitForSelector("#vp svg rect.bd-col");
+    expect(await page.locator("#vp svg .bd-ai").count() === 1 && await page.locator("#plan-side .ed-pend").count() === 0, "после перезагрузки здание не на месте");
+    await page.click('#seg-mode [data-m="3d"]'); // 3D со зданием строится без ошибок
+    await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
+    expect(await page.locator("#vp .rulers").isHidden(), "линейки остались в 3D");
   });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
