@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_collector_list" model="ir.ui.view">
+        <field name="name">f3d.collector.list</field>
+        <field name="model">f3d.collector</field>
+        <field name="arch" type="xml">
+            <list string="Колектори" decoration-success="state == 'online'" decoration-danger="state == 'offline'">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="state" widget="badge"/>
+                <field name="last_seen"/>
+                <field name="version"/>
+                <field name="source_count"/>
+                <field name="signal_count"/>
+                <field name="buffer_rows" optional="hide"/>
+                <field name="token_hint" groups="factory3d_base.group_f3d_admin" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_collector_form" model="ir.ui.view">
+        <field name="name">f3d.collector.form</field>
+        <field name="model">f3d.collector</field>
+        <field name="arch" type="xml">
+            <form string="Колектор">
+                <header>
+                    <button name="action_generate_token" type="object" string="Згенерувати токен"
+                            class="btn-primary" groups="factory3d_base.group_f3d_admin"/>
+                    <button name="action_revoke_token" type="object" string="Відкликати токен"
+                            groups="factory3d_base.group_f3d_admin" invisible="not token_hash"
+                            confirm="Відкликати токен? Колектор перестане підключатися."/>
+                    <field name="state" widget="statusbar" statusbar_visible="never,online,offline"/>
+                </header>
+                <sheet>
+                    <field name="token_hash" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_sources" type="object" class="oe_stat_button" icon="fa-database">
+                            <field name="source_count" widget="statinfo" string="Джерела"/>
+                        </button>
+                        <button class="oe_stat_button" icon="fa-rss" disabled="1">
+                            <field name="signal_count" widget="statinfo" string="Сигнали"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва колектора"/></h1>
+                    </div>
+                    <group>
+                        <group string="Ідентифікація">
+                            <field name="code"/>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="token_hint" groups="factory3d_base.group_f3d_admin"/>
+                            <field name="token_set_at"/>
+                            <field name="version"/>
+                            <field name="last_seen"/>
+                            <field name="last_push_at"/>
+                            <field name="last_ip"/>
+                        </group>
+                        <group string="Періоди">
+                            <field name="status_interval_s"/>
+                            <field name="push_interval_s"/>
+                            <field name="push_max"/>
+                            <field name="config_poll_s"/>
+                        </group>
+                        <group string="Стан сервісу">
+                            <field name="uptime_s"/>
+                            <field name="buffer_rows"/>
+                            <field name="buffer_dropped"/>
+                            <field name="config_etag"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Плагіни" name="plugins">
+                            <field name="plugins" widget="json" readonly="1"/>
+                        </page>
+                        <page string="Джерела" name="sources">
+                            <field name="source_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="type"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="signal_count"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_collector_search" model="ir.ui.view">
+        <field name="name">f3d.collector.search</field>
+        <field name="model">f3d.collector</field>
+        <field name="arch" type="xml">
+            <search string="Колектори">
+                <field name="name" string="Колектор" filter_domain="['|', ('name', 'ilike', self), ('code', 'ilike', self)]"/>
+                <filter name="online" string="Онлайн" domain="[('state', '=', 'online')]"/>
+                <filter name="offline" string="Офлайн" domain="[('state', '=', 'offline')]"/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_collector" model="ir.actions.act_window">
+        <field name="name">Колектори</field>
+        <field name="res_model">f3d.collector</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

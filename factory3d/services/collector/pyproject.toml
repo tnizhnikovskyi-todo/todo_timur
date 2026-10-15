@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f3d_collector"
+version = "0.1.0"
+description = "Колектор телеметрії factory3d"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[project.scripts]
+f3d-collector = "collector.__main__:main"
+
+[project.entry-points."factory3d_collector.plugins"]
+modbus_tcp = "collector.plugins.modbus_tcp:ModbusTcpPlugin"
+mqtt = "collector.plugins.mqtt:MqttPlugin"
+http_push = "collector.plugins.http_push:HttpPushPlugin"
+bacnet_ip = "collector.plugins.bacnet_ip:BacnetIpPlugin"
+
+[tool.setuptools.packages.find]
+include = ["collector*"]
+
+[tool.setuptools.package-data]
+"collector.plugins" = ["schemas/*.json"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+timeout = 60
+markers = ["stand: тести проти compose-стенду", "broker: потрібен MQTT-брокер (Docker)"]
+addopts = "-m 'not stand'"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

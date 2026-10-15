@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "address modbus_tcp (SPEC A.1)",
+  "type": "object",
+  "propertyNames": {"pattern": "^[^_]"},
+  "properties": {
+    "fc": {"enum": [1, 2, 3, 4]},
+    "addr": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "unit": {"type": "integer", "minimum": 1, "maximum": 247},
+    "type": {"enum": ["bool", "u16", "i16", "u32", "i32", "f32", "u64", "i64", "f64"]},
+    "count": {"type": "integer", "minimum": 1, "maximum": 125},
+    "agg": {"enum": ["max", "min", "sum", "avg", "first"]},
+    "wordorder": {"enum": ["big", "little"]},
+    "byteorder": {"enum": ["big", "little"]},
+    "bit": {"type": "integer", "minimum": 0, "maximum": 15},
+    "scale": {"type": "number", "not": {"const": 0}},
+    "offset": {"type": "number"},
+    "range": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+    "map": {
+      "type": "object",
+      "propertyNames": {"pattern": "^-?[0-9]+$"},
+      "additionalProperties": {"type": "string", "maxLength": 64}
+    },
+    "states": {
+      "type": "array", "minItems": 1, "maxItems": 16,
+      "items": {
+        "type": "object",
+        "properties": {
+          "addr": {"type": "integer", "minimum": 0, "maximum": 65535},
+          "eq": {"type": "integer"},
+          "text": {"type": "string", "maxLength": 64},
+          "fc": {"enum": [1, 2, 3, 4]}
+        },
+        "required": ["addr", "eq", "text"]
+      }
+    },
+    "write": {
+      "type": "object",
+      "properties": {
+        "fc": {"enum": [5, 6, 16]},
+        "addr": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "pulse_ms": {"type": "integer", "minimum": 100, "maximum": 10000}
+      }
+    },
+    "doc": {"type": "string", "maxLength": 256}
+  },
+  "required": ["fc"],
+  "anyOf": [{"required": ["addr"]}, {"required": ["states"]}]
+}

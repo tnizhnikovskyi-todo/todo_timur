@@ -1,0 +1,12 @@
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "B"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+# connect/disconnect — необов'язкові хуки з порожньою реалізацією за замовчуванням
+"collector/plugins/base.py" = ["B027"]
+# стендові сценарії: довгі docstring з фактичними значеннями ТК/ТП
+"tests/stand/*" = ["E501"]

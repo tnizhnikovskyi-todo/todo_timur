@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "params bacnet_ip (SPEC A.2)",
+  "type": "object",
+  "propertyNames": {"pattern": "^[^_]"},
+  "properties": {
+    "host": {"type": "string", "minLength": 1, "maxLength": 253},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "device": {"type": "integer", "minimum": 0, "maximum": 4194302},
+    "address": {"type": "string", "maxLength": 64},
+    "network": {"type": "integer", "minimum": 1, "maximum": 65534},
+    "timeout_s": {"type": "number", "minimum": 1, "maximum": 60},
+    "rpm": {"type": "boolean"},
+    "rpm_max": {"type": "integer", "minimum": 1, "maximum": 200},
+    "cov_lifetime_s": {"type": "integer", "minimum": 60, "maximum": 3600},
+    "read_only": {"type": "boolean"},
+    "events": {"type": "boolean"}
+  },
+  "required": ["host", "device"]
+}

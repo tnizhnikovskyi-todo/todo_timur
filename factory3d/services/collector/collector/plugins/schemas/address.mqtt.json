@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "address mqtt (SPEC A.1)",
+  "type": "object",
+  "propertyNames": {"pattern": "^[^_]"},
+  "properties": {
+    "topic": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[^+#\\u0000]+$"},
+    "path": {"type": "string", "pattern": "^\\$(\\.[A-Za-z_][A-Za-z0-9_\\-]*|\\[[0-9]+\\])+$"},
+    "ts_path": {"type": "string", "pattern": "^\\$(\\.[A-Za-z_][A-Za-z0-9_\\-]*|\\[[0-9]+\\])+$"},
+    "device": {"type": "string", "maxLength": 32},
+    "map": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 64}},
+    "write": {
+      "type": "object",
+      "properties": {
+        "topic": {"type": "string", "minLength": 1, "pattern": "^[^+#\\u0000]+$"},
+        "template": {"type": "string", "maxLength": 1024}
+      },
+      "required": ["topic", "template"]
+    },
+    "scale": {"type": "number", "not": {"const": 0}},
+    "offset": {"type": "number"}
+  },
+  "required": ["topic", "path"]
+}

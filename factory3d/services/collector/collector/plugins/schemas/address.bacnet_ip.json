@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "address bacnet_ip (SPEC A.1)",
+  "type": "object",
+  "propertyNames": {"pattern": "^[^_]"},
+  "properties": {
+    "object": {
+      "enum": ["analog-input", "analog-output", "analog-value", "binary-input", "binary-output", "binary-value",
+               "multi-state-input", "multi-state-value", "life-safety-zone", "life-safety-point",
+               "positive-integer-value", "device",
+               "AI", "AO", "AV", "BI", "BO", "BV", "MSI", "MSV", "LSZ", "LSP", "PIV"]
+    },
+    "instance": {"type": "integer", "minimum": 0, "maximum": 4194302},
+    "property": {"type": "string", "pattern": "^[a-z][a-z0-9\\-]{0,63}$"},
+    "index": {"type": "integer", "minimum": 0},
+    "device": {"type": "integer", "minimum": 0, "maximum": 4194302},
+    "mode": {"enum": ["cov", "poll"]},
+    "cov_increment": {"type": "number", "exclusiveMinimum": 0},
+    "priority": {"type": "integer", "minimum": 1, "maximum": 16},
+    "map": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 64}},
+    "states": {
+      "type": "array", "minItems": 1, "maxItems": 16,
+      "items": {
+        "type": "object",
+        "properties": {
+          "object": {"type": "string"},
+          "instance": {"type": "integer", "minimum": 0, "maximum": 4194302},
+          "eq": {},
+          "text": {"type": "string", "maxLength": 64}
+        },
+        "required": ["object", "instance", "eq", "text"]
+      }
+    },
+    "scale": {"type": "number", "not": {"const": 0}},
+    "offset": {"type": "number"},
+    "check_reliability": {"type": "boolean"},
+    "read_priority_array": {"type": "boolean"}
+  },
+  "required": ["object", "instance"]
+}

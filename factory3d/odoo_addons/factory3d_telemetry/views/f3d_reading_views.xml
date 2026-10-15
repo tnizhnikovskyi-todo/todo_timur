@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_reading_graph" model="ir.ui.view">
+        <field name="name">f3d.reading.graph</field>
+        <field name="model">f3d.reading</field>
+        <field name="arch" type="xml">
+            <graph string="Показання" type="line" stacked="0">
+                <field name="ts" interval="hour"/>
+                <field name="signal_id"/>
+                <field name="value" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_reading_list" model="ir.ui.view">
+        <field name="name">f3d.reading.list</field>
+        <field name="model">f3d.reading</field>
+        <field name="arch" type="xml">
+            <list string="Показання" create="false" edit="false" default_order="ts desc">
+                <field name="ts"/>
+                <field name="equipment_id"/>
+                <field name="signal_id"/>
+                <field name="value"/>
+                <field name="text"/>
+                <field name="unit"/>
+                <field name="quality" optional="hide"/>
+                <field name="src" optional="hide"/>
+                <field name="received_at" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_reading_search" model="ir.ui.view">
+        <field name="name">f3d.reading.search</field>
+        <field name="model">f3d.reading</field>
+        <field name="arch" type="xml">
+            <search string="Показання">
+                <field name="signal_id"/>
+                <field name="equipment_id"/>
+                <field name="code"/>
+                <filter name="last_48h" string="Останні 2 доби"
+                        domain="[('ts', '&gt;=', (context_today() - relativedelta(days=2)).strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('ts', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="days7" string="7 днів"
+                        domain="[('ts', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="not_good" string="Непевні/погані" domain="[('quality', '!=', 'good')]"/>
+                <group>
+                    <filter name="group_signal" string="Сигнал" context="{'group_by': 'signal_id'}"/>
+                    <filter name="group_equipment" string="Обладнання" context="{'group_by': 'equipment_id'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'ts:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_reading" model="ir.actions.act_window">
+        <field name="name">Показання</field>
+        <field name="res_model">f3d.reading</field>
+        <field name="view_mode">graph,list</field>
+        <field name="domain">[]</field>
+        <field name="context">{'search_default_last_48h': 1}</field>
+    </record>
+</odoo>
