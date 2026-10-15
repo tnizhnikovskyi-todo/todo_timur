@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_access_device_list" model="ir.ui.view">
+        <field name="name">f3d.access.device.list</field>
+        <field name="model">f3d.access.device</field>
+        <field name="arch" type="xml">
+            <list string="Пристрої СКУД" editable="bottom">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="biostar_id"/>
+                <field name="server_id" column_invisible="1"/>
+                <field name="device_type"/>
+                <field name="direction"/>
+                <field name="zone_id"/>
+                <field name="equipment_id"/>
+                <field name="status" widget="badge" decoration-success="status=='online'"
+                       decoration-danger="status=='offline'"/>
+                <field name="last_event_ts"/>
+                <field name="events_today"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_device_form" model="ir.ui.view">
+        <field name="name">f3d.access.device.form</field>
+        <field name="model">f3d.access.device</field>
+        <field name="arch" type="xml">
+            <form string="Пристрій СКУД">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                                class="btn-secondary"/>
+                        <button name="action_open_events" type="object" string="Події" icon="fa-list"
+                                class="oe_stat_button"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва"/></h1>
+                    </div>
+                    <group>
+                        <group string="Ідентифікація">
+                            <field name="code"/>
+                            <field name="biostar_id"/>
+                            <field name="server_id"/>
+                            <field name="device_type"/>
+                            <field name="ip"/>
+                        </group>
+                        <group string="Сцена">
+                            <field name="equipment_id"/>
+                            <field name="zone_id"/>
+                            <field name="x"/>
+                            <field name="y"/>
+                            <field name="direction"/>
+                        </group>
+                        <group string="Стан">
+                            <field name="status"/>
+                            <field name="status_ts"/>
+                            <field name="sync_fail_count"/>
+                            <field name="last_event_ts"/>
+                            <field name="last_event_code"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_device_search" model="ir.ui.view">
+        <field name="name">f3d.access.device.search</field>
+        <field name="model">f3d.access.device</field>
+        <field name="arch" type="xml">
+            <search string="Пристрої СКУД">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="biostar_id"/>
+                <filter name="offline" string="Не в мережі" domain="[('status', '=', 'offline')]"/>
+                <filter name="no_zone" string="Без зони" domain="[('zone_id', '=', False)]"/>
+                <group>
+                    <filter name="group_status" string="Стан" context="{'group_by': 'status'}"/>
+                    <filter name="group_zone" string="Зона" context="{'group_by': 'zone_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_access_device" model="ir.actions.act_window">
+        <field name="name">Пристрої</field>
+        <field name="res_model">f3d.access.device</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

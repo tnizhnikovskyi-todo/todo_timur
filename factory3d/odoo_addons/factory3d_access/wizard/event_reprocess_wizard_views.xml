@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_access_event_reprocess_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.access.event.reprocess.wizard.form</field>
+        <field name="model">f3d.access.event.reprocess.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Повторна обробка подій СКУД">
+                <group>
+                    <field name="mode" widget="radio"/>
+                    <field name="server_id"/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                    <field name="only_errors" invisible="mode != 'reprocess'"/>
+                    <field name="result" readonly="1" invisible="not result"/>
+                </group>
+                <footer>
+                    <button name="action_run" type="object" string="Виконати" class="btn-primary"/>
+                    <button string="Закрити" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_access_reprocess_wizard" model="ir.actions.act_window">
+        <field name="name">Повторна обробка</field>
+        <field name="res_model">f3d.access.event.reprocess.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

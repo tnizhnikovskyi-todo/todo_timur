@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="server_biostar_sim" model="f3d.access.server">
+        <field name="name">BioStar 2 (емулятор)</field>
+        <field name="url">https://iot-sim:8443</field>
+        <field name="verify_ssl" eval="True"/>
+        <field name="timeout_connect_s">5</field>
+        <field name="timeout_read_s">30</field>
+        <field name="state">offline</field>
+    </record>
+</odoo>

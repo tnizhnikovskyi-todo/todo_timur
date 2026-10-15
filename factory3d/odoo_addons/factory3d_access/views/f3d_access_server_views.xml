@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_access_server_list" model="ir.ui.view">
+        <field name="name">f3d.access.server.list</field>
+        <field name="model">f3d.access.server</field>
+        <field name="arch" type="xml">
+            <list string="Сервери BioStar">
+                <field name="name"/>
+                <field name="url"/>
+                <field name="state" widget="badge" decoration-success="state=='online'"
+                       decoration-danger="state=='error'"/>
+                <field name="last_contact"/>
+                <field name="last_poll_new"/>
+                <field name="error_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_server_form" model="ir.ui.view">
+        <field name="name">f3d.access.server.form</field>
+        <field name="model">f3d.access.server</field>
+        <field name="arch" type="xml">
+            <form string="Сервер BioStar">
+                <header>
+                    <button name="action_test_connection" type="object" string="Перевірити з'єднання"
+                            class="btn-primary" groups="factory3d_base.group_f3d_admin"/>
+                    <button name="action_poll_now" type="object" string="Опитати зараз"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_sync_users" type="object" string="Синхронізувати користувачів"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_sync_devices" type="object" string="Синхронізувати пристрої й двері"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_reset_cursor" type="object" string="Скинути курсор"
+                            groups="factory3d_base.group_f3d_admin"
+                            confirm="Наступне опитування почнеться за initial_lookback_h. Продовжити?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="offline,online,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_events" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="event_count" widget="statinfo" string="Події"/>
+                        </button>
+                        <button name="action_open_errors" type="object" class="oe_stat_button" icon="fa-warning">
+                            <field name="error_event_count" widget="statinfo" string="Помилки"/>
+                        </button>
+                        <button name="action_open_links" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="link_count" widget="statinfo" string="Користувачі"/>
+                            <div class="o_stat_info text-muted">
+                                <field name="unlinked_count"/> не зв'язано
+                            </div>
+                        </button>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not stale">
+                        Немає контакту з BioStar довше трьох інтервалів опитування.
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="state != 'error'">
+                        <field name="last_error"/>
+                    </div>
+                    <div class="alert alert-info" role="alert" invisible="not doors_without_zone">
+                        Двері без зон: <field name="doors_without_zone"/> — проходи через них не змінюють зону людей.
+                    </div>
+                    <field name="stale" invisible="1"/>
+                    <group>
+                        <group string="Підключення">
+                            <field name="name"/>
+                            <field name="url"/>
+                            <field name="verify_ssl"/>
+                            <field name="timeout_connect_s"/>
+                            <field name="timeout_read_s"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Стан">
+                            <field name="last_contact"/>
+                            <field name="error_count"/>
+                            <field name="next_try_at"/>
+                            <field name="last_error_ts"/>
+                            <field name="users_total"/>
+                            <field name="devices_total"/>
+                            <field name="users_synced_at"/>
+                            <field name="devices_synced_at"/>
+                        </group>
+                        <group string="Опитування">
+                            <field name="last_event_ts"/>
+                            <field name="last_event_biostar_id"/>
+                            <field name="last_poll_at"/>
+                            <field name="last_poll_rows"/>
+                            <field name="last_poll_new"/>
+                            <field name="last_poll_more"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Пристрої" name="devices">
+                            <field name="device_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="biostar_id"/>
+                                    <field name="status" widget="badge"/>
+                                    <field name="zone_id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Двері" name="doors">
+                            <field name="door_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="state"/>
+                                    <field name="is_perimeter"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_access_server" model="ir.actions.act_window">
+        <field name="name">Сервери BioStar</field>
+        <field name="res_model">f3d.access.server</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
