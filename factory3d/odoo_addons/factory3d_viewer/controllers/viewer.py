@@ -1,0 +1,200 @@
+"""API-01…04, 07, 10 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
+з `request.env` користувача кіоска."""
+import gzip
+import json
+import logging
+import re
+
+from odoo import http
+from odoo.exceptions import AccessError
+from odoo.http import request
+
+from ..tools import dates, payload as payload_tools, static_data
+from ..tools.cycle_check import check
+
+_logger = logging.getLogger(__name__)
+
+CODE_RE = re.compile(r"^[A-Za-z0-9/_.\-]{1,64}$")
+SECTION_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
+SINCE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
+MAX_CODES = 200
+GROUP_USER = "factory3d_base.group_f3d_user"
+GROUP_MANAGER = "factory3d_base.group_f3d_manager"
+GROUP_ADMIN = "factory3d_base.group_f3d_admin"
+JSON_CT = "application/json; charset=utf-8"
+
+
+class BadRequest(Exception):
+    pass
+
+
+def json_response(data, status=200, headers=None, gzip_ok=False, cache="no-store"):
+    body = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    hdrs = {"Content-Type": JSON_CT, "Cache-Control": cache}
+    hdrs.update(headers or {})
+    if gzip_ok and len(body) > 1024 and "gzip" in (request.httprequest.headers.get("Accept-Encoding") or ""):
+        body = gzip.compress(body, 5)
+        hdrs["Content-Encoding"] = "gzip"
+        hdrs["Vary"] = "Accept-Encoding"
+    return request.make_response(body, headers=list(hdrs.items()), status=status)
+
+
+def error(code, message, status):
+    return json_response({"error": {"code": code, "message": message}}, status=status)
+
+
+def bad_request(message="Невалідний параметр"):
+    return error("bad_request", message, 400)
+
+
+def forbidden():
+    return error("forbidden", "Немає доступу до переглядача «Завод 3D»", 403)
+
+
+def parse_codes(value, limit=MAX_CODES):
+    if value is None or value == "":
+        return None
+    codes = value.split(",")
+    if len(codes) > limit or not all(CODE_RE.match(c) for c in codes):
+        raise BadRequest("codes")
+    return set(codes)
+
+
+def parse_flag(value, name):
+    if value is None or value == "":
+        return False
+    if value not in ("0", "1"):
+        raise BadRequest(name)
+    return value == "1"
+
+
+def etag_matches(header, etag):
+    if not header:
+        return False
+    tags = [t.strip() for t in header.split(",")]
+    return any(t in ('"%s"' % etag, 'W/"%s"' % etag, "*") for t in tags)
+
+
+class F3dViewerController(http.Controller):
+
+    # --- спільна логіка (використовує і кіоск) -----------------------------
+
+    @staticmethod
+    def serve_static():
+        body, body_gz, sha1 = static_data.static_body()
+        headers = {"ETag": '"%s"' % sha1, "Content-Type": JSON_CT, "Cache-Control": "private, max-age=3600",
+                   "Vary": "Accept-Encoding"}
+        if etag_matches(request.httprequest.headers.get("If-None-Match"), sha1):
+            return request.make_response(b"", headers=list(headers.items()), status=304)
+        if "gzip" in (request.httprequest.headers.get("Accept-Encoding") or ""):
+            body = body_gz
+            headers["Content-Encoding"] = "gzip"
+        return request.make_response(body, headers=list(headers.items()))
+
+    @staticmethod
+    def serve_data(kw, kiosk=False):
+        try:
+            full = parse_flag(kw.get("full"), "full")
+            lite = parse_flag(kw.get("lite"), "lite")
+            codes = parse_codes(kw.get("codes"))
+            sections = None
+            if kw.get("sections"):
+                sections = set(kw["sections"].split(","))
+                if not all(SECTION_RE.match(s) for s in sections):
+                    raise BadRequest("sections")
+        except BadRequest as e:
+            return bad_request("Невалідний параметр: %s" % e)
+        try:
+            data = payload_tools.PayloadBuilder(
+                request.env, full=full, lite=lite, kiosk=kiosk, sections=sections, codes=codes).build()
+        except Exception:  # noqa: BLE001
+            _logger.exception("збирач payload впав")
+            return error("payload_failed", "Не вдалося зібрати дані переглядача", 500)
+        return json_response(data, gzip_ok=True)
+
+    @staticmethod
+    def serve_delta(kw, kiosk=False):
+        try:
+            since = kw.get("since")
+            if not since or not SINCE_RE.match(since):
+                raise BadRequest("since")
+            codes = parse_codes(kw.get("codes"))
+            lite = parse_flag(kw.get("lite"), "lite")
+            since_dt = dates.parse_iso_utc(since)
+        except (BadRequest, ValueError) as e:
+            return bad_request("Невалідний параметр: %s" % e)
+        try:
+            data = payload_tools.DeltaBuilder(request.env, since_dt, codes=codes, lite=lite, kiosk=kiosk).build()
+        except Exception:  # noqa: BLE001
+            _logger.exception("збирач дельти впав")
+            return error("payload_failed", "Не вдалося зібрати дельту", 500)
+        return json_response(data, gzip_ok=True)
+
+    @staticmethod
+    def serve_manifest():
+        body, sha1 = static_data.parts_manifest()
+        headers = {"ETag": '"%s"' % sha1, "Content-Type": JSON_CT, "Cache-Control": "private, max-age=3600"}
+        if etag_matches(request.httprequest.headers.get("If-None-Match"), sha1):
+            return request.make_response(b"", headers=list(headers.items()), status=304)
+        return request.make_response(body, headers=list(headers.items()))
+
+    # --- маршрути ----------------------------------------------------------
+
+    @staticmethod
+    def _allowed():
+        return request.env.user.has_group(GROUP_USER)
+
+    @http.route("/f3d/viewer/static", type="http", auth="user", methods=["GET"])
+    def static(self, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_static()
+
+    @http.route("/f3d/viewer/data", type="http", auth="user", methods=["GET"])
+    def data(self, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_data(kw)
+
+    @http.route("/f3d/viewer/delta", type="http", auth="user", methods=["GET"])
+    def delta(self, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_delta(kw)
+
+    @http.route("/f3d/viewer/resolve", type="http", auth="user", methods=["GET"])
+    def resolve(self, **kw):
+        if not self._allowed():
+            return forbidden()
+        code, name = kw.get("code"), kw.get("name")
+        if bool(code) == bool(name):
+            return bad_request("Потрібен рівно один параметр: code або name")
+        if (code or name) and not CODE_RE.match(code or name):
+            return bad_request("Невалідний параметр: code/name")
+        return json_response(payload_tools.resolve(request.env, code=code, name=name))
+
+    @http.route("/f3d/viewer/parts/manifest.json", type="http", auth="user", methods=["GET"])
+    def parts_manifest(self, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_manifest()
+
+    @http.route("/f3d/viewer/cycle_check", type="jsonrpc", auth="user", methods=["POST"])
+    def cycle_check(self, as_user=None, **kw):
+        env = request.env
+        if not env.user.has_group(GROUP_MANAGER):
+            raise AccessError("Перевірка циклу доступна лише менеджеру «Завод 3D».")
+        if as_user:
+            if not env.user.has_group(GROUP_ADMIN):
+                raise AccessError("Вказати іншого користувача може лише адміністратор «Завод 3D».")
+            env = env(user=int(as_user))
+        data = payload_tools.PayloadBuilder(env, full=True).build()
+        for key in ("pickings", "sale_orders", "quality_checks", "productions"):
+            data.setdefault(key, [])
+        for key in ("locations", "workorders"):
+            data.setdefault(key, {})
+        issues = check(data)
+        if issues:
+            return {"ok": False, "issues": issues, "count": len(issues)}
+        return {"ok": True, "issues": []}
