@@ -103,16 +103,18 @@ class TestPanel(LiveCase):
         self.assertEqual(self.lp2.state, "fault")
         self.ingest(sig, text="ok")
         self.assertEqual(self.lp2.state, "ok")
-        col = self.env["f3d.collector"].create({"code": "COL-BMS", "name": "COL-BMS"})
-        src = self.env["f3d.source"].create(
-            {
-                "code": "HN-LP-2",
-                "name": "HN-LP-2",
-                "type": "helvarnet",
-                "collector_id": col.id,
-                "params": {"host": "iot-sim", "port": 50000},
-            }
-        )
+        src = self.env["f3d.source"].search([("code", "=", "HN-LP-2")], limit=1)  # джерело з даних модуля (W3)
+        if not src:
+            col = self.env["f3d.collector"].create({"code": "COL-BMS", "name": "COL-BMS"})
+            src = self.env["f3d.source"].create(
+                {
+                    "code": "HN-LP-2",
+                    "name": "HN-LP-2",
+                    "type": "helvarnet",
+                    "collector_id": col.id,
+                    "params": {"host": "iot-sim", "port": 50000},
+                }
+            )
         self.lp2.source_id = src
         self.cr.execute("UPDATE f3d_source SET state = 'error' WHERE id = %s", [src.id])
         self.env.invalidate_all()

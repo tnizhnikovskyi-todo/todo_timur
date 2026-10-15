@@ -1,3 +1,5 @@
+import json
+
 from odoo.tests import tagged
 
 from .common import F3DBmsCase
@@ -25,7 +27,7 @@ class TestBmsInstall(F3DBmsCase):
         self.assertEqual(icp.get_param("factory3d.bms.write_enabled"), "False")
         self.assertEqual(icp.get_param("factory3d.bms.light_uf"), "0.7")
         self.assertEqual(icp.get_param("factory3d.bms.light_check_delay_min"), "10")
-        self.assertEqual(icp.get_param("factory3d.bms.install_report"), "{}")
+        self.assertIn(json.loads(icp.get_param("factory3d.bms.install_report"))["state"], ("done", "partial"))
         keys = icp.search([("key", "=like", "factory3d.bms.%")]).mapped("key")
         self.assertGreaterEqual(len(keys), 15)
 

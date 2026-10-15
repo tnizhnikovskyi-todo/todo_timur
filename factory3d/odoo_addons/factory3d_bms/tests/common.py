@@ -16,6 +16,12 @@ class F3DBmsCase(TransactionCase):
         cls.user_manager = new_test_user(cls.env, "bms_mgr", groups="base.group_user,factory3d_base.group_f3d_manager")
         cls.user_admin = new_test_user(cls.env, "bms_admin", groups="base.group_user,factory3d_base.group_f3d_admin")
 
+    @classmethod
+    def fresh_signal(cls, vals):
+        """Свіжий сигнал фікстури: сигнал з таким кодом із даних модуля (W3) видаляється — `UNIQUE(code)`."""
+        cls.env["f3d.signal"].with_context(active_test=False).search([("code", "=", vals["code"])]).unlink()
+        return cls.env["f3d.signal"].create(vals)
+
 
 class F3DBmsLightCase(F3DBmsCase):
     """Фікстури освітлення (W1): зони, норми, щити LP-1/LP-2, група з підмножини Додатка A.1 (Φ=20 500, W=126)."""
@@ -42,6 +48,9 @@ class F3DBmsLightCase(F3DBmsCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
+        # дані модуля (W3) вже містять норми, щити й групи — фікстури створюють свої (UNIQUE за кодом)
+        for model in ("f3d.bms.light.group", "f3d.bms.light.panel", "f3d.bms.light.norm"):
+            env[model].with_context(active_test=False).search([]).unlink()
         cls.zones = {}
         for code, area in cls.ZONES.items():
             zone = env["f3d.zone"].search([("f3d_code", "=", code)], limit=1)  # зони base могли бути встановлені
@@ -88,7 +97,7 @@ class F3DBmsLightCase(F3DBmsCase):
 
     @classmethod
     def mk_signal(cls, code, kind="gauge"):
-        return cls.env["f3d.signal"].create({"code": code, "name": code, "kind": kind, "origin": "manual"})
+        return cls.fresh_signal({"code": code, "name": code, "kind": kind, "origin": "manual"})
 
     @classmethod
     def ingest(cls, sig, value=None, text=None):
@@ -105,7 +114,7 @@ class F3DBmsLightCase(F3DBmsCase):
 
 
 class F3DBmsHvacMixin:
-    """Фікстури W2: установки вентиляції (25 RV + AHU-1 + 3 вентилятори), тепловий баланс, сигнали з живими значеннями."""
+    """Фікстури W2: установки вентиляції (25 RV, AHU-1, 3 вентилятори), тепловий баланс, сигнали з живими значеннями."""
 
     @classmethod
     def _setup_hvac_fixtures(cls):
@@ -186,7 +195,7 @@ class F3DBmsHvacMixin:
 
     @classmethod
     def make_signal(cls, code, value=None, text=None, kind="gauge", status="ok", unit=""):
-        sig = cls.env["f3d.signal"].create({"code": code, "name": code, "kind": kind, "unit": unit, "origin": "manual"})
+        sig = cls.fresh_signal({"code": code, "name": code, "kind": kind, "unit": unit, "origin": "manual"})
         sig.sudo().write(
             {"last_value": value or 0.0, "last_text": text or False, "last_ts": fields.Datetime.now(), "status": status}
         )
