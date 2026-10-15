@@ -1,14 +1,22 @@
+import logging
 import re
+from datetime import timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+
+from ..tools import dates
+from ..tools.counter import Series
+from ..tools.dates import param_float
+
+_logger = logging.getLogger(__name__)
 
 ENERGY_UNIT = "кВт·год"
 POWER_UNIT = "кВт"
 
 
 class F3dEnergyMeter(models.Model):
-    """M-02. Методи `_f3d_counter_series`, `_f3d_kwh`, `_f3d_update_state` (R-03, R-21) додає W2."""
+    """M-02. Методи `_f3d_counter_series`, `_f3d_kwh`, `_f3d_update_state` — R-03, R-21."""
 
     _name = "f3d.energy.meter"
     _description = "Енергетика: лічильник"
@@ -58,9 +66,7 @@ class F3dEnergyMeter(models.Model):
         domain="[('kind', '=', 'counter')]",
         ondelete="set null",
     )
-    counter_offset = fields.Float(
-        string="Поправка після скидань (імпорт)", digits=(16, 3), default=0, readonly=True
-    )
+    counter_offset = fields.Float(string="Поправка після скидань (імпорт)", digits=(16, 3), default=0, readonly=True)
     counter_offset_export = fields.Float(
         string="Поправка після скидань (експорт)", digits=(16, 3), default=0, readonly=True
     )
@@ -131,3 +137,127 @@ class F3dEnergyMeter(models.Model):
             "view_mode": "graph,pivot,list",
             "domain": [("meter_id", "=", self.id), ("ts_start", ">=", since)],
         }
+
+    # --- безперервний лічильник (R-03) ---------------------------------------------------------------
+    def _f3d_counter_series(self, a, b, base=0.0, export=False):
+        """R-03 п. 5: ряд `Ec` на вікно `[a, b]` (UTC naive). Показання `f3d.reading` у `[a − 2 год, b + 2 год]`,
+        остання точка до вікна (якорь) і `last_value` сигналу; немає показань (вікно старше `keep_days`) —
+        ряд з інтервалів лічильника (лише імпорт)."""
+        self.ensure_one()
+        signal = (self.e_export_signal_id if export else self.e_import_signal_id).sudo()
+        if not signal:
+            return Series([], [], [])
+        lo, hi = a - timedelta(hours=2), b + timedelta(hours=2)
+        Reading = self.env["f3d.reading"].sudo()
+        base_dom = [("signal_id", "=", signal.id), ("quality", "!=", "bad")]
+        points = {
+            r["ts"]: r["value"]
+            for r in Reading.search_read(base_dom + [("ts", ">=", lo), ("ts", "<=", hi)], ["ts", "value"], order="ts")
+            if r["value"] is not None
+        }
+        if signal.last_ts and lo <= signal.last_ts <= hi and signal.last_quality != "bad":
+            points.setdefault(signal.last_ts, signal.last_value)
+        if not any(t <= a for t in points):
+            lead = Reading.search(base_dom + [("ts", "<", lo)], order="ts desc", limit=1)
+            if lead and lead.value is not None:
+                points[lead.ts] = lead.value
+        if not export:
+            keep_days = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.keep_days", "30"))
+            old = a < dates.now_utc(self.env) - timedelta(days=keep_days)
+            if not points or (old and min(points) > a):
+                series = self._f3d_series_from_intervals(a, b)
+                if series:
+                    return series
+        anchor = max((t for t in points if t <= a), default=None)
+        pts = sorted((t, v) for t, v in points.items() if anchor is None or t >= anchor)
+        return Series.build(
+            pts,
+            base=base,
+            reset_tol=param_float(self.env, "reset_tol_kwh", 1.0),
+            max_kw=self.max_kw,
+            gap_max_s=param_float(self.env, "gap_max_s", 900),
+        )
+
+    def _f3d_series_from_intervals(self, a, b):
+        ivs = (
+            self.env["f3d.energy.interval"]
+            .sudo()
+            .search_read(
+                [("meter_id", "=", self.id), ("ts_end", ">=", a), ("ts_start", "<=", b)],
+                ["ts_start", "ts_end", "e_start", "e_end", "quality"],
+                order="ts_start",
+            )
+        )
+        ts, cs, seg = [], [], []
+        for iv in ivs:
+            if ts and iv["ts_start"] < ts[-1]:
+                continue
+            if ts and iv["ts_start"] > ts[-1]:
+                seg.append("interpolated")
+                ts.append(iv["ts_start"])
+                cs.append(iv["e_start"])
+            elif not ts:
+                ts.append(iv["ts_start"])
+                cs.append(iv["e_start"])
+            seg.append(iv["quality"])
+            ts.append(iv["ts_end"])
+            cs.append(iv["e_end"])
+        return Series.from_segments(ts, cs, seg)
+
+    def _f3d_kwh(self, date_from, date_to):
+        """CE-06 / API: `(кВт·год, якість)` лічильника за вікно; немає даних — `(0.0, 'missing')`."""
+        self.ensure_one()
+        if date_from >= date_to:
+            raise ValueError("date_from має бути раніше за date_to")
+        delta, quality = self._f3d_counter_series(date_from, date_to).delta(date_from, date_to)
+        if delta is None:
+            return 0.0, "missing"
+        return round(delta, 3), quality
+
+    # --- стан даних (R-21) ---------------------------------------------------------------------------
+    def _f3d_update_state(self):
+        """R-21 п. 1–2: `data_state`, `data_state_since`; подія про відсутність даних довше `gap_alarm_min`."""
+        now = dates.now_utc(self.env)
+        Interval = self.env["f3d.energy.interval"].sudo()
+        Event = self.env["f3d.energy.event"].sudo()
+        gap_alarm = timedelta(minutes=param_float(self.env, "gap_alarm_min", 60))
+        for rec in self.sudo():
+            sig = rec.e_import_signal_id
+            if not sig or not sig.last_ts:
+                state = "no_data"
+            else:
+                stale_after = timedelta(seconds=3 * (sig.period_s or 60))
+                if sig.status == "stale" or now - sig.last_ts > stale_after:
+                    state = "stale"
+                elif Interval.search_count(
+                    [
+                        ("meter_id", "=", rec.id),
+                        ("quality", "=", "reset"),
+                        ("ts_start", ">=", now - timedelta(hours=24)),
+                    ]
+                ):
+                    state = "reset"
+                elif Interval.search_count(
+                    [
+                        ("meter_id", "=", rec.id),
+                        ("quality", "in", ("missing", "interpolated")),
+                        ("ts_start", ">=", now - timedelta(hours=2)),
+                    ]
+                ):
+                    state = "gap"
+                else:
+                    state = "ok"
+            if state != rec.data_state:
+                rec.write({"data_state": state, "data_state_since": now})
+            if state == "stale" and sig.last_ts and now - sig.last_ts > gap_alarm:
+                minutes = int((now - sig.last_ts).total_seconds() // 60)
+                last_local = dates.to_local(sig.last_ts).strftime("%H:%M")
+                if not Event.search_count([("kind", "=", "meter"), ("code", "=", rec.code), ("ts", ">", sig.last_ts)]):
+                    Event._f3d_log(
+                        "warn",
+                        "meter",
+                        rec.code,
+                        "Лічильник %s: немає даних %d хв (останнє показання %s)." % (rec.code, minutes, last_local),
+                        ts=now,
+                        node=rec.node_id,
+                    )

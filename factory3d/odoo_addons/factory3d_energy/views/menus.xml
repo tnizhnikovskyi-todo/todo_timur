@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPEC §3 V-21. Пункти з діями додають воркери разом із видами (sequence — з таблиці SPEC §3):
      W1: menu_f3d_energy_scheme (20), menu_f3d_energy_meter (30), menu_f3d_energy_pool (20, під config);
-     W2: menu_f3d_energy_profile (40), menu_f3d_energy_tariff (10, під config);
-     W3: menu_f3d_energy_alloc (50), menu_f3d_energy_balance (60), menu_f3d_energy_event (80);
+     W2: menu_f3d_energy_profile (40), menu_f3d_energy_balance (60), menu_f3d_energy_event (80), menu_f3d_energy_tariff (10, під config);
+     W3: menu_f3d_energy_alloc (50);
      W4: menu_f3d_energy_outage (70); W5: menu_f3d_energy_overview (10), menu_f3d_energy_recompute (30, під config),
      menu_f3d_energy_settings (50, під factory3d_base.menu_f3d_config, group_f3d_admin). -->
 <odoo>
@@ -14,6 +14,12 @@
               action="action_f3d_energy_node_tree" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_meter" name="Лічильники" parent="menu_f3d_energy" sequence="30"
               action="action_f3d_energy_meter" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_profile" name="Профіль" parent="menu_f3d_energy" sequence="40"
+              action="action_f3d_energy_interval" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_balance" name="Баланс обліку" parent="menu_f3d_energy" sequence="60"
+              action="action_f3d_energy_balance" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_event" name="Журнал подій" parent="menu_f3d_energy" sequence="80"
+              action="action_f3d_energy_event" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_tariff" name="Тарифи й договір" parent="menu_f3d_energy_config" sequence="10"
               action="action_f3d_energy_tariff" groups="factory3d_energy.group_f3d_energy_cost"/>
     <menuitem id="menu_f3d_energy_pool" name="Пули спільних споживачів" parent="menu_f3d_energy_config" sequence="20"

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-12 -->
+<odoo>
+    <record id="view_f3d_energy_balance_list" model="ir.ui.view">
+        <field name="name">f3d.energy.balance.list</field>
+        <field name="model">f3d.energy.balance</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="hour"/>
+                <field name="node_id"/>
+                <field name="measured_kwh"/>
+                <field name="expected_kwh"/>
+                <field name="diff_kwh"/>
+                <field name="diff_pct"/>
+                <field name="state" widget="badge" decoration-success="state == 'ok'"
+                       decoration-danger="state == 'deviation'" decoration-muted="state == 'skipped'"/>
+                <field name="reason"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_balance_search" model="ir.ui.view">
+        <field name="name">f3d.energy.balance.search</field>
+        <field name="model">f3d.energy.balance</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="node_id"/>
+                <filter name="deviation" string="Відхилення" domain="[('state', '=', 'deviation')]"/>
+                <filter name="today" string="Сьогодні" domain="[('day', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <group>
+                    <filter name="group_node" string="Вузол" context="{'group_by': 'node_id'}"/>
+                    <filter name="group_day" string="Дата" context="{'group_by': 'day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_balance" model="ir.actions.act_window">
+        <field name="name">Баланс обліку</field>
+        <field name="res_model">f3d.energy.balance</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'search_default_deviation': 1}</field>
+    </record>
+</odoo>
