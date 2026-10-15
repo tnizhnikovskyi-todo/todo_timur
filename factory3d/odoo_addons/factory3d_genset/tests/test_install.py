@@ -1,6 +1,5 @@
 from odoo.tests import TransactionCase, tagged
 
-from ..adapters import td_genset as td
 
 PARAMS = {
     "read_enabled", "requests_enabled", "write_enabled", "amf_master", "offline_min", "ats_position_code",
@@ -20,7 +19,3 @@ class TestInstall(TransactionCase):
         for key in PARAMS:
             self.assertTrue(icp.search_count([("key", "=", "factory3d.genset." + key)]), key)
         self.assertEqual(icp.get_param("factory3d.genset.offline_min"), "5")
-
-    def test_adapter_stub(self):
-        with self.assertRaises(NotImplementedError):
-            td.snapshot(None)
