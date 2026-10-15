@@ -328,3 +328,15 @@ def test_validate_ok_and_errors():
     assert "host" in text and "секрети" in text and "70000" in text
     assert "equipment/a/c" in text and "pulse_ms" in text and "range" in text and "_x" in text
     assert "equipment/a/f" not in text
+
+
+async def test_block_with_hole_exception2_falls_back_to_single_reads(srv, make_ctx):
+    """Блок із дірками (gap ≤ gap_max) виходить за діапазон сервера -> exception 0x02; сигнали читаються по одному."""
+    srv.slaves[70].setValues(3, 4998, [321])
+    sigs = [_sig("equipment/C/a", _addr(addr=4998)), _sig("equipment/C/b", _addr(addr=5002))]
+    p, _ = await _plugin(srv, make_ctx, sigs, gap_max=10)
+    out = {r.code.rsplit("/", 1)[1]: r for r in await p.poll(sigs)}  # не має кидати PollError
+    assert out["a"].value == 321 and out["a"].q == "good"
+    assert out["b"].q != "good"
+    assert srv.requests == 3  # блок (exception 2) + два окремих читання
+    await p.disconnect()

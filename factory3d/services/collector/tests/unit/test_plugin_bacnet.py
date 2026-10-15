@@ -418,3 +418,45 @@ async def test_poll_not_connected(make_ctx):
     p = BacnetIpPlugin(mk_source("B", "bacnet_ip", [], params={"host": "h", "device": 1}), make_ctx().ctx)
     with pytest.raises(PollError):
         await p.poll([])
+
+
+async def test_whois_remote_broadcast_with_network(make_ctx, monkeypatch):
+    """params.network: Who-Is уходить як remote broadcast `<net>:*@host:port` з route_aware (без реальної мережі)."""
+    from types import SimpleNamespace
+
+    from bacpypes3.pdu import Address
+    from bacpypes3.settings import settings as bp_settings
+
+    monkeypatch.setattr(bp_settings, "route_aware", False)
+    sent = []
+
+    class FakeApp:
+        plugins: list = []
+
+        async def _request(self, plugin, service, *args):
+            sent.append((service, args))
+            return [SimpleNamespace(pduSource=Address("127.0.0.1:47808"))]
+
+    src = mk_source(
+        "BAC-NET",
+        "bacnet_ip",
+        [],
+        params={"host": "127.0.0.1", "port": 47809, "device": 140, "network": 2},
+    )
+    p = BacnetIpPlugin(src, make_ctx().ctx)
+    p.bapp = FakeApp()  # type: ignore[assignment]
+    await p._locate()
+    service, args = sent[0]
+    assert service == "who-is" and args[:2] == (140, 140)
+    assert str(args[2]) == str(Address("2:*@127.0.0.1:47809"))
+    assert bp_settings.route_aware is True
+
+    # без network — обычный unicast, route_aware не включается
+    monkeypatch.setattr(bp_settings, "route_aware", False)
+    sent.clear()
+    src2 = mk_source("BAC-NET2", "bacnet_ip", [], params={"host": "127.0.0.1", "port": 47809, "device": 140})
+    p2 = BacnetIpPlugin(src2, make_ctx().ctx)
+    p2.bapp = FakeApp()  # type: ignore[assignment]
+    await p2._locate()
+    assert str(sent[0][1][2]) == str(Address("127.0.0.1:47809"))
+    assert bp_settings.route_aware is False
