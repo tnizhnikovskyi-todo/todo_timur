@@ -1,9 +1,9 @@
 # factory3d_energy
 Статус: IN_PROGRESS
-Тесты: 91/91 (2026-10-15), ТК: ждут W6
-Решений без заказчика: 14 (ниже)
+Тесты: 109/109 (и совместно с base/telemetry/viewer/iot_sim) (2026-10-15), ТК: ждут W6
+Решений без заказчика: 17 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: правка SPEC AC-32 (DEC-8)
+Требует внимания человека: правки SPEC: AC-32 (DEC-8), R-16 п.6 380 В (DEC-15), R-17 ключи (DEC-16)
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -12,8 +12,8 @@
 | W2 | принят | 013a25f | /factory3d_energy 64/64 |
 | W3 | принят | c72ce00 (+merge) | /factory3d_energy 91/91 |
 | W4 | принят | 6c2b011 | /factory3d_energy 73/73 |
-| W5 | в работе | — | — |
-| W6 | ждёт | — | — |
+| W5 | принят | ce2b4df | /factory3d_energy 109/109 |
+| W6 | в работе | — | — |
 
 ## Решения без заказчика
 - DEC-1 (ENV-2): `mrp_workorder` (Enterprise) убран из `depends`; `time_ids` и V-16 — из CE `mrp`; что нет в CE — мост `factory3d_energy_mrp_workorder` (не тестирован — нет Enterprise) — `__manifest__.py`
@@ -30,3 +30,6 @@
 - DEC-12: сверка с мостом genset — только при `mode` auto/remote, событие не чаще раза в сутки; заявка на ATS-1 при FAIL START — штатным порогом сигнала — `models/f3d_energy_outage.py`
 - DEC-13: R-08 п.1 кандидаты WO с `date_finished ≥ d0` дополнительно ограничены `date_start < end` (иначе тянутся все плановые); idle-строки — для всех прямых узлов с лічильником — `models/f3d_energy_alloc.py`
 - DEC-14: без `factory3d_machine_connect` R-08 п.2 (машинные интервалы) — обёртка `_f3d_machine_intervals`, контракт CM-03 с machine_connect не проверен — `models/f3d_energy_alloc.py`
+- DEC-15: `consumers.i_now` считается при 380 В (R-16 п.6 говорит 400 В; AC-64 12,18 кВт / 0,84 = 22 А сходится только при 380) — правка SPEC — `tools/payload.py`
+- DEC-16: `infra.totals` всегда содержит `shed_kw` (0 без отключения) и `bess_mode` — их требует AC-59, в списке R-17 их нет — `tools/payload.py`
+- DEC-17: цена тарифа и `contract_kw` в payload читаются через sudo (только чтение; group_f3d_user тарифы не читает); настройки (res.config.settings) — только base.group_system, f3d_admin без system их не открывает (по §5 ARCH admin входит в system) — `tools/payload.py`, `models/res_config_settings.py`
