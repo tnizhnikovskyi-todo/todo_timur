@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-09: Gantt бронювання воріт (DEC-1: потрібен web_gantt, Enterprise; тут не встановлюється й не тестується) -->
+    <record id="view_f3d_yard_booking_gantt" model="ir.ui.view">
+        <field name="name">f3d.yard.booking.gantt</field>
+        <field name="model">f3d.yard.booking</field>
+        <field name="arch" type="xml">
+            <gantt string="Бронювання воріт" date_start="slot_start" date_stop="slot_end" default_group_by="dock_id"
+                   default_scale="day" scales="day,week" color="color" pill_label="True"
+                   decoration-warning="state == 'requested'" decoration-muted="state == 'cancelled'"
+                   precision="{'day': 'hour:quarter', 'week': 'day:half'}" display_unavailability="0" sample="0">
+                <field name="state"/>
+                <field name="visit_id"/>
+                <field name="plate"/>
+                <field name="partner_id"/>
+                <field name="source"/>
+                <field name="warning"/>
+                <templates>
+                    <div t-name="gantt-popover">
+                        <div>Рейс: <field name="visit_id"/></div>
+                        <div>Номер: <field name="plate"/></div>
+                        <div>Партнер: <field name="partner_id"/></div>
+                        <div>Джерело: <field name="source"/></div>
+                        <div t-if="warning"><field name="warning"/></div>
+                    </div>
+                </templates>
+            </gantt>
+        </field>
+    </record>
+
+    <record id="factory3d_yard.action_f3d_yard_booking" model="ir.actions.act_window">
+        <field name="view_mode">gantt,calendar,list,form</field>
+    </record>
+</odoo>

@@ -7,7 +7,7 @@
     "website": "https://todo.ltd",
     "license": "LGPL-3",
     "depends": ["factory3d_yard", "web_gantt"],
-    "data": [],
+    "data": ["views/f3d_yard_booking_gantt.xml"],
     "auto_install": True,
     "installable": True,
     "application": False,

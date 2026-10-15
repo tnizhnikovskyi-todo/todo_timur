@@ -39,7 +39,13 @@
         "views/f3d_command_views.xml",
         "views/f3d_yard_weighing_views.xml",
         "views/f3d_yard_scale_views.xml",
+        "views/f3d_yard_kpp_action.xml",
+        "report/f3d_yard_report_views.xml",
     ],
+    "assets": {
+        "web.assets_backend": ["factory3d_yard/static/src/kpp/*"],
+        "web.assets_tests": ["factory3d_yard/static/tests/tours/*"],
+    },
     "demo": [],
     "installable": True,
     "application": False,

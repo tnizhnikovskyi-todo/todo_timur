@@ -234,7 +234,12 @@ class F3dYardGate(models.Model):
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
-            "params": {"type": "success", "message": "Команду надіслано", "sticky": False},
+            "params": {
+                "type": "success",
+                "message": "Команду надіслано",
+                "sticky": False,
+                "next": {"type": "ir.actions.act_window_close"},
+            },
         }
 
     def action_open(self):

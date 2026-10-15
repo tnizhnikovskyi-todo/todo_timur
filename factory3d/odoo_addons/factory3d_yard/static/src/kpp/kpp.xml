@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="f3d_yard.Kpp">
+        <div class="f3d-kpp o_action overflow-auto p-3">
+            <t t-if="state.data">
+                <div class="d-flex align-items-center mb-3">
+                    <h2 class="m-0 me-auto">Екран КПП</h2>
+                    <span class="f3d-kpp-clock fs-3 fw-bold" t-esc="state.data.now"/>
+                </div>
+                <div class="alert alert-warning" t-if="!state.data.read_enabled">
+                    Обробка показань і подій двору вимкнена (factory3d.yard.read_enabled).
+                </div>
+
+                <div class="f3d-kpp-top d-flex flex-wrap gap-3 mb-3">
+                    <div t-foreach="state.data.gates" t-as="gate" t-key="gate.id"
+                         class="f3d-gate card p-3" t-att-class="'f3d-gate--' + gate.state">
+                        <div class="fw-bold" t-esc="gate.code + ' · ' + gate.name"/>
+                        <div class="f3d-gate-state" t-esc="gate.state_label"/>
+                        <div class="text-danger" t-if="gate.error" t-esc="gate.error"/>
+                        <div t-if="gate.last_plate">Останній: <span t-esc="gate.last_plate"/> <span t-esc="gate.last_plate_at"/></div>
+                        <div>Проїздів/дозволів: <span t-esc="gate.passes_today"/>/<span t-esc="gate.admitted_today"/></div>
+                        <div class="text-warning" t-if="gate.hold_until">Утримання до <span t-esc="gate.hold_until"/></div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <button t-foreach="gateCommands" t-as="cmd" t-key="cmd[0]"
+                                    type="button" class="btn btn-secondary f3d-btn"
+                                    t-att-data-action="cmd[0]"
+                                    t-att-disabled="gateDisabled(gate)"
+                                    t-att-title="gateTitle(gate)"
+                                    t-on-click="() => this.gateCommand(gate, cmd[0])">
+                                <t t-esc="cmd[1]"/>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary f3d-btn" data-action="opened_manually"
+                                    t-att-disabled="state.busy"
+                                    t-on-click="() => this.act('opened_manually', {gate_id: gate.id})">
+                                Відкрито вручну
+                            </button>
+                        </div>
+                    </div>
+                    <div t-if="state.data.scale" class="f3d-scale card p-3">
+                        <div class="fw-bold" t-esc="state.data.scale.code"/>
+                        <div class="f3d-scale-weight display-5">
+                            <span t-esc="formatKg(state.data.scale.weight_kg)"/> кг
+                        </div>
+                        <div t-esc="scaleText"/>
+                        <div>Сьогодні: <span t-esc="state.data.scale.today_count"/></div>
+                        <div t-if="state.data.scale.last" class="text-muted">
+                            Остання: <span t-esc="state.data.scale.last.plate"/>
+                            <span t-esc="formatKg(state.data.scale.last.weight_kg)"/> кг
+                            <span t-esc="state.data.scale.last.ts"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="f3d-kpp-col f3d-kpp-col-gate col-lg-4">
+                        <h4>На КПП</h4>
+                        <div t-foreach="state.data.at_gate" t-as="card" t-key="card.visit_id"
+                             class="f3d-card card p-3 mb-2" t-att-class="'f3d-card--' + card.color">
+                            <div class="fw-bold fs-4" t-esc="card.plate || card.name"/>
+                            <div t-esc="card.partner"/>
+                            <div class="text-muted">
+                                <span t-esc="card.name"/> · <span t-esc="card.state_label"/>
+                                <t t-if="card.slot"> · <span t-esc="card.slot"/></t>
+                                · з <span t-esc="card.since"/>
+                                <span class="badge text-bg-warning" t-if="card.walk_in">Без броні</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <button t-foreach="card.actions" t-as="name" t-key="name"
+                                        type="button" class="btn f3d-btn"
+                                        t-att-class="name === 'admit' ? 'btn-primary' : 'btn-outline-danger'"
+                                        t-att-data-action="name" t-att-disabled="state.busy"
+                                        t-on-click="() => this.visitAction(card, name)">
+                                    <t t-esc="actionLabels[name]"/>
+                                </button>
+                            </div>
+                        </div>
+                        <t t-foreach="state.data.events.filter((e) => e.kpp_alert)" t-as="event" t-key="event.id">
+                            <div class="f3d-card f3d-event-alert card p-3 mb-2" t-att-class="'f3d-card--' + event.color">
+                                <div class="fw-bold fs-4" t-esc="event.plate || '?'"/>
+                                <div class="text-muted">
+                                    <span t-esc="event.match_label"/> · <span t-esc="event.camera"/> <span t-esc="event.ts"/>
+                                </div>
+                                <t t-call="f3d_yard.KppEventActions"/>
+                            </div>
+                        </t>
+                    </div>
+
+                    <div class="f3d-kpp-col f3d-kpp-col-yard col-lg-4">
+                        <h4>У дворі</h4>
+                        <div t-foreach="state.data.in_yard" t-as="card" t-key="card.visit_id"
+                             class="f3d-card card p-3 mb-2" t-att-class="'f3d-card--' + card.color">
+                            <div class="fw-bold fs-4" t-esc="card.plate || card.name"/>
+                            <div class="text-muted">
+                                <span t-esc="card.name"/> · <span t-esc="card.state_label"/>
+                                <t t-if="card.dock"> · <span t-esc="card.dock"/></t>
+                                <t t-if="card.slot"> · <span t-esc="card.slot"/></t>
+                            </div>
+                            <div class="progress mb-2" t-if="card.progress">
+                                <div class="progress-bar" t-att-style="'width: ' + Math.round(card.progress * 100) + '%'"/>
+                            </div>
+                            <div t-if="card.weights.gross or card.weights.net">
+                                Брутто <span t-esc="formatKg(card.weights.gross)"/> · Нетто <span t-esc="formatKg(card.weights.net)"/> кг
+                            </div>
+                            <div class="input-group mb-2" t-if="card.actions.includes('weigh')">
+                                <input type="number" class="form-control f3d-weight-input" placeholder="Вага, кг"
+                                       t-model="state.weights[card.visit_id]"/>
+                                <button type="button" class="btn btn-outline-primary f3d-btn" data-action="record_weight"
+                                        t-att-disabled="state.busy" t-on-click="() => this.recordWeight(card)">Записати</button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button t-foreach="card.actions" t-as="name" t-key="name"
+                                        type="button" class="btn btn-primary f3d-btn"
+                                        t-att-data-action="name" t-att-disabled="state.busy"
+                                        t-on-click="() => this.visitAction(card, name)">
+                                    <t t-esc="actionLabels[name]"/>
+                                </button>
+                            </div>
+                        </div>
+                        <div t-foreach="state.data.unassigned_weighings" t-as="w" t-key="w.id"
+                             class="f3d-card f3d-card--red card p-3 mb-2">
+                            <div class="fw-bold fs-4">Непривязане зважування <span t-esc="formatKg(w.weight_kg)"/> кг</div>
+                            <div class="text-muted"><span t-esc="w.name"/> · <span t-esc="w.kind"/> · <span t-esc="w.ts"/></div>
+                            <div class="input-group mt-2">
+                                <select class="form-select" t-model="state.assignTo[w.id]">
+                                    <option value="">Оберіть рейс</option>
+                                    <option t-foreach="visitChoices" t-as="c" t-key="c.visit_id" t-att-value="c.visit_id">
+                                        <t t-esc="c.name + ' ' + (c.plate or '')"/>
+                                    </option>
+                                </select>
+                                <button type="button" class="btn btn-primary f3d-btn" data-action="assign_weighing"
+                                        t-att-disabled="state.busy" t-on-click="() => this.assignWeighing(w)">Призначити</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="f3d-kpp-col f3d-kpp-col-events col-lg-4">
+                        <h4>Події LPR</h4>
+                        <div t-foreach="state.data.events" t-as="event" t-key="event.id"
+                             class="f3d-card card p-3 mb-2" t-att-class="'f3d-card--' + event.color">
+                            <div class="d-flex gap-3">
+                                <img t-if="event.image_url" t-att-src="event.image_url" class="f3d-thumb" alt=""/>
+                                <div>
+                                    <div class="fw-bold fs-4" t-esc="event.plate || '?'"/>
+                                    <div class="text-muted">
+                                        <span t-esc="event.match_label"/> · <span t-esc="event.camera"/>
+                                        <span t-esc="event.ts"/> · <span t-esc="Math.round(event.confidence * 100) + '%'"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <t t-call="f3d_yard.KppEventActions"/>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="f3d_yard.KppEventActions">
+        <div class="d-flex flex-wrap gap-2 mt-2" t-if="event.actions.length">
+            <select t-if="event.actions.includes('link')" class="form-select w-auto" t-model="state.linkTo[event.id]">
+                <option value="">Рейс…</option>
+                <option t-foreach="visitChoices" t-as="c" t-key="c.visit_id" t-att-value="c.visit_id">
+                    <t t-esc="c.name + ' ' + (c.plate or '')"/>
+                </option>
+            </select>
+            <button t-foreach="event.actions" t-as="name" t-key="name"
+                    type="button" class="btn btn-outline-primary f3d-btn"
+                    t-att-data-action="'event_' + name" t-att-disabled="state.busy"
+                    t-on-click="() => this.eventAction(event, name)">
+                <t t-esc="actionLabels[name]"/>
+            </button>
+        </div>
+    </t>
+</templates>

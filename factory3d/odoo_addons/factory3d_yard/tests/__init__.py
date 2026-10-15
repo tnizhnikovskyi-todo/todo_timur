@@ -6,3 +6,6 @@ from . import test_gate
 from . import test_lpr
 from . import test_commands
 from . import test_scale
+from . import test_kpp
+from . import test_provider
+from . import test_reports

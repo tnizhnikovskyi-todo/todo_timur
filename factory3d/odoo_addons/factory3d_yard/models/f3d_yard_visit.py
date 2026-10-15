@@ -471,7 +471,12 @@ class F3dYardVisit(models.Model):
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
-            "params": {"type": result[0], "message": result[1], "sticky": False},
+            "params": {
+                "type": result[0],
+                "message": result[1],
+                "sticky": False,
+                "next": {"type": "ir.actions.act_window_close"},  # перечитати вид після кнопки
+            },
         }
 
     def action_call_to_dock(self, dock=None):
@@ -559,7 +564,7 @@ class F3dYardVisit(models.Model):
         self._set_state("left", ts=ts, note=note)
         if self.weighing_policy == "in_out" and not self._f3d_yard_has_weighing("out"):
             self.sudo().message_post(body="Виїзд без зважування на виїзді")
-        unfinished = self.batch_id.picking_ids.filtered(lambda p: p.state not in ("done", "cancel"))
+        unfinished = self.sudo().batch_id.picking_ids.filtered(lambda p: p.state not in ("done", "cancel"))
         if unfinished:
             self.sudo().message_post(body="Документи не завершені: %s" % ", ".join(unfinished.mapped("name")))
         if P.get_bool(self.env, "auto_call_next") and dock:

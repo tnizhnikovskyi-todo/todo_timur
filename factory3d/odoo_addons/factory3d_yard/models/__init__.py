@@ -13,3 +13,6 @@ from . import f3d_yard_scale
 from . import f3d_yard_weighing
 from . import f3d_yard_visit_weigh
 from . import f3d_signal
+from . import f3d_yard_notify
+from . import f3d_yard_visit_kpp
+from . import f3d_viewer_provider
