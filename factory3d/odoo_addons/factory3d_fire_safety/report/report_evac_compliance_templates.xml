@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_f3d_fire_evac_compliance_document">
+        <t t-call="web.html_container">
+            <t t-set="n1" t-value="lambda v: ('%.1f' % (v or 0.0)).replace('.', ',')"/>
+            <t t-set="status" t-value="{'ok': 'відповідає', 'warn': 'зауваження', 'fail': 'не відповідає', 'na': 'не перевірено'}"/>
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <t t-set="Norm" t-value="o.env['f3d.fire.norm']"/>
+                    <t t-set="routes" t-value="o.env['f3d.fire.route'].search([('active', '=', True)], order='zone_code')"/>
+                    <t t-set="exits" t-value="o.env['f3d.fire.exit'].search([('active', '=', True)], order='code')"/>
+                    <t t-set="szones" t-value="o.env['f3d.fire.smoke.zone'].search([('active', '=', True)], order='code')"/>
+                    <div class="page">
+                        <h2>Перевірка евакуації та розстановки</h2>
+                        <p>
+                            Прилад <strong t-out="o.code"/>, перераховано:
+                            <span t-if="o.compliance_ts" t-out="o.compliance_ts" t-options="{'widget': 'datetime', 'tz_name': 'Europe/Kyiv'}"/>
+                            <span t-else="">—</span>
+                            (<span t-if="o.compliance_dirty">потребує перерахунку</span><span t-else="">перераховано</span>)
+                        </p>
+
+                        <h3>1. Маршрути евакуації</h3>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>Зона</th><th>Назва</th><th>Вихід</th><th>Довжина, м</th><th>Норма, м</th><th>Найвужче, м</th><th>Статус</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="routes" t-as="r" class="f3d-route-row">
+                                    <td t-out="r.zone_code"/>
+                                    <td t-out="r.name"/>
+                                    <td t-out="r.exit_id.code"/>
+                                    <td t-out="n1(r.length_m)"/>
+                                    <td t-out="n1(r.norm_m)"/>
+                                    <td t-out="n1(r.width_min_m)"/>
+                                    <td t-out="status.get(r.compliance, '')"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p>
+                            Найдальша точка цеху: <t t-out="n1(o.evac_max_distance_m)"/> м
+                            у точці (<t t-out="n1(o.evac_worst_x)"/>; <t t-out="n1(o.evac_worst_y)"/>).
+                        </p>
+                        <p>
+                            Норма довжини шляху: <t t-out="Norm.get('evac_distance_prod_B')"/> м
+                            (<t t-out="Norm.get_ref('evac_distance_prod_B')"/>);
+                            зі швидкозгоряльними панелями: <t t-out="Norm.get('evac_distance_polymer')"/> м
+                            (<t t-out="Norm.get_ref('evac_distance_polymer')"/>).
+                            Тупики ≤ 25 м (п. 8.2.9): не перевіряється.
+                        </p>
+
+                        <h3>2. Виходи</h3>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>Код</th><th>Стіна</th><th>Ширина, м</th><th>До найближчого, м</th><th>Статус</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="exits" t-as="e" class="f3d-exit-row">
+                                    <td t-out="e.code"/>
+                                    <td t-out="dict(e._fields['side'].selection).get(e.side)"/>
+                                    <td t-out="e.width_m"/>
+                                    <td t-out="n1(e.nearest_exit_m)"/>
+                                    <td t-out="status.get(e.compliance, '')"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p>
+                            Найбільша відстань між виходами: <t t-out="n1(o.compliance_exit_pair_m)"/> м
+                            (потрібно не менше <t t-out="n1(o.compliance_exit_l_m)"/> м).
+                            Підстава: <t t-out="Norm.get_ref('evac_exits_min')"/>
+                        </p>
+
+                        <h3>3. Димові зони</h3>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>Код</th><th>Площа, м²</th><th>Макс. площа, м²</th><th>Потрібно люків</th><th>Люків</th><th>Статус</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="szones" t-as="s" class="f3d-smoke-row">
+                                    <td t-out="s.code"/>
+                                    <td t-out="'%d' % s.area_m2"/>
+                                    <td t-out="'%d' % s.max_area_m2"/>
+                                    <td t-out="s.need_vents"/>
+                                    <td t-out="s.vent_count"/>
+                                    <td t-out="status.get(s.compliance, '')"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p t-if="Norm.search([('key', '=', 'smoke_vent_area')], limit=1).note">
+                            <t t-out="Norm.search([('key', '=', 'smoke_vent_area')], limit=1).note"/>
+                        </p>
+
+                        <h3>4. Розстановка сповіщувачів</h3>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>Код</th><th>Назва</th><th>Тип</th><th>Сповіщувачів</th><th>Потрібно</th><th>Розрив, м</th><th>Точка</th><th>Статус</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.zone_ids.filtered('active')" t-as="z" class="f3d-zone-row">
+                                    <td t-out="z.code"/>
+                                    <td t-out="z.name"/>
+                                    <td t-out="z.kind_name"/>
+                                    <td t-out="z.detector_count"/>
+                                    <td t-out="z.n_required"/>
+                                    <td t-out="n1(z.cover_max_gap_m)"/>
+                                    <td t-out="z.cover_point"/>
+                                    <td t-out="status.get(z.compliance, '')"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p>Зони цеху без сигналізації: <t t-out="o.compliance_missing_zones or 'немає'"/></p>
+
+                        <h3>5. Ручні сповіщувачі</h3>
+                        <p>
+                            Найбільша відстань до ручного сповіщувача: <t t-out="n1(o.compliance_mcp_max_m)"/> м
+                            (норма ≤ <t t-out="Norm.get('mcp_spacing')"/> м) у точці <t t-out="o.compliance_mcp_point"/>.
+                        </p>
+
+                        <h3>6. Оповіщувачі</h3>
+                        <p>
+                            Довідково: найбільша відстань до оповіщувача <t t-out="n1(o.compliance_sounder_max_m)"/> м.
+                            Рівень звуку ≥ <t t-out="Norm.get('sounder_level')"/> дБА або на 5 дБА вище фону
+                            (виробничі <t t-out="Norm.get('sounder_bg_production')"/>, склади <t t-out="Norm.get('sounder_bg_storage')"/>,
+                            офіс <t t-out="Norm.get('sounder_bg_office')"/> дБА) визначає акустичний розрахунок;
+                            паспорт FDS226-RW 75…99 дБА, покриття маяка W-3.2-10.
+                        </p>
+
+                        <h3>7. Норми</h3>
+                        <table class="table table-sm">
+                            <thead><tr><th>Ключ</th><th>Значення</th><th>Підстава</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="Norm.search([])" t-as="nm">
+                                    <td t-out="nm.key"/>
+                                    <td><t t-if="nm.value_set"><t t-out="nm.value"/> <t t-out="nm.unit"/></t><t t-else="">норма не задана</t></td>
+                                    <td t-out="nm.ref"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

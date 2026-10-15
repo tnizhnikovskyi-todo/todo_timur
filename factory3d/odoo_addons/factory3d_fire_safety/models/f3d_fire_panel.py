@@ -342,24 +342,12 @@ class F3dFirePanel(models.Model):
                 float(icp.get_param("factory3d.base.plant_width_m", 72)))
 
     def _recompute_exits(self, panel):
-        """R-06 п. 1–3, 5 + R-07 за записами виходів (сама `_recompute` виходів — у M-09)."""
-        Norm = self.env["f3d.fire.norm"]
-        exits = self.env["f3d.fire.exit"].search([])
-        exits._recompute()
-        length, width = self._plant_size()
-        perimeter = 2 * (length + width)
-        k = Norm.get("exit_dispersal_k", 1.5)
-        limit = k * math.sqrt(perimeter)
-        pair = 0.0
-        pts = [(e.x, e.y) for e in exits]
-        for i, a in enumerate(pts):
-            for b in pts[i + 1:]:
-                pair = max(pair, math.hypot(a[0] - b[0], a[1] - b[1]))
-        pair = round(pair, 1)
-        n_ok = len(exits) >= (Norm.get("evac_exits_min", 2) or 0)
-        widths = all(exits.mapped("width_ok"))
-        return {"compliance_exit_l_m": round(limit, 1), "compliance_exit_pair_m": pair,
-                "compliance_exits_ok": bool(n_ok and pair >= limit and widths)}
+        """R-06 п. 1–3, 5 + R-07: підсумок рахує `f3d.fire.exit._dispersal_summary` (M-09)."""
+        Exit = self.env["f3d.fire.exit"]
+        Exit.search([])._recompute()
+        res = Exit._dispersal_summary()
+        return {"compliance_exit_l_m": res["l_m"], "compliance_exit_pair_m": res["pair_m"],
+                "compliance_exits_ok": res["ok"]}
 
     def action_recompute_compliance(self):
         note = ""

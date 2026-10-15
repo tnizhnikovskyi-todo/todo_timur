@@ -5,3 +5,4 @@ from . import test_w0
 from . import common
 from . import test_norms
 from . import test_event
+from . import test_evacuation

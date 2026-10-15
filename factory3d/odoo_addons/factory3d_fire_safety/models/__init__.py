@@ -7,7 +7,7 @@ from . import f3d_fire_device
 from . import f3d_fire_event
 from . import f3d_fire_system
 from . import f3d_fire_smoke_zone  # W3 (device.smoke_zone_id, system.smoke_zone_ids)
-# from . import f3d_fire_exit
+from . import f3d_fire_exit  # W3
 from . import f3d_fire_route  # W3 (f3d.zone.f3d_evac_route_id)
 from . import f3d_fire_drill  # W4 (event.drill_id)
 # from . import passage_source
