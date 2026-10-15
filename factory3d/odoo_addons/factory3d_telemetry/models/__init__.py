@@ -4,3 +4,6 @@ from . import f3d_signal
 from . import f3d_reading
 from . import f3d_reading_hour
 from . import f3d_command
+from . import maintenance_equipment
+from . import maintenance_request
+from . import res_config_settings

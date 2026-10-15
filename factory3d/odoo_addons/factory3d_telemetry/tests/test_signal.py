@@ -241,7 +241,7 @@ class TestWrite(SignalCase):
 @tagged(*TAGS)
 class TestUnlink(SignalCase):
     def test_meter_signal_protected(self):
-        self.eq_comp.write({'f3d_meter_signal_id': self.sig_hours.id})
+        self.eq_comp.write({'f3d_meter_signal_id': self.sig_hours.id, 'f3d_meter_interval': 2000.0})
         with self.assertRaises(UserError) as ctx:
             self.sig_hours.unlink()
         self.assertIn('Сигнал використовується для ТО за лічильником на Компресорна станція.', _msg(ctx))

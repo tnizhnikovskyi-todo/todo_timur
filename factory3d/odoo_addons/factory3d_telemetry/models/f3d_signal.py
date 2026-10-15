@@ -436,9 +436,3 @@ class F3dSignal(models.Model):
             "view_mode": "form", "target": "new", "context": {"default_signal_id": self.id},
         }
 
-
-class MaintenanceEquipment(models.Model):
-    """Мінімальне зворотне поле для `meter_equipment_ids`; повне розширення обладнання (M-07) — W2."""
-    _inherit = "maintenance.equipment"
-
-    f3d_meter_signal_id = fields.Many2one("f3d.signal", string="Лічильник для ТО", ondelete="set null")

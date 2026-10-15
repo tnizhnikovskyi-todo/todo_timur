@@ -20,4 +20,6 @@
     <menuitem id="menu_f3d_telemetry_maint" name="Телеметрія" parent="maintenance.menu_maintenance_title"
               sequence="6" action="action_f3d_signal_alarm" groups="factory3d_base.group_f3d_user"/>
     <!-- action_f3d_signal_alarm: копія action_f3d_signal з context={'search_default_alarm': 1} (SPEC §3) -->
+    <menuitem id="menu_f3d_telemetry_config" name="Налаштування телеметрії" parent="factory3d_base.menu_f3d_config"
+              sequence="30" action="action_f3d_telemetry_settings" groups="factory3d_base.group_f3d_admin"/>
 </odoo>
