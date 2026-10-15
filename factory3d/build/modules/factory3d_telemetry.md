@@ -1,7 +1,7 @@
 # factory3d_telemetry
 Статус: IN_PROGRESS
 Тесты: Odoo 239/239, collector 172/172 (+2 skip broker) (2026-10-15), ТК: —
-Решений без заказчика: 13 (ниже)
+Решений без заказчика: 14 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правка SPEC R-20/AC-78 vs Додаток A.2 `gap_max` (DEC-10)
 
@@ -14,6 +14,7 @@
 | W6 | принят | 3992343 | pytest unit 172/172 (2 skip broker), ruff, mypy |
 | W3 | принят | 33244f2 | telemetry+viewer 198/198 (2 skip AC-70) |
 | W4 | принят | 9412ed3 | telemetry+viewer 239/239 (и с iot_sim) |
+| DoD | принят | 5cb5e7b | README/CHANGELOG, ruff check+format, x_/TODO чисто; 239/239, unit 174 |
 | W7 | в работе | | |
 
 ## Решения без заказчика
@@ -31,3 +32,4 @@
 - DEC-11: `HttpPushServer` — синглтон процесса, стартует всегда на `F3D_HTTP_PUSH_PORT`; COV-контроль BACnet — внутри `poll()` по `cov_check_s`; кэш адресов BACnet — `buffer_dir/bacnet_addr.json` (fallback без ответа Who-Is). — `collector/core/http_push.py`, `collector/plugins/bacnet_ip.py`
 - DEC-12: хук §5.3 — шаг 6 (заявки) выполняется после verify и только при `mismatches == []`; `signals_catalog` для `new=0` пишет и `decimals`/`min_duration_s` (из C.2); масштаб R-20 округляется до 8 значащих цифр. — `hooks.py`
 - DEC-13: `fields.Json(default=dict)` → `default=lambda self: {}` (иначе падает `Form`). — `models/f3d_source.py`, `models/f3d_signal.py`
+- DEC-14: `docker build` колектора в среде не проходит (pip в контейнере — TLS прокси, self-signed); pylint-odoo не установлен — пункты DoD отложены на CI/человека. ruff.toml модулей: B018 для `__manifest__`, B027 для `plugins/base.py`.
