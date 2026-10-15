@@ -208,3 +208,22 @@ test("устаревший проект: сохранение даёт увед�
   assert.equal(await m2.save("WH"), "stale");
   assert.ok(n2.some((x) => x.key === "n.saveStale"));
 });
+
+test("W-13: applyPlan / applyLog / rollback ходят в /apply/*, ответ сервера возвращается как есть", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    const route = url.replace("/wh_constructor/api", ""), params = JSON.parse(init.body).params; calls.push({ route, params });
+    const result = route === "/apply/run" ? (params.ops.length ? { status: "ok", log_id: 5, refs: { r: 9 }, counts: { create: 1 } } : { status: "error", message: "Немає операцій" })
+      : route === "/apply/log" ? { status: "ok", log: [{ id: 5, state: "applied" }] } : route === "/apply/rollback" ? { status: "denied", message: "no" } : { status: "ok" };
+    return { ok: true, status: 200, json: async () => ({ jsonrpc: "2.0", id: null, result }) };
+  };
+  const st = createOdooStorage({ fetchImpl, ls: lsOf() });
+  const ops = [{ kind: "create", ref: "r", name: "X", usage: "internal", parent: { id: 1 }, vals: {} }];
+  assert.deepEqual(await st.applyPlan({ project: "p", warehouse: 3, ops, comment: "c" }), { status: "ok", log_id: 5, refs: { r: 9 }, counts: { create: 1 } });
+  assert.deepEqual(calls[0].params, { key: "p", warehouse_id: 3, ops, comment: "c" });
+  assert.equal((await st.applyPlan({ project: "p", warehouse: 3, ops: [] })).status, "error");
+  assert.deepEqual(await st.applyLog({ project: "p", warehouse: 3 }), [{ id: 5, state: "applied" }]);
+  assert.deepEqual(calls[2].params, { key: "p", warehouse_id: 3 });
+  assert.equal((await st.rollback(5)).status, "denied");
+  assert.deepEqual(calls[3].params, { log_id: 5 });
+});

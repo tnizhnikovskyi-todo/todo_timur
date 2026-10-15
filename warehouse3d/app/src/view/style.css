@@ -330,6 +330,23 @@ svg .bd-rl { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; text
 .bld-vt .x { border: 0; background: transparent; cursor: pointer; font-size: 16px; color: var(--o-muted); }
 .bld-vt .x:disabled { opacity: 0.3; cursor: default; }
 .bld-form .ed-form { margin-bottom: 6px; }
+/* W-13: окно «План змін», журнал, расхождения с Odoo */
+.o_plan_dlg { width: min(1100px, 100%); }
+.o_plan_dlg .o_tabs { margin-bottom: 10px; }
+.o_plan_dlg .o_chips { margin-bottom: 8px; }
+.o_plan_dlg label.o_chip { display: inline-flex; align-items: center; gap: 4px; }
+.o_plan_dlg label.o_chip input { width: auto; margin: 0; }
+.o_scope { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 8px; font-size: 13px; }
+.o_plan_list tr.grp th { background: var(--o-btn2); font-size: 12px; text-transform: none; padding: 5px 6px; }
+.o_plan_list td.first { width: 28px; }
+.o_tag { display: inline-block; border: 1px solid var(--o-border); border-radius: 10px; padding: 0 7px; font-size: 11px; color: var(--o-muted); }
+.o_tag.bad { border-color: var(--bad); color: var(--bad); }
+.o_warn { background: var(--accent-soft); border-radius: 4px; padding: 6px 10px; font-size: 13px; margin: 0 0 8px; }
+.o_remind { border: 1px solid var(--warn); border-radius: 6px; padding: 8px 12px; margin: 0 0 10px; }
+.o_remind p { margin: 6px 0; }
+.o_msg { padding: 6px 10px; border-radius: 4px; font-size: 13px; margin: 0 0 8px; background: var(--o-btn2); }
+.o_msg.ok { border-left: 3px solid var(--ok); } .o_msg.bad { border-left: 3px solid var(--bad); }
+.o_logops { margin: 4px 0 0; padding-left: 18px; font-size: 12px; max-height: 160px; overflow: auto; }
 
 /* разбор кодов, лоток «Не розміщено» (W-12) */
 .o_modal .sec { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }

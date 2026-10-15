@@ -22,7 +22,7 @@ export function createSidePanel({ model, i18n, root }) {
   const chips = (n, attr, cls = "") => pathOf(model.tree, n).map((x) => `<button class="o_chip ${cls}${x.id === n.id ? " on" : ""}" data-${attr}="${esc(x.id)}">${esc(label(x))}</button>`).join('<span class="o_chip_sep">›</span>');
   const selChips = (n) => chips(n, "esel").replaceAll("<button ", `<button title="${T("side.selectLevel")}" `);
   const pathChips = (n) => pathOf(model.tree, n).map((x) => `<button class="o_chip${x.id === model.ui.focus ? " on" : ""}" data-focus="${esc(x.id)}" title="${T("plan.focusOnly")}">${esc(label(x))}</button>`).join('<span class="o_chip_sep">›</span>');
-  const nameTag = (n) => (n.pend ? ` <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft ? ` <span class="ed-new">${T("tag.new")}</span>` : "");
+  const nameTag = (n) => (n.pend ? ` <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft && !n.adopted ? ` <span class="ed-new">${T("tag.new")}</span>` : "");
   const typeInfo = (tp) => `${esc(tname(tp))} · ${T(`form.${tp.form}`)} · ${i18n.m(tp.w)} × ${i18n.m(tp.d)} ${T("unit.m")}${RACKED.includes(tp.form) ? ` · ${T("side.levelH", { h: i18n.m(tp.lh) })}` : ""}`;
   const typeOpts = (forms, sel) => [...model.tree.types.values()].filter((x) => forms.includes(x.form)).map((x) => `<option value="${esc(x.id)}"${x.id === sel ? " selected" : ""}>${esc(tname(x))} · ${esc(x.id)}</option>`).join("");
   const btns = (ro) => `<div class="ed-btns"><button type="button" class="btn btn-secondary" data-show>${T("form.show")}</button>${ro ? "" : `<button type="submit" class="btn btn-primary">${T("form.save")}</button>`}</div>`;
@@ -117,7 +117,7 @@ export function createSidePanel({ model, i18n, root }) {
     const isGroup = n.type === "group" || n.type === "rackset", zoneLeaf = n.type === "group" && n.loc && !n.kids.length;
     const K = (op) => `form:${op}@${n.id}`;
     const isCell = n.type === "cell", lv = n.type === "level" ? n : isCell ? tree.nodes.get(n.parent) : null, pid = isCell ? n.parent : n.id; // изменения ячейки принадлежат её ярусу
-    let h = `<div class="lab">${T("side.edit")}${n.id === "WH" ? "" : n.pend ? ` · <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft ? ` · <span class="ed-new">${T("tag.new")}</span>` : ` · ${T("tag.fromOdoo")}`}</div><h2>${esc(label(n))}</h2>
+    let h = `<div class="lab">${T("side.edit")}${n.id === "WH" ? "" : n.pend ? ` · <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft && !n.adopted ? ` · <span class="ed-new">${T("tag.new")}</span>` : ` · ${T("tag.fromOdoo")}`}</div><h2>${esc(label(n))}</h2>
       <div class="o_chips" style="margin-top:6px">${chips(n, "esel")}</div>
       <div class="ed-info">${tp && !(isGroup && !zoneLeaf) ? `${typeInfo(tp)}<br>` : ""}${esc(places(n.codes.length))} · ${i18n.m(n.w)} × ${i18n.m(n.d)} ${T("unit.m")}${n.loc ? ` · <span class="code">${esc(n.loc)}</span>` : ""}</div>`;
     const clip = model.clip, dest = clip.length ? model.dropInto(tree.nodes.get(clip[0]), n.id) : null;

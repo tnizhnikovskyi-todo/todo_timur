@@ -10,6 +10,8 @@ import { createModel } from "../src/core/model.js";
 import { createFileAdapter } from "../src/adapters/file.js";
 import { writeCsv } from "../src/adapters/csv.js";
 import { locationRows } from "../src/core/locexport.js";
+import { odooRef, projectFromWarehouses } from "../src/adapters/odoo-api.js";
+import { createWorld } from "./fakeodoo.js";
 import { createProject } from "../src/core/project.js";
 import { createMemoryStorage } from "../src/core/storage.js";
 import { normEdit } from "../src/core/types.js";
@@ -218,4 +220,53 @@ test("импорт CSV прототипа (экспорт → адаптер): �
   await ad.open("loc.csv", writeCsv([out.headers, ...out.rows]));
   const m = createModel(ad.project({ existing: [] }), createMemoryStorage(), { bases: {} });
   assert.equal(m.tray.count(), 0); assert.equal(m.tree.nodes.size, 891); assert.equal(m.nodes().filter((n) => n.is_location).length, 689);
+});
+
+// W-12 + W-13: «План змін» после размещения из лотка, авто-раскладки и разбора по ключу из штрихкода
+const ZONE = "WH1/Stock/Фурнітура";
+function odooSetup(extra = {}) {
+  const world = createWorld({}), snap = world.snapshot(), bases = { [odooRef(1)]: snap };
+  const rec = (id, code, path, parent) => ({ id, complete_name: path, parent_id: parent, usage: "internal", barcode: code, quants: [], capacity: null, fill: null, kind: "bin" });
+  for (const [code, [id, path, parent]] of Object.entries(extra)) snap.locations[code] = rec(id, code, path, parent);
+  const project = projectFromWarehouses([{ id: 1, code: "WH1", name: "Склад 1", company: "Co" }], { id: "odoo-1", name: "P", db: "t", version: { series: `${world.major}.0` } });
+  return { model: createModel(project, createMemoryStorage(), { bases }), snap, world };
+}
+
+test("лоток → «План змін»: размещение существующего места — перенос в зону, а не создание", async () => {
+  const { model: m, snap } = odooSetup({ "LOST-1": [9001, "WH1/Lost", 10] });
+  assert.deepEqual(m.tray.list().map((u) => [u.code, u.name]), [["LOST-1", "Lost"]]);
+  assert.equal(m.changePlan().stats.total, 0);
+  assert.ok(m.ops.place(["LOST-1"], ZONE));
+  assert.equal(m.changePlan().stats.total, 0, "несохранённое в план не входит");
+  await m.save("WH");
+  const p = m.changePlan();
+  assert.deepEqual([p.stats.total, p.stats.move, p.stats.create, p.stats.archive], [1, 1, 0, 0]);
+  const o = p.ops[0]; assert.deepEqual([o.kind, o.id, o.to.path, o.from.id], ["move", 9001, ZONE, snap.meta.odoo.view_location_id]);
+  assert.equal(m.nodes().find((n) => n.code === "LOST-1").odoo_id, 9001);
+});
+
+test("авто-раскладка меняет только положения: «План змін» пуст", async () => {
+  const { model: m } = odooSetup();
+  m.bld.ops.create({ margin: 40 });
+  assert.ok(m.ops.autoLayout("WH")); await m.save("WH");
+  assert.ok(m.edit.pos.length > 0);
+  assert.equal(m.changePlan().stats.total, 0);
+});
+
+test("правила разбора работают с ключом места из штрихкода: имя уровня короткое, код — в barcode", async () => {
+  const codes = { "A-01-02-1": [9101, `${ZONE}/1`, 12], "A-01-02-2": [9102, `${ZONE}/2`, 12], "A-01-03-1": [9103, `${ZONE}/1`, 12], "ODD-9": [9104, "WH1/Odd", 10] };
+  const { model: m } = odooSetup(codes);
+  const before = m.parse.stats().parsed;
+  assert.equal(m.tree.byCode.get("A-01-02-1").parent, ZONE); // без правил — места на полу в зоне
+  m.ops.parse({ rules: [...m.parse.defaults(), { mask: "A-{ряд}-{секція}-{ярус}", tp: "FUR" }] });
+  assert.equal(m.parse.stats().parsed, before + 3);
+  const lv = m.tree.byCode.get("A-01-02-2");
+  assert.deepEqual([lv.id, lv.type, lv.loc], [`${ZONE}/01/02/2`, "level", "A-01-02-2"]);
+  assert.deepEqual(m.tray.list().map((u) => u.code), ["ODD-9"]);
+  assert.equal(m.nodes().find((n) => n.code === "A-01-02-2").odoo_id, 9102); // id берётся по коду = штрихкод
+  assert.ok(m.ops.place(["ODD-9"], `${ZONE}/01/02/1`)); // перетаскивание на ярус: ближайшая зона выше
+  await m.save("WH");
+  const p = m.changePlan();
+  assert.deepEqual(p.ops.map((o) => [o.kind, o.id]).sort(), [["move", 9104]]);
+  assert.equal(p.stats.create, 0);
 });

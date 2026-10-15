@@ -5,6 +5,7 @@
 //   saveProject(p, { commit }) → "shared" | "stale" (в базе проект новее) | "fail"; commit — версия проекта (иначе черновик, версий нет)
 //   lock({ project, warehouse, warehouseCode, zone }) → { ok, owner, expires, mine } · unlock({ project, warehouse, zone }) · me()
 //   versions(id) / restore(id, versionId) — история версий (интерфейс — W-18)
+//   applyPlan({ project, warehouse, ops, comment }) / applyLog({ project, warehouse }) / rollback(logId) — применение плана изменений, журнал и откат (W-13)
 //   listLibrary() / saveLibrary(lib) — общая библиотека типов и шаблонов компании (модель wh.library): читать может «перегляд», писать «проектування»;
 //   если в базе она новее — записи объединяются по id и запись повторяется один раз
 import { migrateProject } from "../core/project.js";
@@ -92,6 +93,12 @@ export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch
       if (r.status === "stale") storage.stale = { rev: r.rev, by: r.by, at: r.at };
       return null;
     },
+    // применение плана изменений к локациям Odoo (W-13): право «застосування в Odoo» проверяет сервер; одна транзакция, при ошибке ничего не применено.
+    // → { status: "ok", log_id, refs, counts } | { status: "error" | "denied", message }
+    applyPlan: ({ project, warehouse, ops, comment }) => rpc("/apply/run", { key: project || null, warehouse_id: warehouse, ops, comment: comment || null }),
+    // журнал применений (проекта и склада Odoo) → [{ id, name, date, user, state, counts, ops, more, comment, rolled_back_by, rolled_back_at }]; откат записи журнала
+    async applyLog({ project, warehouse } = {}) { const r = await rpc("/apply/log", { key: project || null, warehouse_id: warehouse || null }); return r.status === "ok" ? r.log : []; },
+    rollback: (logId) => rpc("/apply/rollback", { log_id: logId }),
     lock: ({ project, warehouse, warehouseCode, zone }) => rpc("/lock/acquire", { key: project, warehouse, zone, warehouse_code: warehouseCode || null }),
     unlock: ({ project, warehouse, zone }, opts) => rpc("/lock/release", { key: project, warehouse: warehouse || null, zone: zone || null }, opts), // без warehouse/zone — все свои блокировки проекта
     async listLibrary() {
