@@ -20,3 +20,21 @@ def free_port() -> int:
 @pytest.fixture
 def port():
     return free_port()
+
+
+# --- W3: Modbus-клієнт на локальному сервері ---------------------------------------------
+@pytest.fixture
+async def modbus(world, port):
+    """``ModbusServer`` на вільному порту + підключений ``AsyncModbusTcpClient`` (``srv.client``)."""
+    from pymodbus.client import AsyncModbusTcpClient
+
+    from iot_sim.protocols.modbus_server import ModbusServer
+
+    srv = ModbusServer(world, port=port, host="127.0.0.1")
+    await srv.start()
+    client = AsyncModbusTcpClient("127.0.0.1", port=port)
+    await client.connect()
+    srv.client = client
+    yield srv
+    client.close()
+    await srv.stop()
