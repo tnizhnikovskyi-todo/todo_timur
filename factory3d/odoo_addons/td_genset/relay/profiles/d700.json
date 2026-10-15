@@ -1,0 +1,70 @@
+{
+  "alarms": {
+    "batt_high_v": 33.0,
+    "batt_low_v": 23.0,
+    "coolant_high_c": 98,
+    "low_fuel_sd_pct": 10,
+    "low_fuel_warn_pct": 25,
+    "oil_low_bar": 1.0
+  },
+  "fuel_lph": {
+    "100": 136.4,
+    "25": 38.6,
+    "50": 71.2,
+    "75": 103.8,
+    "esp": 149.5
+  },
+  "profile": "D700",
+  "rated": {
+    "kva_esp": 697,
+    "kva_prp": 634,
+    "kw_esp": 558,
+    "kw_prp": 507
+  },
+  "sensors": {
+    "batt_v": 25.2,
+    "charger_v": 27.6,
+    "coolant_idle_c": 22,
+    "coolant_run_c": 85,
+    "coolant_tau_s": 600,
+    "f_hz": 50.0,
+    "oil_idle_bar": 0.0,
+    "oil_run_bar": 4.5,
+    "pf": 0.8,
+    "rpm_run": 1500,
+    "u_v": 400
+  },
+  "start": {
+    "fuel_pct": 82,
+    "hours": 1213.0,
+    "kwh": 61250,
+    "last_test": "2026-10-12T07:30:00+03:00",
+    "load_kw": 348,
+    "mains_ok": true,
+    "mode": "auto",
+    "starts": 184
+  },
+  "tank_l": 610,
+  "timers": {
+    "cooling_s": 10,
+    "crank_fire_s": 3,
+    "crank_rest_s": 10,
+    "crank_s": 8,
+    "ets_hold_s": 20,
+    "mains_abnormal_s": 5,
+    "mains_normal_s": 10,
+    "over_current_delay_s": 30,
+    "safety_on_s": 10,
+    "start_delay_s": 1,
+    "start_times": 3,
+    "stop_delay_s": 1,
+    "transfer_s": 1.0,
+    "warming_s": 10
+  },
+  "timers_plant": {
+    "mains_abnormal_s": 2,
+    "safety_on_s": 5,
+    "start_delay_s": 0,
+    "warming_s": 3
+  }
+}

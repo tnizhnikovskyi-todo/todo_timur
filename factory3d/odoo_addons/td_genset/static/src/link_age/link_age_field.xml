@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- «Зв'язок» у шапці картки: «· 14 с тому», повна дата — у підказці (D-05). Власник: W3. -->
+<templates xml:space="preserve">
+    <t t-name="td_genset.LinkAgeField">
+        <span t-if="value" class="o_td_genset_link_age text-muted" t-att-title="title" t-att-data-ts="value.toMillis()">· <t t-esc="text"/></span>
+    </t>
+</templates>

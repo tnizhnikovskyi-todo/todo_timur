@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §5.2, Додаток C -->
+<odoo noupdate="0">
+    <record id="profile_d700" model="f3d.genset.profile">
+        <field name="code">D700</field>
+        <field name="name">KOHLER-SDMO D700 · SmartGen HGM6120N</field>
+        <field name="kva_prp">634</field>
+        <field name="kw_prp">507</field>
+        <field name="kva_esp">697</field>
+        <field name="kw_esp">558</field>
+        <field name="tank_l">610</field>
+        <field name="fuel_lph_25">38.6</field>
+        <field name="fuel_lph_50">71.2</field>
+        <field name="fuel_lph_75">103.8</field>
+        <field name="fuel_lph_100">136.4</field>
+        <field name="fuel_lph_esp">149.5</field>
+        <field name="oil_l">34</field>
+        <field name="oil_pressure_min_bar">0.5</field>
+        <field name="start_to_load_s">15</field>
+        <field name="autonomy_warn_h">2.0</field>
+        <field name="timer_preset">default</field>
+        <field name="note">Джерела: датасіт SDMO D700 (50/75/100 % PRP, 100 % ESP), Doosan DP180LB engine spec (25 %), мануал SmartGen HGM6100N.</field>
+    </record>
+</odoo>

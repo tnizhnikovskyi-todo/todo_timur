@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3. «Заправка» (ТР 2.3.11, 2.10; мокап «Заправка»): каністри kanban (card) / list / form, рух запасу,
+     заправки зі звіркою, місця зберігання, точки калібрування. XML id дій (контракт): action_td_genset_canister,
+     action_td_genset_refuel, action_td_genset_fuel_move, action_td_genset_storage_location. -->
+<odoo>
+    <!-- Місця зберігання -->
+    <record id="view_td_genset_storage_location_list" model="ir.ui.view">
+        <field name="name">td.genset.storage.location.list</field>
+        <field name="model">td.genset.storage.location</field>
+        <field name="arch" type="xml">
+            <list string="Місця зберігання" editable="bottom">
+                <field name="name" string="Місце"/>
+                <field name="canister_count" string="Каністр"/>
+                <field name="liters" string="Палива, L"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_genset_storage_location_form" model="ir.ui.view">
+        <field name="name">td.genset.storage.location.form</field>
+        <field name="model">td.genset.storage.location</field>
+        <field name="arch" type="xml">
+            <form string="Місце зберігання">
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title"><h1><field name="name" placeholder="Щитова"/></h1></div>
+                    <group>
+                        <field name="canister_count"/>
+                        <field name="liters"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+                    <field name="canister_ids" readonly="1" nolabel="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="liters"/>
+                            <field name="volume_l"/>
+                            <field name="state" widget="badge" decoration-success="state == 'full'"
+                                   decoration-warning="state == 'part'" decoration-muted="state == 'empty'"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_td_genset_storage_location_search" model="ir.ui.view">
+        <field name="name">td.genset.storage.location.search</field>
+        <field name="model">td.genset.storage.location</field>
+        <field name="arch" type="xml">
+            <search string="Місця зберігання">
+                <field name="name"/>
+                <filter name="archived" string="Архів" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_td_genset_storage_location" model="ir.actions.act_window">
+        <field name="name">Місця зберігання</field>
+        <field name="res_model">td.genset.storage.location</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Додайте місце зберігання каністр</p>
+            <p>Наприклад, «Щитова» або «Склад»: каністри надходжень прив'язуються до місця, місце з каністрами не
+                видаляється.</p>
+        </field>
+    </record>
+
+    <!-- Каністри -->
+    <record id="view_td_genset_canister_kanban" model="ir.ui.view">
+        <field name="name">td.genset.canister.kanban</field>
+        <field name="model">td.genset.canister</field>
+        <field name="arch" type="xml">
+            <kanban class="o_td_genset_canister_kanban" create="0">
+                <header>
+                    <button name="%(td_genset.action_td_genset_refuel_wizard)d" type="action"
+                            string="Заправити генератор" class="btn-primary" display="always"
+                            groups="td_genset.group_admin"/>
+                    <button name="%(td_genset.action_td_genset_fuel_receipt_wizard)d" type="action"
+                            string="Надходження палива" class="btn-secondary" display="always"
+                            groups="td_genset.group_admin"/>
+                </header>
+                <field name="state"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <field name="name" class="fw-bold fs-5"/>
+                            <field name="state" widget="badge" decoration-success="state == 'full'"
+                                   decoration-warning="state == 'part'" decoration-muted="state == 'empty'"/>
+                        </div>
+                        <div class="d-flex align-items-baseline gap-1">
+                            <field name="liters" class="fw-bold" digits="[16, 1]"/>
+                            <span>/</span>
+                            <field name="volume_l" digits="[16, 0]"/>
+                            <span>L</span>
+                        </div>
+                        <field name="liters" widget="progressbar" options="{'max_value': 'volume_l', 'editable': false}"/>
+                        <div class="text-muted"><i class="fa fa-map-marker me-1" title="Місце"/><field name="location_id"/></div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    <record id="view_td_genset_canister_list" model="ir.ui.view">
+        <field name="name">td.genset.canister.list</field>
+        <field name="model">td.genset.canister</field>
+        <field name="arch" type="xml">
+            <list string="Каністри" create="0">
+                <header>
+                    <button name="%(td_genset.action_td_genset_refuel_wizard)d" type="action"
+                            string="Заправити генератор" class="btn-primary" display="always"
+                            groups="td_genset.group_admin"/>
+                    <button name="%(td_genset.action_td_genset_fuel_receipt_wizard)d" type="action"
+                            string="Надходження палива" class="btn-secondary" display="always"
+                            groups="td_genset.group_admin"/>
+                </header>
+                <field name="name"/>
+                <field name="liters" sum="Разом, L"/>
+                <field name="volume_l"/>
+                <field name="location_id"/>
+                <field name="state" widget="badge" decoration-success="state == 'full'"
+                       decoration-warning="state == 'part'" decoration-muted="state == 'empty'"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_genset_canister_form" model="ir.ui.view">
+        <field name="name">td.genset.canister.form</field>
+        <field name="model">td.genset.canister</field>
+        <field name="arch" type="xml">
+            <form string="Каністра" create="0">
+                <header>
+                    <button name="action_write_off" type="object" string="Списати"
+                            confirm="Списати каністру разом із паливом? Дію не можна скасувати."
+                            groups="td_genset.group_admin" invisible="not active"/>
+                    <field name="state" widget="statusbar" statusbar_visible="empty,part,full"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Списано" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="liters"/>
+                            <field name="volume_l"/>
+                            <field name="location_id"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <div colspan="2" class="text-muted small">
+                                Зміна кількості записується в рух запасу як коригування (інвентаризація), зміна місця —
+                                як переміщення.
+                            </div>
+                        </group>
+                    </group>
+                    <separator string="Рух запасу"/>
+                    <field name="move_ids" readonly="1" nolabel="1">
+                        <list>
+                            <field name="date"/>
+                            <field name="kind" widget="badge"/>
+                            <field name="liters_delta"/>
+                            <field name="user_id"/>
+                            <field name="note"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_td_genset_canister_search" model="ir.ui.view">
+        <field name="name">td.genset.canister.search</field>
+        <field name="model">td.genset.canister</field>
+        <field name="arch" type="xml">
+            <search string="Каністри">
+                <field name="name"/>
+                <field name="location_id"/>
+                <filter name="full" string="Повні" domain="[('state', '=', 'full')]"/>
+                <filter name="part" string="Часткові" domain="[('state', '=', 'part')]"/>
+                <filter name="empty" string="Порожні" domain="[('state', '=', 'empty')]"/>
+                <separator/>
+                <filter name="not_empty" string="З паливом" domain="[('liters', '&gt;', 0)]"/>
+                <filter name="archived" string="Списані" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_location" string="Місце" context="{'group_by': 'location_id'}"/>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_td_genset_canister" model="ir.actions.act_window">
+        <field name="name">Каністри</field>
+        <field name="res_model">td.genset.canister</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Немає каністр — оформіть надходження</p>
+            <p>Кнопка «Надходження палива» створить каністри в місці зберігання і запише рух запасу.</p>
+        </field>
+    </record>
+
+    <!-- Рух запасу -->
+    <record id="view_td_genset_fuel_move_list" model="ir.ui.view">
+        <field name="name">td.genset.fuel.move.list</field>
+        <field name="model">td.genset.fuel.move</field>
+        <field name="arch" type="xml">
+            <list string="Рух запасу" create="0" edit="0">
+                <field name="date"/>
+                <field name="kind" widget="badge" decoration-success="kind == 'in'" decoration-info="kind == 'out'"
+                       decoration-warning="kind in ('fix', 'loc')" decoration-danger="kind == 'off'"/>
+                <field name="canister_id"/>
+                <field name="genset_id" optional="hide"/>
+                <field name="liters_delta" sum="Разом, L"/>
+                <field name="balance_after"/>
+                <field name="price_unit" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="partner_id" optional="hide"/>
+                <field name="receipt_key" optional="hide"/>
+                <field name="user_id"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_genset_fuel_move_form" model="ir.ui.view">
+        <field name="name">td.genset.fuel.move.form</field>
+        <field name="model">td.genset.fuel.move</field>
+        <field name="arch" type="xml">
+            <form string="Рух запасу" create="0" edit="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date"/>
+                            <field name="kind"/>
+                            <field name="canister_id"/>
+                            <field name="liters_delta"/>
+                            <field name="balance_after"/>
+                            <field name="receipt_key"/>
+                        </group>
+                        <group>
+                            <field name="genset_id"/>
+                            <field name="refuel_id"/>
+                            <field name="price_unit"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="partner_id"/>
+                            <field name="location_from_id"/>
+                            <field name="location_to_id"/>
+                            <field name="user_id"/>
+                            <field name="note"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_td_genset_fuel_move_search" model="ir.ui.view">
+        <field name="name">td.genset.fuel.move.search</field>
+        <field name="model">td.genset.fuel.move</field>
+        <field name="arch" type="xml">
+            <search string="Рух запасу">
+                <field name="canister_id"/>
+                <field name="genset_id"/>
+                <field name="receipt_key"/>
+                <filter name="in" string="Надходження" domain="[('kind', '=', 'in')]"/>
+                <filter name="out" string="Заправки генератора" domain="[('kind', '=', 'out')]"/>
+                <filter name="fix" string="Коригування і переміщення" domain="[('kind', 'in', ('fix', 'loc'))]"/>
+                <filter name="off" string="Списання" domain="[('kind', '=', 'off')]"/>
+                <separator/>
+                <filter name="filter_date" string="Дата" date="date"/>
+                <group>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                    <filter name="group_canister" string="Каністра" context="{'group_by': 'canister_id'}"/>
+                    <filter name="group_month" string="Місяць" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_td_genset_fuel_move" model="ir.actions.act_window">
+        <field name="name">Рух запасу</field>
+        <field name="res_model">td.genset.fuel.move</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Рухів палива ще немає</p>
+            <p>Надходження, заправки генератора, коригування і списання записуються автоматично.</p>
+        </field>
+    </record>
+
+    <!-- Заправки -->
+    <record id="view_td_genset_refuel_list" model="ir.ui.view">
+        <field name="name">td.genset.refuel.list</field>
+        <field name="model">td.genset.refuel</field>
+        <field name="arch" type="xml">
+            <list string="Заправки" create="0" decoration-danger="sensor_state in ('unconfirmed', 'drain')">
+                <header>
+                    <button name="%(td_genset.action_td_genset_refuel_wizard)d" type="action"
+                            string="Заправити генератор" class="btn-primary" display="always"
+                            groups="td_genset.group_admin"/>
+                </header>
+                <field name="date" string="Дата"/>
+                <field name="name" optional="show"/>
+                <field name="genset_id" optional="hide"/>
+                <field name="source" optional="show"/>
+                <field name="source_note" string="Звідки" optional="show"/>
+                <field name="liters" string="Зміна, L" sum="Разом, L"/>
+                <field name="level_before_l" string="Бак до, L" optional="show"/>
+                <field name="level_after_l" string="Бак після, L" optional="show"/>
+                <field name="user_id" string="Хто"/>
+                <field name="sensor_state" string="Контролер" widget="badge"
+                       decoration-success="sensor_state == 'confirmed'"
+                       decoration-info="sensor_state == 'by_level'" decoration-warning="sensor_state == 'waiting'"
+                       decoration-danger="sensor_state in ('unconfirmed', 'drain')"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_genset_refuel_form" model="ir.ui.view">
+        <field name="name">td.genset.refuel.form</field>
+        <field name="model">td.genset.refuel</field>
+        <field name="arch" type="xml">
+            <form string="Заправка" create="0">
+                <header>
+                    <field name="sensor_state" widget="statusbar" statusbar_visible="waiting,confirmed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="genset_id"/>
+                            <field name="date"/>
+                            <field name="source"/>
+                            <field name="source_note" invisible="source != 'other'"/>
+                            <field name="liters"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group string="Звірка з рівнем у баку">
+                            <field name="level_before_pct"/>
+                            <field name="level_before_l"/>
+                            <field name="level_after_pct"/>
+                            <field name="level_after_l"/>
+                            <field name="event_id"/>
+                        </group>
+                    </group>
+                    <field name="canister_ids" widget="many2many_tags" invisible="source != 'cans'"/>
+                    <field name="move_ids" readonly="1" nolabel="1">
+                        <list>
+                            <field name="date"/>
+                            <field name="canister_id"/>
+                            <field name="liters_delta"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_td_genset_refuel_search" model="ir.ui.view">
+        <field name="name">td.genset.refuel.search</field>
+        <field name="model">td.genset.refuel</field>
+        <field name="arch" type="xml">
+            <search string="Заправки">
+                <field name="genset_id"/>
+                <field name="name"/>
+                <filter name="waiting" string="Очікують показання" domain="[('sensor_state', '=', 'waiting')]"/>
+                <filter name="unconfirmed" string="Не підтверджені" domain="[('sensor_state', 'in', ('unconfirmed', 'drain'))]"/>
+                <separator/>
+                <filter name="filter_date" string="Дата" date="date"/>
+                <group>
+                    <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>
+                    <filter name="group_state" string="Звірка" context="{'group_by': 'sensor_state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_td_genset_refuel" model="ir.actions.act_window">
+        <field name="name">Заправки</field>
+        <field name="res_model">td.genset.refuel</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">Заправок ще не було</p>
+            <p>Заправку записують кнопкою «Заправити генератор»: система звірить її з рівнем палива в баку за
+                показаннями контролера.</p>
+        </field>
+    </record>
+
+    <!-- Калібрування датчика (редагується на формі генератора, вкладка «Паливо») -->
+    <record id="view_td_genset_fuel_calibration_list" model="ir.ui.view">
+        <field name="name">td.genset.fuel.calibration.list</field>
+        <field name="model">td.genset.fuel.calibration</field>
+        <field name="arch" type="xml">
+            <list string="Калібрування датчика палива" editable="bottom">
+                <field name="genset_id"/>
+                <field name="ohm"/>
+                <field name="liters"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_td_genset_fuel_calibration_form" model="ir.ui.view">
+        <field name="name">td.genset.fuel.calibration.form</field>
+        <field name="model">td.genset.fuel.calibration</field>
+        <field name="arch" type="xml">
+            <form string="Точка калібрування">
+                <sheet>
+                    <group>
+                        <field name="genset_id"/>
+                        <field name="ohm"/>
+                        <field name="liters"/>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_td_genset_fuel_calibration_search" model="ir.ui.view">
+        <field name="name">td.genset.fuel.calibration.search</field>
+        <field name="model">td.genset.fuel.calibration</field>
+        <field name="arch" type="xml">
+            <search string="Калібрування датчика палива">
+                <field name="genset_id"/>
+                <field name="ohm"/>
+            </search>
+        </field>
+    </record>
+</odoo>

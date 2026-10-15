@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0. Моделі контролерів (ТР 2.4.1; SPEC 5.11). -->
+<odoo>
+    <data noupdate="1">
+        <record id="controller_hgm6120n" model="td.genset.controller.model">
+            <field name="name">HGM6120N</field>
+            <field name="code">hgm6120n</field>
+            <field name="has_mains_breaker" eval="True"/>
+        </record>
+        <record id="controller_hgm6110n" model="td.genset.controller.model">
+            <field name="name">HGM6110N</field>
+            <field name="code">hgm6110n</field>
+            <field name="has_mains_breaker" eval="False"/>
+        </record>
+    </data>
+</odoo>

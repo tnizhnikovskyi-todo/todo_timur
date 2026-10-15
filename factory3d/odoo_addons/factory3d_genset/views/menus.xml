@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-08 (CB-09, A-06; X-32, X-69) -->
+<odoo>
+    <menuitem id="menu_f3d_genset" name="Генератор" parent="factory3d_base.menu_f3d_root" sequence="55"
+              groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_genset_link" name="Зв'язка" parent="menu_f3d_genset" sequence="10"
+              action="action_f3d_genset_link" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_genset_profile" name="Профілі" parent="menu_f3d_genset" sequence="20"
+              action="action_f3d_genset_profile" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_genset_event_map" name="Події → ТО" parent="menu_f3d_genset" sequence="30"
+              action="action_f3d_genset_event_map" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_genset_requests" name="Заявки ТО генератора" parent="menu_f3d_genset" sequence="40"
+              action="action_f3d_genset_requests" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_genset_settings" name="Налаштування генератора" parent="factory3d_base.menu_f3d_config"
+              sequence="55" action="action_f3d_genset_settings" groups="factory3d_base.group_f3d_admin"/>
+</odoo>

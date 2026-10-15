@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-01, V-02 -->
+<odoo>
+    <record id="view_f3d_genset_link_form" model="ir.ui.view">
+        <field name="name">f3d.genset.link.form</field>
+        <field name="model">f3d.genset.link</field>
+        <field name="arch" type="xml">
+            <form string="Зв'язка генератора">
+                <header>
+                    <button name="action_check" type="object" string="Перевірити" class="btn-primary"
+                            groups="factory3d_base.group_f3d_manager"/>
+                    <button name="action_show_3d" type="object" string="Показати в 3D"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_signals" type="object" class="oe_stat_button" icon="fa-signal">
+                            <field name="signal_count" widget="statinfo" string="Сигнали"/>
+                        </button>
+                        <button name="action_open_requests" type="object" class="oe_stat_button" icon="fa-wrench">
+                            <field name="request_open_count" widget="statinfo" string="Заявки ТО"/>
+                        </button>
+                        <button name="action_open_td" type="object" class="oe_stat_button" icon="fa-external-link"
+                                string="Генератор (td_genset)"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                        <field name="state_code" invisible="1"/>
+                        <field name="state_label" widget="badge" decoration-success="state_code == 7"
+                               decoration-warning="state_code in (3,4,5,6,8,9)"
+                               decoration-danger="state_code in (0,10)"/>
+                    </div>
+                    <group>
+                        <group string="Зв'язка">
+                            <field name="equipment_id"/>
+                            <field name="f3d_code" readonly="1"/>
+                            <field name="td_genset_ref"/>
+                            <field name="profile_id"/>
+                            <field name="publish_enabled"/>
+                            <field name="amf_master" readonly="1"/>
+                        </group>
+                        <group string="Стан">
+                            <field name="online" widget="boolean_toggle" readonly="1"/>
+                            <field name="island"/>
+                            <field name="last_publish_ts"/>
+                            <field name="last_publish_error" invisible="not last_publish_error"
+                                   decoration-danger="1"/>
+                            <field name="last_event_ts"/>
+                            <field name="source_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Знімок" name="snapshot">
+                            <field name="last_state_text" nolabel="1" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_genset_link_list" model="ir.ui.view">
+        <field name="name">f3d.genset.link.list</field>
+        <field name="model">f3d.genset.link</field>
+        <field name="arch" type="xml">
+            <list string="Зв'язки генераторів" decoration-danger="not online">
+                <field name="name"/>
+                <field name="f3d_code"/>
+                <field name="td_genset_ref"/>
+                <field name="profile_id"/>
+                <field name="state_code" column_invisible="1"/>
+                <field name="state_label" widget="badge" decoration-success="state_code == 7"
+                       decoration-warning="state_code in (3,4,5,6,8,9)" decoration-danger="state_code in (0,10)"/>
+                <field name="online"/>
+                <field name="island"/>
+                <field name="last_publish_ts"/>
+                <field name="publish_enabled" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_f3d_genset_link" model="ir.actions.act_window">
+        <field name="name">Зв'язка генератора</field>
+        <field name="res_model">f3d.genset.link</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
