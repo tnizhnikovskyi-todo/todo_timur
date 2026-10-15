@@ -106,6 +106,78 @@ try {
     await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
     await page.keyboard.press("Escape");
   });
+  // W-06: свойства, рамка, выравнивание, массовое создание, группировка (редактирование, зона «Фурнітура» в 2D)
+  const FURZ = "WH/Сировина/Фурнітура", rackX = (n) => page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("x"), `${FURZ}/R${n}`);
+  const rackBox = (n) => page.evaluate((id) => { const r = document.querySelector(`rect.rackbg[data-node="${id}"]`).getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }, `${FURZ}/R${n}`);
+  const marquee = async (a, b) => {
+    const bs = []; for (let n = a; n <= b; n++) bs.push(await rackBox(n)); // рамка вокруг рядов a…b (с запасом, соседние ряды дальше)
+    const x0 = Math.min(...bs.map((r) => r.x)) - 15, y0 = Math.min(...bs.map((r) => r.y)) - 15, x1 = Math.max(...bs.map((r) => r.x + r.w)) + 15, y1 = Math.max(...bs.map((r) => r.y + r.h)) + 15;
+    await page.keyboard.down("Shift"); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 8 });
+    expect(await page.locator("#vp svg #mq").evaluate((e) => e.style.display !== "none"), "рамка не нарисована"); await page.mouse.up(); await page.keyboard.up("Shift");
+  };
+  await step("панель свойств: ввод X, «Показати», Ctrl+Z", async () => {
+    await page.click('#seg-pick [data-pk="rack"]');
+    const x1 = await rackX(1), x2 = await rackX(2);
+    const b = await rackBox(2); await page.mouse.click(b.x + b.w / 2, b.y + b.h / 2);
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Ряд R2");
+    await page.fill('form[data-op="props"] [name="x"]', "3");
+    await page.click('form[data-op="props"] [data-show]');
+    await page.waitForFunction(() => /Властивості/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    expect(Math.abs((await rackX(2)) - x1 - 3) < 0.02, `X ряду R2 не стал 3 м: ${await rackX(2)} / ${x1} / ${x2}`);
+    expect(Number(await page.inputValue('form[data-op="props"] [name="x"]')) === 3, "в поле не 3");
+    await page.keyboard.press("Control+KeyZ");
+    await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect(Math.abs((await rackX(2)) - x2) < 0.02, "Ctrl+Z не вернул X");
+    await page.fill('form[data-op="props"] [name="x"]', "3"); await page.click('form[data-op="props"] [data-show]'); // оставляем сдвиг для выравнивания
+    await page.waitForSelector("#plan-side .ed-pend");
+  });
+  await step("рамка Shift выделяет 3 ряда, выравнивание по левому краю, Ctrl+Z", async () => {
+    await marquee(1, 3);
+    await page.waitForFunction(() => /^Виділено 3 /.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    await page.click('[data-align="left"]');
+    await page.waitForFunction(() => /Вирівнювання/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    const xs = [await rackX(1), await rackX(2), await rackX(3)];
+    expect(xs.every((x) => Math.abs(x - xs[0]) < 0.02), `ряды не выровнены: ${xs}`);
+    await page.keyboard.press("Control+KeyZ");
+    await page.waitForFunction(() => !/Вирівнювання/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    expect(Math.abs((await rackX(2)) - (await rackX(1)) - 3) < 0.02, "Ctrl+Z не вернул положение");
+    await page.click("#ed-discall"); await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+  });
+  await step("массовое создание 4×5×3: сводка, «Показати», Ctrl+Z", async () => {
+    await page.keyboard.press("Escape");
+    await page.waitForSelector('form[data-op="mass"]');
+    const racks = () => page.locator("#vp svg rect.rackbg").count(), n0 = await racks();
+    await page.fill('form[data-op="mass"] [name="nr"]', "4"); await page.fill('form[data-op="mass"] [name="nb"]', "5"); await page.fill('form[data-op="mass"] [name="nl"]', "3"); await page.fill('form[data-op="mass"] [name="gap"]', "1.5");
+    expect(/60/.test(await text('form[data-op="mass"] [data-mass]')), "в сводке нет 60 місць");
+    await page.click('form[data-op="mass"] [data-show]');
+    await page.waitForFunction(() => /Додано ряди/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    expect(/60 місць/.test(await text("#plan-side .ed-pend")), "в изменении нет 60 місць");
+    expect((await racks()) === n0 + 4, `рядов стало ${await racks()}, ждали ${n0 + 4}`);
+    await page.keyboard.press("Control+KeyZ");
+    await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect((await racks()) === n0, "Ctrl+Z не убрал ряды");
+  });
+  await step("группировка выделенных рядов, Ctrl+Z, «Розгрупувати»", async () => {
+    await marquee(1, 3);
+    await page.waitForFunction(() => /^Виділено 3 /.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    await page.fill('form[data-grouping] [name="name"]', "Група E2E"); await page.click("[data-group]");
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Група E2E");
+    const zone = `rect.zn[data-node="${FURZ}/Група E2E"]`;
+    expect(await page.locator(zone).count() === 1, "зона группы не появилась");
+    expect(await page.locator(`rect.rackbg[data-node="${FURZ}/Група E2E/R1"]`).count() === 1, "ряд не внутри группы");
+    await page.keyboard.press("Control+KeyZ");
+    await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect(await page.locator(zone).count() === 0, "после Ctrl+Z зона осталась");
+    await page.keyboard.press("Control+Shift+KeyZ");
+    await page.waitForSelector("#plan-side .ed-pend");
+    await page.click(`#plan-side [data-esel="${FURZ}/Група E2E"]`);
+    await page.click("[data-ungroup]");
+    await page.waitForFunction(() => /Розгруповано/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    expect(await page.locator(zone).count() === 0, "после «Розгрупувати» зона осталась");
+    expect(await page.locator(`rect.rackbg[data-node="${FURZ}/R1"]`).count() === 1, "ряд не вернулся");
+    await page.click("#ed-discall"); await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    await page.keyboard.press("Escape");
+  });
   await step("3D: клик по модели выделяет место", async () => {
     await page.click("#ed-tg"); // выйти из режима редактирования
     await page.click('#seg-pick [data-pk="place"]');
