@@ -6,7 +6,7 @@
     "стани, журнал станів і простоїв, автостарт/пауза/завершення робочих завдань, OEE за фактом; портальний "
     "склад плит HOMAG STORETEQ P-500 (стоси ↔ залишки, завдання порталу з МО); карти розкрою й програми "
     "ЧПК з МО. Плагіни колектора opcua і rest_vendor — services/collector_plugins/machine_connect.",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Manufacturing/Manufacturing",
     "author": "ToDo",
     "website": "https://todo.ltd",

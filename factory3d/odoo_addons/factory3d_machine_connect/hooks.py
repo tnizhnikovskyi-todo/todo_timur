@@ -328,6 +328,36 @@ def signals(env):
     return res
 
 
+# --- міграція 19.0.1.0.1 (ST-1) ---------------------------------------------------------------------------
+# Шаблони сигналів стану, для яких `store_period_s` змінено з 0 на 300 (SPEC Додаток C.2).
+STORE_PERIOD_TEMPLATES = ("io_state", "io_alarm", "ua_state", "ua_mode", "ua_alarm", "ua_job", "g_state", "g_job")
+
+
+def migrate_store_period(env):
+    """ST-1: `store_period_s` з CSV для вже створених сигналів шаблонів `STORE_PERIOD_TEMPLATES`, лише де він ще 0.
+
+    Записи сигналів `noupdate` (і не мають окремого запису шаблону), тож `-u` нове значення з CSV не застосовує.
+    Ручні правки (будь-яке ненульове значення) лишаються. Повертає кількість змінених сигналів; ідемпотентна.
+    """
+    env = env(su=True)
+    patterns = []
+    for row in _csv_rows(env, "mc_signals"):
+        value = _int(row["store_period_s"])
+        if row["template"] in STORE_PERIOD_TEMPLATES and value > 0:
+            regex = re.escape(row["code"]).replace(re.escape("{C}"), "[^/]+")
+            patterns.append((re.compile(regex), value))
+    Signal = env["f3d.signal"].with_context(active_test=False, tracking_disable=True)
+    fixed = 0
+    for sig in Signal.search([("module", "=", "machine_connect"), ("store_period_s", "=", 0)]):
+        for regex, value in patterns:
+            if regex.fullmatch(sig.code or ""):
+                sig.store_period_s = value
+                fixed += 1
+                break
+    _logger.info("machine_connect: store_period_s виправлено у %d сигналів (ST-1)", fixed)
+    return fixed
+
+
 # --- крок 5 ------------------------------------------------------------------------------------------------
 def stacks(env):
     """§5.3 крок 5: `f3d.gantry.stack` для локацій-стосів `PLT-*`, правила поповнення."""

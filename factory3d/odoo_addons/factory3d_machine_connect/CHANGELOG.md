@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- ST-1 (19.0.1.0.1): `store_period_s = 300` для шаблонів `io_state`, `io_alarm`, `ua_state`, `ua_mode`, `ua_alarm`,
+  `ua_job`, `g_state`, `g_job` (було 0 — кожне опитування 1 Гц писалось у `f3d.reading`, ≈ 3,5 млн рядків на добу).
+  Зміна стану пишеться негайно (telemetry R-03). post-migrate `19.0.1.0.1` оновлює вже створені сигнали зі значенням 0.
 - DEC-19 (ТП-01): менше конкуруючих UPDATE `f3d_machine`/`f3d_collector` під навантаженням. Крон `_cron_tick` — верстати за id,
   пачки по 10 з commit, `FOR UPDATE SKIP LOCKED` (зайнятий push верстат пропускається до наступного такту); push блокує
   верстати за зростанням id; `raw_ts`/`pieces_ts` без інших змін пишуться раз на 30 с (лише інформаційні мітки).
