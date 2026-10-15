@@ -1,5 +1,6 @@
 // Данные Odoo (локации) + слой правок → дерево узлов модели.
-import { BASE_TYPES, FLOW, KIND_TYPE, NODE_TYPE_LABELED, ROTS, zoneTp } from "./types.js";
+import { BASE_TYPES, FLOW, KIND_TYPE, NODE_TYPE_LABELED, ROTS } from "./types.js";
+import { compileRules, defaultRules, effectiveRules, isUnplaced, parseCode, pathParts } from "./parse.js";
 
 export const typeList = (edit) => edit.types || BASE_TYPES;
 // настройки склада, влияющие на дерево, вне слоя правок: код склада (подпись корня); глубина локаций — часть слоя правок (edit.depth / edit.depthZones)
@@ -23,14 +24,12 @@ export const adoptedAdd = (data, a, cfg = {}) => {
   if (a.code) { const r = data.locations[a.code]; return !!r && r.id != null; }
   return !!containerOf(data, a.id, cfg);
 };
-export function codeSegs(code) {
-  let m;
-  if ((m = /^FUR-(R\d+)-(S\d+)-L(\d)$/.exec(code))) return { pre: "FUR", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
-  if ((m = /^EB-(U\d+)-(S\d+)-L(\d)$/.exec(code))) return { pre: "EB", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
-  if ((m = /^FG-(R\d+)-(B\d+)-L(\d)$/.exec(code))) return { pre: "FG", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
-  if ((m = /^RCK-R\d+-(\d)([A-D])$/.exec(code))) return { pre: "RCK", segs: [[m[1], "bay"]], leaf: m[2], lvl: "ABCD".indexOf(m[2]), rackParent: true };
-  if ((m = /^PLT-(\d+)([A-C])$/.exec(code))) return { pre: "PLT", segs: [[m[1], "rack"]], leaf: m[2], bayLeaf: true };
-  return null;
+// Разбор кода места на уровни (ряд / секция / ярус) по правилам склада (parse.js); без rules — правила по умолчанию (этой базы).
+// Для мест на полу (правило без уровней) и нераспознанных кодов — null.
+export function codeSegs(code, rules = null) {
+  const cs = parseCode(code, compileRules(rules || defaultRules()));
+  if (!cs || cs.floor) return null;
+  const { rule, ...r } = cs; return r;
 }
 
 // Дерево: путь Odoo (complete_name) плюс уровни из кода места (ряд, стеллаж, ярус).
@@ -48,22 +47,31 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
     return nodes.get(id);
   };
   node("WH", cfg.code || "WH", null);
-  // места, созданные в модели и уже применённые в Odoo (W-13): в снимке они есть, но узел строится из слоя правок — снимок их не дублирует
-  const adopted = new Set(edit.add.filter((a) => a.code && adoptedAdd(data, a, cfg)).map((a) => a.code));
-  const addIds = new Set(edit.add.map((a) => a.id));
+  // разбор кодов по правилам склада (edit.parse, W-12); место без зоны (не разобрано или не названо местом на полу, путь короче «склад / зона / место») уходит в лоток —
+  // кроме тех, что уже поставлены правкой (запись add с этим кодом и from)
+  const comp = compileRules(effectiveRules(edit)), known = new Set(types.keys()), parseOf = (c) => parseCode(c, comp, known);
+  const adopted = new Set(edit.add.filter((a) => a.code && adoptedAdd(data, a, cfg)).map((a) => a.code)), addIds = new Set(edit.add.map((a) => a.id));
+  const unplaced = [], putCodes = new Set(edit.add.filter((a) => a.code && a.from).map((a) => a.code));
+  const P = new Map(), cont = new Set(); // части путей и пути-контейнеры (место, внутри которого лежат другие места, — зона со своим кодом, не бездомное)
+  for (const [code, l] of Object.entries(data.locations)) { const parts = pathParts(code, l); P.set(code, parts); for (let i = 2; i < parts.length; i++) cont.add(parts.slice(0, i).join("/")); }
   for (const [code, l] of Object.entries(data.locations)) {
-    const parts = l.complete_name.split("/"), cs = codeSegs(code), own = adopted.has(code);
+    const parts = P.get(code), cs = parseOf(code), own = adopted.has(code);
+    if (isUnplaced(parts, cs) && !cont.has(parts.join("/"))) {
+      if (!putCodes.has(code) && !adopted.has(code)) unplaced.push({ code, id: parts.join("/"), name: parts[parts.length - 1], path: l.complete_name || code, tp: cs ? cs.pre : "ZONE", cs });
+      continue;
+    }
     let pid = "WH";
     for (let i = 1; i < parts.length - 1; i++) { const id = parts.slice(0, i + 1).join("/"); if (own && addIds.has(id)) break; node(id, parts[i], pid); pid = id; } // дальше путь строят добавленные узлы слоя
     if (own) continue;
     let n;
-    if (cs) {
+    if (cs && !cs.floor) {
       if (cs.rackParent) { nodes.get(pid).type = "rack"; nodes.get(pid).tp = cs.pre; }
       for (const [s, t] of cs.segs) { const k = node(`${pid}/${s}`, s, pid); k.type = t; k.tp = cs.pre; pid = k.id; }
       n = node(`${pid}/${cs.leaf}`, cs.leaf, pid); n.type = cs.bayLeaf ? "bayleaf" : "level"; n.tp = cs.pre; n.lvl = cs.lvl ?? 0;
-    } else { n = node(parts.join("/"), parts[parts.length - 1], parts.length > 1 ? pid : null); n.tp = zoneTp(code); }
+    } else { n = node(parts.join("/"), parts[parts.length - 1], pid); n.tp = cs ? cs.pre : "ZONE"; }
     n.loc = code; byCode.set(code, n);
   }
+  unplaced.sort((a, b) => a.code.localeCompare(b.code, "uk", { numeric: true }));
   // убранные в модели узлы — вместе со всем, что внутри
   const drop = (n) => { removed.push({ id: n.id, name: n.name, parent: n.parent, type: n.type, tp: n.tp, loc: n.loc }); nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
   const delNode = (id) => { const n = nodes.get(id); if (!n || !n.parent) return; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); };
@@ -140,7 +148,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   for (const p of edit.prop || []) { const n = nodes.get(p.id); if (n) { n.prop = p; if (p.name) n.name = p.name; } }
   const loc = (c) => (alias.has(c) ? data.locations[alias.get(c)] : data.locations[c] || draftLoc[c]);
   const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells, ...(edit.prop || []), ...(edit.cfg || []), ...(edit.codes || [])].map((x) => x.id));
-  return { nodes, byCode, root: nodes.get("WH"), types, TY, EP, draftLoc, pos, pend, loc, removed, contained, changed, alias, renamed, W0: 0, D0: 0 };
+  return { nodes, byCode, root: nodes.get("WH"), unplaced, parseOf, types, TY, EP, draftLoc, pos, pend, loc, removed, contained, changed, alias, renamed, W0: 0, D0: 0 };
 }
 
 export const pathOf = (tree, n) => { const p = []; for (let x = n; x; x = x.parent && tree.nodes.get(x.parent)) p.unshift(x); return p; };

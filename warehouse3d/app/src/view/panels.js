@@ -148,6 +148,7 @@ export function createSidePanel({ model, i18n, root }) {
       const tk = model.checks.tech, ti = tk.of(n.id).own, tl = tk.list(), topts = [...(n.id === "WH" ? [] : ["inherit"]), "none", ...tl.map((x) => x.id)];
       h += `<div class="sec">${T(n.id === "WH" ? "prob.tech" : "side.techTitle")}</div><form class="ed-form" data-op="tech"><label class="wide"><span class="sr">${T("side.techTitle")}</span><select name="t">${topts.map((o) => `<option value="${o}"${o === ti ? " selected" : ""}>${T(`tech.${o}`)}${tl.find((x) => x.id === o) ? ` · ${esc(i18n.m(tl.find((x) => x.id === o).min))} ${T("unit.m")}` : ""}</option>`).join("")}</select></label>${btns(ro)}</form>
         <p class="ed-note">${T("side.techNote")}</p>`;
+      if (n.kids.length) h += `<div class="sec">${T("side.autoTitle")}</div><form class="ed-form" data-op="autoLayout">${btns(ro)}</form><p class="ed-note">${T("side.autoNote")}</p>`;
       h += tools.addrHtml(n, K, ro) + tools.renumHtml(n, K, ro);
     }
     if (n.type === "rack") {
@@ -220,7 +221,7 @@ export function updateEditBar(root, { model, i18n }) {
   q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
-  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = q("#ed-parse").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
   q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");

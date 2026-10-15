@@ -1051,4 +1051,89 @@ export default {
       <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
       <li><b>Code conflicts.</b> A repeated or already used place code (see “Addressing”) also appears in “Problems” as an error; a click goes to the place. While a conflict exists, those places cannot be saved.</li>
     </ul>`,
+  // W-12: code parsing, "Unplaced" tray, auto-layout
+  "op.parse": "Code parsing rules: {n}",
+  "op.place": "{to}: placed from the tray ({n})",
+  "op.autoLayout": "{ref}: auto-layout",
+  "n.placeNoZone": "No zone to place into: pick a zone or a row on the plan",
+  "n.autoNoFit": "{ref}: the blocks do not fit into the building outline, layout unchanged",
+  "n.autoNoFitSub": "Enlarge the outline in “Building” mode or make the zones smaller.",
+  "n.autoNone": "Auto-layout changes nothing: everything already lies like this",
+  "side.autoTitle": "Auto-layout",
+  "side.autoNote": "Manual positions of the objects inside are removed; with a building plan the blocks are fitted into the outline without overlaps. “Show”, then “Save”; Ctrl+Z undoes.",
+  "parse.button": "Code parsing",
+  "parse.title": "Place code parsing",
+  "parse.summary": "{m} of {n} places parsed",
+  "parse.summaryTray": "In the “Unplaced” tray: {k}",
+  "parse.rules": "Rules (the first one that matches wins)",
+  "parse.mask": "Mask",
+  "parse.regex": "Regular expression",
+  "parse.tp": "Place type",
+  "parse.tpAuto": "By prefix",
+  "parse.off": "Off",
+  "parse.up": "Up",
+  "parse.down": "Down",
+  "parse.del": "Delete rule",
+  "parse.hits": "{n} places",
+  "parse.add": "Add rule",
+  "parse.defaults": "Default rules",
+  "parse.suggest": "Suggest a mask from samples",
+  "parse.suggestNote": "Tick codes in the list below (a few of one format). With none ticked, the first three unparsed codes are used.",
+  "parse.suggested": "Rule added: {mask}",
+  "parse.suggestNone": "No samples: tick unparsed codes",
+  "parse.suggestShape": "Samples have different formats: tick codes of one scheme",
+  "parse.bad": "Unparsed codes ({n})",
+  "parse.badTray": "in the tray",
+  "parse.badFloor": "floor place in a zone",
+  "parse.more": "Showing {n} of {m}.",
+  "parse.allOk": "All codes are parsed.",
+  "parse.err.mask": "Mask error (braces)",
+  "parse.err.name": "Unknown part in the mask",
+  "parse.err.dup": "A part is repeated",
+  "parse.err.spec": "Invalid part format",
+  "parse.err.regex": "Invalid expression",
+  "parse.err.shape": "Parts needed: row, section, level; section and level; row and level; or none (floor place)",
+  "parse.help": "Parts: {row} {bay} {level} {prefix} (Ukrainian names work too); {x:a} — letters, {x:A-D} — range, * — anything. Examples: R{row}.S{bay}.L{level}; {prefix}-{row}-{bay}-{level}.",
+  "parse.show": "Show",
+  "parse.saveBtn": "Save",
+  "parse.discard": "Discard draft",
+  "parse.unsaved": "Rules changed, not saved",
+  "parse.saved": "Rules saved",
+  "tray.button": "Unplaced",
+  "tray.title": "Unplaced",
+  "tray.count": "Places without a zone: {n}",
+  "tray.none": "All places are placed.",
+  "tray.note": "Places that did not fit the tree: no matching parsing rule and no parent zone. Drag a place onto a zone or a row on the 2D plan, or pick a zone and press “Place in…”.",
+  "tray.placeIn": "Place in…",
+  "tray.zone": "Zone",
+  "tray.all": "Select all",
+  "tray.parsed": "parsed by a rule",
+  "tray.unparsed": "not parsed",
+  "help.parse.title": "Code parsing",
+  "help.parse.html": `
+    <ul>
+      <li><b>The warehouse is already set up.</b> Any Odoo warehouse becomes a model. A place code (for example <code>FUR-R2-S01-L4</code>) is split into row, section and level by the <b>warehouse rules</b>; the default rules are the ones used for this database.</li>
+      <li><b>“Code parsing” window.</b> A button in the edit bar (“Edit” mode → “Code parsing”). At the top: “M of N places parsed”; below: the rule list and unparsed codes with examples.</li>
+      <li><b>Mask.</b> Text with the parts <code>{row}</code>, <code>{bay}</code>, <code>{level}</code>, <code>{prefix}</code> (Ukrainian names work too): <code>R{row}.S{bay}.L{level}</code>. A letter right before a part belongs to the name (R12). <code>{x:a}</code> — letters, <code>{x:A-D}</code> — range, <code>*</code> — any text. The “Regular expression” flag allows complex cases: groups <code>(?&lt;row&gt;…)</code>, <code>(?&lt;bay&gt;…)</code>, <code>(?&lt;level&gt;…)</code>.</li>
+      <li><b>Resulting levels.</b> Row + section + level — row, rack, level. Section + level — the row is the parent zone from the Odoo path. Row + level — a row of stacks. No parts — a plain floor place.</li>
+      <li><b>Order and type.</b> Rules are checked top to bottom; arrows change the order; each rule has a place type and an “Off” flag.</li>
+      <li><b>“Suggest a mask from samples”.</b> Tick unparsed codes of one scheme — a rule with automatically detected parts is added; the “parsed” counter updates at once.</li>
+      <li><b>Saving.</b> “Show” applies the rules to the tree (undo — Ctrl+Z), “Save” writes them to the project together with other changes.</li>
+    </ul>`,
+  "help.tray.title": "“Unplaced” tray",
+  "help.tray.html": `
+    <ul>
+      <li><b>Nothing is lost.</b> Places that did not fit the tree (no parsing rule and no parent zone) go to the tray — the “Unplaced” button in the top bar with a counter.</li>
+      <li><b>How to place.</b> Drag a place from the list onto a zone or a row on the 2D plan, or tick places, pick a zone and press “Place in…”. It is an ordinary change: “Show / Save”, Ctrl+Z returns the place to the tray.</li>
+      <li><b>Parsed but without a zone.</b> A place parsed into row / section / level but lying outside any zone gets its own row and rack in the zone when placed.</li>
+    </ul>`,
+  "help.auto.title": "Auto-layout",
+  "help.auto.html": `
+    <ul>
+      <li><b>After import</b> the warehouse is laid out by the tree: zones horizontally, rows in depth; nothing needs to be changed.</li>
+      <li><b>“Lay out automatically”</b> is in the zone and warehouse panel (“Edit” mode). It removes manual positions of the objects inside.</li>
+      <li><b>With a building plan.</b> Blocks are fitted into the outline shelf by shelf, avoiding columns, walls and offices, without overlaps. If they do not fit, the layout stays as it was — enlarge the outline or make the zones smaller.</li>
+      <li>It is a “Show / Save” change; Ctrl+Z undoes it.</li>
+    </ul>`,
+  "side.autoBtn": "Lay out automatically",
 };

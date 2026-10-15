@@ -8,6 +8,7 @@ import { rect2d } from "../core/layout.js";
 import { esc, slotCls } from "./util.js";
 import * as B from "../core/building.js";
 import { createBldPlan } from "./bldplan.js";
+import { TRAY_MIME } from "./tray.js";
 
 // условное обозначение формы места на плане (не принимает щелчки): ограждение, цилиндр, носитель, ворота, сетка стосов; остальное — просто прямоугольник
 function deco(n, f, x, y, w, d) {
@@ -106,6 +107,18 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       drag = null; svg.classList.remove("drag");
     });
     svg.addEventListener("pointerleave", () => { if (!drag) tip.hidden = true; if (bp.active()) bp.leave(); });
+    // лоток «Не розміщено» (W-12): место перетаскивают из списка на зону или ряд; ближайшая зона выше становится местом назначения
+    const trayDrag = (e) => !!e.dataTransfer && [...(e.dataTransfer.types || [])].includes(TRAY_MIME);
+    svg.addEventListener("dragover", (e) => { if (trayDrag(e) && !model.readonly) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } });
+    svg.addEventListener("drop", (e) => {
+      if (!trayDrag(e) || model.readonly) return;
+      e.preventDefault();
+      let codes = []; try { codes = JSON.parse(e.dataTransfer.getData(TRAY_MIME)); } catch (x) { codes = []; }
+      const pt = toWorld(e.clientX, e.clientY); let best = null; // самый глубокий объект под курсором (зоны на плане не ловят указатель, поэтому не по элементу)
+      for (const n of model.tree.nodes.values()) if (n.w > 0 && pt.x >= n.x && pt.x <= n.x + n.w && pt.y >= n.y && pt.y <= n.y + n.d && (!best || n.depth > best.depth)) best = n;
+      const id = best ? best.id : model.ui.focus;
+      if (codes.length) { if (!model.ui.edit) model.setEdit(true); model.ops.place(codes, id); }
+    });
     svg.addEventListener("pointercancel", () => { own = false; drag = null; svg.classList.remove("drag"); bp.cancel(); });
     svg.addEventListener("wheel", (e) => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.15 : 1 / 1.15, toWorld(e.clientX, e.clientY)); }, { passive: false });
   }

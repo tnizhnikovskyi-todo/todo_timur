@@ -490,6 +490,59 @@ try {
     await page.click("#ed-discall"); await page.waitForFunction(() => document.querySelector("#pr-cnt")?.textContent === "0");
     await page.click("#ed-tg");
   });
+  await step("розбір кодів: вікно, нове правило збільшує розібране, підказка маски, лоток «Не розміщено», розмістити, перетягнути, Ctrl+Z", async () => {
+    await page.evaluate(() => localStorage.clear()); await page.goto(url); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="2d"]');
+    expect(await page.locator("#tray-btn").isHidden(), "лоток виден без бездомных мест");
+    await page.click("#ed-tg"); await page.waitForSelector("#editbar:not([hidden])");
+    await page.click("#ed-parse"); await page.waitForSelector("#parse-dlg #parse-sum");
+    expect(/З 689 місць розібрано 683/.test(await text("#parse-sum")), `сводка: ${await text("#parse-sum")}`);
+    expect((await page.locator("#parse-dlg [data-row]").count()) === 11, "правил по умолчанию должно быть 11");
+    expect((await page.locator("#parse-dlg .parse-bad li").count()) === 6, "нераспознанных должно быть 6");
+    // новое правило: места на полу QC-*
+    await page.click("#parse-dlg [data-add]"); await page.fill('#parse-dlg [data-mask="11"]', "QC-*");
+    await page.waitForFunction(() => /розібрано 687/.test(document.querySelector("#parse-sum")?.textContent || ""));
+    // подсказка маски по первым нераспознанным (PACK-STORE, PAINT-STORE) → всё разобрано
+    await page.click("#parse-dlg [data-suggest]");
+    await page.waitForFunction(() => /розібрано 689/.test(document.querySelector("#parse-sum")?.textContent || ""));
+    expect(/\{префікс\}-STORE/.test(await page.inputValue('#parse-dlg [data-mask="12"]')), "подсказанная маска");
+    expect(await page.locator("#parse-dlg #parse-ok").count() === 1, "нет сообщения «усі коди розібрано»");
+    // выключить правило POST-*: POST-STAGE остаётся без зоны → в лоток; «Показати»
+    await page.check('#parse-dlg [data-off="8"]');
+    await page.waitForFunction(() => /У лотку «Не розміщено»: 1/.test(document.querySelector("#parse-tray")?.textContent || ""));
+    await page.click("#parse-dlg [data-pshow]");
+    await page.waitForSelector("#tray-btn:not([hidden])");
+    expect((await text("#tray-cnt")) === "1", "счётчик лотка");
+    expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 0, "место без зоны осталось на плане");
+    await page.click("#parse-dlg [data-close]"); await page.waitForSelector("#parse-dlg", { state: "detached" });
+    // лоток: список, выбрать, «Розмістити в…»
+    await page.click("#tray-btn"); await page.waitForSelector("#tray:not([hidden]) .traylist li");
+    expect(/POST-STAGE/.test(await text("#tray .traylist li")), "в лотке нет POST-STAGE");
+    await page.selectOption("#tray [data-zone]", { value: "WH/Сировина/Фурнітура" });
+    expect(await page.locator("#tray [data-place]").isDisabled(), "кнопка «Розмістити в…» доступна без выбора");
+    await page.check('#tray [data-pick="POST-STAGE"]'); await page.click("#tray [data-place]");
+    await page.waitForSelector("#tray #tray-none");
+    expect(await page.locator('svg rect[data-code="POST-STAGE"][data-node^="WH/Сировина/Фурнітура/"]').count() === 1, "место не встало в зону");
+    await page.keyboard.press("Control+z");
+    await page.waitForSelector("#tray .traylist li");
+    expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 0, "Ctrl+Z не вернул место в лоток");
+    // перетаскивание из лотка на зону в 2D
+    await page.dragAndDrop('#tray li[data-code="POST-STAGE"]', 'svg rect.zn[data-node="WH/Сировина/Фурнітура"]', { force: true });
+    await page.waitForSelector("#tray #tray-none");
+    expect(await page.locator(`svg rect[data-code="POST-STAGE"][data-node^="WH/Сировина/Фурнітура/"]`).count() === 1, `перетаскивание не поставило место в зону: ${await page.evaluate(() => [...document.querySelectorAll(`svg rect[data-code="POST-STAGE"]`)].map((x) => x.dataset.node).join(",")) || "нет"}`);
+    await page.keyboard.press("Control+z");
+    await page.waitForSelector("#tray .traylist li");
+    await page.keyboard.press("Control+z"); // отмена правил разбора
+    await page.waitForFunction(() => document.querySelector("#tray-cnt")?.textContent === "0");
+    await page.click("#tray [data-close]");
+    await page.waitForSelector("#tray-btn", { state: "hidden" });
+    expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 1, "после отмены правил POST-STAGE не вернулось на место");
+    // авторозкладка склада: форма есть; без здания и без ручных положений — «нічого не змінює»
+    await page.waitForSelector('#plan-side form[data-op="autoLayout"]');
+    await page.click('#plan-side form[data-op="autoLayout"] [data-show]');
+    await page.waitForFunction(() => /Авторозкладка нічого не змінює/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    await page.click("#ed-tg");
+  });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
     await p2.goto(url);
