@@ -1,5 +1,6 @@
 import hashlib
 from datetime import timedelta
+from unittest.mock import patch
 
 from freezegun import freeze_time
 from psycopg2 import IntegrityError
@@ -191,3 +192,75 @@ class TestConfigPayload(F3DTelemetryCase):
             self.assertFalse(self.col._rate_check())
         with freeze_time("2026-10-14 08:01:01"):
             self.assertTrue(self.col._rate_check())
+
+
+@tagged(*TAGS)
+class TestCollectorTouchThrottle(F3DTelemetryCase):
+    """DEC-19: `_touch` не пише рядок колектора на кожен запит (спільний рядок → deadlock/serialization)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._setup_telemetry_fixtures()
+
+    def _at(self, sec):
+        return freeze_time(fields.Datetime.to_datetime(NOW) + timedelta(seconds=sec))
+
+    def _touch(self, sec, ip="10.0.0.1", **kw):
+        """Повертає кількість `write` на колекторі за виклик `_touch`."""
+        writes = []
+        orig = self.registry["f3d.collector"].write
+
+        def spy(rec, vals):
+            writes.append(set(vals))
+            return orig(rec, vals)
+
+        with self._at(sec), patch.object(self.registry["f3d.collector"], "write", spy):
+            self.col._touch(ip, **kw)
+        return writes
+
+    def test_first_touch_writes_once(self):
+        writes = self._touch(0, version="1.2", pushed=True)
+        self.assertEqual(len(writes), 1)
+        self.assertEqual(self.col.state, "online")
+        self.assertEqual((self.col.last_ip, self.col.version), ("10.0.0.1", "1.2"))
+        self.assertEqual(self.col.last_seen, fields.Datetime.to_datetime(NOW))
+        self.assertEqual(self.col.last_push_at, fields.Datetime.to_datetime(NOW))
+
+    def test_touch_within_interval_skipped(self):
+        self._touch(0, pushed=True)
+        for sec in (1, 10, 29):
+            self.assertEqual(self._touch(sec, pushed=True), [], "sec=%s" % sec)
+        self.assertEqual(self.col.last_seen, fields.Datetime.to_datetime(NOW))
+        self.assertEqual(self.col.last_push_at, fields.Datetime.to_datetime(NOW))
+
+    def test_touch_after_interval_written(self):
+        self._touch(0)
+        self.assertEqual(len(self._touch(30, pushed=True)), 1)
+        later = fields.Datetime.to_datetime(NOW) + timedelta(seconds=30)
+        self.assertEqual((self.col.last_seen, self.col.last_push_at), (later, later))
+
+    def test_changes_written_immediately(self):
+        self._touch(0, version="1.0")
+        self.assertEqual(len(self._touch(1, ip="10.0.0.2")), 1)  # IP
+        self.assertEqual(len(self._touch(2, ip="10.0.0.2", version="1.1")), 1)  # версія
+        self.assertEqual(self._touch(3, ip="10.0.0.2", version="1.1"), [])
+        self.env.flush_all()
+        self.set_sql(self.col, state="offline")  # крон `_cron_offline`
+        self.assertEqual(len(self._touch(4, ip="10.0.0.2", version="1.1")), 1)
+        self.assertEqual(self.col.state, "online")
+
+    def test_interval_capped_by_status_interval(self):
+        """Офлайн-крон = 3·status_interval_s: при status_interval_s = 10 інтервал запису — 10 с, а не 30."""
+        self.col.status_interval_s = 10
+        self._touch(0)
+        self.assertEqual(self._touch(9), [])
+        self.assertEqual(len(self._touch(10)), 1)
+
+    def test_interval_parameter(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        icp.set_param("factory3d.telemetry.touch_interval_s", "0")
+        self._touch(0)
+        self.assertEqual(len(self._touch(1)), 1)
+        icp.set_param("factory3d.telemetry.touch_interval_s", "garbage")
+        self.assertEqual(self._touch(2), [])  # некоректне значення → 30 с

@@ -24,6 +24,8 @@ Q-17 (X-38; ТК-15), Q-15 (X-34, X-38, X-43; X-92 — менеджер). X-93: 
 без імпортів Odoo, побайтово = `cmdtext.py` (§0, M-13, M-20, §7.2, §13.0.1 п. 9, AC-58, AC-80, AC-102, AC-103, §13.1, DoD).
 Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-12, Q-14.
 Зміни: 14.10.2026 — закрито відповідями замовника № 25–36 (прийнято рекомендації): Q-04…Q-08, Q-10, Q-11, Q-13.
+Зміни: 15.10.2026 — DEC-19 (ТП-01): `_cron_tick` — id-порядок, пачки по 10 з commit, `FOR UPDATE SKIP LOCKED`; push блокує верстати за id; `raw_ts`/`pieces_ts` без інших змін — не частіше за раз на 30 с (§6 `cron_f3d_mc_tick`, R-04).
+Зміни: 15.10.2026 — DEC-20 (ТБ-03): одноразовий токен API-01 — у заголовку `X-F3D-Token`, не в query `t` (§7 API-01, §8 `cutopt`, AC-66, AC-67, ТБ-03).
 
 Позначення: UT — `odoo.tests.TransactionCase`; HT — `HttpCase`; CT — pytest пакета плагінів із фейковими серверами;
 TC — стенд (емулятор + колектор + Odoo); MAN — ручна перевірка на тестовому сервері timur-o19demo (база `odoo`).
@@ -1308,7 +1310,7 @@ UPDATE ir_cron SET active = false
 
 | XML-id | Назва | Інтервал | Модель / метод | Один прогін | Ліміти |
 |---|---|---|---|---|---|
-| `cron_f3d_mc_tick` | Верстати: такт | 1 хв, `active=True` | `f3d.machine._cron_tick` | лише якщо `read_enabled`: R-02 п. 4, R-03 п. 3, R-05 п. 6, R-10 п. 2, R-12 п. 3, R-09 п. 9; стан джерела `MC-DERIVED` (M-19) | ≤ 35 верстатів, ≤ 10 с |
+| `cron_f3d_mc_tick` | Верстати: такт | 1 хв, `active=True` | `f3d.machine._cron_tick` (DEC-19: за id, пачки по 10 з commit, `SKIP LOCKED` — верстат, зайнятий push, пропускається до наступного такту) | лише якщо `read_enabled`: R-02 п. 4, R-03 п. 3, R-05 п. 6, R-10 п. 2, R-12 п. 3, R-09 п. 9; стан джерела `MC-DERIVED` (M-19) | ≤ 35 верстатів, ≤ 10 с |
 | `cron_f3d_mc_oee` | Верстати: OEE змін | 5 хв | `f3d.oee.shift._cron_oee` | R-14 | ≤ 35 × 2 записи, ≤ 20 с |
 | `cron_f3d_mc_gantry` | Портал: звірка й завдання | 1 хв | `f3d.gantry.job._cron_gantry` | R-15 п. 1–5 (усі стоси), R-16 п. 2 (відправка `to_send`), п. 5 (тайм-аути), R-18 п. 1 (поповнення) | ≤ 27 стосів, ≤ 20 завдань, ≤ 10 с |
 | `cron_f3d_mc_cutmap` | Розкрій: стан оптимізації | 1 хв | `f3d.cut.map._cron_cutmap` | R-20 п. 6 | ≤ 20 карт |
@@ -1321,7 +1323,7 @@ UPDATE ir_cron SET active = false
 `controllers/cutmap.py`, `type="http"`, `auth="public"`, `csrf=False`, `methods=["GET"]`. Порядок перевірок:
 1. `Authorization: Bearer <токен колектора>` → `request.env['f3d.collector'].sudo()._authenticate(token)` (telemetry M-01);
    порожньо/невірний → `401 {"error": {"code": "unauthorized", "message": "Невірний токен колектора"}}`.
-2. Параметр `t` (16 hex, `^[0-9a-f]{16}$`) → інакше `400 bad_token`.
+2. Заголовок `X-F3D-Token` (16 hex, `^[0-9a-f]{16}$`; query-параметр `t` не приймається — URL потрапляє в access-log) → інакше `400 bad_token`.
 3. `f3d.cut.map._f3d_check_export_token(map_id, t)`: карти немає → `404 not_found`; `sha256(t) != export_token_hash` →
    `403 forbidden`; `export_token_expires < now` → `410 expired`; стан ≠ `exported` → `409 bad_state`.
 4. Відповідь `200`, `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`:
@@ -1509,7 +1511,7 @@ POST → `WriteError("CONFLICT: <message>")`; `5xx`/мережа → `PollError`
 ### 8.6 Адаптер `cutopt` (`cutopt.py`) — P-04, R-24
 
 `CutOptAdapter`: `poll` — нічого (сигналів читання немає); команди (`address.cmd == "cutopt"`, CMD-03) — R-24. Для
-`upload` адаптер робить **читання** з Odoo: `GET {F3D_ODOO_URL}/f3d/machine/cutmap/<map_id>/export?t=<t>` окремою
+`upload` адаптер робить **читання** з Odoo: `GET {F3D_ODOO_URL}/f3d/machine/cutmap/<map_id>/export` з заголовком `X-F3D-Token: <t>` (не в URL) окремою
 `aiohttp.ClientSession` з `Authorization: Bearer <F3D_COLLECTOR_TOKEN>` (`ctx.settings`), TLS-перевірка як ядро
 (`F3D_ODOO_CA`), таймаут 15 с; інших звернень до Odoo плагін не робить (A-14).
 
@@ -2344,8 +2346,8 @@ micro_stop_s` (не аварія) → видалено. Класифікація
 | AC-63 | FR-25 | When команда `done` (`result_data={"job_id": "cj-00077", "state": "optimizing", "eta_s": 5}`), EV-03 `plan` (`total_sheets=7`, `waste_pct=11.4`), EV-03 `mpr` для `P001`; Then `ext_job_id="cj-00077"`, `plan_sheets=7`, вкладення плану й `P001.mpr`, стан `planned`; невалідний план (`total_sheets=0`) → `ValueError` у журналі подій, стан не змінився; карта `optimizing` > 30 хв (крон) → `error` | UT |
 | AC-64 | FR-25 | Given `plan_sheets=9`, рух МО 8; Then `sheets_warning` непорожній; `action_update_mo_need()` → рух 9, чатер МО; `user_f3d_manager` без `mrp_manager` → `AccessError` | UT |
 | AC-65 | FR-26 | When «Випустити» → команда з `payload == {"op": "release", "job": "cj-00077", "machine": "SAW-T", "priority": 5}`; `done` → `released`; EV-02 `jobs` з `external_ref` цього МО → карта `gantry_job_id`; у режимі `manual` M-25 з JSON API-32 → `planned`, «Випустити» → `released` без команд; автостарт `job="cj-00077"` → WO карти (R-09 п. 1) | UT |
-| AC-66 | FR-35 | Given карта `exported`, токен `t`; When `GET /f3d/machine/cutmap/<id>/export?t=t` з Bearer колектора; Then `200`, JSON з `parts_csv` = CSV AC-61, `Cache-Control: no-store`; повтор → `403` (одноразовий) | HT |
-| AC-67 | FR-35 | Then без Bearer → `401`; токен колектора іншого → `401`; невірний `t` → `403`; прострочений → `410`; стан `draft` → `409`; неіснуюча карта → `404`; `t="xyz"` → `400` | HT |
+| AC-66 | FR-35 | Given карта `exported`, токен `t`; When `GET /f3d/machine/cutmap/<id>/export` з Bearer колектора і `X-F3D-Token: t`; Then `200`, JSON з `parts_csv` = CSV AC-61, `Cache-Control: no-store`; повтор → `403` (одноразовий) | HT |
+| AC-67 | FR-35 | Then без Bearer → `401`; токен колектора іншого → `401`; невірний `t` → `403`; без `X-F3D-Token` (у т.ч. `?t=` у query) → `400`; прострочений → `410`; стан `draft` → `409`; неіснуюча карта → `404`; `t="xyz"` → `400` | HT |
 | AC-68 | FR-35 | Given 6 000 деталей; Then `413`, карта `error` | HT |
 | AC-69 | FR-27 | Given `NamespaceArray` з URI на позиції 5; Then `nodeids.resolve("ns=2;s=SAW-1.State…", ns_uri)` → `NodeId(…, 5)`; без URI → індекс 2; URI немає → `ConnectError` «namespace … not found»; `ns=2;x=1` → помилка валідації | CT |
 | AC-70 | FR-27 | Given фейковий сервер (§13.0.2) з `SAW-T`; When плагін `connect`+`subscribe`; Then показання `state` `value=3, text="WORKING"`, `mode` `text="AUTOMATIC"`, `alarm` `text="off"`, `pieces_out` `value=0.0`; зміна на сервері `CurrentState=4` → `text="ERROR"` ≤ 2 с; `ts` = `SourceTimestamp` | CT |
@@ -2577,7 +2579,7 @@ HttpCase)`. Від батьківського класу використову�
 |---|---|---|---|
 | ТБ-01 | Матриця прав і меню | AC-89…91 за таблицею нижче (`with_user(u)`, `check_access`); UI: `user_plain` не бачить «Завод 3D → Верстати»; URL `/odoo/action-factory3d_machine_connect.action_f3d_machine_dashboard` від `user_plain` → помилка доступу | як у таблиці |
 | ТБ-02 | П'ять запобіжників запису | AC-58, ТК-15; огляд коду пакета: `grep -rnE "write_value\|set_value\|write_attribute\|write_params" services/collector_plugins/machine_connect/f3d_collector_mc` → 0 (плагін не пише змінні OPC UA, лише викликає методи `JobOrderControl`) | команди не створюються/не видаються при будь-якому вимкненому; змінні верстата не змінюються ніколи |
-| ТБ-03 | Експорт API-01 | AC-66…68; стенд: 100 запитів з випадковими `t` → усі `403`; токен після першого `200` не діє; `t` і `export_token_hash` не трапляються в лозі Odoo, чатері карти, `f3d.command.result`; `Authorization` іншого колектора → `401` | порівняння хешів `hmac.compare_digest`; `Cache-Control: no-store` |
+| ТБ-03 | Експорт API-01 | AC-66…68; стенд: 100 запитів з випадковими `t` (заголовок `X-F3D-Token`) → усі `403`; токен після першого `200` не діє; `t` і `export_token_hash` не трапляються в лозі Odoo, чатері карти, `f3d.command.result`; `Authorization` іншого колектора → `401` | порівняння хешів `hmac.compare_digest`; `Cache-Control: no-store` |
 | ТБ-04 | Технічний користувач | AC-91; стенд: XML-RPC `authenticate(db, 'f3d_machine_bot', <будь-що>)` → `False`; `/web/login` → помилка | користувач неактивний, без пароля, без `base.group_system`/`group_f3d_manager` |
 | ТБ-05 | Секрети | лог колектора (`docker logs collector`, `F3D_LOG_LEVEL=DEBUG` 15 хв, ТК-04/10), лог Odoo, telemetry `GET config` — пошук значень `F3D_OPCUA_PASSWORD`, `F3D_WOODSTORE_KEY`, `F3D_CUTOPT_KEY`, `F3D_COLLECTOR_TOKEN`, токенів `t` API-01 | 0 збігів; у `f3d.source.params` лише `*_ref` (Додаток C.1) |
 | ТБ-06 | Ін'єкції й екранування | `job="WO00013'; DROP TABLE mrp_workorder; --"` (AC-28 — діяльність з текстом, без SQL); EV-01 `text="<img src=x onerror=alert(1)>"` → чатер/діяльність екрановані (`markupsafe.escape`); деталь `name="=HYPERLINK(\"http://x\")"` → у CSV без `=` (R-19 п. 5); поля команд з `;`/пробілом → `UserError` (R-21); огляд коду: `grep -rnE "execute\(f\"\|execute\(.*%[^s]\|execute\(.*\.format\(" odoo_addons/factory3d_machine_connect` → 0 | відмови/екранування; жодних 5xx |

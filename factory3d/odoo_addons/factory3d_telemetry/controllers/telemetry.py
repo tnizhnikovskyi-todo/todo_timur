@@ -138,8 +138,7 @@ class F3dTelemetryController(http.Controller):
             self._check_collector(body, collector)
             if not collector._rate_check():
                 return _error(429, "rate_limited", "Забагато пакетів за хвилину", NO_STORE + [("Retry-After", "10")])
-            collector._touch(request.httprequest.remote_addr)
-            collector.sudo().with_context(mail_notrack=True).write({"last_push_at": fields.Datetime.now()})
+            collector._touch(request.httprequest.remote_addr, pushed=True)
             res = env["f3d.signal"].sudo()._f3d_ingest(readings, src="collector", collector=collector)
             return _json(
                 {
