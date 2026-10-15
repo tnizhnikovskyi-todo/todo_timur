@@ -91,7 +91,7 @@ export function nodesOf(tree, data) {
   for (const n of tree.nodes.values()) {
     const floor = n.type === "group" && !!n.loc && !n.kids.length;
     out.push({ id: n.id, parent: n.parent, level: floor ? "floor" : LEVEL_OF[n.type], tp: n.tp || null, form: n.tp ? tree.TY(n.tp).form : null,
-      x: n.x, y: n.y, rot: n.rotDeg || 0, w: n.w, d: n.d, h: n.h ?? 0, code: n.loc || null, odoo_id: n.draft && !n.from ? null : n.loc ? odoo(n.loc) : cont(n.id),
+      x: n.x, y: n.y, rot: n.rotDeg || 0, w: n.w, d: n.d, h: n.h ?? 0, code: n.loc || null, odoo_id: n.draft && !n.from ? null : n.loc ? odoo(n.oloc ?? n.loc) : cont(n.id),
       status: n.draft && !n.from ? "new" : tree.changed.has(n.id) ? "changed" : "existing", is_location: !!n.loc, cells: n.type === "level" ? n.cells : null });
   }
   for (const r of tree.removed) out.push({ id: r.id, parent: r.parent, level: LEVEL_OF[r.type] || "zone", tp: r.tp || null, form: null, x: null, y: null, rot: 0, w: null, d: null, h: null,

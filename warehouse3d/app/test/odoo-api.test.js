@@ -191,6 +191,34 @@ test("buildSnapshot: пустые ответы дают пустой, но по�
   assert.deepEqual(s.locations, {});
 });
 
+test("W-08: после перенумерации место из Odoo сохраняет odoo_id (по oloc), reloadBase не теряет codes", async () => {
+  const { snap } = await load();
+  const bases = { [odooRef(1)]: snap };
+  const project = projectFromWarehouses([{ id: 1, code: "WH1", name: "Склад 1", company: "Co" }], { id: "odoo-1", name: "P" });
+  const model = createModel(project, createMemoryStorage(), { bases });
+  const Z = "WH1/Stock/Фурнітура", fur = (m) => m.nodes().filter((n) => n.is_location && n.id.startsWith(`${Z}/`));
+  const ids0 = fur(model).map((n) => n.odoo_id).sort();
+  assert.deepEqual(ids0, [100, 101, 102, 103, 104, 105, 106, 107, 108]);
+  model.setEdit(true);
+  model.ops.addr(Z, { own: "1", zoneCode: "T" });
+  model.ops.renum(Z, {});
+  const renamed = () => fur(model).filter((n) => /^T/.test(n.code));
+  assert.equal(renamed().length, 9, "коды изменились");
+  const pairs = () => renamed().map((n) => [n.code, n.odoo_id]).sort().join("|");
+  const p0 = pairs();
+  assert.deepEqual(fur(model).map((n) => n.odoo_id).sort(), ids0, "odoo_id мест прежние");
+  assert.ok(fur(model).every((n) => n.status !== "new"));
+  assert.equal(await model.save("WH"), "local");
+  const codes0 = JSON.stringify(model.edit.codes);
+  assert.ok(model.edit.codes.length >= 9);
+  const next = JSON.parse(JSON.stringify(snap)); next.locations["PLT-01A"].quants = [];
+  bases[odooRef(1)] = next;
+  model.reloadBase();
+  assert.equal(JSON.stringify(model.edit.codes), codes0, "codes сохранены");
+  assert.equal(pairs(), p0, "код → odoo_id те же после обновления");
+  assert.equal(model.data.locations["PLT-01A"].quants.length, 0);
+});
+
 test("снимок Odoo + каталог типов W-05: дерево строится, reloadBase сохраняет слои prop / building / cfg", async () => {
   const { snap } = await load();
   const bases = { [odooRef(1)]: snap };

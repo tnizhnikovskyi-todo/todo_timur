@@ -60,6 +60,7 @@ export function createSidePanel({ model, i18n, root }) {
         <div class="sec">${T("side.stock")}</div>
         <table class="o_list"><tbody>${l.quants.map((q) => `<tr><td class="first">${esc(P(q.product).name)}${q.lot ? `<br><span class="code mut">${esc(q.lot)}</span>` : ""}${q.package ? `<br><span class="code mut">${esc(q.package)}</span>` : ""}</td>
           <td class="n">${esc(i18n.int(q.qty))} ${esc(P(q.product).uom)}${q.reserved ? `<br><span style="color:var(--warn)">${T("side.reserved", { n: i18n.int(q.reserved) })}</span>` : ""}</td></tr>`).join("") || `<tr><td class="first"><span class="mut">${T("side.noStock")}</span></td></tr>`}</tbody></table>
+        ${tools.placeHtml(tree.byCode.get(code))}
         ${l.draft ? `<p class="ed-note">${T("side.draftNote")}</p>` : ""}<div class="acts"><button class="btn btn-secondary" data-unsel>${T("side.unselect")}</button></div>`;
     } else {
       const f = tree.nodes.get(ui.esel || ui.focus), ls = f.codes.map((c) => tree.loc(c)), picked = !!ui.esel;
@@ -122,7 +123,9 @@ export function createSidePanel({ model, i18n, root }) {
     const clip = model.clip, dest = clip.length ? model.dropInto(tree.nodes.get(clip[0]), n.id) : null;
     if (n.id !== "WH" || clip.length) h += `<div class="acts">${n.id === "WH" || isCell ? "" : `<button class="btn btn-secondary" data-dup title="${esc(mod)}+D">⧉ ${T("side.dup", { name: label(n) })}</button><button class="btn btn-secondary" data-copy title="${esc(mod)}+C">${T("side.copy")}</button>`}${clip.length ? `<button class="btn btn-secondary" data-paste title="${esc(mod)}+V">${T("side.paste", { names: clip.map((id) => label(tree.nodes.get(id))) })}${dest ? ` → ${esc(label(dest))}` : ""}</button>` : ""}${n.id === "WH" || isCell ? "" : `<button class="btn btn-danger" data-del="${esc(n.id)}">${T("side.del", { name: label(n) })}${n.codes.length > 1 ? ` · ${esc(places(n.codes.length))}` : ""}</button>`}</div>`;
     h += pendBox(model.pendFor(pid), t(n.id === "WH" ? "side.saveAll" : "side.saveObj", { name: label(isCell ? tree.nodes.get(pid) : n) }), ro);
+    h += tools.conflictsHtml();
     h += tools.propsHtml(n, ro);
+    if (n.loc) h += tools.placeHtml(n);
     if (zoneLeaf) h += tools.gridHtml(n, K, ro);
     if (isGroup && !zoneLeaf) {
       const rk = n.kids.filter((k) => k.type === "rack"), tp0 = fv(K("rack"), "tp", rk.length ? rk[rk.length - 1].tp : "FUR"), st0 = tree.TY(tp0).form === "stack";
@@ -141,6 +144,7 @@ export function createSidePanel({ model, i18n, root }) {
       const di = model.depthInfo(n.id), dopts = n.id === "WH" ? ["level", "cell"] : ["inherit", "level", "cell"], d0 = di.own; // значение берётся из модели (с учётом показанного), а не из памяти формы
       h += `<div class="sec">${T("side.depthTitle")}</div><form class="ed-form" data-op="depth"><label class="wide"><span class="sr">${T("side.depthTitle")}</span><select name="depth">${dopts.map((o) => `<option value="${o}"${o === d0 ? " selected" : ""}>${T(`depth.${o}`)}</option>`).join("")}</select></label>${btns(ro)}</form>
         <p class="ed-note">${T(n.id === "WH" ? "side.depthWh" : "side.depthZone")}</p>`;
+      h += tools.addrHtml(n, K, ro) + tools.renumHtml(n, K, ro);
     }
     if (n.type === "rack") {
       const stack = tp.form === "stack", lv = Math.max(0, ...n.kids.map((k) => k.nLv || 0)) || tp.lv || 1, par = tree.nodes.get(n.parent);
@@ -174,7 +178,7 @@ export function createSidePanel({ model, i18n, root }) {
     side.querySelector("[data-dup]")?.addEventListener("click", () => model.ops.dup(n.id));
     side.querySelector("[data-copy]")?.addEventListener("click", () => model.copy());
     side.querySelector("[data-paste]")?.addEventListener("click", () => model.paste());
-    tools.bindSingle(side, n);
+    tools.bindSingle(side, n); tools.bindAddr(side, n);
     side.querySelectorAll("form.ed-form[data-op]").forEach((f) => {
       const op = f.dataset.op, k = K(op), tid = f.dataset.target || n.id, val = () => Object.fromEntries(new FormData(f));
       f.querySelector("[data-show]").onclick = () => { FORMV[k] = val(); model.ops[op](tid, val(), k); };
