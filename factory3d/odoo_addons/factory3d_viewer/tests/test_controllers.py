@@ -118,6 +118,9 @@ class TestControllers(HttpCase, F3dViewerBase):
         from odoo.addons.factory3d_viewer.hooks import is_demo_db
         if not is_demo_db(self.env):
             raise unittest.SkipTest("потрібна демо-база: на порожній payload неповний")
+        # payload будується з правами користувача: менеджеру «Завод 3D» потрібен ще й доступ до складу/МО
+        self.user_manager.group_ids = [(4, self.env.ref("stock.group_stock_user").id),
+                                       (4, self.env.ref("mrp.group_mrp_user").id)]
         self.authenticate("f3d_manager", "f3d_manager")
         res = self.make_jsonrpc_request("/f3d/viewer/cycle_check", {})
         self.assertEqual(res, {"ok": True, "issues": []})

@@ -126,7 +126,8 @@ class F3dViewerProviderLogistics(models.AbstractModel):
             if typ in SRC_TYPES:
                 src = []
                 for loc in mls.location_id:
-                    if loc.f3d_code and loc.f3d_code not in src:
+                    # ворота (DOCK-*) — не комірка зберігання: резерв, зроблений на воротах, не є «звідки взято»
+                    if loc.f3d_code and not loc.f3d_code.startswith("DOCK-") and loc.f3d_code not in src:
                         src.append(loc.f3d_code)
                 if src:
                     rec["source_locations"] = src

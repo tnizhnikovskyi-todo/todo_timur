@@ -61,7 +61,15 @@ class TestResolverDemo(F3dViewerCase):
         self.assertEqual(resolve(self.env, code="OP-W9")["reason"], "not_found")
 
     def test_names(self):
-        for name, model in NAMES.items():
+        names = dict(NAMES)
+        # «MR/00031» — номер заявки з еталонного демо; у CE заявка має лише тему (name), без нумерації
+        requests = self.env["maintenance.request"].search([])
+        if not requests.filtered(lambda r: r.name == "MR/00031"):
+            del names["MR/00031"]
+            unique = [r.name for r in requests if requests.mapped("name").count(r.name) == 1]
+            self.assertTrue(unique, "у демо-базі немає заявки з унікальною темою")
+            names[unique[0]] = "maintenance.request"
+        for name, model in names.items():
             with self.subTest(name=name):
                 res = resolve(self.env, name=name)
                 self.assertEqual(res["model"], model)

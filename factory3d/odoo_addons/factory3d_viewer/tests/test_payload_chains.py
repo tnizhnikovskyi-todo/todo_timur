@@ -185,7 +185,8 @@ class TestChains(F3dViewerCase):
         """AC-61."""
         data = self.payload(self.user_f3d, full=True)
         zones = data["zones"]
-        self.assertEqual(len(zones), 45)
+        # test_factory3d_viewer (якщо встановлений) додає власну зону Z-TEST — вона не з демо
+        self.assertEqual(len([z for z in zones if z != "Z-TEST"]), 45)
         yard = zones["Z-YARD-W"]
         zone = self.env["f3d.zone"].search([("f3d_code", "=", "Z-YARD-W")])
         self.assertEqual(yard["zone_type"], "outdoor")

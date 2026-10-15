@@ -4,7 +4,7 @@ payload (контракт Додатка A) без ORM; результат пи�
 
 SHEET_PREFIXES = ("DSP", "MDF", "HDF")
 SHEET_CATEG = "Плитні матеріали"
-COMP_PREFIXES = ("DSP", "MDF", "HDF", "FUR", "EB", "LFM", "PVC", "PK")
+COMP_PREFIXES = ("DSP", "MDF", "HDF", "FUR", "EB", "LFM", "PVC", "PK", "FR")
 DOOR_OF = {"FUR": 4, "EB": 5, "LFM": 6, "PVC": 6, "PK": 7}
 KIND_OF = {"FUR": "фурнітура", "EB": "крайка", "LFM": "ЛФМ", "PVC": "плівка ПВХ", "PK": "пакування"}
 PLT_DOORS = ("UNLOAD-1", "UNLOAD-2", "UNLOAD-3")  # ворота плит; 4–7 — фурнітура, крайка, ЛФМ, пакування
@@ -130,6 +130,8 @@ def component_sources(payload):
                 path += [dict(code="PACK-STORE", label="пакматеріали"), dict(code="PAL-1", label="піддони")]
                 if c["to"] != "BOX-1":
                     path.append(dict(code="BOX-1", label="коробки з гофрокартону"))
+            elif pre == "FR":  # фасад — виріб дочірнього МО (R-08): іде на збирання батька, без `kind`
+                c["to"] = wc("ASM", "ASMLINE")
             else:  # невідомий префікс: kind немає, to = null (клієнт не малює гілку)
                 c["to"] = None
             c["path"] = path

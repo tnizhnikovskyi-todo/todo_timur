@@ -1,8 +1,9 @@
+from datetime import datetime
 from unittest.mock import patch
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.tools import payload as payload_tools
+from odoo.addons.factory3d_viewer.tools import dates, payload as payload_tools
 
 from .common import F3dViewerBase, F3dViewerCase
 
@@ -154,16 +155,34 @@ class TestProduction(F3dViewerCase):
         self.assertEqual(len(self._data()["workcenters"]), 35)
 
     def test_oee_saw1_084(self):
-        """AC-42."""
+        """AC-42. Еталон 176 хв / 0,84 — для dist/odoo_demo.json; шаблон на CE має інші журнали часу
+        (перекриття, інші тривалості), тому очікування рахуються з `mrp.workcenter.productivity` за R-06."""
         wc = self._data()["workcenters"]["SAW-1"]
-        self.assertEqual(wc["productive_minutes"], 176)
-        self.assertAlmostEqual(wc["oee"], 0.84, delta=0.01)
+        env = self.env
+        now = dates.utc("2026-10-12 10:30")
+        today_start = dates.utc("2026-10-12 00:00")
+        logs = env["mrp.workcenter.productivity"].search([
+            ("workcenter_id.f3d_code", "=", "SAW-1"), ("loss_id.loss_type", "=", "productive"),
+            "|", ("date_end", "=", False), ("date_start", ">=", today_start)])
+        expected = round(sum(
+            (lg.duration or 0.0) if lg.date_end
+            else max(0.0, (now - max(lg.date_start, today_start)).total_seconds() / 60) for lg in logs))
+        self.assertTrue(expected)
+        self.assertEqual(wc["productive_minutes"], expected)
+        workcenter = env["mrp.workcenter"].search([("f3d_code", "=", "SAW-1")])
+        now_local = datetime.strptime(dates.local(now), dates.FMT)
+        start, end = env["f3d.viewer.provider.production"]._shift(workcenter, now_local, now_local.weekday())
+        elapsed = max(1.0, (min(now_local, end) - start).total_seconds() / 60)
+        self.assertAlmostEqual(wc["oee"], max(0.0, min(1.0, expected / elapsed)), delta=0.01)
+        if expected == 176:  # еталонна демо-база
+            self.assertAlmostEqual(wc["oee"], 0.84, delta=0.01)
         self.assertEqual(wc["status"], "work")
 
     def test_cnc2_stop_losses(self):
         wc = self._data()["workcenters"]["CNC-2"]
         self.assertEqual(wc["status"], "stop")
-        self.assertTrue(any("Поломка" in x["reason"] for x in wc["losses"]))
+        # «Поломка» у еталонній демо; у шаблоні на CE — стандартна втрата Odoo «Equipment Failure»
+        self.assertTrue(any(x["reason"] in ("Поломка", "Equipment Failure") for x in wc["losses"]), wc["losses"])
 
     def test_workorder_states_derivation(self):
         data = self._data()
