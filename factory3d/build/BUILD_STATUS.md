@@ -21,7 +21,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 6 | `factory3d_machine_connect` | 2 | telemetry | DONE | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | 2026-10-15 18:13 UTC | Odoo 1205/1205 (15 модулей), плагины 53/53, collector 174+2 skip | 18 |
 | 7 | `factory3d_energy` | 3 | telemetry | DONE | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | 2026-10-15 17:42 UTC | Odoo 1076/1076 (14 модулей), демо viewer 211/211 | 18 |
 | 8 | `factory3d_yard` | 4 | base, telemetry | DONE | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | 2026-10-15 13:53 UTC | Odoo 831/831 (10 модулей), collector 174+2 skip, плагин sics 34/34 | 8 |
-| 9 | `factory3d_bms` | 5 | telemetry | IN_PROGRESS | session_01L43oC1FugyPdK6kpcRc1ij | 2026-10-15 13:54 UTC | | | |
+| 9 | `factory3d_bms` | 5 | telemetry | DONE | session_01L43oC1FugyPdK6kpcRc1ij | 2026-10-15 13:54 UTC | 2026-10-15 19:02 UTC | Odoo 1344/1344 (16 модулей), helvarnet 28/28, collector 174+2 skip | 7 |
 | 10 | `factory3d_fire_safety` | 5 | telemetry | DONE | session_01KJcdAJpD2ninHpqxDQv2FC | 2026-10-15 13:58 UTC | 2026-10-15 16:12 UTC | Odoo 965/965 (13 модулей), демо viewer 211/211 | 13 |
 | 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | IN_PROGRESS | session_013Ue8H7Af5WRGUBWdWKM5e4 | 2026-10-15 17:43 UTC | | | |
 
@@ -82,3 +82,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 17:43 UTC td_genset: запущена сессия session_013Ue8H7Af5WRGUBWdWKM5e4 (зависимости DONE). machine_connect DONE по отчёту (d29e2f3), идёт мерж.
 - 2026-10-15 18:13 UTC factory3d_machine_connect: DONE — смержен в `claude/factory3d-build` (`9e6004f`), фикс ожиданий тестов telemetry/energy — `0859a61`; Odoo 1205/1205. Правка telemetry DEC-7 (push_handler: в Odoo 19 registry.descendants отдаёт имена моделей) — после неё стал обнаруживаться push-обработчик lpr из yard, раньше не вызывался. Мост machine_connect_mrp_workorder не ставился (Enterprise). Открыто: ТБ-03 токен в логе, ТП-01 deadlock — разобрать.
 - 2026-10-15 18:32 UTC factory3d_bms: мерж откатан — 3 failed + 1 error в telemetry test_migration: post_init_hook bms создаёт 81 сигнал origin=sim_data, verify() миграции telemetry считает их (88 != 7) → partial. Лидеру отправлено: как energy DEC-3 (sim_data как catalog без level 0) + обновить test_hooks; статус IN_PROGRESS.
+- 2026-10-15 19:02 UTC factory3d_bms: DONE — со 2-й попытки смержен в `claude/factory3d-build` (`29e4340`), Odoo 1344/1344. Правка SPEC energy (AC-32, R-16, R-17) — `37182a6`. Фикс machine_connect DEC-19/DEC-20 (решение менеджера по поручению пользователя) — в работе в ветке claude/f3d-fix-machine-connect.
