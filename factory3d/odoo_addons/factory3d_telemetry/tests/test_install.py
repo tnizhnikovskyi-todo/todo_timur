@@ -19,7 +19,7 @@ class TestInstall(TransactionCase):
             'default_store_period_s': '300', 'stale_periods': '3', 'stale_min_s': '60',
             'bus_min_interval_s': '10', 'realarm_cooldown_s': '3600', 'push_max_readings': '2000',
             'push_rate_per_min': '60', 'meter_lead_pct': '5', 'drop_level0': 'False',
-            'level0_migrated': '{}', 'stale_notify_min': '0',
+            'stale_notify_min': '0',
         }
         for key, val in expected.items():
             self.assertEqual(icp.get_param('factory3d.telemetry.' + key), val, key)

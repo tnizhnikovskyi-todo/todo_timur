@@ -47,7 +47,7 @@ class F3dSource(models.Model):
         "maintenance.equipment", string="Обладнання", ondelete="set null",
         help="Головна одиниця обладнання (для дашборда)")
     module = fields.Selection(MODULES, string="Модуль-власник", default="telemetry")
-    params = fields.Json(string="Параметри", default=dict)
+    params = fields.Json(string="Параметри", default=lambda self: {})
     params_text = fields.Text(string="Параметри (JSON)", compute="_compute_params_text",
                               inverse="_inverse_params_text")
     read_enabled = fields.Boolean(string="Читати", default=True, tracking=True)
