@@ -42,6 +42,53 @@ class TestMigration(TransactionCase):
         spec.loader.exec_module(mod)
         mod.migrate(self.env.cr, '19.0.1.0.0')
 
+    def _load_post_migrate(self):
+        path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'migrations', '19.0.2.0.0',
+                            'post-migrate.py')
+        spec = importlib.util.spec_from_file_location('f3d_sim_post_migrate', path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def _registry_snapshot(self):
+        """{модель: {id: (code, write_date)}} — щоб побачити і дублікати, і зайві записи."""
+        return {model: {r.id: (getattr(r, 'code', False), r.write_date) for r in self.env[model].sudo().search([])}
+                for model in ('f3d.sim.device', 'f3d.sim.signal', 'f3d.sim.panel', 'f3d.sim.scenario')}
+
+    def test_post_migrate_fills_registry_idempotently(self):
+        """S-1: при `-u` з прототипу `post_init_hook` не викликається, реєстр порожній — post-migrate
+        наповнює його тими самими кроками; другий виклик (база, де вже наповнено) нічого не змінює."""
+        Device = self.env['f3d.sim.device'].sudo()
+        Signal = self.env['f3d.sim.signal'].sudo()
+        devices, signals = Device.search_count([]), Signal.search_count([])
+        self.assertTrue(devices and signals)
+        # база прототипу після `-u`: каталог і реєстр порожні
+        Signal.search([]).unlink()
+        Device.search([]).unlink()
+        self.assertEqual((Device.search_count([]), Signal.search_count([])), (0, 0))
+        mod = self._load_post_migrate()
+        mod.migrate(self.env.cr, '19.0.1.0.0')
+        self.assertEqual(Device.search_count([]), devices)
+        self.assertEqual(Signal.search_count([]), signals)
+        self.assertEqual(Signal.search_count([('origin', '=', 'mock')]), 196)
+        self.assertFalse(Signal.search([('device_id', '=', False)]))
+        snapshot = self._registry_snapshot()
+        mod.migrate(self.env.cr, '19.0.1.0.0')  # повторний запуск — без дублікатів і без записів
+        self._assert_unchanged(snapshot)
+
+    def test_post_migrate_on_filled_registry_changes_nothing(self):
+        """Тестовий сервер: реєстр уже наповнено (276/1168) — post-migrate нічого не створює й не пише."""
+        snapshot = self._registry_snapshot()
+        self._load_post_migrate().migrate(self.env.cr, '19.0.1.0.0')
+        self._assert_unchanged(snapshot)
+
+    def _assert_unchanged(self, snapshot):
+        now = self._registry_snapshot()
+        changed = {model: sorted(code for rid, (code, _wd) in recs.items() if snapshot[model].get(rid) != (code, _wd))[:10]
+                   for model, recs in now.items()}
+        self.assertEqual({m: v for m, v in changed.items() if v}, {}, "змінені записи")
+        self.assertEqual({m: len(r) for m, r in now.items()}, {m: len(r) for m, r in snapshot.items()})
+
     def test_hook_read_enabled_by_environment(self):
         ICP = self.env['ir.config_parameter'].sudo()
         ICP.set_param('factory3d.iot_sim.write_enabled', 'False')

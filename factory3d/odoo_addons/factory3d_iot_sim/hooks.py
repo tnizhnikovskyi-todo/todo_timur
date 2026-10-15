@@ -168,7 +168,8 @@ def post_init_hook(env):
     env['f3d.sim.signal']._load_catalog(file_path(CATALOG))
     _fill_addresses(env)
     _check_level0(env)
-    if not (env['ir.config_parameter'].sudo().get_param('factory3d.iot_sim.url') or '').strip():
+    if not (env['ir.config_parameter'].sudo().get_param('factory3d.iot_sim.url') or '').strip() \
+            and panel.state != 'unconfigured':  # без зайвого запису: хук також виконує post-migrate (ідемпотентно)
         panel.sudo().state = 'unconfigured'
     env['f3d.sim.device'].sudo().search([('driver', '=', 'passive'), ('state', '=', 'unknown')]).write(
         {'state': 'passive'})
