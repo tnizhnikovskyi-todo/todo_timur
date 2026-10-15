@@ -4,15 +4,15 @@
     <menuitem id="menu_f3d_bms" name="Будівля" parent="factory3d_base.menu_f3d_root" sequence="80" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_overview" name="Огляд" parent="menu_f3d_bms" sequence="10" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_lighting" name="Освітлення" parent="menu_f3d_bms" sequence="20" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_bms_light_group" name="Групи" parent="menu_f3d_bms_lighting" sequence="10" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_bms_light_panel" name="Щити" parent="menu_f3d_bms_lighting" sequence="20" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_bms_light_norm" name="Норми освітленості" parent="menu_f3d_bms_lighting" sequence="30" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_bms_light_group" action="action_f3d_bms_light_group" name="Групи" parent="menu_f3d_bms_lighting" sequence="10" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_bms_light_panel" action="action_f3d_bms_light_panel" name="Щити" parent="menu_f3d_bms_lighting" sequence="20" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_bms_light_norm" action="action_f3d_bms_light_norm" name="Норми освітленості" parent="menu_f3d_bms_lighting" sequence="30" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_hvac" name="Вентиляція й опалення" parent="menu_f3d_bms" sequence="30" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_hvac_unit" name="Установки" parent="menu_f3d_bms_hvac" sequence="10" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_heat_balance" name="Тепловий баланс" parent="menu_f3d_bms_hvac" sequence="20" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_deviation" name="Відхилення" parent="menu_f3d_bms" sequence="40" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_config" name="Будівля" parent="factory3d_base.menu_f3d_config" sequence="80" groups="factory3d_base.group_f3d_manager"/>
-    <menuitem id="menu_f3d_bms_config_scene" name="Сцени DALI" parent="menu_f3d_bms_config" sequence="10" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_bms_config_scene" action="action_f3d_bms_light_scene" name="Сцени DALI" parent="menu_f3d_bms_config" sequence="10" groups="factory3d_base.group_f3d_manager"/>
     <menuitem id="menu_f3d_bms_config_settings" name="Налаштування будівлі" parent="menu_f3d_bms_config" sequence="20" groups="factory3d_base.group_f3d_admin"/>
     <menuitem id="menu_f3d_bms_config_reinstall" name="Повторити установку даних будівлі" parent="menu_f3d_bms_config" sequence="90" groups="factory3d_base.group_f3d_admin"/>
 </odoo>

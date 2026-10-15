@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_light_group_list" model="ir.ui.view">
+        <field name="name">f3d.bms.light.group.list</field>
+        <field name="model">f3d.bms.light.group</field>
+        <field name="arch" type="xml">
+            <list string="Групи освітлення">
+                <field name="sequence" widget="handle" groups="factory3d_base.group_f3d_manager"/>
+                <field name="code"/>
+                <field name="zone_name"/>
+                <field name="norm_id"/>
+                <field name="e_norm"/>
+                <field name="n_fixtures"/>
+                <field name="n_required" optional="show"/>
+                <field name="design_ok" column_invisible="1"/>
+                <field name="e_calc" decoration-danger="not design_ok"/>
+                <field name="level_pct"/>
+                <field name="e_now"/>
+                <field name="p_now_kw"/>
+                <field name="faults" decoration-danger="faults &gt; 0"/>
+                <field name="deviation" widget="badge" decoration-success="deviation == 'none'"
+                       decoration-danger="deviation in ('off_in_work', 'below_norm')"
+                       decoration-warning="deviation == 'no_mains'"
+                       decoration-muted="deviation in ('no_data', 'off_hours')"/>
+                <field name="panel_id" optional="show"/>
+                <field name="dali_group" optional="hide"/>
+                <field name="control_mode" optional="hide"/>
+                <field name="request_count" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_light_group_form" model="ir.ui.view">
+        <field name="name">f3d.bms.light.group.form</field>
+        <field name="model">f3d.bms.light.group</field>
+        <field name="arch" type="xml">
+            <form string="Група освітлення">
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_requests" type="object" class="oe_stat_button" icon="fa-wrench">
+                            <field name="request_count" widget="statinfo" string="Заявки"/>
+                        </button>
+                        <button name="action_view_deviations" type="object" class="oe_stat_button"
+                                icon="fa-exclamation-triangle" invisible="1">
+                            <field name="deviation_count" widget="statinfo" string="Відхилення"/>
+                        </button>
+                        <button name="action_view_readings" type="object" class="oe_stat_button" icon="fa-line-chart"
+                                string="Графік рівня"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва"/></h1>
+                        <h3><field name="code" placeholder="LT-..." readonly="not is_f3d_manager"/></h3>
+                    </div>
+                    <group>
+                        <group string="Зона й норма">
+                            <field name="zone_id" readonly="not is_f3d_manager"/>
+                            <field name="area_m2"/>
+                            <field name="norm_id" readonly="not is_f3d_manager"/>
+                            <field name="e_norm"/>
+                            <field name="control_mode" readonly="not is_f3d_manager"/>
+                            <field name="level_design" readonly="not is_f3d_manager"/>
+                            <field name="check_off" readonly="not is_f3d_manager"/>
+                            <field name="check_norm" readonly="not is_f3d_manager"/>
+                            <field name="calendar_id" readonly="not is_f3d_manager"/>
+                        </group>
+                        <group string="Світильники">
+                            <field name="passport_id" readonly="not is_f3d_manager"/>
+                            <field name="fixture_kind" readonly="not is_f3d_manager"/>
+                            <field name="lumen" readonly="not is_f3d_manager"/>
+                            <field name="watt" readonly="not is_f3d_manager"/>
+                            <field name="n_fixtures" readonly="not is_f3d_manager"/>
+                            <field name="panel_id" readonly="not is_f3d_manager"/>
+                            <field name="equipment_id" readonly="not is_f3d_manager"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Розрахунок" name="design">
+                            <group>
+                                <group>
+                                    <field name="uf" readonly="not is_f3d_manager"/>
+                                    <field name="mf" readonly="not is_f3d_manager"/>
+                                    <field name="n_required"/>
+                                    <field name="e_calc"/>
+                                    <field name="design_ok" widget="badge" decoration-success="design_ok"
+                                           decoration-danger="not design_ok"/>
+                                    <field name="p_inst_kw"/>
+                                </group>
+                            </group>
+                            <div class="text-muted">E = N · Φ · UF · MF / A; N потрібно = ⌈Eн · A / (Φ · UF · MF)⌉ (метод коефіцієнта використання, plant/lighting.py)</div>
+                        </page>
+                        <page string="Зараз" name="live">
+                            <group>
+                                <group>
+                                    <field name="level_pct" readonly="1"/>
+                                    <field name="level_source" readonly="1"/>
+                                    <field name="e_now" readonly="1"/>
+                                    <field name="p_now_kw" readonly="1"/>
+                                    <field name="scene" readonly="1"/>
+                                    <field name="faults" readonly="1"/>
+                                    <field name="faulty" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="deviation" widget="badge" decoration-success="deviation == 'none'"
+                                           decoration-danger="deviation in ('off_in_work', 'below_norm')"
+                                           decoration-warning="deviation == 'no_mains'"
+                                           decoration-muted="deviation in ('no_data', 'off_hours')" readonly="1"/>
+                                    <field name="deviation_text" readonly="1"/>
+                                    <field name="live_ts" readonly="1"/>
+                                    <field name="stale" readonly="1"/>
+                                    <field name="off_since" readonly="1"/>
+                                    <field name="low_since" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="DALI" name="dali">
+                            <group>
+                                <group>
+                                    <field name="dali_group" readonly="not is_f3d_manager"/>
+                                    <field name="dali_devices" readonly="not is_f3d_manager"/>
+                                </group>
+                                <group>
+                                    <field name="level_signal_id" readonly="not is_f3d_manager"/>
+                                    <field name="power_signal_id" readonly="not is_f3d_manager"/>
+                                    <field name="scene_signal_id" readonly="not is_f3d_manager"/>
+                                    <field name="faults_signal_id" readonly="not is_f3d_manager"/>
+                                    <field name="faulty_signal_id" readonly="not is_f3d_manager"/>
+                                    <field name="check_signal_id" readonly="not is_f3d_manager"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_light_group_kanban" model="ir.ui.view">
+        <field name="name">f3d.bms.light.group.kanban</field>
+        <field name="model">f3d.bms.light.group</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="panel_id" quick_create="false" class="o_kanban_small_column">
+                <field name="plan_state"/>
+                <templates>
+                    <t t-name="card">
+                        <div t-attf-class="border-start border-4 ps-2 #{record.plan_state.raw_value == 'ok' ? 'border-success' : record.plan_state.raw_value == 'low' ? 'border-warning' : ['fault', 'alarm'].includes(record.plan_state.raw_value) ? 'border-danger' : 'border-secondary'}">
+                            <div class="fw-bold"><field name="code"/></div>
+                            <div class="text-muted"><field name="zone_name"/></div>
+                            <div><field name="e_now"/> / <field name="e_norm"/> лк</div>
+                            <div><field name="level_pct"/> %</div>
+                            <div><field name="n_fixtures"/> світильн.</div>
+                            <div t-if="record.faults.raw_value &gt; 0">
+                                <span class="badge text-bg-danger"><field name="faults"/></span>
+                            </div>
+                            <button name="action_f3d_show" type="object" class="btn btn-sm btn-secondary">3D</button>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_light_group_search" model="ir.ui.view">
+        <field name="name">f3d.bms.light.group.search</field>
+        <field name="model">f3d.bms.light.group</field>
+        <field name="arch" type="xml">
+            <search string="Групи освітлення">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="zone_id"/>
+                <field name="panel_id"/>
+                <field name="norm_id"/>
+                <filter name="deviation" string="Відхилення"
+                        domain="[('deviation', 'in', ['off_in_work', 'below_norm'])]"/>
+                <filter name="design_low" string="Нижче норми за проєктом" domain="[('design_ok', '=', False)]"/>
+                <filter name="has_faults" string="Є несправні" domain="[('faults_signal_id.last_value', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="mode_shift" string="Керування: зміна" domain="[('control_mode', '=', 'shift')]"/>
+                <filter name="mode_presence" string="Керування: присутність"
+                        domain="[('control_mode', '=', 'presence')]"/>
+                <separator/>
+                <filter name="archived" string="Архівні" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_panel" string="Щит" context="{'group_by': 'panel_id'}"/>
+                    <filter name="group_norm" string="Вид робіт" context="{'group_by': 'norm_id'}"/>
+                    <filter name="group_mode" string="Керування" context="{'group_by': 'control_mode'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_light_group" model="ir.actions.act_window">
+        <field name="name">Групи освітлення</field>
+        <field name="res_model">f3d.bms.light.group</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+</odoo>

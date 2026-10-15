@@ -1,1 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_bms_light_norm_user,f3d.bms.light.norm user,model_f3d_bms_light_norm,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_light_norm_manager,f3d.bms.light.norm manager,model_f3d_bms_light_norm,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_bms_light_panel_user,f3d.bms.light.panel user,model_f3d_bms_light_panel,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_light_panel_manager,f3d.bms.light.panel manager,model_f3d_bms_light_panel,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_bms_light_group_user,f3d.bms.light.group user,model_f3d_bms_light_group,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_light_group_manager,f3d.bms.light.group manager,model_f3d_bms_light_group,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_bms_light_scene_user,f3d.bms.light.scene user,model_f3d_bms_light_scene,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_light_scene_manager,f3d.bms.light.scene manager,model_f3d_bms_light_scene,factory3d_base.group_f3d_manager,1,1,1,1
