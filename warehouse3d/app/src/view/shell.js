@@ -21,6 +21,8 @@ const HTML = `
       <div class="o_menu" id="file-list" role="menu" hidden data-i18n-attr="aria-label:file.menu">
         <button role="menuitem" id="fm-imp-loc" data-i18n="file.impLoc"></button><button role="menuitem" id="fm-exp-loc" data-i18n="file.expLoc"></button>
         <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button></div></div>
+    <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
+    <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
     <span class="sp"></span>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
     <div class="seg" id="seg-lang" role="group" data-i18n-attr="aria-label:lang.label"><button data-l="uk" title="Українська">UK</button><button data-l="en" title="English">EN</button></div>
@@ -59,6 +61,7 @@ const HTML = `
   </div>
 </div>`;
 
+// host.odoo (только в странице из Odoo, W-11): { canRefresh, refresh() → Promise, newProject() → Promise } — кнопки «Оновити з Odoo» и «Проєкт з Odoo…»
 export function mountApp(root, { model, i18n, host = {} }) {
   root.innerHTML = HTML;
   const q = (s) => root.querySelector(s), t = (k, p) => i18n.t(k, p);
@@ -169,6 +172,12 @@ export function mountApp(root, { model, i18n, host = {} }) {
   q("#ed-undo").onclick = () => model.undo(true);
   q("#ed-types").onclick = () => openTypes({ model, i18n });
   q("#ed-reset").onclick = () => model.ops.reset();
+  if (host.odoo) {
+    const rb = q("#odoo-refresh"), nb = q("#odoo-new"), busy = (b, on) => { b.disabled = on; b.setAttribute("aria-busy", String(on)); };
+    rb.hidden = !host.odoo.canRefresh; nb.hidden = !host.odoo.newProject || model.readonly;
+    rb.onclick = async () => { busy(rb, true); try { await host.odoo.refresh(); } finally { busy(rb, false); } };
+    nb.onclick = async () => { busy(nb, true); try { await host.odoo.newProject(); } finally { busy(nb, false); } };
+  }
   q("#ed-saveall").onclick = () => model.save("WH");
   q("#ed-discall").onclick = () => model.discard("WH");
 

@@ -203,3 +203,21 @@ test("импорт проекта как копия: новый id и имя; id
   // копия открывается как обычный проект
   assert.equal(fresh({ [`project-${c1.id}`]: c1 }).model.project.id, "demo-copy");
 });
+
+test("склад из Odoo после импорта проекта: reloadBase идёт по baseRef, снимок base — запасной", () => {
+  const loc = (c) => ({ complete_name: `W/Z/${c}`, quants: [], capacity: null, fill: null, kind: "place" });
+  const old = { meta: { warehouse: "W" }, products: {}, locations: { OLD: loc("OLD") } };
+  const upd = { meta: { warehouse: "W" }, products: {}, locations: { NEW1: loc("NEW1"), NEW2: loc("NEW2") } };
+  const src = createProject({ id: "o", name: "O", warehouses: [{ id: "wh-1", code: "W", baseRef: "odoo:7" }] });
+  const p = parseProjectFile(serializeProject(src, { bases: { "odoo:7": old } })).project;
+  assert.equal(p.warehouses[0].baseRef, "odoo:7"); assert.ok(p.warehouses[0].base.locations.OLD, "запасной снимок в файле");
+  // Odoo недоступна (снимка по ссылке нет): работает запасной снимок
+  const bases = {}, m = createModel(p, createMemoryStorage(), { bases });
+  assert.deepEqual(sorted(m), ["OLD"]);
+  // хост загрузил снимок из Odoo: он важнее запасного — после reloadBase и при новом открытии
+  bases["odoo:7"] = upd; m.reloadBase();
+  assert.deepEqual(sorted(m), ["NEW1", "NEW2"]);
+  assert.deepEqual(sorted(createModel(p, createMemoryStorage(), { bases })), ["NEW1", "NEW2"]);
+  // файловый склад (baseRef = null) читает base
+  assert.deepEqual(sorted(createModel(createProject({ id: "f", warehouses: [{ code: "W", base: old }] }), createMemoryStorage(), { bases })), ["OLD"]);
+});

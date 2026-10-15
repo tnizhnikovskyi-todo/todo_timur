@@ -38,7 +38,8 @@ export function createModel(project, storage, opts = {}) {
   s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); };
   const rd = (name) => { try { return storage.read(name); } catch (e) { return null; } };
   const wr = (name, v) => { try { return storage.write(name, v); } catch (e) { return "fail"; } };
-  const baseOf = (wh) => wh.base || bases[wh.baseRef] || EMPTY_BASE;
+  // снимок хоста по baseRef (Odoo) важнее встроенной копии base: она — запасной вариант, если Odoo недоступна (импорт проекта кладёт её в файл)
+  const baseOf = (wh) => (wh.baseRef && bases[wh.baseRef]) || wh.base || EMPTY_BASE;
   s.baseOf = baseOf;
 
   // слой правок и дерево активного склада
@@ -97,6 +98,13 @@ export function createModel(project, storage, opts = {}) {
       Object.assign(ui, { focus: "WH", sel: null, esel: ui.edit ? "WH" : null, msel: [] }); bclear();
       s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
       return true;
+    },
+    // снимок Odoo активного склада обновился (хост подменил его в opts.bases): дерево перестраивается, слой правок и несохранённое остаются (W-11)
+    reloadBase() {
+      ed.sync(s); load(s.wh);
+      if (!s.tree.nodes.has(ui.focus)) ui.focus = "WH";
+      Object.assign(ui, { sel: null, esel: ui.edit ? ui.focus : null, msel: [] }); bclear();
+      s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
     },
     nodes: () => nodesOf(s.tree, s.data), // узлы склада в виде v2
     // глубина локаций (D-11): настройка склада ("WH") и зон; меняется операцией ops.depth через «Показати / Зберегти», как другие правки.
