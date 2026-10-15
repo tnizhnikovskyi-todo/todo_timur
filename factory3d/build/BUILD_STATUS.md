@@ -19,7 +19,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 4 | `factory3d_viewer` | 1 | base | IN_PROGRESS | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | | | |
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
-| 7 | `factory3d_energy` | 3 | telemetry | TODO | | | | | |
+| 7 | `factory3d_energy` | 3 | telemetry | IN_PROGRESS | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | | | |
 | 8 | `factory3d_yard` | 4 | base, telemetry | TODO | | | | | |
 | 9 | `factory3d_bms` | 5 | telemetry | TODO | | | | | |
 | 10 | `factory3d_fire_safety` | 5 | telemetry | TODO | | | | | |
@@ -68,3 +68,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 11:36 UTC менеджер: исправлены D-2 (эмулятор iot_sim: 405 вместо 404, `d79c297`, svc 463/463) и O-1 (uninstall factory3d_access без FK ERROR, `e6ebb47`, Odoo 297/297) в `claude/factory3d-build`.
 - 2026-10-15 11:43 UTC factory3d_telemetry: DONE — смержен в `claude/factory3d-build` (`d10cd6e`), Odoo 541/541 (base, iot_sim, access, telemetry + мосты access_telemetry, telemetry_viewer), collector unit 174 + 2 skip (MQTT без docker), DEC 16. Не проверено: стенд ТК-03/09/10 (красные в полном прогоне), ТК-12, ТП-06 — на сервере с Docker; ТП-04 объём таблиц выше оценки (DEC-16).
 - 2026-10-15 11:44 UTC factory3d_machine_connect: запущена сессия session_015rKvjaStE6jPJzyWqGrcwf по указанию пользователя; одновременно 2 (viewer, machine_connect).
+- 2026-10-15 11:54 UTC factory3d_energy: запущена сессия session_018rtyAE7NdpmjQDfBdoewi1 по указанию пользователя сверх лимита одновременных (3: viewer, machine_connect, energy).
