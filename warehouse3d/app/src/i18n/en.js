@@ -1213,4 +1213,159 @@ export default {
       <li>It is a “Show / Save” change; Ctrl+Z undoes it.</li>
     </ul>`,
   "side.autoBtn": "Lay out automatically",
+  // W-18: layout variants, version history, comments, roles, zone locks
+  "common.ok": "OK",
+  "common.cancel": "Cancel",
+  "unit.m3": "m³",
+  "top.variant": "Variant: {name}",
+  "top.variantsTitle": "Warehouse layout variants: create from the current one, switch, compare",
+  "top.history": "History",
+  "top.historyTitle": "Project versions: view and restore",
+  "top.comments": "Comments",
+  "top.commentsTitle": "Notes and \"check on site\" tasks on objects",
+  "bar.notePh": "Version comment (optional)",
+  "bar.noteLabel": "Comment for the version in the project history",
+  "role.view": "View",
+  "role.design": "Design",
+  "role.apply": "Apply",
+  "role.view.tip": "Role \"view\": look at the model, versions and comments and write comments; the project cannot be changed",
+  "role.design.tip": "Role \"design\": change the model, variants and versions, resolve comments, lock zones",
+  "role.apply.tip": "Role \"apply\": everything from \"design\" plus Change plan → Apply in Odoo",
+  "role.needDesign": "Requires the \"Constructor: design\" right",
+  "vr.title": "Layout variants",
+  "vr.intro": "Warehouse {wh} can have several layout variants: each has its own saved and unsaved model changes. A new variant is a copy of the current one's saved changes.",
+  "vr.asIs": "As is",
+  "vr.numbered": "Variant {n}",
+  "vr.name": "Name",
+  "vr.state": "State",
+  "vr.active": "active",
+  "vr.unsaved": "{n} unsaved changes",
+  "vr.switch": "Switch",
+  "vr.rename": "Rename",
+  "vr.delete": "Delete",
+  "vr.delConfirm": "Yes, delete",
+  "vr.noDelActive": "The active variant and the only variant cannot be deleted",
+  "vr.newName": "New variant name",
+  "vr.newPh": "Project A",
+  "vr.create": "Create from current",
+  "vr.createNote": "A copy of the active variant's saved changes; the new variant becomes active.",
+  "vr.compare": "Compare variants",
+  "vr.compareNone": "At least two variants are needed to compare.",
+  "vr.cmpA": "Variant A",
+  "vr.cmpB": "Variant B",
+  "vr.cmpNote": "Figures use the saved changes of each variant. Capacity is the sum of place capacities where known (from Odoo); new places have none yet. Difference is B minus A.",
+  "vr.delta": "Difference",
+  "vr.applyNote": "Only the active variant can be applied in Odoo (Change plan): the plan is always built from its saved changes.",
+  "vr.st.places": "Places",
+  "vr.st.pallets": "Pallet places",
+  "vr.st.area": "Floor area",
+  "vr.st.volume": "Place volume",
+  "vr.st.capacity": "Capacity",
+  "vr.st.ops": "Change plan operations",
+  "odoo.plan.variant": "Layout variant: {name}. Only the active variant is applied in Odoo.",
+  "hist.title": "Project version history",
+  "hist.intro": "Every Save creates a version (the last {n} are kept). Viewing a version is read-only. Restore returns the project to a version; the current state is saved as a separate version first.",
+  "hist.loading": "Loading versions…",
+  "hist.none": "No versions yet: they appear after the first Save.",
+  "hist.when": "When",
+  "hist.who": "Who",
+  "hist.comment": "Comment",
+  "hist.latest": "latest",
+  "hist.local": "this browser",
+  "hist.view": "View",
+  "hist.restore": "Restore",
+  "hist.confirm": "Restore version #{n}? The current state is saved as a new version and the page reloads.",
+  "hist.confirmYes": "Yes, restore",
+  "hist.viewing": "Version #{n}",
+  "hist.readonly": "view only: the project is not changed",
+  "hist.now": "Now (active)",
+  "hist.viewFail": "Could not read the version",
+  "hist.listFail": "Could not read the version list",
+  "cmt.title": "Comments",
+  "cmt.on": "On object",
+  "cmt.pickObject": "Select an object on the plan (or a building object in Building mode).",
+  "cmt.kind": "Kind",
+  "cmt.kind.note": "Note",
+  "cmt.kind.task": "Task: check on site",
+  "cmt.placeholder": "Note or task text",
+  "cmt.text": "Comment text",
+  "cmt.add": "Add comment",
+  "cmt.fState": "Status",
+  "cmt.fState.all": "All",
+  "cmt.fState.open": "Open",
+  "cmt.fState.done": "Resolved",
+  "cmt.search": "Search",
+  "cmt.onlyThis": "this object only",
+  "cmt.count": "Open: {open} · total: {all}",
+  "cmt.go": "Go to the object",
+  "cmt.state.open": "open",
+  "cmt.state.done": "resolved",
+  "cmt.doneBy": "Resolved by {by}, {at}",
+  "cmt.resolve": "Resolve",
+  "cmt.reopen": "Reopen",
+  "cmt.delete": "Delete",
+  "cmt.none": "No comments on this warehouse yet.",
+  "cmt.noneFiltered": "No comments match this filter.",
+  "mk.comments": "Comments: {open} open, {done} resolved",
+  "mk.lockBy": "{by} is editing this zone until {until}",
+  "mk.lockMine": "You are editing this zone: the lock is yours ({by})",
+  "word.variant": "Project",
+  "word.beforeRestore": "Before restoring version",
+  "word.restored": "Restored version",
+  "n.cmtDenied": "Commenting is not allowed: the \"Constructor: view\" right is missing",
+  "n.cmtFail": "The comment was not saved: no connection to the database or no right",
+  "n.cmtResolveDenied": "Only users with the \"design\" right can resolve and delete other people's comments",
+  "n.varDenied": "Layout variants are managed by users with the \"Constructor: design\" right",
+  "n.varMax": "No more than {n} variants per warehouse",
+  "n.varNameTaken": "Variant \"{name}\" already exists",
+  "n.varCreated": "Variant \"{name}\" created and switched to",
+  "n.varRemoveActive": "The active and the only variant cannot be deleted",
+  "n.varRemoved": "Variant deleted",
+  "n.histDenied": "Versions can be restored by users with the \"Constructor: design\" right",
+  "n.histFail": "Could not restore the version",
+  "n.histRestored": "Restored version #{n}",
+  "help.variants.title": "Layout variants",
+  "help.variants.html": `
+    <ul>
+      <li><b>Why.</b> A warehouse can have several layout variants: "As is" (current), "Project A", "Project B"… Each has its own saved and unsaved model changes; the Odoo base is shared. The <b>"Variant: …"</b> button in the top bar opens the variants window.</li>
+      <li><b>Create.</b> "Create from current" copies the <b>saved</b> changes of the active variant (unsaved ones stay with the active variant) and switches to the new one right away. At most 12 variants per warehouse.</li>
+      <li><b>Switch, rename, delete.</b> Switching does not lose unsaved changes: they stay with their variant. Deleting needs a second click to confirm; the active and the only variant cannot be deleted.</li>
+      <li><b>Compare.</b> Pick two variants — the table shows the number of places, pallet places, floor area (rows and floor places), place volume, capacity (sum of place capacities where known from Odoo) and the number of change plan operations, plus the difference. Figures use the saved changes.</li>
+      <li><b>In Odoo.</b> The change plan and applying work only with the active variant; its name is shown in the plan window. Variants are stored in the project with the warehouse (in Odoo — in the shared project).</li>
+      <li>The "design" role can create, rename and delete variants; anyone can switch.</li>
+    </ul>`,
+  "help.history.title": "Version history and restore",
+  "help.history.html": `
+    <ul>
+      <li><b>History.</b> The "History" button in the top bar lists project versions: number, when, who and comment. In Odoo the server keeps versions (the last 50, the author is the Odoo user); outside Odoo the last 20 are kept in this browser (localStorage).</li>
+      <li><b>Version comment.</b> In the edit bar next to "Save all" there is an optional comment field; it goes into the history with the version.</li>
+      <li><b>View.</b> Shows the drawing and the figures of the warehouse variants in that version next to the current state. Read-only: the project is not changed.</li>
+      <li><b>Restore.</b> Needs confirmation in the window itself. The current state (with unsaved changes) is first saved as a separate version, then the version becomes the project and the page reloads. So a restore can be undone by restoring the previous version. The "design" role can restore.</li>
+    </ul>`,
+  "help.comments.title": "Comments on objects",
+  "help.comments.html": `
+    <ul>
+      <li><b>What it is.</b> A note or a "check on site" task on any model node (warehouse, zone, row, rack, level, place) or building object. It has a text, an author, a date and a status: open or resolved.</li>
+      <li><b>Add.</b> The "Comments" button opens the panel. Select an object on the plan (a building object in Building mode), pick the kind, write the text and press "Add comment".</li>
+      <li><b>Badges on the plan.</b> In 2D and 3D an object with comments has a badge with a number (blue — note, orange — open task, grey — all resolved). Clicking a badge opens that object's comments.</li>
+      <li><b>List.</b> Filters by status, kind, text and "this object only"; clicking an object name goes to it on the plan. "Resolve" and "Reopen" are for the "design" role.</li>
+      <li><b>Where they live.</b> In Odoo — in the database, shared by everyone (the "view" role reads and writes, "design" resolves; only "design" deletes other people's comments); the list refreshes every 15 seconds. Outside Odoo — in the project in this browser and in the project file.</li>
+    </ul>`,
+  "help.roles.title": "Roles and rights",
+  "help.roles.html": `
+    <ul>
+      <li>Rights come from Odoo groups; a badge with your role is shown in the top bar. Outside Odoo the rights are full.</li>
+      <li><b>View.</b> Look at the model, versions, variants and comments, write comments, switch variants. Project changes cannot be saved ("View only").</li>
+      <li><b>Design.</b> Everything from "view", plus changing and saving the model, managing variants, restoring versions, resolving comments, locking zones.</li>
+      <li><b>Apply.</b> Everything from "design" plus "Change plan → Apply" and rolling back an application in Odoo.</li>
+      <li>Buttons not available to your role are disabled, with a hint.</li>
+    </ul>`,
+  "help.locks.title": "Zone locks",
+  "help.locks.html": `
+    <ul>
+      <li><b>Why.</b> So that two people do not edit the same zone at the same time. Locks work only when the project is stored in Odoo.</li>
+      <li><b>How it works.</b> When you select an object in edit mode, its zone is locked for you for 5 minutes; while the page is open and you stay in edit mode, the lock is renewed by itself once a minute; leaving edit mode or closing the page releases it.</li>
+      <li><b>Who is editing.</b> On the plan (2D and 3D) a zone being edited by another user has a red badge with their name, yours a green one. The lock list refreshes every 15 seconds.</li>
+      <li><b>Someone else's zone.</b> Changes in a zone another user is editing are rejected with a message saying who and until what time. Viewing, selecting and commenting on that zone is unrestricted.</li>
+    </ul>`,
 };

@@ -35,6 +35,11 @@
         <field name="model_id" ref="model_wh_zone_lock"/>
         <field name="domain_force">['|', ('project_id.company_id', '=', False), ('project_id.company_id', 'in', company_ids)]</field>
     </record>
+    <record id="rule_wh_comment_company" model="ir.rule">
+        <field name="name">Конструктор: коментарі проєктів своєї компанії</field>
+        <field name="model_id" ref="model_wh_comment"/>
+        <field name="domain_force">['|', ('project_id.company_id', '=', False), ('project_id.company_id', 'in', company_ids)]</field>
+    </record>
     <record id="rule_wh_apply_log_company" model="ir.rule">
         <field name="name">Конструктор: журнал застосувань своєї компанії</field>
         <field name="model_id" ref="model_wh_apply_log"/>

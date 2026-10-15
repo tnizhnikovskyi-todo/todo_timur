@@ -126,6 +126,25 @@ class TestWhConstructor(TransactionCase):
         with self.assertRaises(AccessError):
             self.Project.with_user(self.viewer).api_restore("p-1", first["id"], base_rev=3)
 
+    def test_restore_saves_unversioned_current_state(self):
+        """W-18: текущее состояние, которого нет ни в одной версии (черновик), перед восстановлением сохраняется отдельной версией."""
+        rev = self.save(self.designer, marks=1)["rev"]
+        rev = self.save(self.designer, marks=2, base_rev=rev)["rev"]
+        first = self.Project.api_versions("p-1")[-1]
+        rev = self.save(self.designer, marks=7, base_rev=rev, commit=False)["rev"]  # черновик: версии нет
+        self.assertEqual(len(self.Project.api_versions("p-1")), 2)
+        r = self.Project.with_user(self.designer).api_restore("p-1", first["id"], base_rev=rev)
+        self.assertEqual((r["status"], r["data"]["warehouses"][0]["saved"]), ("ok", {"marks": 1}))
+        versions = self.Project.api_versions("p-1")
+        self.assertEqual(len(versions), 4)  # + «перед відновленням» (черновик) + восстановленная
+        self.assertIn("Перед", versions[1]["comment"])
+        before = self.env["wh.project.version"].browse(versions[1]["id"])
+        self.assertEqual(before.data["warehouses"][0]["saved"], {"marks": 7})
+        # состояние уже совпадает с последней версией — лишней не создаётся
+        again = self.Project.with_user(self.designer).api_restore("p-1", first["id"], base_rev=r["rev"])
+        self.assertEqual(len(self.Project.api_versions("p-1")), 5)
+        self.assertEqual(again["status"], "ok")
+
     def test_delete(self):
         self.save(self.designer)
         self.assertTrue(self.Project.with_user(self.designer).api_delete("p-1")["deleted"])

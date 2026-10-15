@@ -8,6 +8,7 @@
 - Моделі: `wh.project` (ключ у застосунку, компанія, склади, `data` — JSON проєкту v2, схема, ревізія `rev`),
   `wh.project.version` (знімок при кожному «Зберегти», зберігаються останні 50; параметр `wh_constructor.max_versions`),
   `wh.zone.lock` (проєкт, склад, ключ зони, користувач, термін; 5 хв, параметр `wh_constructor.lock_ttl`),
+  `wh.comment` (коментарі на об'єктах проєкту: склад і об'єкт — id вузла або `b:<id>` об'єкта будівлі, вид `note` / `task`, текст, автор, дата, статус `open` / `done`, хто й коли вирішив; читає й пише «перегляд», вирішує «проєктування», чужі видаляє лише «проєктування»; W-18),
   `wh.library` (спільний довідник компанії: типи місць і шаблони, JSON `{types, templates}`, ревізія `rev`; читає «перегляд», пише «проєктування»),
   `wh.reader` (абстрактна, без таблиці: читання складів, локацій, залишків, категорій зберігання, правил розміщення й поповнення; W-11),
   `wh.apply.log` (журнал застосувань плану змін: хто, коли, проєкт, склад, операції з прежніми значеннями, стан `applied` / `rolled_back`; методи `api_apply`, `api_rollback`, `api_list`; W-13).
@@ -23,7 +24,8 @@
 | `/api/me` | користувач і права `{view, design, apply}` |
 | `/api/projects`, `/project/load`, `/project/delete` | список, завантаження, видалення |
 | `/api/project/save` | `{key, data, base_rev, commit, comment}` → `ok` + нова `rev`, або `stale` (в базі новіше) |
-| `/api/project/versions`, `/project/restore` | історія; відновлення створює нову ревізію й версію |
+| `/api/project/versions`, `/project/version`, `/project/restore` | історія; `version` `{key, version_id}` — дані версії для перегляду (лише читання, W-18); відновлення створює нову ревізію й версію, а поточний стан, якого немає в жодній версії (чернетка), спершу зберігає окремою версією «Перед відновленням версії №N» |
+| `/api/comment/list`, `/comment/add`, `/comment/resolve`, `/comment/remove` | коментарі (W-18): `list` `{key}`; `add` `{key, warehouse, node, text, kind, label}` — «перегляд»; `resolve` `{key, comment_id, state}` (`done` / `open`) — лише «проєктування»; `remove` — «проєктування» будь-який, решта лише свої. Відповідь — `comment` `{id, wh, node, label, kind, text, by, at, state, doneBy, doneAt}` |
 | `/api/lock/acquire`, `/lock/release`, `/lock/list` | захоплення/продовження, звільнення, чинні блокування; зайнята — `{ok:false, owner, expires}` |
 | `/api/apply/run`, `/apply/log`, `/apply/rollback` | застосування плану змін, журнал, відкат (див. «Застосування плану»); `run` `{warehouse_id, ops, key, comment}` → `ok` + `log_id`, `refs`, `counts` |
 | `/api/library/load`, `/library/save` | довідник типів і шаблонів; `save` `{data, base_rev}` → `ok` + `rev`, або `stale` + поточні `data` (клієнт зливає й повторює) |
@@ -105,6 +107,7 @@ warehouse3d/tools/odoo/run_tests.sh wh_t        # WH_ODOO=18|19; середов�
 
 Без Node (сервер): зберіть застосунок деінде й покладіть вміст `dist` у `odoo_addons/wh_constructor/static/app/`, а `WH_APP_BUILD=skip` не дасть скриптам його перезаписувати.
 
+Тести коментарів і перегляду версії — `tests/test_comment.py` (права по групах, статус, чужий проєкт і компанія, видалення, HTTP, `/project/version`); збереження поточного стану перед відновленням — `test_models.py::test_restore_saves_unversioned_current_state`.
 Тести застосування — `tests/test_apply.py` (створення з ієрархією, перенос, перейменування, атрибути, архівація порожнього, відмова з залишком і з незавершеним переміщенням, відмова без групи, транзакційність, журнал і відкат, HTTP).
 Тести читання — `tests/test_reader.py` (демо-дані: 2 склади по 10 локацій, залишки з партією й резервом, категорія зберігання, правило розміщення,
 min/max, чужа компанія, користувач із двома компаніями, відмова без групи, постранично; `in_date` у `quants`; клас `TestWhConstructorMoves` — рухи за вікно в днях, пара «звідки → куди»,

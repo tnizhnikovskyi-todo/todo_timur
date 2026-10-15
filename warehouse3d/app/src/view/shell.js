@@ -12,6 +12,9 @@ import { createNotifier } from "./notify.js";
 import { createProblems } from "./problems.js";
 import { createTray } from "./tray.js";
 import { openParse } from "./parse.js";
+import { openVariants, variantName } from "./variants.js";
+import { openHistory } from "./history.js";
+import { createComments } from "./comments.js";
 import { bindKeys } from "./keys.js";
 import { esc, isLow, scrollToSide } from "./util.js";
 import { legendHtml } from "./heat.js";
@@ -22,6 +25,7 @@ const HTML = `
   <header class="topbar">
     <div class="brand"><span class="logo" aria-hidden="true">⬡</span><b data-i18n="app.title"></b><span class="sub" id="wh-sub"></span></div>
     <select class="whsw" id="wh-switch" data-i18n-attr="aria-label:top.warehouse,title:top.warehouse"></select>
+    <button class="btn btn-secondary" id="var-btn" data-i18n-attr="title:top.variantsTitle"></button>
     <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" data-i18n="top.building"></button></div>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
     <div class="filemenu"><button class="btn btn-secondary" id="file-btn" aria-haspopup="menu" aria-expanded="false" data-i18n="top.file"></button>
@@ -32,6 +36,9 @@ const HTML = `
     <button class="btn btn-secondary" id="plan-btn" data-i18n="top.plan" hidden></button>
     <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
     <span class="sp"></span>
+    <span class="role-badge" id="role-badge" hidden></span>
+    <button class="btn btn-secondary" id="hist-btn" data-i18n="top.history" data-i18n-attr="title:top.historyTitle"></button>
+    <button class="btn btn-secondary" id="cm-btn" aria-pressed="false" data-i18n-attr="title:top.commentsTitle"><span data-i18n="top.comments"></span> <span class="cnt" id="cm-cnt">0</span></button>
     <button class="btn btn-secondary" id="tray-btn" aria-pressed="false" hidden><span data-i18n="tray.button"></span> <span class="cnt" id="tray-cnt">0</span></button>
     <button class="btn btn-secondary" id="pr-btn" aria-pressed="false"><span data-i18n="prob.button"></span> <span class="cnt" id="pr-cnt">0</span></button>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
@@ -43,6 +50,7 @@ const HTML = `
         <div class="planbar"><div class="o_lvlbar" id="lvlbar" data-i18n-attr="aria-label:lvl.bar"></div></div>
         <div class="editbar" id="editbar" hidden>
           <b id="ed-title"></b><span id="ed-count" class="mut"></span><span class="sp"></span>
+          <input type="text" id="ed-note" maxlength="300" autocomplete="off" data-i18n-attr="placeholder:bar.notePh,aria-label:bar.noteLabel,title:bar.noteLabel">
           <button class="btn btn-primary" id="ed-saveall" data-i18n="bar.saveAll"></button>
           <button class="btn btn-secondary" id="ed-discall" data-i18n="bar.discardAll"></button>
           <button class="btn btn-secondary" id="ed-undo" data-i18n-attr="title:bar.undoTitle,aria-label:bar.undoLabel">↶</button>
@@ -70,6 +78,7 @@ const HTML = `
     <div class="help-view" id="help-view" hidden></div>
     <aside class="o_prob" id="problems" hidden aria-label="Problems"></aside>
     <aside class="o_prob o_tray" id="tray" hidden aria-label="Tray"></aside>
+    <aside class="o_prob o_cmt" id="comments" hidden aria-label="Comments"></aside>
   </div>
 </div>`;
 
@@ -110,13 +119,15 @@ export function mountApp(root, { model, i18n, host = {} }) {
 
   const afterPick = () => scrollToSide(root);
   // панель проблем (W-07): переход к объекту — выделение и уровень на модели; у объекта здания — режим «Будівля»
-  let probs = null, tray = null;
+  let probs = null, tray = null, cm = null;
   const goProblem = (p) => {
     if (!p) return;
     if ((p.ids || []).some((id) => model.tree.nodes.has(id))) { if (bldOn()) model.bld.setOn(false); model.checks.goTo(p); apply(); }
     else if ((p.bld || []).length) { mode = "2d"; model.bld.setOn(true); model.bld.select(p.bld); apply(); p2.fit(); }
   };
-  const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick });
+  // значок на плане (W-18): комментарии объекта — в панели «Коментарі», блокировка — уровень выше зоны с выделением
+  const goMark = (node, kind) => { if (kind === "comment") cm?.showNode(node); else { model.focusTo(node); apply(); } };
+  const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark });
   const side = createSidePanel({ model, i18n, root: q("#plan-side"), host });
 
   // ---------- 3D: загрузка по первому обращению
@@ -124,7 +135,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     if (three) return Promise.resolve(three);
     if (!threeLoading) {
       const ld = document.createElement("div"); ld.className = "loading"; ld.textContent = t("plan.loading3d"); vp.append(ld);
-      threeLoading = createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
+      threeLoading = createPlan3D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark })
         .then((x) => { three = x; ld.remove(); return x; })
         .catch((e) => { ld.textContent = t("plan.fail3d"); threeLoading = null; console.error(e); });
     }
@@ -196,6 +207,15 @@ export function mountApp(root, { model, i18n, host = {} }) {
     const tc = model.tray.count(), tb = q("#tray-btn"), to = !q("#tray").hidden;
     q("#tray-cnt").textContent = String(tc); tb.hidden = !tc && !to; tb.setAttribute("aria-pressed", String(to)); tb.title = t("tray.count", { n: tc });
     updateEditBar(root, { model, i18n });
+    paintTop();
+  }
+  // вариант планировки, роль, число открытых комментариев (W-18)
+  function paintTop() {
+    const vl = model.variants.list(), act = vl.find((v) => v.active), vb = q("#var-btn");
+    vb.textContent = t("top.variant", { name: variantName(i18n, act, vl.indexOf(act)) }); vb.classList.toggle("has-pend", vl.length > 1);
+    const rb = q("#role-badge"), role = model.role();
+    rb.hidden = !model.shared; rb.textContent = t(`role.${role}`); rb.title = t(`role.${role}.tip`); rb.dataset.role = role;
+    q("#cm-cnt").textContent = String(model.comments.openCount()); q("#cm-btn").setAttribute("aria-pressed", String(!q("#comments").hidden));
   }
   const renderLvl = () => renderLevelBar(q("#lvlbar"), { model, i18n });
   function refresh() { p2.paint(); if (three && mode === "3d") three.paint(); }
@@ -203,25 +223,27 @@ export function mountApp(root, { model, i18n, host = {} }) {
   function apply() {
     if (!p2.exists()) { p2.build(); p2.fit(); }
     p2.setHidden(mode !== "2d"); vp.classList.toggle("m2", mode === "2d");
-    if (three) { three.canvas.hidden = mode !== "3d"; three.lbl.hidden = mode !== "3d"; }
+    if (three) { three.canvas.hidden = mode !== "3d"; three.lbl.hidden = mode !== "3d"; three.mkl.hidden = mode !== "3d"; }
     tip.hidden = true;
     paintBars(); renderLvl();
-    if (mode === "3d") ensureThree().then((x) => { if (x && mode === "3d") { x.canvas.hidden = false; x.lbl.hidden = false; x.resize(); x.makeLabels(); x.paint(); x.fit(true); } });
+    if (mode === "3d") ensureThree().then((x) => { if (x && mode === "3d") { x.canvas.hidden = false; x.lbl.hidden = false; x.mkl.hidden = false; x.resize(); x.makeLabels(); x.makeMarks(); x.paint(); x.fit(true); } });
     refresh();
   }
 
   // ---------- события модели
   model.on((ev) => {
     if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); probs?.render(); tray?.render(); return; }
-    if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); renderHeat(); renderFind(); renderData(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); return; }
+    if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); renderHeat(); renderFind(); renderData(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); cm?.render(); return; }
     if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); renderHeat(); renderFind(); refresh(); }
+    else if (ev.type === "comments" || ev.type === "locks" || ev.type === "variant") { refresh(); if (three && mode === "3d") three.makeMarks(); cm?.render(); }
     else if (ev.type === "heat") { renderHeat(); refresh(); }
     else if (ev.type === "find") { renderFind(); refresh(); }
     else if (ev.type === "data") { p2.paint(); if (three) three.rebuild(); renderHeat(); renderFind(); renderData(); refresh(); }
-    else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.paint(); three.fit(); } }
+    else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.makeMarks(); three.paint(); three.fit(); } cm?.render(); }
     else if (ev.type === "bld") p2.bldRefresh(); // режим «Будівля»: слой здания, панель, строка состояния
     else refresh();
     side.render(); paintBars(); if (ev.type === "rebuild") { probs?.render(); tray?.render(); }
+    if (ev.type === "select") cm?.render();
   });
 
   // ---------- кнопки
@@ -255,7 +277,10 @@ export function mountApp(root, { model, i18n, host = {} }) {
     };
     nb.onclick = async () => { busy(nb, true); try { await host.odoo.newProject(); } finally { busy(nb, false); } };
   }
-  q("#ed-saveall").onclick = () => model.save("WH");
+  q("#ed-saveall").onclick = () => { const n = q("#ed-note"), c = n.value.trim(); n.value = ""; model.save("WH", c || null); }; // необязательный комментарий версии (W-18)
+  q("#var-btn").onclick = () => openVariants({ model, i18n });
+  q("#hist-btn").onclick = () => openHistory({ model, i18n, host });
+  q("#cm-btn").onclick = () => cm.toggle();
   q("#ed-discall").onclick = () => model.discard("WH");
 
   // ---------- меню «Файл» (W-10): окна импорта и экспорта грузятся при первом обращении
@@ -291,6 +316,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     if (three) { three.canvas.setAttribute("aria-label", t("plan.canvasLabel")); three.makeLabels(); }
     side.render(); refresh(); q("#problems").setAttribute("aria-label", t("prob.title")); probs?.render();
     q("#tray").setAttribute("aria-label", t("tray.title")); tray?.render();
+    q("#comments").setAttribute("aria-label", t("cmt.title")); cm?.refreshText();
     if (view === "help") renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan") });
   });
 
@@ -298,5 +324,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   applyStatic(); renderSwitch(); renderHeat(); renderFind(); renderData(); apply(); side.render();
   probs = createProblems({ model, i18n, root: q("#problems"), onGo: goProblem });
   tray = createTray({ model, i18n, root: q("#tray"), onToggle: paintBars });
+  // переход к объекту комментария: у объекта здания — режим «Будівля» (2D), у узла — уровень выше и выделение
+  cm = createComments({ model, i18n, root: q("#comments"), onToggle: paintBars, onGo: (r) => { if (r === "bld") mode = "2d"; apply(); if (r === "bld") p2.fit(); afterPick(); } });
   return { showView, get mode() { return mode; } };
 }

@@ -29,7 +29,11 @@ await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
 const url = `http://127.0.0.1:${server.address().port}/`;
 
 const steps = [], errors = [];
-const step = async (name, fn) => { try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n").slice(0, 4).join(" ").trim()}`); errors.push(name); } };
+// E2E_ONLY=<regexp> — выполнить только шаги с подходящим названием (отладка); E2E_VERBOSE=1 — полный текст ошибки
+const step = async (name, fn) => {
+  if (process.env.E2E_ONLY && !new RegExp(process.env.E2E_ONLY).test(name)) return;
+  try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n").slice(0, process.env.E2E_VERBOSE ? 40 : 4).join(" ").trim()}`); errors.push(name); }
+};
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
@@ -929,6 +933,186 @@ try {
     await pg.click("#plan-dlg [data-errs]");
     expect((await pg.locator("#plan-dlg").count()) === 0 && !(await pg.locator("#problems").isHidden()), "переход к панели проблем не сработал");
     await ctx.close();
+  });
+  // W-18 (D-19): варианты планировки, комментарии, история версий, роли и блокировки зон — страница из Odoo с фейковым сервером (проект, версии, комментарии, блокировки)
+  const w18 = { project: null, rev: 0, versions: [], comments: [], foreign: [], released: 0, acquired: 0, vid: 0, cid: 0, restored: null, saves: 0 };
+  const GPZ = "WH/Готова продукція", FURZ2 = "WH/Сировина/Фурнітура";
+  const w18Open = async (rights, name = "Аня") => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; window.__WH_DEBUG = {}; });
+    await ctx.route("**/wh_constructor/api/**", async (route) => {
+      const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+      const now = new Date().toISOString(), deny = { status: "denied", message: "no" }, ver = (v) => ({ id: v.id, rev: v.rev, comment: v.comment, by: v.by, at: v.at });
+      let out = { status: "ok", found: false };
+      if (r === "/me") out = { uid: 1, name, company: "Co", rights };
+      else if (r === "/projects") out = { status: "ok", projects: w18.project ? [{ id: w18.project.id, name: w18.project.name, source: w18.project.source, loaded_at: w18.project.loaded_at, warehouses: w18.project.warehouses.length }] : [] };
+      else if (r === "/project/load") out = w18.project ? { status: "ok", found: true, data: w18.project, rev: w18.rev } : { status: "ok", found: false };
+      else if (r === "/project/save") {
+        if (!rights.design) out = deny;
+        else { w18.project = params.data; w18.rev++; w18.saves++; if (params.commit) w18.versions.push({ id: ++w18.vid, rev: w18.rev, comment: params.comment || "", by: name, at: now, data: params.data }); out = { status: "ok", rev: w18.rev }; }
+      } else if (r === "/project/versions") out = { status: "ok", versions: w18.versions.slice().reverse().map(ver) };
+      else if (r === "/project/version") { const v = w18.versions.find((x) => String(x.id) === String(params.version_id)); out = v ? { status: "ok", data: v.data, ...ver(v) } : { status: "missing" }; }
+      else if (r === "/project/restore") {
+        const v = w18.versions.find((x) => String(x.id) === String(params.version_id));
+        if (!rights.design) out = deny; else { w18.project = v.data; w18.rev++; w18.restored = v.id; w18.versions.push({ id: ++w18.vid, rev: w18.rev, comment: `Відновлено версію №${v.rev}`, by: name, at: now, data: v.data }); out = { status: "ok", rev: w18.rev, data: v.data }; }
+      } else if (r === "/comment/list") out = { status: "ok", comments: w18.comments };
+      else if (r === "/comment/add") { const c = { id: String(++w18.cid), wh: params.warehouse, node: params.node, label: params.label, kind: params.kind, text: params.text, by: name, at: now, state: "open", doneBy: "", doneAt: "" }; w18.comments.push(c); out = { status: "ok", comment: c }; }
+      else if (r === "/comment/resolve") {
+        const c = w18.comments.find((x) => x.id === params.comment_id);
+        if (!rights.design) out = deny; else { c.state = params.state; c.doneBy = params.state === "done" ? name : ""; c.doneAt = params.state === "done" ? now : ""; out = { status: "ok", comment: c }; }
+      } else if (r === "/lock/acquire") {
+        const f = w18.foreign.find((x) => x.zone === params.zone); w18.acquired++;
+        out = f ? { ok: false, owner: f.owner, expires: f.expires, mine: false } : { ok: true, owner: name, expires: new Date(Date.now() + 300000).toISOString(), mine: true };
+      } else if (r === "/lock/release") { w18.released++; out = { ok: true, released: 1 }; }
+      else if (r === "/lock/list") out = { status: "ok", locks: w18.foreign.map((f) => ({ ok: true, zone: f.zone, warehouse: f.warehouse, owner: f.owner, expires: f.expires, mine: false })) };
+      else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [] };
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+    });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    return { ctx, pg };
+  };
+  const digits = (s) => String(s).replace(/\D/g, "");
+  await step("W-18: роль, варианты — создать, переключить, сравнить, переименовать, удалить", async () => {
+    const pg = (w18.a = await w18Open({ view: true, design: true, apply: false })).pg;
+    expect((await pg.locator("#role-badge").innerText()) === "Проєктування", "нет позначки ролі");
+    expect((await pg.locator("#var-btn").innerText()) === "Варіант: Як є", "кнопка варианта");
+    const places0 = await pg.evaluate(() => window.__WH_DEBUG.model.tree.byCode.size);
+    await pg.click("#var-btn"); await pg.waitForSelector("#var-dlg [data-new]");
+    await pg.fill("#var-dlg [data-new]", "Проєкт A"); await pg.click("#var-dlg [data-create]");
+    await pg.waitForFunction(() => document.querySelector("#var-btn").textContent === "Варіант: Проєкт A");
+    expect((await pg.locator("#var-dlg tr[data-var]").count()) === 2, "в списке два варианта");
+    expect((await pg.locator('#var-dlg tr[data-var="v2"] .vr-act').count()) === 1, "активный вариант не помечен");
+    await pg.click("#var-dlg [data-close]");
+    // правка в варианте A (новый ряд) не попадает в «Як є»
+    const added = await pg.evaluate(async () => { const m = window.__WH_DEBUG.model; m.ops.rack("WH/Сировина/Фурнітура", { tp: "FUR", nb: 2, nl: 3 }); await m.save("WH", "додав ряд e2e"); return m.tree.byCode.size; });
+    expect(added > places0, "ряд не добавлен");
+    await pg.click("#var-btn"); await pg.waitForSelector("#var-dlg table.vr-stats");
+    const col = (k, i) => pg.locator(`#var-dlg tr[data-stat=${k}] td[data-col]`).nth(i).innerText();
+    expect(digits(await col("places", 0)) === String(added) && digits(await col("places", 1)) === String(places0), "сравнение: числа мест A и «Як є»");
+    expect(digits(await pg.locator("#var-dlg tr[data-stat=places] td[data-delta]").innerText()) === String(added - places0), "сравнение: разница мест");
+    expect((await pg.locator("#var-dlg tr[data-stat]").count()) === 6, "в таблице сравнения шесть показателей");
+    await pg.click('#var-dlg tr[data-var="v1"] [data-sw]');
+    await pg.waitForFunction(() => document.querySelector("#var-btn").textContent === "Варіант: Як є");
+    expect((await pg.evaluate(() => window.__WH_DEBUG.model.tree.byCode.size)) === places0, "переключение не вернуло «Як є»");
+    // переименовать, отменить удаление, удалить (второе нажатие подтверждает)
+    await pg.click('#var-dlg tr[data-var="v2"] button[data-rn]'); await pg.fill("#var-dlg input[data-rn]", "Проєкт Б"); await pg.press("#var-dlg input[data-rn]", "Enter");
+    await pg.waitForFunction(() => /Проєкт Б/.test(document.querySelector('#var-dlg tr[data-var="v2"]')?.textContent || ""));
+    await pg.click('#var-dlg tr[data-var="v2"] button[data-del]'); await pg.click("#var-dlg [data-del-no]");
+    expect((await pg.locator("#var-dlg tr[data-var]").count()) === 2, "отмена удаления не сработала");
+    await pg.click('#var-dlg tr[data-var="v2"] button[data-del]'); await pg.click("#var-dlg [data-del-ok]");
+    await pg.waitForFunction(() => document.querySelectorAll("#var-dlg tr[data-var]").length === 1);
+    await pg.click("#var-dlg [data-close]");
+    expect(w18.versions.some((v) => v.comment === "додав ряд e2e"), "комментарий версии не дошёл до сервера");
+  });
+  await step("W-18: комментарий на объекте — добавить, значок в 2D и 3D, перейти к объекту, решить", async () => {
+    const pg = w18.a.pg;
+    await pg.click('#seg-mode [data-m="2d"]');
+    await pg.click("#cm-btn"); await pg.waitForSelector("#comments [data-text]");
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await pg.waitForFunction(() => /Сировина/.test(document.querySelector("#comments [data-target]")?.textContent || ""));
+    await pg.selectOption("#comments [data-kind]", "task");
+    await pg.fill("#comments [data-text]", "Перевірити на місці висоту полиць");
+    await pg.click("#comments [data-add]");
+    await pg.waitForSelector("#comments .cm-list li");
+    await pg.click("#comments [data-close]");
+    expect(w18.comments.length === 1 && w18.comments[0].node === "WH/Сировина" && w18.comments[0].kind === "task", "комментарий не ушёл на сервер");
+    await pg.click("#z-up");
+    await pg.waitForSelector('#vp svg g.mk-t[data-mark="WH/Сировина"]');
+    expect((await pg.locator('#vp svg g.mk-t[data-mark="WH/Сировина"]').textContent()).includes("1"), "на значке нет числа комментариев");
+    // значок в 3D
+    await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForSelector("#vp canvas:not([hidden])");
+    await pg.waitForFunction(() => { const e = document.querySelector('#marks3d [data-mark="WH/Сировина"]'); return e && !e.hidden; });
+    await pg.click('#marks3d [data-mark="WH/Сировина"]');
+    expect(await pg.locator("#comments [data-fonly]").isChecked(), "клик по значку 3D не показал комментарии объекта");
+    await pg.click('#seg-mode [data-m="2d"]');
+    // значок в 2D открывает комментарии объекта; фильтр «лише цей об'єкт»
+    await pg.uncheck("#comments [data-fonly]"); await pg.click("#comments [data-close]");
+    await pg.click('#vp svg g.mk-t[data-mark="WH/Сировина"]');
+    await pg.waitForSelector("#comments:not([hidden])");
+    expect(await pg.locator("#comments [data-fonly]").isChecked() && (await pg.locator("#comments .cm-list li").count()) === 1, "клик по значку 2D");
+    // переход к объекту комментария
+    await pg.evaluate(() => window.__WH_DEBUG.model.unselect());
+    await pg.click("#comments [data-go]");
+    await pg.waitForFunction(() => window.__WH_DEBUG.model.ui.esel === "WH/Сировина");
+    // решить: пропадает из «Відкриті», значок серый
+    await pg.click("#comments [data-resolve]");
+    await pg.waitForFunction(() => /Відкритих: 0/.test(document.querySelector("#comments [data-count]")?.textContent || ""));
+    expect(w18.comments[0].state === "done" && w18.comments[0].doneBy === "Аня", "решение не ушло на сервер");
+    await pg.selectOption("#comments [data-fstate]", "open");
+    await pg.waitForSelector("#comments [data-none]");
+    await pg.waitForSelector('#vp svg g.mk-d[data-mark="WH/Сировина"]');
+    await pg.selectOption("#comments [data-fstate]", "all");
+    expect((await pg.locator("#comments .cm-list li").innerText()).includes("вирішена"), "решённый комментарий не виден при фильтре «Усі»");
+    await pg.click("#comments [data-close]");
+  });
+  await step("W-18: история — версии, просмотр только для чтения, восстановление с подтверждением", async () => {
+    const pg = w18.a.pg, vc = w18.versions.length;
+    await pg.click("#hist-btn"); await pg.waitForSelector("#hist-dlg tr[data-ver]");
+    expect((await pg.locator("#hist-dlg tr[data-ver]").count()) === vc, "число версий в окне");
+    const row = pg.locator('#hist-dlg tr[data-ver]:has-text("додав ряд e2e")');
+    expect((await row.innerText()).includes("Аня"), "в версии нет автора");
+    await row.locator("[data-view-btn]").click();
+    await pg.waitForSelector("#hist-dlg [data-view] svg.hist-svg");
+    expect((await pg.locator("#hist-dlg [data-view]").innerText()).includes("тільки перегляд") && (await pg.locator("#hist-dlg [data-view] table.vr-stats").count()) >= 1, "просмотр версии");
+    const saves = w18.saves;
+    await row.locator("[data-restore]").click();
+    expect((await pg.locator("#hist-dlg [data-conf]").innerText()).includes("Відновити версію №"), "нет подтверждения");
+    await pg.click("#hist-dlg [data-restore-no]");
+    expect((await pg.locator("#hist-dlg [data-conf]").count()) === 0 && w18.restored === null, "отмена подтверждения не сработала");
+    await row.locator("[data-restore]").click();
+    await Promise.all([pg.waitForEvent("load"), pg.click("#hist-dlg [data-restore-ok]")]);
+    await pg.waitForSelector("#plan-side h2");
+    expect(w18.restored != null, "восстановление не дошло до сервера");
+    expect(w18.versions.some((v) => /^Перед відновленням версії №/.test(v.comment)), "текущее состояние не сохранено перед восстановлением");
+    expect((await pg.locator("#var-btn").innerText()) === "Варіант: Проєкт A", "после восстановления вернулся вариант из версии");
+    expect(w18.saves > saves, "перед восстановлением проект не сохранялся");
+    await w18.a.ctx.close();
+  });
+  await step("W-18: чужая зона — значок с именем, правка отклонена, просмотр и комментарии работают, своя зона и освобождение", async () => {
+    w18.foreign = [{ zone: GPZ, warehouse: w18.project.warehouses[0].id, owner: "Боря", expires: new Date(Date.now() + 300000).toISOString() }];
+    const b = await w18Open({ view: true, design: true, apply: false }), pg = b.pg;
+    await pg.click('#seg-mode [data-m="2d"]');
+    await pg.waitForSelector(`#vp svg g.mk-l[data-mark="${GPZ}"]`);
+    expect((await pg.locator(`#vp svg g.mk-l[data-mark="${GPZ}"]`).textContent()).includes("Боря"), "на значке нет имени");
+    await pg.click("#ed-tg");
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Готова продукція" });
+    await pg.waitForFunction(() => /Боря/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    expect((await pg.locator("#ed-st").innerText()).includes("Боря"), "в строке состояния нет владельца зоны");
+    const r = await pg.evaluate(() => { const m = window.__WH_DEBUG.model, x = m.ops.rotate("WH/Готова продукція/R1"); return { x, pending: m.pending.length }; });
+    expect(!r.x && r.pending === 0, "правка чужой зоны не отклонена");
+    // просмотр и комментарии не блокируются
+    await pg.click("#ed-tg");
+    await pg.evaluate(async () => { const m = window.__WH_DEBUG.model; m.select("WH/Готова продукція/R1"); await m.comments.add({ node: "WH/Готова продукція", text: "Коментар у чужій зоні" }); });
+    await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForSelector("#vp canvas:not([hidden])"); await pg.click('#seg-mode [data-m="2d"]');
+    expect(w18.comments.some((c) => c.node === GPZ), "комментарий в заблокированной зоне не записан");
+    // своя зона: блокировка берётся, значок «ваша», выход из правки освобождает
+    await pg.click("#z-up"); await pg.click("#ed-tg");
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    await pg.waitForSelector(`#vp svg g.mk-lm[data-mark="${FURZ2}"]`);
+    expect((await pg.locator(`#vp svg g.mk-lm[data-mark="${FURZ2}"]`).textContent()).includes("Аня"), "на своём значке нет имени");
+    expect(w18.acquired >= 1, "блокировка не запрошена");
+    const rel = w18.released;
+    await pg.click("#ed-tg");
+    await pg.waitForTimeout(300);
+    expect(w18.released > rel, "выход из правки не освободил зону");
+    await b.ctx.close();
+  });
+  await step("W-18: роль «перегляд» — комментировать можно, остальное неактивно с подсказкой", async () => {
+    const v = await w18Open({ view: true, design: false, apply: false }, "Боря"), pg = v.pg;
+    expect((await pg.locator("#role-badge").innerText()) === "Перегляд", "позначка ролі «перегляд»");
+    await pg.click("#var-btn"); await pg.waitForSelector("#var-dlg [data-create]");
+    expect(await pg.locator("#var-dlg [data-create]").isDisabled() && (await pg.locator("#var-dlg [data-create]").getAttribute("title")).includes("проєктування"), "создание варианта доступно без права");
+    await pg.click("#var-dlg [data-close]");
+    await pg.click("#cm-btn"); await pg.waitForSelector("#comments [data-text]");
+    await pg.fill("#comments [data-text]", "Нотатка з перегляду"); await pg.click("#comments [data-add]");
+    await pg.waitForFunction(() => document.querySelectorAll("#comments .cm-list li").length >= 1);
+    expect(w18.comments.some((c) => c.text === "Нотатка з перегляду" && c.by === "Боря"), "«перегляд» не смог написать комментарий");
+    expect(await pg.locator("#comments [data-resolve]").first().isDisabled(), "«Вирішено» доступно без права «проєктування»");
+    await pg.click("#hist-btn"); await pg.waitForSelector("#hist-dlg tr[data-ver]");
+    expect(await pg.locator("#hist-dlg [data-restore]").first().isDisabled(), "«Відновити» доступно без права");
+    await v.ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });

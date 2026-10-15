@@ -99,6 +99,32 @@ class WhConstructor(http.Controller):
     def project_restore(self, key=None, version_id=None, base_rev=None, **kw):
         return request.env["wh.project"].api_restore(key, version_id, base_rev=base_rev)
 
+    @http.route(BASE + "/api/project/version", type=JSON, auth="user")
+    @_guard
+    def project_version(self, key=None, version_id=None, **kw):
+        return request.env["wh.project"].api_version(key, version_id)
+
+    # ------------------------------------------------------------ комментарии на объектах (W-18, модель wh.comment)
+    @http.route(BASE + "/api/comment/list", type=JSON, auth="user")
+    @_guard
+    def comment_list(self, key=None, **kw):
+        return {"status": "ok", "comments": request.env["wh.comment"].api_list(key)}
+
+    @http.route(BASE + "/api/comment/add", type=JSON, auth="user")
+    @_guard
+    def comment_add(self, key=None, warehouse=None, node=None, text=None, kind="note", label=None, **kw):
+        return {"status": "ok", "comment": request.env["wh.comment"].api_add(key, warehouse, node, text, kind=kind, label=label)}
+
+    @http.route(BASE + "/api/comment/resolve", type=JSON, auth="user")
+    @_guard
+    def comment_resolve(self, key=None, comment_id=None, state="done", **kw):
+        return {"status": "ok", "comment": request.env["wh.comment"].api_resolve(key, comment_id, state=state)}
+
+    @http.route(BASE + "/api/comment/remove", type=JSON, auth="user")
+    @_guard
+    def comment_remove(self, key=None, comment_id=None, **kw):
+        return {"status": "ok", **request.env["wh.comment"].api_remove(key, comment_id)}
+
     # ------------------------------------------------------------ блокировки зон
     @http.route(BASE + "/api/lock/acquire", type=JSON, auth="user")
     @_guard

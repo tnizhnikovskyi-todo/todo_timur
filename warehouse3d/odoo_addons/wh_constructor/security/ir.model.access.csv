@@ -8,3 +8,5 @@ access_wh_zone_lock_design,wh.zone.lock design,model_wh_zone_lock,group_wh_desig
 access_wh_library_view,wh.library view,model_wh_library,group_wh_view,1,0,0,0
 access_wh_library_design,wh.library design,model_wh_library,group_wh_design,1,1,1,1
 access_wh_apply_log_design,wh.apply.log design,model_wh_apply_log,group_wh_design,1,0,0,0
+access_wh_comment_view,wh.comment view,model_wh_comment,group_wh_view,1,0,1,0
+access_wh_comment_design,wh.comment design,model_wh_comment,group_wh_design,1,1,1,1

@@ -4,7 +4,10 @@
 //   init()               → загружает права текущего пользователя: readonly = нет права «проектирование»
 //   saveProject(p, { commit }) → "shared" | "stale" (в базе проект новее) | "fail"; commit — версия проекта (иначе черновик, версий нет)
 //   lock({ project, warehouse, warehouseCode, zone }) → { ok, owner, expires, mine } · unlock({ project, warehouse, zone }) · me()
-//   versions(id) / restore(id, versionId) — история версий (интерфейс — W-18)
+//   versions(id) / versionData(id, versionId) / restore(id, versionId) — история версий, просмотр версии и восстановление (W-18, окно «Історія»)
+//   lockList({ project }) → чужие и свои действующие блокировки проекта (читает и «перегляд»; значки на плане, W-18)
+//   listComments({ project }) / addComment({ project, warehouse, node, label, kind, text }) / setComment({ project, id, state }) / removeComment({ project, id }) —
+//   комментарии на объектах (W-18, модель wh.comment): читает и пишет «перегляд», решает и удаляет чужие «проектування»; ответ — запись комментария или null (отказ)
 //   applyPlan({ project, warehouse, ops, comment }) / applyLog({ project, warehouse }) / rollback(logId) — применение плана изменений, журнал и откат (W-13)
 //   listLibrary() / saveLibrary(lib) — общая библиотека типов и шаблонов компании (модель wh.library): читать может «перегляд», писать «проектування»;
 //   если в базе она новее — записи объединяются по id и запись повторяется один раз
@@ -87,6 +90,7 @@ export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch
       return r.status === "ok";
     },
     async versions(id) { const r = await rpc("/project/versions", { key: id }); return r.status === "ok" ? r.versions : []; },
+    async versionData(id, versionId) { const r = await rpc("/project/version", { key: id, version_id: versionId }); return r.status === "ok" && r.data ? migrateProject(r.data) : null; },
     async restore(id, versionId) {
       const r = await rpc("/project/restore", { key: id, version_id: versionId, base_rev: revs.has(id) ? revs.get(id) : null });
       if (r.status === "ok") { revs.set(id, r.rev); return migrateProject(r.data); }
@@ -101,6 +105,11 @@ export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch
     rollback: (logId) => rpc("/apply/rollback", { log_id: logId }),
     lock: ({ project, warehouse, warehouseCode, zone }) => rpc("/lock/acquire", { key: project, warehouse, zone, warehouse_code: warehouseCode || null }),
     unlock: ({ project, warehouse, zone }, opts) => rpc("/lock/release", { key: project, warehouse: warehouse || null, zone: zone || null }, opts), // без warehouse/zone — все свои блокировки проекта
+    async lockList({ project }) { const r = await rpc("/lock/list", { key: project }); return r.status === "ok" ? r.locks : []; },
+    async listComments({ project }) { const r = await rpc("/comment/list", { key: project }); return r.status === "ok" ? r.comments : []; },
+    async addComment({ project, warehouse, node, label, kind, text }) { const r = await rpc("/comment/add", { key: project, warehouse, node, label, kind, text }); return r.status === "ok" ? r.comment : null; },
+    async setComment({ project, id, state }) { const r = await rpc("/comment/resolve", { key: project, comment_id: id, state }); return r.status === "ok" ? r.comment : null; },
+    async removeComment({ project, id }) { const r = await rpc("/comment/remove", { key: project, comment_id: id }); return r.status === "ok"; },
     async listLibrary() {
       const r = await rpc("/library/load");
       if (r.status !== "ok") return null;

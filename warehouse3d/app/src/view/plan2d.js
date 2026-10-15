@@ -10,6 +10,7 @@ import { heatColor } from "./heat.js";
 import * as B from "../core/building.js";
 import { createBldPlan } from "./bldplan.js";
 import { TRAY_MIME } from "./tray.js";
+import { markClass, markText, markTitle, visibleMarks } from "./marks.js";
 
 // условное обозначение формы места на плане (не принимает щелчки): ограждение, цилиндр, носитель, ворота, сетка стосов; остальное — просто прямоугольник
 function deco(n, f, x, y, w, d) {
@@ -22,7 +23,7 @@ function deco(n, f, x, y, w, d) {
   return "";
 }
 
-export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
+export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark = null }) {
   let svg = null, cont = null, dyn = null, bp = null, hidden = false, lastH = null, els = [], slots = [];
   let vb = { x: -2, y: -2, w: model.tree.W0 + 4, h: model.tree.D0 + 4 };
   const setVB = () => { if (svg) { svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); bp?.onView(); } };
@@ -98,8 +99,9 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       if (drag && drag.mq && drag.moved) { const d = drag; drag = null; svg.classList.remove("drag"); svg.querySelector("#mq").style.display = "none"; if (d.rect) model.marquee(d.rect, d.mod); return; }
       if (drag && drag.moved && drag.set) { const d = drag; drag = null; svg.classList.remove("drag"); model.moveSet(d.set, d.dx, d.dy); d.els.forEach((x) => x.removeAttribute("transform")); return; }
       if (drag && !drag.moved) {
-        const t = document.elementFromPoint(e.clientX, e.clientY), fl = t?.closest?.("[data-focus]"), id = nodeAt(t);
-        if (bp.active()) bp.click(e, W(e));
+        const t = document.elementFromPoint(e.clientX, e.clientY), fl = t?.closest?.("[data-focus]"), id = nodeAt(t), mk = t?.closest?.("[data-mark]");
+        if (mk && onMark && !bp.active()) onMark(mk.dataset.mark, mk.dataset.kind); // значок комментария или блокировки (W-18)
+        else if (bp.active()) bp.click(e, W(e));
         else if (fl) model.focusTo(fl.dataset.focus);
         else if (model.ui.edit && drag.mod) model.toggleSel(id);
         else if (model.ui.edit) model.editPick(id || model.ui.focus);
@@ -147,6 +149,16 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
     const m = Math.max(n.w, n.d) * 0.08 + 0.3, extra = n.kids.length ? Math.max(n.w, n.d) * 0.03 : 0;
     vb = { x: n.x - m, y: n.y - m - extra, w: n.w + 2 * m, h: n.d + 2 * m + extra }; setVB();
   }
+  // значки комментариев и блокировок зон (W-18): в правом верхнем углу объекта, размер — от показанного уровня; несколько значков одного объекта — в ряд
+  function marksMarkup(f) {
+    const ms = Math.max(0.14, Math.min(2.4, Math.max(f.w, f.d) / 38)), h = ms * 1.35, used = new Map();
+    return visibleMarks(model, inNode).map((m) => {
+      const n = model.tree.nodes.get(m.node); if (!n) return "";
+      const txt = markText(m), w = (txt.length * 0.62 + 0.9) * ms, k = used.get(m.node) || 0; used.set(m.node, k + w + ms * 0.25);
+      return `<g class="${markClass(m)}" data-mark="${esc(m.node)}" data-kind="${m.kind}" transform="translate(${n.x + n.w - w - k} ${n.y})"><title>${esc(markTitle(i18n, m))}</title>`
+        + `<rect x="0" y="${-h}" width="${w}" height="${h}" rx="${h / 4}"/><text x="${ms * 0.45}" y="${-h * 0.27}" style="font-size:${ms}px">${esc(txt)}</text></g>`;
+    }).join("");
+  }
   function paint() {
     if (!svg) return;
     const { sel, focus: F } = model.ui, tree = model.tree, S = model.selIds(), pm = model.checks.marks().nodes; // pm — объекты с проблемами (W-07): подсвечиваются отдельным цветом
@@ -167,7 +179,7 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
     }
     // подписи уровня ниже — размер шрифта от размера выбранного уровня
     const f = tree.nodes.get(F), fs = Math.max(0.12, Math.min(2.2, Math.max(f.w, f.d) / 45));
-    dyn.innerHTML = (f.kids.length ? f.kids : [f]).map((k) => `<text class="dlab" data-focus="${esc(k.id)}" x="${k.x + fs * 0.2}" y="${k.y - fs * 0.35}" style="font-size:${fs}px">${esc(i18n.node(k))}</text>`).join("");
+    dyn.innerHTML = (f.kids.length ? f.kids : [f]).map((k) => `<text class="dlab" data-focus="${esc(k.id)}" x="${k.x + fs * 0.2}" y="${k.y - fs * 0.35}" style="font-size:${fs}px">${esc(i18n.node(k))}</text>`).join("") + marksMarkup(f);
   }
   // дерево перестроено: меняется содержимое слоя, масштаб и сдвиг сохраняются
   function rebuild() { build(); setVB(); bp?.render(); }

@@ -224,7 +224,7 @@ export function updateEditBar(root, { model, i18n }) {
   q("#editbar").hidden = !on && !bld && !s.pending;
   q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
-  q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
+  q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-note").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
   q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = q("#ed-parse").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)

@@ -4,6 +4,7 @@
 // host.odoo.plan (host/main.js): { rights, apply(ops, comment), applied(plan, keys), journal(), rollback(id) } — только в странице из Odoo.
 import { OP_KINDS, applicable, closure, scopeOptions, wireOps } from "../core/plan.js";
 import { esc } from "./util.js";
+import { variantName } from "./variants.js";
 
 export function openPlan({ model, i18n, host }) {
   document.getElementById("plan-dlg")?.remove();
@@ -19,9 +20,10 @@ export function openPlan({ model, i18n, host }) {
     <div class="body" data-body></div><footer data-foot></footer></div>`;
   document.body.append(dlg);
   const q = (s) => dlg.querySelector(s), body = q("[data-body]"), foot = q("[data-foot]");
-  const close = () => { dlg.remove(); document.removeEventListener("keydown", onKey); };
+  const close = () => { dlg.remove(); document.removeEventListener("keydown", onKey); offVar(); };
   const onKey = (ev) => { if (ev.key === "Escape") close(); };
   document.addEventListener("keydown", onKey);
+  const offVar = model.on((ev) => { if (ev.type === "variant") close(); }); // план считается по активному варианту: сменился вариант — окно закрывается (W-18)
   q("[data-close]").onclick = close;
   dlg.addEventListener("mousedown", (ev) => { if (ev.target === dlg) close(); });
 
@@ -49,6 +51,8 @@ export function openPlan({ model, i18n, host }) {
     const s = plan.stats;
     if (!plan.linked) return `<p class="mut">${t("odoo.plan.noOdoo")}</p>`;
     let h = `<p class="mut" style="margin:0 0 10px;font-size:13px">${t("odoo.plan.intro", { wh: model.warehouse.code })}</p>`;
+    const vl = model.variants.list(), va = vl.find((v) => v.active);
+    if (vl.length > 1) h += `<p class="mut" data-variant-note style="margin:0 0 10px;font-size:13px">${t("odoo.plan.variant", { name: variantName(i18n, va, vl.indexOf(va)) })}</p>`;
     if (plan.unsaved) h += `<p class="o_warn">${t("odoo.plan.unsaved", { n: plan.unsaved })}</p>`;
     if (errors()) h += `<p class="o_warn o_errs" role="alert">${t("odoo.plan.errors", { n: errors() })} <button class="btn btn-link" data-errs>${t("odoo.plan.showErrors")}</button></p>`;
     if (!s.total) return `${h}<p>${t("odoo.plan.none")}</p>`;
