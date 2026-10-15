@@ -97,6 +97,10 @@ class Model:
     def on_clear(self) -> None:
         """Хук для моделей: усе назад."""
 
+    def on_release(self, sig: Signal) -> None:
+        """Утримання (force) сигналу знято — вичерпано ``hold_s`` або ``release`` (ST-4). Моделі, що рахують сигнал
+        щотіку (R-01…R-25), нічого не роблять: наступний тік поверне значення. Пасивна модель — див. ``PassiveModel``."""
+
     # --- знімок ----------------------------------------------------------------------
     def get_state(self) -> dict[str, Any]:
         return {}
@@ -117,6 +121,12 @@ class PassiveModel(Model):
     """Невідомий клас пристрою: тримає номінал (значення з каталогу), нічого не рахує."""
 
     driver = "passive"
+
+    def on_release(self, sig: Signal) -> None:
+        """Ніхто не рахує значення за моделлю, тож після ``hold_s``/``release`` воно повертається до значення каталогу
+        (як ``reset``, ``Signal.spec.initial_value()``); інакше примусове значення залишалося б назавжди (ST-4)."""
+        sig.value = sig.spec.initial_value()
+        sig.ts = self.world.now()
 
 
 class NoiseModel(Model):

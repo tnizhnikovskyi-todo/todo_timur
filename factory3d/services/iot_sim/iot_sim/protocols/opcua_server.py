@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -318,7 +319,8 @@ class OpcUaServer(ProtocolServer):
             m = item.get("machine")
             if m in self.joborders:
                 self.joborders[m].append({"id": item["job_order_id"], "state": "AllowedToStart"})
-        now = w.now().replace(tzinfo=None)
+        # SourceTimestamp — UTC з tzinfo (ST-3): naive-час asyncua кодує як UTC, а w.now() — локальний Київ (+2/+3 год)
+        now = w.now().astimezone(UTC)
         for code in self.machines:
             dev = w.devices[code]
             ok = dev.fault != "comm"

@@ -5,6 +5,8 @@
 ``build_axis_payload``: ``camera`` (CAM-05/06), ``plate``, ``state`` (new|lost), ``booking``
 (``{"batch","dock","partner"}`` або ``None``), ``ts`` (необов'язково), ``confidence``, ``truck_type``.
 Помилка доставки: 3 повтори через 2/5/10 с, далі подія ``error`` (подія фури не переривається).
+Автентифікація (стенд, ST-2): якщо задано ``SIM_LPR_PUSH_TOKEN`` — заголовок ``X-F3D-Token`` (як чекає http_push колектора,
+telemetry SPEC §8.7, ``token_ref`` джерела); порожній токен — без заголовка.
 """
 from __future__ import annotations
 
@@ -67,10 +69,11 @@ class LprPusher(ProtocolServer):
     name = "lpr"
 
     def __init__(self, world: World, *, url: str, guard: Any = None,
-                 client: httpx.AsyncClient | None = None,
+                 client: httpx.AsyncClient | None = None, token: str = "",
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  delays: tuple[float, ...] = RETRY_DELAYS_S) -> None:
         self.world, self.url, self.guard = world, url, guard
+        self.token = token
         self._client = client
         self._own_client = client is None
         self._sleep = sleep
@@ -118,6 +121,12 @@ class LprPusher(ProtocolServer):
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    def _headers(self) -> dict[str, str]:
+        headers = {"Content-Type": "application/json"}
+        if self.token:
+            headers["X-F3D-Token"] = self.token
+        return headers
+
     async def deliver(self, body: dict[str, Any], device: str | None = None) -> bool:
         attempts = (0.0, *self.delays)
         last = ""
@@ -126,8 +135,7 @@ class LprPusher(ProtocolServer):
                 await self._sleep(delay)
             try:
                 assert self._client is not None
-                r = await self._client.post(self.url, json=body,
-                                            headers={"Content-Type": "application/json"})
+                r = await self._client.post(self.url, json=body, headers=self._headers())
                 if r.status_code < 300:
                     self.sent += 1
                     return True

@@ -295,6 +295,24 @@ class World:
     def force(self, code: str, value: Any, hold_s: float = 0.0) -> None:
         self.signals[code].force(value, self.now(), hold_s)
 
+    def release(self, code: str) -> None:
+        """Зняти утримання (API-16 ``release``): значення знову веде модель пристрою (ST-4)."""
+        self._release(self.signals[code])
+
+    def _release(self, sig: Signal) -> None:
+        sig.held_until = None
+        dev = self.devices.get(sig.device)
+        model = getattr(dev, "model", None)
+        if model is not None:
+            model.on_release(sig)
+
+    def _expire_holds(self) -> None:
+        """Утримання, що минуло (``held_until <= now``), знімається: модель знову веде значення (SPEC API-16, AC-50)."""
+        now = self.now()
+        for sig in self.signals.values():
+            if sig.held_until is not None and sig.held_until <= now:
+                self._release(sig)
+
     # --- збої ------------------------------------------------------------------------
     def fault(self, device: str, reason: str = "generic", **kw: Any) -> None:
         self.devices[device].model.fault(reason, **kw)
@@ -307,6 +325,7 @@ class World:
         """Порядок §8.2.3: планувальник → джерела → агрегати → баланс → пороги → push."""
         if self.clock.manual:
             self.clock.advance(dt_s)
+        self._expire_holds()
         self._run_hooks("planner", dt_s)
         devs = sorted(self.devices.values(), key=lambda d: d.code)
         for phase_aggregate in (False, True):
