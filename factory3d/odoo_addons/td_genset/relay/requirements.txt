@@ -1,0 +1,2 @@
+# fake_relay.py — только стандартная библиотека; tzdata нужен для RELAY_TZ (Europe/Kyiv) в python:3.12-slim
+tzdata==2025.2

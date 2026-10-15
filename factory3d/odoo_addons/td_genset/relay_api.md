@@ -562,3 +562,33 @@ python3 simulator.py modem 127.0.0.1:9181 3600 &
 - Тільки HTTPS; перевірку сертифіката не вимикати.
 - Ретранслятор не зберігає облікових даних Odoo і сам в Odoo не звертається.
 - Будь-яка команда з API — це реальна дія на генераторі офісу. Права на кнопки керування й особливо на `mains_close_open` / `gen_close_open` — продумати (за погодженням: керувати можуть усі, але з журналом).
+
+## 13. Емуляція (API-F-01…API-F-09)
+
+Цей розділ описує лише **службовий REST емулятора** `relay/fake_relay.py` з профілем `d700` (SPEC td_genset §8). Клієнтське API
+(розділи 1–12, `/api/v1/*`) не змінюється; різниця профілів лише в значеннях, які воно повертає.
+
+**Змінні середовища:** `RELAY_PROFILE` (`office` — умовчання, `d700`), `RELAY_PORT` (8000 у Docker; 8081 без змінної),
+`RELAY_SIM_TOKEN` (порожньо = `/sim/v1/*` вимкнено, 404), `RELAY_TIME_FACTOR` (1.0; 0.1…60), `RELAY_SEED`, `RELAY_TZ`
+(`Europe/Kyiv`), `RELAY_LOG_LEVEL`; додатково `RELAY_HOST` (`0.0.0.0` у Docker), `RELAY_API_TOKEN` (токен `/api/v1`, без змін),
+`RELAY_TIMER_PRESET=plant`. `/sim/v1/*` працює лише з `RELAY_PROFILE=d700` (з `office` — 404); поведінка `office` без змін.
+
+**Спільне:** `Authorization: Bearer <RELAY_SIM_TOKEN>`; JSON; помилки `{"detail": "..."}`: 401 (токен), 404 (роутер вимкнений
+або невідомий ресурс), 409 (неможливо в поточному стані), 422 (валідація). Часи — ISO 8601 з зоною `RELAY_TZ`.
+Токен у логах не друкується; логи — JSON-рядки `{"ts","level","msg","state","mode","p_kw","fuel_l","event"}`.
+
+| ID | Метод і шлях | Тіло | Відповідь 200 |
+|---|---|---|---|
+| API-F-01 | `GET /sim/v1/state` | — | повний стан: `profile`, `sim_time`, `factor`, `mode`, `state`/`state_code` (R-03: 1 standby … 10 alarm_shutdown), `engine`, `mains_ok`, `gen_ok`, `breaker` (`mains`/`gen`/`none`), `remote_start`, `p_kw`, `load_pct`, `u_v`, `f_hz`, `i_a`, `pf`, `kwh`, `fuel_l`, `fuel_pct`, `fuel_lph`, `hours`, `starts`, `coolant_c`, `oil_bar`, `batt_v`, `charger_v`, `rpm`, `alarms`, `alarm_level`, `timers`, `last_test` |
+| API-F-02 | `POST /sim/v1/mains` | `{"available": false}` або `{"available": true, "u_v": 400, "f_hz": 50.0}` | `{"mains_ok","state","timers"}` |
+| API-F-03 | `POST /sim/v1/remote_start` | `{"on": true}` | `{"remote_start","state"}`; у `mode != auto` — 409 |
+| API-F-04 | `POST /sim/v1/load` | `{"kw": 348}` | `{"load_kw","load_pct"}`; `kw > kw_esp` — 422; між PRP і ESP — warning «Genset Over Current» через 30 с |
+| API-F-05 | `POST /sim/v1/fault`, `POST /sim/v1/clear` | `{"alarm": "low_oil_pressure"\|"high_temp"\|"low_fuel"\|"start_fail"\|"batt_low"\|"comm_lost"\|"over_speed"\|"emergency_stop"}`; для `clear` — також `{}` (усі) | `{"alarms": [{"code","name","severity","since"}]}`; `comm_lost` — 503 на `/api/v1/*` (не на `/sim/v1`); `start_fail` «заряджає» наступний пуск |
+| API-F-06 | `POST /sim/v1/fuel` | рівно одне з `{"liters"}`, `{"pct"}`, `{"add_liters"}` | `{"fuel_l","fuel_pct"}`; понад бак — 422 |
+| API-F-07 | `POST /sim/v1/time` | `{"factor": 10.0}` і/або `{"set": "2026-10-12T07:00:00+03:00"}` | `{"factor","sim_time"}`; `factor` 0,1…60; `set` — лише з зоною |
+| API-F-08 | `POST /sim/v1/reset` | `{"profile": "d700", "preset": "plant"}` (необов'язкові) | `{"ok": true, "profile": "D700", "preset": "plant"}`; повертає `start` профілю, журнал очищається, `id` подій продовжує рости; інший `profile` — 422 |
+| API-F-09 | `GET /sim/v1/events?since=<id>&limit=500` | — | `{"items": [{"id","ts","code","severity","name","value","unit","threshold","text"}], "next": id}` |
+
+Таймери й послідовності (Додаток D SPEC): блекаут за умовчанням — `loaded` через ≈ 30 с, пресет `plant` — ≈ 14 с; повернення
+мережі — `standby` через ≈ 42 с; `start_fail` — `alarm_shutdown` на ≈ 50 с з подією «Fail to Start». Клієнтські ендпоінти
+`/api/v1/*` для профілю `d700` показують той самий стан (`genset_status`, `gen_on_load`, `active_power`, `fuel_level` тощо).
