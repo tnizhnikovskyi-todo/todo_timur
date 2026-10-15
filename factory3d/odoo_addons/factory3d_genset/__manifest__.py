@@ -10,7 +10,7 @@
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
         "data/f3d_genset_profile.xml",
-        # W2b: data/f3d_genset_event_map.xml
+        "data/f3d_genset_event_map.xml",
         "data/ir_cron.xml",
         # W3: views/*.xml, views/menus.xml
     ],

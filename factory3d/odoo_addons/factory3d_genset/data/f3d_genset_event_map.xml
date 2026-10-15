@@ -1,0 +1,752 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC Додаток B: мапа подій HGM6120N → дії (48 рядків, A-16). td_code — ADAPTER_MAP Q-13 (td.genset.alarm.code). -->
+<odoo noupdate="1">
+    <record id="evmap_loss_of_speed_signal_w" model="f3d.genset.event.map">
+        <field name="key">LOSS_OF_SPEED_SIGNAL_W</field>
+        <field name="sequence">101</field>
+        <field name="hgm_name">Loss of Speed Signal</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">speed_signal_loss_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: втрачено сигнал датчика обертів</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_genset_over_current_w" model="f3d.genset.event.map">
+        <field name="key">GENSET_OVER_CURRENT_W</field>
+        <field name="sequence">102</field>
+        <field name="hgm_name">Genset Over Current</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">gen_overcurrent_warning</field>
+        <field name="action">bus_only</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: перевищення струму — {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_fail_to_stop_w" model="f3d.genset.event.map">
+        <field name="key">FAIL_TO_STOP_W</field>
+        <field name="sequence">103</field>
+        <field name="hgm_name">Fail to Stop</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">stop_failure</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: не зупиняється після команди «Стоп»</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_low_fuel_level_w" model="f3d.genset.event.map">
+        <field name="key">LOW_FUEL_LEVEL_W</field>
+        <field name="sequence">104</field>
+        <field name="hgm_name">Low Fuel Level</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">low_fuel_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: низький рівень палива — {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_fail_to_charge_w" model="f3d.genset.event.map">
+        <field name="key">FAIL_TO_CHARGE_W</field>
+        <field name="sequence">105</field>
+        <field name="hgm_name">Fail to Charge</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">charging_failure_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: немає зарядки АКБ від генератора (D+/WL)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_battery_under_voltage_w" model="f3d.genset.event.map">
+        <field name="key">BATTERY_UNDER_VOLTAGE_W</field>
+        <field name="sequence">106</field>
+        <field name="hgm_name">Battery Under Voltage</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">battery_undervoltage_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: низька напруга АКБ — {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_battery_over_voltage_w" model="f3d.genset.event.map">
+        <field name="key">BATTERY_OVER_VOLTAGE_W</field>
+        <field name="sequence">107</field>
+        <field name="hgm_name">Battery Over Voltage</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">battery_overvoltage_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: висока напруга АКБ — {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_low_coolant_level_w" model="f3d.genset.event.map">
+        <field name="key">LOW_COOLANT_LEVEL_W</field>
+        <field name="sequence">108</field>
+        <field name="hgm_name">Low Coolant Level</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">low_coolant_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: низький рівень охолоджувальної рідини</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_temp_sensor_open_w" model="f3d.genset.event.map">
+        <field name="key">TEMP_SENSOR_OPEN_W</field>
+        <field name="sequence">109</field>
+        <field name="hgm_name">Temp. Sensor Open</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">temp_sensor_open_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: обрив датчика температури ОЖ</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_oil_pressure_sensor_open_w" model="f3d.genset.event.map">
+        <field name="key">OIL_PRESSURE_SENSOR_OPEN_W</field>
+        <field name="sequence">110</field>
+        <field name="hgm_name">Oil Pressure Sensor Open</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">oil_pressure_sensor_open_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: обрив датчика тиску оливи</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_maintenance_due_w" model="f3d.genset.event.map">
+        <field name="key">MAINTENANCE_DUE_W</field>
+        <field name="sequence">111</field>
+        <field name="hgm_name">Maintenance Due Warning</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">maintenance_due_warning</field>
+        <field name="action">bus_only</field>
+        <field name="priority">1</field>
+        <field name="name_tpl">Генератор {code}: контролер повідомляє про строк ТО (заявку створює R-09)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_high_temp_w" model="f3d.genset.event.map">
+        <field name="key">HIGH_TEMP_W</field>
+        <field name="sequence">112</field>
+        <field name="hgm_name">High Temp.</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">high_temp_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: висока температура ОЖ — {value} {unit} при нормі ≤ {threshold} {unit} (зупинку заблоковано)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_low_oil_pressure_w" model="f3d.genset.event.map">
+        <field name="key">LOW_OIL_PRESSURE_W</field>
+        <field name="sequence">113</field>
+        <field name="hgm_name">Low Oil Pressure</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">low_oil_pressure_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: низький тиск оливи — {value} {unit} при нормі ≥ {threshold} {unit} (зупинку заблоковано)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_input_warn_w" model="f3d.genset.event.map">
+        <field name="key">INPUT_WARN_W</field>
+        <field name="sequence">114</field>
+        <field name="hgm_name">Input Warn</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">input_warning</field>
+        <field name="action">bus_only</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: зовнішній вхід попередження — {text}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_failed_to_charge_input_w" model="f3d.genset.event.map">
+        <field name="key">FAILED_TO_CHARGE_INPUT_W</field>
+        <field name="sequence">115</field>
+        <field name="hgm_name">Failed to Charge</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">charger_fail_warning</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: сигнал «немає зарядки» від зарядного пристрою</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_over_power_w" model="f3d.genset.event.map">
+        <field name="key">OVER_POWER_W</field>
+        <field name="sequence">116</field>
+        <field name="hgm_name">Over Power</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="td_code">overpower_warning</field>
+        <field name="action">bus_only</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: перевищення потужності — {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_ecu_warn_w" model="f3d.genset.event.map">
+        <field name="key">ECU_WARN_W</field>
+        <field name="sequence">117</field>
+        <field name="hgm_name">ECU Warn</field>
+        <field name="hgm_table">warning</field>
+        <field name="severity">warning</field>
+        <field name="action">ignore</field>
+        <field name="priority">0</field>
+        <field name="name_tpl">Генератор {code}: попередження ECU — {text} (HGM6120N без J1939)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_emergency_stop_sd" model="f3d.genset.event.map">
+        <field name="key">EMERGENCY_STOP_SD</field>
+        <field name="sequence">201</field>
+        <field name="hgm_name">Emergency Stop</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — натиснуто аварійну кнопку</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_high_temp_sd" model="f3d.genset.event.map">
+        <field name="key">HIGH_TEMP_SD</field>
+        <field name="sequence">202</field>
+        <field name="hgm_name">High Temp.</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">high_temp_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — висока температура ОЖ {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_low_oil_pressure_sd" model="f3d.genset.event.map">
+        <field name="key">LOW_OIL_PRESSURE_SD</field>
+        <field name="sequence">203</field>
+        <field name="hgm_name">Low Oil Pressure</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">low_oil_pressure_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — низький тиск оливи {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_over_speed_sd" model="f3d.genset.event.map">
+        <field name="key">OVER_SPEED_SD</field>
+        <field name="sequence">204</field>
+        <field name="hgm_name">Over Speed</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">overspeed_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — перевищення обертів {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_under_speed_sd" model="f3d.genset.event.map">
+        <field name="key">UNDER_SPEED_SD</field>
+        <field name="sequence">205</field>
+        <field name="hgm_name">Under Speed</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">underspeed_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — низькі оберти {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_loss_of_speed_signal_sd" model="f3d.genset.event.map">
+        <field name="key">LOSS_OF_SPEED_SIGNAL_SD</field>
+        <field name="sequence">206</field>
+        <field name="hgm_name">Loss of Speed Signal</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">speed_signal_loss_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — втрачено сигнал датчика обертів</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_gen_over_voltage_sd" model="f3d.genset.event.map">
+        <field name="key">GEN_OVER_VOLTAGE_SD</field>
+        <field name="sequence">207</field>
+        <field name="hgm_name">Gen Over Voltage</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">overvoltage_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — перенапруга {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_gen_under_voltage_sd" model="f3d.genset.event.map">
+        <field name="key">GEN_UNDER_VOLTAGE_SD</field>
+        <field name="sequence">208</field>
+        <field name="hgm_name">Gen Under Voltage</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">undervoltage_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — знижена напруга {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_gen_over_current_sd" model="f3d.genset.event.map">
+        <field name="key">GEN_OVER_CURRENT_SD</field>
+        <field name="sequence">209</field>
+        <field name="hgm_name">Gen Over Current</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">gen_overcurrent_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — перевищення струму {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_fail_to_start_sd" model="f3d.genset.event.map">
+        <field name="key">FAIL_TO_START_SD</field>
+        <field name="sequence">210</field>
+        <field name="hgm_name">Fail to Start</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">crank_failure</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: не вдалося запустити — аварійна зупинка після всіх спроб пуску</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_gen_over_frequency_sd" model="f3d.genset.event.map">
+        <field name="key">GEN_OVER_FREQUENCY_SD</field>
+        <field name="sequence">211</field>
+        <field name="hgm_name">Gen Over Frequency</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">overfrequency_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — підвищена частота {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_gen_under_frequency_sd" model="f3d.genset.event.map">
+        <field name="key">GEN_UNDER_FREQUENCY_SD</field>
+        <field name="sequence">212</field>
+        <field name="hgm_name">Gen Under Frequency</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">underfrequency_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — знижена частота {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_genset_failed_sd" model="f3d.genset.event.map">
+        <field name="key">GENSET_FAILED_SD</field>
+        <field name="sequence">213</field>
+        <field name="hgm_name">Genset Failed</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — генератор не видає напругу (частота 0)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_low_fuel_level_sd" model="f3d.genset.event.map">
+        <field name="key">LOW_FUEL_LEVEL_SD</field>
+        <field name="sequence">214</field>
+        <field name="hgm_name">Low Fuel Level</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">low_fuel_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — низький рівень палива {value} {unit} при нормі ≥ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_low_coolant_level_sd" model="f3d.genset.event.map">
+        <field name="key">LOW_COOLANT_LEVEL_SD</field>
+        <field name="sequence">215</field>
+        <field name="hgm_name">Low Coolant Level</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">low_coolant_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — низький рівень охолоджувальної рідини</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_temp_sensor_open_sd" model="f3d.genset.event.map">
+        <field name="key">TEMP_SENSOR_OPEN_SD</field>
+        <field name="sequence">216</field>
+        <field name="hgm_name">Temp. Sensor Open</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">temp_sensor_open_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — обрив датчика температури ОЖ</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_oil_pressure_sensor_open_sd" model="f3d.genset.event.map">
+        <field name="key">OIL_PRESSURE_SENSOR_OPEN_SD</field>
+        <field name="sequence">217</field>
+        <field name="hgm_name">Oil Pressure Sensor Open</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">oil_pressure_sensor_open_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — обрив датчика тиску оливи</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_maintenance_due_sd" model="f3d.genset.event.map">
+        <field name="key">MAINTENANCE_DUE_SD</field>
+        <field name="sequence">218</field>
+        <field name="hgm_name">Maintenance Due</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">maintenance_due_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — настав строк ТО, контролер заблокував роботу</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_input_shutdown_sd" model="f3d.genset.event.map">
+        <field name="key">INPUT_SHUTDOWN_SD</field>
+        <field name="sequence">219</field>
+        <field name="hgm_name">Input Shutdown</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">input_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — зовнішній вхід: {text}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_over_power_sd" model="f3d.genset.event.map">
+        <field name="key">OVER_POWER_SD</field>
+        <field name="sequence">220</field>
+        <field name="hgm_name">Over Power</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="td_code">overpower_shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — перевищення потужності {value} {unit} при нормі ≤ {threshold} {unit}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_ecu_shutdown_sd" model="f3d.genset.event.map">
+        <field name="key">ECU_SHUTDOWN_SD</field>
+        <field name="sequence">221</field>
+        <field name="hgm_name">ECU Shutdown</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — ECU: {text}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_ecu_comm_failure_sd" model="f3d.genset.event.map">
+        <field name="key">ECU_COMM_FAILURE_SD</field>
+        <field name="sequence">222</field>
+        <field name="hgm_name">ECU Comm. Failure</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — немає зв'язку з ECU</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_over_current_fault_sd" model="f3d.genset.event.map">
+        <field name="key">OVER_CURRENT_FAULT_SD</field>
+        <field name="sequence">223</field>
+        <field name="hgm_name">Over Current Fault</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — вхід «перевищення струму»</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_over_speed_input_sd" model="f3d.genset.event.map">
+        <field name="key">OVER_SPEED_INPUT_SD</field>
+        <field name="sequence">224</field>
+        <field name="hgm_name">Over Speed Shutdown Input Alarm</field>
+        <field name="hgm_table">shutdown</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — вхід «перевищення обертів»</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_comm_lost" model="f3d.genset.event.map">
+        <field name="key">COMM_LOST</field>
+        <field name="sequence">300</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">comm</field>
+        <field name="td_code">COMM_LOST</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: втрачено зв'язок з контролером (немає даних {value} хв)</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_service_due" model="f3d.genset.event.map">
+        <field name="key">SERVICE_DUE</field>
+        <field name="sequence">310</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">service</field>
+        <field name="action">request_preventive</field>
+        <field name="priority">1</field>
+        <field name="name_tpl">Генератор {code}: планове ТО {text}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_default_warning" model="f3d.genset.event.map">
+        <field name="key">DEFAULT_WARNING</field>
+        <field name="sequence">900</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">warning</field>
+        <field name="action">bus_only</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: попередження — {name}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_default_shutdown" model="f3d.genset.event.map">
+        <field name="key">DEFAULT_SHUTDOWN</field>
+        <field name="sequence">910</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">shutdown</field>
+        <field name="action">request_corrective</field>
+        <field name="priority">3</field>
+        <field name="name_tpl">Генератор {code}: аварійна зупинка — {name}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_default_comm" model="f3d.genset.event.map">
+        <field name="key">DEFAULT_COMM</field>
+        <field name="sequence">920</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">comm</field>
+        <field name="action">bus_only</field>
+        <field name="priority">2</field>
+        <field name="name_tpl">Генератор {code}: зв'язок — {name}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_default_service" model="f3d.genset.event.map">
+        <field name="key">DEFAULT_SERVICE</field>
+        <field name="sequence">930</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">service</field>
+        <field name="action">bus_only</field>
+        <field name="priority">1</field>
+        <field name="name_tpl">Генератор {code}: ТО — {name}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+    <record id="evmap_default_info" model="f3d.genset.event.map">
+        <field name="key">DEFAULT_INFO</field>
+        <field name="sequence">940</field>
+        <field name="hgm_table">other</field>
+        <field name="severity">info</field>
+        <field name="action">ignore</field>
+        <field name="priority">0</field>
+        <field name="name_tpl">Генератор {code}: {name}</field>
+        <field name="description_tpl">Подія контролера SmartGen HGM6120N (через td_genset): {name}.
+Показник: {value} {unit}; поріг: {threshold} {unit}.
+Час: {ts} (Київ).
+Текст td_genset: {text}
+Запис td_genset: {td_link}</field>
+    </record>
+</odoo>

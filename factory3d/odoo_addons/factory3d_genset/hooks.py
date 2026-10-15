@@ -25,14 +25,16 @@ def _next_06_kyiv_utc(now_utc=None):
 def post_init_hook(env):
     icp = env["ir.config_parameter"].sudo()
     report = {}
-    # 0. td_code рядків мапи подій (модель з'являється у W2b)
+    # 0. td_code рядків мапи подій: зберегти поточні, відновити збережені в порожні (ключ → код)
     if "f3d.genset.event.map" in env:
         try:
-            report["td_codes"] = json.loads(icp.get_param(P + "migration_report") or "{}").get("td_codes", {})
+            saved = json.loads(icp.get_param(P + "migration_report") or "{}").get("td_codes", {})
         except ValueError:
-            report["td_codes"] = {}
+            saved = {}
         rows = env["f3d.genset.event.map"].sudo().with_context(active_test=False)
-        for key, code in report["td_codes"].items():
+        current = {row.key: row.td_code for row in rows.search([("td_code", "!=", False)])}
+        report["td_codes"] = {**saved, **current}
+        for key, code in saved.items():
             row = rows.search([("key", "=", key)], limit=1)
             if row and code and not row.td_code:
                 row.td_code = code
