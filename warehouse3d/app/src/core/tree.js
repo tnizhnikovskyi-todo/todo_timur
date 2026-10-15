@@ -88,6 +88,15 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
       draftLoc[code] = { complete_name: k.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: pd };
     }
   }
+  // перенумерация (W-08): edit.codes [{ id, code }] — новый код места поверх исходного (из Odoo или добавленного); oloc — исходный код,
+  // alias — новый код → исходный (данные Odoo по новому коду), renamed — исходные коды мест Odoo, которые сменили код
+  const alias = new Map(), renamed = new Set(), moves = [];
+  for (const c of edit.codes || []) { const n = nodes.get(c.id); if (n && n.loc && c.code && c.code !== n.loc) moves.push([n, c.code, draftLoc[n.loc]]); }
+  for (const [n] of moves) { if (byCode.get(n.loc) === n) byCode.delete(n.loc); delete draftLoc[n.loc]; }
+  for (const [n, code, dl] of moves) {
+    const old = n.loc; n.oloc = old; n.loc = code; byCode.set(code, n);
+    if (dl) draftLoc[code] = dl; else if (data.locations[old]) { alias.set(code, old); renamed.add(old); }
+  }
   const rank = (n) => { const i = FLOW.indexOf(n.name); return i < 0 ? 99 : i; };
   const walk = (n) => {
     n.kids.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, "uk", { numeric: true }));
@@ -98,9 +107,9 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   walk(nodes.get("WH"));
   // свойства: имя (только подпись, id не меняется) и размеры (читает layout)
   for (const p of edit.prop || []) { const n = nodes.get(p.id); if (n) { n.prop = p; if (p.name) n.name = p.name; } }
-  const loc = (c) => data.locations[c] || draftLoc[c];
-  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells, ...(edit.prop || [])].map((x) => x.id));
-  return { nodes, byCode, root: nodes.get("WH"), types, TY, draftLoc, pos, pend, loc, removed, contained, changed, W0: 0, D0: 0 };
+  const loc = (c) => (alias.has(c) ? data.locations[alias.get(c)] : data.locations[c] || draftLoc[c]);
+  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells, ...(edit.prop || []), ...(edit.codes || [])].map((x) => x.id));
+  return { nodes, byCode, root: nodes.get("WH"), types, TY, draftLoc, pos, pend, loc, removed, contained, changed, alias, renamed, W0: 0, D0: 0 };
 }
 
 export const pathOf = (tree, n) => { const p = []; for (let x = n; x; x = x.parent && tree.nodes.get(x.parent)) p.unshift(x); return p; };

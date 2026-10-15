@@ -2,7 +2,7 @@
 // Правило проекта: любое изменение поведения приложения обновляет эти тексты в том же коммите.
 import { esc, reducedMotion } from "./util.js";
 
-export const HELP_SECTIONS = ["start", "view", "select", "edit", "move", "multi", "tools", "copy", "save", "project", "odoo", "keys"];
+export const HELP_SECTIONS = ["start", "view", "select", "edit", "move", "multi", "tools", "addr", "copy", "save", "project", "odoo", "keys"];
 
 export function renderHelp(root, { i18n, model, onBack }) {
   const t = (k, p) => i18n.t(k, p), now = model.data.meta?.now || "";

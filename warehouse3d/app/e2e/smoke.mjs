@@ -178,6 +178,55 @@ try {
     await page.click("#ed-discall"); await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
     await page.keyboard.press("Escape");
   });
+  // W-08: адресация зоны — шаблон, предпросмотр, перенумерация, конфликт кодов (редактирование продолжается, выделен склад)
+  const EBZ = "WH/Сировина/Крайка", AF = '#plan-side form[data-op="addr"]';
+  const codesPut = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].pending.reduce((n, p) => n + (p.diff.codes ? p.diff.codes.put.length : 0), 0));
+  const noPend = () => page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+  const fillAddr = async (pre, extra) => {
+    await page.check(`${AF} [name="own"]`); await page.fill(`${AF} [name="tpl"]`, `${pre} R{ряд} S{секція} L{ярус}`);
+    await page.fill(`${AF} [name="row_width"]`, "1"); await page.selectOption(`${AF} [name="level_kind"]`, "num"); await page.fill(`${AF} [name="level_width"]`, "1");
+    if (extra) await page.selectOption(`${AF} [name="rowFrom"]`, extra);
+  };
+  await step("адресация: шаблон зоны, предпросмотр, «Показати» перенумерацию, Ctrl+Z", async () => {
+    await page.click('#plan-side [data-esel="WH/Сировина"]'); await page.click(`#plan-side [data-esel="${FURZ}"]`);
+    await page.waitForSelector(AF);
+    expect(await page.locator("#plan-side .ed-warn").filter({ hasText: /штрихкоди/ }).count() === 1, "нет предупреждения о штрихкодах и этикетках");
+    await fillAddr("FX", "bottom");
+    const prev = await page.locator(`${AF} [data-addr-preview]`).innerText();
+    expect(/FX-R1-S01-L1/.test(prev) && /FX-R1-S01-L4/.test(prev) && /змінюється кодів — [1-9]/.test(prev), `предпросмотр: ${prev}`);
+    expect(await page.locator(`${AF} [data-addr-preview] li`).count() === 10, "в предпросмотре не 10 кодов");
+    await page.click(`${AF} [data-show]`);
+    await page.waitForFunction(() => /власна адресація/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    await page.click('#plan-side form[data-op="renum"] [data-show]');
+    await page.waitForFunction(() => /перенумеровано/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    expect((await codesPut()) >= 100, `коды не изменены: ${await codesPut()}`);
+    expect(await page.locator("#plan-side [data-conflicts]").count() === 0, "перестановка рядов не должна давать конфликтов");
+    await page.keyboard.press("Control+KeyZ"); await page.keyboard.press("Control+KeyZ");
+    await noPend();
+    expect((await codesPut()) === 0, "Ctrl+Z не вернул коды");
+  });
+  await step("адресация: конфликт с существующим местом, переход к месту, запрет сохранения, Ctrl+Z", async () => {
+    await page.click('#plan-side [data-esel="WH/Сировина"]'); await page.click(`#plan-side [data-esel="${EBZ}"]`);
+    await page.waitForSelector(AF);
+    await fillAddr("FUR", null);
+    await page.click(`${AF} [data-show]`);
+    await page.waitForSelector("#plan-side .ed-pend");
+    await page.click('#plan-side form[data-op="renum"] [data-show]');
+    await page.waitForSelector("#plan-side [data-conflicts]");
+    const items = page.locator("#plan-side [data-conflicts] + ul button");
+    expect((await items.count()) > 0 && /збігається з наявним місцем Odoo/.test(await items.first().innerText()), "список конфліктов пуст или не про существующее место");
+    await page.click("#ed-saveall");
+    await page.waitForSelector("#o_notifs .o_notif.bad");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.codes.length) === 0, "сохранение с конфликтами прошло");
+    expect(await page.locator("#plan-side .ed-pend").count() === 1, "несохранённое исчезло");
+    await items.first().click();
+    await page.waitForSelector("#plan-side [data-addr-barcode]");
+    expect(/^FUR-R\d+-S0?\d-L\d$/.test(await text("#plan-side [data-addr-barcode]")), "панель места не показала код");
+    await page.keyboard.press("Control+KeyZ"); await page.keyboard.press("Control+KeyZ");
+    await noPend();
+    expect(await page.locator("#plan-side [data-conflicts]").count() === 0, "после Ctrl+Z конфликт остался");
+    await page.keyboard.press("Escape");
+  });
   await step("3D: клик по модели выделяет место", async () => {
     await page.click("#ed-tg"); // выйти из режима редактирования
     await page.click('#seg-pick [data-pk="place"]');
@@ -208,6 +257,8 @@ try {
     await page.click('#help-view .toc a[data-toc="keys"]');
     await page.waitForFunction(() => { const r = document.querySelector("#h-keys")?.getBoundingClientRect(); return r && r.top >= 0 && r.top < innerHeight; });
     expect(await page.locator('#help-view .toc a[data-toc="keys"][aria-current]').count() === 1, "раздел в оглавлении не отмечен");
+    await page.click('#help-view .toc a[data-toc="addr"]');
+    await page.waitForFunction(() => { const r = document.querySelector("#h-addr")?.getBoundingClientRect(); return r && r.top >= 0 && r.top < innerHeight; });
     await page.click('#help-view .toc a[data-toc="start"]');
     await page.waitForFunction(() => { const r = document.querySelector("#h-start")?.getBoundingClientRect(); return r && r.top >= 0 && r.top < innerHeight; });
     await page.click('#seg-lang [data-l="en"]');
