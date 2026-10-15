@@ -7,6 +7,8 @@ CB-07…CB-10; `factory3d_telemetry` CT-01 (M-01…M-06), CT-03 (Додаток 
 §8.4.1, §8.7 (P-05), §8.9.1–§8.9.5 (P-07), Додаток A № 1–80, 190–196, 366–428, S-01, S-03, S-12, API-16;
 `factory3d_viewer` M-01, M-03, R-01, R-07, R-14, A.5, A.12, A.13; `factory3d_machine_connect` CM-02, CM-03 (R-28);
 `td_genset`/`factory3d_genset` R-04…R-06, AC-23, AC-30, AC-56, ТК-G04.
+Зміни: 15.10.2026 — за рішеннями модуля (build/modules/factory3d_energy.md): DEC-8 (AC-32: `ok` після першої години, `alarm` після другої — логіка telemetry), DEC-15 (R-16 п. 6: `i_now` при 380 В, а не 400 В), DEC-16 (R-17: `infra.totals` завжди містить `shed_kw` і `bess_mode`).
+
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-16 (M-15 без `selection_add` поля `origin` — значення `module` у базовому
 selection telemetry M-03; §5.4), X-19 (групи `group_f3d_energy_user/cost/manager` у власному привілеї `privilege_f3d_energy`:
 §4, усі посилання), X-23 (R-18 п. 3, M-20: спільний хелпер `deep_merge` viewer), X-25 (R-16 п. 2, 8: ключі вартості без
@@ -1359,7 +1361,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
 5. `lines` — 6: `kind` (`busway`/`cable` — як макет), `name`, `cell`, `rating_a`, `consumers` (коди), `p_inst`, `p_now`,
    `cos_phi`, `i_now`, `load`.
 6. `consumers` — 49: `name`, `feeder` (код шафи), `bus` (код шинопроводу або `null`), `p_inst`, `p_now` (округлення
-   telemetry R-12: 2 знаки при `< 20`, інакше 1), `cos_phi` (номінал), `source`, `status`, `i_now = round(P·1000/(√3·400·cos))`,
+   telemetry R-12: 2 знаки при `< 20`, інакше 1), `cos_phi` (номінал), `source`, `status`, `i_now = round(P·1000/(√3·380·cos))`,
    `line`, `kwh_shift` (сигнал), `note`, `group` (якщо задані). `status`: РЦ — `workcenters/<код>/machine_state`
    (`working|setup` → `work`, `fault` → `stop`, інше → `idle`), без machine_connect — `working_state == 'blocked'` →
    `stop`, є завдання `progress` → `work`, інакше `idle`; інші — `p_now ≥ 0,05·p_inst` → `work`, інакше `idle`.
@@ -1386,7 +1388,7 @@ machine_connect: WO00013 → `[(06:55:00, 07:25:48, working)]`, `p_now ≈ 12,18
 
 `totals.update({...})` — ключі CE-03 з R-06/R-14 (`pv_kwp` = 900, `n_modules` = 1552, `chp_rated` = 800, `chp_heat` =
 `heat_kw`, `chp_load` = `chp_kw/800` (3 знаки), `bess_kwh` = 387, `bess_soc` — частка (`%/100`, 3 знаки), `load_kw`,
-`critical_kw` — цілі); `vents`, `vent_area`, `genset_kva` не чіпаються.
+`critical_kw` — цілі; `shed_kw` — ціле, 0 без відключення; `bess_mode` — `charge`/`discharge`/`idle`, R-14; обидва ключі завжди присутні, їх вимагає AC-59); `vents`, `vent_area`, `genset_kva` не чіпаються.
 
 ### R-18 Шина й дельти (FR-18, A-22)
 
@@ -1533,7 +1535,7 @@ CT-10, і telemetry рахує статус і заявки.
 | AC-29 | FR-06, FR-27 | When `_cron_live`; Then показання `energy/totals/p_now`, `energy/totals/cos_phi`, `infra/totals/pv_now`, `grid_kw`, `export_kw` з `src='module'`, `ts`=початок хвилини; Given 3 фідери `stale` → тотали не пишуться | UT |
 | AC-30 | FR-07 | Given інтервали за годину за таблицею R-07; When `_cron_balance`; Then Q1 `ok` (diff 0), Q2 `ok` (expected −376,7), BW-1 110,5/106,9 → `deviation`, `diff_pct=3,26`; 109,0 → `ok` 1,93; C1 1,5/0,2 → `ok`; подія «Небаланс обліку BW-1: 3,26 % …» | UT |
 | AC-31 | FR-07 | Given слот споживача лінії `missing` → `skipped`, `reason` містить код лічильника; година з відключенням → `skipped` «відключення мережі»; `imbalance_pct` для `skipped` не пишеться | UT |
-| AC-32 | FR-07, FR-12 | Given BW-1 `deviation` 3,26 % і 5,4 % у дві години поспіль; Then сигнал `energy/lines/BW-1/imbalance_pct` `warn` після першої, `alarm` після другої (`min_duration_s=3600`), одна заявка з назвою, що починається з «Небаланс обліку QF-1: 5,4» (шаблон R-07 п. 3, `decimals=2`), на обладнанні QF-1 | UT |
+| AC-32 | FR-07, FR-12 | Given BW-1 `deviation` 3,26 % і 5,4 % у дві години поспіль; Then сигнал `energy/lines/BW-1/imbalance_pct` `ok` після першої (утримання `min_duration_s=3600` рахується від першого показання, `warn` ще немає, заявки немає), `alarm` після другої (за логікою telemetry), одна заявка з назвою, що починається з «Небаланс обліку QF-1: 5,4» (шаблон R-07 п. 3, `decimals=2`), на обладнанні QF-1 | UT |
 | AC-33 | FR-12, FR-13 | Given сигнал `energy/transformers/T1/s_kva` (`warn_high=900`, `alarm_high=1000`); When показання 950, 1 020, 880 через `_f3d_ingest`; Then події `warn`, `bad`, `info` з текстами R-13 п. 1; заявка «Перевантаження трансформатора T1: 1020 кВА при номіналі 1000» (telemetry R-05) | UT |
 | AC-34 | FR-12 | Given демо-тариф 800 кВт; When `grid15_kw` = 812,4; Then заявка «Перевищення договірної потужності: 812,4 кВт при ліміті 800 кВт» на SWB-1, енергетики (`group_f3d_energy_manager`) — підписники заявки (M-17) | UT |
 | AC-35 | FR-12 | Given фазні струми 171/180/168 і 140/180/150 на QF-T; When `_cron_live` о хвилині, кратній 5; Then `i_unbal_pct` = 4,05 і 14,89 (`warn`); `I_avg=3` А → не пишеться | UT |
