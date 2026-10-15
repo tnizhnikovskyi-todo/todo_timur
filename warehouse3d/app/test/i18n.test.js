@@ -10,6 +10,7 @@ import { SHAPES, SHAPE_KEYS, VARIANTS } from "../src/core/params.js";
 import { OP_KINDS } from "../src/core/plan.js";
 import { DIFF_KINDS } from "../src/core/odoodiff.js";
 import { TECH, TYPES as CHECK_TYPES } from "../src/core/checks.js";
+import { HEAT_KEYS, HEAT_MODES } from "../src/core/metrics.js";
 
 const SHAPE_KEYS_ALL = Object.values(SHAPE_KEYS).flat();
 import { fresh, node, FUR } from "./helpers.js";
@@ -25,7 +26,7 @@ test("словари uk и en содержат одинаковые ключи �
 });
 
 test("каждый ключ, который код просит у t(), есть в словаре", () => {
-  const prefixes = ["odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "parse", "tray"];
+  const prefixes = ["odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "parse", "tray", "heat", "find", "card"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
   for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
@@ -58,6 +59,7 @@ test("каждый ключ, который код просит у t(), есть
   for (const k of ["path", "name", "parent", "usage", "barcode", "posx", "posy", "posz", "product", "qty", "lot", "none"]) used.add(`file.role.${k}`);
   for (const k of ["empty", "noparent", "usage", "dupcode", "qty"]) used.add(`file.issue.${k}`);
   for (const k of ["notJson", "notProject", "newer", "noWarehouses", "badWarehouse", "dupWarehouse"]) used.add(`pf.${k}`);
+  for (const m of HEAT_MODES) { used.add(`heat.${m}`); for (const k of HEAT_KEYS[m]) used.add(`heat.${m}.${k}`); }
   for (const id of HELP_SECTIONS) { used.add(`help.${id}.title`); used.add(`help.${id}.html`); }
   assert.ok(used.size > 100);
   for (const k of used) { assert.ok(k in uk, `нет в uk: ${k}`); assert.ok(k in en, `нет в en: ${k}`); }

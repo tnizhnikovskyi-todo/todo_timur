@@ -234,8 +234,15 @@ try {
     await page.waitForSelector("#vp canvas:not([hidden])");
     await page.waitForTimeout(800);
     const b = await page.locator("#vp canvas").boundingBox();
-    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2 + 20);
-    await page.waitForFunction(() => /^FUR-/.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    // раскладка панелей над планом может сдвинуть кадр: пробуем несколько точек вокруг центра, пока не попадём в место (а не в стойку)
+    let hit = false;
+    for (const dy of [20, -20, 45, -45, 70, -70]) {
+      await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2 + dy);
+      await page.waitForTimeout(200);
+      hit = await page.evaluate(() => /^FUR-/.test(document.querySelector("#plan-side h2")?.textContent || ""));
+      if (hit) break;
+    }
+    expect(hit, "клик по центру 3D не выделил место");
   });
   await step("сменить язык uk → en → uk", async () => {
     await page.click('#seg-lang [data-l="en"]');
@@ -689,8 +696,71 @@ try {
     expect((await pg.locator("#h-file").innerText()).includes("whproj.json"), "раздел «Файли» пуст");
     await pg.close(); await pg.context().close(); fs.rmSync(tmpDir, { recursive: true, force: true });
   });
+  // ---------- W-17: показатели, поиск «где лежит», карточка места, обновление данных
+  await step("W-17 показатели: пять тепловых карт, легенда меняется, цвета в 2D и 3D", async () => {
+    await page.evaluate(() => localStorage.clear()); await page.goto(url); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="2d"]');
+    const legend = async () => (await text("#legend")).replace(/\s+/g, " ");
+    const fills = () => page.evaluate(() => new Set([...document.querySelectorAll("#vp svg rect.s")].filter((e) => e.style.display !== "none").map((e) => e.style.fill || `cls:${e.getAttribute("class")}`)).size);
+    expect((await legend()).includes("30 % і більше"), "в «Стан місць» легенда прежняя");
+    const seen = new Map();
+    for (const [mode, word] of [["fill", "понад 75 %"], ["low", "не нижче мінімуму"], ["empty", "порожнє місце"], ["abc", "A · 80 % переміщень"], ["age", "понад 365 днів"]]) {
+      await page.selectOption("#heat-sel", mode);
+      await page.waitForFunction((m) => document.querySelector("#legend").dataset.mode === m, mode);
+      const l = await legend();
+      expect(l.includes(word), `легенда «${mode}» без «${word}»: ${l}`);
+      expect(!seen.has(l), `легенда «${mode}» не отличается от «${seen.get(l)}»`); seen.set(l, mode);
+      expect(await fills() >= 2, `показатель «${mode}»: в 2D меньше двух цветов`);
+      if (mode === "abc" || mode === "age") expect(l.includes("демо"), `показатель «${mode}»: нет пометки «демо»`);
+    }
+    // 3D: тот же показатель красит экземпляры; смена показателя не создаёт ошибок и новых групп
+    await page.click('#seg-mode [data-m="3d"]'); await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
+    for (const mode of ["fill", "low", "empty", "abc", "age", "status"]) { await page.selectOption("#heat-sel", mode); await page.waitForTimeout(200); }
+    expect((await legend()).includes("30 % і більше"), "после «Стан місць» легенда не вернулась");
+    expect(await page.evaluate(() => localStorage.getItem("wh-app-heat")) === '"status"', "показатель не запомнен");
+  });
+  await step("W-17 поиск «где лежит»: товар → переход к месту, лот, карточка места", async () => {
+    await page.click('#seg-mode [data-m="2d"]');
+    await page.fill("#find-q", "ДСП");
+    await page.waitForFunction(() => /Знайдено місць: \d+/.test(document.querySelector("#find-n").textContent));
+    const n = +(((await text("#find-n")).match(/\d+/) || [])[0]);
+    expect(n > 1, `по «ДСП» найдено ${n}`);
+    expect(await page.locator("#vp svg rect.s.hit").count() > 0, "найденные места не подсвечены в 2D");
+    await page.waitForSelector("#find-list:not([hidden]) [data-go]");
+    const code = await page.locator("#find-list [data-go]").first().getAttribute("data-go");
+    await page.click("#find-list [data-go]");
+    await page.waitForFunction((c) => document.querySelector("#plan-side h2")?.textContent === c, code);
+    expect(await page.locator("#vp svg rect.s.sel").count() === 1, "место не выделено на плане");
+    expect(await page.locator("#find-list").isHidden(), "список не закрылся после перехода");
+    expect((await text("#find-n")).includes(String(n)), "счётчик пропал после перехода");
+    // карточка места: остатки с партией и резервом, категория и правила (в демо данных Odoo нет — «немає»), ёмкость и заполненность
+    const side = await text("#plan-side");
+    expect(await page.locator("#plan-side table.o_list tr").count() > 0 && /Залишки/.test(side), "в карточке нет остатков");
+    expect(await page.locator('#plan-side [data-card="category"]').count() === 1 && await page.locator('#plan-side [data-card="capacity"]').count() === 1 && await page.locator('#plan-side [data-card="rules"]').count() === 1, "в карточке нет категории, ёмкости или правил");
+    expect(await page.locator("#plan-side [data-odoo-link]").count() === 0, "вне Odoo не должно быть ссылки «Відкрити в Odoo»");
+    // лот: одно место
+    await page.fill("#find-q", "DSP16-WNG-2610-114");
+    await page.waitForFunction(() => /Знайдено місць: 1$/.test(document.querySelector("#find-n").textContent.trim()));
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => /^PLT-/.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    expect(/DSP16-WNG-2610-114/.test(await text("#plan-side table.o_list")), "в карточке нет партии");
+    await page.fill("#find-q", "такого товару нет");
+    await page.waitForFunction(() => /Нічого не знайдено/.test(document.querySelector("#find-n").textContent));
+    expect(await page.locator("#vp svg rect.s.hit").count() === 0, "подсветка осталась без совпадений");
+    await page.click("#find-x");
+    expect((await text("#find-n")) === "" && await page.locator("#find-q").inputValue() === "", "поиск не очищен");
+  });
+  await step("W-17 «Оновити дані»: план не перестраивается, правки остаются", async () => {
+    const mark = await page.evaluate(() => { const s = document.querySelector("#vp svg"); s.dataset.mark = "1"; return document.querySelectorAll("#vp svg rect.s").length; });
+    await page.click("#data-refresh");
+    await page.waitForSelector("#o_notifs .o_notif");
+    expect((await text("#o_notifs")).includes("Дані оновлено"), "нет уведомления об обновлении данных");
+    expect(await page.evaluate(() => document.querySelector("#vp svg").dataset.mark === "1"), "SVG плана пересоздан");
+    expect(await page.evaluate(() => document.querySelectorAll("#vp svg rect.s").length) === mark, "число мест на плане изменилось");
+    expect((await page.locator("#data-refresh").getAttribute("title")).includes("2026"), "в подсказке кнопки нет времени снимка");
+  });
   await step("страница из Odoo: выбор складов базы, места из адаптера, «Оновити з Odoo»", async () => {
-    const state = { bays: 3, projects: new Map(), loads: 0 };
+    const state = { bays: 3, projects: new Map(), loads: 0, qty: 5 };
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
     await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; });
     // фейковый сервер Odoo: два склада, у WH1 зона «Фурнітура» с ярусами FUR-R1-S0<b>-L1..3 (число стелажей меняется — «обновление в Odoo»)
@@ -710,9 +780,12 @@ try {
       else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [
         { id: 1, code: "WH1", name: "Склад 1", company_id: 1, company: "Co", view_location_id: 1000, places: 9 }, { id: 2, code: "WH2", name: "Склад 2", company_id: 1, company: "Co", view_location_id: 2000, places: 3 }] };
       else if (r.startsWith("/read/")) {
-        const key = r.slice(6), all = key === "locations" ? rows(params.warehouse_id) : [];
+        // W-17: у WH1 на FUR-R1-S01-L1 (id 1011) остаток, партия и дата поступления (30 дней), по нему же два движения
+        const key = r.slice(6), w1 = params.warehouse_id === 1;
+        const all = key === "locations" ? rows(params.warehouse_id) : key === "quants" && w1 ? [{ id: 1, location_id: 1011, product_id: 1, quantity: state.qty, reserved_quantity: 2, lot: "LOT-W17", package: null, in_date: "2026-09-15 12:00:00" }]
+          : key === "moves" && w1 ? [{ location_id: 1011, location_dest_id: 1012, n: 2, qty: 4 }] : [];
         if (key === "locations") state.loads++;
-        out = { status: "ok", total: all.length, offset: 0, limit: params.limit, next: null, [key]: all, products: {} };
+        out = { status: "ok", total: all.length, offset: 0, limit: params.limit, next: null, [key]: all, products: key === "quants" && w1 ? { 1: { id: 1, default_code: "HNG-1", name: "Завіса W17", uom: "шт", categ: "Ф" } } : {} };
       } else if (r.startsWith("/lock/")) out = { ok: true, owner: "Аня", mine: true };
       else out = { status: "ok", found: false };
       await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
@@ -740,6 +813,22 @@ try {
     expect((await pg.locator("#diff-dlg tbody tr").count()) >= 1, "расхождения не показаны");
     await pg.click("#diff-dlg [data-done]");
     expect((await pg.locator("#diff-dlg").count()) === 0, "окно расхождений не закрылось");
+    // W-17: «Оновити дані» перечитує остатки, но не структуру (в Odoo уже 5 стелажей, на плане остаются 12 мест); поиск, карточка, ссылка в Odoo
+    state.bays = 5; state.qty = 7;
+    await pg.evaluate(() => { document.querySelector("#vp svg")?.setAttribute("data-mark", "1"); });
+    await pg.click("#data-refresh");
+    await pg.waitForFunction(() => /Дані оновлено ·/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    expect((await places()) === 12, `«Оновити дані» перестроила план: ${await places()} мест`);
+    await pg.fill("#find-q", "W17");
+    await pg.waitForFunction(() => /Знайдено місць: 1$/.test(document.querySelector("#find-n").textContent.trim()));
+    await pg.click("#find-list [data-go]");
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "FUR-R1-S01-L1");
+    const card = await pg.locator("#plan-side").innerText();
+    expect(/7\s+шт/.test(card) && card.includes("LOT-W17") && /резерв\s+2/.test(card), `в карточке нет остатка 7, партии и резерва: ${card.slice(0, 300)}`);
+    expect(/30\s+дн/.test(card) && /2 за 90 дн/.test(card), "в карточке нет возраста запаса и движений");
+    expect((await pg.locator("#plan-side [data-odoo-link]").getAttribute("href")) === "/odoo/stock.location/1011", "ссылка «Відкрити в Odoo» не на форму локации");
+    await pg.selectOption("#heat-sel", "abc"); await pg.waitForFunction(() => document.querySelector("#legend").dataset.mode === "abc");
+    expect(!(await pg.locator("#legend").innerText()).includes("демо"), "у данных Odoo не должно быть пометки «демо»");
     await pg.click("#odoo-new");
     await pg.waitForSelector("#odoopick-dlg");
     await pg.click("#odoopick-dlg [data-cancel]");
@@ -802,6 +891,20 @@ try {
     expect((await pg.locator("#plan-dlg [data-key]").count()) === 3, "в плане остался ряд R3");
     expect((await pg.locator("#o_notifs").innerText()).includes("Застосовано в Odoo"), "нет уведомления о применении");
     expect((await pg.evaluate(() => localStorage.getItem("wh-odoo-t-copyack-odoo-1"))) === "true", "«не нагадувати» не запомнилось");
+    // W-17 после применения: «Оновити дані» не трогает слой правок (в плане остаётся ряд R3), карточка созданного места открывается, ссылка ведёт на его новый id; код — из barcode
+    await pg.click("#plan-dlg [data-close2]");
+    await pg.click("#data-refresh");
+    await pg.waitForFunction(() => /Дані оновлено ·/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    const nid = state.rows.find((x) => x.barcode === "FUR-R2-S01-L1").id;
+    await pg.click('#seg-mode [data-m="2d"]');
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    const cell = await pg.locator('#vp svg rect.s[data-code="FUR-R2-S01-L1"]').boundingBox();
+    await pg.mouse.click(cell.x + cell.width / 2, cell.y + cell.height / 2);
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "FUR-R2-S01-L1");
+    expect((await pg.locator("#plan-side [data-odoo-link]").getAttribute("href")) === `/odoo/stock.location/${nid}`, "ссылка «Відкрити в Odoo» не ведёт на новый id созданного места");
+    expect(await pg.locator('#plan-side [data-card="capacity"]').count() === 1, "карточка созданного места не открылась");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 3, "«Оновити дані» затронула слой правок: в плане не осталось ряда R3");
     // журнал и откат (с подтверждением вторым нажатием)
     await pg.click('#plan-dlg [data-tab="journal"]'); await pg.waitForSelector("#plan-dlg [data-rb]");
     await pg.click("#plan-dlg [data-rb]"); await pg.click("#plan-dlg [data-rb]"); await pg.waitForSelector("#plan-dlg .o_msg.ok");

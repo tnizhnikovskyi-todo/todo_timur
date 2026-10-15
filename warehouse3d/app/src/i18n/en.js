@@ -392,7 +392,7 @@ export default {
   "help.start.title": "What this is",
   "help.start.html": `
     <p><b>Warehouse Builder</b> is a model of the warehouse built from Odoo storage locations (database snapshot of {date}). Every row, bay, level and floor place in the model is an Odoo location or a new place you added in the model.</p>
-    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot and is not updated in real time.</p>
+    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot: it is read when the page opens and by the “Refresh data” button (see “Metrics, search and data”).</p>
     <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
   "help.view.title": "Viewing the model",
   "help.view.html": `
@@ -401,7 +401,7 @@ export default {
       <li><b>Level</b> — the lists above the model (WH › zone › row › bay › level). Pick a level — the rest is hidden and the camera moves closer. The labels in the model and the “Show this level only” button in the right panel do the same. <b>↑</b> — level up, <b>⟲</b> — fit the level, <b>+ / −</b> — zoom.</li>
       <li><b>Mouse in 3D</b>: left button — orbit, right button — pan, wheel — zoom. <b>In 2D</b>: drag — pan the plan, wheel — zoom.</li>
       <li>Hover over a place — a tooltip shows the code, product and fill level.</li>
-      <li>The color of a place shows its fill level:</li>
+      <li>The color of a place shows its fill level; the other metrics (below minimum, empty places, ABC, stock age) are chosen with the “Metric” switch (see “Metrics, search and data”). A click on a place opens its card. In the “Place status” mode the colors are:</li>
     </ul>`,
   "help.select.title": "Selection",
   "help.select.html": `
@@ -597,7 +597,7 @@ export default {
       <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (see the "Change plan and applying in Odoo" section). An administrator assigns the groups on the user form.</li>
       <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
       <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
-      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
+      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. The “Refresh data” button above the plan refreshes only stock, fill levels, reservations and moves, without rebuilding the plan. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
     </ul>`,
   "help.plan.title": "Change plan and applying in Odoo",
   "help.plan.html": `
@@ -1050,6 +1050,83 @@ export default {
       <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
       <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
       <li><b>Code conflicts.</b> A repeated or already used place code (see “Addressing”) also appears in “Problems” as an error; a click goes to the place. While a conflict exists, those places cannot be saved.</li>
+    </ul>`,
+  "heat.label": "Metric",
+  "heat.status": "Place status",
+  "heat.fill": "Fill level",
+  "heat.low": "Below minimum",
+  "heat.empty": "Empty places",
+  "heat.abc": "Turnover ABC",
+  "heat.age": "Stock age",
+  "heat.fill.f0": "empty",
+  "heat.fill.f25": "up to 25 %",
+  "heat.fill.f50": "25–50 %",
+  "heat.fill.f75": "50–75 %",
+  "heat.fill.f100": "over 75 %",
+  "heat.fill.none": "no capacity",
+  "heat.low.out": "out of stock",
+  "heat.low.low": "below minimum",
+  "heat.low.ok": "not below minimum",
+  "heat.low.none": "no reorder rule",
+  "heat.empty.empty": "empty place",
+  "heat.empty.used": "has stock",
+  "heat.abc.A": "A · 80 % of moves",
+  "heat.abc.B": "B · next 15 %",
+  "heat.abc.C": "C · last 5 %",
+  "heat.abc.none": "no moves",
+  "heat.age.d30": "up to 30 days",
+  "heat.age.d90": "31–90 days",
+  "heat.age.d180": "91–180 days",
+  "heat.age.d365": "181–365 days",
+  "heat.age.dmax": "over 365 days",
+  "heat.age.none": "no stock or no date",
+  "heat.days": "moves in {n} d",
+  "heat.demo": "demo: moves and age are synthetic",
+  "heat.demoShort": "demo",
+  "heat.noData": "The snapshot has no data for this metric",
+  "find.label": "Where is it",
+  "find.placeholder": "Where is it: product, code, lot, package…",
+  "find.hint": "Type at least 2 characters",
+  "find.count": "Places found: {n}",
+  "find.none": "Nothing found",
+  "find.clear": "Clear search",
+  "find.go": "Go to place {code}",
+  "find.more": "…{n} more",
+  "card.title": "Place card",
+  "card.category": "Storage category",
+  "card.maxWeight": "max weight {n}",
+  "card.capacity": "Capacity",
+  "card.unitQty": "units",
+  "card.unitPkg": "packages",
+  "card.minmax": "Min / max",
+  "card.age": "Stock age",
+  "card.days": "{n} d",
+  "card.moves": "Moves",
+  "card.movesVal": "{n} in {days} d",
+  "card.rules": "Putaway rules leading here",
+  "card.noRules": "No rules lead here.",
+  "card.none": "none",
+  "card.ruleAny": "any product",
+  "card.ruleCat": "by storage category",
+  "card.openOdoo": "Open in Odoo",
+  "top.dataRefresh": "Refresh data",
+  "top.dataRefreshTitle": "Refresh stock, fill levels and reservations without rebuilding the plan",
+  "top.dataAsOf": "data as of {time}",
+  "n.dataRefreshed": "Data refreshed · places: {n}",
+  "n.dataAdded": "Odoo has new places: {added}. The structure is updated by the “Refresh from Odoo” button.",
+  "help.data.title": "Metrics, search and data",
+  "help.data.html": `
+    <ul>
+      <li><b>Metric.</b> The <b>“Metric”</b> switch above the plan changes what the color of a place means, and the legend next to it changes with it and shows how many places fall in each class. <b>“Place status”</b> is the usual coloring (see “Viewing the model”); the other five are heat maps, identical in 2D and 3D. New and unsaved places stay teal and orange under any metric. The choice is remembered.</li>
+      <li><b>Fill level</b> — the share of the place capacity: empty, up to 25 %, 25–50 %, 50–75 %, over 75 %; gray — places without capacity (zones, carts).</li>
+      <li><b>Below minimum</b> — by the place reorder rule (min / max): red — out of stock, yellow — below minimum, green — not below, gray — places without a rule.</li>
+      <li><b>Empty places</b> — places without stock are yellow (room to put things), the rest are gray.</li>
+      <li><b>Turnover ABC</b> — by the number of moves (done moves out of and into the place) over the last 90 days: <b>A</b> — places that together give the first 80 % of moves, <b>B</b> — the next 15 %, <b>C</b> — the last 5 %; gray — no moves.</li>
+      <li><b>Stock age</b> — by the oldest lot of the place (the incoming date of the stock in Odoo): up to 30, 31–90, 91–180, 181–365, over 365 days; gray — the place is empty or has no date.</li>
+      <li><b>Demo.</b> The demo snapshot has neither moves nor incoming dates, so ABC and age show synthetic values, marked “demo” in the legend and in the place card. Odoo supplies real data (moves for 90 days and the incoming date).</li>
+      <li><b>Where is it.</b> The search box above the plan looks for a product name or code, a lot and a package; several words must all match within one stock line. Found places are highlighted on the plan (2D and 3D), a counter sits next to the box, and the list below it shows each place and what lies there. Click a list row (or press <kbd>Enter</kbd> for the first) to show the level that holds the place and select it. <kbd>Esc</kbd> closes the list, pressed again it clears the search.</li>
+      <li><b>Place card.</b> Click a place and the right panel shows: stock (product, quantity, reservation, lot, age), storage category, capacity and fill level, min / max, putaway rules that lead here (direct ones and by storage category), moves for 90 days and the stock age. In the app opened from Odoo there is an <b>“Open in Odoo”</b> button — the form of this location.</li>
+      <li><b>“Refresh data”.</b> The button above the plan refreshes stock, fill levels, reservations and moves <b>without rebuilding the plan</b>, leaving your saved and unsaved model changes alone (the stock snapshot only). New Odoo locations do not appear this way: the structure is updated by “Refresh from Odoo”. The snapshot time is shown next to it. The data is also read every time the page opens. Outside Odoo the button recomputes the metrics from the current snapshot.</li>
     </ul>`,
   // W-12: code parsing, "Unplaced" tray, auto-layout
   "op.parse": "Code parsing rules: {n}",

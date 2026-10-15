@@ -40,3 +40,8 @@ class WhConstructorRead(http.Controller):
     @_guard
     def read_orderpoints(self, warehouse_id=None, offset=0, limit=None, **kw):
         return self._paged("api_orderpoints", warehouse_id, offset, limit)
+
+    @http.route(BASE + "/api/read/moves", type=JSON, auth="user")
+    @_guard
+    def read_moves(self, warehouse_id=None, days=None, offset=0, limit=None, **kw):
+        return {"status": "ok", **request.env["wh.reader"].api_moves(warehouse_id, days, offset, limit)}
