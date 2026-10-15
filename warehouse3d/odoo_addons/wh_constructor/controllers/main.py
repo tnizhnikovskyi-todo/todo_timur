@@ -125,3 +125,19 @@ class WhConstructor(http.Controller):
     @_guard
     def library_save(self, data=None, base_rev=None, **kw):
         return request.env["wh.library"].api_save(data, base_rev=base_rev)
+
+    # ------------------------------------------------------------ применение плана изменений к локациям Odoo (W-13, модель wh.apply.log)
+    @http.route(BASE + "/api/apply/run", type=JSON, auth="user")
+    @_guard
+    def apply_run(self, warehouse_id=None, ops=None, key=None, comment=None, **kw):
+        return request.env["wh.apply.log"].api_apply(warehouse_id=warehouse_id, ops=ops, project_key=key, comment=comment)
+
+    @http.route(BASE + "/api/apply/log", type=JSON, auth="user")
+    @_guard
+    def apply_log(self, key=None, warehouse_id=None, limit=50, **kw):
+        return {"status": "ok", "log": request.env["wh.apply.log"].api_list(project_key=key, warehouse_id=warehouse_id, limit=limit)}
+
+    @http.route(BASE + "/api/apply/rollback", type=JSON, auth="user")
+    @_guard
+    def apply_rollback(self, log_id=None, **kw):
+        return request.env["wh.apply.log"].api_rollback(log_id=log_id)

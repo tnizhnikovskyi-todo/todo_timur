@@ -119,8 +119,9 @@ test("load: места, остатки, ёмкость, min/max, состоян�
   assert.deepEqual(Object.keys(snap.meta.odoo.containers).sort(), ["WH", "WH1/Stock/Фурнітура"].sort());
   assert.equal(snap.meta.odoo.containers.WH.id, 10);
   assert.equal(snap.meta.odoo.view_location_id, 10);
-  assert.equal(L.Stock.id, 11);
-  assert.equal(L.Stock.quants.length, 1);
+  assert.ok(!("Stock" in L), "ключ места — штрихкод (D-14), если он есть");
+  assert.equal(L["WH1-STOCK"].id, 11);
+  assert.equal(L["WH1-STOCK"].quants.length, 1);
   // bin: ёмкость = max правила пополнения, заполнение = остаток / ёмкость, состояние по min
   const a = L["FUR-R1-S01-L1"];
   assert.deepEqual([a.id, a.kind, a.capacity, a.state, a.orderpoint], [100, "bin", 66, "ok", { product: "FUR-HG-110", min: 20, max: 66 }]);

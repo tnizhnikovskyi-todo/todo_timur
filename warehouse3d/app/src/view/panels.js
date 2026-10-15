@@ -23,7 +23,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
   const chips = (n, attr, cls = "") => pathOf(model.tree, n).map((x) => `<button class="o_chip ${cls}${x.id === n.id ? " on" : ""}" data-${attr}="${esc(x.id)}">${esc(label(x))}</button>`).join('<span class="o_chip_sep">›</span>');
   const selChips = (n) => chips(n, "esel").replaceAll("<button ", `<button title="${T("side.selectLevel")}" `);
   const pathChips = (n) => pathOf(model.tree, n).map((x) => `<button class="o_chip${x.id === model.ui.focus ? " on" : ""}" data-focus="${esc(x.id)}" title="${T("plan.focusOnly")}">${esc(label(x))}</button>`).join('<span class="o_chip_sep">›</span>');
-  const nameTag = (n) => (n.pend ? ` <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft ? ` <span class="ed-new">${T("tag.new")}</span>` : "");
+  const nameTag = (n) => (n.pend ? ` <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft && !n.adopted ? ` <span class="ed-new">${T("tag.new")}</span>` : "");
   const typeInfo = (tp) => `${esc(tname(tp))} · ${T(`form.${tp.form}`)} · ${i18n.m(tp.w)} × ${i18n.m(tp.d)} ${T("unit.m")}${RACKED.includes(tp.form) ? ` · ${T("side.levelH", { h: i18n.m(tp.lh) })}` : ""}`;
   const typeOpts = (forms, sel) => [...model.tree.types.values()].filter((x) => forms.includes(x.form)).map((x) => `<option value="${esc(x.id)}"${x.id === sel ? " selected" : ""}>${esc(tname(x))} · ${esc(x.id)}</option>`).join("");
   const btns = (ro) => `<div class="ed-btns"><button type="button" class="btn btn-secondary" data-show>${T("form.show")}</button>${ro ? "" : `<button type="submit" class="btn btn-primary">${T("form.save")}</button>`}</div>`;
@@ -121,7 +121,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
     const isGroup = n.type === "group" || n.type === "rackset", zoneLeaf = n.type === "group" && n.loc && !n.kids.length;
     const K = (op) => `form:${op}@${n.id}`;
     const isCell = n.type === "cell", lv = n.type === "level" ? n : isCell ? tree.nodes.get(n.parent) : null, pid = isCell ? n.parent : n.id; // изменения ячейки принадлежат её ярусу
-    let h = `<div class="lab">${T("side.edit")}${n.id === "WH" ? "" : n.pend ? ` · <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft ? ` · <span class="ed-new">${T("tag.new")}</span>` : ` · ${T("tag.fromOdoo")}`}</div><h2>${esc(label(n))}</h2>
+    let h = `<div class="lab">${T("side.edit")}${n.id === "WH" ? "" : n.pend ? ` · <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft && !n.adopted ? ` · <span class="ed-new">${T("tag.new")}</span>` : ` · ${T("tag.fromOdoo")}`}</div><h2>${esc(label(n))}</h2>
       <div class="o_chips" style="margin-top:6px">${chips(n, "esel")}</div>
       <div class="ed-info">${tp && !(isGroup && !zoneLeaf) ? `${typeInfo(tp)}<br>` : ""}${esc(places(n.codes.length))} · ${i18n.m(n.w)} × ${i18n.m(n.d)} ${T("unit.m")}${n.loc ? ` · <span class="code">${esc(n.loc)}</span>` : ""}</div>`;
     const clip = model.clip, dest = clip.length ? model.dropInto(tree.nodes.get(clip[0]), n.id) : null;
@@ -152,6 +152,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
       const tk = model.checks.tech, ti = tk.of(n.id).own, tl = tk.list(), topts = [...(n.id === "WH" ? [] : ["inherit"]), "none", ...tl.map((x) => x.id)];
       h += `<div class="sec">${T(n.id === "WH" ? "prob.tech" : "side.techTitle")}</div><form class="ed-form" data-op="tech"><label class="wide"><span class="sr">${T("side.techTitle")}</span><select name="t">${topts.map((o) => `<option value="${o}"${o === ti ? " selected" : ""}>${T(`tech.${o}`)}${tl.find((x) => x.id === o) ? ` · ${esc(i18n.m(tl.find((x) => x.id === o).min))} ${T("unit.m")}` : ""}</option>`).join("")}</select></label>${btns(ro)}</form>
         <p class="ed-note">${T("side.techNote")}</p>`;
+      if (n.kids.length) h += `<div class="sec">${T("side.autoTitle")}</div><form class="ed-form" data-op="autoLayout">${btns(ro)}</form><p class="ed-note">${T("side.autoNote")}</p>`;
       h += tools.addrHtml(n, K, ro) + tools.renumHtml(n, K, ro);
     }
     if (n.type === "rack") {
@@ -224,7 +225,7 @@ export function updateEditBar(root, { model, i18n }) {
   q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
-  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = q("#ed-parse").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
   q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");

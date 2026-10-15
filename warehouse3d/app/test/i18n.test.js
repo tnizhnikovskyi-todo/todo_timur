@@ -7,6 +7,8 @@ import { BASE_TYPES, FORM_IDS, PICKS } from "../src/core/types.js";
 import { HELP_SECTIONS } from "../src/view/help.js";
 import { CATALOG, CATALOG_GROUPS } from "../src/core/catalog.js";
 import { SHAPES, SHAPE_KEYS, VARIANTS } from "../src/core/params.js";
+import { OP_KINDS } from "../src/core/plan.js";
+import { DIFF_KINDS } from "../src/core/odoodiff.js";
 import { TECH, TYPES as CHECK_TYPES } from "../src/core/checks.js";
 import { HEAT_KEYS, HEAT_MODES } from "../src/core/metrics.js";
 
@@ -24,7 +26,7 @@ test("словари uk и en содержат одинаковые ключи �
 });
 
 test("каждый ключ, который код просит у t(), есть в словаре", () => {
-  const prefixes = ["odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "heat", "find", "card"];
+  const prefixes = ["odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "parse", "tray", "heat", "find", "card"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
   for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
@@ -46,6 +48,9 @@ test("каждый ключ, который код просит у t(), есть
   for (const k of ["all", ...CATALOG_GROUPS]) used.add(`types.grp.${k}`);
   for (const k of [0, 1, 2]) used.add(`types.fac.${k}`);
   for (const k of ["catalog", "project", "lib"]) used.add(`types.tab.${k}`);
+  for (const k of OP_KINDS) used.add(`odoo.plan.kind.${k}`);
+  for (const k of DIFF_KINDS) { used.add(`odoo.diff.kind.${k}`); used.add(`odoo.diff.row.${k}`); }
+  for (const k of ["create", "move", "rename", "attrs", "archive"]) { used.add(`odoo.log.op.${k}`); used.add(`odoo.plan.row.${k}`); }
   for (const c of CATALOG) { used.add(`cat.${c.id}`); used.add(`catd.${c.id}`); }
   for (const k of ["col", "wall", "gate", "dock", "door", "office", "charge", "aisle", "contour"]) used.add(`bld.kind.${k}`);
   for (const k of ["select", "vertex", "ruler"]) used.add(`bld.tool.${k}`);

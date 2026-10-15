@@ -4,28 +4,30 @@
 // Подписи изменений хранятся как данные { k, p } (ключ словаря и параметры) — текст собирает i18n на экране.
 import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, ROTS, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, normEdit, num, r1, r2 } from "./types.js";
 import { addrFromForm, findConflicts, isDefaultAddr, plan } from "./addressing.js";
-import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
+import { buildTree, cfgOf, nearest, refById, refOf, typeList } from "./tree.js";
 import { hhmm } from "./locks.js";
 import { layout } from "./layout.js";
 import { catalogType } from "./catalog.js";
 import { cleanParam, diffParams, shapeOf } from "./params.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
+import { autoLayout } from "./autolayout.js";
+import { isDefaultRules, normRules } from "./parse.js";
 import { forceEntries, newBlocking, remapChk, runChecks, stockCodes, TECH } from "./checks.js";
 
 // ---------- diff / apply
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
-  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), cfg: kv(a.cfg, b.cfg), chk: kv(a.chk, b.chk), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, addrZones: kv(a.addrZones, b.addrZones), codes: kv(a.codes, b.codes), addr: JSON.stringify(a.addr || null) !== JSON.stringify(b.addr || null) ? { v: b.addr || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), cfg: kv(a.cfg, b.cfg), chk: kv(a.chk, b.chk), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, addrZones: kv(a.addrZones, b.addrZones), codes: kv(a.codes, b.codes), addr: JSON.stringify(a.addr || null) !== JSON.stringify(b.addr || null) ? { v: b.addr || null } : null, parse: JSON.stringify(a.parse || null) !== JSON.stringify(b.parse || null) ? { v: b.parse || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
     types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null,
     // план здания (W-04): общие поля (контур, высоты) одним значением, объекты и узлы проходов — по id, как остальные списки
     bld: JSON.stringify(bldMeta(a.building)) !== JSON.stringify(bldMeta(b.building)) ? { v: bldMeta(b.building) } : null, bi: kv(a.building?.items, b.building?.items), bn: kv(a.building?.nodes, b.building?.nodes) };
 }
 const bldMeta = (b) => (b ? { v: b.v, contour: b.contour, hCeil: b.hCeil, hSpr: b.hSpr } : null);
 const kvEmpty = (x) => !x || (!x.rm.length && !x.put.length);
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !(d.chk && (d.chk.rm.length || d.chk.put.length)) && !d.depth && !(d.addrZones && (d.addrZones.rm.length || d.addrZones.put.length)) && !(d.codes && (d.codes.rm.length || d.codes.put.length)) && !d.addr && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !(d.chk && (d.chk.rm.length || d.chk.put.length)) && !d.depth && !(d.addrZones && (d.addrZones.rm.length || d.addrZones.put.length)) && !(d.codes && (d.codes.rm.length || d.codes.put.length)) && !d.addr && !d.parse && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
-  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.chk) s.chk = kv(s.chk || [], d.chk); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v; if (d.addrZones) s.addrZones = kv(s.addrZones, d.addrZones); if (d.codes) s.codes = kv(s.codes, d.codes); if (d.addr) s.addr = d.addr.v;
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.chk) s.chk = kv(s.chk || [], d.chk); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v; if (d.addrZones) s.addrZones = kv(s.addrZones, d.addrZones); if (d.codes) s.codes = kv(s.codes, d.codes); if (d.addr) s.addr = d.addr.v; if (d.parse) s.parse = d.parse.v;
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
   if (d.bld) s.building = d.bld.v ? { ...clone(d.bld.v), items: s.building?.items || [], nodes: s.building?.nodes || [] } : null;
@@ -253,13 +255,19 @@ function setPropE(e, id, patch) {
   e.prop = (e.prop || []).filter((p) => p.id !== id);
   if (Object.keys(cur).length > 1) e.prop.push(cur);
 }
-// убрать узел вместе с тем, что внутри: добавленный пропадает из слоя, узел из Odoo попадает в del
-// место с остатком убрать нельзя (F4): код попадает в s.stockHit, change() отклоняет всю правку
+// убрать узел вместе с тем, что внутри: добавленный пропадает из слоя, узел из Odoo попадает в del.
+// место с остатком убрать нельзя (F4): код попадает в s.stockHit, change() отклоняет всю правку.
+// Если внутри есть место, уже применённое в Odoo (adopted, W-13), слой его сохраняет: добавленный корень помечается gone, узел из Odoo — в del,
+// и дерево отдаёт «убранное» плану изменений (архивация)
 function removeNode(s, e, x) {
-  const id = x.id, not = (q) => !inNode(q.id, id), hit = stockCodes(s.tree, x);
+  const id = x.id, not = (q) => !inNode(q.id, id), hit = stockCodes(s.tree, x), sub = [];
   if (hit.length) s.stockHit = (s.stockHit || []).concat(hit);
-  e.add = e.add.filter(not); e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not); e.codes = (e.codes || []).filter(not); e.addrZones = (e.addrZones || []).filter(not);
-  if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
+  const walk = (n) => { sub.push(n); n.kids.forEach(walk); }; walk(x);
+  const keep = sub.some((n) => n.adopted);
+  if (!keep) e.add = e.add.filter(not);
+  e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not); e.codes = (e.codes || []).filter(not); e.addrZones = (e.addrZones || []).filter(not);
+  if (keep && x.draft) e.add = e.add.map((a) => (a.id === id ? { ...a, gone: true } : a));
+  else if (!x.draft || keep) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
 }
 // число секций и ярусов ряда: лишние секции / верхние ярусы убираются, недостающие добавляются
 function resizeRack(s, e, r, nb, nl) {
@@ -500,13 +508,53 @@ export const OPS = {
     change(s, zid, () => ({ k: only ? "op.renumNew" : "op.renum", p: { ref: refById(s.tree, zid), places: places(cnt) } }), (e) => {
       const keep = new Map((e.codes || []).map((c) => [c.id, c]));
       for (const it of plan(s.tree, e, { scope: zid, onlyNew: only }).items) {
-        const nd = s.tree.nodes.get(it.id); if (!nd || nd.loc === it.code || (only && (!nd.draft || nd.from))) continue;
+        const nd = s.tree.nodes.get(it.id); if (!nd || nd.loc === it.code || (only && (!nd.draft || nd.from || nd.adopted))) continue;
         keep.delete(it.id); cnt++;
         if (it.code !== (nd.oloc ?? nd.loc)) keep.set(it.id, { id: it.id, code: it.code });
       }
       e.codes = [...keep.values()];
     }, key, f);
     if (!cnt) say(s, "info", "n.renumNone");
+  },
+  // разбор кодов (W-12, D-07): правила склада f.rules [{ id, mask, re, tp, off }]; набор по умолчанию хранится как null
+  parse(s, f, key) {
+    const rules = normRules(f && f.rules), A = isDefaultRules(rules) ? null : { rules };
+    return change(s, "WH", { k: "op.parse", p: { n: rules.filter((r) => !r.off).length } }, (e) => { e.parse = A; }, key, null);
+  },
+  // лоток «Не розміщено» (A2): места из s.tree.unplaced ставятся в зону (target — зона, ряд или любой узел внутри зоны: берётся ближайшая зона выше).
+  // Место на полу — место в зоне; разобранное по уровням — ряд / стелаж / ярус внутри зоны (недостающие создаются). Это запись add с кодом и from: «Показати / Зберегти», undo.
+  place(s, codes, target, key) {
+    const tree = s.tree, want = new Set([].concat(codes || [])), items = tree.unplaced.filter((u) => want.has(u.code));
+    let P = tree.nodes.get(target); while (P && !((P.type === "group" && !isZoneLeaf(P)) || P.type === "rackset")) P = P.parent && tree.nodes.get(P.parent);
+    if (!items.length || !P) { if (items.length) say(s, "bad", "n.placeNoZone"); return false; }
+    let cnt = 0;
+    return change(s, P.id, () => ({ k: "op.place", p: { n: cnt, to: refOf(P) } }), (e) => {
+      const ensure = (pid, name, kind, tp) => { const id = `${pid}/${name}`; if (!e.add.some((a) => a.id === id) && !tree.nodes.has(id)) e.add.push({ id, parent: pid, name, kind, tp }); return id; };
+      for (const it of items) {
+        const cs = it.cs;
+        if (!cs || cs.floor) { const u = uniqId(s, P.id, it.name, bumpNum); e.add.push({ id: u.id, parent: P.id, name: u.name, kind: "zone", tp: it.tp, code: it.code, from: it.id }); cnt++; continue; }
+        let pid = P.id;
+        if (cs.rackParent) pid = ensure(pid, cs.pre, "rack", cs.pre);
+        for (const [nm, t] of cs.segs) pid = ensure(pid, nm, t, cs.pre);
+        const id = `${pid}/${cs.leaf}`; if (taken(s, id)) continue;
+        e.add.push({ id, parent: pid, name: cs.leaf, kind: cs.bayLeaf ? "bayleaf" : "level", tp: cs.pre, lvl: cs.lvl ?? 0, code: it.code, from: it.id }); cnt++;
+      }
+    }, key);
+  },
+  // авто-раскладка (W-12, A4) зоны или склада: ручные положения детей снимаются; с планом здания блоки укладываются в контур без пересечений (autolayout.js)
+  autoLayout(s, id, f, key) {
+    const zid = !id ? "WH" : id, n = s.tree.nodes.get(zid);
+    if (!n || !GROUPS.includes(n.type) || isZoneLeaf(n) || !n.kids.length) return false;
+    const res = autoLayout(s.tree, s.edit, zid), kids = new Set(n.kids.map((k) => k.id));
+    if (!res) return false;
+    if (!res.fit) { say(s, "info", "n.autoNoFit", { ref: refById(s.tree, zid) }, { key: "n.autoNoFitSub" }); return false; }
+    const n0 = s.pending.length;
+    const ok = change(s, zid, { k: "op.autoLayout", p: { ref: refById(s.tree, zid) } }, (e) => {
+      e.pos = e.pos.filter((p) => !kids.has(p.id));
+      for (const p of res.pos) setPosE(e, p.id, p.x, p.y);
+    }, key, f);
+    if (ok && s.pending.length === n0) say(s, "info", "n.autoNone");
+    return ok;
   },
   props(s, id, f, key) {
     if (!s.tree.nodes.has(id) || id === "WH" || s.tree.nodes.get(id).type === "cell") return;
@@ -601,6 +649,39 @@ export const OPS = {
     }, key || null, null, T.map((n) => n.id));
     if (gid && s.tree.nodes.has(gid)) { s.ui.msel = []; s.ui.esel = gid; s.emit({ type: "select" }); }
     return gid;
+  },
+  // «Залишити моє» при расхождениях с Odoo (G7, odoodiff.js): picks — выбранные расхождения нового снимка (s.tree уже построен по нему), old — прежний снимок склада.
+  // Появилось в Odoo → убирается из модели (план предложит архивацию); исчезло → возвращается в модель (план предложит создание); переименовано → прежнее имя
+  // (план предложит переименование); сменило родителя → переносится обратно (план предложит перенос)
+  keepMine(s, picks, old = null) {
+    const T = s.tree; let cnt = 0;
+    const find = (p) => (p.place ? T.byCode.get(p.code) : T.nodes.get(p.path));
+    change(s, "WH", () => ({ k: "op.keepMine", p: { n: cnt } }), (e) => {
+      const oldTree = old ? buildTree(old, emptyEdit(), [], cfgOf(s.wh)) : null, have = new Set(e.add.map((a) => a.id));
+      for (const p of picks) {
+        if (p.kind === "added") { const n = find(p); if (n && n.id !== "WH") { removeNode(s, e, n); cnt++; } }
+        else if (p.kind === "gone") {
+          const on = oldTree && (p.place ? oldTree.byCode.get(p.code) : oldTree.nodes.get(p.path)); if (!on) continue;
+          const chain = [], sub = [], walk = (x) => { sub.push(x); x.kids.forEach(walk); };
+          for (let x = on; x && x.parent && !T.nodes.has(x.id); x = oldTree.nodes.get(x.parent)) chain.unshift(x);
+          walk(on);
+          for (const x of [...chain.slice(0, -1), ...sub]) {
+            if (x.type === "cell" || T.nodes.has(x.id) || have.has(x.id)) continue;
+            const kind = x.type === "group" ? (x.loc && !x.kids.length ? "zone" : "group") : x.type === "rackset" ? "group" : x.type, a = { id: x.id, parent: x.parent, name: x.name, kind, tp: x.tp || null };
+            if (x.type === "level") { a.lvl = x.lvl; a.code = x.loc ?? x.base; } else if (x.loc) a.code = x.loc;
+            e.add.push(a); have.add(x.id);
+          }
+          cnt++;
+        } else if (p.kind === "renamed") {
+          const n = find(p); if (!n) continue;
+          if (p.place) { e.codes = (e.codes || []).filter((c) => c.id !== n.id); e.codes.push({ id: n.id, code: p.old.code }); } else setPropE(e, n.id, { name: p.old.name });
+          cnt++;
+        } else if (p.kind === "moved") {
+          const n = find(p), tid = n && nearest(T, p.old.dir); if (!n || !tid || n.parent === tid) continue;
+          reparent(s, e, n, tid, { x: n.ox || 0, y: n.oy || 0 }); cnt++;
+        }
+      }
+    });
   },
   // «Розгрупувати»: содержимое зоны возвращается в её родителя на прежние места, пустая зона убирается
   ungroup(s, id) {

@@ -91,7 +91,7 @@ export function zonesOf(tree) {
   const out = [], walk = (n) => { if (n.kids.some((k) => k.type === "rack" || isFloor(k))) out.push(n); n.kids.forEach(walk); };
   walk(tree.root); return out;
 }
-const isNew = (n) => !!n.draft && !n.from;
+const isNew = (n) => !!n.draft && !n.from && !n.adopted;
 const byName = (a, b) => a.name.localeCompare(b.name, "uk", { numeric: true });
 
 // План нумерации: коды и name / posx / posy / posz всех мест зоны scope ("WH" — склада). opts.onlyNew — только порядок «существующие, затем новые»;
@@ -102,7 +102,7 @@ export function plan(tree, edit, opts = {}) {
   if (!tree.nodes.has(scope)) return { items, zones: 0 };
   let nz = 0;
   for (const Z of zones) {
-    if (!inNode(Z.id, scope)) continue;
+    if (scope !== "WH" && !inNode(Z.id, scope)) continue; // "WH" — корень склада: зоны склада Odoo с другим кодом (WH1…) лежат под своим путём
     nz++;
     const ov = R.find(Z.id), applied = !!opts.over && (!ov || ov.id === scope), A = applied ? opts.over : ov ? ov.a : R.base, own = applied ? scope !== "WH" : !!ov;
     const seq = (list) => (opts.onlyNew ? [...list.filter((x) => !isNew(x)), ...list.filter(isNew)] : list);

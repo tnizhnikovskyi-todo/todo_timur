@@ -497,6 +497,59 @@ try {
     await page.click("#ed-discall"); await page.waitForFunction(() => document.querySelector("#pr-cnt")?.textContent === "0");
     await page.click("#ed-tg");
   });
+  await step("розбір кодів: вікно, нове правило збільшує розібране, підказка маски, лоток «Не розміщено», розмістити, перетягнути, Ctrl+Z", async () => {
+    await page.evaluate(() => localStorage.clear()); await page.goto(url); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="2d"]');
+    expect(await page.locator("#tray-btn").isHidden(), "лоток виден без бездомных мест");
+    await page.click("#ed-tg"); await page.waitForSelector("#editbar:not([hidden])");
+    await page.click("#ed-parse"); await page.waitForSelector("#parse-dlg #parse-sum");
+    expect(/З 689 місць розібрано 683/.test(await text("#parse-sum")), `сводка: ${await text("#parse-sum")}`);
+    expect((await page.locator("#parse-dlg [data-row]").count()) === 11, "правил по умолчанию должно быть 11");
+    expect((await page.locator("#parse-dlg .parse-bad li").count()) === 6, "нераспознанных должно быть 6");
+    // новое правило: места на полу QC-*
+    await page.click("#parse-dlg [data-add]"); await page.fill('#parse-dlg [data-mask="11"]', "QC-*");
+    await page.waitForFunction(() => /розібрано 687/.test(document.querySelector("#parse-sum")?.textContent || ""));
+    // подсказка маски по первым нераспознанным (PACK-STORE, PAINT-STORE) → всё разобрано
+    await page.click("#parse-dlg [data-suggest]");
+    await page.waitForFunction(() => /розібрано 689/.test(document.querySelector("#parse-sum")?.textContent || ""));
+    expect(/\{префікс\}-STORE/.test(await page.inputValue('#parse-dlg [data-mask="12"]')), "подсказанная маска");
+    expect(await page.locator("#parse-dlg #parse-ok").count() === 1, "нет сообщения «усі коди розібрано»");
+    // выключить правило POST-*: POST-STAGE остаётся без зоны → в лоток; «Показати»
+    await page.check('#parse-dlg [data-off="8"]');
+    await page.waitForFunction(() => /У лотку «Не розміщено»: 1/.test(document.querySelector("#parse-tray")?.textContent || ""));
+    await page.click("#parse-dlg [data-pshow]");
+    await page.waitForSelector("#tray-btn:not([hidden])");
+    expect((await text("#tray-cnt")) === "1", "счётчик лотка");
+    expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 0, "место без зоны осталось на плане");
+    await page.click("#parse-dlg [data-close]"); await page.waitForSelector("#parse-dlg", { state: "detached" });
+    // лоток: список, выбрать, «Розмістити в…»
+    await page.click("#tray-btn"); await page.waitForSelector("#tray:not([hidden]) .traylist li");
+    expect(/POST-STAGE/.test(await text("#tray .traylist li")), "в лотке нет POST-STAGE");
+    await page.selectOption("#tray [data-zone]", { value: "WH/Сировина/Фурнітура" });
+    expect(await page.locator("#tray [data-place]").isDisabled(), "кнопка «Розмістити в…» доступна без выбора");
+    await page.check('#tray [data-pick="POST-STAGE"]'); await page.click("#tray [data-place]");
+    await page.waitForSelector("#tray #tray-none");
+    expect(await page.locator('svg rect[data-code="POST-STAGE"][data-node^="WH/Сировина/Фурнітура/"]').count() === 1, "место не встало в зону");
+    await page.keyboard.press("Control+z");
+    await page.waitForSelector("#tray .traylist li");
+    expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 0, "Ctrl+Z не вернул место в лоток");
+    // перетаскивание из лотка на зону в 2D
+    await page.dragAndDrop('#tray li[data-code="POST-STAGE"]', 'svg rect.zn[data-node="WH/Сировина/Фурнітура"]', { force: true });
+    await page.waitForSelector("#tray #tray-none");
+    expect(await page.locator(`svg rect[data-code="POST-STAGE"][data-node^="WH/Сировина/Фурнітура/"]`).count() === 1, `перетаскивание не поставило место в зону: ${await page.evaluate(() => [...document.querySelectorAll(`svg rect[data-code="POST-STAGE"]`)].map((x) => x.dataset.node).join(",")) || "нет"}`);
+    await page.keyboard.press("Control+z");
+    await page.waitForSelector("#tray .traylist li");
+    await page.keyboard.press("Control+z"); // отмена правил разбора
+    await page.waitForFunction(() => document.querySelector("#tray-cnt")?.textContent === "0");
+    await page.click("#tray [data-close]");
+    await page.waitForSelector("#tray-btn", { state: "hidden" });
+    expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 1, "после отмены правил POST-STAGE не вернулось на место");
+    // авторозкладка склада: форма есть; без здания и без ручных положений — «нічого не змінює»
+    await page.waitForSelector('#plan-side form[data-op="autoLayout"]');
+    await page.click('#plan-side form[data-op="autoLayout"] [data-show]');
+    await page.waitForFunction(() => /Авторозкладка нічого не змінює/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    await page.click("#ed-tg");
+  });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
     await p2.goto(url);
@@ -756,6 +809,10 @@ try {
     await pg.waitForFunction(() => /12\s+місц/.test(document.querySelector("#plan-side").innerText));
     expect(state.loads >= before + 2, "обновление не перечитало склады");
     expect((await pg.locator(".o_notif").first().innerText()).includes("Дані оновлено з Odoo"), "нет уведомления об обновлении");
+    await pg.waitForSelector("#diff-dlg"); // три новых места в Odoo — окно расхождений (W-13)
+    expect((await pg.locator("#diff-dlg tbody tr").count()) >= 1, "расхождения не показаны");
+    await pg.click("#diff-dlg [data-done]");
+    expect((await pg.locator("#diff-dlg").count()) === 0, "окно расхождений не закрылось");
     // W-17: «Оновити дані» перечитує остатки, но не структуру (в Odoo уже 5 стелажей, на плане остаются 12 мест); поиск, карточка, ссылка в Odoo
     state.bays = 5; state.qty = 7;
     await pg.evaluate(() => { document.querySelector("#vp svg")?.setAttribute("data-mark", "1"); });
@@ -776,6 +833,101 @@ try {
     await pg.waitForSelector("#odoopick-dlg");
     await pg.click("#odoopick-dlg [data-cancel]");
     expect((await pg.locator("#odoopick-dlg").count()) === 0, "окно выбора не закрылось");
+    await ctx.close();
+  });
+  await step("страница из Odoo: «План змін» — частичное применение, файл (экспорт W-10), проверки, журнал и откат, расхождения «залишити моє»", async () => {
+    const W = 1000, rows = [{ id: W, name: "WH1", complete_name: "WH1", location_id: null, usage: "view" }, { id: W + 1, name: "Фурнітура", complete_name: "WH1/Фурнітура", location_id: W, usage: "internal" },
+      ...[1, 2].flatMap((b) => [1, 2].map((l) => ({ id: W + 10 * b + l, name: `FUR-R1-S0${b}-L${l}`, complete_name: `WH1/Фурнітура/FUR-R1-S0${b}-L${l}`, location_id: W + 1, usage: "internal", barcode: null })))];
+    const state = { rows, applied: [], log: [], next: 5000, rights: { view: true, design: true, apply: true }, projects: new Map() };
+    const add = (r) => [{ id: `WH1/Фурнітура/${r}`, parent: "WH1/Фурнітура", name: r, kind: "rack", tp: "FUR" }, { id: `WH1/Фурнітура/${r}/S01`, parent: `WH1/Фурнітура/${r}`, name: "S01", kind: "bay", tp: "FUR" },
+      { id: `WH1/Фурнітура/${r}/S01/L1`, parent: `WH1/Фурнітура/${r}/S01`, name: "L1", kind: "level", tp: "FUR", lvl: 0, code: `FUR-${r}-S01-L1` }];
+    const saved = { v: 1, types: null, add: [...add("R2"), ...add("R3")], del: [], set: [], pos: [], rot: [], cells: [], prop: [], cfg: [], depth: null, depthZones: [], building: null, addr: null, addrZones: [], codes: [] };
+    state.projects.set("odoo-1", { rev: 1, data: { schema: 2, id: "odoo-1", name: "P", source: { kind: "odoo", name: "Odoo 19 · t" }, loaded_at: "2026-10-15 12:00", warehouses: [{ id: "wh-1", code: "WH1", name: "Склад 1", company: "Co", baseRef: "odoo:1", saved, pending: [], building: null }] } });
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce", acceptDownloads: true });
+    await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; });
+    const live = () => state.rows.filter((r) => r.active !== false);
+    const path = (r) => (r.location_id ? `${path(state.rows.find((x) => x.id === r.location_id))}/${r.name}` : r.name);
+    await ctx.route("**/wh_constructor/api/**", async (route) => {
+      const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+      let out;
+      if (r === "/me") out = { uid: 1, name: "Аня", company: "Co", rights: state.rights };
+      else if (r === "/projects") out = { status: "ok", projects: [...state.projects.values()].map((x) => ({ id: x.data.id, name: x.data.name, source: x.data.source, loaded_at: x.data.loaded_at, warehouses: 1 })) };
+      else if (r === "/project/load") { const x = state.projects.get(params.key); out = x ? { status: "ok", found: true, data: x.data, rev: x.rev } : { status: "ok", found: false }; }
+      else if (r === "/project/save") { const x = state.projects.get(params.key), rev = x ? x.rev + 1 : 1; state.projects.set(params.key, { data: params.data, rev }); out = { status: "ok", rev }; }
+      else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [{ id: 1, code: "WH1", name: "Склад 1", company_id: 1, company: "Co", view_location_id: W, places: 4 }] };
+      else if (r === "/read/locations") { const all = live().map((x) => ({ ...x, complete_name: path(x) })); out = { status: "ok", total: all.length, offset: 0, limit: params.limit, next: null, locations: all, products: {} }; }
+      else if (r.startsWith("/read/")) out = { status: "ok", total: 0, offset: 0, limit: params.limit, next: null, [r.slice(6)]: [], products: {} };
+      else if (r === "/apply/run") {
+        state.applied.push(params); const refs = {}, made = [];
+        for (const o of params.ops.filter((x) => x.kind === "create")) { const id = state.next++; refs[o.ref] = id; made.push(id); state.rows.push({ id, name: o.name, location_id: o.parent.ref ? refs[o.parent.ref] : o.parent.id, usage: o.usage, barcode: o.vals.barcode || null }); }
+        state.log.unshift({ id: state.log.length + 1, name: "WH1", date: "2026-10-15T12:00:00Z", user: "Аня", state: "applied", counts: { create: made.length }, made, ops: params.ops.map((o) => ({ op: o.kind, name: o.name, id: 0 })), more: 0 });
+        out = { status: "ok", log_id: state.log[0].id, refs, counts: { create: made.length, move: 0, rename: 0, attrs: 0, archive: 0 } };
+      } else if (r === "/apply/log") out = { status: "ok", log: state.log };
+      else if (r === "/apply/rollback") { const l = state.log.find((x) => x.id === params.log_id); l.state = "rolled_back"; l.rolled_back_by = "Аня"; l.rolled_back_at = "2026-10-15T12:05:00Z"; state.rows.filter((x) => l.made.includes(x.id)).forEach((x) => { x.active = false; }); out = { status: "ok", log_id: l.id }; }
+      else if (r.startsWith("/lock/")) out = { ok: true, owner: "Аня", mine: true };
+      else out = { status: "ok", found: false };
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+    });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    expect(await pg.locator("#plan-btn").isVisible(), "кнопка «План змін» не видна");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 6, `в плане должно быть 6 операций (два ряда по ряд+секция+место): ${await pg.locator("#plan-dlg [data-key]").count()}`);
+    expect((await pg.locator("#plan-dlg .o_chip").first().innerText()).includes("Створити"), "нет счётчика создания");
+    // файл — экспорт локаций W-10 (только изменённые, CSV)
+    await pg.click("#plan-dlg [data-csv]"); await pg.waitForSelector("#exp-dlg");
+    await pg.check("#exp-dlg input[name=mode][value=changed]"); await pg.check("#exp-dlg input[name=fmt][value=csv]");
+    const dl = pg.waitForEvent("download"); await pg.click("#exp-dlg [data-go]"); const file = await dl;
+    const csv = fs.readFileSync(await file.path(), "utf8").replace(/^\ufeff/, "");
+    expect(csv.startsWith("name,location_id,usage,barcode") && csv.includes("FUR-R2-S01-L1") && csv.includes("FUR-R3-S01-L1"), "экспорт локаций из плана неверный");
+    // частичное применение: только ряд R2 (зона/ряд — по списку); первое применение — напоминание о тестовой копии
+    await pg.selectOption("#plan-dlg [data-scope]", "WH1/Фурнітура/R2");
+    expect((await pg.locator("#plan-dlg [data-key]:checked").count()) === 3, "выбор ряда R2 должен отметить три операции");
+    await pg.click("#plan-dlg [data-apply]"); await pg.waitForSelector("#plan-dlg .o_remind");
+    expect(state.applied.length === 0, "до подтверждения ничего не отправлено");
+    await pg.check("#plan-dlg [data-ack]"); await pg.click("#plan-dlg [data-go]");
+    await pg.waitForSelector("#plan-dlg .o_msg.ok");
+    expect(state.applied.length === 1 && state.applied[0].ops.length === 3 && state.applied[0].ops.every((o) => o.kind === "create" && !/R3/.test(o.name)), "применены не три операции ряда R2");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 3, "в плане остался ряд R3");
+    expect((await pg.locator("#o_notifs").innerText()).includes("Застосовано в Odoo"), "нет уведомления о применении");
+    expect((await pg.evaluate(() => localStorage.getItem("wh-odoo-t-copyack-odoo-1"))) === "true", "«не нагадувати» не запомнилось");
+    // W-17 после применения: «Оновити дані» не трогает слой правок (в плане остаётся ряд R3), карточка созданного места открывается, ссылка ведёт на его новый id; код — из barcode
+    await pg.click("#plan-dlg [data-close2]");
+    await pg.click("#data-refresh");
+    await pg.waitForFunction(() => /Дані оновлено ·/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    const nid = state.rows.find((x) => x.barcode === "FUR-R2-S01-L1").id;
+    await pg.click('#seg-mode [data-m="2d"]');
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    const cell = await pg.locator('#vp svg rect.s[data-code="FUR-R2-S01-L1"]').boundingBox();
+    await pg.mouse.click(cell.x + cell.width / 2, cell.y + cell.height / 2);
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "FUR-R2-S01-L1");
+    expect((await pg.locator("#plan-side [data-odoo-link]").getAttribute("href")) === `/odoo/stock.location/${nid}`, "ссылка «Відкрити в Odoo» не ведёт на новый id созданного места");
+    expect(await pg.locator('#plan-side [data-card="capacity"]').count() === 1, "карточка созданного места не открылась");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 3, "«Оновити дані» затронула слой правок: в плане не осталось ряда R3");
+    // журнал и откат (с подтверждением вторым нажатием)
+    await pg.click('#plan-dlg [data-tab="journal"]'); await pg.waitForSelector("#plan-dlg [data-rb]");
+    await pg.click("#plan-dlg [data-rb]"); await pg.click("#plan-dlg [data-rb]"); await pg.waitForSelector("#plan-dlg .o_msg.ok");
+    expect(state.log[0].state === "rolled_back" && (await pg.locator("#plan-dlg tbody tr").first().innerText()).includes("Відкочено"), "откат не выполнен");
+    await pg.click('#plan-dlg [data-tab="plan"]'); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 6, "после отката в плане снова все шесть операций");
+    await pg.click("#plan-dlg [data-close2]");
+    expect((await pg.locator("#plan-dlg").count()) === 0, "окно плана не закрылось");
+    // расхождения: в Odoo переименовали место; «залишити моє» возвращает прежнее имя в модели (несохранённая правка, план предложит переименование)
+    state.rows.find((x) => x.name === "FUR-R1-S01-L1").name = "FUR-R1-S01-LX";
+    await pg.click("#odoo-refresh"); await pg.waitForSelector("#diff-dlg tbody tr");
+    expect((await pg.locator("#diff-dlg tbody tr").count()) === 1 && (await pg.locator("#diff-dlg").innerText()).includes("FUR-R1-S01-LX"), "расхождение не показано");
+    await pg.selectOption("#diff-dlg select[data-pick]", "keep"); await pg.click("#diff-dlg [data-done]");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg .o_warn"); // «моё» — несохранённая правка модели: в план попадёт после «Зберегти»
+    expect((await pg.locator("#plan-dlg .o_warn").innerText()).includes("незбережені"), "нет предупреждения о несохранённом");
+    await pg.click("#plan-dlg [data-close2]");
+    // ошибки панели проблем (W-07) запрещают применение: два ряда на одном месте → пересечение
+    const proj = state.projects.get("odoo-1").data.warehouses[0].saved; proj.pos = [{ id: "WH1/Фурнітура/R2", x: 0, y: 0 }, { id: "WH1/Фурнітура/R3", x: 0, y: 0 }];
+    await pg.reload(); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg .o_errs").count()) === 1 && (await pg.locator("#plan-dlg [data-apply]").isDisabled()) && (await pg.locator("#plan-dlg [data-csv]").isDisabled()), "при ошибках проверок применение не заблокировано");
+    await pg.click("#plan-dlg [data-errs]");
+    expect((await pg.locator("#plan-dlg").count()) === 0 && !(await pg.locator("#problems").isHidden()), "переход к панели проблем не сработал");
     await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {

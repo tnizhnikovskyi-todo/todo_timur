@@ -17,6 +17,7 @@ import { decorateDemo } from "./demostats.js";
 import { createOdooApi, odooIdOf, projectFromWarehouses } from "../adapters/odoo-api.js";
 import { openOdooPick } from "../view/odoopick.js";
 import { odooLocationUrl } from "../core/stock.js";
+import { diffSnapshots } from "../core/odoodiff.js";
 
 const LOCK_RENEW_MS = 60000; // срок блокировки на сервере — 5 минут, продлеваем раз в минуту
 
@@ -84,15 +85,34 @@ async function start() {
       if (failed.length) failed.forEach((f) => model.notify("bad", "n.odooLoadFail", f));
       else { model.notify("ok", "n.dataRefreshed", { n: r.updated || r.places }); if (r.added) model.notify("info", "n.dataAdded", { added: r.added }); }
     };
+    // активный склад проекта в Odoo: id склада Odoo и перечитывание его снимка (после применения и отката)
+    const active = () => { const w = model.warehouse; return { wh: w, id: odooIdOf(w.baseRef) }; };
+    const reread = async () => { const { wh } = active(); failed.length = 0; await pullBases([wh]); model.reloadBase(); failed.forEach((f) => model.notify("bad", "n.odooLoadFail", f)); return !failed.length; };
     const hostOdoo = odoo && {
       canRefresh: odooWhs().length > 0,
+      rights: storage.rights,
       async newProject() { try { if (await newOdooProject()) location.reload(); } catch (e) { console.error(e); model.notify("bad", "n.odooProjectFail", { msg: String(e.message || e) }); } },
+      // перечитывает склады проекта; возвращает расхождения с тем, что было загружено раньше (G7): [{ whId, code, items, old }] — выбор «прийняти з Odoo» / «залишити моє» делает окно
       async refresh() {
         failed.length = 0;
-        const places = await pullBases(odooWhs());
+        const whs = odooWhs(), before = new Map(whs.map((w) => [w.baseRef, bases[w.baseRef]]));
+        const places = await pullBases(whs);
         model.reloadBase();
         if (failed.length) failed.forEach((f) => model.notify("bad", "n.odooLoadFail", f));
         else model.notify("ok", "n.odooRefreshed", { n: places });
+        return whs.map((w) => ({ whId: w.id, code: w.code, old: before.get(w.baseRef), items: before.get(w.baseRef) && bases[w.baseRef] ? diffSnapshots(before.get(w.baseRef), bases[w.baseRef]) : [] })).filter((d) => d.items.length);
+      },
+      // «залишити моє» для выбранных строк склада whId (правки слоя, несохранённые)
+      keepMine(whId, picks, old) { if (model.warehouse.id !== whId) model.setWarehouse(whId); model.keepMine(picks, old); },
+      // применение плана изменений, журнал и откат (W-13); работают с активным складом проекта
+      plan: {
+        rights: storage.rights,
+        project: () => project.id,
+        async apply(ops, comment) { const { id } = active(); return storage.applyPlan({ project: project.id, warehouse: id, ops, comment }); },
+        // после успешного применения: снимок перечитывается, слой правок очищается от применённого (plan — план, keys — применённые операции)
+        async applied(plan, keys) { await reread(); model.applied(plan, keys); },
+        async journal() { const { id } = active(); return storage.applyLog({ project: project.id, warehouse: id }); },
+        async rollback(logId) { const r = await storage.rollback(logId); if (r && r.status === "ok") await reread(); return r; },
       },
     };
     mountApp(root, { model, i18n, host: { storage, bases, reload: () => location.reload(), odoo: hostOdoo || null, refreshData: dataRefresh, locationUrl: odoo ? odooLocationUrl : null } });
