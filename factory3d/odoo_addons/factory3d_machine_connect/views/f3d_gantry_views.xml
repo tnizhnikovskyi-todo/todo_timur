@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-15…V-19: f3d.gantry.stack, f3d.gantry.job (SPEC §3) -->
+<odoo>
+    <record id="view_f3d_gantry_stack_kanban" model="ir.ui.view">
+        <field name="name">f3d.gantry.stack.kanban</field>
+        <field name="model">f3d.gantry.stack</field>
+        <field name="arch" type="xml">
+            <kanban string="Портал: стоси" default_group_by="row" default_order="col" create="0"
+                    records_draggable="0" quick_create="0" group_create="0">
+                <field name="ws_product"/>
+                <field name="odoo_product_id"/>
+                <field name="min_qty"/>
+                <field name="max_qty"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <div class="fw-bold"><field name="code"/></div>
+                            <field name="state" widget="badge"
+                                   decoration-success="state == 'ok'" decoration-info="state == 'pending'"
+                                   decoration-danger="state == 'diff'" decoration-muted="state == 'unknown'"/>
+                        </div>
+                        <div>
+                            <field name="ws_product"/>
+                            <span t-if="record.odoo_product_id.raw_value"> / <field name="odoo_product_id"/></span>
+                        </div>
+                        <div class="text-muted">
+                            портал <field name="ws_qty"/> · Odoo <field name="odoo_qty"/> · подано <field name="fed_unconsumed"/>
+                        </div>
+                        <field name="fill" widget="percentage"/>
+                        <div t-if="record.min_qty.raw_value or record.max_qty.raw_value" class="text-muted">
+                            мін <field name="min_qty"/> / макс <field name="max_qty"/>
+                        </div>
+                        <div class="mt-2">
+                            <button type="object" name="action_replenish" class="btn btn-sm btn-secondary me-1"
+                                    groups="stock.group_stock_user">Поповнити</button>
+                            <button type="object" name="action_f3d_show" class="btn btn-sm btn-link"
+                                    groups="factory3d_base.group_f3d_user">3D</button>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_stack_list" model="ir.ui.view">
+        <field name="name">f3d.gantry.stack.list</field>
+        <field name="model">f3d.gantry.stack</field>
+        <field name="arch" type="xml">
+            <list string="Стоси порталу" create="0" decoration-danger="state == 'diff'">
+                <field name="code"/>
+                <field name="ws_product"/>
+                <field name="ws_lot" optional="hide"/>
+                <field name="ws_qty"/>
+                <field name="odoo_qty"/>
+                <field name="fed_unconsumed"/>
+                <field name="expected_qty"/>
+                <field name="diff"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'ok'" decoration-info="state == 'pending'"
+                       decoration-danger="state == 'diff'" decoration-muted="state == 'unknown'"/>
+                <field name="min_qty"/>
+                <field name="ws_updated"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_stack_form" model="ir.ui.view">
+        <field name="name">f3d.gantry.stack.form</field>
+        <field name="model">f3d.gantry.stack</field>
+        <field name="arch" type="xml">
+            <form string="Стос порталу">
+                <header>
+                    <button name="action_accept_portal" type="object" string="Прийняти з порталу"
+                            groups="stock.group_stock_manager" invisible="state != 'diff'"
+                            confirm="Створити інвентаризацію стосу на %s арк.?"/>
+                    <button name="action_fix_portal" type="object" string="Виправити портал"
+                            groups="stock.group_stock_manager" invisible="state != 'diff'"/>
+                    <button name="action_replenish" type="object" string="Поповнити" groups="stock.group_stock_user"/>
+                    <field name="state" widget="statusbar" statusbar_visible="unknown,ok,pending,diff"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_quants" type="object" class="oe_stat_button" icon="fa-cubes"
+                                string="Залишки"/>
+                        <button name="action_f3d_show" type="object" class="oe_stat_button" icon="fa-cube"
+                                string="3D" groups="factory3d_base.group_f3d_user"/>
+                    </div>
+                    <h1><field name="code" readonly="1"/></h1>
+                    <group>
+                        <group string="Портал">
+                            <field name="location_id"/>
+                            <field name="ws_product"/>
+                            <field name="ws_lot"/>
+                            <field name="ws_qty"/>
+                            <field name="ws_reserved"/>
+                            <field name="ws_locked"/>
+                            <field name="ws_updated"/>
+                            <field name="ws_seen"/>
+                        </group>
+                        <group string="Odoo">
+                            <field name="odoo_qty"/>
+                            <field name="odoo_product_id"/>
+                            <field name="odoo_lot_id"/>
+                            <field name="fed_unconsumed"/>
+                            <field name="expected_qty"/>
+                            <field name="diff"/>
+                            <field name="diff_since"/>
+                        </group>
+                        <group string="Правило поповнення">
+                            <field name="orderpoint_id"/>
+                            <field name="min_qty"/>
+                            <field name="max_qty"/>
+                            <field name="capacity"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Завдання" name="jobs">
+                            <field name="job_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="type"/>
+                                    <field name="target_workcenter_id"/>
+                                    <field name="sheets"/>
+                                    <field name="done"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_stack_search" model="ir.ui.view">
+        <field name="name">f3d.gantry.stack.search</field>
+        <field name="model">f3d.gantry.stack</field>
+        <field name="arch" type="xml">
+            <search string="Стоси порталу">
+                <field name="code"/>
+                <field name="ws_product"/>
+                <filter name="f_diff" string="Розбіжність" domain="[('state', '=', 'diff')]"/>
+                <filter name="f_pending" string="Перевіряється" domain="[('state', '=', 'pending')]"/>
+                <filter name="f_unknown" string="Немає даних" domain="[('state', '=', 'unknown')]"/>
+                <filter name="f_below_min" string="Нижче мінімуму" domain="[('ws_qty', '&lt;', 'min_qty')]"/>
+                <group>
+                    <filter name="g_row" string="Ряд" context="{'group_by': 'row'}"/>
+                    <filter name="g_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="g_product" string="Товар" context="{'group_by': 'ws_product'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_job_list" model="ir.ui.view">
+        <field name="name">f3d.gantry.job.list</field>
+        <field name="model">f3d.gantry.job</field>
+        <field name="arch" type="xml">
+            <list string="Завдання порталу">
+                <field name="name"/>
+                <field name="ws_id"/>
+                <field name="type"/>
+                <field name="stack_id"/>
+                <field name="target_workcenter_id"/>
+                <field name="product_id"/>
+                <field name="sheets"/>
+                <field name="done"/>
+                <field name="external_ref"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'" decoration-info="state in ('sent', 'queued')"
+                       decoration-warning="state == 'active'" decoration-danger="state == 'error'"
+                       decoration-muted="state in ('draft', 'cancelled')"/>
+                <field name="origin"/>
+                <field name="started" optional="hide"/>
+                <field name="finished" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_job_form" model="ir.ui.view">
+        <field name="name">f3d.gantry.job.form</field>
+        <field name="model">f3d.gantry.job</field>
+        <field name="arch" type="xml">
+            <form string="Завдання порталу">
+                <header>
+                    <button name="action_send" type="object" string="Надіслати" class="btn-primary"
+                            invisible="state not in ('draft', 'error')" groups="mrp.group_mrp_user"/>
+                    <button name="action_retry" type="object" string="Повторити"
+                            invisible="state != 'error'" groups="mrp.group_mrp_user"/>
+                    <button name="action_cancel" type="object" string="Скасувати"
+                            invisible="state in ('done', 'cancelled')" groups="mrp.group_mrp_user"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,to_send,sent,queued,active,done"/>
+                </header>
+                <sheet>
+                    <h1><field name="name" readonly="1"/></h1>
+                    <div class="alert alert-danger" role="alert" invisible="not error">
+                        <field name="error" readonly="1"/>
+                    </div>
+                    <group>
+                        <group string="Що">
+                            <field name="type"/>
+                            <field name="product_id"/>
+                            <field name="lot_id"/>
+                            <field name="sheets"/>
+                            <field name="done"/>
+                            <field name="priority"/>
+                        </group>
+                        <group string="Звідки/куди">
+                            <field name="stack_id"/>
+                            <field name="target_workcenter_id"/>
+                        </group>
+                        <group string="Документ">
+                            <field name="external_ref"/>
+                            <field name="production_id"/>
+                            <field name="workorder_id"/>
+                            <field name="cut_map_id"/>
+                        </group>
+                        <group string="Портал">
+                            <field name="ws_id"/>
+                            <field name="origin"/>
+                            <field name="command_id"/>
+                            <field name="ws_created"/>
+                            <field name="started"/>
+                            <field name="finished"/>
+                            <field name="consumed_qty"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Листи" name="sheets">
+                            <field name="sheet_log" widget="json" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_job_kanban" model="ir.ui.view">
+        <field name="name">f3d.gantry.job.kanban</field>
+        <field name="model">f3d.gantry.job</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" records_draggable="0" quick_create="0" group_create="0">
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <div class="fw-bold"><field name="name"/></div>
+                            <field name="type"/>
+                        </div>
+                        <div><field name="product_id"/> · <field name="done"/>/<field name="sheets"/> арк.</div>
+                        <div class="text-muted">
+                            <field name="stack_id"/> → <field name="target_workcenter_id"/>
+                        </div>
+                        <div class="text-muted"><field name="external_ref"/></div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_gantry_job_search" model="ir.ui.view">
+        <field name="name">f3d.gantry.job.search</field>
+        <field name="model">f3d.gantry.job</field>
+        <field name="arch" type="xml">
+            <search string="Завдання порталу">
+                <field name="name"/>
+                <field name="ws_id"/>
+                <field name="external_ref"/>
+                <field name="product_id"/>
+                <filter name="f_active" string="Активні"
+                        domain="[('state', 'in', ('to_send', 'sent', 'queued', 'active'))]"/>
+                <filter name="f_error" string="Помилки" domain="[('state', '=', 'error')]"/>
+                <filter name="f_today" string="Сьогодні"
+                        domain="[('create_date', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter name="f_machine" string="З порталу" domain="[('origin', '=', 'machine')]"/>
+                <group>
+                    <filter name="g_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="g_target" string="Верстат" context="{'group_by': 'target_workcenter_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

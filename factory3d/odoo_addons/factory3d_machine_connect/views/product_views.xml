@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-29 (частина): товар — група «Лист плити». -->
+<odoo>
+    <record id="view_product_template_form_f3d" model="ir.ui.view">
+        <field name="name">product.template.form.f3d</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general_information']" position="inside">
+                <group name="f3d_sheet" string="Лист плити" groups="factory3d_base.group_f3d_user">
+                    <field name="f3d_sheet_length_mm"/>
+                    <field name="f3d_sheet_width_mm"/>
+                    <field name="f3d_thickness_mm"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

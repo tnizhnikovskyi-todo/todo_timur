@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-26: завдання (mrp.workorder) — лічильник верстата, неповна партія, «Надіслати на верстат». -->
+<odoo>
+    <record id="view_mrp_workorder_form_f3d" model="ir.ui.view">
+        <field name="name">mrp.workorder.form.f3d</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_production_workorder_form_view_inherit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="f3d_can_send" invisible="1"/>
+                <button name="action_f3d_send_to_machine" type="object" string="Надіслати на верстат"
+                        class="btn-primary" groups="mrp.group_mrp_user"
+                        invisible="not f3d_can_send or state not in ('ready', 'blocked')"/>
+                <button name="action_f3d_finish_partial" type="object" string="Завершити неповною партією"
+                        groups="mrp.group_mrp_manager" invisible="not f3d_partial_hold"/>
+                <button name="action_f3d_clear_hold" type="object" string="Зняти позначку"
+                        groups="mrp.group_mrp_manager" invisible="not f3d_partial_hold"/>
+            </xpath>
+            <xpath expr="//field[@name='qty_produced']" position="after">
+                <field name="f3d_qty_counted"/>
+                <field name="f3d_machine_state" widget="badge"
+                       decoration-success="f3d_machine_state == 'working'"
+                       decoration-info="f3d_machine_state == 'setup'"
+                       decoration-warning="f3d_machine_state == 'idle'"
+                       decoration-danger="f3d_machine_state == 'fault'"
+                       decoration-muted="f3d_machine_state in ('off', 'nodata')"/>
+                <field name="f3d_auto_started"/>
+                <field name="f3d_partial_hold"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Верстат" name="f3d_machine">
+                    <group>
+                        <field name="f3d_run_min" widget="float_time"/>
+                        <field name="f3d_setup_min" widget="float_time"/>
+                    </group>
+                    <field name="f3d_cut_map_ids" readonly="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
+                    <field name="f3d_gantry_job_ids" readonly="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_workorder_list_f3d" model="ir.ui.view">
+        <field name="name">mrp.workorder.list.f3d</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_production_workorder_tree_editable_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state']" position="before">
+                <field name="f3d_qty_counted" optional="show"/>
+                <field name="f3d_machine_state" optional="show" widget="badge"/>
+                <field name="f3d_partial_hold" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

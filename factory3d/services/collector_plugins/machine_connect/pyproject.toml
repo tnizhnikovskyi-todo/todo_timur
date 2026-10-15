@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f3d_collector_mc"
+version = "0.1.0"
+description = "Плагіни колектора factory3d для верстатів (OPC UA, woodStore, оптимізатор розкрою)"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[project.entry-points."factory3d_collector.plugins"]
+opcua = "f3d_collector_mc.opcua:OpcUaPlugin"
+rest_vendor = "f3d_collector_mc.rest_vendor:RestVendorPlugin"
+
+[project.entry-points."factory3d_collector.rest_vendors"]
+woodstore = "f3d_collector_mc.woodstore:WoodStoreAdapter"
+cutopt = "f3d_collector_mc.cutopt:CutOptAdapter"
+generic = "f3d_collector_mc.generic:GenericAdapter"
+
+[tool.setuptools.packages.find]
+include = ["f3d_collector_mc*"]
+
+[tool.setuptools.package-data]
+"f3d_collector_mc" = ["schemas/*.json"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+timeout = 60
+markers = ["stand: тести проти compose-стенду (iot_sim + колектор + Odoo)"]
+addopts = "-m 'not stand'"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]

@@ -1,0 +1,5 @@
+part_code;name;length_mm;width_mm;qty;material_role;material;grain;edge_top;edge_bottom;edge_left;edge_right;program;note
+P001;Боковина;720;560;2;main;DSP18-ANT;1;;;;;;
+P002;Верхня кришка;800;560;1;main;DSP18-ANT;1;;;;;;
+P003;Дно шухляди;720;520;4;main;DSP18-ANT;0;;;;;;
+P004;Полиця;764;520;2;main;DSP18-ANT;0;;;;;;

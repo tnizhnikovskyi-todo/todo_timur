@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-30. Дії без явних view_id: представлення воркерів W1–W8 підключаються самі (за типом). -->
+<odoo>
+    <record id="action_f3d_machine_dashboard" model="ir.actions.act_window">
+        <field name="name">Огляд верстатів</field>
+        <field name="res_model">f3d.machine</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+    <record id="action_f3d_downtime" model="ir.actions.act_window">
+        <field name="name">Простої</field>
+        <field name="res_model">f3d.downtime</field>
+        <field name="view_mode">list,kanban,form,graph,pivot</field>
+        <field name="context">{'search_default_today': 1}</field>
+    </record>
+    <record id="action_f3d_downtime_tablet" model="ir.actions.act_window">
+        <field name="name">Простої без причини</field>
+        <field name="res_model">f3d.downtime</field>
+        <field name="view_mode">kanban,form</field>
+        <field name="context">{'search_default_not_confirmed': 1, 'search_default_today': 1}</field>
+    </record>
+    <record id="action_f3d_oee_shift" model="ir.actions.act_window">
+        <field name="name">OEE</field>
+        <field name="res_model">f3d.oee.shift</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="context">{'search_default_this_week': 1}</field>
+    </record>
+    <record id="action_f3d_machine_state_log" model="ir.actions.act_window">
+        <field name="name">Журнал станів</field>
+        <field name="res_model">f3d.machine.state.log</field>
+        <field name="view_mode">list,graph,pivot</field>
+    </record>
+    <record id="action_f3d_machine_event" model="ir.actions.act_window">
+        <field name="name">Події верстатів</field>
+        <field name="res_model">f3d.machine.event</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_f3d_gantry_stack" model="ir.actions.act_window">
+        <field name="name">Стоси під порталом</field>
+        <field name="res_model">f3d.gantry.stack</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+    <record id="action_f3d_gantry_job" model="ir.actions.act_window">
+        <field name="name">Завдання порталу</field>
+        <field name="res_model">f3d.gantry.job</field>
+        <field name="view_mode">list,kanban,form</field>
+    </record>
+    <record id="action_f3d_cut_map" model="ir.actions.act_window">
+        <field name="name">Карти розкрою</field>
+        <field name="res_model">f3d.cut.map</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_f3d_cut_part" model="ir.actions.act_window">
+        <field name="name">Деталі виробів</field>
+        <field name="res_model">f3d.cut.part</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_bom': 1}</field>
+    </record>
+    <record id="action_f3d_machine_config" model="ir.actions.act_window">
+        <field name="name">Верстати (підключення)</field>
+        <field name="res_model">f3d.machine</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_f3d_machine_message" model="ir.actions.act_window">
+        <field name="name">Повідомлення верстатів</field>
+        <field name="res_model">f3d.machine.message</field>
+        <field name="view_mode">list</field>
+    </record>
+    <record id="action_f3d_productivity_loss" model="ir.actions.act_window">
+        <field name="name">Причини простоїв</field>
+        <field name="res_model">mrp.workcenter.productivity.loss</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_f3d_mc_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування верстатів</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{'module': 'factory3d_machine_connect'}</field>
+    </record>
+
+    <menuitem id="menu_f3d_mc_root" name="Верстати" parent="factory3d_base.menu_f3d_root" sequence="40" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_mc_dashboard" name="Огляд верстатів" parent="menu_f3d_mc_root" sequence="10" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_machine_dashboard"/>
+    <menuitem id="menu_f3d_mc_downtime" name="Простої" parent="menu_f3d_mc_root" sequence="20" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_downtime"/>
+    <menuitem id="menu_f3d_mc_downtime_tablet" name="Простої без причини" parent="menu_f3d_mc_root" sequence="21" groups="mrp.group_mrp_user"
+              action="action_f3d_downtime_tablet"/>
+    <menuitem id="menu_f3d_mc_oee" name="OEE" parent="menu_f3d_mc_root" sequence="30" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_oee_shift"/>
+    <menuitem id="menu_f3d_mc_log" name="Журнал станів" parent="menu_f3d_mc_root" sequence="40" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_machine_state_log"/>
+    <menuitem id="menu_f3d_mc_event" name="Події верстатів" parent="menu_f3d_mc_root" sequence="45" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_machine_event"/>
+    <menuitem id="menu_f3d_mc_gantry" name="Портал" parent="menu_f3d_mc_root" sequence="50" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_mc_gantry_stack" name="Стоси під порталом" parent="menu_f3d_mc_gantry" sequence="10" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_gantry_stack"/>
+    <menuitem id="menu_f3d_mc_gantry_job" name="Завдання порталу" parent="menu_f3d_mc_gantry" sequence="20" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_gantry_job"/>
+    <menuitem id="menu_f3d_mc_cut" name="Розкрій" parent="menu_f3d_mc_root" sequence="60" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_mc_cut_map" name="Карти розкрою" parent="menu_f3d_mc_cut" sequence="10" groups="factory3d_base.group_f3d_user"
+              action="action_f3d_cut_map"/>
+    <menuitem id="menu_f3d_mc_cut_part" name="Деталі виробів" parent="menu_f3d_mc_cut" sequence="20" groups="factory3d_base.group_f3d_manager"
+              action="action_f3d_cut_part"/>
+    <menuitem id="menu_f3d_mc_config" name="Налаштування" parent="menu_f3d_mc_root" sequence="90" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_mc_config_machine" name="Верстати (підключення)" parent="menu_f3d_mc_config" sequence="10" groups="factory3d_base.group_f3d_manager"
+              action="action_f3d_machine_config"/>
+    <menuitem id="menu_f3d_mc_config_message" name="Повідомлення верстатів" parent="menu_f3d_mc_config" sequence="20" groups="factory3d_base.group_f3d_manager"
+              action="action_f3d_machine_message"/>
+    <menuitem id="menu_f3d_mc_config_loss" name="Причини простоїв" parent="menu_f3d_mc_config" sequence="30" groups="factory3d_base.group_f3d_manager"
+              action="action_f3d_productivity_loss"/>
+    <menuitem id="menu_f3d_mc_settings" name="Налаштування верстатів" parent="factory3d_base.menu_f3d_config" sequence="40" groups="factory3d_base.group_f3d_manager"
+              action="action_f3d_mc_settings"/>
+</odoo>

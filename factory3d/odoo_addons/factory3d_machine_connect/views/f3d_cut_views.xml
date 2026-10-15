@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-20…V-23: деталі виробів і карти розкрою. -->
+<odoo>
+    <record id="view_f3d_cut_part_list" model="ir.ui.view">
+        <field name="name">f3d.cut.part.list</field>
+        <field name="model">f3d.cut.part</field>
+        <field name="arch" type="xml">
+            <list string="Деталі виробів" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="bom_id" column_invisible="context.get('default_bom_id')"/>
+                <field name="part_code"/>
+                <field name="name"/>
+                <field name="length_mm"/>
+                <field name="width_mm"/>
+                <field name="qty"/>
+                <field name="material_role"/>
+                <field name="material_product_id" optional="show"/>
+                <field name="grain"/>
+                <field name="edge_top"/>
+                <field name="edge_bottom"/>
+                <field name="edge_left"/>
+                <field name="edge_right"/>
+                <field name="program"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_cut_part_form" model="ir.ui.view">
+        <field name="name">f3d.cut.part.form</field>
+        <field name="model">f3d.cut.part</field>
+        <field name="arch" type="xml">
+            <form string="Деталь виробу">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="bom_id"/>
+                            <field name="part_code"/>
+                            <field name="name"/>
+                            <field name="qty"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="length_mm"/>
+                            <field name="width_mm"/>
+                            <field name="grain"/>
+                            <field name="material_role"/>
+                            <field name="material_product_id" required="material_role == 'product'"/>
+                        </group>
+                        <group string="Крайка">
+                            <field name="edge_top"/>
+                            <field name="edge_bottom"/>
+                            <field name="edge_left"/>
+                            <field name="edge_right"/>
+                        </group>
+                        <group string="ЧПК">
+                            <field name="program"/>
+                            <field name="note"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_cut_part_search" model="ir.ui.view">
+        <field name="name">f3d.cut.part.search</field>
+        <field name="model">f3d.cut.part</field>
+        <field name="arch" type="xml">
+            <search string="Деталі виробів">
+                <field name="bom_id"/>
+                <field name="product_tmpl_id"/>
+                <field name="part_code"/>
+                <field name="name"/>
+                <group>
+                    <filter string="Специфікація" name="group_bom" context="{'group_by': 'bom_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_cut_map_list" model="ir.ui.view">
+        <field name="name">f3d.cut.map.list</field>
+        <field name="model">f3d.cut.map</field>
+        <field name="arch" type="xml">
+            <list string="Карти розкрою">
+                <field name="name"/>
+                <field name="production_id"/>
+                <field name="workcenter_id"/>
+                <field name="material_product_id"/>
+                <field name="qty"/>
+                <field name="parts_count"/>
+                <field name="plan_sheets"/>
+                <field name="plan_waste_pct"/>
+                <field name="state" widget="badge"
+                       decoration-info="state in ('exported', 'optimizing')"
+                       decoration-success="state in ('planned', 'released', 'running', 'done')"
+                       decoration-danger="state == 'error'"
+                       decoration-muted="state in ('draft', 'cancel')"/>
+                <field name="mode"/>
+                <field name="ext_job_id" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_cut_map_form" model="ir.ui.view">
+        <field name="name">f3d.cut.map.form</field>
+        <field name="model">f3d.cut.map</field>
+        <field name="arch" type="xml">
+            <form string="Карта розкрою">
+                <header>
+                    <button name="action_build_lines" type="object" string="Зібрати деталі"
+                            invisible="state != 'draft'"/>
+                    <button name="action_export" type="object" string="Експортувати" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_download_csv" type="object" string="Завантажити CSV"
+                            invisible="not csv_attachment_id"/>
+                    <button name="action_send_optimizer" type="object" string="На оптимізацію"
+                            invisible="state not in ('exported', 'error') or mode != 'collector'"/>
+                    <button name="action_open_plan_import" type="object" string="Імпорт плану"
+                            invisible="state not in ('exported', 'optimizing', 'planned') or mode != 'manual'"/>
+                    <button name="action_update_mo_need" type="object" string="Оновити потребу МО"
+                            invisible="not sheets_warning" groups="mrp.group_mrp_manager"/>
+                    <button name="action_release" type="object" string="Випустити на верстат" class="btn-primary"
+                            invisible="state != 'planned'"/>
+                    <button name="action_cancel" type="object" string="Скасувати"
+                            invisible="state in ('done', 'cancel')"/>
+                    <button name="action_reset_draft" type="object" string="У чернетку"
+                            invisible="state not in ('error', 'cancel')"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,exported,optimizing,planned,released,running,done"/>
+                </header>
+                <sheet>
+                    <h1><field name="name" readonly="1"/></h1>
+                    <div class="alert alert-warning" role="alert" invisible="not sheets_warning">
+                        <field name="sheets_warning"/>
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="not error">
+                        <field name="error"/>
+                    </div>
+                    <group>
+                        <group string="Замовлення">
+                            <field name="production_id" readonly="state != 'draft'"/>
+                            <field name="product_id"/>
+                            <field name="qty" readonly="state != 'draft'"/>
+                            <field name="mode" readonly="state != 'draft'"/>
+                            <field name="workorder_id"/>
+                            <field name="workcenter_id"/>
+                        </group>
+                        <group string="Матеріал">
+                            <field name="material_role" readonly="state != 'draft'"/>
+                            <field name="material_product_id" readonly="state != 'draft'"/>
+                            <field name="sheet_length_mm" readonly="state != 'draft'"/>
+                            <field name="sheet_width_mm" readonly="state != 'draft'"/>
+                            <field name="thickness_mm" readonly="state != 'draft'"/>
+                        </group>
+                        <group string="План">
+                            <field name="plan_sheets"/>
+                            <field name="plan_waste_pct"/>
+                            <field name="plan_cut_length_m"/>
+                            <field name="plan_est_min"/>
+                            <field name="ext_job_id"/>
+                            <field name="job_order_id"/>
+                            <field name="gantry_job_id"/>
+                        </group>
+                        <group string="Файли">
+                            <field name="csv_attachment_id"/>
+                            <field name="plan_attachment_id"/>
+                            <field name="mpr_attachment_ids" widget="many2many_binary" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Деталі" name="lines">
+                            <field name="line_ids" readonly="state != 'draft'">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="part_code"/>
+                                    <field name="name"/>
+                                    <field name="length_mm"/>
+                                    <field name="width_mm"/>
+                                    <field name="qty"/>
+                                    <field name="grain"/>
+                                    <field name="edge_top"/>
+                                    <field name="edge_bottom"/>
+                                    <field name="edge_left"/>
+                                    <field name="edge_right"/>
+                                    <field name="program"/>
+                                    <field name="mpr_attachment_id" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Команди" name="commands">
+                            <field name="command_ids" readonly="1">
+                                <list>
+                                    <field name="text"/>
+                                    <field name="state"/>
+                                    <field name="result"/>
+                                    <field name="error"/>
+                                    <field name="requested_at"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_cut_map_search" model="ir.ui.view">
+        <field name="name">f3d.cut.map.search</field>
+        <field name="model">f3d.cut.map</field>
+        <field name="arch" type="xml">
+            <search string="Карти розкрою">
+                <field name="name"/>
+                <field name="production_id"/>
+                <field name="ext_job_id"/>
+                <filter string="Чернетки" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="В оптимізації" name="optimizing" domain="[('state', 'in', ('exported', 'optimizing'))]"/>
+                <filter string="Сплановані" name="planned" domain="[('state', '=', 'planned')]"/>
+                <filter string="На верстаті" name="released" domain="[('state', 'in', ('released', 'running'))]"/>
+                <filter string="Виконані" name="done" domain="[('state', '=', 'done')]"/>
+                <filter string="Помилки" name="error" domain="[('state', '=', 'error')]"/>
+                <group>
+                    <filter string="Стан" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Верстат" name="group_workcenter" context="{'group_by': 'workcenter_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-29 (частина): РЦ, журнал часу, причини втрат. Лист плити (product.template) — власник W6. -->
+<odoo>
+    <record id="view_mrp_workcenter_form_f3d" model="ir.ui.view">
+        <field name="name">mrp.workcenter.form.f3d</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button type="object" name="action_f3d_machine" class="oe_stat_button" icon="fa-plug"
+                        groups="factory3d_base.group_f3d_user">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Верстат</span>
+                        <field name="f3d_machine_state" widget="badge"
+                               decoration-success="f3d_machine_state == 'working'"
+                               decoration-info="f3d_machine_state == 'setup'"
+                               decoration-warning="f3d_machine_state == 'idle'"
+                               decoration-danger="f3d_machine_state == 'fault'"
+                               decoration-muted="f3d_machine_state in ('off', 'nodata')"/>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_workcenter_productivity_list_f3d" model="ir.ui.view">
+        <field name="name">mrp.workcenter.productivity.list.f3d</field>
+        <field name="model">mrp.workcenter.productivity</field>
+        <field name="inherit_id" ref="mrp.oee_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='loss_id']" position="after">
+                <field name="f3d_source" optional="show"/>
+                <field name="f3d_downtime_id" optional="hide"/>
+                <field name="f3d_auto" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_workcenter_productivity_loss_form_f3d" model="ir.ui.view">
+        <field name="name">mrp.workcenter.productivity.loss.form.f3d</field>
+        <field name="model">mrp.workcenter.productivity.loss</field>
+        <field name="inherit_id" ref="mrp.oee_loss_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='loss_id']" position="after">
+                <field name="f3d_planned"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
