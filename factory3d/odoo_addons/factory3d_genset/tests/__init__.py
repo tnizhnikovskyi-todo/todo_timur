@@ -8,3 +8,7 @@ from . import test_hooks
 from . import test_provider
 from . import test_no_viewer
 from . import test_views
+from . import test_access
+from . import test_static
+from . import test_payload
+from . import test_source

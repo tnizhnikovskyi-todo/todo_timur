@@ -127,3 +127,20 @@ class TestHook(GensetCase):
         self.assertFalse(source.active)
         self.assertEqual(self.env["f3d.signal"].search_count([("code", "=like", "infra/genset/GENSET/%")]), 26)
         self.assertTrue(req.exists())
+
+    def test_signals_appendix_a_fields(self):  # AC-62 (Додаток A)
+        from ..adapters import telemetry
+        self.run_hook()
+        signals = self.env["f3d.signal"].search([("code", "=like", "infra/genset/GENSET/%")])
+        by_leaf = {s.code.rsplit("/", 1)[1]: s for s in signals}
+        self.assertEqual(sorted(by_leaf), sorted(row[0] for row in telemetry.SIGNALS))
+        for leaf, name, unit, kind, _stale in telemetry.SIGNALS:
+            sig = by_leaf[leaf]
+            self.assertTrue(sig.name.endswith(name), leaf)
+            self.assertEqual((sig.unit or "", sig.kind), (unit, kind), leaf)
+            self.assertEqual(sig.equipment_id, self.genset_eq, leaf)
+            self.assertEqual((sig.source_id.code, sig.module), ("GENSET-RELAY", "genset"), leaf)
+            self.assertEqual((sig.period_s, sig.store_period_s, sig.viewer_visible), (100, 0, True), leaf)
+        by_leaf["p_kw"].write({"name": "змінено вручну"})
+        self.run_hook()
+        self.assertEqual(by_leaf["p_kw"].name, "змінено вручну")
