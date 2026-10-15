@@ -1,6 +1,6 @@
 # factory3d_base
 Статус: DONE (юнит-DoD); ТК-01…05 не прогнаны — нет копии демо-базы `odoo`
-Тесты: 150/150 (/factory3d_base, 100 post-install, 2026-10-14), ruff чисто; ТК: ждут копию демо-базы
+Тесты: 150/150 (/factory3d_base, 2026-10-14), ruff чисто; ТК-01 частично: установка на базе `odoo` timur-o19demo (Enterprise, 2026-10-15) — migration_state=done, коды 682/14/35/35/210, пакетов +18, mismatches 0, x_* удалены; ТК-02…05 не прогнаны
 Решений без заказчика: 15 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: ТК-01…05 по DEPLOY_TEST.md на копии базы `odoo`; мост factory3d_base_mrp_maintenance не тестирован — нет Enterprise (ENV-1); правки SPEC: DEC-5, DEC-11, DEC-15

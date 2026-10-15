@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "params modbus_tcp (SPEC A.2)",
+  "type": "object",
+  "propertyNames": {"pattern": "^[^_]"},
+  "properties": {
+    "host": {"type": "string", "minLength": 1, "maxLength": 253},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "unit": {"type": "integer", "minimum": 1, "maximum": 247},
+    "timeout_s": {"type": "number", "minimum": 0.5, "maximum": 60},
+    "retries": {"type": "integer", "minimum": 0, "maximum": 5},
+    "max_block": {"type": "integer", "minimum": 1, "maximum": 125},
+    "gap_max": {"type": "integer", "minimum": 0, "maximum": 32}
+  },
+  "required": ["host"]
+}

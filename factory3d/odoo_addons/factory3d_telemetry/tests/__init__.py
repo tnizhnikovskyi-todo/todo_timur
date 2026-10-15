@@ -1,0 +1,17 @@
+from . import test_install  # noqa: F401
+from . import test_collector  # noqa: F401
+from . import test_source  # noqa: F401
+from . import test_signal  # noqa: F401
+from . import test_readings  # noqa: F401
+from . import test_thresholds  # noqa: F401
+from . import test_requests  # noqa: F401
+from . import test_meter  # noqa: F401
+from . import test_api  # noqa: F401
+from . import test_commands  # noqa: F401
+from . import test_push_handler  # noqa: F401
+from . import test_rotation_push  # noqa: F401
+from . import test_sim_catalog  # noqa: F401
+from . import test_migration  # noqa: F401
+from . import test_security  # noqa: F401
+from . import test_views  # noqa: F401
+from . import test_hooks  # noqa: F401

@@ -1,0 +1,2857 @@
+{
+ "EventCollection": {
+  "rows": [
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPCNC4"
+    },
+    "id": "1",
+    "hint": "H1"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "2",
+    "hint": "H2"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPPACKLINE1"
+    },
+    "id": "3",
+    "hint": "H3"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "4",
+    "hint": "H4"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPSPRAY1"
+    },
+    "id": "5",
+    "hint": "H5"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "6",
+    "hint": "H6"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW6"
+    },
+    "id": "7",
+    "hint": "H7"
+   },
+   {
+    "datetime": "2026-10-12T03:40:00.00Z",
+    "server_datetime": "2026-10-12T03:40:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "8",
+    "hint": "H8"
+   },
+   {
+    "datetime": "2026-10-12T03:40:01.00Z",
+    "server_datetime": "2026-10-12T03:40:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "9",
+    "hint": "H9"
+   },
+   {
+    "datetime": "2026-10-12T03:40:01.00Z",
+    "server_datetime": "2026-10-12T03:40:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "10",
+    "hint": "H10"
+   },
+   {
+    "datetime": "2026-10-12T03:40:01.00Z",
+    "server_datetime": "2026-10-12T03:40:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "11",
+    "hint": "H11"
+   },
+   {
+    "datetime": "2026-10-12T03:40:01.00Z",
+    "server_datetime": "2026-10-12T03:40:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "12",
+    "hint": "H12"
+   },
+   {
+    "datetime": "2026-10-12T03:40:06.00Z",
+    "server_datetime": "2026-10-12T03:40:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "13",
+    "hint": "H13"
+   },
+   {
+    "datetime": "2026-10-12T03:40:06.00Z",
+    "server_datetime": "2026-10-12T03:40:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "14",
+    "hint": "H14"
+   },
+   {
+    "datetime": "2026-10-12T03:40:06.00Z",
+    "server_datetime": "2026-10-12T03:40:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "15",
+    "hint": "H15"
+   },
+   {
+    "datetime": "2026-10-12T03:40:06.00Z",
+    "server_datetime": "2026-10-12T03:40:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "16",
+    "hint": "H16"
+   },
+   {
+    "datetime": "2026-10-12T03:41:00.00Z",
+    "server_datetime": "2026-10-12T03:41:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPCNC3"
+    },
+    "id": "17",
+    "hint": "H17"
+   },
+   {
+    "datetime": "2026-10-12T03:41:00.00Z",
+    "server_datetime": "2026-10-12T03:41:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "18",
+    "hint": "H18"
+   },
+   {
+    "datetime": "2026-10-12T03:41:01.00Z",
+    "server_datetime": "2026-10-12T03:41:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "19",
+    "hint": "H19"
+   },
+   {
+    "datetime": "2026-10-12T03:41:06.00Z",
+    "server_datetime": "2026-10-12T03:41:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "20",
+    "hint": "H20"
+   },
+   {
+    "datetime": "2026-10-12T03:42:00.00Z",
+    "server_datetime": "2026-10-12T03:42:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPASM1"
+    },
+    "id": "21",
+    "hint": "H21"
+   },
+   {
+    "datetime": "2026-10-12T03:42:00.00Z",
+    "server_datetime": "2026-10-12T03:42:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "22",
+    "hint": "H22"
+   },
+   {
+    "datetime": "2026-10-12T03:42:00.00Z",
+    "server_datetime": "2026-10-12T03:42:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPCNC2"
+    },
+    "id": "23",
+    "hint": "H23"
+   },
+   {
+    "datetime": "2026-10-12T03:42:00.00Z",
+    "server_datetime": "2026-10-12T03:42:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "24",
+    "hint": "H24"
+   },
+   {
+    "datetime": "2026-10-12T03:42:00.00Z",
+    "server_datetime": "2026-10-12T03:42:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPEDGE1"
+    },
+    "id": "25",
+    "hint": "H25"
+   },
+   {
+    "datetime": "2026-10-12T03:42:00.00Z",
+    "server_datetime": "2026-10-12T03:42:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "26",
+    "hint": "H26"
+   },
+   {
+    "datetime": "2026-10-12T03:42:01.00Z",
+    "server_datetime": "2026-10-12T03:42:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "27",
+    "hint": "H27"
+   },
+   {
+    "datetime": "2026-10-12T03:42:01.00Z",
+    "server_datetime": "2026-10-12T03:42:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "28",
+    "hint": "H28"
+   },
+   {
+    "datetime": "2026-10-12T03:42:01.00Z",
+    "server_datetime": "2026-10-12T03:42:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "29",
+    "hint": "H29"
+   },
+   {
+    "datetime": "2026-10-12T03:42:06.00Z",
+    "server_datetime": "2026-10-12T03:42:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "30",
+    "hint": "H30"
+   },
+   {
+    "datetime": "2026-10-12T03:42:06.00Z",
+    "server_datetime": "2026-10-12T03:42:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "31",
+    "hint": "H31"
+   },
+   {
+    "datetime": "2026-10-12T03:42:06.00Z",
+    "server_datetime": "2026-10-12T03:42:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "32",
+    "hint": "H32"
+   },
+   {
+    "datetime": "2026-10-12T03:43:00.00Z",
+    "server_datetime": "2026-10-12T03:43:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPASM2"
+    },
+    "id": "33",
+    "hint": "H33"
+   },
+   {
+    "datetime": "2026-10-12T03:43:00.00Z",
+    "server_datetime": "2026-10-12T03:43:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "34",
+    "hint": "H34"
+   },
+   {
+    "datetime": "2026-10-12T03:43:00.00Z",
+    "server_datetime": "2026-10-12T03:43:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPCNC1"
+    },
+    "id": "35",
+    "hint": "H35"
+   },
+   {
+    "datetime": "2026-10-12T03:43:00.00Z",
+    "server_datetime": "2026-10-12T03:43:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "36",
+    "hint": "H36"
+   },
+   {
+    "datetime": "2026-10-12T03:43:00.00Z",
+    "server_datetime": "2026-10-12T03:43:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPEDGE2"
+    },
+    "id": "37",
+    "hint": "H37"
+   },
+   {
+    "datetime": "2026-10-12T03:43:00.00Z",
+    "server_datetime": "2026-10-12T03:43:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "38",
+    "hint": "H38"
+   },
+   {
+    "datetime": "2026-10-12T03:43:01.00Z",
+    "server_datetime": "2026-10-12T03:43:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "39",
+    "hint": "H39"
+   },
+   {
+    "datetime": "2026-10-12T03:43:01.00Z",
+    "server_datetime": "2026-10-12T03:43:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "40",
+    "hint": "H40"
+   },
+   {
+    "datetime": "2026-10-12T03:43:01.00Z",
+    "server_datetime": "2026-10-12T03:43:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "41",
+    "hint": "H41"
+   },
+   {
+    "datetime": "2026-10-12T03:43:06.00Z",
+    "server_datetime": "2026-10-12T03:43:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "42",
+    "hint": "H42"
+   },
+   {
+    "datetime": "2026-10-12T03:43:06.00Z",
+    "server_datetime": "2026-10-12T03:43:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "43",
+    "hint": "H43"
+   },
+   {
+    "datetime": "2026-10-12T03:43:06.00Z",
+    "server_datetime": "2026-10-12T03:43:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "44",
+    "hint": "H44"
+   },
+   {
+    "datetime": "2026-10-12T03:44:00.00Z",
+    "server_datetime": "2026-10-12T03:44:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPASM3"
+    },
+    "id": "45",
+    "hint": "H45"
+   },
+   {
+    "datetime": "2026-10-12T03:44:00.00Z",
+    "server_datetime": "2026-10-12T03:44:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "46",
+    "hint": "H46"
+   },
+   {
+    "datetime": "2026-10-12T03:44:00.00Z",
+    "server_datetime": "2026-10-12T03:44:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPASMLINE1"
+    },
+    "id": "47",
+    "hint": "H47"
+   },
+   {
+    "datetime": "2026-10-12T03:44:00.00Z",
+    "server_datetime": "2026-10-12T03:44:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "48",
+    "hint": "H48"
+   },
+   {
+    "datetime": "2026-10-12T03:44:01.00Z",
+    "server_datetime": "2026-10-12T03:44:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "49",
+    "hint": "H49"
+   },
+   {
+    "datetime": "2026-10-12T03:44:01.00Z",
+    "server_datetime": "2026-10-12T03:44:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "50",
+    "hint": "H50"
+   },
+   {
+    "datetime": "2026-10-12T03:44:06.00Z",
+    "server_datetime": "2026-10-12T03:44:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "51",
+    "hint": "H51"
+   },
+   {
+    "datetime": "2026-10-12T03:44:06.00Z",
+    "server_datetime": "2026-10-12T03:44:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "52",
+    "hint": "H52"
+   },
+   {
+    "datetime": "2026-10-12T03:45:00.00Z",
+    "server_datetime": "2026-10-12T03:45:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPASM4"
+    },
+    "id": "53",
+    "hint": "H53"
+   },
+   {
+    "datetime": "2026-10-12T03:45:00.00Z",
+    "server_datetime": "2026-10-12T03:45:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "54",
+    "hint": "H54"
+   },
+   {
+    "datetime": "2026-10-12T03:45:00.00Z",
+    "server_datetime": "2026-10-12T03:45:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPSAND1"
+    },
+    "id": "55",
+    "hint": "H55"
+   },
+   {
+    "datetime": "2026-10-12T03:45:00.00Z",
+    "server_datetime": "2026-10-12T03:45:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "56",
+    "hint": "H56"
+   },
+   {
+    "datetime": "2026-10-12T03:45:01.00Z",
+    "server_datetime": "2026-10-12T03:45:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "57",
+    "hint": "H57"
+   },
+   {
+    "datetime": "2026-10-12T03:45:01.00Z",
+    "server_datetime": "2026-10-12T03:45:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "58",
+    "hint": "H58"
+   },
+   {
+    "datetime": "2026-10-12T03:45:06.00Z",
+    "server_datetime": "2026-10-12T03:45:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "59",
+    "hint": "H59"
+   },
+   {
+    "datetime": "2026-10-12T03:45:06.00Z",
+    "server_datetime": "2026-10-12T03:45:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "60",
+    "hint": "H60"
+   },
+   {
+    "datetime": "2026-10-12T03:46:00.00Z",
+    "server_datetime": "2026-10-12T03:46:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPHINGE1"
+    },
+    "id": "61",
+    "hint": "H61"
+   },
+   {
+    "datetime": "2026-10-12T03:46:00.00Z",
+    "server_datetime": "2026-10-12T03:46:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "62",
+    "hint": "H62"
+   },
+   {
+    "datetime": "2026-10-12T03:46:01.00Z",
+    "server_datetime": "2026-10-12T03:46:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "63",
+    "hint": "H63"
+   },
+   {
+    "datetime": "2026-10-12T03:46:06.00Z",
+    "server_datetime": "2026-10-12T03:46:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "64",
+    "hint": "H64"
+   },
+   {
+    "datetime": "2026-10-12T03:47:00.00Z",
+    "server_datetime": "2026-10-12T03:47:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPASM6"
+    },
+    "id": "65",
+    "hint": "H65"
+   },
+   {
+    "datetime": "2026-10-12T03:47:00.00Z",
+    "server_datetime": "2026-10-12T03:47:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "66",
+    "hint": "H66"
+   },
+   {
+    "datetime": "2026-10-12T03:47:01.00Z",
+    "server_datetime": "2026-10-12T03:47:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "67",
+    "hint": "H67"
+   },
+   {
+    "datetime": "2026-10-12T03:47:06.00Z",
+    "server_datetime": "2026-10-12T03:47:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "68",
+    "hint": "H68"
+   },
+   {
+    "datetime": "2026-10-12T03:49:00.00Z",
+    "server_datetime": "2026-10-12T03:49:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPBORE1"
+    },
+    "id": "69",
+    "hint": "H69"
+   },
+   {
+    "datetime": "2026-10-12T03:49:00.00Z",
+    "server_datetime": "2026-10-12T03:49:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "70",
+    "hint": "H70"
+   },
+   {
+    "datetime": "2026-10-12T03:49:00.00Z",
+    "server_datetime": "2026-10-12T03:49:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPSAW2"
+    },
+    "id": "71",
+    "hint": "H71"
+   },
+   {
+    "datetime": "2026-10-12T03:49:00.00Z",
+    "server_datetime": "2026-10-12T03:49:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "72",
+    "hint": "H72"
+   },
+   {
+    "datetime": "2026-10-12T03:49:01.00Z",
+    "server_datetime": "2026-10-12T03:49:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "73",
+    "hint": "H73"
+   },
+   {
+    "datetime": "2026-10-12T03:49:01.00Z",
+    "server_datetime": "2026-10-12T03:49:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "74",
+    "hint": "H74"
+   },
+   {
+    "datetime": "2026-10-12T03:49:06.00Z",
+    "server_datetime": "2026-10-12T03:49:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "75",
+    "hint": "H75"
+   },
+   {
+    "datetime": "2026-10-12T03:49:06.00Z",
+    "server_datetime": "2026-10-12T03:49:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "76",
+    "hint": "H76"
+   },
+   {
+    "datetime": "2026-10-12T03:52:00.00Z",
+    "server_datetime": "2026-10-12T03:52:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPSAW1"
+    },
+    "id": "77",
+    "hint": "H77"
+   },
+   {
+    "datetime": "2026-10-12T03:52:00.00Z",
+    "server_datetime": "2026-10-12T03:52:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "78",
+    "hint": "H78"
+   },
+   {
+    "datetime": "2026-10-12T03:52:01.00Z",
+    "server_datetime": "2026-10-12T03:52:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "79",
+    "hint": "H79"
+   },
+   {
+    "datetime": "2026-10-12T03:52:06.00Z",
+    "server_datetime": "2026-10-12T03:52:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "80",
+    "hint": "H80"
+   },
+   {
+    "datetime": "2026-10-12T03:53:00.00Z",
+    "server_datetime": "2026-10-12T03:53:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW1"
+    },
+    "id": "81",
+    "hint": "H81"
+   },
+   {
+    "datetime": "2026-10-12T03:53:00.00Z",
+    "server_datetime": "2026-10-12T03:53:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "82",
+    "hint": "H82"
+   },
+   {
+    "datetime": "2026-10-12T03:53:01.00Z",
+    "server_datetime": "2026-10-12T03:53:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "83",
+    "hint": "H83"
+   },
+   {
+    "datetime": "2026-10-12T03:53:06.00Z",
+    "server_datetime": "2026-10-12T03:53:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "84",
+    "hint": "H84"
+   },
+   {
+    "datetime": "2026-10-12T03:54:00.00Z",
+    "server_datetime": "2026-10-12T03:54:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPDOWEL1"
+    },
+    "id": "85",
+    "hint": "H85"
+   },
+   {
+    "datetime": "2026-10-12T03:54:00.00Z",
+    "server_datetime": "2026-10-12T03:54:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "86",
+    "hint": "H86"
+   },
+   {
+    "datetime": "2026-10-12T03:54:01.00Z",
+    "server_datetime": "2026-10-12T03:54:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "87",
+    "hint": "H87"
+   },
+   {
+    "datetime": "2026-10-12T03:54:06.00Z",
+    "server_datetime": "2026-10-12T03:54:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "88",
+    "hint": "H88"
+   },
+   {
+    "datetime": "2026-10-12T03:55:00.00Z",
+    "server_datetime": "2026-10-12T03:55:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW3"
+    },
+    "id": "89",
+    "hint": "H89"
+   },
+   {
+    "datetime": "2026-10-12T03:55:00.00Z",
+    "server_datetime": "2026-10-12T03:55:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "90",
+    "hint": "H90"
+   },
+   {
+    "datetime": "2026-10-12T03:55:01.00Z",
+    "server_datetime": "2026-10-12T03:55:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "91",
+    "hint": "H91"
+   },
+   {
+    "datetime": "2026-10-12T03:55:06.00Z",
+    "server_datetime": "2026-10-12T03:55:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "92",
+    "hint": "H92"
+   },
+   {
+    "datetime": "2026-10-12T03:56:00.00Z",
+    "server_datetime": "2026-10-12T03:56:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPBOX1"
+    },
+    "id": "93",
+    "hint": "H93"
+   },
+   {
+    "datetime": "2026-10-12T03:56:00.00Z",
+    "server_datetime": "2026-10-12T03:56:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "94",
+    "hint": "H94"
+   },
+   {
+    "datetime": "2026-10-12T03:56:00.00Z",
+    "server_datetime": "2026-10-12T03:56:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPSLIDE1"
+    },
+    "id": "95",
+    "hint": "H95"
+   },
+   {
+    "datetime": "2026-10-12T03:56:00.00Z",
+    "server_datetime": "2026-10-12T03:56:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "96",
+    "hint": "H96"
+   },
+   {
+    "datetime": "2026-10-12T03:56:00.00Z",
+    "server_datetime": "2026-10-12T03:56:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW2"
+    },
+    "id": "97",
+    "hint": "H97"
+   },
+   {
+    "datetime": "2026-10-12T03:56:00.00Z",
+    "server_datetime": "2026-10-12T03:56:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "98",
+    "hint": "H98"
+   },
+   {
+    "datetime": "2026-10-12T03:56:01.00Z",
+    "server_datetime": "2026-10-12T03:56:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "99",
+    "hint": "H99"
+   },
+   {
+    "datetime": "2026-10-12T03:56:01.00Z",
+    "server_datetime": "2026-10-12T03:56:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "100",
+    "hint": "H100"
+   },
+   {
+    "datetime": "2026-10-12T03:56:01.00Z",
+    "server_datetime": "2026-10-12T03:56:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "101",
+    "hint": "H101"
+   },
+   {
+    "datetime": "2026-10-12T03:56:06.00Z",
+    "server_datetime": "2026-10-12T03:56:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "102",
+    "hint": "H102"
+   },
+   {
+    "datetime": "2026-10-12T03:56:06.00Z",
+    "server_datetime": "2026-10-12T03:56:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "103",
+    "hint": "H103"
+   },
+   {
+    "datetime": "2026-10-12T03:56:06.00Z",
+    "server_datetime": "2026-10-12T03:56:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "104",
+    "hint": "H104"
+   },
+   {
+    "datetime": "2026-10-12T03:57:00.00Z",
+    "server_datetime": "2026-10-12T03:57:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPAUTOSPRAY1"
+    },
+    "id": "105",
+    "hint": "H105"
+   },
+   {
+    "datetime": "2026-10-12T03:57:00.00Z",
+    "server_datetime": "2026-10-12T03:57:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "106",
+    "hint": "H106"
+   },
+   {
+    "datetime": "2026-10-12T03:57:00.00Z",
+    "server_datetime": "2026-10-12T03:57:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPNEST1"
+    },
+    "id": "107",
+    "hint": "H107"
+   },
+   {
+    "datetime": "2026-10-12T03:57:00.00Z",
+    "server_datetime": "2026-10-12T03:57:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "108",
+    "hint": "H108"
+   },
+   {
+    "datetime": "2026-10-12T03:57:00.00Z",
+    "server_datetime": "2026-10-12T03:57:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW5"
+    },
+    "id": "109",
+    "hint": "H109"
+   },
+   {
+    "datetime": "2026-10-12T03:57:00.00Z",
+    "server_datetime": "2026-10-12T03:57:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "110",
+    "hint": "H110"
+   },
+   {
+    "datetime": "2026-10-12T03:57:01.00Z",
+    "server_datetime": "2026-10-12T03:57:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "111",
+    "hint": "H111"
+   },
+   {
+    "datetime": "2026-10-12T03:57:01.00Z",
+    "server_datetime": "2026-10-12T03:57:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "112",
+    "hint": "H112"
+   },
+   {
+    "datetime": "2026-10-12T03:57:01.00Z",
+    "server_datetime": "2026-10-12T03:57:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "113",
+    "hint": "H113"
+   },
+   {
+    "datetime": "2026-10-12T03:57:06.00Z",
+    "server_datetime": "2026-10-12T03:57:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "114",
+    "hint": "H114"
+   },
+   {
+    "datetime": "2026-10-12T03:57:06.00Z",
+    "server_datetime": "2026-10-12T03:57:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "115",
+    "hint": "H115"
+   },
+   {
+    "datetime": "2026-10-12T03:57:06.00Z",
+    "server_datetime": "2026-10-12T03:57:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "116",
+    "hint": "H116"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPGLUE1"
+    },
+    "id": "117",
+    "hint": "H117"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "118",
+    "hint": "H118"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPPACK1"
+    },
+    "id": "119",
+    "hint": "H119"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "120",
+    "hint": "H120"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPPRESS1"
+    },
+    "id": "121",
+    "hint": "H121"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "122",
+    "hint": "H122"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW4"
+    },
+    "id": "123",
+    "hint": "H123"
+   },
+   {
+    "datetime": "2026-10-12T03:58:00.00Z",
+    "server_datetime": "2026-10-12T03:58:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "124",
+    "hint": "H124"
+   },
+   {
+    "datetime": "2026-10-12T03:58:01.00Z",
+    "server_datetime": "2026-10-12T03:58:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "125",
+    "hint": "H125"
+   },
+   {
+    "datetime": "2026-10-12T03:58:01.00Z",
+    "server_datetime": "2026-10-12T03:58:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "126",
+    "hint": "H126"
+   },
+   {
+    "datetime": "2026-10-12T03:58:01.00Z",
+    "server_datetime": "2026-10-12T03:58:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "127",
+    "hint": "H127"
+   },
+   {
+    "datetime": "2026-10-12T03:58:01.00Z",
+    "server_datetime": "2026-10-12T03:58:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "128",
+    "hint": "H128"
+   },
+   {
+    "datetime": "2026-10-12T03:58:06.00Z",
+    "server_datetime": "2026-10-12T03:58:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "129",
+    "hint": "H129"
+   },
+   {
+    "datetime": "2026-10-12T03:58:06.00Z",
+    "server_datetime": "2026-10-12T03:58:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "130",
+    "hint": "H130"
+   },
+   {
+    "datetime": "2026-10-12T03:58:06.00Z",
+    "server_datetime": "2026-10-12T03:58:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "131",
+    "hint": "H131"
+   },
+   {
+    "datetime": "2026-10-12T03:58:06.00Z",
+    "server_datetime": "2026-10-12T03:58:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "132",
+    "hint": "H132"
+   },
+   {
+    "datetime": "2026-10-12T03:59:00.00Z",
+    "server_datetime": "2026-10-12T03:59:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPPACK2"
+    },
+    "id": "133",
+    "hint": "H133"
+   },
+   {
+    "datetime": "2026-10-12T03:59:00.00Z",
+    "server_datetime": "2026-10-12T03:59:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "134",
+    "hint": "H134"
+   },
+   {
+    "datetime": "2026-10-12T03:59:00.00Z",
+    "server_datetime": "2026-10-12T03:59:00.00Z",
+    "event_type_id": {
+     "code": "4867"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "1",
+    "user_id": {
+     "user_id": "OPW7"
+    },
+    "id": "135",
+    "hint": "H135"
+   },
+   {
+    "datetime": "2026-10-12T03:59:00.00Z",
+    "server_datetime": "2026-10-12T03:59:00.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "136",
+    "hint": "H136"
+   },
+   {
+    "datetime": "2026-10-12T03:59:01.00Z",
+    "server_datetime": "2026-10-12T03:59:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "137",
+    "hint": "H137"
+   },
+   {
+    "datetime": "2026-10-12T03:59:01.00Z",
+    "server_datetime": "2026-10-12T03:59:01.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "138",
+    "hint": "H138"
+   },
+   {
+    "datetime": "2026-10-12T03:59:06.00Z",
+    "server_datetime": "2026-10-12T03:59:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "139",
+    "hint": "H139"
+   },
+   {
+    "datetime": "2026-10-12T03:59:06.00Z",
+    "server_datetime": "2026-10-12T03:59:06.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390001"
+    },
+    "door_id": [
+     {
+      "id": "1"
+     }
+    ],
+    "tna_key": "",
+    "id": "140",
+    "hint": "H140"
+   },
+   {
+    "datetime": "2026-10-12T06:51:00.00Z",
+    "server_datetime": "2026-10-12T06:51:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390002"
+    },
+    "door_id": [
+     {
+      "id": "2"
+     }
+    ],
+    "tna_key": "",
+    "user_id": {
+     "user_id": "OPW1"
+    },
+    "id": "141",
+    "hint": "H141"
+   },
+   {
+    "datetime": "2026-10-12T06:51:000.00Z",
+    "server_datetime": "2026-10-12T06:51:000.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390002"
+    },
+    "door_id": [
+     {
+      "id": "2"
+     }
+    ],
+    "tna_key": "",
+    "id": "142",
+    "hint": "H142"
+   },
+   {
+    "datetime": "2026-10-12T06:51:001.00Z",
+    "server_datetime": "2026-10-12T06:51:001.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390002"
+    },
+    "door_id": [
+     {
+      "id": "2"
+     }
+    ],
+    "tna_key": "",
+    "id": "143",
+    "hint": "H143"
+   },
+   {
+    "datetime": "2026-10-12T06:51:006.00Z",
+    "server_datetime": "2026-10-12T06:51:006.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390002"
+    },
+    "door_id": [
+     {
+      "id": "2"
+     }
+    ],
+    "tna_key": "",
+    "id": "144",
+    "hint": "H144"
+   },
+   {
+    "datetime": "2026-10-12T07:20:00.00Z",
+    "server_datetime": "2026-10-12T07:20:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390004"
+    },
+    "door_id": [
+     {
+      "id": "4"
+     }
+    ],
+    "tna_key": "",
+    "user_id": {
+     "user_id": "OPW2"
+    },
+    "id": "145",
+    "hint": "H145"
+   },
+   {
+    "datetime": "2026-10-12T07:20:000.00Z",
+    "server_datetime": "2026-10-12T07:20:000.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390004"
+    },
+    "door_id": [
+     {
+      "id": "4"
+     }
+    ],
+    "tna_key": "",
+    "id": "146",
+    "hint": "H146"
+   },
+   {
+    "datetime": "2026-10-12T07:20:001.00Z",
+    "server_datetime": "2026-10-12T07:20:001.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390004"
+    },
+    "door_id": [
+     {
+      "id": "4"
+     }
+    ],
+    "tna_key": "",
+    "id": "147",
+    "hint": "H147"
+   },
+   {
+    "datetime": "2026-10-12T07:20:006.00Z",
+    "server_datetime": "2026-10-12T07:20:006.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390004"
+    },
+    "door_id": [
+     {
+      "id": "4"
+     }
+    ],
+    "tna_key": "",
+    "id": "148",
+    "hint": "H148"
+   },
+   {
+    "datetime": "2026-10-12T08:05:00.00Z",
+    "server_datetime": "2026-10-12T08:05:00.00Z",
+    "event_type_id": {
+     "code": "4102"
+    },
+    "device_id": {
+     "id": "5390005"
+    },
+    "door_id": [
+     {
+      "id": "5"
+     }
+    ],
+    "tna_key": "",
+    "user_id": {
+     "user_id": "1"
+    },
+    "id": "149",
+    "hint": "H149"
+   },
+   {
+    "datetime": "2026-10-12T08:05:000.00Z",
+    "server_datetime": "2026-10-12T08:05:000.00Z",
+    "event_type_id": {
+     "code": "20480"
+    },
+    "device_id": {
+     "id": "5390005"
+    },
+    "door_id": [
+     {
+      "id": "5"
+     }
+    ],
+    "tna_key": "",
+    "id": "150",
+    "hint": "H150"
+   },
+   {
+    "datetime": "2026-10-12T08:05:001.00Z",
+    "server_datetime": "2026-10-12T08:05:001.00Z",
+    "event_type_id": {
+     "code": "20992"
+    },
+    "device_id": {
+     "id": "5390005"
+    },
+    "door_id": [
+     {
+      "id": "5"
+     }
+    ],
+    "tna_key": "",
+    "id": "151",
+    "hint": "H151"
+   },
+   {
+    "datetime": "2026-10-12T08:05:006.00Z",
+    "server_datetime": "2026-10-12T08:05:006.00Z",
+    "event_type_id": {
+     "code": "21248"
+    },
+    "device_id": {
+     "id": "5390005"
+    },
+    "door_id": [
+     {
+      "id": "5"
+     }
+    ],
+    "tna_key": "",
+    "id": "152",
+    "hint": "H152"
+   }
+  ],
+  "total": "152"
+ }
+}

@@ -1,0 +1,18 @@
+# Запуск з кореня factory3d: docker compose -f services/collector/docker-compose.collector.yml up -d
+networks:
+  f3d_sim: {external: true}        # мережа emulator compose (iot_sim, mosquitto)
+  odoo_default: {external: true}   # мережа Odoo
+services:
+  collector:
+    build: .
+    env_file: ./.env
+    networks: [f3d_sim, odoo_default]
+    volumes: ["collector_state:/app/state"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    user: "10002:10002"
+    cap_drop: [ALL]
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9108/health')"], interval: 30s, timeout: 5s, retries: 3}
+    restart: unless-stopped
+volumes: {collector_state: {}}

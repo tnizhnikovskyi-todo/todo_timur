@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_command_list" model="ir.ui.view">
+        <field name="name">f3d.command.list</field>
+        <field name="model">f3d.command</field>
+        <field name="arch" type="xml">
+            <list string="Команди" decoration-danger="state == 'failed'" decoration-muted="state in ('expired', 'cancelled')">
+                <field name="requested_at"/>
+                <field name="signal_id"/>
+                <field name="value"/>
+                <field name="text"/>
+                <field name="state" widget="badge"/>
+                <field name="requested_by"/>
+                <field name="sent_at"/>
+                <field name="done_at"/>
+                <field name="error"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_command_form" model="ir.ui.view">
+        <field name="name">f3d.command.form</field>
+        <field name="model">f3d.command</field>
+        <field name="arch" type="xml">
+            <form string="Команда на пристрій">
+                <header>
+                    <button name="action_cancel" type="object" string="Скасувати" invisible="state != 'queued'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="queued,sent,done"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Команда виконається, лише якщо запис дозволено на модулі, джерелі, сигналі й у колекторі.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="signal_kind" invisible="1"/>
+                            <field name="signal_id"/>
+                            <field name="value"/>
+                            <field name="text" invisible="signal_kind != 'state'"/>
+                            <field name="expires_at"/>
+                            <field name="note"/>
+                        </group>
+                        <group string="Результат">
+                            <field name="result" readonly="1"/>
+                            <field name="error" readonly="1"/>
+                            <field name="result_data" widget="json" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Дані команди">
+                        <field name="payload_text" widget="ace" options="{'mode': 'json'}" nolabel="1"/>
+                        <div class="text-muted">Лише для команд-викликів модулів; порожньо — звичайний запис значення.</div>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_command" model="ir.actions.act_window">
+        <field name="name">Команди</field>
+        <field name="res_model">f3d.command</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

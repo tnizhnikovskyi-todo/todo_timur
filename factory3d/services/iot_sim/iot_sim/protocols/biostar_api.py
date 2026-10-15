@@ -5,7 +5,8 @@ HTTPS (самопідписаний, ``SIM_PORT_BIOSTAR_HTTPS``) і HTTP (``SIM_
 ``emit("access", msg, device="ACR-IN", payload={"user_id": "OPSAW1", "event_code": 4102,
 "door": "1", "tna_key": "1"})`` (``door`` і ``tna_key`` необов'язкові; ``event_code`` — коди §8.12);
 ``BioStarStore.add_event`` — той самий вхід для тестів. Користувачі — ``world.people`` (``barcode``,
-``name``, необов'язково ``group``). POST/PUT/DELETE на незмінні ресурси -> 405.
+``name``, необов'язково ``group``). Відомий шлях + непідтримуваний метод (POST/PUT/DELETE на незмінні ресурси,
+у т. ч. ``/api/users/{id}``, ``/api/cards``) -> 405 з ``Allow``; невідомий шлях -> 404.
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ import ipaddress
 import logging
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,10 @@ EVENT_TYPES = {
     6405: "Access Denied (anti-passback)", 20480: "Door Unlocked", 20736: "Door Locked",
     20992: "Door Opened", 21248: "Door Closed", 21504: "Door Forced Open", 21760: "Door Held Open",
     26368: "Zone Fire Alarm", 12544: "Device System Started", 15104: "TCP Connected"}
+# Ресурси BioStar 2, які є на реальному пристрої, але емулятор їх не обслуговує (лише читання підмножини):
+# будь-який метод на них -> 405, а не 404 (SPEC §8.12: «POST на незмінні ресурси → 405»).
+IMMUTABLE_PATHS = ("/api/users/{user_id}", "/api/cards", "/api/cards/{card_id}")
+_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 _COLUMN_SYNONYMS = {"device_id.id": "device", "door_id.id": "door", "event_type_id.code": "code",
                     "user_group_id.id": "group", "user_id.user_id": "user", "datetime": "datetime",
                     "server_datetime": "server_datetime", "id": "id"}
@@ -318,7 +323,34 @@ def create_app(store: BioStarStore) -> FastAPI:
         rows = [{"code": str(c), "name": n, "description": n} for c, n in EVENT_TYPES.items()]
         return ok({"EventTypeCollection": {"rows": rows}})
 
+    _add_method_not_allowed(app)
     return app
+
+
+def _add_method_not_allowed(app: FastAPI) -> None:
+    """Для кожного відомого шляху (маршрути + ``IMMUTABLE_PATHS``) — відповідь 405 на методи, яких немає.
+
+    Реєструється після робочих маршрутів: Starlette віддає перевагу повному збігу (шлях + метод), тож робочі
+    методи не зачіпає; невідомий шлях, як і раніше, -> 404. Відповідь у форматі BioStar (``Response.code``).
+    """
+    served: dict[str, set[str]] = {}
+    for route in app.routes:
+        path = getattr(route, "path", None)
+        if path is not None:
+            served.setdefault(path, set()).update(getattr(route, "methods", None) or ())
+    for path in IMMUTABLE_PATHS:
+        served.setdefault(path, set())
+    def make_handler(allow: str) -> Callable[[Request], Awaitable[JSONResponse]]:
+        async def handler(request: Request) -> JSONResponse:
+            log.warning("BioStar 405 %s %s", request.method, request.url.path, extra={"proto": "biostar"})
+            return JSONResponse({"Response": {"code": "405", "message": "Method Not Allowed"}},
+                                status_code=405, headers={"Allow": allow})
+        return handler
+
+    for path, methods in served.items():
+        rejected = [m for m in _METHODS if m not in methods]
+        handler = make_handler(", ".join(sorted(methods - {"HEAD"})))
+        app.add_api_route(path, handler, methods=rejected, include_in_schema=False)
 
 
 def ensure_cert(cert_dir: Path) -> tuple[Path, Path]:

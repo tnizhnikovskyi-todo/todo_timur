@@ -1,6 +1,8 @@
 # factory3d_access — специфікація
 
 Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · автор: агент-архітектор модуля (хвиля 2, фаза 4) · статус: **чернетка на погодження**.
+Зміни: 15.10.2026 — за рішенням модуля (build/modules/factory3d_access.md): DEC-10 (V-12 `action_f3d_access_settings` і AC-69: `target='current'` замість `inline`, недопустимого в Odoo 19).
+
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-23 і X-87 (M-12, R-12 п. 7: дельта доповнює `patch` через `deep_merge` —
 картки `infra` і ключі CA-05 `employees`/`zones`; AC-51, AC-67), X-33 (міст `factory3d_access_telemetry` створює 7 сигналів
 `access/*`: §0, §1, M-17, §5.3, R-18, AC-53, AC-68), X-09 (A-21: `f3d_code` працівника тепер у `hr.employee.public`, base
@@ -934,7 +936,7 @@ telemetry R-12 його не дублює), `active=True`.
 | `action_f3d_access_user_link` | `f3d.access.user.link` | list,form | `context={'search_default_unlinked': 1}` |
 | `action_f3d_access_server` | `f3d.access.server` | list,form | — |
 | `action_f3d_access_reprocess_wizard` | M-13 | form | `target='new'` |
-| `action_f3d_access_settings` | `res.config.settings` | form | `target='inline'`, `context={'module': 'hr_attendance'}` — відкриває налаштування застосунку «Відвідування», де блок V-13 `f3d_access_block` (X-89; шаблон td_genset `action_f3d_genset_settings`); визначена у `views/res_config_settings_views.xml` |
+| `action_f3d_access_settings` | `res.config.settings` | form | `target='current'` (`inline` недопустимий в Odoo 19), `context={'module': 'hr_attendance'}` — відкриває налаштування застосунку «Відвідування», де блок V-13 `f3d_access_block` (X-89; шаблон td_genset `action_f3d_genset_settings`); визначена у `views/res_config_settings_views.xml` |
 
 Меню (CB-09: sequence 70 під `factory3d_base.menu_f3d_root` зарезервовано):
 
@@ -1873,7 +1875,7 @@ W1 AC-01…AC-14, W2 AC-15…AC-38, W3 AC-39…AC-48, W4 AC-49…AC-69.
 | AC-66 | FR-12 | `get_view` (адміністратор): форма `hr.employee` містить `page[@name='f3d_access']`; форма `hr.attendance` — `f3d_in_event_id`; налаштування — `block[@name='f3d_access_block']`; форма `f3d.zone` — кнопку `action_view_people`; kanban `f3d.access.presence` має `default_group_by="zone_id"`. MAN: ТК-09 крок 1–3 у браузері | UT + MAN |
 | AC-67 | FR-14 | Given `patch={'infra': {'cards': {'PV-INV': {'rows': [['Зараз', '468 кВт']]}}, 'totals': {'pv_now': 468}}, 'employees': {'OP-TST-A': {'name': 'А', 'workcenter': 'SAW-1'}}}` (як після energy 150 і `people`), `inf = patch['infra']`, `ctx.changes={'hr.employee': {'OP-TST-A'}}`; When `_f3d_viewer_delta(patch, ctx)` (X-23, X-87); Then `patch['infra'] is inf` (не присвоєно), `patch['infra']['cards']` має `PV-INV` (незмінна), `TURNSTILES`, `ACCESS`; `patch['infra']['totals'] == {'pv_now': 468}`; `patch['employees']['OP-TST-A']` має `name='А'`, `workcenter='SAW-1'` і `present`, `zone`, `zone_since`, `last_event`; `deep_merge` — з `factory3d_viewer.tools.payload` | UT |
 | AC-68 | FR-15 | Given установлені `factory3d_access` і `factory3d_telemetry` (міст `factory3d_access_telemetry` установлено автоматично: `ir.module.module` `state='installed'`), 5 пристроїв data; Then є рівно 7 сигналів `access/%` (M-17): 5 `access/readers/<ACR-*>/last_event` (`kind='event'`), `access/turnstiles/TURNSTILES/on_site` (`gauge`, `unit='осіб'`), `access/events` (`event`); у всіх `module='access'`, `origin='module'`, `source_id=False`, `viewer_visible=False`, `create_request=False`, `period_s=60`. When `_f3d_ensure_signals()` удруге; Then `{'created': 0, 'existing': 7}`. When створено `f3d.access.device` з `code='ACR-T9'`; Then з'явився `access/readers/ACR-T9/last_event`. When `env['f3d.signal'].sudo()._f3d_ingest([{'code': 'access/turnstiles/TURNSTILES/on_site', 'ts': now, 'value': 35.0, 'q': 'good'}], src='module')`; Then `accepted=1`, `rejected=[]`, `last_value=35`. When `freeze_time(now + 1 доба)` і `env['f3d.signal']._cron_stale()`; Then статус сигналу не `stale` (без джерела, telemetry R-07) (X-33) | UT |
-| AC-69 | FR-12, FR-16 | Given модуль установлено; Then `factory3d_access.menu_f3d_access_settings`: `parent_id` = `factory3d_base.menu_f3d_config`, `sequence=70`, `group_ids` = `factory3d_base.group_f3d_admin`, дія `action_f3d_access_settings` (`res_model='res.config.settings'`, `view_mode='form'`, `target='inline'`, `context` з `module='hr_attendance'`); `get_views` форми `res.config.settings` для адміністратора містить `block[@name='f3d_access_block']`; користувач `user_security` (без `group_f3d_admin`) пункту не бачить (`ir.ui.menu` `_visible_menu_ids`) (X-89) | UT |
+| AC-69 | FR-12, FR-16 | Given модуль установлено; Then `factory3d_access.menu_f3d_access_settings`: `parent_id` = `factory3d_base.menu_f3d_config`, `sequence=70`, `group_ids` = `factory3d_base.group_f3d_admin`, дія `action_f3d_access_settings` (`res_model='res.config.settings'`, `view_mode='form'`, `target='current'`, `context` з `module='hr_attendance'`); `get_views` форми `res.config.settings` для адміністратора містить `block[@name='f3d_access_block']`; користувач `user_security` (без `group_f3d_admin`) пункту не бачить (`ir.ui.menu` `_visible_menu_ids`) (X-89) | UT |
 
 ## 13. План тестування (для Opus)
 

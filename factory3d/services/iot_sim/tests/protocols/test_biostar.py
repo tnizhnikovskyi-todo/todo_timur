@@ -78,6 +78,30 @@ async def test_users_devices_doors_types(bs):
     assert (await bs.delete("/api/devices")).status_code == 405
 
 
+@pytest.mark.parametrize(("method", "path", "allow"), [
+    ("PUT", "/api/users", "GET"), ("DELETE", "/api/users", "GET"),
+    ("PUT", "/api/users/OPSAW1", ""), ("DELETE", "/api/users/1", ""), ("POST", "/api/users/OPSAW1", ""),
+    ("POST", "/api/cards", ""), ("PUT", "/api/cards/9001", ""), ("DELETE", "/api/cards/9001", ""),
+    ("POST", "/api/devices", "GET"), ("GET", "/api/login", "POST"), ("GET", "/api/events/search", "POST"),
+])
+async def test_known_path_wrong_method_is_405(bs, method, path, allow):  # D-2: 405, а не 404
+    r = await bs.request(method, path, json={})
+    assert r.status_code == 405, (method, path, r.status_code)
+    assert r.headers["allow"] == allow
+    assert r.json()["Response"] == {"code": "405", "message": "Method Not Allowed"}
+    anon = await bs.request(method, path, json={}, headers={"bs-session-id": "nope"})
+    assert anon.status_code == 405  # метод перевіряється до сесії, як у веб-сервері пристрою
+
+
+async def test_unknown_path_is_404_and_served_methods_unchanged(bs):
+    for method, path in [("GET", "/api/nope"), ("POST", "/api/cardz"), ("PUT", "/api/users/1/cards"),
+                         ("DELETE", "/"), ("GET", "/api/cards/1/x")]:
+        assert (await bs.request(method, path, json={})).status_code == 404, (method, path)
+    assert (await bs.get("/api/users")).status_code == 200
+    assert (await bs.get("/api/devices")).status_code == 200
+    assert (await bs.post("/api/events/search", json={"Query": {}})).status_code == 200
+
+
 def add_events(bs, n=7):
     store = bs.srv.store
     for i in range(n):
