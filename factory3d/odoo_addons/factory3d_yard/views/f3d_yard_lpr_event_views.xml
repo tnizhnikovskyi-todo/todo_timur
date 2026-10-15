@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_yard_lpr_event_list" model="ir.ui.view">
+        <field name="name">f3d.yard.lpr.event.list</field>
+        <field name="model">f3d.yard.lpr.event</field>
+        <field name="arch" type="xml">
+            <list string="Розпізнавання номерів" create="0" decoration-danger="kpp_alert" decoration-muted="match_state in ('ignored', 'expired')">
+                <field name="ts"/>
+                <field name="camera_code"/>
+                <field name="gate_id"/>
+                <field name="direction"/>
+                <field name="plate_unicode"/>
+                <field name="confidence"/>
+                <field name="match_state" widget="badge"/>
+                <field name="visit_id"/>
+                <field name="kpp_alert" column_invisible="1"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_lpr_event_form" model="ir.ui.view">
+        <field name="name">f3d.yard.lpr.event.form</field>
+        <field name="model">f3d.yard.lpr.event</field>
+        <field name="arch" type="xml">
+            <form string="Розпізнавання номера" create="0">
+                <header>
+                    <button name="action_walk_in" type="object" string="Рейс без броні" class="btn-primary" invisible="match_state not in ('unmatched', 'low_confidence') or direction == 'out'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_reject" type="object" string="Відхилити" invisible="match_state not in ('unmatched', 'low_confidence')" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_dismiss" type="object" string="Закрити сповіщення" invisible="not kpp_alert" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <field name="match_state" widget="statusbar" statusbar_visible="matched,unmatched,low_confidence"/>
+                </header>
+                <sheet>
+                    <field name="kpp_alert" invisible="1"/>
+                    <group>
+                        <group>
+                            <field name="ts"/>
+                            <field name="received_at"/>
+                            <field name="camera_code"/>
+                            <field name="gate_id"/>
+                            <field name="direction"/>
+                            <field name="car_state"/>
+                            <field name="car_id"/>
+                            <field name="packet_counter"/>
+                            <field name="visit_id"/>
+                            <field name="note"/>
+                        </group>
+                        <group>
+                            <field name="plate_unicode"/>
+                            <field name="plate_raw"/>
+                            <field name="plate_norm"/>
+                            <field name="plate_country"/>
+                            <field name="confidence"/>
+                            <field name="plate_list"/>
+                            <field name="plate_list_mode"/>
+                            <field name="plate_list_description"/>
+                            <field name="lost_at"/>
+                            <field name="handled_by"/>
+                            <field name="handled_at"/>
+                        </group>
+                    </group>
+                    <group string="Знімок">
+                        <field name="image" widget="image" options="{'size': [0, 240]}" nolabel="1" invisible="not image_attachment_id"/>
+                        <field name="image_url" widget="url"/>
+                        <field name="image_attachment_id" invisible="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_lpr_event_search" model="ir.ui.view">
+        <field name="name">f3d.yard.lpr.event.search</field>
+        <field name="model">f3d.yard.lpr.event</field>
+        <field name="arch" type="xml">
+            <search string="Події LPR">
+                <field name="plate_norm"/>
+                <field name="plate_unicode"/>
+                <field name="camera_code"/>
+                <field name="visit_id"/>
+                <filter name="alert" string="Потрібне рішення" domain="[('kpp_alert', '=', True)]"/>
+                <filter name="unmatched" string="Без бронювання" domain="[('match_state', '=', 'unmatched')]"/>
+                <filter name="matched" string="Зіставлено" domain="[('match_state', '=', 'matched')]"/>
+                <group>
+                    <filter name="group_camera" string="Камера" context="{'group_by': 'camera_code'}"/>
+                    <filter name="group_state" string="Результат" context="{'group_by': 'match_state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_yard_lpr_event" model="ir.actions.act_window">
+        <field name="name">Розпізнавання номерів</field>
+        <field name="res_model">f3d.yard.lpr.event</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_f3d_yard_walkin_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.yard.walkin.wizard.form</field>
+        <field name="model">f3d.yard.walkin.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Рейс без броні">
+                <group>
+                    <group>
+                        <field name="event_id" invisible="not event_id"/>
+                        <field name="gate_id" domain="[('direction', 'in', ('in', 'both'))]"/>
+                        <field name="plate"/>
+                        <field name="visit_type"/>
+                        <field name="batch_id"/>
+                    </group>
+                    <group>
+                        <field name="partner_id"/>
+                        <field name="carrier_id"/>
+                        <field name="driver_id"/>
+                        <field name="driver_phone"/>
+                        <field name="driver_doc"/>
+                        <field name="walk_in_left"/>
+                    </group>
+                </group>
+                <field name="note" placeholder="Примітка"/>
+                <footer>
+                    <button name="action_create" type="object" string="Створити рейс" class="btn-primary"/>
+                    <button string="Скасувати" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <menuitem id="menu_f3d_yard_lpr" action="action_f3d_yard_lpr_event" name="Розпізнавання номерів" parent="menu_f3d_yard_journals" sequence="10" groups="group_f3d_yard_security"/>
+</odoo>

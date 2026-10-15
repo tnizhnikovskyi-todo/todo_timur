@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="param_read_enabled" model="ir.config_parameter">
+        <field name="key">factory3d.yard.read_enabled</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_write_enabled" model="ir.config_parameter">
+        <field name="key">factory3d.yard.write_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_antipassback" model="ir.config_parameter">
+        <field name="key">factory3d.yard.antipassback</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_walk_in_allowed" model="ir.config_parameter">
+        <field name="key">factory3d.yard.walk_in_allowed</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_walk_in_limit_per_day" model="ir.config_parameter">
+        <field name="key">factory3d.yard.walk_in_limit_per_day</field>
+        <field name="value">5</field>
+    </record>
+    <record id="param_lpr_min_confidence" model="ir.config_parameter">
+        <field name="key">factory3d.yard.lpr_min_confidence</field>
+        <field name="value">0.80</field>
+    </record>
+    <record id="param_lpr_match_window_h" model="ir.config_parameter">
+        <field name="key">factory3d.yard.lpr_match_window_h</field>
+        <field name="value">4</field>
+    </record>
+    <record id="param_lpr_store_images" model="ir.config_parameter">
+        <field name="key">factory3d.yard.lpr_store_images</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_lpr_image_max_kb" model="ir.config_parameter">
+        <field name="key">factory3d.yard.lpr_image_max_kb</field>
+        <field name="value">1024</field>
+    </record>
+    <record id="param_lpr_keep_days" model="ir.config_parameter">
+        <field name="key">factory3d.yard.lpr_keep_days</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_kpp_refresh_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.kpp_refresh_s</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_slot_default_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.slot_default_min</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_dock_turnaround_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.dock_turnaround_min</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_enforce_calendar" model="ir.config_parameter">
+        <field name="key">factory3d.yard.enforce_calendar</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_calendar_id" model="ir.config_parameter">
+        <field name="key">factory3d.yard.calendar_id</field>
+        <field name="value"></field>
+    </record>
+    <record id="param_early_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.early_min</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_late_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.late_min</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_auto_call_next" model="ir.config_parameter">
+        <field name="key">factory3d.yard.auto_call_next</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_queue_slot_window_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.queue_slot_window_min</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_arrival_timeout_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.arrival_timeout_min</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_no_show_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.no_show_min</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_dock_shift_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.dock_shift_min</field>
+        <field name="value">480</field>
+    </record>
+    <record id="param_open_timeout_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.open_timeout_s</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_cmd_cooldown_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.cmd_cooldown_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_cmd_expire_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.cmd_expire_s</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_hold_max_min" model="ir.config_parameter">
+        <field name="key">factory3d.yard.hold_max_min</field>
+        <field name="value">30</field>
+    </record>
+    <record id="param_signal_max_age_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.signal_max_age_s</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_net_tolerance_pct" model="ir.config_parameter">
+        <field name="key">factory3d.yard.net_tolerance_pct</field>
+        <field name="value">2.0</field>
+    </record>
+    <record id="param_net_tolerance_kg" model="ir.config_parameter">
+        <field name="key">factory3d.yard.net_tolerance_kg</field>
+        <field name="value">100</field>
+    </record>
+    <record id="param_weigh_max_age_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.weigh_max_age_s</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_scale_auto_capture" model="ir.config_parameter">
+        <field name="key">factory3d.yard.scale_auto_capture</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_scale_dwell_s" model="ir.config_parameter">
+        <field name="key">factory3d.yard.scale_dwell_s</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_weighing_policy_west" model="ir.config_parameter">
+        <field name="key">factory3d.yard.weighing_policy_west</field>
+        <field name="value">in_out</field>
+    </record>
+    <record id="param_weighing_policy_east" model="ir.config_parameter">
+        <field name="key">factory3d.yard.weighing_policy_east</field>
+        <field name="value">in_out</field>
+    </record>
+    <record id="param_visit_pii_keep_days" model="ir.config_parameter">
+        <field name="key">factory3d.yard.visit_pii_keep_days</field>
+        <field name="value">90</field>
+    </record>
+    <record id="param_weighing_unassigned_keep_days" model="ir.config_parameter">
+        <field name="key">factory3d.yard.weighing_unassigned_keep_days</field>
+        <field name="value">7</field>
+    </record>
+    <record id="param_seed_product_weights" model="ir.config_parameter">
+        <field name="key">factory3d.yard.seed_product_weights</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_migration_state" model="ir.config_parameter">
+        <field name="key">factory3d.yard.migration_state</field>
+        <field name="value">pending</field>
+    </record>
+    <record id="param_migration_report" model="ir.config_parameter">
+        <field name="key">factory3d.yard.migration_report</field>
+        <field name="value">{}</field>
+    </record>
+</odoo>

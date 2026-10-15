@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Каркас меню (W0): дії (action=) додають W1…W5 повторним оголошенням menuitem з тим самим id -->
+    <menuitem id="menu_f3d_yard" name="Двір" parent="factory3d_base.menu_f3d_root" sequence="60" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_yard_dispatch" action="action_f3d_yard_dispatch" name="Диспетчерська" parent="menu_f3d_yard" sequence="10" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_yard_kpp" name="Екран КПП" parent="menu_f3d_yard" sequence="20" groups="group_f3d_yard_security"/>
+    <menuitem id="menu_f3d_yard_booking" action="action_f3d_yard_booking" name="Бронювання воріт" parent="menu_f3d_yard" sequence="30" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_yard_visit" action="action_f3d_yard_visit" name="Рейси" parent="menu_f3d_yard" sequence="40" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_yard_dispatch_std" name="Диспетчеризація (стандарт)" parent="menu_f3d_yard" sequence="45" groups="group_f3d_yard_dispatcher"/>
+    <menuitem id="menu_f3d_yard_journals" name="Журнали" parent="menu_f3d_yard" sequence="50" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_yard_lpr" name="Розпізнавання номерів" parent="menu_f3d_yard_journals" sequence="10" groups="group_f3d_yard_security"/>
+    <menuitem id="menu_f3d_yard_weighing" name="Зважування" parent="menu_f3d_yard_journals" sequence="20" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_yard_commands" name="Команди на шлагбауми" parent="menu_f3d_yard_journals" sequence="30" groups="group_f3d_yard_security"/>
+    <menuitem id="menu_f3d_yard_reports" name="Звіти" parent="menu_f3d_yard" sequence="60" groups="group_f3d_yard_dispatcher"/>
+    <menuitem id="menu_f3d_yard_report_visits" name="Рейси (аналіз)" parent="menu_f3d_yard_reports" sequence="10" groups="group_f3d_yard_dispatcher"/>
+    <menuitem id="menu_f3d_yard_report_docks" name="Зайнятість воріт" parent="menu_f3d_yard_reports" sequence="20" groups="group_f3d_yard_dispatcher"/>
+    <menuitem id="menu_f3d_yard_config" name="Налаштування" parent="menu_f3d_yard" sequence="90" groups="group_f3d_yard_manager"/>
+    <menuitem id="menu_f3d_yard_config_gate" name="КПП і шлагбауми" parent="menu_f3d_yard_config" sequence="10" groups="group_f3d_yard_manager"/>
+    <menuitem id="menu_f3d_yard_config_scale" name="Автоваги" parent="menu_f3d_yard_config" sequence="20" groups="group_f3d_yard_manager"/>
+    <menuitem id="menu_f3d_yard_config_settings" name="Налаштування двору" parent="factory3d_base.menu_f3d_config" sequence="60" groups="group_f3d_yard_manager"/>
+    <menuitem id="menu_f3d_yard_config_migration" name="Повторити міграцію двору" parent="menu_f3d_yard_config" sequence="90" groups="factory3d_base.group_f3d_admin"/>
+</odoo>

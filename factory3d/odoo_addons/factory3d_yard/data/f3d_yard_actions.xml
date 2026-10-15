@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-34: серверні дії -->
+    <record id="action_f3d_yard_run_migration" model="ir.actions.server">
+        <field name="name">Повторити міграцію двору</field>
+        <field name="model_id" ref="model_f3d_yard_visit"/>
+        <field name="state">code</field>
+        <field name="code">action = env['f3d.yard.visit'].f3d_yard_run_migration()</field>
+    </record>
+
+    <record id="action_f3d_yard_dispatch_std" model="ir.actions.server">
+        <field name="name">Диспетчеризація (стандарт)</field>
+        <field name="model_id" ref="stock_picking_batch.model_stock_picking_batch"/>
+        <field name="state">code</field>
+        <field name="code">view = env.ref('stock_fleet_enterprise.view_stock_picking_batch_gantt', raise_if_not_found=False)
+action = env['ir.actions.act_window']._for_xml_id('stock_picking_batch.stock_picking_batch_action')
+if view:
+    action.update({'view_mode': 'gantt,list,form', 'views': [(view.id, 'gantt'), (False, 'list'), (False, 'form')]})
+action['domain'] = [('dock_id', '!=', False)]
+action['context'] = {'search_default_in_progress': 1}</field>
+    </record>
+
+    <menuitem id="menu_f3d_yard_dispatch_std" name="Диспетчеризація (стандарт)" parent="menu_f3d_yard" sequence="45" action="action_f3d_yard_dispatch_std" groups="group_f3d_yard_dispatcher"/>
+    <menuitem id="menu_f3d_yard_config_migration" name="Повторити міграцію двору" parent="menu_f3d_yard_config" sequence="90" action="action_f3d_yard_run_migration" groups="factory3d_base.group_f3d_admin"/>
+    <menuitem id="menu_f3d_yard_config_settings" name="Налаштування двору" parent="factory3d_base.menu_f3d_config" sequence="60" action="action_f3d_yard_settings" groups="group_f3d_yard_manager"/>
+</odoo>

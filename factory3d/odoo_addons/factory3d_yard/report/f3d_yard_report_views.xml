@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-27: звіт зайнятості воріт -->
+    <record id="view_f3d_yard_dock_report_pivot" model="ir.ui.view">
+        <field name="name">f3d.yard.dock.report.pivot</field>
+        <field name="model">f3d.yard.dock.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Зайнятість воріт">
+                <field name="dock_id" type="row"/>
+                <field name="day" interval="day" type="col"/>
+                <field name="occupancy_pct" type="measure"/>
+                <field name="busy_min" type="measure"/>
+                <field name="idle_min" type="measure"/>
+                <field name="visit_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_dock_report_graph" model="ir.ui.view">
+        <field name="name">f3d.yard.dock.report.graph</field>
+        <field name="model">f3d.yard.dock.report</field>
+        <field name="arch" type="xml">
+            <graph string="Зайнятість воріт" type="bar">
+                <field name="dock_id"/>
+                <field name="occupancy_pct" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_dock_report_list" model="ir.ui.view">
+        <field name="name">f3d.yard.dock.report.list</field>
+        <field name="model">f3d.yard.dock.report</field>
+        <field name="arch" type="xml">
+            <list string="Зайнятість воріт" create="0" edit="0" delete="0">
+                <field name="day"/>
+                <field name="dock_id"/>
+                <field name="side"/>
+                <field name="visit_count"/>
+                <field name="busy_min"/>
+                <field name="idle_min"/>
+                <field name="occupancy_pct"/>
+                <field name="avg_dock_min"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- V-28: дії звітів -->
+    <record id="action_f3d_yard_visit_analysis" model="ir.actions.act_window">
+        <field name="name">Рейси (аналіз)</field>
+        <field name="res_model">f3d.yard.visit</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context">{'search_default_done': 1}</field>
+    </record>
+
+    <record id="action_f3d_yard_dock_report" model="ir.actions.act_window">
+        <field name="name">Зайнятість воріт</field>
+        <field name="res_model">f3d.yard.dock.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+    </record>
+
+    <menuitem id="menu_f3d_yard_report_visits" name="Рейси (аналіз)" parent="menu_f3d_yard_reports" sequence="10" action="action_f3d_yard_visit_analysis" groups="group_f3d_yard_dispatcher"/>
+    <menuitem id="menu_f3d_yard_report_docks" name="Зайнятість воріт" parent="menu_f3d_yard_reports" sequence="20" action="action_f3d_yard_dock_report" groups="group_f3d_yard_dispatcher"/>
+</odoo>

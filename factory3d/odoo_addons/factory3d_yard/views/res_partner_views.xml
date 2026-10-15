@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_f3d_yard" model="ir.ui.view">
+        <field name="name">res.partner.form.f3d.yard</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_f3d_view_visits" type="object" class="oe_stat_button" icon="fa-truck" invisible="not f3d_visit_count">
+                    <field name="f3d_visit_count" widget="statinfo" string="Рейси"/>
+                </button>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="f3d_yard" string="Двір">
+                    <group>
+                        <field name="f3d_is_carrier"/>
+                        <field name="f3d_is_driver"/>
+                        <field name="f3d_carrier_id" invisible="not f3d_is_driver"/>
+                        <field name="f3d_driver_doc" invisible="not f3d_is_driver" groups="factory3d_yard.group_f3d_yard_security"/>
+                        <field name="f3d_default_plate"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_delivery_carrier_form_f3d_yard" model="ir.ui.view">
+        <field name="name">delivery.carrier.form.f3d.yard</field>
+        <field name="model">delivery.carrier</field>
+        <field name="inherit_id" ref="delivery.view_delivery_carrier_form"/>
+        <field name="arch" type="xml">
+            <field name="delivery_type" position="after">
+                <field name="f3d_partner_id"/>
+            </field>
+        </field>
+    </record>
+</odoo>

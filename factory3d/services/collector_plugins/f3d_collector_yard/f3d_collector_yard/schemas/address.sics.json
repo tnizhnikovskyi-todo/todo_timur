@@ -1,0 +1,10 @@
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "title": "address.sics", "type": "object",
+ "required": ["field"], "additionalProperties": false,
+ "properties": {
+   "cmd": {"enum": ["SI"], "default": "SI"},
+   "field": {"enum": ["weight", "stable"]},
+   "write": {"type": "object", "required": ["cmd"], "additionalProperties": false,
+             "properties": {"cmd": {"enum": ["Z", "T", "TAC"]}}},
+   "scale": {"type": "number", "not": {"const": 0}, "default": 1},
+   "offset": {"type": "number", "default": 0},
+   "doc": {"type": "string", "maxLength": 128}}}

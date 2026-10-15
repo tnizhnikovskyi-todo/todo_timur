@@ -54,6 +54,15 @@ class Metrics:
         self.commands = Counter("collector_commands", "Команди за станом", ["state"], registry=r)
         self.clock_skew = Gauge("collector_clock_skew_seconds", "Розходження годинників з Odoo", registry=r)
         self.allowlist_denied = Counter("collector_allowlist_denied", "Відмови allow-list", registry=r)
+        # плагін sics (factory3d_yard §8.8): лише оголошення, лічильники збільшує плагін через getattr
+        sics_labels = ["type", "source"]
+        self.collector_sics_frames_total = Counter("collector_sics_frames", "Кадри SICS", sics_labels, registry=r)
+        self.collector_sics_reconnects_total = Counter(
+            "collector_sics_reconnects", "Перепідключення SICS", sics_labels, registry=r
+        )
+        self.collector_sics_errors_total = Counter(
+            "collector_sics_errors", "Помилки SICS", [*sics_labels, "kind"], registry=r
+        )
         # стан для /health
         self._odoo_fail_since: float | None = None
         self._source_error_since: dict[str, float] = {}
