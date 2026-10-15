@@ -369,7 +369,7 @@ class F3dYardVisit(models.Model):
     # ------------------------------------------------------------------ CRUD
     @api.model_create_multi
     def create(self, vals_list):
-        Seq = self.env["ir.sequence"]
+        Seq = self.env["ir.sequence"].sudo()
         for vals in vals_list:
             if not vals.get("name") or vals["name"] == "/":
                 vals["name"] = Seq.next_by_code("f3d.yard.visit") or "/"

@@ -3,6 +3,8 @@
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
+from odoo.addons.factory3d_telemetry.tools.ingest import parse_ts
+
 
 class F3dYardVisit(models.Model):
     _inherit = "f3d.yard.visit"
@@ -12,6 +14,12 @@ class F3dYardVisit(models.Model):
     @api.depends("weighing_ids.kind", "weighing_ids.ts", "weighing_ids.weight_kg", "weighing_ids.state")
     def _compute_weights(self):
         return super()._compute_weights()
+
+    @api.model
+    def _cron_queue(self):
+        res = super()._cron_queue()
+        self.env["f3d.yard.scale"].sudo().search([("active", "=", True)])._f3d_yard_refresh_offline()  # R-16 п. 6
+        return res
 
     def _f3d_yard_write_pickings(self, net=None):
         """Без чинних зважувань документи не звіряються: скидання, без відхилення й активності."""
@@ -59,3 +67,33 @@ class StockPicking(models.Model):
     _inherit = "stock.picking"
 
     f3d_weighing_ids = fields.One2many("f3d.yard.weighing", "picking_id", string="Зважування двору")
+
+
+class F3dYardGate(models.Model):
+    _inherit = "f3d.yard.gate"
+
+    ROLES = ("state", "loop", "photocell", "passes", "cmd_open", "cmd_close", "cmd_hold")
+
+    scale_id = fields.Many2one("f3d.yard.scale", string="Автоваги", ondelete="set null")
+
+    @api.model
+    def _f3d_yard_dispatch(self, readings):
+        """Показання `yard/gates/*` (M-13) -> gate._f3d_yard_on_readings."""
+        by_code = {}
+        for gate in self.sudo().search([("active", "=", True)]):
+            for role in self.ROLES:
+                sig = gate[role + "_signal_id"]
+                if sig:
+                    by_code[sig.code] = (gate, role)
+        groups = {}
+        for r in readings:
+            target = by_code.get(r.get("code"))
+            ts, reason = parse_ts(r.get("ts"))
+            if not target or reason:
+                continue
+            value = r.get("value")
+            value = float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+            gate, role = target
+            groups.setdefault(gate.id, (gate, []))[1].append((role, ts, value, r.get("q") or "good"))
+        for gate, items in groups.values():
+            gate._f3d_yard_on_readings(items)

@@ -11,4 +11,7 @@
         <field name="division_kg">20</field>
         <field name="auto_capture" eval="True"/>
     </record>
+    <record id="gate_e" model="f3d.yard.gate">
+        <field name="scale_id" ref="scale_truck"/>
+    </record>
 </odoo>

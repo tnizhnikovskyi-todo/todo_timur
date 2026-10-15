@@ -241,3 +241,9 @@ class TestYardScale(YardFlowCase):
         self._ingest(base, [(0, 25200.0, "S"), (1, 25200.0, "S")])
         self.assertFalse(self._autos())
         self.assertEqual(self.scale.last_weight_kg, 0.0)
+
+    def test_seed_scale(self):  # AC-46 (ваги)
+        scale = self.env.ref("factory3d_yard.scale_truck")
+        self.assertEqual((scale.max_kg, scale.min_kg, scale.division_kg), (60000.0, 400.0, 20.0))
+        self.assertEqual((scale.pos_x, scale.pos_y), (172.0, -14.0))
+        self.assertEqual(self.env.ref("factory3d_yard.gate_e").scale_id, scale)

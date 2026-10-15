@@ -214,7 +214,7 @@ class F3dYardScale(models.Model):
         """R-16 п. 6 (викликає крон двору): ваги offline без свіжих даних; свіже показання повертає idle."""
         now = fields.Datetime.now()
         limit = now - timedelta(seconds=3 * P.get_int(self.env, "weigh_max_age_s"))
-        for scale in self.search([("active", "=", True)]):
+        for scale in self:
             sig = scale.weight_signal_id
             dead = bool(sig and sig.status in ("stale", "unknown")) or bool(scale.last_ts and scale.last_ts < limit)
             if dead and scale.capture_state != "offline":
