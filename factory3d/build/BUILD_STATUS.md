@@ -19,11 +19,11 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 4 | `factory3d_viewer` | 1 | base | DONE | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | 2026-10-15 13:27 UTC | Odoo 711/711 (9 модулей), демо f3d_demo_tpl 211/211 | 20 |
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
-| 7 | `factory3d_energy` | 3 | telemetry | IN_PROGRESS | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | | | |
+| 7 | `factory3d_energy` | 3 | telemetry | DONE | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | 2026-10-15 17:42 UTC | Odoo 1076/1076 (14 модулей), демо viewer 211/211 | 18 |
 | 8 | `factory3d_yard` | 4 | base, telemetry | DONE | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | 2026-10-15 13:53 UTC | Odoo 831/831 (10 модулей), collector 174+2 skip, плагин sics 34/34 | 8 |
 | 9 | `factory3d_bms` | 5 | telemetry | IN_PROGRESS | session_01L43oC1FugyPdK6kpcRc1ij | 2026-10-15 13:54 UTC | | | |
 | 10 | `factory3d_fire_safety` | 5 | telemetry | DONE | session_01KJcdAJpD2ninHpqxDQv2FC | 2026-10-15 13:58 UTC | 2026-10-15 16:12 UTC | Odoo 965/965 (13 модулей), демо viewer 211/211 | 13 |
-| 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | TODO | | | | | |
+| 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | IN_PROGRESS | session_013Ue8H7Af5WRGUBWdWKM5e4 | 2026-10-15 17:43 UTC | | | |
 
 Порядок строк — приоритет запуска. Эмулятор (`iot_sim`) и телеметрия идут раньше: от них зависят стендовые тесты.
 Мостики auto_install (`factory3d_viewer_sale`, `factory3d_telemetry_viewer`, `factory3d_fire_safety_viewer`,
@@ -78,3 +78,5 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 13:58 UTC factory3d_fire_safety: запущена сессия session_01KJcdAJpD2ninHpqxDQv2FC по указанию пользователя; одновременно 4 (machine_connect, energy, bms, fire_safety). Будильник 14:30 UTC отменён пользователем. Лимиты «Темп» сняты: td_genset запускать сразу, как energy DONE.
 - 2026-10-15 16:12 UTC factory3d_fire_safety: DONE — смержен в `claude/factory3d-build` (`a2407fb`) со 2-й попытки; первая — 3 failed в тестах провайдеров viewer (ожидали static для fire/evacuation). Фикс тестов viewer в интеграции, независимый от установленных провайдеров — `d8e3b22`. Odoo 965/965, демо 211/211. Не проверено: стенд ТК/ТБ/ТП, DEPLOY_TEST, копия демо (AC-02), security-review.
 - 2026-10-15 17:07 UTC менеджер: стендовые этапы затянулись (machine_connect W9 ~4 ч, energy W6 ~4 ч, bms W7 ~2 ч) — лидерам отправлено: ограничить стенд 30–45 мин, затем закрываться DONE (юнит-DoD), непрогнанные стендовые тесты — в «Требует внимания человека», найденные дефекты кода исправить.
+- 2026-10-15 17:42 UTC factory3d_energy: DONE — смержен в `claude/factory3d-build` (`c3056fb`), фикс кросс-модульных ожиданий тестов telemetry/viewer — `0c7a736`; Odoo 1076/1076, демо 211/211. Стенд частично (ТК-01/05/11, ТБ 6/6, ТП 5/6; ТК-02/07/08/09 красные — эмулятор/сценарий). Правки SPEC: AC-32, R-16 п.6, R-17.
+- 2026-10-15 17:43 UTC td_genset: запущена сессия session_013Ue8H7Af5WRGUBWdWKM5e4 (зависимости DONE). machine_connect DONE по отчёту (d29e2f3), идёт мерж.
