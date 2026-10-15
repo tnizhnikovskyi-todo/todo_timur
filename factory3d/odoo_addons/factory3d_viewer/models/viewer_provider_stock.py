@@ -65,6 +65,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         reserved_for = self._reserved_for(locs)
         picking_of = self._received_today(locs, ctx)
         quality_of = self._quality_by_lot()
+        kit_links = self._kit_links(locs)
         orderpoints = self._orderpoints(locs)
 
         out = {}
@@ -112,6 +113,8 @@ class F3dViewerProviderStock(models.AbstractModel):
                 fill = None
             rec = {"complete_name": loc.complete_name, "quants": rows, "capacity": capacity,
                    "fill": None if fill is None else round(fill, 4), "kind": kind}
+            if code in kit_links:
+                rec["picking"], rec["production"] = kit_links[code]
             if ops:
                 op = ops[0]
                 have = sum(r["qty"] for r in rows if r["product"] == op["product"])
@@ -163,6 +166,21 @@ class F3dViewerProviderStock(models.AbstractModel):
             if ml.picking_id:
                 res.setdefault((ml.location_dest_id.id, ml.product_id.id), ml.picking_id.name)
         return res
+
+    @api.model
+    def _kit_links(self, locs):
+        """R-04: візок `KIT-*` -> (комплектація, МО): остання комплектація з цим призначенням; МО = її `origin`."""
+        kits = locs.filtered(lambda l: (l.f3d_code or "").startswith("KIT-"))
+        if not kits:
+            return {}
+        res = {}
+        moves = self.env["stock.move"].search([
+            ("location_dest_id", "in", kits.ids), ("picking_id", "!=", False), ("state", "!=", "cancel")],
+            order="date, id")
+        for mv in moves:
+            pk = mv.picking_id
+            res[mv.location_dest_id.f3d_code] = (pk.name, pk.origin or None)
+        return {c: v for c, v in res.items() if v[1]}
 
     @api.model
     def _quality_by_lot(self):

@@ -95,8 +95,8 @@ class TestDelta(F3dViewerBase):
         self.patch(cls, "_f3d_sections", ("zones", "workorders"))
         self.patch(cls, "_f3d_viewer_collect",
                    lambda this, payload, ctx: payload.setdefault("workorders", {}).update(
-                       {"WO00051": {"state": "done", "workcenter": "CNC-2"}}))
-        wo = self._delta({"mrp.workorder": {"WO00051"}})["patch"]["workorders"]["WO00051"]
+                       {"WO00001": {"state": "done", "workcenter": "SAW-1"}}))
+        wo = self._delta({"mrp.workorder": {"WO00001"}})["patch"]["workorders"]["WO00001"]
         self.assertIsNone(wo["blocked"])
         self.assertEqual(wo["state"], "done")
         self.assertIn("duration", wo)

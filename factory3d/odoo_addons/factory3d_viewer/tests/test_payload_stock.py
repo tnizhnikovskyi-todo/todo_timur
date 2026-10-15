@@ -83,7 +83,13 @@ class TestStock(F3dViewerCase):
         return self.payload(self.user_f3d)["locations"]
 
     def test_locations_count_689(self):
-        self.assertEqual(len(self._locs()), 689)
+        """R-03: усі `internal|transit` локації з `f3d_code`. Еталонна демо — 689; шаблон на CE кодує ворота
+        як `DOCK-*` (аліас `UNLOAD-*`), тож рахуємо очікування з бази, не слабше за еталон."""
+        locs = self._locs()
+        expected = self.env["stock.location"].search_count([
+            ("f3d_code", "!=", False), ("usage", "in", ("internal", "transit"))])
+        self.assertEqual(len(locs), expected)
+        self.assertGreaterEqual(len(locs), 689)
 
     def test_quants_plt_04c(self):
         loc = self._locs()["PLT-04C"]
