@@ -21,7 +21,8 @@ class TestProductionSynthetic(F3dViewerBase):
         env = cls.env
         att = [(5, 0, 0)] + [(0, 0, {"name": "d%d" % d, "dayofweek": str(d), "hour_from": 7.0, "hour_to": 15.0,
                                      "day_period": "morning"}) for d in range(7)]
-        cls.calendar = env["resource.calendar"].create({"name": "TST зміна 07-15", "tz": "Europe/Kyiv", "attendance_ids": att})
+        cls.calendar = env["resource.calendar"].create(
+            {"name": "TST зміна 07-15", "tz": "Europe/Kyiv", "attendance_ids": att})
         cls.wc1 = env["mrp.workcenter"].create({"name": "TST WC1", "code": "TSTWC1", "f3d_code": "TST-WC-1",
                                                 "resource_calendar_id": cls.calendar.id})
         cls.wc2 = env["mrp.workcenter"].create({"name": "TST WC2", "code": "TSTWC2", "f3d_code": "TST-WC-2",

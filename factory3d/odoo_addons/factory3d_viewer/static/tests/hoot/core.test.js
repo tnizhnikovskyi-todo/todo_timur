@@ -14,7 +14,6 @@ const txt = (el, sel) => q(el, sel)?.textContent ?? "";
 const text = (el) => (el.textContent || "").replace(/\s+/g, " ").trim();
 /** Пари dt → dd усіх `<dl class="o_f3d_kv">` картки. */
 const kv = (el) => Object.fromEntries(qa(el, ".o_f3d_cardbody dt").map((dt) => [text(dt), text(dt.nextElementSibling)]));
-const card = (el) => text(q(el, ".o_f3d_cardbody"));
 const key = (k) => window.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
 
 describe.current.tags("desktop");

@@ -291,7 +291,7 @@ function makeRenderer() {
     try { r = new THREE.WebGLRenderer({ antialias: LS.antialias, preserveDrawingBuffer: true }); }
     catch (err) { console.warn(err); nullR = true; noWebgl = true; }
   }
-  if (!r) r = new NullRenderer();
+  if (!r) {r = new NullRenderer();}
   r.setPixelRatio(LS.pixelRatio(window.devicePixelRatio));
   r.outputColorSpace = THREE.SRGBColorSpace;
   r.shadowMap.enabled = LS.shadows;
@@ -333,9 +333,9 @@ scene.add(sun, sun.target);
 function isDark() {
   const h = document.documentElement;
   const t = h.dataset.theme || h.dataset.bsTheme || h.dataset.colorScheme;
-  if (t) return t === "dark";
-  if (document.body.classList.contains("o_dark")) return true;
-  if (document.querySelector(".o_web_client")) return false;
+  if (t) {return t === "dark";}
+  if (document.body.classList.contains("o_dark")) {return true;}
+  if (document.querySelector(".o_web_client")) {return false;}
   return matchMedia("(prefers-color-scheme: dark)").matches;
 }
 function applyTheme() {
@@ -372,11 +372,11 @@ selBox.visible = false;
 scene.add(selBox);
 
 function codeRoot(obj) {
-  for (let o = obj; o; o = o.parent) if (o.userData && o.userData.code) return o;
+  for (let o = obj; o; o = o.parent) {if (o.userData && o.userData.code) {return o;}}
   return null;
 }
 function isShown(obj) {
-  for (let o = obj; o; o = o.parent) if (!o.visible) return false;
+  for (let o = obj; o; o = o.parent) {if (!o.visible) {return false;}}
   return true;
 }
 
@@ -389,7 +389,7 @@ for (const p of MANIFEST.parts) {
   p.codes.forEach((c) => partOfCode.set(c, p.key));
 }
 // покриття даху ховає цех — вмикається окремо або видом «Дах і СЕС»
-for (const l of MANIFEST.layers) layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: l.key !== "roofdeck" });
+for (const l of MANIFEST.layers) {layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: l.key !== "roofdeck" });}
 let modelReady;
 const modelLoaded = new Promise((res) => { modelReady = res; });
 function onPart(gltf) {
@@ -402,7 +402,7 @@ function onPart(gltf) {
       if (l) { l.node = o; o.visible = l.want; }
     }
     if (u.code && !items.has(u.code)) { items.set(u.code, o); fresh.push(o); }
-    if (u.rect) zoneRects.set(u.code, u.rect);
+    if (u.rect) {zoneRects.set(u.code, u.rect);}
     if (o.isMesh) {
       // свій матеріал на кожен об'єкт, щоб підсвічування не перефарбовувало сусідів
       o.material = o.material.clone();
@@ -411,7 +411,7 @@ function onPart(gltf) {
       const kind = r?.userData.kind;
       o.castShadow = LS.shadows && !o.material.transparent && kind !== "zone" && kind !== "bin" && !o.name.startsWith("Майданчик");
       o.receiveShadow = LS.shadows && !o.material.transparent;
-      if (u.role === "status") lamps.push(o);
+      if (u.role === "status") {lamps.push(o);}
     }
   });
   scene.add(root);
@@ -420,8 +420,8 @@ function onPart(gltf) {
   syncLayerGroups();
 }
 function loadPart(key) {
-  if (!key) return Promise.resolve();
-  if (partState.has(key)) return partState.get(key);
+  if (!key) {return Promise.resolve();}
+  if (partState.has(key)) {return partState.get(key);}
   const p = MANIFEST.parts.find((x) => x.key === key);
   const pr = new Promise((res, rej) => {
     const done = (g) => { onPart(g); res(); };
@@ -430,22 +430,22 @@ function loadPart(key) {
       const bin = Uint8Array.from(atob(emb.textContent.trim()), (c) => c.charCodeAt(0));
       new GLTFLoader().parse(bin.buffer, "", done, rej);
     } else if (p.file.endsWith(".txt")) { // частина як base64-текст (хостинг без .glb)
-      fetch(partUrl(p)).then((r) => { if (!r.ok) throw new Error(`${p.file}: ${r.status}`); return r.text(); }).then((t) => {
+      fetch(partUrl(p)).then((r) => { if (!r.ok) {throw new Error(`${p.file}: ${r.status}`);} return r.text(); }).then((t) => {
         const bin = Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
         new GLTFLoader().parse(bin.buffer, "", done, rej);
       }).catch(rej);
     } else if (opts.fetchPart) { // власне завантаження буфера (тести, кеш): GLTFLoader лише розбирає
       Promise.resolve(opts.fetchPart(partUrl(p))).then((buf) => new GLTFLoader().parse(buf, "", done, rej)).catch(rej);
-    } else new GLTFLoader().load(partUrl(p), done, undefined, rej);
+    } else {new GLTFLoader().load(partUrl(p), done, undefined, rej);}
   });
   partState.set(key, pr);
-  pr.catch((err) => { if (!destroyed) console.error(err); partState.delete(key); });
+  pr.catch((err) => { if (!destroyed) {console.error(err);} partState.delete(key); });
   syncLayerGroups();
   return pr;
 }
 // об'єкт може бути в частині, яка ще не завантажилась
 async function ensureCode(code) {
-  if (!items.has(code) && partOfCode.has(code)) await loadPart(partOfCode.get(code));
+  if (!items.has(code) && partOfCode.has(code)) {await loadPart(partOfCode.get(code));}
   return items.get(code);
 }
 function onModelError(err) {
@@ -454,10 +454,10 @@ function onModelError(err) {
   modelReady();
 }
 buildLayersUI();
-if (LS.lite || kiosk) $(".o_f3d_opt-shadows").closest("label").hidden = true;
+if (LS.lite || kiosk) {$(".o_f3d_opt-shadows").closest("label").hidden = true;}
 let bgReady = Promise.resolve();
 const coreReady = (MANIFEST.parts[0] ? loadPart(MANIFEST.parts[0].key) : Promise.resolve()).then(() => {
-  if (noWebgl) banner("3D недоступне на цьому пристрої — показано лише дані");
+  if (noWebgl) {banner("3D недоступне на цьому пристрої — показано лише дані");}
   const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
   $(".o_f3d_dims").textContent = `${MANIFEST.dims} · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
   goView(VIEWS[0], false);
@@ -465,8 +465,8 @@ const coreReady = (MANIFEST.parts[0] ? loadPart(MANIFEST.parts[0].key) : Promise
   modelReady();
   bgReady = (async () => {
     for (const p of MANIFEST.parts.slice(1)) {
-      if (destroyed) break;
-      if (LS.backgroundParts(p.key)) await loadPart(p.key).catch(() => {});
+      if (destroyed) {break;}
+      if (LS.backgroundParts(p.key)) {await loadPart(p.key).catch(() => {});}
     }
   })();
 }).catch(onModelError);
@@ -488,7 +488,7 @@ const VIEWS = [
   { name: "Когенерація", target: [114, 77, 2], pos: [92, 104, 26] },
 ];
 function viewPose(v) {
-  if (v.pos) return { pos: b2t(v.pos), target: b2t(v.target) };
+  if (v.pos) {return { pos: b2t(v.pos), target: b2t(v.target) };}
   let c, size;
   if (v.zone) {
     const [x0, y0, x1, y1] = zoneRects.get(v.zone);
@@ -511,10 +511,10 @@ function flyTo(pos, target, animate = true) {
   tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), dur: 1000 };
 }
 function goView(v, animate = true) {
-  if (typeof v === "string") v = VIEWS.find((x) => x.name === v);
-  else if (typeof v === "number") v = VIEWS[v];
-  if (!v) return;
-  if (layers.get("roofdeck") && layers.get("roofdeck").want !== !!v.roof) setLayer("roofdeck", !!v.roof);
+  if (typeof v === "string") {v = VIEWS.find((x) => x.name === v);}
+  else if (typeof v === "number") {v = VIEWS[v];}
+  if (!v) {return;}
+  if (layers.get("roofdeck") && layers.get("roofdeck").want !== !!v.roof) {setLayer("roofdeck", !!v.roof);}
   const { pos, target } = viewPose(v);
   flyTo(pos, target, animate);
   root.querySelectorAll(".o_f3d_view").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.name === v.name)));
@@ -527,7 +527,7 @@ VIEWS.forEach((v, i) => {
   $(".o_f3d_views").appendChild(b);
 });
 function fitBox(box, animate = true) {
-  if (box.isEmpty()) return;
+  if (box.isEmpty()) {return;}
   const c = box.getCenter(new THREE.Vector3());
   const r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 2);
   const dir = camera.position.clone().sub(controls.target).normalize();
@@ -551,24 +551,24 @@ const focusOn = (obj) => fitBox(new THREE.Box3().setFromObject(obj));
 const CORE = new Set(["building", "zones", "line", "facade", "buffer", "dust", "people"]);
 function setLayer(key, on) {
   const l = layers.get(key);
-  if (!l) return;
+  if (!l) {return;}
   l.want = on;
-  if (l.node) l.node.visible = on;
-  else if (on) loadPart(partOfLayer.get(key));
+  if (l.node) {l.node.visible = on;}
+  else if (on) {loadPart(partOfLayer.get(key));}
   const cb = $("#layer-" + key);
-  if (cb) cb.checked = on;
+  if (cb) {cb.checked = on;}
   syncLayerGroups();
   syncOutdoorZones();
   syncFireDevices();
   store("f3d.layers", JSON.stringify([...layers].filter(([, l]) => l.want).map(([k]) => k)));
-  if (selected && !isShown(selected)) select(null);
+  if (selected && !isShown(selected)) {select(null);}
 }
 // шари згруповано: заголовок групи вмикає/вимикає всі її шари, стрілка розгортає список
 function buildLayersUI() {
   const groups = new Map();
   for (const [key, l] of [...layers].sort((a, b) => a[1].order - b[1].order)) {
     const g = l.group || "Інше";
-    if (!groups.has(g)) groups.set(g, []);
+    if (!groups.has(g)) {groups.set(g, []);}
     groups.get(g).push([key, l]);
   }
   let gi = 0;
@@ -607,9 +607,9 @@ function buildLayersUI() {
 }
 // перехід до об'єкта з вимкненого шару — шар вмикаємо
 function showLayerOf(o) {
-  if (o.userData?.device) setLayer("fire", true);
-  if (o.userData?.outdoor) setLayer(o.userData.roof ? "roofdeck" : "territory", true);
-  for (let n = o; n; n = n.parent) if (n.userData?.layer && n.name.startsWith("LAYER_")) setLayer(n.userData.layer, true);
+  if (o.userData?.device) {setLayer("fire", true);}
+  if (o.userData?.outdoor) {setLayer(o.userData.roof ? "roofdeck" : "territory", true);}
+  for (let n = o; n; n = n.parent) {if (n.userData?.layer && n.name.startsWith("LAYER_")) {setLayer(n.userData.layer, true);}}
 }
 function syncLayerGroups() {
   root.querySelectorAll(".o_f3d_lgroup").forEach((box) => {
@@ -643,7 +643,7 @@ function addLabel(obj, html, cls, yOffset) {
 function buildLabels(objs = [...items.values()]) {
   for (const obj of objs) {
     const u = obj.userData;
-    if (u.kind === "zone") addLabel(obj, u.label, "zone", 0);
+    if (u.kind === "zone") {addLabel(obj, u.label, "zone", 0);}
     if (u.kind === "machine") {
       const [cls] = MACHINE_STATUS[machStatus(u)] || ["idle"];
       addLabel(obj, `<span class="o_f3d_st" style="background:var(--f3d-${cls})"></span>${u.label}`, "mach", 0.6);
@@ -679,32 +679,32 @@ let colorMode = "none";
 const C_OK = new THREE.Color("#27ae60"), C_WARN = new THREE.Color("#f39c12"), C_BAD = new THREE.Color("#e74c3c");
 const C_SEL = new THREE.Color("#f2c230"), C_HOV = new THREE.Color("#7fb3d5"), C_HL = new THREE.Color("#18a6c9");
 function modeColor(root) {
-  if (!D || colorMode === "none") return null;
+  if (!D || colorMode === "none") {return null;}
   const u = root.userData;
   if (colorMode === "fill") {
     const loc = D.locations[u.code];
-    if (!loc || loc.fill == null) return null;
+    if (!loc || loc.fill == null) {return null;}
     return loc.fill <= 0.001 ? C_BAD : loc.fill < 0.3 ? C_WARN : C_OK;
   }
   if (colorMode === "oee" && u.kind === "machine") {
     const wc = D.workcenters[u.code];
-    if (!wc) return null;
+    if (!wc) {return null;}
     return wc.oee >= 0.75 ? C_OK : wc.oee >= 0.5 ? C_WARN : C_BAD;
   }
   if (colorMode === "lux" && D.lighting) {
     const g = D.lighting.groups[u.code] || (u.kind === "zone" ? lightGroupOfZone(u.code)?.[1] : null);
-    if (g) return g.e_calc >= g.e_norm ? C_OK : g.e_calc >= 0.85 * g.e_norm ? C_WARN : C_BAD;
+    if (g) {return g.e_calc >= g.e_norm ? C_OK : g.e_calc >= 0.85 * g.e_norm ? C_WARN : C_BAD;}
   }
   if (colorMode === "power" && D.energy) {
     const e = D.energy, c = e.consumers[u.code];
-    if (c) return c.p_now >= 30 ? C_BAD : c.p_now >= 10 ? C_WARN : C_OK;
+    if (c) {return c.p_now >= 30 ? C_BAD : c.p_now >= 10 ? C_WARN : C_OK;}
     const l = e.lines[u.code] || e.transformers[u.code];
-    if (l) return l.load >= 0.8 ? C_BAD : l.load >= 0.6 ? C_WARN : C_OK;
+    if (l) {return l.load >= 0.8 ? C_BAD : l.load >= 0.6 ? C_WARN : C_OK;}
   }
   return null;
 }
 function paint(root) {
-  if (!root) return;
+  if (!root) {return;}
   let color = null, k = 0;
   if (root === selected) { color = C_SEL; k = 0.22; }
   else if (hl.roots.has(root)) { color = C_HL; k = 0.4; }
@@ -716,7 +716,7 @@ function paint(root) {
     }
   });
 }
-function repaintAll() { for (const r of items.values()) paint(r); }
+function repaintAll() { for (const r of items.values()) {paint(r);} }
 root.querySelectorAll('input[name="cmode"]').forEach((el) => {
   el.onchange = () => { colorMode = el.value; repaintAll(); renderPanel(); };
 });
@@ -725,10 +725,10 @@ function clearHighlight() {
   const old = [...hl.roots];
   hl.roots.clear();
   old.forEach(paint);
-  for (const m of hl.markers) scene.remove(m);
+  for (const m of hl.markers) {scene.remove(m);}
   hl.markers = [];
   if (hl.path) { scene.remove(hl.path); hl.path.geometry.dispose(); hl.path = null; }
-  for (const b of hl.branches) { scene.remove(b); if (b.geometry !== PART_GEO) b.geometry?.dispose(); }
+  for (const b of hl.branches) { scene.remove(b); if (b.geometry !== PART_GEO) {b.geometry?.dispose();} }
   hl.branches = []; hl.parts = [];
   hl.curve = null;
 }
@@ -767,12 +767,12 @@ function drawBranch(br) {
   const pts = [];
   br.codes.forEach((code, j) => {
     const obj = items.get(code);
-    if (!obj) return;
+    if (!obj) {return;}
     const p = topOf(obj).add(new THREE.Vector3(0, j === br.codes.length - 1 ? 1.2 : 0.8, 0));
-    if (j < br.codes.length - 1) p.y = Math.min(p.y, 2.6);
-    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+    if (j < br.codes.length - 1) {p.y = Math.min(p.y, 2.6);}
+    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) {pts.push(p);}
   });
-  if (pts.length < 2) return;
+  if (pts.length < 2) {return;}
   const c = new THREE.CatmullRomCurve3(pts, false, "centripetal");
   const m = new THREE.Mesh(tubeG(c, pts.length * 16, 0.09, 6, false),
     new THREE.MeshBasicMaterial({ color: br.color ?? 0x888888, transparent: true, opacity: 0.85 }));
@@ -798,7 +798,7 @@ function highlight(entries, { path = false, fit = true, branches = [] } = {}) {
   const pts = [];
   for (const e of entries) {
     const obj = items.get(e.code);
-    if (!obj) continue;
+    if (!obj) {continue;}
     hl.roots.add(obj); paint(obj);
     box.expandByObject(obj);
     const p = topOf(obj);
@@ -810,7 +810,7 @@ function highlight(entries, { path = false, fit = true, branches = [] } = {}) {
       m.position.copy(p).add(new THREE.Vector3(0, 0.6, 0));
       scene.add(m); hl.markers.push(m);
     }
-    if (path && (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.5)) pts.push(p.clone().add(new THREE.Vector3(0, 1.2, 0)));
+    if (path && (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.5)) {pts.push(p.clone().add(new THREE.Vector3(0, 1.2, 0)));}
   }
   if (path && pts.length > 1) {
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
@@ -822,9 +822,9 @@ function highlight(entries, { path = false, fit = true, branches = [] } = {}) {
   }
   for (const br of branches) {
     drawBranch(br);
-    for (const c of br.codes) { const o = items.get(c); if (o) box.expandByObject(o); }
+    for (const c of br.codes) { const o = items.get(c); if (o) {box.expandByObject(o);} }
   }
-  if (fit) fitBox(box);
+  if (fit) {fitBox(box);}
 }
 
 // ---------------------------------------------------------------- шар «Замовлення в роботі»
@@ -841,8 +841,8 @@ function prodFocus(name) {
   prodOv.byMo.forEach((objs, mo) => {
     const k = !name || mo === name ? 1 : 0.15;
     for (const o of objs) {
-      if (o.isCSS2DObject) o.element.style.opacity = k;
-      else o.traverse((x) => { if (x.material) { x.material.transparent = true; x.material.opacity = (x.userData.op0 ??= x.material.opacity) * k; } });
+      if (o.isCSS2DObject) {o.element.style.opacity = k;}
+      else {o.traverse((x) => { if (x.material) { x.material.transparent = true; x.material.opacity = (x.userData.op0 ??= x.material.opacity) * k; } });}
     }
   });
 }
@@ -850,21 +850,21 @@ const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожеж
 const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
 function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
 function clearProdOverlay() {
-  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO) o.geometry?.dispose(); }
+  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO) {o.geometry?.dispose();} }
   prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.parts = []; prodOv.color.clear(); prodOv.byMo.clear();
 }
 // місце замовлення на всьому циклі: індекс точки маршруту (дробовий — у дорозі між точками)
 function cyclePosition(wos, at, firstOut, lastIn) {
   const k = wos.findIndex((w) => w.state === "progress");
-  if (k >= 0) return { u: at[k], w: wos[k], phase: wos[k].name };
+  if (k >= 0) {return { u: at[k], w: wos[k], phase: wos[k].name };}
   const done = wos.map((w) => w.state === "done").lastIndexOf(true);
-  if (done < 0) return { u: Math.max(0, lastIn), w: wos[0], phase: "плита під порталом, чекає першої операції" };
-  if (done === wos.length - 1) return { u: firstOut, w: null, phase: "запаковано — на шляху до клієнта" };
+  if (done < 0) {return { u: Math.max(0, lastIn), w: wos[0], phase: "плита під порталом, чекає першої операції" };}
+  if (done === wos.length - 1) {return { u: firstOut, w: null, phase: "запаковано — на шляху до клієнта" };}
   return { u: at[done] + (at[done + 1] - at[done]) * 0.5, w: wos[done + 1], phase: `до ${wos[done + 1].name}` };
 }
 function drawProdOverlay() {
   clearProdOverlay();
-  if (!prodOv.on || !D) return;
+  if (!prodOv.on || !D) {return;}
   const sim = simOverride != null; // програвання зміни: показуємо всі замовлення дня, рух — за часом операцій
   prodOv.sim = sim;
   prodOv.tracks = []; prodOv.batches = [];
@@ -872,7 +872,7 @@ function drawProdOverlay() {
   const mats = new Map(); // однаковий шлях матеріалу в кількох замовлень — одна лінія, товща
   for (const mo of mos) {
     for (const c of mo.components) {
-      if (!c.path || !c.to || c.product === mo.supply?.product) continue;
+      if (!c.path || !c.to || c.product === mo.supply?.product) {continue;}
       const codes = [...c.path.map((st) => st.code), c.to];
       const key = c.kind + "|" + codes.join();
       const e = mats.get(key) || { kind: c.kind, codes, mos: new Set() };
@@ -885,12 +885,12 @@ function drawProdOverlay() {
     const pts = [];
     e.codes.forEach((code, j) => {
       const obj = items.get(code);
-      if (!obj) return;
+      if (!obj) {return;}
       const p = topOf(obj).add(new THREE.Vector3(0, j === e.codes.length - 1 ? 1.2 : 0.6, 0));
-      if (j < e.codes.length - 1) p.y = Math.min(p.y, 2.2);
-      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+      if (j < e.codes.length - 1) {p.y = Math.min(p.y, 2.2);}
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) {pts.push(p);}
     });
-    if (pts.length < 2) continue;
+    if (pts.length < 2) {continue;}
     const r = 0.07 + 0.025 * Math.min(e.mos.size, 6);
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
     const m = new THREE.Mesh(tubeG(curve, pts.length * 16, r, 5, false),
@@ -898,7 +898,7 @@ function drawProdOverlay() {
     m.userData.isPulse = true;
     m.userData.mos = e.mos;
     scene.add(m); prodOv.objs.push(m); matObjs.push(m);
-    if (sim) continue; // у програванні матеріал їде партіями у свій час — див. buildBatches
+    if (sim) {continue;} // у програванні матеріал їде партіями у свій час — див. buildBatches
     const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 2.4);
     matObjs.push(...parts); prodOv.parts.push(...parts);
   }
@@ -910,19 +910,19 @@ function drawProdOverlay() {
     const pts = [], stage = [], codes = [];
     const push = (code, kind) => {
       const obj = items.get(code);
-      if (!obj) return pts.length - 1;
+      if (!obj) {return pts.length - 1;}
       const p = topOf(obj).add(new THREE.Vector3(0, kind === "op" ? 1.5 : 1.0, 0)).add(off);
-      if (kind !== "op") p.y = Math.min(p.y, 3.0); // стелажі високі — лінія лишається низько
+      if (kind !== "op") {p.y = Math.min(p.y, 3.0);} // стелажі високі — лінія лишається низько
       if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) { pts.push(p); stage.push(kind); codes.push(code); }
       return pts.length - 1;
     };
-    for (const st of mo.supply?.steps || []) push(st.code, "in");
+    for (const st of mo.supply?.steps || []) {push(st.code, "in");}
     const lastIn = pts.length - 1;
     const at = wos.map((w) => push(w.workcenter, "op"));
     const nOps = pts.length;
-    for (const st of mo.delivery?.steps || []) push(st.code, "out");
+    for (const st of mo.delivery?.steps || []) {push(st.code, "out");}
     const firstOut = pts.length > nOps ? nOps : nOps - 1;
-    if (pts.length < 2) return;
+    if (pts.length < 2) {return;}
     const col = moColor(idx.moI.get(mo.name) ?? i);
     prodOv.color.set(mo.name, "#" + col.getHexString());
     const mine = [];
@@ -933,7 +933,7 @@ function drawProdOverlay() {
       new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 })));
     const pointMat = new THREE.MeshBasicMaterial({ color: col.clone().lerp(new THREE.Color(0xffffff), 0.45) });
     pts.forEach((p, j) => { // точки складів і приймання/відвантаження
-      if (stage[j] === "op" || j === 0 || j === pts.length - 1) return;
+      if (stage[j] === "op" || j === 0 || j === pts.length - 1) {return;}
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), pointMat);
       m.position.copy(p);
       add(m);
@@ -969,7 +969,7 @@ function drawProdOverlay() {
     prodOv.tracks.push(track);
   });
   if (sim) { buildBatches(mos); prodSimMove(simMinutes() ?? simOverride); }
-  if (prodOv.focus) prodFocus(prodOv.focus);
+  if (prodOv.focus) {prodFocus(prodOv.focus);}
 }
 
 // ---------------------------------------------------------------- рух за часом зміни (поки грає таймер)
@@ -983,18 +983,18 @@ function trackAt(tr, t) {
   const { wos, at } = tr;
   const lerp = (a, b, k) => a + (b - a) * clamp01(k);
   const s0 = woMin(wos[0], "_s");
-  if (t < s0) return { u: lerp(tr.lastIn, at[0], (t - (s0 - 20)) / 20), ph: t < s0 - 20 ? "матеріал під порталом, чекає розкрою" : `до операції «${wos[0].name}»` };
+  if (t < s0) {return { u: lerp(tr.lastIn, at[0], (t - (s0 - 20)) / 20), ph: t < s0 - 20 ? "матеріал під порталом, чекає розкрою" : `до операції «${wos[0].name}»` };}
   for (let k = 0; k < wos.length; k++) {
     const s = woMin(wos[k], "_s"), f = woMin(wos[k], "_f");
     if (t < s) {
       const pf = woMin(wos[k - 1], "_f");
       return { u: lerp(at[k - 1], at[k], (t - pf) / Math.max(1, Math.min(20, s - pf))), ph: `у дорозі до «${wos[k].name}»` };
     }
-    if (t < f) return { u: at[k], ph: `${wos[k].name} · ${D.workcenters[wos[k].workcenter]?.name || wos[k].workcenter}`, w: wos[k] };
+    if (t < f) {return { u: at[k], ph: `${wos[k].name} · ${D.workcenters[wos[k].workcenter]?.name || wos[k].workcenter}`, w: wos[k] };}
   }
   const fl = woMin(wos[wos.length - 1], "_f");
-  if (tr.out != null && t >= tr.out - 30) return { u: lerp(tr.fg, tr.n - 1, (t - (tr.out - 30)) / 30), ph: "відвантаження клієнту" };
-  if (tr.firstOut >= tr.n - 1 && tr.fg >= tr.n - 1) return { u: at[at.length - 1], ph: "готово" };
+  if (tr.out != null && t >= tr.out - 30) {return { u: lerp(tr.fg, tr.n - 1, (t - (tr.out - 30)) / 30), ph: "відвантаження клієнту" };}
+  if (tr.firstOut >= tr.n - 1 && tr.fg >= tr.n - 1) {return { u: at[at.length - 1], ph: "готово" };}
   return { u: lerp(at[at.length - 1], tr.fg, (t - fl) / 20), ph: "склад готової продукції" };
 }
 // партії матеріалів: фура → склад у час приймання; склад → верстат за 25 хв до операції, що їх споживає
@@ -1003,10 +1003,10 @@ function codesCurve(codes) {
   const pts = [];
   codes.forEach((code, j) => {
     const obj = items.get(code);
-    if (!obj) return;
+    if (!obj) {return;}
     const p = topOf(obj).add(new THREE.Vector3(0, j === codes.length - 1 ? 1.4 : 0.9, 0));
-    if (j < codes.length - 1) p.y = Math.min(p.y, 2.6);
-    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+    if (j < codes.length - 1) {p.y = Math.min(p.y, 2.6);}
+    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) {pts.push(p);}
   });
   return pts.length > 1 ? new THREE.CatmullRomCurve3(pts, false, "centripetal") : null;
 }
@@ -1014,8 +1014,8 @@ const BATCH_GEO = new THREE.BoxGeometry(1.1, 0.7, 1.1);
 const batchMat = new Map();
 function addBatch(codes, kind, w0, w1, mos, label) {
   const curve = codesCurve(codes);
-  if (!curve || w1 <= w0) return;
-  if (!batchMat.has(kind)) batchMat.set(kind, new THREE.MeshBasicMaterial({ color: MAT_COLOR[kind] ?? 0x888888 }));
+  if (!curve || w1 <= w0) {return;}
+  if (!batchMat.has(kind)) {batchMat.set(kind, new THREE.MeshBasicMaterial({ color: MAT_COLOR[kind] ?? 0x888888 }));}
   const m = new THREE.Mesh(BATCH_GEO, batchMat.get(kind));
   m.userData = { isPulse: true, curve, w0, w1, mos, label };
   m.visible = false;
@@ -1026,17 +1026,17 @@ function buildBatches(mos) {
   for (const mo of mos) {
     const wos = mo.workorders.map((id) => D.workorders[id]);
     for (const c of mo.components) {
-      if (!c.path?.length || !c.to) continue;
+      if (!c.path?.length || !c.to) {continue;}
       const codes = c.path.map((st) => st.code);
       let s = codes.findIndex((x) => !IN_CODE.test(x));
-      if (s < 0) s = codes.length - 1;
+      if (s < 0) {s = codes.length - 1;}
       const rc = c.receipt && idx.pick.get(c.receipt);
       if (rc && !inSeen.has(rc.name) && s > 0) { // приймання: фура → склад, раз на документ
         inSeen.add(rc.name);
         const m0 = dayMin(rc.scheduled_date);
-        if (m0 != null) addBatch(codes.slice(0, s + 1), c.kind, m0, m0 + 35, null, rc.name);
+        if (m0 != null) {addBatch(codes.slice(0, s + 1), c.kind, m0, m0 + 35, null, rc.name);}
       }
-      if (c.product === mo.supply?.product) continue; // плиту везе сама мітка замовлення
+      if (c.product === mo.supply?.product) {continue;} // плиту везе сама мітка замовлення
       const w = wos.find((x) => x.workcenter === c.to) || wos[0];
       const ws = woMin(w, "_s");
       addBatch([...codes.slice(s), c.to], c.kind, ws - 25, ws, new Set([mo.name]), mo.name);
@@ -1044,7 +1044,7 @@ function buildBatches(mos) {
   }
 }
 function prodSimMove(t) {
-  if (!prodOv.sim || t == null) return;
+  if (!prodOv.sim || t == null) {return;}
   for (const tr of prodOv.tracks) {
     const pos = trackAt(tr, t);
     const p = tr.curve.getPoint(clamp01(pos.u / Math.max(1, tr.n - 1)));
@@ -1062,21 +1062,21 @@ function prodSimMove(t) {
     const d = b.userData;
     const on = t >= d.w0 && t <= d.w1 && (!f || !d.mos || d.mos.has(f));
     b.visible = on;
-    if (on) b.position.copy(d.curve.getPointAt(clamp01((t - d.w0) / (d.w1 - d.w0))));
+    if (on) {b.position.copy(d.curve.getPointAt(clamp01((t - d.w0) / (d.w1 - d.w0))));}
   }
 }
 // у шарі замовлень довгі назви зон приймання й відвантаження перекривають фури — лишаємо «Ворота N»
 function shortDoorLabels(on) {
   for (const { lbl, obj, cls } of labels) {
     const m = cls === "zone" && /^Z-(RCV|OUT)-(\d+)$/.exec(obj.userData.code || "");
-    if (!m) continue;
+    if (!m) {continue;}
     const el = lbl.element;
     el.dataset.full ??= el.innerHTML;
     el.innerHTML = on ? `Ворота ${m[2]}` : el.dataset.full;
   }
 }
 async function setProdOverlay(on) {
-  if (prodOv.on === on) return;
+  if (prodOv.on === on) {return;}
   prodOv.on = on;
   $(".o_f3d_opt-prod").checked = on;
   shortDoorLabels(on);
@@ -1084,7 +1084,7 @@ async function setProdOverlay(on) {
   if (on) {
     stopDrill();
     prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
-    layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) setLayer(k, false); });
+    layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) {setLayer(k, false);} });
     select(null); clearHighlight();
     // увесь майданчик від КПП приймання до вагової й КПП відвантаження — між лівою й правою панелями
     goView({ name: "План згори", target: [89, 31, 0], pos: [89, 30.9, 330] });
@@ -1093,7 +1093,7 @@ async function setProdOverlay(on) {
     openTab("production");
   } else {
     clearProdOverlay(); prodOv.focus = null;
-    if (prodOv.saved) prodOv.saved.forEach((want, k) => setLayer(k, want));
+    if (prodOv.saved) {prodOv.saved.forEach((want, k) => setLayer(k, want));}
     prodOv.saved = null;
     renderPanel();
   }
@@ -1108,9 +1108,9 @@ function pick(ev) {
   ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ptr, camera);
   for (const hit of ray.intersectObjects(scene.children, true)) {
-    if (!hit.object.isMesh || !isShown(hit.object) || hit.object.userData.isPulse) continue;
+    if (!hit.object.isMesh || !isShown(hit.object) || hit.object.userData.isPulse) {continue;}
     const root = codeRoot(hit.object);
-    if (root) return root;
+    if (root) {return root;}
   }
   return null;
 }
@@ -1118,7 +1118,7 @@ function select(obj, { keepHighlight = false } = {}) {
   const prev = selected;
   selected = obj;
   paint(prev);
-  if (!keepHighlight) clearHighlight();
+  if (!keepHighlight) {clearHighlight();}
   if (obj) {
     paint(obj);
     selBox.box.setFromObject(obj).expandByScalar(0.08);
@@ -1126,13 +1126,13 @@ function select(obj, { keepHighlight = false } = {}) {
     openView({ type: "object", code: obj.userData.code }, false);
   } else {
     selBox.visible = false;
-    if (panel.type === "object") openTab(panel.tab || "overview");
+    if (panel.type === "object") {openTab(panel.tab || "overview");}
   }
 }
 let down = null;
 renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener("pointerup", (e) => {
-  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) {return;}
   select(pick(e));
 });
 renderer.domElement.addEventListener("dblclick", (e) => {
@@ -1141,25 +1141,25 @@ renderer.domElement.addEventListener("dblclick", (e) => {
 });
 let hoverAt = 0;
 renderer.domElement.addEventListener("pointermove", (e) => {
-  if (e.buttons || e.pointerType === "touch") return;
+  if (e.buttons || e.pointerType === "touch") {return;}
   const now = performance.now();
-  if (now - hoverAt < 80) return;
+  if (now - hoverAt < 80) {return;}
   hoverAt = now;
   const o = pick(e);
-  if (o === hovered) return;
+  if (o === hovered) {return;}
   const prev = hovered;
   hovered = o;
   paint(prev); paint(o);
   renderer.domElement.style.cursor = o ? "pointer" : "";
 });
 on(window, "keydown", (e) => {
-  if (e.target?.closest?.("input, textarea")) return;
+  if (e.target?.closest?.("input, textarea")) {return;}
   const ae = document.activeElement;
-  if (!(root.contains(ae) || ae === document.body || !ae)) return;
+  if (!(root.contains(ae) || ae === document.body || !ae)) {return;}
   if (e.key === "Escape") { stopDrill(); select(null); clearHighlight(); openTab(panel.tab || "overview"); }
   if (/^[0-9]$/.test(e.key)) {
     const v = VIEWS[(parseInt(e.key, 10) + 9) % 10];
-    if (v) goView(v);
+    if (v) {goView(v);}
   }
 });
 
@@ -1180,7 +1180,7 @@ function indexData() {
   idx.prodLocs = new Map();
   for (const [code, loc] of Object.entries(D.locations)) {
     for (const q of loc.quants) {
-      if (!idx.prodLocs.has(q.product)) idx.prodLocs.set(q.product, []);
+      if (!idx.prodLocs.has(q.product)) {idx.prodLocs.set(q.product, []);}
       idx.prodLocs.get(q.product).push({ code, qty: q.qty, reserved: q.reserved || 0 });
     }
   }
@@ -1194,13 +1194,13 @@ function setData(d, first) {
   simBase = Date.parse(D.meta.now.replace(" ", "T"));
   scheduleWOs();
   simStart = Date.now();
-  for (const mo of D.productions) mo._st0 = mo.state;
+  for (const mo of D.productions) {mo._st0 = mo.state;}
   $(".o_f3d_odoo-pill").classList.remove(cx("off"));
   $(".o_f3d_odoo-pill").classList.add(cx("on"));
   $(".o_f3d_odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";
-  if (D.meta.live) $(".o_f3d_odoo-pill").title = `Знімок бази на ${D.meta.pulled_at}`;
+  if (D.meta.live) {$(".o_f3d_odoo-pill").title = `Знімок бази на ${D.meta.pulled_at}`;}
   tickClock();
-  if (first) timers.push(setInterval(tick, 3000), setInterval(tickClock, 1000));
+  if (first) {timers.push(setInterval(tick, 3000), setInterval(tickClock, 1000));}
   syncOutdoorZones();
   syncFireDevices();
   syncMachineLabels();
@@ -1231,17 +1231,17 @@ async function load() {
   client.onState?.(syncConnState);
   syncConnState(client.state);
   client.subscribe((patch) => applyPatch(patch));
-  if (client.state === "offline" && typeof navigator !== "undefined" && navigator.onLine === false) syncConnState("offline");
+  if (client.state === "offline" && typeof navigator !== "undefined" && navigator.onLine === false) {syncConnState("offline");}
 }
 let offBanner = null;
 function syncConnState(s) {
-  if (!D) return;
+  if (!D) {return;}
   const pill_ = $(".o_f3d_odoo-pill");
   const bad = s === "offline" || !!client.degraded;
   pill_.classList.toggle(cx("off"), !!bad);
-  if (bad) $(".o_f3d_odoo-state").textContent = "немає зв'язку";
-  else $(".o_f3d_odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";
-  if (s === "offline" && !offBanner) offBanner = banner("Немає мережі — показано останні отримані дані");
+  if (bad) {$(".o_f3d_odoo-state").textContent = "немає зв'язку";}
+  else {$(".o_f3d_odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";}
+  if (s === "offline" && !offBanner) {offBanner = banner("Немає мережі — показано останні отримані дані");}
   if (s !== "offline" && offBanner) { offBanner.remove(); offBanner = null; }
 }
 
@@ -1249,27 +1249,27 @@ function syncConnState(s) {
 function mergeList(list, items_, key) {
   for (const it of items_) {
     const cur = list.find((x) => x[key] === it[key]);
-    if (cur) deepMerge(cur, it); else list.push(deepMerge({}, it));
+    if (cur) {deepMerge(cur, it);} else {list.push(deepMerge({}, it));}
   }
 }
 function setByPath(path, value) {
   const parts = path.split("/");
   let o = D;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (!isObj(o[parts[i]])) o[parts[i]] = {};
+    if (!isObj(o[parts[i]])) {o[parts[i]] = {};}
     o = o[parts[i]];
   }
   o[parts[parts.length - 1]] = value;
   return parts;
 }
 function applyPatch(patch) {
-  if (!D || !patch || destroyed) return;
+  if (!D || !patch || destroyed) {return;}
   if (patch.full) {
     const wasLive = D === Dlive;
     try { setData(mergeData(staticD, patch.full)); } catch (err) { loadFailed(err); return; }
     Dlive = D;
-    if (!wasLive) return;
-    if (prodOv.on) drawProdOverlay();
+    if (!wasLive) {return;}
+    if (prodOv.on) {drawProdOverlay();}
     flow.built = false;
     flowRefresh();
     renderPanel(true);
@@ -1278,15 +1278,15 @@ function applyPatch(patch) {
   const changed = new Set();
   const lists = new Set();
   for (const [k, v] of Object.entries(patch)) {
-    if (k === "removed" || k === "signals" || k === "full") continue;
+    if (k === "removed" || k === "signals" || k === "full") {continue;}
     if (k in LIST_KEYS && Array.isArray(v)) {
       mergeList(D[k] ??= [], v, LIST_KEYS[k]);
-      if (v.length) lists.add(k);
+      if (v.length) {lists.add(k);}
     } else if (isObj(v) && isObj(D[k])) {
       deepMerge(D[k], v);
       Object.keys(v).forEach((c) => changed.add(c));
       lists.add(k);
-      if (k === "workorders") for (const w of Object.values(v)) if (w?.workcenter) changed.add(w.workcenter);
+      if (k === "workorders") {for (const w of Object.values(v)) {if (w?.workcenter) {changed.add(w.workcenter);}}}
     } else {
       D[k] = v;
       lists.add(k);
@@ -1298,13 +1298,13 @@ function applyPatch(patch) {
     lists.add(parts[0]);
   }
   for (const [k, names] of Object.entries(patch.removed || {})) {
-    if (!names?.length) continue;
+    if (!names?.length) {continue;}
     lists.add(k);
     if (Array.isArray(D[k])) {
       const key = LIST_KEYS[k] || "name";
       D[k] = D[k].filter((x) => !names.includes(x[key]));
     } else if (isObj(D[k])) {
-      for (const n of names) delete D[k][n];
+      for (const n of names) {delete D[k][n];}
     }
     names.forEach((c) => changed.add(c));
   }
@@ -1312,34 +1312,34 @@ function applyPatch(patch) {
   indexData();
   if ((lists.has("workorders") || lists.has("productions")) && simOverride == null) {
     scheduleWOs();
-    for (const mo of D.productions) mo._st0 = mo.state;
+    for (const mo of D.productions) {mo._st0 = mo.state;}
   }
-  if (lists.has("zones")) syncOutdoorZones();
-  if (lists.has("fire")) syncFireDevices();
+  if (lists.has("zones")) {syncOutdoorZones();}
+  if (lists.has("fire")) {syncFireDevices();}
   for (const c of changed) {
     const o = items.get(c);
-    if (o) paint(o);
+    if (o) {paint(o);}
   }
-  if (colorMode !== "none") repaintAll();
-  if ([...changed].some((c) => D.workcenters?.[c])) syncMachineLabels();
-  if (prodOv.on && (lists.has("productions") || lists.has("workorders") || lists.has("pickings"))) drawProdOverlay();
+  if (colorMode !== "none") {repaintAll();}
+  if ([...changed].some((c) => D.workcenters?.[c])) {syncMachineLabels();}
+  if (prodOv.on && (lists.has("productions") || lists.has("workorders") || lists.has("pickings"))) {drawProdOverlay();}
   if (lists.has("workorders") || lists.has("pickings") || lists.has("productions")) { flow.built = false; flowRefresh(); }
   updateLive();
   drillSync();
-  if (panel.type !== "drill" && !root.contains(document.activeElement?.closest?.("input"))) renderPanel(true);
+  if (panel.type !== "drill" && !root.contains(document.activeElement?.closest?.("input"))) {renderPanel(true);}
   tickClock();
 }
 function flowRefresh() {
-  if ($(".o_f3d_flow").hidden) return;
+  if ($(".o_f3d_flow").hidden) {return;}
   flowBuild(); flowRender(); flowUpdate(simOverride);
 }
 // підпис верстата читає статус із payload (FR-07)
 function syncMachineLabels() {
   for (const { lbl, obj, cls } of labels) {
-    if (cls !== "mach") continue;
+    if (cls !== "mach") {continue;}
     const [c] = MACHINE_STATUS[machStatus(obj.userData)] || ["idle"];
     const st = lbl.element.querySelector(".o_f3d_st");
-    if (st) st.style.background = `var(--f3d-${c})`;
+    if (st) {st.style.background = `var(--f3d-${c})`;}
   }
 }
 
@@ -1350,14 +1350,14 @@ function drillSync() {
   if (!E || !("drill_active" in E)) { drillName = undefined; return; }
   const da = E.drill_active;
   const name = da?.name ?? null;
-  if (name === drillName) return;
+  if (name === drillName) {return;}
   const prev = drillName;
   drillName = name;
-  if (da) startDrill({ elapsed: da.elapsed_s || 0 });
+  if (da) {startDrill({ elapsed: da.elapsed_s || 0 });}
   else if (prev) {
     const was = panel.type === "drill";
     stopDrill();
-    if (was) openTab(panel.tab || "overview");
+    if (was) {openTab(panel.tab || "overview");}
   }
 }
 
@@ -1369,7 +1369,7 @@ function syncFireDevices() {
   const sig = dev ? JSON.stringify(dev) : "";
   if (sig !== fireDev.sig) {
     fireDev.sig = sig;
-    for (const c of fireDev.codes) items.delete(c);
+    for (const c of fireDev.codes) {items.delete(c);}
     fireDev.codes = [];
     for (const m of [...fireDev.group.children]) { fireDev.group.remove(m); m.geometry.dispose(); m.material.dispose(); }
     for (const [addr, d] of Object.entries(dev || {})) {
@@ -1386,7 +1386,7 @@ function syncFireDevices() {
 }
 function deviceHtml(addr) {
   const d = D?.fire?.devices?.[addr];
-  if (!d) return "";
+  if (!d) {return "";}
   const st = FIRE_STATE[d.state] || ["warn", d.state];
   return `<dl class="o_f3d_kv"><dt>Адреса</dt><dd class="o_f3d_mono">${esc(addr)}</dd><dt>Тип</dt><dd>${esc(d.type)}</dd>
     <dt>Зона</dt><dd><button class="o_f3d_lnk" data-go="obj:${esc(d.zone)}">${esc(D.zones?.[d.zone]?.name || d.zone)}</button></dd>
@@ -1398,7 +1398,7 @@ const outdoor = { group: new THREE.Group(), codes: new Map() };
 scene.add(outdoor.group);
 function syncOutdoorZones() {
   for (const [code, z] of Object.entries(D?.zones || {})) {
-    if (!z.polygon || outdoor.codes.has(code) || items.has(code)) continue;
+    if (!z.polygon || outdoor.codes.has(code) || items.has(code)) {continue;}
     const shape = new THREE.Shape(z.polygon.map(([x, y]) => new THREE.Vector2(x, y)));
     const geo = new THREE.ShapeGeometry(shape);
     geo.rotateX(-Math.PI / 2);
@@ -1423,22 +1423,22 @@ function syncOutdoorZones() {
 
 // ---- R-17: знімки
 async function ensurePlayback() {
-  if (snapChecked || !client?.snapshots || !D) return;
+  if (snapChecked || !client?.snapshots || !D) {return;}
   snapChecked = true;
   try {
     const r = await client.snapshots(D.meta.now.slice(0, 10));
     snapList = r.snapshots || [];
-    if (r.mode === "snapshots" && !userPlan) { playbackMode = "snapshots"; if (simOverride != null) applySimTime(simOverride); }
+    if (r.mode === "snapshots" && !userPlan) { playbackMode = "snapshots"; if (simOverride != null) {applySimTime(simOverride);} }
   } catch (err) { console.warn(err); }
 }
 async function loadSnapshotById(id) {
   try {
     const payload = await client.snapshot(id);
     applySnapshot(payload);
-  } catch (err) { notify(`Знімок ${id} недоступний`, "warning"); }
+  } catch { notify(`Знімок ${id} недоступний`, "warning"); }
 }
 function applySnapshot(payload) {
-  if (!staticD) return;
+  if (!staticD) {return;}
   const keepSim = simOverride;
   D = mergeData(staticD, payload);
   indexData();
@@ -1447,18 +1447,18 @@ function applySnapshot(payload) {
   scheduleWOs();
   simOverride = keepSim;
   items.forEach(paint);
-  if (prodOv.on) drawProdOverlay();
+  if (prodOv.on) {drawProdOverlay();}
   flow.built = false;
   renderPanel(true);
 }
 let snapShown = null;
 function snapshotTime(min) {
-  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); items.forEach(paint); if (prodOv.on) drawProdOverlay(); flow.built = false; renderPanel(true); } return false; }
+  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
   const day = (Dlive || D).meta.now.slice(0, 10);
   const t = Date.parse(`${day}T00:00`) + min * 60000;
   let pick_ = null;
-  for (const s of snapList) if (Date.parse(s.ts.replace(" ", "T")) <= t) pick_ = s;
-  if (!pick_) return false;
+  for (const s of snapList) {if (Date.parse(s.ts.replace(" ", "T")) <= t) {pick_ = s;}}
+  if (!pick_) {return false;}
   if (snapShown !== pick_.id) {
     snapShown = pick_.id;
     simOverride = min;
@@ -1473,24 +1473,24 @@ const qtyU = (q, code) => `${nf.format(q)} ${esc(P(code).uom)}`;
 const simNow = () => new Date(simBase + (Date.now() - simStart));
 const hm = (s) => (s ? s.slice(11, 16) : "");
 const dayHm = (s) => {
-  if (!s) return "";
+  if (!s) {return "";}
   const today = D.meta.now.slice(0, 10);
   return s.slice(0, 10) === today ? `сьогодні ${s.slice(11, 16)}` : `${s.slice(8, 10)}.${s.slice(5, 7)} ${s.slice(11, 16)}`;
 };
 function tickClock() {
-  if (!D) return;
+  if (!D) {return;}
   const t = simNow();
   $(".o_f3d_odoo-time").textContent = simOverride != null ? `демо-час ${hhmm(simOverride)}`
     : `синхр. ${t.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 }
 // «живі» дані: завдання в роботі просуваються, поки сторінка відкрита
 function tick() {
-  if (!D || document.hidden) return;
-  if (D.meta.live && simOverride == null) { if (panel.type === "drill") renderDrill(); return; } // R20: у живому режимі лише патчі
-  if (simOverride != null) { energyTick(); updateLive(); if (panel.type === "drill") renderDrill(); return; }
-  if (panel.type === "drill") renderDrill();
+  if (!D || document.hidden) {return;}
+  if (D.meta.live && simOverride == null) { if (panel.type === "drill") {renderDrill();} return; } // R20: у живому режимі лише патчі
+  if (simOverride != null) { energyTick(); updateLive(); if (panel.type === "drill") {renderDrill();} return; }
+  if (panel.type === "drill") {renderDrill();}
   for (const wo of Object.values(D.workorders)) {
-    if (wo.state !== "progress" || wo.blocked) continue;
+    if (wo.state !== "progress" || wo.blocked) {continue;}
     wo.progress = Math.min(0.98, wo.progress + 0.002 + ((wo.id.charCodeAt(6) % 5) * 0.001));
   }
   for (const mo of D.productions) {
@@ -1500,7 +1500,7 @@ function tick() {
   }
   energyTick();
   updateLive();
-  if (colorMode === "power") repaintAll();
+  if (colorMode === "power") {repaintAll();}
 }
 function updateLive() {
   const val = (key) => {
@@ -1510,15 +1510,15 @@ function updateLive() {
   };
   root.querySelectorAll("[data-p]").forEach((el) => {
     const v = val(el.dataset.p);
-    if (v != null) el.firstElementChild.style.width = barW(v);
+    if (v != null) {el.firstElementChild.style.width = barW(v);}
   });
   root.querySelectorAll("[data-t]").forEach((el) => {
     const v = val(el.dataset.t);
-    if (v != null) el.textContent = pct(v);
+    if (v != null) {el.textContent = pct(v);}
   });
   root.querySelectorAll("[data-e]").forEach((el) => {
     const v = eVal(el.dataset.e);
-    if (v != null) el.textContent = eFmt[el.dataset.ef](v);
+    if (v != null) {el.textContent = eFmt[el.dataset.ef](v);}
   });
   root.querySelectorAll("[data-eb]").forEach((el) => {
     const v = eVal(el.dataset.eb);
@@ -1539,57 +1539,57 @@ function openTab(tab) { panel = { type: "tab", tab }; setTabs(tab); renderPanel(
 function openView(v, scroll = true) {
   panel = { ...v, tab: panel.tab || "overview" };
   renderPanel();
-  if (scroll) body().scrollTop = 0;
+  if (scroll) {body().scrollTop = 0;}
 }
 function renderPanel(soft = false) {
-  if (!D) return;
+  if (!D) {return;}
   const top = body().scrollTop;
   const b = body();
   if (panel.type === "tab") {
     ({ overview: renderOverview, production: renderProduction, stock: renderStock, logistics: renderLogistics,
       energy: renderEnergy })[panel.tab]();
-  } else if (panel.type === "object") renderObject(panel.code);
-  else if (panel.type === "mo") renderMO(panel.name);
-  else if (panel.type === "product") renderProduct(panel.code);
-  else if (panel.type === "picking") renderPicking(panel.name);
-  else if (panel.type === "line") renderLine(panel.code);
-  else if (panel.type === "drill") renderDrill();
-  if (soft) b.scrollTop = top;
+  } else if (panel.type === "object") {renderObject(panel.code);}
+  else if (panel.type === "mo") {renderMO(panel.name);}
+  else if (panel.type === "product") {renderProduct(panel.code);}
+  else if (panel.type === "picking") {renderPicking(panel.name);}
+  else if (panel.type === "line") {renderLine(panel.code);}
+  else if (panel.type === "drill") {renderDrill();}
+  if (soft) {b.scrollTop = top;}
 }
 // «Відкрити в Odoo» для документів: client.resolve({name}) → onOpenRecord (SPEC §8.2 п. 4)
 function openLink(name) {
-  if (!opts.onOpenRecord || kiosk) return "";
+  if (!opts.onOpenRecord || kiosk) {return "";}
   return '<div class="o_f3d_row-btns"><button class="o_f3d_lnk" data-open="' + esc(name) + '">Відкрити в Odoo</button></div>';
 }
 async function openByName(name) {
   try {
     const r = await client.resolve({ name });
-    if (r?.model) opts.onOpenRecord(r.model, r.res_id);
-    else notify("У базі немає запису " + name, "info");
-  } catch (err) { notify("У базі немає запису " + name, "info"); }
+    if (r?.model) {opts.onOpenRecord(r.model, r.res_id);}
+    else {notify("У базі немає запису " + name, "info");}
+  } catch { notify("У базі немає запису " + name, "info"); }
 }
 const backBtn = () => `<button class="o_f3d_back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика", energy: "Енергія" })[panel.tab] || "Назад")}</button>`;
 // усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
 body().addEventListener("click", (e) => {
   const back = e.target.closest("[data-back]");
-  if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) prodFocus(null); openTab(panel.tab || "overview"); return; }
+  if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) {prodFocus(null);} openTab(panel.tab || "overview"); return; }
   const op = e.target.closest("[data-open]");
   if (op) { openByName(op.dataset.open); return; }
   const a = e.target.closest("[data-go]");
-  if (!a) return;
+  if (!a) {return;}
   const [t, ...rest] = a.dataset.go.split(":");
   const v = rest.join(":");
-  if (t === "mo") showMO(v);
-  else if (t === "pick") showPicking(v);
-  else if (t === "prod") showProduct(v);
-  else if (t === "obj") ensureCode(v).then((o) => { if (o) { if (!isShown(o)) showLayerOf(o); select(o, { keepHighlight: true }); focusOn(o); } });
-  else if (t === "comp") showComponent(v);
-  else if (t === "chain") showChain(v);
-  else if (t === "matp") showMatPath(+v);
-  else if (t === "locs") highlightLocs(v.split(","));
-  else if (t === "line") showLine(v);
+  if (t === "mo") {showMO(v);}
+  else if (t === "pick") {showPicking(v);}
+  else if (t === "prod") {showProduct(v);}
+  else if (t === "obj") {ensureCode(v).then((o) => { if (o) { if (!isShown(o)) {showLayerOf(o);} select(o, { keepHighlight: true }); focusOn(o); } });}
+  else if (t === "comp") {showComponent(v);}
+  else if (t === "chain") {showChain(v);}
+  else if (t === "matp") {showMatPath(+v);}
+  else if (t === "locs") {highlightLocs(v.split(","));}
+  else if (t === "line") {showLine(v);}
   else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
-  else if (t === "drill") startDrill();
+  else if (t === "drill") {startDrill();}
 });
 function renderNoData() {
   body().innerHTML = `<div class="o_f3d_kind">Немає даних</div><p>Дані недоступні. Модель працює, але без даних Odoo.</p>`;
@@ -1607,22 +1607,22 @@ function renderOverview() {
   const moProg = D.productions.filter((m) => m.state === "progress").length;
   const attention = [];
   for (const w of wcs) {
-    if (w.status === "stop") attention.push(["bad", `${w.name} — зупинено${w.maintenance_request ? (" · " + (w.maintenance_request)) : ""}`, `obj:${w.code}`]);
+    if (w.status === "stop") {attention.push(["bad", `${w.name} — зупинено${w.maintenance_request ? (" · " + (w.maintenance_request)) : ""}`, `obj:${w.code}`]);}
   }
-  for (const q of D.quality_checks) if (q.state === "fail") attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);
-  for (const m of D.productions) if (m.reservation_state === "waiting") attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);
-  for (const [k, c] of Object.entries(D.infra?.cards || {})) if (c.warn) attention.push(["warn", c.warn, `obj:${k}`]);
+  for (const q of D.quality_checks) {if (q.state === "fail") {attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);}}
+  for (const m of D.productions) {if (m.reservation_state === "waiting") {attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);}}
+  for (const [k, c] of Object.entries(D.infra?.cards || {})) {if (c.warn) {attention.push(["warn", c.warn, `obj:${k}`]);}}
   for (const [k, g] of Object.entries(D.fire?.groups || {})) {
-    if (g.state === "alarm" || g.state === "fault") attention.unshift(["bad", `Пожежна сигналізація: ${FIRE_STATE[g.state][1]} · ${g.zone_name}`, `obj:${k}`]);
-    else if (g.state !== "ok") attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${g.maintenance_request || ""}`, `obj:${k}`]);
+    if (g.state === "alarm" || g.state === "fault") {attention.unshift(["bad", `Пожежна сигналізація: ${FIRE_STATE[g.state][1]} · ${g.zone_name}`, `obj:${k}`]);}
+    else if (g.state !== "ok") {attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${g.maintenance_request || ""}`, `obj:${k}`]);}
   }
   for (const [k, u] of Object.entries(D.ventilation?.units || {})) {
-    if (u.filter_dp_pa > 250) attention.push(["warn", `${k}: забитий фільтр вентиляції (${u.filter_dp_pa} Па) · ${u.maintenance_request || ""}`, `obj:${k}`]);
+    if (u.filter_dp_pa > 250) {attention.push(["warn", `${k}: забитий фільтр вентиляції (${u.filter_dp_pa} Па) · ${u.maintenance_request || ""}`, `obj:${k}`]);}
   }
-  for (const w of wcs) if (w.status === "idle") attention.push(["warn", `${w.name} — ${w.idle_reason || "простій"}`, `obj:${w.code}`]);
-  for (const p of outs) if (p.state === "waiting") attention.push(["warn", `${p.name} (${p.partner}) — ${p.note}`, `pick:${p.name}`]);
+  for (const w of wcs) {if (w.status === "idle") {attention.push(["warn", `${w.name} — ${w.idle_reason || "простій"}`, `obj:${w.code}`]);}}
+  for (const p of outs) {if (p.state === "waiting") {attention.push(["warn", `${p.name} (${p.partner}) — ${p.note}`, `pick:${p.name}`]);}}
   const lowBins = Object.entries(D.locations).filter(([, l]) => l.state && l.state !== "ok");
-  if (lowBins.length) attention.push(["warn", `${lowBins.length} комірок фурнітури нижче мінімуму — закупівлі ${D.purchase_orders.filter((p) => p.locations.length).map((p) => p.name).join(", ")}`, `locs:${lowBins.map(([c]) => c).join(",")}`]);
+  if (lowBins.length) {attention.push(["warn", `${lowBins.length} комірок фурнітури нижче мінімуму — закупівлі ${D.purchase_orders.filter((p) => p.locations.length).map((p) => p.name).join(", ")}`, `locs:${lowBins.map(([c]) => c).join(",")}`]);}
   body().innerHTML = `
     <div class="o_f3d_kpis">
       <div class="o_f3d_kpi"><b>${working}/${wcs.length}</b><span>верстатів у роботі</span></div>
@@ -1639,11 +1639,11 @@ function renderOverview() {
 }
 // парк обладнання: одна модель — один рядок, кількість одиниць і перехід до першої
 function fleetHtml() {
-  if (!D.passports) return "";
+  if (!D.passports) {return "";}
   const groups = new Map();
   for (const [code, pp] of Object.entries(D.passports)) {
     const key = `${pp.manufacturer} ${pp.model}`;
-    if (!groups.has(key)) groups.set(key, { pp, codes: [] });
+    if (!groups.has(key)) {groups.set(key, { pp, codes: [] });}
     groups.get(key).codes.push(code);
   }
   return `<div class="o_f3d_sub">Парк обладнання · ${groups.size} моделей</div><ul class="o_f3d_rows">${[...groups.values()].map(({ pp, codes }) => {
@@ -1652,22 +1652,22 @@ function fleetHtml() {
   }).join("")}</ul>`;
 }
 function legendHtml() {
-  if (colorMode === "fill") return `<div class="o_f3d_sub">Заповненість складу</div><div class="o_f3d_legend">
+  if (colorMode === "fill") {return `<div class="o_f3d_sub">Заповненість складу</div><div class="o_f3d_legend">
     <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>30 % і більше</span>
     <span class="o_f3d_swatch" style="background:var(--f3d-warn)"></span><span>менше 30 %</span>
-    <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>порожньо</span></div>`;
-  if (colorMode === "oee") return `<div class="o_f3d_sub">OEE верстатів</div><div class="o_f3d_legend">
+    <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>порожньо</span></div>`;}
+  if (colorMode === "oee") {return `<div class="o_f3d_sub">OEE верстатів</div><div class="o_f3d_legend">
     <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>75 % і більше</span>
     <span class="o_f3d_swatch" style="background:var(--f3d-warn)"></span><span>50–75 %</span>
-    <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>менше 50 %</span></div>`;
-  if (colorMode === "lux") return `<div class="o_f3d_sub">Освітленість відносно норми</div><div class="o_f3d_legend">
+    <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>менше 50 %</span></div>`;}
+  if (colorMode === "lux") {return `<div class="o_f3d_sub">Освітленість відносно норми</div><div class="o_f3d_legend">
     <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>розрахунок не нижче норми</span>
     <span class="o_f3d_swatch" style="background:var(--f3d-warn)"></span><span>85–100 % норми</span>
-    <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>менше 85 %</span></div>`;
-  if (colorMode === "power") return `<div class="o_f3d_sub">Споживання електроенергії</div><div class="o_f3d_legend">
+    <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>менше 85 %</span></div>`;}
+  if (colorMode === "power") {return `<div class="o_f3d_sub">Споживання електроенергії</div><div class="o_f3d_legend">
     <span class="o_f3d_swatch" style="background:var(--f3d-bad)"></span><span>споживач від 30 кВт · лінія понад 80 %</span>
     <span class="o_f3d_swatch" style="background:var(--f3d-warn)"></span><span>10–30 кВт · 60–80 %</span>
-    <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>до 10 кВт · до 60 %</span></div>`;
+    <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>до 10 кВт · до 60 %</span></div>`;}
   return `<div class="o_f3d_sub">Легенда</div><div class="o_f3d_legend">
     <span class="o_f3d_swatch" style="background:var(--f3d-ok)"></span><span>Маячок верстата: у роботі</span>
     <span class="o_f3d_swatch" style="background:var(--f3d-warn)"></span><span>Простій · лоток нижче мінімуму</span>
@@ -1694,10 +1694,10 @@ function renderProduction() {
 }
 function showMO(name) {
   const mo = idx.mo.get(name);
-  if (!mo) return;
+  if (!mo) {return;}
   select(null);
   openView({ type: "mo", name });
-  if (prodOv.on) prodFocus(name);
+  if (prodOv.on) {prodFocus(name);}
   const wos = mo.workorders.map((id) => D.workorders[id]);
   // маршрут від фури: шлях плити (приймання → контроль → стелаж → під порталом), далі операції
   const sup = (mo.supply?.steps || []).map((st) => ({ code: st.code, html: esc(st.label), cls: "hl" }));
@@ -1714,14 +1714,14 @@ function showMO(name) {
     const store = c.path.find((st) => /^(FUR-|EB-|PAINT|PACK-STORE|RCK-|PLT-)/.test(st.code));
     return { codes, color: MAT_COLOR[c.kind], label: esc(c.kind), at: store?.code, key: c.kind + codes.join() };
   }).filter((b) => { // кілька позицій фурнітури з одного стелажа — одна лінія й одна мітка на вид
-    if (seen.has(b.key)) return false;
-    if ([...seen].some((k) => k.startsWith(b.label))) b.label = null;
+    if (seen.has(b.key)) {return false;}
+    if ([...seen].some((k) => k.startsWith(b.label))) {b.label = null;}
     seen.add(b.key);
     return true;
   });
   const need = [...sup, ...dl, ...branches.flatMap((b) => b.codes.map((code) => ({ code })))];
   Promise.all(need.map((e) => ensureCode(e.code))).then(() => {
-    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops, ...dl], { path: true, branches });
+    if (panel.type === "mo" && panel.name === name) {highlight([...sup, ...ops, ...dl], { path: true, branches });}
   });
   highlight(ops, { path: true, fit: false });
 }
@@ -1757,13 +1757,13 @@ function renderMO(name) {
     ${mo.reservation_state === "waiting" ? ("<div class=\"o_f3d_note o_f3d_bad\">Компоненти не зарезервовано повністю — замовлення чекає приймання.</div>") : ""}`;
 }
 function showComponent(v) {
-  const [mo, product] = v.split("|");
+  const [, product] = v.split("|");
   const locs = (idx.prodLocs.get(product) || []).filter((l) => l.qty > 0);
   highlight(locs.map((l) => ({ code: l.code, html: qtyU(l.qty - l.reserved, product), cls: "hl" })));
 }
 
 // ---------------------------------------------------------------- вкладка «Склад»
-let stockFilter = { q: "", cat: "" };
+const stockFilter = { q: "", cat: "" };
 function renderStock() {
   setTabs("stock");
   const cats = [...new Set(Object.values(D.products).map((p) => p.categ))];
@@ -1836,7 +1836,7 @@ function renderLogistics() {
 }
 function showPicking(name) {
   const p = idx.pick.get(name);
-  if (!p) return;
+  if (!p) {return;}
   select(null);
   openView({ type: "picking", name });
   const e = [];
@@ -1845,7 +1845,7 @@ function showPicking(name) {
     const cells = [...new Set(p.source_locations || [])];
     const route = [...cells.map((c, i) => ({ code: c, html: i ? null : "відібрати", cls: "hl" })),
       { code: `Z-OUT-${k}`, html: "комплектування", cls: "prog" }, { code: p.dock, html: `ворота ${k}`, cls: "prog" }];
-    if (p.truck) route.push({ code: p.truck, html: "фура клієнта", cls: "done" });
+    if (p.truck) {route.push({ code: p.truck, html: "фура клієнта", cls: "done" });}
     Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route, { path: true }));
     return;
   }
@@ -1853,24 +1853,24 @@ function showPicking(name) {
     const k = +p.dock.slice(-1);
     const route = [{ code: p.truck || p.dock, html: p.truck ? "фура" : `ворота ${k}`, cls: "prog" },
       { code: `UNLOAD-${k}`, html: "вивантаження", cls: "prog" }];
-    if (k <= 3) route.push({ code: `QC-PLT-${k}`, html: "контроль", cls: "prog" });
-    if (k === 4) route.push({ code: "QC-1", html: "контроль", cls: "prog" });
+    if (k <= 3) {route.push({ code: `QC-PLT-${k}`, html: "контроль", cls: "prog" });}
+    if (k === 4) {route.push({ code: "QC-1", html: "контроль", cls: "prog" });}
     const prods = new Set(p.lines.map((l) => l.product));
     let dest = idx.po.get(p.origin)?.locations || [];
-    if (!dest.length) dest = Object.entries(D.locations).filter(([c, l]) => !/^(UNLOAD|QC)/.test(c)
-      && l.quants.some((q) => prods.has(q.product))).map(([c]) => c);
+    if (!dest.length) {dest = Object.entries(D.locations).filter(([c, l]) => !/^(UNLOAD|QC)/.test(c)
+      && l.quants.some((q) => prods.has(q.product))).map(([c]) => c);}
     dest.slice(0, 3).forEach((c, i) => route.push({ code: c, html: i ? null : "на зберігання", cls: "done" }));
     Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route.filter((x) => items.has(x.code)), { path: true }));
     return;
   }
-  if (p.dock) e.push({ code: p.dock, html: "Навантаження", cls: "prog" });
-  if (p.truck) e.push({ code: p.truck, html: null });
-  for (const c of p.source_locations || []) e.push({ code: c, html: p.type === "outgoing" ? "відібрати" : "звідси", cls: "hl" });
-  if (p.type === "outgoing") e.push({ code: "OUT-STAGE", html: null });
-  if (p.type === "store_finished") e.push({ code: "POST-STAGE", html: "з пакування", cls: "hl" });
-  if (p.type === "pick_components" && p.location_dest) e.push({ code: p.location_dest, html: "у візок", cls: "prog" });
+  if (p.dock) {e.push({ code: p.dock, html: "Навантаження", cls: "prog" });}
+  if (p.truck) {e.push({ code: p.truck, html: null });}
+  for (const c of p.source_locations || []) {e.push({ code: c, html: p.type === "outgoing" ? "відібрати" : "звідси", cls: "hl" });}
+  if (p.type === "outgoing") {e.push({ code: "OUT-STAGE", html: null });}
+  if (p.type === "store_finished") {e.push({ code: "POST-STAGE", html: "з пакування", cls: "hl" });}
+  if (p.type === "pick_components" && p.location_dest) {e.push({ code: p.location_dest, html: "у візок", cls: "prog" });}
   if (p.type === "replenish" || p.type === "putaway") {
-    if (p.vehicle) e.push({ code: p.vehicle, html: "навантажувач", cls: "prog" });
+    if (p.vehicle) {e.push({ code: p.vehicle, html: "навантажувач", cls: "prog" });}
     e.push({ code: p.location_dest, html: p.type === "putaway" ? "у стелаж" : "під портал", cls: "done" });
   }
   highlight(e);
@@ -1878,24 +1878,24 @@ function showPicking(name) {
 // ланцюжок плит: крок — підсвітити його об'єкти; all — шлях від фури до пили з номерами кроків
 async function showMatPath(i) {
   const m = D.material_paths?.[i];
-  if (!m) return;
+  if (!m) {return;}
   select(null);
-  for (const st of m.steps) await ensureCode(st.code);
+  for (const st of m.steps) {await ensureCode(st.code);}
   highlight(m.steps.map((st, j) => ({ code: st.code, html: esc(st.label), cls: j === m.steps.length - 1 ? "done" : "hl" })), { path: true });
 }
 async function showChain(v) {
   const SC = D.sheet_chain;
-  if (!SC) return;
+  if (!SC) {return;}
   select(null);
   if (v === "all") {
-    for (const p of SC.path) await ensureCode(p.code);
+    for (const p of SC.path) {await ensureCode(p.code);}
     highlight(SC.path.map((p) => ({ code: p.code, html: esc(p.label), cls: "prog" })), { path: true });
     return;
   }
   const ship = v.startsWith("s");
   const st = (ship ? D.ship_chain : SC).steps.find((x) => String(x.n) === (ship ? v.slice(1) : v));
-  if (!st) return;
-  for (const c of st.codes) await ensureCode(c);
+  if (!st) {return;}
+  for (const c of st.codes) {await ensureCode(c);}
   highlight(st.codes.map((c, i) => ({ code: c, html: i ? null : `${st.n} · ${esc(st.title)}`, cls: "hl" })));
 }
 function renderPicking(name) {
@@ -1922,27 +1922,27 @@ function renderPicking(name) {
 // ---------------------------------------------------------------- картка 3D-об'єкта з даними Odoo
 function renderObject(code) {
   const obj = items.get(code);
-  if (!obj) return;
+  if (!obj) {return;}
   const u = obj.userData;
   let chip = "", extra = "";
   const mst = machStatus(u), bst = binState(u);
-  if (u.kind === "machine" && MACHINE_STATUS[mst]) chip = `<span class="o_f3d_chip ${cx(MACHINE_STATUS[mst][0])}">${MACHINE_STATUS[mst][1]}</span>`;
-  if (u.kind === "bin" && BIN_STATE[bst]) chip = `<span class="o_f3d_chip ${cx(BIN_STATE[bst][0])}">${BIN_STATE[bst][1]}</span>`;
-  if (u.model && !D?.passports?.[code]) extra += `<div class="o_f3d_pp-head" style="margin-top:8px">${esc(u.maker)} ${esc(u.model)}</div>`;
+  if (u.kind === "machine" && MACHINE_STATUS[mst]) {chip = `<span class="o_f3d_chip ${cx(MACHINE_STATUS[mst][0])}">${MACHINE_STATUS[mst][1]}</span>`;}
+  if (u.kind === "bin" && BIN_STATE[bst]) {chip = `<span class="o_f3d_chip ${cx(BIN_STATE[bst][0])}">${BIN_STATE[bst][1]}</span>`;}
+  if (u.model && !D?.passports?.[code]) {extra += `<div class="o_f3d_pp-head" style="margin-top:8px">${esc(u.maker)} ${esc(u.model)}</div>`;}
   if (D) {
     const wc = D.workcenters[code], loc = D.locations[code], emp = D.employees[code], eq = D.equipment[code];
-    if (wc) extra += wcHtml(wc);
-    if (loc) extra += locHtml(code, loc);
-    if (emp) extra += empHtml(emp);
-    if (eq) extra += eqHtml(eq);
-    if (u.kind === "dock" && D.docks[code]) extra += `<div class="o_f3d_sub">Документ на воротах</div><ul class="o_f3d_rows">${pickRow(idx.pick.get(D.docks[code]))}</ul>`;
-    if (u.kind === "vehicle" && idx.truck.has(code)) extra += `<div class="o_f3d_sub">Документ</div><ul class="o_f3d_rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;
-    if (u.kind === "zone" && D.zones[code]) extra += zoneHtml(D.zones[code]);
-    if (u.kind === "zone" && lightGroupOfZone(code)) extra += `<div class="o_f3d_sub">Освітлення</div>${lightingHtml(lightGroupOfZone(code)[0])}`;
+    if (wc) {extra += wcHtml(wc);}
+    if (loc) {extra += locHtml(code, loc);}
+    if (emp) {extra += empHtml(emp);}
+    if (eq) {extra += eqHtml(eq);}
+    if (u.kind === "dock" && D.docks[code]) {extra += `<div class="o_f3d_sub">Документ на воротах</div><ul class="o_f3d_rows">${pickRow(idx.pick.get(D.docks[code]))}</ul>`;}
+    if (u.kind === "vehicle" && idx.truck.has(code)) {extra += `<div class="o_f3d_sub">Документ</div><ul class="o_f3d_rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;}
+    if (u.kind === "zone" && D.zones[code]) {extra += zoneHtml(D.zones[code]);}
+    if (u.kind === "zone" && lightGroupOfZone(code)) {extra += `<div class="o_f3d_sub">Освітлення</div>${lightingHtml(lightGroupOfZone(code)[0])}`;}
     extra += lightingHtml(code) + ventHtml(code) + fireHtml(code) + infraHtml(code);
-    if (D.energy) extra += energyHtml(code);
-    if (D.fire?.devices?.[code]) extra += deviceHtml(code);
-    if (D.passports?.[code]) extra += passportHtml(D.passports[code]);
+    if (D.energy) {extra += energyHtml(code);}
+    if (D.fire?.devices?.[code]) {extra += deviceHtml(code);}
+    if (D.passports?.[code]) {extra += passportHtml(D.passports[code]);}
   }
   body().innerHTML = `${backBtn()}
     <div class="o_f3d_kind">${esc(KIND[u.kind] || "Об'єкт")}</div>
@@ -1955,13 +1955,13 @@ function renderObject(code) {
   $(".o_f3d_c-focus").onclick = () => focusOn(obj);
   $(".o_f3d_c-close").onclick = () => select(null);
   const open = $(".o_f3d_c-open");
-  if (open) open.onclick = async () => {
+  if (open) {open.onclick = async () => {
     try {
       const r = await client.resolve({ code });
-      if (r?.model) opts.onOpenRecord(r.model, r.res_id);
-      else notify("У базі немає запису з кодом " + code, "info");
-    } catch (err) { notify("У базі немає запису з кодом " + code, "info"); }
-  };
+      if (r?.model) {opts.onOpenRecord(r.model, r.res_id);}
+      else {notify("У базі немає запису з кодом " + code, "info");}
+    } catch { notify("У базі немає запису з кодом " + code, "info"); }
+  };}
 }
 function wcHtml(wc) {
   const cur = wc.current_workorder ? D.workorders[wc.current_workorder] : null;
@@ -2001,12 +2001,12 @@ function locHtml(code, loc) {
     ${code.startsWith("QC-") ? D.quality_checks.filter((q) => q.location === code).map((q) => ("<div class=\"o_f3d_note " + (cx(q.state === "fail" ? "bad" : "")) + "\"><b>" + (esc(q.name)) + "</b> · " + (esc(q.title)) + " — " + (q.state === "fail" ? "брак" : q.state === "pass" ? "пройдено" : "очікує") + "<br>" + (esc(q.note)) + "</div>")).join("") : ""}`;
 }
 function accessRows(emp) {
-  if (emp.present === undefined && emp.zone === undefined && emp.last_event === undefined) return "";
+  if (emp.present === undefined && emp.zone === undefined && emp.last_event === undefined) {return "";}
   let h = "";
-  if (emp.present !== undefined) h += `<dt>На території</dt><dd>${emp.present ? "так" : "ні"}</dd>`;
-  if (emp.zone) h += `<dt>Зона</dt><dd>${esc(D.zones?.[emp.zone]?.name || emp.zone)}${emp.zone_since ? (" з " + (hm(emp.zone_since))) : ""}</dd>`;
+  if (emp.present !== undefined) {h += `<dt>На території</dt><dd>${emp.present ? "так" : "ні"}</dd>`;}
+  if (emp.zone) {h += `<dt>Зона</dt><dd>${esc(D.zones?.[emp.zone]?.name || emp.zone)}${emp.zone_since ? (" з " + (hm(emp.zone_since))) : ""}</dd>`;}
   const ev = emp.last_event;
-  if (ev) h += `<dt>Останній прохід</dt><dd>${hm(ev.ts)} · ${esc(ev.door)} · ${ev.type && ev.type !== "pass" ? "відмова" : ev.direction === "in" ? "вхід" : "вихід"}</dd>`;
+  if (ev) {h += `<dt>Останній прохід</dt><dd>${hm(ev.ts)} · ${esc(ev.door)} · ${ev.type && ev.type !== "pass" ? "відмова" : ev.direction === "in" ? "вхід" : "вихід"}</dd>`;}
   return h;
 }
 function empHtml(emp) {
@@ -2017,15 +2017,15 @@ function empHtml(emp) {
 }
 function eqHtml(eq) {
   const rows = [];
-  if (eq.battery != null) rows.push(["Заряд АКБ", `${pct(eq.battery)} ${bar(eq.battery, eq.battery < 0.3 ? "bad" : eq.battery < 0.5 ? "warn" : "")}`]);
-  if (eq.hours != null) rows.push(["Мотогодини", nf.format(eq.hours)]);
-  if (eq.pressure_bar != null) rows.push(["Тиск", `${eq.pressure_bar} бар`]);
-  if (eq.load != null) rows.push(["Навантаження", pct(eq.load)]);
-  if (eq.filter_dp_kpa != null) rows.push(["Перепад на фільтрі", `${eq.filter_dp_kpa} кПа`]);
-  if (eq.airflow_m3h != null) rows.push(["Витрата повітря", `${nf.format(eq.airflow_m3h)} м³/год`]);
-  if (eq.cycles_today != null) rows.push(["Циклів за зміну", nf.format(eq.cycles_today)]);
-  if (eq.vacuum_kpa != null) rows.push(["Вакуум", `${eq.vacuum_kpa} кПа`]);
-  if (eq.boilers) rows.push(["Котли", esc(eq.boilers)]);
+  if (eq.battery != null) {rows.push(["Заряд АКБ", `${pct(eq.battery)} ${bar(eq.battery, eq.battery < 0.3 ? "bad" : eq.battery < 0.5 ? "warn" : "")}`]);}
+  if (eq.hours != null) {rows.push(["Мотогодини", nf.format(eq.hours)]);}
+  if (eq.pressure_bar != null) {rows.push(["Тиск", `${eq.pressure_bar} бар`]);}
+  if (eq.load != null) {rows.push(["Навантаження", pct(eq.load)]);}
+  if (eq.filter_dp_kpa != null) {rows.push(["Перепад на фільтрі", `${eq.filter_dp_kpa} кПа`]);}
+  if (eq.airflow_m3h != null) {rows.push(["Витрата повітря", `${nf.format(eq.airflow_m3h)} м³/год`]);}
+  if (eq.cycles_today != null) {rows.push(["Циклів за зміну", nf.format(eq.cycles_today)]);}
+  if (eq.vacuum_kpa != null) {rows.push(["Вакуум", `${eq.vacuum_kpa} кПа`]);}
+  if (eq.boilers) {rows.push(["Котли", esc(eq.boilers)]);}
   if (D.ventilation && eq.boilers) {
     const V = D.ventilation.totals;
     rows.push(["Тепло зараз", V.chp_heat_now
@@ -2033,14 +2033,14 @@ function eqHtml(eq) {
       : `${nf.format(V.heat_kw)} кВт · К1 ${pct(V.boiler_load)} ${bar(V.boiler_load, V.boiler_load > 0.85 ? "warn" : "")}`],
       ["Зима (−15 °C)", `<button class="o_f3d_lnk" data-go="obj:HEAT-NET">≈ ${nf.format(V.design_heat_kw)} кВт</button> з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів${V.chp_heat_rated ? (" + " + (nf.format(V.chp_heat_rated)) + " кВт КГУ") : ""}`]);
   }
-  if (eq.supply_c != null) rows.push(["Подача", `${eq.supply_c} °C`]);
-  if (eq.silo_fill != null) rows.push(["Силос стружки", pct(eq.silo_fill)]);
-  if (eq.briquettes_today_kg != null) rows.push(["Брикети за зміну", `${nf.format(eq.briquettes_today_kg)} кг`]);
-  if (eq.busy != null) rows.push(["Зайнято постів", `${eq.busy} з ${eq.total}`]);
-  if (eq.last_inspection) rows.push(["Остання перевірка", eq.last_inspection]);
-  if (eq.next_maintenance) rows.push(["Наступне ТО", dayHm(eq.next_maintenance)]);
-  if (eq.current_task) rows.push(["Завдання", `<button class="o_f3d_lnk" data-go="pick:${esc(eq.current_task)}">${esc(eq.current_task)}</button>`]);
-  if (D.meta.iot && rows.length) rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);
+  if (eq.supply_c != null) {rows.push(["Подача", `${eq.supply_c} °C`]);}
+  if (eq.silo_fill != null) {rows.push(["Силос стружки", pct(eq.silo_fill)]);}
+  if (eq.briquettes_today_kg != null) {rows.push(["Брикети за зміну", `${nf.format(eq.briquettes_today_kg)} кг`]);}
+  if (eq.busy != null) {rows.push(["Зайнято постів", `${eq.busy} з ${eq.total}`]);}
+  if (eq.last_inspection) {rows.push(["Остання перевірка", eq.last_inspection]);}
+  if (eq.next_maintenance) {rows.push(["Наступне ТО", dayHm(eq.next_maintenance)]);}
+  if (eq.current_task) {rows.push(["Завдання", `<button class="o_f3d_lnk" data-go="pick:${esc(eq.current_task)}">${esc(eq.current_task)}</button>`]);}
+  if (D.meta.iot && rows.length) {rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);}
   const mr = eq.maintenance_request ? idx.mr.get(eq.maintenance_request) : null;
   return `<dl class="o_f3d_kv"><dt>Обладнання</dt><dd>${esc(eq.name)}${eq.serial ? (" <span class=\"o_f3d_mono\">" + (esc(eq.serial)) + "</span>") : ""}</dd>
     ${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>
@@ -2089,9 +2089,9 @@ const loadCls = (v) => (v >= 0.8 ? "bad" : v >= 0.6 ? "warn" : "");
 // ключ «живого» значення: c:<споживач>:<поле> | l:<лінія>:<поле> | t:<трансформатор>:<поле> | tot:<поле>
 function eVal(key) {
   const e = D?.energy;
-  if (!e) return null;
+  if (!e) {return null;}
   const [t, code, f] = key.split(":");
-  if (t === "tot") return e.totals[code];
+  if (t === "tot") {return e.totals[code];}
   const o = t === "c" ? e.consumers[code] : t === "l" ? e.lines[code] : t === "t" ? e.transformers[code] : null;
   return o?.[f];
 }
@@ -2104,9 +2104,9 @@ const tanPhi = (c) => Math.tan(Math.acos(c));
 // споживання «дихає», поки сторінка відкрита: лічильники оновлюються, суми перераховуються
 function energyTick() {
   const e = D.energy;
-  if (!e) return;
+  if (!e) {return;}
   for (const c of Object.values(e.consumers)) {
-    if (c.status !== "work") continue;
+    if (c.status !== "work") {continue;}
     c.base ??= c.p_now;
     c.p_now = Math.round(c.base * (0.94 + Math.random() * 0.12) * 10) / 10;
     c.i_now = Math.round((c.p_now * 1000) / (Math.sqrt(3) * 400 * c.cos_phi));
@@ -2126,7 +2126,7 @@ function energyTick() {
     t.i_a = Math.round((t.s_kva * 1000) / (Math.sqrt(3) * 400));
     Object.assign(e.cells[t.incomer], { i_now: t.i_a, p_now: t.p_kw });
   }
-  for (const c of Object.values(e.cells)) if (c.line) Object.assign(c, { i_now: e.lines[c.line].i_now, p_now: e.lines[c.line].p_now });
+  for (const c of Object.values(e.cells)) {if (c.line) {Object.assign(c, { i_now: e.lines[c.line].i_now, p_now: e.lines[c.line].p_now });}}
   const ts = Object.values(e.transformers);
   e.totals.p_now = ts.reduce((s, t) => s + t.p_kw, 0);
   e.totals.s_now = ts.reduce((s, t) => s + t.s_kva, 0);
@@ -2194,7 +2194,7 @@ function renderEnergy() {
 
 function showLine(code) {
   const ln = D.energy?.lines[code];
-  if (!ln) return;
+  if (!ln) {return;}
   select(null);
   openView({ type: "line", code });
   const objCode = ln.kind === "busway" ? code : "CABLES";
@@ -2239,8 +2239,8 @@ function energyHtml(code) {
       ${c.kwh_shift != null ? ("<dt>За зміну</dt><dd>" + (kwhU(c.kwh_shift)) + " · ≈ " + (nf.format(Math.round(c.kwh_shift * tariff))) + " грн</dd>") : ""}</dl>
       ${c.note ? ("<div class=\"o_f3d_note\">" + (esc(c.note)) + "</div>") : ""}`;
   }
-  if (e.lines[code]) h += lineBody(code);
-  if (code === "CABLES") h += `<div class="o_f3d_sub">Лінії</div><ul class="o_f3d_rows">${lineRow("C1")}${lineRow("C2")}</ul>`;
+  if (e.lines[code]) {h += lineBody(code);}
+  if (code === "CABLES") {h += `<div class="o_f3d_sub">Лінії</div><ul class="o_f3d_rows">${lineRow("C1")}${lineRow("C2")}</ul>`;}
   const t = e.transformers[code];
   if (t) {
     h += `<dl class="o_f3d_kv"><dt>Номінал</dt><dd>${nf.format(t.rating_kva)} кВА, 10/0,4 кВ</dd>
@@ -2254,13 +2254,13 @@ function energyHtml(code) {
   const cell = e.cells[code];
   if (cell) {
     const rows = [["Секція шин", cell.section ?? "між секціями"]];
-    if (cell.line) rows.push(["Лінія", `<button class="o_f3d_lnk" data-go="line:${esc(cell.line)}">${esc(e.lines[cell.line].name)}</button>`],
-      ["Струм", `${ev(("l:" + (cell.line) + ":i_now"), "a")} з ${nf.format(cell.rating_a)} А ${ebar(("l:" + (cell.line) + ":load"))}`]);
-    if (cell.type === "incomer") rows.push(["Від", `<button class="o_f3d_lnk" data-go="obj:${esc(cell.feeds)}">трансформатора ${esc(cell.feeds)}</button>`],
-      ["Струм", `${ev(("t:" + (cell.feeds) + ":i_a"), "a")} з ${nf.format(cell.rating_a)} А`], ["Потужність", ev(`t:${cell.feeds}:p_kw`, "kw")]);
-    if (cell.type === "coupler") rows.push(["Стан", "розімкнений (АВР у готовності)"], ["Номінал", `${nf.format(cell.rating_a)} А`]);
-    if (cell.type === "pfc") rows.push(["Ступені", esc(cell.steps)], ["Видає", `${cell.q_now} квар з ${cell.rating_kvar}`],
-      ["cos φ секції", `${cosU(cell.cos_before)} → ${cosU(cell.cos_after)}`]);
+    if (cell.line) {rows.push(["Лінія", `<button class="o_f3d_lnk" data-go="line:${esc(cell.line)}">${esc(e.lines[cell.line].name)}</button>`],
+      ["Струм", `${ev(("l:" + (cell.line) + ":i_now"), "a")} з ${nf.format(cell.rating_a)} А ${ebar(("l:" + (cell.line) + ":load"))}`]);}
+    if (cell.type === "incomer") {rows.push(["Від", `<button class="o_f3d_lnk" data-go="obj:${esc(cell.feeds)}">трансформатора ${esc(cell.feeds)}</button>`],
+      ["Струм", `${ev(("t:" + (cell.feeds) + ":i_a"), "a")} з ${nf.format(cell.rating_a)} А`], ["Потужність", ev(`t:${cell.feeds}:p_kw`, "kw")]);}
+    if (cell.type === "coupler") {rows.push(["Стан", "розімкнений (АВР у готовності)"], ["Номінал", `${nf.format(cell.rating_a)} А`]);}
+    if (cell.type === "pfc") {rows.push(["Ступені", esc(cell.steps)], ["Видає", `${cell.q_now} квар з ${cell.rating_kvar}`],
+      ["cos φ секції", `${cosU(cell.cos_before)} → ${cosU(cell.cos_after)}`]);}
     h += `<dl class="o_f3d_kv">${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>${cell.note ? ("<div class=\"o_f3d_note\">" + (esc(cell.note)) + "</div>") : ""}`;
   }
   if (code === "SWB-1" || code === "EMS-1") {
@@ -2298,7 +2298,7 @@ function ventRow(code) {
     <span class="o_f3d_m">${nf.format(u.airflow_m3h)} м³/год${u.supply_c != null ? (" · приплив " + (nf1.format(u.supply_c)) + " °C") : ""}${u.heat_kw ? (" · нагрів " + (nf1.format(u.heat_kw)) + " кВт") : ""}</span></button></li>`;
 }
 function lightVentSummary() {
-  if (!D.lighting || !D.ventilation) return "";
+  if (!D.lighting || !D.ventilation) {return "";}
   const gs = Object.values(D.lighting.groups), V = D.ventilation.totals;
   const ok = gs.filter((g) => g.e_calc >= g.e_norm).length;
   const p = (k) => D.energy?.consumers[k];
@@ -2317,7 +2317,7 @@ function lightVentSummary() {
 }
 function lightingHtml(code) {
   const L = D.lighting;
-  if (!L) return "";
+  if (!L) {return "";}
   const g = L.groups[code];
   if (g) {
     const pp = D.passports?.[code];
@@ -2333,12 +2333,12 @@ function lightingHtml(code) {
       <div class="o_f3d_src">E = N · Φ · UF · MF / A, UF ${nf2.format(L.uf)}, MF ${nf2.format(L.mf)}${L.norms_ref?.[g.task] ? (" · норма: " + (esc(L.norms_ref[g.task]))) : ""}.</div>`;
   }
   const pl = L.panels[code];
-  if (pl) return `<div class="o_f3d_sub">Групи</div><ul class="o_f3d_rows">${pl.groups.map(lightRow).join("")}</ul>`;
+  if (pl) {return `<div class="o_f3d_sub">Групи</div><ul class="o_f3d_rows">${pl.groups.map(lightRow).join("")}</ul>`;}
   return "";
 }
 function ventHtml(code) {
   const V = D.ventilation;
-  if (!V) return "";
+  if (!V) {return "";}
   if (code === "HEAT-NET") {
     const us = Object.entries(V.units).filter(([, u]) => u.heat_kw).sort((a, b) => b[1].heat_kw - a[1].heat_kw);
     const hb = V.heat_balance;
@@ -2352,13 +2352,13 @@ function ventHtml(code) {
         ${us.map(([k, u]) => ("<tr class=\"o_f3d_click\" data-go=\"obj:" + (esc(k)) + "\"><td>" + (esc(k)) + " · " + (esc(D.zones[u.zone]?.name || u.zone)) + "</td>\n          <td class=\"o_f3d_n\">" + (pct(u.heating_valve)) + "</td><td class=\"o_f3d_n\">" + (nf1.format(u.heat_kw)) + "</td></tr>")).join("")}</table>`;
   }
   const u = V.units[code];
-  if (!u) return "";
+  if (!u) {return "";}
   const rows = [["Зона", `<button class="o_f3d_lnk" data-go="obj:${esc(u.zone)}">${esc(D.zones[u.zone]?.name || u.zone)}</button>`], ["Режим", esc(u.mode)],
     ["Витрата", `${nf.format(u.airflow_m3h)} з ${nf.format(u.airflow_nom)} м³/год ${bar(u.airflow_nom ? u.airflow_m3h / u.airflow_nom : 0, "flow")}`]];
-  if (u.supply_c != null) rows.push(["Приплив", `${nf1.format(u.supply_c)} °C`]);
-  if (u.indoor_c != null) rows.push(["У зоні", `${nf1.format(u.indoor_c)} °C`]);
-  if (u.heating_valve != null) rows.push(["Клапан нагріву", `${pct(u.heating_valve)} · ${nf1.format(u.heat_kw)} кВт тепла`]);
-  if (u.filter_dp_pa != null) rows.push(["Фільтр", `${u.filter_dp_pa} Па ${u.filter_dp_pa > 250 ? pill(["warn", "замінити"]) : ""}`]);
+  if (u.supply_c != null) {rows.push(["Приплив", `${nf1.format(u.supply_c)} °C`]);}
+  if (u.indoor_c != null) {rows.push(["У зоні", `${nf1.format(u.indoor_c)} °C`]);}
+  if (u.heating_valve != null) {rows.push(["Клапан нагріву", `${pct(u.heating_valve)} · ${nf1.format(u.heat_kw)} кВт тепла`]);}
+  if (u.filter_dp_pa != null) {rows.push(["Фільтр", `${u.filter_dp_pa} Па ${u.filter_dp_pa > 250 ? pill(["warn", "замінити"]) : ""}`]);}
   rows.push(["Вентилятори", `${kwU(u.p_now)} з ${kwU(u.p_inst)}`]);
   const mr = u.maintenance_request ? idx.mr.get(u.maintenance_request) : null;
   return `<dl class="o_f3d_kv">${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>
@@ -2369,7 +2369,7 @@ function ventHtml(code) {
 // ---------------------------------------------------------------- пожежна сигналізація
 function fireSummary() {
   const F = D.fire;
-  if (!F) return "";
+  if (!F) {return "";}
   const T = F.totals;
   const warn = Object.entries(F.groups).filter(([, g]) => g.state !== "ok");
   return `<div class="o_f3d_sub">Пожежна безпека</div>
@@ -2380,7 +2380,7 @@ function fireSummary() {
 }
 function fireHtml(code) {
   const F = D.fire;
-  if (!F) return "";
+  if (!F) {return "";}
   const g = F.groups[code];
   if (g) {
     const mr = g.maintenance_request ? idx.mr.get(g.maintenance_request) : null;
@@ -2410,7 +2410,7 @@ function fireHtml(code) {
         Оповіщувачі — не менше ${F.rules.sounder_level} дБА або на 5 дБА вище фону (у цеху 80–85 дБА), кількість уточнює акустичний розрахунок.</div>`;
   }
   const n = { "FA-MCP": T.mcp, "FA-SND": T.sounders, "FA-FLAME": T.flame, "SPARK-1": T.spark_detectors }[code];
-  if (n == null) return "";
+  if (n == null) {return "";}
   const ev = F.events.filter((e) => e.code === code);
   return `<dl class="o_f3d_kv"><dt>Кількість</dt><dd>${n}${code === "SPARK-1" ? " датчиків + гасіння перед виходом до фільтра" : ""}</dd>
       <dt>Прилад</dt><dd><button class="o_f3d_lnk" data-go="obj:FACP-1">FACP-1</button></dd></dl>
@@ -2434,10 +2434,10 @@ function scheduleWOs() {
       t = w.date_planned_finished ? ms(w.date_planned_finished) : w._f;
     }
   }
-  for (const c of Object.values(D.energy?.consumers || {})) c._p0 = c.p_now;
+  for (const c of Object.values(D.energy?.consumers || {})) {c._p0 = c.p_now;}
 }
 function applySimTime(min) {
-  if (min != null) ensurePlayback();
+  if (min != null) {ensurePlayback();}
   if (playbackMode === "snapshots" && snapList.length && snapshotTime(min)) {
     $(".o_f3d_shift-l").textContent = hhmm(min);
     $(".o_f3d_shift-t").value = min;
@@ -2461,7 +2461,7 @@ function applySimTime(min) {
   if (D.energy) {
     const h = min == null ? 10 : Math.min(23, Math.floor(min / 60));
     const k = D.energy.typical[h] / D.energy.typical[10];
-    for (const c of Object.values(D.energy.consumers)) if (c._p0 != null) { c.base = c._p0 * k; c.p_now = c.base; }
+    for (const c of Object.values(D.energy.consumers)) {if (c._p0 != null) { c.base = c._p0 * k; c.p_now = c.base; }}
     energyTick();
   }
   $(".o_f3d_shift-l").textContent = min == null ? "зараз" : hhmm(min);
@@ -2470,7 +2470,7 @@ function applySimTime(min) {
   renderPanel(true);
   updateLive();
   // у програванні шар будується раз, далі мітки рухаються щокадру; перебудова — лише при зміні режиму
-  if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) drawProdOverlay();
+  if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) {drawProdOverlay();}
   flowUpdate(min);
 }
 $(".o_f3d_shift-t").oninput = (e) => applySimTime(+e.target.value);
@@ -2478,8 +2478,8 @@ $(".o_f3d_shift-now").onclick = () => { stopShift(); applySimTime(null); };
 const SHIFT_STEP_MS = reduceMotion ? 600 : 250;
 let simCont = null; // крок таймера і коли він стався — для плавного руху між кроками
 function simMinutes() {
-  if (simOverride == null) return null;
-  if (!shiftTimer || !simCont) return simOverride;
+  if (simOverride == null) {return null;}
+  if (!shiftTimer || !simCont) {return simOverride;}
   return Math.min(FLOW_T1, simCont.m + ((performance.now() - simCont.at) / SHIFT_STEP_MS) * 5);
 }
 
@@ -2511,10 +2511,10 @@ function flowBuild() {
   for (const mo of D.productions) {
     const wos = mo.workorders.map((id) => D.workorders[id]);
     wos.forEach((w, k) => {
-      if (w._s == null) return;
+      if (w._s == null) {return;}
       const s = woMin(w, "_s"), f = woMin(w, "_f");
       const lane = FLOW_LANES.find((l) => l.re?.test(w.workcenter))?.key || "asm";
-      if (f > FLOW_T0 && s < FLOW_T1) flow.bars.push({ s, f, lane, w, mo: mo.name });
+      if (f > FLOW_T0 && s < FLOW_T1) {flow.bars.push({ s, f, lane, w, mo: mo.name });}
       const nx = wos[k + 1];
       flow.feed.push({ m: s, mo: mo.name, text: `${moShort(mo.name)} · ${w.name} на «${wcName(w.workcenter)}»` });
       flow.feed.push({ m: f, mo: mo.name, text: `${moShort(mo.name)} · ${w.name} готово → ${nx ? ("«" + (wcName(nx.workcenter)) + "»") : mo.delivery ? "склад ГП" : "до основного замовлення"}` });
@@ -2522,8 +2522,8 @@ function flowBuild() {
   }
   for (const p of D.pickings) {
     const m = dayMin(p.scheduled_date), lane = PICK_LANE[p.type];
-    if (m == null || !lane || m < 0 || m > 24 * 60) continue;
-    if (m >= FLOW_T0 && m <= FLOW_T1) flow.evs.push({ m, lane, p });
+    if (m == null || !lane || m < 0 || m > 24 * 60) {continue;}
+    if (m >= FLOW_T0 && m <= FLOW_T1) {flow.evs.push({ m, lane, p });}
     const dock = p.dock ? items.get(p.dock)?.userData.label || p.dock : "";
     const text = {
       incoming: () => `Фура ${p.partner}: ${linesBrief(p)}${dock ? (" → " + (dock)) : ""}`,
@@ -2562,7 +2562,7 @@ function flowRender() {
   flow.X = X;
   let y = top, out = "";
   const grid = [];
-  for (let h = 7; h <= 15; h += W < 560 ? 2 : 1) grid.push(h * 60);
+  for (let h = 7; h <= 15; h += W < 560 ? 2 : 1) {grid.push(h * 60);}
   const laneY = {};
   for (const L of FLOW_LANES) {
     const bars = flow.bars.filter((b) => b.lane === L.key);
@@ -2578,7 +2578,7 @@ function flowRender() {
     y += h;
   }
   const H = y + 14;
-  for (const g of grid) out = `<line class="o_f3d_grid" x1="${X(g)}" x2="${X(g)}" y1="${top}" y2="${y}"/><text class="o_f3d_ax" x="${X(g)}" y="${y + 11}" text-anchor="middle">${hhmm(g)}</text>` + out;
+  for (const g of grid) {out = `<line class="o_f3d_grid" x1="${X(g)}" x2="${X(g)}" y1="${top}" y2="${y}"/><text class="o_f3d_ax" x="${X(g)}" y="${y + 11}" text-anchor="middle">${hhmm(g)}</text>` + out;}
   out = `<rect class="o_f3d_past o_f3d_fl-past" x="${LX}" y="${top}" width="0" height="${y - top}"/>` + out;
   for (const e of flow.evs) {
     const L = laneY[e.lane], x = X(e.m), cy = L.y + L.h / 2 - 1;
@@ -2602,12 +2602,12 @@ function flowViewOffset() {
   camera.setViewOffset(W, H, 0, -Math.max(0, dy), W, H);
 }
 function flowCursor(t) {
-  if (!flow.X || $(".o_f3d_flow").hidden) return;
+  if (!flow.X || $(".o_f3d_flow").hidden) {return;}
   const x = flow.X(t).toFixed(1);
   const g = $(".o_f3d_fl-now");
-  if (g) g.firstElementChild.setAttribute("x1", x), g.firstElementChild.setAttribute("x2", x);
+  if (g) {g.firstElementChild.setAttribute("x1", x), g.firstElementChild.setAttribute("x2", x);}
   const past = $(".o_f3d_fl-past");
-  if (past) past.setAttribute("width", Math.max(0, flow.X(t) - flow.X(FLOW_T0)).toFixed(1));
+  if (past) {past.setAttribute("width", Math.max(0, flow.X(t) - flow.X(FLOW_T0)).toFixed(1));}
 }
 function flowUpdate(min) {
   const on = min != null && !!D;
@@ -2615,10 +2615,10 @@ function flowUpdate(min) {
   if (el.hidden === on) {
     el.hidden = !on;
     root.classList.toggle(cx("flow-on"), on);
-    if (on) { if (!flow.built) flowBuild(); flowRender(); }
+    if (on) { if (!flow.built) {flowBuild();} flowRender(); }
     flowViewOffset();
   }
-  if (!on) return;
+  if (!on) {return;}
   const t = min;
   let act = 0;
   $(".o_f3d_flow-svg").querySelectorAll(".o_f3d_wo").forEach((r) => {
@@ -2643,26 +2643,26 @@ function flowUpdate(min) {
 // клік по смузі, події чи рядку стрічки — та сама картка, що й у правій панелі
 $(".o_f3d_flow").addEventListener("click", (e) => {
   const a = e.target.closest("[data-go]");
-  if (!a) return;
+  if (!a) {return;}
   const [k, ...rest] = a.dataset.go.split(":");
   const v = rest.join(":");
-  if (k === "mo") showMO(v); else if (k === "pick") showPicking(v);
+  if (k === "mo") {showMO(v);} else if (k === "pick") {showPicking(v);}
 });
 on(window, "resize", () => { if (!$(".o_f3d_flow").hidden && flow.built) { flowRender(); flowUpdate(simOverride); } flowViewOffset(); });
 
 function stopShift() { clearInterval(shiftTimer); shiftTimer = null; $(".o_f3d_shift-play").textContent = "▶"; $(".o_f3d_shift-play").setAttribute("aria-label", "Програти зміну"); }
 $(".o_f3d_shift-play").onclick = () => {
-  if (shiftTimer) return stopShift();
+  if (shiftTimer) {return stopShift();}
   let m = simOverride ?? 420;
-  if (m >= 930) m = 420;
+  if (m >= 930) {m = 420;}
   $(".o_f3d_shift-play").textContent = "❚❚"; $(".o_f3d_shift-play").setAttribute("aria-label", "Пауза");
-  if (!D) return;
+  if (!D) {return;}
   applySimTime(m);
   simCont = { m, at: performance.now() };
-  if (!prodOv.on) setProdOverlay(true); // потік видно згори: план цеху з маршрутами замовлень
+  if (!prodOv.on) {setProdOverlay(true);} // потік видно згори: план цеху з маршрутами замовлень
   shiftTimer = setInterval(() => {
     m += 5; applySimTime(m); simCont = { m, at: performance.now() };
-    if (m >= 930) stopShift();
+    if (m >= 930) {stopShift();}
   }, SHIFT_STEP_MS);
 };
 
@@ -2680,8 +2680,8 @@ function drillMarker(x, y, z, html, cls) {
   scene.add(m); drill.marks.push(m);
 }
 function stopDrill() {
-  if (!drill.on) return;
-  for (const o of [...drill.objs, ...drill.dots, ...drill.marks]) scene.remove(o);
+  if (!drill.on) {return;}
+  for (const o of [...drill.objs, ...drill.dots, ...drill.marks]) {scene.remove(o);}
   drill.objs = []; drill.dots = []; drill.curves = []; drill.marks = [];
   const b = drill.blink; drill.blink = [];
   drill.on = false;
@@ -2690,7 +2690,7 @@ function stopDrill() {
 }
 async function startDrill({ elapsed = 0 } = {}) {
   const E = D.evacuation;
-  if (!E) return;
+  if (!E) {return;}
   await Promise.all(["fire", "site"].map((k) => loadPart(k).catch(() => {})));
   await setProdOverlay(false);
   stopDrill(); select(null); clearHighlight();
@@ -2701,14 +2701,14 @@ async function startDrill({ elapsed = 0 } = {}) {
   for (const r of Object.values(E.routes)) {
     const pts = r.path.map(([x, y]) => b2t([x, y, 0.5]));
     const path = new THREE.CurvePath();
-    for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+    for (let i = 1; i < pts.length; i++) {path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));}
     const tube = new THREE.Mesh(tubeG(path, Math.max(8, pts.length * 12), 0.35, 8, false), green);
     tube.userData.isPulse = true;
     scene.add(tube); drill.objs.push(tube); drill.curves.push(path);
     const dot = new THREE.Mesh(new THREE.SphereGeometry(0.7, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
     dot.userData.isPulse = true; scene.add(dot); drill.dots.push(dot);
   }
-  for (const e of E.exits) drillMarker(e.x, e.y, 2.8, `Вихід ${esc(e.code.slice(3))}`, "done");
+  for (const e of E.exits) {drillMarker(e.x, e.y, 2.8, `Вихід ${esc(e.code.slice(3))}`, "done");}
   const src = items.get(E.drill_origin);
   if (src) { const p = topOf(src); const m = new CSS2DObject(Object.assign(document.createElement("div"), { className: cx("mk bad"), innerHTML: `Пожежа · ${esc(E.drill_detector)}` })); m.position.copy(p).add(new THREE.Vector3(0, 0.8, 0)); scene.add(m); drill.marks.push(m); }
   drill.blink = ["FA-SND", "SMOKE-VENTS", E.drill_origin, "EXITS"].map((c) => items.get(c)).filter(Boolean);
@@ -2717,7 +2717,7 @@ async function startDrill({ elapsed = 0 } = {}) {
   goView(VIEWS[0]);
 }
 function renderDrill() {
-  const E = D.evacuation, F = D.fire;
+  const E = D.evacuation;
   const steps = E.drill_steps || [];
   const sec = Math.floor((performance.now() - drill.t0) / 1000);
   const routes = Object.entries(E.routes).sort((a, b) => b[1].length - a[1].length);
@@ -2736,14 +2736,14 @@ function renderDrill() {
 // ---------------------------------------------------------------- інфраструктура: генерична картка з даних
 function infraHtml(code) {
   const I = D.infra;
-  if (!I) return "";
+  if (!I) {return "";}
   if (code.startsWith("TAB-")) {
     const wc = code.slice(4), w = D.workcenters[wc];
     return w ? `<dl class="o_f3d_kv"><dt>Робочий центр</dt><dd><button class="o_f3d_lnk" data-go="obj:${esc(wc)}">${esc(w.name)}</button></dd>
       <dt>Поточне завдання</dt><dd>${w.current_workorder ? esc(D.workorders[w.current_workorder].name) + " · " + esc(D.workorders[w.current_workorder].production) : "—"}</dd></dl>` : "";
   }
   const c = I.cards[code];
-  if (!c) return "";
+  if (!c) {return "";}
   return `<dl class="o_f3d_kv">${c.rows.map(([k, v]) => ("<dt>" + (esc(k)) + "</dt><dd>" + (esc(v)) + "</dd>")).join("")}</dl>
     ${c.warn ? ("<div class=\"o_f3d_note o_f3d_bad\">" + (esc(c.warn)) + "</div>") : ""}
     ${c.note ? ("<div class=\"o_f3d_note\">" + (esc(c.note)) + "</div>") : ""}
@@ -2751,7 +2751,7 @@ function infraHtml(code) {
 }
 function backupSummary() {
   const I = D.infra;
-  if (!I) return "";
+  if (!I) {return "";}
   const T = I.totals;
   const row = (code, t, m, v) => `<li><button class="o_f3d_row" data-go="obj:${esc(code)}"><span class="o_f3d_t">${esc(t)}</span><span class="o_f3d_mono">${esc(v)}</span><span class="o_f3d_m">${esc(m)}</span></button></li>`;
   return `<div class="o_f3d_sub">Власна генерація й резерв</div>
@@ -2786,7 +2786,7 @@ renderer.setAnimationLoop(() => {
     const k = Math.min((now - tween.start) / tween.dur, 1), e = ease(k);
     camera.position.lerpVectors(tween.p0, tween.p1, e);
     controls.target.lerpVectors(tween.t0, tween.t1, e);
-    if (k === 1) tween = null;
+    if (k === 1) {tween = null;}
   }
   controls.update();
   const blink = 0.5 + 0.5 * Math.sin(now / 220);
@@ -2802,20 +2802,20 @@ renderer.setAnimationLoop(() => {
     pulse.position.copy(hl.curve.getPointAt(pulseT));
   }
   if (!reduceMotion && $(".o_f3d_opt-motion").checked) { // матеріали біжать гілками
-    if (prodOv.parts?.length) moveParticles(prodOv.parts, dt);
-    if (hl.parts.length) moveParticles(hl.parts, dt);
+    if (prodOv.parts?.length) {moveParticles(prodOv.parts, dt);}
+    if (hl.parts.length) {moveParticles(hl.parts, dt);}
   }
   if (prodOv.dots.length && !reduceMotion) {
     const s = 1 + 0.25 * Math.sin(now / 260);
-    for (const r of prodOv.dots) r.scale.setScalar(s);
+    for (const r of prodOv.dots) {r.scale.setScalar(s);}
   }
   if (drill.on) {
     const on = Math.sin(now / 180) > 0;
-    for (const r of drill.blink) r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } });
+    for (const r of drill.blink) {r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } });}
     drill.dots.forEach((d, i) => d.position.copy(drill.curves[i].getPointAt(((now / 1000) * 0.08 + i * 0.13) % 1)));
   }
   const sm = simMinutes(); // програвання зміни: курсор стрічки й мітки в 3D рухаються плавно між кроками таймера
-  if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) prodSimMove(sm); }
+  if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) {prodSimMove(sm);} }
   syncLabels();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
@@ -2824,13 +2824,13 @@ renderer.setAnimationLoop(() => {
 // ---------------------------------------------------------------- публічне API ядра
 function setMode(mode) {
   const r = root.querySelector(`input[name="cmode"][value="${mode}"]`);
-  if (!r) return;
+  if (!r) {return;}
   r.checked = true;
   colorMode = mode;
   repaintAll();
   renderPanel();
 }
-function playShift() { if (!shiftTimer) $(".o_f3d_shift-play").click(); }
+function playShift() { if (!shiftTimer) {$(".o_f3d_shift-play").click();} }
 function setPlaybackMode(m) { playbackMode = m; userPlan = m === "plan"; }
 function setLite(v) {
   store("f3d.lite", v ? "1" : "0");
@@ -2838,7 +2838,7 @@ function setLite(v) {
 }
 function getState() {
   const layersState = {};
-  for (const [k, l] of layers) layersState[k] = !!l.want;
+  for (const [k, l] of layers) {layersState[k] = !!l.want;}
   return {
     tab: panel.tab, panel: panel.type, selected: selected?.userData.code ?? null, mode: colorMode, layers: layersState,
     simMinutes: simOverride, lite, live: !!D?.meta?.live, playbackMode, renderer: nullR ? "null" : "webgl",
@@ -2848,27 +2848,27 @@ function getState() {
 }
 async function applyParams(p = {}) {
   if (p.layers) {
-    if (p.layers === "prod") await setProdOverlay(true);
+    if (p.layers === "prod") {await setProdOverlay(true);}
     else {
       const keys = new Set(String(p.layers).split(","));
       layers.forEach((_, k) => setLayer(k, keys.has(k)));
     }
   }
-  if (p.mode) setMode(p.mode);
-  if (p.tab) openTab(p.tab);
-  if (p.snapshot) await loadSnapshotById(+p.snapshot);
+  if (p.mode) {setMode(p.mode);}
+  if (p.tab) {openTab(p.tab);}
+  if (p.snapshot) {await loadSnapshotById(+p.snapshot);}
   soLabel = p.so || null;
   if (p.mo) {
-    if (idx.mo?.has(p.mo)) showMO(p.mo);
-    else notify(`Об'єкта ${p.mo} немає в даних`, "warning");
+    if (idx.mo?.has(p.mo)) {showMO(p.mo);}
+    else {notify(`Об'єкта ${p.mo} немає в даних`, "warning");}
   } else if (p.picking) {
-    if (idx.pick?.has(p.picking)) showPicking(p.picking);
-    else notify(`Об'єкта ${p.picking} немає в даних`, "warning");
+    if (idx.pick?.has(p.picking)) {showPicking(p.picking);}
+    else {notify(`Об'єкта ${p.picking} немає в даних`, "warning");}
   } else if (p.code) {
     const o = await ensureCode(p.code);
-    if (o) { select(o); focusOn(o); } else notify(`Об'єкта ${p.code} немає в моделі`, "warning");
+    if (o) { select(o); focusOn(o); } else {notify(`Об'єкта ${p.code} немає в моделі`, "warning");}
   }
-  if (soLabel) renderPanel(true);
+  if (soLabel) {renderPanel(true);}
 }
 function destroy() {
   destroyed = true;
@@ -2879,7 +2879,7 @@ function destroy() {
   renderer.setAnimationLoop(null);
   scene.traverse((o) => {
     o.geometry?.dispose?.();
-    for (const m of [].concat(o.material || [])) m?.dispose?.();
+    for (const m of [].concat(o.material || [])) {m?.dispose?.();}
   });
   renderer.dispose?.();
   root.innerHTML = "";

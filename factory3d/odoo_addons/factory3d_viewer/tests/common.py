@@ -20,8 +20,10 @@ class F3dViewerBase(TransactionCase):
         cls.user_nobody = cls._make_user("f3d_nobody", ["base.group_user"])
         cls.user_f3d = cls._make_user("f3d_user", [
             "base.group_user", "factory3d_base.group_f3d_user", "stock.group_stock_user", "mrp.group_mrp_user"])
-        cls.user_stock_only = cls._make_user("f3d_stock", ["base.group_user", "factory3d_base.group_f3d_user", "stock.group_stock_user"])
-        cls.user_mrp_only = cls._make_user("f3d_mrp", ["base.group_user", "factory3d_base.group_f3d_user", "mrp.group_mrp_user"])
+        cls.user_stock_only = cls._make_user(
+            "f3d_stock", ["base.group_user", "factory3d_base.group_f3d_user", "stock.group_stock_user"])
+        cls.user_mrp_only = cls._make_user(
+            "f3d_mrp", ["base.group_user", "factory3d_base.group_f3d_user", "mrp.group_mrp_user"])
         cls.user_manager = cls._make_user("f3d_manager", ["base.group_user", "factory3d_base.group_f3d_manager"])
         cls.user_admin = cls._make_user("f3d_admin", ["base.group_user", "factory3d_base.group_f3d_admin"])
         cls.user_kiosk = cls.env.ref("factory3d_viewer.user_kiosk")

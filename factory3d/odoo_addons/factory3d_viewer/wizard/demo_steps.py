@@ -94,7 +94,8 @@ ROLE_CAT = {r: c for c, roles in CATEGORY.items() for r in roles}
 
 def passport_note(pp, extra=""):
     """Паспорт виробу в примітку обладнання: чому обрано, характеристики, габарити, джерела."""
-    rows = "".join(f"<tr><td>{escape(k)}</td><td>{escape(str(v))}</td></tr>" for k, v in (pp.get("specs") or {}).items())
+    rows = "".join(f"<tr><td>{escape(k)}</td><td>{escape(str(v))}</td></tr>"
+            for k, v in (pp.get("specs") or {}).items())
     facts = []
     if pp.get("units"):
         facts.append(f"Кількість: {pp['units']}")
@@ -503,7 +504,7 @@ class FlowSteps:
     def step_attendance(self):
         o = self.o
         n = 0
-        for code, e in self.d["employees"].items():
+        for code, _e in self.d["employees"].items():
             eid = self.ref(key("emp", code))
             o("hr.employee", "write", [eid], {"barcode": code.replace("-", "")})  # бейдж = код у сцені без дефісів
             start = NOW.replace(hour=6, minute=40) + timedelta(minutes=det(code, mod=20))
@@ -610,7 +611,7 @@ class FlowSteps:
                     o("stock.move", "write", [mv["id"]], vals)
         mos = [self.ref(key("mo", m["name"])) for m in d["productions"] if m["state"] == "progress"]
         o("mrp.production", "action_assign", mos)
-        for mid_, want, qty in todo:  # спожите — те, що зарезервовано з комірок (з партіями), не більше
+        for mid_, want, _qty in todo:  # спожите — те, що зарезервовано з комірок (з партіями), не більше
             if want:
                 o("stock.move", "write", [mid_], {"picked": True})
                 n_done += 1
@@ -635,7 +636,8 @@ class FlowSteps:
             parent = mos.get(mo.get("origin"))
             if not (mo["route"].startswith("F") and parent):
                 continue
-            pid, cid, fr = self.ref(key("mo", parent["name"])), self.ref(key("mo", mo["name"])), self.prod(mo["product"])
+            pid, cid = self.ref(key("mo", parent["name"])), self.ref(key("mo", mo["name"]))
+            fr = self.prod(mo["product"])
             raw = o("stock.move", "search", [["raw_material_production_id", "=", pid], ["product_id", "=", fr]])
             if not raw:
                 src = o("mrp.production", "read", [pid], ["location_src_id"])[0]["location_src_id"][0]
@@ -672,7 +674,7 @@ class FlowSteps:
                 continue
             lines = o("purchase.order.line", "search_read", [["order_id", "=", self.ref(key("po", po["name"]))]],
                       fields=["product_id", "orderpoint_id"])
-            for ln, loc in zip(po["lines"], po["locations"]):
+            for ln, loc in zip(po["lines"], po["locations"], strict=False):
                 pol = next((x for x in lines if x["product_id"][0] == self.prod(ln["product"]) and
                             not x["orderpoint_id"]), None)
                 op = self.ref(key("op", loc))
@@ -1032,7 +1034,7 @@ class Push(FlowSteps):
                 "name": parts[-1], "location_id": parent, "usage": "internal", "barcode": code}, update=False)
             groups[path] = rid
             made += 1
-        for label, path in DEST_GROUP.items():  # групи, на які посилаються приймання
+        for _label, path in DEST_GROUP.items():  # групи, на які посилаються приймання
             if path not in groups:
                 parent = groups.get(path.rsplit("/", 1)[0], root) if "/" in path else root
                 groups[path] = self.ensure(key("locgrp", path), "stock.location",
@@ -1097,7 +1099,8 @@ class Push(FlowSteps):
             pname = o("stock.picking", "read", [pid], ["name"])[0]["name"]
             codes = {self.prod(c): c for c in getattr(self, "tracked", ())}
             for ml in o("stock.move.line", "search_read", [["picking_id", "=", pid], ["lot_id", "=", False],
-                                                           ["lot_name", "=", False], ["product_id.tracking", "=", "lot"]],
+                                                           ["lot_name", "=", False],
+                                                           ["product_id.tracking", "=", "lot"]],
                         fields=["product_id"]):
                 code = codes.get(ml["product_id"][0]) or o("product.product", "read", [ml["product_id"][0]],
                                                            ["default_code"])[0]["default_code"]
@@ -1252,7 +1255,7 @@ class Push(FlowSteps):
             o("mrp.production", "action_confirm", [rid])
             odoo_wos = o("mrp.workorder", "search_read", [["production_id", "=", rid]],
                          fields=["id", "sequence", "name"], order="sequence,id")
-            for w, ow in zip(wos, odoo_wos):
+            for w, ow in zip(wos, odoo_wos, strict=False):
                 self.bind(key("wo", w["id"]), "mrp.workorder", ow["id"])
             self.run_workorders(mo, wos)
             n += 1
@@ -1294,7 +1297,7 @@ class Push(FlowSteps):
                 mid = self.ref(key("mo", m["name"]))
                 if o("mrp.production", "read", [mid], ["bom_id"])[0]["bom_id"] is False:
                     o("mrp.production", "write", [mid], {"bom_id": bom})  # повторний запис скидає місця МО
-                for w, op in zip([d["workorders"][x] for x in m["workorders"]], ops):
+                for w, op in zip([d["workorders"][x] for x in m["workorders"]], ops, strict=False):
                     wid = self.ref(key("wo", w["id"]))
                     if not o("mrp.workorder", "read", [wid], ["operation_id"])[0]["operation_id"]:
                         o("mrp.workorder", "write", [wid], {"operation_id": op["id"]})
@@ -1305,7 +1308,7 @@ class Push(FlowSteps):
             return
         ids = [self.ref(key("wo", w["id"])) for w in wos]
         state = {r["id"]: r["state"] for r in self.o("mrp.workorder", "read", ids, ["state"])}
-        for w, wid in zip(wos, ids):
+        for w, wid in zip(wos, ids, strict=False):
             if w["state"] in ("done", "progress") and state[wid] not in ("done", w["state"]):
                 self.run_workorder(wid, w, started=state[wid] == "progress")
 

@@ -119,7 +119,7 @@ class TestChainsPure(BaseCase):
             self.assertTrue(step["codes"])
         ref = self.ref["sheet_chain"]
         self.assertEqual(sheet["path"], ref["path"])
-        for a, b in zip(sheet["steps"], ref["steps"]):
+        for a, b in zip(sheet["steps"], ref["steps"], strict=False):
             self.assertEqual(sorted(a["docs"]), sorted(b["docs"]))
             self.assertEqual({k: v for k, v in a.items() if k != "docs"}, {k: v for k, v in b.items() if k != "docs"})
         self.assertEqual(self.top["ship_chain"], self.ref["ship_chain"])

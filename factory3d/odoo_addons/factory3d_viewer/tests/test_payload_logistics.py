@@ -20,10 +20,12 @@ class TestLogisticsSynthetic(F3dViewerBase):
         wh = env["stock.warehouse"].search([], limit=1)
         cls.wh = wh
         cls.dock9 = env["stock.location"].create({
-            "name": "TST dock 9", "location_id": wh.lot_stock_id.id, "usage": "internal", "f3d_code": "DOCK-W9", "f3d_kind": "dock", "f3d_x": 0, "f3d_y": 5,
+            "name": "TST dock 9", "location_id": wh.lot_stock_id.id, "usage": "internal", "f3d_code": "DOCK-W9",
+            "f3d_kind": "dock", "f3d_x": 0, "f3d_y": 5,
             "f3d_alias": "UNLOAD-9", "f3d_side": "west", "f3d_dock_no": 9})
         cls.dock8 = env["stock.location"].create({
-            "name": "TST dock 8", "location_id": wh.lot_stock_id.id, "usage": "internal", "f3d_code": "DOCK-W8", "f3d_kind": "dock", "f3d_x": 0, "f3d_y": 15,
+            "name": "TST dock 8", "location_id": wh.lot_stock_id.id, "usage": "internal", "f3d_code": "DOCK-W8",
+            "f3d_kind": "dock", "f3d_x": 0, "f3d_y": 15,
             "f3d_side": "west", "f3d_dock_no": 8})
         cls.product = env["product.product"].create({"name": "TST item", "default_code": "TST-ITM",
                                                      "is_storable": True})

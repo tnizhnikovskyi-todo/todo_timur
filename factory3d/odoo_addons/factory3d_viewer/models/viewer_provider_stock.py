@@ -35,7 +35,6 @@ class F3dViewerProviderStock(models.AbstractModel):
             return
         static_locs = ((ctx.get("static") or {}).get("layout") or {}).get("locations") or {}
         locs = env["stock.location"].search([("f3d_code", "!=", False), ("usage", "in", ("internal", "transit"))])
-        loc_by_id = {loc.id: loc for loc in locs}
         quants = env["stock.quant"].search_read(
             [("location_id", "in", locs.ids), ("quantity", "!=", 0)],
             ["location_id", "product_id", "quantity", "reserved_quantity", "lot_id", "package_id"]) if locs else []
@@ -153,8 +152,8 @@ class F3dViewerProviderStock(models.AbstractModel):
     def _received_today(self, locs, ctx):
         """Приймання сьогодні в локаціях UNLOAD-* (за кодом, аліасом або штрихкодом)."""
         env = self.env
-        unload = locs.filtered(lambda l: any(
-            (c or "").startswith("UNLOAD-") for c in (l.f3d_code, l.f3d_alias, l.barcode)))
+        unload = locs.filtered(lambda loc: any(
+            (c or "").startswith("UNLOAD-") for c in (loc.f3d_code, loc.f3d_alias, loc.barcode)))
         if not unload:
             return {}
         start = dates.utc(ctx["today"] + " 00:00")
@@ -170,7 +169,7 @@ class F3dViewerProviderStock(models.AbstractModel):
     @api.model
     def _kit_links(self, locs):
         """R-04: візок `KIT-*` -> (комплектація, МО): остання комплектація з цим призначенням; МО = її `origin`."""
-        kits = locs.filtered(lambda l: (l.f3d_code or "").startswith("KIT-"))
+        kits = locs.filtered(lambda loc: (loc.f3d_code or "").startswith("KIT-"))
         if not kits:
             return {}
         res = {}

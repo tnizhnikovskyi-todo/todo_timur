@@ -1,7 +1,7 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
 Тесты: 131/131 пусто, 162/162 демо-шаблон (2026-10-15), ТК: —
-Решений без заказчика: 12 (ниже)
+Решений без заказчика: 16 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: демо-тесты гоняются на CE-шаблоне f3d_demo_tpl (не копия `odoo`): ожидания OEE/локаций/MR-номеров считаются из базы (DEC-11)
 
@@ -15,9 +15,10 @@
 | W3 | принят | 45ff25b | 131/131 пусто; демо — те же 9 FAIL (W1c) |
 | W1b-2 | принят (дельта chains ждёт W1b-1) | 4a7da35 | 84/84 (демо skip) |
 | W2 | принят | 90dd23b | TestViewerHoot 52 hoot; демо 162/162 |
-| W4 | в работе | — | — |
-| W5 | — | — | — |
-| W6 | — | — | — |
+| W4 | принят | 2859c22 | демо 185/185, пусто 155/155, туры OK |
+| W5 | слит, доводка 2 FAIL cycle_check на демо | c6dcdb7 | пусто 140/140; TestDemoWizard 2/2 (326 с) |
+| W6 | принят | 868aa12 | TestPerf+TestNeutralize 9/9; SQL-пороги AC-52 не держатся → W7 |
+| W7 (SQL AC-52, uninstall) | в работе | — | — |
 
 ## Решения без заказчика
 - DEC-1: §13.0 требует копию демо-базы `odoo`, её в среде нет — шаблон `f3d_demo_tpl` собирается из `f3d_template`
@@ -34,3 +35,7 @@
 - DEC-10: эмиттеры шины перекрывают также `_write_multi` (вычисляемые state пишутся через flush); `_since` по `ts >= since` (точность — секунда); идемпотентность 60 с только для periodic; ACL res.config.settings для group_f3d_admin (иначе пункт меню не виден, сохранение — base.group_system). — `models/bus_emitters.py`, `viewer_event.py`, `viewer_snapshot.py`, `security/ir.model.access.csv`
 - DEC-11: отличия CE-шаблона от базы `odoo` (696 кодовых локаций вместо 689, пересекающиеся логи OEE, потери «Equipment Failure», нет нумерации MR/…) — тесты считают ожидание из данных по правилу SPEC, хардкод SPEC проверяется при совпадении данных; в коде: KIT-* получают picking/production, FR-компоненты → to=ASM, DOCK-* не в source_locations. — `tests/test_payload_*.py`, `tools/chains.py`, `models/viewer_provider_stock.py`, `viewer_provider_logistics.py`
 - DEC-12: клиент — панель/оверлей/поток/учения/энергия в одном `core.js` (общее замыкание), без разбиения на panel/overlay/flow/drill/energy.js; порог lite `deviceMemory <= 4` (Chrome отдаёт максимум 8 — при `<= 8` lite был бы всегда); вложенные шаблонные литералы запрещены (rjsmin их портит). — `static/src/viewer/core.js`, `lite.js`
+- DEC-13: майстер демо не ставит модули (шаг modules → skipped с перечнем; button_immediate_install в кроне опасен); после шагов вызываются хуки base (codes, passports.link, docks.register, zones.bind); пункт «Демо-дані» в корне меню (seq 16, AC-64). — `wizard/demo_steps.py`, `views/menus.xml`
+- DEC-14: тур киоска — browser_js в test_tours.py (на странице киоска нет tour manager); click_open_record_tour — нулевой рендерер (f3d_test), т.к. WebGL в headless Chrome медленный; sale.order.action_f3d_show ищет МО по origin. — `tests/test_tours.py`, `factory3d_viewer_sale/models/sale_order.py`
+- DEC-15: `neutralize.sql` лежит в `data/` (Odoo читает только `data/neutralize.sql`), а не в корне модуля, как в дереве SPEC §0; дополнительно `bus_enabled=False` (§13.3). — `data/neutralize.sql`
+- DEC-16: AC-38 `dist/index.html` не пересобран — `build_scene.py --embed` требует Blender (`bpy`); `factory3d/viewer/index.html` уже обёртка над ядром, GLB в static совпадают с dist побайтно. eslint: конфиг Odoo требует prettier (нет сети) — прочие правила Odoo 0 ошибок. — `docs/modules/factory3d_viewer/DEPLOY_TEST.md`

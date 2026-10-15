@@ -86,7 +86,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
         for mo in mos:
             res_waiting = mo.reservation_state == "confirmed" and mo.state == "confirmed"
             state = MO_STATE.get(mo.state, mo.state)
-            ws = wos_all.filtered(lambda w: w.production_id == mo and w.state != "cancel")
+            ws = wos_all.filtered(lambda w, mo=mo: w.production_id == mo and w.state != "cancel")
             prev = "done"
             ids, kwh = [], 0.0
             n_done, sum_prog = 0, 0.0
@@ -94,7 +94,8 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 wid = f"WO{wo.id:05d}"
                 st = wo.state
                 if st in ("ready", "blocked", "pending"):
-                    st = "waiting" if (k == 0 and res_waiting) else "ready" if prev in ("done", "progress") else "pending"
+                    st = ("waiting" if (k == 0 and res_waiting)
+                          else "ready" if prev in ("done", "progress") else "pending")
                 prev = st
                 mins = worked.get(wo.id, 0.0)
                 rec = {"id": wid, "name": wo.name, "production": mo.name,

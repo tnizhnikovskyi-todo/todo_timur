@@ -34,13 +34,15 @@ class F3dViewerSnapshot(models.Model):
     _rec_name = "display_name"
 
     ts = fields.Datetime(string="Момент", required=True, index=True, default=fields.Datetime.now)
-    shift_date = fields.Date(string="Дата зміни", required=True, index=True, compute="_compute_shift_date", store=True, precompute=True)
+    shift_date = fields.Date(
+        string="Дата зміни", required=True, index=True, compute="_compute_shift_date", store=True, precompute=True)
     kind = fields.Selection(
         [("periodic", "Плановий"), ("event", "Подія"), ("install", "Установка"), ("manual", "Вручну")],
         string="Тип", required=True, default="periodic", index=True)
     payload_file = fields.Binary(string="Дані (gzip JSON)", attachment=True, required=True)
     payload_name = fields.Char(string="Файл", default="snapshot.json.gz")
-    size_kb = fields.Integer(string="Розмір, КБ", readonly=True, compute="_compute_size_kb", store=True, precompute=True)
+    size_kb = fields.Integer(
+        string="Розмір, КБ", readonly=True, compute="_compute_size_kb", store=True, precompute=True)
     schema = fields.Char(string="Версія схеми", default="1.1", required=True)
     note = fields.Char(string="Примітка")
     event_count = fields.Integer(string="Подій з попереднього", readonly=True)

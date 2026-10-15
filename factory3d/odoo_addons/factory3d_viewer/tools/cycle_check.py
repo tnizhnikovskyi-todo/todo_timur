@@ -103,5 +103,5 @@ def check(d):
 if __name__ == "__main__":
     data = json.load(open(sys.argv[1] if len(sys.argv) > 1 else "dist/odoo_demo.json", encoding="utf-8"))
     res = check(data)
-    print("\n".join(res) if res else "Цикл замкнений: усе від вивантаження до відвантаження.")
+    sys.stdout.write(("\n".join(res) if res else "Цикл замкнений: усе від вивантаження до відвантаження.") + "\n")
     sys.exit(1 if res else 0)

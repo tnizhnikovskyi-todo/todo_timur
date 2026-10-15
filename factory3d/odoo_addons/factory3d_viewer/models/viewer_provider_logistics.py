@@ -223,8 +223,8 @@ class F3dViewerProviderLogistics(models.AbstractModel):
                 "name": so.name, "partner": so.partner_id.name or "", "state": so.state,
                 "date_order": dates.local(so.date_order) if so.date_order else None,
                 "commitment_date": dates.local(so.commitment_date) if so.commitment_date else None,
-                "lines": [{"product": l.product_id.default_code or l.product_id.name, "qty": l.product_uom_qty}
-                          for l in so.order_line if not l.display_type and l.product_id],
+                "lines": [{"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_uom_qty}
+                          for ln in so.order_line if not ln.display_type and ln.product_id],
                 "productions": prod_by_origin.get(so.name, []),
                 "delivery": ship_by_origin.get(so.name, ""),
             }
@@ -240,19 +240,19 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         out = []
         has_op = "orderpoint_id" in env["purchase.order.line"]._fields
         for po in orders:
-            lines = po.order_line.filtered(lambda l: not l.display_type and l.product_id)
+            lines = po.order_line.filtered(lambda ln: not ln.display_type and ln.product_id)
             locs = []
             if has_op:
-                for l in lines:
-                    code = l.orderpoint_id.location_id.f3d_code
+                for ln in lines:
+                    code = ln.orderpoint_id.location_id.f3d_code
                     if code and code not in locs:
                         locs.append(code)
             out.append({
                 "name": po.name, "partner": po.partner_id.name or "", "state": po.state,
                 "date_order": dates.local(po.date_order) if po.date_order else None,
                 "date_planned": dates.local(po.date_planned) if po.date_planned else None,
-                "lines": [{"product": l.product_id.default_code or l.product_id.name, "qty": l.product_qty}
-                          for l in lines],
+                "lines": [{"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_qty}
+                          for ln in lines],
                 "locations": locs,
             })
         return out
