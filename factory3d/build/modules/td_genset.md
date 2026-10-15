@@ -1,7 +1,7 @@
 # td_genset
 Статус: IN_PROGRESS
-Тесты: td_genset 176/176 (Odoo 19, 2026-10-15), relay 20/20; ТК: ждут эмулятор
-Решений без заказчика: 15 (ниже)
+Тесты: /td_genset+/factory3d_genset 254/254 с viewer, мост без viewer 73/73 (2026-10-15), relay 20/20; ТК: ждут эмулятор
+Решений без заказчика: 16 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
 
@@ -13,8 +13,8 @@
 | W2a мост: связка/профиль/телеметрия | принят | bd68433 | /factory3d_genset 40/40 |
 | W2b мост: события/ТО | принят | 33a2ecf | /factory3d_genset 67/67 |
 | W4 fake_relay D700 + REST | принят | 33cdac7 | relay/tests 20/20 |
-| W3 мост: провайдер/представления | в работе | — | — |
-| W5 тестировщик | ждёт W1–W4 | — | — |
+| W3 мост: провайдер/представления | принят | 295c6ff | 73/73 без viewer, 254/254 с viewer |
+| W5 тестировщик | в работе | — | — |
 
 ## Решения без заказчика
 - DEC-1: отдельного репозитория `td_genset` (ветка 19.0, тег 18.0.2.0.2) в сессии нет — перенос делается в
@@ -34,3 +34,4 @@
 - DEC-13: список служебных тревог td_genset (DEC-9) — константы SERVICE_ALARM_CODES/PREFIXES; `_mark_stale` не трогает сигналы в unknown (первая публикация не fresh → unknown, не stale) — models/genset_link.py, adapters/telemetry.py.
 - DEC-14: td_genset сам создаёт плановые заявки ТО → мост их не создаёт (R-09 только дописывает сигнал hours в открытые превентивные заявки td); крона events/service в XML active=False, включает хук по requests_enabled — models/genset_link_events.py, data/ir_cron.xml.
 - DEC-15: `maintenance_for` в Odoo 19 CE нет — пишется только если поле есть; строка мапы COMM_LOST получила td_code="COMM_LOST" (иначе уходила в DEFAULT_COMM без заявки); td_code заполнен для 32 из 48 строк, остальные — по hgm_name (Q-13 частично) — data/f3d_genset_event_map.xml.
+- DEC-16: форма оборудования наследует `maintenance.hr_equipment_view_form` (view_equipment_form в 19 нет); у действия настроек нет target='inline'; строка «Тривоги» карточки — количество + alarm_label (имён активных тревог в last_state_json нет) — views/, models/viewer_provider.py.
