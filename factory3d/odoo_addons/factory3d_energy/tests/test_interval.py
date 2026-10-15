@@ -12,6 +12,9 @@ from .test_counter import EnergyMixin
 M15 = timedelta(minutes=15)
 
 
+QUERY_LIMIT = 40
+
+
 @tagged(*TAGS)
 class TestInterval(EnergyMixin, F3DEnergyCase):
     @classmethod
@@ -129,6 +132,18 @@ class TestInterval(EnergyMixin, F3DEnergyCase):
         self.assertEqual(rows[-1].ts_start, start + M15 * 191)
         self.build(now)
         self.assertGreater(len(self.rows(meter)), 192)
+
+    def test_build_query_count(self):  # D-1: N+1 за слотами відсутній
+        meter = self.mk_meter("PM-SAW-T")
+        start = self.at(0)
+        self.feed(meter.e_import_signal_id, [(start + M15 * k, 100.0 + k) for k in range(0, 100)])
+        meter.last_interval_start = start - M15
+        self.Interval.invalidate_model()
+        with self.assertQueryCount(QUERY_LIMIT):
+            self.Interval.with_context(f3d_now=start + timedelta(hours=30))._f3d_build_meter(
+                meter, start + timedelta(hours=30)
+            )
+        self.assertEqual(len(self.rows(meter)), 99)
 
     def test_kwh_shift(self):  # AC-83
         cal = self.env["resource.calendar"].create(

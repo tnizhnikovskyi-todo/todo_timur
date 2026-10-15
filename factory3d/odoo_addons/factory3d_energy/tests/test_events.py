@@ -125,3 +125,17 @@ class TestEvents(EnergyMixin, F3DEnergyCase):
             [{"code": sig.code, "ts": fields.Datetime.now(), "value": 1500.0}]
         )
         self.assertFalse(self.Event.search([("signal_id", "=", sig.id)]))
+
+    def test_on_ingest_db_error_propagates(self):  # O-2
+        """Помилка БД рівня транзакції (serialization) не ковтається — ретрай приймання; інші — лише лог."""
+        from unittest.mock import patch
+
+        from psycopg2 import errors
+
+        Event = self.env["f3d.energy.event"]
+        with patch.object(type(Event), "_f3d_on_ingest_inner", side_effect=errors.SerializationFailure("x")):
+            with self.assertRaises(errors.SerializationFailure):
+                Event._f3d_on_ingest({}, [])
+        with patch.object(type(Event), "_f3d_on_ingest_inner", side_effect=ValueError("x")):
+            with self.assertLogs("odoo.addons.factory3d_energy.models.f3d_energy_event", "ERROR"):
+                Event._f3d_on_ingest({}, [])

@@ -7,6 +7,7 @@ from odoo import api, fields, models, tools
 from odoo.addons.factory3d_telemetry.tools.titles import fmt_num
 
 from ..tools import dates, live
+from ..tools import tariff as tariff_tools
 from ..tools.dates import SLOT, param_bool, param_float
 
 _logger = logging.getLogger(__name__)
@@ -155,7 +156,7 @@ class F3dEnergyInterval(models.Model):
         Tariff = env["f3d.energy.tariff"].sudo()
         company = meter.company_id
         built_at = fields.Datetime.now()
-        rows, built_to = [], None
+        rows, built_to, tariffs = [], None, {}
         for k in range(count):
             a = s0 + k * SLOT
             b = a + SLOT
@@ -181,18 +182,25 @@ class F3dEnergyInterval(models.Model):
             if series_x is not None:
                 dx, _qx = series_x.delta(a, b)
                 kwh_export = dx or 0.0
-            tariff = Tariff._f3d_tariff_at(a, company)
-            zone, price = Tariff._f3d_price_at(a, company)
             local = dates.to_local(a)
-            if not tariff:
-                env["f3d.energy.event"]._f3d_log(
-                    "warn",
-                    "meter",
-                    meter.code,
-                    "Немає чинного тарифу на %s" % local.strftime("%d.%m.%Y"),
-                    ts=now,
-                    dedup_min=1440,
-                )
+            ld = local.date()
+            if ld not in tariffs:  # D-1: тариф і зони — один пошук на місцеву добу, а не на слот
+                tariff = Tariff._f3d_tariff_at(a, company)
+                tariffs[ld] = (tariff, tariff.zone_ids.sorted("sequence") if tariff else None)
+                if not tariff:
+                    env["f3d.energy.event"]._f3d_log(
+                        "warn",
+                        "meter",
+                        meter.code,
+                        "Немає чинного тарифу на %s" % local.strftime("%d.%m.%Y"),
+                        ts=now,
+                        dedup_min=1440,
+                    )
+            tariff, zones = tariffs[ld]
+            zone, price = env["f3d.energy.tariff.zone"], 0.0
+            if tariff:
+                zone = tariff_tools.zone_for(local, zones) or zone
+                price = zone.price if zone else 0.0
             kwh_r = round(kwh, 3)
             cost = round(kwh_r * price, 2) if meter.role in COST_ROLES else 0.0
             rows.append(

@@ -1,6 +1,8 @@
 import logging
 from datetime import timedelta
 
+from psycopg2 import OperationalError
+
 from odoo import api, fields, models
 
 from odoo.addons.factory3d_telemetry.tools import thresholds
@@ -78,6 +80,8 @@ class F3dEnergyEvent(models.Model):
         try:
             with self.env.cr.savepoint():
                 self._f3d_on_ingest_inner(before)
+        except OperationalError:
+            raise  # O-2: serialization/deadlock — ретрай запиту (Odoo http/telemetry) має спрацювати
         except Exception:
             _logger.exception("f3d_energy: помилка журналу подій після прийому показань")
 
