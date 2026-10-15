@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_heat_balance_form" model="ir.ui.view">
+        <field name="name">f3d.bms.heat.balance.form</field>
+        <field name="model">f3d.bms.heat.balance</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_recompute" type="object" string="Перерахувати" class="btn-primary"
+                            groups="factory3d_base.group_f3d_manager"/>
+                    <button name="action_reset_macro" type="object" string="Повернути значення макета"
+                            groups="factory3d_base.group_f3d_manager"
+                            confirm="Повернути параметри макета?"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group string="Зараз">
+                        <group>
+                            <field name="outdoor_c"/>
+                            <field name="heat_need_kw"/>
+                            <field name="chp_heat_now_kw"/>
+                            <field name="chp_source"/>
+                            <field name="boilers_on_calc"/>
+                            <field name="boilers_on"/>
+                            <field name="boiler_state"/>
+                        </group>
+                        <group>
+                            <field name="boiler_load" widget="percentage"/>
+                            <field name="boiler_heat_kw"/>
+                            <field name="supply_c"/>
+                            <field name="return_c"/>
+                            <field name="silo_fill" widget="percentage"/>
+                            <field name="deficit_kw"/>
+                            <field name="deviation" widget="badge"/>
+                            <field name="deviation_text"/>
+                        </group>
+                    </group>
+                    <group string="Результат при розрахунковій температурі">
+                        <group>
+                            <field name="total_kw"/>
+                            <field name="total_raw"/>
+                            <field name="capacity_kw"/>
+                        </group>
+                        <group>
+                            <field name="reserve"/>
+                            <field name="reserve_boilers"/>
+                            <field name="computed_at"/>
+                        </group>
+                    </group>
+                    <field name="note"/>
+                    <field name="line_ids" readonly="1">
+                        <list>
+                            <field name="sequence" widget="handle"/>
+                            <field name="name"/>
+                            <field name="kw_round"/>
+                            <field name="kw" optional="hide"/>
+                            <field name="formula"/>
+                        </list>
+                    </field>
+                    <notebook>
+                        <page name="params" string="Параметри">
+                            <group>
+                                <group string="Будівля">
+                                    <field name="company_id" groups="base.group_multi_company"/>
+                                    <field name="t_out_design"/>
+                                    <field name="t_in_set"/>
+                                    <field name="length_m"/>
+                                    <field name="width_m"/>
+                                    <field name="height_m"/>
+                                    <field name="u_wall"/>
+                                    <field name="u_roof"/>
+                                    <field name="u_floor"/>
+                                    <field name="infiltration_ach"/>
+                                    <field name="air_wh_m3k"/>
+                                    <field name="internal_gains_kw"/>
+                                </group>
+                                <group string="Вентиляція та джерела тепла">
+                                    <field name="winter_oa_share"/>
+                                    <field name="heat_recovery"/>
+                                    <field name="ahu_design_share"/>
+                                    <field name="ahu_supply_c"/>
+                                    <field name="boilers"/>
+                                    <field name="boiler_kw"/>
+                                    <field name="boiler_stage_share"/>
+                                    <field name="chp_el_kw"/>
+                                    <field name="chp_heat_kw"/>
+                                    <field name="chp_heat_75_kw"/>
+                                    <field name="chp_heat_50_kw"/>
+                                    <field name="chp_min_load"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page name="signals" string="Сигнали">
+                            <group>
+                                <group>
+                                    <field name="boiler_equipment_id"/>
+                                    <field name="chp_equipment_id"/>
+                                    <field name="outdoor_signal_id"/>
+                                    <field name="boiler_state_signal_id"/>
+                                    <field name="boiler_supply_signal_id"/>
+                                    <field name="boiler_return_signal_id"/>
+                                </group>
+                                <group>
+                                    <field name="boiler_heat_signal_id"/>
+                                    <field name="silo_signal_id"/>
+                                    <field name="chp_heat_signal_id"/>
+                                    <field name="chp_el_signal_id"/>
+                                    <field name="mains_signal_id"/>
+                                    <field name="fire_signal_id"/>
+                                    <field name="check_signal_id"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_heat_balance_open" model="ir.actions.server">
+        <field name="name">Тепловий баланс</field>
+        <field name="model_id" ref="model_f3d_bms_heat_balance"/>
+        <field name="state">code</field>
+        <field name="code">action = env['f3d.bms.heat.balance']._f3d_bms_get().get_formview_action()</field>
+    </record>
+</odoo>

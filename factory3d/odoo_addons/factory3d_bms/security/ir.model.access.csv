@@ -1,1 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_bms_hvac_unit_user,f3d.bms.hvac.unit user,model_f3d_bms_hvac_unit,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_hvac_unit_manager,f3d.bms.hvac.unit manager,model_f3d_bms_hvac_unit,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_bms_heat_balance_user,f3d.bms.heat.balance user,model_f3d_bms_heat_balance,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_heat_balance_manager,f3d.bms.heat.balance manager,model_f3d_bms_heat_balance,factory3d_base.group_f3d_manager,1,1,1,0
+access_f3d_bms_heat_balance_line_user,f3d.bms.heat.balance.line user,model_f3d_bms_heat_balance_line,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_heat_balance_line_manager,f3d.bms.heat.balance.line manager,model_f3d_bms_heat_balance_line,factory3d_base.group_f3d_manager,1,1,1,1

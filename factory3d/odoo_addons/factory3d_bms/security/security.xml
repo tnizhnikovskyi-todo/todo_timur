@@ -12,6 +12,11 @@
         <field name="comment">Енергетик, головний механік: керування освітленням і вентиляцією (якщо дозволено), журнал відхилень.</field>
         <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
     </record>
+    <record id="f3d_bms_heat_balance_rule_company" model="ir.rule">
+        <field name="name">Тепловий баланс: своя компанія</field>
+        <field name="model_id" ref="model_f3d_bms_heat_balance"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
     <record id="factory3d_base.group_f3d_manager" model="res.groups">
         <field name="implied_ids" eval="[Command.link(ref('group_f3d_bms_operator'))]"/>
     </record>

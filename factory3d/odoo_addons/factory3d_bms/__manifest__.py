@@ -17,6 +17,8 @@
         "security/security.xml",
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
+        "views/f3d_bms_hvac_unit_views.xml",
+        "views/f3d_bms_heat_balance_views.xml",
         "views/menus.xml",
     ],
     "demo": [],
