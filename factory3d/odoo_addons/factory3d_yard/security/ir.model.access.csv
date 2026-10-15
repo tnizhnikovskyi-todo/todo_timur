@@ -10,3 +10,9 @@ access_f3d_yard_lpr_event_security,f3d.yard.lpr.event security,model_f3d_yard_lp
 access_f3d_yard_lpr_event_manager,f3d.yard.lpr.event manager,model_f3d_yard_lpr_event,group_f3d_yard_manager,1,1,1,1
 access_f3d_yard_walkin_wizard_security,f3d.yard.walkin.wizard security,model_f3d_yard_walkin_wizard,group_f3d_yard_security,1,1,1,1
 access_f3d_yard_reject_wizard_security,f3d.yard.reject.wizard security,model_f3d_yard_reject_wizard,group_f3d_yard_security,1,1,1,1
+access_f3d_yard_weighing_user,f3d.yard.weighing user,model_f3d_yard_weighing,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_yard_weighing_stock,f3d.yard.weighing stock,model_f3d_yard_weighing,stock.group_stock_user,1,1,1,0
+access_f3d_yard_weighing_security,f3d.yard.weighing security,model_f3d_yard_weighing,group_f3d_yard_security,1,1,1,0
+access_f3d_yard_weighing_manager,f3d.yard.weighing manager,model_f3d_yard_weighing,group_f3d_yard_manager,1,1,1,1
+access_f3d_yard_scale_user,f3d.yard.scale user,model_f3d_yard_scale,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_yard_scale_manager,f3d.yard.scale manager,model_f3d_yard_scale,group_f3d_yard_manager,1,1,1,1

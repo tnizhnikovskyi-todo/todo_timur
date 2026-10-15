@@ -15,3 +15,5 @@ yard/gates/GATE-E/cmd_close,GATE-E: команда «закрити»,gauge,,GAT
 yard/gates/GATE-E/cmd_hold,GATE-E: тримати відкритим,gauge,,GATE-E,MB-U86-IO7,"{""fc"":1,""addr"":21,""type"":""bool"",""write"":{""fc"":5,""addr"":21},""doc"":""DO5 00022 тримати GATE-E (рівень)""}",5,300,1,,,0,0,gate_e,cmd_hold
 yard/lpr/CAM-05/plate,CAM-05: номер на в'їзді,event,,CCTV,HTTP-PUSH,"{""route"":""lpr"",""match"":{""sensorProviderID"":""CAM-05""},""path"":""$.plateText"",""ts_path"":""$.capture_timestamp""}",3600,0,0,,,0,0,,
 yard/lpr/CAM-06/plate,CAM-06: номер на виїзді,event,,CCTV,HTTP-PUSH,"{""route"":""lpr"",""match"":{""sensorProviderID"":""CAM-06""},""path"":""$.plateText"",""ts_path"":""$.capture_timestamp""}",3600,0,0,,,0,0,,
+yard/scale/TRUCK-SCALE/weight_kg,Автоваги: вага,gauge,кг,TRUCK-SCALE,SICS-TRUCK-SCALE,"{""cmd"":""SI"",""field"":""weight"",""doc"":""SICS SI/SIR, дискретність 20 кг""}",1,60,0,,0,0,0,scale_truck,weight
+yard/scale/TRUCK-SCALE/stable,Автоваги: стабільно,gauge,,TRUCK-SCALE,SICS-TRUCK-SCALE,"{""cmd"":""SI"",""field"":""stable"",""doc"":""SICS статус S/D""}",1,60,0,,0,0,0,scale_truck,stable
