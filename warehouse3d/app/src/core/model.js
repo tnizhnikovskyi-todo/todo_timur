@@ -22,6 +22,7 @@ import { CATALOG, catalogType } from "./catalog.js";
 import { captureTemplate, normLibrary, uniqTemplate } from "./library.js";
 import * as B from "./building.js";
 import { BLD_OPS } from "./bldops.js";
+import { compileRule, defaultRules, effectiveRules, parseStats, suggestMask } from "./parse.js";
 import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "./checks.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон" };
@@ -89,7 +90,7 @@ export function createModel(project, storage, opts = {}) {
     get building() { return bb(); }, // план здания с учётом показанного (null — здания нет)
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.types || v.addr || v.addrZones.length || v.codes.length); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.types || v.addr || v.addrZones.length || v.codes.length || v.parse); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -138,7 +139,7 @@ export function createModel(project, storage, opts = {}) {
     moveSet: (set, dx, dy) => ed.exec(s, () => ed.moveSet(s, set, dx, dy)),
     // правки
     ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), tech: bind("tech"), techMin: bind("techMin"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
-      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
+      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), autoLayout: bind("autoLayout"), place: (codes, target, key) => ed.exec(s, () => ed.OPS.place(s, codes, target, key)), parse: (f, key) => ed.exec(s, () => ed.OPS.parse(s, f, key)), del: bind("del"), reset: bind("reset") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
     save: (id) => ed.saveObj(s, id),
@@ -166,6 +167,17 @@ export function createModel(project, storage, opts = {}) {
       check: (tpl) => { const p = parseTemplate(tpl); return { unknown: p.unknown, used: p.used }; },
       norm: normAddr,
     },
+    // разбор кодов мест и лоток «Не розміщено» (W-12, D-07): правила склада (parse.js), сводка по набору правил (в том числе черновому), подсказка маски по образцам.
+    // Правила меняет ops.parse({ rules }) через «Показати / Зберегти»; лоток — места без зоны (tree.unplaced), ставятся ops.place(коды, зона)
+    parse: {
+      rules: () => effectiveRules(s.edit).map((r) => ({ ...r })),
+      defaults: defaultRules,
+      isDefault: () => !s.edit.parse,
+      stats: (rules = null) => parseStats(s.data.locations, rules || effectiveRules(s.edit), new Set(s.tree.types.keys())),
+      check: (rule) => compileRule(rule).err,
+      suggest: suggestMask,
+    },
+    tray: { list: () => s.tree.unplaced.slice(), count: () => s.tree.unplaced.length },
     // каталог типов (типы активного склада поверх общего справочника)
     types: { list: () => [...s.tree.types.values()], use: () => ed.typeUse(s.tree), isBase: ed.isBaseType, patch: (id, k, v) => ed.exec(s, () => ed.typePatch(s, id, k, v)),
       remove: (id) => ed.exec(s, () => ed.typeRemove(s, id)), add: () => ed.exec(s, () => ed.typeAdd(s)), import: (id, from = "catalog") => ed.exec(s, () => ed.typeImport(s, id, from)) },

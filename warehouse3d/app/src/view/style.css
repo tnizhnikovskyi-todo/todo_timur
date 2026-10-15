@@ -330,3 +330,16 @@ svg .bd-rl { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; text
 .bld-vt .x { border: 0; background: transparent; cursor: pointer; font-size: 16px; color: var(--o-muted); }
 .bld-vt .x:disabled { opacity: 0.3; cursor: default; }
 .bld-form .ed-form { margin-bottom: 6px; }
+
+/* разбор кодов, лоток «Не розміщено» (W-12) */
+.o_modal .sec { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
+.o_modal .acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.parse-rules input[type=text], .parse-rules input:not([type]) { font-family: ui-monospace, monospace; }
+.parse-rules td.nw { white-space: nowrap; } .parse-rules [data-hits] { font-size: 12px; white-space: nowrap; } .parse-rules [data-hits].err { color: var(--bad); }
+.parse-bad { max-height: 240px; overflow: auto; list-style: none; margin: 0; padding: 0; } .parse-bad li { padding: 2px 0; }
+.tray-row { display: flex; gap: 6px; align-items: baseline; flex-direction: row !important; font-size: 13px !important; color: var(--o-text) !important; cursor: pointer; }
+.o_prob.o_tray { left: 8px; right: auto; width: min(380px, calc(100% - 16px)); }
+.o_tray .traylist li { padding: 4px 4px; border-bottom: 1px solid var(--o-border); cursor: grab; } .o_tray .traylist li:hover { background: var(--o-hover); }
+.o_tray .traylist .code { font-family: ui-monospace, monospace; }
+.topbar #tray-btn .cnt { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--warn); color: #fff; font-size: 12px; text-align: center; }
+.vp svg.dropok { outline: 2px dashed var(--o-brand); outline-offset: -4px; }
