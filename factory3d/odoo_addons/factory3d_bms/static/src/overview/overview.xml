@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="factory3d_bms.Overview">
+        <div class="o_f3d_bms_overview o_action overflow-auto p-3">
+            <t t-if="state.data">
+                <t t-set="d" t-value="state.data"/>
+                <div class="d-flex align-items-center mb-3">
+                    <h2 class="m-0 me-auto">Будівля</h2>
+                    <span class="badge me-2" t-att-class="d.work_time ? 'text-bg-success' : 'text-bg-secondary'"
+                          t-esc="d.work_time ? 'Робочий час' : 'Поза робочим часом'"/>
+                    <span class="text-muted" t-esc="d.ts"/>
+                </div>
+                <div class="alert alert-warning" t-if="state.error">Не вдалося оновити дані огляду.</div>
+
+                <div class="o_f3d_bms_kpi d-flex flex-wrap gap-3 mb-3">
+                    <div class="card p-2 o_f3d_bms_kpi_groups">
+                        <div class="text-muted">Освітлення: групи в нормі</div>
+                        <div class="fs-3 fw-bold"><t t-esc="d.kpi.groups_ok"/> / <t t-esc="d.kpi.groups_total"/></div>
+                        <div class="text-muted"><t t-esc="d.kpi.lighting_kw"/> кВт</div>
+                    </div>
+                    <div class="card p-2 o_f3d_bms_kpi_units">
+                        <div class="text-muted">Установки працюють</div>
+                        <div class="fs-3 fw-bold"><t t-esc="d.kpi.units_on"/> / <t t-esc="d.kpi.units_total"/></div>
+                        <div class="text-muted"><t t-esc="d.kpi.airflow"/> м³/год</div>
+                    </div>
+                    <div class="card p-2">
+                        <div class="text-muted">Тепло: потреба / КГУ</div>
+                        <div class="fs-3 fw-bold"><t t-esc="d.kpi.heat_need"/> / <t t-esc="d.kpi.chp_heat"/> кВт</div>
+                        <div class="text-muted">котлів: <t t-esc="d.kpi.boilers_on"/>, дефіцит <t t-esc="d.kpi.deficit"/> кВт</div>
+                    </div>
+                    <div class="card p-2">
+                        <div class="text-muted">Відхилення / заявки</div>
+                        <div class="fs-3 fw-bold" t-att-class="d.kpi.open_deviations ? 'text-danger' : ''">
+                            <t t-esc="d.kpi.open_deviations"/> / <t t-esc="d.kpi.open_requests"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="o_f3d_bms_plan card p-2 mb-3">
+                    <svg class="o_f3d_bms_svg w-100" t-att-viewBox="viewBox" preserveAspectRatio="xMidYMid meet">
+                        <polygon t-foreach="d.zones" t-as="zone" t-key="zone.id"
+                                 t-att-class="zoneClass(zone)" t-att-points="points(zone)"
+                                 t-on-click="() => this.openZone(zone)">
+                            <title t-esc="zoneTitle(zone)"/>
+                        </polygon>
+                        <rect t-foreach="d.panels" t-as="panel" t-key="panel.id"
+                              t-att-class="panelClass(panel)" t-att-x="panel.x - 0.8" t-att-y="panel.y - 0.8"
+                              width="1.6" height="1.6" t-on-click="() => this.openPanel(panel)">
+                            <title t-esc="panel.code + ' · ' + panel.p_now + ' кВт'"/>
+                        </rect>
+                        <circle t-foreach="d.units" t-as="unit" t-key="unit.id"
+                                t-att-class="unitClass(unit)" t-att-cx="unit.x" t-att-cy="unit.y" r="0.9"
+                                t-on-click="() => this.openUnit(unit)">
+                            <title t-esc="unitTitle(unit)"/>
+                        </circle>
+                    </svg>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6 mb-3">
+                        <div class="card p-2 o_f3d_bms_heat">
+                            <h5>Тепло</h5>
+                            <div>Зовнішня <t t-esc="d.heat.outdoor_c"/> °C; подача <t t-esc="d.heat.supply_c"/> °C, зворот <t t-esc="d.heat.return_c"/> °C</div>
+                            <div>Розрахунок при <t t-esc="d.heat.design.total"/> кВт: котли <t t-esc="d.heat.design.capacity"/> кВт, КГУ <t t-esc="d.heat.design.chp"/> кВт, запас <t t-esc="Math.round((d.heat.design.reserve || 0) * 100)"/> %</div>
+                            <ul class="mb-0 mt-1">
+                                <li t-foreach="d.heat.design.lines" t-as="line" t-key="line_index">
+                                    <t t-esc="line.name"/>: <t t-esc="line.kw"/> кВт
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-3">
+                        <div class="card p-2 o_f3d_bms_deviations">
+                            <h5>Відкриті відхилення</h5>
+                            <div class="text-muted" t-if="!d.deviations.length">Немає</div>
+                            <table class="table table-sm mb-0" t-if="d.deviations.length">
+                                <tbody>
+                                    <tr t-foreach="d.deviations" t-as="dev" t-key="dev.id">
+                                        <td t-esc="dev.started"/>
+                                        <td><b t-esc="dev.object_code"/></td>
+                                        <td t-esc="ruleLabel(dev.rule)"/>
+                                        <td t-esc="dev.name"/>
+                                        <td t-esc="dev.request or ''"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </t>
+            <div t-else="" class="text-muted">Завантаження…</div>
+        </div>
+    </t>
+</templates>

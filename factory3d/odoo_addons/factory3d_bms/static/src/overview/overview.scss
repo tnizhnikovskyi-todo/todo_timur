@@ -1,0 +1,34 @@
+.o_f3d_bms_overview {
+    .o_f3d_bms_svg {
+        max-height: 60vh;
+        background: var(--bs-body-bg);
+
+        polygon, circle, rect {
+            cursor: pointer;
+            stroke: var(--bs-border-color);
+            stroke-width: 0.15;
+        }
+    }
+
+    .o_f3d_bms_zone {
+        fill: #e9ecef;
+    }
+    .o_f3d_bms_ok { fill: #a3d9a5; }
+    .o_f3d_bms_low { fill: #ffe08a; }
+    .o_f3d_bms_off, .o_f3d_bms_nodata { fill: #ced4da; }
+    .o_f3d_bms_fault, .o_f3d_bms_alarm { fill: #f1a1a1; }
+    .o_f3d_bms_none { fill: #f8f9fa; }
+
+    .o_f3d_bms_unit {
+        &.o_f3d_bms_on { fill: #2e8b57; }
+        &.o_f3d_bms_standby { fill: #f0ad4e; }
+        &.o_f3d_bms_nodata { fill: #868e96; }
+        &.o_f3d_bms_alarm { fill: #d9534f; }
+    }
+
+    .o_f3d_bms_panel {
+        fill: #0d6efd;
+        &.o_f3d_bms_panel_fault { fill: #d9534f; }
+        &.o_f3d_bms_panel_offline, &.o_f3d_bms_panel_unknown { fill: #868e96; }
+    }
+}

@@ -1,0 +1,17 @@
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "title": "address.helvarnet", "type": "object",
+ "properties": {
+   "group": {"type": "integer", "minimum": 1, "maximum": 16383},
+   "device": {"type": "string", "pattern": "^@\\d{1,3}\\.\\d{1,3}\\.\\d{1,4}\\.\\d{1,3}$"},
+   "query": {"enum": ["level", "power", "scene", "faults", "faulty", "router"], "default": "level"},
+   "devices": {"type": "array", "maxItems": 64,
+               "items": {"type": "string", "pattern": "^@\\d{1,3}\\.\\d{1,3}\\.\\d{1,4}\\.\\d{1,3}(-\\d{1,3})?$"}},
+   "sample": {"type": "integer", "minimum": 1, "maximum": 16, "default": 3},
+   "mask": {"type": "integer", "minimum": 0, "maximum": 4294967295, "default": 134217742},
+   "scale": {"type": "number", "default": 1},
+   "fade_s": {"type": "number", "minimum": 0, "maximum": 90, "default": 2.0},
+   "block": {"type": "integer", "minimum": 1, "maximum": 8, "default": 1},
+   "map": {"type": "object"}},
+ "allOf": [
+   {"if": {"properties": {"query": {"const": "router"}}, "required": ["query"]},
+    "then": {"required": ["device"]},
+    "else": {"required": ["group"]}}]}

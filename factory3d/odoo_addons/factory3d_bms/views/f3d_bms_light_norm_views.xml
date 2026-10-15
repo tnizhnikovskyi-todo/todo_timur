@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_light_norm_list" model="ir.ui.view">
+        <field name="name">f3d.bms.light.norm.list</field>
+        <field name="model">f3d.bms.light.norm</field>
+        <field name="arch" type="xml">
+            <list string="Норми освітленості">
+                <field name="sequence" widget="handle"/>
+                <field name="key"/>
+                <field name="name"/>
+                <field name="lux"/>
+                <field name="ugr"/>
+                <field name="ra"/>
+                <field name="ref_en"/>
+                <field name="ref_dbn" optional="show"/>
+                <field name="group_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_light_norm_form" model="ir.ui.view">
+        <field name="name">f3d.bms.light.norm.form</field>
+        <field name="model">f3d.bms.light.norm</field>
+        <field name="arch" type="xml">
+            <form string="Норма освітленості">
+                <sheet>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Вид робіт"/></h1>
+                    </div>
+                    <group>
+                        <group string="Норма">
+                            <field name="key"/>
+                            <field name="lux"/>
+                            <field name="ugr"/>
+                            <field name="ra"/>
+                        </group>
+                        <group string="Підстави">
+                            <field name="ref_en"/>
+                            <field name="ref_dbn"/>
+                            <field name="sources" widget="text"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                    <notebook>
+                        <page string="Групи" name="groups">
+                            <field name="group_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="zone_name"/>
+                                    <field name="e_calc"/>
+                                    <field name="design_ok"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_light_norm" model="ir.actions.act_window">
+        <field name="name">Норми освітленості</field>
+        <field name="res_model">f3d.bms.light.norm</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

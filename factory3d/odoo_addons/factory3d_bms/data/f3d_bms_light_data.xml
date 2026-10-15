@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Згенеровано tools/gen_data.py з макета (SPEC §5.2). Не редагувати вручну. -->
+    <record id="panel_lp_1" model="f3d.bms.light.panel">
+        <field name="code">LP-1</field>
+        <field name="name">Щит освітлення ЩО-1 · склади сировини, приймання</field>
+        <field name="cluster" eval="1"/>
+        <field name="router" eval="1"/>
+        <field name="x" eval="40.0"/>
+        <field name="y" eval="71.0"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_pks"/>
+        <field name="source_id" ref="source_hn_lp_1"/>
+    </record>
+    <record id="panel_lp_2" model="f3d.bms.light.panel">
+        <field name="code">LP-2</field>
+        <field name="name">Щит освітлення ЩО-2 · лінії й дільниця фасадів</field>
+        <field name="cluster" eval="1"/>
+        <field name="router" eval="2"/>
+        <field name="x" eval="90.6"/>
+        <field name="y" eval="71.0"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_fac"/>
+        <field name="source_id" ref="source_hn_lp_2"/>
+    </record>
+    <record id="panel_lp_3" model="f3d.bms.light.panel">
+        <field name="code">LP-3</field>
+        <field name="name">Щит освітлення ЩО-3 · збирання, пакування, склад ГП, відвантаження</field>
+        <field name="cluster" eval="1"/>
+        <field name="router" eval="3"/>
+        <field name="x" eval="135.0"/>
+        <field name="y" eval="71.0"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_elec"/>
+        <field name="source_id" ref="source_hn_lp_3"/>
+    </record>
+    <record id="group_lt_rcv_1" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-1</field>
+        <field name="name">Освітлення: Приймання плит · ворота 1</field>
+        <field name="sequence" eval="10"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_1"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="1"/>
+        <field name="dali_devices">@1.1.1.1-4</field>
+    </record>
+    <record id="group_lt_rcv_2" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-2</field>
+        <field name="name">Освітлення: Приймання плит · ворота 2</field>
+        <field name="sequence" eval="20"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_2"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="2"/>
+        <field name="dali_devices">@1.1.1.5-8</field>
+    </record>
+    <record id="group_lt_rcv_3" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-3</field>
+        <field name="name">Освітлення: Приймання плит · ворота 3</field>
+        <field name="sequence" eval="30"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_3"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="3"/>
+        <field name="dali_devices">@1.1.1.9-12</field>
+    </record>
+    <record id="group_lt_rcv_4" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-4</field>
+        <field name="name">Освітлення: Приймання фурнітури, контроль і карантин · ворота 4</field>
+        <field name="sequence" eval="40"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_4"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="4"/>
+        <field name="dali_devices">@1.1.1.13-16</field>
+    </record>
+    <record id="group_lt_rcv_5" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-5</field>
+        <field name="name">Освітлення: Приймання крайки · ворота 5</field>
+        <field name="sequence" eval="50"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_5"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="5"/>
+        <field name="dali_devices">@1.1.1.17-20</field>
+    </record>
+    <record id="group_lt_rcv_6" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-6</field>
+        <field name="name">Освітлення: Приймання ЛФМ · ворота 6</field>
+        <field name="sequence" eval="60"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_6"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="6"/>
+        <field name="dali_devices">@1.1.1.21-24</field>
+    </record>
+    <record id="group_lt_rcv_7" model="f3d.bms.light.group">
+        <field name="code">LT-RCV-7</field>
+        <field name="name">Освітлення: Приймання пакматеріалів · ворота 7</field>
+        <field name="sequence" eval="70"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_7"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="7"/>
+        <field name="dali_devices">@1.1.1.25-28</field>
+    </record>
+    <record id="group_lt_sheets" model="f3d.bms.light.group">
+        <field name="code">LT-SHEETS</field>
+        <field name="name">Освітлення: Склад плит</field>
+        <field name="sequence" eval="80"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_sheets"/>
+        <field name="norm_id" ref="norm_storage_floor"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="12"/>
+        <field name="level_design" eval="0.8"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="8"/>
+        <field name="dali_devices">@1.1.1.29-40</field>
+    </record>
+    <record id="group_lt_hw" model="f3d.bms.light.group">
+        <field name="code">LT-HW</field>
+        <field name="name">Освітлення: Склад фурнітури</field>
+        <field name="sequence" eval="90"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_hw"/>
+        <field name="norm_id" ref="norm_storage_racks"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay_rack"/>
+        <field name="fixture_kind">highbay_rack</field>
+        <field name="n_fixtures" eval="5"/>
+        <field name="level_design" eval="0.7"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="9"/>
+        <field name="dali_devices">@1.1.1.41-45</field>
+    </record>
+    <record id="group_lt_edge" model="f3d.bms.light.group">
+        <field name="code">LT-EDGE</field>
+        <field name="name">Освітлення: Склад крайки</field>
+        <field name="sequence" eval="100"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_edge"/>
+        <field name="norm_id" ref="norm_storage_racks"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay_rack"/>
+        <field name="fixture_kind">highbay_rack</field>
+        <field name="n_fixtures" eval="3"/>
+        <field name="level_design" eval="0.7"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="10"/>
+        <field name="dali_devices">@1.1.1.46-48</field>
+    </record>
+    <record id="group_lt_pks" model="f3d.bms.light.group">
+        <field name="code">LT-PKS</field>
+        <field name="name">Освітлення: Пакувальні матеріали</field>
+        <field name="sequence" eval="110"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_pks"/>
+        <field name="norm_id" ref="norm_storage_floor"/>
+        <field name="panel_id" ref="panel_lp_1"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="2"/>
+        <field name="level_design" eval="0.6"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="11"/>
+        <field name="dali_devices">@1.1.1.49-50</field>
+    </record>
+    <record id="group_lt_cut" model="f3d.bms.light.group">
+        <field name="code">LT-CUT</field>
+        <field name="name">Освітлення: Розкрій</field>
+        <field name="sequence" eval="120"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_cut"/>
+        <field name="norm_id" ref="norm_woodworking_machine"/>
+        <field name="panel_id" ref="panel_lp_2"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="27"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="12"/>
+        <field name="dali_devices">@1.2.1.1-27</field>
+    </record>
+    <record id="group_lt_eb" model="f3d.bms.light.group">
+        <field name="code">LT-EB</field>
+        <field name="name">Освітлення: Крайкооблицювання</field>
+        <field name="sequence" eval="130"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_eb"/>
+        <field name="norm_id" ref="norm_woodworking_machine"/>
+        <field name="panel_id" ref="panel_lp_2"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="27"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="13"/>
+        <field name="dali_devices">@1.2.1.28-54</field>
+    </record>
+    <record id="group_lt_cnc" model="f3d.bms.light.group">
+        <field name="code">LT-CNC</field>
+        <field name="name">Освітлення: Присадка</field>
+        <field name="sequence" eval="140"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_cnc"/>
+        <field name="norm_id" ref="norm_woodworking_machine"/>
+        <field name="panel_id" ref="panel_lp_2"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="27"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="14"/>
+        <field name="dali_devices">@1.2.2.1-27</field>
+    </record>
+    <record id="group_lt_sort" model="f3d.bms.light.group">
+        <field name="code">LT-SORT</field>
+        <field name="name">Освітлення: Сортування деталей</field>
+        <field name="sequence" eval="150"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_sort"/>
+        <field name="norm_id" ref="norm_woodworking_bench"/>
+        <field name="panel_id" ref="panel_lp_2"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="12"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="15"/>
+        <field name="dali_devices">@1.2.2.28-39</field>
+    </record>
+    <record id="group_lt_fac" model="f3d.bms.light.group">
+        <field name="code">LT-FAC</field>
+        <field name="name">Освітлення: Дільниця фасадів МДФ</field>
+        <field name="sequence" eval="160"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_fac"/>
+        <field name="norm_id" ref="norm_spraying"/>
+        <field name="panel_id" ref="panel_lp_2"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="91"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="16"/>
+        <field name="dali_devices">@1.2.3.1-64;@1.2.4.1-27</field>
+    </record>
+    <record id="group_lt_asm" model="f3d.bms.light.group">
+        <field name="code">LT-ASM</field>
+        <field name="name">Освітлення: Збирання</field>
+        <field name="sequence" eval="170"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_asm"/>
+        <field name="norm_id" ref="norm_woodworking_bench"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="15"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="17"/>
+        <field name="dali_devices">@1.3.1.1-15</field>
+    </record>
+    <record id="group_lt_pre" model="f3d.bms.light.group">
+        <field name="code">LT-PRE</field>
+        <field name="name">Освітлення: Буфер комплектів</field>
+        <field name="sequence" eval="180"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_pre"/>
+        <field name="norm_id" ref="norm_storage_racks"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="0.8"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="18"/>
+        <field name="dali_devices">@1.3.1.16-19</field>
+    </record>
+    <record id="group_lt_maint" model="f3d.bms.light.group">
+        <field name="code">LT-MAINT</field>
+        <field name="name">Освітлення: Ремонтна дільниця</field>
+        <field name="sequence" eval="190"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_maint"/>
+        <field name="norm_id" ref="norm_woodworking_bench"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="19"/>
+        <field name="dali_devices">@1.3.1.20-23</field>
+    </record>
+    <record id="group_lt_pack" model="f3d.bms.light.group">
+        <field name="code">LT-PACK</field>
+        <field name="name">Освітлення: Пакування</field>
+        <field name="sequence" eval="200"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_pack"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="12"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="20"/>
+        <field name="dali_devices">@1.3.1.24-35</field>
+    </record>
+    <record id="group_lt_post" model="f3d.bms.light.group">
+        <field name="code">LT-POST</field>
+        <field name="name">Освітлення: Вихід з пакування</field>
+        <field name="sequence" eval="210"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_post"/>
+        <field name="norm_id" ref="norm_storage_floor"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="3"/>
+        <field name="level_design" eval="0.8"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="21"/>
+        <field name="dali_devices">@1.3.1.36-38</field>
+    </record>
+    <record id="group_lt_cmp" model="f3d.bms.light.group">
+        <field name="code">LT-CMP</field>
+        <field name="name">Освітлення: Компресорна</field>
+        <field name="sequence" eval="220"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_cmp"/>
+        <field name="norm_id" ref="norm_compressor_room"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="2"/>
+        <field name="level_design" eval="0.5"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="22"/>
+        <field name="dali_devices">@1.3.1.39-40</field>
+    </record>
+    <record id="group_lt_chg" model="f3d.bms.light.group">
+        <field name="code">LT-CHG</field>
+        <field name="name">Освітлення: Зарядна станція</field>
+        <field name="sequence" eval="230"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_chg"/>
+        <field name="norm_id" ref="norm_battery_charging"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="2"/>
+        <field name="level_design" eval="0.5"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="23"/>
+        <field name="dali_devices">@1.3.1.41-42</field>
+    </record>
+    <record id="group_lt_fg" model="f3d.bms.light.group">
+        <field name="code">LT-FG</field>
+        <field name="name">Освітлення: Склад готової продукції</field>
+        <field name="sequence" eval="240"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_fg"/>
+        <field name="norm_id" ref="norm_storage_racks"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay_rack"/>
+        <field name="fixture_kind">highbay_rack</field>
+        <field name="n_fixtures" eval="12"/>
+        <field name="level_design" eval="0.6"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="24"/>
+        <field name="dali_devices">@1.3.1.43-54</field>
+    </record>
+    <record id="group_lt_elec" model="f3d.bms.light.group">
+        <field name="code">LT-ELEC</field>
+        <field name="name">Освітлення: Електрощитова</field>
+        <field name="sequence" eval="250"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_elec"/>
+        <field name="norm_id" ref="norm_switchgear_room"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="0.5"/>
+        <field name="control_mode">presence</field>
+        <field name="dali_group" eval="25"/>
+        <field name="dali_devices">@1.3.1.55-58</field>
+    </record>
+    <record id="group_lt_out_1" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-1</field>
+        <field name="name">Освітлення: Відвантаження · ворота 1</field>
+        <field name="sequence" eval="260"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_1"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="26"/>
+        <field name="dali_devices">@1.3.1.59-62</field>
+    </record>
+    <record id="group_lt_out_2" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-2</field>
+        <field name="name">Освітлення: Відвантаження · ворота 2</field>
+        <field name="sequence" eval="270"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_2"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="27"/>
+        <field name="dali_devices">@1.3.2.1-4</field>
+    </record>
+    <record id="group_lt_out_3" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-3</field>
+        <field name="name">Освітлення: Відвантаження · ворота 3</field>
+        <field name="sequence" eval="280"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_3"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="28"/>
+        <field name="dali_devices">@1.3.2.5-8</field>
+    </record>
+    <record id="group_lt_out_4" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-4</field>
+        <field name="name">Освітлення: Відвантаження · ворота 4</field>
+        <field name="sequence" eval="290"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_4"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="29"/>
+        <field name="dali_devices">@1.3.2.9-12</field>
+    </record>
+    <record id="group_lt_out_5" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-5</field>
+        <field name="name">Освітлення: Відвантаження · ворота 5</field>
+        <field name="sequence" eval="300"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_5"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="30"/>
+        <field name="dali_devices">@1.3.2.13-16</field>
+    </record>
+    <record id="group_lt_out_6" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-6</field>
+        <field name="name">Освітлення: Відвантаження · ворота 6</field>
+        <field name="sequence" eval="310"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_6"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="31"/>
+        <field name="dali_devices">@1.3.2.17-20</field>
+    </record>
+    <record id="group_lt_out_7" model="f3d.bms.light.group">
+        <field name="code">LT-OUT-7</field>
+        <field name="name">Освітлення: Відвантаження · ворота 7</field>
+        <field name="sequence" eval="320"/>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_7"/>
+        <field name="norm_id" ref="norm_packing_dispatch"/>
+        <field name="panel_id" ref="panel_lp_3"/>
+        <field name="passport_id" ref="factory3d_base.passport_highbay"/>
+        <field name="fixture_kind">highbay</field>
+        <field name="n_fixtures" eval="4"/>
+        <field name="level_design" eval="1.0"/>
+        <field name="control_mode">shift</field>
+        <field name="dali_group" eval="32"/>
+        <field name="dali_devices">@1.3.2.21-24</field>
+    </record>
+</odoo>

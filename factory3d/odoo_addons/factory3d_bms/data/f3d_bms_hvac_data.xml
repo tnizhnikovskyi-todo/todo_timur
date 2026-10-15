@@ -1,0 +1,536 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Згенеровано tools/gen_data.py з макета (SPEC §5.2). Не редагувати вручну. -->
+    <record id="unit_rv_01" model="f3d.bms.hvac.unit">
+        <field name="code">RV-01</field>
+        <field name="name">Дахова установка RV-01</field>
+        <field name="sequence" eval="10"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_2"/>
+        <field name="x" eval="7.0"/>
+        <field name="y" eval="12.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_101"/>
+        <field name="bacnet_device" eval="101"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_02" model="f3d.bms.hvac.unit">
+        <field name="code">RV-02</field>
+        <field name="name">Дахова установка RV-02</field>
+        <field name="sequence" eval="20"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_4"/>
+        <field name="x" eval="7.0"/>
+        <field name="y" eval="36.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_102"/>
+        <field name="bacnet_device" eval="102"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_03" model="f3d.bms.hvac.unit">
+        <field name="code">RV-03</field>
+        <field name="name">Дахова установка RV-03</field>
+        <field name="sequence" eval="30"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_7"/>
+        <field name="x" eval="7.0"/>
+        <field name="y" eval="62.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_103"/>
+        <field name="bacnet_device" eval="103"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_04" model="f3d.bms.hvac.unit">
+        <field name="code">RV-04</field>
+        <field name="name">Дахова установка RV-04</field>
+        <field name="sequence" eval="40"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_sheets"/>
+        <field name="x" eval="21.5"/>
+        <field name="y" eval="12.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_104"/>
+        <field name="bacnet_device" eval="104"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_05" model="f3d.bms.hvac.unit">
+        <field name="code">RV-05</field>
+        <field name="name">Дахова установка RV-05</field>
+        <field name="sequence" eval="50"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_sheets"/>
+        <field name="x" eval="21.5"/>
+        <field name="y" eval="33.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_105"/>
+        <field name="bacnet_device" eval="105"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_06" model="f3d.bms.hvac.unit">
+        <field name="code">RV-06</field>
+        <field name="name">Дахова установка RV-06</field>
+        <field name="sequence" eval="60"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_hw"/>
+        <field name="x" eval="21.5"/>
+        <field name="y" eval="58.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_106"/>
+        <field name="bacnet_device" eval="106"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_07" model="f3d.bms.hvac.unit">
+        <field name="code">RV-07</field>
+        <field name="name">Дахова установка RV-07</field>
+        <field name="sequence" eval="70"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_edge"/>
+        <field name="x" eval="35.0"/>
+        <field name="y" eval="62.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_107"/>
+        <field name="bacnet_device" eval="107"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_08" model="f3d.bms.hvac.unit">
+        <field name="code">RV-08</field>
+        <field name="name">Дахова установка RV-08</field>
+        <field name="sequence" eval="80"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cut"/>
+        <field name="x" eval="50.0"/>
+        <field name="y" eval="23.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_108"/>
+        <field name="bacnet_device" eval="108"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_09" model="f3d.bms.hvac.unit">
+        <field name="code">RV-09</field>
+        <field name="name">Дахова установка RV-09</field>
+        <field name="sequence" eval="90"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cut"/>
+        <field name="x" eval="51.5"/>
+        <field name="y" eval="36.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_109"/>
+        <field name="bacnet_device" eval="109"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_10" model="f3d.bms.hvac.unit">
+        <field name="code">RV-10</field>
+        <field name="name">Дахова установка RV-10</field>
+        <field name="sequence" eval="100"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_eb"/>
+        <field name="x" eval="67.0"/>
+        <field name="y" eval="23.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_110"/>
+        <field name="bacnet_device" eval="110"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_11" model="f3d.bms.hvac.unit">
+        <field name="code">RV-11</field>
+        <field name="name">Дахова установка RV-11</field>
+        <field name="sequence" eval="110"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_eb"/>
+        <field name="x" eval="66.5"/>
+        <field name="y" eval="36.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_111"/>
+        <field name="bacnet_device" eval="111"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_12" model="f3d.bms.hvac.unit">
+        <field name="code">RV-12</field>
+        <field name="name">Дахова установка RV-12</field>
+        <field name="sequence" eval="120"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cnc"/>
+        <field name="x" eval="77.0"/>
+        <field name="y" eval="23.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_112"/>
+        <field name="bacnet_device" eval="112"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_13" model="f3d.bms.hvac.unit">
+        <field name="code">RV-13</field>
+        <field name="name">Дахова установка RV-13</field>
+        <field name="sequence" eval="130"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cnc"/>
+        <field name="x" eval="77.0"/>
+        <field name="y" eval="36.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_113"/>
+        <field name="bacnet_device" eval="113"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_14" model="f3d.bms.hvac.unit">
+        <field name="code">RV-14</field>
+        <field name="name">Дахова установка RV-14</field>
+        <field name="sequence" eval="140"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_sort"/>
+        <field name="x" eval="87.0"/>
+        <field name="y" eval="8.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_114"/>
+        <field name="bacnet_device" eval="114"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_15" model="f3d.bms.hvac.unit">
+        <field name="code">RV-15</field>
+        <field name="name">Дахова установка RV-15</field>
+        <field name="sequence" eval="150"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_sort"/>
+        <field name="x" eval="87.0"/>
+        <field name="y" eval="36.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_115"/>
+        <field name="bacnet_device" eval="115"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_16" model="f3d.bms.hvac.unit">
+        <field name="code">RV-16</field>
+        <field name="name">Дахова установка RV-16</field>
+        <field name="sequence" eval="160"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_asm"/>
+        <field name="x" eval="101.0"/>
+        <field name="y" eval="8.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_116"/>
+        <field name="bacnet_device" eval="116"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_17" model="f3d.bms.hvac.unit">
+        <field name="code">RV-17</field>
+        <field name="name">Дахова установка RV-17</field>
+        <field name="sequence" eval="170"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_pre"/>
+        <field name="x" eval="101.0"/>
+        <field name="y" eval="31.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_117"/>
+        <field name="bacnet_device" eval="117"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_18" model="f3d.bms.hvac.unit">
+        <field name="code">RV-18</field>
+        <field name="name">Дахова установка RV-18</field>
+        <field name="sequence" eval="180"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_pack"/>
+        <field name="x" eval="114.0"/>
+        <field name="y" eval="8.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_118"/>
+        <field name="bacnet_device" eval="118"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_19" model="f3d.bms.hvac.unit">
+        <field name="code">RV-19</field>
+        <field name="name">Дахова установка RV-19</field>
+        <field name="sequence" eval="190"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_pack"/>
+        <field name="x" eval="114.0"/>
+        <field name="y" eval="31.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_119"/>
+        <field name="bacnet_device" eval="119"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_20" model="f3d.bms.hvac.unit">
+        <field name="code">RV-20</field>
+        <field name="name">Дахова установка RV-20</field>
+        <field name="sequence" eval="200"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_post"/>
+        <field name="x" eval="114.0"/>
+        <field name="y" eval="52.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_120"/>
+        <field name="bacnet_device" eval="120"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">AQ</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_21" model="f3d.bms.hvac.unit">
+        <field name="code">RV-21</field>
+        <field name="name">Дахова установка RV-21</field>
+        <field name="sequence" eval="210"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fg"/>
+        <field name="x" eval="125.4"/>
+        <field name="y" eval="57.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_121"/>
+        <field name="bacnet_device" eval="121"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">REC</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_22" model="f3d.bms.hvac.unit">
+        <field name="code">RV-22</field>
+        <field name="name">Дахова установка RV-22</field>
+        <field name="sequence" eval="220"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fg"/>
+        <field name="x" eval="130.9"/>
+        <field name="y" eval="57.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_122"/>
+        <field name="bacnet_device" eval="122"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">REC</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_23" model="f3d.bms.hvac.unit">
+        <field name="code">RV-23</field>
+        <field name="name">Дахова установка RV-23</field>
+        <field name="sequence" eval="230"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_2"/>
+        <field name="x" eval="142.5"/>
+        <field name="y" eval="12.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_123"/>
+        <field name="bacnet_device" eval="123"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_24" model="f3d.bms.hvac.unit">
+        <field name="code">RV-24</field>
+        <field name="name">Дахова установка RV-24</field>
+        <field name="sequence" eval="240"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_4"/>
+        <field name="x" eval="142.5"/>
+        <field name="y" eval="36.0"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_124"/>
+        <field name="bacnet_device" eval="124"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_rv_25" model="f3d.bms.hvac.unit">
+        <field name="code">RV-25</field>
+        <field name="name">Дахова установка RV-25</field>
+        <field name="sequence" eval="250"/>
+        <field name="kind">roofvent</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_7"/>
+        <field name="x" eval="142.5"/>
+        <field name="y" eval="62.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_roofvent"/>
+        <field name="source_id" ref="source_bac_125"/>
+        <field name="bacnet_device" eval="125"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="8000.0"/>
+        <field name="heat_nom_kw" eval="116.8"/>
+        <field name="p_inst_kw" eval="8.6"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+    </record>
+    <record id="unit_ahu_1" model="f3d.bms.hvac.unit">
+        <field name="code">AHU-1</field>
+        <field name="name">Припливна установка дільниці фасадів</field>
+        <field name="sequence" eval="260"/>
+        <field name="kind">ahu</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fac"/>
+        <field name="x" eval="66.0"/>
+        <field name="y" eval="56.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_make_up_ahu"/>
+        <field name="source_id" ref="source_bac_130"/>
+        <field name="bacnet_device" eval="130"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="20000.0"/>
+        <field name="heat_nom_kw" eval="0.0"/>
+        <field name="p_inst_kw" eval="15.0"/>
+        <field name="mode_design">VE</field>
+        <field name="required_in_work" eval="True"/>
+        <field name="t_supply_design" eval="21.0"/>
+        <field name="note">Подає підігріте повітря стільки, скільки витягують камери фарбування й сушка — у дільниці невелике розрідження, пил і пари не йдуть у цех.</field>
+    </record>
+    <record id="unit_ef_elec" model="f3d.bms.hvac.unit">
+        <field name="code">EF-ELEC</field>
+        <field name="name">Витяжні вентилятори електрощитової</field>
+        <field name="sequence" eval="270"/>
+        <field name="kind">fan</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_elec"/>
+        <field name="x" eval="124.9"/>
+        <field name="y" eval="71.4"/>
+        <field name="passport_id" ref="factory3d_base.passport_wall_fan"/>
+        <field name="source_id" ref="source_bac_131"/>
+        <field name="bacnet_device" eval="131"/>
+        <field name="fan_count" eval="2"/>
+        <field name="airflow_nom" eval="14120.0"/>
+        <field name="heat_nom_kw" eval="0.0"/>
+        <field name="p_inst_kw" eval="0.84"/>
+        <field name="mode_design">thermostat</field>
+        <field name="required_in_work" eval="False"/>
+        <field name="note">Відводять тепло трансформаторів (≈ 2 × 12 кВт втрат під навантаженням); приплив — крізь сітку.</field>
+    </record>
+    <record id="unit_ef_cmp" model="f3d.bms.hvac.unit">
+        <field name="code">EF-CMP</field>
+        <field name="name">Витяжний вентилятор компресорної</field>
+        <field name="sequence" eval="280"/>
+        <field name="kind">fan</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cmp"/>
+        <field name="x" eval="111.0"/>
+        <field name="y" eval="71.4"/>
+        <field name="passport_id" ref="factory3d_base.passport_wall_fan"/>
+        <field name="source_id" ref="source_bac_132"/>
+        <field name="bacnet_device" eval="132"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="7060.0"/>
+        <field name="heat_nom_kw" eval="0.0"/>
+        <field name="p_inst_kw" eval="0.42"/>
+        <field name="mode_design">thermostat</field>
+        <field name="required_in_work" eval="False"/>
+        <field name="note">Відводить тепло компресорів, коли рекуперація тепла не працює.</field>
+    </record>
+    <record id="unit_ef_chg" model="f3d.bms.hvac.unit">
+        <field name="code">EF-CHG</field>
+        <field name="name">Витяжка зарядної станції (Ex)</field>
+        <field name="sequence" eval="290"/>
+        <field name="kind">exfan</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_chg"/>
+        <field name="x" eval="119.0"/>
+        <field name="y" eval="70.5"/>
+        <field name="passport_id" ref="factory3d_base.passport_ex_fan"/>
+        <field name="source_id" ref="source_bac_133"/>
+        <field name="bacnet_device" eval="133"/>
+        <field name="fan_count" eval="1"/>
+        <field name="airflow_nom" eval="644.0"/>
+        <field name="heat_nom_kw" eval="0.0"/>
+        <field name="p_inst_kw" eval="0.178"/>
+        <field name="mode_design">charging</field>
+        <field name="required_in_work" eval="False"/>
+        <field name="required_m3h" eval="158.4"/>
+        <field name="note">Видаляє водень над зарядними пристроями. Потрібна витрата — за EN IEC 62485-3: Q = 0,055 · 24 елементи · 40 А (40 % струму зарядного 100 А) × 3 батареї. Вентилятор вибухозахищений (IIB+H2), реле термозахисту й перетворювач частоти — поза небезпечною зоною.</field>
+    </record>
+    <record id="heat_balance_main" model="f3d.bms.heat.balance">
+        <field name="name">Тепловий баланс цеху</field>
+        <field name="company_id" ref="base.main_company"/>
+    </record>
+</odoo>

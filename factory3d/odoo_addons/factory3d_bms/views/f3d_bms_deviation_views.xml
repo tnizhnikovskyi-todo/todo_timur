@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_deviation_list" model="ir.ui.view">
+        <field name="name">f3d.bms.deviation.list</field>
+        <field name="model">f3d.bms.deviation</field>
+        <field name="arch" type="xml">
+            <list string="Відхилення" create="false" decoration-danger="state == 'open'">
+                <field name="started"/>
+                <field name="object_code"/>
+                <field name="rule"/>
+                <field name="name"/>
+                <field name="value"/>
+                <field name="threshold"/>
+                <field name="unit"/>
+                <field name="duration_min"/>
+                <field name="state" widget="badge" decoration-danger="state == 'open'"
+                       decoration-muted="state == 'closed'"/>
+                <field name="request_id"/>
+                <field name="ended" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_deviation_graph" model="ir.ui.view">
+        <field name="name">f3d.bms.deviation.graph</field>
+        <field name="model">f3d.bms.deviation</field>
+        <field name="arch" type="xml">
+            <graph string="Відхилення" type="bar">
+                <field name="rule"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_deviation_pivot" model="ir.ui.view">
+        <field name="name">f3d.bms.deviation.pivot</field>
+        <field name="model">f3d.bms.deviation</field>
+        <field name="arch" type="xml">
+            <pivot string="Відхилення">
+                <field name="rule" type="row"/>
+                <field name="started" interval="week" type="col"/>
+                <field name="duration_min" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_deviation_form" model="ir.ui.view">
+        <field name="name">f3d.bms.deviation.form</field>
+        <field name="model">f3d.bms.deviation</field>
+        <field name="arch" type="xml">
+            <form string="Відхилення" create="false" delete="false">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="open,closed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="rule" readonly="1"/>
+                            <field name="object_kind" readonly="1"/>
+                            <field name="object_code" readonly="1"/>
+                            <field name="zone_id" readonly="1"/>
+                            <field name="equipment_id" readonly="1"/>
+                            <field name="signal_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="started" readonly="1"/>
+                            <field name="ended" readonly="1"/>
+                            <field name="duration_min" readonly="1"/>
+                            <field name="value" readonly="1"/>
+                            <field name="threshold" readonly="1"/>
+                            <field name="unit" readonly="1"/>
+                            <field name="request_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_deviation_search" model="ir.ui.view">
+        <field name="name">f3d.bms.deviation.search</field>
+        <field name="model">f3d.bms.deviation</field>
+        <field name="arch" type="xml">
+            <search string="Відхилення">
+                <field name="object_code"/>
+                <field name="rule"/>
+                <field name="equipment_id"/>
+                <field name="zone_id"/>
+                <filter name="open" string="Відкриті" domain="[('state', '=', 'open')]"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('started', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0, 0, 0)))]"/>
+                <filter name="days7" string="7 днів"
+                        domain="[('started', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="lighting" string="Освітлення" domain="[('object_kind', 'in', ('group', 'panel'))]"/>
+                <filter name="hvac" string="Вентиляція" domain="[('object_kind', '=', 'unit')]"/>
+                <filter name="boiler" string="Котельня" domain="[('object_kind', '=', 'boiler')]"/>
+                <group>
+                    <filter name="group_rule" string="Правило" context="{'group_by': 'rule'}"/>
+                    <filter name="group_object" string="Об'єкт" context="{'group_by': 'object_code'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'started:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_deviation" model="ir.actions.act_window">
+        <field name="name">Відхилення</field>
+        <field name="res_model">f3d.bms.deviation</field>
+        <field name="view_mode">list,graph,pivot,form</field>
+        <field name="context">{'search_default_open': 1}</field>
+    </record>
+</odoo>

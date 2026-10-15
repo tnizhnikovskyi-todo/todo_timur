@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_light_panel_list" model="ir.ui.view">
+        <field name="name">f3d.bms.light.panel.list</field>
+        <field name="model">f3d.bms.light.panel</field>
+        <field name="arch" type="xml">
+            <list string="Щити освітлення">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="router"/>
+                <field name="group_count"/>
+                <field name="n_fixtures"/>
+                <field name="p_inst_kw"/>
+                <field name="p_now_kw"/>
+                <field name="p_source" optional="hide"/>
+                <field name="state" widget="badge" decoration-success="state == 'ok'"
+                       decoration-danger="state in ('fault', 'offline')" decoration-muted="state == 'unknown'"/>
+                <field name="source_id" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_light_panel_form" model="ir.ui.view">
+        <field name="name">f3d.bms.light.panel.form</field>
+        <field name="model">f3d.bms.light.panel</field>
+        <field name="arch" type="xml">
+            <form string="Щит освітлення">
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <field name="is_f3d_manager" invisible="1"/>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_groups" type="object" class="oe_stat_button" icon="fa-lightbulb-o">
+                            <field name="group_count" widget="statinfo" string="Групи"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва"/></h1>
+                        <h3><field name="code" placeholder="LP-1" readonly="not is_f3d_manager"/></h3>
+                    </div>
+                    <group>
+                        <group string="Роутер Helvar Imagine 950">
+                            <field name="source_id" readonly="not is_f3d_manager"/>
+                            <field name="cluster" readonly="not is_f3d_manager"/>
+                            <field name="router" readonly="not is_f3d_manager"/>
+                            <field name="equipment_id" readonly="not is_f3d_manager"/>
+                            <field name="state_signal_id" readonly="not is_f3d_manager"/>
+                        </group>
+                        <group string="Розташування">
+                            <field name="zone_id" readonly="not is_f3d_manager"/>
+                            <field name="x" readonly="not is_f3d_manager"/>
+                            <field name="y" readonly="not is_f3d_manager"/>
+                        </group>
+                    </group>
+                    <group string="Зараз">
+                        <group>
+                            <field name="state" widget="badge" decoration-success="state == 'ok'"
+                                   decoration-danger="state in ('fault', 'offline')"
+                                   decoration-muted="state == 'unknown'" readonly="1"/>
+                            <field name="p_now_kw" readonly="1"/>
+                            <field name="p_source" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="n_fixtures" readonly="1"/>
+                            <field name="p_inst_kw" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Групи" name="groups">
+                            <field name="group_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="zone_name"/>
+                                    <field name="n_fixtures"/>
+                                    <field name="level_pct"/>
+                                    <field name="e_now"/>
+                                    <field name="e_norm"/>
+                                    <field name="deviation" widget="badge" decoration-success="deviation == 'none'"
+                                           decoration-danger="deviation in ('off_in_work', 'below_norm')"
+                                           decoration-warning="deviation == 'no_mains'"
+                                           decoration-muted="deviation in ('no_data', 'off_hours')"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_light_panel" model="ir.actions.act_window">
+        <field name="name">Щити освітлення</field>
+        <field name="res_model">f3d.bms.light.panel</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

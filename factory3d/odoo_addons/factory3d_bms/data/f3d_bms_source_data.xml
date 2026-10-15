@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Згенеровано tools/gen_data.py з макета (SPEC §5.2). Не редагувати вручну. -->
+    <record id="source_hn_lp_1" model="f3d.source">
+        <field name="code">HN-LP-1</field>
+        <field name="name">Helvar Imagine 950 · щит LP-1</field>
+        <field name="type">helvarnet</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 50000, 'protocol': 'tcp', 'timeout_s': 3, 'cluster': 1, 'router': 1, 'version': 2, 'rate_per_s': 20, 'push': True, 'membership_ttl_s': 3600}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="60"/>
+    </record>
+    <record id="source_hn_lp_2" model="f3d.source">
+        <field name="code">HN-LP-2</field>
+        <field name="name">Helvar Imagine 950 · щит LP-2</field>
+        <field name="type">helvarnet</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 50000, 'protocol': 'tcp', 'timeout_s': 3, 'cluster': 1, 'router': 2, 'version': 2, 'rate_per_s': 20, 'push': True, 'membership_ttl_s': 3600}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="60"/>
+    </record>
+    <record id="source_hn_lp_3" model="f3d.source">
+        <field name="code">HN-LP-3</field>
+        <field name="name">Helvar Imagine 950 · щит LP-3</field>
+        <field name="type">helvarnet</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 50000, 'protocol': 'tcp', 'timeout_s': 3, 'cluster': 1, 'router': 3, 'version': 2, 'rate_per_s': 20, 'push': True, 'membership_ttl_s': 3600}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="60"/>
+    </record>
+    <record id="source_bac_101" model="f3d.source">
+        <field name="code">BAC-101-RV-01</field>
+        <field name="name">Hoval RoofVent RV-01 (BACnet dev 101)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 101, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_102" model="f3d.source">
+        <field name="code">BAC-102-RV-02</field>
+        <field name="name">Hoval RoofVent RV-02 (BACnet dev 102)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 102, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_103" model="f3d.source">
+        <field name="code">BAC-103-RV-03</field>
+        <field name="name">Hoval RoofVent RV-03 (BACnet dev 103)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 103, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_104" model="f3d.source">
+        <field name="code">BAC-104-RV-04</field>
+        <field name="name">Hoval RoofVent RV-04 (BACnet dev 104)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 104, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_105" model="f3d.source">
+        <field name="code">BAC-105-RV-05</field>
+        <field name="name">Hoval RoofVent RV-05 (BACnet dev 105)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 105, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_106" model="f3d.source">
+        <field name="code">BAC-106-RV-06</field>
+        <field name="name">Hoval RoofVent RV-06 (BACnet dev 106)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 106, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_107" model="f3d.source">
+        <field name="code">BAC-107-RV-07</field>
+        <field name="name">Hoval RoofVent RV-07 (BACnet dev 107)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 107, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_108" model="f3d.source">
+        <field name="code">BAC-108-RV-08</field>
+        <field name="name">Hoval RoofVent RV-08 (BACnet dev 108)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 108, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_109" model="f3d.source">
+        <field name="code">BAC-109-RV-09</field>
+        <field name="name">Hoval RoofVent RV-09 (BACnet dev 109)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 109, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_110" model="f3d.source">
+        <field name="code">BAC-110-RV-10</field>
+        <field name="name">Hoval RoofVent RV-10 (BACnet dev 110)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 110, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_111" model="f3d.source">
+        <field name="code">BAC-111-RV-11</field>
+        <field name="name">Hoval RoofVent RV-11 (BACnet dev 111)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 111, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_112" model="f3d.source">
+        <field name="code">BAC-112-RV-12</field>
+        <field name="name">Hoval RoofVent RV-12 (BACnet dev 112)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 112, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_113" model="f3d.source">
+        <field name="code">BAC-113-RV-13</field>
+        <field name="name">Hoval RoofVent RV-13 (BACnet dev 113)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 113, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_114" model="f3d.source">
+        <field name="code">BAC-114-RV-14</field>
+        <field name="name">Hoval RoofVent RV-14 (BACnet dev 114)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 114, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_115" model="f3d.source">
+        <field name="code">BAC-115-RV-15</field>
+        <field name="name">Hoval RoofVent RV-15 (BACnet dev 115)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 115, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_116" model="f3d.source">
+        <field name="code">BAC-116-RV-16</field>
+        <field name="name">Hoval RoofVent RV-16 (BACnet dev 116)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 116, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_117" model="f3d.source">
+        <field name="code">BAC-117-RV-17</field>
+        <field name="name">Hoval RoofVent RV-17 (BACnet dev 117)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 117, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_118" model="f3d.source">
+        <field name="code">BAC-118-RV-18</field>
+        <field name="name">Hoval RoofVent RV-18 (BACnet dev 118)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 118, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_119" model="f3d.source">
+        <field name="code">BAC-119-RV-19</field>
+        <field name="name">Hoval RoofVent RV-19 (BACnet dev 119)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 119, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_120" model="f3d.source">
+        <field name="code">BAC-120-RV-20</field>
+        <field name="name">Hoval RoofVent RV-20 (BACnet dev 120)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 120, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_121" model="f3d.source">
+        <field name="code">BAC-121-RV-21</field>
+        <field name="name">Hoval RoofVent RV-21 (BACnet dev 121)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 121, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_122" model="f3d.source">
+        <field name="code">BAC-122-RV-22</field>
+        <field name="name">Hoval RoofVent RV-22 (BACnet dev 122)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 122, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_123" model="f3d.source">
+        <field name="code">BAC-123-RV-23</field>
+        <field name="name">Hoval RoofVent RV-23 (BACnet dev 123)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 123, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_124" model="f3d.source">
+        <field name="code">BAC-124-RV-24</field>
+        <field name="name">Hoval RoofVent RV-24 (BACnet dev 124)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 124, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_125" model="f3d.source">
+        <field name="code">BAC-125-RV-25</field>
+        <field name="name">Hoval RoofVent RV-25 (BACnet dev 125)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 125, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_130" model="f3d.source">
+        <field name="code">BAC-130-AHU-1</field>
+        <field name="name">VTS VENTUS AHU-1 (BACnet dev 130)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 130, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_131" model="f3d.source">
+        <field name="code">BAC-131-EF-ELEC</field>
+        <field name="name">Вентилятори електрощитової EF-ELEC (dev 131)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 131, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_132" model="f3d.source">
+        <field name="code">BAC-132-EF-CMP</field>
+        <field name="name">Вентилятор компресорної EF-CMP (dev 132)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 132, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+    <record id="source_bac_133" model="f3d.source">
+        <field name="code">BAC-133-EF-CHG</field>
+        <field name="name">Витяжка зарядної EF-CHG (dev 133)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">bms</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 133, 'network': 2, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50, 'cov_lifetime_s': 300}"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="period_s_default" eval="30"/>
+    </record>
+</odoo>

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f3d-collector-bms"
+version = "0.1.0"
+description = "Плагін колектора factory3d: HelvarNet (Helvar Imagine 950, освітлення DALI)"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest==8.3.3", "pytest-asyncio==0.24.0", "jsonschema==4.23.0"]
+
+[project.entry-points."factory3d_collector.plugins"]
+helvarnet = "f3d_collector_bms.helvarnet:HelvarNetPlugin"
+
+[tool.setuptools.packages.find]
+include = ["f3d_collector_bms*"]
+
+[tool.setuptools.package-data]
+f3d_collector_bms = ["schemas/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
