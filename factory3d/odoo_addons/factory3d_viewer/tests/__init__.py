@@ -19,3 +19,5 @@ from . import test_hoot
 from . import test_show_in_3d
 from . import test_kiosk
 from . import test_tours
+from . import test_perf
+from . import test_neutralize

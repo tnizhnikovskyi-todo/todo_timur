@@ -79,7 +79,7 @@ def component_sources(payload):
     for mo in payload.get("productions") or []:
         wcs = [workorders[w]["workcenter"] for w in mo.get("workorders") or [] if w in workorders]
 
-        def wc(*pre):
+        def wc(*pre, wcs=wcs):
             return next((w for w in wcs if w.startswith(pre)), None)
         for c in mo.get("components") or []:
             prod = c["product"]
@@ -184,7 +184,8 @@ def mo_delivery(payload):
                   dict(code=out["dock"], label="ворота", note=f"Ворота відвантаження {k}")]
         if out.get("truck"):
             steps.append(dict(code=out["truck"], label="фура клієнта",
-                              note=f"{out.get('carrier') or ''} · завантаження {round((out.get('progress') or 0) * 100)} %"))
+                              note=(f"{out.get('carrier') or ''} · завантаження "
+                                     f"{round((out.get('progress') or 0) * 100)} %")))
         steps += [dict(code="TRUCK-SCALE", label="вагова", note="контрольне зважування машини на виїзді"),
                   dict(code="GATE-E", label="виїзд", note="через КПП відвантаження")]
         mo["delivery"] = dict(picking=out["name"], partner=so.get("partner"), steps=steps,

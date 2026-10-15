@@ -1,4 +1,3 @@
-import re
 import unittest
 
 from odoo.tests import HttpCase, JsonRpcException, tagged

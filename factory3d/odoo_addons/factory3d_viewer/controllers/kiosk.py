@@ -116,15 +116,18 @@ class F3dKioskController(http.Controller):
 
     # --- API-09 ------------------------------------------------------------
 
-    @http.route("/f3d/kiosk/<string:token>/static", type="http", auth="public", methods=["GET"], csrf=False, save_session=False)
+    @http.route("/f3d/kiosk/<string:token>/static", type="http", auth="public", methods=["GET"],
+                csrf=False, save_session=False)
     def kiosk_static(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_static()
 
-    @http.route("/f3d/kiosk/<string:token>/data", type="http", auth="public", methods=["GET"], csrf=False, save_session=False)
+    @http.route("/f3d/kiosk/<string:token>/data", type="http", auth="public", methods=["GET"],
+                csrf=False, save_session=False)
     def kiosk_data(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_data(kw, kiosk=True)
 
-    @http.route("/f3d/kiosk/<string:token>/delta", type="http", auth="public", methods=["GET"], csrf=False, save_session=False)
+    @http.route("/f3d/kiosk/<string:token>/delta", type="http", auth="public", methods=["GET"],
+                csrf=False, save_session=False)
     def kiosk_delta(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_delta(kw, kiosk=True)
 
@@ -133,7 +136,8 @@ class F3dKioskController(http.Controller):
     def kiosk_manifest(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_manifest()
 
-    @http.route("/f3d/kiosk/<string:token>/snapshots", type="http", auth="public", methods=["GET"], csrf=False, save_session=False)
+    @http.route("/f3d/kiosk/<string:token>/snapshots", type="http", auth="public", methods=["GET"],
+                csrf=False, save_session=False)
     def kiosk_snapshots(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_snapshots(kw)
 

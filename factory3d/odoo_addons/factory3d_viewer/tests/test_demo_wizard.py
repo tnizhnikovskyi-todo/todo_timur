@@ -143,7 +143,8 @@ class TestDemoWizard(F3dViewerBase):
         line = next(x for x in wiz.log.splitlines() if x.startswith("cycle_check:"))
         # прогалини провайдерів ланцюгів (tools/chains.py, W1c), не вада заливки: фасади FR-* як компоненти, візки KIT
         rest = [i for i in line[len("cycle_check:"):].split(";")
-                if i.strip() not in ("OK", "") and not re.search(r"FR-\S+ — не дійшов до свого верстата|Візки комплектів", i)]
+                if i.strip() not in ("OK", "")
+                and not re.search(r"FR-\S+ — не дійшов до свого верстата|Візки комплектів", i)]
         self.assertEqual(rest, [], line)
         self.assertEqual(wiz.progress, 100)
         self.assertGreater(wiz.new_records, 0)
