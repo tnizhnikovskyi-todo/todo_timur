@@ -60,7 +60,10 @@ time_scale ускоряет физику: задержки последоват�
 """
 
 import argparse
+import hmac
 import json
+import logging
+import os
 import random
 import socket
 import sys
@@ -71,6 +74,13 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from genset_model import GensetModel, SimError, load_profile  # noqa: E402
+
+SIM_PREFIX = "/sim/v1"
+LOG = logging.getLogger("fake_relay")
+LOG.addHandler(logging.NullHandler())
 
 API_PREFIX = "/api/v1"
 DEFAULT_HOSTID = "3130373031334717003D002E"
@@ -217,7 +227,8 @@ class Genset:
         self.mains_ok = True
         self.mains_closed = True       # автомат сети замкнут
         self.gen_closed = False        # автомат генератора замкнут
-        self.fuel_l = 0.95 * TANK_L
+        self.tank_l = TANK_L
+        self.fuel_l = 0.95 * self.tank_l
         self.battery_rest = 27.8
         self.water_temp = 35.0
         self.run_s = 34 * 3600 + 51 * 60
@@ -368,7 +379,7 @@ class Genset:
         elif self.mode == "stop" and self.status in RUNNING_AT_SPEED and self.seq_kind != "stop":
             self.stop()
         # аварийные остановы и пустой бак
-        if self.fuel_l <= 0.05 * TANK_L:
+        if self.fuel_l <= 0.05 * self.tank_l:
             self.flags["low_fuel_shutdown"] = True
         if self.has_shutdown() and self.seq_kind not in ("stop",) and (
                 self.status in RUNNING_AT_SPEED or self.status in (1, 2, 3, 4)):
@@ -430,7 +441,7 @@ class Genset:
             battery, dplus = max(self.battery_rest, 28.4), 28.0
         else:
             battery, dplus = self.battery_rest, 0.0
-        fuel_pct = round(self.fuel_l / TANK_L * 100)
+        fuel_pct = round(self.fuel_l / self.tank_l * 100)
         if self.seq_kind:
             delay = max(0, int(self.state_left + 0.999))
         else:
@@ -486,7 +497,7 @@ class Genset:
             raise ApiError(400, "unknown value key: %s" % key)
         if val is not None:
             if key == "fuel_level":
-                self.fuel_l = max(0.0, min(100.0, float(val))) * TANK_L / 100
+                self.fuel_l = max(0.0, min(100.0, float(val))) * self.tank_l / 100
                 if float(val) > 5:
                     self.flags["low_fuel_shutdown"] = False
                 self.overrides.pop(key, None)
@@ -518,6 +529,78 @@ class Genset:
                 self.overrides.pop(key, None)
                 return
         self.overrides[key] = val
+
+
+# Состояние D700Model → код genset_status старого образа контроллера (5.3 relay_api.md)
+D700_STATUS = {"standby": 0, "mains_abnormal": 0, "starting": 1, "safety_on": 5, "warming": 7, "running": 8,
+               "loaded": 9, "cooling": 10, "stopping": 12, "alarm_shutdown": 0}
+D700_FLAGS = {"low_oil_pressure": "low_oil_pressure_shutdown", "high_temp": "high_temp_shutdown",
+              "low_fuel": "low_fuel_warning", "low_fuel_sd": "low_fuel_shutdown", "start_fail": "crank_failure",
+              "batt_low": "battery_undervoltage_warning", "batt_high": "battery_overvoltage_warning",
+              "over_speed": "overspeed_shutdown", "emergency_stop": "emergency_stop",
+              "over_current": "gen_overcurrent_warning"}
+
+
+class D700Genset(Genset):
+    """Профиль d700: образ контроллера для relay_api.md строится по GensetModel (genset_model.py)."""
+
+    def __init__(self, noise=True, rng=None, model=None):
+        super().__init__(noise=noise, rng=rng)
+        self.model = model
+        self.tank_l = model.tank_l
+        self.flags.update(aux_input_2=False, aux_output_4=False)
+        self._sync()
+
+    def _sync(self):
+        m = self.model
+        if m.state == "starting":
+            self.status = {"delay": 1, "crank": 3, "rest": 4}.get(m.sub, 3)
+        else:
+            self.status = D700_STATUS[m.state]
+        self.mode, self.mains_ok = m.mode, m.mains_ok
+        self.mains_closed, self.gen_closed = m.breaker == "mains", m.breaker == "gen"
+        self.fuel_l, self.water_temp = m.fuel_l, m.coolant_c
+        self.run_s, self.start_count, self.energy = m.hours * 3600.0, m.starts, m.kwh
+        self.battery_rest = m.batt_v
+        for code, key in D700_FLAGS.items():
+            self.flags[key] = code in m.alarms
+
+    def _load_kw(self):
+        return self.model.p_kw
+
+    def tick(self, dt):
+        if self.crank_fail_next:
+            self.model.armed_start_fail, self.crank_fail_next = True, False
+        self.model.tick(dt)
+        self._sync()
+
+    def apply_command(self, command):
+        m = self.model
+        if command in ("auto", "manual", "test"):
+            m.set_mode(command)
+        elif command == "stop":
+            m.clear()
+            m.set_mode("stop")
+        elif command == "start":
+            m.manual_start()
+        elif command == "gen_close_open":
+            m.toggle_breaker("gen")
+        elif command == "mains_close_open":
+            m.toggle_breaker("mains")
+        self._sync()
+
+    def set_mains(self, ok):
+        self.model.set_mains(bool(ok))
+        self._sync()
+
+    def set_value(self, key, val):
+        super().set_value(key, val)
+        m = self.model
+        m.fuel_l, m.coolant_c, m.starts, m.kwh = self.fuel_l, self.water_temp, self.start_count, self.energy
+        m.hours = self.run_s / 3600.0
+        if key == "battery_v" and val is not None:
+            m.batt_v = float(val)
+        self._sync()
 
 
 def raw_image(values):
@@ -564,9 +647,9 @@ def raw_image(values):
 class Device:
     """Один модуль CMM366B-4G (hostid) с контроллером, связью и очередью команд API."""
 
-    def __init__(self, hostid, noise, seed):
+    def __init__(self, hostid, noise, seed, genset=None):
         self.hostid = hostid
-        self.genset = Genset(noise=noise, rng=random.Random(seed))
+        self.genset = genset or Genset(noise=noise, rng=random.Random(seed))
         self.link = True
         self.link_until = None            # link_blip: когда связь вернётся
         self.last_seen = None
@@ -594,9 +677,14 @@ class Relay:
     """Состояние ретранслятора: модули, снимки, сырые сообщения, журнал команд. Всё — под self.lock."""
 
     def __init__(self, token, hostids, snapshot_sec=60.0, time_scale=1.0, commands_enabled=True,
-                 version="1.1.3", noise=True, seed=1, clock_offset=0.0):
+                 version="1.1.3", noise=True, seed=1, clock_offset=0.0, profile="office", sim_token="",
+                 tz="Europe/Kyiv", preset=None):
         self.lock = threading.RLock()
         self.token = token
+        self.profile = str(profile).lower()
+        self.profile_data = load_profile(self.profile) if self.profile == "d700" else None
+        self.sim_token = sim_token or ""
+        self.tz, self.preset = tz, preset
         self.hostids = list(hostids)
         self.defaults = dict(snapshot_sec=float(snapshot_sec), time_scale=float(time_scale),
                              commands_enabled=bool(commands_enabled), version=version, noise=noise, seed=seed)
@@ -618,10 +706,24 @@ class Relay:
         self.started = self.now()
         self.last_tick = self.started
         self.fail_next = None                     # инъекция ошибок API (/_sim fail_next)
-        self.devices = {h: Device(h, d["noise"], d["seed"] + i) for i, h in enumerate(self.hostids)}
+        self.devices = {h: Device(h, d["noise"], d["seed"] + i, self._new_genset(d, i))
+                        for i, h in enumerate(self.hostids)}
         self.readings, self.raw, self.commands = [], [], []
         self.reading_id = self.raw_id = self.command_id = 0
         self.conn_id = 7
+
+    def _new_genset(self, d, index):
+        if self.profile_data is None:
+            return None
+        model = GensetModel(self.profile_data, preset=self.preset, seed=d["seed"] + index, noise=d["noise"],
+                            tz=self.tz, sim_ts=self.now())
+        return D700Genset(noise=d["noise"], rng=random.Random(d["seed"] + index), model=model)
+
+    def sim_model(self):
+        """Модель первого модуля для /sim/v1/* (только профиль d700) или None."""
+        for dev in self.devices.values():
+            return getattr(dev.genset, "model", None)
+        return None
 
     def _restart(self):
         """Перезапуск ретранслятора: данные и id сохраняются, незавершённые команды → failed."""
@@ -869,6 +971,10 @@ class Relay:
     def api(self, method, path, query, body):
         """Маршрутизация /api/v1/*: (код, тело). Токен уже проверен."""
         sub = path[len(API_PREFIX):]
+        with self.lock:
+            model = self.sim_model()
+            if model is not None and model.comm_lost:
+                raise ApiError(503, "relay has no link to the controller (fault comm_lost)")
         routes = {"/status": ("GET",), "/latest": ("GET",), "/readings": ("GET",), "/raw": ("GET",),
                   "/commands": ("GET", "POST")}
         if sub.startswith("/commands/") and sub.count("/") == 2 and sub != "/commands/":
@@ -916,6 +1022,83 @@ class Relay:
                         return 200, self.command_json(cmd)
                 raise ApiError(404, "no such command")
             return self._post_command(body)
+
+    # ---------------------------------------------------------- /sim/v1/* (API-F-01…API-F-09)
+    def sim_v1(self, method, path, query, body):
+        """REST эмулятора генератора (§8.4). Токен уже проверен; ошибки — SimError → {"detail": ...}."""
+        sub = path[len(SIM_PREFIX):].rstrip("/")
+        routes = {"/state": "GET", "/events": "GET", "/mains": "POST", "/remote_start": "POST", "/load": "POST",
+                  "/fault": "POST", "/clear": "POST", "/fuel": "POST", "/time": "POST", "/reset": "POST"}
+        if sub not in routes:
+            raise SimError(404, "not found")
+        if method != routes[sub]:
+            raise SimError(405, "method not allowed")
+        data = {}
+        if method == "POST":
+            if body is not None and len(body) > MAX_BODY:
+                raise SimError(422, "body too large")
+            try:
+                data = json.loads((body or b"").decode("utf-8") or "{}")
+            except (ValueError, UnicodeDecodeError):
+                raise SimError(422, "body must be JSON") from None
+            if not isinstance(data, dict):
+                raise SimError(422, "body must be a JSON object")
+            LOG.info("sim %s %s", sub, json.dumps(data, ensure_ascii=False), extra={"sim": {"event": "command"}})
+        with self.lock:
+            model = self.sim_model()
+            if model is None:
+                raise SimError(404, "not found")
+            self.tick()                                   # догнать часы эмулятора
+            if sub == "/state":
+                return model.state_json(self.time_scale)
+            if sub == "/events":
+                since, limit = self._sim_int(query, "since", 0), self._sim_int(query, "limit", 500)
+                return model.events_json(since, min(limit, MAX_LIMIT))
+            if sub == "/mains":
+                return model.set_mains(data.get("available"), data.get("u_v"), data.get("f_hz"))
+            if sub == "/remote_start":
+                return model.set_remote_start(data.get("on"))
+            if sub == "/load":
+                return model.set_load(data.get("kw"))
+            if sub == "/fault":
+                return model.fault(data.get("alarm"))
+            if sub == "/clear":
+                return model.clear(data.get("alarm"))
+            if sub == "/fuel":
+                return model.set_fuel(data)
+            if sub == "/time":
+                factor, answer = model.set_time(data, self.time_scale)
+                if factor is not None:
+                    self.time_scale = factor
+                return answer
+            return self._sim_reset(model, data)
+
+    @staticmethod
+    def _sim_int(query, name, default):
+        val = qstr(query, name)
+        if val in (None, ""):
+            return default
+        try:
+            num = int(val)
+        except ValueError:
+            raise SimError(422, "%s must be an integer" % name) from None
+        if num < 0:
+            raise SimError(422, "%s must be >= 0" % name)
+        return num
+
+    def _sim_reset(self, model, data):
+        profile = data.get("profile")
+        if profile is not None and str(profile).lower() != self.profile:
+            raise SimError(422, "profile switch needs a restart (RELAY_PROFILE=%s)" % self.profile)
+        preset = data.get("preset")
+        if preset is not None and not isinstance(preset, str):
+            raise SimError(422, "preset must be a string")
+        model.reset(preset if preset is not None else model.initial_preset)
+        for dev in self.devices.values():
+            dev.last_signature, dev.need_first = None, True
+            if hasattr(dev.genset, "_sync"):
+                dev.genset._sync()
+        return {"ok": True, "profile": model.profile["profile"], "preset": model.preset or "default"}
 
     def _post_command(self, body):
         try:
@@ -1202,6 +1385,10 @@ class RelayHandler(BaseHTTPRequestHandler):
             url = urlsplit(self.path)
             path = url.path
             query = parse_qs(url.query, keep_blank_values=True)
+            if path == SIM_PREFIX or path.startswith(SIM_PREFIX + "/"):
+                status, payload = self._sim_v1(method, path, query, body)
+                self._send(status, payload, method)
+                return
             is_sim = path in ("/_sim", API_PREFIX + "/_sim")
             injected = None if is_sim else self.relay.take_failure()
             if injected:                          # /_sim fail_next: ответ до проверки токена и маршрута
@@ -1225,6 +1412,23 @@ class RelayHandler(BaseHTTPRequestHandler):
             traceback.print_exc()
             status, payload = 500, {"error": "internal error"}
         self._send(status, payload, method)
+
+    def _sim_v1(self, method, path, query, body):
+        """/sim/v1/*: пустой RELAY_SIM_TOKEN или профиль без модели → 404; токен → 401; ошибки {"detail": ...}."""
+        try:
+            relay = self.relay
+            if not relay.sim_token or relay.sim_model() is None:
+                raise SimError(404, "not found")
+            header = self.headers.get("Authorization") or ""
+            given = header[7:].strip() if header.startswith("Bearer ") else ""
+            if not hmac.compare_digest(given.encode("utf-8"), relay.sim_token.encode("utf-8")):
+                raise SimError(401, "missing or wrong token")
+            return 200, relay.sim_v1(method, path, query, body)
+        except SimError as exc:
+            return exc.status, {"detail": exc.detail}
+        except Exception:
+            traceback.print_exc()
+            return 500, {"detail": "internal error"}
 
     def _sim(self, method, body):
         if method == "GET":
@@ -1259,6 +1463,33 @@ class RelayHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         if not self.quiet:
             sys.stderr.write("%s %s\n" % (time.strftime("%H:%M:%S"), fmt % args))
+
+
+class JsonFormatter(logging.Formatter):
+    """JSON-строки журнала (§8.7): ts, level, msg, state, mode, p_kw, fuel_l, event; секреты маскируются."""
+
+    def __init__(self, secrets=()):
+        super().__init__()
+        self.secrets = [x for x in secrets if x]
+
+    def format(self, record):
+        msg = record.getMessage()
+        for secret in self.secrets:
+            msg = msg.replace(secret, "***")
+        data = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "level": record.levelname, "msg": msg,
+                "state": None, "mode": None, "p_kw": None, "fuel_l": None, "event": None}
+        data.update(getattr(record, "sim", None) or {})
+        return json.dumps(data, ensure_ascii=False)
+
+
+def setup_logging(level="INFO", secrets=()):
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(JsonFormatter(secrets))
+    for name in ("fake_relay", "genset_model"):
+        log = logging.getLogger(name)
+        log.handlers[:] = [handler]
+        log.setLevel(getattr(logging, str(level).upper(), logging.INFO))
+        log.propagate = False
 
 
 def make_server(relay, host, port, quiet=False):
@@ -1549,12 +1780,17 @@ def selftest():
 # ================================================================== main
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Эмулятор API ретранслятора SmartGen для разработки td_genset.")
-    ap.add_argument("--host", default="127.0.0.1", help="адрес (по умолчанию 127.0.0.1)")
-    ap.add_argument("--port", type=int, default=8081)
-    ap.add_argument("--token", default="dev-token-0123456789abcdefghij", help="Bearer-токен API")
+    env = os.environ.get
+    ap.add_argument("--host", default=env("RELAY_HOST", "127.0.0.1"), help="адрес (env RELAY_HOST; в Docker 0.0.0.0)")
+    ap.add_argument("--port", type=int, default=int(env("RELAY_PORT", "8081")), help="порт (env RELAY_PORT)")
+    ap.add_argument("--token", default=env("RELAY_API_TOKEN", "dev-token-0123456789abcdefghij"),
+                    help="Bearer-токен API relay_api.md (env RELAY_API_TOKEN)")
+    ap.add_argument("--profile", default=env("RELAY_PROFILE", "office"), choices=["office", "d700"],
+                    help="профиль генератора (env RELAY_PROFILE); d700 включает модель D700 и /sim/v1/*")
     ap.add_argument("--snapshot-sec", type=float, default=60.0, help="интервал плановых снимков, с (реальные)")
     ap.add_argument("--hostid", action="append", help="hostid модуля (можно несколько раз)")
-    ap.add_argument("--time-scale", type=float, default=1.0, help="ускорение физики генератора")
+    ap.add_argument("--time-scale", type=float, default=float(env("RELAY_TIME_FACTOR", "1.0")),
+                    help="ускорение физики генератора (env RELAY_TIME_FACTOR; 0.1…60)")
     ap.add_argument("--clock-offset", type=float, default=0.0,
                     help="начальный сдвиг часов эмулятора относительно реального времени, с (может быть < 0)")
     ap.add_argument("--relay-version", default="1.1.3", choices=["1.1.1", "1.1.3"],
@@ -1566,17 +1802,26 @@ def main(argv=None):
     args = ap.parse_args(argv)
     if args.selftest:
         return selftest()
+    sim_token = env("RELAY_SIM_TOKEN", "")
+    setup_logging(env("RELAY_LOG_LEVEL", "INFO"), secrets=(sim_token, args.token))
+    if args.profile == "d700" and not 0.1 <= args.time_scale <= 60:
+        print("RELAY_TIME_FACTOR must be within 0.1…60", file=sys.stderr)
+        return 1
     relay = Relay(args.token, args.hostid or [DEFAULT_HOSTID], snapshot_sec=args.snapshot_sec,
                   time_scale=args.time_scale, commands_enabled=not args.commands_disabled,
-                  version=args.relay_version, noise=not args.no_noise, clock_offset=args.clock_offset)
+                  version=args.relay_version, noise=not args.no_noise, seed=int(env("RELAY_SEED", "1")),
+                  clock_offset=args.clock_offset, profile=args.profile, sim_token=sim_token,
+                  tz=env("RELAY_TZ", "Europe/Kyiv"), preset=env("RELAY_TIMER_PRESET") or None)
     try:
         server = make_server(relay, args.host, args.port, quiet=args.quiet)
     except OSError as exc:
         print("не удалось открыть %s:%d: %s" % (args.host, args.port, exc), file=sys.stderr)
         return 1
     print("fake SmartGen relay: http://%s:%d%s (hostid %s, snapshot %ss, time_scale %s, clock_offset %ss); "
-          "/_sim — служебный" % (args.host, server.server_address[1], API_PREFIX, ", ".join(relay.hostids),
-                                 args.snapshot_sec, args.time_scale, args.clock_offset), file=sys.stderr, flush=True)
+          "/_sim — служебный; профиль %s, /sim/v1 %s" % (args.host, server.server_address[1], API_PREFIX, ", ".join(relay.hostids),
+                                 args.snapshot_sec, args.time_scale, args.clock_offset, args.profile,
+                                 "включён" if sim_token and args.profile == "d700" else "выключен"),
+          file=sys.stderr, flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -1,0 +1,70 @@
+{
+  "alarms": {
+    "batt_high_v": 30.5,
+    "batt_low_v": 24.0,
+    "coolant_high_c": 95,
+    "low_fuel_sd_pct": 5,
+    "low_fuel_warn_pct": 20,
+    "oil_low_bar": 1.0
+  },
+  "fuel_lph": {
+    "100": 3.5,
+    "25": 3.5,
+    "50": 3.5,
+    "75": 3.5,
+    "esp": 3.5
+  },
+  "profile": "Office",
+  "rated": {
+    "kva_esp": 13,
+    "kva_prp": 13,
+    "kw_esp": 12,
+    "kw_prp": 12
+  },
+  "sensors": {
+    "batt_v": 27.8,
+    "charger_v": 28.0,
+    "coolant_idle_c": 35,
+    "coolant_run_c": 82,
+    "coolant_tau_s": 300,
+    "f_hz": 50.0,
+    "oil_idle_bar": 0.0,
+    "oil_run_bar": 3.5,
+    "pf": 0.92,
+    "rpm_run": 1500,
+    "u_v": 400
+  },
+  "start": {
+    "fuel_pct": 95,
+    "hours": 34.85,
+    "kwh": 253,
+    "last_test": null,
+    "load_kw": 12,
+    "mains_ok": true,
+    "mode": "auto",
+    "starts": 39
+  },
+  "tank_l": 145,
+  "timers": {
+    "cooling_s": 20,
+    "crank_fire_s": 5,
+    "crank_rest_s": 5,
+    "crank_s": 5,
+    "ets_hold_s": 8,
+    "mains_abnormal_s": 5,
+    "mains_normal_s": 5,
+    "over_current_delay_s": 30,
+    "safety_on_s": 8,
+    "start_delay_s": 3,
+    "start_times": 3,
+    "stop_delay_s": 0,
+    "transfer_s": 2.0,
+    "warming_s": 15
+  },
+  "timers_plant": {
+    "mains_abnormal_s": 5,
+    "safety_on_s": 8,
+    "start_delay_s": 3,
+    "warming_s": 15
+  }
+}
