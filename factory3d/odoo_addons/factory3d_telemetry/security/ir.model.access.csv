@@ -1,1 +1,16 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_collector_user,f3d.collector user,model_f3d_collector,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_collector_admin,f3d.collector admin,model_f3d_collector,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_source_user,f3d.source user,model_f3d_source,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_source_manager,f3d.source manager,model_f3d_source,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_signal_user,f3d.signal user,model_f3d_signal,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_signal_manager,f3d.signal manager,model_f3d_signal,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_reading_user,f3d.reading user,model_f3d_reading,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_reading_manager,f3d.reading manager,model_f3d_reading,factory3d_base.group_f3d_manager,1,0,1,0
+access_f3d_reading_admin,f3d.reading admin,model_f3d_reading,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_reading_hour_user,f3d.reading.hour user,model_f3d_reading_hour,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_reading_hour_admin,f3d.reading.hour admin,model_f3d_reading_hour,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_command_user,f3d.command user,model_f3d_command,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_command_manager,f3d.command manager,model_f3d_command,factory3d_base.group_f3d_manager,1,1,1,0
+access_f3d_command_admin,f3d.command admin,model_f3d_command,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_collector_token_wizard_admin,f3d.collector.token.wizard admin,model_f3d_collector_token_wizard,factory3d_base.group_f3d_admin,1,1,1,1
