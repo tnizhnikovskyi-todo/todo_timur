@@ -22,7 +22,8 @@ class TestAccessInstall(AccessCase):
         ICP = self.env['ir.config_parameter'].sudo()
         self.assertEqual(ICP.get_param('factory3d.access.write_enabled'), 'False')
         self.assertEqual(ICP.get_param('factory3d.access.page_size'), '500')
-        self.assertEqual(ICP.get_param('factory3d.access.migration_state'), 'pending')
+        # хук W4 перезаписує 'pending'
+        self.assertIn(ICP.get_param('factory3d.access.migration_state'), ('skipped', 'partial', 'done'))
 
     def test_menu(self):
         menu = self.env.ref('factory3d_access.menu_f3d_access')

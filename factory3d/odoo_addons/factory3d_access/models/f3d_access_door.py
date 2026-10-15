@@ -83,8 +83,15 @@ class F3dAccessDoor(models.Model):
         return super().write(vals)
 
     def _f3d_publish_change(self):
-        """Точка розширення: шина переглядача ('f3d.access.door', [code], 'state'), R-12 — W4."""
-        return None
+        """Шина переглядача ('f3d.access.door', коди, 'state'), R-12 крок 6; у пакеті подій — через збирач."""
+        codes = {c for c in self.sudo().mapped('code') if c}
+        if not codes:
+            return None
+        collector = self.env.context.get('f3d_bus_collector')
+        if collector is not None:
+            collector.setdefault('f3d.access.door', set()).update(codes)
+        else:
+            self.env['f3d.access.event']._f3d_bus('f3d.access.door', codes)
 
     def _f3d_set_state(self, state, ts, alarm=None, reason=None):
         """R-10: застосувати подію стану дверей; повертає двері, у яких щось змінилося."""

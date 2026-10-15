@@ -28,7 +28,7 @@
         "views/f3d_zone_views.xml",
         "views/f3d_access_card_views.xml",
         "views/f3d_access_visitor_views.xml",
-        # W3: "views/res_config_settings_views.xml",
+        "views/res_config_settings_views.xml",
         "wizard/event_reprocess_wizard_views.xml",
         "views/menus.xml",
     ],

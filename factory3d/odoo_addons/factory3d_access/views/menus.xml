@@ -26,5 +26,6 @@
     <menuitem id="menu_f3d_access_att_report" name="Проходи СКУД" parent="hr_attendance.menu_hr_attendance_reporting"
               sequence="20" groups="hr_attendance.group_hr_attendance_user,group_f3d_access_security"
               action="action_f3d_access_event_report"/>
-    <!-- W4: menu_f3d_access_settings (SPEC §3 V-15) -->
+    <menuitem id="menu_f3d_access_settings" name="Налаштування СКУД" parent="factory3d_base.menu_f3d_config"
+              sequence="70" groups="factory3d_base.group_f3d_admin" action="action_f3d_access_settings"/>
 </odoo>

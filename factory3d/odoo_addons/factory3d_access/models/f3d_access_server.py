@@ -284,8 +284,19 @@ class F3dAccessServer(models.Model):
             self.sudo().write({'last_event_ts': new, 'last_event_biostar_id': best_id})
 
     def _f3d_after_poll(self, ingest_result):
-        """Точка розширення R-18 (сигнали телеметрії) — W4."""
-        return None
+        """R-18: сигнали телеметрії за новими подіями; збій не зупиняє опитування."""
+        records = (ingest_result or {}).get('records')
+        if not records:
+            return None
+        try:
+            with self.env.cr.savepoint():
+                result = self.env['f3d.access.telemetry']._f3d_publish(self, records)
+            for item in (result or {}).get('rejected', ()):
+                _logger.debug("СКУД: сигнал телеметрії відхилено: %s", item)
+            return result
+        except Exception as exc:  # noqa: BLE001 - телеметрія не зупиняє опитування
+            _logger.warning("СКУД: публікація сигналів телеметрії не вдалась: %s", exc)
+            return None
 
     def action_poll_now(self):
         self.ensure_one()
