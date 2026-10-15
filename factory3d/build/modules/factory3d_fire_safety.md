@@ -1,7 +1,7 @@
 # factory3d_fire_safety
 Статус: IN_PROGRESS
-Тесты: /factory3d_fire_safety 84/84 (2026-10-15), ТК: ждут стенда
-Решений без заказчика: 10 (ниже)
+Тесты: /factory3d_fire_safety 114/114 (2026-10-15), ТК: ждут стенда
+Решений без заказчика: 12 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: AC-77 «signal_count=45» против Додатка B (46+запиленість) — тест ≥45
 
@@ -11,8 +11,8 @@
 | W1 | принят | 48d3d27 (+f2c4b48 слияние) | модуль 50/50 вместе с W3 |
 | W3 | принят | b652677 (+f717785 слияние) | модуль 50/50 |
 | W2 | принят | 3e5cce3 | модуль 84/84; AC-22 (totals), AC-31 — на W4/W5 |
-| W4 | в работе | — | — |
-| W5 | — | — | — |
+| W4 | принят | 9cad410 | модуль 114/114 (с test-модулем и без); +iot_sim/access 30/30 |
+| W5 | в работе | — | — |
 | W6 | — | — | — |
 
 ## Решения без заказчика
@@ -33,3 +33,7 @@
   событие журнала привязывается к заявке в конце FireSync.run. — `models/maintenance_request.py`, `tools/sync.py`
 - DEC-10: прошлое состояние DI2/3/4/6 систем — из последнего события системы; `sprinkler_low` пишется при любом входе в
   `low_pressure`. Строки access для моделей W4 — в `security/ir.model.access_w4_pending.csv` до W4. — `tools/sync.py`
+- DEC-11: `_cron_tick` в одном запуске крона делает 5 тиков с шагом 10 с (commit между ними), в тестах — 1 тик
+  (`odoo.modules.module.current_test`; `registry.in_test_mode()` в Odoo 19 нет). — `models/f3d_fire_drill.py`
+- DEC-12: при установленном access его источник (приоритет 10) перекрывает hr_attendance; R-18 пишет `device_id`, только
+  если сповіщувач в зоне навчання; тесты AC-49/access — skipUnless модулей. — `models/passage_source.py`, `models/f3d_fire_drill.py`
