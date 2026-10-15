@@ -409,6 +409,27 @@ export default {
       <li><b>Cells per level</b> (level panel, 1–12) goes through “Show” / “Save” like other changes. With depth “Cell” and more than one cell the level stops being a place: separate places with codes <span class="code">&lt;level code&gt;-1…N</span> replace it, and in 2D and 3D the level is split into N parts. With depth “Level” the number is remembered but the level stays one place.</li>
       <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. If a project cannot be read, its raw record is kept under the key <span class="code">wh-app-project-&lt;id&gt;.broken-&lt;time&gt;</span> and a new demo project opens with a message — nothing is overwritten. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
     </ul>`,
+  "top.odooRefresh": "Refresh from Odoo",
+  "top.odooNew": "Project from Odoo…",
+  "n.odooRefreshed": "Data refreshed from Odoo · places: {n}",
+  "n.odooLoadFail": "Could not load warehouse {wh} from Odoo: {msg}",
+  "n.odooProjectFail": "Could not create the project from Odoo: {msg}",
+  "odoo.projName": "Odoo · {db}",
+  "odoo.pickTitle": "New project from Odoo",
+  "odoo.pickIntro": "Choose the warehouses of this database to put in the project. Locations, hierarchy, stock, storage categories and putaway rules are read from Odoo; this window cannot change anything in Odoo.",
+  "odoo.pickName": "Project name",
+  "odoo.pickNone": "This database has no warehouses available to you.",
+  "odoo.pickMin": "Choose at least one warehouse",
+  "odoo.pickCount": "Warehouses selected: {n}",
+  "odoo.create": "Create project",
+  "odoo.cancel": "Cancel",
+  "odoo.demo": "Demo project",
+  "odoo.loading": "Loading warehouses…",
+  "odoo.loadFail": "Could not read the warehouses from Odoo: {msg}",
+  "odoo.colCode": "Code",
+  "odoo.colName": "Warehouse",
+  "odoo.colCompany": "Company",
+  "odoo.colPlaces": "Places",
   "help.odoo.title": "Working from Odoo",
   "help.odoo.html": `
     <ul>
@@ -417,6 +438,8 @@ export default {
       <li><b>Versions.</b> Every "Save" creates a new project version (the last 50 are kept); unsaved ("teal") changes are also stored in the project but create no versions. If someone saved the project while you were editing, your save is rejected with "The project was changed by another user" — reload the page to see the current state. Restoring an old version is done in the module (a versions menu in the app will come later).</li>
       <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (coming in a later stage). An administrator assigns the groups on the user form.</li>
       <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
+      <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
+      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; a detailed comparison of changes and applying them in Odoo will come later. The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
     </ul>`,
   "help.keys.title": "Hotkeys",
   "help.keys.html": `

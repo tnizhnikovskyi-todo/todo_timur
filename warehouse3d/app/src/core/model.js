@@ -86,6 +86,13 @@ export function createModel(project, storage, opts = {}) {
       s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
       return true;
     },
+    // снимок Odoo активного склада обновился (хост подменил его в opts.bases): дерево перестраивается, слой правок и несохранённое остаются (W-11)
+    reloadBase() {
+      ed.sync(s); load(s.wh);
+      if (!s.tree.nodes.has(ui.focus)) ui.focus = "WH";
+      Object.assign(ui, { sel: null, esel: ui.edit ? ui.focus : null, msel: [] }); bclear();
+      s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
+    },
     nodes: () => nodesOf(s.tree, s.data), // узлы склада в виде v2
     // глубина локаций (D-11): настройка склада ("WH") и зон; меняется операцией ops.depth через «Показати / Зберегти», как другие правки.
     // own — собственная настройка ("inherit" — как у склада), eff — действующая
