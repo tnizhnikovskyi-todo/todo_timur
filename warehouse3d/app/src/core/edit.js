@@ -6,22 +6,24 @@ import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, ROTS, bumpNum, clampN, clone, em
 import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
 import { hhmm } from "./locks.js";
 import { layout } from "./layout.js";
+import { catalogType } from "./catalog.js";
+import { cleanParam, diffParams, shapeOf } from "./params.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
 
 // ---------- diff / apply
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
-  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), cfg: kv(a.cfg, b.cfg), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
     types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null,
     // план здания (W-04): общие поля (контур, высоты) одним значением, объекты и узлы проходов — по id, как остальные списки
     bld: JSON.stringify(bldMeta(a.building)) !== JSON.stringify(bldMeta(b.building)) ? { v: bldMeta(b.building) } : null, bi: kv(a.building?.items, b.building?.items), bn: kv(a.building?.nodes, b.building?.nodes) };
 }
 const bldMeta = (b) => (b ? { v: b.v, contour: b.contour, hCeil: b.hCeil, hSpr: b.hSpr } : null);
 const kvEmpty = (x) => !x || (!x.rm.length && !x.put.length);
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
-  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v;
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v;
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
   if (d.bld) s.building = d.bld.v ? { ...clone(d.bld.v), items: s.building?.items || [], nodes: s.building?.nodes || [] } : null;
@@ -61,7 +63,7 @@ function withDeps(s, sel) {
   const set = new Set(sel); let grow = true;
   while (grow) {
     grow = false;
-    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.prop ? p.diff.prop.put.map((x) => x.id) : []), ...(p.diff.rot ? p.diff.rot.put.map((x) => x.id) : [])]);
+    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.prop ? p.diff.prop.put.map((x) => x.id) : []), ...(p.diff.cfg ? p.diff.cfg.put.map((x) => x.id) : []), ...(p.diff.rot ? p.diff.rot.put.map((x) => x.id) : [])]);
     for (const q of s.pending) if (!set.has(q) && q.diff.add.put.some((a) => need.some((id) => inNode(id, a.id)))) { set.add(q); grow = true; }
   }
   return s.pending.filter((p) => set.has(p));
@@ -114,11 +116,20 @@ export function pasteSel(s) {
 
 // ---------- имена и коды новых узлов
 const kidNames = (s, pid) => [...(s.tree.nodes.get(pid)?.kids.map((k) => k.name) || []), ...s.edit.add.filter((a) => a.parent === pid).map((a) => a.name)];
+const taken0 = (s, id) => s.tree.nodes.has(id) && !s.edit.add.some((a) => a.id === id); // уровень уже есть в дереве (не добавлен этой правкой)
 const taken = (s, id) => s.tree.nodes.has(id) || s.edit.del.includes(id) || s.edit.add.some((a) => a.id === id);
 function uniqId(s, parent, name, bump) { let id = `${parent}/${name}`; for (let i = 0; taken(s, id) && i < 500; i++) { name = bump(name); id = `${parent}/${name}`; } return { id, name }; }
 const codeTaken = (s, c) => !!s.data.locations[c] || s.tree.byCode.has(c) || s.edit.add.some((a) => a.code === c);
 function uniqCode(s, c) { let k = c; for (let i = 2; codeTaken(s, k); i++) k = `${c}-${i}`; return k; }
 const short = (id, tp) => lastSeg(id).replace(new RegExp(`^${tp}-`), "");
+
+// тип места по коду: тип проекта, затем своя библиотека, затем каталог (D-12); тип не из проекта добавляется в проект той же правкой (ensureType)
+const libType = (s, id) => (s.lib && s.lib.types.find((t) => t.id === id)) || null;
+const typeOf = (s, tp) => s.tree.types.get(tp) || libType(s, tp) || catalogType(tp) || s.tree.TY(tp);
+function ensureType(s, e, tp, rec = null) {
+  if (typeList(e).some((t) => t.id === tp)) return;
+  const t = rec || libType(s, tp) || catalogType(tp); if (t) e.types = [...typeList(e).map((x) => ({ ...x })), clone(t)];
+}
 
 function addLevel(s, e, bid, tp, lvl) {
   const names = kidNames(s, bid), letters = names.length && names.every((x) => /^[A-Z]$/.test(x));
@@ -129,8 +140,8 @@ function addLevel(s, e, bid, tp, lvl) {
   e.add.push({ id, parent: bid, name: nm, kind: "level", tp, lvl, code: uniqCode(s, `${tp}-${short(rid, tp)}-${lastSeg(bid)}-${nm}`) });
   return nm;
 }
-function addBay(s, e, rid, tp, nl) {
-  const t = s.tree.TY(tp);
+// cellsArr — ячеек на каждом ярусе (шаблон); без него — параметр типа pos (позиций на ярусе, связь с ячейками яруса)
+function addBay(s, e, rid, tp, nl, t = typeOf(s, tp), cellsArr = null) {
   if (t.form === "stack") {
     const ls = kidNames(s, rid).filter((x) => /^[A-Z]$/.test(x)), nm = ls.length ? String.fromCharCode(Math.max(...ls.map((x) => x.charCodeAt(0))) + 1) : "A";
     const u = uniqId(s, rid, nm, (x) => String.fromCharCode(x.charCodeAt(0) + 1));
@@ -138,7 +149,10 @@ function addBay(s, e, rid, tp, nl) {
   }
   const u = uniqId(s, rid, nextNum(kidNames(s, rid), "S01"), bumpNum);
   e.add.push({ id: u.id, parent: rid, name: u.name, kind: "bay", tp });
-  for (let l = 0; l < nl; l++) addLevel(s, e, u.id, tp, l);
+  for (let l = 0; l < nl; l++) {
+    const nm = addLevel(s, e, u.id, tp, l), c = clampN(cellsArr ? cellsArr[l] : t.pos, 1, MAX_CELLS, 1), id = `${u.id}/${nm}`;
+    if (c > 1 && !taken0(s, id)) e.cells = [...e.cells.filter((x) => x.id !== id), { id, n: c }];
+  }
   return u.name;
 }
 
@@ -175,7 +189,7 @@ function setPropE(e, id, patch) {
 // убрать узел вместе с тем, что внутри: добавленный пропадает из слоя, узел из Odoo попадает в del
 function removeNode(e, x) {
   const id = x.id, not = (q) => !inNode(q.id, id);
-  e.add = e.add.filter(not); e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not);
+  e.add = e.add.filter(not); e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not);
   if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
 }
 // число секций и ярусов ряда: лишние секции / верхние ярусы убираются, недостающие добавляются
@@ -225,17 +239,19 @@ export const ALIGNS = ["left", "right", "top", "bottom", "cx", "cy"];
 // ---------- операции
 export const OPS = {
   rack(s, gid, f, key) {
-    const tp = f.tp, t = s.tree.TY(tp), nb = clampN(f.nb, 1, 40, 5), nl = clampN(f.nl, 1, 12, t.lv || 1), stack = t.form === "stack"; let nm = "";
+    const tp = f.tp, t = typeOf(s, tp), nb = clampN(f.nb, 1, 40, 5), nl = clampN(f.nl, 1, 12, t.lv || 1), stack = t.form === "stack"; let nm = "";
     change(s, gid, () => ({ k: stack ? "op.rackStack" : "op.rack", p: { name: nm, type: t, nb, nl } }), (e) => {
+      ensureType(s, e, tp);
       const g = s.tree.nodes.get(gid), names = g.kids.filter((k) => k.type === "rack").map((k) => k.name).concat(e.add.filter((a) => a.parent === gid && a.kind === "rack").map((a) => a.name));
       const u = uniqId(s, gid, nextNum(names, stack ? "01" : "R1"), bumpNum); nm = u.name;
       e.add.push({ id: u.id, parent: gid, name: u.name, kind: "rack", tp });
-      for (let i = 0; i < nb; i++) addBay(s, e, u.id, tp, nl);
+      for (let i = 0; i < nb; i++) addBay(s, e, u.id, tp, nl, t);
     }, key, f);
   },
   zone(s, gid, f, key) {
     const tp = f.tp, cnt = clampN(f.cnt, 1, 30, 1), codes = [];
-    change(s, gid, () => ({ k: "op.zone", p: { type: s.tree.TY(tp), codes } }), (e) => {
+    change(s, gid, () => ({ k: "op.zone", p: { type: typeOf(s, tp), codes } }), (e) => {
+      ensureType(s, e, tp);
       for (let i = 0; i < cnt; i++) {
         let k = 1; while (codeTaken(s, `${tp}-${k}`)) k++;
         const code = `${tp}-${k}`, u = uniqId(s, gid, code, bumpNum); codes.push(code); e.add.push({ id: u.id, parent: gid, name: u.name, kind: "zone", tp, code });
@@ -247,12 +263,15 @@ export const OPS = {
     change(s, gid, () => ({ k: "op.group", p: { name: got } }), (e) => { const u = uniqId(s, gid, nm, bumpNum); got = u.name; e.add.push({ id: u.id, parent: gid, name: u.name, kind: "group" }); }, key, f);
   },
   bay(s, rid, f, key) {
-    const r = s.tree.nodes.get(rid), stack = s.tree.TY(r.tp).form === "stack", cnt = clampN(f.cnt, 1, 40, 1), nl = clampN(f.nl, 1, 12, s.tree.TY(r.tp).lv || 1), names = [];
-    change(s, rid, () => ({ k: stack ? "op.bayStack" : "op.bay", p: { names, nl } }), (e) => { for (let i = 0; i < cnt; i++) names.push(addBay(s, e, rid, r.tp, nl)); }, key, f);
+    const r = s.tree.nodes.get(rid), t = s.tree.TY(r.tp), stack = t.form === "stack", cnt = clampN(f.cnt, 1, 40, 1), nl = clampN(f.nl, 1, 12, t.lv || 1), names = [];
+    change(s, rid, () => ({ k: stack ? "op.bayStack" : "op.bay", p: { names, nl } }), (e) => { for (let i = 0; i < cnt; i++) names.push(addBay(s, e, rid, r.tp, nl, t)); }, key, f);
   },
   level(s, bid, f, key) {
     const b = s.tree.nodes.get(bid); let nm = "";
-    change(s, bid, () => ({ k: "op.level", p: { name: nm } }), (e) => { nm = addLevel(s, e, bid, b.tp, b.nLv); }, key, f);
+    change(s, bid, () => ({ k: "op.level", p: { name: nm } }), (e) => {
+      nm = addLevel(s, e, bid, b.tp, b.nLv); const c = clampN(s.tree.TY(b.tp).pos, 1, MAX_CELLS, 1), id = `${bid}/${nm}`;
+      if (c > 1 && !s.tree.nodes.has(id)) e.cells = [...e.cells.filter((x) => x.id !== id), { id, n: c }];
+    }, key, f);
   },
   settp(s, rid, f, key) {
     if (!s.tree.types.has(f.tp)) return;
@@ -302,6 +321,7 @@ export const OPS = {
         if (a.code) cnt += n.type === "level" ? Math.max(1, n.codes.length) : 1;
         e.add.push(a);
         if (n.type === "level" && n.cells > 1) e.cells = [...e.cells.filter((x) => x.id !== a.id), { id: a.id, n: n.cells }];
+        if (n.type === "rack" && n.ov) e.cfg = [...e.cfg.filter((x) => x.id !== a.id), { id: a.id, ...clone(n.ov) }];
         if (n.type === "rack" && n.rot) e.rot = [...(e.rot || []).filter((x) => x.id !== a.id), { id: a.id, r: 90 }];
         if (n.type !== "level") n.kids.forEach((k) => copy(k, a.id, k.name, tp));
         return a.id;
@@ -336,6 +356,49 @@ export const OPS = {
     const n = s.tree.nodes.get(lid); if (!n || n.type !== "level") return;
     const k = clampN(f.n, 1, MAX_CELLS, 1), ref = refOf(n);
     change(s, lid, { k: "op.cells", p: { ref, n: k } }, (e) => { e.cells = e.cells.filter((x) => x.id !== lid); if (k > 1) e.cells.push({ id: lid, n: k }); }, key, f);
+  },
+  // параметры конструкции ряда (C4): переопределение поверх типа (высоты ярусов, нижний ярус на полу, двусторонний ряд, зазоры, балка, нагрузка,
+  // ширина/глубина секции); сохраняются только отличия от типа. f.pos — позиций (ячеек) на каждом ярусе ряда; f.reset — вернуть значения типа
+  rackcfg(s, rid, f, key) {
+    const r = s.tree.nodes.get(rid); if (!r || r.type !== "rack") return;
+    const t = s.tree.TY(r.tp), ref = refOf(r), pos = f.pos == null || f.pos === "" ? null : clampN(f.pos, 1, MAX_CELLS, 1);
+    change(s, rid, { k: f.reset ? "op.rackcfgReset" : "op.rackcfg", p: { ref } }, (e) => {
+      e.cfg = e.cfg.filter((x) => x.id !== rid);
+      if (f.reset) return;
+      const o = shapeOf(t) === "stack" ? {} : diffParams(t, f); if (Object.keys(o).length) e.cfg.push({ id: rid, ...o });
+      if (pos == null) return;
+      for (const b of r.kids) for (const l of b.kids) if (l.type === "level" && (l.cells || 1) !== pos) { e.cells = e.cells.filter((x) => x.id !== l.id); if (pos > 1) e.cells.push({ id: l.id, n: pos }); }
+    }, key, f);
+  },
+  // шаблон из библиотеки (C5): ряд ставится в зону (ближайшую зону выше выбранного узла), секция — в ряд; f.tpl — id шаблона, f.cnt — сколько раз.
+  // Имена и коды новых узлов уникальны, как у любой правки; тип шаблона, которого нет в проекте, добавляется в проект той же правкой
+  template(s, tid, f, key) {
+    const tpl = s.lib && s.lib.templates.find((x) => x.id === f.tpl); if (!tpl) return;
+    const rackT = tpl.kind === "rack", cnt = clampN(f.cnt, 1, rackT ? 20 : 40, 1), stackT = !!tpl.type && tpl.type.form === "stack";
+    const okP = (x) => (rackT ? (x.type === "group" || x.type === "rackset") && !isZoneLeaf(x) : x.type === "rack" && (s.tree.TY(x.tp).form === "stack") === stackT);
+    let P = s.tree.nodes.get(tid); while (P && !okP(P)) P = P.parent && s.tree.nodes.get(P.parent);
+    if (!P) return;
+    const made = [], bp = (b) => Math.max(1, b.nl), per = rackT ? tpl.bays.reduce((sum, b) => sum + bp(b), 0) : bp(tpl.bays[0]); // мест в одной копии
+    change(s, P.id, () => ({ k: "op.template", p: { name: tpl.name, to: refOf(P), n: made.length, places: places(made.length * per) } }), (e) => {
+      if (rackT) ensureType(s, e, tpl.tp, tpl.type);
+      const tp = rackT ? tpl.tp : P.tp, t = typeOf(s, tp) || tpl.type;
+      for (let i = 0; i < cnt; i++) {
+        if (rackT) {
+          const names = s.tree.nodes.get(P.id).kids.filter((k) => k.type === "rack").map((k) => k.name).concat(e.add.filter((a) => a.parent === P.id && a.kind === "rack").map((a) => a.name));
+          const u = uniqId(s, P.id, nextNum(names, stackT ? "01" : "R1"), bumpNum);
+          e.add.push({ id: u.id, parent: P.id, name: u.name, kind: "rack", tp });
+          for (const b of tpl.bays) addBay(s, e, u.id, tp, b.nl, typeOf(s, tp), b.cells);
+          if (tpl.cfg && Object.keys(tpl.cfg).length && !stackT) e.cfg.push({ id: u.id, ...clone(tpl.cfg) });
+          if (tpl.rot) e.rot = [...(e.rot || []), { id: u.id, r: 90 }];
+          made.push(u.id);
+        } else made.push(`${P.id}/${addBay(s, e, P.id, tp, tpl.bays[0].nl, t, tpl.bays[0].cells)}`);
+      }
+    }, key, f);
+    const last = s.pending[s.pending.length - 1];
+    if (last && made.length) { last.obj = made.length === 1 ? made[0] : lca(made); if (made.length > 1) last.objs = made.slice(); savePend(s); }
+    const ok = made.filter((id) => s.tree.nodes.has(id));
+    if (ok.length) { s.ui.msel = ok.length > 1 ? ok : []; s.ui.esel = ok[ok.length - 1]; s.emit({ type: "select" }); }
+    return made;
   },
   // глубина локаций (D-11): "WH" — склад целиком, иначе зона; f.depth: "level" | "cell" | "inherit" (только для зоны — как у склада)
   depth(s, zid, f, key) {
@@ -492,8 +555,8 @@ export function typePatch(s, id, k, v) {
     const x = { ...t };
     if (k === "name") x.name = String(v).trim().slice(0, 40) || t.name;
     else if (k === "id") { const c = String(v).trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6); if (c && !types.has(c)) x.id = c; }
-    else if (k === "form") { x.form = v; if (RACKED.includes(v)) { x.lh = x.lh || 0.5; x.lv = x.lv || 4; } else { x.lh = 0; x.lv = 1; } }
-    else { const lim = { w: [0.3, 12], d: [0.3, 12], lh: [0.2, 3], lv: [1, 12] }[k], n = +v; if (lim && Number.isFinite(n) && n > 0) x[k] = k === "lv" ? Math.round(Math.min(lim[1], Math.max(lim[0], n))) : Math.min(lim[1], Math.max(lim[0], Math.round(n * 100) / 100)); }
+    else if (k === "form") { x.form = v; delete x.shape; delete x.v; if (RACKED.includes(v)) { x.lh = x.lh || 0.5; x.lv = x.lv || 4; } else { x.lh = 0; x.lv = 1; } }
+    else { const c = cleanParam(x, k, v); if (c === null) delete x[k]; else if (c !== undefined) x[k] = c; } // параметры конструкции (params.js)
     return x;
   }));
 }
@@ -501,6 +564,12 @@ export const typeRemove = (s, id) => setTypes(s, typeList(s.edit).filter((t) => 
 export function typeAdd(s) {
   let k = 1; while (s.tree.types.has(`T${k}`)) k++;
   setTypes(s, [...typeList(s.edit).map((t) => ({ ...t })), { id: `T${k}`, name: s.words().newType, form: "shelf", w: 1.2, d: 0.6, lh: 0.5, lv: 4 }]);
+}
+// тип из каталога (catalog.js) или из своей библиотеки — в список типов проекта (правки в проекте не меняют каталог и библиотеку)
+export function typeImport(s, id, from = "catalog") {
+  if (s.tree.types.has(id)) return false;
+  const t = from === "lib" ? libType(s, id) : catalogType(id); if (!t) return false;
+  setTypes(s, [...typeList(s.edit).map((c) => ({ ...c })), clone(t)]); return true;
 }
 export const isBaseType = (id) => BASE_TYPES.some((b) => b.id === id);
 export { moveTargets, rackOf };

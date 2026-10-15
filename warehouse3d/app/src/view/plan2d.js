@@ -3,10 +3,22 @@
 // элементов, у которых изменилось состояние (кэш на самих элементах).
 import { inNode } from "../core/types.js";
 import { isSel } from "../core/select.js";
+import { shapeOf } from "../core/params.js";
 import { rect2d } from "../core/layout.js";
 import { esc, slotCls } from "./util.js";
 import * as B from "../core/building.js";
 import { createBldPlan } from "./bldplan.js";
+
+// условное обозначение формы места на плане (не принимает щелчки): ограждение, цилиндр, носитель, ворота, сетка стосов; остальное — просто прямоугольник
+function deco(n, f, x, y, w, d) {
+  const sh = shapeOf(f), id = `data-node="${esc(n.id)}"`, r = (a, b, c, e, cls = "shp") => `<rect ${id} class="${cls}" x="${a}" y="${b}" width="${c}" height="${e}"/>`;
+  if (sh === "enclosure") { const t = Math.min(f.th || 0.1, w / 4, d / 4); return r(x + t, y + t, w - 2 * t, d - 2 * t, "shp dash"); }
+  if (sh === "cylinder") return `<ellipse ${id} class="shp" cx="${x + w / 2}" cy="${y + d / 2}" rx="${Math.min(w, d) / 2}" ry="${Math.min(w, d) / 2}"/>`;
+  if (sh === "mobile") { const k = Math.min(0.12, w / 6, d / 6); return [[x, y], [x + w - 2 * k, y], [x, y + d - 2 * k], [x + w - 2 * k, y + d - 2 * k]].map(([a, b]) => r(a, b, 2 * k, 2 * k)).join(""); }
+  if (sh === "gate") { const k = Math.min(0.25, w / 6); return r(x, y, k, d, "shp fillj") + r(x + w - k, y, k, d, "shp fillj"); }
+  if (sh === "stack" && ((f.gx || 1) > 1 || (f.gy || 1) > 1)) { let p = ""; for (let i = 1; i < (f.gx || 1); i++) p += `M${x + (w * i) / f.gx} ${y}v${d}`; for (let j = 1; j < (f.gy || 1); j++) p += `M${x} ${y + (d * j) / f.gy}h${w}`; return `<path ${id} class="shp" d="${p}"/>`; }
+  return "";
+}
 
 export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
   let svg = null, cont = null, dyn = null, bp = null, hidden = false, lastH = null, els = [], slots = [];
@@ -25,6 +37,7 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       if (n.loc && (n.type !== "group" || !n.kids.length)) {
         const { x, y, w, d } = rect2d(tree, n);
         h += `<rect data-node="${esc(n.id)}" data-code="${esc(n.loc)}" x="${x}" y="${y}" width="${w}" height="${d}" class="s"/>`;
+        if (n.type === "group" || n.type === "bayleaf") h += deco(n, tree.EP(n), x, y, w, d);
       }
       n.kids.forEach(walk);
     };

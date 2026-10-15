@@ -14,7 +14,12 @@ export const LANGS = ["uk", "en"];
 export function createI18n(lang = "uk", globals = {}, dicts = DICTS) {
   let cur = dicts[lang] ? lang : "uk";
   const subs = new Set();
-  const typeName = (tp) => BASE_TYPES.some((b) => b.id === tp.id && b.name === tp.name) && dicts[cur][`type.${tp.id}`] ? dicts[cur][`type.${tp.id}`] : tp.name;
+  // названия не менялись — переводятся: базовые типы (type.<id>) и типы каталога (cat.<код каталога>); свои названия остаются как есть
+  const typeName = (tp) => {
+    if (BASE_TYPES.some((b) => b.id === tp.id && b.name === tp.name) && dicts[cur][`type.${tp.id}`]) return dicts[cur][`type.${tp.id}`];
+    if (tp.cat && tp.name === dicts.uk[`cat.${tp.cat}`] && dicts[cur][`cat.${tp.cat}`]) return dicts[cur][`cat.${tp.cat}`];
+    return tp.name;
+  };
   const fmt = (v) => {
     if (v == null) return "";
     if (Array.isArray(v)) return v.map(fmt).join(", ");
