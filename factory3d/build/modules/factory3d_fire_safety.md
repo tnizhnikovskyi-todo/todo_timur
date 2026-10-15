@@ -1,17 +1,17 @@
 # factory3d_fire_safety
 Статус: IN_PROGRESS
-Тесты: /factory3d_fire_safety 50/50, 1 skip до W2 (2026-10-15), ТК: ждут стенда
-Решений без заказчика: 6 (ниже)
+Тесты: /factory3d_fire_safety 84/84 (2026-10-15), ТК: ждут стенда
+Решений без заказчика: 10 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: нет
+Требует внимания человека: AC-77 «signal_count=45» против Додатка B (46+запиленість) — тест ≥45
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
 | W0 | принят | 8c85402 | TestW0Skeleton 4/4, test_data_sync 2/2 |
 | W1 | принят | 48d3d27 (+f2c4b48 слияние) | модуль 50/50 вместе с W3 |
 | W3 | принят | b652677 (+f717785 слияние) | модуль 50/50 |
-| W2 | в работе | — | — |
-| W4 | — | — | — |
+| W2 | принят | 3e5cce3 | модуль 84/84; AC-22 (totals), AC-31 — на W4/W5 |
+| W4 | в работе | — | — |
 | W5 | — | — | — |
 | W6 | — | — | — |
 
@@ -27,3 +27,9 @@
   `f3d.fire.<model>.csv` (norm, zone, smoke.zone, device, exit); манифест и gen_data.py поправлены. — `data/`
 - DEC-5: регэксп ключа нормы `^[A-Za-z0-9_]+$` вместо `[a-z0-9_]`: в данных макета есть `evac_distance_prod_B`. — `models/f3d_fire_norm.py`
 - DEC-6: скелет `f3d.fire.drill` (name, zone_id, state) до W4 — на него ссылается журнал событий W1. — `models/f3d_fire_drill.py`
+- DEC-7: `target="inline"` недопустим в Odoo 19 — у `action_f3d_fire_settings` target не задан. — `views/res_config_settings_views.xml`
+- DEC-8: булевы настройки пишутся явно 'True'/'False' (стандарт удаляет параметр при False → умолчание True). — `models/res_config_settings.py`
+- DEC-9: команда ТО из `team_id` ставится на заявки telemetry (threshold/stale); явную команду других вызывающих не трогаем;
+  событие журнала привязывается к заявке в конце FireSync.run. — `models/maintenance_request.py`, `tools/sync.py`
+- DEC-10: прошлое состояние DI2/3/4/6 систем — из последнего события системы; `sprinkler_low` пишется при любом входе в
+  `low_pressure`. Строки access для моделей W4 — в `security/ir.model.access_w4_pending.csv` до W4. — `tools/sync.py`
