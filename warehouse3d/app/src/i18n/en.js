@@ -392,7 +392,7 @@ export default {
   "help.start.title": "What this is",
   "help.start.html": `
     <p><b>Warehouse Builder</b> is a model of the warehouse built from Odoo storage locations (database snapshot of {date}). Every row, bay, level and floor place in the model is an Odoo location or a new place you added in the model.</p>
-    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot and is not updated in real time.</p>
+    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot: it is read when the page opens and by the “Refresh data” button (see “Metrics, search and data”).</p>
     <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
   "help.view.title": "Viewing the model",
   "help.view.html": `
@@ -401,7 +401,7 @@ export default {
       <li><b>Level</b> — the lists above the model (WH › zone › row › bay › level). Pick a level — the rest is hidden and the camera moves closer. The labels in the model and the “Show this level only” button in the right panel do the same. <b>↑</b> — level up, <b>⟲</b> — fit the level, <b>+ / −</b> — zoom.</li>
       <li><b>Mouse in 3D</b>: left button — orbit, right button — pan, wheel — zoom. <b>In 2D</b>: drag — pan the plan, wheel — zoom.</li>
       <li>Hover over a place — a tooltip shows the code, product and fill level.</li>
-      <li>The color of a place shows its fill level:</li>
+      <li>The color of a place shows its fill level; the other metrics (below minimum, empty places, ABC, stock age) are chosen with the “Metric” switch (see “Metrics, search and data”). A click on a place opens its card. In the “Place status” mode the colors are:</li>
     </ul>`,
   "help.select.title": "Selection",
   "help.select.html": `
@@ -597,7 +597,7 @@ export default {
       <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (see the "Change plan and applying in Odoo" section). An administrator assigns the groups on the user form.</li>
       <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
       <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
-      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
+      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. The “Refresh data” button above the plan refreshes only stock, fill levels, reservations and moves, without rebuilding the plan. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
     </ul>`,
   "help.plan.title": "Change plan and applying in Odoo",
   "help.plan.html": `
@@ -1117,6 +1117,7 @@ export default {
   "cap.mmNone": "A replenishment rule can only be set for an Odoo place that has stock or an existing rule.",
   "cap.mmRules": "Rules in Odoo: {list}.",
   "cap.mmNoRule": "There are no replenishment rules for this place in Odoo.",
+  "cap.mmOwn": "project edit",
   "cap.mmNote": "The change goes to the Change plan: the rule is created or changed (stock.warehouse.orderpoint).",
   "cap.fnTitle": "Zone function and attributes",
   "cap.fnInherit": "Inherit (from the level above)",
@@ -1205,4 +1206,166 @@ export default {
       <li><b>Min / Max.</b> In the place card: the replenishment rule — product, min, max. It can only be set for a place that has stock or an existing rule. In the plan these are “Replenishment rules”: a rule is created or changed (<span class="code">stock.warehouse.orderpoint</span>).</li>
       <li><b>Capacity summary.</b> In the zone and warehouse panel: places, pallet places, area, volume, occupied / free (from stock), total maximum weight; calculated from the capacities of the places and types.</li>
     </ul>`,
+  "heat.label": "Metric",
+  "heat.status": "Place status",
+  "heat.fill": "Fill level",
+  "heat.low": "Below minimum",
+  "heat.empty": "Empty places",
+  "heat.abc": "Turnover ABC",
+  "heat.age": "Stock age",
+  "heat.fill.f0": "empty",
+  "heat.fill.f25": "up to 25 %",
+  "heat.fill.f50": "25–50 %",
+  "heat.fill.f75": "50–75 %",
+  "heat.fill.f100": "over 75 %",
+  "heat.fill.none": "no capacity",
+  "heat.low.out": "out of stock",
+  "heat.low.low": "below minimum",
+  "heat.low.ok": "not below minimum",
+  "heat.low.none": "no reorder rule",
+  "heat.empty.empty": "empty place",
+  "heat.empty.used": "has stock",
+  "heat.abc.A": "A · 80 % of moves",
+  "heat.abc.B": "B · next 15 %",
+  "heat.abc.C": "C · last 5 %",
+  "heat.abc.none": "no moves",
+  "heat.age.d30": "up to 30 days",
+  "heat.age.d90": "31–90 days",
+  "heat.age.d180": "91–180 days",
+  "heat.age.d365": "181–365 days",
+  "heat.age.dmax": "over 365 days",
+  "heat.age.none": "no stock or no date",
+  "heat.days": "moves in {n} d",
+  "heat.demo": "demo: moves and age are synthetic",
+  "heat.demoShort": "demo",
+  "heat.noData": "The snapshot has no data for this metric",
+  "find.label": "Where is it",
+  "find.placeholder": "Where is it: product, code, lot, package…",
+  "find.hint": "Type at least 2 characters",
+  "find.count": "Places found: {n}",
+  "find.none": "Nothing found",
+  "find.clear": "Clear search",
+  "find.go": "Go to place {code}",
+  "find.more": "…{n} more",
+  "card.title": "Place card",
+  "card.category": "Storage category",
+  "card.maxWeight": "max weight {n}",
+  "card.capacity": "Capacity",
+  "card.unitQty": "units",
+  "card.unitPkg": "packages",
+  "card.minmax": "Min / max",
+  "card.age": "Stock age",
+  "card.days": "{n} d",
+  "card.moves": "Moves",
+  "card.movesVal": "{n} in {days} d",
+  "card.rules": "Putaway rules leading here",
+  "card.noRules": "No rules lead here.",
+  "card.none": "none",
+  "card.ruleAny": "any product",
+  "card.ruleCat": "by storage category",
+  "card.openOdoo": "Open in Odoo",
+  "top.dataRefresh": "Refresh data",
+  "top.dataRefreshTitle": "Refresh stock, fill levels and reservations without rebuilding the plan",
+  "top.dataAsOf": "data as of {time}",
+  "n.dataRefreshed": "Data refreshed · places: {n}",
+  "n.dataAdded": "Odoo has new places: {added}. The structure is updated by the “Refresh from Odoo” button.",
+  "help.data.title": "Metrics, search and data",
+  "help.data.html": `
+    <ul>
+      <li><b>Metric.</b> The <b>“Metric”</b> switch above the plan changes what the color of a place means, and the legend next to it changes with it and shows how many places fall in each class. <b>“Place status”</b> is the usual coloring (see “Viewing the model”); the other five are heat maps, identical in 2D and 3D. New and unsaved places stay teal and orange under any metric. The choice is remembered.</li>
+      <li><b>Fill level</b> — the share of the place capacity: empty, up to 25 %, 25–50 %, 50–75 %, over 75 %; gray — places without capacity (zones, carts).</li>
+      <li><b>Below minimum</b> — by the place reorder rule (min / max): red — out of stock, yellow — below minimum, green — not below, gray — places without a rule.</li>
+      <li><b>Empty places</b> — places without stock are yellow (room to put things), the rest are gray.</li>
+      <li><b>Turnover ABC</b> — by the number of moves (done moves out of and into the place) over the last 90 days: <b>A</b> — places that together give the first 80 % of moves, <b>B</b> — the next 15 %, <b>C</b> — the last 5 %; gray — no moves.</li>
+      <li><b>Stock age</b> — by the oldest lot of the place (the incoming date of the stock in Odoo): up to 30, 31–90, 91–180, 181–365, over 365 days; gray — the place is empty or has no date.</li>
+      <li><b>Demo.</b> The demo snapshot has neither moves nor incoming dates, so ABC and age show synthetic values, marked “demo” in the legend and in the place card. Odoo supplies real data (moves for 90 days and the incoming date).</li>
+      <li><b>Where is it.</b> The search box above the plan looks for a product name or code, a lot and a package; several words must all match within one stock line. Found places are highlighted on the plan (2D and 3D), a counter sits next to the box, and the list below it shows each place and what lies there. Click a list row (or press <kbd>Enter</kbd> for the first) to show the level that holds the place and select it. <kbd>Esc</kbd> closes the list, pressed again it clears the search.</li>
+      <li><b>Place card.</b> Click a place and the right panel shows: stock (product, quantity, reservation, lot, age), storage category, capacity and fill level, min / max, putaway rules that lead here (direct ones and by storage category), moves for 90 days and the stock age. In the app opened from Odoo there is an <b>“Open in Odoo”</b> button — the form of this location.</li>
+      <li><b>“Refresh data”.</b> The button above the plan refreshes stock, fill levels, reservations and moves <b>without rebuilding the plan</b>, leaving your saved and unsaved model changes alone (the stock snapshot only). New Odoo locations do not appear this way: the structure is updated by “Refresh from Odoo”. The snapshot time is shown next to it. The data is also read every time the page opens. Outside Odoo the button recomputes the metrics from the current snapshot.</li>
+    </ul>`,
+  // W-12: code parsing, "Unplaced" tray, auto-layout
+  "op.parse": "Code parsing rules: {n}",
+  "op.place": "{to}: placed from the tray ({n})",
+  "op.autoLayout": "{ref}: auto-layout",
+  "n.placeNoZone": "No zone to place into: pick a zone or a row on the plan",
+  "n.autoNoFit": "{ref}: the blocks do not fit into the building outline, layout unchanged",
+  "n.autoNoFitSub": "Enlarge the outline in “Building” mode or make the zones smaller.",
+  "n.autoNone": "Auto-layout changes nothing: everything already lies like this",
+  "side.autoTitle": "Auto-layout",
+  "side.autoNote": "Manual positions of the objects inside are removed; with a building plan the blocks are fitted into the outline without overlaps. “Show”, then “Save”; Ctrl+Z undoes.",
+  "parse.button": "Code parsing",
+  "parse.title": "Place code parsing",
+  "parse.summary": "{m} of {n} places parsed",
+  "parse.summaryTray": "In the “Unplaced” tray: {k}",
+  "parse.rules": "Rules (the first one that matches wins)",
+  "parse.mask": "Mask",
+  "parse.regex": "Regular expression",
+  "parse.tp": "Place type",
+  "parse.tpAuto": "By prefix",
+  "parse.off": "Off",
+  "parse.up": "Up",
+  "parse.down": "Down",
+  "parse.del": "Delete rule",
+  "parse.hits": "{n} places",
+  "parse.add": "Add rule",
+  "parse.defaults": "Default rules",
+  "parse.suggest": "Suggest a mask from samples",
+  "parse.suggestNote": "Tick codes in the list below (a few of one format). With none ticked, the first three unparsed codes are used.",
+  "parse.suggested": "Rule added: {mask}",
+  "parse.suggestNone": "No samples: tick unparsed codes",
+  "parse.suggestShape": "Samples have different formats: tick codes of one scheme",
+  "parse.bad": "Unparsed codes ({n})",
+  "parse.badTray": "in the tray",
+  "parse.badFloor": "floor place in a zone",
+  "parse.more": "Showing {n} of {m}.",
+  "parse.allOk": "All codes are parsed.",
+  "parse.err.mask": "Mask error (braces)",
+  "parse.err.name": "Unknown part in the mask",
+  "parse.err.dup": "A part is repeated",
+  "parse.err.spec": "Invalid part format",
+  "parse.err.regex": "Invalid expression",
+  "parse.err.shape": "Parts needed: row, section, level; section and level; row and level; or none (floor place)",
+  "parse.help": "Parts: {row} {bay} {level} {prefix} (Ukrainian names work too); {x:a} — letters, {x:A-D} — range, * — anything. Examples: R{row}.S{bay}.L{level}; {prefix}-{row}-{bay}-{level}.",
+  "parse.show": "Show",
+  "parse.saveBtn": "Save",
+  "parse.discard": "Discard draft",
+  "parse.unsaved": "Rules changed, not saved",
+  "parse.saved": "Rules saved",
+  "tray.button": "Unplaced",
+  "tray.title": "Unplaced",
+  "tray.count": "Places without a zone: {n}",
+  "tray.none": "All places are placed.",
+  "tray.note": "Places that did not fit the tree: no matching parsing rule and no parent zone. Drag a place onto a zone or a row on the 2D plan, or pick a zone and press “Place in…”.",
+  "tray.placeIn": "Place in…",
+  "tray.zone": "Zone",
+  "tray.all": "Select all",
+  "tray.parsed": "parsed by a rule",
+  "tray.unparsed": "not parsed",
+  "help.parse.title": "Code parsing",
+  "help.parse.html": `
+    <ul>
+      <li><b>The warehouse is already set up.</b> Any Odoo warehouse becomes a model. A place code (for example <code>FUR-R2-S01-L4</code>) is split into row, section and level by the <b>warehouse rules</b>; the default rules are the ones used for this database.</li>
+      <li><b>“Code parsing” window.</b> A button in the edit bar (“Edit” mode → “Code parsing”). At the top: “M of N places parsed”; below: the rule list and unparsed codes with examples.</li>
+      <li><b>Mask.</b> Text with the parts <code>{row}</code>, <code>{bay}</code>, <code>{level}</code>, <code>{prefix}</code> (Ukrainian names work too): <code>R{row}.S{bay}.L{level}</code>. A letter right before a part belongs to the name (R12). <code>{x:a}</code> — letters, <code>{x:A-D}</code> — range, <code>*</code> — any text. The “Regular expression” flag allows complex cases: groups <code>(?&lt;row&gt;…)</code>, <code>(?&lt;bay&gt;…)</code>, <code>(?&lt;level&gt;…)</code>.</li>
+      <li><b>Resulting levels.</b> Row + section + level — row, rack, level. Section + level — the row is the parent zone from the Odoo path. Row + level — a row of stacks. No parts — a plain floor place.</li>
+      <li><b>Order and type.</b> Rules are checked top to bottom; arrows change the order; each rule has a place type and an “Off” flag.</li>
+      <li><b>“Suggest a mask from samples”.</b> Tick unparsed codes of one scheme — a rule with automatically detected parts is added; the “parsed” counter updates at once.</li>
+      <li><b>Saving.</b> “Show” applies the rules to the tree (undo — Ctrl+Z), “Save” writes them to the project together with other changes.</li>
+    </ul>`,
+  "help.tray.title": "“Unplaced” tray",
+  "help.tray.html": `
+    <ul>
+      <li><b>Nothing is lost.</b> Places that did not fit the tree (no parsing rule and no parent zone) go to the tray — the “Unplaced” button in the top bar with a counter.</li>
+      <li><b>How to place.</b> Drag a place from the list onto a zone or a row on the 2D plan, or tick places, pick a zone and press “Place in…”. It is an ordinary change: “Show / Save”, Ctrl+Z returns the place to the tray.</li>
+      <li><b>Parsed but without a zone.</b> A place parsed into row / section / level but lying outside any zone gets its own row and rack in the zone when placed.</li>
+    </ul>`,
+  "help.auto.title": "Auto-layout",
+  "help.auto.html": `
+    <ul>
+      <li><b>After import</b> the warehouse is laid out by the tree: zones horizontally, rows in depth; nothing needs to be changed.</li>
+      <li><b>“Lay out automatically”</b> is in the zone and warehouse panel (“Edit” mode). It removes manual positions of the objects inside.</li>
+      <li><b>With a building plan.</b> Blocks are fitted into the outline shelf by shelf, avoiding columns, walls and offices, without overlaps. If they do not fit, the layout stays as it was — enlarge the outline or make the zones smaller.</li>
+      <li>It is a “Show / Save” change; Ctrl+Z undoes it.</li>
+    </ul>`,
+  "side.autoBtn": "Lay out automatically",
 };

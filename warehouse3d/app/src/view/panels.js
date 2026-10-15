@@ -9,10 +9,11 @@ import { openTypes } from "./types.js";
 import { createBldPanel } from "./bldpanel.js";
 import { createTools } from "./tools.js";
 import { createCapacity } from "./capacity.js";
+import { cardHtml } from "./card.js";
 
 const KINDS = ["stack", "bin", "shelf", "pallet_cell", "kit", "area"];
 
-export function createSidePanel({ model, i18n, root }) {
+export function createSidePanel({ model, i18n, root, host = {} }) {
   const t = (k, p) => i18n.t(k, p), T = (k, p) => esc(i18n.t(k, p)), mod = modKey();
   const FORMV = {}; // значения форм не теряются, когда панель перерисовывается после «Показати»
   const fv = (k, name, d) => FORMV[k]?.[name] ?? d;
@@ -54,24 +55,26 @@ export function createSidePanel({ model, i18n, root }) {
   function browse(side) {
     const tree = model.tree, ui = model.ui, code = ui.sel, l = code && tree.loc(code);
     if (l) {
-      const kind = KINDS.includes(l.kind) ? l.kind : "place";
+      const kind = KINDS.includes(l.kind) ? l.kind : "place", card = capUi.cardOf(model.place(code), tree.byCode.get(code));
       side.innerHTML = `<div class="lab">${T(`kind.${kind}`)}</div><h2>${esc(code)}</h2>
         <div class="sec">${T("side.selectLevelTitle")}</div><div class="o_chips">${selChips(tree.byCode.get(code))}</div>
         ${l.capacity ? `<div class="sec">${T("side.fill")}</div>${pbar(i18n, l.fill, fillCls(l))}` : ""}
-        ${l.orderpoint ? `<div class="sec">${T("side.rule")}</div><div>${T("side.minmax", { min: l.orderpoint.min, max: l.orderpoint.max })} ${isLow(l) ? `<span class="badge ${l.state === "out" ? "bad" : "warn"}">${T(l.state === "out" ? "side.empty" : "side.low")}</span>` : ""}</div>` : ""}
         <div class="sec">${T("side.stock")}</div>
-        <table class="o_list"><tbody>${l.quants.map((q) => `<tr><td class="first">${esc(P(q.product).name)}${q.lot ? `<br><span class="code mut">${esc(q.lot)}</span>` : ""}${q.package ? `<br><span class="code mut">${esc(q.package)}</span>` : ""}</td>
+        <table class="o_list"><tbody>${l.quants.map((q) => `<tr><td class="first">${esc(P(q.product).name)}${q.lot ? `<br><span class="code mut">${esc(q.lot)}</span>` : ""}${q.package ? `<br><span class="code mut">${esc(q.package)}</span>` : ""}${Number.isFinite(q.age) ? `<br><span class="mut" style="font-size:12px">${T("card.days", { n: q.age })}</span>` : ""}</td>
           <td class="n">${esc(i18n.int(q.qty))} ${esc(P(q.product).uom)}${q.reserved ? `<br><span style="color:var(--warn)">${T("side.reserved", { n: i18n.int(q.reserved) })}</span>` : ""}</td></tr>`).join("") || `<tr><td class="first"><span class="mut">${T("side.noStock")}</span></td></tr>`}</tbody></table>
         ${capUi.browseHtml(tree.byCode.get(code))}
+        ${cardHtml({ card, i18n, url: card && host.locationUrl ? host.locationUrl(card.id) : null })}
         ${tools.placeHtml(tree.byCode.get(code))}
         ${l.draft ? `<p class="ed-note">${T("side.draftNote")}</p>` : ""}<div class="acts"><button class="btn btn-secondary" data-unsel>${T("side.unselect")}</button></div>`;
     } else {
       const f = tree.nodes.get(ui.esel || ui.focus), ls = f.codes.map((c) => tree.loc(c)), picked = !!ui.esel;
       const cap = ls.filter((x) => x.capacity), fill = cap.length ? cap.reduce((s, x) => s + x.fill, 0) / cap.length : null;
       const lows = f.codes.filter((c) => isLow(tree.loc(c)));
+      const asOf = (model.data.meta || {}).pulled_at || (model.data.meta || {}).now || "";
       const kidStat = (k) => { const kc = k.codes.map((c) => tree.loc(c)).filter((x) => x.capacity); return kc.length ? kc.reduce((s, x) => s + x.fill, 0) / kc.length : null; };
       side.innerHTML = `<div class="lab">${T(picked ? "side.selected" : f.id === "WH" ? "side.whole" : "side.shown")}</div><h2>${esc(label(f))}</h2>
         <div class="o_chips" style="margin-top:6px">${picked ? selChips(f) : pathChips(f)}</div>
+        ${asOf ? `<div class="mut" style="font-size:12px;margin-top:6px" data-asof>${T("top.dataAsOf", { time: asOf })}</div>` : ""}
         ${picked ? `<div class="acts"><button class="btn btn-primary" data-focus="${esc(f.id)}">${T("plan.focusOnly")}</button><button class="btn btn-secondary" data-unsel>${T("side.unselect")}</button></div>` : ""}
         <div class="sec">${esc(places(f.codes.length))}${fill != null ? ` · ${T("side.fillPct", { pct: i18n.pct(fill) })}` : ""}</div>${fill != null ? pbar(i18n, fill, fill < 0.3 ? "warn" : "") : ""}
         ${capUi.browseHtml(f)}
@@ -153,6 +156,7 @@ export function createSidePanel({ model, i18n, root }) {
       const tk = model.checks.tech, ti = tk.of(n.id).own, tl = tk.list(), topts = [...(n.id === "WH" ? [] : ["inherit"]), "none", ...tl.map((x) => x.id)];
       h += `<div class="sec">${T(n.id === "WH" ? "prob.tech" : "side.techTitle")}</div><form class="ed-form" data-op="tech"><label class="wide"><span class="sr">${T("side.techTitle")}</span><select name="t">${topts.map((o) => `<option value="${o}"${o === ti ? " selected" : ""}>${T(`tech.${o}`)}${tl.find((x) => x.id === o) ? ` · ${esc(i18n.m(tl.find((x) => x.id === o).min))} ${T("unit.m")}` : ""}</option>`).join("")}</select></label>${btns(ro)}</form>
         <p class="ed-note">${T("side.techNote")}</p>`;
+      if (n.kids.length) h += `<div class="sec">${T("side.autoTitle")}</div><form class="ed-form" data-op="autoLayout">${btns(ro)}</form><p class="ed-note">${T("side.autoNote")}</p>`;
       h += tools.addrHtml(n, K, ro) + tools.renumHtml(n, K, ro);
     }
     if (n.type === "rack") {
@@ -226,7 +230,7 @@ export function updateEditBar(root, { model, i18n }) {
   q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
-  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = q("#ed-parse").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
   q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");

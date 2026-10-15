@@ -41,14 +41,15 @@
 |---|---|---|
 | `warehouses` | — | `version {series, major}`, `db`, `now`, `warehouses [{id, code, name, company_id, company, view_location_id, places}]` (`places` — внутрішні локації) |
 | `locations` | `warehouse_id` | внутрішні та view-локації під view-локацією складу, разом із нею: `id, name, complete_name, location_id, usage, barcode, company_id, storage_category_id, removal_strategy_id, removal_strategy`, `replenish_location`, а також `posx/posy/posz` і `scrap_location`, якщо поле є у версії |
-| `quants` | `warehouse_id` | `quants [{id, location_id, product_id, quantity, reserved_quantity, lot, package}]` (кількість ≠ 0) і `products {id: {id, default_code, name, uom, categ}}` для товарів сторінки |
+| `quants` | `warehouse_id` | `quants [{id, location_id, product_id, quantity, reserved_quantity, lot, package, in_date}]` (кількість ≠ 0; `in_date` — дата надходження партії, UTC `YYYY-MM-DD HH:MM:SS`, для віку запасу) і `products {id: {id, default_code, name, uom, categ}}` для товарів сторінки |
 | `storage_categories` | `warehouse_id` | категорії, призначені локаціям складу або його правилам розміщення, і всі категорії компанії складу (або без компанії; W-14): `id, name, max_weight, allow_new_product, company_id, capacities [{id, product_id, package_type_id, package_type, quantity}]` + `products` |
 | `putaway_rules` | `warehouse_id` | `id, sequence, product_id, category_id, category, location_in_id, location_out_id, storage_category_id, package_types, sublocation, company_id` + `products` |
 | `orderpoints` | `warehouse_id` | правила поповнення по місцях: `id, name, location_id, product_id, min, max, trigger, warehouse_id` + `products` |
+| `moves` | `warehouse_id`, `days` (90, не більше 365) | W-17, оборотність ABC: виконані (`state = done`) рядки руху `stock.move.line` за `days` днів, що зачіпають склад (звідки або куди — під view-локацією складу), згорнуті за парою «звідки → куди»: `moves [{location_id, location_dest_id, n, qty}]` (`n` — число рядків, `qty` — кількість в одиницях товару), `days`; сторінки — за парами, порядок за `(location_id, location_dest_id)`. Застосунок додає пару до обох місць |
 | `removal_strategies` | — | стратегії списання бази (`product.removal`): `id, name, method` (W-14) |
 | `package_types` | — | типи пакування (`stock.package.type`): `id, name` (W-14) |
 
-Архівні записи не читаються (`active_test`). Приклад споживача — `warehouse3d/app/src/adapters/odoo-api.js`.
+Архівні записи не читаються (`active_test`). Приклад споживача — `warehouse3d/app/src/adapters/odoo-api.js`. Для `moves` агрегація йде в базі (`_read_group` з `__count` і `quantity_product_uom:sum`), а не по одному рядку.
 
 ### Відмінності Odoo 18 і 19 (R-02, перевірено за вихідниками `addons/stock/models/`)
 
@@ -60,6 +61,9 @@
 | `stock.storage.category` (+ `.capacity`: товар / тип упаковки, кількість), `stock.putaway.rule` (у `product_strategy.py`), `stock.quant` | ті самі моделі й поля | ті самі | однаково |
 | `stock.warehouse.orderpoint`: min / max | `product_min_qty`, `product_max_qty` | ті самі | однаково |
 | `stock.warehouse.orderpoint`: кратність | `qty_multiple` | `replenishment_uom_id` | не читається (потрібні лише min/max) |
+| `stock.move.line`: `date`, `state` (related `move_id.state`, stored), `quantity_product_uom` (stored), `_read_group(domain, groupby, aggregates)` | є | є | однаково (W-17) |
+| `stock.quant.in_date` | є | є | однаково (W-17) |
+| `stock.move.name` | є | немає | лише в тестах: поле додається, якщо воно є |
 | тип JSON-маршруту | `json` | `jsonrpc` | константа `JSON` у `controllers/main.py` |
 | поле груп користувача | `groups_id` | `group_ids` | `tests/common.py` |
 
@@ -123,4 +127,5 @@ warehouse3d/tools/odoo/run_tests.sh wh_t        # WH_ODOO=18|19; середов�
 Тести ємності й атрибутів (W-14) — `tests/test_capacity.py` (нова категорія та її призначення, правка категорії, прапорці й стратегія, створення й зміна правила min / max, порядок «категорії → локації → правила», відмови, транзакційність, відкат, довідники читача, відмова без групи; Odoo 19 і 18).
 Тести застосування — `tests/test_apply.py` (створення з ієрархією, перенос, перейменування, атрибути, архівація порожнього, відмова з залишком і з незавершеним переміщенням, відмова без групи, транзакційність, журнал і відкат, HTTP).
 Тести читання — `tests/test_reader.py` (демо-дані: 2 склади по 10 локацій, залишки з партією й резервом, категорія зберігання, правило розміщення,
-min/max, чужа компанія, користувач із двома компаніями, відмова без групи, постранично).
+min/max, чужа компанія, користувач із двома компаніями, відмова без групи, постранично; `in_date` у `quants`; клас `TestWhConstructorMoves` — рухи за вікно в днях, пара «звідки → куди»,
+старі рухи поза вікном, стеля вікна, сторінки, відмова без групи, чужий склад).

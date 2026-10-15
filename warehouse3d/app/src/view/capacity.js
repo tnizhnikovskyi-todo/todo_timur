@@ -88,7 +88,7 @@ export function createCapacity({ model, i18n, btns, fv }) {
     let h = "";
     if (n.loc) {
       const d = info.dims, w = info.maxw;
-      h += `${sec("cap.title")}<table class="o_list cap-info"><tbody>${row("cap.catTitle", esc(catLine(info.cat, n)))}${row("cap.dimsTitle", `${i18n.m(d.w)} × ${i18n.m(d.d)} × ${i18n.m(d.h)} ${T("unit.m")}`)}
+      h += `${sec("cap.title")}<table class="o_list cap-info"><tbody>${row("cap.dimsTitle", `${i18n.m(d.w)} × ${i18n.m(d.d)} × ${i18n.m(d.h)} ${T("unit.m")}`)}
         ${row("cap.maxw", w.v != null ? `${i18n.int(w.v)} (${T(`cap.src.${w.src}`)})` : "—")}${row("cap.repl", yn(f.repl))}${f.scrapOk ? row("cap.scrap", yn(f.scrap)) : ""}${row("cap.usage", T(`cap.usage.${f.usage}`))}${row("cap.rsTitle", esc(f.rsName || "—"))}</tbody></table>`;
     }
     const hint = zoneHint(i18n, z);
@@ -98,9 +98,17 @@ export function createCapacity({ model, i18n, btns, fv }) {
     return h;
   }
 
+  // карточка места W-17 показывает действующие значения: категорию (с наследованием и правками проекта) и правило min / max (правка проекта поверх Odoo) — одна карточка, без дублей
+  function cardOf(card, n) {
+    if (!card || !n) return card;
+    const info = model.cap.node(n.id); if (!info) return card;
+    const c = info.cat.cat, mm = info.minmax && info.minmax.eff;
+    return { ...card, category: c ? { id: c.id, name: c.name, maxWeight: c.maxw || 0, allowNew: c.policy } : null, orderpoint: mm ? { min: mm.min, max: mm.max, product: mm.product } : card.orderpoint, orderpointOwn: !!(info.minmax && info.minmax.own) };
+  }
+
   // кнопки «Категорії зберігання…» открывают окно (грузится лениво)
   function bind(root) {
     root.querySelectorAll("[data-cats]").forEach((b) => b.onclick = () => import("./storage.js").then((m) => m.openCategories({ model, i18n })));
   }
-  return { editHtml, browseHtml, summaryHtml, bind };
+  return { editHtml, browseHtml, summaryHtml, cardOf, bind };
 }

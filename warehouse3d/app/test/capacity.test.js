@@ -9,7 +9,7 @@ import { applicable, closure, wireOps } from "../src/core/plan.js";
 import { locationRows, PLAN_LIMITS } from "../src/core/locexport.js";
 import { normAttr } from "../src/core/attr.js";
 import { createWorld } from "./fakeodoo.js";
-import { fresh, FUR, GP } from "./helpers.js";
+import { fresh, FUR, GP, DATA } from "./helpers.js";
 
 const ZONE = "WH1/Stock/Фурнітура", GLASS = "WH1/Stock/Скло", PLACE = `${ZONE}/R1/S01/L1`;
 const nodeOf = (m, id) => m.tree.nodes.get(id);
@@ -287,4 +287,16 @@ test("I-04: файл «как в плане» учитывает выбор оп
   assert.equal(one.rows[0][one.headers.indexOf(".id")], 121);
   // без плана (демо-данные) режим «как в плане» пуст
   assert.equal(locationRows(fresh().model, { mode: "plan" }).rows.length, 0);
+});
+
+test("«Оновити дані» (W-17) не трогает слой attr: сохранённое и несохранённое остаются; карточка места показывает действующие категорию и min / max", async () => {
+  const { model } = fresh({}, { noStock: true });
+  const key = model.ops.catSave("", { name: "Хол", maxw: 10, policy: "mixed", caps: [] });
+  model.ops.catAssign(FUR, { cat: key }); await model.save("WH");
+  model.ops.zoneFn(GP, { fn: "picking" });
+  const before = JSON.stringify([model.saved.attr, model.pending]);
+  const fr = JSON.parse(JSON.stringify(DATA)); for (const l of Object.values(fr.locations)) l.quants = [];
+  model.refreshData({ "data.json": fr });
+  assert.equal(JSON.stringify([model.saved.attr, model.pending]), before, "слой attr не изменился");
+  assert.equal(model.cap.node(`${FUR}/R1/S01/L1`).cat.cat.name, "Хол"); assert.equal(model.cap.zone(GP).fn, "picking");
 });

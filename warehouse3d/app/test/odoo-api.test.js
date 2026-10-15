@@ -1,7 +1,7 @@
 // Адаптер чтения Odoo (adapters/odoo-api.js) на фейковом fetch: формат снимка совпадает с data.json, дерево строится, правки переживают обновление.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createOdooApi, buildSnapshot, odooIdOf, odooRef, projectFromWarehouses } from "../src/adapters/odoo-api.js";
+import { ageDays, createOdooApi, buildSnapshot, odooIdOf, odooRef, projectFromWarehouses } from "../src/adapters/odoo-api.js";
 import { createModel } from "../src/core/model.js";
 import { createMemoryStorage } from "../src/core/storage.js";
 import { buildTree } from "../src/core/tree.js";
@@ -26,7 +26,7 @@ function server({ fail = null } = {}) {
   locs.push({ id: 200, name: "WH2", complete_name: "WH2", location_id: null, usage: "view" });
   const mine = locs.filter((l) => l.id !== 200); // 21 локация склада 1: view, Stock, зона, 9 FUR, 3 PLT, 6 «Полиця»; WH2 (id 200) не отдаётся
   const q = (n, loc, product, quantity, extra = {}) => ({ id: n, location_id: loc, product_id: product, quantity, reserved_quantity: 0, lot: null, package: null, ...extra });
-  const quants = [q(1, 100, 1, 58, { reserved_quantity: 58 }), q(2, 101, 1, 10), q(3, 102, 1, 0.5), q(4, 109, 2, 45, { lot: "L-1", package: "PK-1" }), q(5, 110, 2, 20, { package: "PK-2" }),
+  const quants = [q(1, 100, 1, 58, { reserved_quantity: 58, in_date: "2026-10-05 12:00:00" }), q(2, 101, 1, 10), q(3, 102, 1, 0.5), q(4, 109, 2, 45, { lot: "L-1", package: "PK-1", in_date: "2026-04-18 12:00:00" }), q(5, 110, 2, 20, { package: "PK-2" }),
     q(6, 112, 3, 4), q(7, STOCK, 2, 3)]; // последний — остаток на родительской локации (она остаётся местом)
   const cats = [{ id: 7, name: "Фурнітура", max_weight: 0, allow_new_product: "mixed", company_id: null, capacities: [{ id: 1, product_id: 1, package_type_id: null, package_type: null, quantity: 66 }] },
     { id: 8, name: "Піддони", max_weight: 1000, allow_new_product: "same", company_id: null, capacities: [{ id: 2, product_id: null, package_type_id: 5, package_type: "Піддон", quantity: 2 }] }];
@@ -34,7 +34,10 @@ function server({ fail = null } = {}) {
   const ops = [{ id: 1, name: "OP/1", location_id: 100, product_id: 1, min: 20, max: 66, trigger: "auto", warehouse_id: W1 }, { id: 2, name: "OP/2", location_id: 101, product_id: 1, min: 20, max: 66, trigger: "auto", warehouse_id: W1 },
     { id: 3, name: "OP/3", location_id: 102, product_id: 1, min: 0.2, max: 66, trigger: "auto", warehouse_id: W1 }, { id: 4, name: "OP/4", location_id: 103, product_id: 1, min: 5, max: 66, trigger: "auto", warehouse_id: W1 }];
   const wh = [{ id: W1, code: "WH1", name: "Склад 1", company_id: 1, company: "Co", view_location_id: V1, places: 19 }, { id: 2, code: "WH2", name: "Склад 2", company_id: 1, company: "Co", view_location_id: 200, places: 0 }];
-  const tables = { locations: mine, quants, storage_categories: cats, putaway_rules: rules, orderpoints: ops };
+  // движения за окно: пары «откуда → куда» (W-17); 100 → 101 затрагивает оба места, WH1 (view, id V1) и чужой склад (id 200) — не места снимка
+  const moves = [{ location_id: 100, location_dest_id: 101, n: 3, qty: 30 }, { location_id: 100, location_dest_id: 109, n: 1, qty: 5 }, { location_id: V1, location_dest_id: 100, n: 2, qty: 8 },
+    { location_id: 109, location_dest_id: 109, n: 1, qty: 1 }];
+  const tables = { locations: mine, quants, storage_categories: cats, putaway_rules: rules, orderpoints: ops, moves };
   const calls = [];
   const fetchImpl = async (url, init) => {
     const route = url.replace("/wh_constructor/api/read/", ""), p = JSON.parse(init.body).params;
@@ -86,6 +89,29 @@ test("load: ключи снимка те же, что у data.json; формат
   for (const k of ["default_code", "name", "uom", "categ"]) assert.ok(k in p && k in dp, k);
 });
 
+test("load: движения за окно и возраст партий (W-17)", async () => {
+  const { s, snap } = await load();
+  assert.equal(s.calls.find((c) => c.route === "moves").p.days, 90); // окно по умолчанию
+  const A = snap.meta.activity;
+  assert.equal(A.days, 90);
+  // строка 100 → 101 считается для обоих мест; 100 → 109 и view-корень → 100 — для мест снимка; 109 → 109 — один раз; view-корень местом не является
+  assert.deepEqual(A.moves["FUR-R1-S01-L1"], { n: 3 + 1 + 2, qty: 43 });
+  assert.deepEqual(A.moves["FUR-R1-S01-L2"], { n: 3, qty: 30 });
+  assert.deepEqual(A.moves["PLT-01A"], { n: 1 + 1, qty: 6 });
+  assert.ok(!("PLT-01C" in A.moves) && !("WH1" in A.moves));
+  assert.equal(snap.locations["FUR-R1-S01-L2"].quants[0].age, undefined); // in_date не пришёл — возраста нет
+  const api = createOdooApi({ fetchImpl: server().fetchImpl, moveDays: 30 });
+  assert.equal((await api.load(1)).meta.activity.days, 30);
+});
+
+test("ageDays: целые дни, нет даты — null", () => {
+  assert.equal(ageDays("2026-10-05 12:00:00", "2026-10-15 12:00"), 10);
+  assert.equal(ageDays("2026-10-05 13:00:00", "2026-10-15 12:00"), 9);
+  assert.equal(ageDays("2026-10-16 00:00:00", "2026-10-15 12:00"), 0); // будущая дата — 0
+  assert.equal(ageDays(null, "2026-10-15 12:00"), null);
+  assert.equal(ageDays("не дата", "2026-10-15 12:00"), null);
+});
+
 test("load: места, остатки, ёмкость, min/max, состояние", async () => {
   const { snap } = await load();
   const L = snap.locations;
@@ -102,7 +128,7 @@ test("load: места, остатки, ёмкость, min/max, состоян�
   const a = L["FUR-R1-S01-L1"];
   assert.deepEqual([a.id, a.kind, a.capacity, a.state, a.orderpoint], [100, "bin", 66, "ok", { product: "FUR-HG-110", min: 20, max: 66 }]);
   assert.equal(a.fill, round(58 / 66));
-  assert.deepEqual(a.quants, [{ product: "FUR-HG-110", qty: 58, reserved: 58 }]);
+  assert.deepEqual(a.quants, [{ product: "FUR-HG-110", qty: 58, reserved: 58, age: 10 }]); // in_date 2026-10-05 12:00 при now 2026-10-15 12:00
   assert.equal(L["FUR-R1-S01-L2"].state, "low"); // 10 при min 20
   assert.equal(L["FUR-R1-S01-L3"].state, "ok"); // 0.5 при min 0.2
   assert.equal(L["FUR-R1-S02-L1"].state, "out"); // нет остатка при min 5 (правило OP/4)
@@ -110,7 +136,7 @@ test("load: места, остатки, ёмкость, min/max, состоян�
   // категория хранения: по упаковкам (pallet_cell) и по товару
   const pl = L["PLT-01A"];
   assert.deepEqual([pl.kind, pl.capacity, pl.fill, pl.storage_category_id], ["pallet_cell", 2, 0.5, 8]);
-  assert.deepEqual(pl.quants, [{ product: "DSP-1", qty: 45, lot: "L-1", package: "PK-1" }]);
+  assert.deepEqual(pl.quants, [{ product: "DSP-1", qty: 45, lot: "L-1", package: "PK-1", age: 180 }]);
   assert.equal(L["PLT-01C"].fill, 0);
   // версионные поля отдаются как есть; товар без кода получает код ID<n>
   assert.deepEqual([a.posx, a.posy, a.posz, a.removal_strategy], [1, 1, 1, "FIFO"]);

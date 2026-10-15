@@ -50,3 +50,8 @@ class WhConstructorRead(http.Controller):
     @_guard
     def read_package_types(self, **kw):
         return {"status": "ok", **request.env["wh.reader"].api_package_types()}
+
+    @http.route(BASE + "/api/read/moves", type=JSON, auth="user")
+    @_guard
+    def read_moves(self, warehouse_id=None, days=None, offset=0, limit=None, **kw):
+        return {"status": "ok", **request.env["wh.reader"].api_moves(warehouse_id, days, offset, limit)}

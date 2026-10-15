@@ -8,6 +8,7 @@
 //   opts.library — общая библиотека (library.js: свои типы и шаблоны), прочитанная хостом из storage.listLibrary(); model.library правит её и пишет в storage.saveLibrary
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
 //   { type: "library" } изменилась библиотека типов и шаблонов ·
+//   { type: "heat" } сменился показатель тепловой карты · { type: "find" } изменился запрос поиска «где лежит» · { type: "data" } обновлены остатки снимка (W-17) ·
 //   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
 //   { type: "notify", kind, key, params, sub } сообщение пользователю · { type: "locks" } изменились блокировки зон (locks.js).
 import { PICKS, clone, normEdit } from "./types.js";
@@ -23,8 +24,11 @@ import { captureTemplate, normLibrary, uniqTemplate } from "./library.js";
 import * as B from "./building.js";
 import * as C from "./capacity.js";
 import { BLD_OPS } from "./bldops.js";
+import { compileRule, defaultRules, effectiveRules, parseStats, suggestMask } from "./parse.js";
 import { cleanApplied, computePlan } from "./plan.js";
 import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "./checks.js";
+import { HEAT_KEYS, HEAT_MODES, heatHasData, heatMap } from "./metrics.js";
+import { activityOf, mergeStock, placeCard, searchStock } from "./stock.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон" };
 const EMPTY_BASE = { meta: {}, products: {}, locations: {} };
@@ -54,6 +58,19 @@ export function createModel(project, storage, opts = {}) {
   const want = rd("wh");
   load(project.warehouses.find((w) => w.id === want) || project.warehouses[0]);
   s.ui = sel.newUi(rd("pick"));
+  // данные склада (W-17): показатель тепловой карты и поиск «где лежит»; кэши привязаны к дереву и версии данных (hs.ver растёт при обновлении остатков)
+  const hm = rd("heat"), hs = { mode: HEAT_MODES.includes(hm) ? hm : "status", ver: 0, cache: null }, fs = { q: "", cache: null };
+  const heatOf = () => {
+    const c = hs.cache; if (c && c.tree === s.tree && c.ver === hs.ver && c.mode === hs.mode) return c;
+    const r = heatMap(hs.mode, s.tree.byCode.keys(), s.tree.loc, activityOf(s.data));
+    const locs = hs.mode === "age" ? [...s.tree.byCode.keys()].map((k) => s.tree.loc(k)).filter(Boolean) : [];
+    return (hs.cache = { tree: s.tree, ver: hs.ver, mode: hs.mode, ...r, hasData: heatHasData(hs.mode, activityOf(s.data), locs) });
+  };
+  const findOf = () => {
+    const c = fs.cache; if (c && c.tree === s.tree && c.ver === hs.ver && c.q === fs.q) return c;
+    const r = searchStock(s.tree.byCode.keys(), s.tree.loc, s.data.products || {}, fs.q);
+    return (fs.cache = { tree: s.tree, ver: hs.ver, q: fs.q, ...r, codes: new Set(r.items.map((i) => i.code)) });
+  };
   // блокировки зон (W-21): берутся при входе в правку зоны, если хранилище это умеет; см. locks.js
   s.locks = createLocks(s);
   s.listeners.add((ev) => { if (ev.type === "select" || ev.type === "focus" || ev.type === "warehouse") s.locks.sync(); });
@@ -92,7 +109,7 @@ export function createModel(project, storage, opts = {}) {
     get building() { return bb(); }, // план здания с учётом показанного (null — здания нет)
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.attr.length || v.types || v.addr || v.addrZones.length || v.codes.length); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.attr.length || v.types || v.addr || v.addrZones.length || v.codes.length || v.parse); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -110,6 +127,40 @@ export function createModel(project, storage, opts = {}) {
       Object.assign(ui, { sel: null, esel: ui.edit ? ui.focus : null, msel: [] }); bclear();
       s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
     },
+    // обновление данных (W-17, H1): остатки, заполненность, резервы, движения — без перестройки плана и без потери слоя правок. fresh — { baseRef: свежий снимок } (Odoo);
+    // без аргумента данные берутся из текущего снимка (перерасчёт и перерисовка). Структура меняется только через reloadBase («Оновити з Odoo»)
+    refreshData(fresh = {}) {
+      const tot = { updated: 0, missing: 0, added: 0, places: s.tree.byCode.size };
+      for (const wh of s.project.warehouses) {
+        const f = wh.baseRef && fresh[wh.baseRef], b = baseOf(wh);
+        if (!f || b === EMPTY_BASE) continue;
+        const r = mergeStock(b, f); for (const k of ["updated", "missing", "added"]) tot[k] += r[k];
+      }
+      hs.ver++; s.emit({ type: "data" });
+      return tot;
+    },
+    // тепловые карты (W-17, H2): показатель (запоминается), ключ класса по месту и сводка по складу; демо — у снимка синтетические движения и возраст (хост)
+    heat: {
+      modes: HEAT_MODES, keys: (m = hs.mode) => HEAT_KEYS[m] || [],
+      get mode() { return hs.mode; },
+      set(m) { if (!HEAT_MODES.includes(m) || m === hs.mode) return false; hs.mode = m; wr("heat", m); s.emit({ type: "heat" }); return true; },
+      map: () => heatOf().map, keyOf: (code) => heatOf().map.get(code) || null, counts: () => heatOf().counts, hasData: () => heatOf().hasData,
+      demo: () => !!(activityOf(s.data) || {}).demo,
+      days: () => (activityOf(s.data) || {}).days || null,
+    },
+    // поиск «где лежит» (H3): товар (название / артикул), партия, упаковка → места с совпадениями; go — уровень выше места и выделение
+    find: {
+      get query() { return fs.q; },
+      set(q) { q = String(q || ""); if (q === fs.q) return; fs.q = q; s.emit({ type: "find" }); },
+      results: () => findOf(),
+      go: (code) => {
+        const n = s.tree.byCode.get(code); if (!n) return false;
+        const par = n.parent && s.tree.nodes.get(n.parent);
+        return patch({ focus: par ? par.id : "WH", esel: n.id, sel: code, msel: [] }, "focus");
+      },
+    },
+    // карточка места (H4): остатки, категория хранения, правила размещения, ёмкость, min / max, движения; null — места нет или оно новое
+    place: (code) => { const l = s.tree.loc(code); return l && !l.draft ? placeCard(s.data, code, l) : null; },
     // план изменений (W-13, plan.js): сохранённый слой правок против снимка Odoo активного склада; несохранённое в план не входит (unsaved — сколько его)
     changePlan: () => ({ ...computePlan(s.data, s.saved, cfgOf(s.wh)), unsaved: s.pending.length }),
     // применённое в Odoo (keys — ключи операций плана): слой правок очищается от применённого, остальное остаётся; вызывается после перечитывания снимка (reloadBase)
@@ -150,7 +201,7 @@ export function createModel(project, storage, opts = {}) {
     moveSet: (set, dx, dy) => ed.exec(s, () => ed.moveSet(s, set, dx, dy)),
     // правки
     ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), tech: bind("tech"), techMin: bind("techMin"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
-      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset"),
+      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), autoLayout: bind("autoLayout"), place: (codes, target, key) => ed.exec(s, () => ed.OPS.place(s, codes, target, key)), parse: (f, key) => ed.exec(s, () => ed.OPS.parse(s, f, key)), del: bind("del"), reset: bind("reset"),
       capacity: bind("capacity"), catAssign: bind("catAssign"), flags: bind("flags"), removal: bind("removal"), zoneFn: bind("zoneFn"), minmax: bind("minmax"), catSave: bind("catSave"), catDel: bind("catDel") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
@@ -179,6 +230,17 @@ export function createModel(project, storage, opts = {}) {
       check: (tpl) => { const p = parseTemplate(tpl); return { unknown: p.unknown, used: p.used }; },
       norm: normAddr,
     },
+    // разбор кодов мест и лоток «Не розміщено» (W-12, D-07): правила склада (parse.js), сводка по набору правил (в том числе черновому), подсказка маски по образцам.
+    // Правила меняет ops.parse({ rules }) через «Показати / Зберегти»; лоток — места без зоны (tree.unplaced), ставятся ops.place(коды, зона)
+    parse: {
+      rules: () => effectiveRules(s.edit).map((r) => ({ ...r })),
+      defaults: defaultRules,
+      isDefault: () => !s.edit.parse,
+      stats: (rules = null) => parseStats(s.data.locations, rules || effectiveRules(s.edit), new Set(s.tree.types.keys())),
+      check: (rule) => compileRule(rule).err,
+      suggest: suggestMask,
+    },
+    tray: { list: () => s.tree.unplaced.slice(), count: () => s.tree.unplaced.length },
     // каталог типов (типы активного склада поверх общего справочника)
     types: { list: () => [...s.tree.types.values()], use: () => ed.typeUse(s.tree), isBase: ed.isBaseType, patch: (id, k, v) => ed.exec(s, () => ed.typePatch(s, id, k, v)),
       remove: (id) => ed.exec(s, () => ed.typeRemove(s, id)), add: () => ed.exec(s, () => ed.typeAdd(s)), import: (id, from = "catalog") => ed.exec(s, () => ed.typeImport(s, id, from)) },

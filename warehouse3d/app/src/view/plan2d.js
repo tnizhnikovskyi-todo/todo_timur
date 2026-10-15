@@ -7,8 +7,10 @@ import { shapeOf } from "../core/params.js";
 import { rect2d } from "../core/layout.js";
 import { esc, slotCls } from "./util.js";
 import { funcColor } from "../core/attr.js";
+import { heatColor } from "./heat.js";
 import * as B from "../core/building.js";
 import { createBldPlan } from "./bldplan.js";
+import { TRAY_MIME } from "./tray.js";
 
 // условное обозначение формы места на плане (не принимает щелчки): ограждение, цилиндр, носитель, ворота, сетка стосов; остальное — просто прямоугольник
 function deco(n, f, x, y, w, d) {
@@ -32,9 +34,9 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
     let h = "";
     const walk = (n) => {
       if (n.type === "group" || n.type === "rackset") {
-        // функция зоны (W-14) — цвет рамки и лёгкая заливка; подпись — в слое подписей
+        // функция зоны (W-14) — только цвет рамки (заливка мест — показатель тепловой карты, W-17, функцию не перекрывает); подпись — в слое подписей
         const col = n.id !== "WH" ? funcColor(model.cap.zone(n.id).fn) : null;
-        if (n.kids.length || n.id === "WH" || !n.loc) h += `<rect data-node="${esc(n.id)}" class="${n.id === "WH" ? "bld" : "zn"}" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.d}" rx="0.3"${n.loc ? ` data-code="${esc(n.loc)}"` : ""}${col ? ` data-fn style="fill:${col};fill-opacity:0.1;stroke:${col};stroke-dasharray:none"` : ""}/>`;
+        if (n.kids.length || n.id === "WH" || !n.loc) h += `<rect data-node="${esc(n.id)}" class="${n.id === "WH" ? "bld" : "zn"}" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.d}" rx="0.3"${n.loc ? ` data-code="${esc(n.loc)}"` : ""}${col ? ` data-fn style="stroke:${col};stroke-width:2.2;stroke-dasharray:none"` : ""}/>`;
       }
       if (n.type === "rack") h += `<rect data-node="${esc(n.id)}" class="rackbg" x="${n.x - 0.12}" y="${n.y - 0.12}" width="${n.w + 0.24}" height="${n.d + 0.24}"/>`;
       if (n.loc && (n.type !== "group" || !n.kids.length)) {
@@ -109,6 +111,18 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       drag = null; svg.classList.remove("drag");
     });
     svg.addEventListener("pointerleave", () => { if (!drag) tip.hidden = true; if (bp.active()) bp.leave(); });
+    // лоток «Не розміщено» (W-12): место перетаскивают из списка на зону или ряд; ближайшая зона выше становится местом назначения
+    const trayDrag = (e) => !!e.dataTransfer && [...(e.dataTransfer.types || [])].includes(TRAY_MIME);
+    svg.addEventListener("dragover", (e) => { if (trayDrag(e) && !model.readonly) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } });
+    svg.addEventListener("drop", (e) => {
+      if (!trayDrag(e) || model.readonly) return;
+      e.preventDefault();
+      let codes = []; try { codes = JSON.parse(e.dataTransfer.getData(TRAY_MIME)); } catch (x) { codes = []; }
+      const pt = toWorld(e.clientX, e.clientY); let best = null; // самый глубокий объект под курсором (зоны на плане не ловят указатель, поэтому не по элементу)
+      for (const n of model.tree.nodes.values()) if (n.w > 0 && pt.x >= n.x && pt.x <= n.x + n.w && pt.y >= n.y && pt.y <= n.y + n.d && (!best || n.depth > best.depth)) best = n;
+      const id = best ? best.id : model.ui.focus;
+      if (codes.length) { if (!model.ui.edit) model.setEdit(true); model.ops.place(codes, id); }
+    });
     svg.addEventListener("pointercancel", () => { own = false; drag = null; svg.classList.remove("drag"); bp.cancel(); });
     svg.addEventListener("wheel", (e) => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.15 : 1 / 1.15, toWorld(e.clientX, e.clientY)); }, { passive: false });
   }
@@ -148,9 +162,13 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
         const pr = pm.has(el._n); if (pr !== !!el._p) { el._p = pr; el.classList.toggle("prob", pr); }
       }
     }
+    // тепловая карта (W-17): цвет места — inline fill по ключу показателя; найденные поиском места — класс hit
+    const hm =model.heat.mode, hmap = hm !== "status" ? model.heat.map() : null, fq = model.find.query ? model.find.results().codes : null;
     for (const el of slots) {
-      const c = el.dataset.code, cls = `s ${slotCls(tree.loc(c))}${c === sel ? " sel" : ""}${pm.has(el._n) ? " prob" : ""}`;
+      const c = el.dataset.code, hk = hmap && hmap.get(c), tail = `${c === sel ? " sel" : ""}${fq && fq.has(c) ? " hit" : ""}${pm.has(el._n) ? " prob" : ""}`;
+      const cls = hk ? `s heat${tail}` : `s ${slotCls(tree.loc(c))}${tail}`, fc = hk ? heatColor(hm, hk) : "";
       if (cls !== el._c) { el._c = cls; el.setAttribute("class", cls); }
+      if (fc !== (el._f || "")) { el._f = fc; el.style.fill = fc; }
     }
     // подписи уровня ниже — размер шрифта от размера выбранного уровня
     const f = tree.nodes.get(F), fs = Math.max(0.12, Math.min(2.2, Math.max(f.w, f.d) / 45));

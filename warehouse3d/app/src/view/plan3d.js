@@ -7,6 +7,7 @@ import { levelBase, levelH, levelsTop, shapeOf } from "../core/params.js";
 import { esc, reducedMotion, slotCls } from "./util.js";
 import { createBuilding3D } from "./building3d.js";
 import { funcColor } from "../core/attr.js";
+import { heatColor } from "./heat.js";
 
 // стелаж, в котором стоит ярус или ячейка (для остальных — сам узел)
 const bayOf = (tree, n) => (n.type === "level" ? tree.nodes.get(n.parent) : n.type === "cell" ? tree.nodes.get(tree.nodes.get(n.parent).parent) : n);
@@ -31,7 +32,13 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   const box = new T.BoxGeometry(1, 1, 1), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 20), cone = new T.ConeGeometry(0.5, 1, 20);
   const bld3 = createBuilding3D({ T, scene, X, Z }); // план здания (W-04): контур, стены, колонны, проёмы
   const themed = [], TM = (token, opts = {}) => { const m = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05, ...opts }); themed.push([m, token]); return m; };
-  const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: TM("--ok"), warn: TM("--warn"), bad: TM("--bad"), area: TM("--idle", { transparent: true, opacity: 0.32 }), crate: TM("--idle") };
+  // W-17: материалы состояния места (ok / warn / bad / зона / ящик) — два белых материала, цвет задаётся атрибутом экземпляра (instanceColor): прежняя раскраска и тепловые карты
+  // идут тем же InstancedMesh без новых draw calls (групп стало меньше: пять материалов → два). Маркер status.<класс> превращается в материал и класс в push().
+  const statM = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05 }), statA = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05, transparent: true, opacity: 0.32 });
+  const MARK = new Map(), mark = (cls, mat) => { const o = { cls, mat }; MARK.set(o, o); return o; };
+  const TOK = { ok: "--ok", warn: "--warn", bad: "--bad", area: "--idle", crate: "--idle" }, tok = {}, loadTok = () => { for (const k of Object.keys(TOK)) tok[k] = col(TOK[k]); };
+  const hc = new Map(), heatRGB = (mode, key) => { const k = `${mode}|${key}`; let c = hc.get(k); if (!c) hc.set(k, c = new T.Color(heatColor(mode, key))); return c; };
+  const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: mark("ok", statM), warn: mark("warn", statM), bad: mark("bad", statM), area: mark("area", statA), crate: mark("crate", statM) };
   const wallM = TM("--steel", { metalness: 0.2, transparent: true, opacity: 0.5 });
   const hlM = TM("--accent"), probM = TM("--prob"), steel = TM("--steel", { metalness: 0.4, roughness: 0.5 }), beam = TM("--beam"), upright = TM("--upright", { metalness: 0.3 }), wood = TM("--wood");
   const floorM = TM("--floor", { roughness: 1 }), lineM = TM("--mark", { roughness: 1 });
@@ -45,7 +52,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const i = items.length;
     if ((i + 1) * 16 > mats.length) { const n = new Float32Array(mats.length * 2); n.set(mats); mats = n; }
     _m.compose(_p.set(px, py, pz), q, _s.set(sx, sy, sz)).toArray(mats, i * 16);
-    const it = { i, geo, mat, node: nodeId, code: null, cast, recv, hl: false, pr: false, vis: true, drag: false, gBase: null, gHl: null };
+    const mk = MARK.get(mat), it = { i, geo, mat: mk ? mk.mat : mat, cls: mk ? mk.cls : null, rgb: null, node: nodeId, code: null, cast, recv, hl: false, pr: false, vis: true, drag: false, gBase: null, gHl: null };
     items.push(it); return it;
   };
   const add = (geo, mat, nodeId, x, y, w, d, h, base = 0, o) => push(geo, mat, nodeId, X(x + w / 2), base + h / 2, Z(y + d / 2), Q0, w, h, d, o);
@@ -241,7 +248,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const ids = new Map(), id = (o) => { if (!ids.has(o)) ids.set(o, ids.size); return ids.get(o); }, by = new Map();
     const grp = (it, mat) => {
       const key = `${id(it.geo)}|${id(mat)}|${+it.cast}|${+it.recv}|${+!!it.code}`;
-      let g = by.get(key); if (!g) { g = { key, geo: it.geo, mat, cast: it.cast, recv: it.recv, pick: !!it.code, cap: 0, n: 0, mesh: null, ids: null, arr: null }; by.set(key, g); }
+      let g = by.get(key); if (!g) { g = { key, geo: it.geo, mat, cast: it.cast, recv: it.recv, pick: !!it.code, col: mat === statM || mat === statA, cap: 0, n: 0, mesh: null, ids: null, arr: null, carr: null }; by.set(key, g); }
       g.cap++; return g;
     };
     for (const it of items) { it.gBase = grp(it, it.mat); it.gHl = grp(it, hlM); it.gPr = grp(it, probM); }
@@ -249,6 +256,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     for (const g of groups) {
       const m = new T.InstancedMesh(g.geo, g.mat, g.cap);
       m.instanceMatrix.setUsage(T.DynamicDrawUsage); m.castShadow = g.cast; m.receiveShadow = g.recv; m.frustumCulled = false; m.count = 0; m.visible = false; m.userData.g = g;
+      if (g.col) { m.instanceColor = new T.InstancedBufferAttribute(new Float32Array(g.cap * 3), 3); m.instanceColor.setUsage(T.DynamicDrawUsage); g.carr = m.instanceColor.array; }
       g.mesh = m; g.ids = new Int32Array(g.cap); g.arr = m.instanceMatrix.array; G.add(m);
     }
   }
@@ -283,7 +291,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   }
   let raf = 0;
   const render = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; renderer.render(scene, camera); placeLabels(); }); };
-  function applyTheme() { scene.background = col("--scene"); for (const [m, tok] of themed) if (tok) m.color.copy(col(tok)); hlM.emissive.copy(col("--accent")).multiplyScalar(0.35); render(); }
+  function applyTheme() { scene.background = col("--scene"); for (const [m, t] of themed) if (t) m.color.copy(col(t)); hlM.emissive.copy(col("--accent")).multiplyScalar(0.35); loadTok(); paint(); }
   // раскладка матриц по группам: видимые элементы с текущим материалом (родной или подсветка); перетаскиваемые сдвигаются на drag.dx / drag.dz
   function compose() {
     for (const g of groups) g.n = 0;
@@ -293,12 +301,14 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
       const g = it.hl ? it.gHl : it.pr ? it.gPr : it.gBase, k = g.n++, o = k * 16, src = it.i * 16, arr = g.arr;
       g.ids[k] = it.i;
       for (let j = 0; j < 16; j++) arr[o + j] = mats[src + j];
+      if (g.col) { const c = it.rgb || tok.crate, ca = g.carr, q = k * 3; ca[q] = c.r; ca[q + 1] = c.g; ca[q + 2] = c.b; }
       if (dr && it.drag) { arr[o + 12] += dr.dx; arr[o + 14] += dr.dz; }
     }
     pickMeshes = []; allMeshes = [];
     for (const g of groups) {
       const m = g.mesh; m.count = g.n; m.visible = g.n > 0; m.boundingSphere = null;
       m.instanceMatrix.clearUpdateRanges(); if (g.n) m.instanceMatrix.addUpdateRange(0, g.n * 16); m.instanceMatrix.needsUpdate = true;
+      if (g.col) { m.instanceColor.clearUpdateRanges(); if (g.n) m.instanceColor.addUpdateRange(0, g.n * 3); m.instanceColor.needsUpdate = true; }
       if (g.n) { allMeshes.push(m); if (g.pick) pickMeshes.push(m); }
     }
     renderer.shadowMap.needsUpdate = true;
@@ -313,7 +323,12 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
       v = false; for (let i = id.length; i > 0 && !v; i = id.lastIndexOf("/", i - 1)) v = pm.has(id.slice(0, i));
       pr.set(id, v); return v;
     };
-    for (const it of items) { it.vis = inF(it.node); it.hl = it.code ? (S.length ? inS(it.node) : it.code === sel) : inS(it.node); it.pr = pm.size > 0 && inP(it.node); }
+    // тепловая карта и поиск (W-17): цвет экземпляра — по ключу показателя места, найденные места подсвечиваются как выделенные
+    const hm = model.heat.mode, hmap = hm !== "status" ? model.heat.map() : null, fq = model.find.query ? model.find.results().codes : null;
+    for (const it of items) {
+      it.vis = inF(it.node); it.hl = it.code ? (S.length ? inS(it.node) : it.code === sel) || !!(fq && fq.has(it.code)) : inS(it.node); it.pr = pm.size > 0 && inP(it.node);
+      if (it.cls) { const k = hmap && it.code ? hmap.get(it.code) : undefined; it.rgb = k ? heatRGB(hm, k) : tok[it.cls]; }
+    }
     fitFloor(); compose(); render();
   }
   // приблизить к выбранному уровню: угол камеры тот же, расстояние — чтобы уровень весь влез
@@ -385,7 +400,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   new ResizeObserver(resize).observe(vp);
   globalThis.matchMedia?.("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
   new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  paint(); applyTheme(); resize(); fit(true);
+  applyTheme(); resize(); fit(true);
   const dbg = globalThis.__WH_DEBUG; // отладочные данные для e2e/perf.mjs
   if (dbg) Object.assign(dbg, { renderer, camera, controls, scene, itemCount: () => items.length, groupCount: () => G.children.length, buildMs: performance.now() - t0 });
   const zoom = (f) => {

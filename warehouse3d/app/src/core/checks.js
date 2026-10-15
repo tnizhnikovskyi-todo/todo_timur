@@ -8,7 +8,8 @@
 //   запись `f|<key>` в слое edit.chk делает проблему предупреждением (forced).
 // Настройки проверок лежат в слое правок edit.chk [{ id, … }]: `t|WH` / `t|<id зоны>` — техника (t: id техники или "none"), `m|<id техники>` — минимальная ширина прохода (w), `f|<key>` — переопределение.
 import { rectInPoly } from "./building.js";
-import { codeSegs, refOf } from "./tree.js";
+import { refOf } from "./tree.js";
+import { isUnplaced, pathParts } from "./parse.js";
 import { findConflicts } from "./addressing.js";
 
 // техника и минимальная ширина прохода по умолчанию, м (редактируется в проекте: edit.chk `m|<id>`)
@@ -51,7 +52,8 @@ export function stockCodes(tree, n) {
 // исходная зона места из Odoo: путь локации без последних сегментов (ряд, место на полу)
 function origZone(tree, code) {
   const l = tree.loc(code); if (!l || l.draft || !l.complete_name) return null;
-  const parts = l.complete_name.split("/"), cs = codeSegs(code);
+  const parts = pathParts(code, l), cs = tree.parseOf ? tree.parseOf(code) : null;
+  if (isUnplaced(parts, cs)) return null; // место из лотка «Не розміщено»: исходной зоны у него не было
   return parts.slice(0, cs && cs.rackParent ? -2 : -1).join("/");
 }
 
@@ -103,6 +105,17 @@ function solids(b) {
     out.push({ id: it.id, kind: it.k, pts, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) });
   }
   return out;
+}
+// прямоугольник { x, y, w, d } задевает непроходимый объект здания из solids(b) (для авто-раскладки: те же допуски, что у проверки overlapBld)
+export const solidsOf = solids;
+export function hitsSolid(S, r) {
+  const x1 = r.x + r.w, y1 = r.y + r.d; let P = null;
+  for (const q of S) {
+    if (q.x1 <= r.x + EPS || q.x0 >= x1 - EPS || q.y1 <= r.y + EPS || q.y0 >= y1 - EPS) continue;
+    P = P || rectPts4(r);
+    if (satHit(P, q.pts)) return true;
+  }
+  return false;
 }
 
 // ---------- вес товаров яруса / секции стоса из снимка: null — вес товара неизвестен (берётся максимум типа, проблемы нет)
