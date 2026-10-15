@@ -15,10 +15,10 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | `factory3d_base` | 1 | — | DONE | session_01QHzZ3cNyHZ2W6eBd43JJwn | 2026-10-14 22:04 UTC | 2026-10-14 23:17 UTC | 150/150 | 15 |
 | 2 | `factory3d_iot_sim` | 1 | base | DONE | session_019MFyhB78Wd7hgrNLzgRGkP | 2026-10-14 23:18 UTC | 2026-10-15 04:30 UTC | Odoo 140/140, svc 451/451 | 18 |
-| 3 | `factory3d_telemetry` | 2 | base | IN_PROGRESS | session_01NF5Tuhsrpzgd1SMkYaMG8N | 2026-10-15 06:47 UTC | | | |
+| 3 | `factory3d_telemetry` | 2 | base | DONE | session_01NF5Tuhsrpzgd1SMkYaMG8N | 2026-10-15 06:47 UTC | 2026-10-15 11:43 UTC | Odoo 541/541 (6 модулей), collector 174+2 skip | 16 |
 | 4 | `factory3d_viewer` | 1 | base | IN_PROGRESS | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | | | |
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
-| 6 | `factory3d_machine_connect` | 2 | telemetry | TODO | | | | | |
+| 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
 | 7 | `factory3d_energy` | 3 | telemetry | TODO | | | | | |
 | 8 | `factory3d_yard` | 4 | base, telemetry | TODO | | | | | |
 | 9 | `factory3d_bms` | 5 | telemetry | TODO | | | | | |
@@ -66,3 +66,5 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 09:58 UTC менеджер: правки SPEC по DEC (base DEC-5/11/15, iot_sim DEC-4/11, telemetry DEC-10, access AC-69) — `fa69787` в `claude/factory3d-build`; отчёт base (ТК-01 частично на timur-o19demo) смержен — `c3c845b`.
 - 2026-10-15 10:59 UTC factory3d_access: DONE — смержен в `claude/factory3d-build` (`9ab374a`), Odoo 296/296 (base+iot_sim+access), DEC 13. Не проверено: мост `factory3d_access_telemetry` (нет telemetry), ТК-09 (viewer), ТК-10 drill (fire_safety), копия базы `odoo`. Найдено: эмулятор iot_sim отдаёт 404 вместо 405 (D-2); ERROR FK `card.server_id` при деинсталляции (O-1); подпись security/pr-review — за человеком.
 - 2026-10-15 11:36 UTC менеджер: исправлены D-2 (эмулятор iot_sim: 405 вместо 404, `d79c297`, svc 463/463) и O-1 (uninstall factory3d_access без FK ERROR, `e6ebb47`, Odoo 297/297) в `claude/factory3d-build`.
+- 2026-10-15 11:43 UTC factory3d_telemetry: DONE — смержен в `claude/factory3d-build` (`d10cd6e`), Odoo 541/541 (base, iot_sim, access, telemetry + мосты access_telemetry, telemetry_viewer), collector unit 174 + 2 skip (MQTT без docker), DEC 16. Не проверено: стенд ТК-03/09/10 (красные в полном прогоне), ТК-12, ТП-06 — на сервере с Docker; ТП-04 объём таблиц выше оценки (DEC-16).
+- 2026-10-15 11:44 UTC factory3d_machine_connect: запущена сессия session_015rKvjaStE6jPJzyWqGrcwf по указанию пользователя; одновременно 2 (viewer, machine_connect).
