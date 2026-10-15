@@ -5,6 +5,8 @@ A-01…A-17, Q-01…Q-08). Контракти, на які спирається:
 C-08 (зони й ворота, `factory3d_base`), C-09 (паспорт, `factory3d_base`); контракти, які задає: C-02
 (хук провайдера), C-03 (шина `f3d_viewer`), C-04 (HTTP API), C-05 (клієнтська дія), C-06 (знімки й
 події), C-07 (шляхи сигналів). Формат даних — `dist/odoo_demo.json` + ключі модулів, `meta.schema = "1.1"` (Додаток A).
+Зміни: 15.10.2026 — за рішеннями модуля (build/modules/factory3d_viewer.md): DEC-5 (§0: вбудовані провайдери по файлу `models/viewer_provider_<key>.py`), DEC-12 (§0, §8.2: панель, шар замовлень, потік, тривога й енергія — у `core.js`, без окремих `panel/overlay/flow/drill/energy.js`; вкладені шаблонні літерали заборонені — `rjsmin` їх псує; §8.4: поріг lite `deviceMemory <= 4`), DEC-15 (§0, §5.1: `neutralize.sql` у `data/`; додатково `bus_enabled=False`).
+
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-08 (кнопки «Показати в 3D» на формах носіїв домішки — у base CB-02;
 V-02…V-07 вилучено, M-09, AC-22), X-09 (M-01f читає `hr.employee.public` без `sudo`, §4.4), X-14 (`f3d_loc_kind`,
 `f3d_capacity` з base, R-04, Q-09 закрито), X-15 (код фури — `stock.picking.batch.f3d_code`, R-05, R-16, M-07),
@@ -29,12 +31,12 @@ odoo_addons/factory3d_viewer/
 ├── __init__.py                      імпорт models, controllers, wizard, tools; post_init_hook, uninstall_hook
 ├── __manifest__.py                  §1
 ├── hooks.py                         post_init(env), uninstall(env) — ARCHITECTURE §2.8
-├── neutralize.sql                   demo_enabled=False, kiosk_enabled=False, новий kiosk_token, крони вимкнути
 ├── README.md                        коротко: що це, URL кіоска, як оновити асети
 ├── CHANGELOG.md
 ├── models/
 │   ├── __init__.py
-│   ├── viewer_provider.py           M-01 абстрактний провайдер + M-01a…M-01h вбудовані
+│   ├── viewer_provider.py           M-01 абстрактний провайдер
+│   ├── viewer_provider_<key>.py     M-01a…M-01h вбудовані: по файлу на провайдер (stock, production, logistics, quality, maintenance, people, chains, signals)
 │   ├── viewer_event.py              M-03 f3d.viewer.event (+ _notify, крон сигналів)
 │   ├── viewer_snapshot.py           M-02 f3d.viewer.snapshot (+ крони знімків і ротації)
 │   ├── bus_emitters.py              M-07 перевизначення write/create/unlink 9 стандартних моделей
@@ -66,6 +68,7 @@ odoo_addons/factory3d_viewer/
 ├── data/
 │   ├── params.xml                   ir.config_parameter (noupdate)
 │   ├── cron.xml                     4 крони §6
+│   ├── neutralize.sql               demo_enabled=False, kiosk_enabled=False, bus_enabled=False, новий kiosk_token, крони вимкнути (Odoo читає лише `data/neutralize.sql`)
 │   └── actions.xml                  ir.actions.client action_f3d_viewer, server action «Новий токен кіоска»
 ├── views/
 │   ├── menus.xml                    V-01
@@ -92,12 +95,7 @@ odoo_addons/factory3d_viewer/
 │   │   │   ├── viewer_action.js     OWL F3dViewerAction (§8.1)
 │   │   │   └── viewer_action.xml    шаблон factory3d_viewer.ViewerAction
 │   │   ├── viewer/
-│   │   │   ├── core.js              клас F3dViewer (§8.2) — сцена, частини, шари, види, вибір, підсвічування
-│   │   │   ├── panel.js             вкладки й картки (R10–R19 реєстру)
-│   │   │   ├── overlay.js           шар «Замовлення в роботі» (R7), гілки, партії
-│   │   │   ├── flow.js              «Потік зміни» + програвання (R3, R4)
-│   │   │   ├── drill.js             сценарій пожежної тривоги (R21)
-│   │   │   ├── energy.js            розділ «Енергія» та energyHtml/lineBody (R17, R18)
+│   │   │   ├── core.js              клас F3dViewer (§8.2) — сцена, частини, шари, види, вибір, підсвічування; у тому ж файлі (спільне замикання): вкладки й картки (R10–R19), шар «Замовлення в роботі» (R7), «Потік зміни» + програвання (R3, R4), пожежна тривога (R21), «Енергія» (R17, R18)
 │   │   │   ├── data_client.js       DataClient: /static, /data, /delta, шина, дебаунс, патчі (§8.3)
 │   │   │   ├── lite.js              визначення й застосування lite (§8.4)
 │   │   │   ├── format.js            nf, pct, esc, plural, dayHm, KIND, *_STATE словники
@@ -830,7 +828,7 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
 | `factory3d.viewer.delta_debounce_ms` | `1500` | налаштування |
 | `factory3d.viewer.kiosk_enabled` | `True` | налаштування, `neutralize.sql` |
 | `factory3d.viewer.kiosk_refresh_s` | `15` | налаштування |
-| `factory3d.viewer.bus_enabled` | `True` | налаштування |
+| `factory3d.viewer.bus_enabled` | `True` | налаштування, `neutralize.sql` |
 | `factory3d.viewer.lite_default` | `auto` | налаштування |
 | `factory3d.viewer.kiosk_token` | **не в XML** — `post_init` генерує `secrets.token_hex(16)` | кнопка «Новий токен», `neutralize.sql` |
 | `factory3d.viewer.demo_enabled` | **не в XML** — `post_init` за ознакою демо-бази (ARCHITECTURE §2.8) | налаштування, `neutralize.sql` |
@@ -1046,7 +1044,9 @@ registry.category("actions").add("f3d_viewer.action", F3dViewerAction);
 приходить з `params = {code, alias, model, res_id, kind}`: переглядач бере лише `code`; `alias`, `model`, `res_id`, `kind`
 довідкові й ігноруються, як і будь-які інші невідомі ключі (FR-02).
 
-### 8.2 Ядро `F3dViewer` (`static/src/viewer/core.js`, + panel/overlay/flow/drill/energy)
+### 8.2 Ядро `F3dViewer` (`static/src/viewer/core.js`; панель, шар замовлень, потік, тривога й енергія — у тому ж файлі)
+
+Вкладені шаблонні літерали (шаблон усередині `${…}` шаблону) у файлах переглядача заборонені: їх псує `rjsmin`.
 
 Публічний API (використовують дія, кіоск, тури, HOOT):
 
@@ -1134,7 +1134,7 @@ registry.category("actions").add("f3d_viewer.action", F3dViewerAction);
 
 ### 8.4 Lite-режим (`static/src/viewer/lite.js`)
 
-`detectLite()` → `true`, якщо `navigator.deviceMemory !== undefined && navigator.deviceMemory <= 8` або
+`detectLite()` → `true`, якщо `navigator.deviceMemory !== undefined && navigator.deviceMemory <= 4` (Chrome віддає не більше 8, тож при `<= 8` lite вмикався б завжди) або
 (`matchMedia("(pointer: coarse)").matches` і `innerWidth <= 1400`) або `opts.kiosk && !params.lite==="0"`.
 `applyLite(viewer, on)`:
 
