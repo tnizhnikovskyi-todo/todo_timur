@@ -1,7 +1,7 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
 Тесты: 131/131 пусто, 162/162 демо-шаблон (2026-10-15), ТК: —
-Решений без заказчика: 16 (ниже)
+Решений без заказчика: 17 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: демо-тесты гоняются на CE-шаблоне f3d_demo_tpl (не копия `odoo`): ожидания OEE/локаций/MR-номеров считаются из базы (DEC-11)
 
@@ -19,7 +19,7 @@
 | W5 | принят | 7bb4e6b | демо 192/192; TestDemoWizard 2/2 (354 с); ruff OK |
 | W4b (флейк тура) | в работе | — | — |
 | W6 | принят | 868aa12 | TestPerf+TestNeutralize 9/9; SQL-пороги AC-52 не держатся → W7 |
-| W7 (SQL AC-52, uninstall) | в работе | — | — |
+| W7 (SQL AC-52, uninstall) | принят | 1fcfa70 | /data 202→75 запр., /delta 64→29; демо 202/202 |
 
 ## Решения без заказчика
 - DEC-1: §13.0 требует копию демо-базы `odoo`, её в среде нет — шаблон `f3d_demo_tpl` собирается из `f3d_template`
@@ -40,3 +40,4 @@
 - DEC-14: тур киоска — browser_js в test_tours.py (на странице киоска нет tour manager); click_open_record_tour — нулевой рендерер (f3d_test), т.к. WebGL в headless Chrome медленный; sale.order.action_f3d_show ищет МО по origin. — `tests/test_tours.py`, `factory3d_viewer_sale/models/sale_order.py`
 - DEC-15: `neutralize.sql` лежит в `data/` (Odoo читает только `data/neutralize.sql`), а не в корне модуля, как в дереве SPEC §0; дополнительно `bus_enabled=False` (§13.3). — `data/neutralize.sql`
 - DEC-16: AC-38 `dist/index.html` не пересобран — `build_scene.py --embed` требует Blender (`bpy`); `factory3d/viewer/index.html` уже обёртка над ядром, GLB в static совпадают с dist побайтно. eslint: конфиг Odoo требует prettier (нет сети) — прочие правила Odoo 0 ошибок. — `docs/modules/factory3d_viewer/DEPLOY_TEST.md`
+- DEC-17: PayloadBuilder — оптимистичный проход под одним savepoint; при сбое провайдера откат и повтор с изоляцией каждого (AC-13 сохраняется, −2 SQL на провайдер); uninstall удаляет ir.model.data user_kiosk и архивирует пользователя. — `tools/payload.py`, `hooks.py`
