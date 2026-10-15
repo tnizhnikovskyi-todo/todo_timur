@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC Додаток B.1: каталог повідомлень верстатів (iot_sim §8.3.3) → причина простою. -->
+<odoo noupdate="1">
+    <record id="message_I0001" model="f3d.machine.message">
+        <field name="sequence">10</field>
+        <field name="message_id">I0001</field>
+        <field name="name">Завдання запущено</field>
+        <field name="category">2</field>
+        <field name="loss_id" ref="factory3d_machine_connect.loss_unknown"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_I0002" model="f3d.machine.message">
+        <field name="sequence">20</field>
+        <field name="message_id">I0002</field>
+        <field name="name">Завдання завершено</field>
+        <field name="category">2</field>
+        <field name="loss_id" ref="factory3d_machine_connect.loss_unknown"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_I0003" model="f3d.machine.message">
+        <field name="sequence">30</field>
+        <field name="message_id">I0003</field>
+        <field name="name">Зміна розпочата</field>
+        <field name="category">2</field>
+        <field name="loss_id" ref="factory3d_machine_connect.loss_unknown"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_W0101" model="f3d.machine.message">
+        <field name="sequence">40</field>
+        <field name="message_id">W0101</field>
+        <field name="name">Низький тиск повітря</field>
+        <field name="category">3</field>
+        <field name="loss_id" ref="mrp.block_reason1"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_W0102" model="f3d.machine.message">
+        <field name="sequence">50</field>
+        <field name="message_id">W0102</field>
+        <field name="name">Потрібне ТО за мотогодинами</field>
+        <field name="category">3</field>
+        <field name="loss_id" ref="mrp.block_reason1"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_A0201" model="f3d.machine.message">
+        <field name="sequence">60</field>
+        <field name="message_id">A0201</field>
+        <field name="name">Аварійна зупинка (кнопка)</field>
+        <field name="category">4</field>
+        <field name="loss_id" ref="mrp.block_reason1"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_A0202" model="f3d.machine.message">
+        <field name="sequence">70</field>
+        <field name="message_id">A0202</field>
+        <field name="name">Втрата зв'язку з приводом осі</field>
+        <field name="category">4</field>
+        <field name="loss_id" ref="mrp.block_reason1"/>
+        <field name="auto_apply" eval="True"/>
+    </record>
+    <record id="message_E0421" model="f3d.machine.message">
+        <field name="sequence">80</field>
+        <field name="message_id">E0421</field>
+        <field name="name">Помилка шпинделя осі Z</field>
+        <field name="category">5</field>
+        <field name="loss_id" ref="mrp.block_reason1"/>
+        <field name="auto_apply" eval="True"/>
+    </record>
+    <record id="message_E0430" model="f3d.machine.message">
+        <field name="sequence">90</field>
+        <field name="message_id">E0430</field>
+        <field name="name">Втрата живлення</field>
+        <field name="category">5</field>
+        <field name="loss_id" ref="factory3d_machine_connect.loss_unknown"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+    <record id="message_E0440" model="f3d.machine.message">
+        <field name="sequence">100</field>
+        <field name="message_id">E0440</field>
+        <field name="name">Відкрито огородження</field>
+        <field name="category">5</field>
+        <field name="loss_id" ref="mrp.block_reason2"/>
+        <field name="auto_apply" eval="False"/>
+    </record>
+</odoo>

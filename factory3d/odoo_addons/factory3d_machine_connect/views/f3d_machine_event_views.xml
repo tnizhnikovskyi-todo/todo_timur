@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-10, V-11: f3d.machine.event; V-24: f3d.machine.message (SPEC §3) -->
+<odoo>
+    <record id="view_f3d_machine_event_list" model="ir.ui.view">
+        <field name="name">f3d.machine.event.list</field>
+        <field name="model">f3d.machine.event</field>
+        <field name="arch" type="xml">
+            <list string="Події верстатів" create="0" edit="0" delete="0">
+                <field name="ts"/>
+                <field name="machine_id"/>
+                <field name="kind"/>
+                <field name="message_id"/>
+                <field name="text"/>
+                <field name="category" widget="badge"
+                       decoration-danger="category in ('4', '5')" decoration-warning="category == '3'"/>
+                <field name="active"/>
+                <field name="downtime_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_machine_event_form" model="ir.ui.view">
+        <field name="name">f3d.machine.event.form</field>
+        <field name="model">f3d.machine.event</field>
+        <field name="arch" type="xml">
+            <form string="Подія верстата" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="machine_id"/>
+                            <field name="ts"/>
+                            <field name="kind"/>
+                            <field name="category"/>
+                            <field name="severity"/>
+                        </group>
+                        <group>
+                            <field name="message_id"/>
+                            <field name="message_name"/>
+                            <field name="text"/>
+                            <field name="path"/>
+                            <field name="active"/>
+                            <field name="acked"/>
+                            <field name="downtime_id"/>
+                            <field name="ext_event_id"/>
+                        </group>
+                    </group>
+                    <field name="payload" widget="ace" options="{'mode': 'json'}"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_machine_event_search" model="ir.ui.view">
+        <field name="name">f3d.machine.event.search</field>
+        <field name="model">f3d.machine.event</field>
+        <field name="arch" type="xml">
+            <search string="Події верстатів">
+                <field name="message_id"/>
+                <field name="machine_id"/>
+                <filter name="alarms" string="Тривоги" domain="[('kind', '=', 'alarm')]"/>
+                <filter name="active" string="Активні" domain="[('active', '=', True)]"/>
+                <filter name="errors" string="Помилки" domain="[('category', 'in', ('4', '5'))]"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('ts', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <group>
+                    <filter name="group_machine" string="Верстат" context="{'group_by': 'machine_id'}"/>
+                    <filter name="group_message" string="Код" context="{'group_by': 'message_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_machine_message_list" model="ir.ui.view">
+        <field name="name">f3d.machine.message.list</field>
+        <field name="model">f3d.machine.message</field>
+        <field name="arch" type="xml">
+            <list string="Повідомлення верстатів" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="message_id"/>
+                <field name="name"/>
+                <field name="category"/>
+                <field name="loss_id" options="{'no_create': True}"/>
+                <field name="auto_apply"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+</odoo>

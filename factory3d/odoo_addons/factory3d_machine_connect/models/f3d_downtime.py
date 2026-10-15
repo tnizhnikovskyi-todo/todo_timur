@@ -1,7 +1,9 @@
 import logging
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError, UserError
 
+from ..tools import ppt
 from .f3d_machine import local
 
 _logger = logging.getLogger(__name__)
@@ -120,3 +122,125 @@ class F3dDowntime(models.Model):
         has = bool(self.env.ref("factory3d.loss_tool", raise_if_not_found=False))
         for rec in self:
             rec.has_loss_tool = has
+
+    # --- причина, підтвердження (M-03) ---------------------------------------------------------------
+    def _f3d_reason_rights(self):
+        """Права й `src` за замовчуванням: `(is_manager)`; `AccessError` без `mrp.group_mrp_user`."""
+        user = self.env.user
+        if not (self.env.su or user.has_group("mrp.group_mrp_user")):
+            raise AccessError(_("Причину простою вказує користувач виробництва."))
+        is_manager = user.has_group("mrp.group_mrp_manager")
+        if any(rec.reason_state == "confirmed" for rec in self) and not (self.env.su or is_manager):
+            raise UserError(_("Простій підтверджено — змінити причину може майстер."))
+        return is_manager
+
+    def action_set_reason(self, loss_id, employee_id=None, source=None):
+        is_manager = self._f3d_reason_rights()
+        loss = self.env["mrp.workcenter.productivity.loss"].browse(loss_id).exists()
+        if not loss or loss.sudo().loss_type not in ("availability", "quality"):
+            raise UserError(_("Причина має бути втратою доступності або якості."))
+        src = source or ("master" if is_manager else "operator")
+        employee = self.env["hr.employee"].browse(employee_id).exists() if employee_id else self.env["hr.employee"]
+        for rec in self:
+            rec._f3d_apply_reason(loss, src, employee)
+            rec.sudo().with_context(f3d_mc_internal=True).write(
+                {"reason_state": "confirmed" if src == "master" else "to_confirm"}
+            )
+        return True
+
+    def action_confirm(self):
+        if not (self.env.su or self.env.user.has_group("mrp.group_mrp_manager")):
+            raise AccessError(_("Підтверджує простій майстер."))
+        unknown = self.env.ref("factory3d_machine_connect.loss_unknown")
+        for rec in self:
+            if rec.loss_id == unknown:
+                raise UserError(_("Спершу вкажіть причину простою %s.", rec.display_name))
+        self.sudo().with_context(f3d_mc_internal=True).write(
+            {"reason_state": "confirmed", "confirmed_by": self.env.uid, "confirmed_at": fields.Datetime.now()}
+        )
+        return True
+
+    def action_open_reason_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Причина простою"),
+            "res_model": "f3d.downtime.reason.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_downtime_id": self.id},
+        }
+
+    def action_quick_reason(self):
+        """Кнопки kanban «Без причини»: причина за XML-id з контексту `f3d_loss_xmlid`."""
+        loss = self.env.ref(self.env.context["f3d_loss_xmlid"])
+        return self.action_set_reason(loss.id)
+
+    def _f3d_apply_reason(self, loss, source, employee=None):
+        """Записати причину простою; машинні записи журналу часу отримують ту саму причину."""
+        who = dict(self._fields["reason_source"]._description_selection(self.env)).get(source, source)
+        for rec in self:
+            rec.sudo().with_context(f3d_mc_internal=True).write(
+                {
+                    "loss_id": loss.id,
+                    "reason_source": source,
+                    "employee_id": employee.id if employee else False,
+                    "reason_user_id": self.env.uid,
+                    "reason_at": fields.Datetime.now(),
+                }
+            )
+            rec.sudo().productivity_ids.filtered("f3d_auto").write({"loss_id": loss.id})
+            rec.sudo().message_post(body=_("Причина: %(loss)s (%(who)s)", loss=loss.sudo().name, who=who))
+
+    def _f3d_set_hint(self, loss, text, event, apply):
+        """R-07: підказка (і причина, якщо `apply` і причину ще не вказав оператор/майстер)."""
+        self.ensure_one()
+        self.sudo().with_context(f3d_mc_internal=True).write(
+            {"hint_loss_id": loss.id, "hint_text": (text or "")[:256], "event_id": event.id if event else False}
+        )
+        if event:
+            event.sudo().write({"downtime_id": self.id})
+        if apply and self.reason_source in ("auto", "hint"):
+            self._f3d_apply_reason(loss, "hint")
+            self.sudo().with_context(f3d_mc_internal=True).write({"reason_state": "to_confirm"})
+
+    def _f3d_close(self, ts):
+        """R-05 п. 4: закрити простій переходом о `ts` (коротку не аварію — видалити)."""
+        for dt in self.sudo():
+            if dt.date_end:
+                continue
+            machine = dt.machine_id
+            end = max(ts, dt.date_start)
+            wc = dt.workcenter_id
+            ppt_min = ppt.total_min(ppt.ppt_intervals(self.env, wc, dt.date_start, end))
+            tech = machine._f3d_tech_env()
+            recs = dt.productivity_ids
+            operator = [(r.date_start, r.date_end or end) for r in recs if not r.f3d_auto]
+            for rec in recs.filtered(lambda r: not r.date_end):
+                rec.with_env(tech).write({"date_end": max(end, rec.date_start)})
+            if dt.state_kind != "fault" and ppt_min * 60 < machine.micro_stop_s:
+                dt.unlink()
+                continue
+            dt.write({"date_end": end, "ppt_min": ppt_min})
+            if dt.state_kind == "fault":
+                continue
+            label = dict(self._fields["state_kind"]._description_selection(self.env)).get(dt.state_kind, "")
+            desc = "%s: %s" % (label, dt.loss_id.name)
+            if dt.hint_text:
+                desc += "; %s" % dt.hint_text
+            wo = dt.workorder_id if dt.state_kind == "setup" else False
+            for start, stop in ppt.minus([(dt.date_start, end)], operator):
+                if (stop - start).total_seconds() < 60 * 1.0:
+                    continue
+                machine._f3d_create_machine_record(dt, start, desc, date_end=stop, workorder=wo)
+        return True
+
+    def write(self, vals):
+        if "loss_id" in vals and not self.env.context.get("f3d_mc_internal"):
+            self._f3d_reason_rights()
+        return super().write(vals)
+
+    def unlink(self):
+        if not (self.env.su or self.env.user.has_group("factory3d_base.group_f3d_admin")):
+            raise AccessError(_("Простій видаляє лише адміністратор."))
+        return super().unlink()
