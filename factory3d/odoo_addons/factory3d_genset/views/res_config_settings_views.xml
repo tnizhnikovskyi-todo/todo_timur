@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-07 -->
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.f3d.genset</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="47"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Завод 3D: генератор" string="Завод 3D: генератор" name="factory3d_genset"
+                     groups="factory3d_base.group_f3d_admin">
+                    <block title="Стоп-крани" name="factory3d_genset_switches">
+                        <setting string="Публікувати показання в телеметрію">
+                            <field name="f3d_genset_read_enabled"/>
+                        </setting>
+                        <setting string="Створювати заявки ТО">
+                            <field name="f3d_genset_requests_enabled"/>
+                        </setting>
+                        <setting string="Команди на генератор (зарезервовано)" help="Зарезервовано: міст команд не надсилає">
+                            <field name="f3d_genset_write_enabled" readonly="1"/>
+                        </setting>
+                    </block>
+                    <block title="Параметри" name="factory3d_genset_params">
+                        <setting string="Логіка AMF">
+                            <field name="f3d_genset_amf_master"/>
+                        </setting>
+                        <setting string="Офлайн через, хв">
+                            <field name="f3d_genset_offline_min"/>
+                        </setting>
+                        <setting string="Період публікації, с">
+                            <field name="f3d_genset_publish_period_s"/>
+                        </setting>
+                        <setting string="Сигнали АВР">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_genset_ats_position_code"/>
+                                    <field name="f3d_genset_ats_position_code"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_genset_ats_src1_code"/>
+                                    <field name="f3d_genset_ats_src1_code"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_genset_ats_src2_code"/>
+                                    <field name="f3d_genset_ats_src2_code"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_genset_ats_position_i_value"/>
+                                    <field name="f3d_genset_ats_position_i_value"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_genset_ats_position_ii_value"/>
+                                    <field name="f3d_genset_ats_position_ii_value"/></div>
+                            </div>
+                        </setting>
+                        <setting string="Критичні споживачі — запасний список (коди сигналів через кому)"
+                                 help="Використовується, лише якщо в energy немає жодного вузла з ознакою «Критичний» (f3d.energy.node.is_critical)">
+                            <field name="f3d_genset_critical_codes" widget="char"
+                                   placeholder="energy/consumers/LP-1/p_now, energy/lines/BW-1/p_now"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_f3d_genset_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування генератора</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{"module": "factory3d_genset"}</field>
+    </record>
+</odoo>

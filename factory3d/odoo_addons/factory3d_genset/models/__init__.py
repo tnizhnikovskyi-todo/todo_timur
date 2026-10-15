@@ -6,3 +6,5 @@ from . import res_config_settings
 from . import genset_event_map
 from . import maintenance_request
 from . import genset_link_events
+from . import genset_link_view
+from . import viewer_provider

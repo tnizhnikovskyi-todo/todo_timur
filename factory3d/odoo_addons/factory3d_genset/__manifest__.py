@@ -12,7 +12,12 @@
         "data/f3d_genset_profile.xml",
         "data/f3d_genset_event_map.xml",
         "data/ir_cron.xml",
-        # W3: views/*.xml, views/menus.xml
+        "views/f3d_genset_link_views.xml",
+        "views/f3d_genset_profile_views.xml",
+        "views/f3d_genset_event_map_views.xml",
+        "views/maintenance_views.xml",
+        "views/res_config_settings_views.xml",
+        "views/menus.xml",
     ],
     "post_init_hook": "post_init_hook",
     "uninstall_hook": "uninstall_hook",

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-03, V-04 -->
+<odoo>
+    <record id="view_f3d_genset_profile_form" model="ir.ui.view">
+        <field name="name">f3d.genset.profile.form</field>
+        <field name="model">f3d.genset.profile</field>
+        <field name="arch" type="xml">
+            <form string="Профіль генератора">
+                <header>
+                    <button name="action_export_relay_profile" type="object"
+                            string="Експорт профілю для fake_relay"/>
+                    <button name="action_apply_to_td" type="object" string="Застосувати витрату до td_genset"
+                            groups="factory3d_base.group_f3d_manager"
+                            confirm="Записати 75 %-витрату в td_genset для всіх зв'язок з цим профілем?"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Паспорт">
+                            <field name="code"/>
+                            <field name="name"/>
+                            <field name="passport_id"/>
+                        </group>
+                        <group string="Потужність">
+                            <field name="kva_prp"/>
+                            <field name="kw_prp"/>
+                            <field name="kva_esp"/>
+                            <field name="kw_esp"/>
+                        </group>
+                        <group string="Паливо">
+                            <field name="tank_l"/>
+                            <field name="fuel_lph_25"/>
+                            <field name="fuel_lph_50"/>
+                            <field name="fuel_lph_75"/>
+                            <field name="fuel_lph_100"/>
+                            <field name="fuel_lph_esp"/>
+                            <field name="autonomy_warn_h"/>
+                        </group>
+                        <group string="Двигун">
+                            <field name="oil_l"/>
+                            <field name="oil_pressure_min_bar"/>
+                            <field name="start_to_load_s"/>
+                        </group>
+                        <group string="Таймери HGM6120N">
+                            <field name="timer_preset"/>
+                            <field name="timers_text" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_genset_profile_list" model="ir.ui.view">
+        <field name="name">f3d.genset.profile.list</field>
+        <field name="model">f3d.genset.profile</field>
+        <field name="arch" type="xml">
+            <list string="Профілі генераторів">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="kw_prp"/>
+                <field name="tank_l"/>
+                <field name="fuel_lph_75"/>
+                <field name="timer_preset"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_f3d_genset_profile" model="ir.actions.act_window">
+        <field name="name">Профілі генераторів</field>
+        <field name="res_model">f3d.genset.profile</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

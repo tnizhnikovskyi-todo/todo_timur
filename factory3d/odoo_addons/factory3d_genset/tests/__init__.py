@@ -5,3 +5,6 @@ from . import test_publish
 from . import test_events
 from . import test_service
 from . import test_hooks
+from . import test_provider
+from . import test_no_viewer
+from . import test_views
