@@ -10,12 +10,13 @@
     "website": "https://todo.ltd",
     "license": "LGPL-3",
     "depends": ["factory3d_base", "maintenance", "mail", "web"],
-    # Каркас W0: решту файлів SPEC §1 додає лідер при приймання воркерів (див. *.full у security/, data/, views/).
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
         "data/ir_cron.xml",
+        "data/f3d_source_data.xml",
+        "data/f3d_actions.xml",
         "wizard/collector_token_wizard_views.xml",
         "views/f3d_collector_views.xml",
         "views/f3d_source_views.xml",
@@ -30,6 +31,8 @@
         "views/menus.xml",
     ],
     "demo": [],
+    "post_init_hook": "post_init_hook",
+    "uninstall_hook": "uninstall_hook",
     "external_dependencies": {"python": []},
     "installable": True,
     "application": False,

@@ -164,7 +164,136 @@ class F3DTelemetryMixin:
         with mock.patch('odoo.addons.factory3d_telemetry.hooks._catalog_rows', return_value=rows):
             yield
 
-    # make_level0(signals, readings) — реалізує воркер міграції (W4): потребує Додатка D.
+    # --- рівень 0 (Додаток D) ---
+    LEVEL0_SIGNALS = [  # (ключ, x_code, x_name, x_kind, x_unit, x_mode, x_value, x_alarm, x_threshold, x_state, eq)
+        ('rv', 'ventilation/units/RV-05-T/filter_dp_pa', 'RV-05-T: перепад на фільтрі', 'Перепад', 'Па', 'drift',
+         320.594, 'above', 250.0, 'тривога', 'eq_rv'),
+        ('dust', 'fire/groups/FA-T/dust', 'FA-T: запиленість', 'Запиленість', '%', 'drift', 89.304, 'above', 90.0,
+         'норма', 'eq_other'),
+        ('bat', 'equipment/FL-T/battery', 'FL-T: заряд', 'Заряд', '%', 'drain', 49.556, False, 0.0, 'норма', None),
+        ('hours', 'equipment/FL-T/hours', 'FL-T: мотогодини', 'Мотогодини', 'год', 'hours', 3222.1, False, 0.0,
+         'норма', None),
+        ('press', 'equipment/COMPRESSOR-T/pressure_bar', 'Компресор: тиск', 'Тиск', 'бар', 'noise', 7.01, 'below',
+         6.0, 'норма', 'eq_comp'),
+        ('pnow', 'energy/consumers/SAW-T/p_now', 'SAW-T: потужність', 'Потужність', 'кВт', 'machine', 12.18, False,
+         0.0, 'норма', None),
+        ('kwh', 'energy/consumers/SAW-T/kwh_shift', 'SAW-T: енергія за зміну', 'Енергія', 'кВт·год', 'energy', 50.5,
+         False, 0.0, 'норма', None),
+    ]
+    LEVEL0_FIELDS = {
+        'x_f3d_signal': [
+            ('x_name', 'char', None), ('x_code', 'char', None), ('x_sequence', 'integer', None),
+            ('x_active', 'boolean', None), ('x_equipment_id', 'many2one', 'maintenance.equipment'),
+            ('x_workcenter_id', 'many2one', 'mrp.workcenter'), ('x_source_id', 'many2one', 'x_f3d_signal'),
+            ('x_kind', 'char', None), ('x_unit', 'char', None), ('x_mode', 'char', None),
+            ('x_value', 'float', None), ('x_nominal', 'float', None), ('x_noise', 'float', None),
+            ('x_rate', 'float', None), ('x_limit', 'float', None), ('x_alarm', 'char', None),
+            ('x_threshold', 'float', None), ('x_state', 'char', None), ('x_charging', 'boolean', None),
+            ('x_seed', 'integer', None), ('x_updated', 'datetime', None),
+            ('x_request_id', 'many2one', 'maintenance.request'),
+        ],
+        'x_f3d_reading': [
+            ('x_name', 'char', None), ('x_signal_id', 'many2one', 'x_f3d_signal'),
+            ('x_equipment_id', 'many2one', 'maintenance.equipment'), ('x_value', 'float', None),
+            ('x_unit', 'char', None), ('x_time', 'datetime', None),
+        ],
+    }
+
+    def _level0_xmlid(self, name, record):
+        self.env['ir.model.data'].create({'module': 'factory3d_iot_sim', 'name': name, 'model': record._name,
+                                          'res_id': record.id, 'noupdate': True})
+        return record
+
+    @classmethod
+    def _level0_models(cls):
+        env = cls.env
+        for model, spec in cls.LEVEL0_FIELDS.items():
+            if model in env:
+                continue
+            fields_ = []
+            for name, ttype, rel in spec:
+                vals = {'name': name, 'field_description': name, 'ttype': ttype, 'state': 'manual'}
+                if rel:
+                    vals['relation'] = rel
+                fields_.append((0, 0, vals))
+            env['ir.model'].create({'name': 'Рівень 0 (тест) ' + model, 'model': model, 'state': 'manual',
+                                    'field_id': fields_})
+        if 'x_f3d_signal_ids' not in env['maintenance.equipment']._fields:
+            env['ir.model.fields'].create({
+                'model_id': env['ir.model']._get_id('maintenance.equipment'), 'name': 'x_f3d_signal_ids',
+                'field_description': 'Сигнали рівня 0', 'ttype': 'one2many', 'relation': 'x_f3d_signal',
+                'relation_field': 'x_equipment_id', 'state': 'manual'})
+
+    def _level0_service(self):
+        """Крон «IoT tick», меню й 7 представлень `factory3d_iot_sim.*` (створює, якщо iot_sim не встановлено)."""
+        env = self.env
+        ref = lambda name: env.ref('factory3d_iot_sim.' + name, raise_if_not_found=False)  # noqa: E731
+        cron = ref('cron_iot_sim')
+        if not cron:
+            cron = self._level0_xmlid('cron_iot_sim', env['ir.cron'].create({
+                'name': 'IoT tick (тест)', 'model_id': env['ir.model']._get_id('x_f3d_signal'), 'state': 'code',
+                'code': 'pass', 'interval_number': 1, 'interval_type': 'minutes'}))
+        cron.write({'active': True})
+        menu = ref('menu_iot_root')
+        if not menu:
+            menu = self._level0_xmlid('menu_iot_root', env['ir.ui.menu'].create({
+                'name': 'Імітація IoT', 'parent_id': env.ref('maintenance.menu_maintenance_title').id}))
+            self._level0_xmlid('menu_iot_signals', env['ir.ui.menu'].create({'name': 'Сигнали', 'parent_id': menu.id}))
+        menu.write({'active': True})
+        specs = {
+            'view_signal_list': ('x_f3d_signal', '<list><field name="x_name"/></list>', None),
+            'view_signal_form': ('x_f3d_signal', '<form><field name="x_name"/></form>', None),
+            'view_signal_search': ('x_f3d_signal', '<search><field name="x_name"/></search>', None),
+            'view_reading_list': ('x_f3d_reading', '<list><field name="x_name"/></list>', None),
+            'view_reading_graph': ('x_f3d_reading', '<graph><field name="x_time"/>'
+                                   '<field name="x_value" type="measure"/></graph>', None),
+            'view_reading_search': ('x_f3d_reading', '<search><field name="x_name"/></search>', None),
+            'view_equipment_form_signals': (
+                'maintenance.equipment',
+                '<xpath expr="//notebook" position="inside"><page name="x_f3d_iot" string="IoT">'
+                '<field name="x_f3d_signal_ids"/></page></xpath>', 'maintenance.hr_equipment_view_form'),
+        }
+        for name, (model, arch, inherit) in specs.items():
+            view = ref(name)
+            if not view:
+                vals = {'name': 'f3d.level0.test.' + name, 'model': model, 'arch': '<data>%s</data>' % arch
+                        if inherit else arch}
+                if inherit:
+                    vals['inherit_id'] = env.ref(inherit).id
+                view = self._level0_xmlid(name, env['ir.ui.view'].create(vals))
+            view.write({'active': True})
+        env['ir.config_parameter'].sudo().set_param('factory3d.iot_sim.level0_enabled', 'True')
+
+    def make_level0(self, signals=None, readings=None):
+        """SPEC §13.0.1: рівень 0 — моделі `x_f3d_*`, 7 сигналів (AC-53), 30 показань + 1 з `x_time=NULL`,
+        заявки A (`eq_rv`) і B (`eq_other`), крон/меню/представлення `factory3d_iot_sim.*`, параметр iot_sim."""
+        env = self.env
+        self._level0_models()
+        Sig, Read = env['x_f3d_signal'], env['x_f3d_reading']
+        stage = self.stage_new
+        req_a = env['maintenance.request'].create({'name': 'Заявка A (RV-05-T)', 'equipment_id': self.eq_rv.id,
+                                                   'stage_id': stage.id})
+        req_b = env['maintenance.request'].create({'name': 'Заявка B (FA-T)', 'equipment_id': self.eq_other.id,
+                                                   'stage_id': stage.id})
+        recs = {}
+        for key, code, name, kind, unit, mode, value, alarm, thr, state, eq in (signals or self.LEVEL0_SIGNALS):
+            recs[key] = Sig.create({
+                'x_code': code, 'x_name': name, 'x_sequence': len(recs) + 1, 'x_active': True,
+                'x_equipment_id': getattr(self, eq).id if eq else False, 'x_kind': kind, 'x_unit': unit,
+                'x_mode': mode, 'x_value': value, 'x_nominal': value, 'x_noise': 0.1, 'x_rate': 0.5, 'x_limit': 20.0,
+                'x_alarm': alarm, 'x_threshold': thr, 'x_state': state, 'x_charging': key == 'bat',
+                'x_seed': 7, 'x_updated': self.T0,
+                'x_request_id': {'rv': req_a.id, 'dust': req_b.id}.get(key, False)})
+        recs['kwh'].x_source_id = recs['pnow']
+        items = list(recs.values())
+        reads = []
+        for i in range(30 if readings is None else readings):
+            sig = items[i % len(items)]
+            reads.append(Read.create({'x_name': sig.x_code, 'x_signal_id': sig.id, 'x_value': i + 0.5,
+                                      'x_unit': sig.x_unit, 'x_time': self.T0 + timedelta(minutes=i)}))
+        null_read = Read.create({'x_name': 'без часу', 'x_signal_id': items[0].id, 'x_value': 1.0})
+        self._level0_service()
+        return {'signals': recs, 'readings': reads, 'null_reading': null_read, 'req_a': req_a, 'req_b': req_b}
 
 
 class F3DTelemetryCase(F3DTelemetryMixin, TransactionCase):

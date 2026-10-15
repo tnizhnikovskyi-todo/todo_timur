@@ -4,9 +4,10 @@ from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools import address as address_tools
+from ..tools import sim_catalog
 from ..tools import thresholds
 from ..tools.ingest import STATUS_LABELS, Ingester
 from ..tools.titles import fmt_num, render_title
@@ -54,7 +55,7 @@ class F3dSignal(models.Model):
     source_id = fields.Many2one("f3d.source", string="Джерело", ondelete="set null", index=True, tracking=True)
     source_type = fields.Selection(related="source_id.type")
     collector_id = fields.Many2one("f3d.collector", related="source_id.collector_id", store=True, index=True)
-    address = fields.Json(string="Адреса в джерелі", default=dict)
+    address = fields.Json(string="Адреса в джерелі", default=lambda self: {})
     address_text = fields.Text(string="Адреса (JSON)", compute="_compute_address_text",
                                inverse="_inverse_address_text")
     period_s = fields.Integer(string="Період, с", default=10)
@@ -279,6 +280,100 @@ class F3dSignal(models.Model):
     def _f3d_ingest(self, readings, src="module", collector=None):
         """Єдиний вхід показань (API-02/API-05 з src='collector', модулі — src='module'). R-17."""
         return Ingester(self.env, src=src, collector=collector).run(readings)
+
+    # --- каталог емулятора (CT-11, R-24) -------------------------------------------------------------
+    SIM_ROW_FIELDS = ("code", "name", "protocol", "address", "dtype", "unit", "scale", "nominal", "thresholds", "kind")
+
+    @api.model
+    def _f3d_import_sim_catalog(self, codes=None, module=None, source_map=None, defaults=None):
+        """CT-11: імпорт `f3d.sim.signal` (iot_sim ≥ 2.0.0); без моделі — нулі й `state='skipped'`."""
+        if "f3d.sim.signal" not in self.env:
+            return {"created": 0, "updated": 0, "unparsed": [], "skipped": [], "state": "skipped"}
+        sims = self.env["f3d.sim.signal"].sudo().search([("code", "in", list(codes))] if codes is not None else [])
+        if module:
+            sims = sims.filtered(lambda s: sim_catalog.module_for_code(s.code) == module)
+        rows = [{f: s[f] or "" for f in self.SIM_ROW_FIELDS} for s in sims]
+        return self._f3d_import_sim_rows(rows, source_map or {}, defaults or {})
+
+    @api.model
+    def _f3d_import_sim_rows(self, rows, source_map, defaults):
+        """Ядро CT-11: рядки каталогу → створення/оновлення сигналів (адреса, `sim_params`, `nominal`).
+
+        Існуючий сигнал: `address` лише якщо порожня, `source_id` лише якщо порожній, `sim_params` — додаються
+        відсутні ключі; `last_*` не чіпаються. Новий — `origin` з `defaults` (умовчання `catalog`)."""
+        Signal = self.sudo().with_context(active_test=False, tracking_disable=True, mail_create_nolog=True)
+        Source = self.env["f3d.source"].sudo().with_context(active_test=False)
+        local = self.env["f3d.source"]._f3d_local_types()
+        result = {"created": 0, "updated": 0, "unparsed": [], "skipped": []}
+        origin = defaults.get("origin")
+        origin = origin if origin in ("sim_data", "catalog", "manual", "module") else "catalog"
+        for row in rows:
+            code = row.get("code")
+            if not code or len(code) > 128 or not self.CODE_RE.match(code):
+                result["skipped"].append(code)
+                continue
+            text = row.get("address") or ""
+            address = sim_catalog.parse_sim_address(
+                row.get("protocol"), text, row.get("dtype"), row.get("scale"), row.get("unit"))
+            if address is None:
+                result["unparsed"].append(code)
+                continue
+            sig = Signal.search([("code", "=", code)], limit=1)
+            src_code = source_map.get(sim_catalog.source_key(text))
+            source = sig.source_id or (Source.search([("code", "=", src_code)], limit=1) if src_code else Source)
+            if source and address_tools.validate_address(source.type, address, local):
+                result["unparsed"].append(code)
+                continue
+            nominal = sim_catalog.parse_nominal(row.get("nominal"))
+            params = {k: v for k, v in (("nominal", nominal), ("thresholds", row.get("thresholds") or None),
+                                        ("catalog_address", text)) if v is not None}
+            if sig:
+                vals = {}
+                if not sig.address:
+                    vals["address"] = address
+                if not sig.source_id and source:
+                    vals["source_id"] = source.id
+                if nominal is not None and not sig.nominal:
+                    vals["nominal"] = nominal
+                merged = {**params, **(sig.sim_params or {})}
+                if merged != (sig.sim_params or {}):
+                    vals["sim_params"] = merged
+                if vals:
+                    sig.write(vals)
+                result["updated"] += 1
+                continue
+            vals = {
+                "code": code, "name": row.get("name") or code, "origin": origin, "address": address,
+                "module": defaults.get("module") or sim_catalog.module_for_code(code), "sim_params": params,
+                "source_id": source.id if source else False, "nominal": nominal or 0.0,
+            }
+            if row.get("kind") in ("gauge", "counter", "state", "event"):
+                vals["kind"] = row["kind"]
+            if row.get("unit") and not sim_catalog.parse_enum_map(row["unit"]):
+                vals["unit"] = row["unit"]
+            if vals.get("kind") == "state" and isinstance(address.get("map"), dict):
+                vals["states"] = list(dict.fromkeys(address["map"].values()))
+            eq_code = sim_catalog.equipment_code(code)
+            equipment = self.env["maintenance.equipment"].sudo().search_f3d(eq_code) if eq_code else False
+            if equipment:
+                vals["equipment_id"] = equipment.id
+            Signal.create(vals)
+            result["created"] += 1
+        return result
+
+    @api.model
+    def f3d_run_migration(self):
+        """Дія «Повторити міграцію рівня 0» (§5.3): лише `group_f3d_admin`."""
+        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+            raise AccessError(_("Запускати міграцію може лише адміністратор «Завод 3D»."))
+        from .. import hooks  # noqa: PLC0415
+        data = hooks.run_migration(self.sudo().env)
+        return {
+            "type": "ir.actions.client", "tag": "display_notification",
+            "params": {"title": _("Міграція рівня 0"),
+                       "message": _("Міграцію виконано: %s", json.dumps(data, ensure_ascii=False)),
+                       "type": "success", "sticky": True},
+        }
 
     def _apply_reading(self, ts, value, text, quality):
         """Нові значення last_*/status* для показання (у пам'яті, без запису)."""

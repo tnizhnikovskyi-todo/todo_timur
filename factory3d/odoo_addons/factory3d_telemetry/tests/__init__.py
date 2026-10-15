@@ -10,3 +10,8 @@ from . import test_api  # noqa: F401
 from . import test_commands  # noqa: F401
 from . import test_push_handler  # noqa: F401
 from . import test_rotation_push  # noqa: F401
+from . import test_sim_catalog  # noqa: F401
+from . import test_migration  # noqa: F401
+from . import test_security  # noqa: F401
+from . import test_views  # noqa: F401
+from . import test_hooks  # noqa: F401
