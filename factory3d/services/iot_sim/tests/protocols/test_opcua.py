@@ -132,3 +132,22 @@ async def test_authenticated_write_denied(opc):
         with pytest.raises(ua.UaStatusCodeError):
             await st.write_value(ua.DataValue(ua.Variant(2, ua.VariantType.UInt32)))
         assert await st.read_value() == before
+
+
+async def test_source_timestamp_is_utc_aware(opc, world):
+    """ST-3: SourceTimestamp = sim-час у UTC (FakeClock 10:30 Київ, EEST = 07:30 UTC), а не локальний час без зони."""
+    from datetime import UTC, datetime, timedelta
+    world.advance(2)
+    await opc.refresh()
+    expected = world.now().astimezone(UTC)
+    assert expected.hour == 7  # 10:30 за Києвом (UTC+3) = 07:30 UTC
+    async with Client(url(opc)) as c:
+        ns = await c.get_namespace_index(NS_INST)
+        for node_id in ("SAW-1.State.Machine.Overview.CurrentState", "SAW-1.State.Machine.Flags.Alarm",
+                        "SAW-1.State.Machine.Values.RelativePiecesOut"):
+            dv = await c.get_node(f"ns={ns};s={node_id}").read_data_value()
+            ts = dv.SourceTimestamp
+            assert ts is not None and ts.tzinfo is not None and ts.utcoffset() == timedelta(0)
+            # значення без змін не переписуються (кеш), тому ts може відставати на кілька с; помилка зони дала б ±3 год
+            assert abs(ts - expected) < timedelta(minutes=1), (node_id, ts, expected)
+            assert isinstance(ts, datetime)
