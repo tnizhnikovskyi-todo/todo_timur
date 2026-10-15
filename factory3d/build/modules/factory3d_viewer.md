@@ -1,7 +1,7 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
 Тесты: — , ТК: —
-Решений без заказчика: 9 (ниже)
+Решений без заказчика: 10 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
 
@@ -12,7 +12,7 @@
 | W1a | принят | e3fcaea | /factory3d_viewer+/test_factory3d_viewer 60/60 (демо-тесты skip) |
 | W1b-1 | принят (на демо 9 FAIL → W1c) | 3c285ed | 111/111 пусто; демо 132/141 |
 | W1c (демо-фиксы) | в работе | — | — |
-| W3 | в работе | — | — |
+| W3 | принят | 45ff25b | 131/131 пусто; демо — те же 9 FAIL (W1c) |
 | W1b-2 | принят (дельта chains ждёт W1b-1) | 4a7da35 | 84/84 (демо skip) |
 | W2 | в работе | — | — |
 | W4 | — | — | — |
@@ -31,3 +31,4 @@
 - DEC-7: в шаблоне f3d_demo_tpl шаги push `modules,iot_module,signals` пропущены (Enterprise iot, zip-импорт); `x_f3d_signal` пуст, сигналы есть в `f3d_sim_signal` (1168) — AC-17 на демо проверяется моками; `plant/odoo_push.py` получил CE-правки (поля Enterprise через fields_get, lot_name при приёмке). — `factory3d/tools/odoo/make_demo_tpl.sh`
 - DEC-8: ir.rule только чтение для group_f3d_user на maintenance.equipment/request с f3d_code (в Odoo 19 обычный пользователь видит лишь «свои» — противоречит §4.4). — `security/security.xml`
 - DEC-9: `energy.profile_k` нет в model_static.json — запасная таблица PROFILE_KF из plant/energy.py; `next_maintenance` — ближайшая открытая preventive-заявка (в 19 нет next_action_date). — `models/viewer_provider_production.py`, `viewer_provider_maintenance.py`
+- DEC-10: эмиттеры шины перекрывают также `_write_multi` (вычисляемые state пишутся через flush); `_since` по `ts >= since` (точность — секунда); идемпотентность 60 с только для periodic; ACL res.config.settings для group_f3d_admin (иначе пункт меню не виден, сохранение — base.group_system). — `models/bus_emitters.py`, `viewer_event.py`, `viewer_snapshot.py`, `security/ir.model.access.csv`
