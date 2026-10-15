@@ -15,7 +15,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | `factory3d_base` | 1 | — | DONE | session_01QHzZ3cNyHZ2W6eBd43JJwn | 2026-10-14 22:04 UTC | 2026-10-14 23:17 UTC | 150/150 | 15 |
 | 2 | `factory3d_iot_sim` | 1 | base | DONE | session_019MFyhB78Wd7hgrNLzgRGkP | 2026-10-14 23:18 UTC | 2026-10-15 04:30 UTC | Odoo 140/140, svc 451/451 | 18 |
-| 3 | `factory3d_telemetry` | 2 | base | TODO | | | | | |
+| 3 | `factory3d_telemetry` | 2 | base | IN_PROGRESS | session_01NF5Tuhsrpzgd1SMkYaMG8N | 2026-10-15 06:47 UTC | | | |
 | 4 | `factory3d_viewer` | 1 | base | TODO | | | | | |
 | 5 | `factory3d_access` | 4 | base | TODO | | | | | |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | TODO | | | | | |
@@ -60,3 +60,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-14 23:18 UTC factory3d_iot_sim: запущена сессия session_019MFyhB78Wd7hgrNLzgRGkP (2/2 за 24 ч; следующий слот — 2026-10-15 22:04 UTC).
 - 2026-10-15 04:30 UTC factory3d_iot_sim: DONE — смержен в `claude/factory3d-build` (`609a247`), Odoo 140/140 (base+iot_sim), сервис 451/451, DEC 18. Не проверено: ТК-01/15 на копии базы `odoo`, ТК-18 (нет genset_relay в td_genset, CI-02), ТП-06 24 ч; ТП-04 p95 1,39 с > 1 с (медиана в норме); подпись security-review — за человеком.
 - 2026-10-15 04:30 UTC менеджер: лимит запусков 2/24 ч исчерпан; следующий запуск (`factory3d_telemetry`) — 2026-10-15 22:05 UTC.
+- 2026-10-15 06:47 UTC factory3d_telemetry: запущена сессия session_01NF5Tuhsrpzgd1SMkYaMG8N по прямому указанию пользователя сверх лимита (3/2 за 24 ч). Пауза до 22:05 отменена. Дальше лимит «2 за 24 ч» снова действует: следующий запуск — когда в окне 24 ч останется меньше 2 сессий (после 2026-10-15 23:19 UTC).
