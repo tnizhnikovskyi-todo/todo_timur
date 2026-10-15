@@ -10,10 +10,11 @@
 | W0 | принят | 670b3fb | unit 3/3, TestInstall OK |
 | W1a | принят | e3023b2 | unit 79/79, core cov 99 %, ruff OK |
 | W1b-2 | принят | d2fdc56 | svc 156/156, models cov 99 % |
-| W1b-1 | смержен, интеграция (7 красных юнитов) | 0c265bf | — |
+| W1b-1 | принят | f4ce407 | unit 293/293 (в worktree), models cov 99 % |
 | W2 | принят | 1348d5d | svc tests 98/98, ruff OK |
-| W3 | в работе (worktree) | — | — |
-| W4 | в работе (worktree) | — | — |
+| W3 | принят | c833e68 | svc 159 (в worktree), ruff OK |
+| W4 | принят | afa7082 | svc 225 (в worktree), smoke health OK |
+| INT | в работе | — | интеграция W1–W4 |
 | W5 | принят | 6e43f5b | Odoo /factory3d_iot_sim 40/40 |
 | W6 | ждёт | — | — |
 
@@ -31,3 +32,6 @@
 - TODO `__main__ run`: регистрация серверов W2–W4 и цикл world.tick_real — после W4 (лидер).
 - DEC-11 (W1b-2): R-11 по формуле даёт коэффициент 0,84…1,0 (r ∈ [−1,1)), AC-11 пишет 0,92…1,0 — реализовано по формуле, правка SPEC. Хук ретранслятора genset — `models/ats.py` (relay_cb; без ответа — запасной режим §8.14). Нет в каталоге: AIR-RING, ATyS 20490+, датчики освещения 322.
 - TODO ядро: коллизия коротких ключей `World.devices[code].signals` (AHU-1/p_now из ventilation и energy/consumers) — один сигнал теряется; модели читают по полному коду. — `core/world.py` `_build`
+- DEC-12 (W1b): владелец kwh_total/kwh_shift потребителей — `models/meter.py` (R-03); machine пишет только p_now. В реестре 278 пристроїв (276 + агрегаты OFFICE, RV-ALL).
+- DEC-13 (W3): BACnet AI/AV не commandable (без priority-array); при нескольких сигналах на одну Modbus-адресу берётся первый по каталогу; AI:5 из сигнала filter_extract_dp_pa. Макет детекторов/групп DALI — из `dist/odoo_demo.json` (SIM_LAYOUT_PATH) — в образ Docker нужно положить файл.
+- DEC-14 (W4): SIM_CATALOG_SOURCE=odoo — реестр из локального каталога (API-01 только для bookings/employees через follow); reset не сбрасывает внутреннее состояние моделей; в Odoo пересылаются kind scenario/fault/alarm/error/info.
