@@ -28,4 +28,13 @@
               action="action_f3d_energy_tariff" groups="factory3d_energy.group_f3d_energy_cost"/>
     <menuitem id="menu_f3d_energy_pool" name="Пули спільних споживачів" parent="menu_f3d_energy_config" sequence="20"
               action="action_f3d_energy_pool" groups="factory3d_energy.group_f3d_energy_manager"/>
+    <!-- W5 -->
+    <menuitem id="menu_f3d_energy_overview" name="Огляд" parent="menu_f3d_energy" sequence="10"
+              action="action_f3d_energy_overview" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_peak" name="Пік і вартість" parent="menu_f3d_energy" sequence="45"
+              action="action_f3d_energy_peak" groups="factory3d_energy.group_f3d_energy_cost"/>
+    <menuitem id="menu_f3d_energy_recompute" name="Перерахувати" parent="menu_f3d_energy_config" sequence="30"
+              action="action_f3d_energy_recompute_wizard" groups="factory3d_energy.group_f3d_energy_manager"/>
+    <menuitem id="menu_f3d_energy_settings" name="Енергетика" parent="factory3d_base.menu_f3d_config" sequence="50"
+              action="action_f3d_energy_settings" groups="factory3d_base.group_f3d_admin"/>
 </odoo>

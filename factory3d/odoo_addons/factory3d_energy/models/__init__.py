@@ -4,4 +4,4 @@ from . import f3d_energy_event, f3d_energy_interval, f3d_energy_balance, f3d_ene
 from . import f3d_energy_alloc  # noqa: F401  (W3)
 from . import f3d_energy_outage  # noqa: F401  (W4)
 from . import mrp_workorder, mrp_production, mrp_workcenter, maintenance_equipment, maintenance_request  # noqa: F401  (W3)
-# W5: from . import res_config_settings, viewer_provider
+from . import res_config_settings, viewer_provider  # noqa: F401  (W5)

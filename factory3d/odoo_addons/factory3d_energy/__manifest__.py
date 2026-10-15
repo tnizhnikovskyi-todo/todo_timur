@@ -32,7 +32,8 @@
         "views/mrp_workorder_views.xml",  # W3
         "views/mrp_workcenter_views.xml",  # W3
         # "views/mrp_workorder_views.xml", "views/mrp_workcenter_views.xml";
-        # W5: "views/res_config_settings_views.xml", "views/dashboard_views.xml",
+        "views/res_config_settings_views.xml",  # W5
+        "views/dashboard_views.xml",  # W5
         "views/menus.xml",
     ],
     "demo": [],
