@@ -1,7 +1,7 @@
 # factory3d_telemetry
 Статус: IN_PROGRESS
-Тесты: Odoo 198/198, collector 172/172 (+2 skip broker) (2026-10-15), ТК: —
-Решений без заказчика: 11 (ниже)
+Тесты: Odoo 239/239, collector 172/172 (+2 skip broker) (2026-10-15), ТК: —
+Решений без заказчика: 13 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правка SPEC R-20/AC-78 vs Додаток A.2 `gap_max` (DEC-10)
 
@@ -13,8 +13,8 @@
 | W2 | принят | ef075c1 | /factory3d_telemetry 140/140 |
 | W6 | принят | 3992343 | pytest unit 172/172 (2 skip broker), ruff, mypy |
 | W3 | принят | 33244f2 | telemetry+viewer 198/198 (2 skip AC-70) |
-| W4 | в работе | | |
-| W7 | | | |
+| W4 | принят | 9412ed3 | telemetry+viewer 239/239 (и с iot_sim) |
+| W7 | в работе | | |
 
 ## Решения без заказчика
 - DEC-1: модуль должен ставиться до появления моделей — в `__manifest__` `data` только существующие файлы, хуки не подключены;
@@ -29,3 +29,5 @@
 - DEC-9: API-05 — поле `collector` в теле необязательно (проверяется при наличии); API-07 — неизвестный `state` → `rejected`, `reason=bad_state`. — `controllers/telemetry.py`
 - DEC-10: противоречие SPEC — AC-78 ждёт одно чтение 3000…3020 для u70, но разрыв 3010→3019 = 9 > `gap_max` по умолчанию 8 (Додаток A.2). Оставлен default 8 по A.2, тест AC-78 задаёт `gap_max=10`; в SPEC поднять default или поправить пример. — `collector/plugins/modbus_tcp.py:110`
 - DEC-11: `HttpPushServer` — синглтон процесса, стартует всегда на `F3D_HTTP_PUSH_PORT`; COV-контроль BACnet — внутри `poll()` по `cov_check_s`; кэш адресов BACnet — `buffer_dir/bacnet_addr.json` (fallback без ответа Who-Is). — `collector/core/http_push.py`, `collector/plugins/bacnet_ip.py`
+- DEC-12: хук §5.3 — шаг 6 (заявки) выполняется после verify и только при `mismatches == []`; `signals_catalog` для `new=0` пишет и `decimals`/`min_duration_s` (из C.2); масштаб R-20 округляется до 8 значащих цифр. — `hooks.py`
+- DEC-13: `fields.Json(default=dict)` → `default=lambda self: {}` (иначе падает `Form`). — `models/f3d_source.py`, `models/f3d_signal.py`

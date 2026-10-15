@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPEC §6. Замінює data/ir_cron.xml, коли з'являться моделі W1/W2. nextcall rotate ставить хук. -->
+<!-- SPEC §6. nextcall rotate ставить хук. -->
 <odoo noupdate="1">
     <record id="cron_f3d_telemetry_stale" model="ir.cron">
         <field name="name">Телеметрія: застарілі сигнали й офлайн-колектори</field>
