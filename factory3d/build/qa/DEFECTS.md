@@ -12,9 +12,9 @@
 | T-2 | telemetry | P2 | `_rate_check` пишет строку коллектора на каждый push (DEC-19 не до конца), f3d_collector.py:230-241 | DONE 8e24f2d (не раскатан) |
 | T-3 | telemetry | P2 | троттлинг `_touch` сбрасывается при смене IP; за Cloudflare IP меняется каждый запрос | DONE 112932f (не раскатан) |
 | T-4 | telemetry | P2 | действие «Телеметрія» показывает сигналы вместо тревог (фильтры в одной OR-группе), f3d_signal_views.xml:183-187 | DONE a41e015 (не раскатан) |
-| M-2 | machine_connect | P2 | смены OEE считают незакрытые записи журнала часа прошлых дней работой до конца смены, f3d_oee_shift.py:190,254,266 | OPEN |
-| B-1 | base | P2 | f3d.zone.f3d_code > 32 символов молча обрезается, нужна ValidationError (AC-01) | OPEN |
-| B-2 | base | P2 | Enterprise: оборудование с f3d_code РЦ без workcenter_id не связывается (hooks/zones.py:75-86) | OPEN |
+| M-2 | machine_connect | P2 | смены OEE считают незакрытые записи журнала часа прошлых дней работой до конца смены, f3d_oee_shift.py:190,254,266 | FIX (batch 2b) |
+| B-1 | base | P2 | f3d.zone.f3d_code > 32 символов молча обрезается, нужна ValidationError (AC-01) | FIX (batch 2b) |
+| B-2 | base | P2 | Enterprise: оборудование с f3d_code РЦ без workcenter_id не связывается (hooks/zones.py:75-86) | FIX (batch 2b) |
 | S-2 | iot_sim | P2 | params у 8/276 устройств, у 31 ADAM нет раскладки каналов (SPEC §5.2) | OPEN |
 | S-3 | iot_sim | P2 | данные каталога: T1/T2 unit 1/2 вместо 96; сигналы PV-INV на родителе; FL-6 не пассивный | OPEN |
 | B-3 | base | P3 | f3d_resolve возвращает архивную зону (противоречие SPEC AC-05/AC-06) | OPEN |
@@ -32,13 +32,13 @@
 | Y-2 | yard | P2 | фильтр «сегодня» КПП сравнивает день по Киеву с context_today браузера: 00:00–03:00 Киева (21–24 UTC) карточки не видны; падает test_dispatch_tour | DONE 7602a37 (не раскатан) |
 | F-1 | fire_safety | P3 | при тревоге FA-CUT не создана активность на FACP-1 (AC-17): возможно, пустая группа оповещения — проверить | OPEN |
 | BM-1 | bms | P3 | 81 сигнал ventilation/* с origin=sim_data, а не catalog (DEC-7); вероятно, созданы миграцией прототипа до установки bms — перепроверить после T-1 | OPEN |
-| G-1 | td_genset | P2 | ТО при просрочке мотогодин создаётся без priority '3' и без «прострочено на N мотогодин» в названии (AC-19), genset_fuel.py:1177 | OPEN |
+| G-1 | td_genset | P2 | ТО при просрочке мотогодин создаётся без priority '3' и без «прострочено на N мотогодин» в названии (AC-19), genset_fuel.py:1177 | FIX (batch 2b) |
 | V-2 | viewer | P3 | GET /f3d/viewer/data?codes=../../etc → 200 вместо 400: CODE_RE допускает «/» и «.» (controllers/viewer.py:18) | OPEN |
 | V-3 | viewer | P3 | /f3d/viewer/snapshot/abc → 303 на /uk/… вместо 404 (viewer.py:235) | OPEN |
-| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | OPEN |
-| ST-2 | iot_sim (сервис) | P2 | эмулятор шлёт LPR без токена → 401 (DEC-15); LPR дошёл только при снятом token_ref | OPEN |
-| ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | OPEN |
-| ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | OPEN |
+| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | FIX (ветка claude/f3d-fix-stand) |
+| ST-2 | iot_sim (сервис) | P2 | эмулятор шлёт LPR без токена → 401 (DEC-15); LPR дошёл только при снятом token_ref | FIX (ветка claude/f3d-fix-stand) |
+| ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | FIX (ветка claude/f3d-fix-stand) |
+| ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | FIX (ветка claude/f3d-fix-stand) |
 | E-4 | energy | P3 | 9 производных kwh_shift без данных и при живом стенде | OPEN |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
