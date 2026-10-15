@@ -4,6 +4,7 @@ import os
 
 _logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
 
+WC_LINK = 'workcenter_id'  # поле maintenance.equipment з mrp_maintenance (Enterprise); у CE його немає
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 
 
@@ -66,22 +67,23 @@ def bind(env):
 
 
 def _equipment_from_workcenter(env):
-    """Обладнання без зони успадковує зону свого РЦ.
+    """Обладнання без зони успадковує зону свого РЦ (крок 7 і повтор міграції).
 
-    Зв'язок — workcenter_id (mrp_maintenance); без нього (ENV-1) — однаковий f3d_code РЦ
-    і обладнання (A-15)."""
+    Зв'язок — workcenter_id (mrp_maintenance, Enterprise); обладнання без зв'язку — і в CE, де поля немає (ENV-1),
+    і в Enterprise, де поле є, але порожнє (B-2) — шукає РЦ за однаковим f3d_code (A-15)."""
     Eq, Wc = env['maintenance.equipment'], env['mrp.workcenter']
+    link = WC_LINK if WC_LINK in Eq._fields else None
     count = 0
-    if 'workcenter_id' in Eq._fields:
+    if link:
         for eq in Eq.search([('f3d_zone_id', '=', False),
-                             ('workcenter_id.f3d_zone_id', '!=', False)]):
-            eq.f3d_zone_id = eq.workcenter_id.f3d_zone_id
+                             (link + '.f3d_zone_id', '!=', False)]):
+            eq.f3d_zone_id = eq[link].f3d_zone_id
             count += 1
-    elif _has_code(Eq) and _has_code(Wc):
+    if _has_code(Eq) and _has_code(Wc):
         for wc in Wc.with_context(active_test=False).search(
                 [('f3d_zone_id', '!=', False), ('f3d_code', '!=', False)]):
             eq = Eq.search_f3d(wc.f3d_code)
-            if eq and not eq.f3d_zone_id:
+            if eq and not eq.f3d_zone_id and not (link and eq[link]):
                 eq.f3d_zone_id = wc.f3d_zone_id
                 count += 1
     return count

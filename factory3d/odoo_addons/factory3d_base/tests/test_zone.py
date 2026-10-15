@@ -1,4 +1,5 @@
 from collections import Counter
+from unittest import mock
 
 from odoo.exceptions import ValidationError
 from odoo.tests import tagged
@@ -168,3 +169,44 @@ class TestZoneBind(F3DCase):
             res = zone_hooks.bind(self.env)
         self.assertEqual(self.eq.f3d_zone_id, zone)
         self.assertGreaterEqual(res['equipment'], 1)
+
+
+@tagged('post_install', '-at_install', 'f3d', 'f3d_base')
+class TestEquipmentZoneFromWorkcenter(F3DCase):
+    """B-2: поле workcenter_id існує (Enterprise), але порожнє — зв'язок за f3d_code (A-15)."""
+
+    def setUp(self):
+        super().setUp()
+        model = self.env['ir.model']._get('maintenance.equipment')
+        self.env['ir.model.fields'].create({
+            'name': 'x_workcenter_id', 'field_description': 'Робочий центр (імітація mrp_maintenance)',
+            'ttype': 'many2one', 'relation': 'mrp.workcenter', 'model_id': model.id, 'state': 'manual',
+        })
+        patcher = mock.patch.object(zone_hooks, 'WC_LINK', 'x_workcenter_id')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.zone = self.env.ref('factory3d_base.zone_z_cut')
+        self.wc.write({'f3d_code': 'SAW-T', 'f3d_zone_id': self.zone.id})
+
+    def test_empty_link_falls_back_to_code(self):
+        self.assertIn('x_workcenter_id', self.env['maintenance.equipment']._fields)
+        self.eq.f3d_code = 'SAW-T'
+        self.assertFalse(self.eq.x_workcenter_id)
+        with self.with_data_file('scene_zone_links.csv', []):
+            res = zone_hooks.bind(self.env)
+        self.assertEqual(self.eq.f3d_zone_id, self.zone)
+        self.assertGreaterEqual(res['equipment'], 1)
+
+    def test_filled_link_still_inherits(self):
+        eq2 = self.env['maintenance.equipment'].create({'name': 'Eq with link'})
+        eq2.x_workcenter_id = self.wc
+        with self.with_data_file('scene_zone_links.csv', []):
+            zone_hooks.bind(self.env)
+        self.assertEqual(eq2.f3d_zone_id, self.zone)
+
+    def test_link_to_other_workcenter_not_overridden_by_code(self):
+        other = self.env['mrp.workcenter'].create({'name': 'Other WC'})
+        self.eq.write({'f3d_code': 'SAW-T', 'x_workcenter_id': other.id})
+        with self.with_data_file('scene_zone_links.csv', []):
+            zone_hooks.bind(self.env)
+        self.assertFalse(self.eq.f3d_zone_id)
