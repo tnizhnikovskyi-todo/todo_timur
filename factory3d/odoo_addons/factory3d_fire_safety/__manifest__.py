@@ -13,7 +13,7 @@
     # шаблон → джерела → сигнали → крони → представлення → звіти → меню).
     "data": [
         "security/security.xml",
-        # "security/ir.model.access.csv",         # після моделей усіх W1…W4 (42 рядки, §4.1)
+        "security/ir.model.access.csv",  # рядки моделей W4 — у security/ir.model.access_w4_pending.csv
         "data/ir_config_parameter.xml",
         "data/ir_sequence.xml",
         "data/mail_activity_type.xml",
@@ -26,9 +26,9 @@
         "data/f3d.fire.exit.csv",                 # M-09
         "data/f3d_fire_route.xml",               # M-10
         # "data/f3d_fire_drill_template.xml",     # M-11c, M-11e
-        # "data/f3d_source_data.xml",             # поле f3d_fire_readonly на f3d.source (M-15)
-        # "data/f3d_signal_data.xml",             # M-01…M-06 (signal_*), M-15
-        # "data/ir_cron.xml",                     # panel, drill
+        "data/f3d_source_data.xml",              # поле f3d_fire_readonly на f3d.source (M-15)
+        "data/f3d_signal_data.xml",              # M-01…M-06 (signal_*), M-15
+        "data/ir_cron.xml",                      # panel, drill
         "views/f3d_fire_norm_views.xml",
         "views/f3d_fire_panel_views.xml",
         "views/f3d_fire_zone_views.xml",
@@ -40,11 +40,11 @@
         "views/f3d_fire_smoke_zone_views.xml",
         # "views/f3d_fire_drill_views.xml",
         # "wizard/drill_rollcall_views.xml",
-        # "wizard/bacnet_device_views.xml",
+        "wizard/bacnet_device_views.xml",
         "views/f3d_zone_views.xml",
-        # "views/f3d_source_views.xml",
-        # "views/maintenance_request_views.xml",
-        # "views/res_config_settings_views.xml",
+        "views/f3d_source_views.xml",
+        "views/maintenance_request_views.xml",
+        "views/res_config_settings_views.xml",
         "report/report_evac_compliance.xml",
         "report/report_evac_compliance_templates.xml",
         # "report/report_drill.xml",

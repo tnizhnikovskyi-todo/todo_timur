@@ -115,6 +115,18 @@ class F3dFireSystem(models.Model):
                     text = "Спринклерна система в режимі очікування"
             rec.state_text = text
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        self.env.registry.clear_cache()  # f3d.signal._f3d_fire_extra_codes (M-15)
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if "pressure_signal_id" in vals or "active" in vals:
+            self.env.registry.clear_cache()
+        return res
+
     def _set_state(self, new, ts, etype=None, text=None):
         self.ensure_one()
         vals = {"state_ts": ts}

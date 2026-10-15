@@ -30,14 +30,4 @@ access_f3d_fire_route_manager,f3d.fire.route manager,model_f3d_fire_route,factor
 access_f3d_fire_route_admin,f3d.fire.route admin,model_f3d_fire_route,factory3d_base.group_f3d_admin,1,1,1,1
 access_f3d_fire_drill_user,f3d.fire.drill user,model_f3d_fire_drill,factory3d_base.group_f3d_user,1,0,0,0
 access_f3d_fire_drill_drill,f3d.fire.drill drill,model_f3d_fire_drill,factory3d_fire_safety.group_f3d_fire_drill,1,1,1,1
-access_f3d_fire_drill_step_user,f3d.fire.drill.step user,model_f3d_fire_drill_step,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_fire_drill_step_drill,f3d.fire.drill.step drill,model_f3d_fire_drill_step,factory3d_fire_safety.group_f3d_fire_drill,1,1,1,1
-access_f3d_fire_drill_person_drill,f3d.fire.drill.person drill,model_f3d_fire_drill_person,factory3d_fire_safety.group_f3d_fire_drill,1,1,1,1
-access_f3d_fire_drill_person_hr,f3d.fire.drill.person hr,model_f3d_fire_drill_person,hr.group_hr_user,1,0,0,0
-access_f3d_fire_drill_template_user,f3d.fire.drill.template user,model_f3d_fire_drill_template,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_fire_drill_template_manager,f3d.fire.drill.template manager,model_f3d_fire_drill_template,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_fire_drill_template_step_user,f3d.fire.drill.template.step user,model_f3d_fire_drill_template_step,factory3d_base.group_f3d_user,1,0,0,0
-access_f3d_fire_drill_template_step_manager,f3d.fire.drill.template.step manager,model_f3d_fire_drill_template_step,factory3d_base.group_f3d_manager,1,1,1,1
-access_f3d_fire_drill_rollcall_wizard_drill,f3d.fire.drill.rollcall.wizard drill,model_f3d_fire_drill_rollcall_wizard,factory3d_fire_safety.group_f3d_fire_drill,1,1,1,1
-access_f3d_fire_drill_rollcall_line_drill,f3d.fire.drill.rollcall.line drill,model_f3d_fire_drill_rollcall_line,factory3d_fire_safety.group_f3d_fire_drill,1,1,1,1
 access_f3d_fire_bacnet_device_wizard_admin,f3d.fire.bacnet.device.wizard admin,model_f3d_fire_bacnet_device_wizard,factory3d_base.group_f3d_admin,1,1,1,1

@@ -274,6 +274,58 @@ class F3dFirePanel(models.Model):
                 self._f3d_fire_comm_request(ts)
         fire_notify(self.env, "f3d.fire.panel", [self.code], "state")
 
+    # --- синхронізація з сигналами (R-19, R-22 п. 3) -------------------------------------------------------
+    @api.model
+    def _f3d_fire_sync(self, codes=None, full=False):
+        from ..tools.sync import FireSync
+        return FireSync(self.env).run(codes=codes, full=full)
+
+    @api.model
+    def _cron_sync(self):
+        """Крон «звірка станів і зв'язку» (A-22): наздоганяє push, виставляє зв'язок."""
+        return self._f3d_fire_sync(full=True)
+
+    def _f3d_fire_comm_request(self, ts):
+        """Заявка ТО про втрату зв'язку (R-22 п. 3): одна відкрита на прилад."""
+        self.ensure_one()
+        request = self.comm_request_id
+        if request.exists() and not request.stage_id.done:
+            return request
+        equipment = self.equipment_id
+        if not equipment:
+            _logger.warning("Прилад %s без обладнання: заявку про втрату зв'язку не створено", self.code)
+            return False
+        from ..tools.dates import local
+        icp = self.env["ir.config_parameter"].sudo()
+        team = self.env["maintenance.team"]
+        for param_team in (self._get_param("team_id", 0), equipment.maintenance_team_id.id,
+                           int(icp.get_param("factory3d.telemetry.default_team_id") or 0)):
+            if param_team:
+                team = team.browse(param_team).exists()
+                if team:
+                    break
+        since = local(self.last_seen)[-5:] if self.last_seen else "—"
+        minutes = int((ts - self.last_seen).total_seconds() // 60) if self.last_seen else 0
+        request = self.env["maintenance.request"].sudo().create({
+            "name": "Втрата зв'язку з приладом %s: немає даних з %s (%d хв)" % (self.code, since, minutes),
+            "equipment_id": equipment.id,
+            "maintenance_type": "corrective",
+            "maintenance_team_id": team.id or False,
+            "priority": "3",
+            "f3d_origin": "fire_comm",
+            "request_date": fields.Date.today(),
+            "schedule_date": fields.Datetime.now(),
+            "description": "Автоматично: немає показань приладу %s (джерело %s) з %s; поріг %d с." % (
+                self.code, self.source_id.code or "—", local(self.last_seen) if self.last_seen else "—",
+                self._get_param("comm_lost_after_s", 180)),
+        })
+        self.sudo().write({"comm_request_id": request.id})
+        event = self.env["f3d.fire.event"].search(
+            [("etype", "=", "comm_lost"), ("panel_id", "=", self.id)], order="ts desc, id desc", limit=1)
+        if event and not event.request_id:
+            event.request_id = request.id
+        return request
+
     # --- сповіщення ---------------------------------------------------------------------------------------
     def _alert_users(self):
         xmlid = self._get_param("alert_group_xmlid", "factory3d_base.group_f3d_user")

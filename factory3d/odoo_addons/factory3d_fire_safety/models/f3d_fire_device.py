@@ -280,7 +280,7 @@ class F3dFireDevice(models.Model):
                         "warn_high": warn_pct, "alarm_high": alarm_pct,
                         "viewer_visible": False, "module": "fire_safety", "origin": "module",
                         "write_enabled": False,
-                        "alarm_title": ("Очистити сповіщувач %s (%s): запиленість {value} % при нормі до "
+                        "alarm_title": ("Очистити сповіщувач %s (%s): запиленість {value} %% при нормі до "
                                         "{threshold}" % (dev.address, zone_name))})
                     created += 1
                 dev.dust_signal_id = sig

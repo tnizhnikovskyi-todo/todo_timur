@@ -52,6 +52,7 @@ class FireCase(TransactionCase):
                 'code': 'equipment/SPRINKLERS/pressure_bar', 'name': 'Тиск спринклерів', 'kind': 'gauge',
                 'alarm_low': 6.5, 'alarm_low_on': True, 'module': 'telemetry',
                 'equipment_id': cls.equipment['SPRINKLERS'].id})
+        cls._ensure_dust_signal()
         hooks.equipment.link(env)
         # параметри й тестова група охорони
         icp = env['ir.config_parameter'].sudo()
@@ -71,6 +72,23 @@ class FireCase(TransactionCase):
         cls.guard2 = new_test_user(env, 'fire_guard2', groups='base.group_user')
         cls.g_alert.user_ids = [(6, 0, (cls.guard1 | cls.guard2).ids)]
 
+    @classmethod
+    def _ensure_dust_signal(cls):
+        """Сигнал запиленості 2.FAC.07 (хук §5.4 п. 3): створюється, якщо хук ще не створив."""
+        env = cls.env
+        sig = env['f3d.signal'].search([('code', '=', 'fire/groups/FA-FAC/dust')], limit=1)
+        if not sig:
+            sig = env['f3d.signal'].create({
+                'code': 'fire/groups/FA-FAC/dust', 'name': 'Запиленість сповіщувача 2.FAC.07', 'kind': 'gauge',
+                'unit': '%', 'source_id': cls.src_bac.id, 'address': {'object': 'PIV', 'instance': 21607, 'mode': 'poll'},
+                'period_s': 600, 'store_period_s': 3600, 'module': 'fire_safety', 'origin': 'module',
+                'warn_high': 80, 'warn_high_on': True, 'alarm_high': 90, 'alarm_high_on': True, 'hysteresis': 1.8,
+                'decimals': 1, 'create_request': True, 'write_enabled': False,
+                'alarm_title': 'Очистити сповіщувач 2.FAC.07 (Дільниця фасадів МДФ): запиленість {value} % при нормі до {threshold}'})
+        cls.dust_signal = sig
+        cls.z_fac.dust_signal_id = sig
+        cls.dev_fac07.write({'dust_signal_id': sig.id, 'monitor': True})
+
     # --- час ---------------------------------------------------------------------------------------------
     @staticmethod
     def at(s):
@@ -87,8 +105,10 @@ class FireCase(TransactionCase):
     def push_value(self, code, value, ts=None):
         return self._push([{'code': code, 'ts': ts or T0, 'value': value}], ts or T0)
 
-    def sync(self):
-        return self.panel._f3d_fire_sync(full=True)
+    def sync(self, s=None):
+        """Повна звірка; `s` — секунди від T0 (час заморожується, інакше «зараз» далеко від T0)."""
+        with freeze_time(self.at(s if s is not None else 5)):
+            return self.panel._f3d_fire_sync(full=True)
 
     def ev(self, etype, **dom):
         domain = [('etype', '=', etype)] + [(k, '=', v) for k, v in dom.items()]

@@ -10,18 +10,6 @@ from .common import FireCase
 
 class EventCase(FireCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # ACL §4.1 для журналу (access.csv у манифест W1 не входить): U — читання/запис, D — + створення
-        model = cls.env['ir.model']._get('f3d.fire.event')
-        Access = cls.env['ir.model.access']
-        for name, xmlid, create in (('user', 'factory3d_base.group_f3d_user', 0),
-                                    ('drill', 'factory3d_fire_safety.group_f3d_fire_drill', 1)):
-            Access.create({'name': 'test f3d.fire.event ' + name, 'model_id': model.id,
-                           'group_id': cls.env.ref(xmlid).id, 'perm_read': 1, 'perm_write': 1,
-                           'perm_create': create, 'perm_unlink': 0})
-
     def log(self, etype='fault', code='FA-CUT', ts=None, text='Тест', **kw):
         return self.env['f3d.fire.event']._log(etype, code, ts or self.T0, text, **kw)
 
@@ -112,8 +100,6 @@ class TestBacnetPush(EventCase):
 
     def setUp(self):
         super().setUp()
-        if 'f3d.push.handler.fire' not in self.env:
-            self.skipTest('f3d.push.handler.fire (M-18, W2) ще не встановлено')
         self.handler = self.env['f3d.push.handler.fire']
         if not self.panel.source_id and self.src_bac:
             self.panel.source_id = self.src_bac

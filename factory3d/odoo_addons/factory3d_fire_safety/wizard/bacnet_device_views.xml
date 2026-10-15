@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-27 -->
+    <record id="view_f3d_fire_bacnet_device_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.fire.bacnet.device.wizard.form</field>
+        <field name="model">f3d.fire.bacnet.device.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Змінити BACnet device">
+                <div class="alert alert-warning" role="alert">
+                    Змінюється device instance у параметрах джерела (і явні адреси сигналів, якщо є);
+                    запис у прилад не виконується.
+                </div>
+                <group>
+                    <group>
+                        <field name="panel_id" readonly="1"/>
+                        <field name="source_id" readonly="1"/>
+                        <field name="old_instance"/>
+                        <field name="new_instance"/>
+                    </group>
+                    <group>
+                        <field name="signal_count"/>
+                        <field name="explicit_count"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Змінити" class="btn-primary"
+                            confirm="Змінити BACnet device instance у джерелі?"/>
+                    <button string="Скасувати" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

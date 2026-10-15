@@ -12,10 +12,10 @@ from . import f3d_fire_route  # W3 (f3d.zone.f3d_evac_route_id)
 from . import f3d_fire_drill  # W4 (event.drill_id)
 # from . import passage_source
 from . import f3d_zone
-# from . import maintenance_request
-# from . import f3d_source
-# from . import f3d_signal
-# from . import f3d_command
-# from . import res_config_settings
-# from . import push_handler
+from . import maintenance_request
+from . import f3d_source
+from . import f3d_signal
+from . import f3d_command
+from . import res_config_settings
+from . import push_handler
 # from . import iot_sim_bridge
