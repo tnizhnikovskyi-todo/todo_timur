@@ -40,7 +40,7 @@
                                     <field name="sequence" widget="handle"/>
                                     <field name="selected" widget="boolean_toggle"/>
                                     <field name="label"/>
-                                    <field name="name" readonly="1"/>
+                                    <field name="name" readonly="1" force_save="1"/>
                                     <field name="state" widget="badge"
                                            decoration-muted="state == 'todo'" decoration-info="state == 'running'"
                                            decoration-success="state == 'done'"

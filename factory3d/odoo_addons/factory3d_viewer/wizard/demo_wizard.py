@@ -13,6 +13,7 @@ _logger = logging.getLogger(__name__)
 
 PREFIX = "factory3d.viewer."
 LOG_LINES = 500
+STALE_S = 2100  # крон ≤ 30 хв
 LABELS = OrderedDict([
     ("modules", "Модулі"), ("settings", "Налаштування складу/виробництва"),
     ("base", "Компанія, валюта, товари, партнери, одиниці"), ("views", "Поля ворота/фура на формі переміщення"),
@@ -51,6 +52,18 @@ class F3dDemoWizardStep(models.TransientModel):
                               ("skipped", "Пропущено"), ("error", "Помилка")], default="todo")
     duration_s = fields.Float("Секунд", digits=(8, 1))
     message = fields.Char("Повідомлення")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Вебклієнт не шле readonly-поле name: ключ кроку відновлюється з назви (або за порядком)."""
+        by_label = {v: k for k, v in LABELS.items()}
+        keys = list(LABELS)
+        for i, vals in enumerate(vals_list):
+            if not vals.get("name"):
+                seq = vals.get("sequence") or 0
+                vals["name"] = by_label.get(vals.get("label")) or (
+                    keys[seq // 10 - 1] if seq and 0 < seq // 10 <= len(keys) else keys[i % len(keys)])
+        return super().create(vals_list)
 
 
 class F3dDemoWizard(models.TransientModel):
@@ -119,9 +132,11 @@ class F3dDemoWizard(models.TransientModel):
         cron = self._cron()
         if not cron:
             raise UserError("Крон «3D: заливка демо» не знайдено.")
-        if cron.sudo().active and self._load_state().get("state") == "running":
+        st = self._load_state()
+        fresh = time.time() - st.get("ts", 0) < STALE_S  # «завислий» running після збою не блокує вічно
+        if cron.sudo().active and st.get("state") == "running" and fresh:
             raise UserError("Заливка вже виконується")
-        steps = [s.name for s in self.step_ids.sorted("sequence") if s.selected]
+        steps = [s.name for s in self.step_ids.sorted("sequence") if s.selected and s.name in LABELS]
         if not steps:
             raise UserError("Оберіть хоча б один крок.")
         self._set_param("demo_clock", self.demo_clock or "2026-10-12 10:30")
@@ -140,6 +155,9 @@ class F3dDemoWizard(models.TransientModel):
         st = self._load_state()
         if st.get("wizard_id") == self.id:
             self._apply(st)
+        cron = self._cron()
+        if cron and cron.sudo().active and st.get("state") in ("done", "error"):
+            cron.sudo().active = False  # поза кроном: після завершення вимкнути
         return self._form()
 
     def _apply(self, st):
@@ -161,11 +179,14 @@ class F3dDemoWizard(models.TransientModel):
         except ValueError:
             queue = {}
         names = queue.get("steps") or []
+        if not names:  # крон активний, а роботи немає (повторний виклик за розкладом) — просто вийти
+            return
         st = {"wizard_id": queue.get("wizard_id"), "state": "running", "progress": 0, "log": [], "steps": {},
               "new_records": 0, "current_step": ""}
         wiz = self.browse(queue.get("wizard_id") or 0).exists()
 
         def save():
+            st["ts"] = time.time()
             params.set_param(PREFIX + "demo_state", json.dumps(st, ensure_ascii=False))
             if wiz:
                 wiz._apply(st)
@@ -175,8 +196,6 @@ class F3dDemoWizard(models.TransientModel):
         def say(msg):
             st["log"] = (st["log"] + [str(msg)])[-LOG_LINES:]
 
-        if not names:
-            return self._finish(st, save, say, "done")
         runner = demo_steps.Runner(self.env, log=say)
         save()
         for k, name in enumerate(names, 1):
@@ -208,10 +227,7 @@ class F3dDemoWizard(models.TransientModel):
             st["progress"] = 100
             st["current_step"] = ""
             say(self._cycle_check_line())
-        self._set_param("demo_queue", "")
-        cron = self._cron()
-        if cron:
-            cron.sudo().active = False
+        self._set_param("demo_queue", "")  # крон лишається активним до «Оновити»: сам себе він вимкнути не може
         save()
 
     def _cycle_check_line(self):

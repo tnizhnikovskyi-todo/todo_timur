@@ -1,5 +1,6 @@
 import difflib
 import os
+from unittest.mock import patch
 
 from odoo import SUPERUSER_ID
 from odoo.exceptions import UserError
@@ -58,6 +59,52 @@ class TestDemoWizardGuard(F3dViewerBase):
         self.assertEqual(self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.demo_clock"),
                          "2026-10-13 09:00")
         self.assertIn('"settings"', self.env["ir.config_parameter"].sudo().get_param("factory3d.viewer.demo_queue"))
+
+    def test_steps_from_form_without_name(self):
+        """Вебклієнт не шле readonly name: кроки з форми валідні, ключ відновлюється."""
+        wiz = self.env["f3d.demo.wizard"].with_user(self.user_admin).create({"step_ids": [
+            (0, 0, {"label": LABELS["views"], "sequence": 40, "selected": True}),
+            (0, 0, {"label": "довільна назва", "sequence": 310, "selected": True})]})
+        self.assertEqual(wiz.step_ids.mapped("name"), ["views", "iot_module"])
+
+    def test_cron_run_does_not_touch_cron(self):
+        """Крон не може змінювати сам себе (Odoo 19): _cron_run доходить до done без запису в ir.cron."""
+        self.set_param("demo_enabled", "True")
+        wiz = self._wizard()
+        wiz.step_ids.write({"selected": False})
+        wiz.step_ids.filtered(lambda s: s.name in ("views", "iot_module")).write({"selected": True})
+        wiz.action_run()
+        self.env["f3d.demo.wizard"].flush_model()
+
+        def forbidden(self, *a, **kw):
+            raise UserError("cron currently being executed")
+        with patch.object(type(self.env["ir.cron"]), "write", forbidden):
+            wiz.with_user(SUPERUSER_ID)._cron_run()
+        wiz.invalidate_recordset()
+        self.assertEqual((wiz.state, wiz.progress), ("done", 100))
+        self.assertIn("cycle_check:", wiz.log)
+        # після завершення кнопка «Оновити» вимикає крон, і новий запуск можливий
+        wiz.action_refresh()
+        self.assertFalse(self.env.ref("factory3d_viewer.cron_f3d_demo").active)
+        wiz2 = self._wizard()
+        wiz2.action_run()
+        self.assertEqual(wiz2.state, "queued")
+
+    def test_rerun_after_error(self):
+        self.set_param("demo_enabled", "True")
+        wiz = self._wizard()
+        wiz.step_ids.write({"selected": False})
+        wiz.step_ids.filtered(lambda s: s.name == "calendar").write({"selected": True})
+        wiz.action_run()
+        with patch.object(demo_steps.Runner, "run", side_effect=RuntimeError("boom")), self.assertLogs(
+                "odoo.addons.factory3d_viewer.wizard.demo_wizard", "ERROR"):
+            wiz.with_user(SUPERUSER_ID)._cron_run()
+        wiz.invalidate_recordset()
+        self.assertEqual(wiz.state, "error")
+        self.assertIn("boom", wiz.step_ids.filtered(lambda s: s.name == "calendar").message)
+        wiz2 = self._wizard()
+        wiz2.action_run()  # не заблоковано
+        self.assertEqual(wiz2.state, "queued")
 
     def test_orm_proxy(self):
         o = OrmProxy(self.env)
@@ -147,6 +194,7 @@ class TestDemoWizard(F3dViewerBase):
         self.assertTrue(self.env["mrp.production"].search([("name", "=", "WH/MO/00231")]))
         self.assertEqual(self._count("mrp.workcenter"), 35)
         self.assertEqual(self._count("mrp.production"), 32)
+        wiz.action_refresh()  # поза кроном крон вимикається
         self.assertFalse(self.env.ref("factory3d_viewer.cron_f3d_demo").active)
 
     def test_idempotent_rerun(self):
