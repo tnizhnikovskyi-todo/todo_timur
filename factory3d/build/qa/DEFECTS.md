@@ -25,6 +25,9 @@
 | A-1 | access | P2 | роль Охрана: в CSV RW на f3d.access.door, по SPEC §13.3 только alarm*; ограничение только в write() (f3d_access_door.py:79); проверить под ролью | OPEN |
 | A-2 | access | P3 | два меню «Сервери BioStar» (id 520, 521) | OPEN |
 | A-3 | access | P3 | сервер BioStar-эмулятора: read_enabled, state=error, опрос каждую минуту (сервис эмулятора не запущен); migration_state=partial | OPEN |
+| E-1 | energy | P2 | у 67 счётчиков нет показаний kwh_total, интервалы и распределение = 0; вероятно нет живых данных (сервис эмулятора не запущен) и/или T-1 | OPEN |
+| E-2 | energy | P3 | сигнал SAW-1/p_now отстаёт от последнего показания (20:36 против 21:00) | OPEN |
+| E-3 | energy | P2 | моста factory3d_energy_mrp_workorder нет (FR-08, AC-37–41): на Enterprise не реализовано (ENV) | OPEN |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
 
