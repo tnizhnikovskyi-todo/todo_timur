@@ -4,7 +4,7 @@
 // Отличия от data.json (только добавления): у мест есть `id` (из него `odoo_id` узлов), `usage`, `barcode`, `parent_id`, `storage_category_id`, позиции posx/posy/posz
 // и флаги — те, что есть в данной версии Odoo; у снимка в `meta.odoo` лежат `version`, `warehouse_id`, `view_location_id`, `containers` (родительские и
 // view-локации по пути — у них тоже есть id), `storage_categories`, `putaway_rules`, `orderpoints`. Ключи верхнего уровня те же, что у data.json.
-// Места — локации без дочерних (и локации с остатком); ключ места — имя локации (при совпадении имён — `имя~id`).
+// Места — локации без дочерних (и локации с остатком); ключ места — штрихкод локации, а без него имя (при совпадении — `ключ~id`): так короткое имя уровня (D-14) не ломает коды.
 // Обмен — JSON-RPC (POST <api>/read/<маршрут>, сессия Odoo); fetch подставляется (в unit-тестах фейковый). Большие выборки грузятся постранично.
 export const ODOO_READ_API = "/wh_constructor/api";
 export const PAGE_SIZE = 2000;
@@ -101,7 +101,7 @@ export function buildSnapshot({ warehouse, db = "", version = {}, now = "", loca
       containers[isRoot ? "WH" : l.complete_name] = { id: l.id, usage: l.usage, ...extra(l) };
       continue;
     }
-    let key = l.name; if (used.has(key)) key = `${l.name}~${l.id}`; used.add(key);
+    let key = l.barcode || l.name; if (used.has(key)) key = `${key}~${l.id}`; used.add(key); // ключ места — штрихкод (в нём полный код, D-14), иначе имя
     const op = opByLoc.get(l.id), cat = cats.get(l.storage_category_id);
     const prodCaps = cat ? cat.capacities.filter((c) => c.product_id != null) : [], pkgCaps = cat ? cat.capacities.filter((c) => c.package_type_id != null) : [];
     let capacity = null, capProduct = null, kind = "area", fill = null;

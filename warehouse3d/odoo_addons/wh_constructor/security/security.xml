@@ -16,7 +16,7 @@
     <record id="group_wh_apply" model="res.groups">
         <field name="name">Конструктор: застосування в Odoo</field>
         <field name="implied_ids" eval="[(4, ref('group_wh_design'))]"/>
-        <field name="comment">Застосовувати проєкт до локацій Odoo (саме застосування — окремий етап; зараз лише група).</field>
+        <field name="comment">Застосовувати план змін до локацій Odoo (створення, перенесення, перейменування, архівація), відкочувати застосування за журналом.</field>
     </record>
 
     <!-- Записи проєкту та залежні — лише своєї компанії (або без компанії) -->
@@ -34,5 +34,10 @@
         <field name="name">Конструктор: блокування зон своєї компанії</field>
         <field name="model_id" ref="model_wh_zone_lock"/>
         <field name="domain_force">['|', ('project_id.company_id', '=', False), ('project_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wh_apply_log_company" model="ir.rule">
+        <field name="name">Конструктор: журнал застосувань своєї компанії</field>
+        <field name="model_id" ref="model_wh_apply_log"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
 </odoo>

@@ -22,6 +22,7 @@ import { CATALOG, catalogType } from "./catalog.js";
 import { captureTemplate, normLibrary, uniqTemplate } from "./library.js";
 import * as B from "./building.js";
 import { BLD_OPS } from "./bldops.js";
+import { cleanApplied, computePlan } from "./plan.js";
 import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "./checks.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон" };
@@ -108,6 +109,15 @@ export function createModel(project, storage, opts = {}) {
       Object.assign(ui, { sel: null, esel: ui.edit ? ui.focus : null, msel: [] }); bclear();
       s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
     },
+    // план изменений (W-13, plan.js): сохранённый слой правок против снимка Odoo активного склада; несохранённое в план не входит (unsaved — сколько его)
+    changePlan: () => ({ ...computePlan(s.data, s.saved, cfgOf(s.wh)), unsaved: s.pending.length }),
+    // применённое в Odoo (keys — ключи операций плана): слой правок очищается от применённого, остальное остаётся; вызывается после перечитывания снимка (reloadBase)
+    applied(plan, keys) {
+      cleanApplied(s.saved, plan, new Set(keys));
+      ed.persist(s, true); ed.recompute(s); ed.applyEdit(s); s.emit({ type: "warehouse" });
+    },
+    // расхождения с Odoo (G7, odoodiff.js): «залишити моє» для выбранных строк — правки слоя (несохранённые, с undo); old — прежний снимок склада
+    keepMine: (picks, old) => ed.OPS.keepMine(s, picks, old),
     nodes: () => nodesOf(s.tree, s.data), // узлы склада в виде v2
     // глубина локаций (D-11): настройка склада ("WH") и зон; меняется операцией ops.depth через «Показати / Зберегти», как другие правки.
     // own — собственная настройка ("inherit" — как у склада), eff — действующая

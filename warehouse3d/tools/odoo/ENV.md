@@ -14,6 +14,7 @@ WH_TEST_INSTALL=wh_constructor $T/run_tests.sh …    # ставити/тест�
 $T/new_db.sh | update.sh | serve.sh [stop|status] | drop_db.sh <db>   # порожня копія · -i/-u модулів · сервер у фоні (admin/admin) · видалення
 $T/pg.sh start|stop|status|init                     # Postgres не стартує сам після рестарту контейнера
 $T/setup.sh template|check                          # перезібрати шаблон · перевірка тестової інфраструктури (/stock:TestWarehouse)
+$T/prepare_module.sh [--force]                      # зібрати застосунок warehouse3d/app у static/app модуля wh_constructor (I-02; його ж викликають setup.sh app і update.sh)
 ```
 
 Назви баз — `[a-z0-9_-]`; у кожного потоку свій префікс (`wh_w21_…`). Логи Odoo — у `/home/user/odoo<версія>-data/logs/`, у вивід скриптів потрапляють лише підсумок і помилки.

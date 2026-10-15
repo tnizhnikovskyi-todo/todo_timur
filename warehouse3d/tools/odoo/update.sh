@@ -5,6 +5,7 @@
 #
 # Модулі — WH_TEST_INSTALL (через кому) або всі з warehouse3d/odoo_addons. Ті, що вже встановлені в
 # базі, оновлюються (-u), решта — ставляться (-i; -u на невстановленому модулі мовчки нічого не робить).
+# Перед оновленням wh_constructor збирається застосунок у його static/app (prepare_module.sh; WH_APP_BUILD=skip — пропустити, I-02).
 # Потім --stop-after-init. Запущений serve.sh для цієї бази перезавантажить реєстр сам; якщо
 # інтерфейс «завис» — перезапустіть його. Повний лог: $ODOO_LOG_DIR/update-<dbname>.log.
 # Код виходу — як у run_tests.sh (0 / код Odoo / 1 при ERROR у логу / 4 — модуль не встановився).
@@ -26,6 +27,7 @@ wh_lock_db "$db"
 
 modules="${WH_TEST_INSTALL:-$(wh_local_modules)}"
 [[ -n "$modules" ]] || wh_die "нема що оновлювати: WH_TEST_INSTALL не заданий і в $WH_ADDONS_DIR немає модулів"
+for m in ${modules//,/ }; do [[ "$m" == "wh_constructor" ]] && "$WH_TOOLS_DIR/prepare_module.sh"; done
 upd=(); ins=()
 for m in ${modules//,/ }; do
     state="$(wh_module_state "$db" "$m")"
