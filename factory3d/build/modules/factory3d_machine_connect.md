@@ -1,9 +1,9 @@
 # factory3d_machine_connect
-Статус: IN_PROGRESS
-Тесты: Odoo 125/125, collector plugins unit 51/51 (2026-10-15), ТК: W9
-Решений без заказчика: 18 (ниже)
+Статус: DONE (юнит-DoD); стенд частично — ТК-03/15, ТП-01/04 красные, ТК-14 не прогнан, ТБ-03 (лог) не выполнен
+Тесты: Odoo 129/129 (/factory3d_machine_connect, чистая база и с iot_sim), collector plugins unit 53/53 (2026-10-15); ruff OK; статика DoD (x_/TODO/print/overrides/cmdtext) чисто; ТК: прогнаны частично (TEST_REPORT.md): ТК 12/15 PASS, ТБ 9/10, ТП 2/4
+Решений без заказчика: 21 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ISA95-структуры — допущение Q-01
+Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ТП-01 deadlock/serialization при 35 верстатах/с (DEC-19); ТБ-03 токен API-01 в access-log (DEC-20); ТП-04 500 только на стенде (DEC-21); ТК-03/15 не разобраны; ТК-14 и AC-70-подобные — до factory3d_viewer; копия демо-базы (AC-93, TestMigrationDemo, CHANGELOG «Міграція демо»); Docker-стенд и сертификаты HOMAG; ISA95-структуры — допущение Q-01; дефекты iot_sim (TEST_REPORT); мост mrp_workorder не тестирован (нет Enterprise)
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -16,7 +16,8 @@
 | W6 | принят | ca5b681 | /factory3d_machine_connect 80/80 |
 | W3 | принят | 29ca2f4 | /factory3d_machine_connect 100/100 |
 | W8 | принят | e27cc6c | /factory3d_machine_connect 125/125 (и с iot_sim) |
-| W9 | в работе | | |
+| W9 | принят (досрочно, по менеджеру) | 9eff23b, acaa5c8 | стенд частично; 3 дефекта исправлены с регресс-тестами |
+| DoD | принят | — | 129/129, unit 53/53, README/CHANGELOG |
 
 ## Решения без заказчика
 - DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
@@ -67,3 +68,10 @@
   существующие `f3d.machine` не перезаписываются. TestMigrationDemo пропускается без копии демо. — `hooks.py`
 - DEC-18: провайдер переглядача M-22 — duck typing без `factory3d_viewer` (как telemetry DEC-8), payload меняется на месте;
   тест bus `f3d.viewer.event` — skip до viewer. V-31 без `target='inline'` (Odoo 19). — `models/viewer_provider.py`
+- DEC-19: ТП-01 — 72 deadlock и 278 serialization errors при одновременных UPDATE `f3d_machine`/`f3d_collector`
+  (35 верстатов/с + крони); прочие метрики в пределах SPEC (p95 451 мс, 0×5xx). Нужна архитектурная правка
+  (порядок блокировок/батчинг) — человеку. Прогоны ТК-03/ТП-01/ТП-02 сокращены по времени.
+- DEC-20: ТБ-03 — одноразовый токен `t` API-01 попадает в access-log werkzeug (query); SPEC требует 0 совпадений.
+  Варианты: заголовок вместо query (правка адаптера cutopt и API-01) или правка SPEC — решение человека.
+- DEC-21: ТП-04 — 500 на EV-02 (27 стосов) на юнит/HttpCase не воспроизводится (200, тесты добавлены), в стендовом
+  payload не было `hash`; повторить на стенде с логом Odoo.

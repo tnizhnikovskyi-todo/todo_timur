@@ -1,2 +1,3 @@
 .claude/worktrees/
 *.egg-info/
+factory3d/services/iot_sim/state/
