@@ -16,7 +16,8 @@
 | W1b-2 | принят (дельта chains ждёт W1b-1) | 4a7da35 | 84/84 (демо skip) |
 | W2 | принят | 90dd23b | TestViewerHoot 52 hoot; демо 162/162 |
 | W4 | принят | 2859c22 | демо 185/185, пусто 155/155, туры OK |
-| W5 | слит, доводка 2 FAIL cycle_check на демо | c6dcdb7 | пусто 140/140; TestDemoWizard 2/2 (326 с) |
+| W5 | принят | 7bb4e6b | демо 192/192; TestDemoWizard 2/2 (354 с); ruff OK |
+| W4b (флейк тура) | в работе | — | — |
 | W6 | принят | 868aa12 | TestPerf+TestNeutralize 9/9; SQL-пороги AC-52 не держатся → W7 |
 | W7 (SQL AC-52, uninstall) | в работе | — | — |
 
