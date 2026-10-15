@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- W3: V-16. ENV-2: mrp_workorder (Enterprise) немає — використано CE `mrp` 19.0 (форма/список завдань). -->
+<odoo>
+    <record id="view_mrp_workorder_form_f3d_energy" model="ir.ui.view">
+        <field name="name">mrp.workorder.form.f3d.energy</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_production_workorder_form_view_inherit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//label[@for='duration']/parent::div" position="after">
+                <group name="f3d_energy" groups="factory3d_energy.group_f3d_energy_user">
+                    <field name="f3d_energy_kwh"/>
+                    <field name="f3d_energy_cost" groups="factory3d_energy.group_f3d_energy_cost"/>
+                    <field name="f3d_energy_quality" widget="badge" decoration-success="f3d_energy_quality == 'measured'"
+                           decoration-warning="f3d_energy_quality == 'partial'"
+                           decoration-muted="f3d_energy_quality in ('none', 'estimate')"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_mrp_workorder_list_f3d_energy" model="ir.ui.view">
+        <field name="name">mrp.workorder.list.f3d.energy</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_production_workorder_tree_editable_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='duration']" position="after">
+                <field name="f3d_energy_kwh" optional="show" sum="Разом" readonly="1"
+                       groups="factory3d_energy.group_f3d_energy_user"/>
+                <field name="f3d_energy_cost" optional="hide" readonly="1"
+                       groups="factory3d_energy.group_f3d_energy_cost"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

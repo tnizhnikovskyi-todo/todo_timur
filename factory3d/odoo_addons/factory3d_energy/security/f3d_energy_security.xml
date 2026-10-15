@@ -52,6 +52,11 @@
         <field name="model_id" ref="model_f3d_energy_meter"/>
         <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
     </record>
+    <record id="f3d_energy_alloc_rule_company" model="ir.rule">
+        <field name="name">Енергетика: розподіл — компанія</field>
+        <field name="model_id" ref="model_f3d_energy_alloc"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
     <record id="f3d_energy_tariff_rule_company" model="ir.rule">
         <field name="name">Енергетика: тарифи — компанія</field>
         <field name="model_id" ref="model_f3d_energy_tariff"/>

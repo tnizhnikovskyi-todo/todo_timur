@@ -20,6 +20,8 @@
               action="action_f3d_energy_balance" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_event" name="Журнал подій" parent="menu_f3d_energy" sequence="80"
               action="action_f3d_energy_event" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_alloc" name="Енергія на виробництво" parent="menu_f3d_energy" sequence="50"
+              action="action_f3d_energy_alloc_pivot" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_tariff" name="Тарифи й договір" parent="menu_f3d_energy_config" sequence="10"
               action="action_f3d_energy_tariff" groups="factory3d_energy.group_f3d_energy_cost"/>
     <menuitem id="menu_f3d_energy_pool" name="Пули спільних споживачів" parent="menu_f3d_energy_config" sequence="20"
