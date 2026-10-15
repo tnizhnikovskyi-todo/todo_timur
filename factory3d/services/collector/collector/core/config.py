@@ -1,4 +1,5 @@
 """Конфігурація колектора з env, префікс F3D_ (SPEC §8.2)."""
+
 from __future__ import annotations
 
 import os

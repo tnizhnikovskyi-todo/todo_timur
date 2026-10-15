@@ -30,12 +30,27 @@ class F3dSource(models.Model):
     _rec_name = "name"
     _rec_names_search = ["name", "code"]
     CODE_RE = re.compile(r"^[A-Z0-9][A-Z0-9\-\.]{0,31}$")
-    TYPES = [("modbus_tcp", "Modbus TCP"), ("mqtt", "MQTT"), ("http_push", "HTTP push (приймач)"),
-             ("opcua", "OPC UA"), ("bacnet_ip", "BACnet/IP"), ("helvarnet", "HelvarNet"),
-             ("sics", "SICS (ваги)"), ("rest_vendor", "REST вендора")]
-    MODULES = [("telemetry", "Телеметрія"), ("machine_connect", "Верстати"), ("energy", "Енергетика"),
-               ("genset", "Генератор"), ("bms", "Інженерні системи"), ("fire_safety", "Пожежна безпека"),
-               ("yard", "Двір"), ("access", "СКУД"), ("other", "Інше")]
+    TYPES = [
+        ("modbus_tcp", "Modbus TCP"),
+        ("mqtt", "MQTT"),
+        ("http_push", "HTTP push (приймач)"),
+        ("opcua", "OPC UA"),
+        ("bacnet_ip", "BACnet/IP"),
+        ("helvarnet", "HelvarNet"),
+        ("sics", "SICS (ваги)"),
+        ("rest_vendor", "REST вендора"),
+    ]
+    MODULES = [
+        ("telemetry", "Телеметрія"),
+        ("machine_connect", "Верстати"),
+        ("energy", "Енергетика"),
+        ("genset", "Генератор"),
+        ("bms", "Інженерні системи"),
+        ("fire_safety", "Пожежна безпека"),
+        ("yard", "Двір"),
+        ("access", "СКУД"),
+        ("other", "Інше"),
+    ]
 
     code = fields.Char(string="Код", required=True, index=True, copy=False, tracking=True)
     name = fields.Char(string="Назва", required=True)
@@ -44,18 +59,30 @@ class F3dSource(models.Model):
     collector_id = fields.Many2one("f3d.collector", string="Колектор", ondelete="restrict", index=True, tracking=True)
     is_local = fields.Boolean(string="Локальне (без колектора)", compute="_compute_is_local")
     equipment_id = fields.Many2one(
-        "maintenance.equipment", string="Обладнання", ondelete="set null",
-        help="Головна одиниця обладнання (для дашборда)")
+        "maintenance.equipment",
+        string="Обладнання",
+        ondelete="set null",
+        help="Головна одиниця обладнання (для дашборда)",
+    )
     module = fields.Selection(MODULES, string="Модуль-власник", default="telemetry")
     params = fields.Json(string="Параметри", default=lambda self: {})
-    params_text = fields.Text(string="Параметри (JSON)", compute="_compute_params_text",
-                              inverse="_inverse_params_text")
+    params_text = fields.Text(string="Параметри (JSON)", compute="_compute_params_text", inverse="_inverse_params_text")
     read_enabled = fields.Boolean(string="Читати", default=True, tracking=True)
     write_enabled = fields.Boolean(string="Дозволити запис", default=False, tracking=True)
     period_s_default = fields.Integer(string="Період опитування за замовчуванням, с", default=10)
     state = fields.Selection(
-        [("unknown", "Невідомо"), ("online", "Онлайн"), ("offline", "Офлайн"), ("error", "Помилка"),
-         ("disabled", "Вимкнено")], default="unknown", index=True, readonly=True, tracking=True)
+        [
+            ("unknown", "Невідомо"),
+            ("online", "Онлайн"),
+            ("offline", "Офлайн"),
+            ("error", "Помилка"),
+            ("disabled", "Вимкнено"),
+        ],
+        default="unknown",
+        index=True,
+        readonly=True,
+        tracking=True,
+    )
     last_ok = fields.Datetime(string="Остання успішна відповідь", readonly=True)
     last_error = fields.Char(string="Остання помилка", readonly=True)
     error_count = fields.Integer(string="Кількість помилок", readonly=True, default=0)
@@ -98,7 +125,8 @@ class F3dSource(models.Model):
         counts = {}
         if self.ids:
             for src, status, count in self.env["f3d.signal"]._read_group(
-                    [("source_id", "in", self.ids)], ["source_id", "status"], ["__count"]):
+                [("source_id", "in", self.ids)], ["source_id", "status"], ["__count"]
+            ):
                 counts.setdefault(src.id, {})[status] = count
         for rec in self:
             by = counts.get(rec.id, {})
@@ -124,8 +152,12 @@ class F3dSource(models.Model):
     @api.constrains("type", "write_enabled", "params")
     def _check_read_only(self):
         for rec in self:
-            if rec.type == "bacnet_ip" and isinstance(rec.params, dict) and rec.params.get("read_only") \
-                    and rec.write_enabled:
+            if (
+                rec.type == "bacnet_ip"
+                and isinstance(rec.params, dict)
+                and rec.params.get("read_only")
+                and rec.write_enabled
+            ):
                 raise ValidationError(_("Джерело лише для читання (пожежна панель): запис заборонено."))
 
     @api.constrains("type", "collector_id")
@@ -191,8 +223,11 @@ class F3dSource(models.Model):
     def action_view_signals(self):
         self.ensure_one()
         return {
-            "type": "ir.actions.act_window", "name": _("Сигнали"), "res_model": "f3d.signal",
-            "view_mode": "list,form", "domain": [("source_id", "=", self.id)],
+            "type": "ir.actions.act_window",
+            "name": _("Сигнали"),
+            "res_model": "f3d.signal",
+            "view_mode": "list,form",
+            "domain": [("source_id", "=", self.id)],
             "context": {"default_source_id": self.id},
         }
 
@@ -203,8 +238,11 @@ class F3dSource(models.Model):
             message, kind = "; ".join(errors), "danger"
         else:
             message, kind = _("Параметри коректні"), "success"
-        return {"type": "ir.actions.client", "tag": "display_notification",
-                "params": {"title": _("Перевірка параметрів"), "message": message, "type": kind, "sticky": False}}
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {"title": _("Перевірка параметрів"), "message": message, "type": kind, "sticky": False},
+        }
 
     def _default_address(self):
         self.ensure_one()

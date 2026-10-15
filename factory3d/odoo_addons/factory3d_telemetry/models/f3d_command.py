@@ -17,20 +17,37 @@ class F3dCommand(models.Model):
     _order = "requested_at desc"
     _inherit = ["mail.thread"]
 
-    signal_id = fields.Many2one("f3d.signal", string="Сигнал", required=True, ondelete="cascade", index=True,
-                                domain="[('write_enabled', '=', True)]")
+    signal_id = fields.Many2one(
+        "f3d.signal",
+        string="Сигнал",
+        required=True,
+        ondelete="cascade",
+        index=True,
+        domain="[('write_enabled', '=', True)]",
+    )
     source_id = fields.Many2one("f3d.source", related="signal_id.source_id", store=True, index=True)
     collector_id = fields.Many2one("f3d.collector", related="signal_id.collector_id", store=True, index=True)
     signal_kind = fields.Selection(related="signal_id.kind")
     value = fields.Float(string="Значення")
     text = fields.Char(string="Текст/стан")
     payload = fields.Json(string="Дані команди", copy=False)
-    payload_text = fields.Text(string="Дані команди (JSON)", compute="_compute_payload_text",
-                               inverse="_inverse_payload_text")
+    payload_text = fields.Text(
+        string="Дані команди (JSON)", compute="_compute_payload_text", inverse="_inverse_payload_text"
+    )
     result_data = fields.Json(string="Дані результату", readonly=True, copy=False)
     state = fields.Selection(
-        [("queued", "У черзі"), ("sent", "Передано колектору"), ("done", "Виконано"), ("failed", "Помилка"),
-         ("expired", "Прострочено"), ("cancelled", "Скасовано")], default="queued", index=True, tracking=True)
+        [
+            ("queued", "У черзі"),
+            ("sent", "Передано колектору"),
+            ("done", "Виконано"),
+            ("failed", "Помилка"),
+            ("expired", "Прострочено"),
+            ("cancelled", "Скасовано"),
+        ],
+        default="queued",
+        index=True,
+        tracking=True,
+    )
     requested_by = fields.Many2one("res.users", string="Замовник", default=lambda self: self.env.user, readonly=True)
     requested_at = fields.Datetime(string="Запитано", default=fields.Datetime.now, readonly=True)
     expires_at = fields.Datetime(string="Дійсна до", default=_default_expires_at)
@@ -97,8 +114,7 @@ class F3dCommand(models.Model):
     @api.model
     def _cron_expire(self):
         """R-18 п. 4: `queued/sent` з `expires_at < now` → `expired`."""
-        expired = self.sudo().search([("state", "in", ("queued", "sent")),
-                                      ("expires_at", "<", fields.Datetime.now())])
+        expired = self.sudo().search([("state", "in", ("queued", "sent")), ("expires_at", "<", fields.Datetime.now())])
         for cmd in expired:
             cmd.write({"state": "expired"})
             cmd.message_post(body=_("Колектор не забрав команду"), subtype_xmlid="mail.mt_note")

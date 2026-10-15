@@ -1,4 +1,5 @@
 """CLI: run | check-config | dump-config | test-source <code> | drain-buffer (SPEC §8.1.1)."""
+
 from __future__ import annotations
 
 import argparse
@@ -29,8 +30,9 @@ def _strip_secrets(obj: Any) -> Any:
 
 
 def _client(s: Settings) -> OdooClient:
-    return OdooClient(s.odoo_url, s.collector_token, collector=s.collector_code, ca=s.odoo_ca,
-                      skew_warn_s=s.clock_skew_warn_s)
+    return OdooClient(
+        s.odoo_url, s.collector_token, collector=s.collector_code, ca=s.odoo_ca, skew_warn_s=s.clock_skew_warn_s
+    )
 
 
 async def check_config(s: Settings) -> int:
@@ -93,9 +95,14 @@ async def test_source(s: Settings, code: str) -> int:
     metrics = Metrics()
     emitter = Emitter(Buffer(s.buffer_dir / "buffer.sqlite", s.buffer_max_mb), {}, metrics)
     ctx = PluginContext(
-        settings=s, secrets=resolve_secret, allowlist=Allowlist(s.allow_hosts, s.odoo_url, metrics).check,
-        emit=emitter.emit, emit_event=emitter.emit_event, metrics=metrics,
-        log=logging.getLogger(f"collector.plugin.{src.type}.{src.code}"))
+        settings=s,
+        secrets=resolve_secret,
+        allowlist=Allowlist(s.allow_hosts, s.odoo_url, metrics).check,
+        emit=emitter.emit,
+        emit_event=emitter.emit_event,
+        metrics=metrics,
+        log=logging.getLogger(f"collector.plugin.{src.type}.{src.code}"),
+    )
     plugin = cls(src, ctx)
     try:
         await plugin.connect()
@@ -106,8 +113,11 @@ async def test_source(s: Settings, code: str) -> int:
     finally:
         await plugin.disconnect()
     for r in readings:
-        print(json.dumps({"code": r.code, "ts": to_iso_z(r.ts), "value": r.value, "text": r.text, "q": r.q},
-                         ensure_ascii=False))
+        print(
+            json.dumps(
+                {"code": r.code, "ts": to_iso_z(r.ts), "value": r.value, "text": r.text, "q": r.q}, ensure_ascii=False
+            )
+        )
     return 0
 
 

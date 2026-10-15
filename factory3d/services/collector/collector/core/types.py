@@ -1,4 +1,5 @@
 """Типи ядра колектора (SPEC §8.3.1, CT-02)."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

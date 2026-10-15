@@ -87,8 +87,14 @@ class F3dPushEvent(models.Model):
             else:
                 ts = _device_ts(ev["ts"]) or received_at
             remote = ev.get("remote")
-            event = {"event_id": event_id, "route": route, "ts": ts, "remote": remote,
-                     "headers": ev.get("headers") or {}, "payload": payload}
+            event = {
+                "event_id": event_id,
+                "route": route,
+                "ts": ts,
+                "remote": remote,
+                "headers": ev.get("headers") or {},
+                "payload": payload,
+            }
             names = Handler._f3d_handler_models(route)
             errors = []
             for name in names:
@@ -101,15 +107,26 @@ class F3dPushEvent(models.Model):
             readings = self._f3d_event_readings(route, payload, collector, received_at)
             count = 0
             if readings:
-                res = self.env["f3d.signal"].sudo().with_context(f3d_received_at=received_at)._f3d_ingest(
-                    readings, src="collector", collector=collector)
+                res = (
+                    self.env["f3d.signal"]
+                    .sudo()
+                    .with_context(f3d_received_at=received_at)
+                    ._f3d_ingest(readings, src="collector", collector=collector)
+                )
                 count = len(readings) - len(res["rejected"])
-            self.sudo().create({
-                "event_id": event_id, "route": route, "ts": ts, "collector_id": collector.id,
-                "remote": (remote or "")[:64] or False, "payload": payload,
-                "handled_by": ",".join(names)[:256] or False,
-                "error": "; ".join(errors)[:512] or False, "signal_count": count,
-            })
+            self.sudo().create(
+                {
+                    "event_id": event_id,
+                    "route": route,
+                    "ts": ts,
+                    "collector_id": collector.id,
+                    "remote": (remote or "")[:64] or False,
+                    "payload": payload,
+                    "handled_by": ",".join(names)[:256] or False,
+                    "error": "; ".join(errors)[:512] or False,
+                    "signal_count": count,
+                }
+            )
             accepted += 1
             if names:
                 handled[route] = sorted(set(handled.get(route, [])) | set(names))
@@ -119,9 +136,17 @@ class F3dPushEvent(models.Model):
     def _f3d_event_readings(self, route, payload, collector, received_at):
         """Показання сигналів `http_push` колектора, чий `address.route/match` підходить події (R-22, X-63)."""
         keep_days = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.keep_days", "30") or 30)
-        signals = self.env["f3d.signal"].sudo().search([
-            ("source_id.type", "=", "http_push"), ("source_id.collector_id", "=", collector.id),
-            ("active", "=", True)])
+        signals = (
+            self.env["f3d.signal"]
+            .sudo()
+            .search(
+                [
+                    ("source_id.type", "=", "http_push"),
+                    ("source_id.collector_id", "=", collector.id),
+                    ("active", "=", True),
+                ]
+            )
+        )
         readings = []
         for sig in signals:
             addr = sig.address or {}
@@ -153,8 +178,9 @@ class F3dPushEvent(models.Model):
             ts = None
             if addr.get("ts_path"):
                 ts = _device_ts(jsonpath(addr["ts_path"], payload))
-                if ts is not None and (ts > received_at + timedelta(seconds=FUTURE_S)
-                                       or ts < received_at - timedelta(days=keep_days)):
+                if ts is not None and (
+                    ts > received_at + timedelta(seconds=FUTURE_S) or ts < received_at - timedelta(days=keep_days)
+                ):
                     ts = None
                 if ts is None:
                     reading["q"] = "uncertain"

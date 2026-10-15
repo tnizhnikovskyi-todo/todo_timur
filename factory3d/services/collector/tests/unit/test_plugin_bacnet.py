@@ -1,4 +1,5 @@
 """AC-81, AC-97, AC-101 (bacnet): плагін bacnet_ip проти тестового пристрою bacpypes3 (device 140)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,8 +29,12 @@ def _sig(code, address, kind="gauge", period_s=30, states=None, **kw):
 
 async def _plug(dev, make_ctx, signals, clock=None, **params):
     box = make_ctx(clock=clock)
-    src = mk_source("BAC-T-140", "bacnet_ip", signals,
-                    params={"host": "127.0.0.1", "port": dev.port, "device": 140, "timeout_s": 1, **params})
+    src = mk_source(
+        "BAC-T-140",
+        "bacnet_ip",
+        signals,
+        params={"host": "127.0.0.1", "port": dev.port, "device": 140, "timeout_s": 1, **params},
+    )
     p = BacnetIpPlugin(src, box.ctx)
     await p.connect()
     return p, box
@@ -200,8 +205,12 @@ async def test_write_ro_object_error(bacnet_device, make_ctx):
 
 async def test_whois_not_found(bacnet_device, make_ctx):
     box = make_ctx()
-    src = mk_source("BAC-X", "bacnet_ip", [], params={"host": "127.0.0.1", "port": bacnet_device.port,
-                                                    "device": 999, "timeout_s": 1})
+    src = mk_source(
+        "BAC-X",
+        "bacnet_ip",
+        [],
+        params={"host": "127.0.0.1", "port": bacnet_device.port, "device": 999, "timeout_s": 1},
+    )
     with pytest.raises(ConnectError, match=r"Who-Is: device 999 not found"):
         await BacnetIpPlugin(src, box.ctx).connect()
 
@@ -220,8 +229,7 @@ async def test_msv_write_reverse_map(bacnet_device, make_ctx):
 
 
 async def test_msv_write_states_1_based(bacnet_device, make_ctx):
-    sg = _sig("equipment/B/mode", _a("MSV", 1), kind="state", write=True,
-              states=["standby", "K1", "K1+K2", "fault"])
+    sg = _sig("equipment/B/mode", _a("MSV", 1), kind="state", write=True, states=["standby", "K1", "K1+K2", "fault"])
     p, _ = await _plug(bacnet_device, make_ctx, [sg])
     assert await p.write(sg, None, "K1+K2") == "written 3 @prio 8"
     assert bacnet_device.get_pv("MSV:1") == 3
@@ -234,9 +242,11 @@ async def test_msv_write_states_1_based(bacnet_device, make_ctx):
 
 # --- read_only (D-07, X-05) ---
 def _ro_sigs():
-    return [_sig("equipment/B/supply_c", {"object": "AI", "instance": 1}),  # mode не задано -> умовч. cov
-            _sig("equipment/B/mode", {"object": "MSV", "instance": 1}, kind="state", states=["a", "b", "c", "d"]),
-            _sig("fire/groups/FA-CUT/state", {"object": "LSZ", "instance": 12}, kind="state")]
+    return [
+        _sig("equipment/B/supply_c", {"object": "AI", "instance": 1}),  # mode не задано -> умовч. cov
+        _sig("equipment/B/mode", {"object": "MSV", "instance": 1}, kind="state", states=["a", "b", "c", "d"]),
+        _sig("fire/groups/FA-CUT/state", {"object": "LSZ", "instance": 12}, kind="state"),
+    ]
 
 
 async def test_read_only_no_packet(bacnet_device, make_ctx):
@@ -248,8 +258,14 @@ async def test_read_only_no_packet(bacnet_device, make_ctx):
         await p.write(sigs[0], 1.0, None)
     assert bacnet_device.count("write-property") == 0
     assert not p._cov_tasks and p._cov_active == set()
-    forbidden = {"subscribe-cov", "write-property", "acknowledge-alarm", "life-safety-operation",
-                 "device-communication-control", "reinitialize-device"}
+    forbidden = {
+        "subscribe-cov",
+        "write-property",
+        "acknowledge-alarm",
+        "life-safety-operation",
+        "device-communication-control",
+        "reinitialize-device",
+    }
     assert set(bacnet_device.services) <= {"who-is", "read-property-multiple"}
     assert not forbidden & set(bacnet_device.services)
     await p.disconnect()
@@ -262,8 +278,16 @@ async def test_read_only_services_whitelist(bacnet_device, make_ctx):
     with pytest.raises(NotSupported, match="read-only device: subscribe-cov"):
         await p.bapp._request(p, "SubscribeCOV", p.addr, "analog-input,1", 1, False, 60)
     assert box.metrics.bacnet_ro_blocked.labels("BAC-T-140", "subscribe-cov")._value.get() == 1
-    for svc in ("write-property", "WritePropertyMultiple", "AcknowledgeAlarm", "LifeSafetyOperation",
-                "DeviceCommunicationControl", "ReinitializeDevice", "AtomicWriteFile", "CreateObject"):
+    for svc in (
+        "write-property",
+        "WritePropertyMultiple",
+        "AcknowledgeAlarm",
+        "LifeSafetyOperation",
+        "DeviceCommunicationControl",
+        "ReinitializeDevice",
+        "AtomicWriteFile",
+        "CreateObject",
+    ):
         with pytest.raises(NotSupported, match="read-only device"):
             await p.bapp._request(p, svc)
     assert len(bacnet_device.services) == n  # жодного пакета
@@ -286,9 +310,20 @@ async def test_event_relay_life_safety(bacnet_device, make_ctx, vclock):
     await bacnet_device.send_event(p.bapp.local_port, message=msg)
     assert await _until(lambda: len(box.events) == 1)
     ev = box.events[0]
-    payload = {"device": 140, "object": "LSZ", "instance": 12, "event_type": "change-of-life-safety",
-               "from_state": "quiet", "to_state": "test-alarm", "mode": "on", "message_text": msg,
-               "notification_class": 1, "priority": 1, "ack_required": False, "ts": to_iso_z(vclock.now())}
+    payload = {
+        "device": 140,
+        "object": "LSZ",
+        "instance": 12,
+        "event_type": "change-of-life-safety",
+        "from_state": "quiet",
+        "to_state": "test-alarm",
+        "mode": "on",
+        "message_text": msg,
+        "notification_class": 1,
+        "priority": 1,
+        "ack_required": False,
+        "ts": to_iso_z(vclock.now()),
+    }
     assert ev.route == "bacnet_event" and ev.remote == "BAC-T-140" and ev.headers == {} and ev.payload == payload
     assert ev.ts == vclock.now()
     assert ev.event_id == hashlib.sha256(("bacnet_event\nBAC-T-140\n" + canonical_json(payload)).encode()).hexdigest()
@@ -300,8 +335,14 @@ async def test_event_relay_life_safety(bacnet_device, make_ctx, vclock):
 async def test_event_out_of_range(bacnet_device, make_ctx):
     p, box = await _plug(bacnet_device, make_ctx, _ro_sigs(), read_only=True)
     long_msg = "x" * 600
-    await bacnet_device.send_event(p.bapp.local_port, obj=("analog-input", 1), event_type="out-of-range",
-                                   from_state="normal", to_state="high-limit", message=long_msg)
+    await bacnet_device.send_event(
+        p.bapp.local_port,
+        obj=("analog-input", 1),
+        event_type="out-of-range",
+        from_state="normal",
+        to_state="high-limit",
+        message=long_msg,
+    )
     assert await _until(lambda: len(box.events) == 1)
     pl = box.events[0].payload
     assert pl["object"] == "AI" and pl["event_type"] == "out-of-range"
@@ -313,8 +354,7 @@ async def test_event_out_of_range(bacnet_device, make_ctx):
 async def test_event_ignored_unknown_or_disabled(bacnet_device, make_ctx):
     p, box = await _plug(bacnet_device, make_ctx, _ro_sigs(), read_only=True)
     await bacnet_device.send_event(p.bapp.local_port, device=999)
-    assert await _until(
-        lambda: box.metrics.bacnet_events_ignored.labels("unknown_device")._value.get() == 1)
+    assert await _until(lambda: box.metrics.bacnet_events_ignored.labels("unknown_device")._value.get() == 1)
     assert box.events == []
     await p.disconnect()
     p2, box2 = await _plug(bacnet_device, make_ctx, _ro_sigs(), read_only=True, events=False)
@@ -335,25 +375,40 @@ def test_normalize_and_service_names():
 
 def test_effective_mode(make_ctx):
     box = make_ctx()
-    sigs = [_sig("equipment/B/a", {"object": "AI", "instance": 1}), _sig("equipment/B/b", {"object": "AV", "instance": 1}),
-            _sig("equipment/B/c", {"object": "PIV", "instance": 1}), _sig("equipment/B/d", {"object": "MSV", "instance": 1}),
-            _sig("equipment/B/e", {"object": "AI", "instance": 2, "mode": "poll"})]
+    sigs = [
+        _sig("equipment/B/a", {"object": "AI", "instance": 1}),
+        _sig("equipment/B/b", {"object": "AV", "instance": 1}),
+        _sig("equipment/B/c", {"object": "PIV", "instance": 1}),
+        _sig("equipment/B/d", {"object": "MSV", "instance": 1}),
+        _sig("equipment/B/e", {"object": "AI", "instance": 2, "mode": "poll"}),
+    ]
     p = BacnetIpPlugin(mk_source("B", "bacnet_ip", sigs, params={"host": "h", "device": 1}), box.ctx)
     assert [s.mode for s in p._specs.values()] == ["cov", "poll", "poll", "cov", "poll"]
-    ro = BacnetIpPlugin(mk_source("B", "bacnet_ip", sigs, params={"host": "h", "device": 1, "read_only": True}), box.ctx)
+    ro = BacnetIpPlugin(
+        mk_source("B", "bacnet_ip", sigs, params={"host": "h", "device": 1, "read_only": True}), box.ctx
+    )
     assert {s.mode for s in ro._specs.values()} == {"poll"} and ro.events is True
     assert BacnetIpPlugin(mk_source("B", "bacnet_ip", sigs, params={"host": "h", "device": 1}), box.ctx).events is False
 
 
 def test_validate():
-    ok = mk_source("B", "bacnet_ip", [mk_signal("equipment/a/b", address={"object": "AI", "instance": 1, "device": 140})],
-                   params={"host": "iot-sim", "port": 47808, "device": 140, "network": 2, "read_only": True})
+    ok = mk_source(
+        "B",
+        "bacnet_ip",
+        [mk_signal("equipment/a/b", address={"object": "AI", "instance": 1, "device": 140})],
+        params={"host": "iot-sim", "port": 47808, "device": 140, "network": 2, "read_only": True},
+    )
     assert BacnetIpPlugin.validate(ok) == []
-    bad = mk_source("B", "bacnet_ip", [
-        mk_signal("equipment/a/b", address={"object": "XX", "instance": 1}),
-        mk_signal("equipment/a/c", address={"object": "AI", "instance": 9999999}),
-        mk_signal("equipment/a/d", address={"object": "AI", "instance": 1, "device": 5}, write=True),
-    ], params={"host": "h", "device": 140, "read_only": True, "rpm_max": 500})
+    bad = mk_source(
+        "B",
+        "bacnet_ip",
+        [
+            mk_signal("equipment/a/b", address={"object": "XX", "instance": 1}),
+            mk_signal("equipment/a/c", address={"object": "AI", "instance": 9999999}),
+            mk_signal("equipment/a/d", address={"object": "AI", "instance": 1, "device": 5}, write=True),
+        ],
+        params={"host": "h", "device": 140, "read_only": True, "rpm_max": 500},
+    )
     text = "\n".join(BacnetIpPlugin.validate(bad))
     assert "object" in text and "instance" in text and "params.device" in text and "rpm_max" in text
     assert "read_only" in text

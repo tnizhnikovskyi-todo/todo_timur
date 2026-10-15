@@ -11,8 +11,8 @@ from odoo.tools import mute_logger
 
 from .common import F3DTelemetryCase
 
-TAGS = ('post_install', '-at_install', 'f3d', 'f3d_telemetry')
-NOW = '2026-10-14 08:00:00'
+TAGS = ("post_install", "-at_install", "f3d", "f3d_telemetry")
+NOW = "2026-10-14 08:00:00"
 
 
 def _msg(ctx):
@@ -31,86 +31,93 @@ class TestToken(F3DTelemetryCase):
 
     def test_generate_token(self):
         res = self._generate()
-        self.assertEqual(res['type'], 'ir.actions.act_window')
-        self.assertEqual(res['res_model'], 'f3d.collector.token.wizard')
-        self.assertEqual(res['target'], 'new')
-        token = res['context']['default_token']
+        self.assertEqual(res["type"], "ir.actions.act_window")
+        self.assertEqual(res["res_model"], "f3d.collector.token.wizard")
+        self.assertEqual(res["target"], "new")
+        token = res["context"]["default_token"]
         self.assertGreaterEqual(len(token), 43)
         col = self.col.with_user(self.user_admin)
         self.assertEqual(col.token_hash, hashlib.sha256(token.encode()).hexdigest())
         self.assertEqual(col.token_hint, token[-4:])
         self.assertTrue(col.token_set_at)
-        bodies = ' '.join(self.col.message_ids.mapped('body'))
-        self.assertIn('Видано новий токен (…%s)' % token[-4:], bodies)
+        bodies = " ".join(self.col.message_ids.mapped("body"))
+        self.assertIn("Видано новий токен (…%s)" % token[-4:], bodies)
         self.assertNotIn(token, bodies)
-        self.assertEqual(self.env['f3d.collector']._authenticate(token), self.col)
+        self.assertEqual(self.env["f3d.collector"]._authenticate(token), self.col)
 
     def test_generate_requires_admin(self):
         with self.assertRaises(AccessError):
             self.col.with_user(self.user_manager).action_generate_token()
 
     def test_authenticate_cases(self):
-        token = self._generate()['context']['default_token']
-        Col = self.env['f3d.collector']
-        for case in (token + 'x', '', 'a' * 257, None):
+        token = self._generate()["context"]["default_token"]
+        Col = self.env["f3d.collector"]
+        for case in (token + "x", "", "a" * 257, None):
             with self.subTest(case=case):
                 self.assertFalse(Col._authenticate(case))
 
     def test_inactive_collector(self):
-        token = self._generate()['context']['default_token']
+        token = self._generate()["context"]["default_token"]
         self.col.active = False
-        self.assertFalse(self.env['f3d.collector']._authenticate(token))
+        self.assertFalse(self.env["f3d.collector"]._authenticate(token))
 
     def test_regenerate_invalidates(self):
-        old = self._generate()['context']['default_token']
-        new = self._generate()['context']['default_token']
-        Col = self.env['f3d.collector']
+        old = self._generate()["context"]["default_token"]
+        new = self._generate()["context"]["default_token"]
+        Col = self.env["f3d.collector"]
         self.assertFalse(Col._authenticate(old))
         self.assertEqual(Col._authenticate(new), self.col)
 
     def test_revoke(self):
-        token = self._generate()['context']['default_token']
+        token = self._generate()["context"]["default_token"]
         self.col.with_user(self.user_admin).action_revoke_token()
         col = self.col.with_user(self.user_admin)
         self.assertFalse(col.token_hash)
         self.assertFalse(col.token_hint)
-        self.assertFalse(self.env['f3d.collector']._authenticate(token))
-        self.assertIn('Токен відкликано', ' '.join(self.col.message_ids.mapped('body')))
+        self.assertFalse(self.env["f3d.collector"]._authenticate(token))
+        self.assertIn("Токен відкликано", " ".join(self.col.message_ids.mapped("body")))
 
 
 @tagged(*TAGS)
 class TestCollectorConstraints(F3DTelemetryCase):
     def _create(self, code, **kw):
-        return self.env['f3d.collector'].create({'code': code, 'name': code, **kw})
+        return self.env["f3d.collector"].create({"code": code, "name": code, **kw})
 
     def test_code_valid(self):
-        for code in ('COL-MAIN-T', 'C1', 'COL-2-YARD'):
+        for code in ("COL-MAIN-T", "C1", "COL-2-YARD"):
             with self.subTest(code=code):
                 self.assertEqual(self._create(code).code, code)
 
     def test_code_invalid(self):
-        for code in ('col-main', 'COL_MAIN', '-COL', 'COL MAIN', 'A' * 33):
+        for code in ("col-main", "COL_MAIN", "-COL", "COL MAIN", "A" * 33):
             with self.subTest(code=code), self.assertRaises(ValidationError) as ctx:
                 self._create(code)
-            self.assertIn('Код колектора: великі латинські літери, цифри, дефіс (напр. COL-MAIN).', _msg(ctx))
+            self.assertIn("Код колектора: великі латинські літери, цифри, дефіс (напр. COL-MAIN).", _msg(ctx))
 
     def test_code_unique(self):
-        self._create('COL-MAIN-T')
-        with mute_logger('odoo.sql_db'), self.assertRaises(IntegrityError), self.cr.savepoint():
-            self._create('COL-MAIN-T')
+        self._create("COL-MAIN-T")
+        with mute_logger("odoo.sql_db"), self.assertRaises(IntegrityError), self.cr.savepoint():
+            self._create("COL-MAIN-T")
 
     def test_interval_checks(self):
-        col = self._create('COL-INT-T')
-        for field, value in (('push_max', 2001), ('push_interval_s', 0), ('push_interval_s', 61),
-                             ('status_interval_s', 9), ('config_poll_s', 9)):
+        col = self._create("COL-INT-T")
+        for field, value in (
+            ("push_max", 2001),
+            ("push_interval_s", 0),
+            ("push_interval_s", 61),
+            ("status_interval_s", 9),
+            ("config_poll_s", 9),
+        ):
             with self.subTest(field=field, value=value):
-                with mute_logger('odoo.sql_db'), self.assertRaises(IntegrityError), self.cr.savepoint():
+                with mute_logger("odoo.sql_db"), self.assertRaises(IntegrityError), self.cr.savepoint():
                     col.write({field: value})
 
     def test_defaults(self):
-        col = self._create('COL-DEF-T')
-        self.assertEqual((col.state, col.push_interval_s, col.push_max, col.status_interval_s, col.config_poll_s),
-                         ('never', 5, 1000, 60, 60))
+        col = self._create("COL-DEF-T")
+        self.assertEqual(
+            (col.state, col.push_interval_s, col.push_max, col.status_interval_s, col.config_poll_s),
+            ("never", 5, 1000, 60, 60),
+        )
 
 
 @tagged(*TAGS)
@@ -122,31 +129,31 @@ class TestCollectorOffline(F3DTelemetryCase):
 
     def _prepare(self, age):
         now = fields.Datetime.now()
-        self.set_sql(self.col, state='online', last_seen=now - timedelta(seconds=age))
-        self.set_sql(self.col2, state='online', last_seen=now)
-        self.set_sql(self.src_mb, state='online')
-        self.set_sql(self.src_mqtt, state='error')
-        self.set_sql(self.src_other, state='online')
-        self.set_sql(self.sig_press, status='ok', last_ts=now)
-        self.set_sql(self.sig_foreign, status='ok', last_ts=now)
+        self.set_sql(self.col, state="online", last_seen=now - timedelta(seconds=age))
+        self.set_sql(self.col2, state="online", last_seen=now)
+        self.set_sql(self.src_mb, state="online")
+        self.set_sql(self.src_mqtt, state="error")
+        self.set_sql(self.src_other, state="online")
+        self.set_sql(self.sig_press, status="ok", last_ts=now)
+        self.set_sql(self.sig_foreign, status="ok", last_ts=now)
 
     def test_offline_after_3_intervals(self):
         with freeze_time(NOW):
             self._prepare(181)
-            self.env['f3d.signal']._cron_stale()
-            self.assertEqual(self.col.state, 'offline')
-            self.assertEqual((self.src_mb.state, self.src_mqtt.state), ('offline', 'offline'))
-            self.assertEqual(self.sig_press.status, 'stale')
-            self.assertEqual(self.col2.state, 'online')
-            self.assertEqual(self.src_other.state, 'online')
-            self.assertEqual(self.sig_foreign.status, 'ok')
+            self.env["f3d.signal"]._cron_stale()
+            self.assertEqual(self.col.state, "offline")
+            self.assertEqual((self.src_mb.state, self.src_mqtt.state), ("offline", "offline"))
+            self.assertEqual(self.sig_press.status, "stale")
+            self.assertEqual(self.col2.state, "online")
+            self.assertEqual(self.src_other.state, "online")
+            self.assertEqual(self.sig_foreign.status, "ok")
 
     def test_online_within_window(self):
         with freeze_time(NOW):
             self._prepare(179)
-            self.env['f3d.signal']._cron_stale()
-            self.assertEqual(self.col.state, 'online')
-            self.assertEqual(self.sig_press.status, 'ok')
+            self.env["f3d.signal"]._cron_stale()
+            self.assertEqual(self.col.state, "online")
+            self.assertEqual(self.sig_press.status, "ok")
 
 
 @tagged(*TAGS)
@@ -158,29 +165,29 @@ class TestConfigPayload(F3DTelemetryCase):
 
     def test_payload_and_etag(self):
         body = self.col._config_payload()
-        codes = [s['code'] for s in body['sources']]
-        self.assertIn('MB-T-U70', codes)
-        self.assertNotIn('MB-T-OLD', codes)
-        self.assertNotIn('MB-T2', codes)
-        mb = next(s for s in body['sources'] if s['code'] == 'MB-T-U70')
-        sig_codes = [s['code'] for s in mb['signals']]
+        codes = [s["code"] for s in body["sources"]]
+        self.assertIn("MB-T-U70", codes)
+        self.assertNotIn("MB-T-OLD", codes)
+        self.assertNotIn("MB-T2", codes)
+        mb = next(s for s in body["sources"] if s["code"] == "MB-T-U70")
+        sig_codes = [s["code"] for s in mb["signals"]]
         self.assertIn(self.sig_press.code, sig_codes)
         self.assertNotIn(self.sig_noaddr.code, sig_codes)
         self.assertNotIn(self.sig_old.code, sig_codes)
-        self.assertEqual(len(body['etag']), 64)
-        self.assertEqual(self.col.config_etag, body['etag'])
-        self.assertEqual(self.col._config_payload()['etag'], body['etag'])
-        self.assertEqual(self.col._etag(), body['etag'])
-        self.sig_press.write({'period_s': 20})
+        self.assertEqual(len(body["etag"]), 64)
+        self.assertEqual(self.col.config_etag, body["etag"])
+        self.assertEqual(self.col._config_payload()["etag"], body["etag"])
+        self.assertEqual(self.col._etag(), body["etag"])
+        self.sig_press.write({"period_s": 20})
         self.assertFalse(self.col.config_etag)
-        self.assertNotEqual(self.col._config_payload()['etag'], body['etag'])
-        self.assertTrue(body['read_enabled'])
-        self.assertFalse(body['write_enabled'])
+        self.assertNotEqual(self.col._config_payload()["etag"], body["etag"])
+        self.assertTrue(body["read_enabled"])
+        self.assertFalse(body["write_enabled"])
 
     def test_rate_check(self):
         with freeze_time(NOW):
             for _i in range(60):
                 self.assertTrue(self.col._rate_check())
             self.assertFalse(self.col._rate_check())
-        with freeze_time('2026-10-14 08:01:01'):
+        with freeze_time("2026-10-14 08:01:01"):
             self.assertTrue(self.col._rate_check())

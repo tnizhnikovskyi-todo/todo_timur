@@ -2,8 +2,8 @@
     "name": "Завод 3D: телеметрія",
     "summary": "Джерела, сигнали, показання з обладнання; пороги → заявки ТО; ТО за лічильником; API колектора",
     "description": "Спільний хребет збору даних factory3d: f3d.collector, f3d.source, f3d.signal, f3d.reading, "
-                   "f3d.reading.hour, f3d.command; ендпоінти /f3d/telemetry/*; плагіни колектора modbus_tcp, mqtt, "
-                   "http_push, bacnet_ip (services/collector); міграція рівня 0 factory3d_iot_sim.",
+    "f3d.reading.hour, f3d.command; ендпоінти /f3d/telemetry/*; плагіни колектора modbus_tcp, mqtt, "
+    "http_push, bacnet_ip (services/collector); міграція рівня 0 factory3d_iot_sim.",
     "version": "19.0.1.1.0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",

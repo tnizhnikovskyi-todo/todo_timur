@@ -1,4 +1,5 @@
 """Цикл команд: GET commands -> plugin.write()/call() -> результат через буфер (R-18, SPEC §8.4)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -86,8 +87,11 @@ class CommandLoop:
         plugin = self.registry.plugins.get(source.code)
         if plugin is None:
             return self._failed(cmd, f"source {source.code} unavailable")
-        pulse_ms = (signal.address.get("write") or {}).get("pulse_ms", 0) if isinstance(
-            signal.address.get("write"), dict) else 0
+        pulse_ms = (
+            (signal.address.get("write") or {}).get("pulse_ms", 0)
+            if isinstance(signal.address.get("write"), dict)
+            else 0
+        )
         timeout = self.call_timeout_s + float(pulse_ms or 0) / 1000.0
         try:
             if cmd.payload is None:
@@ -110,5 +114,4 @@ class CommandLoop:
                 raise ValueError
         except (TypeError, ValueError):
             return self._failed(cmd, "call returned invalid data")
-        return CommandResult(
-            id=cmd.id, state="done", ts=self.clock.now(), result=dumped[:RESULT_MAX_CHARS], data=data)
+        return CommandResult(id=cmd.id, state="done", ts=self.clock.now(), result=dumped[:RESULT_MAX_CHARS], data=data)

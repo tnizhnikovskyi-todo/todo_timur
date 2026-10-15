@@ -19,17 +19,24 @@ class F3dReading(models.Model):
     _rec_name = "ts"
 
     signal_id = fields.Many2one("f3d.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
-    equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", related="signal_id.equipment_id",
-                                   store=True, index=True)
+    equipment_id = fields.Many2one(
+        "maintenance.equipment", string="Обладнання", related="signal_id.equipment_id", store=True, index=True
+    )
     ts = fields.Datetime(string="Час", required=True)
     value = fields.Float(string="Значення")
     text = fields.Char(string="Текст")
-    quality = fields.Selection([("good", "Добра"), ("uncertain", "Непевна"), ("bad", "Погана")],
-                               default="good", required=True, string="Якість")
-    src = fields.Selection([("collector", "Колектор"), ("sim_data", "Рівень 0"), ("module", "Модуль"),
-                            ("manual", "Вручну")], default="collector", required=True, string="Джерело даних")
-    received_at = fields.Datetime(string="Отримано", required=True, default=fields.Datetime.now,
-                                  help="Час прийому показання в Odoo")
+    quality = fields.Selection(
+        [("good", "Добра"), ("uncertain", "Непевна"), ("bad", "Погана")], default="good", required=True, string="Якість"
+    )
+    src = fields.Selection(
+        [("collector", "Колектор"), ("sim_data", "Рівень 0"), ("module", "Модуль"), ("manual", "Вручну")],
+        default="collector",
+        required=True,
+        string="Джерело даних",
+    )
+    received_at = fields.Datetime(
+        string="Отримано", required=True, default=fields.Datetime.now, help="Час прийому показання в Odoo"
+    )
     unit = fields.Char(related="signal_id.unit")
     code = fields.Char(related="signal_id.code")
 
@@ -51,7 +58,10 @@ class F3dReading(models.Model):
         while True:
             self.env.cr.execute(
                 "DELETE FROM {t} WHERE id IN (SELECT id FROM {t} WHERE {c} < %s ORDER BY {c} LIMIT %s)".format(
-                    t=table, c=column), (cutoff, ROTATE_BATCH))
+                    t=table, c=column
+                ),
+                (cutoff, ROTATE_BATCH),
+            )
             n = self.env.cr.rowcount
             total += n
             if n < ROTATE_BATCH or time.monotonic() > deadline:

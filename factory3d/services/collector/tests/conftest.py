@@ -1,5 +1,6 @@
 """Фікстури колектора (SPEC §13.0.2). Імпорти класів сервісу — лише всередині фікстур,
 щоб колекція тестів працювала, поки core/ ще не змерджено."""
+
 from __future__ import annotations
 
 import asyncio
@@ -76,16 +77,22 @@ class FakeOdoo:
         if path.endswith("/config"):
             if request.headers.get("If-None-Match", "").strip('"') == self.etag:
                 return web.Response(status=304)
-            return web.json_response({**self.config, "config_etag": self.etag, "server_time": now},
-                                     headers={"ETag": self.etag})
+            return web.json_response(
+                {**self.config, "config_etag": self.etag, "server_time": now}, headers={"ETag": self.etag}
+            )
         if path.endswith("/push"):
             status = self.push_status.pop(0) if self.push_status else 200
-            resp = {"accepted": len(body.get("readings", [])) if body else 0, "server_time": now,
-                    "config_etag": self.etag, **self.push_extra}
+            resp = {
+                "accepted": len(body.get("readings", [])) if body else 0,
+                "server_time": now,
+                "config_etag": self.etag,
+                **self.push_extra,
+            }
             return web.json_response(resp, status=status, headers=self.push_headers if status != 200 else None)
         if path.endswith("/commands"):
-            return web.json_response({"commands": self.commands, "write_enabled": self.write_enabled,
-                                      "server_time": now})
+            return web.json_response(
+                {"commands": self.commands, "write_enabled": self.write_enabled, "server_time": now}
+            )
         return web.json_response({"ok": True, "server_time": now})
 
     async def start(self) -> None:
@@ -192,8 +199,22 @@ def mqtt_broker():
     if not shutil.which("docker"):
         pytest.skip("немає Docker і F3D_TEST_MQTT")
     cid = subprocess.run(
-        ["docker", "run", "-d", "--rm", "-p", "127.0.0.1::1883", "eclipse-mosquitto:2.0.20",
-         "mosquitto", "-c", "/mosquitto-no-auth.conf"], capture_output=True, text=True, check=False)
+        [
+            "docker",
+            "run",
+            "-d",
+            "--rm",
+            "-p",
+            "127.0.0.1::1883",
+            "eclipse-mosquitto:2.0.20",
+            "mosquitto",
+            "-c",
+            "/mosquitto-no-auth.conf",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     if cid.returncode:
         pytest.skip("docker run mosquitto не вдався")
     cid_s = cid.stdout.strip()
@@ -252,8 +273,11 @@ async def modbus_server(vclock):
 
     def ctx():
         return Slave(
-            di=CountingBlock(h, 2, 1, [0] * 100), co=CountingBlock(h, 5, 1, [0] * 100),
-            hr=CountingBlock(h, 6, 1, [0] * 5000), ir=CountingBlock(h, 4, 1, [0] * 5000))
+            di=CountingBlock(h, 2, 1, [0] * 100),
+            co=CountingBlock(h, 5, 1, [0] * 100),
+            hr=CountingBlock(h, 6, 1, [0] * 5000),
+            ir=CountingBlock(h, 4, 1, [0] * 5000),
+        )
 
     h.slaves = {u: ctx() for u in (70, 84, 86, 90, 96)}
     context = ModbusServerContext(slaves=h.slaves, single=False)
@@ -303,15 +327,26 @@ def make_ctx(vclock):
 
     def factory(clock=None, secrets=None, **settings):
         box = SimpleNamespace(readings=[], events=[], allowed=[])
-        cfg = SimpleNamespace(collector_code="COL-T", write_enabled=True, bacnet_bind="127.0.0.1:0",
-                              bacnet_device_id=3999, http_push_allow_ips=[], http_push_port=0)
+        cfg = SimpleNamespace(
+            collector_code="COL-T",
+            write_enabled=True,
+            bacnet_bind="127.0.0.1:0",
+            bacnet_device_id=3999,
+            http_push_allow_ips=[],
+            http_push_port=0,
+        )
         for k, v in settings.items():
             setattr(cfg, k, v)
         box.metrics = Metrics(vclock)
         box.ctx = PluginContext(
-            settings=cfg, secrets=secrets or (lambda name: os.environ[name]), allowlist=box.allowed.append,
-            emit=box.readings.append, emit_event=box.events.append, metrics=box.metrics,
-            log=logging.getLogger("collector.plugin.test"))
+            settings=cfg,
+            secrets=secrets or (lambda name: os.environ[name]),
+            allowlist=box.allowed.append,
+            emit=box.readings.append,
+            emit_event=box.events.append,
+            metrics=box.metrics,
+            log=logging.getLogger("collector.plugin.test"),
+        )
         box.ctx.clock = clock or vclock  # type: ignore[attr-defined]
         return box
 

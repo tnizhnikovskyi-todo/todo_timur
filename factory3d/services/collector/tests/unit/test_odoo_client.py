@@ -1,4 +1,5 @@
 """AC-73: клієнт Odoo і Pusher."""
+
 from __future__ import annotations
 
 import logging
@@ -38,8 +39,15 @@ async def client(fake_odoo, vclock):
 
 @pytest.fixture
 def pusher(client, buffer, vclock):
-    return Pusher(client, buffer, push_max=100, push_interval_s=5, registry=StubRegistry(),
-                  metrics=client.test_metrics, clock=vclock)
+    return Pusher(
+        client,
+        buffer,
+        push_max=100,
+        push_interval_s=5,
+        registry=StubRegistry(),
+        metrics=client.test_metrics,
+        clock=vclock,
+    )
 
 
 async def _fill(buffer, n=3):
@@ -119,8 +127,10 @@ async def test_push_401_kept(fake_odoo, client, buffer, vclock):
 
 async def test_config_etag_refresh(fake_odoo, pusher, buffer):
     await _fill(buffer)
-    fake_odoo.push_extra = {"config_etag": "etag-NEW", "rejected": [
-        {"i": 0, "code": "a", "reason": "unknown_code"}, {"i": 1, "code": "b", "reason": "unknown_code"}]}
+    fake_odoo.push_extra = {
+        "config_etag": "etag-NEW",
+        "rejected": [{"i": 0, "code": "a", "reason": "unknown_code"}, {"i": 1, "code": "b", "reason": "unknown_code"}],
+    }
     assert await pusher.push_once() == "ok"
     assert pusher.registry.refreshed == 1
 

@@ -1,4 +1,5 @@
 """JSON-логи і SecretFilter (SPEC §8.10)."""
+
 from __future__ import annotations
 
 import fnmatch
@@ -22,7 +23,8 @@ _PATTERNS = [
 
 def _secret_values() -> list[str]:
     vals = [
-        v for k, v in os.environ.items()
+        v
+        for k, v in os.environ.items()
         if len(v) >= _MIN_SECRET_LEN and any(fnmatch.fnmatchcase(k.upper(), p) for p in _SECRET_ENV)
     ]
     return sorted(set(vals), key=len, reverse=True)
@@ -75,7 +77,8 @@ class JsonFormatter(logging.Formatter):
 def setup_logging(level: str = "INFO", json_logs: bool = True, stream: Any = None) -> logging.Handler:
     handler = logging.StreamHandler(stream or sys.stderr)
     handler.setFormatter(
-        JsonFormatter() if json_logs else logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+        JsonFormatter() if json_logs else logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+    )
     handler.addFilter(SecretFilter())
     root = logging.getLogger()
     for h in list(root.handlers):

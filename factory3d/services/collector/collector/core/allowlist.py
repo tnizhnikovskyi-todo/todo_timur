@@ -1,4 +1,5 @@
 """Allow-list хостів пристроїв (F3D_ALLOW_HOSTS), SPEC §8.10."""
+
 from __future__ import annotations
 
 import ipaddress

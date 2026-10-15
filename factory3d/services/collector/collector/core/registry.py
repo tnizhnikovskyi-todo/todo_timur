@@ -1,4 +1,5 @@
 """Реєстр джерел: API-01, diff за ETag, створення/зупинка плагінів (SPEC §0.3, §8.3.2–§8.3.3)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -41,15 +42,29 @@ def parse_config(data: dict) -> list[SourceCfg]:
         code = s["code"]
         signals = tuple(
             SignalCfg(
-                code=g["code"], kind=g.get("kind", "gauge"), unit=g.get("unit", ""), period_s=int(g.get("period_s", 10)),
-                scale=float(g.get("scale", 1.0)), write_enabled=bool(g.get("write_enabled", False)),
-                states=g.get("states"), decimals=int(g.get("decimals", 2)), address=g.get("address") or {},
-                source_code=code)
+                code=g["code"],
+                kind=g.get("kind", "gauge"),
+                unit=g.get("unit", ""),
+                period_s=int(g.get("period_s", 10)),
+                scale=float(g.get("scale", 1.0)),
+                write_enabled=bool(g.get("write_enabled", False)),
+                states=g.get("states"),
+                decimals=int(g.get("decimals", 2)),
+                address=g.get("address") or {},
+                source_code=code,
+            )
             for g in s.get("signals") or []
         )
-        out.append(SourceCfg(
-            code=code, type=s["type"], read_enabled=bool(s.get("read_enabled", True)),
-            write_enabled=bool(s.get("write_enabled", False)), params=s.get("params") or {}, signals=signals))
+        out.append(
+            SourceCfg(
+                code=code,
+                type=s["type"],
+                read_enabled=bool(s.get("read_enabled", True)),
+                write_enabled=bool(s.get("write_enabled", False)),
+                params=s.get("params") or {},
+                signals=signals,
+            )
+        )
     return out
 
 

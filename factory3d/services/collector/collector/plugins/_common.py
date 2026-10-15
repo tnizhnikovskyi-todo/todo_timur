@@ -1,4 +1,5 @@
 """Спільні помічники вбудованих плагінів: схеми A.1/A.2, валідація, EWMA, лінійний масштаб (SPEC §8.5–§8.8)."""
+
 from __future__ import annotations
 
 import json

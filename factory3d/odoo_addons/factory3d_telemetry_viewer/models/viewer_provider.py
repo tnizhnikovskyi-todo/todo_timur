@@ -17,8 +17,11 @@ class F3dViewerProviderTelemetry(models.AbstractModel):
 
     # --- R-12 ----------------------------------------------------------------------------------------
     def _f3d_visible_signals(self):
-        return self.env["f3d.signal"].sudo().search([
-            ("active", "=", True), ("viewer_visible", "=", True), ("status", "!=", "unknown")])
+        return (
+            self.env["f3d.signal"]
+            .sudo()
+            .search([("active", "=", True), ("viewer_visible", "=", True), ("status", "!=", "unknown")])
+        )
 
     @staticmethod
     def _f3d_value(sig):

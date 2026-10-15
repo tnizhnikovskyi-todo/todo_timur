@@ -1,4 +1,5 @@
 """Тестовий BACnet-пристрій device 140 на bacpypes3 (SPEC §13.0.2): AI:1-3, AO:1, MSV:1, BI:1, LSZ:12, PIV:1/3."""
+
 from __future__ import annotations
 
 import asyncio
@@ -62,29 +63,75 @@ class BacnetTestDevice:
         self.reject_cov = False
         flags = [0, 0, 0, 0]
         objs: list[Any] = [
-            AnalogInputObject(objectIdentifier=("analog-input", 1), objectName="supply_c", presentValue=77.4,
-                              statusFlags=flags, covIncrement=0.1, units="degrees-celsius"),
-            AnalogInputObject(objectIdentifier=("analog-input", 2), objectName="return_c", presentValue=55.0,
-                              statusFlags=flags, covIncrement=0.1, units="degrees-celsius"),
-            AnalogInputObject(objectIdentifier=("analog-input", 3), objectName="raw_ai3", presentValue=61.1,
-                              statusFlags=flags, covIncrement=0.1, units="no-units"),
-            AnalogOutputObject(objectIdentifier=("analog-output", 1), objectName="valve", presentValue=0.0,
-                               statusFlags=flags, covIncrement=0.1, relinquishDefault=0.0, units="percent"),
-            MultiStateValueObject(objectIdentifier=("multi-state-value", 1), objectName="mode", presentValue=2,
-                                  statusFlags=flags, numberOfStates=4),
-            BinaryInputObject(objectIdentifier=("binary-input", 1), objectName="run", presentValue="active",
-                              statusFlags=flags),
-            LifeSafetyZoneObject(objectIdentifier=("life-safety-zone", 12), objectName="fa_zone",
-                                 presentValue="quiet", statusFlags=flags, trackingValue="quiet", mode="on",
-                                 acceptedModes=["on"], silenced="unsilenced", operationExpected="none"),
-            PositiveIntegerValueObject(objectIdentifier=("positive-integer-value", 1), objectName="piv1",
-                                       presentValue=17, statusFlags=flags),
-            PositiveIntegerValueObject(objectIdentifier=("positive-integer-value", 3), objectName="piv3",
-                                       presentValue=17, statusFlags=flags),
+            AnalogInputObject(
+                objectIdentifier=("analog-input", 1),
+                objectName="supply_c",
+                presentValue=77.4,
+                statusFlags=flags,
+                covIncrement=0.1,
+                units="degrees-celsius",
+            ),
+            AnalogInputObject(
+                objectIdentifier=("analog-input", 2),
+                objectName="return_c",
+                presentValue=55.0,
+                statusFlags=flags,
+                covIncrement=0.1,
+                units="degrees-celsius",
+            ),
+            AnalogInputObject(
+                objectIdentifier=("analog-input", 3),
+                objectName="raw_ai3",
+                presentValue=61.1,
+                statusFlags=flags,
+                covIncrement=0.1,
+                units="no-units",
+            ),
+            AnalogOutputObject(
+                objectIdentifier=("analog-output", 1),
+                objectName="valve",
+                presentValue=0.0,
+                statusFlags=flags,
+                covIncrement=0.1,
+                relinquishDefault=0.0,
+                units="percent",
+            ),
+            MultiStateValueObject(
+                objectIdentifier=("multi-state-value", 1),
+                objectName="mode",
+                presentValue=2,
+                statusFlags=flags,
+                numberOfStates=4,
+            ),
+            BinaryInputObject(
+                objectIdentifier=("binary-input", 1), objectName="run", presentValue="active", statusFlags=flags
+            ),
+            LifeSafetyZoneObject(
+                objectIdentifier=("life-safety-zone", 12),
+                objectName="fa_zone",
+                presentValue="quiet",
+                statusFlags=flags,
+                trackingValue="quiet",
+                mode="on",
+                acceptedModes=["on"],
+                silenced="unsilenced",
+                operationExpected="none",
+            ),
+            PositiveIntegerValueObject(
+                objectIdentifier=("positive-integer-value", 1), objectName="piv1", presentValue=17, statusFlags=flags
+            ),
+            PositiveIntegerValueObject(
+                objectIdentifier=("positive-integer-value", 3), objectName="piv3", presentValue=17, statusFlags=flags
+            ),
         ]
         dev = DeviceObject(objectIdentifier=("device", 140), objectName="BACNET-T-140", vendorIdentifier=999)
-        port = NetworkPortObject("127.0.0.1:0", objectIdentifier=("network-port", 1), objectName="np",
-                                 networkNumber=0, networkNumberQuality="unknown")
+        port = NetworkPortObject(
+            "127.0.0.1:0",
+            objectIdentifier=("network-port", 1),
+            objectName="np",
+            networkNumber=0,
+            networkNumberQuality="unknown",
+        )
         self.app: _Dev = _Dev.from_object_list([dev, port, *objs])  # type: ignore[assignment]
         self.app.sim = self
 
@@ -129,11 +176,22 @@ class BacnetTestDevice:
         return self.services.count(service)
 
     # --- події ---
-    async def send_event(self, collector_port: int, *, obj: tuple[str, int] = ("life-safety-zone", 12),
-                         event_type: str = "change-of-life-safety", new_state: str = "test-alarm",
-                         new_mode: str = "on", message: str = "Тест", from_state: str = "normal",
-                         to_state: str = "offnormal", notification_class: int = 1, priority: int = 1,
-                         ack_required: bool = False, device: int = 140) -> None:
+    async def send_event(
+        self,
+        collector_port: int,
+        *,
+        obj: tuple[str, int] = ("life-safety-zone", 12),
+        event_type: str = "change-of-life-safety",
+        new_state: str = "test-alarm",
+        new_mode: str = "on",
+        message: str = "Тест",
+        from_state: str = "normal",
+        to_state: str = "offnormal",
+        notification_class: int = 1,
+        priority: int = 1,
+        ack_required: bool = False,
+        device: int = 140,
+    ) -> None:
         kwargs: dict[str, Any] = {
             "destination": Address(f"127.0.0.1:{collector_port}"),
             "processIdentifier": 0,
@@ -152,8 +210,12 @@ class BacnetTestDevice:
         if event_type == "change-of-life-safety":
             kwargs["eventValues"] = NotificationParameters(
                 changeOfLifeSafety=NotificationParametersChangeOfLifeSafety(
-                    newState=new_state, newMode=new_mode, statusFlags=StatusFlags([0, 0, 0, 0]),
-                    operationExpected="none"))
+                    newState=new_state,
+                    newMode=new_mode,
+                    statusFlags=StatusFlags([0, 0, 0, 0]),
+                    operationExpected="none",
+                )
+            )
         res = self.app.request(UnconfirmedEventNotificationRequest(**kwargs))
         if inspect.isawaitable(res):
             await res

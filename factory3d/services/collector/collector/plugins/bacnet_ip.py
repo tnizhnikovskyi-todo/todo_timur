@@ -1,4 +1,5 @@
 """Плагін `bacnet_ip` (SPEC §8.8, R-23, FR-29): ReadPropertyMultiple, COV, запис, події, режим read_only."""
+
 from __future__ import annotations
 
 import asyncio
@@ -35,13 +36,27 @@ MAX_MESSAGE = 500
 ADDR_CACHE = "bacnet_addr.json"
 
 LONG = {
-    "AI": "analog-input", "AO": "analog-output", "AV": "analog-value", "BI": "binary-input",
-    "BO": "binary-output", "BV": "binary-value", "MSI": "multi-state-input", "MSV": "multi-state-value",
-    "LSZ": "life-safety-zone", "LSP": "life-safety-point", "PIV": "positive-integer-value",
+    "AI": "analog-input",
+    "AO": "analog-output",
+    "AV": "analog-value",
+    "BI": "binary-input",
+    "BO": "binary-output",
+    "BV": "binary-value",
+    "MSI": "multi-state-input",
+    "MSV": "multi-state-value",
+    "LSZ": "life-safety-zone",
+    "LSP": "life-safety-point",
+    "PIV": "positive-integer-value",
 }
 SHORT = {v: k for k, v in LONG.items()}
-_COV_DEFAULT = {"analog-input", "binary-input", "multi-state-input", "multi-state-value", "life-safety-zone",
-                "life-safety-point"}
+_COV_DEFAULT = {
+    "analog-input",
+    "binary-input",
+    "multi-state-input",
+    "multi-state-value",
+    "life-safety-zone",
+    "life-safety-point",
+}
 _PA_TYPES = {"analog-output", "analog-value", "binary-output", "binary-value"}
 _BINARY = {"binary-input", "binary-output", "binary-value"}
 _MULTI = {"multi-state-input", "multi-state-value"}
@@ -93,8 +108,13 @@ class BacnetApp:
         bind = getattr(settings, "bacnet_bind", "0.0.0.0:47808")
         dev_id = int(getattr(settings, "bacnet_device_id", 3999))
         device = DeviceObject(objectIdentifier=("device", dev_id), objectName="F3D Collector", vendorIdentifier=999)
-        port = NetworkPortObject(bind, objectIdentifier=("network-port", 1), objectName="NetworkPort-1",
-                                 networkNumber=0, networkNumberQuality="unknown")
+        port = NetworkPortObject(
+            bind,
+            objectIdentifier=("network-port", 1),
+            objectName="NetworkPort-1",
+            networkNumber=0,
+            networkNumberQuality="unknown",
+        )
         self.app: _F3DApplication = _F3DApplication.from_object_list([device, port])  # type: ignore[assignment]
         self.app.owner = self
         self.plugins: list[BacnetIpPlugin] = []
@@ -151,8 +171,11 @@ class BacnetApp:
             scm = self.app.change_of_value(*args, **kwargs)
             await asyncio.wait_for(scm.__aenter__(), timeout)
             return scm
-        fn = {"read-property": self.app.read_property, "read-property-multiple": self.app.read_property_multiple,
-              "write-property": self.app.write_property}.get(svc)
+        fn = {
+            "read-property": self.app.read_property,
+            "read-property-multiple": self.app.read_property_multiple,
+            "write-property": self.app.write_property,
+        }.get(svc)
         if fn is None:
             raise NotSupported(f"unsupported service: {svc}")
         return await asyncio.wait_for(fn(*args, **kwargs), timeout)
@@ -248,8 +271,11 @@ class BacnetIpPlugin(SourcePlugin):
         if source.params.get("read_only") is True:
             if source.write_enabled:
                 errs.append("write_enabled: заборонено для джерела з params.read_only")
-            errs += [f"{s.code}: write_enabled заборонено для джерела з params.read_only"
-                     for s in source.signals if s.write_enabled]
+            errs += [
+                f"{s.code}: write_enabled заборонено для джерела з params.read_only"
+                for s in source.signals
+                if s.write_enabled
+            ]
         return errs
 
     @staticmethod
@@ -305,8 +331,9 @@ class BacnetIpPlugin(SourcePlugin):
         except BaseException:
             await self.disconnect()
             raise
-        if self.read_only and any(s.sg.address.get("mode") == "cov" or s.objtype in _COV_DEFAULT
-                                  for s in self._specs.values()):
+        if self.read_only and any(
+            s.sg.address.get("mode") == "cov" or s.objtype in _COV_DEFAULT for s in self._specs.values()
+        ):
             self.ctx.log.info("bacnet %s: read_only — COV-сигнали опитуються як poll", self.source.code)
         self._start_cov()
 
@@ -418,7 +445,7 @@ class BacnetIpPlugin(SourcePlugin):
         assert self.bapp is not None
         data: dict[tuple[str, str], Any] = {}
         for i in range(0, len(pairs), self.rpm_max):
-            chunk = pairs[i:i + self.rpm_max]
+            chunk = pairs[i : i + self.rpm_max]
             if self._rpm_ok:
                 try:
                     data.update(await self._rpm(chunk))
@@ -487,8 +514,12 @@ class BacnetIpPlugin(SourcePlugin):
             elif fault:
                 q = "uncertain"
             rel = data.get((s.objid, "reliability"))
-            if a.get("check_reliability") and rel is not None and not _is_error(rel) \
-                    and str(rel) != "no-fault-detected":
+            if (
+                a.get("check_reliability")
+                and rel is not None
+                and not _is_error(rel)
+                and str(rel) != "no-fault-detected"
+            ):
                 q = "bad"
             pa = data.get((s.objid, "priority-array"))
             if pa is not None and not _is_error(pa):
@@ -542,8 +573,9 @@ class BacnetIpPlugin(SourcePlugin):
             if val is None or _is_error(val):
                 continue
             eq = st["eq"]
-            if str(val) == str(eq) or (_num(val) is not None and isinstance(eq, int | float)
-                                       and _num(val) == float(eq)):
+            if str(val) == str(eq) or (
+                _num(val) is not None and isinstance(eq, int | float) and _num(val) == float(eq)
+            ):
                 return Reading(code=sg.code, ts=ts, text=str(st["text"]), q=q)
         return Reading(code=sg.code, ts=ts, q="uncertain")
 
@@ -559,7 +591,8 @@ class BacnetIpPlugin(SourcePlugin):
         pid = zlib.crc32(code.encode()) % (1 << 22) or 1
         try:
             scm = await self.bapp._request(
-                self, "subscribe-cov", self.addr, ObjectIdentifier(s.objid), pid, False, self.cov_lifetime_s)
+                self, "subscribe-cov", self.addr, ObjectIdentifier(s.objid), pid, False, self.cov_lifetime_s
+            )
         except (ErrorRejectAbortNack, TimeoutError, NotSupported, OSError, ValueError) as e:
             self._cov_fallback(code, f"SubscribeCOV rejected: {e}")
             return
@@ -622,12 +655,14 @@ class BacnetIpPlugin(SourcePlugin):
             return
         ts = self.clock.now()
         payload["ts"] = to_iso_z(ts)
-        event_id = hashlib.sha256(
-            f"bacnet_event\n{self.source.code}\n{canonical_json(payload)}".encode()).hexdigest()
+        event_id = hashlib.sha256(f"bacnet_event\n{self.source.code}\n{canonical_json(payload)}".encode()).hexdigest()
         self.stats["events"] += 1
         self.ctx.metrics.bacnet_events.labels(self.source.code).inc()
-        self.ctx.emit_event(PushEvent(event_id=event_id, route="bacnet_event", ts=ts, remote=self.source.code,
-                                      headers={}, payload=payload))
+        self.ctx.emit_event(
+            PushEvent(
+                event_id=event_id, route="bacnet_event", ts=ts, remote=self.source.code, headers={}, payload=payload
+            )
+        )
 
     def _event_payload(self, apdu: Any) -> dict[str, Any]:
         otype = str(apdu.eventObjectIdentifier[0])

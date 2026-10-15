@@ -1,4 +1,5 @@
 """AC-79, AC-101 (mqtt): плагін mqtt на фейковому paho-клієнті; `-m broker` — на справжньому брокері."""
+
 from __future__ import annotations
 
 import asyncio
@@ -29,8 +30,14 @@ def _sigs(**over):
     ]
 
 
-PARAMS = {"host": "iot-sim", "client_id": "f3d", "topics": ["f3d/mobile/+/telemetry"],
-          "status_topic": "f3d/mobile/{device}/status", "username": "u", "password_ref": "F3D_MQTT_PASSWORD"}
+PARAMS = {
+    "host": "iot-sim",
+    "client_id": "f3d",
+    "topics": ["f3d/mobile/+/telemetry"],
+    "status_topic": "f3d/mobile/{device}/status",
+    "username": "u",
+    "password_ref": "F3D_MQTT_PASSWORD",
+}
 
 
 async def _start(make_ctx, fake_mqtt, signals=None, params=None, monkeypatch=None):
@@ -119,8 +126,7 @@ async def test_disconnect_states(make_ctx, fake_mqtt):
 
 
 async def test_address_scale_not_signal_scale(make_ctx, fake_mqtt):
-    sg = mk_signal("energy/p_kw", scale=1000.0,
-                   address={"topic": TOPIC, "path": "$.p_w", "scale": 0.001, "offset": 0})
+    sg = mk_signal("energy/p_kw", scale=1000.0, address={"topic": TOPIC, "path": "$.p_w", "scale": 0.001, "offset": 0})
     p, box, cl = await _start(make_ctx, fake_mqtt, [sg])
     cl.deliver(TOPIC, b'{"p_w": 3402}')
     await _settle()
@@ -129,8 +135,16 @@ async def test_address_scale_not_signal_scale(make_ctx, fake_mqtt):
 
 
 async def test_write_template_and_unsupported(make_ctx, fake_mqtt):
-    sg = mk_signal("equipment/FL-1/cmd", write=True, kind="state", address={
-        "topic": TOPIC, "path": "$.s", "write": {"topic": "f3d/mobile/FL-1/cmd", "template": '{"go": "{text}", "n": {value}}'}})
+    sg = mk_signal(
+        "equipment/FL-1/cmd",
+        write=True,
+        kind="state",
+        address={
+            "topic": TOPIC,
+            "path": "$.s",
+            "write": {"topic": "f3d/mobile/FL-1/cmd", "template": '{"go": "{text}", "n": {value}}'},
+        },
+    )
     ro = mk_signal("equipment/FL-1/ro", address={"topic": TOPIC, "path": "$.s"})
     p, _, cl = await _start(make_ctx, fake_mqtt, [sg, ro])
     assert await p.write(sg, 2.0, 'a"b') == "published f3d/mobile/FL-1/cmd"
@@ -161,8 +175,12 @@ def test_topic_matches():
 def test_validate():
     ok = mk_source("MQ", "mqtt", _sigs(), params=PARAMS)
     assert MqttPlugin.validate(ok) == []
-    bad = mk_source("MQ", "mqtt", [mk_signal("equipment/x/y", address={"topic": "a/+/b", "path": "battery"})],
-                    params={"host": "h", "client_id": "bad id", "topics": ["a/#/b"], "password": "x"})
+    bad = mk_source(
+        "MQ",
+        "mqtt",
+        [mk_signal("equipment/x/y", address={"topic": "a/+/b", "path": "battery"})],
+        params={"host": "h", "client_id": "bad id", "topics": ["a/#/b"], "password": "x"},
+    )
     text = "\n".join(MqttPlugin.validate(bad))
     assert "client_id" in text and "#" in text and "секрети" in text and "topic" in text and "path" in text
 

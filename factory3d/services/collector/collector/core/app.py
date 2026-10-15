@@ -1,4 +1,5 @@
 """Збирання компонентів колектора, запуск і graceful shutdown (SPEC §8.1.1)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -40,20 +41,40 @@ class Collector:
         self.buffer = Buffer(settings.buffer_dir / "buffer.sqlite", settings.buffer_max_mb, self.clock, self.metrics)
         self.allowlist = Allowlist(settings.allow_hosts, settings.odoo_url, self.metrics)
         self.client = OdooClient(
-            settings.odoo_url, settings.collector_token, collector=settings.collector_code, clock=self.clock,
-            metrics=self.metrics, skew_warn_s=settings.clock_skew_warn_s, ca=settings.odoo_ca)
+            settings.odoo_url,
+            settings.collector_token,
+            collector=settings.collector_code,
+            clock=self.clock,
+            metrics=self.metrics,
+            skew_warn_s=settings.clock_skew_warn_s,
+            ca=settings.odoo_ca,
+        )
         self.emitter = Emitter(self.buffer, self._signals, self.metrics)
         self.registry = Registry(self.client, settings, self._make_ctx, self.clock, self.metrics)
         self.scheduler = Scheduler(self.buffer, self.registry, self.metrics, self.clock, rand)
         self.pusher = Pusher(
-            self.client, self.buffer, push_max=settings.push_max, push_interval_s=settings.push_interval_s,
-            registry=self.registry, metrics=self.metrics, clock=self.clock,
-            on_read_enabled=lambda v: self.registry.set_flags(v))
+            self.client,
+            self.buffer,
+            push_max=settings.push_max,
+            push_interval_s=settings.push_interval_s,
+            registry=self.registry,
+            metrics=self.metrics,
+            clock=self.clock,
+            on_read_enabled=lambda v: self.registry.set_flags(v),
+        )
         self.status = StatusReporter(
-            self.client, self.registry, self.buffer, self.scheduler, interval_s=settings.status_interval_s,
-            clock=self.clock, metrics=self.metrics, on_flags=self.registry.set_flags)
+            self.client,
+            self.registry,
+            self.buffer,
+            self.scheduler,
+            interval_s=settings.status_interval_s,
+            clock=self.clock,
+            metrics=self.metrics,
+            on_flags=self.registry.set_flags,
+        )
         self.commands = CommandLoop(
-            self.client, self.registry, self.buffer, settings, clock=self.clock, metrics=self.metrics)
+            self.client, self.registry, self.buffer, settings, clock=self.clock, metrics=self.metrics
+        )
         self.metrics_server = MetricsServer(self.metrics, settings.metrics_port)
         self.registry.listeners.append(self._on_config)
         self.http_push: Any = None
@@ -65,9 +86,14 @@ class Collector:
 
     def _make_ctx(self, source: SourceCfg) -> PluginContext:
         return PluginContext(
-            settings=self.settings, secrets=resolve_secret, allowlist=self.allowlist.check, emit=self.emitter.emit,
-            emit_event=self.emitter.emit_event, metrics=self.metrics,
-            log=logging.getLogger(f"collector.plugin.{source.type}.{source.code}"))
+            settings=self.settings,
+            secrets=resolve_secret,
+            allowlist=self.allowlist.check,
+            emit=self.emitter.emit,
+            emit_event=self.emitter.emit_event,
+            metrics=self.metrics,
+            log=logging.getLogger(f"collector.plugin.{source.type}.{source.code}"),
+        )
 
     async def _on_config(self) -> None:
         c = self.registry.collector
@@ -88,8 +114,15 @@ class Collector:
         except ImportError:
             return
         cls = mod.HttpPushServer
-        avail = {"settings": self.settings, "clock": self.clock, "buffer": self.buffer, "registry": self.registry,
-                 "metrics": self.metrics, "allowlist": self.allowlist, "emitter": self.emitter}
+        avail = {
+            "settings": self.settings,
+            "clock": self.clock,
+            "buffer": self.buffer,
+            "registry": self.registry,
+            "metrics": self.metrics,
+            "allowlist": self.allowlist,
+            "emitter": self.emitter,
+        }
         params = inspect.signature(cls).parameters
         self.http_push = cls(**{k: v for k, v in avail.items() if k in params})
         if hasattr(self.http_push, "start"):
@@ -102,8 +135,13 @@ class Collector:
         await self.buffer.open()
         await self._start_http_push()
         await self.registry.load()
-        coros = [self.registry.run_refresh(), self.pusher.run(), self.status.run(), self.emitter.run(),
-                 self._maintenance()]
+        coros = [
+            self.registry.run_refresh(),
+            self.pusher.run(),
+            self.status.run(),
+            self.emitter.run(),
+            self._maintenance(),
+        ]
         if self.settings.write_enabled:
             coros.append(self.commands.run())
         self._tasks = [asyncio.create_task(c) for c in coros]

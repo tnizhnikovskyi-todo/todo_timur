@@ -1,4 +1,5 @@
 """AC-83: CLI check-config, dump-config, drain-buffer."""
+
 from __future__ import annotations
 
 import asyncio
@@ -18,8 +19,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 async def _cli(*args: str) -> tuple[int, str, str]:
     proc = await asyncio.create_subprocess_exec(
-        sys.executable, "-m", "collector", *args, cwd=ROOT,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        sys.executable,
+        "-m",
+        "collector",
+        *args,
+        cwd=ROOT,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
     out, err = await asyncio.wait_for(proc.communicate(), 30)
     return proc.returncode or 0, out.decode(), err.decode()
 
@@ -37,9 +44,16 @@ async def test_check_config_401(fake_odoo, settings, monkeypatch):
 
 
 async def test_dump_config_no_secrets(fake_odoo, settings):
-    fake_odoo.config = {"sources": [src_json(
-        "MQ", type_="mqtt", params={"host": "mosquitto", "password_ref": "F3D_MQTT_PASSWORD", "token_ref": "F3D_X"},
-        signals=[sig_json("equipment/A/x")])]}
+    fake_odoo.config = {
+        "sources": [
+            src_json(
+                "MQ",
+                type_="mqtt",
+                params={"host": "mosquitto", "password_ref": "F3D_MQTT_PASSWORD", "token_ref": "F3D_X"},
+                signals=[sig_json("equipment/A/x")],
+            )
+        ]
+    }
     code, out, _ = await _cli("dump-config")
     assert code == 0
     data = json.loads(out)

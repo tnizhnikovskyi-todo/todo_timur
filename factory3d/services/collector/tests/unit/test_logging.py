@@ -1,4 +1,5 @@
 """AC-82: SecretFilter, JSON-логи, /metrics без секретів."""
+
 from __future__ import annotations
 
 import io

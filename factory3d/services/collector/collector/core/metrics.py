@@ -1,4 +1,5 @@
 """Метрики Prometheus і HTTP :9108 (/metrics, /health), SPEC §8.9."""
+
 from __future__ import annotations
 
 import logging
@@ -37,15 +38,19 @@ class Metrics:
         self.mqtt_messages = Counter("collector_mqtt_messages", "MQTT-повідомлення", ["source"], registry=r)
         self.mqtt_missing_path = Counter("collector_mqtt_missing_path", "Відсутній jsonpath", ["source"], registry=r)
         self.http_push_requests = Counter(
-            "collector_http_push_requests", "Запити http_push", ["route", "status"], registry=r)
+            "collector_http_push_requests", "Запити http_push", ["route", "status"], registry=r
+        )
         self.bacnet_cov_active = Gauge("collector_bacnet_cov_active", "Активні COV-підписки", ["source"], registry=r)
         self.bacnet_events = Counter("collector_bacnet_events", "BACnet-події", ["source"], registry=r)
         self.bacnet_events_ignored = Counter(
-            "collector_bacnet_events_ignored", "Проігноровані BACnet-події", ["reason"], registry=r)
+            "collector_bacnet_events_ignored", "Проігноровані BACnet-події", ["reason"], registry=r
+        )
         self.bacnet_ro_blocked = Counter(
-            "collector_bacnet_ro_blocked", "Заблоковані сервіси read_only", ["source", "service"], registry=r)
+            "collector_bacnet_ro_blocked", "Заблоковані сервіси read_only", ["source", "service"], registry=r
+        )
         self.modbus_pulse_reset_failed = Counter(
-            "collector_modbus_pulse_reset_failed", "Невдале скидання імпульсу", ["source"], registry=r)
+            "collector_modbus_pulse_reset_failed", "Невдале скидання імпульсу", ["source"], registry=r
+        )
         self.commands = Counter("collector_commands", "Команди за станом", ["state"], registry=r)
         self.clock_skew = Gauge("collector_clock_skew_seconds", "Розходження годинників з Odoo", registry=r)
         self.allowlist_denied = Counter("collector_allowlist_denied", "Відмови allow-list", registry=r)
@@ -95,8 +100,9 @@ class Metrics:
 class MetricsServer:
     """aiohttp-сервер `/metrics` і `/health`."""
 
-    def __init__(self, metrics: Metrics, port: int = 9108, rows: Callable[[], int] | None = None,
-                 host: str = "0.0.0.0") -> None:
+    def __init__(
+        self, metrics: Metrics, port: int = 9108, rows: Callable[[], int] | None = None, host: str = "0.0.0.0"
+    ) -> None:
         self.metrics = metrics
         self.port = port
         self.host = host

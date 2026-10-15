@@ -1,4 +1,5 @@
 """AC-71, AC-101: планувальник, бекоф, джиттер, масштаб ядра."""
+
 from __future__ import annotations
 
 import asyncio
@@ -14,8 +15,13 @@ from . import CountingClock, FakePlugin, mk_signal, mk_source, reading
 
 
 def _src():
-    return mk_source(signals=[mk_signal("equipment/A/x", period_s=10), mk_signal("equipment/A/y", period_s=10),
-                              mk_signal("equipment/A/z", period_s=60)])
+    return mk_source(
+        signals=[
+            mk_signal("equipment/A/x", period_s=10),
+            mk_signal("equipment/A/y", period_s=10),
+            mk_signal("equipment/A/z", period_s=60),
+        ]
+    )
 
 
 async def _run(sched, src, plugin, period=10):
@@ -81,12 +87,23 @@ async def test_overrun_metric(buffer, vclock):
 
 
 async def test_core_applies_signal_scale_once(buffer, vclock):
-    src = mk_source(signals=[
-        mk_signal("equipment/A/p1", scale=1.0), mk_signal("equipment/A/p2", scale=2.0),
-        mk_signal("equipment/A/st", kind="state", scale=5.0), mk_signal("equipment/A/bad", scale=3.0)])
+    src = mk_source(
+        signals=[
+            mk_signal("equipment/A/p1", scale=1.0),
+            mk_signal("equipment/A/p2", scale=2.0),
+            mk_signal("equipment/A/st", kind="state", scale=5.0),
+            mk_signal("equipment/A/bad", scale=3.0),
+        ]
+    )
     plugin = FakePlugin(src, None)
-    plugin.script = [[reading("equipment/A/p1", 3.402), reading("equipment/A/p2", 3.402),
-                      reading("equipment/A/st", None, text="busy"), reading("equipment/A/bad", None, q="bad")]]
+    plugin.script = [
+        [
+            reading("equipment/A/p1", 3.402),
+            reading("equipment/A/p2", 3.402),
+            reading("equipment/A/st", None, text="busy"),
+            reading("equipment/A/bad", None, q="bad"),
+        ]
+    ]
     sched = Scheduler(buffer, clock=vclock, rand=lambda: 0.0)
     await _run(sched, src, plugin)
     rows = [r for _, r in await buffer.take(10)]
@@ -95,8 +112,10 @@ async def test_core_applies_signal_scale_once(buffer, vclock):
 
 
 async def test_emit_applies_signal_scale(buffer):
-    sigs = {"equipment/A/p2": mk_signal("equipment/A/p2", scale=2.0),
-            "equipment/A/st": mk_signal("equipment/A/st", kind="state", scale=5.0)}
+    sigs = {
+        "equipment/A/p2": mk_signal("equipment/A/p2", scale=2.0),
+        "equipment/A/st": mk_signal("equipment/A/st", kind="state", scale=5.0),
+    }
     em = Emitter(buffer, sigs)
     em.emit(reading("equipment/A/p2", 3.402))
     em.emit(reading("equipment/A/st", None, text="busy"))

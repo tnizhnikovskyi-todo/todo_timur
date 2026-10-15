@@ -1,4 +1,5 @@
 """Планувальник опитування (R-19), apply_signal_scale (R-02, X-63) і приймач emit() від push-плагінів."""
+
 from __future__ import annotations
 
 import asyncio

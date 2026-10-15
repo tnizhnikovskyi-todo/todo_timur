@@ -1,4 +1,5 @@
 """Плагін `modbus_tcp` (SPEC §8.5, R-20): пул клієнтів, групування блоків, декодування, запис, імпульс."""
+
 from __future__ import annotations
 
 import asyncio
@@ -223,8 +224,12 @@ class ModbusTcpPlugin(SourcePlugin):
         """Значення блоку або текст помилки."""
         assert self.entry is not None
         client = self.entry.client
-        fn = {1: client.read_coils, 2: client.read_discrete_inputs, 3: client.read_holding_registers,
-              4: client.read_input_registers}[b.fc]
+        fn = {
+            1: client.read_coils,
+            2: client.read_discrete_inputs,
+            3: client.read_holding_registers,
+            4: client.read_input_registers,
+        }[b.fc]
         try:
             async with self.entry.lock:
                 rr = await fn(b.addr, count=b.count, slave=b.unit)
@@ -286,7 +291,7 @@ class ModbusTcpPlugin(SourcePlugin):
             if start <= need.addr and need.addr + need.count <= start + count:
                 if isinstance(res, str):
                     return None
-                return res[need.addr - start: need.addr - start + need.count]
+                return res[need.addr - start : need.addr - start + need.count]
         return None
 
     def _decode(self, sg: SignalCfg, ts: Any, data: dict) -> Reading:
@@ -317,7 +322,7 @@ class ModbusTcpPlugin(SourcePlugin):
         else:
             w = reg_count(typ)
             wo, bo = a.get("wordorder", "big"), a.get("byteorder", "big")
-            raws = [float(decode_registers(vals[i:i + w], typ, wo, bo)) for i in range(0, len(vals) - w + 1, w)]
+            raws = [float(decode_registers(vals[i : i + w], typ, wo, bo)) for i in range(0, len(vals) - w + 1, w)]
         if sg.kind == "state":
             key = int(raws[0])
             amap = a.get("map") or {}
@@ -376,8 +381,9 @@ class ModbusTcpPlugin(SourcePlugin):
                 if fc == 5:
                     rr = await client.write_coil(addr, bool(payload), slave=unit)
                 elif fc == 6:
-                    rr = await client.write_register(addr, payload[0] if isinstance(payload, list) else payload,
-                                                     slave=unit)
+                    rr = await client.write_register(
+                        addr, payload[0] if isinstance(payload, list) else payload, slave=unit
+                    )
                 else:
                     rr = await client.write_registers(addr, payload, slave=unit)
         except _NET_ERRORS as e:
@@ -437,4 +443,3 @@ class ModbusTcpPlugin(SourcePlugin):
         if self._last_error is not None and (self._last_ok is None or now - self._last_ok > window):
             return Health(state="offline", error=self._last_error, stats=stats)
         return Health(state="online", stats=stats)
-

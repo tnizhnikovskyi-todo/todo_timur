@@ -1,4 +1,5 @@
 """AC-72: SQLite-буфер."""
+
 from __future__ import annotations
 
 import os
@@ -46,7 +47,7 @@ async def test_size_limit_drops_oldest(tmp_path):
     assert b.dropped_total >= 10_000 and b.dropped_total % 10_000 == 0
     assert dropped % 10_000 == 0
     assert os.path.getsize(path) <= 1024 * 1024
-    first = (await b.take(1))
+    first = await b.take(1)
     assert not first or first[0][1].code != "equipment/A/c0"
     await b.close()
 
@@ -61,7 +62,7 @@ async def test_events_results_not_dropped(tmp_path, vclock):
         await b.put_many([_r(k * 10_000 + i, text="x" * 64) for i in range(10_000)])
     await b.enforce_limit()
     assert await b.count_events() == 1 and await b.count_results() == 1
-    (_, got), = await b.take_results(10)
+    ((_, got),) = await b.take_results(10)
     assert got.id == 5 and got.data == {"a": 1}
     # старші за 7 діб — видаляються
     vclock.advance(8 * 86400)

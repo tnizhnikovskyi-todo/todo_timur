@@ -4,8 +4,18 @@ RANK = {"unknown": 0, "stale": 0, "ok": 0, "warn": 1, "alarm": 2}
 LEVELS = ("ok", "warn", "alarm")
 
 CFG_FIELDS = (
-    "kind", "warn_low_on", "warn_low", "warn_high_on", "warn_high", "alarm_low_on", "alarm_low",
-    "alarm_high_on", "alarm_high", "hysteresis", "min_duration_s", "alarm_states",
+    "kind",
+    "warn_low_on",
+    "warn_low",
+    "warn_high_on",
+    "warn_high",
+    "alarm_low_on",
+    "alarm_low",
+    "alarm_high_on",
+    "alarm_high",
+    "hysteresis",
+    "min_duration_s",
+    "alarm_states",
 )
 
 

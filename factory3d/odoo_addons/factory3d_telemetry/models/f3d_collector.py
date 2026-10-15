@@ -32,7 +32,11 @@ class F3dCollector(models.Model):
     last_ip = fields.Char(string="IP", readonly=True)
     state = fields.Selection(
         [("never", "Ще не підключався"), ("online", "Онлайн"), ("offline", "Офлайн")],
-        default="never", index=True, tracking=True, readonly=True)
+        default="never",
+        index=True,
+        tracking=True,
+        readonly=True,
+    )
     status_interval_s = fields.Integer(string="Період звіту стану, с", default=60)
     push_interval_s = fields.Integer(string="Період відправки, с", default=5)
     push_max = fields.Integer(string="Показань у пакеті", default=1000)
@@ -53,24 +57,26 @@ class F3dCollector(models.Model):
     _f3d_collector_intervals = models.Constraint(
         "CHECK(status_interval_s >= 10 AND push_interval_s BETWEEN 1 AND 60 AND push_max BETWEEN 1 AND 2000 "
         "AND config_poll_s >= 10)",
-        "Періоди колектора поза межами (статус ≥ 10 с, відправка 1…60 с, пакет 1…2000, конфігурація ≥ 10 с).")
+        "Періоди колектора поза межами (статус ≥ 10 с, відправка 1…60 с, пакет 1…2000, конфігурація ≥ 10 с).",
+    )
 
     @api.constrains("code")
     def _check_code(self):
         for rec in self:
             if not rec.code or not self.CODE_RE.match(rec.code):
-                raise ValidationError(
-                    _("Код колектора: великі латинські літери, цифри, дефіс (напр. COL-MAIN)."))
+                raise ValidationError(_("Код колектора: великі латинські літери, цифри, дефіс (напр. COL-MAIN)."))
 
     def _compute_counts(self):
         sources = {}
         signals = {}
         if self.ids:
             for collector, count in self.env["f3d.source"]._read_group(
-                    [("collector_id", "in", self.ids)], ["collector_id"], ["__count"]):
+                [("collector_id", "in", self.ids)], ["collector_id"], ["__count"]
+            ):
                 sources[collector.id] = count
             for collector, count in self.env["f3d.signal"]._read_group(
-                    [("source_id.collector_id", "in", self.ids)], ["collector_id"], ["__count"]):
+                [("source_id.collector_id", "in", self.ids)], ["collector_id"], ["__count"]
+            ):
                 signals[collector.id] = count
         for rec in self:
             rec.source_count = sources.get(rec.id, 0)
@@ -82,11 +88,13 @@ class F3dCollector(models.Model):
         if not self.env.user.has_group(GROUP_ADMIN):
             raise AccessError(_("Токен колектора видає лише адміністратор."))
         token = secrets.token_urlsafe(32)
-        self.write({
-            "token_hash": hashlib.sha256(token.encode()).hexdigest(),
-            "token_hint": token[-4:],
-            "token_set_at": fields.Datetime.now(),
-        })
+        self.write(
+            {
+                "token_hash": hashlib.sha256(token.encode()).hexdigest(),
+                "token_hint": token[-4:],
+                "token_set_at": fields.Datetime.now(),
+            }
+        )
         self.message_post(body=_("Видано новий токен (…%s)", token[-4:]))
         return {
             "type": "ir.actions.act_window",
@@ -139,21 +147,43 @@ class F3dCollector(models.Model):
         for src in self.sudo().source_ids.filtered(lambda s: s.active and s.type not in local).sorted("code"):
             signals = []
             for sig in src.signal_ids.filtered(lambda s: s.active and s.address).sorted("code"):
-                signals.append({
-                    "code": sig.code, "kind": sig.kind, "unit": sig.unit or "", "period_s": sig.period_s,
-                    "scale": sig.scale, "write_enabled": bool(sig.write_enabled), "states": sig.states or None,
-                    "decimals": sig.decimals, "address": sig.address,
-                })
-            sources.append({
-                "code": src.code, "type": src.type, "read_enabled": bool(src.read_enabled and read_enabled),
-                "write_enabled": bool(src.write_enabled), "params": src.params or {}, "signals": signals,
-            })
+                signals.append(
+                    {
+                        "code": sig.code,
+                        "kind": sig.kind,
+                        "unit": sig.unit or "",
+                        "period_s": sig.period_s,
+                        "scale": sig.scale,
+                        "write_enabled": bool(sig.write_enabled),
+                        "states": sig.states or None,
+                        "decimals": sig.decimals,
+                        "address": sig.address,
+                    }
+                )
+            sources.append(
+                {
+                    "code": src.code,
+                    "type": src.type,
+                    "read_enabled": bool(src.read_enabled and read_enabled),
+                    "write_enabled": bool(src.write_enabled),
+                    "params": src.params or {},
+                    "signals": signals,
+                }
+            )
         return {
-            "read_enabled": read_enabled, "write_enabled": write_enabled,
-            "collector": {"code": self.code, "push_interval_s": self.push_interval_s, "push_max": self.push_max,
-                          "status_interval_s": self.status_interval_s, "config_poll_s": self.config_poll_s},
-            "params": {"stale_periods": int(icp.get_param("factory3d.telemetry.stale_periods", "3") or 3),
-                       "stale_min_s": int(icp.get_param("factory3d.telemetry.stale_min_s", "60") or 60)},
+            "read_enabled": read_enabled,
+            "write_enabled": write_enabled,
+            "collector": {
+                "code": self.code,
+                "push_interval_s": self.push_interval_s,
+                "push_max": self.push_max,
+                "status_interval_s": self.status_interval_s,
+                "config_poll_s": self.config_poll_s,
+            },
+            "params": {
+                "stale_periods": int(icp.get_param("factory3d.telemetry.stale_periods", "3") or 3),
+                "stale_min_s": int(icp.get_param("factory3d.telemetry.stale_min_s", "60") or 60),
+            },
             "sources": sources,
         }
 
@@ -191,8 +221,11 @@ class F3dCollector(models.Model):
     def action_view_sources(self):
         self.ensure_one()
         return {
-            "type": "ir.actions.act_window", "name": _("Джерела"), "res_model": "f3d.source",
-            "view_mode": "list,form", "domain": [("collector_id", "=", self.id)],
+            "type": "ir.actions.act_window",
+            "name": _("Джерела"),
+            "res_model": "f3d.source",
+            "view_mode": "list,form",
+            "domain": [("collector_id", "=", self.id)],
             "context": {"default_collector_id": self.id},
         }
 

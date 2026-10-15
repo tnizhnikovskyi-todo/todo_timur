@@ -1,4 +1,5 @@
 """AC-80: приймач http_push (HttpPushServer + плагін) на aiohttp test client."""
+
 from __future__ import annotations
 
 import hashlib
@@ -20,9 +21,16 @@ SECRETS = {"F3D_HTTP_PUSH_TOKEN_LPR": "tok-lpr", "F3D_HTTP_PUSH_SECRET_LPR": "se
 
 
 def _src(**params):
-    sg = mk_signal("yard/lpr/CAM-05/plate", kind="event",
-                   address={"route": "lpr", "match": {"sensorProviderID": "CAM-05"}, "path": "$.plateText",
-                            "ts_path": "$.capture_timestamp"})
+    sg = mk_signal(
+        "yard/lpr/CAM-05/plate",
+        kind="event",
+        address={
+            "route": "lpr",
+            "match": {"sensorProviderID": "CAM-05"},
+            "path": "$.plateText",
+            "ts_path": "$.capture_timestamp",
+        },
+    )
     return mk_source("HP", "http_push", [sg], params={"routes": ["lpr"], "allow_ips": ["127.0.0.1"], **params})
 
 
@@ -111,8 +119,9 @@ async def test_token_header(http_push_client, make_ctx, buffer):
     assert bad.status == 401
     ok = await http_push_client.post("/f3d/lpr", json=PAYLOAD, headers={"X-F3D-Token": "tok-lpr"})
     assert ok.status == 200
-    bearer = await http_push_client.post("/f3d/lpr", json={**PAYLOAD, "n": 2},
-                                         headers={"Authorization": "Bearer tok-lpr"})
+    bearer = await http_push_client.post(
+        "/f3d/lpr", json={**PAYLOAD, "n": 2}, headers={"Authorization": "Bearer tok-lpr"}
+    )
     assert bearer.status == 200
     evs = await _events(em, buffer)
     assert len(evs) == 2 and all("authorization" not in e.headers for e in evs)
@@ -156,8 +165,7 @@ async def test_multipart_json_part(http_push_client, make_ctx, buffer):
     _p, em = await _setup(make_ctx, buffer)
     form = aiohttp.FormData()
     form.add_field("event", json.dumps(PAYLOAD), content_type="application/json")
-    form.add_field("image", b"\xff\xd8\xff\xe0" + bytes(range(256)) * 4, filename="p.jpg",
-                   content_type="image/jpeg")
+    form.add_field("image", b"\xff\xd8\xff\xe0" + bytes(range(256)) * 4, filename="p.jpg", content_type="image/jpeg")
     r = await http_push_client.post("/f3d/lpr", data=form)
     assert r.status == 200
     (ev,) = await _events(em, buffer)
@@ -194,9 +202,14 @@ async def test_connect_without_server(make_ctx):
 
 def test_validate():
     assert HttpPushPlugin.validate(_src()) == []
-    bad = mk_source("HP", "http_push", [
-        mk_signal("yard/a/b", address={"route": "other", "path": "$.x"}),
-        mk_signal("yard/a/c", address={"route": "lpr", "path": "x"}),
-    ], params={"routes": ["lpr"], "secret": "x", "token_ref": "lower"})
+    bad = mk_source(
+        "HP",
+        "http_push",
+        [
+            mk_signal("yard/a/b", address={"route": "other", "path": "$.x"}),
+            mk_signal("yard/a/c", address={"route": "lpr", "path": "x"}),
+        ],
+        params={"routes": ["lpr"], "secret": "x", "token_ref": "lower"},
+    )
     text = "\n".join(HttpPushPlugin.validate(bad))
     assert "other" in text and "path" in text and "секрети" in text and "token_ref" in text
