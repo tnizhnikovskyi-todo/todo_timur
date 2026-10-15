@@ -1,1 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_genset_link_user,f3d.genset.link user,model_f3d_genset_link,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_genset_link_manager,f3d.genset.link manager,model_f3d_genset_link,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_genset_profile_user,f3d.genset.profile user,model_f3d_genset_profile,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_genset_profile_manager,f3d.genset.profile manager,model_f3d_genset_profile,factory3d_base.group_f3d_manager,1,1,1,1

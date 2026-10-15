@@ -9,7 +9,9 @@
     "data": [
         "security/ir.model.access.csv",
         "data/ir_config_parameter.xml",
-        # W2: data/f3d_genset_profile.xml, data/f3d_genset_event_map.xml, data/ir_cron.xml
+        "data/f3d_genset_profile.xml",
+        # W2b: data/f3d_genset_event_map.xml
+        "data/ir_cron.xml",
         # W3: views/*.xml, views/menus.xml
     ],
     "post_init_hook": "post_init_hook",
