@@ -5,6 +5,8 @@
 X-15 (`f3d_truck` — опис/назва фури, не держномер і не код; код фури в 3D — лише `f3d_code`), X-32 і сторона base у X-69 (§3: резерв
 55 genset, правило пункту «Налаштування <модуля>» під `menu_f3d_config`, власні пункти base поза резервом), сторона base у X-19
 (§4.2: у `privilege_f3d` лише групи base).
+Зміни: 15.10.2026 — за рішеннями модуля (build/modules/factory3d_base.md): DEC-5 (M-10a: `_rec_names_search` дзеркала),
+DEC-11 (§13.1 `TestBatchMigration`: 4 пакети на 4 документи, а не 3), DEC-15 (§4.3, AC-45: `company_id` зони обов'язкове, зон без компанії немає).
 Спирається на контракти каркаса `docs/ARCHITECTURE.md`: C-6.1 (код сцени), C-6.2 (зони й ворота),
 C-6.3 (паспорт), C-6.7 (кнопка «Показати в 3D»), рішення D-03 (ворота = `stock.location`-док),
 конвенції §5. Визначає власні контракти CB-01…CB-12 (ARCH §2.1). Протоколи P-xx не задіяні.
@@ -475,6 +477,7 @@ class MaintenanceEquipment(models.Model):
 ```python
 class HrEmployeePublic(models.Model):
     _inherit = "hr.employee.public"
+    _rec_names_search = ["name", "f3d_code"]
 ```
 
 | Поле | Тип | Параметри |
@@ -483,6 +486,8 @@ class HrEmployeePublic(models.Model):
 | `f3d_alias` | Char(32) | `readonly=True`, `string="Другий код сцени"` |
 | `f3d_kind` | Selection | `selection=F3D_KIND_SELECTION` (той самий список, що M-01), `readonly=True`, `string="Вид у сцені"` |
 
+`_rec_names_search = ["name", "f3d_code"]` оголошено і в дзеркалі: без нього `name_search`/`search` за кодом
+користувача без `hr.group_hr_user` іде через `hr.employee.public` і порожній (AC-55; зміна за DEC-5 factory3d_base).
 Без `compute`, `default`, `index`, обмежень і методів: `hr.employee.public` — SQL-представлення (`_auto = False`),
 стандарт будує його з колонок `hr_employee` за збереженими полями моделі (`hr/models/hr_employee_public.py:_get_fields`,
 `init`: `FROM hr_employee e JOIN hr_version v ON v.id = e.current_version_id`; колонки, яких немає в `hr.version`,
@@ -622,6 +627,9 @@ access_f3d_equipment_source_manager,f3d.equipment.source manager,model_f3d_equip
 | XML-id | Модель | Домен | Групи |
 |---|---|---|---|
 | `f3d_zone_rule_company` | `f3d.zone` | `['|', ('company_id','=',False), ('company_id','in',company_ids)]` | глобальне (без груп) |
+
+`f3d.zone.company_id` обов'язкове (M-02), тож гілка `company_id = False` недосяжна й лишена лише як запобіжник
+(зміна за DEC-15 factory3d_base).
 
 Паспорти/специфікації/джерела — без компанії (довідник вендорів спільний).
 
@@ -914,7 +922,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | AC-42 | FR-10 | Given користувач лише з `group_f3d_user`; Then читає `f3d.zone`/паспорти, `write`/`create`/`unlink` → `AccessError`; з `group_f3d_manager` — усе дозволено | UT |
 | AC-43 | FR-10 | Given користувач `stock.group_stock_manager` без `group_f3d_manager`; When `location.write({'f3d_code':'X-1'})`; Then `AccessError`; `write({'name':'Нова'})` — ок; з `group_f3d_manager` — ок | UT |
 | AC-44 | FR-10 | Then існують меню з xml-id таблиці §3 із указаними `sequence`, `parent_id`, групами; `menu_f3d_root.sequence=75` | UT |
-| AC-45 | FR-10 | Given 2 компанії, зона компанії B; When користувач компанії A шукає зони; Then зона B не видна; зона без компанії видна обом | UT |
+| AC-45 | FR-10 | Given 2 компанії, зона компанії B; When користувач компанії A шукає зони; Then зона B не видна; зон без компанії немає (`company_id` обов'язкове, M-02), перевіряється лише ізоляція компаній | UT |
 | AC-46 | FR-11 | Then усі 12 параметрів §5.1 існують зі значеннями за замовчуванням (крім `migration_state`, що після хука ≠ `pending`) | UT |
 | AC-47 | FR-11 | Given чиста база (без `x_*`); Then `migration_state='skipped'`, звіт без помилок, установка успішна | UT |
 | AC-48 | FR-11 | Given чиста база з установленим модулем і 1 зоною, 1 локацією з кодом; When `uninstall_hook(env)`; Then параметри `factory3d.base.*` відсутні, локація існує; `restore_manual_fields` створив `x_dock/x_truck/x_vehicle` | UT |
@@ -959,7 +967,7 @@ UPDATE ir_config_parameter SET value = 'test' WHERE key = 'factory3d.base.enviro
 | `::TestPickingRelated` | `test_related_fields`, `test_search_read` | AC-51 | пакет із `dock_id`, кодами, технікою | значення; `search_read` через `env['stock.picking'].search_read(...)` |
 | `test_migration.py::TestCodesHooks` | `test_locations`, `test_workcenters`, `test_equipment_resolution` | AC-10, AC-12, AC-14 | локації `A-1`/`b-1`/`WHSTOCK`; РЦ; обладнання 4 шт. + `ir.model.data` `factory3d.eq_fl_1` | коди; `unmatched` |
 | `::TestLocationKinds` | `test_kind_capacity_from_table`, `test_kind_via_alias`, `test_rerun`, `test_capacity_nonneg`, `test_kind_selection` | AC-53 | локації `PLT-T1`, `FUR-T1`, ворота з псевдонімом `UNLOAD-T1`; `with_data_file('scene_locations.csv', …)` | `f3d_loc_kind`/`f3d_capacity`; `IntegrityError` у `mute_logger`; `ValueError` при невідомому значенні селекції |
-| `::TestBatchMigration` | `test_full_cycle_synthetic`, `test_done_pickings_attached`, `test_moves_untouched`, `test_rerun_idempotent`, `test_keep_x_fields`, `test_mismatch_blocks_drop` | AC-25…AC-30 (синтетично) | тест сам створює manual-поля `x_dock/x_truck/x_vehicle` через `ir.model.fields`, 4 документи (2 `done` із `x_dock`, 1 `assigned` із `x_truck`+`x_dock`, 1 internal `done` із `x_vehicle`), ворота `DOCK-T1`, обладнання `FL-T`, демо-представлення `factory3d.view_picking_form_dock` (створене тестом із `x_dock` в arch) | після `batches.migrate`: 3 пакети (1 з `f3d_code`), `batch_id` на 4 документах, стани `done`/`in_progress`; `snapshot_moves` рівний; після `verify`: `mismatches == []`; після `drop_demo`: поля й представлення відсутні; повтор: `batches_created == 0`; з `keep_x_fields` поля лишаються; якщо підмінити `x_dock` на неіснуючий код → `mismatches` ≠ [] і поля не видалені |
+| `::TestBatchMigration` | `test_full_cycle_synthetic`, `test_done_pickings_attached`, `test_moves_untouched`, `test_rerun_idempotent`, `test_keep_x_fields`, `test_mismatch_blocks_drop` | AC-25…AC-30 (синтетично) | тест сам створює manual-поля `x_dock/x_truck/x_vehicle` через `ir.model.fields`, 4 документи (2 `done` із `x_dock`, 1 `assigned` із `x_truck`+`x_dock`, 1 internal `done` із `x_vehicle`), ворота `DOCK-T1`, обладнання `FL-T`, демо-представлення `factory3d.view_picking_form_dock` (створене тестом із `x_dock` в arch) | після `batches.migrate`: 4 пакети (1 з `f3d_code`; один пакет на документ, R-11(б)/Q-02), `batch_id` на 4 документах, стани `done`/`in_progress`; `snapshot_moves` рівний; після `verify`: `mismatches == []`; після `drop_demo`: поля й представлення відсутні; повтор: `batches_created == 0`; з `keep_x_fields` поля лишаються; якщо підмінити `x_dock` на неіснуючий код → `mismatches` ≠ [] і поля не видалені |
 | `::TestUninstall` | `test_restore_x_fields` | AC-48 | те саме + `uninstall_hook(env)` | `ir.model.fields` 3 шт. створено, значення `x_dock`/`x_truck`/`x_vehicle` відновлені (через `cr.execute SELECT`), параметри відсутні |
 | `test_passport.py::TestPassportData` | `test_93_passports`, `test_beam_saw_fields`, `test_spec_counts`, `test_sources`, `test_extra_numeric_keys` | AC-32, AC-33 | data | кількості 93/999/252; значення `beam_saw`; `highbay lumen` |
 | `::TestPassportApi` | `test_get_num`, `test_equipment_related`, `test_unit_count`, `test_role_unique`, `test_spec_key_unique`, `test_source_url_check` | AC-36, AC-37 (синтетично) | обладнання з `f3d_passport_id=passport_beam_saw` | значення; `IntegrityError`; `ValidationError` |
