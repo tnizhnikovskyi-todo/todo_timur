@@ -22,6 +22,10 @@ class EnergyMixin:
         vals.update(kw)
         return self.env["f3d.signal"].create(vals)
 
+    def ensure_signal(self, code, kind="gauge", unit="кВт", **kw):
+        """Наявний сигнал або новий: `workcenters/<РЦ>/machine_state` створює й factory3d_machine_connect (R-05)."""
+        return self.env["f3d.signal"].search([("code", "=", code)], limit=1) or self.mk_signal(code, kind, unit, **kw)
+
     def mk_meter(self, code, role="consumer", export=False, max_kw=48.0, with_power=False):
         """Вузол-споживач `<code без PM->` під SEC-1 і лічильник `code` з сигналами енергії."""
         node_code = code[3:] if code.startswith("PM-") else code

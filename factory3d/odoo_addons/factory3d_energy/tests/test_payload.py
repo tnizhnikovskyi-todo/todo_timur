@@ -134,7 +134,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
         self.assertEqual(
             (saw["i_now"], saw["p_now"], saw["status"]), (22, 12.18, "idle")
         )  # без machine_connect і без завдань — простій (R-16 п. 6)
-        self.mk_signal("workcenters/SAW-1/machine_state", "state", "")
+        self.ensure_signal("workcenters/SAW-1/machine_state", "state", "")
         self.sig("workcenters/SAW-1/machine_state", 1, "working")
         self.assertEqual(self.energy(user=self.u_mrpm)["energy"]["consumers"]["SAW-1"]["status"], "work")
         wc = self.mk_wc("CNC-T")
@@ -144,7 +144,7 @@ class TestPayload(AllocMixin, F3DEnergyCase):
                 "parent_id": self.env["f3d.energy.node"].search([("code", "=", "SEC-1")]).id, "p_inst_kw": 22.0,
             }
         )  # fmt: skip
-        self.mk_signal("workcenters/CNC-T/machine_state", "state", "")
+        self.ensure_signal("workcenters/CNC-T/machine_state", "state", "")
         self.sig("workcenters/CNC-T/machine_state", 3, "fault")
         self.assertEqual(self.energy(user=self.u_mrpm)["energy"]["consumers"]["CNC-T"]["status"], "stop")
 
