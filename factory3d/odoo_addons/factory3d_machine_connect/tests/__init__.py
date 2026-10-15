@@ -9,3 +9,5 @@ from . import test_gantry_stack
 from . import test_gantry_job
 from . import test_oee
 from . import test_energy_contract
+from . import test_cutmap
+from . import test_api_export
