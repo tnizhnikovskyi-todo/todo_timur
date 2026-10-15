@@ -1,11 +1,16 @@
+from datetime import datetime, timedelta
+from unittest import mock
+
 from psycopg2 import IntegrityError
+from psycopg2 import errors as pg_errors
 
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
 
-from ..tools.biostar_client import BioStarAuthError
-from .common import AccessCase, FakeBioStar
+from ..tools import params as P
+from ..tools.biostar_client import BioStarAuthError, BioStarError
+from .common import AccessCase, FakeBioStar, freeze_time
 
 
 class ServerCase(AccessCase):
@@ -153,3 +158,116 @@ class TestCodeValidation(ServerCase):
         self.assertTrue(door.alarm)  # пожежну знімає лише охорона
         door.with_user(self.user_security).action_ack_alarm()
         self.assertFalse(door.alarm)
+
+
+@tagged('post_install', '-at_install', 'f3d', 'f3d_access')
+class TestPoll(ServerCase):
+
+    def _rows(self, *stamps, code=20480):
+        return [self.make_row(i + 1, '2026-10-12T%s.00Z' % st, code) for i, st in enumerate(stamps)]
+
+    def _four(self):
+        return self._rows('06:58:20', '06:58:40', '06:59:00', '06:59:10')
+
+    def _events(self):
+        return self.env['f3d.access.event'].search([('server_id', '=', self.server.id)])
+
+    def test_window_first_and_next(self):
+        fake = FakeBioStar(events=self._four())
+        self.poll('2026-10-12 07:00:30', fake)
+        self.assertEqual(fake.search_calls[0]['since'], datetime(2026, 10, 11, 7, 0, 30))
+        self.assertEqual(fake.search_calls[0]['until'], datetime(2026, 10, 12, 7, 5, 30))
+        self.assertEqual(self.server.last_event_ts, datetime(2026, 10, 12, 6, 59, 10))
+        self.poll('2026-10-12 07:01:30', fake)
+        self.assertEqual(fake.search_calls[-1]['since'], datetime(2026, 10, 12, 6, 57, 10))
+
+    def test_future_row_cursor(self):
+        fake = FakeBioStar(events=self._rows('06:59:10') + [
+            self.prow(2, '2026-10-12T07:03:00.00Z', 4102, 'TSTA1', tna='1')])
+        self.poll('2026-10-12 07:00:30', fake)
+        future = self._events().filtered(lambda e: e.biostar_id == '2')
+        self.assertEqual((future.attendance_action, future.process_state), ('future', 'new'))
+        self.assertEqual(self.server.last_event_ts, datetime(2026, 10, 12, 7, 0, 30))
+
+    def test_dedup(self):
+        fake = FakeBioStar(events=self._four())
+        self.poll('2026-10-12 07:00:30', fake)
+        self.poll('2026-10-12 07:01:30', fake)
+        self.assertEqual(len(self._events()), 4)
+        self.assertEqual((self.server.last_poll_new, self.server.last_poll_rows), (0, 4))
+        res = self.env['f3d.access.event']._f3d_ingest_rows(self.server, fake.events)
+        self.assertEqual((res['created'], res['duplicates'], res['invalid']), (0, 4, 0))
+        with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.env.cr.savepoint():
+            self.env['f3d.access.event'].create({
+                'server_id': self.server.id, 'biostar_id': '1', 'ts': '2026-10-12 06:58:20', 'code': 20480,
+                'event_type': 'door'})
+
+    def test_backoff_sequence(self):
+        fake = FakeBioStar(events=self._four())
+        self.poll('2026-10-12 07:00:30', fake)
+        cursor = self.server.last_event_ts
+        fake.fail_always = BioStarError(None, None, 'ConnectionError: refused')
+        server = self.server
+        now = datetime(2026, 10, 12, 7, 10, 0)
+        pauses = []
+        for _ in range(6):
+            with self.patch_client(fake), freeze_time(now):
+                server._cron_poll()
+            pauses.append((server.error_count, (server.next_try_at - now).total_seconds()))
+            now = server.next_try_at + timedelta(seconds=1)
+        self.assertEqual(pauses, [(1, 60), (2, 120), (3, 240), (4, 480), (5, 600), (6, 600)])
+        calls = len(fake.calls)
+        with self.patch_client(fake), freeze_time(server.next_try_at - timedelta(seconds=5)):
+            server._cron_poll()
+        self.assertEqual(len(fake.calls), calls)
+        self.assertEqual(server.last_event_ts, cursor)
+
+    def test_recovery_after_outage(self):
+        fake = FakeBioStar(events=self._four())
+        self.poll('2026-10-12 07:00:30', fake)
+        cursor = self.server.last_event_ts
+        fake.fail_always = BioStarError(None, None, 'ConnectionError: refused')
+        with self.patch_client(fake), freeze_time('2026-10-12 07:02:00'):
+            self.server._cron_poll()
+        self.assertEqual(self.server.state, 'error')
+        fake.fail_always = None
+        fake.events += [self.make_row(10 + i, '2026-10-12T07:%02d:00.00Z' % (1 + i), 20480) for i in range(12)]
+        with self.patch_client(fake), freeze_time('2026-10-12 07:20:00'):
+            self.server._cron_poll()
+        self.assertEqual((self.server.state, self.server.error_count), ('online', 0))
+        self.assertEqual(fake.search_calls[-1]['since'], cursor - timedelta(seconds=120))
+        self.assertEqual(len(self._events()), 16)
+
+    def test_max_pages_more(self):
+        P.set_param(self.env, 'page_size', '2')
+        P.set_param(self.env, 'max_pages_per_run', '2')
+        stamps = ['05:%02d:00' % (5 * i) for i in range(7)]
+        fake = FakeBioStar(events=self._rows(*stamps))
+        self.poll('2026-10-12 06:00:00', fake)
+        self.assertEqual(len(self._events()), 4)
+        self.assertTrue(self.server.last_poll_more)
+        self.assertEqual(self.server.last_event_ts, datetime(2026, 10, 12, 5, 15))
+        self.poll('2026-10-12 06:00:30', fake)
+        self.assertEqual(len(self._events()), 7)
+
+    def test_pagination_offsets(self):
+        P.set_param(self.env, 'page_size', '2')
+        fake = FakeBioStar(events=self._rows('05:00:00', '05:05:00', '05:10:00', '05:15:00', '05:20:00'))
+        self.poll('2026-10-12 06:00:00', fake)
+        self.assertEqual([(c['offset'], c['limit']) for c in fake.search_calls], [(0, 2), (2, 2), (4, 2)])
+        self.assertEqual(len(self._events()), 5)
+
+    def test_lock_skip(self):
+        cr = self.env.cr
+        original = cr.execute
+
+        def execute(query, params=None, *args, **kwargs):
+            if 'FOR UPDATE NOWAIT' in str(query):
+                raise pg_errors.LockNotAvailable('locked')
+            return original(query, params, *args, **kwargs)
+
+        fake = FakeBioStar(events=self._four())
+        with mock.patch.object(cr, 'execute', side_effect=execute), self.patch_client(fake):
+            res = self.server._poll()
+        self.assertEqual(res, {'skipped': True})
+        self.assertEqual(fake.search_calls, [])

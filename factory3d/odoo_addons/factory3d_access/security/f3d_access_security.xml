@@ -40,5 +40,18 @@
         <field name="model_id" ref="model_f3d_access_user_link"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
-    <!-- W2/W3: rule_f3d_access_{event,card,visitor,presence}_company, rule_f3d_access_card_* (SPEC §4.3) -->
+    <record id="rule_f3d_access_event_company" model="ir.rule">
+        <field name="name">СКУД event: компанія</field>
+        <field name="model_id" ref="model_f3d_access_event"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_access_presence_company" model="ir.rule">
+        <field name="name">СКУД presence: компанія</field>
+        <field name="model_id" ref="model_f3d_access_presence"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <!-- W3: rule_f3d_access_{card,visitor}_company, rule_f3d_access_card_* (SPEC §4.3) -->
 </odoo>

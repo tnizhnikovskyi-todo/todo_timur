@@ -2,6 +2,8 @@ import json
 from contextlib import contextmanager
 from unittest import mock
 
+from freezegun import freeze_time
+
 from odoo.tests import TransactionCase, new_test_user
 from odoo.tools import file_open
 
@@ -109,6 +111,10 @@ class FakeBioStar:
         self._write_guard()
 
 
+ACR = {'in': ('5390001', '1'), 'elec': ('5390002', '2'), 'chg': ('5390003', '3'), 'paint': ('5390004', '4'),
+       'srv': ('5390005', '5')}
+
+
 def make_row(id, dt, code, user=None, device='5390001', door='1', tna=''):  # noqa: A002
     """Рядок EventCollection (SPEC §7.2); `door_id` — список."""
     row = {'id': str(id), 'datetime': dt, 'server_datetime': dt, 'event_type_id': {'code': str(code)},
@@ -143,11 +149,20 @@ class AccessCase(TransactionCase):
             setattr(cls, 'device_' + code, cls.env.ref('factory3d_access.device_' + code))
         for code in ('turn_1', 'elec', 'chg', 'paint', 'srv'):
             setattr(cls, 'door_' + code, cls.env.ref('factory3d_access.door_' + code))
+        days = 'Пн Вт Ср Чт Пт'.split()
+        cls.cal = cls.env['resource.calendar'].create({
+            'name': 'Тест 07:00–15:30', 'tz': 'Europe/Kyiv', 'attendance_ids': [(5, 0, 0)] + [
+                (0, 0, {'name': '%s %s' % (days[i], part), 'dayofweek': str(i), 'hour_from': frm, 'hour_to': to,
+                        'day_period': period})
+                for i in range(5) for part, frm, to, period in (
+                    ('ранок', 7, 11.5, 'morning'), ('день', 12, 15.5, 'afternoon'))]})
         Employee = cls.env['hr.employee'].sudo()
-        cls.emp_a = Employee.create({'name': 'Тест А', 'barcode': 'TSTA1', 'f3d_code': 'OP-TST-A'})
-        cls.emp_b = Employee.create({'name': 'Тест Б', 'barcode': 'TSTB2', 'f3d_code': 'OP-TST-B'})
-        cls.emp_c = Employee.create({'name': 'Тест В', 'f3d_code': 'OP-TST-C'})
-        cls.emp_d = Employee.create({'name': 'Тест Г', 'f3d_code': 'OP-TST-D', 'f3d_alias': 'ALIAS1'})
+        common = {'resource_calendar_id': cls.cal.id, 'tz': 'Europe/Kyiv'}
+        cls.emp_a = Employee.create(dict(common, name='Тест А', barcode='TSTA1', f3d_code='OP-TST-A',
+                                         f3d_home_zone_id=cls.z['Z-CUT'].id))
+        cls.emp_b = Employee.create(dict(common, name='Тест Б', barcode='TSTB2', f3d_code='OP-TST-B'))
+        cls.emp_c = Employee.create(dict(common, name='Тест В', f3d_code='OP-TST-C'))
+        cls.emp_d = Employee.create(dict(common, name='Тест Г', f3d_code='OP-TST-D', f3d_alias='ALIAS1'))
         Link = cls.env['f3d.access.user.link'].sudo()
         cls.link_a = Link.create({'server_id': cls.server.id, 'biostar_user_id': 'TSTA1',
                                   'employee_id': cls.emp_a.id, 'match': 'barcode'})
@@ -168,6 +183,27 @@ class AccessCase(TransactionCase):
     def patch_client(self, fake):
         with mock.patch.object(type(self.env['f3d.access.server']), '_get_client', lambda srv: fake):
             yield fake
+
+    def prow(self, id, dt, code, user, where='in', tna=''):  # noqa: A002
+        """Рядок події для пристрою/дверей з `ACR` (in/elec/chg/paint/srv)."""
+        device, door = ACR[where]
+        return make_row(id, dt, code, user, device=device, door=door, tna=tna)
+
+    def feed(self, *rows, at='2026-10-12 23:00:00'):
+        """Зберегти й обробити рядки без опитування (час `at` — «зараз»); -> створені події."""
+        Event = self.env['f3d.access.event']
+        with freeze_time(at):
+            res = Event._f3d_ingest_rows(self.server, list(rows))
+            res['records']._f3d_process()
+        return res['records']
+
+    def attendances(self, employee):
+        return self.env['hr.attendance'].sudo().search([('employee_id', '=', employee.id)], order='check_in')
+
+    def poll(self, at, fake):
+        """Одне опитування сервера в момент `at` через підміну клієнта."""
+        with self.patch_client(fake), freeze_time(at):
+            return self.server._poll()
 
     make_row = staticmethod(make_row)
     load_fixture = staticmethod(load_fixture)

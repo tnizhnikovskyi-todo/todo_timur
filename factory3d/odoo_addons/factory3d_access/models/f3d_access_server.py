@@ -236,10 +236,8 @@ class F3dAccessServer(models.Model):
             self._save_session(client)
         event = self.env['f3d.access.event']
         res = event._f3d_ingest_rows(self, rows_all)
-        now = fields.Datetime.now()
         pending = event.search(
-            [('server_id', '=', self.id), ('process_state', '=', 'new'), ('ts', '<=', now)],
-            order='ts, id', limit=10000)
+            [('server_id', '=', self.id), ('process_state', '=', 'new')], order='ts, id', limit=10000)
         pending._f3d_process()
         out = {'rows': len(rows_all), 'new': res.get('created', 0), 'processed': len(pending), 'more': more,
                'duplicates': res.get('duplicates', 0), 'invalid': res.get('invalid', 0)}
