@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-16 -->
+    <record id="view_f3d_fire_drill_list" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.list</field>
+        <field name="model">f3d.fire.drill</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="title"/>
+                <field name="planned_ts"/>
+                <field name="start_ts"/>
+                <field name="zone_id"/>
+                <field name="mode"/>
+                <field name="origin" optional="show"/>
+                <field name="state" widget="badge" decoration-danger="state == 'running'"
+                       decoration-warning="state == 'evaluating'" decoration-success="state == 'done'"
+                       decoration-muted="state == 'cancelled'"/>
+                <field name="evac_time_s"/>
+                <field name="evac_pct"/>
+                <field name="result" widget="badge"/>
+                <field name="responsible_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_f3d_fire_drill_calendar" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.calendar</field>
+        <field name="model">f3d.fire.drill</field>
+        <field name="arch" type="xml">
+            <calendar date_start="planned_ts" color="state" mode="month">
+                <field name="zone_id"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+    <record id="view_f3d_fire_drill_search" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.search</field>
+        <field name="model">f3d.fire.drill</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="title"/>
+                <field name="zone_id"/>
+                <filter name="filter_planned" string="Заплановані" domain="[('state', '=', 'planned')]"/>
+                <filter name="filter_running" string="Тривають" domain="[('state', '=', 'running')]"/>
+                <filter name="filter_evaluating" string="Оцінювання" domain="[('state', '=', 'evaluating')]"/>
+                <filter name="filter_done" string="Завершені" domain="[('state', '=', 'done')]"/>
+                <separator/>
+                <filter name="filter_mine" string="Мої" domain="[('responsible_id', '=', uid)]"/>
+                <filter name="filter_auto" string="Автоматичні" domain="[('origin', '=', 'panel')]"/>
+                <group>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="group_zone" string="Зона" context="{'group_by': 'zone_id'}"/>
+                    <filter name="group_planned_month" string="Місяць" context="{'group_by': 'planned_ts:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- V-17 -->
+    <record id="view_f3d_fire_drill_form" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.form</field>
+        <field name="model">f3d.fire.drill</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_plan" string="Запланувати" type="object" invisible="state != 'draft'"/>
+                    <button name="action_start" string="Почати" type="object" class="btn-primary"
+                            invisible="state not in ('draft', 'planned') or mode == 'sim'"/>
+                    <button name="action_start_sim" string="Запустити на емуляторі" type="object" class="btn-primary"
+                            invisible="state not in ('draft', 'planned') or mode != 'sim' or not sim_available"/>
+                    <button name="action_stop" string="Завершити" type="object" class="btn-danger"
+                            invisible="state != 'running'"/>
+                    <button name="action_rollcall" string="Перекличка" type="object" invisible="state != 'evaluating'"/>
+                    <button name="action_close" string="Закрити" type="object" class="btn-primary"
+                            invisible="state != 'evaluating'"/>
+                    <button name="action_cancel" string="Скасувати" type="object"
+                            invisible="state not in ('draft', 'planned', 'running')"
+                            confirm="Скасувати навчання?"/>
+                    <button name="action_reset_draft" string="У чернетку" type="object" invisible="state != 'cancelled'"/>
+                    <button name="action_print" string="Протокол" type="object"
+                            invisible="state not in ('evaluating', 'done')"/>
+                    <button name="action_f3d_show" string="Показати в 3D" type="object" icon="fa-cube"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,planned,running,evaluating,done"/>
+                </header>
+                <div class="alert alert-danger" role="alert" invisible="not real_alarm">
+                    Під час навчання прилад показав справжню тривогу
+                </div>
+                <div class="alert alert-info" role="alert" invisible="state != 'running'">
+                    Триває: <field name="elapsed_s" class="oe_inline"/> с · кроки
+                    <field name="steps_done" class="oe_inline"/>/<field name="steps_total" class="oe_inline"/> · вийшли
+                    <field name="evacuated_count" class="oe_inline"/>/<field name="on_site_count" class="oe_inline"/>
+                </div>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                        <h2><field name="title" readonly="state == 'done'"/></h2>
+                    </div>
+                    <group>
+                        <group string="План">
+                            <field name="mode" readonly="state != 'draft'"/>
+                            <field name="planned_ts" readonly="state not in ('draft', 'planned')"/>
+                            <field name="zone_id" readonly="state not in ('draft', 'planned')"/>
+                            <field name="device_id" readonly="state not in ('draft', 'planned')"/>
+                            <field name="template_id" readonly="state != 'draft'"/>
+                            <field name="responsible_id" readonly="state == 'done'"/>
+                            <field name="origin"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="sim_run_ref" invisible="not sim_run_ref"/>
+                            <field name="sim_available" invisible="1"/>
+                            <field name="real_alarm" invisible="1"/>
+                        </group>
+                        <group string="Результат">
+                            <field name="start_ts"/>
+                            <field name="end_ts"/>
+                            <field name="duration_s"/>
+                            <field name="evac_time_s"/>
+                            <field name="time_limit_s" readonly="state == 'done'"/>
+                            <field name="on_site_count"/>
+                            <field name="evacuated_count"/>
+                            <field name="present_count"/>
+                            <field name="missing_count"/>
+                            <field name="evac_pct"/>
+                            <field name="data_quality"/>
+                            <field name="passage_source"/>
+                            <field name="result_suggested"/>
+                            <field name="result" readonly="state == 'done'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Кроки" name="steps">
+                            <field name="step_ids" readonly="state in ('cancelled', 'done')">
+                                <list editable="bottom" create="state in ('draft', 'planned')"
+                                      delete="state in ('draft', 'planned')">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="t_plan_s" readonly="parent.state not in ('draft', 'planned')"/>
+                                    <field name="who" readonly="parent.state not in ('draft', 'planned')"/>
+                                    <field name="text" readonly="parent.state not in ('draft', 'planned')"/>
+                                    <field name="auto_key" optional="hide" readonly="parent.state not in ('draft', 'planned')"/>
+                                    <field name="done" readonly="1"/>
+                                    <field name="t_fact_s" readonly="1"/>
+                                    <field name="delay_s"/>
+                                    <field name="done_by"/>
+                                    <button name="action_done_now" string="Виконано" type="object" icon="fa-check"
+                                            invisible="done or parent.state not in ('running', 'evaluating')"/>
+                                    <button name="action_undo" string="Скасувати відмітку" type="object" icon="fa-undo"
+                                            invisible="done_by != 'manual'"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Люди" name="people"
+                              groups="factory3d_fire_safety.group_f3d_fire_drill,hr.group_hr_user">
+                            <field name="person_ids" readonly="1">
+                                <list>
+                                    <field name="seq"/>
+                                    <field name="employee_id"/>
+                                    <field name="since"/>
+                                    <field name="source"/>
+                                    <field name="exit_ts"/>
+                                    <field name="exit_s"/>
+                                    <field name="exit_point"/>
+                                    <field name="rollcall"/>
+                                    <field name="status" widget="badge" decoration-success="status == 'evacuated'"
+                                           decoration-info="status == 'present'" decoration-danger="status == 'missing'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Висновки" name="conclusions">
+                            <group>
+                                <field name="conclusions"/>
+                                <field name="remarks"/>
+                                <field name="print_names"/>
+                            </group>
+                        </page>
+                        <page string="Журнал" name="events">
+                            <field name="event_ids" readonly="1">
+                                <list>
+                                    <field name="ts"/>
+                                    <field name="level" widget="badge" decoration-danger="level == 'alarm'"
+                                           decoration-warning="level == 'warn'" decoration-info="level == 'info'"/>
+                                    <field name="text"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_fire_drill" model="ir.actions.act_window">
+        <field name="name">Навчальні тривоги</field>
+        <field name="res_model">f3d.fire.drill</field>
+        <field name="view_mode">list,form,calendar</field>
+    </record>
+
+    <!-- V-19 -->
+    <record id="view_f3d_fire_drill_template_list" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.template.list</field>
+        <field name="model">f3d.fire.drill.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="is_default"/>
+                <field name="duration_s"/>
+                <field name="default_zone_id"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_f3d_fire_drill_template_form" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.template.form</field>
+        <field name="model">f3d.fire.drill.template</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="is_default"/>
+                            <field name="duration_s"/>
+                            <field name="default_zone_id"/>
+                            <field name="default_device_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="note"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">Плейсхолдери: {detector}, {zone}, {sounders}</div>
+                    <field name="step_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="t_plan_s"/>
+                            <field name="who"/>
+                            <field name="text"/>
+                            <field name="auto_key"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_f3d_fire_drill_template" model="ir.actions.act_window">
+        <field name="name">Шаблони навчань</field>
+        <field name="res_model">f3d.fire.drill.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

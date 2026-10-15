@@ -1,0 +1,9 @@
+id,code,name,system_id:id,x0,y0,x1,y1
+smoke_zone_sz_1,SZ-1,Димова зона SZ-1,system_smoke_ctrl,0,0,20,72
+smoke_zone_sz_2,SZ-2,Димова зона SZ-2,system_smoke_ctrl,20,0,42,72
+smoke_zone_sz_3,SZ-3,Димова зона SZ-3,system_smoke_ctrl,42,0,62,46
+smoke_zone_sz_4,SZ-4,Димова зона SZ-4,system_smoke_ctrl,62,0,92,46
+smoke_zone_sz_5,SZ-5,Димова зона SZ-5,system_smoke_ctrl,42,46,92,72
+smoke_zone_sz_6,SZ-6,Димова зона SZ-6,system_smoke_ctrl,92,0,112,72
+smoke_zone_sz_7,SZ-7,Димова зона SZ-7,system_smoke_ctrl,112,0,132,72
+smoke_zone_sz_8,SZ-8,Димова зона SZ-8,system_smoke_ctrl,132,0,150,72

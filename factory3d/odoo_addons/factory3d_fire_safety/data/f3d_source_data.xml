@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="source_bacnet_facp_1" model="f3d.source">
+        <field name="code">BAC-200-FACP-1</field>
+        <field name="name">Cerberus PRO FACP-1 (BACnet dev 200, лише читання)</field>
+        <field name="type">bacnet_ip</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 47808, 'device': 200, 'network': 2, 'read_only': True, 'timeout_s': 5, 'rpm': True, 'rpm_max': 50}"/>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">fire_safety</field>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="f3d_fire_readonly" eval="True"/>
+        <field name="period_s_default">10</field>
+    </record>
+    <record id="source_mb_u85_io6" model="f3d.source">
+        <field name="code">MB-U85-IO6</field>
+        <field name="name">ADAM-6050 IO-6: GreCon BS 7 і D+H (лише читання)</field>
+        <field name="type">modbus_tcp</field>
+        <field name="params" eval="{'host': 'iot-sim', 'port': 502, 'unit': 85, 'timeout_s': 3, 'retries': 1}"/>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="module">fire_safety</field>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="f3d_fire_readonly" eval="True"/>
+        <field name="period_s_default">2</field>
+    </record>
+</odoo>

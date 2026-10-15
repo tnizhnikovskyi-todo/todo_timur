@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="panel_facp_1" model="f3d.fire.panel">
+        <field name="name">Приймально-контрольний прилад</field>
+        <field name="code">FACP-1</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_office"/>
+        <field name="x">97.2</field>
+        <field name="y">58.25</field>
+        <field name="evac_max_distance_m">45.3</field>
+        <field name="evac_worst_x">32.25</field>
+        <field name="evac_worst_y">33.75</field>
+    </record>
+    <record id="loop_1" model="f3d.fire.loop">
+        <field name="panel_id" ref="panel_facp_1"/>
+        <field name="number">1</field>
+        <field name="from_x_m">0</field>
+        <field name="to_x_m">42</field>
+        <field name="modules_count">0</field>
+    </record>
+    <record id="loop_2" model="f3d.fire.loop">
+        <field name="panel_id" ref="panel_facp_1"/>
+        <field name="number">2</field>
+        <field name="from_x_m">42</field>
+        <field name="to_x_m">92</field>
+        <field name="modules_count">4</field>
+    </record>
+    <record id="loop_3" model="f3d.fire.loop">
+        <field name="panel_id" ref="panel_facp_1"/>
+        <field name="number">3</field>
+        <field name="from_x_m">92</field>
+        <field name="to_x_m">122</field>
+        <field name="modules_count">0</field>
+    </record>
+    <record id="loop_4" model="f3d.fire.loop">
+        <field name="panel_id" ref="panel_facp_1"/>
+        <field name="number">4</field>
+        <field name="from_x_m">122</field>
+        <field name="to_x_m">151</field>
+        <field name="modules_count">0</field>
+    </record>
+</odoo>
