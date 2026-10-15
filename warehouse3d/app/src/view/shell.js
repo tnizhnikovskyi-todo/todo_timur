@@ -40,6 +40,7 @@ const HTML = `
     <button class="btn btn-secondary" id="wiz-btn" aria-pressed="false" data-i18n="wiz.btn" hidden></button>
     <span class="sp"></span>
     <span class="role-badge" id="role-badge" hidden></span>
+    <button class="btn btn-secondary" id="lb-btn" data-i18n="lb.btn" data-i18n-attr="title:lb.btnTitle"></button>
     <button class="btn btn-secondary" id="pa-btn" data-i18n="pa.btn" data-i18n-attr="title:pa.btnTitle"></button>
     <button class="btn btn-secondary" id="hist-btn" data-i18n="top.history" data-i18n-attr="title:top.historyTitle"></button>
     <button class="btn btn-secondary" id="cm-btn" aria-pressed="false" data-i18n-attr="title:top.commentsTitle"><span data-i18n="top.comments"></span> <span class="cnt" id="cm-cnt">0</span></button>
@@ -292,6 +293,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   q("#ed-saveall").onclick = () => { const n = q("#ed-note"), c = n.value.trim(); n.value = ""; model.save("WH", c || null); }; // необязательный комментарий версии (W-18)
   q("#var-btn").onclick = () => openVariants({ model, i18n });
   q("#pa-btn").onclick = () => import("./putaway.js").then((m) => m.openPutaway({ model, i18n })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); // правила размещения (W-15): окно грузится лениво
+  q("#lb-btn").onclick = () => import("./labels.js").then((m) => m.openLabels({ model, i18n })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); // этикетки (W-09): окно грузится лениво
   q("#pa-clear").onclick = () => model.putaway.clear();
   q("#hist-btn").onclick = () => openHistory({ model, i18n, host });
   q("#cm-btn").onclick = () => cm.toggle();

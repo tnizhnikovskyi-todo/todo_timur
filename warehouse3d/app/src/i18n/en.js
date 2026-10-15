@@ -461,6 +461,15 @@ export default {
       <li><b>Uniqueness.</b> Codes and barcodes are unique in the project. If a code is repeated or matches an existing Odoo place or a place of another warehouse, the object panel shows a <b>conflict list</b> (click to go to the place), and <b>such places cannot be saved</b> until the conflicts are resolved. New places created by the app get a free code themselves. Give different zone codes to different warehouses, otherwise numbering will coincide.</li>
       <li><b>Floor places</b> (gates, carts, floor zones) are numbered by the template of their zone: in order from the entrance, the number goes into <span class="code">{pos}</span>, or, if the template has none, into the first of <span class="code">{row}</span>, <span class="code">{bay}</span>, <span class="code">{level}</span>. Odoo codes stay as they are until renumbered; grouping does not change codes.</li>
     </ul>`,
+  "help.labels.title": "Labels",
+  "help.labels.html": `
+    <ul>
+      <li><b>Where.</b> The "Labels" button: a PDF for A4 sheets and a ZPL file for Zebra, from the current model (new and renumbered places too).</li>
+      <li><b>What to print.</b> The selection (all places inside), zone, row, level from the bottom, all; "Only new and renumbered", "Only applied in Odoo". Conditions combine.</li>
+      <li><b>On the label.</b> Code128 or QR with the full code (the Odoo barcode), the code in large type, optionally zone, row / bay / level, type. An up arrow marks levels above the scanning-point level ("up and down" adds "down").</li>
+      <li><b>PDF.</b> A4 sheets: 70×36 (3×8), 105×48 (2×6), 100×150 mm (one) or a custom size, margins, gaps; "Skip the first" for a used sheet. Captions are Latin.</li>
+      <li><b>ZPL.</b> 203 or 300 dpi, size in mm; ^BC (Code128), ^BQ (QR). Warnings: small barcode, non-ASCII code (QR is printed). Scan a test label.</li>
+    </ul>`,
   "help.copy.title": "Copying",
   "help.copy.html": `
     <ul>
@@ -1652,6 +1661,8 @@ export default {
       <li><b>Columns and rows.</b> If the rows do not fit between columns, the checks reject the change; use “Lay out automatically” for the zone or make the block smaller.</li>
     </ul>`,
   // ---------- putaway rules, "Where will Odoo put it", "Will it fit", company barcodes (W-15)
+  "lb.btn": "Labels",
+  "lb.btnTitle": "Location labels: PDF (A4) and ZPL (Zebra)",
   "pa.btn": "Putaway",
   "pa.btnTitle": "Putaway rules of the warehouse and \"Where will Odoo put it\"",
   "pa.title": "Putaway rules",

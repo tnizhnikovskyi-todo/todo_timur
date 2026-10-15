@@ -2,6 +2,7 @@
 // Запуск: npm run build && npm run e2e. Печатает только итог.
 import http from "node:http";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -1454,6 +1455,54 @@ try {
     await pg.click("#pr-btn"); await pg.waitForSelector("#problems:not([hidden]) .plist");
     expect((await pg.locator("#problems .plist").innerText()).includes("Штрихкод зайнятий в Odoo"), "конфликт штрихкода не в панели проблем");
     await ctx.close();
+  });
+  // ---------- W-09: этикетки мест
+  await step("W-09 этикетки: выбрать ряд, окно «Етикетки», предпросмотр, скачать PDF и ZPL, инструкция", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wh-labels-"));
+    const download = async (trigger) => { const [dl] = await Promise.all([pg.waitForEvent("download"), trigger()]); const p = path.join(dir, dl.suggestedFilename()); await dl.saveAs(p); return { name: dl.suggestedFilename(), data: fs.readFileSync(p) }; };
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    await pg.click('#seg-mode [data-m="2d"]'); await pg.click('#seg-pick [data-pk="rack"]');
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Фурнітура");
+    const box = await pg.locator("#vp svg rect.s:visible").first().boundingBox();
+    await pg.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await pg.waitForFunction(() => /^Ряд /.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    await pg.click("#lb-btn"); await pg.waitForSelector("#lb-dlg [data-pv] svg");
+    expect((await pg.locator('#lb-dlg [data-f="scope"]').inputValue()) === "sel", "выделенный ряд не выбран по умолчанию");
+    expect((await pg.locator("#lb-dlg [data-count]").innerText()).includes("Етикеток: 24"), `число этикеток: ${await pg.locator("#lb-dlg [data-count]").innerText()}`);
+    expect((await pg.locator("#lb-dlg [data-pv] svg").count()) === 6, "в предпросмотре должно быть 6 этикеток");
+    expect((await pg.locator("#lb-dlg [data-pv] svg").first().innerHTML()).includes("<path"), "в этикетке нет штрихкода");
+    // QR вместо Code128, стрелка у верхних ярусов (ярус выше точки сканирования 2)
+    await pg.selectOption('#lb-dlg [data-f="sym"]', "qr"); await pg.selectOption('#lb-dlg [data-f="sym"]', "code128");
+    expect((await pg.locator("#lb-dlg [data-pv] svg polygon").count()) > 0, "нет стрелки у верхнего яруса");
+    // фильтры: ярус 1 — меньше этикеток, «только новые» — ни одной
+    await pg.fill('#lb-dlg [data-f="level"]', "1");
+    await pg.waitForFunction(() => /Етикеток: 6\b/.test(document.querySelector("#lb-dlg [data-count]").textContent));
+    await pg.fill('#lb-dlg [data-f="level"]', ""); await pg.check('#lb-dlg [data-f="onlyNew"]');
+    await pg.waitForSelector("#lb-dlg [data-pv] p.mut");
+    expect(await pg.locator("#lb-dlg [data-pdf]").isDisabled(), "PDF доступен без мест");
+    await pg.uncheck('#lb-dlg [data-f="onlyNew"]'); await pg.selectOption('#lb-dlg [data-f="scope"]', "all");
+    await pg.waitForFunction(() => /Етикеток: 689 · аркушів: 29\b/.test(document.querySelector("#lb-dlg [data-count]").textContent));
+    await pg.selectOption('#lb-dlg [data-f="scope"]', "sel");
+    const pdf = await download(() => pg.click("#lb-dlg [data-pdf]"));
+    expect(/^labels-WH-\d{4}-\d\d-\d\d\.pdf$/.test(pdf.name) && pdf.data.length > 1000 && pdf.data.subarray(0, 5).toString("latin1") === "%PDF-", `PDF: ${pdf.name}, ${pdf.data.length} байт`);
+    const pages = (pdf.data.toString("latin1").match(/\/Type \/Page(?!s)/g) || []).length;
+    expect(pages === 1, `страниц в PDF: ${pages}`);
+    const zpl = await download(() => pg.click("#lb-dlg [data-zpl]"));
+    const z = zpl.data.toString("utf8");
+    expect(zpl.name.endsWith(".zpl") && z.startsWith("^XA") && z.includes("^BCN,") && z.trimEnd().endsWith("^XZ") && z.split("^XA").length - 1 === 24, `ZPL: ${zpl.name}, ${z.slice(0, 40)}`);
+    await pg.keyboard.press("Escape");
+    expect((await pg.locator("#lb-dlg").count()) === 0, "окно не закрылось");
+    // английский язык и инструкция
+    await pg.click('#seg-lang [data-l="en"]'); await pg.click("#lb-btn"); await pg.waitForSelector("#lb-dlg [data-pv] svg");
+    expect((await pg.locator("#lb-dlg").innerText()).includes("Labels: 24"), "английское окно");
+    await pg.keyboard.press("Escape"); await pg.click('#seg-lang [data-l="uk"]');
+    await pg.click("#help-btn"); await pg.waitForSelector('#help-view .toc a[data-toc="labels"]');
+    expect((await pg.locator("#h-labels").innerText()).includes("ZPL"), "раздел «Етикетки» пуст");
+    fs.rmSync(dir, { recursive: true, force: true }); await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });

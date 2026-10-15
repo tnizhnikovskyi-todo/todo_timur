@@ -467,3 +467,11 @@ svg .pa-src { stroke: #f2994a; stroke-width: 2.6; stroke-dasharray: 5 3; }
 .o_pa_form label.chk { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
 .o_pa_res { margin: 10px 0; padding: 8px 10px; border: 1px solid var(--o-border); border-radius: 6px; }
 .o_tag.warn { background: #f2994a33; color: inherit; }
+
+/* этикетки (W-09) */
+.o_lb { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
+.o_lb fieldset { margin: 0; min-width: 0; }
+.o_lb_pv { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.o_lb_card { width: 100%; height: auto; background: #fff; border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.o_lb .chk { flex: 1 1 100%; }
+.o_lb .chk input { flex: none; }
