@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_maintenance_equipment_form_bms" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.bms</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <field name="f3d_bms_object" invisible="1"/>
+                <button name="action_f3d_bms_open" type="object" class="oe_stat_button" icon="fa-building"
+                        string="Будівля" invisible="not f3d_bms_object"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_maintenance_request_form_bms" model="ir.ui.view">
+        <field name="name">maintenance.request.form.bms</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='f3d_telemetry']/field[@name='f3d_threshold']" position="after">
+                <field name="f3d_bms_rule" invisible="not f3d_bms_rule"/>
+                <field name="f3d_bms_deviation_ids" invisible="not f3d_bms_deviation_ids" readonly="1" colspan="2">
+                    <list>
+                        <field name="started"/>
+                        <field name="ended"/>
+                        <field name="value"/>
+                        <field name="state"/>
+                    </list>
+                </field>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_maintenance_request_list_bms" model="ir.ui.view">
+        <field name="name">maintenance.request.list.bms</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="f3d_bms_rule" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_maintenance_request_search_bms" model="ir.ui.view">
+        <field name="name">maintenance.request.search.bms</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <group>
+                    <filter name="group_f3d_bms_rule" string="Правило «Будівля»"
+                            context="{'group_by': 'f3d_bms_rule'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

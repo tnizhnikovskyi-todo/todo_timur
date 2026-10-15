@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_zone_form_bms" model="ir.ui.view">
+        <field name="name">f3d.zone.form.bms</field>
+        <field name="model">f3d.zone</field>
+        <field name="inherit_id" ref="factory3d_base.view_f3d_zone_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page name="f3d_bms" string="Будівля"
+                      invisible="not f3d_light_group_ids and not f3d_hvac_unit_ids">
+                    <field name="f3d_light_group_ids" readonly="1">
+                        <list>
+                            <field name="code"/>
+                            <field name="e_norm"/>
+                            <field name="e_calc"/>
+                            <field name="level_pct"/>
+                            <field name="e_now"/>
+                            <field name="deviation"/>
+                        </list>
+                    </field>
+                    <field name="f3d_hvac_unit_ids" readonly="1">
+                        <list>
+                            <field name="code"/>
+                            <field name="mode_label"/>
+                            <field name="airflow_m3h"/>
+                            <field name="filter_dp_pa"/>
+                            <field name="deviation"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

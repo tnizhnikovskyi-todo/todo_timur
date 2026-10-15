@@ -12,7 +12,6 @@
     "website": "https://todo.ltd",
     "license": "LGPL-3",
     "depends": ["factory3d_telemetry", "web"],
-    # Каркас W0: решту файлів (access, дані, крон, представлення) додають W1…W5 і менеджер при злитті.
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
@@ -28,6 +27,13 @@
         "views/f3d_bms_light_scene_views.xml",
         "views/f3d_bms_hvac_unit_views.xml",
         "views/f3d_bms_heat_balance_views.xml",
+        "views/f3d_bms_deviation_views.xml",
+        "views/f3d_zone_views.xml",
+        "views/maintenance_views.xml",
+        "views/res_config_settings_views.xml",
+        "wizard/command_wizard_views.xml",
+        "data/f3d_bms_actions.xml",
+        "data/ir_cron.xml",
         "views/menus.xml",
     ],
     "demo": [],

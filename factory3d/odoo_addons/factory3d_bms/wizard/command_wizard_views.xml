@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_light_command_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.bms.light.command.wizard.form</field>
+        <field name="model">f3d.bms.light.command.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Керування освітленням">
+                <div class="alert alert-warning" role="alert">
+                    Команда виконається, лише якщо керування дозволено в модулі «Будівля», телеметрії, джерелі,
+                    сигналі й колекторі.
+                </div>
+                <group>
+                    <field name="group_ids" widget="many2many_tags"/>
+                    <field name="action" widget="radio"/>
+                    <field name="scene_id" invisible="action != 'scene'" required="action == 'scene'"/>
+                    <field name="level_pct" invisible="action != 'level'"/>
+                    <field name="fade_s"/>
+                    <field name="expires_min"/>
+                    <field name="note"/>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Надіслати" class="btn-primary"/>
+                    <button string="Скасувати" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_hvac_command_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.bms.hvac.command.wizard.form</field>
+        <field name="model">f3d.bms.hvac.command.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Керування вентиляцією">
+                <div class="alert alert-warning" role="alert">
+                    Команда виконається, лише якщо керування дозволено в модулі «Будівля», телеметрії, джерелі,
+                    сигналі й колекторі.
+                </div>
+                <group>
+                    <field name="unit_ids" widget="many2many_tags"/>
+                    <field name="action" widget="radio"/>
+                    <field name="mode" invisible="action != 'mode'" required="action == 'mode'"/>
+                    <field name="value_c" invisible="action == 'mode'"/>
+                    <field name="expires_min"/>
+                    <field name="note"/>
+                </group>
+                <footer>
+                    <button name="action_apply" type="object" string="Надіслати" class="btn-primary"/>
+                    <button string="Скасувати" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

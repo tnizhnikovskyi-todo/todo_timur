@@ -38,8 +38,11 @@
                 <header>
                     <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
                             class="btn-secondary"/>
+                    <button name="action_open_command" type="object" string="Керування"
+                            groups="factory3d_bms.group_f3d_bms_operator" invisible="not f3d_bms_write_enabled"/>
                 </header>
                 <sheet>
+                    <field name="f3d_bms_write_enabled" invisible="1"/>
                     <field name="is_f3d_manager" invisible="1"/>
                     <field name="active" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
@@ -47,7 +50,7 @@
                             <field name="request_count" widget="statinfo" string="Заявки"/>
                         </button>
                         <button name="action_view_deviations" type="object" class="oe_stat_button"
-                                icon="fa-exclamation-triangle" invisible="1">
+                                icon="fa-exclamation-triangle">
                             <field name="deviation_count" widget="statinfo" string="Відхилення"/>
                         </button>
                         <button name="action_view_readings" type="object" class="oe_stat_button" icon="fa-line-chart"

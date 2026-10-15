@@ -200,3 +200,79 @@ class F3DBmsHvacMixin:
             {"last_value": value or 0.0, "last_text": text or False, "last_ts": fields.Datetime.now(), "status": status}
         )
         return sig
+
+
+class F3DBmsRulesMixin:
+    """Фікстури W4: календар «Зміна 1», параметри перевірок, обладнання, сигнали й керування часом (freezegun)."""
+
+    @classmethod
+    def _setup_rules(cls):
+        env = cls.env
+        cls.derived = env["f3d.source"].search([("code", "=", "BMS-DERIVED")], limit=1)
+        if not cls.derived:
+            cls.derived = env["f3d.source"].create(
+                {"code": "BMS-DERIVED", "name": "Будівля: обчислені", "type": "f3d_bms", "module": "bms"}
+            )
+        cls.cal = env["resource.calendar"].create(
+            {
+                "name": "Зміна 1 (тест)",
+                "tz": "Europe/Kyiv",
+                "attendance_ids": [
+                    (0, 0, {"name": "%s %s" % (d, p), "dayofweek": d, "hour_from": a, "hour_to": b, "day_period": p})
+                    for d in "01234"
+                    for a, b, p in ((7.0, 11.5, "morning"), (12.0, 15.5, "afternoon"))
+                ],
+            }
+        )
+        icp = env["ir.config_parameter"].sudo()
+        for key, value in {
+            "read_enabled": "True",
+            "calendar_id": str(cls.cal.id),
+            "light_check_delay_min": "10",
+            "light_norm_tolerance_pct": "5",
+            "hvac_check_delay_min": "10",
+            "cold_delay_min": "30",
+            "indoor_min_work_c": "16.0",
+            "indoor_min_off_c": "10.0",
+            "heat_deficit_kw": "20",
+            "heat_deficit_delay_min": "30",
+            "check_heartbeat_min": "10",
+        }.items():
+            icp.set_param("factory3d.bms." + key, value)
+
+    @classmethod
+    def eq(cls, code):
+        """Обладнання за назвою (створюється, якщо немає); перевірка — без кешу: тести відкочують транзакції."""
+        Equipment = cls.env["maintenance.equipment"]
+        return Equipment.search([("name", "=", code)], limit=1) or Equipment.create({"name": code})
+
+    @classmethod
+    def define(cls, code, equipment=None, **vals):
+        """Сигнал модуля «Будівля»: `…/check` — стан на BMS-DERIVED з алертами за станами."""
+        data = {"code": code, "name": code, "kind": "gauge", "origin": "module", "module": "bms"}
+        if equipment:
+            data["equipment_id"] = cls.eq(equipment).id
+        if code.endswith("/check"):
+            data.update(kind="state", source_id=cls.derived.id, alarm_title="{equipment}: {text}")
+        data.update(vals)
+        return cls.fresh_signal(data)
+
+    @classmethod
+    def push(cls, code, ts, value=None, text=None):
+        item = {"code": code, "ts": ts, "q": "good"}
+        if value is not None:
+            item["value"] = value
+        if text is not None:
+            item["text"] = text
+        res = cls.env["f3d.signal"].sudo()._f3d_ingest([item], src="module")
+        cls.env.invalidate_all()
+        return res
+
+    @classmethod
+    def run_check(cls):
+        cls.env["f3d.bms.check"]._cron_check()
+        cls.env.invalidate_all()
+
+    @classmethod
+    def requests(cls, sig):
+        return cls.env["maintenance.request"].search([("f3d_signal_id", "=", sig.id)])

@@ -129,6 +129,7 @@ class F3dBmsLightGroup(models.Model):
     request_count = fields.Integer(compute="_compute_requests")
     deviation_count = fields.Integer(compute="_compute_deviation_count")
     is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
+    f3d_bms_write_enabled = fields.Boolean(compute="_compute_write_enabled")
     note = fields.Text()
 
     _f3d_bms_group_code_uniq = models.Constraint("UNIQUE(code)", "Код групи освітлення має бути унікальним.")
@@ -295,7 +296,24 @@ class F3dBmsLightGroup(models.Model):
                 Dev.search_count([("object_code", "=", rec.code), ("state", "=", "open")]) if Dev is not None else 0
             )
 
+    def _compute_write_enabled(self):
+        enabled = self.env["ir.config_parameter"].sudo().get_param("factory3d.bms.write_enabled") == "True"
+        for rec in self:
+            rec.f3d_bms_write_enabled = enabled
+
     # --- дії ------------------------------------------------------------------------------------------
+    def action_open_command(self):
+        self.ensure_one()
+        self.env["f3d.bms.light.command.wizard"]._f3d_bms_check_operator()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Керування освітленням",
+            "res_model": "f3d.bms.light.command.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_group_ids": [self.id]},
+        }
+
     def action_f3d_show(self):
         self.ensure_one()
         if self.equipment_id.f3d_code:

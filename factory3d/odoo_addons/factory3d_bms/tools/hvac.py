@@ -17,7 +17,9 @@ HEAT_FACTORS = {"AQ": 0.3, "VE": 0.8, "VEL": 0.8, "REC": 0.8, "EA": 0.8, "SA": 0
 
 
 def nominals(kind, fan_count, get_num):
-    """R-10 п. 1. `get_num(key)` — значення паспорта або None. Повертає airflow_nom/heat_nom_kw/p_inst_kw[/required_m3h]."""
+    """R-10 п. 1. `get_num(key)` — значення паспорта або None.
+
+    Повертає airflow_nom/heat_nom_kw/p_inst_kw[/required_m3h]."""
     fan_count = fan_count or 1
     air, heat, power = get_num("airflow_m3h"), get_num("heat_kw"), get_num("power_kw")
     if kind == "roofvent":

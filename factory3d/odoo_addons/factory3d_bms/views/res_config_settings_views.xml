@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_f3d_bms" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.f3d.bms</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="46"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Завод 3D: будівля" string="Завод 3D: будівля" name="factory3d_bms"
+                     groups="factory3d_base.group_f3d_admin">
+                    <block title="Будівля" name="factory3d_bms_settings">
+                        <setting string="Читати освітлення й вентиляцію" help="Стоп-кран читання джерел і перевірок">
+                            <field name="f3d_bms_read_enabled"/>
+                        </setting>
+                        <setting string="Дозволити керування" help="Стоп-кран запису в освітлення й вентиляцію">
+                            <field name="f3d_bms_write_enabled" groups="factory3d_base.group_f3d_admin"/>
+                        </setting>
+                    </block>
+                    <block title="Перевірки" name="factory3d_bms_checks">
+                        <setting string="Робочий час і затримки">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_calendar_id"/>
+                                    <field name="f3d_bms_calendar_id"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_light_check_delay_min"/>
+                                    <field name="f3d_bms_light_check_delay_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_light_norm_tolerance_pct"/>
+                                    <field name="f3d_bms_light_norm_tolerance_pct"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_hvac_check_delay_min"/>
+                                    <field name="f3d_bms_hvac_check_delay_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_cold_delay_min"/>
+                                    <field name="f3d_bms_cold_delay_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_indoor_min_work_c"/>
+                                    <field name="f3d_bms_indoor_min_work_c"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_indoor_min_off_c"/>
+                                    <field name="f3d_bms_indoor_min_off_c"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_heat_deficit_kw"/>
+                                    <field name="f3d_bms_heat_deficit_kw"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_heat_deficit_delay_min"/>
+                                    <field name="f3d_bms_heat_deficit_delay_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_check_heartbeat_min"/>
+                                    <field name="f3d_bms_check_heartbeat_min"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Розрахунок освітлення" name="factory3d_bms_lighting">
+                        <setting string="Коефіцієнти за умовчанням">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_light_uf"/>
+                                    <field name="f3d_bms_light_uf"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_light_mf"/>
+                                    <field name="f3d_bms_light_mf"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Дані" name="factory3d_bms_data">
+                        <setting string="Установка даних">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_bms_install_state"/>
+                                    <field name="f3d_bms_install_state"/></div>
+                                <button name="action_f3d_bms_reinstall" type="object"
+                                        string="Повторити установку даних" class="btn-link"
+                                        groups="factory3d_base.group_f3d_admin"/>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування будівлі</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{'module': 'factory3d_bms'}</field>
+    </record>
+</odoo>

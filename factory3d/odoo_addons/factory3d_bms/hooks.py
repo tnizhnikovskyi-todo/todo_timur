@@ -15,6 +15,8 @@ from collections import Counter
 from odoo import fields
 from odoo.tools import file_open
 
+from .tools import rules
+
 _logger = logging.getLogger(__name__)
 
 P = "factory3d.bms."
@@ -451,27 +453,10 @@ def recompute(env):
 
 
 # --- крок 9 ----------------------------------------------------------------------------------------------
-def _deviation_meta(code):
-    """(rule, object_kind, object_code) за кодом сигналу."""
-    parts = code.split("/")
-    tail = parts[-1]
-    if code.startswith("lighting/groups/"):
-        return ("light_fault" if tail == "faults" else "other"), "group", parts[2]
-    if code.startswith("lighting/panels/"):
-        return "other", "panel", parts[2]
-    if code.startswith("equipment/BOILER/"):
-        return ("boiler_fault" if tail == "state" else "other"), "boiler", "BOILER"
-    unit = parts[2] if len(parts) > 2 else ""
-    rule = {
-        "filter_dp_pa": "filter_supply",
-        "filter_extract_dp_pa": "filter_extract",
-        "room_pressure_pa": "pressure",
-    }.get(tail, "other")
-    if tail == "state":
-        rule = "charging_vent" if unit == "EF-CHG" else "unit_fault"
-    elif tail == "indoor_c" and unit == "EF-ELEC":
-        rule = "overheat"
-    return rule, "unit", unit
+def _deviation_meta(code, text=None):
+    """(rule, object_kind, object_code) за кодом сигналу (R-22)."""
+    kind, obj = rules.object_of(code)
+    return rules.rule_of(code, text), kind or False, obj or False
 
 
 def demo_request(env):
@@ -488,7 +473,7 @@ def demo_request(env):
         sig = req.f3d_signal_id
         if Deviation.search_count([("signal_id", "=", sig.id), ("state", "=", "open")]):
             continue
-        rule, kind, obj = _deviation_meta(sig.code)
+        rule, kind, obj = _deviation_meta(sig.code, sig.last_text)
         Deviation.create(
             {
                 "name": req.name,
