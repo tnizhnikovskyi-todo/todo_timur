@@ -13,7 +13,7 @@ export const LANGS = ["uk", "en"];
 
 export function createI18n(lang = "uk", globals = {}, dicts = DICTS) {
   let cur = dicts[lang] ? lang : "uk";
-  const subs = new Set();
+  const subs = new Set(), extra = {}; // extra — тексты, подгруженные позже вместе с окном (extend)
   // названия не менялись — переводятся: базовые типы (type.<id>) и типы каталога (cat.<код каталога>); свои названия остаются как есть
   const typeName = (tp) => {
     if (BASE_TYPES.some((b) => b.id === tp.id && b.name === tp.name) && dicts[cur][`type.${tp.id}`]) return dicts[cur][`type.${tp.id}`];
@@ -32,7 +32,7 @@ export function createI18n(lang = "uk", globals = {}, dicts = DICTS) {
   };
   function t(key, params = {}) {
     const p = { ...globals, ...params };
-    let v = dicts[cur][key] ?? dicts.uk[key];
+    let v = dicts[cur][key] ?? extra[cur]?.[key] ?? dicts.uk[key] ?? extra.uk?.[key];
     if (v == null) return key;
     if (typeof v === "object") v = v[new Intl.PluralRules(cur).select(+p.n || 0)] ?? v.other;
     return v.replace(/\{(\w+)\}/g, (m, k) => (k in p ? fmt(p[k]) : m));
@@ -40,6 +40,7 @@ export function createI18n(lang = "uk", globals = {}, dicts = DICTS) {
   const nf2 = () => new Intl.NumberFormat(cur === "uk" ? "uk-UA" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return {
     t,
+    extend(more) { for (const l of Object.keys(more)) extra[l] = { ...extra[l], ...more[l] }; },
     lang: () => cur,
     setLang(l) { if (!dicts[l] || l === cur) return; cur = l; for (const f of [...subs]) f(l); },
     onChange(fn) { subs.add(fn); return () => subs.delete(fn); },
