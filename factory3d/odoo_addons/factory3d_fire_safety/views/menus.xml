@@ -24,8 +24,6 @@
     <menuitem id="menu_f3d_fire_maint_requests" name="Заявки пожежної безпеки" parent="maintenance.menu_m_request" sequence="50" action="action_f3d_fire_maint_requests" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_fire_loop" name="Шлейфи" parent="menu_f3d_fire_config" sequence="20" action="action_f3d_fire_loop" groups="factory3d_base.group_f3d_manager"/>
 
-    <!--
     <menuitem id="menu_f3d_fire_drill" name="Навчальні тривоги" parent="menu_f3d_fire_root" sequence="70" action="action_f3d_fire_drill" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_fire_template" name="Шаблони навчань" parent="menu_f3d_fire_config" sequence="10" action="action_f3d_fire_drill_template" groups="factory3d_base.group_f3d_manager"/>
-    -->
 </odoo>

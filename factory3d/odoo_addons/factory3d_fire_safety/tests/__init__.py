@@ -9,3 +9,5 @@ from . import test_evacuation
 from . import test_sync
 from . import test_security_readonly
 from . import test_requests
+from . import test_drill
+from . import test_passage_source

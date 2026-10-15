@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-18 -->
+    <record id="view_f3d_fire_drill_rollcall_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.fire.drill.rollcall.wizard.form</field>
+        <field name="model">f3d.fire.drill.rollcall.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Перекличка">
+                <group>
+                    <field name="drill_id" readonly="1"/>
+                </group>
+                <field name="line_ids">
+                    <list editable="bottom" create="false" delete="false">
+                        <field name="seq" readonly="1"/>
+                        <field name="employee_name" readonly="1"
+                               groups="factory3d_fire_safety.group_f3d_fire_drill,hr.group_hr_user"/>
+                        <field name="present" widget="boolean_toggle"/>
+                    </list>
+                </field>
+                <footer>
+                    <button name="action_apply" string="Зберегти перекличку" type="object" class="btn-primary"/>
+                    <button string="Скасувати" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="action_f3d_fire_drill_rollcall" model="ir.actions.act_window">
+        <field name="name">Перекличка</field>
+        <field name="res_model">f3d.fire.drill.rollcall.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
