@@ -4,13 +4,23 @@ from odoo.tests import tagged
 from .test_rules import GensetCase
 
 VIEWS = (
-    "view_f3d_genset_link_form", "view_f3d_genset_link_list", "view_f3d_genset_profile_form",
-    "view_f3d_genset_profile_list", "view_f3d_genset_event_map_list", "view_f3d_genset_event_map_form",
-    "view_maintenance_equipment_form_f3d_genset", "res_config_settings_view_form",
+    "view_f3d_genset_link_form",
+    "view_f3d_genset_link_list",
+    "view_f3d_genset_profile_form",
+    "view_f3d_genset_profile_list",
+    "view_f3d_genset_event_map_list",
+    "view_f3d_genset_event_map_form",
+    "view_maintenance_equipment_form_f3d_genset",
+    "res_config_settings_view_form",
     "view_maintenance_request_form_f3d_genset",
 )
-ACTIONS = ("action_f3d_genset_link", "action_f3d_genset_profile", "action_f3d_genset_event_map",
-           "action_f3d_genset_requests", "action_f3d_genset_settings")
+ACTIONS = (
+    "action_f3d_genset_link",
+    "action_f3d_genset_profile",
+    "action_f3d_genset_event_map",
+    "action_f3d_genset_requests",
+    "action_f3d_genset_settings",
+)
 
 
 @tagged("post_install", "-at_install")
@@ -24,11 +34,16 @@ class TestViews(GensetCase):
     def test_menus(self):  # AC-33
         def menu(name):
             return self.env.ref("factory3d_genset." + name)
+
         root = self.env.ref("factory3d_base.menu_f3d_root")
         self.assertEqual(menu("menu_f3d_genset").parent_id, root)
         self.assertEqual(menu("menu_f3d_genset").sequence, 55)
-        for name, seq, group in (("link", 10, "user"), ("profile", 20, "manager"),
-                                 ("event_map", 30, "manager"), ("requests", 40, "user")):
+        for name, seq, group in (
+            ("link", 10, "user"),
+            ("profile", 20, "manager"),
+            ("event_map", 30, "manager"),
+            ("requests", 40, "user"),
+        ):
             m = menu("menu_f3d_genset_" + name)
             self.assertEqual((m.parent_id, m.sequence), (menu("menu_f3d_genset"), seq), name)
             self.assertEqual(m.group_ids, self.env.ref("factory3d_base.group_f3d_" + group), name)
@@ -53,5 +68,4 @@ class TestViews(GensetCase):
         self.assertEqual(icp.get_param("factory3d.genset.ats_position_ii_value"), "4")
         self.assertIs(self.link._island_state_from_signals({}, pos=4)["island"], True)
         with self.assertRaises(ValidationError):
-            Settings.create({"f3d_genset_ats_position_i_value": 3,
-                             "f3d_genset_ats_position_ii_value": 3}).set_values()
+            Settings.create({"f3d_genset_ats_position_i_value": 3, "f3d_genset_ats_position_ii_value": 3}).set_values()

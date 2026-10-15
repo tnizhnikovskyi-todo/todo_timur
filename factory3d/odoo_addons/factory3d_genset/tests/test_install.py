@@ -2,9 +2,20 @@ from odoo.tests import TransactionCase, tagged
 
 
 PARAMS = {
-    "read_enabled", "requests_enabled", "write_enabled", "amf_master", "offline_min", "ats_position_code",
-    "ats_src1_code", "ats_src2_code", "ats_position_i_value", "ats_position_ii_value", "critical_codes",
-    "publish_period_s", "service_warn_h", "migration_report",
+    "read_enabled",
+    "requests_enabled",
+    "write_enabled",
+    "amf_master",
+    "offline_min",
+    "ats_position_code",
+    "ats_src1_code",
+    "ats_src2_code",
+    "ats_position_i_value",
+    "ats_position_ii_value",
+    "critical_codes",
+    "publish_period_s",
+    "service_warn_h",
+    "migration_report",
 }
 
 

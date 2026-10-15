@@ -1,4 +1,5 @@
 """SPEC §5.3, §5.4. Усі кроки ідемпотентні; звіт — параметр factory3d.genset.migration_report."""
+
 import json
 import logging
 from datetime import datetime, time, timedelta, timezone
@@ -78,23 +79,35 @@ def post_init_hook(env):
         elif gens is None:
             report["link"] = link_msg
         elif len(gens) == 1:
-            link = Link.create({
-                "equipment_id": eq.id, "td_genset_ref": "%s,%d" % (td.GENSET_MODEL, gens.id),
-                "profile_id": profile.id, "source_id": source.id})
+            link = Link.create(
+                {
+                    "equipment_id": eq.id,
+                    "td_genset_ref": "%s,%d" % (td.GENSET_MODEL, gens.id),
+                    "profile_id": profile.id,
+                    "source_id": source.id,
+                }
+            )
             report["link"] = {"created": 1, "existing": 0}
         elif len(gens) > 1:
             report["link"] = "skipped: кілька генераторів — зв'яжіть вручну"
         else:
             report["link"] = "skipped: у td_genset немає генераторів"
         # сигнали (крок 5) — після зв'язки, бо ensure_signals бере код з link.equipment_id
-        n_before = env["f3d.signal"].sudo().with_context(active_test=False).search_count(
-            [("code", "=like", telemetry.prefix(eq.f3d_code) + "%")])
+        n_before = (
+            env["f3d.signal"]
+            .sudo()
+            .with_context(active_test=False)
+            .search_count([("code", "=like", telemetry.prefix(eq.f3d_code) + "%")])
+        )
         telemetry.ensure_signals(env, link or pseudo)
         report["signals"] = {"created": len(telemetry.LEAFS) - n_before, "existing": n_before}
         report["meter"] = "skipped: A-04"
     # 8. крони
-    cron_flags = {"cron_f3d_genset_publish": read_enabled, "cron_f3d_genset_events": requests_enabled,
-                  "cron_f3d_genset_service": requests_enabled}
+    cron_flags = {
+        "cron_f3d_genset_publish": read_enabled,
+        "cron_f3d_genset_events": requests_enabled,
+        "cron_f3d_genset_service": requests_enabled,
+    }
     for xml_id, flag in cron_flags.items():
         cron = env.ref("factory3d_genset." + xml_id, raise_if_not_found=False)
         if cron:

@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from odoo import _, api, fields, models
@@ -13,15 +13,30 @@ _logger = logging.getLogger(__name__)
 KYIV = ZoneInfo("Europe/Kyiv")
 
 STATE_LABELS = {
-    0: "немає даних", 1: "очікування", 2: "мережа втрачена, затримка", 3: "пуск", 4: "захисна затримка",
-    5: "прогрів", 6: "працює без навантаження", 7: "під навантаженням", 8: "охолодження", 9: "зупинка",
+    0: "немає даних",
+    1: "очікування",
+    2: "мережа втрачена, затримка",
+    3: "пуск",
+    4: "захисна затримка",
+    5: "прогрів",
+    6: "працює без навантаження",
+    7: "під навантаженням",
+    8: "охолодження",
+    9: "зупинка",
     10: "аварійна зупинка",
 }
 ALARM_LABELS = {0: "немає", 1: "попередження", 2: "аварійна зупинка"}
 # DEC-9: службові тривоги td_genset (не з контролера) не входять в alarm_level/alarm_count; зв'язок — R-12
-SERVICE_ALARM_CODES = frozenset({
-    "link_lost", "cmd_unconfirmed", "breaker_unconfirmed", "external_control", "drain", "maintenance_due",
-})
+SERVICE_ALARM_CODES = frozenset(
+    {
+        "link_lost",
+        "cmd_unconfirmed",
+        "breaker_unconfirmed",
+        "external_control",
+        "drain",
+        "maintenance_due",
+    }
+)
 SERVICE_ALARM_PREFIXES = ("relay_", "sensor_")
 STATE_KEYS = ("state", "mode", "alarm_level", "island", "grid_ok", "online")
 CLOCK_AHEAD_S = 120
@@ -47,18 +62,28 @@ class F3dGensetLink(models.Model):
 
     name = fields.Char(compute="_compute_name", store=True)
     equipment_id = fields.Many2one(
-        "maintenance.equipment", string="Обладнання", required=True, ondelete="restrict", index=True,
-        domain="[('f3d_passport_id.role', '=', 'genset')]", tracking=True)
+        "maintenance.equipment",
+        string="Обладнання",
+        required=True,
+        ondelete="restrict",
+        index=True,
+        domain="[('f3d_passport_id.role', '=', 'genset')]",
+        tracking=True,
+    )
     f3d_code = fields.Char(related="equipment_id.f3d_code", string="Код сцени")
     td_genset_ref = fields.Reference(selection="_td_models", string="Генератор td_genset", required=True)
     profile_id = fields.Many2one(
-        "f3d.genset.profile", string="Профіль", required=True, ondelete="restrict",
-        default=lambda self: self.env.ref("factory3d_genset.profile_d700", raise_if_not_found=False))
+        "f3d.genset.profile",
+        string="Профіль",
+        required=True,
+        ondelete="restrict",
+        default=lambda self: self.env.ref("factory3d_genset.profile_d700", raise_if_not_found=False),
+    )
     source_id = fields.Many2one("f3d.source", string="Джерело телеметрії", readonly=True, ondelete="set null")
     publish_enabled = fields.Boolean(string="Публікувати в телеметрію", default=True, tracking=True)
     amf_master = fields.Selection(
-        [("hgm", "HGM6120N веде AMF"), ("ats", "ATyS p головний")], compute="_compute_amf_master",
-        string="Логіка AMF")
+        [("hgm", "HGM6120N веде AMF"), ("ats", "ATyS p головний")], compute="_compute_amf_master", string="Логіка AMF"
+    )
     last_publish_ts = fields.Datetime(string="Остання публікація", readonly=True)
     last_publish_error = fields.Char(string="Помилка публікації", readonly=True)
     last_event_ts = fields.Datetime(string="Остання оброблена подія", readonly=True)
@@ -113,20 +138,36 @@ class F3dGensetLink(models.Model):
         Request = self.env["maintenance.request"]
         has_key = "f3d_genset_event_key" in Request._fields
         for rec in self:
-            rec.signal_count = self.env["f3d.signal"].search_count([
-                ("equipment_id", "=", rec.equipment_id.id),
-                ("code", "=like", telemetry.prefix(rec.f3d_code or "") + "%")]) if rec.f3d_code else 0
-            rec.request_open_count = Request.search_count([
-                ("equipment_id", "=", rec.equipment_id.id), ("f3d_genset_event_key", "!=", False),
-                ("stage_id.done", "=", False)]) if has_key else 0
+            rec.signal_count = (
+                self.env["f3d.signal"].search_count(
+                    [
+                        ("equipment_id", "=", rec.equipment_id.id),
+                        ("code", "=like", telemetry.prefix(rec.f3d_code or "") + "%"),
+                    ]
+                )
+                if rec.f3d_code
+                else 0
+            )
+            rec.request_open_count = (
+                Request.search_count(
+                    [
+                        ("equipment_id", "=", rec.equipment_id.id),
+                        ("f3d_genset_event_key", "!=", False),
+                        ("stage_id.done", "=", False),
+                    ]
+                )
+                if has_key
+                else 0
+            )
 
     @api.constrains("equipment_id")
     def _check_equipment(self):
         for rec in self:
             eq = rec.equipment_id
             if not eq.f3d_code:
-                raise ValidationError(_(
-                    "Обладнання не має коду сцени (f3d_code). Заповніть «Завод 3D → Код сцени» в base."))
+                raise ValidationError(
+                    _("Обладнання не має коду сцени (f3d_code). Заповніть «Завод 3D → Код сцени» в base.")
+                )
             role = eq.f3d_passport_id.role
             if role != "genset":
                 raise ValidationError(_("Паспорт обладнання має роль «%s», потрібна «genset».", role or "—"))
@@ -186,8 +227,13 @@ class F3dGensetLink(models.Model):
         alarms = [a for a in snap.get("alarms") or [] if not _is_service_alarm(a.get("code"))]  # DEC-9
         severities = {a.get("severity") for a in alarms}
         alarm_level = 2 if "shutdown" in severities else 1 if "warning" in severities else 0
-        return {"state": state, "mode": mode, "breaker": breaker, "alarm_level": alarm_level,
-                "alarm_count": len(alarms)}, error
+        return {
+            "state": state,
+            "mode": mode,
+            "breaker": breaker,
+            "alarm_level": alarm_level,
+            "alarm_count": len(alarms),
+        }, error
 
     def _compute_values(self, snap, errors=None):
         """R-03, R-01, R-02: dict leaf -> float|None для свіжого знімка."""
@@ -212,14 +258,35 @@ class F3dGensetLink(models.Model):
             service_left = None
         mains_ok = snap.get("mains_ok")
         vals = {
-            "state": codes["state"], "mode": codes["mode"], "breaker": codes["breaker"],
+            "state": codes["state"],
+            "mode": codes["mode"],
+            "breaker": codes["breaker"],
             "mains_ok": None if mains_ok is None else int(bool(mains_ok)),
-            "alarm_level": codes["alarm_level"], "alarm_count": codes["alarm_count"], "online": 1,
-            "p_kw": p_kw, "load_pct": load_pct, "fuel_l": fuel_l, "fuel_lph": fuel_lph, "autonomy_h": autonomy,
+            "alarm_level": codes["alarm_level"],
+            "alarm_count": codes["alarm_count"],
+            "online": 1,
+            "p_kw": p_kw,
+            "load_pct": load_pct,
+            "fuel_l": fuel_l,
+            "fuel_lph": fuel_lph,
+            "autonomy_h": autonomy,
             "service_h_left": service_left,
         }
-        for leaf in ("u_v", "f_hz", "i_a", "pf", "kwh", "fuel_pct", "hours", "starts", "coolant_c", "oil_bar",
-                     "batt_v", "charger_v", "rpm"):
+        for leaf in (
+            "u_v",
+            "f_hz",
+            "i_a",
+            "pf",
+            "kwh",
+            "fuel_pct",
+            "hours",
+            "starts",
+            "coolant_c",
+            "oil_bar",
+            "batt_v",
+            "charger_v",
+            "rpm",
+        ):
             vals[leaf] = snap.get(leaf)
         return vals
 
@@ -239,8 +306,11 @@ class F3dGensetLink(models.Model):
                 return self._island_from_ats(pos, s1)
         if snap.get("online"):
             codes_, _err = self._state_codes(snap)
-            return {"island": codes_["breaker"] == 2 and codes_["state"] in (6, 7),
-                    "grid_ok": None if snap.get("mains_ok") is None else bool(snap["mains_ok"]), "source": "hgm"}
+            return {
+                "island": codes_["breaker"] == 2 and codes_["state"] in (6, 7),
+                "grid_ok": None if snap.get("mains_ok") is None else bool(snap["mains_ok"]),
+                "source": "hgm",
+            }
         last = self.last_state_json or {}
         return {"island": last.get("island"), "grid_ok": None, "source": "stale"}
 
@@ -277,8 +347,11 @@ class F3dGensetLink(models.Model):
         Equipment = self.env["maintenance.equipment"].sudo()
         entries = []  # (code сигналу, назва)
         if "f3d.energy.node" in self.env:
-            nodes = self.env["f3d.energy.node"].sudo().search_read(
-                [("is_critical", "=", True)], ["code", "kind", "name", "equipment_id"], order="code")
+            nodes = (
+                self.env["f3d.energy.node"]
+                .sudo()
+                .search_read([("is_critical", "=", True)], ["code", "kind", "name", "equipment_id"], order="code")
+            )
             for node in nodes:
                 folder = {"consumer": "consumers", "line": "lines"}.get(node["kind"])
                 if not folder:
@@ -289,8 +362,10 @@ class F3dGensetLink(models.Model):
         if not entries:
             codes = [c.strip() for c in (self._param("critical_codes", "") or "").split(",") if c.strip()]
             seg = {c: (c.split("/")[-2] if c.count("/") >= 2 else c) for c in codes}
-            eq_names = {r["f3d_code"]: r["name"] for r in Equipment.search_read(
-                [("f3d_code", "in", list(seg.values()))], ["f3d_code", "name"])}
+            eq_names = {
+                r["f3d_code"]: r["name"]
+                for r in Equipment.search_read([("f3d_code", "in", list(seg.values()))], ["f3d_code", "name"])
+            }
             entries = [(c, eq_names.get(seg[c], seg[c])) for c in codes]
         values = telemetry.read_values(self.env, [c for c, _n in entries])
         missing = [c for c, _n in entries if c not in values]
@@ -317,8 +392,13 @@ class F3dGensetLink(models.Model):
             vals = self._compute_values(snap, errors)
             batch_ts = ts
             codes, _err = self._state_codes(snap)
-            new_state = {"state": codes["state"], "mode": codes["mode"], "breaker": codes["breaker"],
-                         "alarm_level": codes["alarm_level"], "online": 1}
+            new_state = {
+                "state": codes["state"],
+                "mode": codes["mode"],
+                "breaker": codes["breaker"],
+                "alarm_level": codes["alarm_level"],
+                "online": 1,
+            }
         else:
             last_fuel = telemetry.read_values(self.env, [pfx + "fuel_l"]).get(pfx + "fuel_l")
             autonomy = None
@@ -326,15 +406,24 @@ class F3dGensetLink(models.Model):
                 autonomy = self.profile_id.autonomy_h(last_fuel[0], 75.0)
             vals = {"online": 0, "state": 0, "fuel_lph": 0.0, "autonomy_h": autonomy}
             batch_ts = now
-            new_state = {"state": prev.get("state", 0), "mode": prev.get("mode", 0), "breaker": prev.get("breaker", 0),
-                         "alarm_level": prev.get("alarm_level", 0), "online": 0}
+            new_state = {
+                "state": prev.get("state", 0),
+                "mode": prev.get("mode", 0),
+                "breaker": prev.get("breaker", 0),
+                "alarm_level": prev.get("alarm_level", 0),
+                "online": 0,
+            }
         new_state.update(island=island["island"], grid_ok=island["grid_ok"])
-        batch = [{"code": pfx + leaf, "ts": batch_ts, "value": float(v), "q": "good"}
-                 for leaf, v in vals.items() if v is not None]
+        batch = [
+            {"code": pfx + leaf, "ts": batch_ts, "value": float(v), "q": "good"}
+            for leaf, v in vals.items()
+            if v is not None
+        ]
         result = telemetry.ingest(self.env, batch)
         if not fresh:
-            telemetry.mark_stale(self.env, [pfx + leaf for leaf in telemetry.STALE_LEAFS],
-                                 "td_genset: немає свіжих даних")
+            telemetry.mark_stale(
+                self.env, [pfx + leaf for leaf in telemetry.STALE_LEAFS], "td_genset: немає свіжих даних"
+            )
             since = prev.get("offline_since") if prev.get("online") == 0 and prev.get("offline_since") else None
             since = since or fields.Datetime.to_string(min(ts, now) if ts else now)
             comm_lost = bool(prev.get("comm_lost")) if prev.get("online") == 0 else False
@@ -346,8 +435,13 @@ class F3dGensetLink(models.Model):
             self._on_comm_restored()
         if any(new_state.get(k) != prev.get(k) for k in STATE_KEYS):
             self._notify_state_change(new_state, prev)
-        self.write({"last_publish_ts": now, "last_publish_error": "; ".join(errors)[:250] or False,
-                    "last_state_json": new_state})
+        self.write(
+            {
+                "last_publish_ts": now,
+                "last_publish_error": "; ".join(errors)[:250] or False,
+                "last_state_json": new_state,
+            }
+        )
         return {"snap": snap, "values": vals, "result": result, "fresh": fresh}
 
     def _notify_state_change(self, new_state, prev=None):
@@ -357,23 +451,37 @@ class F3dGensetLink(models.Model):
         if "f3d.viewer.event" in self.env:
             self.env["f3d.viewer.event"]._notify("maintenance.equipment", [self.f3d_code], "state")
         if any(new_state.get(k) != prev.get(k) for k in ("state", "alarm_level", "island")):
-            self.message_post(body=_(
-                "Стан: %(state)s, режим: %(mode)s, тривога: %(alarm)s, острів: %(island)s",
-                state=STATE_LABELS.get(new_state.get("state"), "—"),
-                mode={0: "стоп", 1: "ручний", 2: "авто", 3: "тест"}.get(new_state.get("mode"), "—"),
-                alarm=ALARM_LABELS.get(new_state.get("alarm_level"), "—"),
-                island=_("так") if new_state.get("island") else _("ні")))
+            self.message_post(
+                body=_(
+                    "Стан: %(state)s, режим: %(mode)s, тривога: %(alarm)s, острів: %(island)s",
+                    state=STATE_LABELS.get(new_state.get("state"), "—"),
+                    mode={0: "стоп", 1: "ручний", 2: "авто", 3: "тест"}.get(new_state.get("mode"), "—"),
+                    alarm=ALARM_LABELS.get(new_state.get("alarm_level"), "—"),
+                    island=_("так") if new_state.get("island") else _("ні"),
+                )
+            )
 
     # --- R-12: зв'язок -----------------------------------------------------------------------------------
     def _on_comm_lost(self):
         """Одна подія COMM_LOST через R-07 (мапа подій і _apply_event — W2b)."""
         self.ensure_one()
-        if not self._flag("requests_enabled", "True") or not hasattr(self, "_apply_event") \
-                or "f3d.genset.event.map" not in self.env:
+        if (
+            not self._flag("requests_enabled", "True")
+            or not hasattr(self, "_apply_event")
+            or "f3d.genset.event.map" not in self.env
+        ):
             return
-        ev = {"id": 0, "ts": fields.Datetime.now(), "code": "COMM_LOST", "severity": "comm",
-              "name": "втрачено зв'язок з контролером", "value": None, "unit": None, "threshold": None,
-              "text": ""}
+        ev = {
+            "id": 0,
+            "ts": fields.Datetime.now(),
+            "code": "COMM_LOST",
+            "severity": "comm",
+            "name": "втрачено зв'язок з контролером",
+            "value": None,
+            "unit": None,
+            "threshold": None,
+            "text": "",
+        }
         row = self.env["f3d.genset.event.map"]._match(ev)
         self._apply_event(ev, row)
 
@@ -382,9 +490,14 @@ class F3dGensetLink(models.Model):
         Request = self.env["maintenance.request"]
         if "f3d_genset_event_key" not in Request._fields:
             return
-        req = Request.sudo().search([
-            ("equipment_id", "=", self.equipment_id.id), ("f3d_genset_event_key", "=", "GENSET:COMM_LOST"),
-            ("stage_id.done", "=", False)], limit=1)
+        req = Request.sudo().search(
+            [
+                ("equipment_id", "=", self.equipment_id.id),
+                ("f3d_genset_event_key", "=", "GENSET:COMM_LOST"),
+                ("stage_id.done", "=", False),
+            ],
+            limit=1,
+        )
         if req:
             local = fields.Datetime.now().replace(tzinfo=timezone.utc).astimezone(KYIV)
             req.message_post(body=_("Зв'язок відновлено о %s", local.strftime("%H:%M")))
@@ -400,12 +513,19 @@ class F3dGensetLink(models.Model):
         res = self.sudo()._publish_one()
         snap, vals = res["snap"], res["values"]
         message = _(
-            "Знімок: стан %(state)s, %(p)s кВт, паливо %(pct)s %% (%(l)s л), мотогодини %(h)s; "
-            "записано %(n)s показань",
-            state=STATE_LABELS.get(vals.get("state"), "—"), p=snap.get("p_kw"), pct=snap.get("fuel_pct"),
-            l=vals.get("fuel_l"), h=snap.get("hours"), n=res["result"]["accepted"])
-        return {"type": "ir.actions.client", "tag": "display_notification",
-                "params": {"message": message, "type": "info", "sticky": False}}
+            "Знімок: стан %(state)s, %(p)s кВт, паливо %(pct)s %% (%(l)s л), мотогодини %(h)s; записано %(n)s показань",
+            state=STATE_LABELS.get(vals.get("state"), "—"),
+            p=snap.get("p_kw"),
+            pct=snap.get("fuel_pct"),
+            l=vals.get("fuel_l"),
+            h=snap.get("hours"),
+            n=res["result"]["accepted"],
+        )
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {"message": message, "type": "info", "sticky": False},
+        }
 
     def action_open_td(self):
         self.ensure_one()
@@ -413,15 +533,23 @@ class F3dGensetLink(models.Model):
 
     def action_open_signals(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": _("Сигнали генератора"), "res_model": "f3d.signal",
-                "view_mode": "list,form",
-                "domain": [("code", "=like", telemetry.prefix(self.f3d_code) + "%")]}
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Сигнали генератора"),
+            "res_model": "f3d.signal",
+            "view_mode": "list,form",
+            "domain": [("code", "=like", telemetry.prefix(self.f3d_code) + "%")],
+        }
 
     def action_open_requests(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window", "name": _("Заявки генератора"),
-                "res_model": "maintenance.request", "view_mode": "list,form",
-                "domain": [("equipment_id", "=", self.equipment_id.id), ("f3d_genset_event_key", "!=", False)]}
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Заявки генератора"),
+            "res_model": "maintenance.request",
+            "view_mode": "list,form",
+            "domain": [("equipment_id", "=", self.equipment_id.id), ("f3d_genset_event_key", "!=", False)],
+        }
 
     def action_show_3d(self):
         self.ensure_one()

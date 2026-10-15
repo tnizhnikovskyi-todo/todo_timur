@@ -40,18 +40,35 @@ class F3dGensetEventMap(models.Model):
     hgm_name = fields.Char(string="Назва за мануалом HGM6120N")
     hgm_table = fields.Selection(
         [("warning", "Table 4 — попередження"), ("shutdown", "Table 5 — аварійна зупинка"), ("other", "Інше")],
-        string="Таблиця мануала", default="other")
+        string="Таблиця мануала",
+        default="other",
+    )
     severity = fields.Selection(
-        [("warning", "Попередження"), ("shutdown", "Аварійна зупинка"), ("comm", "Зв'язок"), ("service", "ТО"),
-         ("info", "Інформація")], string="Важливість", required=True)
+        [
+            ("warning", "Попередження"),
+            ("shutdown", "Аварійна зупинка"),
+            ("comm", "Зв'язок"),
+            ("service", "ТО"),
+            ("info", "Інформація"),
+        ],
+        string="Важливість",
+        required=True,
+    )
     td_code = fields.Char(string="Код у td_genset", size=64, index=True)
     action = fields.Selection(
-        [("request_corrective", "Заявка ТО (ремонт)"), ("request_preventive", "Заявка ТО (планова)"),
-         ("bus_only", "Лише подія в 3D"), ("ignore", "Ігнорувати")],
-        string="Дія", required=True, default="bus_only")
+        [
+            ("request_corrective", "Заявка ТО (ремонт)"),
+            ("request_preventive", "Заявка ТО (планова)"),
+            ("bus_only", "Лише подія в 3D"),
+            ("ignore", "Ігнорувати"),
+        ],
+        string="Дія",
+        required=True,
+        default="bus_only",
+    )
     priority = fields.Selection(
-        [("0", "Дуже низький"), ("1", "Низький"), ("2", "Звичайний"), ("3", "Високий")],
-        string="Пріоритет", default="2")
+        [("0", "Дуже низький"), ("1", "Низький"), ("2", "Звичайний"), ("3", "Високий")], string="Пріоритет", default="2"
+    )
     name_tpl = fields.Char(string="Шаблон назви заявки", required=True)
     description_tpl = fields.Text(string="Шаблон опису")
     match_regex = fields.Char(string="Регулярний вираз за назвою події")
@@ -69,12 +86,17 @@ class F3dGensetEventMap(models.Model):
                 try:
                     parsed = list(Formatter().parse(tpl))
                 except ValueError:
-                    raise ValidationError(message)
+                    raise ValidationError(message) from None
                 for _lit, field_name, spec, conv in parsed:
                     if field_name is None:
                         continue
-                    if (field_name not in ALLOWED_FIELDS or "." in field_name or "[" in field_name
-                            or "{" in (spec or "") or conv):
+                    if (
+                        field_name not in ALLOWED_FIELDS
+                        or "." in field_name
+                        or "[" in field_name
+                        or "{" in (spec or "")
+                        or conv
+                    ):
                         raise ValidationError(message)
 
     @api.model
@@ -112,8 +134,12 @@ class F3dGensetEventMap(models.Model):
         ts_txt = ts.replace(tzinfo=timezone.utc).astimezone(KYIV).strftime("%d.%m %H:%M") if ts else "—"
         ref = link.td_genset_ref
         raw = {
-            "code": link.f3d_code or "—", "name": ev.get("name") or "—", "value": _num(ev.get("value")),
-            "unit": ev.get("unit") or "", "threshold": _num(ev.get("threshold")), "ts": ts_txt,
+            "code": link.f3d_code or "—",
+            "name": ev.get("name") or "—",
+            "value": _num(ev.get("value")),
+            "unit": ev.get("unit") or "",
+            "threshold": _num(ev.get("threshold")),
+            "ts": ts_txt,
             "text": (ev.get("text") or "—")[:TEXT_LIMIT],
             "td_link": "%s,%d" % (ref._name, ref.id) if ref else "—",
         }

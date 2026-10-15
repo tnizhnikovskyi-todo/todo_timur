@@ -20,7 +20,7 @@
                             <field name="request_open_count" widget="statinfo" string="Заявки ТО"/>
                         </button>
                         <button name="action_open_td" type="object" class="oe_stat_button" icon="fa-external-link"
-                                string="td_genset"/>
+                                string="Генератор (td_genset)"/>
                     </div>
                     <div class="oe_title">
                         <h1><field name="name" readonly="1"/></h1>

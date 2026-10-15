@@ -4,8 +4,7 @@ from odoo import _, fields, models
 class MaintenanceRequest(models.Model):
     _inherit = "maintenance.request"
 
-    f3d_genset_event_key = fields.Char(
-        string="Ключ події генератора", size=80, index=True, readonly=True, copy=False)
+    f3d_genset_event_key = fields.Char(string="Ключ події генератора", size=80, index=True, readonly=True, copy=False)
 
     def write(self, vals):
         if "stage_id" not in vals:

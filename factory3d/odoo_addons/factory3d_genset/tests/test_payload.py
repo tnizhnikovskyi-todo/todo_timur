@@ -1,4 +1,5 @@
 """Повний payload переглядача з мостом: AC-22, AC-25, AC-30, AC-66, AC-70, AC-72, ТП-01, ТП-02."""
+
 import statistics
 import time
 import unittest
@@ -23,6 +24,7 @@ class TestPayload(GensetCase):
 
     def payload(self, user=None, **kw):
         from odoo.addons.factory3d_viewer.tools.payload import PayloadBuilder
+
         return PayloadBuilder(self.env(user=user or self.user_reader), **kw).build()
 
     def provider(self):
@@ -80,8 +82,12 @@ class TestPayload(GensetCase):
     def test_delta_ac72(self):  # AC-72
         self.link._cron_publish()
         prov = self.provider()
-        base = {"infra": {"cards": {"PV-INV": {"rows": [["Стан", "усі в мережі"]]}},
-                          "totals": {"pv_now": 468, "chp_kw": 400, "critical_kw": 348}}}
+        base = {
+            "infra": {
+                "cards": {"PV-INV": {"rows": [["Стан", "усі в мережі"]]}},
+                "totals": {"pv_now": 468, "chp_kw": 400, "critical_kw": 348},
+            }
+        }
         for code in (PFX + "state", "infra/ats/position"):
             patch = {"infra": {"cards": dict(base["infra"]["cards"]), "totals": dict(base["infra"]["totals"])}}
             prov._f3d_viewer_delta(patch, {"changes": {"f3d.signal": {code}}})

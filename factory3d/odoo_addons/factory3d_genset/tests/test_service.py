@@ -25,7 +25,8 @@ class TestService(GensetCase):
     def old_reading(self):
         ts = fields.Datetime.now().replace(microsecond=0) - timedelta(days=29, hours=23)
         self.env["f3d.signal"]._f3d_ingest(
-            [{"code": self.hours_sig.code, "ts": ts, "value": 1177.0, "q": "good"}], src="module")
+            [{"code": self.hours_sig.code, "ts": ts, "value": 1177.0, "q": "good"}], src="module"
+        )
 
     def test_planned_request(self):  # AC-18
         self.old_reading()
@@ -33,7 +34,9 @@ class TestService(GensetCase):
             self.env["f3d.genset.link"]._cron_service()
             req = self.requests()
             self.assertEqual(len(req), 1)
-            self.assertEqual(req.name, "Генератор GENSET: планове ТО через 37 мотогодин (наступне на 1 250, зараз 1 213)")
+            self.assertEqual(
+                req.name, "Генератор GENSET: планове ТО через 37 мотогодин (наступне на 1 250, зараз 1 213)"
+            )
             self.assertEqual((req.priority, req.maintenance_type), ("1", "preventive"))
             self.assertEqual(req.f3d_genset_event_key, "GENSET:SERVICE:1250")
             self.assertEqual(req.f3d_signal_id, self.hours_sig)
@@ -62,9 +65,9 @@ class TestService(GensetCase):
         self.assertFalse(self.requests())
 
     def test_td_creates_requests(self):  # AC-21, R-09 крок 1
-        td_req = self.Request.create({
-            "name": "ТО-1: кожні 250 мотогодин", "maintenance_type": "preventive",
-            "equipment_id": self.genset_eq.id})
+        td_req = self.Request.create(
+            {"name": "ТО-1: кожні 250 мотогодин", "maintenance_type": "preventive", "equipment_id": self.genset_eq.id}
+        )
         self.assertFalse(td_req.f3d_signal_id)
         total = self.Request.search_count([("equipment_id", "=", self.genset_eq.id)])
         with mock.patch(TD + ".SERVICE_REQUESTS_BY_TD", True), self.service(hours_left=-12.0, due=True):
@@ -76,13 +79,27 @@ class TestService(GensetCase):
 
     def test_service_event(self):  # AC-64
         t0 = fields.Datetime.now().replace(microsecond=0) - timedelta(hours=1)
-        events = [{"id": i, "ts": t0 + timedelta(seconds=i), "code": "", "severity": "warning",
-                   "name": "Maintenance Due Warning", "value": None, "unit": None, "threshold": None, "text": ""}
-                  for i in (1, 2)]
-        with mock.patch(TD + ".events_since", return_value=events), \
-                self.service(hours_left=37.0, due=True), \
-                mock.patch("odoo.addons.factory3d_genset.models.genset_link_events.F3dGensetLinkEvents."
-                           "_notify_bus_state") as notify:
+        events = [
+            {
+                "id": i,
+                "ts": t0 + timedelta(seconds=i),
+                "code": "",
+                "severity": "warning",
+                "name": "Maintenance Due Warning",
+                "value": None,
+                "unit": None,
+                "threshold": None,
+                "text": "",
+            }
+            for i in (1, 2)
+        ]
+        with (
+            mock.patch(TD + ".events_since", return_value=events),
+            self.service(hours_left=37.0, due=True),
+            mock.patch(
+                "odoo.addons.factory3d_genset.models.genset_link_events.F3dGensetLinkEvents._notify_bus_state"
+            ) as notify,
+        ):
             self.env["f3d.genset.link"]._cron_events()
         self.assertEqual(len(self.requests("GENSET:MAINTENANCE_DUE_W")), 0)
         self.assertEqual(len(self.requests("GENSET:SERVICE:1250")), 1)

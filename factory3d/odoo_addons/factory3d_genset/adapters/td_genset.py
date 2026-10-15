@@ -4,6 +4,7 @@
 ``td.genset.alarm``, ``td.genset.schedule``, ``td.genset.command``); таблиця — docs/modules/td_genset/ADAPTER_MAP.md.
 Усі функції — чисте читання (крім ADP-09). Константа-кортеж означає «розрахунок у snapshot()».
 """
+
 from datetime import timedelta
 import re
 
@@ -67,16 +68,16 @@ FIELD_FUEL_RATE_LPH = None
 # state: td_genset не має станів «мережа втрачена, затримка» (код 2) — міст виводить його сам
 # з mains_ok=False при state 1. «працює» (6) -> 7 за навантаженням вирішує міст (R-03).
 STATE_MAP: dict = {
-    "0": 1,   # Очікування
-    "1": 3,   # Передпусковий підігрів -> пуск
-    "2": 3,   # Подача палива -> пуск
-    "3": 3,   # Прокрутка стартером
-    "4": 3,   # Пауза між спробами пуску
-    "5": 4,   # Безпечний пуск -> захисна затримка
-    "6": 5,   # Холостий хід -> прогрів
-    "7": 5,   # Прогрів
-    "8": 6,   # Очікування навантаження -> працює без навантаження
-    "9": 6,   # Нормальна робота (7, якщо breaker == 2 або p_kw ≥ 0,05·kw_prp — у мосту)
+    "0": 1,  # Очікування
+    "1": 3,  # Передпусковий підігрів -> пуск
+    "2": 3,  # Подача палива -> пуск
+    "3": 3,  # Прокрутка стартером
+    "4": 3,  # Пауза між спробами пуску
+    "5": 4,  # Безпечний пуск -> захисна затримка
+    "6": 5,  # Холостий хід -> прогрів
+    "7": 5,  # Прогрів
+    "8": 6,  # Очікування навантаження -> працює без навантаження
+    "9": 6,  # Нормальна робота (7, якщо breaker == 2 або p_kw ≥ 0,05·kw_prp — у мосту)
     "10": 8,  # Охолодження
     "11": 9,  # Холостий хід перед зупинкою
     "12": 9,  # Зупинка (ETS)
@@ -90,8 +91,14 @@ BREAKER_MAP: dict = {"none": 0, "mains": 1, "genset": 2}
 _CODE_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 # td.genset.event.event_type -> (code, severity)
 _EVENT_SEVERITY = {
-    "run": "info", "outage": "warning", "refuel": "info", "drain": "warning",
-    "external_control": "command", "alarm": "warning", "link": "comm", "gap": "comm",
+    "run": "info",
+    "outage": "warning",
+    "refuel": "info",
+    "drain": "warning",
+    "external_control": "command",
+    "alarm": "warning",
+    "link": "comm",
+    "gap": "comm",
     "maintenance": "service",
 }
 _DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"]
@@ -115,8 +122,10 @@ def generators(env):
 def snapshot(gen) -> dict:
     """ADP-03: останній знімок показань (немає знімка -> усі значення None, alarms [])."""
     gen = gen.sudo()
-    keys = ("ts online state_raw mode_raw mains_ok breaker_raw p_kw u_v f_hz i_a pf kwh fuel_pct fuel_l hours "
-            "starts coolant_c oil_bar batt_v charger_v rpm mains_u_v mains_f_hz").split()
+    keys = (
+        "ts online state_raw mode_raw mains_ok breaker_raw p_kw u_v f_hz i_a pf kwh fuel_pct fuel_l hours "
+        "starts coolant_c oil_bar batt_v charger_v rpm mains_u_v mains_f_hz"
+    ).split()
     snap = dict.fromkeys(keys)
     snap["alarms"] = []
     if not gen.last_reading_id:
@@ -148,11 +157,17 @@ def snapshot(gen) -> dict:
     )
     alarms = gen.env[FIELD_ALARMS_MODEL].search(
         [("genset_id", "=", gen.id), ("state", "!=", "cleared"), ("level", "in", list(ALARM_SEVERITY))],
-        order="date_raised, id")
-    snap["alarms"] = [{
-        "code": a.code or "", "name": a.name or "",
-        "severity": ALARM_SEVERITY[a.level], "since": a.date_raised,
-    } for a in alarms]
+        order="date_raised, id",
+    )
+    snap["alarms"] = [
+        {
+            "code": a.code or "",
+            "name": a.name or "",
+            "severity": ALARM_SEVERITY[a.level],
+            "since": a.date_raised,
+        }
+        for a in alarms
+    ]
     return snap
 
 
@@ -160,8 +175,11 @@ def events_since(gen, since=None, limit: int = 200) -> list:
     """ADP-04: події журналу td_genset новіші за since (за замовчуванням — останні 24 год)."""
     if since is None:
         since = fields.Datetime.now() - timedelta(hours=24)
-    events = gen.sudo().env[EVENT_MODEL].search(
-        [("genset_id", "=", gen.id), ("date_start", ">", since)], order="date_start, id", limit=limit)
+    events = (
+        gen.sudo()
+        .env[EVENT_MODEL]
+        .search([("genset_id", "=", gen.id), ("date_start", ">", since)], order="date_start, id", limit=limit)
+    )
     result = []
     for ev in events:
         severity = _EVENT_SEVERITY.get(ev.event_type, "info")
@@ -170,17 +188,19 @@ def events_since(gen, since=None, limit: int = 200) -> list:
         code = ev.event_type or ""
         if ev.event_type == "alarm" and ev.alarm_id.code:
             code = ev.alarm_id.code
-        result.append({
-            "id": ev.id,
-            "ts": ev.date_start,
-            "code": code if _CODE_RE.match(code) else "",
-            "severity": severity,
-            "name": ev.display_name or "",
-            "value": None,
-            "unit": None,
-            "threshold": None,
-            "text": ev.summary or ev.reason or "",
-        })
+        result.append(
+            {
+                "id": ev.id,
+                "ts": ev.date_start,
+                "code": code if _CODE_RE.match(code) else "",
+                "severity": severity,
+                "name": ev.display_name or "",
+                "value": None,
+                "unit": None,
+                "threshold": None,
+                "text": ev.summary or ev.reason or "",
+            }
+        )
     return result
 
 
@@ -226,15 +246,28 @@ def schedule_info(gen) -> dict:
 def last_test(gen):
     """ADP-07: останній тестовий пуск (з журналу команд source='test') або None."""
     gen = gen.sudo()
-    cmd = gen.env[LAST_TEST_MODEL].search([
-        ("genset_id", "=", gen.id), ("source", "=", "test"), ("command", "in", ["test", "start"]),
-        ("state", "in", ["done", "done_late"])], order="id desc", limit=1)
+    cmd = gen.env[LAST_TEST_MODEL].search(
+        [
+            ("genset_id", "=", gen.id),
+            ("source", "=", "test"),
+            ("command", "in", ["test", "start"]),
+            ("state", "in", ["done", "done_late"]),
+        ],
+        order="id desc",
+        limit=1,
+    )
     if not cmd:
         return None
     ts = cmd.done_at or cmd.confirmed_at or cmd.sent_at
-    run = gen.env[EVENT_MODEL].search([
-        ("genset_id", "=", gen.id), ("event_type", "=", "run"), ("date_start", ">=", ts)],
-        order="date_start, id", limit=1) if ts else gen.env[EVENT_MODEL]
+    run = (
+        gen.env[EVENT_MODEL].search(
+            [("genset_id", "=", gen.id), ("event_type", "=", "run"), ("date_start", ">=", ts)],
+            order="date_start, id",
+            limit=1,
+        )
+        if ts
+        else gen.env[EVENT_MODEL]
+    )
     return {
         "ts": ts,
         "duration_min": round(run.duration * 60.0, 1) if run and not run.is_open else None,
@@ -244,8 +277,13 @@ def last_test(gen):
 
 def open_action(gen) -> dict:
     """ADP-08: act_window на запис генератора td_genset."""
-    return {"type": "ir.actions.act_window", "res_model": GENSET_MODEL, "res_id": gen.id,
-            "view_mode": "form", "target": "current"}
+    return {
+        "type": "ir.actions.act_window",
+        "res_model": GENSET_MODEL,
+        "res_id": gen.id,
+        "view_mode": "form",
+        "target": "current",
+    }
 
 
 def set_fuel_rate(gen, lph: float) -> bool:

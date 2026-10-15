@@ -3,9 +3,8 @@ from unittest import mock
 
 from odoo import fields
 from odoo.exceptions import AccessError, ValidationError
-from odoo.tests import new_test_user, tagged
+from odoo.tests import tagged
 
-from ..adapters import telemetry
 from .test_rules import TD, GensetCase
 
 LINK = "odoo.addons.factory3d_genset.models.genset_link_events.F3dGensetLinkEvents"
@@ -29,8 +28,17 @@ class TestEvents(GensetCase):
         self.Map = self.env["f3d.genset.event.map"]
 
     def ev(self, id_, name, severity, code="", value=None, unit=None, threshold=None, text=""):
-        event = {"id": id_, "ts": self.t0 + timedelta(seconds=id_), "code": code, "severity": severity,
-                 "name": name, "value": value, "unit": unit, "threshold": threshold, "text": text}
+        event = {
+            "id": id_,
+            "ts": self.t0 + timedelta(seconds=id_),
+            "code": code,
+            "severity": severity,
+            "name": name,
+            "value": value,
+            "unit": unit,
+            "threshold": threshold,
+            "text": text,
+        }
         self.events.append(event)
         return event
 
@@ -51,7 +59,9 @@ class TestEvents(GensetCase):
         self.run_events()
         req = self.requests()
         self.assertEqual(len(req), 1)
-        self.assertEqual(req.name, "Генератор GENSET: аварійна зупинка — низький тиск оливи 0,8 бар при нормі ≥ 1,0 бар")
+        self.assertEqual(
+            req.name, "Генератор GENSET: аварійна зупинка — низький тиск оливи 0,8 бар при нормі ≥ 1,0 бар"
+        )
         self.assertEqual(req.priority, "3")
         self.assertEqual(req.maintenance_type, "corrective")
         self.assertEqual(req.equipment_id, self.genset_eq)
@@ -110,22 +120,26 @@ class TestEvents(GensetCase):
         rows = self.Map.search([])
         self.assertEqual(len(rows), 48)
         for table, count in (("warning", 17), ("shutdown", 24), ("other", 7)):
-            self.assertEqual(len(rows.filtered(lambda r: r.hgm_table == table)), count, table)
+            self.assertEqual(len(rows.filtered(lambda r, t=table: r.hgm_table == t)), count, table)
         for row in rows.filtered(lambda r: r.hgm_table == "shutdown"):
             self.assertEqual((row.action, row.priority), ("request_corrective", "3"), row.key)
         self.assertTrue(all(rows.mapped("name_tpl")))
 
     def test_match_severity(self):  # AC-63
-        self.assertEqual(self.Map._match({"name": "Low Oil Pressure", "severity": "warning", "code": ""}).key,
-                         "LOW_OIL_PRESSURE_W")
-        self.assertEqual(self.Map._match({"name": "Low Oil Pressure", "severity": "shutdown", "code": ""}).key,
-                         "LOW_OIL_PRESSURE_SD")
-        self.assertEqual(self.Map._match({"name": "low oil pressure", "severity": "shutdown", "code": ""}).key,
-                         "LOW_OIL_PRESSURE_SD")
+        self.assertEqual(
+            self.Map._match({"name": "Low Oil Pressure", "severity": "warning", "code": ""}).key, "LOW_OIL_PRESSURE_W"
+        )
+        self.assertEqual(
+            self.Map._match({"name": "Low Oil Pressure", "severity": "shutdown", "code": ""}).key, "LOW_OIL_PRESSURE_SD"
+        )
+        self.assertEqual(
+            self.Map._match({"name": "low oil pressure", "severity": "shutdown", "code": ""}).key, "LOW_OIL_PRESSURE_SD"
+        )
         by_code = self.Map._match({"name": "x", "severity": "warning", "code": "high_temp_warning"})
         self.assertEqual(by_code.key, "HIGH_TEMP_W")  # td_code (Q-13)
-        regex = self.Map.create({"key": "RX", "severity": "warning", "name_tpl": "x", "match_regex": r"^zz\d+$",
-                                 "sequence": 5})
+        regex = self.Map.create(
+            {"key": "RX", "severity": "warning", "name_tpl": "x", "match_regex": r"^zz\d+$", "sequence": 5}
+        )
         self.assertEqual(self.Map._match({"name": "ZZ12", "severity": "warning", "code": ""}), regex)
         regex.active = False
         self.assertEqual(self.Map._match({"name": "ZZ12", "severity": "warning", "code": ""}).key, "DEFAULT_WARNING")

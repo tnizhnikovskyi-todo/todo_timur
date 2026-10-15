@@ -5,7 +5,8 @@ class F3dSource(models.Model):
     _inherit = "f3d.source"
 
     type = fields.Selection(
-        selection_add=[("td_genset", "td_genset (ретранслятор SmartGen)")], ondelete={"td_genset": "cascade"})
+        selection_add=[("td_genset", "td_genset (ретранслятор SmartGen)")], ondelete={"td_genset": "cascade"}
+    )
 
     @api.model
     def _f3d_local_types(self):

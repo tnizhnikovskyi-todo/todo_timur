@@ -74,8 +74,7 @@ class TestProvider(GensetCase):
     def test_delta_deep_merge(self):  # AC-72
         self.link._cron_publish()
         patch = {"infra": {"cards": {"PV-INV": {"rows": []}}, "totals": {"pv_now": 468, "chp_kw": 400}}}
-        self.env["f3d.viewer.provider.genset"]._f3d_viewer_delta(
-            patch, {"changes": {"f3d.signal": {PFX + "state"}}})
+        self.env["f3d.viewer.provider.genset"]._f3d_viewer_delta(patch, {"changes": {"f3d.signal": {PFX + "state"}}})
         infra = patch["infra"]
         self.assertIn("PV-INV", infra["cards"])
         self.assertIn("GENSET", infra["cards"])
@@ -86,8 +85,12 @@ class TestProvider(GensetCase):
         self.link.amf_master = "ats"
         self.link._cron_publish()
         self.assertEqual(dict(self.collect()["cards"]["GENSET"]["rows"])["Логіка AMF"], "ATyS p (головний)")
-        self.snap(ts=fields.Datetime.now().replace(microsecond=0) + timedelta(seconds=5),
-                  p_kw=348.04, oil_bar=4.456, hours=1213.2)
+        self.snap(
+            ts=fields.Datetime.now().replace(microsecond=0) + timedelta(seconds=5),
+            p_kw=348.04,
+            oil_bar=4.456,
+            hours=1213.2,
+        )
         self.link._cron_publish()
         node = self.collect()["genset"]["GENSET"]
         self.assertEqual((node["p_kw"], node["oil_bar"], node["hours"]), (348.0, 4.46, 1213.2))

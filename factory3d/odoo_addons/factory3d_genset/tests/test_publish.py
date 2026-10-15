@@ -21,7 +21,7 @@ class TestPublish(GensetCase):
 
     def values(self):
         signals = self.env["f3d.signal"].search([("code", "=like", PFX + "%")])
-        return {s.code[len(PFX):]: s for s in signals}
+        return {s.code[len(PFX) :]: s for s in signals}
 
     def test_publish_values(self):  # AC-07
         snap = self.snap()
@@ -30,8 +30,18 @@ class TestPublish(GensetCase):
         self.assertEqual(len(readings), 26)
         self.assertEqual(set(readings.mapped("ts")), {snap["ts"]})
         sig = self.values()
-        expected = {"state": 7, "p_kw": 348.0, "load_pct": 68.6, "fuel_l": 500.2, "fuel_lph": 95.5,
-                    "autonomy_h": 5.2, "hours": 1213.0, "online": 1, "service_h_left": 37.0, "oil_bar": 4.4}
+        expected = {
+            "state": 7,
+            "p_kw": 348.0,
+            "load_pct": 68.6,
+            "fuel_l": 500.2,
+            "fuel_lph": 95.5,
+            "autonomy_h": 5.2,
+            "hours": 1213.0,
+            "online": 1,
+            "service_h_left": 37.0,
+            "oil_bar": 4.4,
+        }
         for leaf, value in expected.items():
             self.assertEqual(sig[leaf].last_value, value, leaf)
         self.assertTrue(self.link.last_publish_ts)
@@ -84,6 +94,7 @@ class TestPublish(GensetCase):
     def test_state_change_chatter(self):  # AC-27, AC-28
         def state_messages():
             return self.link.message_ids.filtered(lambda m: "Стан:" in (m.body or ""))
+
         self.link.last_state_json = {"state": 1, "online": 1}
         self.link._publish_one()
         self.assertEqual(len(state_messages()), 1)
@@ -122,11 +133,13 @@ class TestPublish(GensetCase):
         self.assertIn("годинник ретранслятора попереду", self.link.last_publish_error)
 
     def test_adapter_not_verified_and_isolation(self):  # MG-11
-        eq2 = self.env["maintenance.equipment"].create({
-            "name": "Генератор 2", "f3d_code": "GENSET-2", "f3d_passport_id": self.passport.id})
+        eq2 = self.env["maintenance.equipment"].create(
+            {"name": "Генератор 2", "f3d_code": "GENSET-2", "f3d_passport_id": self.passport.id}
+        )
         gen2 = self.env["res.partner"].create({"name": "Генератор td_genset 2"})
-        link2 = self.env["f3d.genset.link"].create({
-            "equipment_id": eq2.id, "td_genset_ref": "res.partner,%d" % gen2.id, "profile_id": self.profile.id})
+        link2 = self.env["f3d.genset.link"].create(
+            {"equipment_id": eq2.id, "td_genset_ref": "res.partner,%d" % gen2.id, "profile_id": self.profile.id}
+        )
         good = self.snap()
 
         def snapshot(gen):

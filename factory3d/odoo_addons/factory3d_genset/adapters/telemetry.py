@@ -1,4 +1,5 @@
 """Адаптер factory3d_telemetry: TEL-01…TEL-04 (SPEC §2.0.2, §2.0.3). Єдине місце імен telemetry у мості."""
+
 from odoo import fields
 
 SOURCE_CODE = "GENSET-RELAY"
@@ -58,11 +59,18 @@ def ensure_source(env, link):
     Source = env["f3d.source"].sudo()
     source = Source.search([("code", "=", SOURCE_CODE)], limit=1)
     if not source:
-        source = Source.create({
-            "code": SOURCE_CODE, "name": "Ретранслятор SmartGen (td_genset)", "type": SOURCE_TYPE,
-            "module": SOURCE_MODULE, "equipment_id": link.equipment_id.id, "params": {},
-            "read_enabled": True, "period_s_default": 60,
-        })
+        source = Source.create(
+            {
+                "code": SOURCE_CODE,
+                "name": "Ретранслятор SmartGen (td_genset)",
+                "type": SOURCE_TYPE,
+                "module": SOURCE_MODULE,
+                "equipment_id": link.equipment_id.id,
+                "params": {},
+                "read_enabled": True,
+                "period_s_default": 60,
+            }
+        )
     if link and link.source_id != source:
         link.sudo().source_id = source
     return source
@@ -82,10 +90,20 @@ def ensure_signals(env, link):
         if code in existing:
             continue
         vals = {
-            "code": code, "name": "Генератор %s: %s" % (f3d_code, title), "equipment_id": link.equipment_id.id,
-            "source_id": source.id, "module": SOURCE_MODULE, "unit": unit or False, "kind": kind,
-            "period_s": period, "store_period_s": 0, "scale": 1.0, "viewer_visible": True,
-            "create_request": False, "alarm_states": [], "address": {"leaf": leaf},
+            "code": code,
+            "name": "Генератор %s: %s" % (f3d_code, title),
+            "equipment_id": link.equipment_id.id,
+            "source_id": source.id,
+            "module": SOURCE_MODULE,
+            "unit": unit or False,
+            "kind": kind,
+            "period_s": period,
+            "store_period_s": 0,
+            "scale": 1.0,
+            "viewer_visible": True,
+            "create_request": False,
+            "alarm_states": [],
+            "address": {"leaf": leaf},
         }
         if leaf == "alarm_level":
             vals.update(alarm_high_on=True, alarm_high=0.5)
@@ -95,11 +113,15 @@ def ensure_signals(env, link):
 
 def ingest(env, batch):
     """TEL-03: пакет [{code, ts, value[, q]}] через CT-10 `_f3d_ingest(src="module")`."""
-    readings = [{
-        "code": item["code"], "ts": item["ts"], "value": item["value"],
-        "q": item.get("q", "good") if isinstance(item.get("q", "good"), str)
-        else ("good" if item["q"] else "bad"),
-    } for item in batch]
+    readings = [
+        {
+            "code": item["code"],
+            "ts": item["ts"],
+            "value": item["value"],
+            "q": item.get("q", "good") if isinstance(item.get("q", "good"), str) else ("good" if item["q"] else "bad"),
+        }
+        for item in batch
+    ]
     res = env["f3d.signal"].sudo()._f3d_ingest(readings, src="module")
     return {"accepted": res["accepted"], "stored": res["stored"], "skipped": res["accepted"] - res["stored"]}
 
@@ -111,8 +133,9 @@ def mark_stale(env, codes, reason):
 
 def read_values(env, codes):
     """TEL-04: {code: (value, ts, status)}; відсутній код — відсутній ключ."""
-    rows = env["f3d.signal"].sudo().search_read(
-        [("code", "in", list(codes))], ["code", "last_value", "last_ts", "status"])
+    rows = (
+        env["f3d.signal"].sudo().search_read([("code", "in", list(codes))], ["code", "last_value", "last_ts", "status"])
+    )
     return {r["code"]: (r["last_value"], r["last_ts"] or None, r["status"]) for r in rows}
 
 

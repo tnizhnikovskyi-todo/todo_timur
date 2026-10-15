@@ -1,4 +1,5 @@
 """R-07, R-08, R-09: події контролера td_genset → заявки ТО; ТО за мотогодинами (SPEC §6, §13.1)."""
+
 import logging
 import re
 from datetime import datetime, timedelta, timezone
@@ -124,29 +125,35 @@ class F3dGensetLinkEvents(models.Model):
         eq = self.equipment_id
         Request = self.env["maintenance.request"].sudo()  # R-07: заявка від імені OdooBot
         name, description = row._render(ev, self)
-        open_req = Request.search([
-            ("equipment_id", "=", eq.id), ("f3d_genset_event_key", "=", key), ("stage_id.done", "=", False)], limit=1)
+        open_req = Request.search(
+            [("equipment_id", "=", eq.id), ("f3d_genset_event_key", "=", key), ("stage_id.done", "=", False)], limit=1
+        )
         if open_req:
             if notify_repeat:
                 ts = _to_utc_naive(ev.get("ts")) or fields.Datetime.now()
                 local = ts.replace(tzinfo=timezone.utc).astimezone(KYIV)
-                open_req.message_post(body=_("Повтор: %(name)s о %(time)s", name=name,
-                                             time=local.strftime("%H:%M %d.%m")))
+                open_req.message_post(
+                    body=_("Повтор: %(name)s о %(time)s", name=name, time=local.strftime("%H:%M %d.%m"))
+                )
             return open_req
         priority = priority or row.priority or "2"
         now = fields.Datetime.now()
         team = eq.maintenance_team_id or self.env["maintenance.team"].sudo().search(
-            [("company_id", "in", (eq.company_id.id, False))], limit=1)
-        signal = self.env["f3d.signal"].sudo().search(
-            [("code", "=", telemetry.prefix(eq.f3d_code) + leaf)], limit=1)
+            [("company_id", "in", (eq.company_id.id, False))], limit=1
+        )
+        signal = self.env["f3d.signal"].sudo().search([("code", "=", telemetry.prefix(eq.f3d_code) + leaf)], limit=1)
         vals = {
-            "name": name, "description": description, "equipment_id": eq.id,
-            "maintenance_team_id": team.id, "priority": priority,
+            "name": name,
+            "description": description,
+            "equipment_id": eq.id,
+            "maintenance_team_id": team.id,
+            "priority": priority,
             "maintenance_type": "preventive" if row.action == "request_preventive" else "corrective",
             "request_date": datetime.now(KYIV).date(),
             "schedule_date": schedule_date or (now if priority == "3" else now + timedelta(days=1)),
             "user_id": eq.technician_user_id.id or False,
-            "f3d_signal_id": signal.id or False, "f3d_genset_event_key": key,
+            "f3d_signal_id": signal.id or False,
+            "f3d_genset_event_key": key,
             "company_id": eq.company_id.id or self.env.company.id,
         }
         if "maintenance_for" in Request._fields:  # Odoo 19 CE поля немає
@@ -162,15 +169,21 @@ class F3dGensetLinkEvents(models.Model):
         self.ensure_one()
         eq = self.equipment_id
         Request = self.env["maintenance.request"].sudo()
-        hours_signal = self.env["f3d.signal"].sudo().search(
-            [("code", "=", telemetry.prefix(eq.f3d_code) + "hours")], limit=1)
+        hours_signal = (
+            self.env["f3d.signal"].sudo().search([("code", "=", telemetry.prefix(eq.f3d_code) + "hours")], limit=1)
+        )
         if td.SERVICE_REQUESTS_BY_TD:
             # крок 1: заявки створює td_genset — міст лише дописує сигнал `hours`
             if hours_signal:
-                Request.search([
-                    ("equipment_id", "=", eq.id), ("maintenance_type", "=", "preventive"),
-                    ("stage_id.done", "=", False), ("f3d_signal_id", "=", False),
-                    ("f3d_genset_event_key", "=", False)]).write({"f3d_signal_id": hours_signal.id})
+                Request.search(
+                    [
+                        ("equipment_id", "=", eq.id),
+                        ("maintenance_type", "=", "preventive"),
+                        ("stage_id.done", "=", False),
+                        ("f3d_signal_id", "=", False),
+                        ("f3d_genset_event_key", "=", False),
+                    ]
+                ).write({"f3d_signal_id": hours_signal.id})
             return False
         info = td.service_info(self.td_genset_ref)
         left, hours_now, next_h = info.get("hours_left"), info.get("hours_now"), info.get("next_service_hours")
@@ -188,24 +201,50 @@ class F3dGensetLinkEvents(models.Model):
         now = fields.Datetime.now()
         priority = "3" if left < 0 else "2" if left <= 10 else "1"
         if left >= 0:
-            text = _("через %(h)s мотогодин (наступне на %(next)s, зараз %(now)s)",
-                     h=_fmt_int(left), next=_fmt_int(next_h), now=_fmt_int(hours_now))
+            text = _(
+                "через %(h)s мотогодин (наступне на %(next)s, зараз %(now)s)",
+                h=_fmt_int(left),
+                next=_fmt_int(next_h),
+                now=_fmt_int(hours_now),
+            )
         else:
-            text = _("прострочено на %(h)s мотогодин (наступне на %(next)s, зараз %(now)s)",
-                     h=_fmt_int(-left), next=_fmt_int(next_h), now=_fmt_int(hours_now))
-        ev = {"id": 0, "ts": now, "code": "SERVICE_DUE", "severity": "service", "name": _("Планове ТО"),
-              "value": None, "unit": None, "threshold": None, "text": text}
+            text = _(
+                "прострочено на %(h)s мотогодин (наступне на %(next)s, зараз %(now)s)",
+                h=_fmt_int(-left),
+                next=_fmt_int(next_h),
+                now=_fmt_int(hours_now),
+            )
+        ev = {
+            "id": 0,
+            "ts": now,
+            "code": "SERVICE_DUE",
+            "severity": "service",
+            "name": _("Планове ТО"),
+            "value": None,
+            "unit": None,
+            "threshold": None,
+            "text": text,
+        }
         return self._open_request(
-            row, ev, "GENSET:SERVICE:%d" % int(next_h), "hours", priority=priority,
-            schedule_date=now + timedelta(days=days), notify_repeat=False)
+            row,
+            ev,
+            "GENSET:SERVICE:%d" % int(next_h),
+            "hours",
+            priority=priority,
+            schedule_date=now + timedelta(days=days),
+            notify_repeat=False,
+        )
 
     def _avg_hours_per_day(self, hours_signal, hours_now):
         """R-09 крок 3: (hours_now − перше показання за 30 діб)/30, не менше 0,1; немає показань — 1,0."""
         if not hours_signal or hours_now is None:
             return 1.0
         since = fields.Datetime.now() - timedelta(days=30)
-        first = self.env["f3d.reading"].sudo().search(
-            [("signal_id", "=", hours_signal.id), ("ts", ">=", since)], order="ts, id", limit=1)
+        first = (
+            self.env["f3d.reading"]
+            .sudo()
+            .search([("signal_id", "=", hours_signal.id), ("ts", ">=", since)], order="ts, id", limit=1)
+        )
         if not first:
             return 1.0
         return max(0.1, (hours_now - first.value) / 30.0)

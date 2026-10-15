@@ -1,4 +1,5 @@
 """AC-69: локальний тип джерела td_genset (SPEC §13.1, TestLocalSource)."""
+
 from odoo.exceptions import ValidationError
 from odoo.tests import tagged
 from odoo.tools import mute_logger
@@ -21,11 +22,11 @@ class TestLocalSource(GensetCase):
         self.assertFalse(source.params)
 
     def test_source_without_collector(self):  # AC-69
-        second = self.env["f3d.source"].create({"code": "GENSET-RELAY-2", "name": "Другий ретранслятор",
-                                                "type": "td_genset"})
+        second = self.env["f3d.source"].create(
+            {"code": "GENSET-RELAY-2", "name": "Другий ретранслятор", "type": "td_genset"}
+        )
         self.assertFalse(second.collector_id)
 
     def test_other_type_needs_collector(self):  # AC-69
         with self.assertRaises(ValidationError), mute_logger("odoo.sql_db"):
-            self.env["f3d.source"].create({"code": "MB-NOCOL", "name": "Modbus без колектора",
-                                           "type": "modbus_tcp"})
+            self.env["f3d.source"].create({"code": "MB-NOCOL", "name": "Modbus без колектора", "type": "modbus_tcp"})

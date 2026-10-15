@@ -16,13 +16,22 @@ class TestAccess(GensetCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user_nobody = cls.env["res.users"].with_context(no_reset_password=True).create({
-            "name": "Nobody genset", "login": "genset_nobody",
-            "group_ids": [(6, 0, [cls.env.ref("base.group_user").id])]})
+        cls.user_nobody = (
+            cls.env["res.users"]
+            .with_context(no_reset_password=True)
+            .create(
+                {
+                    "name": "Nobody genset",
+                    "login": "genset_nobody",
+                    "group_ids": [(6, 0, [cls.env.ref("base.group_user").id])],
+                }
+            )
+        )
         cls.has_viewer = "f3d.viewer.event" in cls.env
 
     def payload(self, user, **kw):
         from odoo.addons.factory3d_viewer.tools.payload import PayloadBuilder
+
         return PayloadBuilder(self.env(user=user), **kw).build()
 
     def test_acl_matrix(self):  # AC-33, ТБ-01

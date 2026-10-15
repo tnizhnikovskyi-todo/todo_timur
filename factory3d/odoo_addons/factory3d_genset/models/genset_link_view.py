@@ -5,6 +5,7 @@ from ..adapters import telemetry
 
 class F3dGensetLinkView(models.Model):
     """R-05 (з уже прочитаних значень) і R-13 (коди критичних споживачів) для провайдера переглядача."""
+
     _inherit = "f3d.genset.link"
 
     def _island_state_from_signals(self, vals=None, pos=None, s1=None):
@@ -26,8 +27,11 @@ class F3dGensetLinkView(models.Model):
             return self._island_from_ats(pos, s1)
         if vals.get("online"):
             mains_ok = vals.get("mains_ok")
-            return {"island": vals.get("breaker") == 2 and vals.get("state") in (6, 7),
-                    "grid_ok": None if mains_ok is None else bool(mains_ok), "source": "hgm"}
+            return {
+                "island": vals.get("breaker") == 2 and vals.get("state") in (6, 7),
+                "grid_ok": None if mains_ok is None else bool(mains_ok),
+                "source": "hgm",
+            }
         last = self.last_state_json or {}
         return {"island": last.get("island"), "grid_ok": None, "source": "stale"}
 

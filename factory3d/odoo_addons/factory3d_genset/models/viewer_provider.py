@@ -1,5 +1,6 @@
 """M-08, A-18, X-20: провайдер переглядача — `AbstractModel` без `_inherit` (duck typing, ARCHITECTURE §6.7).
 Без `factory3d_viewer` модель просто ніхто не викликає; імпортів viewer на рівні модуля немає."""
+
 import logging
 from datetime import timezone
 
@@ -15,8 +16,10 @@ MODE_LABELS = {0: "стоп", 1: "ручний", 2: "авто", 3: "тест"}
 BREAKER_LABELS = {0: "немає", 1: "мережа", 2: "генератор"}
 INT_LEAFS = frozenset({"state", "mode", "breaker", "mains_ok", "alarm_level", "alarm_count", "online", "starts"})
 UNITS = {row[0]: row[2] for row in telemetry.SIGNALS}
-NOTE = ("Під час відключення генератор тримає пожежну сигналізацію, освітлення, аспірацію, компресори, "
-        "котельню, офіс із серверною і лінії A–B. Для довгих відключень потрібен додатковий паливний бак.")
+NOTE = (
+    "Під час відключення генератор тримає пожежну сигналізацію, освітлення, аспірацію, компресори, "
+    "котельню, офіс із серверною і лінії A–B. Для довгих відключень потрібен додатковий паливний бак."
+)
 
 
 def _fmt(value, digits=0):
@@ -71,11 +74,17 @@ class F3dViewerProviderGenset(models.AbstractModel):
         node["critical_missing"] = missing
         isl = link._island_state_from_signals(raw)
         totals = payload["infra"].setdefault("totals", {})
-        totals.update({
-            "genset_kw": node.get("p_kw", 0.0), "genset_state": node["state_label"],
-            "genset_fuel_pct": node.get("fuel_pct"), "genset_autonomy_h": node.get("autonomy_h"),
-            "island": isl["island"], "grid_ok": isl["grid_ok"], "genset_kva": int(round(profile.kva_prp)),
-        })
+        totals.update(
+            {
+                "genset_kw": node.get("p_kw", 0.0),
+                "genset_state": node["state_label"],
+                "genset_fuel_pct": node.get("fuel_pct"),
+                "genset_autonomy_h": node.get("autonomy_h"),
+                "island": isl["island"],
+                "grid_ok": isl["grid_ok"],
+                "genset_kva": int(round(profile.kva_prp)),
+            }
+        )
         payload["infra"].setdefault("cards", {})[code] = self._card(link, raw, node, isl, crit_kw, names, updated)
 
     def _card(self, link, raw, node, isl, crit_kw, names, updated):
@@ -108,34 +117,46 @@ class F3dViewerProviderGenset(models.AbstractModel):
         if online:
             conn = "оновлено %s" % (updated.strftime("%H:%M") if updated else "—")
         else:
-            since = _local(fields.Datetime.to_datetime(state_json.get("offline_since"))) \
-                if state_json.get("offline_since") else updated
+            since = (
+                _local(fields.Datetime.to_datetime(state_json.get("offline_since")))
+                if state_json.get("offline_since")
+                else updated
+            )
             conn = "втрачено з %s" % (since.strftime("%H:%M") if since else "—")
-        card = {"rows": [
-            ["Потужність", "%s кВА / %s кВт (основна)" % (_fmt(profile.kva_prp), _fmt(profile.kw_prp))],
-            ["Стан", row_state],
-            ["Режим", node["mode_label"]],
-            ["Логіка AMF", "ATyS p (головний)" if link.amf_master == "ats" else "HGM6120N (AMF)"],
-            ["Контролер", "SmartGen HGM6120N · CMM366B-4G → Odoo (td_genset)"],
-            ["Паливо", "%s %% · %s л" % (_fmt(raw["fuel_pct"]), _fmt(raw.get("fuel_l") or 0.0))
-             if raw.get("fuel_pct") is not None else "—"],
-            ["Автономність", "≈ %s год при %s %%" % (_fmt(autonomy, 1), _fmt(ref_pct))
-             if autonomy is not None else "—"],
-            ["Критичні споживачі зараз", "%s кВт з %s кВт" % (_fmt(crit_kw), _fmt(profile.kw_prp))],
-            ["Мережа", grid],
-            ["Напруга · частота", volt],
-            ["Мотогодини", hours],
-            ["Тривоги", alarms],
-            ["Остання перевірка", self._last_test(link)],
-            ["Зв'язок", conn],
-        ], "items": list(names), "note": NOTE}
+        card = {
+            "rows": [
+                ["Потужність", "%s кВА / %s кВт (основна)" % (_fmt(profile.kva_prp), _fmt(profile.kw_prp))],
+                ["Стан", row_state],
+                ["Режим", node["mode_label"]],
+                ["Логіка AMF", "ATyS p (головний)" if link.amf_master == "ats" else "HGM6120N (AMF)"],
+                ["Контролер", "SmartGen HGM6120N · CMM366B-4G → Odoo (td_genset)"],
+                [
+                    "Паливо",
+                    "%s %% · %s л" % (_fmt(raw["fuel_pct"]), _fmt(raw.get("fuel_l") or 0.0))
+                    if raw.get("fuel_pct") is not None
+                    else "—",
+                ],
+                [
+                    "Автономність",
+                    "≈ %s год при %s %%" % (_fmt(autonomy, 1), _fmt(ref_pct)) if autonomy is not None else "—",
+                ],
+                ["Критичні споживачі зараз", "%s кВт з %s кВт" % (_fmt(crit_kw), _fmt(profile.kw_prp))],
+                ["Мережа", grid],
+                ["Напруга · частота", volt],
+                ["Мотогодини", hours],
+                ["Тривоги", alarms],
+                ["Остання перевірка", self._last_test(link)],
+                ["Зв'язок", conn],
+            ],
+            "items": list(names),
+            "note": NOTE,
+        }
         warn = None
         if int(raw.get("alarm_level") or 0) == 2:
             warn = "Аварійна зупинка: %s" % (alarm_n or 1)
         elif not online:
             since = state_json.get("offline_since")
-            mins = int((telemetry.now() - fields.Datetime.to_datetime(since)).total_seconds() // 60) \
-                if since else 0
+            mins = int((telemetry.now() - fields.Datetime.to_datetime(since)).total_seconds() // 60) if since else 0
             warn = "Зв'язок із контролером втрачено (%d хв)" % mins
         elif int(raw.get("alarm_level") or 0) == 1:
             warn = "Попередження: %s" % (alarm_n or 1)
@@ -166,6 +187,7 @@ class F3dViewerProviderGenset(models.AbstractModel):
         if not self._wants_delta(changes):
             return
         from odoo.addons.factory3d_viewer.tools.payload import deep_merge
+
         tmp = {}
         self._f3d_viewer_collect(tmp, ctx)
         deep_merge(patch.setdefault("infra", {}), tmp.get("infra", {}))

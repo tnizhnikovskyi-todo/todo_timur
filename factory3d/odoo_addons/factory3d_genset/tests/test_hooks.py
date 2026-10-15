@@ -77,10 +77,12 @@ class TestHook(GensetCase):
         row.td_code = "LOP_SD"
 
         def counts():
-            return (self.Link.search_count([("equipment_id", "=", self.genset_eq.id)]),
-                    self.env["f3d.source"].search_count([("code", "=", "GENSET-RELAY")]),
-                    self.env["f3d.signal"].search_count([("code", "=like", "infra/genset/GENSET/%")]),
-                    self.env["f3d.genset.event.map"].with_context(active_test=False).search_count([]))
+            return (
+                self.Link.search_count([("equipment_id", "=", self.genset_eq.id)]),
+                self.env["f3d.source"].search_count([("code", "=", "GENSET-RELAY")]),
+                self.env["f3d.signal"].search_count([("code", "=like", "infra/genset/GENSET/%")]),
+                self.env["f3d.genset.event.map"].with_context(active_test=False).search_count([]),
+            )
 
         first = counts()
         self.run_hook()
@@ -118,8 +120,9 @@ class TestHook(GensetCase):
 
     def test_uninstall_hook(self):  # AC-35
         self.run_hook()
-        req = self.env["maintenance.request"].create({
-            "name": "Заявка GENSET", "equipment_id": self.genset_eq.id, "f3d_genset_event_key": "GENSET:X"})
+        req = self.env["maintenance.request"].create(
+            {"name": "Заявка GENSET", "equipment_id": self.genset_eq.id, "f3d_genset_event_key": "GENSET:X"}
+        )
         hooks.uninstall_hook(self.env)
         icp = self.env["ir.config_parameter"].sudo()
         self.assertEqual(icp.search_count([("key", "=like", "factory3d.genset.%")]), 0)
@@ -129,7 +132,6 @@ class TestHook(GensetCase):
         self.assertTrue(req.exists())
 
     def test_signals_appendix_a_fields(self):  # AC-62 (Додаток A)
-        from ..adapters import telemetry
         self.run_hook()
         signals = self.env["f3d.signal"].search([("code", "=like", "infra/genset/GENSET/%")])
         by_leaf = {s.code.rsplit("/", 1)[1]: s for s in signals}

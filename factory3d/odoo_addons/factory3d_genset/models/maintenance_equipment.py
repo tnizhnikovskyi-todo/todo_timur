@@ -6,7 +6,8 @@ class MaintenanceEquipment(models.Model):
 
     f3d_genset_link_ids = fields.One2many("f3d.genset.link", "equipment_id", string="Зв'язка генератора")
     f3d_genset_link_id = fields.Many2one(
-        "f3d.genset.link", compute="_compute_f3d_genset_link", string="Зв'язка генератора (перша)")
+        "f3d.genset.link", compute="_compute_f3d_genset_link", string="Зв'язка генератора (перша)"
+    )
     f3d_is_genset = fields.Boolean(compute="_compute_f3d_genset_link", string="Генератор")
 
     @api.depends("f3d_genset_link_ids", "f3d_passport_id.role")
@@ -17,8 +18,13 @@ class MaintenanceEquipment(models.Model):
 
     def action_open_f3d_genset(self):
         self.ensure_one()
-        action = {"type": "ir.actions.act_window", "name": "Генератор", "res_model": "f3d.genset.link",
-                  "view_mode": "form", "target": "current"}
+        action = {
+            "type": "ir.actions.act_window",
+            "name": "Генератор",
+            "res_model": "f3d.genset.link",
+            "view_mode": "form",
+            "target": "current",
+        }
         if self.f3d_genset_link_id:
             action["res_id"] = self.f3d_genset_link_id.id
         else:
