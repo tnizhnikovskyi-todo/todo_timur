@@ -23,6 +23,7 @@
         "views/f3d_reading_views.xml",
         "views/f3d_reading_hour_views.xml",
         "views/f3d_command_views.xml",
+        "views/f3d_push_event_views.xml",
         "views/maintenance_equipment_views.xml",
         "views/maintenance_request_views.xml",
         "views/res_config_settings_views.xml",

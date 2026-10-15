@@ -14,3 +14,5 @@ access_f3d_command_user,f3d.command user,model_f3d_command,factory3d_base.group_
 access_f3d_command_manager,f3d.command manager,model_f3d_command,factory3d_base.group_f3d_manager,1,1,1,0
 access_f3d_command_admin,f3d.command admin,model_f3d_command,factory3d_base.group_f3d_admin,1,1,1,1
 access_f3d_collector_token_wizard_admin,f3d.collector.token.wizard admin,model_f3d_collector_token_wizard,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_push_event_user,f3d.push.event user,model_f3d_push_event,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_push_event_admin,f3d.push.event admin,model_f3d_push_event,factory3d_base.group_f3d_admin,1,1,1,1

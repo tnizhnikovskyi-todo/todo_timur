@@ -17,9 +17,11 @@
               action="action_f3d_collector" groups="factory3d_base.group_f3d_admin"/>
     <menuitem id="menu_f3d_telemetry_command" name="Команди" parent="menu_f3d_telemetry" sequence="60"
               action="action_f3d_command" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_telemetry_push_event" name="Події HTTP push" parent="menu_f3d_telemetry" sequence="70"
+              action="action_f3d_push_event" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_telemetry_config" name="Налаштування телеметрії" parent="factory3d_base.menu_f3d_config"
+              sequence="30" action="action_f3d_telemetry_settings" groups="factory3d_base.group_f3d_admin"/>
     <menuitem id="menu_f3d_telemetry_maint" name="Телеметрія" parent="maintenance.menu_maintenance_title"
               sequence="6" action="action_f3d_signal_alarm" groups="factory3d_base.group_f3d_user"/>
     <!-- action_f3d_signal_alarm: копія action_f3d_signal з context={'search_default_alarm': 1} (SPEC §3) -->
-    <menuitem id="menu_f3d_telemetry_config" name="Налаштування телеметрії" parent="factory3d_base.menu_f3d_config"
-              sequence="30" action="action_f3d_telemetry_settings" groups="factory3d_base.group_f3d_admin"/>
 </odoo>

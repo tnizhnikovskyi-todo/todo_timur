@@ -6,3 +6,7 @@ from . import test_readings  # noqa: F401
 from . import test_thresholds  # noqa: F401
 from . import test_requests  # noqa: F401
 from . import test_meter  # noqa: F401
+from . import test_api  # noqa: F401
+from . import test_commands  # noqa: F401
+from . import test_push_handler  # noqa: F401
+from . import test_rotation_push  # noqa: F401
