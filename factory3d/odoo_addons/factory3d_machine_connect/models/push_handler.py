@@ -9,7 +9,7 @@ EV_OPCUA_REQUIRED = ("kind", "source", "machine", "time", "category", "text")
 EV_KINDS = {
     "mc_opcua": {"event": (), "alarm": ()},
     "mc_woodstore": {"status": ("status",), "stacks": ("items",), "jobs": ("items",), "events": ("items",)},
-    "mc_cutopt": {"job": ("map", "job"), "plan": ("map", "plan"), "mpr": ("map", "part", "text")},
+    "mc_cutopt": {"job": ("job",), "plan": ("plan",), "mpr": ("part", "text")},
 }
 # (маршрут, kind) -> (модель власника, метод); власники реалізують методи в W2/W3 (EV-01), W5 (EV-02), W6 (EV-03).
 ROUTES = {
@@ -41,10 +41,12 @@ class F3dPushHandlerMachineConnect(models.AbstractModel):
         for key in required:
             if key not in payload or payload[key] is None:
                 raise ValueError("%s: %s" % (route, key))
+        # id події колектора читають власники (W2 `_f3d_apply_event`: ext_event_id)
+        ctx = {"f3d_push_event_id": event.get("event_id")}
         if route == "mc_opcua":
-            return self.env["f3d.machine"].sudo()._f3d_apply_event(payload)
+            return self.env["f3d.machine"].sudo().with_context(**ctx)._f3d_apply_event(payload)
         model, method = ROUTES[(route, kind)]
-        owner = self.env[model].sudo()
+        owner = self.env[model].sudo().with_context(**ctx)
         func = getattr(owner, method, None)
         if func is None:
             raise ValueError("%s: обробник %s.%s ще не реалізовано" % (route, model, method))
@@ -56,9 +58,10 @@ class F3dPushHandlerMachineConnect(models.AbstractModel):
 
     def _f3d_route_cutopt(self, owner, kind, payload, event):
         """EV-03: найти карту за `map` (номер) і передати частину payload."""
-        cut_map = owner.search([("name", "=", payload["map"])], limit=1)
+        job_id = payload.get("job_id") or (payload.get("job") or {}).get("job_id")
+        cut_map = owner._f3d_find_for_event(payload.get("map"), job_id)
         if not cut_map:
-            raise ValueError("mc_cutopt: map %s" % payload["map"])
+            raise ValueError("mc_cutopt: map %s / job %s" % (payload.get("map"), job_id))
         if kind == "job":
             return cut_map._f3d_apply_job(payload["job"])
         if kind == "plan":

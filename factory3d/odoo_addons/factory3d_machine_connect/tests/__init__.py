@@ -11,3 +11,5 @@ from . import test_oee
 from . import test_energy_contract
 from . import test_cutmap
 from . import test_api_export
+from . import test_autostart
+from . import test_counter_finish

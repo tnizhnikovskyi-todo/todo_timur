@@ -64,8 +64,7 @@ class TestDowntime(DowntimeMixin, F3DMachineCase):
         self.assertEqual((rec.f3d_source, rec.date_start), ("machine", kt("09:42")))
         self.assertEqual(rec.create_uid, self.env.ref("factory3d_machine_connect.user_f3d_machine"))
         self.assertEqual(self.wc_ua.working_state, "blocked")
-        if hasattr(m, "_f3d_close_timers"):  # гачок W3 (R-10 п. 1)
-            self.assertEqual(timer.date_end, kt("09:42"))
+        self.assertEqual(timer.date_end, kt("09:42"))  # R-10 п. 1 (W3)
 
     def test_idle_no_timelog_until_close(self):
         """AC-12: поки простій `idle` триває — записів журналу часу немає; після — один закритий запис."""

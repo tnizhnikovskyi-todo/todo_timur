@@ -36,6 +36,7 @@
         "views/f3d_cut_views.xml",
         "views/mrp_production_views.xml",
         "views/product_views.xml",
+        "views/mrp_workorder_views.xml",
         "views/menus.xml",
     ],
     "demo": [],

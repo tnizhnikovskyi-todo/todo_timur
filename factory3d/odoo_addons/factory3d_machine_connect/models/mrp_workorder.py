@@ -1,6 +1,8 @@
 import logging
+from math import ceil
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError, UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -24,5 +26,66 @@ class MrpWorkorder(models.Model):
     @api.depends("workcenter_id.f3d_machine_ids.protocol", "workcenter_id.f3d_machine_ids.sig_job_cmd_id")
     def _compute_f3d_can_send(self):
         for rec in self:
-            machine = rec.workcenter_id.f3d_machine_ids[:1]
+            machine = rec.workcenter_id.sudo().f3d_machine_ids[:1]
             rec.f3d_can_send = bool(machine and machine.protocol == "opcua" and machine.sig_job_cmd_id)
+
+    def action_f3d_finish_partial(self):
+        """R-12 п. 5: майстер завершує завдання неповною партією (`qty_produced = f3d_qty_counted`)."""
+        self.ensure_one()
+        if not self.env.su and not self.env.user.has_group("mrp.group_mrp_manager"):
+            raise AccessError(_("Завершити неповною партією може лише майстер (керівник виробництва)."))
+        vals = {"f3d_partial_hold": False}
+        if self.f3d_qty_counted > 0:
+            vals["qty_produced"] = self.f3d_qty_counted
+        self.write(vals)
+        self.button_finish()
+        self.production_id.sudo().message_post(
+            body=_(
+                "Завдання %(wo)s завершено неповною партією: %(c)s з %(q)s",
+                wo=self.display_name,
+                c=self.f3d_qty_counted,
+                q=self.qty_production,
+            ),
+            subtype_xmlid="mail.mt_note",
+        )
+        return True
+
+    def action_f3d_clear_hold(self):
+        """Зняти позначку «Неповна партія» (дозапуск)."""
+        self.write({"f3d_partial_hold": False})
+        return True
+
+    def action_f3d_send_to_machine(self):
+        """FR-27, CMD-01 `Store`: поставити завдання в чергу верстата (OPC UA JobManagement)."""
+        self.ensure_one()
+        if not self.f3d_can_send:
+            raise UserError(
+                _(
+                    "Робочий центр %s не приймає завдань з Odoo (немає OPC UA JobManagement).",
+                    self.workcenter_id.display_name,
+                )
+            )
+        if self.state not in ("ready", "blocked"):
+            raise UserError(_("Завдання %s уже в роботі або завершене.", self.display_name))
+        machine = self.workcenter_id.sudo().f3d_machine_ids[:1]
+        cmd = self.env["f3d.command"]._f3d_mc_create_command(
+            machine.sig_job_cmd_id,
+            "Store",
+            {
+                "job": "WO%05d" % self.id,
+                "qty": max(1, ceil(self.qty_remaining)),
+                "ref": self.production_id.name,
+                "priority": 5,
+            },
+            {"f3d_machine_id": machine.id},
+        )
+        self.production_id.sudo().message_post(
+            body=_(
+                "Завдання %(wo)s поставлено в чергу верстата %(code)s: %(text)s",
+                wo=self.display_name,
+                code=machine.code,
+                text=cmd.text or "",
+            ),
+            subtype_xmlid="mail.mt_note",
+        )
+        return True
