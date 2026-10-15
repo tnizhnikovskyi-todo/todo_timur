@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_yard_gate_list" model="ir.ui.view">
+        <field name="name">f3d.yard.gate.list</field>
+        <field name="model">f3d.yard.gate</field>
+        <field name="arch" type="xml">
+            <list string="КПП і шлагбауми" decoration-danger="state == 'error'" decoration-muted="state == 'unknown'">
+                <field name="sequence" widget="handle"/>
+                <field name="f3d_code"/>
+                <field name="name"/>
+                <field name="direction"/>
+                <field name="side"/>
+                <field name="camera_code"/>
+                <field name="mode"/>
+                <field name="state" widget="badge"/>
+                <field name="passes_today"/>
+                <field name="admitted_today"/>
+                <field name="tailgate_today"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_gate_form" model="ir.ui.view">
+        <field name="name">f3d.yard.gate.form</field>
+        <field name="model">f3d.yard.gate</field>
+        <field name="arch" type="xml">
+            <form string="КПП / шлагбаум">
+                <header>
+                    <button name="action_open" type="object" string="Відкрити" class="btn-primary" invisible="not can_command" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_close" type="object" string="Закрити" invisible="not can_command" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_hold" type="object" string="Тримати відкритим" invisible="not can_command or state == 'held'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_release" type="object" string="Зняти утримання" invisible="state != 'held'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_opened_manually" type="object" string="Відкрито вручну" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_reset_error" type="object" string="Скинути помилку" invisible="state != 'error'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <field name="state" widget="statusbar" statusbar_visible="closed,open,held,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_commands" type="object" class="oe_stat_button" icon="fa-bolt">
+                            <field name="command_ids" widget="statinfo" string="Команди"/>
+                        </button>
+                        <button name="action_f3d_show" type="object" class="oe_stat_button" icon="fa-cube" string="У 3D"/>
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="not last_error">
+                        <field name="last_error" nolabel="1"/>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not command_block_reason">
+                        <field name="command_block_reason" nolabel="1"/>
+                    </div>
+                    <field name="can_command" invisible="1"/>
+                    <group>
+                        <group string="Основне">
+                            <field name="f3d_code"/>
+                            <field name="name"/>
+                            <field name="direction"/>
+                            <field name="side"/>
+                            <field name="mode"/>
+                            <field name="invert_di"/>
+                            <field name="responsible_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Обладнання">
+                            <field name="camera_code"/>
+                            <field name="camera_equipment_id"/>
+                            <field name="equipment_id"/>
+                            <field name="zone_id"/>
+                            <field name="source_id"/>
+                            <field name="pos_x"/>
+                            <field name="pos_y"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Лічильники доби">
+                            <field name="passes_today"/>
+                            <field name="admitted_today"/>
+                            <field name="tailgate_today"/>
+                            <field name="last_tailgate_at"/>
+                            <field name="hold_until"/>
+                            <field name="last_plate"/>
+                            <field name="last_plate_at"/>
+                            <field name="pending_visit_id"/>
+                        </group>
+                        <group string="Сигнали">
+                            <field name="state_signal_id"/>
+                            <field name="loop_signal_id"/>
+                            <field name="photocell_signal_id"/>
+                            <field name="passes_signal_id"/>
+                            <field name="cmd_open_signal_id"/>
+                            <field name="cmd_close_signal_id"/>
+                            <field name="cmd_hold_signal_id"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_gate_search" model="ir.ui.view">
+        <field name="name">f3d.yard.gate.search</field>
+        <field name="model">f3d.yard.gate</field>
+        <field name="arch" type="xml">
+            <search string="КПП">
+                <field name="name"/>
+                <field name="f3d_code"/>
+                <field name="camera_code"/>
+                <filter name="error" string="Помилка" domain="[('state', '=', 'error')]"/>
+                <filter name="auto" string="Авто" domain="[('mode', '=', 'auto')]"/>
+                <filter name="archived" string="Архівні" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_yard_gate" model="ir.actions.act_window">
+        <field name="name">КПП і шлагбауми</field>
+        <field name="res_model">f3d.yard.gate</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_f3d_yard_config_gate" action="action_f3d_yard_gate" name="КПП і шлагбауми" parent="menu_f3d_yard_config" sequence="10" groups="group_f3d_yard_manager"/>
+</odoo>
