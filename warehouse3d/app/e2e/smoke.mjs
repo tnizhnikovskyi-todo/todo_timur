@@ -414,7 +414,7 @@ try {
     await page.waitForSelector("#vp svg .bd-contour");
     await page.waitForSelector("#plan-side .ed-pend");
     expect((await saved()).building === null, "здание сохранилось без «Зберегти»");
-    await tool("col"); await click(14.3, 9.7);
+    await tool("col"); await click(-1, -1); // колонна в отступе контура: на ряд колонну ставить нельзя (W-07)
     await page.waitForSelector("#vp svg rect.bd-col");
     await tool("aisle"); await click(6, 4); await click(36, 4);
     await page.waitForSelector("#vp svg .bd-ai");
@@ -425,7 +425,7 @@ try {
     const shown = parseFloat((await text("#bld-ruler b")).replace(/[^\d,]/g, "").replace(",", "."));
     const want = Math.hypot(b.x - a.x, b.y - a.y) / a.k;
     expect(Math.abs(shown - want) < 0.02, `рулетка: ${shown} м, ожидалось ${want.toFixed(2)} м`);
-    await tool("select"); await tool("col"); await click(22.4, 14.2); // вторая колона — её отменим
+    await tool("select"); await tool("col"); await click(-1, 6); // вторая колона — её отменим
     await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 2);
     await page.keyboard.press("Control+KeyZ");
     await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 1);
@@ -447,6 +447,47 @@ try {
     await page.click('#seg-mode [data-m="3d"]'); // 3D со зданием строится без ошибок
     await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
     expect(await page.locator("#vp .rulers").isHidden(), "линейки остались в 3D");
+  });
+  // W-07: проверки — пересечение отклоняется, «Поставити все одно», панель проблем, защита мест с товаром
+  await step("проверки: перетаскивание на соседний ряд отклонено, «Поставити все одно», панель проблем, место с товаром не убирается", async () => {
+    await page.evaluate(() => localStorage.clear()); await page.goto(url); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="2d"]'); await page.click('#seg-pick [data-pk="rack"]');
+    await page.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await page.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Фурнітура");
+    await page.click("#ed-tg"); await page.waitForSelector("#editbar:not([hidden])");
+    expect((await text("#pr-cnt")) === "0", "до правок проблем нет");
+    const mid = async (n) => { const b = await rackBox(n); return { x: b.x + b.w / 2, y: b.y + b.h / 2 }; };
+    const a = await mid(2), c = await mid(1);
+    await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move((a.x + c.x) / 2, (a.y + c.y) / 2, { steps: 5 }); await page.mouse.move(c.x, c.y, { steps: 5 }); await page.mouse.up();
+    await page.waitForSelector("#o_notifs .o_notif.bad [data-force]");
+    expect(/Перетин/.test(await text("#o_notifs .o_notif.bad")), `в уведомлении нет «Перетин»: ${await text("#o_notifs .o_notif.bad")}`);
+    expect(await page.locator("#plan-side .ed-pend").count() === 0, "отклонённая правка попала в список");
+    expect((await text("#pr-cnt")) === "0", "счётчик проблем вырос после отклонённой правки");
+    const y1 = await page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("y"), `${FURZ}/R2`), y0 = await page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("y"), `${FURZ}/R1`);
+    expect(y1 > y0 + 1, "ряд R2 сдвинулся, хотя правка отклонена");
+    await page.click("#o_notifs .o_notif.bad [data-force]");
+    await page.waitForSelector("#plan-side .ed-pend");
+    await page.waitForFunction(() => document.querySelector("#pr-cnt")?.textContent === "1");
+    expect(Math.abs((await page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("y"), `${FURZ}/R2`)) - y0) < 0.05, "«Поставити все одно» не поставило ряд на ряд");
+    expect(await page.locator("svg rect.rackbg.prob").count() === 2, "оба ряда должны подсвечиваться как проблемные");
+    // панель проблем: запись, фильтр, переход к объекту
+    await page.click("#pr-btn"); await page.waitForSelector("#problems:not([hidden]) .plist li");
+    const row = await text("#problems .plist li");
+    expect(/Перетин/.test(row) && /попри заборону/.test(row) && /Попередження/i.test(row), `строка панели проблем: ${row}`);
+    await page.selectOption("#problems [data-fsev]", "error"); await page.waitForSelector("#problems #prob-none");
+    await page.selectOption("#problems [data-fsev]", "all"); await page.waitForSelector("#problems .plist li");
+    await page.keyboard.press("Escape");
+    await page.click("#problems .plist li button");
+    await page.waitForFunction(() => /^Ряд R[12]$/.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    expect(await page.locator("#vp svg .esel").count() > 0, "объект проблемы не выделен на модели");
+    // место с товаром: «Прибрати» отклоняется, ряд остаётся
+    await page.click("#problems [data-close]");
+    await page.click("#plan-side [data-del]");
+    await page.waitForFunction(() => /залишок/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    expect(await page.locator(`rect.rackbg[data-node="${FURZ}/R1"]`).count() === 1 && await page.locator(`rect.rackbg[data-node="${FURZ}/R2"]`).count() === 1, "ряд с товаром убран");
+    await page.click("#ed-discall"); await page.waitForFunction(() => document.querySelector("#pr-cnt")?.textContent === "0");
+    await page.click("#ed-tg");
   });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();

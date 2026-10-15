@@ -40,7 +40,7 @@ test("поворот места на полу меняет ширину и гл�
 });
 
 test("панель свойств: X, Y, размеры, имя; применяются только изменённые поля; undo", () => {
-  const { model: m } = fresh(), n0 = node(m, GATE), ox = n0.ox, oy = n0.oy;
+  const { model: m } = fresh({}, { enforce: false }), n0 = node(m, GATE), ox = n0.ox, oy = n0.oy;
   m.ops.props(GATE, { name: n0.name, x: String(ox), y: String(oy), rot: "0", w: String(n0.w), d: String(n0.d), h: String(n0.h) }, "k");
   assert.equal(m.pending.length, 0, "ничего не изменилось — правки нет");
   m.ops.props(GATE, { x: "3,5", y: "2.25", w: "6", d: "4.5", h: "2", name: "Ворота А" }, "k");
@@ -60,7 +60,7 @@ test("панель свойств: X, Y, размеры, имя; применя�
 });
 
 test("свойства ряда: число секций и ярусов (добавление, удаление, undo)", () => {
-  const { model: m } = fresh(), c0 = count(m).codes;
+  const { model: m } = fresh({}, { noStock: true }), c0 = count(m).codes;
   m.ops.rack(FUR, { tp: "FUR", nb: 3, nl: 2 });
   const id = `${FUR}/R7`; assert.equal(node(m, id).codes.length, 6);
   m.ops.props(id, { nb: "5", nl: "3" });
@@ -101,7 +101,7 @@ test("массовое создание: N рядов × M секций × K я�
 });
 
 test("массив по сетке для места на полу", () => {
-  const { model: m } = fresh(), c0 = count(m).codes, n0 = node(m, GATE), ox = n0.ox, oy = n0.oy, w = n0.w;
+  const { model: m } = fresh({}, { enforce: false }), c0 = count(m).codes, n0 = node(m, GATE), ox = n0.ox, oy = n0.oy, w = n0.w;
   m.ops.grid(GATE, { nx: "3", ny: "2", sx: "5", sy: "6" }, "form:grid");
   assert.equal(count(m).codes, c0 + 5); assert.equal(m.pending.length, 1);
   const copies = [...m.tree.nodes.values()].filter((x) => x.draft && x.loc && x.type === "group" && !x.kids.length);
@@ -114,7 +114,7 @@ test("массив по сетке для места на полу", () => {
 });
 
 test("выравнивание и распределение: координаты", () => {
-  const { model: m } = fresh(), ids = [1, 2, 3].map((i) => `${FUR}/R${i}`);
+  const { model: m } = fresh({}, { enforce: false }), ids = [1, 2, 3].map((i) => `${FUR}/R${i}`);
   m.ops.props(ids[1], { x: "3" }); m.ops.props(ids[2], { x: "1.5", y: "20" });
   const abs = (id) => [node(m, id).x, node(m, id).y];
   const x0 = ids.map((i) => abs(i)[0]), base = Math.min(...x0);
@@ -182,7 +182,7 @@ test("группировка и разгруппировка: дерево, ко
 });
 
 test("группировка мест на полу и объектов разных зон", () => {
-  const { model: m, notes } = fresh(), gates = ["WH/Вхід/Ворота 1", "WH/Вхід/Ворота 2"], cod = gates.map((g) => codes(m, g));
+  const { model: m, notes } = fresh({}, { enforce: false }), gates = ["WH/Вхід/Ворота 1", "WH/Вхід/Ворота 2"], cod = gates.map((g) => codes(m, g));
   m.setEdit(true); m.focusTo("WH");
   const gid = m.ops.groupSel(gates, { name: "Прийом" });
   assert.equal(node(m, gid).kids.length, 2); assert.deepEqual(codes(m, `${gid}/Ворота 1`), cod[0]);
@@ -193,7 +193,7 @@ test("группировка мест на полу и объектов разн
 });
 
 test("свойства переживают перезагрузку проекта", async () => {
-  const { model: m, storage } = fresh();
+  const { model: m, storage } = fresh({}, { enforce: false });
   m.ops.props(GATE, { x: "9", w: "7", name: "Брама" }); m.ops.rotate(`${FUR}/R1`, 270);
   const gid = (m.setEdit(true), m.focusTo("WH"), m.ops.groupSel([`${FUR}/R2`, `${FUR}/R3`], { name: "Пара" }));
   await m.save("WH");

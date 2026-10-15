@@ -154,6 +154,10 @@ test("уникальность: конфликт с существующим м�
   assert.equal(cf.length, 18, "FUR-R1-S01-L1 … у зоны «Тест» совпадают с зоной Фурнітура");
   assert.equal(cf.every((c) => c.existing && c.kind === "dup" && c.ids.length === 2), true);
   assert.equal(cf.some((c) => c.code === "FUR-R1-S01-L1" && c.ids.includes(`${FUR}/R1/S01/L1`) && c.ids.includes(`${Z}/R1/S01/L1`)), true);
+  // W-07: конфликты кодов — ошибки в общей панели проблем, переход к месту
+  const pc = m.checks.problems().filter((p) => p.type === "codeConflict");
+  assert.equal(pc.length, 18); assert.ok(pc.every((p) => p.sev === "error" && p.ids.length === 2 && p.p.text.k === "addr.conflictEx"));
+  assert.equal(m.checks.goTo(pc[0]), true); assert.equal(m.ui.esel, pc[0].ids[0]);
   assert.equal(await m.save("WH"), null, "сохранение с конфликтами запрещено");
   assert.equal(m.pending.length > 0, true);
   assert.equal(m.pending.length, 6);

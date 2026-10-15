@@ -90,7 +90,7 @@ test("создать здание по размеру склада: прямоу
 });
 
 test("операции здания: добавить / сдвинуть / удалить, undo / redo, склейка числовых правок одного объекта", () => {
-  const { model } = fresh();
+  const { model } = fresh({}, { enforce: false });
   assert.equal(model.bld.ops.add("col", { x: 1, y: 1 }), null, "без здания ничего не добавляется");
   model.bld.ops.create();
   const c = model.bld.ops.add("col", { x: 5, y: 5, s: 0.5 }), g = model.bld.ops.add("gate", { x: 2, y: -3, w: 4, d: 1 });
@@ -117,7 +117,7 @@ test("операции здания: добавить / сдвинуть / уд�
 });
 
 test("здание сохраняется в проект и находится после «перезагрузки»; несохранённое тоже", async () => {
-  const f = fresh();
+  const f = fresh({}, { enforce: false });
   const m = f.model;
   m.bld.ops.create({ margin: 1 });
   m.bld.ops.add("col", { x: 3, y: 3 });
@@ -151,7 +151,7 @@ test("сохранить только здание не трогает проч�
 });
 
 test("ворота и доки связываются с локацией склада; у остальных связи нет", () => {
-  const { model } = fresh();
+  const { model } = fresh({}, { enforce: false });
   const targets = model.bld.targets(); assert.ok(targets.length > 0);
   model.bld.ops.create();
   const g = model.bld.ops.add("gate", { x: 0, y: 0 }), o = model.bld.ops.add("office", { x: 5, y: 5 });
@@ -162,7 +162,7 @@ test("ворота и доки связываются с локацией скл
 });
 
 test("места внутри контура: ряды и зоны за контуром — предупреждение", () => {
-  const { model } = fresh();
+  const { model } = fresh({}, { enforce: false });
   model.bld.ops.create({ margin: 2 });
   assert.equal(model.bld.outside().length, 0);
   model.bld.ops.contour({ x: 0, y: 0, w: 20, d: 20 });
@@ -175,7 +175,7 @@ test("места внутри контура: ряды и зоны за конт
 });
 
 test("состояние редактора: инструмент, выделение, Esc, Delete, режимы", () => {
-  const { model, events } = fresh();
+  const { model, events } = fresh({}, { enforce: false });
   const bs = model.bld.state;
   model.bld.setOn(true); assert.equal(bs.on, true); assert.ok(events.some((e) => e.type === "bld"));
   model.bld.ops.create(); model.bld.setTool("aisle");

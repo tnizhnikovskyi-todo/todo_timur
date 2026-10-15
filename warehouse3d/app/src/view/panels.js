@@ -144,6 +144,10 @@ export function createSidePanel({ model, i18n, root }) {
       const di = model.depthInfo(n.id), dopts = n.id === "WH" ? ["level", "cell"] : ["inherit", "level", "cell"], d0 = di.own; // значение берётся из модели (с учётом показанного), а не из памяти формы
       h += `<div class="sec">${T("side.depthTitle")}</div><form class="ed-form" data-op="depth"><label class="wide"><span class="sr">${T("side.depthTitle")}</span><select name="depth">${dopts.map((o) => `<option value="${o}"${o === d0 ? " selected" : ""}>${T(`depth.${o}`)}</option>`).join("")}</select></label>${btns(ro)}</form>
         <p class="ed-note">${T(n.id === "WH" ? "side.depthWh" : "side.depthZone")}</p>`;
+      // техника склада / зоны и ширина проходов (W-07): проходы и проёмы между рядами уже минимума подсвечиваются и попадают в «Проблеми»
+      const tk = model.checks.tech, ti = tk.of(n.id).own, tl = tk.list(), topts = [...(n.id === "WH" ? [] : ["inherit"]), "none", ...tl.map((x) => x.id)];
+      h += `<div class="sec">${T(n.id === "WH" ? "prob.tech" : "side.techTitle")}</div><form class="ed-form" data-op="tech"><label class="wide"><span class="sr">${T("side.techTitle")}</span><select name="t">${topts.map((o) => `<option value="${o}"${o === ti ? " selected" : ""}>${T(`tech.${o}`)}${tl.find((x) => x.id === o) ? ` · ${esc(i18n.m(tl.find((x) => x.id === o).min))} ${T("unit.m")}` : ""}</option>`).join("")}</select></label>${btns(ro)}</form>
+        <p class="ed-note">${T("side.techNote")}</p>`;
       h += tools.addrHtml(n, K, ro) + tools.renumHtml(n, K, ro);
     }
     if (n.type === "rack") {
