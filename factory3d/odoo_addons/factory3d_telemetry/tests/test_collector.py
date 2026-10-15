@@ -268,13 +268,25 @@ class TestCollectorTouchThrottle(F3DTelemetryCase):
 
     def test_changes_written_immediately(self):
         self._touch(0, version="1.0")
-        self.assertEqual(len(self._touch(1, ip="10.0.0.2")), 1)  # IP
-        self.assertEqual(len(self._touch(2, ip="10.0.0.2", version="1.1")), 1)  # версія
-        self.assertEqual(self._touch(3, ip="10.0.0.2", version="1.1"), [])
+        self.assertEqual(len(self._touch(2, ip="10.0.0.1", version="1.1")), 1)  # версія
+        self.assertEqual(self._touch(3, ip="10.0.0.1", version="1.1"), [])
         self.env.flush_all()
         self.set_sql(self.col, state="offline")  # крон `_cron_offline`
-        self.assertEqual(len(self._touch(4, ip="10.0.0.2", version="1.1")), 1)
+        self.assertEqual(len(self._touch(4, ip="10.0.0.1", version="1.1")), 1)
         self.assertEqual(self.col.state, "online")
+
+    def test_ip_change_alone_not_written(self):
+        """T-3: за Cloudflare IP інший у кожного запиту — сама зміна IP не змушує писати рядок колектора."""
+        self._touch(0, ip="10.0.0.1", pushed=True)
+        for sec in range(1, 30):
+            self.assertEqual(self._touch(sec, ip="172.70.0.%d" % sec, pushed=True), [], "sec=%s" % sec)
+        self.assertEqual(self.col.last_ip, "10.0.0.1")  # IP зберігається лише разом із записом
+        self.assertEqual(len(self._touch(30, ip="172.70.1.1", pushed=True)), 1)  # тротлінговий запис несе й IP
+        self.assertEqual(self.col.last_ip, "172.70.1.1")
+        self.env.flush_all()
+        self.set_sql(self.col, state="offline")
+        self.assertEqual(len(self._touch(31, ip="172.70.1.2")), 1)  # зміна стану пише й IP
+        self.assertEqual((self.col.state, self.col.last_ip), ("online", "172.70.1.2"))
 
     def test_interval_capped_by_status_interval(self):
         """Офлайн-крон = 3·status_interval_s: при status_interval_s = 10 інтервал запису — 10 с, а не 30."""

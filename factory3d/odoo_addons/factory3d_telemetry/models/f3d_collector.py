@@ -141,7 +141,9 @@ class F3dCollector(models.Model):
         DEC-19: рядок колектора спільний для всіх запитів, тому запис — не частіше ніж раз на
         `min(touch_interval_s, status_interval_s)` с (параметр `factory3d.telemetry.touch_interval_s`, 30 за
         замовчуванням; не більше `status_interval_s`, щоб `_cron_offline` — 3·status_interval_s — не спрацював хибно).
-        Негайно пишеться зміна стану (не `online`), IP чи версії. Один `write` на колектор.
+        Негайно пишеться зміна стану (не `online`) чи версії. IP не є причиною запису: за CDN/проксі (Cloudflare)
+        він інший у кожного запиту й звів би тротлінг нанівець; `last_ip` оновлюється разом із тротлінговим
+        записом або зміною стану. Один `write` на колектор.
         """
         now = fields.Datetime.now()
         try:
@@ -152,7 +154,6 @@ class F3dCollector(models.Model):
             if (
                 rec.state == "online"
                 and rec.last_seen
-                and rec.last_ip == ip
                 and (not version or rec.version == version)
                 and 0 <= (now - rec.last_seen).total_seconds() < min(interval, rec.status_interval_s)
             ):
