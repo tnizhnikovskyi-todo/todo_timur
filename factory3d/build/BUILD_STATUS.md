@@ -22,7 +22,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 7 | `factory3d_energy` | 3 | telemetry | IN_PROGRESS | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | | | |
 | 8 | `factory3d_yard` | 4 | base, telemetry | DONE | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | 2026-10-15 13:53 UTC | Odoo 831/831 (10 модулей), collector 174+2 skip, плагин sics 34/34 | 8 |
 | 9 | `factory3d_bms` | 5 | telemetry | IN_PROGRESS | session_01L43oC1FugyPdK6kpcRc1ij | 2026-10-15 13:54 UTC | | | |
-| 10 | `factory3d_fire_safety` | 5 | telemetry | TODO | | | | | |
+| 10 | `factory3d_fire_safety` | 5 | telemetry | IN_PROGRESS | session_01KJcdAJpD2ninHpqxDQv2FC | 2026-10-15 13:58 UTC | | | |
 | 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | TODO | | | | | |
 
 Порядок строк — приоритет запуска. Эмулятор (`iot_sim`) и телеметрия идут раньше: от них зависят стендовые тесты.
@@ -75,3 +75,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 13:27 UTC factory3d_viewer: DONE — со второй попытки смержен в `claude/factory3d-build` (`848580c`), Odoo 711/711 (все модули с iot_sim), демо 211/211, DEC 20 (DEC-20 — демо-детект по наличию демо-данных). Правки SPEC DEC-5/12/15 — `be809aa`. Не проверено: копия базы `odoo`, ТК-07 планшет, AC-38 dist (Blender), access/telemetry на демо-шаблоне.
 - 2026-10-15 13:53 UTC factory3d_yard: DONE — смержен в `claude/factory3d-build` (`f7b0a84`), Odoo 831/831, collector 174+2 skip, плагин sics 34/34, DEC 8. Мост factory3d_yard_gantt не ставился (нет web_gantt). Замечание: тест коллектора test_load_real_plugins_exactly_four падает, если плагин yard стоит в том же venv (5 плагинов) — ставить в разные venv или поправить тест. Не проверено: ТК-01…08 на копии демо-базы.
 - 2026-10-15 13:54 UTC factory3d_bms: запущена сессия session_01L43oC1FugyPdK6kpcRc1ij по указанию пользователя (раньше 14:30); одновременно 3 (machine_connect, energy, bms). В 14:30 UTC — fire_safety (и td_genset, если energy DONE).
+- 2026-10-15 13:58 UTC factory3d_fire_safety: запущена сессия session_01KJcdAJpD2ninHpqxDQv2FC по указанию пользователя; одновременно 4 (machine_connect, energy, bms, fire_safety). Будильник 14:30 UTC отменён пользователем. Лимиты «Темп» сняты: td_genset запускать сразу, как energy DONE.
