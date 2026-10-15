@@ -35,7 +35,7 @@ export default {
   "legend.idle": "zone without capacity",
   "legend.new": "new · model only",
   "legend.pend": "not saved",
-  "status.hintEdit": "Click — select · {mod}+click — several · drag — move · R — rotate row · {mod}+C / {mod}+V — copy / paste · {mod}+D — duplicate · {mod}+Z — undo",
+  "status.hintEdit": "Click — select · {mod}+click — several · drag — move · Shift+drag — marquee · R — rotate row · {mod}+C / {mod}+V — copy / paste · {mod}+D — duplicate · {mod}+Z — undo",
   "status.hint2d": "Click — select (again — level up) · wheel — zoom",
   "status.hint3d": "Click — select (again — level up) · left button — orbit · right button — pan",
   "status.local": "Saved changes are kept in this browser only",
@@ -141,6 +141,65 @@ export default {
   "op.dupN": "Copied: {pairs} ({places})",
   "op.paste": "Pasted into {to}: {pairs}",
   "op.pasteN": "Pasted into {to}: {pairs} ({places})",
+  "op.props": "Properties of {ref}: {what}",
+  "op.rotTo": "{ref}: rotation {deg}°",
+  "op.mass": "Added rows {names}: {type}, {nr} × {nb} × {nl} ({places})",
+  "op.grid": "Grid of places {ref}: {nx} × {ny} ({places})",
+  "op.align": "Aligned “{mode}”: {refs}",
+  "op.distribute": "Distributed {axis}: {refs}",
+  "op.groupSel": "Grouped into “{name}”: {refs}",
+  "op.ungroup": "Ungrouped {ref}",
+  "n.groupParents": "Only objects of one zone can be grouped",
+  "n.groupParentsSub": "Select rows or floor places that stand in the same zone",
+  "prop.name": "name",
+  "prop.pos": "position",
+  "prop.rot": "rotation",
+  "prop.size": "size",
+  "prop.sections": "bays and levels",
+  "props.title": "Properties",
+  "props.x": "X, m",
+  "props.y": "Y, m",
+  "props.rot": "Rotation",
+  "props.w": "Width, m",
+  "props.d": "Depth, m",
+  "props.h": "Height, m",
+  "props.wMin": "Zone width, m",
+  "props.dMin": "Zone depth, m",
+  "props.bays": "Bays",
+  "props.noteLeaf": "X, Y are measured from the corner of the zone the place stands in. Width and depth are the place's own (before rotation); 90° and 270° swap them. Only changed fields are applied.",
+  "props.noteRack": "X, Y are measured from the zone corner. Rotation 180° and 270° puts the bays in reverse order. Bays and levels: extra ones are removed (last bays, top levels), missing ones are added.",
+  "props.noteZone": "X, Y are measured from the parent zone corner. A zone cannot be smaller than its contents.",
+  "mass.title": "Mass create",
+  "mass.rows": "Rows",
+  "mass.bays": "Bays",
+  "mass.gap": "Aisle between rows, m",
+  "mass.orient": "Orientation",
+  "mass.orientH": "along X",
+  "mass.orientV": "along Y (rotated 90°)",
+  "mass.sum": "Will create: {nr} rows, {nb} bays per row, {nl} levels; {places} in total; block {w} × {d} m. “Show” displays them in the model.",
+  "mass.sumStack": "Will create: {nr} rows, {nb} stacks per row; {places} in total; block {w} × {d} m. “Show” displays them in the model.",
+  "grid.title": "Grid array",
+  "grid.nx": "Along X, pcs",
+  "grid.ny": "Along Y, pcs",
+  "grid.sx": "Step X, m",
+  "grid.sy": "Step Y, m",
+  "grid.note": "Copies stand in the same zone and get the next free codes; the step is the distance from the start of one place to the start of the next.",
+  "align.title": "Align and distribute",
+  "align.left": "Left",
+  "align.right": "Right",
+  "align.top": "Top",
+  "align.bottom": "Bottom",
+  "align.cx": "Center X",
+  "align.cy": "Center Y",
+  "align.distx": "Distribute along X",
+  "align.disty": "Distribute along Y",
+  "align.mx": "along X",
+  "align.my": "along Y",
+  "group.title": "Grouping",
+  "group.group": "Group",
+  "group.ungroup": "Ungroup",
+  "group.ungroupTitle": "Return the zone contents to its parent zone; the zone disappears",
+  "group.note": "The selected objects of one zone move into a new zone with this name. Place codes do not change.",
   "op.unpos": "{ref}: automatic position",
   "op.del": "Removed {ref}",
   "op.delN": "Removed {ref} ({places})",
@@ -305,15 +364,25 @@ export default {
       <li><b>Drag</b> a row or a floor place with the mouse (in 2D and 3D). A zone can be dragged if you select it first. You can drag what stands inside the visible level: to move a row, open its zone, not the row itself.</li>
       <li>The zone grows to fit the object. If a row overlaps a neighbor, the panel shows a warning.</li>
       <li><b>“Automatic position”</b> in the row panel puts the row back to where the layout places it.</li>
-      <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back.</li>
+      <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back. Other angles (180° and 270°) and exact coordinates are in “Properties” (see “Editing tools”).</li>
     </ul>`,
   "help.multi.title": "Several objects at once",
   "help.multi.html": `
     <ul>
       <li><kbd>{mod}</kbd>+<kbd>click</kbd> in the model adds an object to the selection, another <kbd>{mod}</kbd>+<kbd>click</kbd> removes it. All selected objects are highlighted together.</li>
       <li>Drag <b>any selected object</b> — everything selected moves, keeping the relative layout. A selected level or bay drags its row.</li>
-      <li><kbd>R</kbd> rotates all selected rows.</li>
+      <li><kbd>R</kbd> rotates all selected rows. Marquee selection (<kbd>Shift</kbd> + drag), align, distribute and grouping are described in “Editing tools”.</li>
       <li>The “N objects selected” panel: the list (× removes from the selection), “Duplicate all”, “Copy”, “Rotate rows”, “Remove all”, “Save selection”, “Clear selection”.</li>
+    </ul>`,
+  "help.tools.title": "Editing tools",
+  "help.tools.html": `
+    <ul>
+      <li><b>Properties</b> (panel of a row, zone or floor place): name, <b>X and Y</b> in meters from the parent zone corner, <b>rotation</b> 0 / 90 / 180 / 270°, width, depth and height, and for a row the <b>number of bays and levels</b>. Only changed fields are applied — through “Show” / “Save”, undone with {mod}+Z. Rotation 90° and 270° swaps width and depth; 180° and 270° put the bays in reverse order.</li>
+      <li><b>Mass create</b> (zone panel): type, rows × bays × levels, aisle between rows (m) and orientation (along X or Y). Under the form there is a summary: how many places and what block you get; “Show” draws the rows in the model before saving. Rows are placed below the existing contents of the zone.</li>
+      <li><b>Grid array</b> (floor place panel): N × M copies with the step along X and Y (start to start), new codes are the next free ones.</li>
+      <li><b>Marquee selection</b> in 2D: hold <kbd>Shift</kbd> and drag — objects that fall entirely inside the frame are selected; what exactly (place, bay, row, zone) is decided by the “Click selects” switch. <kbd>Shift</kbd>+<kbd>{mod}</kbd> adds to the selection. Without <kbd>Shift</kbd> the mouse still drags an object or pans.</li>
+      <li><b>Align</b> (the “N objects selected” panel): by left, right, top, bottom edge and by center X / Y; <b>distribute</b> with equal gaps along X or Y (three objects or more, the outer ones stay in place).</li>
+      <li><b>Grouping:</b> “Group” moves the selected objects of one zone into a new zone with the given name (positions are kept); “Ungroup” in the panel of such a zone returns the contents to the parent zone and the zone disappears. Place codes do not change. Everything is undone with {mod}+Z.</li>
     </ul>`,
   "help.copy.title": "Copying",
   "help.copy.html": `
@@ -354,6 +423,7 @@ export default {
     <p class="mut">They work in edit mode when the cursor is not in an input field; the Ukrainian keyboard layout works too. On Mac use ⌘ instead of Ctrl.</p>
     <table class="hl-t"><tbody>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>click</kbd></td><td>add to / remove from the selection</td></tr>
+      <tr><td class="first"><kbd>Shift</kbd>+drag (2D)</td><td>marquee select; with <kbd>{mod}</kbd> — add to the selection</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>C</kbd></td><td>copy the selection</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>V</kbd></td><td>paste the copied objects</td></tr>
       <tr><td class="first"><kbd>{mod}</kbd>+<kbd>D</kbd></td><td>duplicate the selection next to it</td></tr>

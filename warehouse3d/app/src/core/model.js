@@ -75,7 +75,7 @@ export function createModel(project, storage, opts = {}) {
     get building() { return bb(); }, // план здания с учётом показанного (null — здания нет)
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.cells.length || v.depth || v.depthZones.length || v.types); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.types); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -111,10 +111,13 @@ export function createModel(project, storage, opts = {}) {
     dragSet: (id) => sel.dragSet(s.tree, ui, id),
     moveTargets: (ids) => sel.moveTargets(s.tree, ui, ids),
     rackOf: (id) => sel.rackOf(s.tree, id),
+    // выделение рамкой (метры плана { x0, y0, x1, y1 }); add — добавить к выделению (Ctrl)
+    marquee: (rect, add = false) => patch(sel.marqueePick(s.tree, ui, rect, add)),
+    massInfo: (f) => ed.massPlan(s.tree.TY, f),
     moveSet: (set, dx, dy) => ed.moveSet(s, set, dx, dy),
     // правки
     ops: { rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
-      move: bind("move"), rotate: bind("rotate"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
+      move: bind("move"), rotate: bind("rotate"), props: bind("props"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
     save: (id) => ed.saveObj(s, id),
