@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:odoo": "vite build --outDir ../odoo_addons/wh_constructor/static/app --emptyOutDir",
     "test": "node --test test/*.test.js",
     "e2e": "node e2e/smoke.mjs",
     "perf": "node e2e/perf.mjs"

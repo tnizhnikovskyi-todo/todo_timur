@@ -4,6 +4,7 @@
 // Подписи изменений хранятся как данные { k, p } (ключ словаря и параметры) — текст собирает i18n на экране.
 import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, r1 } from "./types.js";
 import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
+import { hhmm } from "./locks.js";
 import { layout } from "./layout.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
 
@@ -27,9 +28,11 @@ export function recompute(s) { s.edit = s.pending.reduce((e, p) => applyDiff(e, 
 export function rebuild(s) { s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(s.wh))); Object.assign(s.ui, reconcile(s.tree, s.ui)); }
 // слой правок и несохранённое активного склада переходят в проект; проект целиком уходит в хранилище (Promise со статусом записи)
 export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; }
-export function persist(s) {
+// commit — явное «Зберегти»: общее хранилище (Odoo) при нём заводит версию проекта, черновик (несохранённое) версий не плодит
+export function persist(s, commit = false) {
   sync(s);
-  try { return Promise.resolve(s.storage.saveProject(clone(s.project))).catch(() => "fail"); } catch (e) { return Promise.resolve("fail"); } // хранилище недоступно — правки остаются в памяти
+  const done = (r) => { if (r === "stale" && !commit && !s.staleSaid) { s.staleSaid = true; say(s, "bad", "n.saveStale"); } return r; }; // про устаревшее — один раз
+  try { return Promise.resolve(s.storage.saveProject(clone(s.project), { commit })).then(done, () => "fail"); } catch (e) { return Promise.resolve("fail"); } // хранилище недоступно — правки остаются в памяти
 }
 const savePend = (s) => { persist(s); };
 export function applyEdit(s) { rebuild(s); s.emit({ type: "rebuild" }); }
@@ -38,6 +41,8 @@ const places = (n) => ({ k: "n.places", p: { n } });
 
 // key — та же форма на том же объекте: повторный «Показати» заменяет свой прошлый показ, если после него ничего не меняли
 export function change(s, obj, label, fn, key = null, params = null, objs = null) {
+  const lock = s.locks && s.locks.blocked([obj, ...(objs || [])]); // зону правит другой пользователь (locks.js)
+  if (lock) { say(s, "bad", "n.zoneLocked", { zone: refById(s.tree, lock.zone), by: lock.by, until: hhmm(lock.until) }); return; }
   s.redo = [];
   if (key && s.pending.length && s.pending[s.pending.length - 1].key === key) { s.pending.pop(); recompute(s); rebuild(s); }
   const before = clone(s.edit); fn(s.edit); const diff = diffEdit(before, s.edit);
@@ -62,8 +67,9 @@ export function saveObj(s, id) {
   const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
-  const done = persist(s).then((r) => {
+  const done = persist(s, true).then((r) => {
     if (r === "fail") say(s, "bad", "n.saveFail", { what });
+    else if (r === "stale") say(s, "bad", "n.saveStale", {}, { key: "n.saveStaleSub" });
     else say(s, "ok", "n.saved", { what, cnt }, { key: r === "local" ? "n.savedLocal" : "n.savedShared" });
     return r;
   });

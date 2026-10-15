@@ -40,6 +40,8 @@ export default {
   "status.hint3d": "Click — select (again — level up) · left button — orbit · right button — pan",
   "status.local": "Saved changes are kept in this browser only",
   "status.ro": "View only: the model cannot be saved",
+  "status.odoo": "The project is stored in the Odoo database",
+  "status.zoneBusy": "{zone} is being edited by {by} until {until}",
   "tip.new": "new place · model only",
   "tip.newPend": "new place · not saved",
   "tip.more": "+ {n} more",
@@ -67,6 +69,9 @@ export default {
   "n.savedLocal": "Stored in this browser",
   "n.savedShared": "The model is updated for everyone who opens the page",
   "n.saveFail": "Could not save: {what}",
+  "n.saveStale": "The project was changed by another user",
+  "n.saveStaleSub": "Your changes are not saved in Odoo. Reload the page to see the current state.",
+  "n.zoneLocked": "{zone} is being edited by {by} (until {until}): changes in this zone are blocked",
   "n.discarded": "Unsaved changes discarded: {n}",
   "n.nothingUndo": "Nothing to undo",
   "n.nothingUndoSub": "Only unsaved changes can be undone",
@@ -334,6 +339,15 @@ export default {
       <li><b>Location depth</b> (edit mode, warehouse or zone panel) is the last level that becomes an Odoo location: <b>“Level”</b> (default) or <b>“Cell”</b>. A zone can have its own value or “as in the warehouse”. It goes through “Show” / “Save” like other changes and is undone with {mod}+Z.</li>
       <li><b>Cells per level</b> (level panel, 1–12) goes through “Show” / “Save” like other changes. With depth “Cell” and more than one cell the level stops being a place: separate places with codes <span class="code">&lt;level code&gt;-1…N</span> replace it, and in 2D and 3D the level is split into N parts. With depth “Level” the number is remembered but the level stays one place.</li>
       <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. If a project cannot be read, its raw record is kept under the key <span class="code">wh-app-project-&lt;id&gt;.broken-&lt;time&gt;</span> and a new demo project opens with a message — nothing is overwritten. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
+    </ul>`,
+  "help.odoo.title": "Working from Odoo",
+  "help.odoo.html": `
+    <ul>
+      <li><b>Where to open it.</b> In Odoo: <b>Inventory → Configuration → Конструктор складу</b> (the module menu is in Ukrainian; it needs the "Конструктор: перегляд" group). The app opens from your Odoo database address; no separate sign-in — your Odoo account is used. Outside Odoo (an opened file or a site) the app keeps the project in the browser, as described above.</li>
+      <li><b>Where projects are stored.</b> In the Odoo database, not in the browser: the "Warehouse constructor" module (<span class="code">wh_constructor</span>) keeps projects, their versions and zone locks. There is one project for everyone with access to the company; project warehouses are linked to Odoo warehouses by code.</li>
+      <li><b>Versions.</b> Every "Save" creates a new project version (the last 50 are kept); unsaved ("teal") changes are also stored in the project but create no versions. If someone saved the project while you were editing, your save is rejected with "The project was changed by another user" — reload the page to see the current state. Restoring an old version is done in the module (a versions menu in the app will come later).</li>
+      <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (coming in a later stage). An administrator assigns the groups on the user form.</li>
+      <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
     </ul>`,
   "help.keys.title": "Hotkeys",
   "help.keys.html": `

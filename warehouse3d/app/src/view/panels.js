@@ -2,6 +2,7 @@
 // Тексты — через i18n.t; всё, что идёт в innerHTML, экранируется.
 import { RACKED, inNode } from "../core/types.js";
 import { pathOf } from "../core/tree.js";
+import { hhmm } from "../core/locks.js";
 import { esc, fillCls, isLow, modKey, pbar } from "./util.js";
 
 const KINDS = ["stack", "bin", "shelf", "pallet_cell", "kit", "area"];
@@ -177,5 +178,6 @@ export function updateEditBar(root, { model, i18n }) {
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
   q("#ed-undo").hidden = q("#ed-types").hidden = q("#ed-reset").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
-  q("#ed-st").textContent = i18n.t(ro ? "status.ro" : "status.local");
+  const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
+  q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");
 }

@@ -1,0 +1,97 @@
+// Хранилище «модуль Odoo wh_constructor» (D-22) по интерфейсу core/storage.js: проекты, версии и блокировки лежат в базе Odoo,
+// приложение открыто с её адреса (сессия Odoo, права — группы Odoo). Настройки интерфейса (язык, режим…) — в localStorage, ключи wh-odoo-*.
+// Обмен — JSON-RPC (POST <api>/<маршрут>, тело { jsonrpc, method: "call", params }); fetch подставляется (в тестах — фейковый).
+//   init()               → загружает права текущего пользователя: readonly = нет права «проектирование»
+//   saveProject(p, { commit }) → "shared" | "stale" (в базе проект новее) | "fail"; commit — версия проекта (иначе черновик, версий нет)
+//   lock({ project, warehouse, warehouseCode, zone }) → { ok, owner, expires, mine } · unlock({ project, warehouse, zone }) · me()
+//   versions(id) / restore(id, versionId) — история версий (интерфейс — W-18)
+import { migrateProject } from "../core/project.js";
+
+export const ODOO_API = "/wh_constructor/api";
+export const odooConfig = (w = globalThis.window) => (w && w.__WH_ODOO__ ? w.__WH_ODOO__ : null); // задаёт страница, отданная модулем
+
+export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch && globalThis.fetch.bind(globalThis), ls = globalThis.localStorage, db = "", delay = 400 } = {}) {
+  const pre = `wh-odoo-${db}-`;
+  const get = (k) => { try { const v = ls.getItem(pre + k); return v == null ? null : JSON.parse(v); } catch (e) { return null; } };
+  const revs = new Map(); // id проекта → ревизия, на которой основаны правки (base_rev при сохранении)
+  let tail = Promise.resolve(), draft = null, rights = { view: true, design: true, apply: false }, user = null;
+
+  async function rpc(route, params = {}, { keepalive = false } = {}) {
+    const res = await fetchImpl(`${api}${route}`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, keepalive,
+      body: JSON.stringify({ jsonrpc: "2.0", method: "call", params }) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    if (j.error) throw new Error((j.error.data && j.error.data.message) || j.error.message || "rpc");
+    return j.result;
+  }
+  const queue = (fn) => { const p = tail.then(fn, fn); tail = p.catch(() => {}); return p; }; // запросы идут по очереди: ревизии не обгоняют друг друга
+
+  async function send(p, commit, comment) {
+    const r = await rpc("/project/save", { key: p.id, name: p.name, data: p, base_rev: revs.has(p.id) ? revs.get(p.id) : null, commit, comment: comment || null });
+    if (r.status === "ok") { revs.set(p.id, r.rev); return "shared"; }
+    if (r.status === "stale") { storage.stale = { rev: r.rev, by: r.by, at: r.at }; return "stale"; }
+    return "fail";
+  }
+
+  const storage = {
+    readonly: false,
+    shared: true,
+    stale: null, // после "stale" проект в базе новее: пока страница не перезагружена, ничего не отправляем
+    read: (name) => get(name),
+    write(name, value) { try { ls.setItem(pre + name, JSON.stringify(value)); return "local"; } catch (e) { return "fail"; } },
+    get rights() { return rights; },
+    get user() { return user; },
+    async init() {
+      const me = await rpc("/me");
+      user = { id: me.uid, name: me.name, company: me.company };
+      rights = me.rights || rights;
+      storage.readonly = !rights.design;
+      return me;
+    },
+    me: () => ({ ...user, rights }),
+    async listProjects() {
+      const r = await rpc("/projects");
+      return r.status === "ok" ? r.projects.map(({ id, name, source, loaded_at, warehouses }) => ({ id, name, source, loaded_at, warehouses })) : [];
+    },
+    async loadProject(id) {
+      const r = await rpc("/project/load", { key: id });
+      if (r.status !== "ok" || !r.found) return null;
+      revs.set(id, r.rev);
+      return migrateProject(r.data);
+    },
+    saveProject(p, { commit = false, comment = null } = {}) {
+      if (storage.readonly) return Promise.resolve("fail");
+      if (storage.stale) return Promise.resolve("stale");
+      const safe = (fn) => queue(fn).catch((e) => { console.error("save", e); return "fail"; });
+      if (commit) {
+        if (draft) { clearTimeout(draft.timer); const d = draft; draft = null; const res = safe(() => send(p, true, comment)); res.then(d.resolve); return res; } // черновик вошёл в версию
+        return safe(() => send(p, true, comment));
+      }
+      // черновик (несохранённое): частые правки склеиваем в один запрос с последним состоянием
+      if (!draft) {
+        draft = {};
+        draft.promise = new Promise((resolve) => { draft.resolve = resolve; });
+      }
+      draft.p = p; clearTimeout(draft.timer);
+      const d = draft;
+      d.timer = setTimeout(() => { if (draft === d) draft = null; safe(() => send(d.p, false)).then(d.resolve); }, delay);
+      return d.promise;
+    },
+    async deleteProject(id) {
+      const r = await rpc("/project/delete", { key: id });
+      revs.delete(id);
+      return r.status === "ok";
+    },
+    async versions(id) { const r = await rpc("/project/versions", { key: id }); return r.status === "ok" ? r.versions : []; },
+    async restore(id, versionId) {
+      const r = await rpc("/project/restore", { key: id, version_id: versionId, base_rev: revs.has(id) ? revs.get(id) : null });
+      if (r.status === "ok") { revs.set(id, r.rev); return migrateProject(r.data); }
+      if (r.status === "stale") storage.stale = { rev: r.rev, by: r.by, at: r.at };
+      return null;
+    },
+    lock: ({ project, warehouse, warehouseCode, zone }) => rpc("/lock/acquire", { key: project, warehouse, zone, warehouse_code: warehouseCode || null }),
+    unlock: ({ project, warehouse, zone }, opts) => rpc("/lock/release", { key: project, warehouse: warehouse || null, zone: zone || null }, opts), // без warehouse/zone — все свои блокировки проекта
+    legacy: () => null,
+  };
+  return storage;
+}
