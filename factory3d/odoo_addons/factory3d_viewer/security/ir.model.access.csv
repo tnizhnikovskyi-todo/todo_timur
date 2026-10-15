@@ -5,3 +5,6 @@ access_f3d_viewer_snapshot_manager,f3d.viewer.snapshot manager,model_f3d_viewer_
 access_f3d_viewer_event_user,f3d.viewer.event user,model_f3d_viewer_event,base.group_user,1,0,1,0
 access_f3d_viewer_event_manager,f3d.viewer.event manager,model_f3d_viewer_event,factory3d_base.group_f3d_manager,1,1,1,1
 access_f3d_viewer_settings_admin,res.config.settings f3d admin,base.model_res_config_settings,factory3d_base.group_f3d_admin,1,1,1,0
+access_f3d_demo_wizard_admin,f3d.demo.wizard admin,model_f3d_demo_wizard,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_demo_wizard_step_admin,f3d.demo.wizard.step admin,model_f3d_demo_wizard_step,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_viewer_cycle_check,factory3d_base.group_f3d_manager,1,1,1,1

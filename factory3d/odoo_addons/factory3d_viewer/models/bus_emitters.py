@@ -3,7 +3,7 @@
 Спільний міксин перехоплює create / write / _write_multi (обчислювані збережені поля пишуться через `_write`) / unlink
 і публікує коди через `f3d.viewer.event._notify` (коалесценція — R-15).
 """
-from odoo import models
+from odoo import api, models
 
 IN_PROGRESS_NAMES = {"in progress", "в роботі"}
 
@@ -38,6 +38,7 @@ class F3dViewerBusMixin(models.AbstractModel):
         except Exception:  # noqa: BLE001 — емітер ніколи не ламає бізнес-операцію
             return set()
 
+    @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
         if records and records._f3d_bus_active():

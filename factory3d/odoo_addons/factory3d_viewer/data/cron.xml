@@ -30,4 +30,13 @@
         <field name="interval_type">minutes</field>
         <field name="active" eval="False"/>
     </record>
+    <record id="cron_f3d_demo" model="ir.cron">
+        <field name="name">3D: заливка демо</field>
+        <field name="model_id" ref="model_f3d_demo_wizard"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_run()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="False"/>
+    </record>
 </odoo>

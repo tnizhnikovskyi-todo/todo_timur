@@ -19,6 +19,8 @@
         "views/viewer_event_views.xml",
         "views/res_config_settings_views.xml",
         "views/templates_kiosk.xml",
+        "wizard/demo_wizard_views.xml",
+        "wizard/cycle_check_views.xml",
         "views/menus.xml",
     ],
     "assets": {
