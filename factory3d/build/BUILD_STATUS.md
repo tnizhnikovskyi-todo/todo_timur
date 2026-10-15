@@ -20,7 +20,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
 | 7 | `factory3d_energy` | 3 | telemetry | IN_PROGRESS | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | | | |
-| 8 | `factory3d_yard` | 4 | base, telemetry | IN_PROGRESS | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | | | |
+| 8 | `factory3d_yard` | 4 | base, telemetry | DONE | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | 2026-10-15 13:53 UTC | Odoo 831/831 (10 модулей), collector 174+2 skip, плагин sics 34/34 | 8 |
 | 9 | `factory3d_bms` | 5 | telemetry | TODO | | | | | |
 | 10 | `factory3d_fire_safety` | 5 | telemetry | TODO | | | | | |
 | 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | TODO | | | | | |
@@ -73,3 +73,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 12:36 UTC factory3d_viewer: мерж откатан (интеграция красная): 4 failed/671 из-за совместной установки с access (провайдер access в тестах viewer; тест access ждёт отсутствия viewer) и 24 failed+10 errors при установленном iot_sim (is_demo_db() истинно без демо-данных). Лидеру отправлено send_message с задачей; статус IN_PROGRESS.
 - 2026-10-15 13:03 UTC пользователь: с 14:30 UTC (17:30 Киев, после сброса 5-часового лимита в 14:20 UTC) запустить все модули с готовыми зависимостями и дальше запускать без ограничений по числу (раздел «Темп» MANAGER.md отменён пользователем с 14:30 UTC). Будильник на 14:30 UTC поставлен.
 - 2026-10-15 13:27 UTC factory3d_viewer: DONE — со второй попытки смержен в `claude/factory3d-build` (`848580c`), Odoo 711/711 (все модули с iot_sim), демо 211/211, DEC 20 (DEC-20 — демо-детект по наличию демо-данных). Правки SPEC DEC-5/12/15 — `be809aa`. Не проверено: копия базы `odoo`, ТК-07 планшет, AC-38 dist (Blender), access/telemetry на демо-шаблоне.
+- 2026-10-15 13:53 UTC factory3d_yard: DONE — смержен в `claude/factory3d-build` (`f7b0a84`), Odoo 831/831, collector 174+2 skip, плагин sics 34/34, DEC 8. Мост factory3d_yard_gantt не ставился (нет web_gantt). Замечание: тест коллектора test_load_real_plugins_exactly_four падает, если плагин yard стоит в том же venv (5 плагинов) — ставить в разные venv или поправить тест. Не проверено: ТК-01…08 на копии демо-базы.
