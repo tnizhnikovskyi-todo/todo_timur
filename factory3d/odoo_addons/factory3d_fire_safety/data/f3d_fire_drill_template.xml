@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="drill_template_default" model="f3d.fire.drill.template">
+        <field name="name">Евакуація цеху: сценарій макета</field>
+        <field name="sequence">10</field>
+        <field name="is_default" eval="True"/>
+        <field name="duration_s">300</field>
+        <field name="default_zone_id" ref="fire_zone_fa_cnc"/>
+        <field name="default_device_id" ref="dev_2_cnc_05"/>
+    </record>
+    <record id="drill_template_step_01" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">10</field>
+        <field name="t_plan_s">0</field>
+        <field name="who">Пожежна сигналізація</field>
+        <field name="text">Сповіщувач {detector} ({zone}): дим і тепло — тривога на приладі.</field>
+        <field name="auto_key">detector</field>
+    </record>
+    <record id="drill_template_step_02" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">20</field>
+        <field name="t_plan_s">3</field>
+        <field name="who">Пожежна сигналізація</field>
+        <field name="text">Увімкнено {sounders} сирен-маяків по всьому цеху.</field>
+        <field name="auto_key">sounders</field>
+    </record>
+    <record id="drill_template_step_03" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">30</field>
+        <field name="t_plan_s">3</field>
+        <field name="who">Пульт</field>
+        <field name="text">Сигнал «Пожежа» передано на пульт ДСНС і черговому.</field>
+        <field name="auto_key">brigade</field>
+    </record>
+    <record id="drill_template_step_04" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">40</field>
+        <field name="t_plan_s">6</field>
+        <field name="who">Вентиляція</field>
+        <field name="text">Зупинено дахові установки й приплив фасадів, щоб не роздувати вогонь.</field>
+        <field name="auto_key">ventilation</field>
+    </record>
+    <record id="drill_template_step_05" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">50</field>
+        <field name="t_plan_s">9</field>
+        <field name="who">Димовидалення</field>
+        <field name="text">Відкрито клапани димовидалення на покрівлі.</field>
+        <field name="auto_key">smoke</field>
+    </record>
+    <record id="drill_template_step_06" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">60</field>
+        <field name="t_plan_s">12</field>
+        <field name="who">Охорона й доступ</field>
+        <field name="text">Розблоковано двері з контролем доступу й турнікети, шлагбауми — вгору.</field>
+        <field name="auto_key">doors</field>
+    </record>
+    <record id="drill_template_step_07" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">70</field>
+        <field name="t_plan_s">15</field>
+        <field name="who">Евакуація</field>
+        <field name="text">Люди йдуть зеленими маршрутами до найближчих виходів; збір — на паркуванні.</field>
+        <field name="auto_key">evacuation</field>
+    </record>
+    <record id="drill_template_step_08" model="f3d.fire.drill.template.step">
+        <field name="template_id" ref="drill_template_default"/>
+        <field name="sequence">80</field>
+        <field name="t_plan_s">20</field>
+        <field name="who">Виробництво</field>
+        <field name="text">Аварійна зупинка верстатів у зоні пожежі; аспірація — іскрогасіння в готовності.</field>
+        <field name="auto_key">machines</field>
+    </record>
+</odoo>

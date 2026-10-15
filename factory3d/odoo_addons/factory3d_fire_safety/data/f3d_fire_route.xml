@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="route_z_rcv_1" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-1</field>
+        <field name="name">Приймання плит · ворота 1</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_1"/>
+        <field name="exit_id" ref="exit_ex_s1"/>
+        <field name="length_m">8.3</field>
+        <field name="path" eval="[[7.25, 5.25], [13.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_rcv_2" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-2</field>
+        <field name="name">Приймання плит · ворота 2</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_2"/>
+        <field name="exit_id" ref="exit_ex_s1"/>
+        <field name="length_m">17.7</field>
+        <field name="path" eval="[[7.25, 15.25], [9.25, 13.25], [9.25, 6.25], [13.25, 2.25], [13.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_rcv_3" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-3</field>
+        <field name="name">Приймання плит · ворота 3</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_3"/>
+        <field name="exit_id" ref="exit_ex_s1"/>
+        <field name="length_m">27.7</field>
+        <field name="path" eval="[[7.25, 25.25], [10.25, 22.25], [10.25, 7.25], [13.25, 4.25], [13.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_rcv_4" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-4</field>
+        <field name="name">Приймання фурнітури, контроль і карантин · ворота 4</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_4"/>
+        <field name="exit_id" ref="exit_ex_s1"/>
+        <field name="length_m">37.7</field>
+        <field name="path" eval="[[7.25, 35.25], [11.75, 30.75], [11.75, 15.75], [12.25, 8.25], [13.25, 7.25], [13.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_rcv_5" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-5</field>
+        <field name="name">Приймання крайки · ворота 5</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_5"/>
+        <field name="exit_id" ref="exit_ex_n1"/>
+        <field name="length_m">29.2</field>
+        <field name="path" eval="[[7.25, 45.25], [10.25, 48.25], [10.25, 64.75], [13.25, 67.75], [13.25, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_rcv_6" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-6</field>
+        <field name="name">Приймання ЛФМ · ворота 6</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_6"/>
+        <field name="exit_id" ref="exit_ex_n1"/>
+        <field name="length_m">19.2</field>
+        <field name="path" eval="[[7.25, 55.25], [10.25, 58.25], [10.25, 64.75], [13.25, 67.75], [13.25, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_rcv_7" model="f3d.fire.route">
+        <field name="code">EVAC-RCV-7</field>
+        <field name="name">Приймання пакматеріалів · ворота 7</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_rcv_7"/>
+        <field name="exit_id" ref="exit_ex_n1"/>
+        <field name="length_m">8.7</field>
+        <field name="path" eval="[[7.25, 65.75], [13.25, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_sheets" model="f3d.fire.route">
+        <field name="code">EVAC-SHEETS</field>
+        <field name="name">Склад плит</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_sheets"/>
+        <field name="exit_id" ref="exit_ex_s1"/>
+        <field name="length_m">33.1</field>
+        <field name="path" eval="[[28.25, 23.25], [26.25, 21.25], [26.25, 8.25], [24.25, 6.25], [18.25, 6.25], [14.25, 3.25], [14.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_hw" model="f3d.fire.route">
+        <field name="code">EVAC-HW</field>
+        <field name="name">Склад фурнітури</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_hw"/>
+        <field name="exit_id" ref="exit_ex_n1"/>
+        <field name="length_m">19.4</field>
+        <field name="path" eval="[[21.75, 58.75], [20.75, 59.75], [14.75, 60.25], [14.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_edge" model="f3d.fire.route">
+        <field name="code">EVAC-EDGE</field>
+        <field name="name">Склад крайки</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_edge"/>
+        <field name="exit_id" ref="exit_ex_n1"/>
+        <field name="length_m">29.6</field>
+        <field name="path" eval="[[32.25, 58.75], [31.25, 59.75], [31.25, 70.75], [30.25, 71.75], [14.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_pks" model="f3d.fire.route">
+        <field name="code">EVAC-PKS</field>
+        <field name="name">Пакувальні матеріали</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_pks"/>
+        <field name="exit_id" ref="exit_ex_n2"/>
+        <field name="length_m">17.6</field>
+        <field name="path" eval="[[38.75, 58.75], [41.25, 61.25], [41.25, 63.25], [49.25, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_cut" model="f3d.fire.route">
+        <field name="code">EVAC-CUT</field>
+        <field name="name">Розкрій</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cut"/>
+        <field name="exit_id" ref="exit_ex_s2"/>
+        <field name="length_m">22.5</field>
+        <field name="path" eval="[[49.75, 22.25], [50.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_eb" model="f3d.fire.route">
+        <field name="code">EVAC-EB</field>
+        <field name="name">Крайкооблицювання</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_eb"/>
+        <field name="exit_id" ref="exit_ex_s3"/>
+        <field name="length_m">28.8</field>
+        <field name="path" eval="[[64.25, 25.25], [67.75, 25.25], [67.75, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_cnc" model="f3d.fire.route">
+        <field name="code">EVAC-CNC</field>
+        <field name="name">Присадка</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cnc"/>
+        <field name="exit_id" ref="exit_ex_s3"/>
+        <field name="length_m">29.8</field>
+        <field name="path" eval="[[73.75, 24.75], [68.75, 24.75], [68.75, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_sort" model="f3d.fire.route">
+        <field name="code">EVAC-SORT</field>
+        <field name="name">Сортування деталей</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_sort"/>
+        <field name="exit_id" ref="exit_ex_s4"/>
+        <field name="length_m">24.7</field>
+        <field name="path" eval="[[86.75, 23.25], [90.25, 19.75], [90.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_fac" model="f3d.fire.route">
+        <field name="code">EVAC-FAC</field>
+        <field name="name">Дільниця фасадів МДФ</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fac"/>
+        <field name="exit_id" ref="exit_ex_n3"/>
+        <field name="length_m">16.4</field>
+        <field name="path" eval="[[66.75, 58.75], [67.25, 62.75], [74.25, 69.75], [74.25, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_asm" model="f3d.fire.route">
+        <field name="code">EVAC-ASM</field>
+        <field name="name">Збирання</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_asm"/>
+        <field name="exit_id" ref="exit_ex_in"/>
+        <field name="length_m">17.2</field>
+        <field name="path" eval="[[100.25, 16.25], [99.25, 16.25], [99.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_pre" model="f3d.fire.route">
+        <field name="code">EVAC-PRE</field>
+        <field name="name">Буфер комплектів</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_pre"/>
+        <field name="exit_id" ref="exit_ex_in"/>
+        <field name="length_m">38.6</field>
+        <field name="path" eval="[[101.25, 37.75], [99.25, 35.75], [99.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_maint" model="f3d.fire.route">
+        <field name="code">EVAC-MAINT</field>
+        <field name="name">Ремонтна дільниця</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_maint"/>
+        <field name="exit_id" ref="exit_ex_n5"/>
+        <field name="length_m">30.6</field>
+        <field name="path" eval="[[98.25, 52.25], [103.75, 57.75], [109.75, 57.75], [111.25, 59.25], [112.75, 59.25], [111.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_pack" model="f3d.fire.route">
+        <field name="code">EVAC-PACK</field>
+        <field name="name">Пакування</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_pack"/>
+        <field name="exit_id" ref="exit_ex_s5"/>
+        <field name="length_m">19.1</field>
+        <field name="path" eval="[[115.75, 17.25], [112.75, 13.75], [112.75, 7.25], [111.25, 5.75], [111.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_post" model="f3d.fire.route">
+        <field name="code">EVAC-POST</field>
+        <field name="name">Вихід з пакування</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_post"/>
+        <field name="exit_id" ref="exit_ex_n5"/>
+        <field name="length_m">26.9</field>
+        <field name="path" eval="[[115.75, 46.75], [113.25, 49.25], [111.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_cmp" model="f3d.fire.route">
+        <field name="code">EVAC-CMP</field>
+        <field name="name">Компресорна</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_cmp"/>
+        <field name="exit_id" ref="exit_ex_n5"/>
+        <field name="length_m">6.7</field>
+        <field name="path" eval="[[112.75, 65.75], [111.75, 66.75], [111.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_chg" model="f3d.fire.route">
+        <field name="code">EVAC-CHG</field>
+        <field name="name">Зарядна станція</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_chg"/>
+        <field name="exit_id" ref="exit_ex_n5"/>
+        <field name="length_m">24.8</field>
+        <field name="path" eval="[[118.75, 65.75], [117.75, 64.75], [117.75, 59.25], [113.25, 59.25], [113.25, 64.75], [111.75, 66.25], [111.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_fg" model="f3d.fire.route">
+        <field name="code">EVAC-FG</field>
+        <field name="name">Склад готової продукції</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fg"/>
+        <field name="exit_id" ref="exit_ex_s6"/>
+        <field name="length_m">32.6</field>
+        <field name="path" eval="[[129.75, 30.25], [130.25, 6.25], [131.75, 4.75], [131.75, 2.75], [134.75, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_elec" model="f3d.fire.route">
+        <field name="code">EVAC-ELEC</field>
+        <field name="name">Електрощитова</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_elec"/>
+        <field name="exit_id" ref="exit_ex_n4"/>
+        <field name="length_m">13.5</field>
+        <field name="path" eval="[[134.25, 61.75], [136.25, 61.75], [136.25, 64.75], [139.25, 67.75], [139.25, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_1" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-1</field>
+        <field name="name">Відвантаження · ворота 1</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_1"/>
+        <field name="exit_id" ref="exit_ex_s6"/>
+        <field name="length_m">8.8</field>
+        <field name="path" eval="[[142.75, 5.25], [139.25, 1.75], [137.75, 1.75], [136.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_2" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-2</field>
+        <field name="name">Відвантаження · ворота 2</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_2"/>
+        <field name="exit_id" ref="exit_ex_s6"/>
+        <field name="length_m">17.9</field>
+        <field name="path" eval="[[142.75, 15.25], [140.25, 12.75], [140.25, 6.25], [136.25, 2.25], [136.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_3" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-3</field>
+        <field name="name">Відвантаження · ворота 3</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_3"/>
+        <field name="exit_id" ref="exit_ex_s6"/>
+        <field name="length_m">27.9</field>
+        <field name="path" eval="[[142.75, 25.25], [139.25, 21.75], [139.25, 7.25], [136.25, 4.25], [136.25, 0.25]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_4" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-4</field>
+        <field name="name">Відвантаження · ворота 4</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_4"/>
+        <field name="exit_id" ref="exit_ex_n4"/>
+        <field name="length_m">37.6</field>
+        <field name="path" eval="[[142.75, 35.25], [140.75, 37.25], [140.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_5" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-5</field>
+        <field name="name">Відвантаження · ворота 5</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_5"/>
+        <field name="exit_id" ref="exit_ex_n4"/>
+        <field name="length_m">27.6</field>
+        <field name="path" eval="[[142.75, 45.25], [140.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_6" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-6</field>
+        <field name="name">Відвантаження · ворота 6</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_6"/>
+        <field name="exit_id" ref="exit_ex_n4"/>
+        <field name="length_m">17.6</field>
+        <field name="path" eval="[[142.75, 55.25], [141.75, 56.75], [141.75, 63.75], [140.75, 64.75], [140.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+    <record id="route_z_out_7" model="f3d.fire.route">
+        <field name="code">EVAC-OUT-7</field>
+        <field name="name">Відвантаження · ворота 7</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_out_7"/>
+        <field name="exit_id" ref="exit_ex_n4"/>
+        <field name="length_m">7.1</field>
+        <field name="path" eval="[[142.75, 65.75], [140.75, 67.75], [140.75, 71.75]]"/>
+        <field name="width_min_m">1.2</field>
+    </record>
+</odoo>

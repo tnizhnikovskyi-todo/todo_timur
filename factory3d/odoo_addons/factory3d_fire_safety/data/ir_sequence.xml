@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_f3d_fire_drill" model="ir.sequence">
+        <field name="name">Навчальна тривога</field>
+        <field name="code">f3d.fire.drill</field>
+        <field name="prefix">DRILL/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+        <field name="implementation">standard</field>
+    </record>
+</odoo>

@@ -1,0 +1,3 @@
+# test_data_sync.py — pytest/unittest поза Odoo, тут не підключається.
+# common.py (FireCase) заробить після моделей W1…W4; тоді підключати тести: from . import common, test_hooks, …
+from . import test_w0
