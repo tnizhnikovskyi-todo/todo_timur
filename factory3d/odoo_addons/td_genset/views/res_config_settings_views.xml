@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W3. Блок «Генератори» у стандартних Налаштуваннях (ТР 2.3.10, А.10): адреса, токен (маска, у форму не
+     повертається, порожнє поле не затирає), таймаут — лише base.group_system (AC-01, AC-57). -->
+<odoo>
+    <record id="res_config_settings_view_form_td_genset" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.td_genset</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="95"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Генератори" string="Генератори" name="td_genset" groups="base.group_system">
+                    <block title="Ретранслятор SmartGen" name="td_genset_relay">
+                        <setting id="td_genset_relay_url" string="Адреса API ретранслятора"
+                                 help="Адреса без завершального «/», напр. https://…/api/v1 (на тесті — емулятор).">
+                            <field name="td_genset_relay_url" placeholder="https://…/api/v1"/>
+                        </setting>
+                        <setting id="td_genset_relay_token" string="Токен ретранслятора"
+                                 help="Після збереження токен не показується; порожнє поле не змінює збережений токен.">
+                            <field name="td_genset_relay_token" password="True" placeholder="••••••••"/>
+                            <field name="td_genset_relay_token_set" invisible="1"/>
+                            <div class="mt-1">
+                                <span class="badge text-bg-success" invisible="not td_genset_relay_token_set">
+                                    Токен встановлено
+                                </span>
+                                <span class="badge text-bg-warning" invisible="td_genset_relay_token_set">
+                                    Токен не задано
+                                </span>
+                            </div>
+                        </setting>
+                        <setting id="td_genset_http_timeout" string="Таймаут, с"
+                                 help="Таймаут читання відповіді ретранслятора; з'єднання — 5 с.">
+                            <field name="td_genset_http_timeout"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_td_genset_res_config_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування Odoo: Генератори</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'td_genset', 'bin_size': False}</field>
+    </record>
+</odoo>

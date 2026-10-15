@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0. Підтипи повідомлень і типи активності (ТР 2.4.7, 2.4.8; SPEC 6). -->
+<odoo>
+    <data noupdate="1">
+        <record id="mt_alarm" model="mail.message.subtype">
+            <field name="name">Генератори: Тривога</field>
+            <field name="res_model">td.genset</field>
+            <field name="default" eval="True"/>
+            <field name="sequence">20</field>
+            <field name="description">Тривога генератора</field>
+        </record>
+        <record id="mt_command" model="mail.message.subtype">
+            <field name="name">Генератори: Команда</field>
+            <field name="res_model">td.genset</field>
+            <field name="default" eval="True"/>
+            <field name="sequence">21</field>
+            <field name="description">Команда генератору</field>
+        </record>
+        <record id="mt_event" model="mail.message.subtype">
+            <field name="name">Генератори: Подія</field>
+            <field name="res_model">td.genset</field>
+            <field name="default" eval="False"/>
+            <field name="sequence">22</field>
+            <field name="description">Подія генератора</field>
+        </record>
+
+        <record id="activity_refuel" model="mail.activity.type">
+            <field name="name">Долити паливо</field>
+            <field name="summary">Долити паливо в бак генератора</field>
+            <field name="res_model">td.genset</field>
+            <field name="icon">fa-tint</field>
+            <field name="delay_count">0</field>
+            <field name="category">default</field>
+        </record>
+        <record id="activity_check" model="mail.activity.type">
+            <field name="name">Перевірити генератор</field>
+            <field name="summary">Перевірити генератор на об'єкті</field>
+            <field name="res_model">td.genset</field>
+            <field name="icon">fa-wrench</field>
+            <field name="delay_count">0</field>
+            <field name="category">default</field>
+        </record>
+    </data>
+</odoo>

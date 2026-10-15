@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Власник: W0. Заплановані дії (ТР 2.7.1, А.7; SPEC 12). Користувач — OdooBot; винятки перехоплюються
+     в методах (інакше Odoo деактивує задачу після 5 невдач за 7 днів). -->
+<odoo>
+    <data noupdate="1">
+        <record id="cron_pull_readings" model="ir.cron">
+            <field name="name">Генератори: забір показань і стан</field>
+            <field name="model_id" ref="model_td_genset"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_pull_readings()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="priority">5</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="cron_commands" model="ir.cron">
+            <field name="name">Генератори: команди</field>
+            <field name="model_id" ref="model_td_genset_command"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_process_commands()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="priority">1</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="cron_scheduler" model="ir.cron">
+            <field name="name">Генератори: розклад, таймер, тест, ескалація</field>
+            <field name="model_id" ref="model_td_genset"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_scheduler()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="priority">3</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="cron_cleanup" model="ir.cron">
+            <field name="name">Генератори: чистка</field>
+            <field name="model_id" ref="model_td_genset_reading"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_cleanup()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="priority">10</field>
+            <!-- 03:30 за Києвом ≈ 00:30 UTC (літній час) -->
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 00:30:00')"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>
