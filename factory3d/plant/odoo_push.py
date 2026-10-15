@@ -224,7 +224,7 @@ class Push(FlowSteps):
             eid = self.ensure(key("emp", code), "hr.employee", {
                 "name": e["name"], "job_title": e["job"], "department_id": deps[dep],
                 "resource_calendar_id": self.ref("calendar_shift1")})
-            if e.get("workcenter"):
+            if e.get("workcenter") and "employee_ids" in o("mrp.workcenter", "fields_get", [], attributes=["type"]):
                 o("mrp.workcenter", "write", [self.ref(key("wc", e["workcenter"]))], {"employee_ids": [(4, eid)]})
         print(f"people: {len(self.d['employees'])} співробітників, {len(deps)} відділів")
 
@@ -250,7 +250,15 @@ class Push(FlowSteps):
             done = ln["qty_done"] if ln else (m["product_uom_qty"] if validate else 0)
             if done:
                 o("stock.move", "write", [m["id"]], {"quantity": done, "picked": True})
-        if validate:
+        if validate:  # Odoo 19: партійний товар не підтверджується без номера партії
+            pname = o("stock.picking", "read", [pid], ["name"])[0]["name"]
+            codes = {self.prod(c): c for c in getattr(self, "tracked", ())}
+            for ml in o("stock.move.line", "search_read", [["picking_id", "=", pid], ["lot_id", "=", False],
+                                                           ["lot_name", "=", False], ["product_id.tracking", "=", "lot"]],
+                        fields=["product_id"]):
+                code = codes.get(ml["product_id"][0]) or o("product.product", "read", [ml["product_id"][0]],
+                                                           ["default_code"])[0]["default_code"]
+                o("stock.move.line", "write", [ml["id"]], {"lot_name": self.receipt_lot(code, pname)})
             res = o("stock.picking", "button_validate", [pid])
             if isinstance(res, dict) and res.get("res_model"):
                 raise RuntimeError(f"підтвердження {pid} відкрило майстер {res['res_model']}")
@@ -460,6 +468,8 @@ class Push(FlowSteps):
 
     def operator(self, wc_code):
         """Оператор верстата з демо (OP-<код>) або перший із дозволених на робочому центрі."""
+        if "employee_ids" not in self.o("mrp.workcenter", "fields_get", [], attributes=["type"]):
+            return False   # CE: ні входу за оператором (start_employee), ні списку допущених
         emp = self.ref(key("emp", f"OP-{wc_code}"))
         if not emp:
             allowed = self.o("mrp.workcenter", "read", [self.ref(key("wc", wc_code))], ["employee_ids"])[0]

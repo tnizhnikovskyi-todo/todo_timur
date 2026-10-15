@@ -60,6 +60,11 @@ run_tests.sh f3d_smoke`): модуль ставиться на копію шаб
 `stock, mrp, maintenance, mrp_maintenance, hr, stock_picking_batch, stock_fleet, fleet, web, bus, mail, mrp_workorder,
 mrp_account, analytic, web_hierarchy, delivery, stock_delivery, web_gantt, hr_attendance` (+ їхні залежності, 86 модулів).
 
+### Демо-шаблон `f3d_demo_tpl` (`make_demo_tpl.sh`)
+
+`make_demo_tpl.sh [--force]` (≈ 6,5 хв): копія `f3d_template` + uk_UA + purchase_stock/sale_stock/… → `plant.odoo_push` по XML-RPC (сервер без cron) → `-i factory3d_base,factory3d_iot_sim` (post_init_hook мігрує демо) → шаблон (`ALLOW_CONNECTIONS false`). Є: MO `WH/MO/00231`, 35 РЦ, 731 локація, `f3d_sim_signal` 1168. Тести на ній: `F3D_TEMPLATE_DB=f3d_demo_tpl F3D_TEST_INSTALL=… run_tests.sh f3d_<ім'я> …`.
+Кроки push `modules` (iot — Enterprise), `iot_module`, `signals` пропускаються (`--skip`/`F3D_DEMO_SKIP`); у `plant/odoo_push.py` — правки для CE: без `employee_ids`/`start_employee` і з lot_name при підтвердженні приймань. Якщо база є — вихід без дій.
+
 ### Недоступні модулі (Odoo 19.0 Community)
 
 Скрипт ставить лише ті зі списку, чий каталог з `__manifest__.py` є в `<odoo>/addons`; решту пропускає й
