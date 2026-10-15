@@ -25,7 +25,7 @@
 | A-1 | access | P2 | роль Охрана: в CSV RW на f3d.access.door, по SPEC §13.3 только alarm*; ограничение только в write() (f3d_access_door.py:79); проверить под ролью | FIX (batch 2a) |
 | A-2 | access | P3 | два меню «Сервери BioStar» (id 520, 521) | OPEN |
 | A-3 | access | P3 | сервер BioStar-эмулятора: read_enabled, state=error, опрос каждую минуту (сервис эмулятора не запущен); migration_state=partial | OPEN |
-| E-1 | energy | P2 | у 67 счётчиков нет показаний kwh_total, интервалы и распределение = 0; вероятно нет живых данных (сервис эмулятора не запущен) и/или T-1 | OPEN |
+| E-1 | energy | P2 | у 67 счётчиков нет показаний kwh_total, интервалы и распределение = 0; вероятно нет живых данных (сервис эмулятора не запущен) и/или T-1 | VERIFIED — не дефект кода: со стендом у всех 67 счётчиков есть показания |
 | E-2 | energy | P3 | сигнал SAW-1/p_now отстаёт от последнего показания (20:36 против 21:00) | OPEN |
 | E-3 | energy | P2 | моста factory3d_energy_mrp_workorder нет (FR-08, AC-37–41): на Enterprise не реализовано (ENV) | OPEN |
 | Y-1 | yard | P3 | док: путь LPR из AC-82 /f3d/lpr → 404, реальный /f3d/telemetry/event с route=lpr; поправить SPEC/ТК-02 | OPEN |
@@ -35,6 +35,11 @@
 | G-1 | td_genset | P2 | ТО при просрочке мотогодин создаётся без priority '3' и без «прострочено на N мотогодин» в названии (AC-19), genset_fuel.py:1177 | OPEN |
 | V-2 | viewer | P3 | GET /f3d/viewer/data?codes=../../etc → 200 вместо 400: CODE_RE допускает «/» и «.» (controllers/viewer.py:18) | OPEN |
 | V-3 | viewer | P3 | /f3d/viewer/snapshot/abc → 303 на /uk/… вместо 404 (viewer.py:235) | OPEN |
+| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | OPEN |
+| ST-2 | iot_sim (сервис) | P2 | эмулятор шлёт LPR без токена → 401 (DEC-15); LPR дошёл только при снятом token_ref | OPEN |
+| ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | OPEN |
+| ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | OPEN |
+| E-4 | energy | P3 | 9 производных kwh_shift без данных и при живом стенде | OPEN |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
 
