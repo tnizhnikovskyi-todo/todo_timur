@@ -87,17 +87,22 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         today = ctx["today"]
         start = dates.utc(today + " 00:00") - timedelta(days=7)
         end = dates.utc(today + " 00:00") + timedelta(days=8)
-        recs = env["stock.picking"].search([
+        recs = env["stock.picking"].search_fetch([
             ("state", "!=", "cancel"), "|", "&", ("scheduled_date", ">=", start), ("scheduled_date", "<", end),
             ("state", "in", ("assigned", "waiting", "confirmed"))], order="scheduled_date, id")
         quality_fail = self._quality_fail(recs)
+        moves_of = {}  # одна вибірка рядків замість o2m-читання на кожну комплектацію (AC-52)
+        if recs:
+            for mv in env["stock.move"].search_fetch([("picking_id", "in", recs.ids), ("state", "!=", "cancel")]):
+                moves_of.setdefault(mv.picking_id.id, []).append(mv)
+            (recs.move_line_ids.location_id | recs.move_line_ids.location_dest_id).mapped("f3d_code")
         has_carrier = "carrier_id" in env["stock.picking"]._fields
         out = []
         for p in recs:
             typ = self._picking_type(p)
             if not typ:
                 continue
-            moves = p.move_ids.filtered(lambda m: m.state != "cancel")
+            moves = moves_of.get(p.id, [])
             lines = []
             for m in moves:
                 done = m.quantity if (m.picked or m.state == "done") else 0
@@ -165,7 +170,8 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         if not pickings or not payload_tools.access_ok(env, "quality.check"):
             return {}
         res = {}
-        for c in env["quality.check"].search([("picking_id", "in", pickings.ids), ("quality_state", "=", "fail")]):
+        for c in env["quality.check"].search_fetch([
+                ("picking_id", "in", pickings.ids), ("quality_state", "=", "fail")]):
             res.setdefault(c.picking_id.id, set()).add(c.lot_id.id)
         return res
 
@@ -205,17 +211,20 @@ class F3dViewerProviderLogistics(models.AbstractModel):
     @api.model
     def _sale_orders(self, ctx):
         env = self.env
-        orders = env["sale.order"].search([("state", "not in", ("draft", "sent", "cancel"))], order="id")
+        orders = env["sale.order"].search_fetch([("state", "not in", ("draft", "sent", "cancel"))], order="id")
         if not orders:
             return []
         names = orders.mapped("name")
         prod_by_origin, ship_by_origin = {}, {}
         if payload_tools.access_ok(env, "mrp.production"):
-            for mo in env["mrp.production"].search([("origin", "in", names)], order="id"):
+            for mo in env["mrp.production"].search_fetch([("origin", "in", names)], order="id"):
                 prod_by_origin.setdefault(mo.origin, []).append(mo.name)
-        for pk in env["stock.picking"].search([("origin", "in", names), ("picking_type_code", "=", "outgoing"),
+        for pk in env["stock.picking"].search_fetch([("origin", "in", names), ("picking_type_code", "=", "outgoing"),
                                                ("state", "!=", "cancel")], order="id"):
             ship_by_origin.setdefault(pk.origin, pk.name)
+        lines_of = {}
+        for ln in env["sale.order.line"].search_fetch([("order_id", "in", orders.ids)]):
+            lines_of.setdefault(ln.order_id.id, []).append(ln)
         amounts = (not ctx.get("kiosk")) and env.user.has_group("sales_team.group_sale_salesman_all_leads")
         out = []
         for so in orders:
@@ -224,7 +233,7 @@ class F3dViewerProviderLogistics(models.AbstractModel):
                 "date_order": dates.local(so.date_order) if so.date_order else None,
                 "commitment_date": dates.local(so.commitment_date) if so.commitment_date else None,
                 "lines": [{"product": ln.product_id.default_code or ln.product_id.name, "qty": ln.product_uom_qty}
-                          for ln in so.order_line if not ln.display_type and ln.product_id],
+                          for ln in lines_of.get(so.id, []) if not ln.display_type and ln.product_id],
                 "productions": prod_by_origin.get(so.name, []),
                 "delivery": ship_by_origin.get(so.name, ""),
             }
@@ -236,11 +245,15 @@ class F3dViewerProviderLogistics(models.AbstractModel):
     @api.model
     def _purchase_orders(self, ctx):
         env = self.env
-        orders = env["purchase.order"].search([("state", "not in", ("draft", "sent", "cancel"))], order="id")
+        orders = env["purchase.order"].search_fetch([("state", "not in", ("draft", "sent", "cancel"))], order="id")
         out = []
         has_op = "orderpoint_id" in env["purchase.order.line"]._fields
+        lines_of = {}
+        if orders:
+            for ln in env["purchase.order.line"].search_fetch([("order_id", "in", orders.ids)]):
+                lines_of.setdefault(ln.order_id.id, []).append(ln)
         for po in orders:
-            lines = po.order_line.filtered(lambda ln: not ln.display_type and ln.product_id)
+            lines = [ln for ln in lines_of.get(po.id, []) if not ln.display_type and ln.product_id]
             locs = []
             if has_op:
                 for ln in lines:

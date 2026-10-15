@@ -56,7 +56,7 @@ class F3dViewerProviderChains(models.AbstractModel):
             if p.get("dock"):
                 by_dock.setdefault(p["dock"], []).append(p["name"])
         zones = payload.setdefault("zones", {})
-        for zone in env["f3d.zone"].search([("active", "=", True)], order="sequence, f3d_code"):
+        for zone in env["f3d.zone"].search_fetch([("active", "=", True)], order="sequence, f3d_code"):
             code = zone.f3d_code
             st = static.get(code)
             rec = {"name": zone.name, "zone_type": zone.zone_type}

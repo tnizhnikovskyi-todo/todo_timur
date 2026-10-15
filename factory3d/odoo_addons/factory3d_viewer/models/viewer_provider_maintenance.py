@@ -34,7 +34,7 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         requests = env["maintenance.request"].browse()
         open_by_eq, next_prev = {}, {}
         if payload_tools.access_ok(env, "maintenance.request"):
-            requests = env["maintenance.request"].search([
+            requests = env["maintenance.request"].search_fetch([
                 ("equipment_id.f3d_code", "!=", False),
                 "|", ("stage_id.done", "=", False), ("close_date", ">=", since.date())], order="request_date, id")
             for r in requests.filtered(lambda r: not r.stage_id.done):
@@ -47,11 +47,11 @@ class F3dViewerProviderMaintenance(models.AbstractModel):
         passport_ok = payload_tools.access_ok(env, "f3d.equipment.passport")
         tasks = {}
         if payload_tools.access_ok(env, "stock.picking.batch"):
-            for b in env["stock.picking.batch"].search([("f3d_vehicle_id", "!=", False),
+            for b in env["stock.picking.batch"].search_fetch([("f3d_vehicle_id", "!=", False),
                                                         ("state", "in", ("in_progress", "draft"))], order="id"):
                 tasks.setdefault(b.f3d_vehicle_id.id, b.name)
 
-        for eq in env["maintenance.equipment"].search([("f3d_code", "!=", False)], order="id"):
+        for eq in env["maintenance.equipment"].search_fetch([("f3d_code", "!=", False)], order="id"):
             code = eq.f3d_code
             rec = {"name": eq.name, "category": eq.category_id.name or ""}
             if eq.serial_no and eq.serial_no != code:

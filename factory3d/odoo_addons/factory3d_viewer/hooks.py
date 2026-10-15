@@ -51,6 +51,9 @@ def post_init(env):
 def uninstall(env):
     params = env["ir.config_parameter"].sudo()
     params.search([("key", "=like", PREFIX + "%")]).unlink()
-    user = env.ref("factory3d_viewer.user_kiosk", raise_if_not_found=False)
-    if user:
-        user.sudo().active = False
+    data = env["ir.model.data"].sudo().search(
+        [("module", "=", "factory3d_viewer"), ("name", "=", "user_kiosk"), ("model", "=", "res.users")])
+    user = env["res.users"].sudo().browse(data.mapped("res_id")).exists()
+    # без xmlid модульна деінсталяція не видалить користувача (він лише архівується)
+    data.unlink()
+    user.write({"active": False})
