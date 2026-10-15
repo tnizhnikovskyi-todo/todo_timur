@@ -1240,9 +1240,18 @@ class TdGensetFuel(models.Model):
                          hours=fmt_num(self.maint_interval_hours))
             else:
                 name = _('ТО-%(number)s: раз на %(months)s міс.', number=number, months=self.maint_interval_months)
+        # AC-19 (FR-06): просрочка за мотогодинами — пріоритет «Високий» і величина просрочки в назві;
+        # щойно досягнуте (0 мотогодин) чи прострочене за датою — «Звичайний» (ТР 2.9, R-09 п. 4)
+        overdue_hours = -float(info['hours_left'] or 0.0)
+        if float_compare(overdue_hours, 0.0, precision_digits=2) > 0:
+            priority = '3'
+            name = _('%(name)s — прострочено на %(hours)s мотогодин', name=name, hours=fmt_num(overdue_hours))
+        else:
+            priority = '2'
         values = {
             'name': name,
             'maintenance_type': 'preventive',
+            'priority': priority,
             'equipment_id': equipment.id,
             'user_id': self.user_id.id,
             'description': config.maint_checklist if config else False,

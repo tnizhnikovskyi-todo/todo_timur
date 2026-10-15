@@ -101,6 +101,27 @@ class TestW4Maintenance(AlarmSpyMixin, TdGensetCase):
         self.assertEqual(len(self._genset_requests()), 1)
         self.assertEqual(len(self._calls(self.raised, 'maintenance_due')), 1)
 
+    def test_ac19_overdue_request_priority_and_name(self):
+        """AC-19 (G-1): просрочка 12 мотогодин (перше ТО 30 год, зараз 42) — priority '3' і «прострочено на 12
+        мотогодин» у назві; рівно 30,0 (просрочки ще немає) — priority '2', назва без просрочки."""
+        genset = self.genset
+        self._set_hours(42.0)
+        genset._check_maintenance()
+        request = self._genset_requests()
+        self.assertEqual(len(request), 1)
+        self.assertEqual(genset.maint_hours_left, -12.0)
+        self.assertEqual(request.priority, '3')
+        self.assertEqual(request.name, FIRST_REQUEST + ' — прострочено на 12 мотогодин')
+        self.assertTrue(request.schedule_date)
+        warnings = self._calls(self.raised, 'maintenance_due')
+        self.assertIn('прострочено на 12 мотогодин', warnings[0]['name'])
+
+    def test_ac19_just_reached_request_priority(self):
+        self._set_hours(30.0)
+        self.genset._check_maintenance()
+        request = self._genset_requests()
+        self.assertEqual((request.priority, request.name), ('2', FIRST_REQUEST))
+
     def test_ac53_maintenance_data_in_install_company(self):
         """AC-53 (DoD W4): категорія обладнання і команда ТО «Генератори» (data) — без компанії, спільні для всіх
         компаній бази (прод — 5 компаній; заявка в компанії генератора не падає на check_company, див.
