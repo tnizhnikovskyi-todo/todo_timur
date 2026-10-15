@@ -1,9 +1,7 @@
 import gzip
 import json
 import logging
-import os
 import time
-import unittest
 from datetime import timedelta
 
 from odoo import fields
@@ -23,8 +21,6 @@ LIMIT_STATIC_FIRST_S = 0.3
 LIMIT_STATIC_SECOND_S = 0.1
 LIMIT_DELTA_S = 0.3
 LIMIT_DELTA_SQL = 30
-STRICT_SQL = bool(os.environ.get("F3D_PERF_SQL_STRICT"))
-SKIP_MSG = "поріг SQL SPEC AC-52 не тримається (DEPLOY_TEST.md); F3D_PERF_SQL_STRICT=1 вмикає перевірку"
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer", "f3d_perf")
@@ -56,9 +52,6 @@ class TestPerf(HttpCase, F3dViewerCase):
         self.assertTrue(data["meta"])
         self.assertLess(elapsed, LIMIT_DATA_S, f"/data {elapsed:.2f} с")
 
-    # Поріг SQL зі SPEC (AC-52) НЕ тримається: виміряно ~198 > 80 (DEPLOY_TEST.md, «Продуктивність»). Тест суворий,
-    # але вимкнений за замовчуванням, щоб не ламати прогін; вмикається F3D_PERF_SQL_STRICT=1. Виміри — у логу (PERF).
-    @unittest.skipUnless(STRICT_SQL, SKIP_MSG)
     def test_data_query_count(self):
         self._build()
         self.env.invalidate_all()
@@ -108,7 +101,6 @@ class TestPerf(HttpCase, F3dViewerCase):
         _logger.info("PERF /delta 50: %.3f с, %d SQL", elapsed, self.env.cr.sql_log_count - n0)
         self.assertLess(elapsed, LIMIT_DELTA_S, f"/delta {elapsed * 1000:.0f} мс")
 
-    @unittest.skipUnless(STRICT_SQL, SKIP_MSG)  # виміряно ~64 > 30
     def test_delta_query_count(self):
         since = fields.Datetime.now() - timedelta(minutes=5)
         codes = self.env["stock.location"].search([("f3d_code", "!=", False)], limit=50).mapped("f3d_code")

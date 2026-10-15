@@ -1,7 +1,7 @@
 from odoo.exceptions import AccessDenied
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.hooks import is_demo_db
+from odoo.addons.factory3d_viewer.hooks import is_demo_db, uninstall
 
 from .common import F3dViewerBase
 
@@ -92,3 +92,13 @@ class TestInstall(F3dViewerBase):
         implied = {self.env.ref(x) for x in ("base.group_user", "factory3d_base.group_f3d_user",
                                               "stock.group_stock_user", "mrp.group_mrp_user")}
         self.assertEqual(set(group.implied_ids), implied)
+
+    def test_uninstall_archives_kiosk_user(self):  # ARCHITECTURE §2.8
+        user = self.env.ref("factory3d_viewer.user_kiosk")
+        uninstall(self.env)
+        data = self.env["ir.model.data"].sudo().search(
+            [("module", "=", "factory3d_viewer"), ("name", "=", "user_kiosk")])
+        self.assertFalse(data, "xmlid user_kiosk має бути видалений, щоб користувач пережив деінсталяцію")
+        self.assertTrue(user.exists())
+        self.assertFalse(user.active)
+        self.assertFalse(self._param("kiosk_token"))

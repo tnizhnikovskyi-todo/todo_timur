@@ -52,14 +52,21 @@ class F3dViewerProviderProduction(models.AbstractModel):
         static = ctx.get("static") or {}
         today_start = dates.utc(ctx["today"] + " 00:00")
 
-        mos = env["mrp.production"].search([
+        mos = env["mrp.production"].search_fetch([
             ("state", "!=", "cancel"), "|", ("state", "in", ("confirmed", "progress", "to_close")),
             ("date_finished", ">=", today_start)], order="id")
-        wos_all = env["mrp.workorder"].search([("production_id", "in", mos.ids)], order="sequence, id")
-        wcs = env["mrp.workcenter"].search([("f3d_code", "!=", False)], order="id")
+        wos_all = env["mrp.workorder"].search_fetch([("production_id", "in", mos.ids)], order="sequence, id")
+        wcs = env["mrp.workcenter"].search_fetch([("f3d_code", "!=", False)], order="id")
+        wcs.resource_calendar_id.attendance_ids.mapped("hour_from")  # прогрів змін для _shift
+        wos_all.workcenter_id.mapped("f3d_code")  # одне читання центрів замість одного на МО
 
         # --- журнал продуктивності: по завданнях (будь-коли) і по центрах (сьогодні)
-        logs_wo = env["mrp.workcenter.productivity"].search([("workorder_id", "in", wos_all.ids)])
+        # один запит на обидві вибірки журналу (AC-52); далі розділяємо в Python
+        logs_all = env["mrp.workcenter.productivity"].search_fetch([
+            "|", ("workorder_id", "in", wos_all.ids),
+            "&", ("workcenter_id", "in", wcs.ids), "|", ("date_end", "=", False), ("date_start", ">=", today_start)])
+        wo_ids, wc_ids = set(wos_all.ids), set(wcs.ids)
+        logs_wo = logs_all.filtered(lambda lg: lg.workorder_id.id in wo_ids)
         worked, first, last = {}, {}, {}
         for lg in logs_wo:
             k = lg.workorder_id.id
@@ -67,15 +74,15 @@ class F3dViewerProviderProduction(models.AbstractModel):
             first[k] = min(first.get(k, lg.date_start), lg.date_start)
             if lg.date_end:
                 last[k] = max(last.get(k, lg.date_end), lg.date_end)
-        logs_today = env["mrp.workcenter.productivity"].search([
-            ("workcenter_id", "in", wcs.ids), "|", ("date_end", "=", False), ("date_start", ">=", today_start)])
+        logs_today = logs_all.filtered(lambda lg: lg.workcenter_id.id in wc_ids and (
+            not lg.date_end or lg.date_start >= today_start))
 
         # --- робочі завдання й МО
         wo_out, mo_out = {}, []
         derived = {}  # wo.id -> (id, state)
         children = {}
         if mos:
-            for child in env["mrp.production"].search([("origin", "in", mos.mapped("name"))]):
+            for child in env["mrp.production"].search_fetch([("origin", "in", mos.mapped("name"))]):
                 children.setdefault(child.origin, []).append(child.name)
         comp_locs = self._component_locations(mos, static)
         consumers = (static.get("energy") or {}).get("consumers") or {}
@@ -172,13 +179,13 @@ class F3dViewerProviderProduction(models.AbstractModel):
         # обладнання центрів і відкриті заявки
         eq_by_wc, req_by_eq = {}, {}
         if payload_tools.access_ok(env, "maintenance.equipment"):
-            eqs = env["maintenance.equipment"].search([("f3d_code", "!=", False)])
+            eqs = env["maintenance.equipment"].search_fetch([("f3d_code", "!=", False)])
             link = "workcenter_id" in env["maintenance.equipment"]._fields
             for eq in eqs:
                 wc_code = (eq.workcenter_id.f3d_code if link and eq.workcenter_id else None) or eq.f3d_code
                 eq_by_wc.setdefault(wc_code, eq)
             if payload_tools.access_ok(env, "maintenance.request"):
-                for r in env["maintenance.request"].search([("stage_id.done", "=", False),
+                for r in env["maintenance.request"].search_fetch([("stage_id.done", "=", False),
                                                             ("equipment_id", "in", eqs.ids)],
                                                            order="request_date, id"):
                     req_by_eq.setdefault(r.equipment_id.id, r.name)
@@ -257,7 +264,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
         if not mos or not payload_tools.access_ok(env, "stock.quant"):
             return {}
         pids = mos.move_raw_ids.filtered(lambda m: m.state != "cancel").product_id.ids
-        quants = env["stock.quant"].search([("product_id", "in", pids), ("quantity", "!=", 0),
+        quants = env["stock.quant"].search_fetch([("product_id", "in", pids), ("quantity", "!=", 0),
                                             ("location_id.f3d_code", "!=", False)])
         order = {c: i for i, c in enumerate(((static.get("layout") or {}).get("locations") or {}))}
         res = {}
@@ -289,6 +296,14 @@ class F3dViewerProviderProduction(models.AbstractModel):
         sel = set(ctx.get("codes") or ())
         for model in ("mrp.production", "mrp.workorder", "mrp.workcenter", "mrp.workcenter.productivity"):
             sel |= set(changes.get(model) or ())
+        env = self.env
+        if sel and not any(WO_RE.match(c) for c in sel) and all(payload_tools.access_ok(env, m) for m in (
+                "mrp.workcenter", "mrp.production")):
+            # жодного коду WO*, центру чи МО серед вибраних (напр. лише локації) — збирати нічого, 2 SQL замість ~9
+            names = list(sel)
+            if not (env["mrp.workcenter"].search_count([("f3d_code", "in", names)], limit=1)
+                    or env["mrp.production"].search_count([("name", "in", names)], limit=1)):
+                return
         tmp = {}
         self._f3d_viewer_collect(tmp, ctx)
         wos = tmp.get("workorders") or {}

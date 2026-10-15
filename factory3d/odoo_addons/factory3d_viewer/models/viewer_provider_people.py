@@ -62,7 +62,7 @@ class F3dViewerProviderPeople(models.AbstractModel):
         op_wo, wo_by_wc = {}, {}
         if not payload_tools.access_ok(env, "mrp.workorder"):
             return op_wo, wo_by_wc
-        for wo in env["mrp.workorder"].search([("state", "=", "progress")], order="date_start, id"):
+        for wo in env["mrp.workorder"].search_fetch([("state", "=", "progress")], order="date_start, id"):
             code = wo.workcenter_id.f3d_code
             if not code:
                 continue
@@ -86,7 +86,7 @@ class F3dViewerProviderPeople(models.AbstractModel):
         if not emp_ids or not payload_tools.access_ok(env, "hr.attendance"):
             return set()
         start = dates.utc(ctx["today"] + " 00:00")
-        att = env["hr.attendance"].search([("employee_id", "in", emp_ids), ("check_in", ">=", start),
+        att = env["hr.attendance"].search_fetch([("employee_id", "in", emp_ids), ("check_in", ">=", start),
                                            ("check_out", "=", False)])
         return set(att.employee_id.ids)
 

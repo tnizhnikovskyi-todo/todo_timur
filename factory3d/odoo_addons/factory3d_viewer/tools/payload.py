@@ -78,7 +78,7 @@ def access_ok(env, model):
 
 def group_ok(env, xmlid):
     """Група існує в базі й користувач у ній."""
-    if not env.ref(xmlid, raise_if_not_found=False):
+    if not env["ir.model.data"]._xmlid_to_res_id(xmlid, raise_if_not_found=False):
         return False
     return env.user.has_group(xmlid)
 
@@ -136,6 +136,27 @@ class _Base:
         self.lite = bool(lite)
         self.kiosk = bool(kiosk)
         self.codes = set(codes) if codes else None
+        self._groups = {}  # кеш group_ok в межах одного збирання
+        self._strict = False
+
+    def build(self):
+        """Оптимістичний прохід: один спільний savepoint замість двох SQL на провайдера (AC-52).
+        Якщо провайдер упав — savepoint відкочується, і збирання повторюється з ізоляцією кожного."""
+        self._strict = True
+        try:
+            with self.env.cr.savepoint():
+                return self._build()
+        except Exception:  # noqa: BLE001 — деталі пише повторний прохід
+            pass
+        finally:
+            self._strict = False
+        self._groups = {}
+        return self._build()
+
+    def _group_ok(self, xmlid):
+        if xmlid not in self._groups:
+            self._groups[xmlid] = group_ok(self.env, xmlid)
+        return self._groups[xmlid]
 
     def _ctx(self, now, sections, **extra):
         env = self.env
@@ -147,7 +168,7 @@ class _Base:
             "static": static_data.load(),
             "lite": self.lite,
             "kiosk": self.kiosk,
-            "energy_cost": (not self.kiosk) and group_ok(env, ENERGY_COST_GROUP),
+            "energy_cost": (not self.kiosk) and self._group_ok(ENERGY_COST_GROUP),
             "codes": None,
             "changes": {},
             "sections": sections,
@@ -162,6 +183,9 @@ class _Base:
 
     def _call(self, p, func, target, secs, errors):
         """Виклик у savepoint; при помилці розділи провайдера відновлюються. True — успіх."""
+        if self._strict:
+            func(target)
+            return True
         before = {k: copy.deepcopy(target[k]) for k in secs if k in target}
         try:
             with self.env.cr.savepoint():
@@ -195,7 +219,7 @@ class PayloadBuilder(_Base):
         host = re.sub(r"^https?://", "", params.get_param("web.base.url") or "").rstrip("/")
         warehouse = ""
         if access_ok(env, "stock.warehouse"):
-            wh = env["stock.warehouse"].search([("company_id", "=", env.company.id)], limit=1)
+            wh = env["stock.warehouse"].search_fetch([("company_id", "=", env.company.id)], limit=1)
             warehouse = wh.code or ""
         return {
             "source": f"Odoo {release.series} · {host}",
@@ -215,7 +239,7 @@ class PayloadBuilder(_Base):
             "errors": [],
         }
 
-    def build(self):
+    def _build(self):
         env = self.env
         static = static_data.load()
         now = dates.now(env)
@@ -246,7 +270,7 @@ class PayloadBuilder(_Base):
             secs, grp = self._info(p)
             if self.sections is not None and not (set(secs) & self.sections):
                 continue
-            if not group_ok(env, grp):
+            if not self._group_ok(grp):
                 for k in secs:
                     sections[k] = "denied"
                     if k in BASE_KEYS and k != "meta":  # §4.4: порожнє значення за типом ключа
@@ -291,7 +315,7 @@ class DeltaBuilder(_Base):
         self.since = since
         self.changes = changes
 
-    def build(self):
+    def _build(self):
         env = self.env
         now = dates.now(env)
         ts = dates.iso_utc(dates.real_now())
@@ -311,7 +335,7 @@ class DeltaBuilder(_Base):
 
         patch = {"meta": {"now": dates.local(now), "errors": []}}
         errors = patch["meta"]["errors"]
-        ctx = self._ctx(now, {}, codes=codes, changes=changes)
+        ctx = self._ctx(now, {}, codes=codes, changes=changes, delta=True)
         failed = set()
         for p in get_providers(env):
             collect = getattr(p, "_f3d_viewer_collect", None)
@@ -319,7 +343,7 @@ class DeltaBuilder(_Base):
                 _logger.warning("провайдер %s без _f3d_viewer_collect", p._name)
                 continue
             secs, grp = self._info(p)
-            if not group_ok(env, grp):
+            if not self._group_ok(grp):
                 continue
             delta = getattr(p, "_f3d_viewer_delta", None)
 

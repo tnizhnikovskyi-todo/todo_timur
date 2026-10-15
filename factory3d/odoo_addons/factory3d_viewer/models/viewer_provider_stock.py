@@ -34,27 +34,41 @@ class F3dViewerProviderStock(models.AbstractModel):
                    ("product.product", "stock.location", "stock.quant", "stock.move.line")):
             return
         static_locs = ((ctx.get("static") or {}).get("layout") or {}).get("locations") or {}
-        locs = env["stock.location"].search([("f3d_code", "!=", False), ("usage", "in", ("internal", "transit"))])
-        quants = env["stock.quant"].search_read(
-            [("location_id", "in", locs.ids), ("quantity", "!=", 0)],
-            ["location_id", "product_id", "quantity", "reserved_quantity", "lot_id", "package_id"]) if locs else []
+        locs = env["stock.location"].search_fetch([("f3d_code", "!=", False), ("usage", "in", ("internal", "transit"))])
+        quants = []
+        if locs:
+            # records замість search_read: без зайвих читань display_name товару й локації
+            for q in env["stock.quant"].search_fetch(
+                    [("location_id", "in", locs.ids), ("quantity", "!=", 0)],
+                    ["location_id", "product_id", "quantity", "reserved_quantity", "lot_id", "package_id"]):
+                quants.append({
+                    "location_id": (q.location_id.id,), "product_id": (q.product_id.id,),
+                    "quantity": q.quantity, "reserved_quantity": q.reserved_quantity,
+                    "lot_id": (q.lot_id.id, q.lot_id.name) if q.lot_id else False,
+                    "package_id": (q.package_id.id, q.package_id.name) if q.package_id else False})
 
         # --- товари
         pids = {q["product_id"][0] for q in quants}
         extra = set()
         if payload_tools.access_ok(env, "mrp.production"):
-            mos = env["mrp.production"].search([("state", "not in", ("done", "cancel"))])
+            mos = env["mrp.production"].search_fetch([("state", "not in", ("done", "cancel"))])
             extra = set(mos.product_id.ids) | set(mos.move_raw_ids.product_id.ids)
         if len(pids | extra) <= PRODUCTS_LIMIT:
             pids |= extra
-        products = env["product.product"].with_context(active_test=False).search(
+        products = env["product.product"].with_context(active_test=False).search_fetch(
             [("id", "in", list(pids)), ("default_code", "!=", False)])
         code_of = {p.id: p.default_code for p in products}
         prod_out = {}
-        for p in products:
+        delta = bool(ctx.get("delta"))  # дельта віддає лише locations: товари потрібні тільки як код
+        seller_of = {}  # перший постачальник шаблону (порядок product.supplierinfo)
+        if not delta and products and payload_tools.access_ok(env, "product.supplierinfo"):
+            for si in env["product.supplierinfo"].search_fetch(
+                    [("product_tmpl_id", "in", products.product_tmpl_id.ids)]):
+                seller_of.setdefault(si.product_tmpl_id.id, si.partner_id)
+        for p in (products if not delta else products.browse()):
             item = {"default_code": p.default_code, "name": p.name, "uom": p.uom_id.name,
                     "categ": p.categ_id.name or ""}
-            seller = p.seller_ids[:1].partner_id.name
+            seller = seller_of.get(p.product_tmpl_id.id).name if p.product_tmpl_id.id in seller_of else None
             if seller:
                 item["seller"] = seller
             prod_out[p.default_code] = item
@@ -137,7 +151,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         env = self.env
         if not locs:
             return {}
-        lines = env["stock.move.line"].search([
+        lines = env["stock.move.line"].search_fetch([
             ("location_id", "in", locs.ids), ("state", "in", ("assigned", "partially_available")),
             ("picking_id.picking_type_code", "=", "outgoing")])
         res = {}
@@ -157,7 +171,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         if not unload:
             return {}
         start = dates.utc(ctx["today"] + " 00:00")
-        lines = env["stock.move.line"].search([
+        lines = env["stock.move.line"].search_fetch([
             ("location_dest_id", "in", unload.ids), ("state", "=", "done"), ("date", ">=", start)],
             order="date, id")
         res = {}
@@ -173,7 +187,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         if not kits:
             return {}
         res = {}
-        moves = self.env["stock.move"].search([
+        moves = self.env["stock.move"].search_fetch([
             ("location_dest_id", "in", kits.ids), ("picking_id", "!=", False), ("state", "!=", "cancel")],
             order="date, id")
         for mv in moves:
@@ -186,7 +200,7 @@ class F3dViewerProviderStock(models.AbstractModel):
         env = self.env
         if not payload_tools.access_ok(env, "quality.check"):
             return {}
-        checks = env["quality.check"].search([("quality_state", "=", "fail"), ("lot_id", "!=", False)])
+        checks = env["quality.check"].search_fetch([("quality_state", "=", "fail"), ("lot_id", "!=", False)])
         return {c.lot_id.id: c.name for c in checks}
 
     @api.model
@@ -194,12 +208,12 @@ class F3dViewerProviderStock(models.AbstractModel):
         env = self.env
         if not locs or not payload_tools.access_ok(env, "stock.warehouse.orderpoint"):
             return {}
-        ops = env["stock.warehouse.orderpoint"].search([("location_id", "in", locs.ids),
+        ops = env["stock.warehouse.orderpoint"].search_fetch([("location_id", "in", locs.ids),
                                                         ("product_id.default_code", "!=", False)])
         purchase = {}
         if ops and payload_tools.access_ok(env, "purchase.order.line") \
                 and "orderpoint_id" in env["purchase.order.line"]._fields:
-            for line in env["purchase.order.line"].search([("orderpoint_id", "in", ops.ids),
+            for line in env["purchase.order.line"].search_fetch([("orderpoint_id", "in", ops.ids),
                                                            ("order_id.state", "=", "purchase")]):
                 purchase.setdefault(line.orderpoint_id.id, line.order_id.name)
         res = {}

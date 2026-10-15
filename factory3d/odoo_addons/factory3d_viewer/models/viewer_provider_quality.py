@@ -30,11 +30,11 @@ class F3dViewerProviderQuality(models.AbstractModel):
             ctx["sections"]["quality_checks"] = "missing" if "quality.check" not in env else "denied"
             return
         since = dates.utc(ctx["today"] + " 00:00") - timedelta(days=7)
-        checks = env["quality.check"].search(["|", ("create_date", ">=", since), ("quality_state", "=", "fail")],
+        checks = env["quality.check"].search_fetch(["|", ("create_date", ">=", since), ("quality_state", "=", "fail")],
                                              order="id")
         quarantine = set()
         if payload_tools.access_ok(env, "stock.quant") and checks.lot_id:
-            quarantine = {q.lot_id.id for q in env["stock.quant"].search([
+            quarantine = {q.lot_id.id for q in env["stock.quant"].search_fetch([
                 ("lot_id", "in", checks.lot_id.ids), ("quantity", "!=", 0), ("location_id.f3d_code", "=", QC_CODE)])}
         fields = env["quality.check"]._fields
         out = []
