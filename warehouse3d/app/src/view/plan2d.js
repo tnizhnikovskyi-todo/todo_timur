@@ -135,13 +135,16 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
   }
   function paint() {
     if (!svg) return;
-    const { sel, focus: F } = model.ui, tree = model.tree, S = model.selIds();
+    const { sel, focus: F } = model.ui, tree = model.tree, S = model.selIds(), pm = model.checks.marks().nodes; // pm — объекты с проблемами (W-07): подсвечиваются отдельным цветом
     for (const el of els) {
       const v = inNode(el._n, F); if (v !== el._v) { el._v = v; el.style.display = v ? "" : "none"; }
-      if (el._c === undefined) { const e = S.length > 0 && isSel(el._n, S); if (e !== el._e) { el._e = e; el.classList.toggle("esel", e); } } // у мест подсветку задаёт класс sel
+      if (el._c === undefined) {
+        const e = S.length > 0 && isSel(el._n, S); if (e !== el._e) { el._e = e; el.classList.toggle("esel", e); } // у мест подсветку задаёт класс sel
+        const pr = pm.has(el._n); if (pr !== !!el._p) { el._p = pr; el.classList.toggle("prob", pr); }
+      }
     }
     for (const el of slots) {
-      const c = el.dataset.code, cls = `s ${slotCls(tree.loc(c))}${c === sel ? " sel" : ""}`;
+      const c = el.dataset.code, cls = `s ${slotCls(tree.loc(c))}${c === sel ? " sel" : ""}${pm.has(el._n) ? " prob" : ""}`;
       if (cls !== el._c) { el._c = cls; el.setAttribute("class", cls); }
     }
     // подписи уровня ниже — размер шрифта от размера выбранного уровня

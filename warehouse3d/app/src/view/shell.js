@@ -7,6 +7,7 @@ import { createSidePanel, renderLevelBar, updateEditBar } from "./panels.js";
 import { openTypes } from "./types.js";
 import { renderHelp } from "./help.js";
 import { createNotifier } from "./notify.js";
+import { createProblems } from "./problems.js";
 import { bindKeys } from "./keys.js";
 import { esc, isLow, scrollToSide } from "./util.js";
 
@@ -24,6 +25,7 @@ const HTML = `
     <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
     <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
     <span class="sp"></span>
+    <button class="btn btn-secondary" id="pr-btn" aria-pressed="false"><span data-i18n="prob.button"></span> <span class="cnt" id="pr-cnt">0</span></button>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
     <div class="seg" id="seg-lang" role="group" data-i18n-attr="aria-label:lang.label"><button data-l="uk" title="Українська">UK</button><button data-l="en" title="English">EN</button></div>
   </header>
@@ -58,6 +60,7 @@ const HTML = `
       <aside class="side" id="plan-side" aria-live="polite"></aside>
     </div>
     <div class="help-view" id="help-view" hidden></div>
+    <aside class="o_prob" id="problems" hidden aria-label="Problems"></aside>
   </div>
 </div>`;
 
@@ -96,6 +99,13 @@ export function mountApp(root, { model, i18n, host = {} }) {
   };
 
   const afterPick = () => scrollToSide(root);
+  // панель проблем (W-07): переход к объекту — выделение и уровень на модели; у объекта здания — режим «Будівля»
+  let probs = null;
+  const goProblem = (p) => {
+    if (!p) return;
+    if ((p.ids || []).some((id) => model.tree.nodes.has(id))) { if (bldOn()) model.bld.setOn(false); model.checks.goTo(p); apply(); }
+    else if ((p.bld || []).length) { mode = "2d"; model.bld.setOn(true); model.bld.select(p.bld); apply(); p2.fit(); }
+  };
   const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick });
   const side = createSidePanel({ model, i18n, root: q("#plan-side") });
 
@@ -129,6 +139,9 @@ export function mountApp(root, { model, i18n, host = {} }) {
     root.querySelectorAll("#seg-pick [data-pk]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pk === model.ui.pick)));
     root.querySelectorAll("#seg-lang [data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === i18n.lang())));
     q("#vp-status").textContent = statusTxt();
+    const pc = model.checks.counts(), pb = q("#pr-btn");
+    q("#pr-cnt").textContent = String(pc.total); pb.classList.toggle("has-err", pc.error > 0); pb.classList.toggle("has-warn", !pc.error && pc.total > 0);
+    pb.setAttribute("aria-pressed", String(!q("#problems").hidden)); pb.title = t("prob.count", { e: pc.error, w: pc.warn });
     updateEditBar(root, { model, i18n });
   }
   const renderLvl = () => renderLevelBar(q("#lvlbar"), { model, i18n });
@@ -146,13 +159,13 @@ export function mountApp(root, { model, i18n, host = {} }) {
 
   // ---------- события модели
   model.on((ev) => {
-    if (ev.type === "notify") { notifier.fromEvent(ev); return; }
-    if (ev.type === "warehouse") { renderSwitch(); applyStatic(); side.render(); paintBars(); refresh(); return; }
-    if (ev.type === "rebuild") { p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); refresh(); }
+    if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); probs?.render(); return; }
+    if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); side.render(); paintBars(); refresh(); probs?.render(); return; }
+    if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.paint(); three.fit(); } }
     else if (ev.type === "bld") p2.bldRefresh(); // режим «Будівля»: слой здания, панель, строка состояния
     else refresh();
-    side.render(); paintBars();
+    side.render(); paintBars(); if (ev.type === "rebuild") probs?.render();
   });
 
   // ---------- кнопки
@@ -202,6 +215,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     else if (three) three.resize();
   }
   q("#help-btn").onclick = () => showView(view === "help" ? "plan" : "help");
+  q("#pr-btn").onclick = () => { probs.toggle(); paintBars(); };
 
   bindKeys({ model, isActive: () => view === "plan" });
 
@@ -210,11 +224,12 @@ export function mountApp(root, { model, i18n, host = {} }) {
     document.documentElement.lang = l; model.pref.write("lang", l);
     applyStatic(); paintBars(); renderLvl(); p2.rebuild(); p2.setHidden(mode !== "2d"); p2.paint();
     if (three) { three.canvas.setAttribute("aria-label", t("plan.canvasLabel")); three.makeLabels(); }
-    side.render(); refresh();
+    side.render(); refresh(); q("#problems").setAttribute("aria-label", t("prob.title")); probs?.render();
     if (view === "help") renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan") });
   });
 
   document.documentElement.lang = i18n.lang();
   applyStatic(); renderSwitch(); apply(); side.render();
+  probs = createProblems({ model, i18n, root: q("#problems"), onGo: goProblem });
   return { showView, get mode() { return mode; } };
 }
