@@ -31,6 +31,7 @@
         "views/f3d_machine_event_views.xml",
         "views/f3d_gantry_views.xml",
         "views/mrp_workcenter_views.xml",
+        "views/f3d_oee_views.xml",
         "views/menus.xml",
     ],
     "demo": [],
