@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_wh_constructor_app" model="ir.actions.act_url">
+        <field name="name">Конструктор складу</field>
+        <field name="url">/wh_constructor/app</field>
+        <field name="target">self</field>
+    </record>
+
+    <!-- Склад → Конфігурація → Конструктор складу; видимість батьківського меню розширює post_init_hook -->
+    <menuitem id="menu_wh_constructor" name="Конструктор складу" parent="stock.menu_stock_config_settings"
+              action="action_wh_constructor_app" groups="group_wh_view" sequence="90"/>
+</odoo>

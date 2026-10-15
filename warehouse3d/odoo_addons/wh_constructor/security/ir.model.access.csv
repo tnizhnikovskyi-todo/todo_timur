@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_wh_project_view,wh.project view,model_wh_project,group_wh_view,1,0,0,0
+access_wh_project_design,wh.project design,model_wh_project,group_wh_design,1,1,1,1
+access_wh_project_version_view,wh.project.version view,model_wh_project_version,group_wh_view,1,0,0,0
+access_wh_project_version_design,wh.project.version design,model_wh_project_version,group_wh_design,1,0,1,0
+access_wh_zone_lock_view,wh.zone.lock view,model_wh_zone_lock,group_wh_view,1,0,0,0
+access_wh_zone_lock_design,wh.zone.lock design,model_wh_zone_lock,group_wh_design,1,1,1,1

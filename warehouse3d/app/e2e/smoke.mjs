@@ -228,6 +228,35 @@ try {
     expect(ks.some((k) => /^wh-app-project-demo-\d+$/.test(k)), "демо-проект не создан под новым id");
     await p2.close();
   });
+  await step("страница из Odoo: проект в базе (фейковый сервер), права, статус хранилища", async () => {
+    const open = async (rights) => {
+      const db = { saves: [], projects: [] }, ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+      await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; });
+      await ctx.route("**/wh_constructor/api/**", async (route) => {
+        const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+        const out = r === "/me" ? { uid: 1, name: "Аня", company: "Co", rights }
+          : r === "/projects" ? { status: "ok", projects: [] }
+          : r === "/project/save" ? (db.saves.push(params), { status: "ok", rev: db.saves.length })
+          : r.startsWith("/lock/") ? { ok: true, owner: "Аня", mine: true } : { status: "ok", found: false };
+        await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+      });
+      const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+      await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+      return { pg, db };
+    };
+    const rw = await open({ view: true, design: true, apply: false });
+    await rw.pg.waitForTimeout(800);
+    expect(rw.db.saves.length >= 1 && rw.db.saves[0].data.schema === 2 && rw.db.saves[0].base_rev === null, "демо-проект не ушёл на сервер");
+    expect(!(await rw.pg.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith("wh-app-project")))), "проект попал в localStorage");
+    await rw.pg.click("#ed-tg");
+    expect((await rw.pg.locator("#ed-st").innerText()) === "Проєкт зберігається в базі Odoo", "статус хранилища Odoo");
+    const ro = await open({ view: true, design: false, apply: false });
+    await ro.pg.waitForTimeout(500);
+    await ro.pg.click("#ed-tg");
+    expect((await ro.pg.locator("#ed-st").innerText()).startsWith("Лише перегляд"), "режим только просмотра");
+    expect(ro.db.saves.length === 0, "режим просмотра отправил запись");
+    await rw.pg.context().close(); await ro.pg.context().close();
+  });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForSelector("#plan-side h2");

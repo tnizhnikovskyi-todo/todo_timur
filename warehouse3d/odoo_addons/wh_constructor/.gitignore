@@ -1,0 +1,4 @@
+# сборка приложения: npm run build:odoo в warehouse3d/app
+static/app/
+__pycache__/
+*.pyc

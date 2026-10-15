@@ -6,12 +6,13 @@
 //   opts.words — () => ({ copy, newZone, newType }): слова, которые попадают в имена новых узлов (по языку интерфейса)
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
 //   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
-//   { type: "notify", kind, key, params, sub } сообщение пользователю.
+//   { type: "notify", kind, key, params, sub } сообщение пользователю · { type: "locks" } изменились блокировки зон (locks.js).
 import { PICKS, clone, normEdit } from "./types.js";
 import { buildTree, cfgOf } from "./tree.js";
 import { layout } from "./layout.js";
 import { nodesOf } from "./project.js";
 import * as sel from "./select.js";
+import { createLocks } from "./locks.js";
 import * as ed from "./edit.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип" };
@@ -34,6 +35,9 @@ export function createModel(project, storage, opts = {}) {
   const want = rd("wh");
   load(project.warehouses.find((w) => w.id === want) || project.warehouses[0]);
   s.ui = sel.newUi(rd("pick"));
+  // блокировки зон (W-21): берутся при входе в правку зоны, если хранилище это умеет; см. locks.js
+  s.locks = createLocks(s);
+  s.listeners.add((ev) => { if (ev.type === "select" || ev.type === "focus" || ev.type === "warehouse") s.locks.sync(); });
 
   const ui = s.ui, patch = (p, type = "select") => { if (!p) return false; Object.assign(ui, p); s.emit({ type }); return true; };
   const bind = (name) => (...a) => ed.OPS[name](s, ...a);
@@ -55,6 +59,7 @@ export function createModel(project, storage, opts = {}) {
     get pending() { return s.pending; },
     get clip() { return s.clip.filter((id) => s.tree.nodes.has(id)); },
     get readonly() { return !!storage.readonly; },
+    get shared() { return !!storage.shared; }, // проект хранится в общей базе (модуль Odoo), а не в браузере
     get data() { return s.data; }, // снимок Odoo активного склада
     get project() { ed.sync(s); return s.project; },
     get warehouse() { return s.wh; },
@@ -90,7 +95,9 @@ export function createModel(project, storage, opts = {}) {
     focusTo: (id) => patch(sel.focusTo(s.tree, ui, id), "focus"),
     focusUp: () => { const f = s.tree.nodes.get(ui.focus); if (f.parent) patch(sel.focusTo(s.tree, ui, f.parent), "focus"); },
     setPick(p) { if (!PICKS.includes(p)) return; ui.pick = p; wr("pick", p); s.emit({ type: "select" }); },
-    setEdit(on) { patch({ edit: on, esel: on ? ui.focus : null, sel: null, msel: [] }); },
+    setEdit(on) { patch({ edit: on, esel: on ? ui.focus : null, sel: null, msel: [] }); if (!on) s.locks.release(); },
+    // блокировки зон (locks.js): занятая другим зона для узла, продление и снятие (хост вызывает по таймеру и при закрытии страницы)
+    locks: { busyInfo: (id) => s.locks.busyInfo(id), zoneOf: (id) => s.locks.zoneOf(id), held: () => s.locks.held(), renew: () => s.locks.renew(), release: () => s.locks.release() },
     dragSet: (id) => sel.dragSet(s.tree, ui, id),
     moveTargets: (ids) => sel.moveTargets(s.tree, ui, ids),
     rackOf: (id) => sel.rackOf(s.tree, id),
