@@ -1,0 +1,27 @@
+# ruff: noqa: B018
+{
+    "name": "Завод 3D: двір (КПП, ворота, ваги)",
+    "summary": "Двір: рейси сторонніх фур, бронювання воріт, LPR, шлагбауми, автоваги",
+    "description": "Облік рейсів і бронювання воріт, розпізнавання номерів (Axis LPV), команди на шлагбауми "
+                   "через telemetry, автоваги (SICS), диспетчерська й екран КПП.",
+    "version": "19.0.1.0.0",
+    "category": "Inventory/Inventory",
+    "author": "ToDo",
+    "website": "https://todo.ltd",
+    "license": "LGPL-3",
+    # DEC-1: web_gantt (Enterprise) не в depends; Gantt — у мосту factory3d_yard_gantt
+    "depends": [
+        "factory3d_base", "factory3d_telemetry", "stock_picking_batch", "stock_fleet",
+        "delivery", "stock_delivery", "mail", "bus",
+    ],
+    "data": [
+        "security/f3d_yard_security.xml",
+        "security/ir.model.access.csv",
+        "data/ir_config_parameter.xml",
+        "data/ir_sequence.xml",
+        "views/f3d_yard_menus.xml",
+    ],
+    "demo": [],
+    "installable": True,
+    "application": False,
+}
