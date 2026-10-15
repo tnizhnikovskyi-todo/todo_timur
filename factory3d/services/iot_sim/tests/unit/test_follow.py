@@ -3,7 +3,6 @@ import json
 
 import httpx
 import pytest
-
 from iot_sim.odoo.devices_client import DevicesClient, EventForwarder
 from iot_sim.odoo.follow import FollowOdoo, OdooReadOnly
 

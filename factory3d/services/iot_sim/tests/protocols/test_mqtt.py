@@ -2,7 +2,6 @@
 import json
 
 import pytest
-
 from iot_sim.protocols.mqtt_publisher import BUFFER_S, MqttPublisher, parse_mqtt_url
 
 

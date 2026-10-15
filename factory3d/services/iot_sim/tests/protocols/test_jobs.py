@@ -1,7 +1,6 @@
 """P-04 /jobs: карти розкрою (SPEC §8.6)."""
 import httpx
 import pytest
-
 from iot_sim.protocols.jobs_api import JobsApi, optimize, parse_parts
 
 KEY = {"X-Api-Key": "k-jobs"}

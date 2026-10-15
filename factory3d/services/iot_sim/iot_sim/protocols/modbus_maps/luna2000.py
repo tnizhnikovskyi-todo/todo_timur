@@ -1,6 +1,8 @@
 """P-07 Huawei LUNA2000 BESS (SPEC §8.9.2): unit 69; діапазони регістрів не перекриваються (X-51)."""
 from __future__ import annotations
 
+from typing import Any
+
 from iot_sim.protocols.modbus_maps import Ctx, to_int, words_of
 
 UNIT = 69
@@ -23,7 +25,7 @@ def build(ctx: Ctx) -> None:
     um.add_hr(37016, lambda: words_of(to_int(ctx.num("infra/bess/kwh_discharge_total") * 100), 2),
               2, None, "total_discharge")
 
-    def day(key: str, sign: int):  # ПРИПУЩЕННЯ: добовий лічильник = поточний total − total на 00:00
+    def day(key: str, sign: int) -> Any:  # ПРИПУЩЕННЯ: добовий лічильник = поточний total − total на 00:00
         def get() -> list[int]:
             tot = ctx.num(f"infra/bess/kwh_{key}_total")
             d = ctx.world.now().date().isoformat()

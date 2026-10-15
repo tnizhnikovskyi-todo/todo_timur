@@ -133,7 +133,7 @@ async def test_tk03_ventilation_boiler(bac, api):
 async def test_tk08_fire_panel(bac, api):
     api.post("/time", {"set": NOON, "factor": 1})
     assert str(await bac.rp(200, "life-safety-zone,14")) == "quiet"
-    r = api.post("/scenario/fire_drill/start", {"params": {"zone": "FA-CNC", "detector": "2.CNC.05"}})
+    r = api.post("/scenario/fire_drill/start", {"params": {"zone": "FA-CNC"}})
     assert r.status_code == 201, r.text
     await asyncio.sleep(4)
     assert str(await bac.rp(200, "life-safety-zone,14")) == "test-alarm"            # AC-15
@@ -172,12 +172,9 @@ async def test_tk08_fire_panel(bac, api):
     assert api.post("/device/FA-CUT/clear").status_code == 200
     assert api.post("/device/PV-ROOF/fault", {"reason": "sensor"}).status_code == 422
     # object-list dev 200: лише LSZ/LSP/PIV/BV/MSV/device (AC-61), 302 LSP (AC-66)
-    # object-list читаємо поелементно (array_index): повне читання ~490 об'єктів потребує сегментації відповіді,
-    # а клієнт bacpypes3 без Application.from_object_list її не приймає (див. TEST_REPORT.md)
-    n = await bac.c.read_property(bac.dev(200), "device,200", "object-list", array_index=0)
-    ol = []
-    for i in range(1, n + 1):
-        ol.append(await bac.c.read_property(bac.dev(200), "device,200", "object-list", array_index=i))
+    # object-list цілком: клієнт має оголосити сегментацію (bacpypes3 для клієнтського Application сам не виставляє)
+    bac.c.asap.device_object = bac.c.device_object
+    ol = await bac.rp(200, "device,200", "object-list")
     types = {str(o[0]) for o in ol}
     assert types <= {"device", "life-safety-zone", "life-safety-point", "binary-value",
                      "multi-state-value", "positive-integer-value"}, types

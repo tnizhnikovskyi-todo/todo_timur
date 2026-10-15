@@ -2,7 +2,6 @@
 from datetime import datetime
 
 import pytest
-
 from iot_sim.core.rng import det
 from iot_sim.models.lighting import BY_CODE, GROUPS, c110_state
 from iot_sim.models.roofvent import AQ, REC, ST, VE, VEL

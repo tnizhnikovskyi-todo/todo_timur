@@ -48,7 +48,7 @@ def drill_view(world: Any) -> dict[str, Any] | None:
     ckey = (epoch, id(flag), flag.get("phase") if flag else None)
     cache = getattr(world, "_drill_cache", None)
     if cache is not None and cache[0] == ckey:
-        return cache[1]
+        return cache[1]  # type: ignore[no-any-return]
     st = getattr(world, "_drill", None)
     if flag:
         t0 = datetime.fromisoformat(flag["t0"]).timestamp()
@@ -113,6 +113,12 @@ class FacpZone(Model):
     def first_detector(self) -> str | None:
         return self.detectors[0] if self.detectors else None
 
+    @property
+    def drill_detector(self) -> str | None:
+        """Сповіщувач навчальної тривоги за умовчанням: AC-15 — для FA-CNC це 2.CNC.05 (LSP:21405), інакше перший у зоні."""
+        pref = {"FA-CNC": "2.CNC.05"}.get(self.device.code)
+        return pref if pref in self.detectors else self.first_detector
+
     def detector_loop(self, addr: str | None = None) -> int:
         a = addr or self.first_detector
         return int(a.split(".")[0]) if a else 1
@@ -149,7 +155,7 @@ class FacpZone(Model):
         self.set("state", self.state_value)
         for addr, obj in self.lsp.items():
             pv = QUIET
-            if alarm is not None and addr == (view["detector"] or self.first_detector):
+            if alarm is not None and addr == (view["detector"] or self.drill_detector):  # type: ignore[index]
                 pv = alarm
             obj["present_value"] = pv
             bad = self.contamination[addr] > DUST_ALARM or (
@@ -263,10 +269,10 @@ class Facp(Model):
         self.set("brigade", int(self.brigade))
         did = view["id"] if view else None
         if did is not None and did != self.drill_id:
-            zone = self.world.devices.get(view["zone"]) if view["zone"] else None
-            det_addr = view["detector"] or (zone.model.first_detector if zone else None)
-            label = "Тривога" if view["real"] else "Навчальна тривога"
+            zone = self.world.devices.get(view["zone"]) if view["zone"] else None  # type: ignore[index]
+            det_addr = view["detector"] or (zone.model.drill_detector if zone else None)  # type: ignore[attr-defined,index]
+            label = "Тривога" if view["real"] else "Навчальна тривога"  # type: ignore[index]
             self.world.events.emit(
-                "fire", f"{label}: сповіщувач {det_addr}, зона {view['zone']}", device=self.device.code,
-                payload={"zone": view["zone"], "detector": det_addr, "real": view["real"]})
+                "fire", f"{label}: сповіщувач {det_addr}, зона {view['zone']}", device=self.device.code,  # type: ignore[index]
+                payload={"zone": view["zone"], "detector": det_addr, "real": view["real"]})  # type: ignore[index]
         self.drill_id = did

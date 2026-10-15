@@ -6,6 +6,8 @@ RTD0–2 -> ``energy/transformers/T1/temp_c`` (максимум з трьох о
 """
 from __future__ import annotations
 
+from typing import Any
+
 from iot_sim.protocols.modbus_maps import Ctx, f32_words, to_float
 
 UNIT = 96
@@ -22,11 +24,11 @@ def build(ctx: Ctx) -> None:
     for ch in range(6):
         code, off = SIGNALS[ch // 3], SPREAD[ch % 3]
 
-        def temp(c=code, o=off) -> float:
-            return to_float(ctx.val(c)) - o
+        def temp(c: Any=code, o: Any=off) -> float:
+            return to_float(ctx.val(c)) - o  # type: ignore[no-any-return]
 
-        um.add_hr(ch, lambda t=temp: [raw_of(t())], 1, None, f"RTD{ch}")
-        um.add_hr(30 + 2 * ch, lambda t=temp: f32_words(t(), little=True), 2, None, f"RTD{ch}_c")
+        um.add_hr(ch, lambda t=temp: [raw_of(t())], 1, None, f"RTD{ch}")  # type: ignore[misc]
+        um.add_hr(30 + 2 * ch, lambda t=temp: f32_words(t(), little=True), 2, None, f"RTD{ch}_c")  # type: ignore[misc]
         um.add_bit("c", 120 + ch, lambda: False, None, f"burnout{ch}")
     um.add_const(6, [0], "RTD6")
     um.add_hr(42, lambda: f32_words(-50.0, little=True), 2, None, "RTD6_c")

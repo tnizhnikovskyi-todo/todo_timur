@@ -5,7 +5,6 @@ from datetime import datetime
 
 import httpx
 import pytest
-
 from iot_sim.core.outbound import OutboundDenied, OutboundGuard
 from iot_sim.protocols.lpr_push import LprPusher, build_axis_payload
 

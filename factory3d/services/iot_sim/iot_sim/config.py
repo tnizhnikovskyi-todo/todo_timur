@@ -1,7 +1,7 @@
 """Налаштування сервісу: усі змінні SIM_* (SPEC §8.2.1)."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
 
     @field_validator("helvar_version", mode="before")
     @classmethod
-    def _helvar_int(cls, v):
+    def _helvar_int(cls, v: Any) -> Any:
         """SIM_HELVAR_VERSION приходить з env рядком «1»/«2» (Literal[1, 2] його б відхилив — рестарт падав)."""
         return int(v) if isinstance(v, str) and v.strip().isdigit() else v
 

@@ -156,7 +156,7 @@ class YardCtl:
             if isinstance(sh, dict) and sh.get("trucks", True):
                 self.demo_loaded = True
                 base = datetime.combine(now.date(), datetime.min.time(), tzinfo=now.tzinfo)
-                src = [dict(b, scheduled=(base + timedelta(hours=b["hhmm"][0], minutes=b["hhmm"][1])).isoformat())
+                src = [dict(b, scheduled=(base + timedelta(hours=b["hhmm"][0], minutes=b["hhmm"][1])).isoformat())  # type: ignore[arg-type,index]
                        for b in DEMO_BOOKINGS]
                 w.trucks.extend(src)
         for b in list(w.trucks):
@@ -313,7 +313,7 @@ class YardCtl:
                         tr["req"] = g["pulse"]
                     else:
                         return
-                    self.open_request(tr["gate_in"], tr["req"])
+                    self.open_request(tr["gate_in"], tr["req"])  # type: ignore[arg-type]
                 if epoch < tr["req"] + OPEN_S:
                     return
                 self._pass_gate(tr, tr["gate_in"], tr["req"] + OPEN_S)

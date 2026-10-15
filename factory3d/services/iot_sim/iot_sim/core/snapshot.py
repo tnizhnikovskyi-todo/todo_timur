@@ -64,7 +64,7 @@ def restore(world: World, data: dict[str, Any]) -> None:
         sig = world.signals.get(code)
         if sig is None:  # сигнал зник з каталогу — ігноруємо
             continue
-        sig.value, sig.ts, sig.status, sig.held_until = value, _dt(ts), status, _dt(held)
+        sig.value, sig.ts, sig.status, sig.held_until = value, _dt(ts), status, _dt(held)  # type: ignore[assignment]
     for code, d in data["devices"].items():
         dev = world.devices.get(code)
         if dev is not None:
@@ -110,4 +110,4 @@ def load(state_dir: str | Path, max_age_s: float = MAX_AGE_S) -> dict[str, Any] 
         log.warning("snapshot ignored (too old: %.0f s)", age)
         return None
     log.info("restored snapshot from %s (age %.0f s)", data["sim_now"], age)
-    return data
+    return data  # type: ignore[no-any-return]

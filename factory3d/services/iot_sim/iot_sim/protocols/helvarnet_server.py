@@ -179,7 +179,7 @@ class HelvarServer(ProtocolServer):
                             outer._udp.sendto("".join(resp).encode("utf-8"), addr)
 
             transport, _ = await loop.create_datagram_endpoint(Udp, local_addr=(self.host, self.udp_port))
-            self._udp = transport  # type: ignore[assignment]
+            self._udp = transport
             if self.udp_port == 0:
                 self.udp_port = transport.get_extra_info("sockname")[1]
         self._last = {g.g: self._level(g) for g in self.layout.groups}
@@ -201,7 +201,7 @@ class HelvarServer(ProtocolServer):
             self._udp.close()
             self._udp = None
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self.up, "tcp": self.tcp_port, "udp": self.udp_port,
                 "clients": len(self.clients), "groups": len(self.layout.groups)}
 
@@ -378,7 +378,7 @@ class HelvarServer(ProtocolServer):
         fn = getattr(self, f"_q{c}", None)
         if fn is None:
             raise HelvarError(ERR_CMD)
-        return fn(req)
+        return fn(req)  # type: ignore[no-any-return]
 
     # --- команди C:11…18 -------------------------------------------------------------
     def _targets(self, req: Request) -> tuple[Group | None, str | None]:
@@ -409,7 +409,7 @@ class HelvarServer(ProtocolServer):
         resp = [f"!{req.header()}={ERR_OK}#"] if req.get("A") == "1" else []
         return resp, push
 
-    def _apply(self, grp: Group | None, addr: str | None, level: int, extra: dict, fade: int) -> None:
+    def _apply(self, grp: Group | None, addr: str | None, level: int, extra: dict[str, Any], fade: int) -> None:
         w = self.world
         if grp is not None:
             for d in grp.devices:
@@ -452,84 +452,84 @@ class HelvarServer(ProtocolServer):
         return resp, f">{req.header(drop=('A',))}#"
 
     # --- запити ----------------------------------------------------------------------
-    def _q101(self, req):  # Query Clusters
+    def _q101(self, req: Any) -> Any:  # Query Clusters
         return self._ok(req, 1)
 
-    def _q102(self, req):  # Query Routers
+    def _q102(self, req: Any) -> Any:  # Query Routers
         return self._ok(req, ",".join(str(i) for i in range(1, self.layout.routers + 1)))
 
-    def _q103(self, req):  # LSIB
+    def _q103(self, req: Any) -> Any:  # LSIB
         g = self._group(req)
         self._int(req, "B", 1, 8, ERR_BLOCK)
-        return self._ok(req, self._scene(g))
+        return self._ok(req, self._scene(g))  # type: ignore[arg-type]
 
-    def _q104(self, req):  # Query Device Type
+    def _q104(self, req: Any) -> Any:  # Query Device Type
         self._addr(req, sensors=True)
         return self._ok(req, DEVICE_TYPE_DALI)
 
-    def _q105(self, req):  # Description (Group)
+    def _q105(self, req: Any) -> Any:  # Description (Group)
         g = self._group(req, allow_emergency=True)
         return self._ok(req, "EMERGENCY" if g == EMERGENCY_G else g.name)  # type: ignore[union-attr]
 
-    def _q106(self, req):  # Description (Device)
+    def _q106(self, req: Any) -> Any:  # Description (Device)
         a = self._addr(req, sensors=True)
         grp = self.layout.devices.get(a)
         return self._ok(req, f"{grp.name} {a}" if grp else f"Датчик/EMERGENCY {a}")
 
-    def _q107(self, req):
+    def _q107(self, req: Any) -> Any:
         return self._ok(req, "F3D")
 
-    def _q108(self, req):  # Workgroup membership
+    def _q108(self, req: Any) -> Any:  # Workgroup membership
         a = self._addr(req)
         grp = self.layout.devices.get(a)
         return self._ok(req, grp.g if grp else EMERGENCY_G)
 
-    def _q109(self, req):  # LSIG
+    def _q109(self, req: Any) -> Any:  # LSIG
         g = self._group(req)
-        return self._ok(req, self._scene(g))
+        return self._ok(req, self._scene(g))  # type: ignore[arg-type]
 
-    def _q110(self, req):  # Query Device State
+    def _q110(self, req: Any) -> Any:  # Query Device State
         a = self._addr(req)
         return self._ok(req, self._dev_state(a))
 
-    def _flag_q(self, req: Request, mask: int):
+    def _flag_q(self, req: Request, mask: int) -> Any:
         a = self._addr(req)
         return self._ok(req, 1 if self._dev_state(a) & mask else 0)
 
-    def _q111(self, req):
+    def _q111(self, req: Any) -> Any:
         return self._flag_q(req, 0x1)
 
-    def _q112(self, req):
+    def _q112(self, req: Any) -> Any:
         return self._flag_q(req, 0x2)
 
-    def _q113(self, req):
+    def _q113(self, req: Any) -> Any:
         return self._flag_q(req, 0x4)
 
-    def _q114(self, req):
+    def _q114(self, req: Any) -> Any:
         return self._flag_q(req, 0x8)
 
-    def _q150(self, req):  # Measurement (датчик 322): лк
+    def _q150(self, req: Any) -> Any:  # Measurement (датчик 322): лк
         self._addr(req, sensors=True)
         lux = self.world.flag("lighting.lux")
         return self._ok(req, int(lux) if isinstance(lux, (int, float)) else 300)
 
-    def _q151(self, req):  # Inputs: присутність
+    def _q151(self, req: Any) -> Any:  # Inputs: присутність
         self._addr(req, sensors=True)
         return self._ok(req, 1 if self.world.shift.in_shift(self.world.now()) else 0)
 
-    def _q152(self, req):  # Load level
+    def _q152(self, req: Any) -> Any:  # Load level
         a = self._addr(req)
         return self._ok(req, self._dev_level(a))
 
-    def _q160(self, req):  # Power (device)
+    def _q160(self, req: Any) -> Any:  # Power (device)
         a = self._addr(req)
         return self._ok(req, round(126 * self._dev_level(a) / 100))
 
-    def _q161(self, req):  # Power (group)
+    def _q161(self, req: Any) -> Any:  # Power (group)
         g = self._group(req)
-        return self._ok(req, round(len(g.devices) * 126 * self._level(g) / 100))  # type: ignore[union-attr]
+        return self._ok(req, round(len(g.devices) * 126 * self._level(g) / 100))  # type: ignore[arg-type,union-attr]
 
-    def _q164(self, req):  # Query Group: склад, ≤ 64 адрес у кадрі, часткові кадри `$`
+    def _q164(self, req: Any) -> Any:  # Query Group: склад, ≤ 64 адрес у кадрі, часткові кадри `$`
         g = self._group(req, allow_emergency=True)
         devs = self.layout.emergency if g == EMERGENCY_G else g.devices  # type: ignore[union-attr]
         if not devs:
@@ -539,19 +539,19 @@ class HelvarServer(ProtocolServer):
         frames = [f"?{head}={','.join(ch)}{'#' if i == len(chunks) - 1 else '$'}" for i, ch in enumerate(chunks)]
         return frames, None
 
-    def _q165(self, req):  # Query Groups
+    def _q165(self, req: Any) -> Any:  # Query Groups
         return self._ok(req, ",".join([str(g.g) for g in self.layout.groups] + [str(EMERGENCY_G)]))
 
-    def _q166(self, req):  # Query Scene Names
+    def _q166(self, req: Any) -> Any:  # Query Scene Names
         self._group(req, allow_emergency=True)
         return self._ok(req, ",".join(SCENE_NAMES))
 
-    def _q167(self, req):  # Query Scene Info
+    def _q167(self, req: Any) -> Any:  # Query Scene Info
         self._group(req, allow_emergency=True)
         s = self._int(req, "S", 1, 16, ERR_SCENE)
         return self._ok(req, f"{SCENE_NAMES[s - 1]},{SCENE_LEVELS[s - 1]}")
 
-    def _em_query(self, req: Request, value: int):
+    def _em_query(self, req: Request, value: int) -> Any:
         if req.get("G") is not None:
             if self._group(req, allow_emergency=True) != EMERGENCY_G:
                 raise HelvarError(ERR_GROUP)
@@ -559,44 +559,44 @@ class HelvarServer(ProtocolServer):
             raise HelvarError(ERR_NODEVICE)
         return self._ok(req, value)
 
-    def _q170(self, req):
+    def _q170(self, req: Any) -> Any:
         return self._em_query(req, self.em["ft_time"])
 
-    def _q171(self, req):
+    def _q171(self, req: Any) -> Any:
         return self._em_query(req, self.em["ft_state"])
 
-    def _q172(self, req):
+    def _q172(self, req: Any) -> Any:
         return self._em_query(req, self.em["dt_time"])
 
-    def _q173(self, req):
+    def _q173(self, req: Any) -> Any:
         return self._em_query(req, self.em["dt_state"])
 
-    def _q174(self, req):  # заряд АКБ, %
+    def _q174(self, req: Any) -> Any:  # заряд АКБ, %
         return self._em_query(req, 40 if self._blackout() else 100)
 
-    def _q175(self, req):  # час роботи від АКБ, хв
+    def _q175(self, req: Any) -> Any:  # час роботи від АКБ, хв
         return self._em_query(req, 180)
 
-    def _q176(self, req):  # напрацювання лампи, год
+    def _q176(self, req: Any) -> Any:  # напрацювання лампи, год
         return self._em_query(req, 1200)
 
-    def _q185(self, req):
+    def _q185(self, req: Any) -> Any:
         return self._ok(req, int(self.world.now().timestamp()))
 
-    def _q186(self, req):
+    def _q186(self, req: Any) -> Any:
         return self._ok(req, 30.52)
 
-    def _q187(self, req):
+    def _q187(self, req: Any) -> Any:
         return self._ok(req, 50.45)
 
-    def _q188(self, req):
+    def _q188(self, req: Any) -> Any:
         return self._ok(req, "+120")
 
-    def _q189(self, req):
+    def _q189(self, req: Any) -> Any:
         return self._ok(req, 1)
 
-    def _q190(self, req):
+    def _q190(self, req: Any) -> Any:
         return self._ok(req, "5.4.0")
 
-    def _q191(self, req):
+    def _q191(self, req: Any) -> Any:
         return self._ok(req, self.version)

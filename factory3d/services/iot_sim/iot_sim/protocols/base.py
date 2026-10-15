@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class ProtocolServer(ABC):
@@ -14,5 +15,5 @@ class ProtocolServer(ABC):
     async def stop(self) -> None: ...
 
     @abstractmethod
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         """Стан сервера: {"proto": name, "up": bool, ...}."""

@@ -82,7 +82,7 @@ class _Rules(PermissionRuleset):
     def __init__(self) -> None:
         self._base = SimpleRoleRuleset()
 
-    def check_validity(self, user, action_type, body):
+    def check_validity(self, user: Any, action_type: Any, body: Any) -> Any:
         call_id = ua.NodeId(ua.ObjectIds.CallRequest_Encoding_DefaultBinary)
         write_id = ua.NodeId(ua.ObjectIds.WriteRequest_Encoding_DefaultBinary)
         if action_type == write_id:  # ТБ-04: клієнтський Write заборонений усім, включно з collector
@@ -98,7 +98,7 @@ class _Users(UserManager):
     def __init__(self, user: str, password: str) -> None:
         self.user, self.password = user, password
 
-    def get_user(self, iserver, username=None, password=None, certificate=None):
+    def get_user(self, iserver: Any, username: Any=None, password: Any=None, certificate: Any=None) -> Any:
         if username:
             if username == self.user and password == self.password:
                 return User(role=UserRole.Admin, name=username)
@@ -126,7 +126,7 @@ class OpcUaServer(ProtocolServer):
         self._events: dict[str, Any] = {}
         self._cursor = 0
         self._wake = asyncio.Event()
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
     # --- життєвий цикл ----------------------------------------------------------------
@@ -182,7 +182,7 @@ class OpcUaServer(ProtocolServer):
         except ValueError:
             pass
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self.up, "port": self.port,
                 "machines": len(self.machines)}
 
@@ -200,8 +200,8 @@ class OpcUaServer(ProtocolServer):
                 log.exception("opcua refresh failed")
 
     # --- побудова адресного простору --------------------------------------------------
-    async def _var(self, parent, path: str, name: str, value: Any, vt: ua.VariantType,
-                   writable: bool = False):
+    async def _var(self, parent: Any, path: str, name: str, value: Any, vt: ua.VariantType,
+                   writable: bool = False) -> Any:
         nid = ua.NodeId(f"{path}.{name}", self.ns)
         node = await parent.add_variable(nid, ua.QualifiedName(name, self.ns),
                                          ua.Variant(value, vt))
@@ -210,11 +210,11 @@ class OpcUaServer(ProtocolServer):
         self._nodes[f"{path}.{name}"] = (node, vt)
         return node
 
-    async def _obj(self, parent, path: str, name: str):
+    async def _obj(self, parent: Any, path: str, name: str) -> Any:
         return await parent.add_object(ua.NodeId(f"{path}.{name}", self.ns),
                                        ua.QualifiedName(name, self.ns))
 
-    async def _build_machine(self, folder, code: str) -> None:
+    async def _build_machine(self, folder: Any, code: str) -> None:
         dev = self.world.devices[code]
         ns = self.ns
         obj = await folder.add_object(ua.NodeId(code, ns), ua.QualifiedName(code, ns))
@@ -269,9 +269,9 @@ class OpcUaServer(ProtocolServer):
                         [""], ua.VariantType.String)
         self.joborders[code] = []
 
-    def _make_method(self, code: str, method: str):
+    def _make_method(self, code: str, method: str) -> Any:
         @uamethod
-        def call(parent, job_order_id: str = "", comment: str = "") -> int:
+        def call(parent: Any, job_order_id: str = "", comment: str = "") -> int:
             self.world.post("opc_joborder", {"machine": code, "method": method,
                                              "job_order_id": job_order_id, "comment": comment})
             self._apply_command(code, method, job_order_id)
@@ -295,14 +295,14 @@ class OpcUaServer(ProtocolServer):
             item["state"] = JOB_STATES[method]
 
     # --- оновлення значень ------------------------------------------------------------
-    def _sig(self, *codes: str):
+    def _sig(self, *codes: str) -> Any:
         for c in codes:
             s = self.world.signals.get(c)
             if s is not None:
                 return s
         return None
 
-    async def _write(self, key: str, value: Any, good: bool, ts) -> None:
+    async def _write(self, key: str, value: Any, good: bool, ts: Any) -> None:
         node, vt = self._nodes[key]
         stamp = (tuple(value) if isinstance(value, list) else value, good)
         if self._cache.get(key) == stamp:
@@ -371,7 +371,7 @@ class OpcUaServer(ProtocolServer):
                 await self._write_joborders(code, ok, now)
         await self._emit_events()
 
-    async def _write_joborders(self, code: str, ok: bool, now) -> None:
+    async def _write_joborders(self, code: str, ok: bool, now: Any) -> None:
         lst = self.joborders[code]
         jsig = self._sig(f"workcenters/{code}/job")
         cur = str(jsig.value) if jsig is not None and jsig.value not in (None, "", 0) else ""

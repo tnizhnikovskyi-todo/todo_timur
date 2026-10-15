@@ -2,7 +2,6 @@ import socket
 from types import SimpleNamespace
 
 import pytest
-
 from iot_sim.core.outbound import OutboundDenied, OutboundGuard
 
 

@@ -22,7 +22,7 @@ SILO_RATE = 0.02
 SILO_LIMIT = 15.0
 
 
-def heat_total_vent(world) -> float:
+def heat_total_vent(world: Any) -> float:
     return sum(float(s.value) for c, s in world.signals.items()
                if c.startswith("ventilation/units/") and c.endswith("/heat_kw"))
 

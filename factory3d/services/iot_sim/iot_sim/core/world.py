@@ -276,7 +276,7 @@ class World:
         self._timers.append(_Timer(self.clock.epoch() + sim_s, self._timer_seq, fn))
         self._timers.sort(key=lambda t: (t.deadline, t.seq))
 
-    def sleep_until(self, epoch: float) -> asyncio.Future:
+    def sleep_until(self, epoch: float) -> asyncio.Future[Any]:
         """Future, що вирішується, коли sim-епоха ≥ ``epoch`` (одразу, якщо вже минула)."""
         fut = asyncio.get_running_loop().create_future()
         if epoch <= self.clock.epoch():
@@ -284,11 +284,11 @@ class World:
         else:
             self._timer_seq += 1
             self._timers.append(_Timer(epoch, self._timer_seq,
-                                       lambda: fut.done() or fut.set_result(None)))
+                                       lambda: fut.done() or fut.set_result(None)))  # type: ignore[arg-type,func-returns-value]
             self._timers.sort(key=lambda t: (t.deadline, t.seq))
         return fut
 
-    def sleep(self, sim_s: float) -> asyncio.Future:
+    def sleep(self, sim_s: float) -> asyncio.Future[Any]:
         """``await world.sleep(30)`` — чекає 30 sim-секунд (вирішується в ``step``)."""
         return self.sleep_until(self.clock.epoch() + sim_s)
 

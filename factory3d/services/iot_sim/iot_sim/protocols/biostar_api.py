@@ -64,7 +64,7 @@ def _parse(v: str) -> dt.datetime:
     return dt.datetime.fromisoformat(str(v)).astimezone(dt.UTC)
 
 
-def ok(body: dict | None = None, status: int = 200, headers: dict | None = None) -> JSONResponse:
+def ok(body: dict[str, Any] | None = None, status: int = 200, headers: dict | None = None) -> JSONResponse:  # type: ignore[type-arg]
     data = dict(body or {})
     data.setdefault("Response", {"code": "0", "message": "Success"})
     return JSONResponse(data, status_code=status, headers=headers)
@@ -166,17 +166,17 @@ class BioStarStore:
         if not vals_c:
             return True
         if op == 0:
-            return v == vals_c[0]
+            return v == vals_c[0]  # type: ignore[no-any-return]
         if op == 1:
-            return v != vals_c[0]
+            return v != vals_c[0]  # type: ignore[no-any-return]
         if op in (2, 4):
             return str(vals_c[0]).lower() in str(v).lower()
         if op == 3:
-            return vals_c[0] <= v <= vals_c[-1]
+            return vals_c[0] <= v <= vals_c[-1]  # type: ignore[no-any-return]
         if op == 5:
-            return v > vals_c[0]
+            return v > vals_c[0]  # type: ignore[no-any-return]
         if op == 6:
-            return v < vals_c[0]
+            return v < vals_c[0]  # type: ignore[no-any-return]
         raise ValueError(f"unknown operator {op}")
 
     def search(self, query: dict[str, Any]) -> dict[str, Any]:
@@ -191,7 +191,7 @@ class BioStarStore:
             if col not in ("datetime", "id"):
                 raise ValueError(f"unsupported order column {col!r}")
             desc = str(o.get("descending", False)).lower() == "true"
-            rows.sort(key=lambda e, c=col: (e["ts"], e["id"]) if c == "datetime" else e["id"],
+            rows.sort(key=lambda e, c=col: (e["ts"], e["id"]) if c == "datetime" else e["id"],  # type: ignore[misc]
                       reverse=desc)
         total = len(rows)
         limit = min(int(query.get("limit", 100)), MAX_LIMIT)
@@ -253,7 +253,7 @@ def create_app(store: BioStarStore) -> FastAPI:
         return fail(401, "10", "Invalid session")
 
     @app.post("/api/login")
-    async def login(request: Request):
+    async def login(request: Request) -> Any:
         store.requests += 1
         try:
             u = (await request.json())["User"]
@@ -271,21 +271,21 @@ def create_app(store: BioStarStore) -> FastAPI:
                   headers={"bs-session-id": sid})
 
     @app.post("/api/logout")
-    async def logout(request: Request):
+    async def logout(request: Request) -> Any:
         if (err := session_error(request)):
             return err
         store.sessions.pop(request.headers["bs-session-id"], None)
         return ok()
 
     @app.get("/api/users")
-    async def users(request: Request, limit: int = 100, offset: int = 0):
+    async def users(request: Request, limit: int = 100, offset: int = 0) -> Any:
         if (err := session_error(request)):
             return err
         rows = store.users()
         return ok({"UserCollection": {"total": str(len(rows)), "rows": rows[offset:offset + limit]}})
 
     @app.get("/api/devices")
-    async def devices(request: Request):
+    async def devices(request: Request) -> Any:
         if (err := session_error(request)):
             return err
         rows = [{"id": d[0], "name": d[2], "device_type_id": {"id": "62", "name": "BioEntry W3"},
@@ -293,7 +293,7 @@ def create_app(store: BioStarStore) -> FastAPI:
         return ok({"DeviceCollection": {"rows": rows}})
 
     @app.get("/api/doors")
-    async def doors(request: Request):
+    async def doors(request: Request) -> Any:
         if (err := session_error(request)):
             return err
         rows = [{"id": k, "name": v, "status": "1", "open_duration": "5",
@@ -302,7 +302,7 @@ def create_app(store: BioStarStore) -> FastAPI:
         return ok({"DoorCollection": {"rows": rows}})
 
     @app.post("/api/events/search")
-    async def events_search(request: Request):
+    async def events_search(request: Request) -> Any:
         if (err := session_error(request)):
             return err
         try:
@@ -312,7 +312,7 @@ def create_app(store: BioStarStore) -> FastAPI:
             return fail(400, "2", f"Invalid query: {exc}")
 
     @app.get("/api/event_types")
-    async def event_types(request: Request):
+    async def event_types(request: Request) -> Any:
         if (err := session_error(request)):
             return err
         rows = [{"code": str(c), "name": n, "description": n} for c, n in EVENT_TYPES.items()]
@@ -371,7 +371,7 @@ class BioStarApi(ProtocolServer):
             runner.server = uvicorn.Server(uvicorn.Config(
                 self.app, host=self.host, port=self.port_https, log_level="warning", lifespan="off",
                 ssl_certfile=str(crt), ssl_keyfile=str(key)))
-            runner.server.capture_signals = contextlib.nullcontext  # type: ignore[method-assign]
+            runner.server.capture_signals = contextlib.nullcontext  # type: ignore[assignment,method-assign]
             self._https = runner
             await runner.start()
 
@@ -380,7 +380,7 @@ class BioStarApi(ProtocolServer):
         if self._https is not None:
             await self._https.stop()
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         up = self._http.up and (self._https is None or self._https.up)
         return {"proto": self.name, "up": up, "port": self.port_http, "port_https": self.port_https,
                 "sessions": len(self.store.sessions), "events": len(self.store.events)}

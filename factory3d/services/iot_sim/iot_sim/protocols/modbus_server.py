@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
+from typing import Any
 
 from pymodbus.datastore import ModbusBaseSlaveContext, ModbusServerContext
 from pymodbus.server import ModbusTcpServer
@@ -43,7 +44,7 @@ class UnitContext(ModbusBaseSlaveContext):
             return False
         return True
 
-    def getValues(self, fc_as_hex: int, address: int, count: int = 1):  # type: ignore[override]
+    def getValues(self, fc_as_hex: int, address: int, count: int = 1) -> Any:
         table = _READ.get(fc_as_hex) or _WRITE.get(fc_as_hex)  # write-back після FC 05/06/16
         if table is None:
             return 1  # Illegal Function
@@ -52,7 +53,7 @@ class UnitContext(ModbusBaseSlaveContext):
         except ModbusError as e:
             return e.code
 
-    def setValues(self, fc_as_hex: int, address: int, values: Sequence[int | bool]):  # type: ignore[override]
+    def setValues(self, fc_as_hex: int, address: int, values: Sequence[int | bool]) -> Any:
         table = _WRITE.get(fc_as_hex)
         if table is None:
             return 1
@@ -76,19 +77,19 @@ class GatewayContext(UnitContext):
     def validate(self, fc_as_hex: int, address: int, count: int = 1) -> bool:
         return False
 
-    def getValues(self, fc_as_hex: int, address: int, count: int = 1):  # type: ignore[override]
+    def getValues(self, fc_as_hex: int, address: int, count: int = 1) -> Any:
         return 0x0B
 
-    def setValues(self, fc_as_hex: int, address: int, values):  # type: ignore[override]
+    def setValues(self, fc_as_hex: int, address: int, values: Any) -> Any:
         return 0x0B
 
 
 class SimServerContext(ModbusServerContext):
     def __init__(self, slaves: dict[int, UnitContext]) -> None:
-        super().__init__(slaves=slaves, single=False)
+        super().__init__(slaves=slaves, single=False)  # type: ignore[no-untyped-call]
         self._gateway = GatewayContext()
 
-    def __getitem__(self, slave):
+    def __getitem__(self, slave: Any) -> Any:
         return self._slaves.get(slave) or self._gateway
 
 
@@ -113,9 +114,9 @@ class ModbusServer(ProtocolServer):
 
     async def stop(self) -> None:
         if self._server is not None:
-            await self._server.shutdown()
+            await self._server.shutdown()  # type: ignore[no-untyped-call]
             self._server = None
         self.up = False
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self.up, "port": self.port, "units": len(self.units)}

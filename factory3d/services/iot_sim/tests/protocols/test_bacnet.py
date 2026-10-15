@@ -9,8 +9,8 @@ from bacpypes3.local.device import DeviceObject
 from bacpypes3.pdu import Address, IPv4Address
 from bacpypes3.primitivedata import ObjectIdentifier
 from bacpypes3.settings import settings as bp_settings
-
 from iot_sim.protocols.bacnet_server import BacnetServer
+
 from tests.protocols.conftest import free_port
 
 ALL = {99, *range(101, 126), 130, 131, 132, 133, 140, 200}
@@ -241,3 +241,13 @@ async def test_facp_302_lsp_objects_and_names(bacnet):
     for inst, name in ((19001, "1.MCP.01"), (29113, "2.SND.13"), (29201, "2.FLM.01"), (49009, "4.MCP.09")):
         assert await c.read_property(addr, f"life-safety-point,{inst}", "object-name") == name
         assert str(await c.read_property(addr, f"life-safety-point,{inst}", "present-value")) == "quiet"
+
+
+async def test_object_list_full_read_segmented(bacnet):
+    """ТК-08/AC-61: object-list dev 200 цілком (сегментована відповідь); клієнт має оголосити сегментацію
+    (``client.asap.device_object`` — у bacpypes3 для клієнтського Application не виставляється сам)."""
+    c = bacnet.client
+    c.asap.device_object = c.device_object
+    ol = await rp(bacnet, 200, "device,200", "object-list")
+    assert sum(1 for o in ol if str(o[0]) == "life-safety-point") == 302
+    assert len(await rp(bacnet, 105, "device,105", "object-list")) > 10

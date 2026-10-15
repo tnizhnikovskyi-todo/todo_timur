@@ -17,7 +17,7 @@
 | Скорочення | 15 хв → 45–110 с (на `factor=10`), 10 хв → 120 с, 30 хв → 60–75 с, 24 год (ТП-06) — не прогнано; кожне скорочення позначено «скорочено» |
 
 Підсумок останнього повного прогону `pytest -m stand tests/stand`: **46 тестів (stand): 43 пройшли в повному прогоні, 2 пропущено (ТК-18 кроки 2–5, ТК-10 без Odoo), 1 нестабільний; після виправлень перепрогнано вибірково (misc+modbus 11 passed, perf+ТП-04 5 passed)**
-(ТК-02 після `fire_drill` — виправлено `reset` двору, перепрогнано: зелений). Юніт/інтеграція (`pytest tests -q`, без stand): **448 passed**.
+(ТК-02 після `fire_drill` — виправлено `reset` двору, перепрогнано: зелений). Юніт/інтеграція (`pytest tests -q`, без stand): **451 passed**.
 `ruff check .` — чисто. Модульні тести Odoo (`run_tests.sh`) — 40/40 (модуль не змінювався).
 
 ## ТК — стендові сценарії (§13.2)
@@ -95,12 +95,31 @@
 13. **`SIM_HELVAR_VERSION=1` з env** відхилявся (`Literal[1, 2]` проти рядка) → сервіс не стартував (ТК-17).
 14. `tools/gen_catalog.py` — прапор виконання (ruff EXE001).
 
+## Рішення лідера після стенду (виконано)
+
+* `fire_drill` без `detector` для `FA-CNC` → `2.CNC.05` (LSP:21405), AC-15 (`test_fire_drill_default_detector_ac15`).
+* `u69 fc3 pdu37000+51` блоком → 0x02 **залишено** як поведінку (розріджена карта BESS, X-51, як у реального приладу); читання по адресах працює.
+* `object-list` цілком: сервер сегментує коректно; помилка була в тестовому клієнті bacpypes3 (клієнтський `Application` не оголошує
+  сегментацію — потрібно `client.asap.device_object = client.device_object`). Стендовий тест читає список цілком (571 об'єкт dev 200),
+  юніт — `test_object_list_full_read_segmented`.
+* Modbus 2020 (Reset All Energies) обнуляє кВт·год лічильника і його споживачів (`Meter._commands`, `test_reset_all_energies_zeroes_counters`).
+
+## DoD (SPEC §14), фінальний круг
+
+| Пункт | Результат |
+|---|---|
+| `pytest tests -q` | 451 passed; покриття `iot_sim/core`+`models` — 99 % |
+| `ruff` / `mypy --strict` | чисто (`mypy` у `pyproject.toml`; 84 точкових `# type: ignore[код]`, переважно «Cannot infer type of lambda» і Any від bacpypes3/asyncua без заглушок) |
+| `pre-commit run --all-files` (корінь, `.pre-commit-config.yaml`: ruff+isort(I), xml lint, end-of-file, mypy) | Passed |
+| `tools/gen_catalog.py --check` | OK, 1168 сигналів; sha256 `signals.csv` = `f3d_sim_signal.csv` |
+| ТБ-05 | зелений (прогін стенду; після правок типів файли каталогу не змінювались) |
+| Odoo `run_tests.sh f3d_iot_sim_dod /factory3d_iot_sim` (`factory3d_base,factory3d_iot_sim`) | OK, 0 failed of 40 tests |
+| `CHANGELOG.md` сервісу 0.1.0 і модуля 19.0.2.0.0, `static/description/icon.png` | додано (іконка — з `factory3d_base`) |
+| Не виконано | перегляд безпеки менеджером, звірка §4 ARCHITECTURE з UI, `compose --profile demo up ≤ 60 с` (demo-профіль лише `config`) |
+
 ## Спостереження без змін коду (потребують рішення)
 
-* **BACnet `object-list` цілком** (≈ 490 об'єктів на dev 200, ≈ 5 КБ) клієнт `bacpypes3` без сегментації читає з `segmentation-not-supported`; поелементне читання (`array_index`) працює. Не перевірено, чи сегментує сервер для клієнта з підтримкою сегментації.
-* **ТК-07 крок 2**: `u69 fc3 pdu37000+51` одним блоком → виняток 0x02 (карта BESS розріджена, діапазони не перекриваються — X-51); читання за адресами працює. Якщо потрібне суцільне читання — заповнити прогалини нулями.
-* **ТК-08/AC-15**: `fire_drill {zone: FA-CNC}` без `detector` піднімає `2.CNC.01` (перший у зоні), а AC-15/ТК-08 очікують LSP:21405 (`2.CNC.05`) → у тесті `detector` задано явно; уточнити умовчання в SPEC або в сценарії.
-* **ТП-04**: затримка DataChange фізично ≥ період тіку (1 с) + publishing (0,5 с): виміряно p50 = 0,69 с, p95 = 1,39 с; критерій «< 1 с» виконується лише для медіани (ТП-04 → частково).
+* **ТП-04**: затримка DataChange фізично ≥ період тіку (1 с) + publishing (0,5 с): p50 = 0,69 с, p95 = 1,39 с.
 * **AC-12**: `load ≥ 80` вимагає WORKING усіх 35 РЦ; `shift` на стенді дає 13/35.
-* Демо-бази немає: `devices=276`, `level0 matched=196/196`, `x_f3d_signal`, `maintenance.equipment`=210 — не перевірені (потрібна людина з доступом до timur-o19demo).
+* Демо-бази немає: `devices=276`, `level0 matched=196/196`, `x_f3d_signal`, `maintenance.equipment`=210 — не перевірені.
 * `td_genset` не містить контракту CI-02 (`relay/`, `RELAY_PROFILE=d700`, `RELAY_SIM_TOKEN`, `/sim/v1/*`): ТК-18, ТК-07 (variant relay) і §8.14 «штатний режим» не перевіряються.

@@ -65,8 +65,8 @@ class UvicornRunner:
     def __init__(self, app: FastAPI, host: str, port: int) -> None:
         cfg = uvicorn.Config(app, host=host, port=port, log_level="warning", lifespan="off")
         self.server = uvicorn.Server(cfg)
-        self.server.capture_signals = contextlib.nullcontext  # type: ignore[method-assign]
-        self.task: asyncio.Task | None = None
+        self.server.capture_signals = contextlib.nullcontext  # type: ignore[assignment,method-assign]
+        self.task: asyncio.Task[Any] | None = None
 
     async def start(self) -> None:
         self.task = asyncio.create_task(self.server.serve())
@@ -99,7 +99,7 @@ def install_errors(app: FastAPI) -> None:
                             422)
 
 
-def api_key_dep(expected: str):
+def api_key_dep(expected: str) -> Any:
     def check(x_api_key: str | None = Header(default=None)) -> None:
         if not expected or x_api_key != expected:
             raise ApiError(401, "UNAUTHORIZED", "invalid or missing X-Api-Key")
@@ -150,7 +150,7 @@ class WoodStore:
                             "job": kw.get("job"), "stack": kw.get("stack"),
                             "target": kw.get("target"), "message": message})
 
-    def available(self, product: str | None, lot: str | None, source: str | None) -> list[dict]:
+    def available(self, product: str | None, lot: str | None, source: str | None) -> list[dict[str, Any]]:
         out = [s for s in self.stacks.values() if s["qty"] - s["reserved"] > 0 and not s["locked"]
                and (source is None or s["id"] == source)
                and (product is None or s["product"] == product)
@@ -186,7 +186,7 @@ class WoodStore:
                "lot": j.lot or (self.stacks[source]["lot"] if source else None),
                "priority": j.priority, "external_ref": j.external_ref, "state": "queued",
                "created": self.world.now().isoformat(), "started": None, "finished": None}
-        self.jobs[job["id"]] = job
+        self.jobs[job["id"]] = job  # type: ignore[index]
         return job
 
     def cancel_job(self, job: dict[str, Any]) -> None:
@@ -284,21 +284,21 @@ def create_app(store: WoodStore, apikey: str) -> FastAPI:
         return store.jobs[jid]
 
     @app.get("/api/v1/status", dependencies=dep)
-    def status() -> dict:
+    def status() -> dict[str, Any]:
         return store.status()
 
     @app.get("/api/v1/stacks", dependencies=dep)
-    def stacks(product: str | None = None, row: int | None = None) -> list:
+    def stacks(product: str | None = None, row: int | None = None) -> list[Any]:
         return [s for s in store.stacks.values()
                 if (product is None or s["product"] == product)
                 and (row is None or s["row"] == row)]
 
     @app.get("/api/v1/stacks/{sid}", dependencies=dep)
-    def stack(sid: str) -> dict:
+    def stack(sid: str) -> dict[str, Any]:
         return get_stack(sid)
 
     @app.patch("/api/v1/stacks/{sid}", dependencies=dep)
-    def patch_stack(sid: str, body: StackPatch) -> dict:
+    def patch_stack(sid: str, body: StackPatch) -> dict[str, Any]:
         s = get_stack(sid)
         if body.qty is not None:
             if not 0 <= body.qty <= s["max"]:
@@ -313,7 +313,7 @@ def create_app(store: WoodStore, apikey: str) -> FastAPI:
         return s
 
     @app.get("/api/v1/jobs", dependencies=dep)
-    def jobs(state: str | None = None, since: str | None = None) -> list:
+    def jobs(state: str | None = None, since: str | None = None) -> list[Any]:
         if state is not None and state not in JOB_STATES:
             raise ApiError(422, "VALIDATION", f"state must be one of {JOB_STATES}")
         return [j for j in store.jobs.values()
@@ -321,21 +321,21 @@ def create_app(store: WoodStore, apikey: str) -> FastAPI:
                 and (since is None or j["created"] >= since)]
 
     @app.post("/api/v1/jobs", dependencies=dep, status_code=201)
-    def create_job(body: JobIn) -> dict:
+    def create_job(body: JobIn) -> dict[str, Any]:
         return store.create_job(body)
 
     @app.get("/api/v1/jobs/{jid}", dependencies=dep)
-    def job(jid: str) -> dict:
+    def job(jid: str) -> dict[str, Any]:
         return get_job(jid)
 
     @app.delete("/api/v1/jobs/{jid}", dependencies=dep)
-    def delete_job(jid: str) -> dict:
+    def delete_job(jid: str) -> dict[str, Any]:
         j = get_job(jid)
         store.cancel_job(j)
         return {"id": jid, "state": j["state"]}
 
     @app.get("/api/v1/events", dependencies=dep)
-    def events(since: int = 0) -> list:
+    def events(since: int = 0) -> list[Any]:
         return [e for e in store.events if e["id"] > since]
 
     return app
@@ -358,6 +358,6 @@ class WoodStoreApi(ProtocolServer):
     async def stop(self) -> None:
         await self._runner.stop()
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self._runner.up, "port": self.port,
                 "stacks": sum(1 for s in self.store.stacks.values() if s["qty"] > 0)}

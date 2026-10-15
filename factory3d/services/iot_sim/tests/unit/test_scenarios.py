@@ -1,7 +1,6 @@
 import asyncio
 
 import pytest
-
 from iot_sim.core.scenarios import (
     SCENARIOS,
     Scenario,

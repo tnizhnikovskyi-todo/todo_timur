@@ -182,7 +182,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- API-18 health/metrics -----------------------------------------------------------
     @app.get("/sim/v1/health")
-    def health() -> dict:
+    def health() -> dict[str, Any]:
         protocols = ctl.protocols()
         down = [n for n, s in protocols.items() if s == "down"]
         stale = bool(ctl.world and ctl.world.odoo_stale)
@@ -197,7 +197,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                 "servers": {n: s for n, s in protocols.items() if s != "off"}}
 
     class _Collector:
-        def collect(self):
+        def collect(self) -> Any:
             w = ctl.world
             yield GaugeMetricFamily("iot_sim_up", "Сервіс працює", value=1)
             if w is not None:
@@ -248,7 +248,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- LPR-приймач (без токена, §8.13.2) ------------------------------------------------
     @app.post("/sim/v1/lpr-sink")
-    async def lpr_sink(request: Request) -> dict:
+    async def lpr_sink(request: Request) -> dict[str, Any]:
         try:
             body = await request.json()
         except ValueError:
@@ -263,7 +263,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- API-10 status ---------------------------------------------------------------------
     @app.get("/sim/v1/status", dependencies=[Depends(read_auth)])
-    def status() -> dict:
+    def status() -> dict[str, Any]:
         w = W()
         s = ctl.settings
         runs = [_run_brief(r) for r in (ctl.runner.active() if ctl.runner else [])]
@@ -280,12 +280,12 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                      "catalog_source": ctl.catalog_source},
             "catalog_hash": "sha256:" + w.registry.catalog_hash}
 
-    def _run_brief(r: Any) -> dict:
+    def _run_brief(r: Any) -> dict[str, Any]:
         return {"id": r.id, "run_ref": r.run_ref, "scenario": r.name, "state": r.state,
                 "started": _iso(r.started), "params": r.params}
 
     # --- API-11/12 devices -----------------------------------------------------------------
-    def _device(code: str) -> dict:
+    def _device(code: str) -> dict[str, Any]:
         d = W().devices[code]
         meta = ctl.fault_meta.get(code)
         return {"code": code, "name": d.params.get("name", code), "protocol": d.protocol, "driver": d.driver,
@@ -296,19 +296,19 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                 "model": d.driver, "signals": [s.code for s in d.signals.values()], "extra": {}}
 
     @app.get("/sim/v1/devices", dependencies=[Depends(read_auth)])
-    def devices(protocol: str | None = None, state: str | None = None) -> list[dict]:
+    def devices(protocol: str | None = None, state: str | None = None) -> list[dict[str, Any]]:
         out = [_device(c) for c in sorted(W().devices)]
         return [d for d in out if (protocol is None or d["protocol"] == protocol)
                 and (state is None or d["state"] == state)]
 
     @app.get("/sim/v1/devices/{code}", dependencies=[Depends(read_auth)])
-    def device(code: str) -> dict:
+    def device(code: str) -> dict[str, Any]:
         if code not in W().devices:
             raise HTTPException(404, f"device {code} not found")
         return _device(code)
 
     @app.post("/sim/v1/device/{code}/fault", dependencies=[Depends(write_auth)])
-    def device_fault(code: str, body: FaultBody | None = None) -> dict:
+    def device_fault(code: str, body: FaultBody | None = None) -> dict[str, Any]:
         w = W()
         dev = w.devices.get(code)
         if dev is None:
@@ -328,7 +328,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return {"code": code, "state": _device_state(dev)}
 
     @app.post("/sim/v1/device/{code}/clear", dependencies=[Depends(write_auth)])
-    def device_clear(code: str) -> dict:
+    def device_clear(code: str) -> dict[str, Any]:
         w = W()
         dev = w.devices.get(code)
         if dev is None:
@@ -344,19 +344,19 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return HTTPException(exc.status, str(exc))
 
     @app.get("/sim/v1/scenarios", dependencies=[Depends(read_auth)])
-    def scenarios() -> list[dict]:
+    def scenarios() -> list[dict[str, Any]]:
         out = []
         for item in R().list():
             sc = R().scenarios[item["name"]]
             try:
-                default = sc.Params().model_dump(mode="json")
+                default = sc.Params().model_dump(mode="json")  # type: ignore[call-arg]
             except Exception:  # noqa: BLE001 - є обов'язкові параметри
                 default = {}
             out.append({**item, "params_default": default})
         return out
 
     @app.post("/sim/v1/scenario/{name}/start", status_code=201, dependencies=[Depends(write_auth)])
-    async def scenario_start(name: str, body: StartBody | None = None) -> dict:
+    async def scenario_start(name: str, body: StartBody | None = None) -> dict[str, Any]:
         body = body or StartBody()
         try:
             run = R().start(name, body.params, body.run_ref)
@@ -366,7 +366,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                 "ends": _iso(run.ends)}
 
     @app.post("/sim/v1/scenario/{name}/stop", dependencies=[Depends(write_auth)])
-    async def scenario_stop(name: str, body: StopBody | None = None) -> dict:
+    async def scenario_stop(name: str, body: StopBody | None = None) -> dict[str, Any]:
         r = R()
         if name not in r.scenarios:
             raise HTTPException(404, f"unknown scenario {name}")
@@ -377,21 +377,21 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
                     raise HTTPException(404, f"run {run_id} is not a {name} run")
                 runs = [await r.stop(run_id)]
             else:
-                runs = [await r.stop(x.id) for x in r.active() if x.name == name]
+                runs = [await r.stop(x.id) for x in r.active() if x.name == name]  # type: ignore[attr-defined]
         except ScenarioError as exc:
             raise _scenario_err(exc) from exc
         return {"id": runs[0].id if runs else None, "state": "stopped", "runs": [x.id for x in runs]}
 
-    def _run_full(r: Any) -> dict:
+    def _run_full(r: Any) -> dict[str, Any]:
         n = sum(1 for e in W().events.ring if e.run_id == r.id)
         return {**_run_brief(r), "events": n, "result": r.result}
 
     @app.get("/sim/v1/runs", dependencies=[Depends(read_auth)])
-    def runs() -> list[dict]:
+    def runs() -> list[dict[str, Any]]:
         return [_run_full(r) for r in R().runs.values()]
 
     @app.get("/sim/v1/runs/{run_id}", dependencies=[Depends(read_auth)])
-    def run_get(run_id: str) -> dict:
+    def run_get(run_id: str) -> dict[str, Any]:
         r = R().runs.get(run_id)
         if r is None:
             raise HTTPException(404, f"run {run_id} not found")
@@ -399,7 +399,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- API-14 time, API-15 mode ----------------------------------------------------------
     @app.post("/sim/v1/time", dependencies=[Depends(write_auth)])
-    def set_time(body: TimeBody) -> dict:
+    def set_time(body: TimeBody) -> dict[str, Any]:
         w = W()
         if body.factor is None and body.set is None:
             raise HTTPException(422, "factor and/or set required")
@@ -420,7 +420,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return {"factor": w.clock.factor, "sim_now": w.now().isoformat()}
 
     @app.post("/sim/v1/mode", dependencies=[Depends(write_auth)])
-    def set_mode(body: ModeBody) -> dict:
+    def set_mode(body: ModeBody) -> dict[str, Any]:
         w = W()
         if body.mode == "follow_odoo":
             if ctl.follow is None or not ctl.follow.configured:
@@ -432,13 +432,13 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return {"mode": w.mode, "factor": w.clock.factor}
 
     # --- API-16 signals --------------------------------------------------------------------
-    def _signal(s: Any) -> dict:
+    def _signal(s: Any) -> dict[str, Any]:
         return {"code": s.code, "value": s.value, "unit": s.unit, "status": s.status, "ts": _iso(s.ts),
                 "device": s.device, "protocol": s.protocol, "kind": s.kind}
 
     @app.get("/sim/v1/signals", dependencies=[Depends(read_auth)])
     def signals(prefix: str | None = None, device: str | None = None, status: str | None = None,
-                limit: int = 1000, offset: int = 0) -> dict:
+                limit: int = 1000, offset: int = 0) -> dict[str, Any]:
         rows = [s for s in W().signals.values() if s.spec.emulated
                 and (prefix is None or s.code.startswith(prefix)) and (device is None or s.device == device)
                 and (status is None or s.status == status)]
@@ -454,11 +454,11 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return s
 
     @app.get("/sim/v1/signals/{code:path}", dependencies=[Depends(read_auth)])
-    def signal_get(code: str) -> dict:
+    def signal_get(code: str) -> dict[str, Any]:
         return _signal(_sig(code))
 
     @app.put("/sim/v1/signals/{code:path}", dependencies=[Depends(write_auth)])
-    def signal_put(code: str, body: SignalPut) -> dict:
+    def signal_put(code: str, body: SignalPut) -> dict[str, Any]:
         s = _sig(code)
         if body.release:
             s.held_until = None
@@ -472,7 +472,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
 
     # --- API-17 reset / stop-all / resume --------------------------------------------------
     @app.post("/sim/v1/reset", dependencies=[Depends(write_auth)])
-    async def reset(body: ResetBody | None = None) -> dict:
+    async def reset(body: ResetBody | None = None) -> dict[str, Any]:
         w, body = W(), body or ResetBody()
         await R().stop_all()
         for code, dev in w.devices.items():
@@ -494,14 +494,14 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return {"ok": True, "sim_now": w.now().isoformat()}
 
     @app.post("/sim/v1/stop-all", dependencies=[Depends(admin_auth)])
-    async def stop_all() -> dict:
+    async def stop_all() -> dict[str, Any]:
         w = W()
         await R().stop_all()
         ctl.stopped = True
         return {"ok": True, "sim_now": w.now().isoformat()}
 
     @app.post("/sim/v1/resume", dependencies=[Depends(admin_auth)])
-    def resume() -> dict:
+    def resume() -> dict[str, Any]:
         w = W()
         if not ctl.enabled:
             raise HTTPException(423, "emulator disabled by SIM_ENABLED=0")
@@ -535,7 +535,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
         return FileResponse(path, media_type="text/csv")
 
     @app.get("/sim/v1/catalog/devices.json", dependencies=[Depends(read_auth)])
-    def catalog_devices() -> list[dict]:
+    def catalog_devices() -> list[dict[str, Any]]:
         return [_device(c) for c in sorted(W().devices)]
 
     return app

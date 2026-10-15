@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
-
 from iot_sim.core import snapshot
 from iot_sim.core.clock import FakeClock
 from iot_sim.core.events import RING_SIZE, CursorGone, EventBus, ulid

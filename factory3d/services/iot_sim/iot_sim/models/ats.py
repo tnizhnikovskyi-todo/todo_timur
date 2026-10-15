@@ -230,7 +230,7 @@ class Ats(Model):
         self.set("gen_start", self.gen_start)
         self.set("fail_start", self.fail)
 
-    def _post(self, world, dt_s: float) -> None:
+    def _post(self, world: Any, dt_s: float) -> None:
         """R-22: навантаження генератора після того, як усі моделі тіку порахували свої значення."""
         if self.pos != POS_II:
             if self.last_sent is not None:

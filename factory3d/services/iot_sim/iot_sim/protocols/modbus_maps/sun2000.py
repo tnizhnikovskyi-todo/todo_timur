@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, time
+from typing import Any
 
 from iot_sim.protocols.modbus_maps import (
     Ctx,
@@ -49,10 +50,10 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
     um.add_const(30073, words_of(int(RATED_KW * 1000), 2), "pn")
     um.add_const(30075, words_of(int(PMAX_KW * 1000), 2), "pmax")
 
-    def pv_v(i: int):
+    def pv_v(i: int) -> Any:
         return lambda: [to_int(10 * (700 + 8 * i)) if p() > 0.05 else 0]
 
-    def pv_i(i: int):  # 10 стрінгів: I = P_dc / (V·10)
+    def pv_i(i: int) -> Any:  # 10 стрінгів: I = P_dc / (V·10)
         return lambda: [to_int(100 * (p() / 0.986 * 1000 / ((700 + 8 * i) * 10))) if p() > 0.05 else 0]
 
     for i in range(10):
@@ -104,7 +105,7 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
               None, "kwh_today")
 
     # RW: час системи (40000+2) і код мережевого стандарту (42000) — запис лише при write_accept
-    def rw(addr: int, n: int, default):
+    def rw(addr: int, n: int, default: Any) -> None:
         key = f"modbus.u{unit}.{addr}"
 
         def get() -> list[int]:

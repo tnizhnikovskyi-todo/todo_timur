@@ -142,7 +142,7 @@ class Machine(Model):
         w = self.world
         used = [int(str(j["id"])[4:]) for j in w.jobs if str(j.get("id", "")).startswith("SIM-")]
         n = max([getattr(w, "_sim_seq", 0), *used]) + 1
-        w._sim_seq = n
+        w._sim_seq = n  # type: ignore[attr-defined]
         return f"SIM-{n:05d}"
 
     def _speed(self) -> float:
@@ -230,9 +230,9 @@ class Machine(Model):
 
     def _power(self, cs: int) -> None:
         if cs == WORKING:
-            p = self.nominal * (1 + self.noise * self.r("p_now"))
+            p = self.nominal * (1 + self.noise * self.r("p_now"))  # type: ignore[operator]
         elif cs == READY:
-            p = self.rate * (1 + 0.05 * self.r("p_now"))
+            p = self.rate * (1 + 0.05 * self.r("p_now"))  # type: ignore[operator]
         else:
             p = 0.0
         self.p_now = p

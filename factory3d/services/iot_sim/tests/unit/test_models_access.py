@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
-
 from iot_sim.core.rng import det
 from iot_sim.models.access import DEVICE_ID, EV_CARD, EV_DENIED, EV_FACE, verify_code
 

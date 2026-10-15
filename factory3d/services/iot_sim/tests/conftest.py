@@ -14,7 +14,6 @@ SEED = 20261012
 @pytest.fixture
 def client():
     from fastapi.testclient import TestClient
-
     from iot_sim.protocols.control_api import create_app
 
     return TestClient(create_app())

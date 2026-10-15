@@ -59,14 +59,14 @@ class ScenarioConflict(ScenarioError):
 class ScenarioParamsError(ScenarioError):
     status = 422
 
-    def __init__(self, errors: list[dict]) -> None:
+    def __init__(self, errors: list[dict[str, Any]]) -> None:
         super().__init__("invalid params")
         self.errors = errors
 
 
 # --- запуск ------------------------------------------------------------------------------
 class Run:
-    def __init__(self, run_id: str, name: str, params: dict, started: datetime,
+    def __init__(self, run_id: str, name: str, params: dict[str, Any], started: datetime,
                  ends: datetime | None, run_ref: str | None) -> None:
         self.id = run_id
         self.name = name
@@ -74,15 +74,15 @@ class Run:
         self.state = "running"
         self.started = started
         self.ends = ends
-        self.result: dict | None = None
+        self.result: dict[str, Any] | None = None
         self.error: str | None = None
         self.run_ref = run_ref
-        self.timeline: list[dict] = []
+        self.timeline: list[dict[str, Any]] = []
         self.owned_flags: list[tuple[str, str | None]] = []
         self.stop_event = asyncio.Event()
-        self.task: asyncio.Task | None = None
+        self.task: asyncio.Task[Any] | None = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "name": self.name, "state": self.state, "params": self.params,
                 "started": self.started.isoformat(), "ends": self.ends.isoformat() if self.ends else None,
                 "result": self.result, "error": self.error, "run_ref": self.run_ref,
@@ -166,7 +166,7 @@ class ScenarioContext:
         self._faults, self._forced = [], []
 
 
-def clear_flags(world: World, owned: list) -> None:
+def clear_flags(world: World, owned: list[Any]) -> None:
     for name, key in owned:
         if key is None:
             world.clear_flag(name)
@@ -193,7 +193,7 @@ def _device_check(v: str, info: ValidationInfo, pattern: str, label: str) -> str
 
 class ShiftParams(BaseParams):
     date: dt.date | None = None
-    lines: list[Literal["A", "B", "C", "D", "F"]] = Field(default_factory=lambda: list("ABCDF"))
+    lines: list[Literal["A", "B", "C", "D", "F"]] = Field(default_factory=lambda: list("ABCDF"))  # type: ignore[arg-type]
     speed: float = Field(1.0, ge=0.5, le=3)
     trucks: bool = True
     people: bool = True
@@ -349,9 +349,9 @@ class Scenario:
     def check_mode(self, world: World) -> None:
         """Перевірка режиму; ``ScenarioConflict`` -> 409."""
 
-    async def run(self, ctx: ScenarioContext) -> dict | None:
+    async def run(self, ctx: ScenarioContext) -> dict[str, Any] | None:
         await self.apply(ctx, ctx.params)
-        await ctx.wait_or_stop(ctx.params.duration_s)
+        await ctx.wait_or_stop(ctx.params.duration_s)  # type: ignore[attr-defined]
         return None
 
     async def apply(self, ctx: ScenarioContext, p: Any) -> None:
@@ -359,20 +359,20 @@ class Scenario:
 
     @classmethod
     def default_duration(cls) -> int:
-        return cls.Params.model_fields["duration_s"].default
+        return cls.Params.model_fields["duration_s"].default  # type: ignore[no-any-return]
 
 
 class Shift(Scenario):
     name, title_uk, group, Params = "shift", "Робоча зміна", "production", ShiftParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"shift"}
 
-    def check_mode(self, world):
+    def check_mode(self, world: Any) -> None:
         if world.mode == "follow_odoo":
             raise ScenarioConflict("shift недоступний у follow_odoo")
 
-    async def apply(self, ctx, p):
+    async def apply(self, ctx: Any, p: Any) -> None:
         ctx.flag("shift", {"date": (p.date or ctx.world.now().date()).isoformat(),
                            "lines": p.lines, "speed": p.speed, "trucks": p.trucks,
                            "people": p.people})
@@ -381,10 +381,10 @@ class Shift(Scenario):
 class MachineFault(Scenario):
     name, title_uk, group, Params = "machine_fault", "Збій верстата", "production", MachineFaultParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {f"dev:{p.device}"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         ctx.fault(p.device, p.reason)
         ctx.step("fault", f"Збій {p.device}: {p.reason}")
@@ -401,10 +401,10 @@ class MachineFault(Scenario):
 class Blackout(Scenario):
     name, title_uk, group, Params = "blackout", "Блекаут (втрата мережі)", "energy", BlackoutParams
 
-    def conflicts(self, p):  # ASSUMPTION: «усе енергетичне», у т.ч. COMPRESSOR/AIR-RING (S-11)
+    def conflicts(self, p: Any) -> Any:  # ASSUMPTION: «усе енергетичне», у т.ч. COMPRESSOR/AIR-RING (S-11)
         return {"energy", "dev:COMPRESSOR", "dev:AIR-RING"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> Any:
         p = ctx.params
         amf = p.amf_master or getattr(ctx.world.settings, "genset_amf_master", "hgm")
         ctx.flag("blackout", {"t0": ctx.world.now().isoformat(), "phase": "outage",
@@ -425,13 +425,13 @@ class FilterClogged(Scenario):
                "FA-FAC": "fire/groups/FA-FAC/dust"}
     DEFAULTS: ClassVar[dict[str, float]] = {"DUST-1": 1.9, "FA-FAC": 92.0}
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {f"dev:{p.device}"}
 
     def code(self, dev: str) -> str:
         return self.TARGETS.get(dev, f"ventilation/units/{dev}/filter_dp_pa")
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         target = p.value if p.value is not None else self.DEFAULTS.get(p.device, 285.0)
         code = self.code(p.device)
@@ -453,10 +453,10 @@ class FilterClogged(Scenario):
 class TruckNoBooking(Scenario):
     name, title_uk, group, Params = "truck_no_booking", "Фура без бронювання", "logistics", TruckNoBookingParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {f"loop:{p.gate}"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> Any:
         p = ctx.params
         plate = p.plate or f"AA{ctx.world.minute % 10000:04d}KT"
         ctx.world.post("yard", {"kind": "truck_no_booking", "plate": plate, "gate": p.gate,
@@ -472,10 +472,10 @@ class TruckArrival(Scenario):
     name, title_uk, group, Params = "truck_arrival", "Прибуття фури з бронюванням", "logistics", TruckArrivalParams
     # R-29: відкриття 5 с, ваги 60 с, до дока 3 хв, розвантаження, до виїзду 2 хв, ваги 60 с
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"loop:GATE-W"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> Any:
         p = ctx.params
         ctx.world.post("yard", {"kind": "truck_arrival", "booking": p.booking, "plate": p.plate,
                                 "at": p.at.isoformat() if p.at else None,
@@ -497,10 +497,10 @@ class FireDrill(Scenario):
              (6, "vent_stop", "Зупинка вентиляції"), (9, "dampers", "Димовидалення"),
              (12, "doors", "Двері й шлагбауми"), (20, "machines", "Верстати зони → ERROR")]
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {f"zone:{p.zone}"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> Any:
         p = ctx.params
         ctx.flag("fire_drill", {"zone": p.zone, "detector": p.detector, "real": p.real,
                                 "t0": ctx.world.now().isoformat(), "phase": "active"})
@@ -514,7 +514,7 @@ class FireDrill(Scenario):
 class Spark(Scenario):
     name, title_uk, group, Params = "spark", "Іскра в аспірації", "safety", SparkParams
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> Any:
         p = ctx.params
         for i in range(p.count):
             ctx.world.post("spark", {"fault": p.fault, "index": i, "run_id": ctx.run.id})
@@ -527,7 +527,7 @@ class Spark(Scenario):
 class AccessEvent(Scenario):
     name, title_uk, group, Params = "access_event", "Подія СКУД", "access", AccessEventParams
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         ctx.world.post("access", {"device": p.device, "user": p.user, "code": p.code,
                                   "tna_key": p.tna_key, "door_open": p.door_open,
@@ -538,10 +538,10 @@ class AccessEvent(Scenario):
 class BatteryLow(Scenario):
     name, title_uk, group, Params = "battery_low", "Низький заряд АКБ", "logistics", BatteryLowParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {f"dev:{p.device}"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         ctx.flag("battery_low", p.level_pct, key=p.device)
         code = f"equipment/{p.device}/battery"
@@ -554,20 +554,20 @@ class BatteryLow(Scenario):
 class CompressorFault(Scenario):
     name, title_uk, group, Params = "compressor_fault", "Збій компресора", "energy", CompressorFaultParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"dev:COMPRESSOR", "dev:AIR-RING"}
 
-    async def apply(self, ctx, p):
+    async def apply(self, ctx: Any, p: Any) -> None:
         ctx.flag("compressor_fault", {"kind": p.kind})
 
 
 class PvCloudy(Scenario):
     name, title_uk, group, Params = "pv_cloudy", "Хмарність (СЕС)", "energy", PvCloudyParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"energy"}
 
-    async def apply(self, ctx, p):
+    async def apply(self, ctx: Any, p: Any) -> None:
         ctx.flag("pv_cf", p.cf)
 
 
@@ -575,10 +575,10 @@ class BoilerRefill(Scenario):
     name, title_uk, group, Params = "boiler_refill", "Поповнення бункера котельні", "bms", BoilerRefillParams
     SILO = "equipment/BOILER/silo_fill"
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"dev:BOILER"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         if self.SILO in ctx.world.signals:
             ctx.world.signals[self.SILO].force(p.level_pct, ctx.world.now())
@@ -591,10 +591,10 @@ class BoilerRefill(Scenario):
 class GensetTest(Scenario):
     name, title_uk, group, Params = "genset_test", "Тестовий пуск ДГУ", "energy", GensetTestParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"energy"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         ctx.flag("genset_test", {"on_load": p.test_on_load, "phase": "running"})
         ctx.world.events.emit("info", "Тестовий пуск генератора", run_id=ctx.run.id)
@@ -606,10 +606,10 @@ class GensetTest(Scenario):
 class LightingScene(Scenario):
     name, title_uk, group, Params = "lighting_scene", "Сцена освітлення", "bms", LightingSceneParams
 
-    def conflicts(self, p):
+    def conflicts(self, p: Any) -> Any:
         return {"lt:*" if p.group == "all" else f"lt:{p.group}"}
 
-    async def run(self, ctx):
+    async def run(self, ctx: Any) -> None:
         p = ctx.params
         ctx.flag("lighting_scene", {"scene": p.scene, "level": p.level,
                                     "fault_device": p.fault_device}, key=p.group)
@@ -638,29 +638,29 @@ class ScenarioRunner:
         self.runs = world.runs
         self._tags: dict[str, set[str]] = {}
 
-    def list(self) -> list[dict]:
+    def list(self) -> list[dict[str, Any]]:
         return [{"name": s.name, "title_uk": s.title_uk, "group": s.group,
                  "duration_s": s.default_duration(),
                  "params_schema": s.Params.model_json_schema()} for s in self.scenarios.values()]
 
-    def active(self) -> list[Run]:
+    def active(self) -> list[Run]:  # type: ignore[valid-type]
         return [r for r in self.runs.values() if r.state in RUN_ACTIVE]
 
-    def validate(self, name: str, params: dict | None) -> tuple[Scenario, BaseModel]:
+    def validate(self, name: str, params: dict[str, Any] | None) -> tuple[Scenario, BaseModel]:
         sc = self.scenarios.get(name)
         if sc is None:
             raise UnknownScenario(f"unknown scenario {name}")
         try:
             p = sc.Params.model_validate(params or {}, context={"world": self.world})
         except ValidationError as exc:
-            raise ScenarioParamsError(exc.errors(include_url=False, include_context=False)) from exc
+            raise ScenarioParamsError(exc.errors(include_url=False, include_context=False)) from exc  # type: ignore[arg-type]
         return sc, p
 
-    def start(self, name: str, params: dict | None = None, run_ref: str | None = None) -> Run:
+    def start(self, name: str, params: dict[str, Any] | None = None, run_ref: str | None = None) -> Run:
         sc, p = self.validate(name, params)
         sc.check_mode(self.world)
         tags = sc.conflicts(p)
-        for other in self.active():
+        for other in self.active():  # type: ignore[attr-defined]
             osc = self.scenarios[other.name]
             hit = _tags_conflict(tags, self._tags[other.id])
             if hit is None and (sc.group in osc.conflict_groups or osc.group in sc.conflict_groups):
@@ -669,7 +669,7 @@ class ScenarioRunner:
                 what = f"device {hit[4:]}" if hit.startswith("dev:") else hit
                 raise ScenarioConflict(f"{what} busy by run {other.id}")
         now = self.world.now()
-        dur = p.duration_s
+        dur = p.duration_s  # type: ignore[attr-defined]
         run = Run(f"r-{ulid()}", name, p.model_dump(mode="json"), now,
                   now + timedelta(seconds=dur) if dur else None, run_ref)
         self.runs[run.id] = run
@@ -709,12 +709,12 @@ class ScenarioRunner:
             run.state = "stopping"
             run.stop_event.set()
             await run.task
-        return run
+        return run  # type: ignore[no-any-return]
 
-    async def stop_all(self) -> list[Run]:
-        return [await self.stop(r.id) for r in self.active()]
+    async def stop_all(self) -> list[Run]:  # type: ignore[valid-type]
+        return [await self.stop(r.id) for r in self.active()]  # type: ignore[attr-defined]
 
-    def restore_runs(self, saved: dict[str, dict]) -> None:
+    def restore_runs(self, saved: dict[str, dict[str, Any]]) -> None:
         """Після рестарту запуски не відновлюються: закриваються як ``stopped`` (AC-48),
         їхні прапори знімаються."""
         for rid, d in saved.items():

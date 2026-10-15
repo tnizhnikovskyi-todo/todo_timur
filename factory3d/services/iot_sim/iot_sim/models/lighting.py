@@ -106,7 +106,7 @@ def group_of(address: str) -> str | None:
     return None
 
 
-def c110_state(world, address: str) -> int | None:
+def c110_state(world: Any, address: str) -> int | None:
     """``C:110``: 0 — норма, ``0x02`` — збій світильника (S-15), ``0x400`` — аварійний (blackout до II);
     ``None`` — пристрій поза складом (``!…=11#``)."""
     code = group_of(address)
@@ -121,7 +121,7 @@ def c110_state(world, address: str) -> int | None:
     return mask
 
 
-def emergency(world) -> bool:
+def emergency(world: Any) -> bool:
     """Мережі немає і ATyS ще не в II → аварійне освітлення від АКБ."""
     return island(world) and get(world, "infra/ats/position", 2) != 3
 

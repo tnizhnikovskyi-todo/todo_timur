@@ -136,4 +136,3 @@ def test_short_key_collision_is_explicit(registry, clock, caplog):
     assert dev.signals["AHU-1/p_now"].code == first  # короткий — першому за каталогом
     assert any("AHU-1" in r.message and "p_now" in r.message for r in caplog.records)
     assert isinstance(registry, Registry)
-

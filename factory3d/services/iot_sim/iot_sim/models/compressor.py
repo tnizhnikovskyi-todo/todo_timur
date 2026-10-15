@@ -25,7 +25,7 @@ def clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
 
-def production(world) -> tuple[float, float]:
+def production(world: Any) -> tuple[float, float]:
     """``(P_prod, P_prod_max)`` — потужність верстатів зараз і при номіналі."""
     now = pmax = 0.0
     for dev in world.devices.values():

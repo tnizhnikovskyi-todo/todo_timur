@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+from typing import Any
 
 from iot_sim.protocols.modbus_maps import (
     Ctx,
@@ -57,10 +58,10 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
     def iavg() -> float:
         return f(3009) if ctx.sig_at(unit, 3009) else s() * 1000 / (math.sqrt(3) * 400)
 
-    def ph(addr: int):  # фазний струм
+    def ph(addr: int) -> Any:  # фазний струм
         return lambda _i=0: f(addr) if ctx.sig_at(unit, addr) else iavg()
 
-    def f32(addr: int, fn, n: int = 1) -> None:
+    def f32(addr: int, fn: Any, n: int = 1) -> None:
         um.add_hr(addr, lambda: [w for i in range(n) for w in f32_words(fn())], 2 * n,
                   None, f"f32@{addr}")
 
@@ -100,7 +101,7 @@ def _build_unit(ctx: Ctx, um: UnitMap, unit: int) -> None:
     def wh(addr: int) -> int:
         return round(f(addr) * 1000)
 
-    def i64(addr: int, fn) -> None:
+    def i64(addr: int, fn: Any) -> None:
         um.add_hr(addr, lambda: words_of(fn(), 4, signed=True), 4, None, f"i64@{addr}")
 
     i64(3203, lambda: wh(3203))

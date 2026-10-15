@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 
 import pytest
-
 from iot_sim.models import MODELS, load_all
 from iot_sim.models.machine import (
     ERROR,

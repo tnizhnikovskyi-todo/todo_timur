@@ -52,14 +52,14 @@ class DevicesClient:
         r.raise_for_status()
         if protocol is None:
             self.etag = r.headers.get("ETag", self.etag)
-        return r.json()
+        return r.json()  # type: ignore[no-any-return]
 
     async def post_events(self, events: list[dict[str, Any]]) -> dict[str, Any]:
         """API-03: ``{"accepted": n, "rejected": [{"index", "reason"}]}``."""
         r = await self._client.post(f"{self.base}/f3d/sim/events", headers=self._headers(),
                                     json={"events": events})
         r.raise_for_status()
-        return r.json()
+        return r.json()  # type: ignore[no-any-return]
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -71,7 +71,7 @@ class EventForwarder:
         self.queue: list[dict[str, Any]] = []
         self.sent = 0
         self.dropped = 0
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
 
     def to_item(self, ev: Event) -> dict[str, Any]:
         run = self.world.runs.get(ev.run_id) if ev.run_id else None

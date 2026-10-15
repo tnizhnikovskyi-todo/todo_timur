@@ -2,7 +2,6 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
-
 from iot_sim.core.clock import FakeClock, FakeRealTime, SimClock
 
 KYIV = ZoneInfo("Europe/Kyiv")

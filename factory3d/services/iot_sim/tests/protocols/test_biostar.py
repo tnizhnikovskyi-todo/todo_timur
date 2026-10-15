@@ -3,7 +3,6 @@ import datetime as dt
 
 import httpx
 import pytest
-
 from iot_sim.protocols.biostar_api import BioStarApi
 
 PWD = "bio-pass"

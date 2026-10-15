@@ -3,7 +3,6 @@ import math
 from datetime import datetime
 
 import pytest
-
 from iot_sim.models import mobile
 from iot_sim.models.mobile import point_in_polygon, set_zones, zone_at, zones
 

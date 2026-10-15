@@ -2,7 +2,6 @@
 import struct
 
 import pytest
-
 from iot_sim.protocols.modbus_maps import pm5560
 
 

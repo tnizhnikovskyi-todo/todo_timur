@@ -1,5 +1,4 @@
 import pytest
-
 from iot_sim.core.world import World
 from iot_sim.models import MODELS, load_all, model_class, register_model
 from iot_sim.models.base import (

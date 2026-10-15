@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from iot_sim.protocols.bacnet_server import load_layout
 
 CAT = Path(__file__).resolve().parents[2] / "catalog" / "odoo_demo.json"

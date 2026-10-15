@@ -1,7 +1,6 @@
 import shutil
 
 import pytest
-
 from iot_sim.core.registry import Registry, driver_for, parse_spec
 from iot_sim.models.base import PassiveModel
 

@@ -19,7 +19,7 @@ WINDOW_S = 300.0
 PAINT_MACHINES = ("SPRAY-1", "AUTOSPRAY-1")
 
 
-def is_working(world, code: str) -> bool:
+def is_working(world: Any, code: str) -> bool:
     """Верстат WORKING: за ``world.workcenters[code]["state"]``, інакше — за потужністю > 50 % номіналу."""
     wc = world.workcenters.get(code)
     if wc and "state" in wc:

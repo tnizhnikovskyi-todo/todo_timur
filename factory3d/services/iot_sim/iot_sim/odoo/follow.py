@@ -56,26 +56,26 @@ class OdooReadOnly:
             self.guard.check_url(self.url)
         return xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/{path}", allow_none=True)
 
-    def _call(self, model: str, method: str, args: list, kwargs: dict) -> Any:
+    def _call(self, model: str, method: str, args: list[Any], kwargs: dict[str, Any]) -> Any:
         if method not in self.ALLOWED:
             raise PermissionError(f"метод {method} заборонено (лише читання)")
         if self._uid is None:
             uid = self._proxy("common").authenticate(self.db, self.user, self.apikey, {})
             if not uid:
                 raise PermissionError("Odoo відхилила облікові дані SIM_ODOO_USER")
-            self._uid = int(uid)
+            self._uid = int(uid)  # type: ignore[arg-type]
         return self._proxy("object").execute_kw(self.db, self._uid, self.apikey, model, method, args, kwargs)
 
-    async def search_read(self, model: str, domain: list, fields: list[str], **kw: Any) -> list[dict]:
+    async def search_read(self, model: str, domain: list[Any], fields: list[str], **kw: Any) -> list[dict[str, Any]]:
         return await asyncio.to_thread(self._call, model, "search_read", [domain], {"fields": fields, **kw})
 
-    async def read(self, model: str, ids: list[int], fields: list[str]) -> list[dict]:
+    async def read(self, model: str, ids: list[int], fields: list[str]) -> list[dict[str, Any]]:
         return await asyncio.to_thread(self._call, model, "read", [ids], {"fields": fields})
 
-    async def search_count(self, model: str, domain: list) -> int:
+    async def search_count(self, model: str, domain: list[Any]) -> int:
         return await asyncio.to_thread(self._call, model, "search_count", [domain], {})
 
-    async def fields_get(self, model: str, attributes: list[str] | None = None) -> dict:
+    async def fields_get(self, model: str, attributes: list[str] | None = None) -> dict[str, Any]:
         return await asyncio.to_thread(self._call, model, "fields_get", [], {"attributes": attributes or ["type"]})
 
 
@@ -101,7 +101,7 @@ class FollowOdoo:
         self._last_maint: str | None = None
         self._plate_field: bool | None = None
         self._level0_done = False
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
         self.errors = 0
         self._started_mono = mono()
 
@@ -185,7 +185,7 @@ class FollowOdoo:
         qty: dict[int, list[float]] = {}
         for m in moves:
             pid = _m2o_id(m.get("picking_id"))
-            acc = qty.setdefault(pid, [0.0, 0.0])
+            acc = qty.setdefault(pid, [0.0, 0.0])  # type: ignore[arg-type]
             acc[0] += float(m.get("quantity") or 0)
             acc[1] += float(m.get("product_uom_qty") or 0)
         trucks = []
@@ -232,7 +232,7 @@ class FollowOdoo:
 
     async def _poll_maintenance(self) -> None:
         o, w = self.odoo, self.world
-        domain: list = [("stage_id.done", "=", True)]
+        domain: list[Any] = [("stage_id.done", "=", True)]
         if self._last_maint:
             domain.append(("write_date", ">=", self._last_maint))
         self._last_maint = self.world.now().astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S")

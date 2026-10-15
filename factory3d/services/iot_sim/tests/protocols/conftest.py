@@ -26,9 +26,8 @@ def port():
 @pytest.fixture
 async def modbus(world, port):
     """``ModbusServer`` на вільному порту + підключений ``AsyncModbusTcpClient`` (``srv.client``)."""
-    from pymodbus.client import AsyncModbusTcpClient
-
     from iot_sim.protocols.modbus_server import ModbusServer
+    from pymodbus.client import AsyncModbusTcpClient
 
     srv = ModbusServer(world, port=port, host="127.0.0.1")
     await srv.start()

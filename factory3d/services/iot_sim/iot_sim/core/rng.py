@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from typing import Any
+
 FNV_OFFSET = 0x811C9DC5
 FNV_PRIME = 0x01000193
 LCG_A = 1103515245
@@ -59,10 +61,10 @@ class Rng:
             self.minute = minute
         return self.r
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {"state": self.state, "r": self.r, "minute": self.minute}
 
-    def from_dict(self, d: dict) -> None:
+    def from_dict(self, d: dict[str, Any]) -> None:
         self.state = int(d["state"])
         self.r = float(d["r"])
         self.minute = d["minute"]

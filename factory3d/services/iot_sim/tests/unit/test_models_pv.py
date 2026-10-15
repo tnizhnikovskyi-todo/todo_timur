@@ -3,7 +3,6 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-
 from iot_sim.models.pv import ST_BLACKOUT, ST_NIGHT, ST_ON, ST_START, sun_factor
 
 

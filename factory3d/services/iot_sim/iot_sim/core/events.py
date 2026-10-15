@@ -46,7 +46,7 @@ class Event:
     payload: dict[str, Any] = field(default_factory=dict)
     seq: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "ts": self.ts.isoformat(), "kind": self.kind,
                 "device": self.device, "run_id": self.run_id, "message": self.message,
                 "payload": self.payload}
@@ -66,7 +66,7 @@ class EventBus:
         self.subscribers.append(fn)
 
     def emit(self, kind: str, message: str, device: str | None = None,
-             run_id: str | None = None, payload: dict | None = None) -> Event:
+             run_id: str | None = None, payload: dict[str, Any] | None = None) -> Event:
         if kind not in KINDS:
             raise ValueError(f"unknown event kind {kind!r}")
         self.seq += 1

@@ -1,7 +1,6 @@
 """P-03 woodStore API v1 (SPEC §8.5)."""
 import httpx
 import pytest
-
 from iot_sim.protocols.woodstore_api import WoodStoreApi
 
 KEY = {"X-Api-Key": "k-wood"}

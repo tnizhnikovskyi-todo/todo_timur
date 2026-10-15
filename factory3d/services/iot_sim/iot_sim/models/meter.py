@@ -40,50 +40,50 @@ V_LL = 400.0
 
 
 # --- хелпери, спільні для моделей енергетики -------------------------------------------
-def get(world, code: str, default: float = 0.0) -> Any:
+def get(world: Any, code: str, default: float = 0.0) -> Any:
     s = world.signals.get(code)
     return default if s is None else s.value
 
 
-def put(world, code: str, value: Any) -> bool:
+def put(world: Any, code: str, value: Any) -> bool:
     s = world.signals.get(code)
     return False if s is None else s.set(value, world.now())
 
 
-def blackout(world) -> dict[str, Any] | None:
+def blackout(world: Any) -> dict[str, Any] | None:
     b = world.flags.get("blackout")
     return b if isinstance(b, dict) else None
 
 
-def island(world) -> bool:
+def island(world: Any) -> bool:
     """Мережі немає: сценарій ``blackout`` у фазі ``outage`` (R-22)."""
     b = blackout(world)
     return b is not None and b.get("phase", "outage") != "restoring"
 
 
-def consumer_p(world, code: str) -> float:
+def consumer_p(world: Any, code: str) -> float:
     return float(get(world, f"energy/consumers/{code}/p_now", 0.0) or 0.0)
 
 
-def p_crit(world) -> float:
+def p_crit(world: Any) -> float:
     """Σ ``p_now`` критичних споживачів (R-22)."""
     return sum(consumer_p(world, c) for c in CRITICAL)
 
 
-def total_load(world) -> float:
+def total_load(world: Any) -> float:
     """R-13: ``load = Σ p_now`` усіх споживачів; в острові — лише критичних."""
     if island(world):
         return p_crit(world)
     return sum(consumer_p(world, c) for c in ALL_CONSUMERS)
 
 
-def section_p(world, section: int) -> float:
+def section_p(world: Any, section: int) -> float:
     if island(world):
         return 0.0
     return sum(consumer_p(world, c) for line in SECTIONS[section] for c in LINE_CONSUMERS[line])
 
 
-def update_rv_all(world) -> None:
+def update_rv_all(world: Any) -> None:
     """``RV-ALL`` = Σ потужностей вентиляторів RV-01…RV-25 (дзеркало PM5560 u55)."""
     total, seen = 0.0, False
     for code, s in world.signals.items():
@@ -145,7 +145,23 @@ class Meter(Model):
         self.shift_key = key
 
     # --- тік --------------------------------------------------------------------------
+    def _commands(self) -> None:
+        """Modbus 2020 (Reset All Energies) → ``post("meter", {unit, cmd})``: обнуляє накопичені кВт·год лічильника."""
+        q = self.world.inbox["meter"]
+        mine = [c for c in q if c.get("unit") == self.device.unit_id and c.get("cmd") == "reset_energy"]
+        if not mine:
+            return
+        for c in mine:
+            q.remove(c)
+        self.own_wh = self.export_wh = 0.0
+        for c in self.consumers:  # type: ignore[assignment]
+            self.e_wh[c] = 0.0  # type: ignore[index]
+            self.base_wh[c] = 0.0  # type: ignore[index]
+            put(self.world, f"energy/consumers/{c}/kwh_total", 0.0)
+            put(self.world, f"energy/consumers/{c}/kwh_shift", 0.0)
+
     def tick(self, dt_s: float) -> None:
+        self._commands()
         if self.cell:
             self._tick_cell()
         else:

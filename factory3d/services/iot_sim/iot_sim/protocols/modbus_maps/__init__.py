@@ -115,7 +115,7 @@ def parse_scale(text: str) -> float:
 class Entry:
     start: int
     n: int
-    get: Callable[[], list]
+    get: Callable[[], list[Any]]
     set: Callable[[int, int], None] | None = None  # (зміщення у діапазоні, слово/біт)
     name: str = ""
 
@@ -131,7 +131,7 @@ class UnitMap:
         t = self.tables[table]
         return all(a not in t for a in range(start, start + n))
 
-    def add(self, table: str, start: int, n: int, get: Callable[[], list],
+    def add(self, table: str, start: int, n: int, get: Callable[[], list[Any]],
             set: Callable[[int, int], None] | None = None, name: str = "",
             force: bool = False) -> Entry | None:
         if not force and not self.free(table, start, n):
@@ -147,7 +147,7 @@ class UnitMap:
         return self.add("h", start, n, words, set, name)
 
     def add_const(self, start: int, words: list[int], name: str = "") -> Entry | None:
-        return self.add("h", start, len(words), lambda w=tuple(words): list(w), None, name)
+        return self.add("h", start, len(words), lambda w=tuple(words): list(w), None, name)  # type: ignore[misc]
 
     def add_bit(self, table: str, addr: int, get: Callable[[], bool],
                 set: Callable[[int, int], None] | None = None, name: str = "") -> None:
@@ -155,10 +155,10 @@ class UnitMap:
         if table == "d":  # DI видно й через fc01 (SPEC §8.4.2)
             self.add("c", addr, 1, lambda: [bool(get())], None, name)
 
-    def read(self, table: str, start: int, count: int) -> list:
+    def read(self, table: str, start: int, count: int) -> list[Any]:
         t = self.tables[table]
-        cache: dict[int, list] = {}
-        out: list = []
+        cache: dict[int, list[Any]] = {}
+        out: list[Any] = []
         for a in range(start, start + count):
             hit = t.get(a)
             if hit is None:
@@ -170,7 +170,7 @@ class UnitMap:
             out.append(vals[off] if off < len(vals) else 0)
         return out
 
-    def write(self, table: str, start: int, values: list) -> None:
+    def write(self, table: str, start: int, values: list[Any]) -> None:
         t = self.tables[table]
         for i in range(len(values)):  # спершу перевірка, потім запис (атомарно)
             hit = t.get(start + i)
@@ -221,7 +221,7 @@ class Ctx:
     def num(self, code: str, default: float = 0.0) -> float:
         return to_float(self.val(code, default))
 
-    def command(self, unit: int, what: str, payload: dict | None = None) -> None:
+    def command(self, unit: int, what: str, payload: dict[str, Any] | None = None) -> None:
         """Подія ``command`` (SPEC AC-44): запис у ADAM-DO/ATyS/… логується."""
         self.world.events.emit("command", f"Modbus u{unit}: {what}", payload={
             "unit": unit, **(payload or {})})
@@ -258,9 +258,9 @@ def bind_catalog(ctx: Ctx) -> int:
         sig = world.signals[spec.code]
         if dtype in ("bool", "bit"):
             if fc == 2:
-                um.add_bit("d", pdu, lambda s=sig: to_bool(s.value), None, spec.code)
+                um.add_bit("d", pdu, lambda s=sig: to_bool(s.value), None, spec.code)  # type: ignore[misc]
             else:  # fc1: coil; запис FC05 — командний сигнал (SPEC §8.13.1)
-                um.add_bit("c", pdu, lambda s=sig: to_bool(s.value),
+                um.add_bit("c", pdu, lambda s=sig: to_bool(s.value),  # type: ignore[misc]
                            coil_cmd(ctx, unit, spec), spec.code)
             n_bound += 1
             continue
@@ -269,7 +269,7 @@ def bind_catalog(ctx: Ctx) -> int:
         scale = parse_scale(spec.scale)
         words = {"f32": 2, "u16": 1, "i16": 1, "u32": 2, "i32": 2, "u64": 4, "i64": 4}[dtype]
 
-        def get(s=sig, sc=scale, dt=dtype, lt=little) -> list[int]:
+        def get(s: Any=sig, sc: Any=scale, dt: Any=dtype, lt: Any=little) -> list[int]:
             v = to_float(s.value)
             return encode(v / sc, dt, lt)
 

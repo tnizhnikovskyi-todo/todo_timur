@@ -130,7 +130,7 @@ def load_layout(path: str | Path | None = None) -> dict[str, Any]:
     for c in cands:
         if c and Path(c).is_file():
             try:
-                return json.loads(Path(c).read_text(encoding="utf-8"))
+                return json.loads(Path(c).read_text(encoding="utf-8"))  # type: ignore[no-any-return]
             except (OSError, ValueError):
                 log.warning("не вдалося прочитати макет %s", c)
     return {}
@@ -157,7 +157,7 @@ class Builder:
     def flag_num(self, key: str, default: float) -> Callable[[], float]:
         return lambda: _num(self.w.flag(key, default), default)
 
-    def command(self, dev: str, what: str, payload: dict | None = None) -> None:
+    def command(self, dev: str, what: str, payload: dict[str, Any] | None = None) -> None:
         self.w.events.emit("command", f"BACnet {dev}: {what}", device=dev, payload=payload or {})
 
     def setter_signal(self, dev: str, code: str, hold_s: float, what: str) -> Callable[[Any], None]:
@@ -360,7 +360,7 @@ class Builder:
         for z, g in enumerate(order, 1):
             info = lay.get(g, {})
             desc = f"{info.get('zone_name', g)}, {info.get('kind_name', 'сповіщувачі')}, {info.get('n', '?')} сповіщувачів"
-            P(Point("lsz", z, g.replace("FA-", "FA-"), (lambda gg=g: _lss(self.val(f"fire/groups/{gg}/state", 0))),
+            P(Point("lsz", z, g.replace("FA-", "FA-"), (lambda gg=g: _lss(self.val(f"fire/groups/{gg}/state", 0))),  # type: ignore[misc]
                     desc))
             loop, n = int(info.get("loop", 0) or 0), int(info.get("n", 0) or 0)
             code = g[3:]
@@ -380,11 +380,11 @@ class Builder:
         for lp in range(1, 5):
             code = f"fire/loops/{lp}/state"
             P(Point("bv", lp, f"FACP-1_Loop{lp}_Fault",
-                    (lambda c=code: _truthy(self.val(c, 0)) or str(self.val(c, "")).lower() == "fault"),
+                    (lambda c=code: _truthy(self.val(c, 0)) or str(self.val(c, "")).lower() == "fault"),  # type: ignore[misc]
                     f"Несправність лінії {lp}"))
         for i, (leaf, nm) in enumerate((("alarms", "ActiveAlarms"), ("faults", "Faults"),
                                         ("disabled", "Disablements")), 1):
-            P(Point("piv", i, f"FACP-1_{nm}", (lambda lf=leaf: int(self.num(f"fire/totals/{lf}"))), nm))
+            P(Point("piv", i, f"FACP-1_{nm}", (lambda lf=leaf: int(self.num(f"fire/totals/{lf}"))), nm))  # type: ignore[misc]
         P(Point("bv", 10, "FACP-1_SoundersActive", lambda: _truthy(self.val("fire/totals/sounders_active", 0)),
                 "Сирени активні"))
         P(Point("bv", 11, "FACP-1_FireBrigadeTransmitted", lambda: _truthy(self.val("fire/totals/brigade", 0)),
@@ -650,6 +650,6 @@ class BacnetServer(ProtocolServer):
         self.objects.clear()
         self.router = None
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self.up, "port": self.port, "devices": len(self.apps),
                 "objects": len(self.objects)}

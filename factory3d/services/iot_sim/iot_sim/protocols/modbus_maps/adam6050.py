@@ -6,6 +6,8 @@ DI/лічильники беруться з каталогу (``SignalSpec.modbu
 """
 from __future__ import annotations
 
+from typing import Any
+
 from iot_sim.protocols.modbus_maps import (
     Ctx,
     ModbusError,
@@ -32,7 +34,7 @@ def digital_module(ctx: Ctx, unit: int, n_di: int, n_do: int, module: int, name:
     world = ctx.world
 
     # --- дискретні входи (fc02, дзеркало fc01) ---
-    def di_getter(i: int):
+    def di_getter(i: int) -> Any:
         sig = ctx.sig_at(unit, i, fc=2)
         if unit == 84 and i in (0, 1):  # DUST-1: складений стан (DI0 в роботі, DI1 аварія)
             comp = ctx.world.signals.get("equipment/DUST-1/state")
@@ -50,12 +52,12 @@ def digital_module(ctx: Ctx, unit: int, n_di: int, n_do: int, module: int, name:
         addr = 16 + j
         sig = ctx.sig_at(unit, addr, fc=1)
         if sig is not None:  # командний сигнал каталогу (шлагбауми)
-            um.add_bit("c", addr, lambda s=sig: to_bool(s.value), coil_cmd(ctx, unit, sig.spec),
+            um.add_bit("c", addr, lambda s=sig: to_bool(s.value), coil_cmd(ctx, unit, sig.spec),  # type: ignore[misc]
                        sig.code)
             continue
         key = f"modbus.u{unit}.do{j}"
 
-        def do_set(_off: int, v: int, a=addr, k=key, jj=j) -> None:
+        def do_set(_off: int, v: int, a: Any=addr, k: Any=key, jj: Any=j) -> None:
             if not ctx.write_accept:
                 raise ModbusError(4)
             world.set_flag(k, int(bool(v)))
@@ -65,10 +67,10 @@ def digital_module(ctx: Ctx, unit: int, n_di: int, n_do: int, module: int, name:
             ctx.command(unit, f"DO{jj} = {int(bool(v))}" + ("" if cmd else " (резерв, без ефекту)"),
                         {"channel": jj, "cmd": cmd})
 
-        um.add_bit("c", addr, lambda k=key: bool(world.flag(k, 0)), do_set, f"DO{j}")
+        um.add_bit("c", addr, lambda k=key: bool(world.flag(k, 0)), do_set, f"DO{j}")  # type: ignore[misc]
 
     # --- лічильники на DI: 40001+2k -> pdu 2k, u32 little ---
-    def counter(k: int):
+    def counter(k: int) -> Any:
         sig = ctx.sig_at(unit, 2 * k, fc=3)
         scale = parse_scale(sig.spec.scale) if sig else 1.0
         okey = f"modbus.u{unit}.cnt_off{k}"
@@ -88,14 +90,14 @@ def digital_module(ctx: Ctx, unit: int, n_di: int, n_do: int, module: int, name:
         for off, label in enumerate(("start", "clear", "clear_ovf", "latch")):
             ck = f"modbus.u{unit}.cnt{k}.{label}"
 
-            def cset(_o: int, v: int, lab=label, okey=okey, raw=raw, ck=ck) -> None:
+            def cset(_o: int, v: int, lab: Any=label, okey: Any=okey, raw: Any=raw, ck: Any=ck) -> None:
                 if lab == "clear":
                     if v:
                         world.set_flag(okey, raw())
                     return
                 world.set_flag(ck, int(bool(v)))
 
-            def cget(lab=label, ck=ck):
+            def cget(lab: Any=label, ck: Any=ck) -> Any:
                 return False if lab == "clear" else bool(world.flag(ck, 1 if lab == "start" else 0))
 
             um.add_bit("c", base + off, cget, cset, f"cnt{k}_{label}")

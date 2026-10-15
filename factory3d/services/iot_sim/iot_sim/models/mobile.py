@@ -95,7 +95,7 @@ class Mobile(Model):
 
     @staticmethod
     def _centroid(code: str) -> tuple[float, float]:
-        return zones()[code]["centroid"]
+        return zones()[code]["centroid"]  # type: ignore[no-any-return]
 
     def emit(self, typ: str, **detail: Any) -> None:
         self.outbox.append({"ts": self.world.now().isoformat(), "code": self.device.code, "type": typ,

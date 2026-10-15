@@ -1,6 +1,5 @@
 """R-08: компресор (AC-12)."""
 import pytest
-
 from iot_sim.models.compressor import production
 
 P = "equipment/COMPRESSOR/pressure_bar"

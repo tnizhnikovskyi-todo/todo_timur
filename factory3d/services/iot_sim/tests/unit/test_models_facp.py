@@ -1,6 +1,5 @@
 """R-25, R-09 (запиленість FA-FAC), R-26/R-27 (spark, smoke); SPEC §13.1, AC-15, AC-50, AC-56, AC-61, AC-66."""
 import pytest
-
 from iot_sim.models.facp import (
     ALARM,
     FAULT,
@@ -301,3 +300,12 @@ def test_smoke_commands_and_battery(world):
     world.fault("SMOKE-CTRL", "generic")
     world.advance(10)
     assert v(world, "fire/smoke/SMOKE-CTRL/fault") == 1
+
+
+def test_fire_drill_default_detector_ac15(world):
+    """AC-15: fire_drill {zone: FA-CNC} без detector → LSP 2.CNC.05 (id 21405) = test-alarm."""
+    start_drill(world, detector=None)
+    at(world, 3)
+    z = world.devices["FA-CNC"].model
+    assert z.drill_detector == "2.CNC.05"
+    assert z.lsp["2.CNC.05"]["present_value"] != 0 and z.lsp["2.CNC.01"]["present_value"] == 0

@@ -2,7 +2,6 @@
 import asyncio
 
 import pytest
-
 from iot_sim.protocols.sics_server import SicsServer
 
 

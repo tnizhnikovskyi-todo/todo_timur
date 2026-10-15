@@ -1,7 +1,6 @@
 """REST керування /sim/v1 (SPEC §7.2, API-10…API-19; AC-21; §11)."""
 import pytest
 from fastapi.testclient import TestClient
-
 from iot_sim.config import Settings
 from iot_sim.core.scenarios import ScenarioRunner
 from iot_sim.protocols.control_api import create_app

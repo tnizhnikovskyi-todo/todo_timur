@@ -48,7 +48,7 @@ def parse_mqtt_url(url: str) -> dict[str, Any]:
 
 def _make_client() -> Any:
     import paho.mqtt.client as mqtt
-    return mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="iot_sim")
+    return mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="iot_sim")  # type: ignore[attr-defined]
 
 
 class MqttPublisher(ProtocolServer):
@@ -107,12 +107,12 @@ class MqttPublisher(ProtocolServer):
             self.client.loop_stop()
         self.connected = False
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self._started, "connected": self.connected,
                 "buffered": len(self._buffer), "dropped": self.dropped, "published": self.published}
 
     # --- paho-колбеки (потік paho) ------------------------------------------------------
-    def _on_connect(self, client, userdata, flags, reason_code, properties=None) -> None:
+    def _on_connect(self, client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any=None) -> None:
         if getattr(reason_code, "is_failure", False) or (isinstance(reason_code, int) and reason_code):
             log.warning("mqtt connect refused: %s", reason_code, extra={"proto": "mqtt"})
             return
@@ -122,7 +122,7 @@ class MqttPublisher(ProtocolServer):
             self._send(self.topic(code, "status"), self._status(code, online=True), 1, True)
         self._flush()
 
-    def _on_disconnect(self, client, userdata, *args) -> None:
+    def _on_disconnect(self, client: Any, userdata: Any, *args: Any) -> None:
         self.connected = False
         log.warning("mqtt disconnected", extra={"proto": "mqtt"})
 
@@ -207,7 +207,7 @@ class MqttPublisher(ProtocolServer):
             prev = self._last_state.get(code)
             changed = prev is not None and prev != tel["state"]
             if changed:
-                self._derive_events(code, prev, tel)
+                self._derive_events(code, prev, tel)  # type: ignore[arg-type]
             self._last_state[code] = tel["state"]
             is_on = tel["state"] != "offline"
             if self._last_online.get(code, True) != is_on:  # §8.8.1: status — «при з'єднанні/зміні» (AC-40)

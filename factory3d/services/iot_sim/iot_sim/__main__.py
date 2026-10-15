@@ -54,7 +54,7 @@ def _prefix_of(ip: str) -> int:
                 except OSError:
                     continue
                 if addr == ip:
-                    return struct.unpack("!I", mask)[0].bit_count()
+                    return struct.unpack("!I", mask)[0].bit_count()  # type: ignore[no-any-return]
     except OSError:
         pass
     return 24

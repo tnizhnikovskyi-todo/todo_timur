@@ -3,7 +3,6 @@ import struct
 from types import SimpleNamespace
 
 import pytest
-
 from iot_sim.protocols.modbus_maps import adam6015, adam6017
 
 

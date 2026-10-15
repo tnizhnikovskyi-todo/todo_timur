@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+from typing import Any
 
 from iot_sim.models.base import AGGREGATE, SOURCE, Model, NoiseModel, PassiveModel
 
@@ -14,7 +15,7 @@ MODELS: dict[str, type[Model]] = {"passive": PassiveModel, "noise": NoiseModel}
 _loaded = False
 
 
-def register_model(driver: str):
+def register_model(driver: str) -> Any:
     """Декоратор: ``@register_model("compressor") class Compressor(Model): ...``."""
 
     def deco(cls: type[Model]) -> type[Model]:

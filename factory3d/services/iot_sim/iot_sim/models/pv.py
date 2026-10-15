@@ -36,17 +36,17 @@ def _astral_sun(now: datetime) -> float:
         return 0.0
     d = now.date()
     if d not in _noon_cache:
-        noon_t = noon(obs, d, tzinfo=now.tzinfo)
+        noon_t = noon(obs, d, tzinfo=now.tzinfo)  # type: ignore[arg-type]
         _noon_cache[d] = math.sin(math.radians(elevation(obs, noon_t)))
     return max(0.0, math.sin(math.radians(elev))) / _noon_cache[d]
 
 
-def sun_factor(world) -> float:
+def sun_factor(world: Any) -> float:
     """Частка сонця 0…1 на sim-час ``world.now()`` за моделлю ``sun_model``."""
     now = world.now()
     if getattr(world.settings, "sun_model", "astral") == "parabola":
         h = now.hour + now.minute / 60.0 + now.second / 3600.0
-        return max(0.0, 1.0 - ((h - 13.0) / 6.0) ** 2)
+        return max(0.0, 1.0 - ((h - 13.0) / 6.0) ** 2)  # type: ignore[no-any-return]
     return _astral_sun(now)
 
 

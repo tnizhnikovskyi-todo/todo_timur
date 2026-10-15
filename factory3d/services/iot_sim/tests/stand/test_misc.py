@@ -249,7 +249,7 @@ def test_tk08_fire_drill_side_effects(api, host, env_get):
     """AC-15/53: fire_drill → +9 с u85 DI4=1, +12 с BioStar 20480 на дверях 1–5 і u86 fc1 pdu20/21 = [1,1]."""
     mb = Mb(host)
     api.post("/time", {"set": NOON, "factor": 1})
-    r = api.post("/scenario/fire_drill/start", {"params": {"zone": "FA-CNC", "detector": "2.CNC.05"}})
+    r = api.post("/scenario/fire_drill/start", {"params": {"zone": "FA-CNC"}})
     assert r.status_code == 201, r.text
     assert api.wait(lambda: mb.di(85, 4)[0] == 1, timeout=14, step=0.5), "u85 DI4 (клапани) не став 1"
     assert api.wait(lambda: mb.coils(86, 20, 2) == [1, 1], timeout=15, step=0.5), "u86 DO4/DO5 не стали 1"

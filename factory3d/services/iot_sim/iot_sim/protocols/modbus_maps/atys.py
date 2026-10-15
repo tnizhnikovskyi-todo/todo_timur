@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from iot_sim.protocols.modbus_maps import Ctx, ModbusError, to_int, words_of
@@ -15,7 +16,7 @@ LAST_TRANSFER = int(datetime(2026, 10, 5, 18, 42, tzinfo=ZoneInfo("Europe/Kyiv")
 def build(ctx: Ctx) -> None:
     um = ctx.unit(UNIT, "ATyS p")
 
-    def sig(leaf: str, default: int = 0):
+    def sig(leaf: str, default: int = 0) -> Any:
         return lambda: [to_int(ctx.val(f"{A}/{leaf}", default)) & 0xFFFF]
 
     um.add_hr(20480, lambda: words_of(to_int(ctx.world.clock.epoch()), 2), 2, None, "datetime")

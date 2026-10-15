@@ -1,7 +1,6 @@
 """P-01 OPC UA: читання, статуси, JobOrderList, методи (SPEC §8.3)."""
 import pytest
 from asyncua import Client, ua
-
 from iot_sim.protocols.opcua_server import OpcUaServer
 
 NS_INST = "http://todo.ltd/f3d/iot_sim/instances/"

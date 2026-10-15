@@ -37,4 +37,3 @@ def test_tk18_steps2_5_genset_relay_up():  # pragma: no cover - потребує
     out = subprocess.run(["docker", "exec", "iot_sim-iot_sim-1", "python", "-c", code],
                          check=True, capture_output=True, text=True).stdout
     assert "D700" in out
-

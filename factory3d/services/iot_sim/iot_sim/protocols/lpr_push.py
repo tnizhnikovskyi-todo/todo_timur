@@ -79,7 +79,7 @@ class LprPusher(ProtocolServer):
         self.failed = 0
         self.counter = 0
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._tasks: set[asyncio.Task] = set()
+        self._tasks: set[asyncio.Task[Any]] = set()
         self._up = False
 
     async def start(self) -> None:
@@ -101,7 +101,7 @@ class LprPusher(ProtocolServer):
         if self._client is not None and self._own_client:
             await self._client.aclose()
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self._up, "sent": self.sent, "failed": self.failed}
 
     # --- події ------------------------------------------------------------------------
@@ -142,4 +142,3 @@ class LprPusher(ProtocolServer):
             "error", f"LPR не доставлено ({body.get('plateText')}): {last}",
             device=device or body.get("sensorProviderID"), payload={"url_failed": True})
         return False
-

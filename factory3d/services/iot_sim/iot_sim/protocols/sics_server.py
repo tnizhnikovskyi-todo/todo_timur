@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import logging
 import re
+from typing import Any
 
 from iot_sim.core.world import World
 from iot_sim.protocols.base import ProtocolServer
@@ -46,7 +47,7 @@ class SicsServer(ProtocolServer):
         self.zero_offset = 0.0
         self.requests = 0
         self._server: asyncio.AbstractServer | None = None
-        self._tasks: set[asyncio.Task] = set()
+        self._tasks: set[asyncio.Task[Any]] = set()
 
     # --- сигнали ------------------------------------------------------------------------
     def _gross(self) -> float:
@@ -129,7 +130,7 @@ class SicsServer(ProtocolServer):
 
     # --- з'єднання ----------------------------------------------------------------------
     async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        stream: asyncio.Task | None = None
+        stream: asyncio.Task[Any] | None = None
 
         async def send(text: str) -> None:
             writer.write(text.encode("ascii", "replace") + b"\r\n")
@@ -177,6 +178,6 @@ class SicsServer(ProtocolServer):
                 await asyncio.wait_for(self._server.wait_closed(), 2)
             self._server = None
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self._server is not None and self._server.is_serving(),
                 "port": self.port, "requests": self.requests}

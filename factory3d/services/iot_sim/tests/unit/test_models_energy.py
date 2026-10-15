@@ -4,7 +4,6 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-
 from iot_sim.models.meter import ALL_CONSUMERS, CRITICAL, p_crit, total_load
 
 BIG = 1e9
@@ -406,3 +405,18 @@ def test_blackout_without_genset_and_ats_state(world):
 
 def a_relay_calls(world):
     return [c for c in ats(world).relay_log if c[0] != "load"]
+
+
+def test_reset_all_energies_zeroes_counters(world):
+    """Modbus 2020 (Reset All Energies): накопичені кВт·год лічильника (споживачі лінії і власний) обнуляються."""
+    meters = [d for d in world.devices.values() if d.driver == "meter" and d.model.consumers]
+    m = meters[0].model
+    world.advance(60)
+    c = m.consumers[0]
+    m.e_wh[c] = 500_000.0
+    world.advance(1)
+    assert world.signals[f"energy/consumers/{c}/kwh_total"].value > 100
+    world.post("meter", {"unit": meters[0].unit_id, "cmd": "reset_energy"})
+    world.advance(1)
+    assert world.signals[f"energy/consumers/{c}/kwh_total"].value < 0.1
+    assert not world.inbox["meter"]

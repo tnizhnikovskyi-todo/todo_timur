@@ -12,6 +12,7 @@ import ipaddress
 import logging
 import socket
 from collections.abc import Callable
+from typing import Any
 from urllib.parse import urlsplit
 
 log = logging.getLogger("iot_sim.outbound")
@@ -62,7 +63,7 @@ class OutboundGuard:
     def check_url(self, url: str) -> None:
         self.check(urlsplit(url).hostname or "")
 
-    async def httpx_hook(self, request) -> None:
+    async def httpx_hook(self, request: Any) -> None:
         """``httpx.AsyncClient(event_hooks={"request": [guard.httpx_hook]})``."""
         self.check(request.url.host)
 
@@ -72,11 +73,11 @@ class OutboundGuard:
         orig = socket.create_connection
         guard = self
 
-        def guarded(address, *args, **kwargs):
+        def guarded(address: Any, *args: Any, **kwargs: Any) -> Any:
             guard.check(address[0])
             return orig(address, *args, **kwargs)
 
-        self._orig = orig
+        self._orig = orig  # type: ignore[assignment]
         socket.create_connection = guarded
 
     def uninstall(self) -> None:

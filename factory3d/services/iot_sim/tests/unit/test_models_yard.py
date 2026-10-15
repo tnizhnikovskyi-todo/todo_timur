@@ -4,7 +4,6 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
-
 from iot_sim.models.yard import (
     DEMO_BOOKINGS,
     cargo_kg,

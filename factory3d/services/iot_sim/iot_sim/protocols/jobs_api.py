@@ -189,7 +189,7 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
     dep = [Depends(api_key_dep(apikey))]
 
     @app.post("/jobs", dependencies=dep, status_code=202)
-    async def submit(request: Request):
+    async def submit(request: Request) -> Any:
         ctype = request.headers.get("content-type", "")
         try:
             if ctype.startswith("application/json"):
@@ -199,7 +199,7 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
                 form = await request.form()
                 body = dict(form)
                 raw = form.get("parts")
-                text = (await raw.read()).decode("utf-8") if hasattr(raw, "read") else str(raw or "")
+                text = (await raw.read()).decode("utf-8") if hasattr(raw, "read") else str(raw or "")  # type: ignore[union-attr]
                 parts = parse_parts(text)
         except CsvError as e:
             return JSONResponse({"detail": e.errors}, 422)
@@ -210,11 +210,11 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
         return {"job_id": job["job_id"], "state": "optimizing", "eta_s": ETA_S}
 
     @app.get("/jobs/{jid}", dependencies=dep)
-    def get_job(jid: str) -> dict:
+    def get_job(jid: str) -> dict[str, Any]:
         return store.public(store.get(jid))
 
     @app.get("/jobs/{jid}/plan", dependencies=dep)
-    def get_plan(jid: str) -> dict:
+    def get_plan(jid: str) -> dict[str, Any]:
         job = store.get(jid)
         if job["state"] == "optimizing":
             raise ApiError(409, "CONFLICT", "plan is not ready")
@@ -222,7 +222,7 @@ def create_app(store: JobStore, apikey: str) -> FastAPI:
         return {"sheets": p["sheets"], "total_sheets": p["total_sheets"], "waste_pct": p["waste_pct"]}
 
     @app.post("/jobs/{jid}/release", dependencies=dep)
-    async def release(jid: str, request: Request) -> dict:
+    async def release(jid: str, request: Request) -> dict[str, Any]:
         job = store.get(jid)
         if job["state"] != "planned":
             raise ApiError(409, "CONFLICT", f"job is {job['state']}, expected planned")
@@ -277,7 +277,7 @@ class JobsApi(ProtocolServer):
     async def stop(self) -> None:
         await self._runner.stop()
 
-    def health(self) -> dict:
+    def health(self) -> dict[str, Any]:
         return {"proto": self.name, "up": self._runner.up, "port": self.port,
                 "jobs": len(self.store.jobs)}
 
