@@ -1,11 +1,15 @@
 // W-12: разбор кодов по правилам склада, автоподбор маски, лоток «Не розміщено», авто-раскладка.
 import test from "node:test";
+import fs from "node:fs";
 import assert from "node:assert/strict";
 import { fresh, count, layoutHash, FUR } from "./helpers.js";
 import { OTHER_RULES, otherModel } from "./fixture-other.js";
 import * as P from "../src/core/parse.js";
 import * as B from "../src/core/building.js";
 import { createModel } from "../src/core/model.js";
+import { createFileAdapter } from "../src/adapters/file.js";
+import { writeCsv } from "../src/adapters/csv.js";
+import { locationRows } from "../src/core/locexport.js";
 import { createProject } from "../src/core/project.js";
 import { createMemoryStorage } from "../src/core/storage.js";
 import { normEdit } from "../src/core/types.js";
@@ -180,4 +184,38 @@ test("авто-раскладка со зданием: внутри контур
   const k = m.pending.length, notes = [];
   m.on((e) => { if (e.type === "notify") notes.push(e.key); });
   assert.equal(m.ops.autoLayout("WH"), false); assert.equal(m.pending.length, k); assert.deepEqual(notes, ["n.autoNoFit"]);
+});
+
+// W-10 + W-12: импорт CSV идёт через правила разбора склада
+test("импорт CSV (адаптер файла): фикстура e2e разбирается, правила склада действуют, нераспознанное попадает в лоток", async () => {
+  const fixture = fs.readFileSync(new URL("../e2e/fixtures/locations.csv", import.meta.url), "utf8").trimEnd();
+  const extra = ["WH/Stock/A-01-01-1,Internal Location,A-01-01-1,,", "WH/Stock/A-01-01-2,Internal Location,A-01-01-2,,", "WH/R7.S1.L1,Internal Location,R7.S1.L1,,", "WH/Odd,Internal Location,Odd,,"];
+  const ad = createFileAdapter({ now: () => "2026-10-15 10:00" });
+  await ad.open("loc.csv", `${fixture}\n${extra.join("\n")}\n`);
+  const project = ad.project({ existing: [] }), m = createModel(project, createMemoryStorage(), { bases: {} });
+  assert.deepEqual(Object.keys(m.data.locations).sort(), ["A-01-01-1", "A-01-01-2", "Odd", "R7.S1.L1", "SH-A", "SH-B", "SH-C"]);
+  // правила по умолчанию: ничего не разобрано; бездомные — «Odd» и «R7.S1.L1» (прямо под складом)
+  assert.equal(m.parse.stats().parsed, 0);
+  assert.deepEqual(m.tray.list().map((u) => u.code), ["Odd", "R7.S1.L1"]);
+  assert.ok(m.tree.byCode.has("SH-A"));
+  // правила под этот файл: A-… и R…S…L…, места SH-* — на полу
+  m.ops.parse({ rules: [{ mask: "A-{ряд}-{секція}-{ярус}", tp: "FUR" }, { mask: "R{ряд}.S{секція}.L{ярус}", tp: "FG" }, { mask: "SH-*", tp: "ZONE" }] });
+  const st = m.parse.stats(); assert.equal(st.parsed, 6); assert.deepEqual(st.bad, ["Odd"]);
+  assert.equal(m.tree.byCode.get("A-01-01-2").type, "level");
+  assert.deepEqual(m.tray.list().map((u) => [u.code, !!u.cs]), [["Odd", false], ["R7.S1.L1", true]]);
+  // лоток → зона Stock; ничего не потеряно
+  assert.ok(m.ops.place(["Odd", "R7.S1.L1"], "WH/Stock")); assert.equal(m.tray.count(), 0);
+  assert.equal(m.tree.byCode.get("R7.S1.L1").parent, "WH/Stock/R7/S1"); assert.equal(m.tree.byCode.get("Odd").parent, "WH/Stock");
+  assert.equal(m.nodes().filter((n) => n.is_location).length, 7);
+  // экспорт CSV и повторный импорт: те же места
+  const out = locationRows(m), again = createFileAdapter({ now: () => "2026-10-15 10:00" });
+  await again.open("out.csv", writeCsv([out.headers, ...out.rows]));
+  assert.equal(Object.keys(again.preview().snapshots.WH.locations).length, 7);
+});
+
+test("импорт CSV прототипа (экспорт → адаптер): по умолчанию те же числа, лоток пуст", async () => {
+  const { model } = fresh(), out = locationRows(model), ad = createFileAdapter({ now: () => "2026-10-15 10:00" });
+  await ad.open("loc.csv", writeCsv([out.headers, ...out.rows]));
+  const m = createModel(ad.project({ existing: [] }), createMemoryStorage(), { bases: {} });
+  assert.equal(m.tray.count(), 0); assert.equal(m.tree.nodes.size, 891); assert.equal(m.nodes().filter((n) => n.is_location).length, 689);
 });

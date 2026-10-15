@@ -343,3 +343,15 @@ svg .bd-rl { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; text
 .o_tray .traylist .code { font-family: ui-monospace, monospace; }
 .topbar #tray-btn .cnt { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--warn); color: #fff; font-size: 12px; text-align: center; }
 .vp svg.dropok { outline: 2px dashed var(--o-brand); outline-offset: -4px; }
+/* меню «Файл» и окна импорта / экспорта (W-10) */
+.filemenu { position: relative; }
+.o_menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; min-width: 220px; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 4px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); padding: 4px 0; display: flex; flex-direction: column; }
+.o_menu[hidden] { display: none; }
+.o_menu button { border: 0; background: transparent; color: var(--o-text); font: 14px var(--f-body); text-align: left; padding: 7px 14px; cursor: pointer; }
+.o_menu button:hover, .o_menu button:focus-visible { background: var(--o-btn2); }
+.o_menu hr { border: 0; border-top: 1px solid var(--o-border); margin: 4px 0; }
+.o_map { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; margin-bottom: 10px; }
+.o_modal fieldset { border: 1px solid var(--o-border); border-radius: 4px; margin: 0 0 10px; padding: 6px 10px; }
+.o_modal h4 { margin: 12px 0 6px; font-size: 14px; }
+.o_modal .o_err { color: var(--bad); margin: 6px 0; }
+.o_modal .o_err:empty { display: none; }

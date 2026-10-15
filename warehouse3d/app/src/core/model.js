@@ -41,7 +41,8 @@ export function createModel(project, storage, opts = {}) {
   s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); };
   const rd = (name) => { try { return storage.read(name); } catch (e) { return null; } };
   const wr = (name, v) => { try { return storage.write(name, v); } catch (e) { return "fail"; } };
-  const baseOf = (wh) => wh.base || bases[wh.baseRef] || EMPTY_BASE;
+  // снимок хоста по baseRef (Odoo) важнее встроенной копии base: она — запасной вариант, если Odoo недоступна (импорт проекта кладёт её в файл)
+  const baseOf = (wh) => (wh.baseRef && bases[wh.baseRef]) || wh.base || EMPTY_BASE;
   s.baseOf = baseOf;
 
   // слой правок и дерево активного склада
