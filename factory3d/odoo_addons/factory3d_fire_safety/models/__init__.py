@@ -6,9 +6,9 @@
 # from . import f3d_fire_device
 # from . import f3d_fire_event
 # from . import f3d_fire_system
-# from . import f3d_fire_smoke_zone
-# from . import f3d_fire_exit
-# from . import f3d_fire_route
+from . import f3d_fire_smoke_zone
+from . import f3d_fire_exit
+from . import f3d_fire_route
 # from . import f3d_fire_drill
 # from . import passage_source
 # from . import f3d_zone

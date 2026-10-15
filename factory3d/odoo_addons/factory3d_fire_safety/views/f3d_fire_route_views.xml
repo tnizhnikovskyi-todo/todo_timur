@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_fire_route_list" model="ir.ui.view">
+        <field name="name">f3d.fire.route.list</field>
+        <field name="model">f3d.fire.route</field>
+        <field name="arch" type="xml">
+            <list default_order="length_m desc" decoration-danger="compliance == 'fail'">
+                <field name="zone_code"/>
+                <field name="name"/>
+                <field name="exit_id"/>
+                <field name="length_m"/>
+                <field name="norm_m"/>
+                <field name="width_min_m"/>
+                <field name="point_count" optional="hide"/>
+                <field name="compliance" widget="badge" decoration-success="compliance == 'ok'"
+                       decoration-warning="compliance == 'warn'" decoration-danger="compliance == 'fail'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_fire_route_form" model="ir.ui.view">
+        <field name="name">f3d.fire.route.form</field>
+        <field name="model">f3d.fire.route</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Маршрут">
+                            <field name="code"/>
+                            <field name="name"/>
+                            <field name="zone_id"/>
+                            <field name="exit_id"/>
+                            <field name="length_m"/>
+                            <field name="width_min_m"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Перевірка">
+                            <field name="norm_m"/>
+                            <field name="length_ok"/>
+                            <field name="width_ok"/>
+                            <field name="compliance" widget="badge" decoration-success="compliance == 'ok'"
+                                   decoration-warning="compliance == 'warn'" decoration-danger="compliance == 'fail'"/>
+                            <field name="compliance_note"/>
+                        </group>
+                    </group>
+                    <field name="path_text" widget="ace" options="{'mode': 'json'}"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_fire_route_search" model="ir.ui.view">
+        <field name="name">f3d.fire.route.search</field>
+        <field name="model">f3d.fire.route</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="zone_id"/>
+                <field name="exit_id"/>
+                <filter name="filter_fail" string="Не відповідає" domain="[('compliance', '=', 'fail')]"/>
+                <group>
+                    <filter name="group_exit" string="Вихід" context="{'group_by': 'exit_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_fire_route" model="ir.actions.act_window">
+        <field name="name">Маршрути евакуації</field>
+        <field name="res_model">f3d.fire.route</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
