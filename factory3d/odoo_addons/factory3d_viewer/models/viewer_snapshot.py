@@ -81,7 +81,7 @@ class F3dViewerSnapshot(models.Model):
     def _take(self, kind="periodic", note=None, user=None):
         from ..tools.payload import PayloadBuilder
         env = self.env
-        now = fields.Datetime.now()
+        now = dates.now(env)  # шкала демо-годинника (R-21): shift_date знімка збігається з «сьогодні» API-05
         prev = self.search([], limit=1)
         if kind == "periodic" and prev and prev.ts > now - timedelta(seconds=60):
             return prev

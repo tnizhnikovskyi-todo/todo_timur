@@ -640,3 +640,38 @@ test("access_rows (AC-63): рядки СКУД у картках людини й
     plain.viewer.select("Z-CUT");
     expect("Людей зараз" in kv(plain.el)).toBe(false);
 });
+
+test("section_errors (§11): банер недоступного розділу при meta.sections=error", async () => {
+    const { viewer, el } = await mountViewer({
+        model: "none",
+        mutate: (fx) => {
+            fx.data.meta.sections = { energy: "error", products: "live" };
+            fx.data.meta.errors = [{ provider: "factory3d_energy", error: "KeyError" }];
+        },
+    });
+    const b = q(el, ".o_f3d_sec-banner");
+    expect(b).not.toBe(null);
+    expect(b.textContent.includes("Розділ energy недоступний")).toBe(true);
+    expect(b.textContent.includes("factory3d_energy")).toBe(true);
+    viewer.applyPatch({ meta: { errors: [] } });
+    expect(q(el, ".o_f3d_sec-banner")).not.toBe(null); // sections лишились
+    viewer.D.meta.sections.energy = "live";
+    viewer.applyPatch({ meta: { errors: [] } });
+    expect(q(el, ".o_f3d_sec-banner")).toBe(null);
+});
+
+test("snapshots_tag (R-17): мітка «знімки» при режимі snapshots", async () => {
+    const snaps = [1, 2, 3].map((i) => ({ id: i, ts: "2026-10-12 0" + (6 + i) + ":00", kind: "periodic" }));
+    const { viewer, el } = await mountViewer({
+        model: "none",
+        routes: { "/snapshots": () => json({ date: "2026-10-12", snapshots: snaps, mode: "snapshots" }) },
+    });
+    expect(q(el, ".o_f3d_snap-tag").hidden).toBe(true);
+    viewer.setSimTime(600);
+    await tick();
+    await tick();
+    expect(viewer.getState().playbackMode).toBe("snapshots");
+    expect(q(el, ".o_f3d_snap-tag").hidden).toBe(false);
+    viewer.setPlaybackMode("plan");
+    expect(q(el, ".o_f3d_snap-tag").hidden).toBe(true);
+});

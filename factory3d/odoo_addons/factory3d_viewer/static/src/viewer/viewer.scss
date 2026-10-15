@@ -313,3 +313,5 @@
   padding: 6px 12px; font-size: 13px; box-shadow: var(--f3d-shadow);
 }
 .o_f3d_viewer.o_f3d_is_kiosk .o_f3d_c-open { display: none; }
+.o_f3d_viewer .o_f3d_snap-tag { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--f3d-accent-soft); }
+.o_f3d_viewer .o_f3d_sec-banner { bottom: auto; top: 64px; border-color: var(--f3d-bad); }

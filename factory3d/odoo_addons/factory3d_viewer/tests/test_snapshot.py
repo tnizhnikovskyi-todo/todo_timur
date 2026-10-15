@@ -144,3 +144,17 @@ class TestSnapshotHttp(HttpCase, F3dViewerBase):
         self.assertEqual(res.json(), {"meta": {"schema": "1.1"}})
         self.assertEqual(self._get("/f3d/viewer/snapshot/99999999").status_code, 404)
         self.assertEqual(self._get("/f3d/viewer/snapshot/%d" % snap.id, user="f3d_nobody").status_code, 403)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_viewer")
+class TestSnapshotDemoClock(F3dViewerBase):
+    """R-17/R-21: «сьогодні» API-05 і shift_date знімка — в одній шкалі (demo_clock)."""
+
+    def test_snapshots_found_under_demo_clock(self):
+        from odoo.addons.factory3d_viewer.tools import dates
+        self.env["ir.config_parameter"].sudo().set_param("factory3d.viewer.demo_clock", "2020-01-12 10:30")
+        Snap = self.env["f3d.viewer.snapshot"].sudo()
+        Snap.search([]).unlink()
+        recs = [Snap._take("manual", note=str(i)) for i in range(1)]
+        self.assertEqual(str(recs[0].shift_date), "2020-01-12")
+        self.assertEqual(str(recs[0].shift_date), dates.today(self.env))

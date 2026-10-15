@@ -43,7 +43,7 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
     <div class="o_f3d_panel o_f3d_shift o_f3d_shift" role="group" aria-label="Програвання зміни">
       <button class="o_f3d_btn o_f3d_shift-play" aria-label="Програти зміну">▶</button>
       <input class="o_f3d_shift-t" type="range" min="420" max="930" step="5" value="630" aria-label="Час зміни">
-      <span class="o_f3d_mono o_f3d_shift-l">зараз</span>
+      <span class="o_f3d_mono o_f3d_shift-l">зараз</span><span class="o_f3d_mono o_f3d_snap-tag" title="Програвання за знімками стану" hidden>знімки</span>
       <button class="o_f3d_btn o_f3d_shift-now">Зараз</button>
     </div>
     <button class="o_f3d_btn o_f3d_toggle-side" aria-expanded="false">Види і шари</button>
@@ -1206,6 +1206,7 @@ function setData(d, first) {
   syncMachineLabels();
   items.forEach(paint);
   drillSync();
+  syncSectionErrors();
 }
 function loadFailed(err) {
   console.error(err);
@@ -1326,6 +1327,7 @@ function applyPatch(patch) {
   if (lists.has("workorders") || lists.has("pickings") || lists.has("productions")) { flow.built = false; flowRefresh(); }
   updateLive();
   drillSync();
+  if (patch.meta) syncSectionErrors();
   if (panel.type !== "drill" && !root.contains(document.activeElement?.closest?.("input"))) {renderPanel(true);}
   tickClock();
 }
@@ -1422,13 +1424,30 @@ function syncOutdoorZones() {
 }
 
 // ---- R-17: знімки
+function syncSnapTag() {
+  const tag = $(".o_f3d_snap-tag");
+  if (tag) tag.hidden = playbackMode !== "snapshots";
+}
+// §11: розділ, де провайдер кинув виняток, — банер «Розділ … недоступний (помилка модуля …)»
+let secBanner = null;
+function syncSectionErrors() {
+  const meta = D?.meta || {};
+  const bad = Object.entries(meta.sections || {}).filter(([, v]) => v === "error").map(([k]) => k);
+  const prov = (meta.errors || []).map((e) => e.provider).filter(Boolean);
+  if (secBanner) { secBanner.remove(); secBanner = null; }
+  if (!bad.length && !prov.length) return;
+  const names = bad.length ? bad.join(", ") : prov.join(", ");
+  const mods = prov.length ? " (помилка модуля " + prov.join(", ") + ")" : "";
+  secBanner = banner("Розділ " + names + " недоступний" + mods);
+  secBanner.classList.add(cx("sec-banner"));
+}
 async function ensurePlayback() {
   if (snapChecked || !client?.snapshots || !D) {return;}
   snapChecked = true;
   try {
     const r = await client.snapshots(D.meta.now.slice(0, 10));
     snapList = r.snapshots || [];
-    if (r.mode === "snapshots" && !userPlan) { playbackMode = "snapshots"; if (simOverride != null) {applySimTime(simOverride);} }
+    if (r.mode === "snapshots" && !userPlan) { playbackMode = "snapshots"; syncSnapTag(); if (simOverride != null) {applySimTime(simOverride);} }
   } catch (err) { console.warn(err); }
 }
 async function loadSnapshotById(id) {
@@ -2831,7 +2850,7 @@ function setMode(mode) {
   renderPanel();
 }
 function playShift() { if (!shiftTimer) {$(".o_f3d_shift-play").click();} }
-function setPlaybackMode(m) { playbackMode = m; userPlan = m === "plan"; }
+function setPlaybackMode(m) { playbackMode = m; userPlan = m === "plan"; syncSnapTag(); }
 function setLite(v) {
   store("f3d.lite", v ? "1" : "0");
   opts.onSetLite?.(v); // рендерер створюється один раз: дія перезавантажується з параметром lite
