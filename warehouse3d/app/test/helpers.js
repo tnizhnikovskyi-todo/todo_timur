@@ -1,12 +1,17 @@
 import fs from "node:fs";
 import { createModel } from "../src/core/model.js";
 import { createMemoryStorage } from "../src/core/storage.js";
+import { demoBase2, demoProject } from "../src/core/demo.js";
 
 export const DATA = JSON.parse(fs.readFileSync(new URL("../../prototype/data.json", import.meta.url), "utf8"));
 
+export const BASES = { "data.json": DATA, "demo-2": demoBase2(DATA.meta) };
+
+// initial — то, что лежало в хранилище (storage.dump()): «перезагрузка страницы»; без него — новый демо-проект
 export function fresh(initial = {}, opts = {}) {
-  const storage = createMemoryStorage(initial, opts);
-  const model = createModel(DATA, storage);
+  const { words, ...so } = opts;
+  const storage = createMemoryStorage(initial, so);
+  const model = createModel(storage.peekProject() || demoProject(BASES), storage, { bases: BASES, words });
   const events = [];
   model.on((e) => events.push(e));
   return { model, storage, events, notes: () => events.filter((e) => e.type === "notify") };

@@ -89,12 +89,13 @@ export function createSidePanel({ model, i18n, root }) {
     const n = tree.nodes.get(ui.esel || ui.focus), tp = n.tp ? tree.TY(n.tp) : null, ro = model.readonly;
     const isGroup = n.type === "group" || n.type === "rackset", zoneLeaf = n.type === "group" && n.loc && !n.kids.length;
     const K = (op) => `form:${op}@${n.id}`;
+    const isCell = n.type === "cell", lv = n.type === "level" ? n : isCell ? tree.nodes.get(n.parent) : null, pid = isCell ? n.parent : n.id; // изменения ячейки принадлежат её ярусу
     let h = `<div class="lab">${T("side.edit")}${n.id === "WH" ? "" : n.pend ? ` · <span class="ed-pnd">${T("tag.pend")}</span>` : n.draft ? ` · <span class="ed-new">${T("tag.new")}</span>` : ` · ${T("tag.fromOdoo")}`}</div><h2>${esc(label(n))}</h2>
       <div class="o_chips" style="margin-top:6px">${chips(n, "esel")}</div>
       <div class="ed-info">${tp && !(isGroup && !zoneLeaf) ? `${typeInfo(tp)}<br>` : ""}${esc(places(n.codes.length))} · ${i18n.m(n.w)} × ${i18n.m(n.d)} ${T("unit.m")}${n.loc ? ` · <span class="code">${esc(n.loc)}</span>` : ""}</div>`;
     const clip = model.clip, dest = clip.length ? model.dropInto(tree.nodes.get(clip[0]), n.id) : null;
-    if (n.id !== "WH" || clip.length) h += `<div class="acts">${n.id === "WH" ? "" : `<button class="btn btn-secondary" data-dup title="${esc(mod)}+D">⧉ ${T("side.dup", { name: label(n) })}</button><button class="btn btn-secondary" data-copy title="${esc(mod)}+C">${T("side.copy")}</button>`}${clip.length ? `<button class="btn btn-secondary" data-paste title="${esc(mod)}+V">${T("side.paste", { names: clip.map((id) => label(tree.nodes.get(id))) })}${dest ? ` → ${esc(label(dest))}` : ""}</button>` : ""}${n.id === "WH" ? "" : `<button class="btn btn-danger" data-del="${esc(n.id)}">${T("side.del", { name: label(n) })}${n.codes.length > 1 ? ` · ${esc(places(n.codes.length))}` : ""}</button>`}</div>`;
-    h += pendBox(model.pendFor(n.id), t(n.id === "WH" ? "side.saveAll" : "side.saveObj", { name: label(n) }), ro);
+    if (n.id !== "WH" || clip.length) h += `<div class="acts">${n.id === "WH" || isCell ? "" : `<button class="btn btn-secondary" data-dup title="${esc(mod)}+D">⧉ ${T("side.dup", { name: label(n) })}</button><button class="btn btn-secondary" data-copy title="${esc(mod)}+C">${T("side.copy")}</button>`}${clip.length ? `<button class="btn btn-secondary" data-paste title="${esc(mod)}+V">${T("side.paste", { names: clip.map((id) => label(tree.nodes.get(id))) })}${dest ? ` → ${esc(label(dest))}` : ""}</button>` : ""}${n.id === "WH" || isCell ? "" : `<button class="btn btn-danger" data-del="${esc(n.id)}">${T("side.del", { name: label(n) })}${n.codes.length > 1 ? ` · ${esc(places(n.codes.length))}` : ""}</button>`}</div>`;
+    h += pendBox(model.pendFor(pid), t(n.id === "WH" ? "side.saveAll" : "side.saveObj", { name: label(isCell ? tree.nodes.get(pid) : n) }), ro);
     if (isGroup && !zoneLeaf) {
       const rk = n.kids.filter((k) => k.type === "rack"), tp0 = fv(K("rack"), "tp", rk.length ? rk[rk.length - 1].tp : "FUR"), st0 = tree.TY(tp0).form === "stack";
       h += `<div class="sec">${T("side.addRack")}</div><form class="ed-form" data-op="rack">
@@ -106,6 +107,10 @@ export function createSidePanel({ model, i18n, root }) {
           <label>${T("form.count")}<input type="number" name="cnt" min="1" max="30" value="${esc(fv(K("zone"), "cnt", 1))}"></label>${btns(ro)}</form>
         <div class="sec">${T("side.addGroup")}</div><form class="ed-form" data-op="group">
           <label class="wide">${T("form.name")}<input name="name" value="${esc(fv(K("group"), "name", t("word.newZone")))}" maxlength="40"></label>${btns(ro)}</form>`;
+      // глубина локаций: склад целиком или зона (как другие правки: «Показати» / «Зберегти», отменяется Ctrl+Z)
+      const di = model.depthInfo(n.id), dopts = n.id === "WH" ? ["level", "cell"] : ["inherit", "level", "cell"], d0 = di.own; // значение берётся из модели (с учётом показанного), а не из памяти формы
+      h += `<div class="sec">${T("side.depthTitle")}</div><form class="ed-form" data-op="depth"><label class="wide"><span class="sr">${T("side.depthTitle")}</span><select name="depth">${dopts.map((o) => `<option value="${o}"${o === d0 ? " selected" : ""}>${T(`depth.${o}`)}</option>`).join("")}</select></label>${btns(ro)}</form>
+        <p class="ed-note">${T(n.id === "WH" ? "side.depthWh" : "side.depthZone")}</p>`;
     }
     if (n.type === "rack") {
       const stack = tp.form === "stack", lv = Math.max(0, ...n.kids.map((k) => k.nLv || 0)) || tp.lv || 1, par = tree.nodes.get(n.parent);
@@ -118,26 +123,29 @@ export function createSidePanel({ model, i18n, root }) {
           ${stack ? "" : `<label>${T("form.levels")}<input type="number" name="nl" min="1" max="12" value="${esc(fv(K("bay"), "nl", lv))}"></label>`}${btns(ro)}</form>`;
     }
     if (n.type === "bay") h += `<div class="sec">${T("side.addLevel")}</div><form class="ed-form" data-op="level"><input type="hidden" name="at" value="${n.nLv}">${btns(ro)}</form>`;
+    if (lv) h += `<div class="sec">${T("side.cellsTitle")}</div>${isCell ? `<p class="ed-note">${T("side.cellOf")}</p>` : ""}<form class="ed-form" data-op="cells" data-target="${esc(lv.id)}">
+        <label>${T("form.cells")}<input type="number" name="n" min="1" max="12" value="${esc(fv(K("cells"), "n", lv.cells))}"></label>${btns(ro)}</form>
+        <p class="ed-note">${T(model.depthInfo(lv.id).eff === "cell" ? "side.cellsOn" : "side.cellsOff")}</p>`;
     if (n.kids.length) h += `<div class="sec">${T("side.inside", { n: n.kids.length })}</div><ul class="lowlist ed-kids">${n.kids.map((k) => `<li><button data-esel="${esc(k.id)}"><span class="t">${esc(label(k))}${nameTag(k)}</span><span class="mut" style="font-size:12px">${k.codes.length}</span>
-        <span class="m">${k.tp && k.type !== "group" ? esc(tname(tree.TY(k.tp))) : esc(places(k.codes.length))}${k.loc ? ` · ${esc(k.loc)}` : ""}</span></button><button class="x" data-del="${esc(k.id)}" aria-label="${T("side.delLabel", { name: label(k) })}" title="${T("side.delTitle")}">×</button></li>`).join("")}</ul>`;
+        <span class="m">${k.tp && k.type !== "group" ? esc(tname(tree.TY(k.tp))) : esc(places(k.codes.length))}${k.loc ? ` · ${esc(k.loc)}` : ""}</span></button>${k.type === "cell" ? "" : `<button class="x" data-del="${esc(k.id)}" aria-label="${T("side.delLabel", { name: label(k) })}" title="${T("side.delTitle")}">×</button>`}</li>`).join("")}</ul>`;
     h += `<p class="ed-note">${T("side.noteEdit")}${ro ? ` ${T("status.ro")}.` : ""}</p>`;
     side.innerHTML = h;
     side.querySelectorAll("[data-esel]").forEach((b) => b.onclick = () => model.editPick(b.dataset.esel, true));
     side.querySelectorAll("[data-del]").forEach((b) => b.onclick = () => model.ops.del(b.dataset.del));
-    side.querySelector("[data-save]")?.addEventListener("click", () => model.save(n.id));
-    side.querySelector("[data-discard]")?.addEventListener("click", () => model.discard(n.id));
+    side.querySelector("[data-save]")?.addEventListener("click", () => model.save(pid));
+    side.querySelector("[data-discard]")?.addEventListener("click", () => model.discard(pid));
     side.querySelector("[data-unpos]")?.addEventListener("click", () => model.ops.unpos(n.id));
     side.querySelector("[data-rot]")?.addEventListener("click", () => model.ops.rotate(n.id));
     side.querySelector("[data-dup]")?.addEventListener("click", () => model.ops.dup(n.id));
     side.querySelector("[data-copy]")?.addEventListener("click", () => model.copy());
     side.querySelector("[data-paste]")?.addEventListener("click", () => model.paste());
     side.querySelectorAll("form.ed-form").forEach((f) => {
-      const op = f.dataset.op, k = K(op), val = () => Object.fromEntries(new FormData(f));
-      f.querySelector("[data-show]").onclick = () => { FORMV[k] = val(); model.ops[op](n.id, val(), k); };
+      const op = f.dataset.op, k = K(op), tid = f.dataset.target || n.id, val = () => Object.fromEntries(new FormData(f));
+      f.querySelector("[data-show]").onclick = () => { FORMV[k] = val(); model.ops[op](tid, val(), k); };
       f.onsubmit = (ev) => {
         ev.preventDefault(); const v = val(), pk = JSON.stringify(v);
-        if (!model.hasPending(k, pk)) model.ops[op](n.id, v, k);
-        delete FORMV[k]; model.save(n.id);
+        if (!model.hasPending(k, pk)) model.ops[op](tid, v, k);
+        delete FORMV[k]; model.save(tid);
       };
       if (op === "rack") f.tp.onchange = () => { const tt = model.tree.TY(f.tp.value); f.nl.disabled = tt.form === "stack"; f.nl.value = tt.lv || 1; };
     });
@@ -149,7 +157,7 @@ export function createSidePanel({ model, i18n, root }) {
 // ---------- панель уровней: на каждом уровне пути — список соседей, в конце — уровень ниже
 export function renderLevelBar(bar, { model, i18n }) {
   const tree = model.tree, path = pathOf(tree, tree.nodes.get(model.ui.focus)), f = path[path.length - 1], label = (n) => esc(i18n.node(n));
-  let h = `<button class="o_chip${f.id === "WH" ? " on" : ""}" data-focus="WH">WH</button>`;
+  let h = `<button class="o_chip${f.id === "WH" ? " on" : ""}" data-focus="WH">${esc(tree.root.name)}</button>`;
   for (let i = 1; i < path.length; i++) {
     const sib = tree.nodes.get(path[i].parent).kids;
     h += `<span class="o_chip_sep">›</span><select data-lvl="${i}" aria-label="${esc(i18n.t("lvl.level", { n: i }))}">${sib.map((k) => `<option value="${esc(k.id)}"${k.id === path[i].id ? " selected" : ""}>${label(k)}</option>`).join("")}</select>`;

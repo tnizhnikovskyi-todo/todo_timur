@@ -1,7 +1,8 @@
-# Конструктор склада — приложение (W-01)
+# Конструктор склада — приложение (W-01, W-02)
 
 Раздел «3D-модель» прототипа (`../prototype/sklad.template.html`) как отдельное приложение: ядро без DOM,
-экран отдельно, хост отдельно. Данные — снимок Odoo `../prototype/data.json`; Odoo приложение не меняет.
+экран отдельно, хост отдельно. Данные — снимок Odoo `../prototype/data.json` (склад WH) и синтетический второй склад WH2
+(`src/core/demo.js`); Odoo приложение не меняет.
 
 ## Команды (из этого каталога, нужен `npm install`)
 
@@ -12,15 +13,36 @@
 
 ## Структура
 
-- `src/core/` — без DOM и без модульных переменных. `model.js` — фабрика `createModel(data, storage, opts)`;
-  `tree.js` (данные + слой правок → дерево), `layout.js` (раскладка в метрах), `edit.js` (diff/apply, стек
-  несохранённых, undo/redo, операции), `select.js` (чистая логика выделения), `storage.js` (интерфейс хранения),
-  `types.js` (константы). Подписи изменений и уведомлений — данные `{ k, p }`, текст собирает i18n.
+- `src/core/` — без DOM и без модульных переменных. `model.js` — фабрика `createModel(project, storage, opts)`
+  (`opts.bases` — снимки складов по `baseRef`); `project.js` (модель проекта v2, миграции, `openProject`, `nodesOf`),
+  `demo.js` (демо-проект и склад WH2), `tree.js` (снимок + слой правок + настройки склада → дерево), `layout.js`
+  (раскладка в метрах), `edit.js` (diff/apply, стек несохранённых, undo/redo, операции), `select.js` (чистая логика
+  выделения), `storage.js` (интерфейс хранения + хранилище в памяти), `types.js` (константы).
+  Подписи изменений и уведомлений — данные `{ k, p }`, текст собирает i18n.
 - `src/view/` — `shell.js` (оболочка), `plan2d.js`, `plan3d.js` (three.js, грузится лениво), `panels.js`,
   `types.js` (окно типов мест), `help.js` (инструкция), `notify.js`, `keys.js`, `style.css`.
 - `src/i18n/` — `uk.js`, `en.js`, `createI18n` → `t(key, params)`. Язык запоминается в `wh-app-lang`.
-- `src/host/main.js` — загрузка данных, хранилище в `localStorage` (ключи `wh-app-*`), монтирование view.
-- `test/` — тесты ядра на `data.json`; `e2e/smoke.mjs` — сценарий в браузере (включая 390 px).
+- `src/host/main.js` — загрузка данных, открытие проекта, монтирование view; `src/host/storage.js` — хранилище в `localStorage`
+  (ключи `wh-app-*`, проект — `wh-app-project-<id>`).
+- `test/` — тесты ядра на `data.json` (`core`, `project`, `i18n`); `e2e/smoke.mjs` — сценарий в браузере (включая склады, ячейки и 390 px).
+
+## Модель проекта v2 (`core/project.js`)
+
+- `project { schema: 2, id, name, source { kind: odoo|file|scratch, name }, loaded_at, warehouses[] }`;
+  `warehouse { id, code, name, company, baseRef | base, saved, pending, building: null }`.
+  Склад владеет слоем правок: `saved` (SAVED) и `pending` (PENDING); типы мест склада — `saved.types` (`null` — общий
+  справочник `BASE_TYPES`, иначе свой список поверх него). `building` — заготовка под W-04.
+- Узлы склада производные: снимок Odoo + слой правок → дерево (`tree.js`) → `model.nodes()` / `nodesOf` даёт плоский
+  список v2: `level` (zone, rack, bay, level, cell, floor), `tp`, `x y rot w d h`, `code`, `odoo_id` (null у новых и если
+  в снимке нет id), `status` (existing, new, changed, archived), `is_location`. Корень любого склада — узел `WH` (id), подпись — код склада.
+- Глубина локаций — часть слоя правок: `edit.depth` (`null` = `level` | `cell`) и `edit.depthZones [{ id зоны, d }]`; меняется
+  операцией `ops.depth` через «Показати / Зберегти» с undo, как всё остальное. Ячейки яруса — `edit.cells [{ id яруса, n }]` (1–12, через «Показати / Зберегти»); при глубине `cell` и n > 1 ярус
+  перестаёт быть местом, местами становятся ячейки `<код яруса>-1..n`.
+- Хранилище (`core/storage.js`): `listProjects / loadProject / saveProject / deleteProject` — Promise, плюс синхронные
+  настройки `read / write`. Формат версионирован (`migrateProject`). При первом запуске `openProject` создаёт демо-проект и
+  переносит в склад WH правки прежних ключей (`wh-app-edit/pending`, прототип `wh-model-edit/pending`); старые ключи остаются.
+  Нечитаемый проект не перезаписывается: сырая запись уходит в `wh-app-project-<id>.broken-<время>` (`backupBroken`), открывается
+  демо-проект `demo-<время>`, `onNotice` → уведомление.
 
 ## Правила
 

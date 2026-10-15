@@ -31,6 +31,7 @@ button, input, select { font: inherit; color: inherit; }
 .topbar .logo { color: var(--o-brand); font-size: 20px; align-self: center; }
 .topbar .brand b { font-size: 16px; font-weight: 600; }
 .topbar .sub { color: var(--o-muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar .whsw { border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 4px 8px; font: 13px var(--f-body); max-width: 100%; min-width: 0; }
 .topbar .sp, .editbar .sp, .o_modal footer .sp { flex: 1; }
 .content { flex: 1; min-height: 0; overflow: auto; position: relative; }
 .help-view { min-height: 100%; background: var(--o-form-bg); }

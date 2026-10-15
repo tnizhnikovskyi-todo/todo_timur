@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DATA, fresh, node, count, layoutHash, FUR, GP } from "./helpers.js";
+import { DATA, BASES, fresh, node, count, layoutHash, FUR, GP } from "./helpers.js";
+import { demoProject } from "../src/core/demo.js";
 import { applyDiff, diffEdit, diffEmpty } from "../src/core/edit.js";
 import { clone, emptyEdit } from "../src/core/types.js";
 import { codeSegs } from "../src/core/tree.js";
@@ -110,7 +111,7 @@ test("имена копий: ряд, стеллаж, ярус, место на �
 });
 
 test("слова для имён новых узлов задаёт хост", () => {
-  const m = createModel(DATA, fresh().storage, { words: () => ({ copy: "copy", newZone: "New zone", newType: "New type" }) });
+  const m = createModel(demoProject(BASES), fresh().storage, { bases: BASES, words: () => ({ copy: "copy", newZone: "New zone", newType: "New type" }) });
   assert.equal(m.ops.dup("WH/Сировина/Крайка")[0], "WH/Сировина/Крайка copy");
   m.ops.group("WH", { name: "" });
   assert.ok(m.tree.nodes.has("WH/New zone"));

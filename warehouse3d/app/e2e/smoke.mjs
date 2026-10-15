@@ -146,10 +146,87 @@ try {
   });
   await step("правки переживают перезагрузку", async () => {
     await page.click('form[data-op="rack"] [data-show]').catch(() => {});
-    const pending = await page.evaluate(() => (JSON.parse(localStorage.getItem("wh-app-pending") || "[]")).length);
+    const project = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo") || "null"));
+    const pending = (await project()).warehouses[0].pending.length;
     await page.reload(); await page.waitForSelector("#plan-side h2");
-    const after = await page.evaluate(() => (JSON.parse(localStorage.getItem("wh-app-pending") || "[]")).length);
+    const after = (await project()).warehouses[0].pending.length;
     expect(after === pending, "несохранённое потеряно при перезагрузке");
+  });
+  await step("склад: переключатель, у каждого склада свой план", async () => {
+    expect(await page.locator("#wh-switch option").count() === 2, "в переключателе не два склада");
+    const places = () => page.locator("#vp svg rect.s").count();
+    expect((await places()) === 688, "в WH не 688 нарисованных мест (689 локаций, одна — зона с вложенными)");
+    await page.selectOption("#wh-switch", "wh-2");
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "WH2");
+    expect((await text(".topbar .sub")).includes("WH2"), "подпись склада не сменилась");
+    expect((await places()) === 19, "в WH2 не 19 мест");
+    await page.reload(); await page.waitForSelector("#plan-side h2");
+    expect((await text("#plan-side h2")) === "WH2" && (await page.inputValue("#wh-switch")) === "wh-2", "выбранный склад не запомнен");
+    await page.selectOption("#wh-switch", "wh-1");
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "WH");
+    expect((await places()) === 688, "после возврата в WH не 688 мест");
+  });
+  // перейти к стеллажу FUR-R1-S01 через панель уровней и выбрать его ярус L1 (режим «Місце»)
+  const toLevel = async () => {
+    await page.click('#seg-mode [data-m="2d"]');
+    for (const name of ["Сировина", "Фурнітура", "Ряд R1", "Стелаж S01"]) await page.selectOption('#lvlbar select[data-lvl="next"]', { label: name });
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Стелаж S01");
+    await page.click('#seg-pick [data-pk="place"]');
+  };
+  const clickRect = async (code) => {
+    const b = await page.locator(`#vp svg rect[data-code="${code}"]`).boundingBox();
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+  };
+  const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0]);
+  await step("ячейки на ярусе: глубина → показать → сохранить → перезагрузка", async () => {
+    await page.click("#ed-tg");
+    await page.waitForSelector('#plan-side form[data-op="depth"]');
+    const dsel = '#plan-side form[data-op="depth"] select[name="depth"]', saved = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.depth);
+    await page.selectOption(dsel, "cell");
+    await page.click('#plan-side form[data-op="depth"] [data-show]'); // глубина — обычная правка: сначала показ, не сохранено
+    await page.waitForSelector("#plan-side .ed-pend");
+    expect((await saved()) === null, "глубина сохранилась без «Зберегти»");
+    await page.keyboard.press("Control+KeyZ"); // и отменяется
+    await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect((await page.inputValue(dsel)) === "level", "после отмены глубина не «Ярус»");
+    await page.selectOption(dsel, "cell");
+    await page.click('#plan-side form[data-op="depth"] button[type="submit"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.depth === "cell");
+    await toLevel();
+    await clickRect("FUR-R1-S01-L1");
+    await page.waitForSelector('form[data-op="cells"]');
+    expect((await text("#plan-side h2")) === "Ярус L1", "панель яруса не открылась");
+    await page.fill('form[data-op="cells"] input[name="n"]', "3");
+    await page.click('form[data-op="cells"] [data-show]');
+    await page.waitForSelector("#plan-side .ed-pend");
+    expect(await page.locator('#vp svg rect[data-code="FUR-R1-S01-L1-3"]').count() === 1, "после «Показати» нет третьей ячейки");
+    expect(await page.locator('#vp svg rect[data-code="FUR-R1-S01-L1"]').count() === 0, "ярус остался местом");
+    await page.click('form[data-op="cells"] button[type="submit"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.cells.length === 1);
+    expect((await stored()).pending.length === 0, "после «Зберегти» остались несохранённые");
+    await page.reload(); await page.waitForSelector("#plan-side h2");
+    await page.click("#ed-tg");
+    await toLevel();
+    await clickRect("FUR-R1-S01-L1-2");
+    await page.waitForSelector('form[data-op="cells"]');
+    expect((await page.inputValue('form[data-op="cells"] input[name="n"]')) === "3", "значение «Ячеек на ярусе» не сохранилось");
+    await page.click('#seg-mode [data-m="3d"]'); // 3D с ячейками строится без ошибок
+    await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
+    await page.click("#ed-tg"); // выйти из режима редактирования
+  });
+  await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
+    const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
+    await p2.goto(url);
+    await p2.waitForSelector("#plan-side h2");
+    await p2.evaluate(() => localStorage.setItem("wh-app-project-demo", "{не json"));
+    await p2.reload();
+    await p2.waitForSelector("#o_notifs .o_notif.bad");
+    expect((await p2.locator("#o_notifs .o_notif.bad").first().innerText()).includes("копія збережена"), "нет уведомления о копии");
+    const ks = await p2.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("wh-app-project")));
+    const broken = ks.find((k) => k.startsWith("wh-app-project-demo.broken-"));
+    expect(broken && (await p2.evaluate((k) => localStorage.getItem(k), broken)) === "{не json", "сырая копия не сохранена");
+    expect(ks.some((k) => /^wh-app-project-demo-\d+$/.test(k)), "демо-проект не создан под новым id");
+    await p2.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });

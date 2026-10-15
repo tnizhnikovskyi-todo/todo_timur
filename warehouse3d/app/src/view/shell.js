@@ -14,6 +14,7 @@ const HTML = `
 <div class="app">
   <header class="topbar">
     <div class="brand"><span class="logo" aria-hidden="true">⬡</span><b data-i18n="app.title"></b><span class="sub" id="wh-sub"></span></div>
+    <select class="whsw" id="wh-switch" data-i18n-attr="aria-label:top.warehouse,title:top.warehouse"></select>
     <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button></div>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
     <span class="sp"></span>
@@ -58,13 +59,13 @@ export function mountApp(root, { model, i18n }) {
   root.innerHTML = HTML;
   const q = (s) => root.querySelector(s), t = (k, p) => i18n.t(k, p);
   const vp = q("#vp"), tip = q("#tip"), notifier = createNotifier({ i18n });
-  const meta = model.data.meta || {};
   let mode = model.pref.read("mode") === "2d" ? "2d" : "3d", view = "plan", three = null, threeLoading = null;
 
   // ---------- статические тексты по атрибутам data-i18n / data-i18n-attr
   function applyStatic() {
     root.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
     root.querySelectorAll("[data-i18n-attr]").forEach((el) => el.dataset.i18nAttr.split(",").forEach((pair) => { const [a, k] = pair.split(":"); el.setAttribute(a, t(k)); }));
+    const meta = model.data.meta || {};
     q("#wh-sub").textContent = [meta.company, meta.warehouse].filter(Boolean).join(" · ");
     document.title = t("app.title");
   }
@@ -103,6 +104,14 @@ export function mountApp(root, { model, i18n }) {
     return threeLoading;
   }
 
+  // переключатель склада: у каждого склада свой план и свои правки
+  function renderSwitch() {
+    const sw = q("#wh-switch"), cur = model.warehouse.id;
+    sw.innerHTML = model.warehouses().map((w) => `<option value="${esc(w.id)}"${w.id === cur ? " selected" : ""}>${esc(w.code)}${w.name && w.name !== w.code ? ` · ${esc(w.name)}` : ""}</option>`).join("");
+    sw.hidden = model.warehouses().length < 2;
+  }
+  q("#wh-switch").onchange = (ev) => model.setWarehouse(ev.target.value);
+
   const statusTxt = () => model.ui.edit ? t("status.hintEdit") : t(mode === "2d" ? "status.hint2d" : "status.hint3d");
   function paintBars() {
     const on = model.ui.edit, tg = q("#ed-tg");
@@ -129,6 +138,7 @@ export function mountApp(root, { model, i18n }) {
   // ---------- события модели
   model.on((ev) => {
     if (ev.type === "notify") { notifier.fromEvent(ev); return; }
+    if (ev.type === "warehouse") { renderSwitch(); applyStatic(); side.render(); paintBars(); refresh(); return; }
     if (ev.type === "rebuild") { p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.paint(); three.fit(); } }
     else refresh();
@@ -172,6 +182,6 @@ export function mountApp(root, { model, i18n }) {
   });
 
   document.documentElement.lang = i18n.lang();
-  applyStatic(); apply(); side.render();
+  applyStatic(); renderSwitch(); apply(); side.render();
   return { showView, get mode() { return mode; } };
 }
