@@ -1,0 +1,2045 @@
+<title>Склад меблевої фабрики</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Оболонка за зразком веб-клієнта Odoo 17–19: панель застосунку, контрольна панель з хлібними крихтами,
+   пошуком і перемикачем видів; під нею — вид (план, список, канбан) або картка запису на сірому тлі. */
+:root {
+  --o-brand: #714b67;
+  --o-brand-hover: #5f3f57;
+  --o-link: #017e84;
+  --o-text: #374151;
+  --o-muted: #6b7280;
+  --o-border: #d8dadd;
+  --o-hover: #f3f4f6;
+  --o-bg: #ffffff;
+  --o-form-bg: #f3f4f6;
+  --o-nav: #ffffff;
+  --o-btn2: #e7e9ed;
+  --o-btn2-hover: #d8dadd;
+  /* токени плану (2D/3D) */
+  --panel: #ffffff; --fg: #374151; --muted: #6b7280; --line: #d8dadd; --accent: #714b67; --accent-soft: rgba(113, 75, 103, 0.12);
+  --ok: #28a745; --warn: #e99d00; --bad: #d44c59; --idle: #8f969e; --info: #017e84; --mark: #f0c419; --cell-empty: #e5e7eb;
+  --floor: #f7f8f9; --scene: #e9ecef; --area: rgba(143, 150, 158, 0.18); --hatch: rgba(107, 114, 128, 0.22);
+  --steel: #6f7d8a; --beam: #e0761c; --upright: #2f6fae; --wood: #b08a5a;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --f-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --f-display: var(--f-body);
+  --f-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --o-brand: #a87ca0; --o-brand-hover: #b98fb1; --o-link: #34b8bd; --o-text: #d6d8dd; --o-muted: #9a9fae; --o-border: #3c4050;
+    --o-hover: #313543; --o-bg: #262a36; --o-form-bg: #1f222b; --o-nav: #1b1d26; --o-btn2: #3a3e4c; --o-btn2-hover: #464b5b;
+    --panel: #2b2f3c; --fg: #d6d8dd; --muted: #9a9fae; --line: #3c4050; --accent: #c49abc; --accent-soft: rgba(196, 154, 188, 0.18);
+    --ok: #3cc479; --warn: #f0a52a; --bad: #f0606f; --idle: #8d9aa6; --info: #34b8bd; --mark: #f2c230; --cell-empty: #343948;
+    --floor: #1f232d; --scene: #1a1d26; --area: rgba(141, 154, 166, 0.16); --hatch: rgba(147, 161, 174, 0.18);
+    --steel: #7d8b98; --beam: #e88a35; --upright: #4a8ad0; --wood: #9c7a50; --shadow: 0 4px 14px rgba(0, 0, 0, 0.45); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --o-brand: #a87ca0; --o-brand-hover: #b98fb1; --o-link: #34b8bd; --o-text: #d6d8dd; --o-muted: #9a9fae; --o-border: #3c4050;
+  --o-hover: #313543; --o-bg: #262a36; --o-form-bg: #1f222b; --o-nav: #1b1d26; --o-btn2: #3a3e4c; --o-btn2-hover: #464b5b;
+  --panel: #2b2f3c; --fg: #d6d8dd; --muted: #9a9fae; --line: #3c4050; --accent: #c49abc; --accent-soft: rgba(196, 154, 188, 0.18);
+  --ok: #3cc479; --warn: #f0a52a; --bad: #f0606f; --idle: #8d9aa6; --info: #34b8bd; --mark: #f2c230; --cell-empty: #343948;
+  --floor: #1f232d; --scene: #1a1d26; --area: rgba(141, 154, 166, 0.16); --hatch: rgba(147, 161, 174, 0.18);
+  --steel: #7d8b98; --beam: #e88a35; --upright: #4a8ad0; --wood: #9c7a50; --shadow: 0 4px 14px rgba(0, 0, 0, 0.45); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--o-bg); color: var(--o-text); font: 14px/1.5 var(--f-body); overflow: hidden; }
+button { font: inherit; color: inherit; }
+a { color: var(--o-link); }
+:focus-visible { outline: 2px solid var(--o-brand); outline-offset: 1px; }
+.o_web_client { height: 100%; display: flex; flex-direction: column; }
+
+/* панель застосунку */
+.o_navbar { flex: none; display: flex; align-items: center; gap: 4px; height: 46px; background: var(--o-nav); border-bottom: 1px solid var(--o-border);
+  padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+.o_navbar .apps { width: 38px; height: 38px; border: 0; background: transparent; border-radius: 6px; cursor: pointer; display: grid; place-items: center; color: var(--o-text); }
+.o_navbar .apps:hover, .o_menu:hover { background: var(--o-hover); }
+.o_brandname { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 400; margin: 0 8px 0 4px; white-space: nowrap; }
+.o_menus { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; min-width: 0; flex: 1; }
+.o_menu { border: 0; background: transparent; padding: 0 12px; height: 46px; cursor: pointer; white-space: nowrap; color: var(--o-text); }
+.o_menu { height: 30px; padding: 0 10px; border-radius: 4px; border: 1px solid transparent; }
+.o_menu[aria-current="page"], .o_menu[aria-expanded="true"] { border-color: color-mix(in srgb, var(--o-link) 55%, transparent); background: color-mix(in srgb, var(--o-link) 8%, transparent); }
+.o_menus { align-items: center; gap: 4px; }
+.o_menu_dd { position: fixed; z-index: 30; min-width: 200px; max-width: calc(100vw - 16px); max-height: calc(100vh - 70px); overflow: auto; background: var(--o-bg);
+  border: 1px solid var(--o-border); border-radius: 4px; box-shadow: var(--shadow); padding: 6px 0; display: flex; flex-direction: column; }
+.o_menu_dd .h { padding: 8px 20px 2px; font-size: 13px; font-weight: 500; color: var(--o-muted); }
+.o_menu_dd .it { display: block; text-align: left; border: 0; background: transparent; padding: 5px 20px; font-size: 14px; color: var(--o-text); white-space: nowrap; cursor: pointer; }
+.o_menu_dd .it.ind { padding-left: 32px; }
+.o_menu_dd button.it:hover, .o_menu_dd button.it:focus-visible { background: var(--o-hover); outline: none; }
+.o_menu_dd .it.off { color: color-mix(in srgb, var(--o-muted) 70%, transparent); cursor: default; }
+.o_systray { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--o-muted); white-space: nowrap; }
+.o_db { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid var(--o-border); border-radius: 4px; font-family: var(--f-mono); font-size: 11px; }
+.o_db i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.o_avatar { width: 28px; height: 28px; border-radius: 4px; background: var(--o-brand); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+@media (max-width: 900px) { .o_systray .o_db, .o_systray .o_company { display: none; } }
+
+/* контрольна панель */
+.o_control_panel { flex: none; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 2fr) minmax(0, 1fr); gap: 8px 16px; align-items: center;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--o-border); background: var(--o-bg); }
+.o_control_panel.nosearch { grid-template-columns: minmax(0, 1fr) auto; }
+.o_control_panel.nosearch .o_searchwrap { display: none; }
+.o_bc { display: flex; align-items: center; gap: 6px; font-size: 17px; min-width: 0; flex-wrap: wrap; }
+.o_bc a { color: var(--o-link); text-decoration: none; cursor: pointer; white-space: nowrap; }
+.o_bc a:hover { text-decoration: underline; }
+.o_bc .sep { color: var(--o-muted); }
+.o_bc .cur { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_cp_right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.o_pager { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--o-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.o_pager button { width: 28px; height: 28px; border: 0; background: var(--o-btn2); border-radius: 4px; cursor: pointer; }
+.o_pager button:hover:not(:disabled) { background: var(--o-btn2-hover); }
+.o_pager button:disabled { opacity: 0.4; cursor: default; }
+.o_switch { display: inline-flex; border-radius: 4px; overflow: hidden; }
+.o_switch button { width: 34px; height: 30px; border: 0; background: var(--o-btn2); cursor: pointer; display: grid; place-items: center; color: var(--o-text); }
+.o_switch button + button { border-left: 1px solid var(--o-border); }
+.o_switch button[aria-pressed="true"] { background: var(--o-brand); color: #fff; }
+.o_switch button:hover:not([aria-pressed="true"]) { background: var(--o-btn2-hover); }
+@media (max-width: 760px) {
+  .o_control_panel { grid-template-columns: minmax(0, 1fr) auto; }
+  .o_searchwrap { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* пошук */
+.o_searchwrap { position: relative; min-width: 0; }
+.o_searchview { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-height: 34px; border: 1px solid var(--o-border); border-radius: 4px; padding: 2px 4px 2px 8px; background: var(--o-bg); }
+.o_searchview:focus-within { border-color: var(--o-brand); }
+.o_searchview svg { color: var(--o-muted); flex: none; }
+.o_facet { display: inline-flex; align-items: stretch; border-radius: 3px; overflow: hidden; font-size: 12px; background: var(--o-btn2); max-width: 100%; }
+.o_facet b { background: var(--o-brand); color: #fff; padding: 2px 6px; font-weight: 500; display: flex; align-items: center; }
+.o_facet span { padding: 2px 6px; display: flex; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_facet button { border: 0; background: transparent; cursor: pointer; padding: 0 6px; color: var(--o-muted); }
+.o_facet button:hover { color: var(--o-text); }
+.o_searchview input { flex: 1; min-width: 120px; border: 0; background: transparent; color: var(--o-text); font: inherit; padding: 4px; outline: none; }
+.o_toggler { border: 0; background: transparent; width: 28px; height: 28px; cursor: pointer; color: var(--o-muted); border-radius: 3px; }
+.o_toggler:hover { background: var(--o-hover); color: var(--o-text); }
+.o_dropdown { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; left: 0; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 4px;
+  box-shadow: var(--shadow); display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); padding: 8px 0; max-height: 60vh; overflow: auto; }
+.o_dropdown section { padding: 0 8px; min-width: 0; }
+.o_dropdown section + section { border-left: 1px solid var(--o-border); }
+.o_dropdown h4 { margin: 4px 8px 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.o_dropdown h4 svg { color: var(--o-brand); }
+.o_dropdown button.it { display: flex; width: 100%; text-align: left; border: 0; background: transparent; padding: 4px 8px 4px 26px; cursor: pointer; border-radius: 3px; position: relative; font-size: 13px; }
+.o_dropdown button.it:hover { background: var(--o-hover); }
+.o_dropdown button.it[aria-checked="true"]::before { content: "✓"; position: absolute; left: 9px; color: var(--o-brand); font-weight: 700; }
+.o_dropdown hr { border: 0; border-top: 1px solid var(--o-border); margin: 4px 8px; }
+
+/* вміст */
+.o_content { flex: 1; min-height: 0; overflow: auto; position: relative; }
+.o_content.form { background: var(--o-form-bg); }
+.o_help { display: grid; grid-template-columns: 200px minmax(0, 860px); gap: 24px; justify-content: center; padding: 20px 16px 40px; }
+.o_help .toc { position: sticky; top: 16px; align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.o_help .toc .h { font-weight: 600; color: var(--o-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.04em; margin: 0 0 6px 8px; }
+.o_help .toc a { color: var(--o-text); text-decoration: none; padding: 5px 8px; border-radius: 4px; border-left: 2px solid transparent; }
+.o_help .toc a:hover { background: var(--o-hover); border-left-color: var(--o-brand); }
+.hl-sheet { margin: 0; padding: 28px 36px; max-width: none; }
+.hl-sheet h1 { font-size: 22px; margin: 0 0 8px; font-weight: 600; }
+.hl-sheet h2 { font-size: 17px; font-weight: 600; margin: 0 0 8px; color: var(--o-brand); }
+.hl-sheet section { padding: 18px 0 6px; border-top: 1px solid var(--o-border); margin-top: 14px; scroll-margin-top: 12px; }
+.hl-sheet section:first-of-type { border-top: 0; margin-top: 0; }
+.hl-sheet p, .hl-sheet li { max-width: 72ch; }
+.hl-sheet ul { padding-left: 20px; margin: 6px 0; }
+.hl-sheet li { margin: 5px 0; }
+.hl-sheet kbd { font: 12px var(--f-mono); padding: 1px 6px; border: 1px solid var(--o-border); border-bottom-width: 2px; border-radius: 4px; background: var(--o-form-bg); white-space: nowrap; }
+.hl-sheet .code { font-family: var(--f-mono); font-size: 12.5px; }
+.hl-t { margin: 10px 0; width: 100%; }
+.hl-t td { vertical-align: top; }
+.hl-t td.first { white-space: nowrap; width: 1%; padding-right: 18px; }
+.hl-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--o-muted); margin-top: 8px; }
+.hl-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hl-legend .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+@media (max-width: 900px) { .o_help { grid-template-columns: minmax(0, 1fr); padding: 12px 0 32px; } .o_help .toc { position: static; flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 0 16px; }
+  .o_help .toc .h { display: none; } .o_help .toc a { border: 1px solid var(--o-border); border-radius: 12px; padding: 3px 10px; background: var(--o-bg); }
+  .hl-sheet { padding: 18px 16px; border-left: 0; border-right: 0; } .hl-t td.first { white-space: normal; } }
+.pad { padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* список */
+.o_list { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.o_list th { position: sticky; top: 0; z-index: 1; background: var(--o-bg); text-align: left; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--o-border); white-space: nowrap; cursor: pointer; user-select: none; }
+.o_list th:hover { background: var(--o-hover); }
+.o_list th.n, .o_list td.n { text-align: right; }
+.o_list th .ar { color: var(--o-muted); margin-left: 4px; font-size: 10px; }
+.o_list td { padding: 7px 10px; border-bottom: 1px solid var(--o-border); vertical-align: middle; }
+.o_list tbody tr.rec { cursor: pointer; }
+.o_list tbody tr.rec:hover td { background: var(--o-hover); }
+.o_list tr.grp td { background: color-mix(in srgb, var(--o-btn2) 55%, transparent); font-weight: 600; cursor: pointer; }
+.o_list tr.grp:hover td { background: var(--o-btn2); }
+.o_list tr.grp .car { display: inline-block; width: 14px; color: var(--o-muted); }
+.o_list td.first, .o_list th.first { padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+.o_list .mut { color: var(--o-muted); }
+.o_list .code { font-family: var(--f-mono); font-size: 12px; }
+.listwrap { overflow-x: auto; }
+.o_nocontent { text-align: center; padding: 60px 16px; color: var(--o-muted); }
+.o_nocontent b { display: block; color: var(--o-text); font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.badge.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.badge.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: color-mix(in srgb, var(--warn) 80%, var(--o-text)); }
+.badge.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.badge.info { background: color-mix(in srgb, var(--info) 16%, transparent); color: var(--info); }
+.badge.idle { background: var(--o-btn2); color: var(--o-muted); }
+.o_pb { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.o_pb .bar { flex: 1; height: 8px; border-radius: 4px; background: var(--cell-empty); overflow: hidden; }
+.o_pb .bar i { display: block; height: 100%; background: var(--ok); }
+.o_pb.warn .bar i { background: var(--warn); } .o_pb.bad .bar i { background: var(--bad); }
+.o_pb span { font-size: 12px; min-width: 34px; text-align: right; }
+
+/* канбан */
+.o_kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.o_kcard { display: flex; gap: 10px; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 4px; padding: 8px; cursor: pointer; text-align: left; width: 100%; min-width: 0; }
+.o_kcard:hover { box-shadow: var(--shadow); }
+.o_kimg { width: 64px; height: 64px; flex: none; border-radius: 3px; display: grid; place-items: center; color: #fff; font: 600 13px var(--f-mono); letter-spacing: 0.02em; }
+.o_kcard .kb { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.o_kcard .kt { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.o_kcard .mut { color: var(--o-muted); }
+.o_kcols { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
+.o_kcol { flex: 0 0 300px; display: flex; flex-direction: column; gap: 8px; }
+.o_kcol h3 { margin: 0; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; padding: 2px 2px 4px; }
+.o_kcol h3 span { color: var(--o-muted); font-weight: 400; }
+
+/* дашборд «Огляд» */
+.o_dash { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.o_dcard { background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 2px; padding: 14px 16px; min-height: 150px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.o_dcard h3 { margin: 0; font-size: 18px; font-weight: 500; color: var(--o-link); }
+.o_dcard h3 small { display: none; }
+.o_dcard .row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.o_dcard .links { display: flex; flex-direction: column; gap: 2px; align-items: stretch; min-width: 170px; font-size: 14px; }
+.o_dcard .links button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--o-link); display: flex; justify-content: space-between; gap: 14px; text-align: left; }
+.o_dcard .links button b { font-weight: 400; font-variant-numeric: tabular-nums; min-width: 2ch; text-align: left; }
+.o_dcard .links button.bad { color: var(--bad); }
+.o_dcard .links button:hover { text-decoration: underline; }
+.o_dcard .links .mut { color: var(--o-muted); }
+.btn { border: 0; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn-primary { background: var(--o-brand); color: #fff; }
+.btn-primary:hover { background: var(--o-brand-hover); }
+.btn-secondary { background: var(--o-btn2); color: var(--o-text); }
+.btn-secondary:hover { background: var(--o-btn2-hover); }
+.btn-link { background: transparent; color: var(--o-link); padding: 6px 4px; }
+
+/* картка запису */
+.o_form_wrap { padding-block: 16px 32px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+.o_statusbar { max-width: 1140px; margin: 0 auto 8px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
+.o_status { display: flex; }
+.o_status span { position: relative; padding: 5px 14px 5px 20px; font-size: 13px; background: var(--o-bg); border: 1px solid var(--o-border); margin-left: -1px; color: var(--o-muted);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%, 9px 50%); }
+.o_status span:first-child { clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%); padding-left: 12px; }
+.o_status span.on { background: var(--o-brand); color: #fff; border-color: var(--o-brand); }
+.o_sheet { max-width: 1140px; margin: 0 auto; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 2px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 20px 32px 28px; min-width: 0; }
+@media (max-width: 760px) { .o_sheet { padding: 16px; } }
+.o_btnbox { display: flex; justify-content: flex-end; flex-wrap: wrap; margin: -20px -32px 16px; border-bottom: 1px solid var(--o-border); }
+@media (max-width: 760px) { .o_btnbox { margin: -16px -16px 12px; justify-content: flex-start; } }
+.o_stat { display: flex; align-items: center; gap: 8px; min-width: 132px; height: 48px; padding: 0 14px; border: 0; border-left: 1px solid var(--o-border); background: transparent; cursor: pointer; text-align: left; }
+.o_stat:hover { background: var(--o-hover); }
+.o_stat.static { cursor: default; } .o_stat.static:hover { background: transparent; }
+.o_stat svg { color: var(--o-muted); flex: none; }
+.o_stat .sv { display: flex; flex-direction: column; line-height: 1.15; font-size: 12px; color: var(--o-muted); }
+.o_stat .sv b { font-size: 14px; color: var(--o-link); font-weight: 600; font-variant-numeric: tabular-nums; }
+.o_title { display: flex; gap: 16px; align-items: flex-start; }
+.o_title .o_kimg { width: 90px; height: 90px; font-size: 16px; }
+.o_title label { font-size: 13px; color: var(--o-muted); }
+.o_title h1 { margin: 0 0 4px; font-size: 26px; font-weight: 500; line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }
+.o_group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; margin-top: 16px; }
+@media (max-width: 760px) { .o_group { grid-template-columns: minmax(0, 1fr); } }
+.o_group dl { display: grid; grid-template-columns: minmax(130px, auto) minmax(0, 1fr); gap: 8px 16px; margin: 0; align-content: start; }
+.o_group dt { font-weight: 600; } .o_group dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.o_group dd .code { font-family: var(--f-mono); font-size: 12.5px; }
+.o_notebook { margin-top: 24px; }
+.o_nb_tabs { display: flex; border-bottom: 1px solid var(--o-border); overflow-x: auto; scrollbar-width: none; }
+.o_nb_tabs button { border: 1px solid transparent; border-bottom: 0; background: transparent; padding: 8px 16px; cursor: pointer; margin-bottom: -1px; white-space: nowrap; color: var(--o-link); border-radius: 3px 3px 0 0; }
+.o_nb_tabs button[aria-selected="true"] { color: var(--o-text); background: var(--o-bg); border-color: var(--o-border); font-weight: 500; }
+.o_nb_page { padding-top: 12px; }
+.o_nb_page .o_list td.first, .o_nb_page .o_list th.first { padding-left: 10px; }
+.o_note { margin-top: 12px; padding: 10px 12px; border-radius: 4px; background: color-mix(in srgb, var(--info) 12%, transparent); font-size: 13px; }
+.o_note.bad { background: color-mix(in srgb, var(--bad) 13%, transparent); }
+.o_link { border: 0; background: transparent; padding: 0; color: var(--o-link); cursor: pointer; font: inherit; text-align: left; }
+.o_link:hover { text-decoration: underline; }
+
+/* вид «План» */
+.o_plan { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 100%; }
+.o_plan .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 12px 12px 12px max(16px, env(safe-area-inset-left, 0px)); }
+.o_plan #plan-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.o_plan #plan-host > div { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.o_plan .vp, .o_plan .vp.m2 { flex: 1; height: auto; min-height: 0; aspect-ratio: auto; border-radius: 4px; }
+.o_plan aside { border-left: 1px solid var(--o-border); overflow: auto; padding: 14px 16px; padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--o-bg); }
+.o_plan aside h2 { margin: 0; font-size: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.o_plan aside .lab { font-size: 12px; color: var(--o-muted); }
+.o_plan aside .sec { margin: 16px 0 6px; font-size: 13px; font-weight: 600; }
+.o_plan aside .o_list td { padding: 6px 4px; }
+.o_plan aside .o_list td.first { padding-left: 4px; }
+.o_plan aside .acts { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.o_plan .lowlist { list-style: none; margin: 0; padding: 0; }
+.o_plan .lowlist button { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; text-align: left; border: 0; border-bottom: 1px solid var(--o-border); background: transparent; padding: 7px 2px; cursor: pointer; font-size: 13px; }
+.o_plan .lowlist button:hover { background: var(--o-hover); }
+.o_plan .lowlist .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_plan .lowlist .m { grid-column: 1 / -1; color: var(--o-muted); font-size: 12px; font-family: var(--f-mono); }
+@media (max-width: 900px) {
+  body { overflow: auto; } .o_web_client { height: auto; min-height: 100%; } .o_content { overflow: visible; }
+  .o_plan { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .o_plan .vp, .o_plan .vp.m2 { flex: none; height: 440px; }
+  .o_plan aside { border-left: 0; border-top: 1px solid var(--o-border); }
+}
+/* план складу: 2D-креслення і 3D-сцена з однієї розкладки місць (метри) */
+:root { --floor: #f4f6f7; --scene: #e4e9ec; --area: rgba(127, 140, 153, 0.18); --hatch: rgba(93, 107, 120, 0.22); --steel: #6f7d8a; --beam: #e0761c; --upright: #2f6fae; --wood: #b08a5a; --new: #2f80ed; --pend: #0fb5ae; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --floor: #161c22; --scene: #1a2027; --area: rgba(141, 154, 166, 0.16); --hatch: rgba(147, 161, 174, 0.18); --steel: #7d8b98; --beam: #e88a35; --upright: #4a8ad0; --wood: #9c7a50; --new: #5ea2ff; --pend: #3fd6cf; } }
+:root[data-theme="dark"] { --floor: #161c22; --scene: #1a2027; --area: rgba(141, 154, 166, 0.16); --hatch: rgba(147, 161, 174, 0.18); --steel: #7d8b98; --beam: #e88a35; --upright: #4a8ad0; --wood: #9c7a50; --new: #5ea2ff; --pend: #3fd6cf; }
+.planbar { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 5px 14px; font: 600 13px var(--f-display); cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.planbar .legend { flex: 1 1 260px; }
+.vp { position: relative; height: min(64vh, 620px); min-height: 360px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--scene); }
+@media (max-width: 760px) { .vp { height: 440px; } }
+.vp.m2 { height: auto; aspect-ratio: 128 / 68; min-height: 0; }
+@media (max-width: 760px) { .vp.m2 { height: 380px; aspect-ratio: auto; } }
+.vp svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; }
+.vp svg.drag { cursor: grabbing; }
+.vp canvas { display: block; outline: none; touch-action: none; }
+.vp .tools { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 4px; z-index: 3; }
+.vp .tools button { width: 30px; height: 30px; border: 1px solid var(--line); background: var(--panel); border-radius: 7px; cursor: pointer; font: 600 15px/1 var(--f-mono); }
+.vp .tools button:hover { border-color: var(--accent); }
+.vp .tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.vp .status { position: absolute; left: 8px; bottom: 8px; font: 11px var(--f-mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; z-index: 3; }
+.vp .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 500 13px var(--f-display); }
+#labels3d { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
+#labels3d span { position: absolute; transform: translate(-50%, -50%); font: 600 10.5px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--fg); white-space: nowrap; text-shadow: 0 0 3px var(--scene), 0 0 6px var(--scene), 0 0 9px var(--scene); }
+.tip { position: absolute; z-index: 4; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; box-shadow: var(--shadow);
+  padding: 6px 9px; font-size: 12px; max-width: 240px; }
+.tip b { font: 600 12px var(--f-mono); display: block; }
+.tip span { color: var(--muted); display: block; }
+svg .bld { fill: var(--floor); stroke: var(--steel); stroke-width: 2; }
+svg .zn { fill: none; stroke: var(--mark); stroke-width: 1.2; stroke-dasharray: 5 3; }
+svg .znl { fill: var(--muted); font: 600 1.5px var(--f-display); letter-spacing: 0.08px; text-transform: uppercase; }
+svg .cap { fill: var(--muted); font: 1.05px var(--f-mono); }
+svg .hall { fill: url(#hatch); stroke: var(--line); stroke-width: 1; }
+svg .door { fill: var(--accent); }
+svg .rackbg { fill: var(--steel); opacity: 0.35; }
+svg .s { stroke: var(--panel); stroke-width: 0.6; cursor: pointer; }
+svg .s.ok { fill: var(--ok); } svg .s.warn { fill: var(--warn); } svg .s.bad { fill: var(--bad); }
+svg .s.area { fill: var(--area); stroke: var(--idle); stroke-width: 1; }
+svg .s.area.has { fill: color-mix(in srgb, var(--idle) 40%, transparent); }
+svg .s.dim { opacity: 0.16; }
+svg .s.hl { stroke: var(--fg); stroke-width: 2; }
+svg .s.sel { stroke: var(--accent); stroke-width: 3; }
+svg .s:hover { stroke: var(--fg); stroke-width: 2; }
+svg .s, svg .bld, svg .zn, svg .hall { vector-effect: non-scaling-stroke; }
+.planbar { margin-bottom: 8px; }
+.seg { border-radius: 4px; border: 0; }
+.seg button { background: var(--o-btn2); color: var(--o-text); font: 500 13px var(--f-body); padding: 5px 14px; }
+.seg button + button { border-left: 1px solid var(--o-border); }
+.seg button[aria-pressed="true"] { background: var(--o-brand); color: #fff; box-shadow: none; }
+.vp .tools button { background: var(--o-bg); border-radius: 4px; }
+.vp .tools button:hover { border-color: var(--o-brand); }
+.legend { display: flex; gap: 4px 12px; flex-wrap: wrap; font-size: 12px; color: var(--o-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; display: inline-block; }
+#labels3d span { text-transform: none; letter-spacing: 0; font: 600 11.5px/1 var(--f-body); }
+svg .znl { text-transform: none; font: 600 1.45px var(--f-body); letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.o_lvlbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; flex: 1; }
+.o_lvlbar select { border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 3px 6px; font: 13px var(--f-body); max-width: 220px; cursor: pointer; }
+.o_chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.o_chip { border: 1px solid var(--o-border); background: var(--o-btn2); color: var(--o-text); border-radius: 4px; padding: 3px 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.o_chip:hover { border-color: var(--o-brand); }
+.o_chip.on { background: var(--o-brand); border-color: var(--o-brand); color: #fff; }
+.o_chip_sep { color: var(--o-muted); font-size: 12px; }
+#labels3d span { pointer-events: auto; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, var(--o-bg) 80%, transparent); text-shadow: none; }
+#labels3d span:hover { background: var(--o-brand); color: #fff; }
+svg text.dlab { fill: var(--o-link); font-family: var(--f-body); font-weight: 600; cursor: pointer; }
+svg text.dlab:hover { text-decoration: underline; }
+svg .s.pend { fill: color-mix(in srgb, var(--pend) 35%, transparent); stroke: var(--pend); stroke-width: 1.4; stroke-dasharray: 3 2; }
+.planbar2 { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; margin: -2px 0 8px; }
+.planbar2 .legend { flex: 1 1 300px; }
+.seg.pick { align-items: center; }
+.seg.pick .lbl { font-size: 12px; color: var(--o-muted); padding: 0 8px 0 2px; align-self: center; }
+.seg.pick .lbl + button { border-left: 0; }
+#o_notifs { position: fixed; top: 60px; right: 16px; z-index: 80; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.o_notif { display: flex; gap: 10px; align-items: flex-start; background: var(--o-bg); color: var(--o-text); border: 1px solid var(--o-border); border-left: 4px solid var(--ok); border-radius: 4px; padding: 10px 8px 10px 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); font-size: 14px; animation: notifIn 0.2s ease-out; transition: opacity 0.3s, transform 0.3s; }
+.o_notif.bad { border-left-color: var(--bad); } .o_notif.info { border-left-color: var(--o-link); }
+.o_notif .ic { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: var(--ok); }
+.o_notif.bad .ic { background: var(--bad); } .o_notif.info .ic { background: var(--o-link); }
+.o_notif div { flex: 1; min-width: 0; } .o_notif b { display: block; font-weight: 600; } .o_notif div span { display: block; font-size: 12px; color: var(--o-muted); margin-top: 2px; }
+.o_notif .x { border: 0; background: transparent; color: var(--o-muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.o_notif.out { opacity: 0; transform: translateX(16px); }
+@keyframes notifIn { from { opacity: 0; transform: translateX(16px); } }
+@media (prefers-reduced-motion: reduce) { .o_notif { animation: none; transition: none; } }
+.ed-warn { margin: 0 0 6px; padding: 6px 10px; border-radius: 4px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--o-text); font-size: 13px; }
+.ed-pnd { color: var(--pend); font-weight: 600; font-size: 12px; }
+.ed-pend { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--pend); border-left-width: 4px; border-radius: 4px; background: color-mix(in srgb, var(--pend) 8%, transparent); font-size: 13px; }
+.ed-pend ul { margin: 6px 0 0; padding-left: 18px; color: var(--o-text); }
+.ed-pend li { margin: 2px 0; }
+.ed-btns { display: flex; gap: 6px; flex-basis: 100%; justify-content: flex-end; }
+.o_modal footer .sp { flex: 1; }
+.o_modal footer { align-items: center; flex-wrap: wrap; }
+svg .s.new { fill: color-mix(in srgb, var(--new) 30%, transparent); stroke: var(--new); stroke-width: 1.2; stroke-dasharray: 3 2; }
+svg .esel { stroke: var(--accent) !important; stroke-width: 3 !important; vector-effect: non-scaling-stroke; }
+svg rect.rackbg.esel { fill: var(--accent); opacity: 0.6; }
+.editbar { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; padding: 6px 10px; margin-bottom: 8px; border: 1px solid var(--o-brand); background: var(--accent-soft); border-radius: 4px; font-size: 13px; }
+.editbar .sp { flex: 1; }
+.editbar .btn { padding: 4px 10px; }
+.editbar .ed-st { flex-basis: 100%; font-size: 12px; color: var(--o-muted); }
+.o_plan .btn:disabled, .o_modal .btn:disabled { opacity: 0.45; cursor: default; }
+.btn-danger { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+.btn-danger:hover { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.ed-info { margin-top: 10px; font-size: 13px; color: var(--o-muted); line-height: 1.5; }
+.ed-new { color: var(--new); font-weight: 600; font-size: 12px; }
+.ed-note { font-size: 12px; color: var(--o-muted); margin: 14px 0 0; line-height: 1.45; }
+.ed-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 0; }
+.ed-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--o-muted); flex: 1 1 80px; min-width: 0; }
+.ed-form label.wide { flex-basis: 100%; }
+.ed-form input, .ed-form select, .o_modal input, .o_modal select { border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 5px 7px; font: 13px var(--f-body); min-width: 0; width: 100%; }
+.ed-form input:focus, .ed-form select:focus, .o_modal input:focus, .o_modal select:focus { outline: none; border-color: var(--o-brand); }
+.o_modal input[readonly] { background: var(--o-btn2); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ed-kids li { display: flex; align-items: stretch; }
+.ed-kids li > button[data-esel] { flex: 1; min-width: 0; }
+.o_plan .lowlist button.x { width: auto; flex: none; display: block; padding: 0 10px; font-size: 18px; color: var(--o-muted); }
+.o_plan .lowlist button.x:hover, .o_modal button.x:hover:not(:disabled) { color: var(--bad); }
+.o_modal button.x { border: 0; background: transparent; color: var(--o-muted); font-size: 18px; cursor: pointer; padding: 0 6px; }
+.o_modal button.x:disabled { opacity: 0.25; cursor: default; }
+.o_modal_bg { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 60; display: grid; place-items: center; padding: 16px; }
+.o_modal { background: var(--o-bg); color: var(--o-text); border-radius: 6px; width: min(1000px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.o_modal header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--o-border); }
+.o_modal h3 { margin: 0; font-size: 18px; font-weight: 500; }
+.o_modal .body { padding: 14px 16px; overflow: auto; }
+.o_modal footer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--o-border); }
+.o_list.ty td { padding: 4px; vertical-align: middle; }
+.o_list.ty input[type=number] { width: 76px; text-align: right; }
+.o_list.ty input[name=id] { width: 72px; }
+.o_list.ty input[name=name] { min-width: 170px; }
+</style>
+
+<div class="o_web_client">
+  <nav class="o_navbar" aria-label="Головне меню">
+    <button class="apps" id="apps" aria-label="Огляд складу" title="Огляд складу">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="7" y="1" width="4" height="4" rx="1"/><rect x="13" y="1" width="4" height="4" rx="1"/><rect x="1" y="7" width="4" height="4" rx="1"/><rect x="7" y="7" width="4" height="4" rx="1"/><rect x="13" y="7" width="4" height="4" rx="1"/><rect x="1" y="13" width="4" height="4" rx="1"/><rect x="7" y="13" width="4" height="4" rx="1"/><rect x="13" y="13" width="4" height="4" rx="1"/></svg>
+    </button>
+    <div class="o_brandname">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 21.1 6.75v10.5L12 22.5 2.9 17.25V6.75Z" fill="#f0a134"/><path d="M12 1.5 21.1 6.75v10.5L12 22.5Z" fill="#7b4f8e"/><path d="M12 7.2 16.3 9.7v4.6L12 16.8 7.7 14.3V9.7Z" fill="#fbd38d" opacity=".9"/></svg>
+      Склад
+    </div>
+    <div class="o_menus" id="menus" role="menubar"></div>
+    <div class="o_systray">
+      <span class="o_db" title="База даних"><i></i><span id="dbname"></span></span>
+      <span class="o_company" id="company"></span>
+      <span class="o_avatar" aria-hidden="true">М</span>
+    </div>
+  </nav>
+  <div class="o_control_panel" id="cp"></div>
+  <main class="o_content" id="content"></main>
+</div>
+
+<script type="application/json" id="odoo-data">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("odoo-data").textContent);
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const nf = new Intl.NumberFormat("uk-UA");
+const nf2 = new Intl.NumberFormat("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct = (x) => `${Math.round((x ?? 0) * 100)}%`;
+const plural = (n, one, few, many) => { const d = n % 10, h = n % 100;
+  return d === 1 && h !== 11 ? one : d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many; };
+const P = (code) => D.products[code] || { name: code, uom: "", default_code: code };
+const qtyU = (q, code) => `${nf.format(q)} ${esc(P(code).uom)}`;
+const dt = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)} ${s.slice(11, 16)}` : "";
+const dayHm = (s) => { if (!s) return ""; const today = D.meta.now.slice(0, 10);
+  return s.slice(0, 10) === today ? `сьогодні ${s.slice(11, 16)}` : `${s.slice(8, 10)}.${s.slice(5, 7)} ${s.slice(11, 16)}`; };
+const badge = ([c, t]) => `<span class="badge ${c}">${esc(t)}</span>`;
+const fillCls = (l) => l.state === "out" ? "bad" : l.state === "low" ? "warn" : l.fill == null ? "" : l.fill <= 0.001 ? "bad" : l.fill < 0.3 ? "warn" : "ok";
+const pbar = (v, cls) => `<div class="o_pb ${cls === "ok" ? "" : cls || ""}"><div class="bar"><i style="width:${Math.max(0, Math.min(100, v * 100))}%"></i></div><span>${pct(v)}</span></div>`;
+const isLow = (l) => !!(l.state && l.state !== "ok");
+const MO_STATE = { progress: ["warn", "У роботі"], confirmed: ["info", "Підтверджено"], done: ["ok", "Виконано"] };
+const KIND = { stack: "Стос плит", bin: "Комірка фурнітури", shelf: "Полиця", pallet_cell: "Палетне місце", kit: "Комплект на виробництво", area: "Зона" };
+const CAT_HUE = {}; [...new Set(Object.values(D.products).map((p) => p.categ))].forEach((c, i) => CAT_HUE[c] = [205, 28, 265, 160, 10, 330, 95, 45][i % 8]);
+const kimg = (p) => `<div class="o_kimg" style="background:hsl(${CAT_HUE[p.categ] ?? 210} 38% 46%)" aria-hidden="true">${esc((p.default_code || "").split("-")[0].slice(0, 4))}</div>`;
+const ICON = {
+  list: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>',
+  kanban: '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>',
+  plan: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1.5 3.5 5.5 2l5 1.5 4-1.5v10.5l-4 1.5-5-1.5-4 1.5Z"/><path d="M5.5 2v10.5M10.5 3.5V14"/></svg>',
+  search: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 4 4"/></svg>',
+  caret: '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 4h8L6 9Z"/></svg>',
+  filter: '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 2h14l-5.5 6.5V14l-3-1.5v-4Z"/></svg>',
+  group: '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="14" height="4" rx="1"/><rect x="4" y="7" width="11" height="3" rx="1"/><rect x="4" y="12" width="11" height="3" rx="1"/></svg>',
+  cubes: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 20 6v4l-8 4-8-4V6Z" opacity=".55"/><path d="M4 12l8 4 8-4v6l-8 4-8-4Z"/></svg>',
+  pin: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>',
+  truck: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 5h12v10H2Zm12 4h4l3 3v3h-7Z"/><circle cx="6" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/></svg>',
+  gear: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 21V9l5 3V9l5 3V9l5 3V3h3v18Z"/></svg>',
+  lock: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5Zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10Z"/></svg>',
+};
+
+// ---------------------------------------------------------------- індекси і записи
+const prodLocs = new Map();
+for (const [code, l] of Object.entries(D.locations)) for (const q of l.quants) {
+  if (!prodLocs.has(q.product)) prodLocs.set(q.product, []);
+  prodLocs.get(q.product).push({ code, qty: q.qty, reserved: q.reserved || 0 });
+}
+// зони: батьківський шлях; ряди стелажів …/R1 — до спільної групи
+const zoneOf = {}, zoneList = new Map();
+for (const [code, l] of Object.entries(D.locations)) {
+  const parts = l.complete_name.split("/");
+  let parent = parts.slice(0, -1).join("/") || parts[0];
+  if (/^R\d+$/.test(parts[parts.length - 2] || "")) parent = parts.slice(0, -2).join("/");
+  if (l.kind === "area") parent = "Зони";
+  zoneOf[code] = parent;
+  if (!zoneList.has(parent)) zoneList.set(parent, []);
+  zoneList.get(parent).push(code);
+}
+const ZONE_ORDER = ["Плити/Портал", "Плити/Стелажі", "Фурнітура", "Крайка", "Передвиробництво/Фасади", "Передвиробництво", "Готова продукція", "Зони"];
+const zoneRank = (k) => { const i = ZONE_ORDER.findIndex((z) => k.endsWith(z)); return i < 0 ? 99 : i; };
+const zoneName = (k) => k === "Зони" ? "Приймання, контроль, відвантаження" : k.replace(/^WH\/?/, "").split("/").join(" / ") || "WH";
+const ZONES = [...zoneList.keys()].sort((a, b) => zoneRank(a) - zoneRank(b));
+
+const REC = {
+  products: Object.values(D.products).map((p) => {
+    const locs = prodLocs.get(p.default_code) || [];
+    const qty = locs.reduce((s, l) => s + l.qty, 0), res = locs.reduce((s, l) => s + l.reserved, 0);
+    return { id: p.default_code, p, qty, res, n: locs.filter((l) => l.qty > 0).length, low: locs.some((l) => isLow(D.locations[l.code])) };
+  }),
+  quants: Object.entries(D.locations).flatMap(([code, l]) => l.quants.map((q, i) => ({ id: `${code}#${i}`, code, l, q, p: P(q.product) }))),
+  locations: Object.entries(D.locations).map(([code, l]) => ({ id: code, code, l, zone: zoneOf[code], qty: l.quants.length })),
+  purchases: D.purchase_orders.map((po) => ({ id: po.name, po })),
+};
+const recById = (act, id) => REC[act].find((r) => r.id === id);
+const locText = (r) => `${r.code} ${r.l.complete_name} ${r.l.quants.map((q) => `${P(q.product).name} ${q.product} ${q.lot || ""} ${q.package || ""}`).join(" ")}`;
+
+// ---------------------------------------------------------------- дії, пошук
+const cats = [...new Set(Object.values(D.products).map((p) => p.categ))];
+const ACTIONS = {
+  overview: { title: "Огляд складу", views: ["kanban"] },
+  help: { title: "Інструкція", views: [] },
+  products: { title: "Продукти", views: ["kanban", "list"], text: (r) => `${r.p.name} ${r.p.default_code} ${r.p.categ} ${r.p.seller || ""}`,
+    filters: [...cats.map((c) => ({ key: `cat:${c}`, group: "cat", label: c, fn: (r) => r.p.categ === c })), "-",
+      { key: "low", group: "low", label: "Нижче мінімуму", fn: (r) => r.low }, { key: "none", group: "none", label: "Немає в наявності", fn: (r) => !r.qty },
+      { key: "res", group: "res", label: "Є резерв", fn: (r) => r.res > 0 }],
+    groupby: [{ key: "categ", label: "Категорія продукту", fn: (r) => r.p.categ }, { key: "seller", label: "Постачальник", fn: (r) => r.p.seller || "Без постачальника" }] },
+  quants: { title: "Фізичні залишки", views: ["list"], text: (r) => `${r.p.name} ${r.q.product} ${r.code} ${r.l.complete_name} ${r.q.lot || ""} ${r.q.package || ""} ${r.q.reserved_for || ""}`,
+    filters: [{ key: "res", group: "res", label: "Зарезервовано", fn: (r) => r.q.reserved > 0 }, { key: "lot", group: "lot", label: "З партією", fn: (r) => !!r.q.lot },
+      { key: "pack", group: "pack", label: "В упаковці", fn: (r) => !!r.q.package }, "-",
+      ...cats.map((c) => ({ key: `cat:${c}`, group: "cat", label: c, fn: (r) => r.p.categ === c }))],
+    groupby: [{ key: "product", label: "Продукт", fn: (r) => r.p.name, sum: true }, { key: "zone", label: "Зона", fn: (r) => zoneName(zoneOf[r.code]) },
+      { key: "categ", label: "Категорія продукту", fn: (r) => r.p.categ }] },
+  locations: { title: "Місця зберігання", views: ["plan", "list"], text: locText,
+    filters: [{ key: "low", group: "low", label: "Нижче мінімуму", fn: (r) => isLow(r.l) }, { key: "empty", group: "empty", label: "Порожні", fn: (r) => !r.l.quants.length },
+      { key: "full", group: "full", label: "Заповнені на 90 % і більше", fn: (r) => r.l.fill >= 0.9 }, { key: "res", group: "res", label: "Із резервом", fn: (r) => r.l.quants.some((q) => q.reserved) }, "-",
+      ...ZONES.map((z) => ({ key: `zone:${z}`, group: "zone", label: zoneName(z), fn: (r) => r.zone === z }))],
+    groupby: [{ key: "zone", label: "Зона", fn: (r) => zoneName(r.zone) }, { key: "kind", label: "Тип місця", fn: (r) => KIND[r.l.kind] || r.l.kind }] },
+  purchases: { title: "Закупівлі в дорозі", views: ["list"], text: (r) => `${r.po.name} ${r.po.partner} ${r.po.lines.map((l) => P(l.product).name).join(" ")}`, filters: [], groupby: [{ key: "partner", label: "Постачальник", fn: (r) => r.po.partner }] },
+};
+// меню як у модулі «Склад» Odoo 19; пункти без сторінки в цьому вивантаженні показані неактивними
+const MENU = [
+  { label: "Загальний огляд", id: "overview", go: { key: "overview" } },
+  { label: "Операції", sections: [
+    ["Переміщення", [["Надходження"], ["Доставки"], ["Внутрішнє"], ["Виробництва"]]],
+    ["Jobs", [["Групові переміщення"], ["Групове переміщення"]]],
+    ["Корегування", [["Коригування залишків", "quants", { key: "quants", title: "Коригування залишків" }], ["Брак"]]],
+    ["Забезпечення", [["Поповнення", "replenish", { key: "locations", view: "list", filters: ["low"], title: "Поповнення" }]]]] },
+  { label: "Товари", sections: [[null, [["Товари", "products", { key: "products", title: "Товари" }], ["Партії / Серійні номери"], ["Упаковки"]]]] },
+  { label: "Звітність", sections: [[null, [["Запаси", "stock", { key: "products", view: "list", title: "Запаси" }], ["Розташування", "locations", { key: "locations", view: "list", title: "Розташування" }],
+    ["Історія переміщень"], ["Аналіз переміщень"]]]] },
+  { label: "Налаштування", sections: [[null, [["Налаштування"]]],
+    ["Керування складами", [["Склади"], ["Типи операцій"], ["Розташування", "locconf", { key: "locations", view: "list", title: "Розташування" }], ["Маршрути"], ["Правила"], ["Категорії зберігання"], ["Правила витягування"]]],
+    ["Товари", [["Категорії"], ["Одиниці виміру та Упаковки"]]],
+    ["Доставка", [["Методи доставки"], ["Типи упаковки"]]],
+    ["Звітність", [["Скинути налаштування підключених принтерів"]]]] },
+  { label: "3D", id: "model3d", go: { key: "locations", view: "plan", title: "3D-модель складу", mode: "3d" } },
+  { label: "Інструкція", id: "help", go: { key: "help", title: "Інструкція" } },
+];
+const MENU_ITEMS = {};
+MENU.forEach((m, i) => { if (m.go) MENU_ITEMS[m.id] = { ...m.go, top: i };
+  m.sections?.forEach(([, items]) => items.forEach(([, id, go]) => { if (id) MENU_ITEMS[id] = { ...go, top: i }; })); });
+const newSearch = () => ({ text: [], live: "", filters: new Set(), custom: [], groupby: null });
+const actEntry = (key, view, extra = {}) => ({ kind: "action", key, view: view || ACTIONS[key].views[0], s: newSearch(), sort: null, open: new Set(), ...extra });
+const menuEntry = (id) => { const g = MENU_ITEMS[id]; const e = actEntry(g.key, g.view, { title: g.title, top: g.top, mode: g.mode });
+  (g.filters || []).forEach((f) => e.s.filters.add(f)); return e; };
+let stack = [menuEntry("model3d")];
+try { const m = localStorage.getItem("wh-o-menu3"); if (MENU_ITEMS[m]) stack = [menuEntry(m)]; } catch (e) {}
+const cur = () => stack[stack.length - 1];
+
+function passes(act, e, r, { noText = false } = {}) {
+  const cfg = ACTIONS[act], s = e.s;
+  if (!noText) { const t = cfg.text(r).toLowerCase();
+    for (const q of [...s.text, s.live].filter(Boolean)) if (!t.includes(q.toLowerCase())) return false; }
+  for (const c of s.custom) if (!c.fn(r)) return false;
+  const groups = new Map();
+  for (const f of cfg.filters || []) if (f !== "-" && s.filters.has(f.key)) { if (!groups.has(f.group)) groups.set(f.group, []); groups.get(f.group).push(f.fn); }
+  for (const fns of groups.values()) if (!fns.some((fn) => fn(r))) return false;
+  return true;
+}
+const records = (e) => REC[e.key].filter((r) => passes(e.key, e, r));
+
+// ---------------------------------------------------------------- навігація
+function go(entry, replace = false) { if (replace) stack[stack.length - 1] = entry; else stack.push(entry); render(); }
+function menu(id) { closeMenu(); stack = [menuEntry(id)]; try { localStorage.setItem("wh-o-menu3", id); } catch (e) {} render(); }
+function openForm(model, id, ids) { const e = cur(); go({ kind: "form", model, id, ids: (ids?.length ? ids : null) || (e.kind === "action" && listIds(e, model).length ? listIds(e, model) : [id]), tab: 0 }); }
+function listIds(e, model) { return model === { products: "product", locations: "location", purchases: "po" }[e.key] ? sortRecs(e, records(e)).map((r) => r.id) : []; }
+function render() {
+  const e = cur();
+  const topIdx = stack[0].top ?? MENU.findIndex((m) => m.sections?.some(([, its]) => its.some(([, , g]) => g?.key === stack[0].key)) || m.go?.key === stack[0].key);
+  document.querySelectorAll(".o_menu").forEach((b) => +b.dataset.top === topIdx ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  renderCP();
+  const c = $("#content");
+  c.className = `o_content${e.kind === "form" || e.key === "help" ? " form" : ""}`;
+  if (e.kind === "form") return renderForm(e);
+  if (e.key === "overview") return renderOverview();
+  if (e.key === "help") return renderHelp();
+  if (e.view === "plan") return renderPlanView(e);
+  if (e.view === "kanban") return renderKanban(e);
+  renderList(e);
+}
+const titleOf = (e) => e.kind === "action" ? (e.title || ACTIONS[e.key].title)
+  : e.model === "product" ? P(e.id).name : e.id;
+
+const NOSEARCH = ["overview", "help"];
+function renderCP() {
+  const e = cur(), cfg = e.kind === "action" ? ACTIONS[e.key] : null;
+  const bc = stack.map((x, i) => i < stack.length - 1 ? `<a data-bc="${i}">${esc(titleOf(x))}</a><span class="sep">/</span>` : `<span class="cur">${esc(titleOf(x))}</span>`).join("");
+  let right = "";
+  if (e.kind === "form") {
+    const i = e.ids.indexOf(e.id);
+    right = e.ids.length > 1 ? `<div class="o_pager"><span>${i + 1} / ${e.ids.length}</span><button data-pg="-1" aria-label="Попередній запис">‹</button><button data-pg="1" aria-label="Наступний запис">›</button></div>` : "";
+  } else if (cfg.views.length && !NOSEARCH.includes(e.key)) {
+    const n = records(e).length;
+    right = `${e.view !== "plan" ? `<div class="o_pager"><span>${n ? `1-${n}` : "0"} / ${n}</span></div>` : ""}
+      ${cfg.views.length > 1 ? `<div class="o_switch" role="group" aria-label="Вид">${cfg.views.map((v) => `<button data-view="${v}" aria-pressed="${e.view === v}" aria-label="${({ list: "Список", kanban: "Канбан", plan: "План 2D/3D" })[v]}" title="${({ list: "Список", kanban: "Канбан", plan: "План 2D/3D" })[v]}">${ICON[v]}</button>`).join("")}</div>` : ""}`;
+  }
+  $("#cp").classList.toggle("nosearch", !(cfg && !NOSEARCH.includes(e.key)));
+  $("#cp").innerHTML = `<div class="o_bc">${bc}</div>
+    <div class="o_searchwrap">${cfg && !NOSEARCH.includes(e.key) ? searchHtml(e) : ""}</div>
+    <div class="o_cp_right">${right}</div>`;
+  if (cfg && !NOSEARCH.includes(e.key)) bindSearch(e);
+}
+
+function facets(e) {
+  const cfg = ACTIONS[e.key], s = e.s, out = [];
+  s.text.forEach((t, i) => out.push({ k: "Пошук", v: t, rm: () => s.text.splice(i, 1) }));
+  s.custom.forEach((c, i) => out.push({ k: c.label, v: c.value, rm: () => s.custom.splice(i, 1) }));
+  const groups = new Map();
+  for (const f of cfg.filters || []) if (f !== "-" && s.filters.has(f.key)) { if (!groups.has(f.group)) groups.set(f.group, []); groups.get(f.group).push(f); }
+  for (const fs of groups.values()) out.push({ k: ICON.filter, raw: true, v: fs.map((f) => f.label).join(" або "), rm: () => fs.forEach((f) => s.filters.delete(f.key)) });
+  if (s.groupby) out.push({ k: ICON.group, raw: true, v: cfg.groupby.find((g) => g.key === s.groupby).label, rm: () => { s.groupby = null; } });
+  return out;
+}
+function searchHtml(e) {
+  return `<div class="o_searchview">${ICON.search}${facets(e).map((f, i) => `<span class="o_facet"><b>${f.raw ? f.k : esc(f.k)}</b><span>${esc(f.v)}</span><button data-rmf="${i}" aria-label="Прибрати фільтр">×</button></span>`).join("")}
+    <input id="sv" type="search" placeholder="Пошук…" value="${esc(e.s.live)}" aria-label="Пошук" autocomplete="off">
+    <button class="o_toggler" id="sv-tg" aria-label="Фільтри і групування" aria-expanded="false">${ICON.caret}</button></div>`;
+}
+function bindSearch(e) {
+  const inp = $("#sv"), s = e.s, fs = facets(e);
+  let t = 0;
+  inp.oninput = () => { s.live = inp.value; clearTimeout(t); t = setTimeout(() => refreshView(e), 120); };
+  inp.onkeydown = (ev) => {
+    if (ev.key === "Enter" && inp.value.trim()) { s.text.push(inp.value.trim()); s.live = ""; render(); focusSearch(); }
+    if (ev.key === "Backspace" && !inp.value && fs.length) { fs[fs.length - 1].rm(); render(); focusSearch(); }
+  };
+  document.querySelectorAll("[data-rmf]").forEach((b) => b.onclick = () => { fs[+b.dataset.rmf].rm(); render(); });
+  $("#sv-tg").onclick = (ev) => { ev.stopPropagation(); toggleDropdown(e); };
+}
+const focusSearch = () => { const i = $("#sv"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } };
+function toggleDropdown(e) {
+  const wrap = $(".o_searchwrap"), old = $(".o_dropdown");
+  if (old) { old.remove(); $("#sv-tg").setAttribute("aria-expanded", "false"); return; }
+  const cfg = ACTIONS[e.key];
+  const dd = document.createElement("div"); dd.className = "o_dropdown";
+  const paint = () => {
+    dd.innerHTML = `${cfg.filters?.length ? `<section><h4>${ICON.filter}Фільтри</h4>${cfg.filters.map((f) => f === "-" ? "<hr>"
+      : `<button class="it" role="menuitemcheckbox" data-f="${esc(f.key)}" aria-checked="${e.s.filters.has(f.key)}">${esc(f.label)}</button>`).join("")}</section>` : ""}
+      ${cfg.groupby?.length ? `<section><h4>${ICON.group}Групувати за</h4>${cfg.groupby.map((g) => `<button class="it" role="menuitemcheckbox" data-g="${g.key}" aria-checked="${e.s.groupby === g.key}">${esc(g.label)}</button>`).join("")}</section>` : ""}`;
+    dd.querySelectorAll("[data-f]").forEach((b) => b.onclick = (ev) => { ev.stopPropagation(); const k = b.dataset.f; e.s.filters.has(k) ? e.s.filters.delete(k) : e.s.filters.add(k); after(); });
+    dd.querySelectorAll("[data-g]").forEach((b) => b.onclick = (ev) => { ev.stopPropagation(); e.s.groupby = e.s.groupby === b.dataset.g ? null : b.dataset.g; e.open = new Set(); after(); });
+  };
+  const after = () => { renderCP(); $(".o_searchwrap").append(dd); $("#sv-tg").setAttribute("aria-expanded", "true"); paint(); refreshView(e); };
+  paint(); wrap.append(dd); $("#sv-tg").setAttribute("aria-expanded", "true");
+}
+document.addEventListener("click", (ev) => { if (!ev.target.closest(".o_dropdown") && !ev.target.closest("#sv-tg")) { $(".o_dropdown")?.remove(); $("#sv-tg")?.setAttribute("aria-expanded", "false"); } });
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") { $(".o_dropdown")?.remove(); if (cur().kind === "action" && cur().view === "plan" && !planState.edit && (planState.sel || planState.esel)) { planState.sel = null; planState.esel = null; refreshView(cur()); } } });
+// оновити вид без перебудови контрольної панелі (щоб не втратити фокус у полі пошуку)
+function refreshView(e) {
+  const pg = $(".o_pager span"); if (pg && e.view !== "plan") { const n = records(e).length; pg.textContent = `${n ? `1-${n}` : "0"} / ${n}`; }
+  if (e.view === "plan") return planSync(e);
+  if (e.view === "kanban") return renderKanban(e);
+  renderList(e);
+}
+
+$("#cp").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-bc]"); if (b) { stack = stack.slice(0, +b.dataset.bc + 1); render(); return; }
+  const v = ev.target.closest("[data-view]"); if (v) { cur().view = v.dataset.view; render(); return; }
+  const pg = ev.target.closest("[data-pg]"); if (pg) { const e = cur(); const i = (e.ids.indexOf(e.id) + +pg.dataset.pg + e.ids.length) % e.ids.length; go({ ...e, id: e.ids[i], tab: 0 }, true); }
+});
+$("#content").addEventListener("click", (ev) => {
+  const o = ev.target.closest("[data-open]"); if (o) { const [m, ...id] = o.dataset.open.split(":"); openForm(m, id.join(":"), o.dataset.ids ? JSON.parse(o.dataset.ids) : undefined); return; }
+  const a = ev.target.closest("[data-act]"); if (a) { navAct(JSON.parse(a.dataset.act)); return; }
+});
+// перехід до дії з наперед заданим фільтром: {key, view, filters:[…], custom:{label,value,kind,arg}, sel}
+function navAct(o) {
+  const e = actEntry(o.key, o.view);
+  (o.filters || []).forEach((f) => e.s.filters.add(f));
+  if (o.custom) e.s.custom.push(customFacet(o.custom));
+  if (o.sel) { planState.sel = o.sel; planState.focus = focusForCode(o.sel); planState.esel = TREE.byCode.get(o.sel)?.id || null; }
+  if (o.reset) { const id = Object.keys(MENU_ITEMS).find((k) => MENU_ITEMS[k].key === o.key && (!o.view || MENU_ITEMS[k].view === o.view));
+    if (id) { e.top = MENU_ITEMS[id].top; e.title = MENU_ITEMS[id].title; } stack = [e]; render(); } else go(e);
+}
+function customFacet(c) {
+  if (c.kind === "product") return { label: "Продукт", value: P(c.arg).name, fn: (r) => (r.q ? r.q.product === c.arg : r.l?.quants.some((q) => q.product === c.arg)) };
+  if (c.kind === "loc") return { label: "Місце", value: c.arg, fn: (r) => r.code === c.arg };
+  if (c.kind === "po") { const po = D.purchase_orders.find((p) => p.name === c.arg);
+    return { label: "Закупівля", value: c.arg, fn: (r) => r.po ? r.po.name === c.arg : r.p ? po.lines.some((l) => l.product === r.p.default_code) : po.locations.includes(r.code) }; }
+  if (c.kind === "pos") return { label: "Закупівля", value: "у дорозі", fn: (r) => r.po ? r.po.lines.some((l) => l.product === c.arg) : true };
+}
+const act = (o) => esc(JSON.stringify(o));
+
+// ---------------------------------------------------------------- список
+const COLS = {
+  products: [
+    { k: "code", t: "Внутрішній код", v: (r) => `<span class="code">${esc(r.p.default_code)}</span>`, s: (r) => r.p.default_code },
+    { k: "name", t: "Назва", v: (r) => esc(r.p.name), s: (r) => r.p.name },
+    { k: "cat", t: "Категорія продукту", v: (r) => `<span class="mut">${esc(r.p.categ)}</span>`, s: (r) => r.p.categ },
+    { k: "qty", t: "В наявності", n: 1, v: (r) => nf2.format(r.qty), s: (r) => r.qty },
+    { k: "res", t: "Зарезервовано", n: 1, v: (r) => r.res ? nf2.format(r.res) : `<span class="mut">0,00</span>`, s: (r) => r.res },
+    { k: "free", t: "Доступно", n: 1, v: (r) => `<b>${nf2.format(r.qty - r.res)}</b>`, s: (r) => r.qty - r.res },
+    { k: "uom", t: "Од. виміру", v: (r) => esc(r.p.uom), s: (r) => r.p.uom },
+    { k: "st", t: "", v: (r) => r.low ? badge(["warn", "Нижче мінімуму"]) : !r.qty ? badge(["idle", "Немає"]) : "" },
+  ],
+  quants: [
+    { k: "loc", t: "Місце", v: (r) => esc(r.l.complete_name), s: (r) => r.l.complete_name },
+    { k: "prod", t: "Продукт", v: (r) => `<span class="code mut">[${esc(r.q.product)}]</span> ${esc(r.p.name)}`, s: (r) => r.p.name },
+    { k: "lot", t: "Партія/серійний номер", v: (r) => r.q.lot ? `<span class="code">${esc(r.q.lot)}</span>` : "", s: (r) => r.q.lot || "" },
+    { k: "pack", t: "Упаковка", v: (r) => r.q.package ? `<span class="code">${esc(r.q.package)}</span>` : "", s: (r) => r.q.package || "" },
+    { k: "qty", t: "Кількість", n: 1, v: (r) => nf2.format(r.q.qty), s: (r) => r.q.qty, sum: (rs) => nf2.format(rs.reduce((a, r) => a + r.q.qty, 0)) },
+    { k: "res", t: "Зарезервовано", n: 1, v: (r) => r.q.reserved ? nf2.format(r.q.reserved) : `<span class="mut">0,00</span>`, s: (r) => r.q.reserved || 0, sum: (rs) => nf2.format(rs.reduce((a, r) => a + (r.q.reserved || 0), 0)) },
+    { k: "uom", t: "Од.", v: (r) => esc(r.p.uom), s: (r) => r.p.uom },
+    { k: "for", t: "Резерв під", v: (r) => r.q.reserved_for ? `<span class="code">${esc(r.q.reserved_for)}</span>` : "", s: (r) => r.q.reserved_for || "" },
+  ],
+  locations: [
+    { k: "name", t: "Місце", v: (r) => esc(r.l.complete_name), s: (r) => r.l.complete_name },
+    { k: "kind", t: "Тип", v: (r) => `<span class="mut">${esc(KIND[r.l.kind] || r.l.kind)}</span>`, s: (r) => KIND[r.l.kind] || "" },
+    { k: "fill", t: "Заповненість", v: (r) => r.l.fill == null ? `<span class="mut">—</span>` : pbar(r.l.fill, fillCls(r.l)), s: (r) => r.l.fill ?? -1 },
+    { k: "n", t: "Позицій", n: 1, v: (r) => r.qty || `<span class="mut">0</span>`, s: (r) => r.qty },
+    { k: "op", t: "Правило поповнення", v: (r) => r.l.orderpoint ? `<span class="mut">мін ${r.l.orderpoint.min} · макс ${r.l.orderpoint.max}</span>` : "", s: (r) => r.l.orderpoint?.min ?? -1 },
+    { k: "st", t: "", v: (r) => r.l.state === "out" ? badge(["bad", "Порожньо"]) : r.l.state === "low" ? badge(["warn", "Нижче мінімуму"]) : "" },
+  ],
+  purchases: [
+    { k: "name", t: "Номер", v: (r) => `<b>${esc(r.po.name)}</b>`, s: (r) => r.po.name },
+    { k: "partner", t: "Постачальник", v: (r) => esc(r.po.partner), s: (r) => r.po.partner },
+    { k: "date", t: "Дата замовлення", v: (r) => dt(r.po.date_order), s: (r) => r.po.date_order },
+    { k: "plan", t: "Очікуване надходження", v: (r) => dt(r.po.date_planned), s: (r) => r.po.date_planned },
+    { k: "n", t: "Позицій", n: 1, v: (r) => r.po.lines.length, s: (r) => r.po.lines.length },
+    { k: "st", t: "Стан", v: () => badge(["ok", "Замовлення на купівлю"]) },
+  ],
+};
+const MODEL = { products: "product", quants: "location", locations: "location", purchases: "po" };
+const recOpenId = (key, r) => key === "quants" ? r.code : r.id;
+function sortRecs(e, rs) {
+  if (!e.sort) return rs;
+  const c = COLS[e.key].find((x) => x.k === e.sort.k); if (!c?.s) return rs;
+  return [...rs].sort((a, b) => { const x = c.s(a), y = c.s(b); return (typeof x === "number" ? x - y : String(x).localeCompare(String(y), "uk")) * (e.sort.asc ? 1 : -1); });
+}
+function renderList(e) {
+  const cols = COLS[e.key], rs = sortRecs(e, records(e)), c = $("#content");
+  if (!rs.length) { c.innerHTML = noContent(); return; }
+  const ids = e.key === "quants" ? undefined : JSON.stringify(rs.map((r) => r.id));
+  const row = (r) => `<tr class="rec" data-open="${MODEL[e.key]}:${esc(recOpenId(e.key, r))}">${cols.map((col, i) => `<td class="${col.n ? "n" : ""}${i === 0 ? " first" : ""}">${col.v(r)}</td>`).join("")}</tr>`;
+  let body = "";
+  if (e.s.groupby) {
+    const g = ACTIONS[e.key].groupby.find((x) => x.key === e.s.groupby), groups = new Map();
+    for (const r of rs) { const k = g.fn(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+    for (const [k, grs] of groups) {
+      const open = e.open.has(k);
+      body += `<tr class="grp" data-grp="${esc(k)}" aria-expanded="${open}"><td class="first" colspan="${cols.findIndex((x) => x.sum) > 0 ? cols.findIndex((x) => x.sum) : cols.length}"><span class="car">${open ? "▾" : "▸"}</span>${esc(k)} (${grs.length})</td>
+        ${cols.findIndex((x) => x.sum) > 0 ? cols.slice(cols.findIndex((x) => x.sum)).map((col) => `<td class="${col.n ? "n" : ""}">${col.sum && g.sum ? col.sum(grs) : ""}</td>`).join("") : ""}</tr>`;
+      if (open) body += grs.map(row).join("");
+    }
+  } else body = rs.map(row).join("");
+  c.innerHTML = `<div class="listwrap"><table class="o_list"><thead><tr>${cols.map((col, i) => `<th class="${col.n ? "n" : ""}${i === 0 ? " first" : ""}" data-sort="${col.k}">${esc(col.t)}${e.sort?.k === col.k ? `<span class="ar">${e.sort.asc ? "▲" : "▼"}</span>` : ""}</th>`).join("")}</tr></thead>
+    <tbody>${body}</tbody></table></div>`;
+  if (ids) c.querySelectorAll("tr.rec").forEach((tr) => tr.dataset.ids = ids);
+  c.querySelectorAll("[data-sort]").forEach((th) => th.onclick = () => { const k = th.dataset.sort; e.sort = e.sort?.k === k ? (e.sort.asc ? { k, asc: false } : null) : { k, asc: true }; renderList(e); });
+  c.querySelectorAll("[data-grp]").forEach((tr) => tr.onclick = () => { const k = tr.dataset.grp; e.open.has(k) ? e.open.delete(k) : e.open.add(k); renderList(e); });
+}
+const noContent = () => `<div class="o_nocontent"><b>Записів не знайдено</b>Змініть пошуковий запит або приберіть фільтри.</div>`;
+
+// ---------------------------------------------------------------- канбан продуктів
+function kcard(r, ids) {
+  return `<button class="o_kcard" data-open="product:${esc(r.id)}" data-ids="${ids}">${kimg(r.p)}<span class="kb">
+    <span class="kt">${esc(r.p.name)}</span><span class="mut">[${esc(r.p.default_code)}]</span>
+    <span>В наявності: <b>${nf2.format(r.qty)}</b> ${esc(r.p.uom)}</span>
+    <span>${r.low ? badge(["warn", "Нижче мінімуму"]) : !r.qty ? badge(["idle", "Немає в наявності"]) : r.res ? `<span class="mut">резерв ${nf.format(r.res)} ${esc(r.p.uom)}</span>` : ""}</span></span></button>`;
+}
+function renderKanban(e) {
+  const rs = sortRecs(e, records(e)), c = $("#content");
+  if (!rs.length) { c.innerHTML = noContent(); return; }
+  const ids = esc(JSON.stringify(rs.map((r) => r.id)));
+  if (e.s.groupby) {
+    const g = ACTIONS[e.key].groupby.find((x) => x.key === e.s.groupby), groups = new Map();
+    for (const r of rs) { const k = g.fn(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+    c.innerHTML = `<div class="pad"><div class="o_kcols">${[...groups].map(([k, grs]) => `<div class="o_kcol"><h3>${esc(k)}<span>${grs.length}</span></h3>${grs.map((r) => kcard(r, ids)).join("")}</div>`).join("")}</div></div>`;
+  } else c.innerHTML = `<div class="pad"><div class="o_kanban">${rs.map((r) => kcard(r, ids)).join("")}</div></div>`;
+}
+
+// ---------------------------------------------------------------- «Огляд»
+// ---------------------------------------------------------------- інструкція (пункт меню «Інструкція»)
+function renderHelp() {
+  const k = (...keys) => keys.map((x) => `<kbd>${esc(x)}</kbd>`).join("+");
+  const M = MOD, sw = (v, b) => `<i class="sw" style="${b ? `border:1.5px solid var(${v})` : `background:var(${v})`}"></i>`;
+  const S = [
+    ["start", "Що це", `
+      <p>Пункт <b>3D</b> — модель складу, побудована з місць зберігання Odoo (знімок бази на ${esc(D.meta.now.slice(8, 10))}.${esc(D.meta.now.slice(5, 7))}.${esc(D.meta.now.slice(0, 4))}). Кожен ряд, стелаж, ярус і місце на підлозі в моделі — це локація Odoo або нове місце, яке ви додали в моделі.</p>
+      <p>Усе, що ви змінюєте в моделі, стосується <b>лише моделі</b>: в Odoo нічого не створюється й не видаляється. Пізніше збережену модель можна буде прив'язати до системи.</p>
+      <p><button class="btn btn-primary" data-menu-go="model3d">Відкрити 3D-модель</button></p>`],
+    ["view", "Перегляд моделі", `
+      <ul>
+        <li><b>2D / 3D</b> — перемикач над моделлю: план згори або об'ємна модель.</li>
+        <li><b>Рівень</b> — списки над моделлю (WH › зона › ряд › стелаж › ярус). Виберіть рівень — решта сховається, камера наблизиться. Те саме роблять підписи в моделі та кнопка «Показати лише цей рівень» у панелі праворуч. <b>↑</b> — рівень вище, <b>⟲</b> — показати рівень повністю, <b>+ / −</b> — масштаб.</li>
+        <li><b>Миша в 3D</b>: ліва кнопка — обертати, права — зсунути, коліщатко — масштаб. <b>У 2D</b>: тягнути — зсунути план, коліщатко — масштаб.</li>
+        <li>Наведіть курсор на місце — з'явиться підказка: код, товар, заповненість.</li>
+        <li><b>Пошук і фільтри</b> вгорі сторінки підсвічують відповідні місця в моделі.</li>
+      </ul>
+      <div class="hl-legend"><span>${sw("--ok")}30 % і більше</span><span>${sw("--warn")}менше 30 % · нижче мінімуму</span><span>${sw("--bad")}порожньо</span><span>${sw("--idle", 1)}зона без місткості</span><span>${sw("--new")}нове · лише в моделі</span><span>${sw("--pend")}не збережено</span></div>`],
+    ["select", "Виділення", `
+      <ul>
+        <li><b>Клік</b> по моделі виділяє й підсвічує об'єкт, нічого не ховаючи. Що саме виділяється, задає перемикач <b>«Клік виділяє: Місце / Стелаж / Ряд / Зона»</b>.</li>
+        <li><b>Повторний клік</b> по виділеному — виділити рівень вище (ярус → стелаж → ряд → зона).</li>
+        <li>У панелі праворуч — ланцюжок рівнів (клік по ньому виділяє цей рівень), що всередині, і кнопки «Показати лише цей рівень», «Зняти виділення». ${k("Esc")} — зняти виділення.</li>
+      </ul>`],
+    ["edit", "Редагування", `
+      <p>Кнопка <b>«✎ Редагувати»</b> над моделлю вмикає режим редагування, <b>«Готово»</b> — вимикає. Виділіть об'єкт — у панелі праворуч з'являться дії для нього:</p>
+      <table class="o_list hl-t"><thead><tr><th class="first">Виділено</th><th>Що можна зробити</th></tr></thead><tbody>
+        <tr><td class="first">Склад або зона</td><td>«Додати ряд» (тип місць, кількість стелажів і ярусів), «Додати місце на підлозі», «Додати зону»</td></tr>
+        <tr><td class="first">Ряд</td><td>змінити тип ряду, «Додати стелаж» (для плит — «Додати стос»), повернути, поставити автоматично</td></tr>
+        <tr><td class="first">Стелаж</td><td>«Додати ярус нагорі»</td></tr>
+        <tr><td class="first">Будь-що</td><td>«⧉ Дублювати», «Копіювати», «Прибрати» (разом з усім, що всередині); × у списку «Усередині» прибирає один вкладений об'єкт</td></tr>
+      </tbody></table>
+      <p><b>Типи місць</b> (кнопка над моделлю) — довідник конструкцій: код, назва, вид (полична секція, стелаж для рулонів, палетний стелаж, стос на підлозі, місце на підлозі), ширина, глибина, висота ярусу, ярусів у новому стелажі. Зміна розміру одразу перебудовує всі місця цього типу; можна додати свій тип. Зберігається кнопкою «Зберегти типи» у вікні.</p>
+      <p>Нові місця отримують коди за зразком сусідніх (<span class="code">FUR-R7-S01-L1</span>) і показуються синіми.</p>`],
+    ["move", "Переміщення й поворот", `
+      <ul>
+        <li><b>Перетягніть</b> ряд або місце на підлозі мишкою (у 2D і 3D). Зону можна перетягнути, якщо спершу її виділити. Тягнути можна те, що стоїть усередині показаного рівня: щоб пересунути ряд, відкрийте його зону, а не сам ряд.</li>
+        <li>Зона розширюється під об'єкт. Якщо ряд налазить на сусідній — у панелі з'явиться попередження.</li>
+        <li><b>«Автоматичне положення»</b> в панелі ряду повертає його на місце за розкладкою.</li>
+        <li>${k("R")} або <b>«⟳ Повернути на 90°»</b> — повернути ряд: стелажі підуть углиб замість уздовж. Ще раз — повернути назад.</li>
+      </ul>`],
+    ["multi", "Кілька об'єктів одразу", `
+      <ul>
+        <li>${k(M, "клік")} у моделі додає об'єкт до виділення, повторний ${k(M, "клік")} — прибирає. Виділені підсвічуються всі разом.</li>
+        <li>Перетягніть <b>будь-який із виділених</b> — переміститься все виділене, зберігаючи взаємне розташування. Виділений ярус чи стелаж тягне свій ряд.</li>
+        <li>${k("R")} повертає всі виділені ряди.</li>
+        <li>Панель «Виділено N об'єктів»: список (× — прибрати з виділення), «Дублювати всі», «Копіювати», «Повернути ряди», «Прибрати всі», «Зберегти виділене», «Зняти виділення».</li>
+      </ul>`],
+    ["copy", "Копіювання", `
+      <ul>
+        <li><b>«⧉ Дублювати»</b> або ${k(M, "D")} — копія виділеного поруч: ярус — новим ярусом нагорі, стелаж — у кінці ряду, ряд — з наступним номером (R3 → R7), місце на підлозі — з наступним вільним кодом (KIT-01 → KIT-13), зона — «назва копія». Ряд, поставлений вручну, копіюється поруч на вільне місце.</li>
+        <li>${k(M, "C")} — запам'ятати виділене, ${k(M, "V")} — вставити копію. Куди вставляється: у виділений об'єкт, якщо він підходить — ярус у стелаж, стелаж у ряд тієї ж конструкції, ряд, місце на підлозі чи зону — у зону; інакше — у найближчий підходящий рівень вище; інакше — поруч з оригіналом. Кнопка <b>«Вставити … → куди»</b> в панелі показує, куди потрапить копія.</li>
+        <li>Копія має ту саму будову й типи, але місця в ній нові й порожні. Після копіювання виділена сама копія — її можна одразу перетягнути чи повернути.</li>
+      </ul>`],
+    ["save", "Збереження та скасування", `
+      <ul>
+        <li>Кожна зміна спершу лише <b>показується</b> в моделі бірюзовим кольором — «не збережено». У формах є дві кнопки: <b>«Показати»</b> (подивитися результат; повторний показ тієї ж форми замінює попередній) і <b>«Зберегти»</b>.</li>
+        <li>Незбережені зміни збираються по об'єкту, де їх зробили. У панелі об'єкта — список змін і кнопки <b>«Зберегти &lt;об'єкт&gt;»</b> / «Скасувати». Над моделлю — «Зберегти все», «Скасувати все», ↶.</li>
+        <li>${k(M, "Z")} або ↶ — скасувати останню незбережену зміну, ${k(M, "Shift", "Z")} або ${k(M, "Y")} — повернути її. Збережене так не скасовується.</li>
+        <li>Після збереження в правому верхньому куті з'являється повідомлення «Збережено: … · N змін».</li>
+        <li>Збережена модель записується в спільну базу сторінки — її бачать усі, хто відкриває сторінку. Незбережене бачите лише ви (зберігається у вашому браузері й переживає перезавантаження). Якщо сторінка відкрита як локальний файл — збережене теж лишається тільки в цьому браузері.</li>
+        <li><b>«Скинути до даних Odoo»</b> прибирає всі зміни моделі (як незбережена зміна — її ще треба зберегти або можна скасувати).</li>
+      </ul>`],
+    ["keys", "Гарячі клавіші", `
+      <p class="mut">Працюють у режимі редагування, коли курсор не в полі вводу; підходить і українська розкладка. На Mac замість Ctrl — ⌘.</p>
+      <table class="o_list hl-t"><tbody>
+        <tr><td class="first">${k(M, "клік")}</td><td>додати / прибрати з виділення</td></tr>
+        <tr><td class="first">${k(M, "C")}</td><td>копіювати виділене</td></tr>
+        <tr><td class="first">${k(M, "V")}</td><td>вставити скопійоване</td></tr>
+        <tr><td class="first">${k(M, "D")}</td><td>дублювати виділене поруч</td></tr>
+        <tr><td class="first">${k(M, "Z")}</td><td>скасувати останню незбережену зміну</td></tr>
+        <tr><td class="first">${k(M, "Shift", "Z")} · ${k(M, "Y")}</td><td>повернути скасовану зміну</td></tr>
+        <tr><td class="first">${k("R")}</td><td>повернути виділені ряди на 90°</td></tr>
+        <tr><td class="first">${k("Esc")}</td><td>зняти виділення (також закриває вікна й меню)</td></tr>
+      </tbody></table>`],
+    ["other", "Інші розділи", `
+      <ul>
+        <li><b>Загальний огляд</b> — картки зон із заповненістю, місцями нижче мінімуму й перевірками якості.</li>
+        <li><b>Операції</b> → Коригування залишків (усі залишки), Поповнення (місця нижче мінімуму). <b>Товари</b> → Товари. <b>Звітність</b> → Запаси, Розташування. <b>Налаштування</b> → Розташування.</li>
+        <li>Сірі пункти меню — розділи Odoo, які ще не підключені.</li>
+        <li>Дані Odoo — знімок, в реальному часі не оновлюються.</li>
+      </ul>`],
+  ];
+  $("#content").innerHTML = `<div class="o_help"><nav class="toc" aria-label="Зміст"><div class="h">Зміст</div>${S.map(([id, h]) => `<a href="#h-${id}" data-toc="${id}">${esc(h)}</a>`).join("")}</nav>
+    <article class="o_sheet hl-sheet"><h1>Як працювати з 3D-моделлю складу</h1>${S.map(([id, h, body]) => `<section id="h-${id}"><h2>${esc(h)}</h2>${body}</section>`).join("")}</article></div>`;
+  const c = $("#content");
+  c.querySelectorAll("[data-toc]").forEach((a) => a.onclick = (ev) => { ev.preventDefault();
+    $(`#h-${a.dataset.toc}`).scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); });
+  c.querySelectorAll("[data-menu-go]").forEach((b) => b.onclick = () => menu(b.dataset.menuGo));
+}
+
+function renderOverview() {
+  const lows = Object.entries(D.locations).filter(([, l]) => isLow(l));
+  const qcFail = D.quality_checks.filter((q) => q.state === "fail");
+  const card = (z) => {
+    const codes = zoneList.get(z), ls = codes.map((c) => D.locations[c]);
+    const cap = ls.filter((l) => l.capacity), fill = cap.length ? cap.reduce((s, l) => s + l.fill, 0) / cap.length : null;
+    const nLow = ls.filter(isLow).length, nEmpty = ls.filter((l) => !l.quants.length).length, nRes = ls.filter((l) => l.quants.some((q) => q.reserved)).length;
+    return `<div class="o_dcard"><h3>${esc(zoneName(z))}<small>${esc(z.startsWith("WH") ? z : "WH")}</small></h3>
+      <div class="row"><button class="btn btn-primary" data-act="${act({ key: "locations", view: "list", filters: [`zone:${z}`] })}">${codes.length} ${plural(codes.length, "місце", "місця", "місць")}</button>
+        <div class="links">${nLow ? `<button class="bad" data-act="${act({ key: "locations", view: "list", filters: [`zone:${z}`, "low"] })}"><span>Нижче мінімуму</span><b>${nLow}</b></button>` : ""}
+          <button data-act="${act({ key: "locations", view: "list", filters: [`zone:${z}`, "empty"] })}"><span>Порожні</span><b>${nEmpty}</b></button>
+          ${nRes ? `<button data-act="${act({ key: "locations", view: "list", filters: [`zone:${z}`, "res"] })}"><span>Із резервом</span><b>${nRes}</b></button>` : ""}
+          <button data-act="${act({ key: "locations", view: "plan", filters: [`zone:${z}`] })}">Показати на плані</button></div></div>
+      ${fill != null ? pbar(fill, fill < 0.3 ? "warn" : "") : `<span style="font-size:12px;color:var(--o-muted)">Місця без заданої місткості: шкали заповненості немає</span>`}</div>`;
+  };
+  $("#content").innerHTML = `<div class="pad"><div class="o_dash">
+    <div class="o_dcard"><h3>Правила поповнення<small>stock.warehouse.orderpoint</small></h3>
+      <div class="row"><button class="btn btn-primary" data-act="${act({ key: "locations", view: "list", filters: ["low"] })}">${lows.length} нижче мінімуму</button>
+        <div class="links"><span class="mut">${lows.filter(([, l]) => l.state === "out").length} комірок порожні</span>
+        <button data-act="${act({ key: "locations", view: "plan", filters: ["low"] })}">Показати на плані</button></div></div></div>
+    <div class="o_dcard"><h3>Закупівлі в дорозі<small>purchase.order</small></h3>
+      <div class="row"><button class="btn btn-primary" data-act="${act({ key: "purchases" })}">${D.purchase_orders.length} до надходження</button>
+        <div class="links">${D.purchase_orders.map((po) => `<button data-open="po:${esc(po.name)}">${esc(po.name)} · ${dayHm(po.date_planned)}</button>`).join("")}</div></div></div>
+    ${qcFail.length ? `<div class="o_dcard"><h3>Контроль якості<small>quality.check</small></h3>
+      <div class="row"><button class="btn btn-primary" data-open="location:${esc(qcFail[0].location)}">${qcFail.length} у карантині</button>
+        <div class="links">${qcFail.map((q) => `<button class="bad" data-open="location:${esc(q.location)}">${esc(q.name)} · ${esc(P(q.product).name)}</button>`).join("")}</div></div></div>` : ""}
+    ${ZONES.map(card).join("")}</div></div>`;
+}
+
+// ---------------------------------------------------------------- картки записів
+const stat = (icon, val, label, actObj) => actObj
+  ? `<button class="o_stat" data-act="${act(actObj)}">${ICON[icon]}<span class="sv"><b>${val}</b>${esc(label)}</span></button>`
+  : `<div class="o_stat static">${ICON[icon]}<span class="sv"><b>${val}</b>${esc(label)}</span></div>`;
+function notebook(e, pages) {
+  const i = Math.min(e.tab || 0, pages.length - 1);
+  return `<div class="o_notebook"><div class="o_nb_tabs" role="tablist">${pages.map((p, k) => `<button role="tab" data-tab="${k}" aria-selected="${k === i}">${esc(p[0])}</button>`).join("")}</div>
+    <div class="o_nb_page" role="tabpanel">${pages[i][1]}</div></div>`;
+}
+const quantTable = (quants, showLoc) => `<div class="listwrap"><table class="o_list"><thead><tr>
+  <th class="first">${showLoc ? "Місце" : "Продукт"}</th><th>Партія / упаковка</th><th class="n">Кількість</th><th class="n">Зарезервовано</th></tr></thead><tbody>
+  ${quants.map(({ code, q }) => `<tr class="rec" data-open="${showLoc ? `location:${esc(code)}` : `product:${esc(q.product)}`}"><td class="first">${showLoc ? esc(D.locations[code].complete_name) : `<span class="code mut">[${esc(q.product)}]</span> ${esc(P(q.product).name)}`}
+    ${q.reserved_for ? `<br><span class="mut">резерв під ${esc(q.reserved_for)}</span>` : ""}${q.quality ? `<br><span style="color:var(--bad)">брак ${esc(q.quality)}</span>` : ""}</td>
+    <td><span class="code">${esc([q.lot, q.package].filter(Boolean).join(" · "))}</span></td><td class="n">${qtyU(q.qty, q.product)}</td><td class="n">${q.reserved ? nf2.format(q.reserved) : `<span class="mut">0,00</span>`}</td></tr>`).join("")
+  || `<tr><td class="first" colspan="4"><span class="mut">Немає залишків.</span></td></tr>`}</tbody></table></div>`;
+
+function renderForm(e) {
+  const c = $("#content");
+  let html = "";
+  if (e.model === "product") {
+    const p = P(e.id), r = recById("products", e.id) || { qty: 0, res: 0, n: 0 };
+    const quants = Object.entries(D.locations).flatMap(([code, l]) => l.quants.filter((q) => q.product === e.id).map((q) => ({ code, q }))).sort((a, b) => b.q.qty - a.q.qty);
+    const pos = D.purchase_orders.filter((po) => po.lines.some((l) => l.product === e.id));
+    const mos = D.productions.filter((m) => m.product === e.id || m.components.includes(e.id));
+    const ops = Object.entries(D.locations).filter(([, l]) => l.orderpoint?.product === e.id);
+    html = `<div class="o_sheet"><div class="o_btnbox">
+        ${stat("cubes", `${nf.format(r.qty)} ${esc(p.uom)}`, "В наявності", { key: "quants", custom: { kind: "product", arg: e.id } })}
+        ${stat("pin", r.n, plural(r.n, "Місце", "Місця", "Місць"), { key: "locations", view: "plan", custom: { kind: "product", arg: e.id } })}
+        ${stat("truck", pos.length, "Закупівлі", pos.length ? { key: "purchases", custom: { kind: "pos", arg: e.id } } : null)}
+        ${stat("gear", mos.length, "Виробництво")}
+      </div>
+      <div class="o_title">${kimg(p)}<div><label>Продукт</label><h1>${esc(p.name)}</h1></div></div>
+      <div class="o_group"><dl><dt>Внутрішній код</dt><dd><span class="code">${esc(e.id)}</span></dd><dt>Категорія продукту</dt><dd>${esc(p.categ)}</dd><dt>Одиниця виміру</dt><dd>${esc(p.uom)}</dd></dl>
+        <dl><dt>Постачальник</dt><dd>${esc(p.seller || "—")}</dd><dt>Зарезервовано</dt><dd>${qtyU(r.res, e.id)}</dd><dt>Доступно</dt><dd><b>${qtyU(r.qty - r.res, e.id)}</b></dd></dl></div>
+      ${notebook(e, [
+        [`Залишки (${quants.length})`, quantTable(quants, true)],
+        ...(ops.length ? [["Правила поповнення", `<div class="listwrap"><table class="o_list"><thead><tr><th class="first">Місце</th><th class="n">Мін</th><th class="n">Макс</th><th class="n">Зараз</th><th></th></tr></thead><tbody>
+          ${ops.map(([code, l]) => `<tr class="rec" data-open="location:${esc(code)}"><td class="first">${esc(l.complete_name)}</td><td class="n">${l.orderpoint.min}</td><td class="n">${l.orderpoint.max}</td>
+            <td class="n">${nf.format(l.quants.reduce((s, q) => s + q.qty, 0))}</td><td>${isLow(l) ? badge(l.state === "out" ? ["bad", "Порожньо"] : ["warn", "Нижче мінімуму"]) : badge(["ok", "Норма"])}</td></tr>`).join("")}</tbody></table></div>`]] : []),
+        ...(pos.length ? [["Закупівлі", `<div class="listwrap"><table class="o_list"><thead><tr><th class="first">Номер</th><th>Постачальник</th><th>Очікується</th><th class="n">Кількість</th></tr></thead><tbody>
+          ${pos.map((po) => `<tr class="rec" data-open="po:${esc(po.name)}"><td class="first"><b>${esc(po.name)}</b></td><td>${esc(po.partner)}</td><td>${dt(po.date_planned)}</td><td class="n">${qtyU(po.lines.find((l) => l.product === e.id).qty, e.id)}</td></tr>`).join("")}</tbody></table></div>`]] : []),
+        ...(mos.length ? [["Виробничі замовлення", `<div class="listwrap"><table class="o_list"><thead><tr><th class="first">Номер</th><th>Виріб</th><th class="n">К-сть</th><th>Роль</th><th>Стан</th></tr></thead><tbody>
+          ${mos.map((m) => `<tr><td class="first"><span class="code">${esc(m.name)}</span></td><td>${esc(m.product_name)}</td><td class="n">${m.qty}</td><td class="mut">${m.product === e.id ? "виготовляє" : "компонент"}</td><td>${badge(MO_STATE[m.state] || ["idle", m.state])}</td></tr>`).join("")}</tbody></table></div>`]] : []),
+      ])}</div>`;
+  } else if (e.model === "location") {
+    const l = D.locations[e.id];
+    if (!l) { c.innerHTML = noContent(); return; }
+    const op = l.orderpoint, mo = l.production ? D.productions.find((m) => m.name === l.production) : null;
+    const qcs = D.quality_checks.filter((q) => q.location === e.id);
+    const parts = l.complete_name.split("/");
+    html = `<div class="o_statusbar"><span></span><div class="o_status">${isLow(l) ? `<span>Норма</span><span class="on">${l.state === "out" ? "Порожньо" : "Нижче мінімуму"}</span>` : op ? `<span class="on">Норма</span><span>Нижче мінімуму</span>` : ""}</div></div>
+      <div class="o_sheet"><div class="o_btnbox">
+        ${stat("cubes", l.quants.length, "Залишки", { key: "quants", custom: { kind: "loc", arg: e.id } })}
+        ${stat("pin", "План", "Показати на плані", { key: "locations", view: "plan", sel: e.id, reset: true })}
+      </div>
+      <div class="o_title"><div><label>Місце зберігання</label><h1>${esc(e.id)}</h1><span class="code" style="color:var(--o-muted)">${esc(l.complete_name)}</span></div></div>
+      <div class="o_group"><dl><dt>Батьківське місце</dt><dd>${esc(parts.slice(0, -1).join("/"))}</dd><dt>Тип місця</dt><dd>Внутрішнє місце · ${esc(KIND[l.kind] || l.kind)}</dd>
+          <dt>Зона</dt><dd>${esc(zoneName(zoneOf[e.id]))}</dd>${l.picking ? `<dt>Документ</dt><dd><span class="code">${esc(l.picking)}</span></dd>` : ""}</dl>
+        <dl>${l.capacity ? `<dt>Місткість</dt><dd>${nf.format(l.capacity)}</dd><dt>Заповненість</dt><dd>${pbar(l.fill, fillCls(l))}</dd>` : ""}
+          ${op ? `<dt>Правило поповнення</dt><dd>${esc(P(op.product).name)} · мін ${op.min} · макс ${op.max}${op.purchase ? ` · <span class="code">${esc(op.purchase)}</span>` : ""}</dd>` : ""}
+          ${mo ? `<dt>Для замовлення</dt><dd><span class="code">${esc(mo.name)}</span> · ${esc(mo.product_name)} × ${mo.qty}</dd>` : l.production ? `<dt>Для замовлення</dt><dd><span class="code">${esc(l.production)}</span></dd>` : ""}</dl></div>
+      ${l.note ? `<div class="o_note">${esc(l.note)}</div>` : ""}
+      ${qcs.map((q) => `<div class="o_note ${q.state === "fail" ? "bad" : ""}"><b>${esc(q.name)}</b> · ${esc(q.title)} — ${q.state === "fail" ? "брак" : q.state === "pass" ? "пройдено" : "очікує"}<br>${esc(q.note)}</div>`).join("")}
+      ${notebook(e, [[`Залишки (${l.quants.length})`, quantTable(l.quants.map((q) => ({ code: e.id, q })), false)]])}</div>`;
+  } else if (e.model === "po") {
+    const po = D.purchase_orders.find((p) => p.name === e.id);
+    html = `<div class="o_statusbar"><span></span><div class="o_status"><span>Запит на пропозицію</span><span>Запит надіслано</span><span class="on">Замовлення на купівлю</span></div></div>
+      <div class="o_sheet"><div class="o_btnbox">
+        ${stat("truck", 1, "Надходження")}
+        ${po.locations.length ? stat("pin", po.locations.length, "Місць поповнення", { key: "locations", view: "plan", custom: { kind: "po", arg: po.name } }) : ""}
+      </div>
+      <div class="o_title"><div><label>Замовлення на купівлю</label><h1>${esc(po.name)}</h1></div></div>
+      <div class="o_group"><dl><dt>Постачальник</dt><dd>${esc(po.partner)}</dd></dl>
+        <dl><dt>Дата замовлення</dt><dd>${dt(po.date_order)}</dd><dt>Очікуване надходження</dt><dd>${dt(po.date_planned)}</dd></dl></div>
+      ${notebook(e, [["Товари", `<div class="listwrap"><table class="o_list"><thead><tr><th class="first">Продукт</th><th class="n">Кількість</th><th>Од.</th></tr></thead><tbody>
+        ${po.lines.map((ln) => `<tr class="rec" data-open="product:${esc(ln.product)}"><td class="first"><span class="code mut">[${esc(ln.product)}]</span> ${esc(P(ln.product).name)}</td><td class="n">${nf2.format(ln.qty)}</td><td>${esc(P(ln.product).uom)}</td></tr>`).join("")}</tbody></table></div>`]])}</div>`;
+  }
+  c.innerHTML = `<div class="o_form_wrap">${html}</div>`;
+  c.scrollTop = 0;
+  c.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { e.tab = +b.dataset.tab; renderForm(e); });
+}
+
+// ---------------------------------------------------------------- вид «План»: модель складу з дерева локацій
+// Дерево: шлях Odoo (complete_name) плюс рівні з коду місця (ряд, стелаж, ярус), щоб кожен рівень можна було вибрати окремо.
+// Поверх дерева Odoo лежать правки моделі (EDIT): додані й прибрані вузли, типи місць. Odoo вони не змінюють.
+const FORMS = { shelf: "Полична секція", rolls: "Стелаж для рулонів", pallet: "Палетний стелаж", stack: "Стос на підлозі", zone: "Місце на підлозі" };
+const RACKED = ["shelf", "rolls", "pallet"];
+const BASE_TYPES = [ // секція: ширина × глибина (м), висота ярусу, ярусів у новому стелажі
+  { id: "FUR", name: "Полиці фурнітури", form: "shelf", w: 1.2, d: 0.6, lh: 0.45, lv: 4 },
+  { id: "EB", name: "Стелаж крайки", form: "rolls", w: 1.4, d: 0.8, lh: 0.6, lv: 3 },
+  { id: "FG", name: "Палетний стелаж ГП", form: "pallet", w: 2.7, d: 1.1, lh: 1.5, lv: 4 },
+  { id: "RCK", name: "Комірковий стелаж", form: "shelf", w: 3.0, d: 1.5, lh: 1.0, lv: 4 },
+  { id: "PLT", name: "Стос плит", form: "stack", w: 3.0, d: 2.1, lh: 0, lv: 1 },
+  { id: "PAL", name: "Палетне місце", form: "zone", w: 1.4, d: 1.0 },
+  { id: "CART", name: "Візок", form: "zone", w: 1.6, d: 1.0 },
+  { id: "DOCK", name: "Ворота розвантаження", form: "zone", w: 4, d: 5 },
+  { id: "BIG", name: "Велика зона", form: "zone", w: 4, d: 9 },
+  { id: "ZONE", name: "Зона на підлозі", form: "zone", w: 4, d: 4 },
+];
+// SAVED — збережені правки (спільні); PENDING — незбережені зміни по об'єктах; EDIT — що показуємо = SAVED + PENDING
+const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [] });
+const clone = (x) => JSON.parse(JSON.stringify(x));
+let SAVED = emptyEdit(), PENDING = [], EDIT = emptyEdit();
+function diffEdit(a, b) {
+  const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+    types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null };
+}
+const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !d.delNew.length && !d.delRm.length && !d.types;
+function applyDiff(s, d) {
+  const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot);
+  s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
+  if (d.types) s.types = clone(d.types.v);
+  return s;
+}
+const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [] } : emptyEdit();
+function recompute() { EDIT = PENDING.reduce((s, p) => applyDiff(s, p.diff), clone(SAVED)); }
+let TYPES = new Map();
+const typeList = () => EDIT.types || BASE_TYPES;
+const TY = (id) => TYPES.get(id) || TYPES.get("ZONE") || BASE_TYPES[9];
+const zoneTp = (c) => /^PAL-/.test(c) ? "PAL" : /^(KIT|FRONTS)-/.test(c) ? "CART" : /^(POST|OUT)-/.test(c) ? "BIG" : /^UNLOAD-/.test(c) ? "DOCK" : "ZONE";
+let DRAFT_LOC = {}, POS = new Map(), PEND = new Set();
+const LOC = (c) => D.locations[c] || DRAFT_LOC[c];
+function codeSegs(code) {
+  let m;
+  if ((m = /^FUR-(R\d+)-(S\d+)-L(\d)$/.exec(code))) return { pre: "FUR", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
+  if ((m = /^EB-(U\d+)-(S\d+)-L(\d)$/.exec(code))) return { pre: "EB", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
+  if ((m = /^FG-(R\d+)-(B\d+)-L(\d)$/.exec(code))) return { pre: "FG", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
+  if ((m = /^RCK-R\d+-(\d)([A-D])$/.exec(code))) return { pre: "RCK", segs: [[m[1], "bay"]], leaf: m[2], lvl: "ABCD".indexOf(m[2]), rackParent: true };
+  if ((m = /^PLT-(\d+)([A-C])$/.exec(code))) return { pre: "PLT", segs: [[m[1], "rack"]], leaf: m[2], bayLeaf: true };
+  return null;
+}
+const FLOW = ["Вхід", "Приймання", "Контроль якості", "Сировина", "Стелажі", "Портал", "Плити", "Фурнітура", "Крайка", "Пакування", "ЛФМ", "Передвиробництво", "Фасади", "Пост-виробництво", "Готова продукція", "Відвантаження"];
+const KIND_TYPE = { group: "group", zone: "group", rack: "rack", bay: "bay", level: "level", bayleaf: "bayleaf" };
+function buildTree() {
+  TYPES = new Map(typeList().map((t) => [t.id, t]));
+  DRAFT_LOC = {}; POS = new Map(EDIT.pos.map((p) => [p.id, p]));
+  PEND = new Set(PENDING.flatMap((p) => p.diff.add.put.map((a) => a.id)));
+  const nodes = new Map(), byCode = new Map();
+  const node = (id, name, parent) => {
+    if (!nodes.has(id)) { const n = { id, name, parent, kids: [], type: "group", tp: null, loc: null, lvl: 0 }; nodes.set(id, n); if (parent) nodes.get(parent).kids.push(n); }
+    return nodes.get(id);
+  };
+  node("WH", "WH", null);
+  for (const [code, l] of Object.entries(D.locations)) {
+    const parts = l.complete_name.split("/"), cs = codeSegs(code);
+    let pid = "WH";
+    for (let i = 1; i < parts.length - 1; i++) { const id = parts.slice(0, i + 1).join("/"); node(id, parts[i], pid); pid = id; }
+    let n;
+    if (cs) {
+      if (cs.rackParent) { nodes.get(pid).type = "rack"; nodes.get(pid).tp = cs.pre; }
+      for (const [s, t] of cs.segs) { const k = node(`${pid}/${s}`, s, pid); k.type = t; k.tp = cs.pre; pid = k.id; }
+      n = node(`${pid}/${cs.leaf}`, cs.leaf, pid); n.type = cs.bayLeaf ? "bayleaf" : "level"; n.tp = cs.pre; n.lvl = cs.lvl ?? 0;
+    } else { n = node(parts.join("/"), parts[parts.length - 1], parts.length > 1 ? pid : null); n.tp = zoneTp(code); }
+    n.loc = code; byCode.set(code, n);
+  }
+  // додані в моделі вузли; кілька проходів — батько може стояти в списку після дітей
+  let rest = EDIT.add.slice(), prog = true;
+  while (rest.length && prog) { prog = false;
+    rest = rest.filter((a) => { if (!nodes.has(a.parent)) return true; prog = true; if (nodes.has(a.id)) return false;
+      const n = node(a.id, a.name, a.parent); n.type = KIND_TYPE[a.kind] || "group"; n.tp = a.tp || null; n.lvl = a.lvl || 0; n.draft = true; n.pend = PEND.has(a.id);
+      if (a.code) { n.loc = a.code; byCode.set(a.code, n);
+        DRAFT_LOC[a.code] = { complete_name: a.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: n.pend }; }
+      return false; }); }
+  // зміна типу ряду переходить на його стелажі та яруси
+  const setTp = (n, tp) => { n.tp = tp; n.kids.forEach((k) => setTp(k, tp)); };
+  for (const s of EDIT.set) { const n = nodes.get(s.id); if (n && TYPES.has(s.tp)) setTp(n, s.tp); }
+  // ряд, повернутий на 90°: стелажі йдуть углиб, а не вздовж
+  const setRot = (n) => { n.rot = true; n.kids.forEach(setRot); };
+  for (const r of EDIT.rot || []) { const n = nodes.get(r.id); if (n && n.type === "rack") setRot(n); }
+  // прибрані в моделі вузли — разом з усім, що всередині
+  const drop = (n) => { nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
+  for (const id of EDIT.del) { const n = nodes.get(id); if (!n || !n.parent) continue; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); }
+  const rank = (n) => { const i = FLOW.indexOf(n.name); return i < 0 ? 99 : i; };
+  const walk = (n) => {
+    n.kids.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, "uk", { numeric: true }));
+    n.kids.forEach(walk);
+    if (n.type === "group" && n.kids.length && n.kids.every((k) => k.type === "rack")) n.type = "rackset";
+    n.codes = [...(n.loc ? [n.loc] : []), ...n.kids.flatMap((k) => k.codes)];
+  };
+  walk(nodes.get("WH"));
+  return { nodes, byCode, root: nodes.get("WH") };
+}
+let TREE = null;
+const TYPE_LABEL = { rack: "Ряд", bay: "Стелаж", level: "Ярус", bayleaf: "Стос" };
+const nodeLabel = (n) => n.id === "WH" ? "WH" : TYPE_LABEL[n.type] ? `${TYPE_LABEL[n.type]} ${n.name}` : n.name;
+const pathOf = (n) => { const p = []; for (let x = n; x; x = x.parent && TREE.nodes.get(x.parent)) p.unshift(x); return p; };
+const inNode = (id, f) => id === f || id.startsWith(`${f}/`);
+
+// розкладка: групи — по горизонталі; ряди стелажів — один за одним углиб; стелажі ряду — уздовж ряду; яруси — угору
+// ряд, перетягнутий мишкою, стоїть там, де його поставили (координати всередині батька); батько розширюється під нього
+function posOverride(n, pad) { let any = false;
+  for (const k of n.kids) { const p = POS.get(k.id); if (p) { k.ox = p.x; k.oy = p.y; k.moved = true; any = true; } }
+  if (any) { n.w = Math.max(n.w, ...n.kids.map((k) => k.ox + k.w + pad)); n.d = Math.max(n.d, ...n.kids.map((k) => k.oy + k.d + pad)); } }
+function measure(n, depth = 0) {
+  n.depth = depth;
+  const t = TY(n.tp);
+  const [tw, td] = n.rot ? [t.d, t.w] : [t.w, t.d];
+  if (n.type === "level") { n.w = tw; n.d = td; n.h = (n.lvl + 1) * t.lh; return; }
+  if (n.type === "bayleaf") { n.w = tw; n.d = td; n.h = 1.1; return; }
+  n.kids.forEach((k) => measure(k, depth + 1));
+  const H = n.kids.length ? Math.max(...n.kids.map((k) => k.h)) : 0.2;
+  if (n.type === "bay") { n.w = tw; n.d = td; n.nLv = n.kids.length ? Math.max(...n.kids.map((k) => k.lvl)) + 1 : 0; n.h = n.nLv * t.lh + 0.2; n.kids.forEach((k) => { k.ox = 0; k.oy = 0; }); return; }
+  if (n.type === "rack") { if (!n.kids.length) { n.w = tw; n.d = td; n.h = 0.2; return; }
+    let a = 0; const g = t.form === "stack" ? 0.6 : 0.08;
+    n.kids.forEach((k) => { if (n.rot) { k.ox = 0; k.oy = a; a += k.d + g; } else { k.ox = a; k.oy = 0; a += k.w + g; } });
+    if (n.rot) { n.w = Math.max(...n.kids.map((k) => k.w)); n.d = a - g; } else { n.w = a - g; n.d = Math.max(...n.kids.map((k) => k.d)); } n.h = H; return; }
+  if (n.type === "rackset") { let y = 0; const g = TY(n.kids[0].tp).form === "stack" ? 1.2 : 2.4; n.kids.forEach((k) => { k.ox = 0; k.oy = y; y += k.d + g; }); n.w = Math.max(...n.kids.map((k) => k.w)); n.d = y - g; posOverride(n, 0); n.h = H; return; }
+  if (!n.kids.length) { if (n.loc) { n.w = t.w; n.d = t.d; } else { n.w = 4; n.d = 4; } n.h = 1.2; return; }
+  // група: листки (ворота, візки) — сіткою, підгрупи — праворуч по горизонталі
+  // порядок дітей зберігаємо; сусідні листки (ворота, візки) збираємо в один блок, понад 8 — у два рядки
+  const pad = 1, head = 1.6, gap = depth <= 1 ? 4 : 2.5, blocks = [];
+  const isLeaf = (k) => !k.kids.length && k.type === "group";
+  for (let i = 0; i < n.kids.length;) {
+    if (!isLeaf(n.kids[i])) { const k = n.kids[i++]; blocks.push({ items: [k], w: k.w, d: k.d }); continue; }
+    const run = []; while (i < n.kids.length && isLeaf(n.kids[i])) run.push(n.kids[i++]);
+    const cols = run.length > 8 ? Math.ceil(run.length / 2) : run.length, lg = 0.6;
+    const cw = Math.max(...run.map((k) => k.w)), ch = Math.max(...run.map((k) => k.d));
+    run.forEach((k, j) => { k.ox = (j % cols) * (cw + lg); k.oy = Math.floor(j / cols) * (ch + lg); });
+    blocks.push({ items: run, w: cols * (cw + lg) - lg, d: Math.ceil(run.length / cols) * (ch + lg) - lg, block: true });
+  }
+  let x = pad;
+  for (const b of blocks) { for (const k of b.items) { if (b.block) { k.ox += x; k.oy += head; } else { k.ox = x; k.oy = head; } } x += b.w + gap; }
+  n.w = x - gap + pad; n.d = head + Math.max(...blocks.map((b) => b.d)) + pad; posOverride(n, pad); n.h = H;
+}
+function place(n, x, y) { n.x = x; n.y = y; n.kids.forEach((k) => place(k, x + k.ox, y + k.oy)); }
+let W0 = 0, D0 = 0;
+const planState = { sel: null, hl: new Set(), match: null, mode: "3d", focus: "WH", edit: false, esel: null, msel: [] };
+// найближчий вузол, що ще є в дереві (після того як щось прибрали)
+const nearest = (id) => { while (id && !TREE.nodes.has(id)) id = id.includes("/") ? id.slice(0, id.lastIndexOf("/")) : null; return id || "WH"; };
+function rebuildModel() {
+  TREE = buildTree(); measure(TREE.root); place(TREE.root, 0, 0); W0 = TREE.root.w; D0 = TREE.root.d;
+  planState.focus = nearest(planState.focus);
+  if (planState.esel) planState.esel = nearest(planState.esel);
+  planState.msel = planState.msel.filter((id) => TREE.nodes.has(id)); if (planState.msel.length < 2) planState.msel = [];
+  if (planState.sel && !TREE.byCode.has(planState.sel)) planState.sel = null;
+}
+try { const s = JSON.parse(localStorage.getItem("wh-model-edit") || "null"); if (s && s.v === 1) SAVED = normEdit(s); } catch (e) {}
+try { const s = JSON.parse(localStorage.getItem("wh-model-pending") || "[]"); if (Array.isArray(s)) PENDING = s.filter((p) => p && p.diff && p.diff.add); } catch (e) {}
+recompute();
+rebuildModel();
+try { const m = localStorage.getItem("wh-mode"); if (m === "2d" || m === "3d") planState.mode = m; } catch (e) {}
+const slotCls = (l) => l.pend ? "pend" : l.draft ? "new" : l.fill == null ? `area${l.quants.length ? " has" : ""}` : fillCls(l);
+const tipText = (code) => { const l = LOC(code); const q = l.quants[0];
+  if (l.draft) return `<b>${esc(code)}</b><span>${l.pend ? "нове місце · не збережено" : "нове місце · лише в моделі"}</span>`;
+  return `<b>${esc(code)}</b><span>${q ? `${esc(P(q.product).name)}${l.quants.length > 1 ? ` + ще ${l.quants.length - 1}` : ""}` : "порожньо"}</span>
+    <span>${l.fill != null ? `заповнено ${pct(l.fill)}` : `${l.quants.length} ${plural(l.quants.length, "позиція", "позиції", "позицій")}`}${isLow(l) ? " · нижче мінімуму" : ""}</span>`; };
+function planFocus() {
+  const { hl, sel, match } = planState;
+  return { hl, sel, dim: (code) => !DRAFT_LOC[code] && ((match && !match(code)) || (hl.size > 0 && !hl.has(code))) };
+}
+function renderPlanView(e) {
+  if (e.mode) { planState.mode = e.mode; e.mode = null; }
+  $("#content").innerHTML = `<div class="o_plan"><div class="main"><div id="plan-host"></div></div><aside id="plan-side" aria-live="polite"></aside></div>`;
+  planSync(e, true);
+}
+function planSync(e, mount = false) {
+  const s = e.s, txt = [...s.text, s.live].filter(Boolean);
+  const hasF = s.filters.size || s.custom.length;
+  planState.match = hasF ? (code) => passes("locations", e, recById("locations", code), { noText: true }) : null;
+  planState.hl = new Set(txt.length ? REC.locations.filter((r) => passes("locations", e, r)).map((r) => r.code) : []);
+  if (mount) Plan.show($("#plan-host")); else Plan.refresh();
+  renderSide(e);
+}
+function planPick(code) { planState.sel = code; planState.esel = TREE.byCode.get(code)?.id || null; Plan.refresh(); renderSide(cur());
+  if (matchMedia("(max-width: 900px)").matches) $("#plan-side")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }
+function planFocusTo(id) { if (!TREE.nodes.has(id)) return; planState.focus = id;
+  planState.msel = [];
+  if (planState.edit) planState.esel = id;
+  else if (planState.esel && (planState.esel === id || !inNode(planState.esel, id))) { planState.esel = null; planState.sel = null; }
+  Plan.focus(); renderSide(cur()); }
+// виділено кілька (Ctrl/⌘+клік у режимі редагування); інакше — один виділений вузол
+const selIds = () => planState.msel.length > 1 ? planState.msel.slice() : planState.esel && planState.esel !== planState.focus ? [planState.esel] : [];
+const isSel = (id, S) => S.some((s) => inNode(id, s));
+const lca = (ids) => ids.reduce((a, b) => { while (!inNode(b, a)) a = a.includes("/") ? a.slice(0, a.lastIndexOf("/")) : "WH"; return a; });
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform || "") ? "⌘" : "Ctrl";
+// що можна пересувати: безпосередні діти зони (ряди, місця на підлозі, підзони) у межах видимого рівня
+const movable = (n) => !!n && n.id !== "WH" && !!n.parent && /^(group|rackset)$/.test(TREE.nodes.get(n.parent).type) && !inNode(planState.focus, n.id);
+function toggleSel(id) { const n = id && resolvePick(id, false); if (!n) return;
+  let S = selIds();
+  if (S.includes(n.id)) S = S.filter((x) => x !== n.id); else { S = S.filter((x) => !inNode(x, n.id) && !inNode(n.id, x)); S.push(n.id); }
+  planState.msel = S.length > 1 ? S : []; planState.esel = S[S.length - 1] || planState.focus; Plan.refresh(); renderSide(cur()); }
+// що тягнути: натиснули на виділене — усе виділене (виділений ярус чи стелаж тягне свій ряд); інакше ряд або місце на підлозі під курсором
+const moveTarget = (n) => { if (!n) return null; if (movable(n)) return n; const r = rackOf(n.id); return movable(r) ? r : null; };
+function moveTargets(ids) { const S = [...new Set(ids.map((s) => moveTarget(TREE.nodes.get(s))).filter(Boolean))]; return S.filter((s) => !S.some((o) => o !== s && inNode(s.id, o.id))); }
+function dragSet(id) { if (!id || !TREE.nodes.has(id)) return [];
+  const S = moveTargets(selIds());
+  if (S.some((s) => inNode(id, s.id))) return S;
+  const r = rackOf(id); if (r) return movable(r) ? [r] : [];
+  const n = TREE.nodes.get(id); return movable(n) && !n.kids.length ? [n] : []; }
+function moveSet(set, dx, dy) { if (set.length === 1) { planState.msel = []; planState.esel = set[0].id; }
+  OPS.move(set.map((r) => ({ id: r.id, x: r.ox + dx, y: r.oy + dy }))); }
+// вибір кліком: що саме виділяти (місце / стелаж / ряд / зона); повторний клік по виділеному — рівень вище
+const PICK = { place: "Місце", bay: "Стелаж", rack: "Ряд", zone: "Зона" };
+try { const v = localStorage.getItem("wh-pick"); if (PICK[v]) planState.pick = v; } catch (e) {}
+planState.pick = planState.pick || "place";
+function resolvePick(id, climb = true) {
+  const n = TREE.nodes.get(id); if (!n) return null;
+  const F = planState.focus, up = (x) => x.parent && TREE.nodes.get(x.parent);
+  const is = { place: (x) => !x.kids.length || x.type === "level" || x.type === "bayleaf", bay: (x) => x.type === "bay" || x.type === "bayleaf",
+    rack: (x) => x.type === "rack", zone: (x) => (x.type === "group" || x.type === "rackset") && x.kids.length > 0 }[planState.pick];
+  let x = n; while (x && !is(x)) x = up(x);
+  if (!x || (x.id !== F && inNode(F, x.id))) x = n;
+  const S = planState.esel;
+  if (climb && S && S !== F && inNode(x.id, S)) { const p = up(TREE.nodes.get(S)); x = p && p.id !== F && inNode(p.id, F) ? p : x; }
+  return x.id === F ? null : x;
+}
+function selectNode(id) {
+  const n = resolvePick(id); planState.msel = [];
+  planState.esel = n ? n.id : null; planState.sel = n && n.loc && !n.kids.length ? n.loc : null;
+  Plan.refresh(); renderSide(cur());
+  if (n && matchMedia("(max-width: 900px)").matches) $("#plan-side")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+// контекст для місця з картки: ряд (для ярусу і стосу) або батьківська група
+function focusForCode(code) { const n = TREE.byCode.get(code); if (!n) return "WH";
+  const up = n.type === "level" ? 2 : 1; let x = n; for (let i = 0; i < up && x.parent; i++) x = TREE.nodes.get(x.parent); return x.id; }
+const selChips = (n) => pathOf(n).map((x) => `<button class="o_chip${x.id === n.id ? " on" : ""}" data-esel="${esc(x.id)}" title="Виділити цей рівень">${esc(nodeLabel(x))}</button>`).join('<span class="o_chip_sep">›</span>');
+const pathChips = (n, cls = "") => pathOf(n).map((x) => `<button class="o_chip ${cls}${x.id === planState.focus ? " on" : ""}" data-focus="${esc(x.id)}" title="Показати лише цей рівень">${esc(nodeLabel(x))}</button>`).join('<span class="o_chip_sep">›</span>');
+function renderSide(e) {
+  const side = $("#plan-side"); if (!side) return;
+  if (planState.edit) return renderEditSide(side);
+  const code = planState.sel, l = code && LOC(code);
+  if (l) {
+    side.innerHTML = `<div class="lab">${esc(KIND[l.kind] || "Місце")}</div><h2>${esc(code)}</h2>
+      <div class="sec">Виділити рівень</div><div class="o_chips">${selChips(TREE.byCode.get(code))}</div>
+      ${l.capacity ? `<div class="sec">Заповненість</div>${pbar(l.fill, fillCls(l))}` : ""}
+      ${l.orderpoint ? `<div class="sec">Правило поповнення</div><div>мін ${l.orderpoint.min} · макс ${l.orderpoint.max} ${isLow(l) ? badge(l.state === "out" ? ["bad", "Порожньо"] : ["warn", "Нижче мінімуму"]) : ""}</div>` : ""}
+      <div class="sec">Залишки</div>
+      <table class="o_list"><tbody>${l.quants.map((q) => `<tr class="rec" data-open="product:${esc(q.product)}"><td class="first">${esc(P(q.product).name)}${q.lot ? `<br><span class="code mut">${esc(q.lot)}</span>` : ""}${q.package ? `<br><span class="code mut">${esc(q.package)}</span>` : ""}</td>
+        <td class="n">${qtyU(q.qty, q.product)}${q.reserved ? `<br><span style="color:var(--warn)">резерв ${nf.format(q.reserved)}</span>` : ""}</td></tr>`).join("") || `<tr><td class="first"><span class="mut">Порожньо.</span></td></tr>`}</tbody></table>
+      ${l.draft ? `<p class="ed-note">Нове місце: є лише в 3D-моделі, в Odoo його ще немає.</p>` : ""}<div class="acts">${l.draft ? "" : `<button class="btn btn-primary" data-open="location:${esc(code)}">Відкрити картку</button>`}<button class="btn btn-secondary" id="side-clear">Зняти виділення</button></div>`;
+    $("#side-clear").onclick = () => { planState.sel = null; planState.esel = null; Plan.refresh(); renderSide(e); };
+  } else {
+    const f = TREE.nodes.get(planState.esel || planState.focus), ls = f.codes.map((c) => LOC(c)), picked = !!planState.esel;
+    const cap = ls.filter((x) => x.capacity), fill = cap.length ? cap.reduce((s, x) => s + x.fill, 0) / cap.length : null;
+    const lows = f.codes.filter((c) => isLow(LOC(c)));
+    const kidStat = (k) => { const kc = k.codes.map((c) => LOC(c)).filter((x) => x.capacity); return kc.length ? kc.reduce((s, x) => s + x.fill, 0) / kc.length : null; };
+    side.innerHTML = `<div class="lab">${picked ? "Виділено" : f.id === "WH" ? "Весь склад" : "Показано рівень"}</div><h2>${esc(nodeLabel(f))}</h2>
+      <div class="o_chips" style="margin-top:6px">${picked ? selChips(f) : pathChips(f)}</div>
+      ${picked ? `<div class="acts"><button class="btn btn-primary" data-focus="${esc(f.id)}">Показати лише цей рівень</button><button class="btn btn-secondary" data-unsel>Зняти виділення</button></div>` : ""}
+      <div class="sec">${f.codes.length} ${plural(f.codes.length, "місце", "місця", "місць")}${fill != null ? ` · заповненість ${pct(fill)}` : ""}</div>${fill != null ? pbar(fill, fill < 0.3 ? "warn" : "") : ""}
+      ${f.kids.length ? `<div class="sec">Рівень нижче · ${f.kids.length}</div><ul class="lowlist">${f.kids.map((k) => { const kf = kidStat(k), kl = k.codes.filter((c) => isLow(LOC(c))).length;
+        return `<li><button data-esel="${esc(k.id)}" title="Виділити"><span class="t">${esc(nodeLabel(k))}</span>${kl ? badge(["warn", `${kl} мін`]) : kf != null ? `<span class="mut" style="font-size:12px">${pct(kf)}</span>` : ""}
+          <span class="m">${k.codes.length} ${plural(k.codes.length, "місце", "місця", "місць")}${k.loc ? ` · ${esc(k.loc)}` : ""}</span></button></li>`; }).join("")}</ul>` : ""}
+      ${lows.length ? `<div class="sec">Нижче мінімуму · ${lows.length}</div><ul class="lowlist">${lows.map((c) => { const x = LOC(c), q = x.quants[0], op = x.orderpoint;
+        return `<li><button data-pick="${esc(c)}"><span class="t">${esc(P(op?.product || q?.product).name)}</span>${badge(x.state === "out" ? ["bad", "0"] : ["warn", q ? nf.format(q.qty) : "0"])}
+          <span class="m">${esc(c)} · мін ${op?.min ?? "—"}</span></button></li>`; }).join("")}</ul>` : ""}
+      ${f.loc ? `<div class="acts"><button class="btn btn-secondary" data-pick="${esc(f.loc)}">Залишки місця ${esc(f.loc)}</button></div>` : ""}`;
+  }
+  side.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => planPick(b.dataset.pick));
+  side.querySelectorAll("[data-focus]").forEach((b) => b.onclick = () => planFocusTo(b.dataset.focus));
+  side.querySelectorAll("[data-esel]").forEach((b) => b.onclick = () => { const n = TREE.nodes.get(b.dataset.esel); if (!n) return;
+    planState.esel = n.id === planState.focus ? null : n.id; planState.sel = n.loc && !n.kids.length ? n.loc : null; Plan.refresh(); renderSide(e); });
+  side.querySelector("[data-unsel]")?.addEventListener("click", () => { planState.esel = null; planState.sel = null; Plan.refresh(); renderSide(e); });
+}
+
+// ---------------------------------------------------------------- редагування моделі (лише 3D-модель, Odoo не змінюється)
+// Кожна зміна спершу лише показується в моделі (PENDING, за об'єктом, де її зробили), у сховище йде після «Зберегти».
+const fmtM = (x) => nf2.format(Math.round(x * 100) / 100);
+const Store = (() => {
+  let ref = null, chain = Promise.resolve(), st = "local", ro = false;
+  const TEXT = { local: "Збережене зберігається лише в цьому браузері", shared: "Збережене спільне для всіх, хто відкриває сторінку", saving: "Зберігаю…",
+    error: "Не вдалося зберегти зміни", ro: "Лише перегляд: зберігати модель можуть власник і учасники з правом змін" };
+  const set = (s) => { st = s; Plan.editbar(); };
+  async function init() {
+    if (typeof window.claude?.use !== "function") return;
+    const use = (name) => window.claude.use(name);
+    const db = await use("db").catch(() => null); if (!db) return;
+    const user = await use("user").catch(() => null);
+    if (user && (await user.can?.("data.write")) === false) ro = true;
+    ref = db.doc("model/layout"); set(ro ? "ro" : "shared");
+    ref.onSnapshot((snap) => {
+      if (snap.metadata.hasPendingWrites) return;
+      const next = normEdit(snap.exists ? snap.data() : null);
+      if (JSON.stringify(next) === JSON.stringify(SAVED)) return;
+      SAVED = next; recompute(); applyEdit();
+    }, () => { ref = null; set("local"); });
+  }
+  // відповідь: "local" | "shared" | "fail" — для сповіщення «Збережено»
+  function save() {
+    const body = clone(SAVED);
+    if (!ref) { let ok = true; try { localStorage.setItem("wh-model-edit", JSON.stringify(body)); } catch (e) { ok = false; } Plan.editbar(); return Promise.resolve(ok ? "local" : "fail"); }
+    if (ro) return Promise.resolve("fail");
+    set("saving");
+    chain = chain.then(() => ref.set(body)).then(() => { set("shared"); return "shared"; }, (e) => { if (e?.code === "invalid_argument") { ro = true; set("ro"); } else set("error"); return "fail"; });
+    return chain;
+  }
+  return { init, save, text: () => TEXT[st], ro: () => ro };
+})();
+const savePend = () => { try { localStorage.setItem("wh-model-pending", JSON.stringify(PENDING)); } catch (e) {} };
+function applyEdit() { rebuildModel(); Plan.rebuild(); renderSide(cur()); Plan.editbar(); }
+// key — та сама форма на тому самому об'єкті: повторний «Показати» замінює свій попередній показ, якщо після нього нічого не міняли
+function change(obj, label, fn, key = null, params = null, objs = null) { REDO = [];
+  if (key && PENDING.length && PENDING[PENDING.length - 1].key === key) { PENDING.pop(); recompute(); rebuildModel(); }
+  const before = clone(EDIT); fn(EDIT); const diff = diffEdit(before, EDIT);
+  if (!diffEmpty(diff)) PENDING.push({ obj, ...(objs && objs.length > 1 ? { objs } : {}), key, label: typeof label === "function" ? label() : label, params: params && JSON.stringify(params), diff });
+  recompute(); savePend(); applyEdit();
+}
+const pendFor = (id) => { const ids = [].concat(id); return ids.includes("WH") ? PENDING.slice() : PENDING.filter((p) => (p.objs || [p.obj]).some((o) => ids.some((x) => inNode(o, x)))); };
+// разом із зміною зберігаються ті, без яких вона не має сенсу (новий ряд — для нового стелажа в ньому)
+function withDeps(sel) { const set = new Set(sel); let grow = true;
+  while (grow) { grow = false;
+    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id)]);
+    for (const q of PENDING) if (!set.has(q) && q.diff.add.put.some((a) => need.some((id) => inNode(id, a.id)))) { set.add(q); grow = true; } }
+  return PENDING.filter((p) => set.has(p)); }
+function saveObj(id) { if (Store.ro()) return; const sel = withDeps(pendFor(id)); if (!sel.length) return;
+  const what = Array.isArray(id) ? `виділене (${id.length})` : id === "WH" ? "усі зміни" : id === "types" ? "типи місць" : nodeLabel(TREE.nodes.get(id) || { id, name: lastSeg(id) });
+  SAVED = sel.reduce((s, p) => applyDiff(s, p.diff), clone(SAVED)); PENDING = PENDING.filter((p) => !sel.includes(p)); REDO = [];
+  const k = sel.length, cnt = `${k} ${plural(k, "зміна", "зміни", "змін")}`;
+  Store.save().then((r) => r === "fail" ? notify(`Не вдалося зберегти: ${what}`, "bad")
+    : notify(`Збережено: ${what} · ${cnt}`, "ok", r === "local" ? "Зберігається в цьому браузері" : "Модель оновлено для всіх, хто відкриває сторінку"));
+  recompute(); savePend(); applyEdit(); }
+function discardObj(id) { const k = pendFor(id).length; PENDING = PENDING.filter((p) => !pendFor(id).includes(p)); REDO = []; recompute(); savePend(); applyEdit();
+  if (k) notify(`Скасовано незбережених змін: ${k}`, "info"); }
+// сповіщення в куті екрана, як в Odoo
+function notify(text, kind = "ok", sub = "") {
+  let box = $("#o_notifs"); if (!box) { box = document.createElement("div"); box.id = "o_notifs"; box.setAttribute("aria-live", "polite"); document.body.append(box); }
+  const n = document.createElement("div"); n.className = `o_notif ${kind}`; n.setAttribute("role", "status");
+  n.innerHTML = `<span class="ic" aria-hidden="true">${kind === "ok" ? "✓" : kind === "bad" ? "!" : "i"}</span><div><b>${esc(text)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}</div><button class="x" aria-label="Закрити">×</button>`;
+  n.querySelector(".x").onclick = () => n.remove();
+  box.append(n); setTimeout(() => { n.classList.add("out"); setTimeout(() => n.remove(), 300); }, kind === "bad" ? 6000 : 3200);
+}
+// Ctrl+Z — прибрати останню незбережену зміну, Ctrl+Shift+Z / Ctrl+Y — повернути її
+let REDO = [];
+function undoEdit(say = false) {
+  if (!PENDING.length) { if (say) notify("Нема чого скасовувати", "info", "Скасовуються лише незбережені зміни"); return; }
+  const p = PENDING.pop(); REDO.push(p); recompute(); savePend(); applyEdit();
+  if (say) notify(`Скасовано: ${labelOf(p)}`, "info", `${MOD}+Shift+Z — повернути`); }
+function redoEdit() { const p = REDO.pop(); if (!p) { notify("Нема чого повертати", "info"); return; }
+  PENDING.push(p); recompute(); savePend(); applyEdit(); notify(`Повернуто: ${labelOf(p)}`, "info"); }
+// буфер для Ctrl+C / Ctrl+V: що скопійовано (вузли моделі)
+let CLIP = [];
+const namesOf = (ids) => ids.map((id) => nodeLabel(TREE.nodes.get(id) || { id, name: lastSeg(id) })).join(", ");
+function copySel() { const S = selIds(); if (!S.length) { notify("Нічого не виділено", "info", "Виділіть об'єкт у моделі, потім " + MOD + "+C"); return; }
+  CLIP = S; notify(`Скопійовано: ${namesOf(S)}`, "info", `${MOD}+V — вставити у виділене місце або поруч з оригіналом`); renderSide(cur()); }
+function pasteSel() { const ids = CLIP.filter((id) => TREE.nodes.has(id)); if (!ids.length) { notify("Буфер порожній", "info", `Спершу виділіть об'єкт і натисніть ${MOD}+C`); return; }
+  OPS.dup(ids, planState.esel || planState.focus); }
+const editStats = () => ({ added: Object.keys(DRAFT_LOC).filter((c) => TREE.byCode.has(c)).length,
+  removed: Object.keys(D.locations).filter((c) => !TREE.byCode.has(c)).length, pending: PENDING.length });
+
+// імена нових вузлів: наступний номер після наявних (R6 → R7, S05 → S06), яруси — L1…, стоси — A…
+const lastSeg = (id) => id.slice(id.lastIndexOf("/") + 1);
+const kidNames = (pid) => [...(TREE.nodes.get(pid)?.kids.map((k) => k.name) || []), ...EDIT.add.filter((a) => a.parent === pid).map((a) => a.name)];
+function nextNum(names, fb) { let best = null;
+  for (const s of names) { const m = /^(.*?)(\d+)$/.exec(s); if (m && (!best || +m[2] > +best[2])) best = m; }
+  return best ? best[1] + String(+best[2] + 1).padStart(best[2].length, "0") : fb; }
+const bumpNum = (s) => nextNum([s], `${s} 2`);
+const taken = (id) => TREE.nodes.has(id) || EDIT.del.includes(id) || EDIT.add.some((a) => a.id === id);
+function uniqId(parent, name, bump) { let id = `${parent}/${name}`; for (let i = 0; taken(id) && i < 500; i++) { name = bump(name); id = `${parent}/${name}`; } return { id, name }; }
+const codeTaken = (c) => !!D.locations[c] || TREE.byCode.has(c) || EDIT.add.some((a) => a.code === c);
+function uniqCode(c) { let k = c; for (let i = 2; codeTaken(k); i++) k = `${c}-${i}`; return k; }
+const short = (id, tp) => lastSeg(id).replace(new RegExp(`^${tp}-`), "");
+
+function addLevel(e, bid, tp, lvl) {
+  const names = kidNames(bid), letters = names.length && names.every((s) => /^[A-Z]$/.test(s));
+  const nm = letters ? "ABCDEFGHIJKL"[lvl] : `L${lvl + 1}`, id = `${bid}/${nm}`;
+  if (e.del.includes(id)) { e.del = e.del.filter((d) => d !== id); return nm; } // ярус з Odoo повертається на місце
+  if (taken(id)) return nm;
+  const rid = bid.slice(0, bid.lastIndexOf("/"));
+  e.add.push({ id, parent: bid, name: nm, kind: "level", tp, lvl, code: uniqCode(`${tp}-${short(rid, tp)}-${lastSeg(bid)}-${nm}`) });
+  return nm;
+}
+function addBay(e, rid, tp, nl) {
+  const t = TY(tp);
+  if (t.form === "stack") {
+    const ls = kidNames(rid).filter((s) => /^[A-Z]$/.test(s)), nm = ls.length ? String.fromCharCode(Math.max(...ls.map((s) => s.charCodeAt(0))) + 1) : "A";
+    const u = uniqId(rid, nm, (s) => String.fromCharCode(s.charCodeAt(0) + 1));
+    e.add.push({ id: u.id, parent: rid, name: u.name, kind: "bayleaf", tp, code: uniqCode(`${tp}-${short(rid, tp)}${u.name}`) }); return u.name;
+  }
+  const u = uniqId(rid, nextNum(kidNames(rid), "S01"), bumpNum);
+  e.add.push({ id: u.id, parent: rid, name: u.name, kind: "bay", tp });
+  for (let l = 0; l < nl; l++) addLevel(e, u.id, tp, l);
+  return u.name;
+}
+const clampN = (v, a, b, d) => { const n = Math.round(+v); return Number.isFinite(n) ? Math.min(b, Math.max(a, n)) : d; };
+const rackOf = (id) => { let n = TREE.nodes.get(id); while (n && n.type !== "rack") n = n.parent && TREE.nodes.get(n.parent); return n || null; };
+// куди можна вставити копію: ярус — у стелаж, стелаж — у ряд тієї ж конструкції, ряд — у зону, зона й місце на підлозі — у зону
+const isZoneLeaf = (n) => n.type === "group" && !!n.loc && !n.kids.length;
+function canHold(P, src) { if (!P || inNode(P.id, src.id)) return false;
+  if (src.type === "level") return P.type === "bay";
+  if (src.type === "bay") return P.type === "rack" && TY(P.tp).form !== "stack";
+  if (src.type === "bayleaf") return P.type === "rack" && TY(P.tp).form === "stack";
+  if (src.type === "rack") return P.type === "rackset" || (P.type === "group" && !isZoneLeaf(P));
+  return P.type === "group" && !isZoneLeaf(P); }
+function dropInto(src, tid) { let x = TREE.nodes.get(tid); while (x && !canHold(x, src)) x = x.parent && TREE.nodes.get(x.parent); return x || null; }
+const r1 = (v) => Math.max(0, Math.round(v * 10) / 10);
+// місце для копії об'єкта, поставленого вручну: поруч, де нічого не стоїть
+function freeSpot(src, P, placed) { const gap = 1.2, sx = src.rot ? src.w + gap : 0, sy = src.rot ? 0 : src.d + gap;
+  const rects = P.kids.map((k) => ({ x: k.ox, y: k.oy, w: k.w, d: k.d })).concat(placed);
+  const hits = (x, y) => rects.some((r) => x < r.x + r.w && r.x < x + src.w && y < r.y + r.d && r.y < y + src.d);
+  for (let i = 1; i < 40; i++) { const x = r1(src.ox + sx * i), y = r1(src.oy + sy * i); if (!hits(x, y)) return { x, y }; }
+  return { x: r1(src.ox + sx), y: r1(src.oy + sy) }; }
+const OPS = {
+  rack(gid, f, key) { const tp = f.tp, t = TY(tp), nb = clampN(f.nb, 1, 40, 5), nl = clampN(f.nl, 1, 12, t.lv || 1); let nm = "";
+    change(gid, () => `Додано ряд ${nm}: ${t.name}, ${nb} ${t.form === "stack" ? "стосів" : `стел. × ${nl} яр.`}`, (e) => {
+      const g = TREE.nodes.get(gid), names = g.kids.filter((k) => k.type === "rack").map((k) => k.name).concat(e.add.filter((a) => a.parent === gid && a.kind === "rack").map((a) => a.name));
+      const u = uniqId(gid, nextNum(names, t.form === "stack" ? "01" : "R1"), bumpNum); nm = u.name;
+      e.add.push({ id: u.id, parent: gid, name: u.name, kind: "rack", tp });
+      for (let i = 0; i < nb; i++) addBay(e, u.id, tp, nl); }, key, f); },
+  zone(gid, f, key) { const tp = f.tp, cnt = clampN(f.cnt, 1, 30, 1); const codes = [];
+    change(gid, () => `Додано ${TY(tp).name.toLowerCase()}: ${codes.join(", ")}`, (e) => { for (let i = 0; i < cnt; i++) { let k = 1; while (codeTaken(`${tp}-${k}`)) k++; const code = `${tp}-${k}`;
+      const u = uniqId(gid, code, bumpNum); codes.push(code); e.add.push({ id: u.id, parent: gid, name: u.name, kind: "zone", tp, code }); } }, key, f); },
+  group(gid, f, key) { const nm = (f.name || "").trim().replace(/\//g, "-").slice(0, 40) || "Нова зона"; let got = nm;
+    change(gid, () => `Додано зону «${got}»`, (e) => { const u = uniqId(gid, nm, bumpNum); got = u.name; e.add.push({ id: u.id, parent: gid, name: u.name, kind: "group" }); }, key, f); },
+  bay(rid, f, key) { const r = TREE.nodes.get(rid), stack = TY(r.tp).form === "stack", cnt = clampN(f.cnt, 1, 40, 1), nl = clampN(f.nl, 1, 12, TY(r.tp).lv || 1); const names = [];
+    change(rid, () => `Додано ${stack ? "стос" : "стелаж"} ${names.join(", ")}${stack ? "" : ` × ${nl} яр.`}`, (e) => { for (let i = 0; i < cnt; i++) names.push(addBay(e, rid, r.tp, nl)); }, key, f); },
+  level(bid, f, key) { const b = TREE.nodes.get(bid); let nm = "";
+    change(bid, () => `Додано ярус ${nm}`, (e) => { nm = addLevel(e, bid, b.tp, b.nLv); }, key, f); },
+  settp(rid, f, key) { if (!TYPES.has(f.tp)) return;
+    change(rid, `Тип ряду: ${TY(f.tp).name}`, (e) => { e.set = e.set.filter((s) => s.id !== rid); e.set.push({ id: rid, tp: f.tp }); }, key, f); },
+  move(list) { list = list.filter((p) => TREE.nodes.has(p.id)); if (!list.length) return; const ids = list.map((p) => p.id), one = ids.length === 1;
+    change(one ? ids[0] : lca(ids), one ? `Переміщено ${nodeLabel(TREE.nodes.get(ids[0]))}` : `Переміщено разом: ${namesOf(ids)}`, (e) => {
+      e.pos = e.pos.filter((p) => !ids.includes(p.id)); list.forEach((p) => e.pos.push({ id: p.id, x: r1(p.x), y: r1(p.y) })); }, `move@${ids.slice().sort().join("|")}`, null, ids); },
+  rotate(ids) { const rs = [...new Set([].concat(ids))].map((id) => TREE.nodes.get(id)).filter((r) => r && r.type === "rack"); if (!rs.length) return;
+    const rid = rs.map((r) => r.id), key = `rot@${rid.slice().sort().join("|")}`, last = PENDING[PENDING.length - 1];
+    if (last && last.key === key) { PENDING.pop(); recompute(); savePend(); applyEdit(); return; } // другий поворот поспіль скасовує перший
+    const r = rs[0], lbl = rs.length > 1 ? `Повернуто на 90°: ${namesOf(rid)}` : r.rot ? `${nodeLabel(r)}: повернуто назад` : `${nodeLabel(r)}: повернуто на 90°`;
+    change(rs.length > 1 ? lca(rid) : r.id, lbl, (e) => { for (const id of rid) {
+      const on = (e.rot || []).some((x) => x.id === id); e.rot = (e.rot || []).filter((x) => x.id !== id); if (!on) e.rot.push({ id, r: 90 }); } }, key, null, rid); },
+  // копія поруч (target не задано) або вставка в target; та сама будова, місця нові й порожні; кілька об'єктів — однією зміною
+  dup(ids, target = null) {
+    ids = [].concat(ids).filter((id) => id && id !== "WH" && TREE.nodes.has(id));
+    ids = ids.filter((id) => !ids.some((o) => o !== id && inNode(id, o)));
+    if (!ids.length) return [];
+    const srcs = ids.map((id) => TREE.nodes.get(id)), dests = srcs.map((s) => (target && dropInto(s, target)) || TREE.nodes.get(s.parent));
+    const away = dests.some((P, i) => P.id !== srcs[i].parent), made = [], pairs = [], n0 = PENDING.length; let cnt = 0;
+    change(dests[0].id, () => `${away ? `Вставлено в ${nodeLabel(dests[0])}` : "Скопійовано"}: ${pairs.map(([s, c]) => `${nodeLabel(s)} → ${nodeLabel(c)}`).join(", ")}${cnt > 1 ? ` (${placesTxt(cnt)})` : ""}`, (e) => {
+      const freeZone = (n) => { let c = n.loc || `${n.tp}-1`; for (let i = 0; i < 999 && codeTaken(c); i++) c = nextNum([c], `${c}-2`); return c; }; // KIT-01 → KIT-13
+      const copy = (n, pid, name, tp) => {
+        const u = uniqId(pid, name, bumpNum), kind = isZoneLeaf(n) ? "zone" : n.type === "rackset" ? "group" : n.type, ty = tp || n.tp || null;
+        const a = { id: u.id, parent: pid, name: u.name, kind, tp: ty };
+        if (n.type === "level") { const rid = pid.slice(0, pid.lastIndexOf("/")); a.lvl = n.lvl; a.code = uniqCode(`${ty}-${short(rid, ty)}-${lastSeg(pid)}-${u.name}`); }
+        else if (n.type === "bayleaf") a.code = uniqCode(`${ty}-${short(pid, ty)}${u.name}`);
+        else if (kind === "zone") { a.code = freeZone(n); a.name = a.code; a.id = uniqId(pid, a.code, bumpNum).id; }
+        if (a.code) cnt++;
+        e.add.push(a);
+        if (n.type === "rack" && n.rot) e.rot = [...(e.rot || []).filter((x) => x.id !== a.id), { id: a.id, r: 90 }];
+        n.kids.forEach((k) => copy(k, a.id, k.name, tp));
+        return a.id;
+      };
+      const placed = [];
+      srcs.forEach((src, i) => {
+        const P = dests[i], same = P.id === src.parent, tp = !same && ["level", "bay", "bayleaf"].includes(src.type) ? P.tp : null;
+        const racks = () => P.kids.filter((k) => k.type === "rack").map((k) => k.name).concat(e.add.filter((x) => x.parent === P.id && x.kind === "rack").map((x) => x.name));
+        let id;
+        if (src.type === "level") { const lv = Math.max(P.nLv || 0, ...e.add.filter((x) => x.parent === P.id && x.kind === "level").map((x) => x.lvl + 1)), names = kidNames(P.id), letters = names.length && names.every((s) => /^[A-Z]$/.test(s));
+          id = copy({ ...src, lvl: lv, kids: [] }, P.id, letters ? "ABCDEFGHIJKL"[lv] : `L${lv + 1}`, tp); }
+        else if (src.type === "bayleaf") { const ls = kidNames(P.id).filter((s) => /^[A-Z]$/.test(s)); id = copy(src, P.id, String.fromCharCode(Math.max(64, ...ls.map((s) => s.charCodeAt(0))) + 1), tp); }
+        else if (src.type === "rack") id = copy(src, P.id, nextNum(racks(), "R1"));
+        else if (src.type === "bay") id = copy(src, P.id, nextNum(kidNames(P.id), "S01"), tp);
+        else if (isZoneLeaf(src)) id = copy(src, P.id, src.name);
+        else id = copy(src, P.id, `${src.name} копія`);
+        // об'єкт, поставлений вручну, — копія поруч із ним, а не в кінці зони
+        if (same && src.moved) { const s = freeSpot(src, P, placed); placed.push({ x: s.x, y: s.y, w: src.w, d: src.d }); e.pos.push({ id, x: s.x, y: s.y }); }
+        made.push(id); pairs.push([src, { id, name: lastSeg(id), type: src.type }]);
+      });
+    });
+    // зміна належить самим копіям — її можна зберегти з панелі копії
+    const last = PENDING[PENDING.length - 1];
+    if (last && PENDING.length > n0 && made.length) { last.obj = made.length === 1 ? made[0] : lca(made); if (made.length > 1) last.objs = made.slice(); savePend(); }
+    const ok = made.filter((id) => TREE.nodes.has(id));
+    if (ok.length) { planState.msel = ok.length > 1 ? ok : []; planState.esel = ok[ok.length - 1]; Plan.refresh(); renderSide(cur()); }
+    return made; },
+  unpos(rid) { const r = TREE.nodes.get(rid); change(rid, `${nodeLabel(r)}: автоматичне положення`, (e) => { e.pos = e.pos.filter((p) => p.id !== rid); }); },
+  del(ids) { ids = [].concat(ids).filter((id) => id !== "WH" && TREE.nodes.has(id)); ids = ids.filter((id) => !ids.some((o) => o !== id && inNode(id, o))); if (!ids.length) return;
+    const ns = ids.map((id) => TREE.nodes.get(id)), n = ns[0], k = ns.reduce((s, x) => s + x.codes.length, 0), par = ns.map((x) => x.parent);
+    if (planState.esel && ids.some((id) => inNode(planState.esel, id))) planState.esel = n.parent;
+    planState.msel = planState.msel.filter((x) => !ids.some((id) => inNode(x, id))); if (planState.msel.length < 2) planState.msel = [];
+    const f = ns.find((x) => inNode(planState.focus, x.id)); if (f) planState.focus = f.parent;
+    change(ns.length > 1 ? lca(par) : n.parent, ns.length > 1 ? `Прибрано: ${namesOf(ids)}${k > 1 ? ` (${placesTxt(k)})` : ""}` : `Прибрано ${nodeLabel(n)}${k > 1 ? ` (${placesTxt(k)})` : ""}`, (e) => {
+      for (const x of ns) { const id = x.id;
+        e.add = e.add.filter((a) => !inNode(a.id, id)); e.set = e.set.filter((s) => !inNode(s.id, id)); e.pos = e.pos.filter((p) => !inNode(p.id, id));
+        if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); } } }, null, null, [...new Set(par)]); },
+};
+// мітка зміни може залежати від імен, які з'являються під час самої зміни
+const labelOf = (p) => typeof p.label === "string" ? p.label : "Зміна";
+const typeOpts = (forms, sel) => typeList().filter((t) => forms.includes(t.form)).map((t) => `<option value="${esc(t.id)}"${t.id === sel ? " selected" : ""}>${esc(t.name)} · ${esc(t.id)}</option>`).join("");
+const typeInfo = (t) => `${esc(t.name)} · ${esc(FORMS[t.form])} · ${fmtM(t.w)} × ${fmtM(t.d)} м${RACKED.includes(t.form) ? ` · ярус ${fmtM(t.lh)} м` : ""}`;
+const placesTxt = (k) => `${k} ${plural(k, "місце", "місця", "місць")}`;
+// значення форм не губляться, коли панель перемальовується після «Показати»
+const FORMV = {};
+const fv = (k, name, d) => FORMV[k]?.[name] ?? d;
+const btns = (ro) => `<div class="ed-btns"><button type="button" class="btn btn-secondary" data-show>Показати</button>${ro ? "" : '<button type="submit" class="btn btn-primary">Зберегти</button>'}</div>`;
+function renderMultiSide(side, S) {
+  const ns = S.map((id) => TREE.nodes.get(id)), k = ns.reduce((s, x) => s + x.codes.length, 0), ro = Store.ro(), pend = pendFor(S);
+  const mv = moveTargets(S), rk = [...new Set(S.map((id) => rackOf(id)?.id).filter(Boolean))];
+  let h = `<div class="lab">Редагування моделі · виділено кілька</div><h2>Виділено ${S.length} ${plural(S.length, "об'єкт", "об'єкти", "об'єктів")}</h2>
+    <div class="ed-info">${placesTxt(k)}${mv.length ? ` · перетягніть будь-який із виділених у моделі — разом переміститься: ${esc(namesOf(mv.map((x) => x.id)))}` : " · ці об'єкти не пересуваються мишкою (пересуваються ряди, місця на підлозі й зони всередині видимого рівня)"}</div>
+    <div class="acts"><button class="btn btn-secondary" data-dup title="${MOD}+D">⧉ Дублювати всі</button><button class="btn btn-secondary" data-copy title="${MOD}+C">Копіювати</button>${rk.length ? `<button class="btn btn-secondary" data-rot title="Клавіша R">⟳ Повернути ${rk.length > 1 ? "ряди" : "ряд"}</button>` : ""}<button class="btn btn-danger" data-delall>Прибрати всі · ${placesTxt(k)}</button></div>`;
+  if (pend.length) h += `<div class="ed-pend"><b>Не збережено · ${pend.length}</b><ul>${pend.map((p) => `<li>${esc(labelOf(p))}</li>`).join("")}</ul>
+    <div class="acts" style="margin-top:8px">${ro ? "" : `<button class="btn btn-primary" data-save>Зберегти виділене</button>`}<button class="btn btn-secondary" data-discard>Скасувати</button></div></div>`;
+  h += `<div class="sec">Виділено · ${S.length}</div><ul class="lowlist ed-kids">${ns.map((x) => `<li><button data-esel="${esc(x.id)}" title="Виділити лише цей"><span class="t">${esc(nodeLabel(x))}${x.pend ? ' <span class="ed-pnd">не збережено</span>' : x.draft ? ' <span class="ed-new">нове</span>' : ""}</span><span class="mut" style="font-size:12px">${x.codes.length}</span>
+      <span class="m">${esc(pathOf(x).slice(1, -1).map(nodeLabel).join(" › ") || "WH")}</span></button><button class="x" data-unpick="${esc(x.id)}" aria-label="Прибрати ${esc(nodeLabel(x))} з виділення" title="Прибрати з виділення">×</button></li>`).join("")}</ul>
+    <div class="acts"><button class="btn btn-link" data-unsel>Зняти виділення</button></div>
+    <p class="ed-note">${MOD}+клік у моделі — додати об'єкт до виділення або прибрати з нього. ${MOD}+C / ${MOD}+V — копіювати й вставити, ${MOD}+Z — скасувати останню незбережену зміну, ${MOD}+Shift+Z — повернути.</p>`;
+  side.innerHTML = h;
+  const re = () => { Plan.refresh(); renderSide(cur()); };
+  side.querySelectorAll("[data-esel]").forEach((b) => b.onclick = () => editPick(b.dataset.esel, true));
+  side.querySelectorAll("[data-unpick]").forEach((b) => b.onclick = () => { const r = S.filter((x) => x !== b.dataset.unpick); planState.msel = r.length > 1 ? r : []; planState.esel = r[r.length - 1]; re(); });
+  side.querySelector("[data-unsel]").onclick = () => { planState.msel = []; planState.esel = planState.focus; re(); };
+  side.querySelector("[data-dup]").onclick = () => OPS.dup(S);
+  side.querySelector("[data-copy]").onclick = copySel;
+  side.querySelector("[data-rot]")?.addEventListener("click", () => OPS.rotate(rk));
+  side.querySelector("[data-delall]").onclick = () => OPS.del(S);
+  side.querySelector("[data-save]")?.addEventListener("click", () => saveObj(S));
+  side.querySelector("[data-discard]")?.addEventListener("click", () => discardObj(S));
+}
+function renderEditSide(side) {
+  const S = selIds(); if (S.length > 1) return renderMultiSide(side, S);
+  const n = TREE.nodes.get(planState.esel || planState.focus), t = n.tp ? TY(n.tp) : null, ro = Store.ro();
+  const isGroup = n.type === "group" || n.type === "rackset", zoneLeaf = n.type === "group" && n.loc && !n.kids.length;
+  const chips = pathOf(n).map((x) => `<button class="o_chip${x.id === n.id ? " on" : ""}" data-esel="${esc(x.id)}">${esc(nodeLabel(x))}</button>`).join('<span class="o_chip_sep">›</span>');
+  const K = (op) => `form:${op}@${n.id}`;
+  let h = `<div class="lab">Редагування моделі${n.id === "WH" ? "" : n.pend ? ' · <span class="ed-pnd">не збережено</span>' : n.draft ? ' · <span class="ed-new">нове</span>' : " · з Odoo"}</div><h2>${esc(nodeLabel(n))}</h2>
+    <div class="o_chips" style="margin-top:6px">${chips}</div>
+    <div class="ed-info">${t && !(isGroup && !zoneLeaf) ? `${typeInfo(t)}<br>` : ""}${placesTxt(n.codes.length)} · ${fmtM(n.w)} × ${fmtM(n.d)} м${n.loc ? ` · <span class="code">${esc(n.loc)}</span>` : ""}</div>`;
+  const clip = CLIP.filter((id) => TREE.nodes.has(id)), dest = clip.length ? dropInto(TREE.nodes.get(clip[0]), n.id) : null;
+  if (n.id !== "WH" || clip.length) h += `<div class="acts">${n.id === "WH" ? "" : `<button class="btn btn-secondary" data-dup title="${MOD}+D">⧉ Дублювати ${esc(nodeLabel(n))}</button><button class="btn btn-secondary" data-copy title="${MOD}+C">Копіювати</button>`}${clip.length ? `<button class="btn btn-secondary" data-paste title="${MOD}+V">Вставити ${esc(namesOf(clip))}${dest ? ` → ${esc(nodeLabel(dest))}` : ""}</button>` : ""}${n.id === "WH" ? "" : `<button class="btn btn-danger" data-del="${esc(n.id)}">Прибрати ${esc(nodeLabel(n))}${n.codes.length > 1 ? ` · ${placesTxt(n.codes.length)}` : ""}</button>`}</div>`;
+  const pend = pendFor(n.id);
+  if (pend.length) h += `<div class="ed-pend"><b>Не збережено · ${pend.length}</b><ul>${pend.map((p) => `<li>${esc(labelOf(p))}</li>`).join("")}</ul>
+    <div class="acts" style="margin-top:8px">${ro ? "" : `<button class="btn btn-primary" data-save>Зберегти ${n.id === "WH" ? "все" : esc(nodeLabel(n))}</button>`}<button class="btn btn-secondary" data-discard>Скасувати</button></div></div>`;
+  if (isGroup && !zoneLeaf) {
+    const rk = n.kids.filter((k) => k.type === "rack"), tp0 = fv(K("rack"), "tp", rk.length ? rk[rk.length - 1].tp : "FUR"), st0 = TY(tp0).form === "stack";
+    h += `<div class="sec">Додати ряд</div><form class="ed-form" data-op="rack">
+        <label class="wide">Тип місць<select name="tp">${typeOpts([...RACKED, "stack"], tp0)}</select></label>
+        <label>${st0 ? "Стосів" : "Стелажів"}<input type="number" name="nb" min="1" max="40" value="${esc(fv(K("rack"), "nb", 5))}"></label>
+        <label>Ярусів<input type="number" name="nl" min="1" max="12" value="${esc(fv(K("rack"), "nl", TY(tp0).lv || 1))}"${st0 ? " disabled" : ""}></label>${btns(ro)}</form>
+      <div class="sec">Додати місце на підлозі</div><form class="ed-form" data-op="zone">
+        <label class="wide">Тип місць<select name="tp">${typeOpts(["zone"], fv(K("zone"), "tp", "ZONE"))}</select></label>
+        <label>Кількість<input type="number" name="cnt" min="1" max="30" value="${esc(fv(K("zone"), "cnt", 1))}"></label>${btns(ro)}</form>
+      <div class="sec">Додати зону</div><form class="ed-form" data-op="group">
+        <label class="wide">Назва<input name="name" value="${esc(fv(K("group"), "name", "Нова зона"))}" maxlength="40"></label>${btns(ro)}</form>`;
+  }
+  if (n.type === "rack") {
+    const stack = t.form === "stack", lv = Math.max(0, ...n.kids.map((k) => k.nLv || 0)) || t.lv || 1;
+    const ov = TREE.nodes.get(n.parent).kids.filter((k) => k !== n && k.x < n.x + n.w && n.x < k.x + k.w && k.y < n.y + n.d && n.y < k.y + k.d);
+    h += `<div class="sec">Положення</div>${ov.length ? `<div class="ed-warn">Перетинається з: ${ov.map((k) => esc(nodeLabel(k))).join(", ")}. Перетягніть ряд на вільне місце.</div>` : ""}<div class="ed-info" style="margin-top:0">${n.moved ? "Поставлено вручну" : "Автоматично"}${n.rot ? " · повернуто на 90°" : ""} · ${fmtM(n.ox)}; ${fmtM(n.oy)} м від кута «${esc(nodeLabel(TREE.nodes.get(n.parent)))}». ${inNode(planState.focus, n.id) ? "Щоб перетягнути ряд, виберіть рівень вище." : "Перетягніть ряд мишкою в моделі."}</div>
+      <div class="acts" style="margin-top:6px"><button class="btn btn-secondary" data-rot title="Клавіша R">⟳ Повернути на 90°</button>${n.moved ? `<button class="btn btn-secondary" data-unpos>Автоматичне положення</button>` : ""}</div>
+      <div class="sec">Тип ряду</div><form class="ed-form" data-op="settp"><label class="wide"><span class="sr">Тип ряду</span><select name="tp">${typeOpts(stack ? ["stack"] : RACKED, fv(K("settp"), "tp", n.tp))}</select></label>${btns(ro)}</form>
+      <div class="sec">Додати ${stack ? "стос" : "стелаж"}</div><form class="ed-form" data-op="bay">
+        <label>Кількість<input type="number" name="cnt" min="1" max="40" value="${esc(fv(K("bay"), "cnt", 1))}"></label>
+        ${stack ? "" : `<label>Ярусів<input type="number" name="nl" min="1" max="12" value="${esc(fv(K("bay"), "nl", lv))}"></label>`}${btns(ro)}</form>`;
+  }
+  if (n.type === "bay") h += `<div class="sec">Додати ярус нагорі</div><form class="ed-form" data-op="level"><input type="hidden" name="at" value="${n.nLv}">${btns(ro)}</form>`;
+  if (n.kids.length) h += `<div class="sec">Усередині · ${n.kids.length}</div><ul class="lowlist ed-kids">${n.kids.map((k) => `<li><button data-esel="${esc(k.id)}"><span class="t">${esc(nodeLabel(k))}${k.pend ? ' <span class="ed-pnd">не збережено</span>' : k.draft ? ' <span class="ed-new">нове</span>' : ""}</span><span class="mut" style="font-size:12px">${k.codes.length}</span>
+      <span class="m">${k.tp && k.type !== "group" ? esc(TY(k.tp).name) : placesTxt(k.codes.length)}${k.loc ? ` · ${esc(k.loc)}` : ""}</span></button><button class="x" data-del="${esc(k.id)}" aria-label="Прибрати ${esc(nodeLabel(k))}" title="Прибрати з моделі (до збереження — лише показ)">×</button></li>`).join("")}</ul>`;
+  h += `<p class="ed-note">«Показати» — зміна видна в моделі, але ще не збережена (бірюзова). «Зберегти» записує зміни цього об'єкта. «Дублювати» (${MOD}+D) створює поруч копію виділеного з порожніми місцями; ${MOD}+C / ${MOD}+V — копіювати й вставити в інше місце; ${MOD}+клік — виділити кілька об'єктів і перетягнути разом; ${MOD}+Z — скасувати останню незбережену зміну. В Odoo нічого не змінюється.${ro ? ` ${esc(Store.text())}.` : ""}</p>`;
+  side.innerHTML = h;
+  side.querySelectorAll("[data-esel]").forEach((b) => b.onclick = () => editPick(b.dataset.esel, true));
+  side.querySelectorAll("[data-del]").forEach((b) => b.onclick = () => OPS.del(b.dataset.del));
+  side.querySelector("[data-save]")?.addEventListener("click", () => saveObj(n.id));
+  side.querySelector("[data-discard]")?.addEventListener("click", () => discardObj(n.id));
+  side.querySelector("[data-unpos]")?.addEventListener("click", () => OPS.unpos(n.id));
+  side.querySelector("[data-rot]")?.addEventListener("click", () => OPS.rotate(n.id));
+  side.querySelector("[data-dup]")?.addEventListener("click", () => OPS.dup(n.id));
+  side.querySelector("[data-copy]")?.addEventListener("click", copySel);
+  side.querySelector("[data-paste]")?.addEventListener("click", pasteSel);
+  side.querySelectorAll("form.ed-form").forEach((f) => {
+    const op = f.dataset.op, k = K(op), val = () => Object.fromEntries(new FormData(f));
+    f.querySelector("[data-show]").onclick = () => { FORMV[k] = val(); OPS[op](n.id, val(), k); };
+    f.onsubmit = (ev) => { ev.preventDefault(); const v = val(), pk = JSON.stringify(v);
+      if (!PENDING.some((p) => p.key === k && p.params === pk)) OPS[op](n.id, v, k);
+      delete FORMV[k]; saveObj(n.id); };
+    if (op === "rack") f.tp.onchange = () => { const tt = TY(f.tp.value); f.nl.disabled = tt.form === "stack"; f.nl.value = tt.lv || 1; };
+  });
+}
+function editPick(id, raw = false) { if (!id || !TREE.nodes.has(id)) return; planState.msel = []; planState.esel = raw ? id : (resolvePick(id)?.id || planState.focus); Plan.refresh(); renderSide(cur()); }
+function setEdit(on) {
+  planState.edit = on; planState.esel = on ? planState.focus : null; planState.sel = null; planState.msel = [];
+  Plan.editbar(); Plan.refresh(); renderSide(cur());
+}
+
+// типи місць: таблиця з розмірами; зміна одразу видна в моделі, зберігається кнопкою «Зберегти типи»
+function typeUse() { const u = {}; for (const n of TREE.nodes.values()) if (n.tp && (n.type === "bay" || n.type === "bayleaf" || (n.type === "group" && n.loc && !n.kids.length))) u[n.tp] = (u[n.tp] || 0) + 1; return u; }
+function openTypes() {
+  closeTypes();
+  const dlg = document.createElement("div"); dlg.className = "o_modal_bg"; dlg.id = "types-dlg";
+  dlg.innerHTML = `<div class="o_modal" role="dialog" aria-modal="true" aria-labelledby="types-h"><header><h3 id="types-h">Типи місць зберігання</h3><button class="x" data-close aria-label="Закрити">×</button></header>
+    <div class="body"><p class="mut" style="margin:0 0 10px;font-size:13px">Розміри однієї секції в метрах. Зміна одразу видна в моделі на всіх місцях цього типу, а зберігається кнопкою «Зберегти типи». Поки що це налаштування лише для 3D-моделі.</p><div class="listwrap"><table class="o_list ty"><thead><tr>
+      <th class="first">Код</th><th>Назва</th><th>Конструкція</th><th class="n">Ширина</th><th class="n">Глибина</th><th class="n">Висота ярусу</th><th class="n">Ярусів</th><th class="n">Місць</th><th></th></tr></thead><tbody></tbody></table></div></div>
+    <footer><button class="btn btn-secondary" data-new>+ Новий тип</button><span class="sp"></span><span class="mut" data-pst style="font-size:13px"></span>
+      <button class="btn btn-secondary" data-tdisc>Скасувати зміни</button><button class="btn btn-primary" data-tsave>Зберегти типи</button></footer></div>`;
+  document.body.append(dlg);
+  const tb = dlg.querySelector("tbody");
+  const foot = () => { const k = pendFor("types").length; dlg.querySelector("[data-pst]").textContent = k ? "Є незбережені зміни типів" : "Усе збережено";
+    dlg.querySelector("[data-tsave]").disabled = !k || Store.ro(); dlg.querySelector("[data-tsave]").hidden = Store.ro(); dlg.querySelector("[data-tdisc]").disabled = !k; };
+  const draw = () => { const use = typeUse();
+    tb.innerHTML = typeList().map((t) => { const u = use[t.id] || 0, base = BASE_TYPES.some((b) => b.id === t.id), rk = RACKED.includes(t.form);
+      const forms = u ? (rk ? RACKED : [t.form]) : Object.keys(FORMS);
+      return `<tr data-id="${esc(t.id)}"><td class="first"><input name="id" value="${esc(t.id)}" maxlength="6" class="code" ${u || base ? "readonly" : ""} aria-label="Код"></td>
+        <td><input name="name" value="${esc(t.name)}" maxlength="40" aria-label="Назва"></td>
+        <td><select name="form" aria-label="Конструкція">${forms.map((f) => `<option value="${f}"${f === t.form ? " selected" : ""}>${FORMS[f]}</option>`).join("")}</select></td>
+        <td class="n"><input name="w" type="number" step="0.1" min="0.3" max="12" value="${t.w}" aria-label="Ширина, м"></td>
+        <td class="n"><input name="d" type="number" step="0.1" min="0.3" max="12" value="${t.d}" aria-label="Глибина, м"></td>
+        <td class="n"><input name="lh" type="number" step="0.05" min="0.2" max="3" value="${t.lh || ""}" ${rk ? "" : "disabled"} aria-label="Висота ярусу, м"></td>
+        <td class="n"><input name="lv" type="number" step="1" min="1" max="12" value="${t.lv || ""}" ${rk ? "" : "disabled"} aria-label="Ярусів у новому стелажі"></td>
+        <td class="n">${u}</td><td><button class="x" data-rm ${u || base ? "disabled title=\"Тип використовується або базовий\"" : 'title="Видалити тип"'} aria-label="Видалити тип">×</button></td></tr>`; }).join("");
+    foot(); };
+  const setTypes = (list, label) => change("types", label, (e) => { e.types = list; }, "types");
+  const patch = (id, k, v) => setTypes(typeList().map((t) => {
+    if (t.id !== id) return { ...t };
+    const x = { ...t };
+    if (k === "name") x.name = v.trim().slice(0, 40) || t.name;
+    else if (k === "id") { const c = v.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6); if (c && !TYPES.has(c)) x.id = c; }
+    else if (k === "form") { x.form = v; if (RACKED.includes(v)) { x.lh = x.lh || 0.5; x.lv = x.lv || 4; } else { x.lh = 0; x.lv = 1; } }
+    else { const lim = { w: [0.3, 12], d: [0.3, 12], lh: [0.2, 3], lv: [1, 12] }[k], n = +v; if (Number.isFinite(n) && n > 0) x[k] = k === "lv" ? Math.round(Math.min(lim[1], Math.max(lim[0], n))) : Math.min(lim[1], Math.max(lim[0], Math.round(n * 100) / 100)); }
+    return x; }), "Змінено типи місць");
+  tb.addEventListener("change", (ev) => { const i = ev.target, tr = i.closest("tr"); if (!tr || !i.name) return; patch(tr.dataset.id, i.name, i.value); if (i.name === "form" || i.name === "id") draw(); else foot(); });
+  tb.addEventListener("click", (ev) => { const b = ev.target.closest("[data-rm]"); if (!b || b.disabled) return; const id = b.closest("tr").dataset.id;
+    setTypes(typeList().filter((t) => t.id !== id).map((t) => ({ ...t })), "Змінено типи місць"); draw(); });
+  dlg.querySelector("[data-new]").onclick = () => { let k = 1; while (TYPES.has(`T${k}`)) k++;
+    setTypes([...typeList().map((t) => ({ ...t })), { id: `T${k}`, name: "Новий тип", form: "shelf", w: 1.2, d: 0.6, lh: 0.5, lv: 4 }], "Змінено типи місць"); draw();
+    tb.querySelector("tr:last-child input[name=name]")?.select(); };
+  dlg.querySelector("[data-tsave]").onclick = () => { saveObj("types"); draw(); };
+  dlg.querySelector("[data-tdisc]").onclick = () => { discardObj("types"); draw(); };
+  dlg.addEventListener("click", (ev) => { if (ev.target === dlg || ev.target.closest("[data-close]")) closeTypes(); });
+  draw(); dlg.querySelector("input[name=name]")?.focus();
+}
+function closeTypes() { $("#types-dlg")?.remove(); }
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && $("#types-dlg")) { ev.stopPropagation(); closeTypes(); } }, true);
+
+const Plan = (() => {
+  const el = document.createElement("div");
+  el.innerHTML = `
+    <div class="planbar">
+      <div class="seg" role="group" aria-label="Вигляд плану"><button data-m="2d">2D</button><button data-m="3d">3D</button></div>
+      <div class="o_lvlbar" id="lvlbar" aria-label="Рівень локації"></div>
+      <button class="btn btn-secondary" id="ed-tg" aria-pressed="false">✎ Редагувати</button>
+    </div>
+    <div class="editbar" id="editbar" hidden>
+      <b id="ed-title">Режим редагування</b><span id="ed-count" class="mut"></span><span class="sp"></span>
+      <button class="btn btn-primary" id="ed-saveall">Зберегти все</button>
+      <button class="btn btn-secondary" id="ed-discall">Скасувати все</button>
+      <button class="btn btn-secondary" id="ed-undo" title="Скасувати останню незбережену зміну (${MOD}+Z)" aria-label="Прибрати останню незбережену зміну">↶</button>
+      <button class="btn btn-secondary" id="ed-types">Типи місць</button>
+      <button class="btn btn-link" id="ed-reset">Скинути до даних Odoo</button>
+      <span id="ed-st" class="ed-st"></span>
+    </div>
+    <div class="planbar2"><div class="seg pick" role="group" aria-label="Що виділяти кліком"><span class="lbl">Клік виділяє</span>${Object.entries(PICK).map(([k, v]) => `<button data-pk="${k}">${v}</button>`).join("")}</div>
+    <div class="legend"><span><i class="sw" style="background:var(--ok)"></i>30 % і більше</span>
+      <span><i class="sw" style="background:var(--warn)"></i>менше 30 % · нижче мінімуму</span>
+      <span><i class="sw" style="background:var(--bad)"></i>порожньо</span>
+      <span><i class="sw" style="border:1.5px solid var(--idle)"></i>зона без місткості</span>
+      <span><i class="sw" style="background:var(--new)"></i>нове · лише в моделі</span>
+      <span><i class="sw" style="background:var(--pend)"></i>не збережено</span></div></div>
+    <div class="vp" id="vp">
+      <div class="tools"><button id="z-up" aria-label="Рівень вище" title="Рівень вище">↑</button><button id="z-in" aria-label="Наблизити">+</button><button id="z-out" aria-label="Віддалити">−</button><button id="z-reset" aria-label="Показати вибраний рівень повністю" title="Показати рівень повністю">⟲</button></div>
+      <div class="status" id="vp-status"></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>`;
+  const vp = el.querySelector("#vp"), tip = el.querySelector("#tip"), lvlbar = el.querySelector("#lvlbar");
+  let svg = null, three = null, mode = planState.mode;
+  el.querySelectorAll(".seg [data-m]").forEach((b) => b.onclick = () => { mode = planState.mode = b.dataset.m; try { localStorage.setItem("wh-mode", mode); } catch (e) {} apply(); });
+  el.querySelectorAll(".seg [data-pk]").forEach((b) => b.onclick = () => { planState.pick = b.dataset.pk; try { localStorage.setItem("wh-pick", planState.pick); } catch (e) {}
+    el.querySelectorAll(".seg [data-pk]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); });
+  // клавіші в режимі редагування: Ctrl/⌘ + C, V, D, Z (Shift+Z або Y — повернути); R — повернути ряд; Esc — зняти виділення
+  // ev.code — працює і в українській розкладці
+  document.addEventListener("keydown", (ev) => {
+    if (!planState.edit || !el.isConnected || $("#types-dlg") || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || document.activeElement?.isContentEditable) return;
+    const c = ev.code;
+    if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
+      if (c === "KeyZ" && !ev.shiftKey) { ev.preventDefault(); undoEdit(true); }
+      else if ((c === "KeyZ" && ev.shiftKey) || c === "KeyY") { ev.preventDefault(); redoEdit(); }
+      else if (c === "KeyC") { if (String(getSelection() || "").trim()) return; ev.preventDefault(); copySel(); }
+      else if (c === "KeyV") { ev.preventDefault(); pasteSel(); }
+      else if (c === "KeyD") { ev.preventDefault(); const S = selIds(); if (S.length) OPS.dup(S); }
+      return;
+    }
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    if (ev.key === "Escape" && selIds().length) { planState.msel = []; planState.esel = planState.focus; Plan.refresh(); renderSide(cur()); return; }
+    if (c === "KeyR") { const S = selIds(), rs = (S.length ? S : [planState.esel]).map((id) => id && rackOf(id)?.id).filter(Boolean);
+      if (rs.length && !Store.ro()) { ev.preventDefault(); OPS.rotate(rs); } } });
+  el.querySelector("#z-in").onclick = () => (mode === "2d" ? S2.zoom(0.7) : three?.zoom(0.75));
+  el.querySelector("#z-out").onclick = () => (mode === "2d" ? S2.zoom(1 / 0.7) : three?.zoom(1 / 0.75));
+  el.querySelector("#z-reset").onclick = () => (mode === "2d" ? S2.fit() : three?.fit());
+  el.querySelector("#ed-tg").onclick = () => setEdit(!planState.edit);
+  el.querySelector("#ed-undo").onclick = () => undoEdit(true);
+  el.querySelector("#ed-types").onclick = openTypes;
+  el.querySelector("#ed-reset").onclick = () => change("WH", "Скинуто всі зміни моделі до даних Odoo", (e) => Object.assign(e, emptyEdit()));
+  el.querySelector("#ed-saveall").onclick = () => saveObj("WH");
+  el.querySelector("#ed-discall").onclick = () => discardObj("WH");
+  const statusTxt = () => planState.edit ? `Клік — виділити · ${MOD}+клік — кілька · перетягнути — перемістити · R — повернути ряд · ${MOD}+C / ${MOD}+V — копіювати / вставити · ${MOD}+D — дублювати · ${MOD}+Z — скасувати`
+    : mode === "2d" ? "Клік — виділити (ще раз — рівень вище) · коліщатко — масштаб" : "Клік — виділити (ще раз — рівень вище) · ЛКМ — обертати · ПКМ — зсув";
+  function editbar() { const on = planState.edit, tg = el.querySelector("#ed-tg"), s = editStats(), q = (x) => el.querySelector(x);
+    q("#editbar").hidden = !on && !s.pending; tg.textContent = on ? "Готово" : "✎ Редагувати"; tg.className = `btn ${on ? "btn-primary" : "btn-secondary"}`; tg.setAttribute("aria-pressed", String(on));
+    q("#ed-title").textContent = on ? "Режим редагування" : "Є незбережені зміни моделі";
+    q("#ed-count").textContent = `· ${s.pending ? `не збережено: ${s.pending}` : "усе збережено"}${s.added || s.removed ? ` · у моделі додано місць: ${s.added}, прибрано: ${s.removed}` : ""}`;
+    q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = Store.ro(); q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
+    q("#ed-undo").hidden = q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+    q("#ed-reset").disabled = !SAVED.add.length && !SAVED.del.length && !SAVED.set.length && !SAVED.pos.length && !SAVED.types;
+    q("#ed-st").textContent = Store.text(); q("#vp-status").textContent = statusTxt(); }
+  el.querySelector("#z-up").onclick = () => { const f = TREE.nodes.get(planState.focus); if (f.parent) planFocusTo(f.parent); };
+  const showTip = (code, cx, cy) => {
+    if (!code) { tip.hidden = true; return; }
+    tip.innerHTML = tipText(code); tip.hidden = false;
+    const r = vp.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = cx - r.left + 14, y = cy - r.top + 14;
+    if (x + tw > r.width - 4) x = cx - r.left - tw - 14;
+    if (y + th > r.height - 4) y = cy - r.top - th - 14;
+    tip.style.left = `${Math.max(4, x)}px`; tip.style.top = `${Math.max(4, y)}px`;
+  };
+  const pick = (code) => { if (code) planPick(code); };
+
+  // вибір рівня: на кожному рівні шляху — список сусідів, у кінці — рівень нижче
+  function renderLvl() {
+    const path = pathOf(TREE.nodes.get(planState.focus)), f = path[path.length - 1];
+    let h = `<button class="o_chip${f.id === "WH" ? " on" : ""}" data-focus="WH">WH</button>`;
+    for (let i = 1; i < path.length; i++) {
+      const sib = TREE.nodes.get(path[i].parent).kids;
+      h += `<span class="o_chip_sep">›</span><select data-lvl="${i}" aria-label="Рівень ${i}">${sib.map((k) => `<option value="${esc(k.id)}"${k.id === path[i].id ? " selected" : ""}>${esc(nodeLabel(k))}</option>`).join("")}</select>`;
+    }
+    if (f.kids.length) h += `<span class="o_chip_sep">›</span><select data-lvl="next" aria-label="Рівень нижче"><option value="">рівень нижче…</option>${f.kids.map((k) => `<option value="${esc(k.id)}">${esc(nodeLabel(k))}</option>`).join("")}</select>`;
+    lvlbar.innerHTML = h;
+    lvlbar.querySelectorAll("select").forEach((s) => s.onchange = () => { if (s.value) planFocusTo(s.value); });
+    lvlbar.querySelector("[data-focus]").onclick = () => planFocusTo("WH");
+  }
+
+  // ---------------- 2D
+  const S2 = (() => {
+    let vb = { x: -2, y: -2, w: W0 + 4, h: D0 + 4 }, dyn = null;
+    const setVB = () => svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+    function build() {
+      let h = "";
+      const walk = (n) => {
+        if (n.type === "group" || n.type === "rackset") {
+          if (n.kids.length || n.id === "WH" || !n.loc) h += `<rect data-node="${esc(n.id)}" class="${n.id === "WH" ? "bld" : "zn"}" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.d}" rx="0.3"${n.loc ? ` data-code="${esc(n.loc)}"` : ""}/>`;
+        }
+        if (n.type === "rack") h += `<rect data-node="${esc(n.id)}" class="rackbg" x="${n.x - 0.12}" y="${n.y - 0.12}" width="${n.w + 0.24}" height="${n.d + 0.24}"/>`;
+        if (n.loc && (n.type !== "group" || !n.kids.length)) {
+          let { x, y, w, d } = n;
+          if (n.type === "level") { const bay = TREE.nodes.get(n.parent), k = bay.nLv;
+            if (bay.rot) { d = bay.d / k; y = bay.y + n.lvl * d; x = bay.x; w = bay.w; } else { w = bay.w / k; x = bay.x + n.lvl * w; y = bay.y; d = bay.d; } }
+          h += `<rect data-node="${esc(n.id)}" data-code="${esc(n.loc)}" x="${x}" y="${y}" width="${w}" height="${d}" class="s"/>`;
+        }
+        n.kids.forEach(walk);
+      };
+      walk(TREE.root);
+      svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Схема складу згори: локації за ієрархією Odoo, розфарбовані за заповненістю");
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      svg.innerHTML = `${h}<g id="dyn"></g>`;
+      dyn = svg.querySelector("#dyn");
+      vp.prepend(svg);
+      let drag = null;
+      svg.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, vb: { ...vb }, moved: false, mod: e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId);
+        // у режимі редагування тягнеться ряд / місце на підлозі під курсором або все виділене (якщо натиснули на виділене)
+        const set = planState.edit && !drag.mod ? dragSet(e.target.closest?.("[data-node]")?.dataset.node) : [];
+        if (set.length) { const ids = set.map((r) => r.id); drag.set = set; drag.mx = Math.min(...set.map((r) => r.ox)); drag.my = Math.min(...set.map((r) => r.oy));
+          drag.els = [...svg.querySelectorAll("[data-node]")].filter((x) => isSel(x.dataset.node, ids)); } });
+      svg.addEventListener("pointermove", (e) => {
+        if (drag) {
+          const s = Math.max(vb.w / svg.clientWidth, vb.h / svg.clientHeight), dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+          if (Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; svg.classList.add("drag"); tip.hidden = true; }
+          if (drag.moved && drag.set) { drag.dx = Math.max(-drag.mx, dx * s); drag.dy = Math.max(-drag.my, dy * s); drag.els.forEach((x) => x.setAttribute("transform", `translate(${drag.dx} ${drag.dy})`)); }
+          else if (drag.moved) { vb.x = drag.vb.x - dx * s; vb.y = drag.vb.y - dy * s; setVB(); }
+          return;
+        }
+        const t = e.target.closest?.("[data-code]"); showTip(t?.dataset.code, e.clientX, e.clientY);
+      });
+      svg.addEventListener("pointerup", (e) => {
+        if (drag && drag.moved && drag.set) { const d = drag; drag = null; svg.classList.remove("drag"); moveSet(d.set, d.dx, d.dy); return; }
+        if (drag && !drag.moved) { const t = document.elementFromPoint(e.clientX, e.clientY);
+          const fl = t?.closest?.("[data-focus]"); if (fl) planFocusTo(fl.dataset.focus); else if (planState.edit && drag.mod) toggleSel(t?.closest?.("[data-node]")?.dataset.node); else if (planState.edit) editPick(t?.closest?.("[data-node]")?.dataset.node || planState.focus); else selectNode(t?.closest?.("[data-node]")?.dataset.node || planState.focus); }
+        drag = null; svg.classList.remove("drag");
+      });
+      svg.addEventListener("pointerleave", () => { if (!drag) tip.hidden = true; });
+      svg.addEventListener("wheel", (e) => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.15 : 1 / 1.15, toWorld(e.clientX, e.clientY)); }, { passive: false });
+    }
+    function toWorld(cx, cy) {
+      const r = svg.getBoundingClientRect(), s = Math.max(vb.w / r.width, vb.h / r.height);
+      return { x: vb.x - (r.width * s - vb.w) / 2 + (cx - r.left) * s, y: vb.y - (r.height * s - vb.h) / 2 + (cy - r.top) * s };
+    }
+    function zoom(f, p) {
+      const nw = Math.min((W0 + 4) * 1.5, Math.max(0.5, vb.w * f)); f = nw / vb.w;
+      p = p || { x: vb.x + vb.w / 2, y: vb.y + vb.h / 2 };
+      vb = { x: p.x - (p.x - vb.x) * f, y: p.y - (p.y - vb.y) * f, w: vb.w * f, h: vb.h * f }; setVB();
+    }
+    function fit() { const n = TREE.nodes.get(planState.focus), m = Math.max(n.w, n.d) * 0.08 + 0.3;
+      vb = { x: n.x - m, y: n.y - m - (n.kids.length ? Math.max(n.w, n.d) * 0.03 : 0), w: n.w + 2 * m, h: n.d + 2 * m + (n.kids.length ? Math.max(n.w, n.d) * 0.03 : 0) }; setVB(); }
+    function paint() {
+      const { hl, sel, dim } = planFocus(), F = planState.focus;
+      const S = selIds();
+      svg.querySelectorAll("[data-node]").forEach((n) => { n.style.display = inNode(n.dataset.node, F) ? "" : "none"; n.classList.toggle("esel", isSel(n.dataset.node, S)); });
+      svg.querySelectorAll("rect.s").forEach((n) => {
+        const c = n.dataset.code, l = LOC(c);
+        n.setAttribute("class", `s ${slotCls(l)}${dim(c) ? " dim" : ""}${hl.has(c) && c !== sel ? " hl" : ""}${c === sel ? " sel" : ""}`);
+      });
+      // підписи рівня нижче — розмір шрифту від розміру вибраного рівня
+      const f = TREE.nodes.get(F), fs = Math.max(0.12, Math.min(2.2, Math.max(f.w, f.d) / 45));
+      dyn.innerHTML = (f.kids.length ? f.kids : [f]).map((k) => `<text class="dlab" data-focus="${esc(k.id)}" x="${k.x + fs * 0.2}" y="${k.y - fs * 0.35}" style="font-size:${fs}px">${esc(nodeLabel(k))}</text>`).join("");
+    }
+    return { build, paint, zoom, fit, view: () => setVB() };
+  })();
+
+  // ---------------- 3D
+  const loadScript = (src) => new Promise((ok, fail) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = fail; document.head.append(s); });
+  let threeLoading = null;
+  function ensureThree() {
+    if (three) return Promise.resolve(three);
+    if (!threeLoading) {
+      const ld = document.createElement("div"); ld.className = "loading"; ld.textContent = "Будую 3D-модель…"; vp.append(ld);
+      threeLoading = loadScript("https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js")
+        .then(() => loadScript("https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"))
+        .then(() => { three = makeThree(); ld.remove(); return three; })
+        .catch(() => { ld.textContent = "Не вдалося завантажити 3D-бібліотеку. Перевірте з'єднання і перемкніть вигляд ще раз."; threeLoading = null; });
+    }
+    return threeLoading;
+  }
+  function makeThree() {
+    THREE.ColorManagement.legacyMode = false;
+    const T = THREE, css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), col = (n) => new T.Color(css(n) || "#888");
+    const renderer = new T.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap; renderer.outputEncoding = T.sRGBEncoding;
+    const canvas = renderer.domElement; canvas.setAttribute("aria-label", "3D-модель складу"); vp.prepend(canvas);
+    const lbl = document.createElement("div"); lbl.id = "labels3d"; vp.append(lbl);
+    const scene = new T.Scene(), camera = new T.PerspectiveCamera(36, 1, 0.05, 2000), controls = new T.OrbitControls(camera, canvas);
+    controls.maxPolarAngle = Math.PI * 0.49; controls.minDistance = 1; controls.maxDistance = 600; controls.screenSpacePanning = true;
+    scene.add(new T.HemisphereLight(0xffffff, 0x8899aa, 0.8));
+    const sun = new T.DirectionalLight(0xffffff, 0.7); sun.position.set(-60, 120, 80); sun.castShadow = true;
+    Object.assign(sun.shadow.camera, { left: -W0 / 2 - 10, right: W0 / 2 + 10, top: D0, bottom: -D0, near: 10, far: 400 }); sun.shadow.mapSize.set(4096, 1024); sun.shadow.bias = -0.0005;
+    scene.add(sun);
+    const X = (x) => x - W0 / 2, Z = (y) => y - D0 / 2;
+    const box = new T.BoxGeometry(1, 1, 1), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 20);
+    const themed = [], TM = (token, opts = {}) => { const m = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05, ...opts }); themed.push([m, token]); return m; };
+    const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: TM("--ok"), warn: TM("--warn"), bad: TM("--bad"), area: TM("--idle", { transparent: true, opacity: 0.32 }), crate: TM("--idle") };
+    const dimM = new Map(), dimOf = (m) => { if (!dimM.has(m)) { const d = m.clone(); d.transparent = true; d.opacity = 0.12; d.depthWrite = false; themed.push([d, themed.find(([x]) => x === m)?.[1]]); dimM.set(m, d); } return dimM.get(m); };
+    const hlM = TM("--accent"), steel = TM("--steel", { metalness: 0.4, roughness: 0.5 }), beam = TM("--beam"), upright = TM("--upright", { metalness: 0.3 }), wood = TM("--wood");
+    const floorM = TM("--floor", { roughness: 1 }), lineM = TM("--mark", { roughness: 1 });
+    const all = [], byCode = new Map(), pickables = [], G = new T.Group(); scene.add(G);
+    const add = (geo, mat, nodeId, x, y, w, d, h, base = 0, { cast = true, recv = true } = {}) => {
+      const m = new T.Mesh(geo, mat); m.position.set(X(x + w / 2), base + h / 2, Z(y + d / 2)); m.scale.set(w, h, d); m.castShadow = cast; m.receiveShadow = recv;
+      m.userData.node = nodeId; m.userData.base0 = mat; G.add(m); all.push(m); return m;
+    };
+    const reg = (m, code) => { m.userData.code = code; m.userData.base = m.material; pickables.push(m); if (!byCode.has(code)) byCode.set(code, []); byCode.get(code).push(m); return m; };
+    // підлога — під вибраним рівнем (розмір і положення міняються в paint)
+    const floor = new T.Mesh(box, floorM); floor.receiveShadow = true; scene.add(floor);
+    function fitFloor() {
+      const n = TREE.nodes.get(planState.focus), b = n.type === "level" ? TREE.nodes.get(n.parent) : n;
+      const m = Math.max(0.25, Math.max(b.w, b.d) * 0.04), w = b.w + 2 * m, d = b.d + 2 * m;
+      floor.position.set(X(b.x - m + w / 2), -0.05, Z(b.y - m + d / 2)); floor.scale.set(w, 0.1, d);
+    }
+    const frame = (n) => { const t = Math.max(0.06, Math.min(0.18, n.w / 300)), c = { cast: false };
+      for (const [x, y, w, d] of [[n.x, n.y, n.w, t], [n.x, n.y + n.d - t, n.w, t], [n.x, n.y, t, n.d], [n.x + n.w - t, n.y, t, n.d]]) add(box, lineM, n.id, x, y, w, d, 0.02, 0.005 + n.depth * 0.002, c); };
+    const content = (n) => {
+      const code = n.loc, l = LOC(code), cls = slotCls(l).split(" ")[0], m = status[cls] || status.area, qty = l.quants.reduce((s, q) => s + q.qty, 0);
+      const bay = n.type === "level" ? TREE.nodes.get(n.parent) : n;
+      const empty = (base) => reg(add(box, status.bad, n.id, bay.x + 0.04, bay.y + 0.04, bay.w - 0.08, bay.d - 0.08, 0.03, base, { cast: false }), code);
+      if (l.draft) { // нове місце — напівпрозорий об'єм (бірюзовий, поки не збережено)
+        const nm = l.pend ? status.pend : status.new;
+        if (n.type === "level") { const f = TY(n.tp); return reg(add(box, nm, n.id, bay.x + 0.06, bay.y + 0.05, bay.w - 0.12, bay.d - 0.1, Math.max(0.05, f.lh - 0.16), n.lvl * f.lh + 0.08), code); }
+        if (n.type === "bayleaf") return reg(add(box, nm, n.id, n.x + 0.1, n.y + 0.1, n.w - 0.2, n.d - 0.2, 0.3, 0), code);
+        return reg(add(box, nm, n.id, n.x, n.y, n.w, n.d, 0.06, 0, { cast: false }), code);
+      }
+      if (n.type === "level") {
+        const f = TY(n.tp), base = n.lvl * f.lh + 0.08;
+        if (f.form === "rolls") { if (!qty) return empty(base); const r = Math.min(0.26, (f.lh - 0.12) / 2), k = Math.max(1, Math.round(3 * (l.fill || 0.2)));
+          const along = bay.rot ? bay.d : bay.w, deep = bay.rot ? bay.w : bay.d;
+          const kk = Math.max(1, Math.min(k, Math.floor((along - 0.14) / (r * 2 + 0.06))));
+          for (let i = 0; i < kk; i++) { const mm = new T.Mesh(cyl, m), a = 0.1 + r + i * (r * 2 + 0.06);
+            if (bay.rot) { mm.rotation.z = Math.PI / 2; mm.position.set(X(bay.x + bay.w / 2), base + r, Z(bay.y + a)); } else { mm.rotation.x = Math.PI / 2; mm.position.set(X(bay.x + a), base + r, Z(bay.y + bay.d / 2)); }
+            mm.scale.set(r * 2, deep - 0.12, r * 2); mm.castShadow = mm.receiveShadow = true; mm.userData.node = n.id; G.add(mm); all.push(mm); reg(mm, code); }
+          return; }
+        if (f.form === "pallet") { const along = bay.rot ? bay.d : bay.w, pw = Math.min(1.2, along - 0.2), fit = Math.max(1, Math.floor((along - 0.1) / (pw + 0.1)));
+          const k = Math.min(2, fit, l.quants.length ? Math.max(1, Math.round((l.fill || 0) * 2)) : 0); if (!k) return empty(base);
+          const ph = Math.max(0.2, Math.min(1.0, f.lh - 0.4));
+          for (let i = 0; i < k; i++) { const a = 0.1 + i * (pw + 0.1);
+            if (bay.rot) { add(box, wood, n.id, bay.x + 0.05, bay.y + a, bay.w - 0.1, pw, 0.14, base, { cast: false }); reg(add(box, m, n.id, bay.x + 0.1, bay.y + a + 0.05, bay.w - 0.2, pw - 0.1, ph, base + 0.14), code); }
+            else { add(box, wood, n.id, bay.x + a, bay.y + 0.05, pw, bay.d - 0.1, 0.14, base, { cast: false }); reg(add(box, m, n.id, bay.x + a + 0.05, bay.y + 0.1, pw - 0.1, bay.d - 0.2, ph, base + 0.14), code); } }
+          return; }
+        if (!qty) return empty(base);
+        const hh = l.fill != null ? Math.max(0.04, (f.lh - 0.1) * (l.fill || 0.1)) : Math.max(0.03, Math.min(f.lh - 0.1, qty * 0.016));
+        return reg(add(box, m, n.id, bay.x + 0.06, bay.y + 0.05, bay.w - 0.12, bay.d - 0.1, hh, base), code);
+      }
+      if (n.type === "bayleaf") { add(box, wood, n.id, n.x + 0.2, n.y + 0.2, n.w - 0.4, n.d - 0.4, 0.1, 0, { cast: false }); if (!qty) return empty(0.1);
+        return reg(add(box, m, n.id, n.x, n.y, n.w, n.d, Math.max(0.03, qty * 0.017), 0.1), code); }
+      // зони, візки, палети: плитка + ящики за кількістю позицій
+      const tile = reg(add(box, status.area, n.id, n.x, n.y, n.w, n.d, 0.04, 0, { cast: false }), code); tile.userData.area = true;
+      const kit = /^(KIT|FRONTS)-/.test(code), cnt = Math.min(kit ? 3 : 6, l.quants.length);
+      if (kit) add(box, steel, n.id, n.x + 0.08, n.y + 0.08, n.w - 0.16, n.d - 0.16, 0.06, 0.35, { cast: false });
+      for (let i = 0; i < cnt; i++) { const cw = Math.min(1.1, (n.w - 0.3) / Math.min(cnt, 3)), cd = Math.min(1.1, n.d - 0.3);
+        reg(add(box, status.crate, n.id, n.x + 0.15 + (i % 3) * (cw + 0.04), n.y + 0.15 + Math.floor(i / 3) * (cd + 0.1), cw, Math.min(cd, (n.d - 0.4) / Math.ceil(cnt / 3)), kit ? 0.5 : 0.8, kit ? 0.41 : 0.04), code); }
+    };
+    const structure = (n) => {
+      if (n.type !== "bay") return;
+      const f = TY(n.tp), top = n.nLv * f.lh + 0.15, fg = f.form === "pallet", post = fg ? upright : steel, pw = fg ? 0.09 : 0.05;
+      for (const dx of [0, n.w]) for (const dy of [0, n.d]) add(box, post, n.id, n.x + dx - pw / 2, n.y + dy - pw / 2, pw, pw, top);
+      for (let l = 0; l < n.nLv; l++) for (const dd of n.rot ? [0, n.w] : [0, n.d]) {
+        if (n.rot) add(box, fg ? beam : steel, n.id, n.x + dd - 0.04, n.y, 0.08, n.d, 0.08, l * f.lh, { cast: false });
+        else add(box, fg ? beam : steel, n.id, n.x, n.y + dd - 0.04, n.w, 0.08, 0.08, l * f.lh, { cast: false }); }
+    };
+    const walk = (n) => { if ((n.type === "group" || n.type === "rackset") && n.id !== "WH" && (n.kids.length || !n.loc)) frame(n); structure(n); if (n.loc && (n.type !== "group" || !n.kids.length)) content(n); else if (n.loc) { const t = reg(add(box, status.area, n.id, n.x + 0.2, n.y + 1.2, n.w - 0.4, n.d - 1.4, 0.02, 0, { cast: false }), n.loc); t.userData.area = true; } n.kids.forEach(walk); };
+    let lastW = W0, lastD = D0;
+    function build() {
+      const sx = (lastW - W0) / 2, sz = (lastD - D0) / 2; lastW = W0; lastD = D0;
+      if (sx || sz) { camera.position.x += sx; camera.position.z += sz; controls.target.x += sx; controls.target.z += sz; controls.update(); }
+      G.clear(); all.length = 0; byCode.clear(); pickables.length = 0; walk(TREE.root);
+      Object.assign(sun.shadow.camera, { left: -W0 / 2 - 10, right: W0 / 2 + 10, top: D0, bottom: -D0 }); sun.shadow.camera.updateProjectionMatrix();
+    }
+    build();
+
+    // підписи рівня нижче — клік вибирає рівень
+    let lblItems = [];
+    const v3 = new T.Vector3();
+    function makeLabels() {
+      const f = TREE.nodes.get(planState.focus), items = f.kids.length ? f.kids : [f];
+      lblItems = items.map((k) => ({ k, p: new T.Vector3(X(k.x + k.w / 2), (k.h || 1) + 0.25, Z(k.y + (k.type === "level" ? k.d / 2 : 0.3))) }));
+      if (f.type === "bay") lblItems.forEach((it) => { it.p.set(X(f.x) - 0.15, it.k.lvl * TY(f.tp).lh + 0.25, Z(f.y + f.d / 2)); });
+      lbl.innerHTML = lblItems.map((it) => `<span data-focus="${esc(it.k.id)}" title="Показати лише цей рівень">${esc(nodeLabel(it.k))}</span>`).join("");
+      lbl.querySelectorAll("[data-focus]").forEach((s) => s.onclick = () => planFocusTo(s.dataset.focus));
+    }
+    function placeLabels() {
+      const w = vp.clientWidth, h = vp.clientHeight, els = lbl.children;
+      lblItems.forEach((it, i) => { v3.copy(it.p).project(camera); const e = els[i]; if (!e) return;
+        e.hidden = v3.z > 1 || Math.abs(v3.x) > 1.02 || Math.abs(v3.y) > 1.02; e.style.left = `${(v3.x * 0.5 + 0.5) * w}px`; e.style.top = `${(-v3.y * 0.5 + 0.5) * h}px`; });
+    }
+    let raf = 0;
+    const render = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; renderer.render(scene, camera); placeLabels(); }); };
+    function applyTheme() { scene.background = col("--scene"); for (const [m, tok] of themed) if (tok) m.color.copy(col(tok)); hlM.emissive.copy(col("--accent")).multiplyScalar(0.35); render(); }
+    function paint() {
+      const { hl, sel, dim } = planFocus(), F = planState.focus;
+      const S = selIds();
+      for (const m of all) { m.visible = inNode(m.userData.node, F); if (!m.userData.code) m.material = isSel(m.userData.node, S) ? hlM : m.userData.base0; }
+      fitFloor();
+      for (const [code, ms] of byCode) for (const m of ms) m.material = (S.length ? isSel(m.userData.node, S) : code === sel || (hl.has(code) && !m.userData.area)) ? hlM : dim(code) ? dimOf(m.userData.base) : m.userData.base;
+      render();
+    }
+    // наблизити до вибраного рівня: кут камери той самий, відстань — щоб рівень увесь вліз
+    let anim = 0;
+    function fit(instant = false) {
+      const n = TREE.nodes.get(planState.focus), bay = n.type === "level" ? TREE.nodes.get(n.parent) : n;
+      const cx = X(bay.x + bay.w / 2), cz = Z(bay.y + bay.d / 2), cy = n.type === "level" ? n.lvl * TY(n.tp).lh + 0.3 : Math.min(2, (n.h || 1) / 3);
+      const aspect = vp.clientWidth / Math.max(1, vp.clientHeight), fov = (camera.fov * Math.PI) / 180;
+      const span = Math.max(bay.w / Math.max(aspect, 0.5), bay.d * 1.4, (n.h || 1) * 1.6, 1.6);
+      const dist = (span / 2) / Math.tan(fov / 2) * 1.2;
+      const dir = new T.Vector3(-0.08, 0.6, 0.8).normalize();
+      const toT = new T.Vector3(cx, cy, cz), toP = toT.clone().add(dir.multiplyScalar(dist));
+      cancelAnimationFrame(anim);
+      if (instant || matchMedia("(prefers-reduced-motion: reduce)").matches) { controls.target.copy(toT); camera.position.copy(toP); controls.update(); render(); return; }
+      const fT = controls.target.clone(), fP = camera.position.clone(), t0 = performance.now();
+      const step = (t) => { const k = Math.min(1, (t - t0) / 550), e = 1 - Math.pow(1 - k, 3);
+        controls.target.lerpVectors(fT, toT, e); camera.position.lerpVectors(fP, toP, e); controls.update(); render(); if (k < 1) anim = requestAnimationFrame(step); };
+      anim = requestAnimationFrame(step);
+    }
+    controls.addEventListener("change", () => { tip.hidden = true; render(); });
+    const ray = new T.Raycaster(), ndc = new T.Vector2();
+    const hit = (e) => { const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera); return ray.intersectObjects(pickables.filter((m) => m.visible), false)[0]?.object.userData.code; };
+    // у режимі редагування вибирається будь-який вузол: ярус, стояки стелажа, рамка зони; клік по підлозі — поточний рівень
+    const hitNode = (e) => { const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera); const h = ray.intersectObjects([...all.filter((m) => m.visible), floor], false)[0];
+      return h ? (h.object === floor ? planState.focus : h.object.userData.node) : null; };
+    let down = null, hov = 0, drag = null;
+    const ground = new T.Plane(new T.Vector3(0, 1, 0), 0);
+    const groundAt = (e) => { const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera); return ray.ray.intersectPlane(ground, new T.Vector3()); };
+    // перетягування ряду: ловимо натиск раніше за OrbitControls і вимикаємо обертання на час перетягування
+    vp.addEventListener("pointerdown", (e) => {
+      if (!planState.edit || e.button !== 0 || e.target !== canvas || e.ctrlKey || e.metaKey) return;
+      const set = dragSet(hitNode(e)); if (!set.length) return;
+      const p0 = groundAt(e); if (!p0) return;
+      controls.enabled = false; canvas.setPointerCapture(e.pointerId); const ids = set.map((r) => r.id);
+      drag = { set, p0, x: e.clientX, y: e.clientY, dx: 0, dz: 0, moved: false, mx: Math.min(...set.map((r) => r.ox)), my: Math.min(...set.map((r) => r.oy)),
+        ms: all.filter((m) => isSel(m.userData.node, ids)).map((m) => [m, m.position.clone()]) };
+    }, true);
+    const endDrag = () => { controls.enabled = true; const d = drag; drag = null; canvas.style.cursor = "";
+      if (d && d.moved) { moveSet(d.set, d.dx, d.dz); return true; } return false; };
+    canvas.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      if (!drag.moved && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 5) return;
+      const p = groundAt(e); if (!p) return;
+      drag.moved = true; tip.hidden = true; canvas.style.cursor = "grabbing";
+      drag.dx = Math.max(-drag.mx, Math.round((p.x - drag.p0.x) * 10) / 10); drag.dz = Math.max(-drag.my, Math.round((p.z - drag.p0.z) * 10) / 10);
+      for (const [m, o] of drag.ms) m.position.set(o.x + drag.dx, o.y, o.z + drag.dz);
+      render();
+    });
+    canvas.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
+    canvas.addEventListener("pointercancel", () => { if (drag) { for (const [m, o] of drag.ms) m.position.copy(o); drag = null; controls.enabled = true; render(); } });
+    canvas.addEventListener("pointerup", (e) => { if (drag && endDrag()) { down = null; return; } if (drag) endDrag(); if (down && Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) < 5) { if (planState.edit && (e.ctrlKey || e.metaKey)) toggleSel(hitNode(e)); else if (planState.edit) editPick(hitNode(e)); else selectNode(hitNode(e)); } down = null; });
+    canvas.addEventListener("pointermove", (e) => { if (e.buttons || drag) return; cancelAnimationFrame(hov); hov = requestAnimationFrame(() => { const c = hit(e); canvas.style.cursor = c ? "pointer" : "grab"; showTip(c, e.clientX, e.clientY); }); });
+    canvas.addEventListener("pointerleave", () => { tip.hidden = true; });
+    const resize = () => { const w = vp.clientWidth, h = vp.clientHeight; if (!w || !h) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); render(); };
+    new ResizeObserver(resize).observe(vp);
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+    new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    applyTheme(); resize(); fit(true);
+    const zoom = (f) => { const off = camera.position.clone().sub(controls.target).multiplyScalar(f);
+      if (off.length() < controls.minDistance || off.length() > controls.maxDistance) return; camera.position.copy(controls.target).add(off); controls.update(); };
+    return { paint, resize, zoom, fit, makeLabels, canvas, lbl, rebuild: () => { build(); makeLabels(); paint(); } };
+  }
+
+  function apply() {
+    el.querySelectorAll(".seg [data-m]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === mode)));
+    el.querySelectorAll(".seg [data-pk]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pk === planState.pick)));
+    if (!svg) { S2.build(); S2.fit(); }
+    svg.toggleAttribute("hidden", mode !== "2d"); vp.classList.toggle("m2", mode === "2d");
+    if (three) { three.canvas.hidden = mode !== "3d"; three.lbl.hidden = mode !== "3d"; }
+    tip.hidden = true;
+    el.querySelector("#vp-status").textContent = statusTxt();
+    renderLvl();
+    if (mode === "3d") ensureThree().then((t) => { if (t && mode === "3d") { t.canvas.hidden = false; t.lbl.hidden = false; t.resize(); t.makeLabels(); t.paint(); t.fit(true); } });
+    refresh();
+  }
+  function refresh() { if (svg) S2.paint(); if (three && mode === "3d") three.paint(); }
+  function rebuild() { if (svg) { svg.remove(); svg = null; S2.build(); S2.view(); svg.toggleAttribute("hidden", mode !== "2d"); } if (three) three.rebuild(); renderLvl(); refresh(); }
+  function focus() { renderLvl(); if (svg) { S2.paint(); S2.fit(); } if (three) { three.makeLabels(); three.paint(); three.fit(); } }
+  function show(host) { if (!host.contains(el)) { host.innerHTML = ""; host.append(el); apply(); } else refresh(); }
+  return { show, refresh, focus, rebuild, editbar };
+})();
+
+// ---------------------------------------------------------------- старт
+$("#menus").innerHTML = MENU.map((m, i) => `<button class="o_menu" data-top="${i}"${m.sections ? ' aria-haspopup="true" aria-expanded="false"' : ""}>${esc(m.label)}</button>`).join("");
+let menuDd = null;
+function closeMenu() { menuDd?.remove(); menuDd = null; document.querySelectorAll(".o_menu[aria-expanded]").forEach((b) => b.setAttribute("aria-expanded", "false")); }
+function openMenu(btn) {
+  const m = MENU[+btn.dataset.top];
+  closeMenu();
+  menuDd = document.createElement("div"); menuDd.className = "o_menu_dd"; menuDd.setAttribute("role", "menu");
+  menuDd.innerHTML = m.sections.map(([h, items]) => `${h ? `<div class="h">${esc(h)}</div>` : ""}${items.map(([label, id]) => id
+    ? `<button role="menuitem" class="it${h ? " ind" : ""}" data-menu="${id}">${esc(label)}</button>`
+    : `<span role="menuitem" class="it off${h ? " ind" : ""}" aria-disabled="true" title="Розділ ще не підключено">${esc(label)}</span>`).join("")}`).join("");
+  document.body.append(menuDd);
+  const r = btn.getBoundingClientRect();
+  menuDd.style.top = `${r.bottom + 4}px`;
+  menuDd.style.left = `${Math.max(8, Math.min(r.left, innerWidth - menuDd.offsetWidth - 8))}px`;
+  btn.setAttribute("aria-expanded", "true");
+  menuDd.onclick = (ev) => { const it = ev.target.closest("[data-menu]"); if (it) menu(it.dataset.menu); };
+  menuDd.querySelector("[data-menu]")?.focus();
+}
+$("#menus").onclick = (ev) => { const b = ev.target.closest(".o_menu"); if (!b) return; ev.stopPropagation();
+  const m = MENU[+b.dataset.top]; if (m.go) return menu(m.id);
+  b.getAttribute("aria-expanded") === "true" ? closeMenu() : openMenu(b); };
+document.addEventListener("click", (ev) => { if (menuDd && !ev.target.closest(".o_menu_dd")) closeMenu(); });
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && menuDd) closeMenu(); });
+addEventListener("resize", closeMenu);
+$("#menus").addEventListener("scroll", closeMenu);
+$("#apps").onclick = () => menu("overview");
+$("#dbname").textContent = `${D.meta.source.split("·").pop().trim()} · ${D.meta.now.slice(8, 10)}.${D.meta.now.slice(5, 7)} ${D.meta.now.slice(11, 16)}`;
+$("#company").textContent = D.meta.company;
+render();
+Store.init();
+</script>
