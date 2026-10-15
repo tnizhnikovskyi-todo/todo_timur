@@ -13,8 +13,10 @@ import { mountApp } from "../view/shell.js";
 import { modKey } from "../view/util.js";
 import { createLocalStorage } from "./storage.js";
 import { createOdooStorage, odooConfig } from "./odoo.js";
+import { decorateDemo } from "./demostats.js";
 import { createOdooApi, odooIdOf, projectFromWarehouses } from "../adapters/odoo-api.js";
 import { openOdooPick } from "../view/odoopick.js";
+import { odooLocationUrl } from "../core/stock.js";
 
 const LOCK_RENEW_MS = 60000; // срок блокировки на сервере — 5 минут, продлеваем раз в минуту
 
@@ -44,6 +46,7 @@ async function start() {
     const data = await res.json();
     const bases = { [DEMO_REFS.main]: data, [DEMO_REFS.second]: demoBase2(data.meta) };
     if (syn > 0) bases[SYNTHETIC_REF] = syntheticBase(syn, data.meta);
+    Object.values(bases).forEach(decorateDemo); // демо-движения и возраст запаса для тепловых карт ABC и «вік» (в снимке их нет), помечены demo
     let notice = null;
     // первый запуск в Odoo (проектов ещё нет): предлагаем выбрать склады базы; отказ, ошибка или пустая база — демо-проект, как раньше
     if (odoo && !storage.readonly) {
@@ -67,6 +70,20 @@ async function start() {
     await pullBases(odooWhs());
     let library = null; try { library = storage.listLibrary ? await storage.listLibrary() : null; } catch (e) { /* без общей библиотеки: типы каталога доступны, шаблоны — только после записи */ }
     const model = createModel(project, storage, { bases, library, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType"), newTpl: i18n.t("word.newTpl") }) });
+    // «Оновити дані» (W-17): остатки, заполненность, резервы и движения без перестройки плана; Odoo — свежие снимки складов проекта, иначе — пересчёт из текущего снимка
+    const dataRefresh = async () => {
+      const fresh = {}; failed.length = 0;
+      if (adapter) {
+        const whs = odooWhs(), res = await Promise.allSettled(whs.map((w) => adapter.load(odooIdOf(w.baseRef))));
+        res.forEach((r, i) => {
+          if (r.status === "fulfilled") fresh[whs[i].baseRef] = r.value;
+          else { failed.push({ wh: whs[i].code, msg: String(r.reason && r.reason.message || r.reason) }); console.error(r.reason); }
+        });
+      }
+      const r = model.refreshData(fresh);
+      if (failed.length) failed.forEach((f) => model.notify("bad", "n.odooLoadFail", f));
+      else { model.notify("ok", "n.dataRefreshed", { n: r.updated || r.places }); if (r.added) model.notify("info", "n.dataAdded", { added: r.added }); }
+    };
     const hostOdoo = odoo && {
       canRefresh: odooWhs().length > 0,
       async newProject() { try { if (await newOdooProject()) location.reload(); } catch (e) { console.error(e); model.notify("bad", "n.odooProjectFail", { msg: String(e.message || e) }); } },
@@ -78,7 +95,7 @@ async function start() {
         else model.notify("ok", "n.odooRefreshed", { n: places });
       },
     };
-    mountApp(root, { model, i18n, host: { storage, bases, reload: () => location.reload(), odoo: hostOdoo || null } });
+    mountApp(root, { model, i18n, host: { storage, bases, reload: () => location.reload(), odoo: hostOdoo || null, refreshData: dataRefresh, locationUrl: odoo ? odooLocationUrl : null } });
     if (odoo) {
       setInterval(() => model.locks.renew(), LOCK_RENEW_MS);
       addEventListener("pagehide", () => { if (model.locks.held().length) storage.unlock({ project: model.project.id }, { keepalive: true }).catch(() => {}); });

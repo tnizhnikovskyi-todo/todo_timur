@@ -75,7 +75,13 @@ async function measure(name, query, prep = null) {
     const g0 = renderer.info.memory.geometries, n0 = d.groupCount(), t1 = performance.now();
     for (let i = 0; i < 3; i++) d.rebuild();
     const rebuildMs = (performance.now() - t1) / 3, leak = renderer.info.memory.geometries - g0 + (d.groupCount() - n0);
-    return { calls, tris, orbitMs, rebuildMs, leak, buildMs: d.buildMs, items: d.itemCount(), groups: d.groupCount(), geometries: renderer.info.memory.geometries };
+    // W-17: смена показателя тепловой карты красит экземпляры (instanceColor) — draw calls не растут; время — синхронная часть переключения
+    const sel = document.querySelector("#heat-sel"); let heatMs = 0, heatCalls = 0;
+    for (const m of ["fill", "low", "empty", "abc", "age", "status"]) {
+      const t2 = performance.now(); sel.value = m; sel.dispatchEvent(new Event("change", { bubbles: true })); heatMs = Math.max(heatMs, performance.now() - t2);
+      renderer.render(d.scene, camera); heatCalls = Math.max(heatCalls, renderer.info.render.calls);
+    }
+    return { calls, tris, orbitMs, rebuildMs, leak, heatMs, heatCalls, buildMs: d.buildMs, items: d.itemCount(), groups: d.groupCount(), geometries: renderer.info.memory.geometries };
   }, FRAMES);
   // наведение: время raycast (отладочное поле hoverMs)
   const box = await page.locator("#vp canvas").boundingBox();
@@ -110,20 +116,22 @@ async function buildingPrep(page) {
 }
 const fmt = (v, n = 0) => (v == null ? "—" : Number(v).toFixed(n));
 const show = (m) => console.log(`${m.name}: построение 3D ${fmt(m.buildMs)} мс, до готовности ${m.ready} мс, draw calls ${m.calls}, треугольников ${m.tris}, кадр при вращении ${fmt(m.orbitMs, 1)} мс (${fmt(1000 / m.orbitMs, 1)} к/с, swiftshader), наведение ${fmt(m.hoverMs, 1)} мс, перестройка ${fmt(m.rebuildMs)} мс (утечка ${m.leak}), групп ${m.groups}, 2D: ${m.rects} элементов, выбор ${fmt(m.selectMs)} мс`);
+const showHeat = (m) => console.log(`  смена показателя (5 карт): ${fmt(m.heatMs, 1)} мс, draw calls ${m.heatCalls}`);
 let bad = [];
 try {
   const chk = measureChecks();
   console.log(`проверки: ${chk.places} мест, полный прогон ${fmt(chk.ms, 1)} мс (максимум ${fmt(chk.max, 1)} мс), проблем ${chk.problems}`);
   if (!(chk.ms <= LIMITS.checksMs)) bad.push(`полный прогон проверок ${fmt(chk.ms, 1)} мс > ${LIMITS.checksMs} мс`);
   const wh = await measure("WH", "");
-  show(wh);
+  show(wh); showHeat(wh);
   const syn = await measure("synthetic 10000", "?synthetic=10000");
-  show(syn);
+  show(syn); showHeat(syn);
   const bld = await measure("WH + здание, 1500 колонн", "", buildingPrep);
-  show(bld);
+  show(bld); showHeat(bld);
   if (!(bld.calls <= LIMITS.calls)) bad.push(`со зданием draw calls ${bld.calls} > ${LIMITS.calls}`);
   if (bld.calls > wh.calls + 6) bad.push(`здание добавило ${bld.calls - wh.calls} вызовов отрисовки (ожидалось ≤ 6: инстансинг)`);
   if (bld.leak > 0) bad.push(`со зданием после перестройки выросло число групп/геометрий: ${bld.leak}`);
+  for (const m of [wh, syn, bld]) if (m.heatCalls > m.calls) bad.push(`${m.name}: смена показателя добавила draw calls (${m.calls} → ${m.heatCalls})`);
   if (!(syn.calls <= LIMITS.calls)) bad.push(`draw calls ${syn.calls} > ${LIMITS.calls}`);
   if (wh.leak || syn.leak) bad.push(`после перестройки выросло число групп/геометрий: ${wh.leak} / ${syn.leak}`);
   if (!(syn.buildMs <= LIMITS.buildMs)) bad.push(`построение ${fmt(syn.buildMs)} мс > ${LIMITS.buildMs} мс`);

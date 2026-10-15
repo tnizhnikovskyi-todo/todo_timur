@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from odoo import _, api, fields, models, release
 from odoo.exceptions import AccessError, UserError
 
 G_VIEW = "wh_constructor.group_wh_view"
 PAGE_DEFAULT, PAGE_MAX = 2000, 5000
+MOVES_DAYS, MOVES_DAYS_MAX = 90, 365  # окно движений для оборачиваемости (ABC): по умолчанию и максимум, дней
 
 # Различия Odoo 18 и 19 (R-02): набор полей локации зависит от версии — отдаём только существующие.
 # 18: posx / posy / posz и scrap_location; 19: их нет (скрап — локация с usage = inventory). replenish_location есть в обеих.
@@ -89,7 +92,8 @@ class WhReader(models.AbstractModel):
         wh = self._warehouse(env, warehouse_id)
         recs, page = self._page(env["stock.quant"], [("location_id", "child_of", wh.view_location_id.id), ("quantity", "!=", 0)], offset, limit)
         rows = [{"id": q.id, "location_id": q.location_id.id, "product_id": q.product_id.id, "quantity": q.quantity,
-                 "reserved_quantity": q.reserved_quantity, "lot": q.lot_id.name or None, "package": q.package_id.name or None} for q in recs]
+                 "reserved_quantity": q.reserved_quantity, "lot": q.lot_id.name or None, "package": q.package_id.name or None,
+                 "in_date": fields.Datetime.to_string(q.in_date) if q.in_date else None} for q in recs]  # in_date — для возраста запаса (UTC)
         return {**page, "warehouse_id": wh.id, "quants": rows, "products": self._products(recs.product_id)}
 
     # ------------------------------------------------------------ категории хранения
@@ -140,3 +144,23 @@ class WhReader(models.AbstractModel):
         rows = [{"id": o.id, "name": o.name, "location_id": o.location_id.id, "product_id": o.product_id.id, "min": o.product_min_qty,
                  "max": o.product_max_qty, "trigger": o.trigger, "warehouse_id": o.warehouse_id.id or None} for o in recs]
         return {**page, "warehouse_id": wh.id, "orderpoints": rows, "products": self._products(recs.product_id)}
+
+    # ------------------------------------------------------------ движения (оборачиваемость ABC, W-17)
+    @api.model
+    def api_moves(self, warehouse_id=None, days=None, offset=0, limit=None):
+        """Выполненные движения (stock.move.line) за `days` дней, затрагивающие склад: агрегат по паре «откуда → куда»
+        (число строк движений и количество в единицах товара); приложение складывает их по местам. Постранично по парам."""
+        env = self._reader()
+        wh = self._warehouse(env, warehouse_id)
+        days = min(max(int(days or MOVES_DAYS), 1), MOVES_DAYS_MAX)
+        view = wh.view_location_id.id
+        since = fields.Datetime.now() - timedelta(days=days)
+        domain = [("state", "=", "done"), ("date", ">=", since), "|", ("location_id", "child_of", view), ("location_dest_id", "child_of", view)]
+        groups = env["stock.move.line"]._read_group(domain, ["location_id", "location_dest_id"], ["__count", "quantity_product_uom:sum"])
+        rows = sorted(({"location_id": src.id, "location_dest_id": dst.id, "n": n, "qty": qty or 0.0} for src, dst, n, qty in groups),
+                      key=lambda r: (r["location_id"], r["location_dest_id"]))
+        offset = max(int(offset or 0), 0)
+        limit = min(max(int(limit or PAGE_DEFAULT), 1), PAGE_MAX)
+        nxt = offset + limit
+        return {"total": len(rows), "offset": offset, "limit": limit, "next": nxt if nxt < len(rows) else None,
+                "warehouse_id": wh.id, "days": days, "moves": rows[offset:nxt]}

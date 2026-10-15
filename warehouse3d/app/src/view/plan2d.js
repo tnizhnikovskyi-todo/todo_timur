@@ -6,6 +6,7 @@ import { isSel } from "../core/select.js";
 import { shapeOf } from "../core/params.js";
 import { rect2d } from "../core/layout.js";
 import { esc, slotCls } from "./util.js";
+import { heatColor } from "./heat.js";
 import * as B from "../core/building.js";
 import { createBldPlan } from "./bldplan.js";
 
@@ -143,9 +144,13 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
         const pr = pm.has(el._n); if (pr !== !!el._p) { el._p = pr; el.classList.toggle("prob", pr); }
       }
     }
+    // тепловая карта (W-17): цвет места — inline fill по ключу показателя; найденные поиском места — класс hit
+    const hm =model.heat.mode, hmap = hm !== "status" ? model.heat.map() : null, fq = model.find.query ? model.find.results().codes : null;
     for (const el of slots) {
-      const c = el.dataset.code, cls = `s ${slotCls(tree.loc(c))}${c === sel ? " sel" : ""}${pm.has(el._n) ? " prob" : ""}`;
+      const c = el.dataset.code, hk = hmap && hmap.get(c), tail = `${c === sel ? " sel" : ""}${fq && fq.has(c) ? " hit" : ""}${pm.has(el._n) ? " prob" : ""}`;
+      const cls = hk ? `s heat${tail}` : `s ${slotCls(tree.loc(c))}${tail}`, fc = hk ? heatColor(hm, hk) : "";
       if (cls !== el._c) { el._c = cls; el.setAttribute("class", cls); }
+      if (fc !== (el._f || "")) { el._f = fc; el.style.fill = fc; }
     }
     // подписи уровня ниже — размер шрифта от размера выбранного уровня
     const f = tree.nodes.get(F), fs = Math.max(0.12, Math.min(2.2, Math.max(f.w, f.d) / 45));
