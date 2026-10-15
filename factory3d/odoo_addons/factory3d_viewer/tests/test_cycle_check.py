@@ -30,12 +30,15 @@ class TestCycleCheckPure(BaseCase):
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestCycleCheck(F3dViewerCase):
 
-    def test_ok_on_demo(self):
-        if "f3d.viewer.provider.logistics" not in self.env:
-            self.skipTest("немає вбудованих провайдерів (W1b)")
+    def setUp(self):
+        super().setUp()
         # payload будується з правами користувача: адміністратору «Завод 3D» потрібен ще й доступ до складу/МО
         self.user_admin.group_ids = [(4, self.env.ref("stock.group_stock_user").id),
                                      (4, self.env.ref("mrp.group_mrp_user").id)]
+
+    def test_ok_on_demo(self):
+        if "f3d.viewer.provider.logistics" not in self.env:
+            self.skipTest("немає вбудованих провайдерів (W1b)")
         data = PayloadBuilder(self.env(user=self.user_admin), full=True).build()
         self.assertEqual(check(data), [])
 
