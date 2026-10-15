@@ -1,0 +1,34 @@
+{
+    "name": "Завод 3D: верстати",
+    "summary": "Стани верстатів → журнал часу, автостарт, простої з причинами, OEE; портал STORETEQ; карти розкрою",
+    "description": "Підключення верстатів HOMAG (OPC UA, OPC 40550-1) і верстатів без інтерфейсу (I/O ADAM): "
+    "нормалізовані "
+    "стани, журнал станів і простоїв, автостарт/пауза/завершення робочих завдань, OEE за фактом; портальний "
+    "склад плит HOMAG STORETEQ P-500 (стоси ↔ залишки, завдання порталу з МО); карти розкрою й програми "
+    "ЧПК з МО. Плагіни колектора opcua і rest_vendor — services/collector_plugins/machine_connect.",
+    "version": "19.0.1.0.0",
+    "category": "Manufacturing/Manufacturing",
+    "author": "ToDo",
+    "website": "https://todo.ltd",
+    "license": "LGPL-3",
+    # DEC-1/ENV-3: mrp_workorder (Enterprise) у середовищі немає; mrp, hr, stock, maintenance — явно (CE).
+    "depends": ["factory3d_telemetry", "mrp", "hr", "stock", "maintenance"],
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "data/ir_config_parameter.xml",
+        "data/ir_sequence.xml",
+        "data/res_users.xml",
+        "data/mrp_loss_data.xml",
+        "data/mc_sources.xml",
+        "data/ir_cron.xml",
+        "data/f3d_actions.xml",
+        "views/menus.xml",
+    ],
+    "demo": [],
+    "post_init_hook": "post_init_hook",
+    "uninstall_hook": "uninstall_hook",
+    "external_dependencies": {"python": []},
+    "installable": True,
+    "application": False,
+}

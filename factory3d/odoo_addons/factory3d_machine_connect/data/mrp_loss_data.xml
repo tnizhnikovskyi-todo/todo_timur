@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="loss_unknown" model="mrp.workcenter.productivity.loss">
+        <field name="name">Не вказано</field>
+        <field name="loss_id" ref="mrp.category_availability"/>
+        <field name="manual" eval="True"/>
+        <field name="sequence">99</field>
+    </record>
+</odoo>

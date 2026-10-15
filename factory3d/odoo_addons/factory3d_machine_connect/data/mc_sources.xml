@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC Додаток C.1: 22 джерела. equipment_id ставить хук (крок 3). -->
+<odoo noupdate="1">
+    <record id="source_ua_saw_1" model="f3d.source">
+        <field name="code">UA-SAW-1</field>
+        <field name="name">OPC UA SAW-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_saw_2" model="f3d.source">
+        <field name="code">UA-SAW-2</field>
+        <field name="name">OPC UA SAW-2</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_saw_3" model="f3d.source">
+        <field name="code">UA-SAW-3</field>
+        <field name="name">OPC UA SAW-3</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_nest_1" model="f3d.source">
+        <field name="code">UA-NEST-1</field>
+        <field name="name">OPC UA NEST-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_edge_1" model="f3d.source">
+        <field name="code">UA-EDGE-1</field>
+        <field name="name">OPC UA EDGE-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_edge_2" model="f3d.source">
+        <field name="code">UA-EDGE-2</field>
+        <field name="name">OPC UA EDGE-2</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_edge_3" model="f3d.source">
+        <field name="code">UA-EDGE-3</field>
+        <field name="name">OPC UA EDGE-3</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_cnc_1" model="f3d.source">
+        <field name="code">UA-CNC-1</field>
+        <field name="name">OPC UA CNC-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_cnc_2" model="f3d.source">
+        <field name="code">UA-CNC-2</field>
+        <field name="name">OPC UA CNC-2</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_cnc_3" model="f3d.source">
+        <field name="code">UA-CNC-3</field>
+        <field name="name">OPC UA CNC-3</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_cnc_4" model="f3d.source">
+        <field name="code">UA-CNC-4</field>
+        <field name="name">OPC UA CNC-4</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_bore_1" model="f3d.source">
+        <field name="code">UA-BORE-1</field>
+        <field name="name">OPC UA BORE-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_dowel_1" model="f3d.source">
+        <field name="code">UA-DOWEL-1</field>
+        <field name="name">OPC UA DOWEL-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_sort_1" model="f3d.source">
+        <field name="code">UA-SORT-1</field>
+        <field name="name">OPC UA SORT-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_ua_asmline_1" model="f3d.source">
+        <field name="code">UA-ASMLINE-1</field>
+        <field name="name">OPC UA ASMLINE-1</field>
+        <field name="type">opcua</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"endpoint": "opc.tcp://iot-sim:4840/f3d/", "security_mode": "None", "security_policy": "None", "username": "collector", "password_ref": "F3D_OPCUA_PASSWORD", "timeout_s": 5, "publishing_interval_ms": 1000, "ns_uri": "http://todo.ltd/f3d/iot_sim/instances/", "app_uri": "urn:todo.ltd:f3d:collector", "heartbeat_s": 60}'/>
+    </record>
+    <record id="source_mb_u80_io1" model="f3d.source">
+        <field name="code">MB-U80-IO1</field>
+        <field name="name">Модуль I/O ADAM-6050 №1</field>
+        <field name="type">modbus_tcp</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 80, "timeout_s": 3, "retries": 2, "max_block": 125, "gap_max": 8}'/>
+    </record>
+    <record id="source_mb_u81_io2" model="f3d.source">
+        <field name="code">MB-U81-IO2</field>
+        <field name="name">Модуль I/O ADAM-6050 №2</field>
+        <field name="type">modbus_tcp</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 81, "timeout_s": 3, "retries": 2, "max_block": 125, "gap_max": 8}'/>
+    </record>
+    <record id="source_mb_u82_io3" model="f3d.source">
+        <field name="code">MB-U82-IO3</field>
+        <field name="name">Модуль I/O ADAM-6050 №3</field>
+        <field name="type">modbus_tcp</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 82, "timeout_s": 3, "retries": 2, "max_block": 125, "gap_max": 8}'/>
+    </record>
+    <record id="source_mb_u83_io4" model="f3d.source">
+        <field name="code">MB-U83-IO4</field>
+        <field name="name">Модуль I/O ADAM-6050 №4</field>
+        <field name="type">modbus_tcp</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"host": "iot-sim", "port": 502, "unit": 83, "timeout_s": 3, "retries": 2, "max_block": 125, "gap_max": 8}'/>
+    </record>
+    <record id="source_rest_woodstore" model="f3d.source">
+        <field name="code">REST-WOODSTORE</field>
+        <field name="name">Портал STORETEQ: woodStore</field>
+        <field name="type">rest_vendor</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"base_url": "http://iot-sim:8082", "auth": "api_key", "header": "X-Api-Key", "key_ref": "F3D_WOODSTORE_KEY", "verify_tls": True, "timeout_s": 5, "vendor": "woodstore", "events_period_s": 2, "stacks_period_s": 30, "jobs_period_s": 10}'/>
+    </record>
+    <record id="source_rest_cutopt" model="f3d.source">
+        <field name="code">REST-CUTOPT</field>
+        <field name="name">Оптимізатор розкрою</field>
+        <field name="type">rest_vendor</field>
+        <field name="module">machine_connect</field>
+        <field name="collector_id" ref="factory3d_telemetry.collector_main"/>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval='{"base_url": "http://iot-sim:8083", "auth": "api_key", "header": "X-Api-Key", "key_ref": "F3D_CUTOPT_KEY", "verify_tls": True, "timeout_s": 15, "vendor": "cutopt"}'/>
+    </record>
+    <record id="source_mc_derived" model="f3d.source">
+        <field name="code">MC-DERIVED</field>
+        <field name="name">Верстати: обчислені стани</field>
+        <field name="type">f3d_machine</field>
+        <field name="module">machine_connect</field>
+        <field name="read_enabled" eval="True"/>
+        <field name="write_enabled" eval="False"/>
+        <field name="params" eval="{}"/>
+    </record>
+</odoo>

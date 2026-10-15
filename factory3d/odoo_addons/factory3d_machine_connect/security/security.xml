@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §4.3: record rules (мультикомпанія). Власних груп немає (CB-10). -->
+<odoo>
+    <record id="rule_f3d_machine_company" model="ir.rule">
+        <field name="name">Верстати: підключення — компанія</field>
+        <field name="model_id" ref="model_f3d_machine"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_downtime_company" model="ir.rule">
+        <field name="name">Верстати: простої — компанія</field>
+        <field name="model_id" ref="model_f3d_downtime"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_oee_shift_company" model="ir.rule">
+        <field name="name">Верстати: OEE — компанія</field>
+        <field name="model_id" ref="model_f3d_oee_shift"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_gantry_job_company" model="ir.rule">
+        <field name="name">Портал: завдання — компанія</field>
+        <field name="model_id" ref="model_f3d_gantry_job"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_cut_map_company" model="ir.rule">
+        <field name="name">Розкрій: карти — компанія</field>
+        <field name="model_id" ref="model_f3d_cut_map"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

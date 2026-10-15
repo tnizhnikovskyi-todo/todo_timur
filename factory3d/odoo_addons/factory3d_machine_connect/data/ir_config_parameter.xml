@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §5.1. read_enabled і cutting_mode ставить хук (крок 0). -->
+<odoo noupdate="1">
+    <record id="param_auto_start_enabled" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.auto_start_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_write_enabled" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.write_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_micro_stop_s" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.micro_stop_s</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_pause_after_min" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.pause_after_min</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_finish_idle_s" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.finish_idle_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_qty_sync_mode" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.qty_sync_mode</field>
+        <field name="value">finish</field>
+    </record>
+    <record id="param_qty_sync_s" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.qty_sync_s</field>
+        <field name="value">300</field>
+    </record>
+    <record id="param_coverage_min" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.coverage_min</field>
+        <field name="value">0.95</field>
+    </record>
+    <record id="param_oee_good" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.oee_good</field>
+        <field name="value">0.75</field>
+    </record>
+    <record id="param_oee_warn" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.oee_warn</field>
+        <field name="value">0.5</field>
+    </record>
+    <record id="param_no_job_activity_min" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.no_job_activity_min</field>
+        <field name="value">15</field>
+    </record>
+    <record id="param_stack_diff_tolerance" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.stack_diff_tolerance</field>
+        <field name="value">0</field>
+    </record>
+    <record id="param_stack_diff_confirm_min" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.stack_diff_confirm_min</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_gantry_auto_replenish" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.gantry_auto_replenish</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_gantry_auto_feed" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.gantry_auto_feed</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_export_token_ttl_s" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.export_token_ttl_s</field>
+        <field name="value">600</field>
+    </record>
+    <record id="param_keep_log_days" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.keep_log_days</field>
+        <field name="value">400</field>
+    </record>
+    <record id="param_keep_event_days" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.keep_event_days</field>
+        <field name="value">90</field>
+    </record>
+    <record id="param_migration_report" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.migration_report</field>
+        <field name="value">{}</field>
+    </record>
+    <record id="param_gantry_status" model="ir.config_parameter">
+        <field name="key">factory3d.machine_connect.gantry_status</field>
+        <field name="value">{}</field>
+    </record>
+</odoo>
