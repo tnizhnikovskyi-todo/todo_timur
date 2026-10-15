@@ -22,5 +22,10 @@
 | S-4 | iot_sim | P3 | «Перевірити зв'язок» при пустом url → offline навсегда вместо unconfigured | OPEN |
 | S-5 | iot_sim | P3 | params_schema сценариев: device без enum, мастер принимает несуществующее устройство | OPEN |
 | T-5 | telemetry | P3 | last_error стирается при неизвестном state; value+text принимаются вместе; 405 отдаёт HTML; нет icon.png | OPEN |
+| A-1 | access | P2 | роль Охрана: в CSV RW на f3d.access.door, по SPEC §13.3 только alarm*; ограничение только в write() (f3d_access_door.py:79); проверить под ролью | OPEN |
+| A-2 | access | P3 | два меню «Сервери BioStar» (id 520, 521) | OPEN |
+| A-3 | access | P3 | сервер BioStar-эмулятора: read_enabled, state=error, опрос каждую минуту (сервис эмулятора не запущен); migration_state=partial | OPEN |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
+
+Не дефект (решение менеджера): крон access «ротація і закриття відміток» закроет 35 открытых hr.attendance от 12.10 — поведение по SPEC (stale_close), на тестовой базе допустимо.
