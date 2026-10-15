@@ -1,6 +1,6 @@
 # factory3d_iot_sim
 Статус: IN_PROGRESS
-Тесты: svc 156/156 + Odoo 40/40 (2026-10-14), ТК: ждут стенд
+Тесты: svc 433/433 + Odoo 40/40 (2026-10-15), ТК: в работе (W6)
 Решений без заказчика: 0 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
@@ -14,9 +14,9 @@
 | W2 | принят | 1348d5d | svc tests 98/98, ruff OK |
 | W3 | принят | c833e68 | svc 159 (в worktree), ruff OK |
 | W4 | принят | afa7082 | svc 225 (в worktree), smoke health OK |
-| INT | в работе | — | интеграция W1–W4 |
+| INT | принят | 7812c1e | svc 433/433, cov core+models 99 %, smoke 11 протоколов ok |
+| W6 | в работе | — | стенд docker compose |
 | W5 | принят | 6e43f5b | Odoo /factory3d_iot_sim 40/40 |
-| W6 | ждёт | — | — |
 
 ## Решения без заказчика
 - DEC-1: `services/iot_sim` из SPEC §0.1 размещён в `factory3d/services/iot_sim` (как `factory3d/odoo_addons`).
@@ -35,3 +35,4 @@
 - DEC-12 (W1b): владелец kwh_total/kwh_shift потребителей — `models/meter.py` (R-03); machine пишет только p_now. В реестре 278 пристроїв (276 + агрегаты OFFICE, RV-ALL).
 - DEC-13 (W3): BACnet AI/AV не commandable (без priority-array); при нескольких сигналах на одну Modbus-адресу берётся первый по каталогу; AI:5 из сигнала filter_extract_dp_pa. Макет детекторов/групп DALI — из `dist/odoo_demo.json` (SIM_LAYOUT_PATH) — в образ Docker нужно положить файл.
 - DEC-14 (W4): SIM_CATALOG_SOURCE=odoo — реестр из локального каталога (API-01 только для bookings/employees через follow); reset не сбрасывает внутреннее состояние моделей; в Odoo пересылаются kind scenario/fault/alarm/error/info.
+- DEC-15 (INT): темы post ats/hvac/boiler/meter/modbus_cmd применяются протоколом напрямую (force/flag), очередь ограничена 256; короткий ключ сигнала при коллизии — первому по каталогу (+WARNING), полный код — `Device.by_code`. MQTT health=ok без брокера (буфер). — `core/world.py`, `__main__.py`
