@@ -32,7 +32,7 @@ class F3dZone(models.Model):
     _rec_names_search = ['name', 'f3d_code']
     _f3d_kind = 'zone'
 
-    f3d_code = fields.Char(required=True, size=32)
+    f3d_code = fields.Char(required=True)  # довжину ≤ 32 перевіряє _check_f3d_codes (size=32 мовчки обрізало б, B-1)
     name = fields.Char(string='Назва', required=True, size=128)
     sequence = fields.Integer(default=10)
     zone_type = fields.Selection(ZONE_TYPES, string='Тип', required=True)

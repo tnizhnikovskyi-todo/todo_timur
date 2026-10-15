@@ -29,6 +29,16 @@ class TestCodeFormat(SceneCase):
                 self.loc('Bad ' + code, f3d_code=code)
 
 
+    def test_zone_code_too_long(self):
+        """B-1 (AC-01): 33 символи в f3d.zone — ValidationError, а не мовчазне обрізання до 32."""
+        self.assertEqual(self.make_zone('Z' * 32).f3d_code, 'Z' * 32)
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            self.make_zone('Z' * 33)
+        zone = self.make_zone('Z-OK-1')
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            zone.f3d_code = 'Z' * 40
+
+
 @tagged('post_install', '-at_install', 'f3d', 'f3d_base')
 class TestUniqueness(SceneCase):
 
