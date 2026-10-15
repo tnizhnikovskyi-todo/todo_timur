@@ -1,7 +1,7 @@
 # factory3d_machine_connect
 Статус: IN_PROGRESS
 Тесты: —, ТК: ждут W9
-Решений без заказчика: 13 (ниже)
+Решений без заказчика: 15 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ISA95-структуры — допущение Q-01
 
@@ -14,7 +14,8 @@
 | W5 | принят | 0dce9e7 | /factory3d_machine_connect 55/55 |
 | W4 | принят | 57a6daf | /factory3d_machine_connect 68/68 |
 | W6 | принят | ca5b681 | /factory3d_machine_connect 80/80 |
-| W3 | в работе | | |
+| W3 | принят | 29ca2f4 | /factory3d_machine_connect 100/100 |
+| W8 | в работе | | |
 
 ## Решения без заказчика
 - DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
@@ -50,4 +51,10 @@
 - DEC-13: API-01 отдаёт карту в состояниях `exported` и `optimizing` (409 для прочих) — `action_send_optimizer` сразу
   ставит `optimizing`, по букве SPEC колектор всегда получал бы 409; 413 — при >5000 строк карты или теле >1 МБ;
   тайм-аут оптимизации 30 хв — от `optimizing_since` (запасной — `write_date`). — `controllers/cutmap.py`, `models/f3d_cut_map.py`
-- TODO лидера после W3: push_handler `mc_cutopt` — `map` необязателен, карта через `_f3d_find_for_event(map, job_id)` (DEC-11).
+- DEC-11 (доп.): push_handler `mc_cutopt` — `map` необязателен, карта через `f3d.cut.map._f3d_find_for_event(map, job_id)`. — `models/push_handler.py`
+- DEC-14: автостарт (DEC-1 в CE) — R-09 п.4(б) упрощён: «сегодня» = начало локального дня, а не первый интервал ППЧ;
+  работник записи = `wo.f3d_employee_id`, иначе работник пользователя; ответственный активности «нет задания» —
+  `equipment.technician_user_id`, иначе admin (у `mrp.workcenter` в CE нет technician). `f3d.machine` получил
+  `mail.activity.mixin`. `_f3d_close_timers` режет `date_end` до `ts` всегда (AC-11). — `models/f3d_machine_wo.py`
+- DEC-15: неполная партия снимает `active_workorder_id`, автостарт пропускает WO с `f3d_partial_hold`; отложенная
+  микрозупинка считается «не working» для завершения I/O по `finish_idle_s`. — `models/f3d_machine_wo.py`
