@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <gantt string="Бронювання воріт" date_start="slot_start" date_stop="slot_end" default_group_by="dock_id"
                    default_scale="day" scales="day,week" color="color" pill_label="True"
-                   decoration-warning="state == 'requested'" decoration-muted="state == 'cancelled'"
+                   decoration-warning="state == 'requested'" decoration-secondary="state == 'cancelled'"
                    precision="{'day': 'hour:quarter', 'week': 'day:half'}" display_unavailability="0" sample="0">
                 <field name="state"/>
                 <field name="visit_id"/>
