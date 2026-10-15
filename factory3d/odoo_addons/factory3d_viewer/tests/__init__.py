@@ -6,3 +6,7 @@ from . import test_payload_static
 from . import test_delta
 from . import test_cycle_check
 from . import test_controllers
+from . import test_payload_stock
+from . import test_payload_production
+from . import test_payload_logistics
+from . import test_payload_misc
