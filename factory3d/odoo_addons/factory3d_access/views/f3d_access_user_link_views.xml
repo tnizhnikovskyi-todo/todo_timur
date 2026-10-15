@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_access_user_link_list" model="ir.ui.view">
+        <field name="name">f3d.access.user.link.list</field>
+        <field name="model">f3d.access.user.link</field>
+        <field name="arch" type="xml">
+            <list string="Користувачі BioStar" decoration-muted="not in_biostar">
+                <field name="biostar_user_id"/>
+                <field name="biostar_name"/>
+                <field name="employee_id"/>
+                <field name="match" widget="badge" decoration-warning="match=='none'"/>
+                <field name="user_group"/>
+                <field name="disabled"/>
+                <field name="card_count"/>
+                <field name="has_face"/>
+                <field name="in_biostar"/>
+                <field name="last_sync"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_user_link_form" model="ir.ui.view">
+        <field name="name">f3d.access.user.link.form</field>
+        <field name="model">f3d.access.user.link</field>
+        <field name="arch" type="xml">
+            <form string="Користувач BioStar">
+                <header>
+                    <button name="action_rematch" type="object" string="Підібрати працівника"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_open_events" type="object" string="Події"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="server_id"/>
+                            <field name="biostar_user_id"/>
+                            <field name="biostar_name"/>
+                            <field name="employee_id"/>
+                            <field name="match"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="user_group"/>
+                            <field name="disabled"/>
+                            <field name="start_dt"/>
+                            <field name="expiry_dt"/>
+                            <field name="card_count"/>
+                            <field name="has_face"/>
+                            <field name="has_finger"/>
+                            <field name="in_biostar"/>
+                            <field name="last_sync"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_user_link_search" model="ir.ui.view">
+        <field name="name">f3d.access.user.link.search</field>
+        <field name="model">f3d.access.user.link</field>
+        <field name="arch" type="xml">
+            <search string="Користувачі BioStar">
+                <field name="biostar_user_id"/>
+                <field name="biostar_name"/>
+                <field name="employee_id"/>
+                <filter name="unlinked" string="Не зв'язано" domain="[('match', '=', 'none')]"/>
+                <filter name="missing" string="Немає в BioStar" domain="[('in_biostar', '=', False)]"/>
+                <filter name="disabled" string="Вимкнено" domain="[('disabled', '=', True)]"/>
+                <group>
+                    <filter name="group_match" string="Збіг" context="{'group_by': 'match'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_access_user_link" model="ir.actions.act_window">
+        <field name="name">Користувачі BioStar</field>
+        <field name="res_model">f3d.access.user.link</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_unlinked': 1}</field>
+    </record>
+</odoo>

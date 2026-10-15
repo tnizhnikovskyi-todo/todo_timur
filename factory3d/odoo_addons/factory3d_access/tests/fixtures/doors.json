@@ -8,16 +8,13 @@
     "entry_device_id": {
      "id": "5390001"
     },
-    "open_duration": "3",
-    "exit_device_id": {
-     "id": "5390002"
-    }
+    "open_duration": "3"
    },
    {
     "id": "2",
     "name": "Двері DOOR-ELEC",
     "entry_device_id": {
-     "id": "5390003"
+     "id": "5390002"
     },
     "open_duration": "3"
    },
@@ -25,7 +22,7 @@
     "id": "3",
     "name": "Двері DOOR-CHG",
     "entry_device_id": {
-     "id": "5390004"
+     "id": "5390003"
     },
     "open_duration": "3"
    },

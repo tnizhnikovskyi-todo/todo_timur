@@ -13,16 +13,16 @@
    },
    {
     "id": "5390002",
-    "name": "ACR-OUT BioEntry W3 (прохідна)",
+    "name": "ACR-ELEC BioLite N2 (електрощитова)",
     "device_type_id": {
-     "name": "BioEntry W3"
+     "name": "BioLite N2"
     },
     "status": "1",
     "ip": "192.168.10.12"
    },
    {
     "id": "5390003",
-    "name": "ACR-ELEC BioLite N2 (електрощитова)",
+    "name": "ACR-CHG BioLite N2 (зарядна)",
     "device_type_id": {
      "name": "BioLite N2"
     },
@@ -31,7 +31,7 @@
    },
    {
     "id": "5390004",
-    "name": "ACR-PAINT BioLite N2 (фарбування)",
+    "name": "ACR-PAINT BioLite N2 (склад ЛФМ)",
     "device_type_id": {
      "name": "BioLite N2"
     },

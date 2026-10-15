@@ -20,5 +20,25 @@
     <record id="factory3d_base.group_f3d_admin" model="res.groups">
         <field name="implied_ids" eval="[Command.link(ref('group_f3d_access_admin'))]"/>
     </record>
-    <!-- W1: record rules (SPEC §4.3) для моделей W1-W4 додаються після появи моделей -->
+    <record id="rule_f3d_access_server_company" model="ir.rule">
+        <field name="name">СКУД server: компанія</field>
+        <field name="model_id" ref="model_f3d_access_server"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_access_device_company" model="ir.rule">
+        <field name="name">СКУД device: компанія</field>
+        <field name="model_id" ref="model_f3d_access_device"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_access_door_company" model="ir.rule">
+        <field name="name">СКУД door: компанія</field>
+        <field name="model_id" ref="model_f3d_access_door"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_f3d_access_user_link_company" model="ir.rule">
+        <field name="name">СКУД user.link: компанія</field>
+        <field name="model_id" ref="model_f3d_access_user_link"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <!-- W2/W3: rule_f3d_access_{event,card,visitor,presence}_company, rule_f3d_access_card_* (SPEC §4.3) -->
 </odoo>

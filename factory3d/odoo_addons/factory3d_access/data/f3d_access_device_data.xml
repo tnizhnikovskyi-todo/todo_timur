@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="device_acr_in" model="f3d.access.device">
+        <field name="code">ACR-IN</field>
+        <field name="name">Вхід персоналу (прохідна)</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">5390001</field>
+        <field name="direction">tna</field>
+        <field name="x">99.3</field>
+        <field name="y">0.12</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_kpp"/>
+    </record>
+    <record id="device_acr_elec" model="f3d.access.device">
+        <field name="code">ACR-ELEC</field>
+        <field name="name">Електрощитова</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">5390002</field>
+        <field name="direction">in</field>
+        <field name="x">129.0</field>
+        <field name="y">62.25</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fg"/>
+    </record>
+    <record id="device_acr_chg" model="f3d.access.device">
+        <field name="code">ACR-CHG</field>
+        <field name="name">Зарядна</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">5390003</field>
+        <field name="direction">in</field>
+        <field name="x">117.0</field>
+        <field name="y">59.88</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_post"/>
+    </record>
+    <record id="device_acr_paint" model="f3d.access.device">
+        <field name="code">ACR-PAINT</field>
+        <field name="name">Склад ЛФМ</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">5390004</field>
+        <field name="direction">in</field>
+        <field name="x">61.0</field>
+        <field name="y">65.88</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_fac"/>
+    </record>
+    <record id="device_acr_srv" model="f3d.access.device">
+        <field name="code">ACR-SRV</field>
+        <field name="name">Серверна</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">5390005</field>
+        <field name="direction">in</field>
+        <field name="x">99.6</field>
+        <field name="y">48.6</field>
+        <field name="zone_id" ref="factory3d_base.zone_z_maint"/>
+    </record>
+    <record id="door_turn_1" model="f3d.access.door">
+        <field name="code">TURN-1</field>
+        <field name="name">Турнікет прохідної</field>
+        <field name="kind">turnstile</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">1</field>
+        <field name="entry_device_id" ref="device_acr_in"/>
+        <field name="zone_from_id" ref="factory3d_base.zone_z_kpp"/>
+        <field name="zone_to_id" ref="factory3d_base.zone_z_asm"/>
+        <field name="is_perimeter" eval="True"/>
+        <field name="dwell_min">0</field>
+    </record>
+    <record id="door_elec" model="f3d.access.door">
+        <field name="code">DOOR-ELEC</field>
+        <field name="name">Електрощитова</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">2</field>
+        <field name="entry_device_id" ref="device_acr_elec"/>
+        <field name="zone_from_id" ref="factory3d_base.zone_z_fg"/>
+        <field name="zone_to_id" ref="factory3d_base.zone_z_elec"/>
+        <field name="is_perimeter" eval="False"/>
+        <field name="dwell_min">30</field>
+    </record>
+    <record id="door_chg" model="f3d.access.door">
+        <field name="code">DOOR-CHG</field>
+        <field name="name">Зарядна</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">3</field>
+        <field name="entry_device_id" ref="device_acr_chg"/>
+        <field name="zone_from_id" ref="factory3d_base.zone_z_post"/>
+        <field name="zone_to_id" ref="factory3d_base.zone_z_chg"/>
+        <field name="is_perimeter" eval="False"/>
+        <field name="dwell_min">30</field>
+    </record>
+    <record id="door_paint" model="f3d.access.door">
+        <field name="code">DOOR-PAINT</field>
+        <field name="name">Склад ЛФМ</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">4</field>
+        <field name="entry_device_id" ref="device_acr_paint"/>
+        <field name="zone_from_id" ref="factory3d_base.zone_z_fac"/>
+        <field name="zone_to_id" ref="factory3d_base.zone_z_fac"/>
+        <field name="is_perimeter" eval="False"/>
+        <field name="dwell_min">30</field>
+    </record>
+    <record id="door_srv" model="f3d.access.door">
+        <field name="code">DOOR-SRV</field>
+        <field name="name">Серверна</field>
+        <field name="kind">door</field>
+        <field name="server_id" ref="server_biostar_sim"/>
+        <field name="biostar_id">5</field>
+        <field name="entry_device_id" ref="device_acr_srv"/>
+        <field name="zone_from_id" ref="factory3d_base.zone_z_maint"/>
+        <field name="zone_to_id" ref="factory3d_base.zone_z_maint"/>
+        <field name="is_perimeter" eval="False"/>
+        <field name="dwell_min">30</field>
+    </record>
+</odoo>

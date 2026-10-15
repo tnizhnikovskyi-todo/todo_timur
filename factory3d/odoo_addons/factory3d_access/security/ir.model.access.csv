@@ -1,1 +1,11 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_access_server_admin,f3d.access.server access admin,model_f3d_access_server,group_f3d_access_admin,1,0,0,0
+access_f3d_access_server_f3d_admin,f3d.access.server f3d admin,model_f3d_access_server,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_access_device_user,f3d.access.device user,model_f3d_access_device,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_access_device_admin,f3d.access.device admin,model_f3d_access_device,group_f3d_access_admin,1,1,1,1
+access_f3d_access_door_user,f3d.access.door user,model_f3d_access_door,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_access_door_security,f3d.access.door security,model_f3d_access_door,group_f3d_access_security,1,1,0,0
+access_f3d_access_door_admin,f3d.access.door admin,model_f3d_access_door,group_f3d_access_admin,1,1,1,1
+access_f3d_access_user_link_security,f3d.access.user.link security,model_f3d_access_user_link,group_f3d_access_security,1,0,0,0
+access_f3d_access_user_link_hr,f3d.access.user.link hr,model_f3d_access_user_link,hr_attendance.group_hr_attendance_user,1,0,0,0
+access_f3d_access_user_link_admin,f3d.access.user.link admin,model_f3d_access_user_link,group_f3d_access_admin,1,1,1,1
