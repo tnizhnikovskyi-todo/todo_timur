@@ -212,22 +212,30 @@ async def modbus_server(vclock):
     from pymodbus.server import ModbusTcpServer
 
     class CountingBlock(ModbusSequentialDataBlock):
-        def __init__(self, owner, *a, **k):
+        def __init__(self, owner, wfc, *a, **k):
             super().__init__(*a, **k)
             self.owner = owner
+            self.wfc = wfc  # fc, який бачить журнал записів: coils -> 5, регістри -> 6/16
 
         def getValues(self, address, count=1):
             self.owner.requests += 1
+            if address < self.address or address + count > self.address + len(self.values):
+                return 2  # ILLEGAL_ADDRESS (pymodbus 3.9: код винятку повертається значенням)
             return super().getValues(address, count)
 
         def setValues(self, address, values):
             vals = values if isinstance(values, list) else [values]
-            if self.owner.fail_n > 0:
-                self.owner.fail_n -= 1
-                raise ValueError("0x04")
             for i, v in enumerate(vals):
-                self.owner.writes.append((vclock.now(), 3, address + i, v))
+                fc = self.wfc if self.wfc != 6 or len(vals) == 1 else 16
+                self.owner.writes.append((vclock.now(), fc, address + i - 1, v))  # ModbusSlaveContext додає +1
             super().setValues(address, values)
+
+    class Slave(ModbusSlaveContext):
+        async def async_setValues(self, fc_as_hex, address, values):
+            if h.fail_n > 0:
+                h.fail_n -= 1
+                return 4  # SLAVE_FAILURE
+            return super().setValues(fc_as_hex, address, values)  # type: ignore[no-any-return]
 
     class Handle:
         requests = 0
@@ -243,26 +251,31 @@ async def modbus_server(vclock):
     h.writes = []
 
     def ctx():
-        return ModbusSlaveContext(
-            di=CountingBlock(h, 0, [0] * 100), co=CountingBlock(h, 0, [0] * 100),
-            hr=CountingBlock(h, 0, [0] * 5000), ir=CountingBlock(h, 0, [0] * 5000), zero_mode=True)
+        return Slave(
+            di=CountingBlock(h, 2, 1, [0] * 100), co=CountingBlock(h, 5, 1, [0] * 100),
+            hr=CountingBlock(h, 6, 1, [0] * 5000), ir=CountingBlock(h, 4, 1, [0] * 5000))
 
     h.slaves = {u: ctx() for u in (70, 84, 86, 90, 96)}
     context = ModbusServerContext(slaves=h.slaves, single=False)
     server = ModbusTcpServer(context, address=("127.0.0.1", 0))
     task = asyncio.create_task(server.serve_forever())
     await asyncio.sleep(0.1)
-    h.port = server.server.sockets[0].getsockname()[1] if getattr(server, "server", None) else 0
+    h.port = server.transport.sockets[0].getsockname()[1]
     yield h
     await server.shutdown()
     task.cancel()
 
 
-@pytest.fixture
-def bacnet_device():
-    """bacpypes3 пристрій device 140 (AC-97, X-05). Каркас: наповнює воркер bacnet_ip."""
+@pytest_asyncio.fixture
+async def bacnet_device():
+    """bacpypes3 пристрій device 140 (AC-81, AC-97, X-05); див. tests/bacnet_sim.py."""
     pytest.importorskip("bacpypes3")
-    pytest.skip("фікстура bacnet_device реалізується воркером плагіна bacnet_ip")
+    from bacnet_sim import BacnetTestDevice
+
+    dev = BacnetTestDevice()
+    await dev.start()
+    yield dev
+    dev.close()
 
 
 @pytest_asyncio.fixture
@@ -273,5 +286,33 @@ async def http_push_client(settings, vclock):
     server = HttpPushServer(settings=settings, clock=vclock)
     client = TestClient(TestServer(server.app))
     await client.start_server()
+    client.f3d_server = server  # type: ignore[attr-defined]
     yield client
     await client.close()
+    server.reset_instance()
+
+
+@pytest.fixture
+def make_ctx(vclock):
+    """Фабрика PluginContext із записом emit/emit_event (SPEC §8.3.2); `ctx.clock` — віртуальний годинник."""
+    import logging
+    from types import SimpleNamespace
+
+    from collector.core.metrics import Metrics
+    from collector.plugins.base import PluginContext
+
+    def factory(clock=None, secrets=None, **settings):
+        box = SimpleNamespace(readings=[], events=[], allowed=[])
+        cfg = SimpleNamespace(collector_code="COL-T", write_enabled=True, bacnet_bind="127.0.0.1:0",
+                              bacnet_device_id=3999, http_push_allow_ips=[], http_push_port=0)
+        for k, v in settings.items():
+            setattr(cfg, k, v)
+        box.metrics = Metrics(vclock)
+        box.ctx = PluginContext(
+            settings=cfg, secrets=secrets or (lambda name: os.environ[name]), allowlist=box.allowed.append,
+            emit=box.readings.append, emit_event=box.events.append, metrics=box.metrics,
+            log=logging.getLogger("collector.plugin.test"))
+        box.ctx.clock = clock or vclock  # type: ignore[attr-defined]
+        return box
+
+    return factory

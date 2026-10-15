@@ -13,10 +13,16 @@ dynamic = ["dependencies"]
 f3d-collector = "collector.__main__:main"
 
 [project.entry-points."factory3d_collector.plugins"]
-# плагіни реєструють воркери: modbus_tcp = "collector.plugins.modbus_tcp:ModbusTcpPlugin" тощо
+modbus_tcp = "collector.plugins.modbus_tcp:ModbusTcpPlugin"
+mqtt = "collector.plugins.mqtt:MqttPlugin"
+http_push = "collector.plugins.http_push:HttpPushPlugin"
+bacnet_ip = "collector.plugins.bacnet_ip:BacnetIpPlugin"
 
 [tool.setuptools.packages.find]
 include = ["collector*"]
+
+[tool.setuptools.package-data]
+"collector.plugins" = ["schemas/*.json"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }

@@ -125,6 +125,17 @@ def test_load_plugins(monkeypatch):
     assert load_plugins() == {"modbus_tcp": FakePlugin}
 
 
+def test_load_real_plugins_exactly_four():
+    """AC-76: у базовому образі рівно 4 плагіни (entry points pyproject.toml)."""
+    plugins = load_plugins()
+    assert sorted(plugins) == ["bacnet_ip", "http_push", "modbus_tcp", "mqtt"]
+    for typ, cls in plugins.items():
+        assert cls.type == typ and cls.address_schema and cls.params_schema
+        assert issubclass(cls, SourcePlugin) and not getattr(cls, "__abstractmethods__", None)
+    assert plugins["mqtt"].push_mode and plugins["http_push"].push_mode
+    assert not plugins["modbus_tcp"].push_mode and not plugins["bacnet_ip"].push_mode
+
+
 async def test_missing_plugin(fake_odoo, client, settings, vclock):
     _cfg(fake_odoo, [src_json("OPC", type_="opcua")])
     reg = _reg(client, settings, vclock)
