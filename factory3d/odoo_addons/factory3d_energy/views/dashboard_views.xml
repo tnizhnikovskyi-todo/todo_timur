@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-20 (A-12): «Огляд» — kanban вузлів kind in (transformer, line); KPI-панелі немає (їх дає переглядач).
+     Окрема дія «Пік і вартість» — pivot інтервалів фідерів. -->
+<odoo>
+    <record id="view_f3d_energy_node_kanban" model="ir.ui.view">
+        <field name="name">f3d.energy.node.kanban</field>
+        <field name="model">f3d.energy.node</field>
+        <field name="arch" type="xml">
+            <kanban create="false" edit="false" default_order="sequence, id">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="kind"/>
+                <field name="p_now"/>
+                <field name="rating_a"/>
+                <field name="rating_kva"/>
+                <field name="kwh_today"/>
+                <templates>
+                    <t t-name="card">
+                        <t t-set="cap" t-value="record.rating_kva.raw_value or (record.rating_a.raw_value * 0.6235)"/>
+                        <t t-set="pct" t-value="cap ? Math.round(record.p_now.raw_value / cap * 100) : 0"/>
+                        <div class="d-flex justify-content-between">
+                            <strong><field name="name"/></strong>
+                            <field name="code" widget="badge"/>
+                        </div>
+                        <div><field name="p_now"/> кВт
+                            <span t-if="record.rating_kva.raw_value"> / <field name="rating_kva"/> кВА</span>
+                            <span t-elif="record.rating_a.raw_value"> / <field name="rating_a"/> А</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 6px;">
+                            <div t-attf-class="progress-bar #{pct &lt; 60 ? 'bg-success' : (pct &lt; 80 ? 'bg-warning' : 'bg-danger')}"
+                                 t-attf-style="width: #{Math.min(pct, 100)}%;"/>
+                        </div>
+                        <div class="text-muted"><t t-esc="pct"/> % · <field name="kwh_today"/> кВт·год сьогодні</div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_overview" model="ir.actions.act_window">
+        <field name="name">Огляд</field>
+        <field name="res_model">f3d.energy.node</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('kind', 'in', ('transformer', 'line'))]</field>
+    </record>
+
+    <record id="view_f3d_energy_interval_peak_pivot" model="ir.ui.view">
+        <field name="name">f3d.energy.interval.peak.pivot</field>
+        <field name="model">f3d.energy.interval</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="day" type="row" interval="day"/>
+                <field name="kwh" type="measure"/>
+                <field name="kw_avg" type="measure" string="Пік, кВт"/>
+                <field name="cost" type="measure" groups="factory3d_energy.group_f3d_energy_cost"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_peak" model="ir.actions.act_window">
+        <field name="name">Пік і вартість</field>
+        <field name="res_model">f3d.energy.interval</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="domain">[('role', '=', 'feeder')]</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_f3d_energy_interval_peak_pivot')})]"/>
+    </record>
+</odoo>

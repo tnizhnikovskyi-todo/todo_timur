@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- W3: V-11 (розподіл енергії на виробництво). Грошові поля — лише для group_f3d_energy_cost. -->
+<odoo>
+    <record id="view_f3d_energy_alloc_list" model="ir.ui.view">
+        <field name="name">f3d.energy.alloc.list</field>
+        <field name="model">f3d.energy.alloc</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="day"/>
+                <field name="production_id"/>
+                <field name="workorder_id"/>
+                <field name="workcenter_id"/>
+                <field name="kind"/>
+                <field name="pool_id"/>
+                <field name="kwh" sum="Разом"/>
+                <field name="minutes"/>
+                <field name="cost" sum="Разом" groups="factory3d_energy.group_f3d_energy_cost"/>
+                <field name="quality" widget="badge" decoration-success="quality == 'measured'"
+                       decoration-warning="quality in ('interpolated', 'partial')"
+                       decoration-muted="quality == 'estimate'"/>
+                <field name="locked"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_alloc_pivot" model="ir.ui.view">
+        <field name="name">f3d.energy.alloc.pivot</field>
+        <field name="model">f3d.energy.alloc</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="production_id" type="row"/>
+                <field name="kind" type="col"/>
+                <field name="kwh" type="measure"/>
+                <field name="cost" type="measure" groups="factory3d_energy.group_f3d_energy_cost"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_alloc_graph" model="ir.ui.view">
+        <field name="name">f3d.energy.alloc.graph</field>
+        <field name="model">f3d.energy.alloc</field>
+        <field name="arch" type="xml">
+            <graph type="bar" stacked="1">
+                <field name="day"/>
+                <field name="kind"/>
+                <field name="kwh" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_alloc_search" model="ir.ui.view">
+        <field name="name">f3d.energy.alloc.search</field>
+        <field name="model">f3d.energy.alloc</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="production_id"/>
+                <field name="workorder_id"/>
+                <field name="workcenter_id"/>
+                <filter name="direct" string="Прямі" domain="[('kind', '=', 'direct')]"/>
+                <filter name="shared" string="Спільні" domain="[('kind', '=', 'shared')]"/>
+                <filter name="idle" string="Простій РЦ" domain="[('kind', '=', 'idle')]"/>
+                <filter name="unallocated" string="Нерозподілені" domain="[('kind', '=', 'unallocated')]"/>
+                <filter name="overhead" string="Накладні" domain="[('kind', '=', 'overhead')]"/>
+                <separator/>
+                <filter name="locked" string="Зафіксовані" domain="[('locked', '=', True)]"/>
+                <filter name="today" string="Сьогодні" domain="[('day', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="week" string="Тиждень"
+                        domain="[('day', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <group>
+                    <filter name="group_day" string="Дата" context="{'group_by': 'day'}"/>
+                    <filter name="group_production" string="МО" context="{'group_by': 'production_id'}"/>
+                    <filter name="group_workcenter" string="Робочий центр" context="{'group_by': 'workcenter_id'}"/>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                    <filter name="group_pool" string="Пул" context="{'group_by': 'pool_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_alloc_pivot" model="ir.actions.act_window">
+        <field name="name">Енергія на виробництво</field>
+        <field name="res_model">f3d.energy.alloc</field>
+        <field name="view_mode">pivot,graph,list</field>
+    </record>
+</odoo>

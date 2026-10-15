@@ -1,0 +1,276 @@
+import re
+from datetime import timezone
+
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError, UserError, ValidationError
+
+from ..tools.tariff import to_local
+
+
+def _today_start_utc():
+    """Початок поточної доби за Києвом у UTC (naive, як у Odoo). R-20: повна версія — `tools/dates.py` (W2)."""
+    start = to_local(fields.Datetime.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+    return start.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+class F3dEnergyNode(models.Model):
+    _name = "f3d.energy.node"
+    _description = "Енергетика: вузол мережі"
+    _inherit = ["mail.thread"]
+    _parent_name = "parent_id"
+    _parent_store = True
+    _order = "sequence, code"
+    _rec_name = "name"
+    _rec_names_search = ["name", "code"]
+    CODE_RE = re.compile(r"^[A-Z0-9][A-Z0-9\-]{0,31}$")
+    KINDS = [
+        ("input", "Ввід мережі"),
+        ("substation", "РУ 10 кВ"),
+        ("transformer", "Трансформатор"),
+        ("switchboard", "ГРЩ"),
+        ("section", "Секція шин"),
+        ("cell", "Шафа ГРЩ"),
+        ("line", "Лінія"),
+        ("tapoff", "Відгалуження"),
+        ("consumer", "Споживач"),
+        ("generator", "Генерація"),
+        ("storage", "Накопичувач"),
+        ("ats", "АВР"),
+    ]
+    NEEDS_PARENT = ("consumer", "cell", "line", "tapoff", "section", "transformer", "substation")
+
+    code = fields.Char(string="Код", size=32, required=True, index=True, copy=False, tracking=True)
+    name = fields.Char(string="Назва", size=128, required=True)
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+    kind = fields.Selection(KINDS, string="Вид", required=True, index=True, tracking=True)
+    cell_type = fields.Selection(
+        [
+            ("incomer", "Ввідна"),
+            ("feeder", "Фідер шинопроводу"),
+            ("cable", "Кабельні фідери"),
+            ("coupler", "Секційний вимикач"),
+            ("pfc", "Компенсація"),
+        ],
+        string="Тип шафи",
+    )
+    line_kind = fields.Selection([("busway", "Шинопровід"), ("cable", "Кабелі")], string="Тип лінії")
+    gen_kind = fields.Selection(
+        [
+            ("pv_inverters", "СЕС: група інверторів"),
+            ("pv_inverter", "Інвертор СЕС"),
+            ("pv_field", "Поле модулів СЕС"),
+            ("chp", "Когенерація"),
+            ("genset", "Дизель-генератор"),
+        ],
+        string="Тип генерації",
+    )
+    parent_id = fields.Many2one("f3d.energy.node", string="Живиться від", ondelete="restrict", index=True)
+    parent_path = fields.Char(index=True)
+    child_ids = fields.One2many("f3d.energy.node", "parent_id", string="Живить")
+    cabinet_id = fields.Many2one(
+        "f3d.energy.node", string="Шафа (збірка)", domain="[('kind', '=', 'switchboard')]", ondelete="set null"
+    )
+    peer_id = fields.Many2one("f3d.energy.node", string="З'єднує з", ondelete="set null")
+    section = fields.Integer(string="Секція шин", default=0)
+    equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null", index=True)
+    equipment_code = fields.Char(related="equipment_id.f3d_code")
+    workcenter_id = fields.Many2one("mrp.workcenter", string="Робочий центр", ondelete="set null", index=True)
+    zone_id = fields.Many2one("f3d.zone", related="equipment_id.f3d_zone_id", string="Зона")
+    rating_a = fields.Integer(string="Номінал, А")
+    rating_kva = fields.Integer(string="Номінал, кВА")
+    rating_kvar = fields.Integer(string="Номінал, квар")
+    voltage_kv = fields.Float(string="Напруга, кВ", digits=(5, 2), default=0.4)
+    p_inst_kw = fields.Float(string="Встановлена, кВт", digits=(10, 2))
+    p_inst_source = fields.Selection(
+        [("passport", "Паспорт"), ("estimate", "Оцінка"), ("mixed", "Паспорт + оцінка")],
+        string="Джерело потужності",
+    )
+    load_factor = fields.Float(string="Коефіцієнт завантаження в роботі", digits=(6, 3))
+    idle_factor = fields.Float(string="Коефіцієнт простою", digits=(6, 3))
+    cos_phi_nominal = fields.Float(string="cos φ (номінал)", digits=(4, 2), default=0.9)
+    is_critical = fields.Boolean(string="Критичний (живлення від ДГУ)", tracking=True)
+    alloc_role = fields.Selection(
+        [
+            ("direct", "Прямий (верстат)"),
+            ("shared", "Спільний (пул)"),
+            ("overhead", "Накладні"),
+            ("none", "Не розподіляється"),
+        ],
+        string="Роль у розподілі",
+        default="none",
+        required=True,
+    )
+    pool_id = fields.Many2one("f3d.energy.pool", string="Пул", ondelete="set null")
+    meter_ids = fields.One2many("f3d.energy.meter", "node_id", string="Лічильники")
+    meter_count = fields.Integer(string="Лічильників", compute="_compute_meter_count")
+    meter_id = fields.Many2one("f3d.energy.meter", compute="_compute_meter_id", string="Лічильник")
+    unit_id = fields.Integer(string="Modbus unit (стенд)")
+    note = fields.Text(string="Примітка")
+    group = fields.Selection([("light", "Освітлення"), ("vent", "Вентиляція")], string="Група")
+    company_id = fields.Many2one(
+        "res.company", string="Компанія", required=True, default=lambda self: self.env.company, index=True
+    )
+    p_now = fields.Float(string="Зараз, кВт", compute="_compute_live")
+    kwh_today = fields.Float(string="Сьогодні, кВт·год", compute="_compute_live")
+    pfc_q_now = fields.Integer(string="Компенсація зараз, квар", readonly=True)
+    live_status = fields.Selection(
+        [
+            ("ok", "Норма"),
+            ("stale", "Немає даних"),
+            ("gap", "Пропуск"),
+            ("reset", "Скидання"),
+            ("no_data", "Ще не було даних"),
+            ("none", "Без лічильника"),
+        ],
+        string="Стан даних",
+        compute="_compute_live",
+    )
+
+    _f3d_energy_node_code_uniq = models.Constraint("UNIQUE(code)", "Код вузла мережі має бути унікальним.")
+    _f3d_energy_node_wc_uniq = models.Constraint(
+        "UNIQUE(workcenter_id)", "Робочий центр уже прив'язаний до іншого вузла."
+    )
+
+    # --- перевірки ---------------------------------------------------------------------------------
+    @api.constrains(
+        "code", "kind", "cell_type", "line_kind", "parent_id", "alloc_role", "workcenter_id", "pool_id", "section"
+    )
+    def _check_node(self):
+        for rec in self:
+            if not rec.code or not self.CODE_RE.match(rec.code):
+                raise ValidationError(
+                    _("Код вузла %s: великі латинські літери, цифри, дефіс (напр. QF-3, TAP-SAW-1).", rec.code)
+                )
+            if rec._has_cycle():
+                raise ValidationError(_("Вузол %s не може живитися сам від себе (цикл у схемі).", rec.code))
+            if rec.kind == "cell" and not rec.cell_type:
+                raise ValidationError(_("Для шафи ГРЩ задайте тип шафи."))
+            if rec.kind == "line" and not rec.line_kind:
+                raise ValidationError(_("Для лінії задайте тип."))
+            if rec.kind in self.NEEDS_PARENT and not rec.parent_id:
+                raise ValidationError(_("Вузол %s має живитися від іншого вузла.", rec.code))
+            if rec.alloc_role == "direct" and (not rec.workcenter_id or rec.kind != "consumer"):
+                raise ValidationError(_("Прямий споживач має бути вузлом-споживачем з робочим центром."))
+            if rec.alloc_role == "shared" and not rec.pool_id:
+                raise ValidationError(_("Спільний споживач має належати пулу."))
+            if rec.pool_id and rec.alloc_role != "shared":
+                raise ValidationError(_("Пул задається лише спільним споживачам."))
+            if rec.workcenter_id and rec.kind != "consumer":
+                raise ValidationError(_("Робочий центр прив'язується лише до споживача."))
+            if rec.section not in (0, 1, 2):
+                raise ValidationError(_("Секція шин: 0, 1 або 2."))
+
+    def write(self, vals):
+        # цикл ловимо до `_parent_store_update` ORM («Recursion Detected»), щоб віддати повідомлення SPEC
+        if vals.get("parent_id"):
+            for rec in self:
+                if rec.id == vals["parent_id"] or rec.search_count(
+                    [("id", "=", vals["parent_id"]), ("id", "child_of", rec.id)]
+                ):
+                    raise ValidationError(_("Вузол %s не може живитися сам від себе (цикл у схемі).", rec.code))
+        return super().write(vals)
+
+    # --- обчислювані -------------------------------------------------------------------------------
+    @api.depends("meter_ids")
+    def _compute_meter_count(self):
+        for rec in self:
+            rec.meter_count = len(rec.meter_ids)
+
+    @api.depends("meter_ids.active", "meter_ids.code")
+    def _compute_meter_id(self):
+        for rec in self:
+            rec.meter_id = rec.meter_ids.filtered("active").sorted("code")[:1]
+
+    @api.depends("meter_ids.active", "meter_ids.code", "meter_ids.p_signal_id.last_value", "meter_ids.data_state")
+    def _compute_live(self):
+        meters = self.meter_id.sudo()
+        kwh = {}
+        if meters and "f3d.energy.interval" in self.env:
+            groups = (
+                self.env["f3d.energy.interval"]
+                .sudo()
+                ._read_group(
+                    [("meter_id", "in", meters.ids), ("ts_start", ">=", _today_start_utc())],
+                    ["meter_id"],
+                    ["kwh:sum"],
+                )
+            )
+            kwh = {meter.id: total for meter, total in groups}
+        for rec in self:
+            meter = rec.meter_id.sudo()
+            rec.p_now = meter.p_signal_id.last_value if meter.p_signal_id else 0.0
+            rec.kwh_today = kwh.get(meter.id, 0.0)
+            rec.live_status = meter.data_state if meter else "none"
+
+    def _compute_display_name(self):
+        for rec in self:
+            rec.display_name = "%s · %s" % (rec.code, rec.name) if rec.code else (rec.name or "")
+
+    # --- API ---------------------------------------------------------------------------------------
+    @api.model
+    def _f3d_kwh_by_code(self, code, date_from, date_to):
+        """CE-06: кВт·год вузла за вікно; немає вузла чи лічильника — (0.0, 'missing')."""
+        node = self.search([("code", "=", code)], limit=1)
+        if not node or not node.meter_id:
+            return 0.0, "missing"
+        return node.meter_id._f3d_kwh(date_from, date_to)
+
+    def _f3d_descendant_meters(self):
+        """Активні лічильники вузлів-нащадків (без самого `self`)."""
+        nodes = self.search([("id", "child_of", self.ids)]) - self
+        return nodes.meter_ids.filtered("active")
+
+    def action_view_meters(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Лічильники"),
+            "res_model": "f3d.energy.meter",
+            "view_mode": "list,form",
+            "domain": [("node_id", "child_of", self.id)],
+        }
+
+    def action_view_intervals(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Профіль"),
+            "res_model": "f3d.energy.interval",
+            "view_mode": "graph,pivot,list",
+            "domain": [("node_id", "child_of", self.id), ("ts_start", ">=", _today_start_utc())],
+        }
+
+    def action_view_balance(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Баланс"),
+            "res_model": "f3d.energy.balance",
+            "view_mode": "list",
+            "domain": [("node_id", "=", self.id)],
+        }
+
+    def action_f3d_show(self):
+        self.ensure_one()
+        if not self.equipment_id:
+            raise UserError(_("Вузол %s не має об'єкта в 3D.", self.code))
+        return self.equipment_id.action_f3d_show()
+
+    @api.model
+    def action_f3d_energy_rebind(self):
+        """§5.2: повтор прив'язки даних (лише адміністратор)."""
+        if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
+            raise AccessError(_("Повтор прив'язки даних енергетики — лише адміністратор."))
+        from .. import hooks  # відкладено: hooks імпортується пакетом після models
+
+        report = hooks.run_bind(self.env)
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "type": "success",
+                "sticky": True,
+                "message": _("Прив'язку виконано: %s", hooks.dump(report)),
+            },
+        }

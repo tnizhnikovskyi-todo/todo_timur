@@ -1,0 +1,6 @@
+code,name,sequence,driver,workcenters
+POOL-AIR,Стиснене повітря,10,kwh,
+POOL-DUST,Аспірація,20,kwh,
+POOL-GANTRY,Подача плит (портал),30,kwh,SAW-1;SAW-2;SAW-3;NEST-1
+POOL-LIGHT,Освітлення цеху,40,time,
+POOL-HVAC,Вентиляція,50,time,

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-18, V-21: налаштування енергетики (лише group_f3d_admin) -->
+<odoo>
+    <record id="res_config_settings_view_form_f3d_energy" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.f3d.energy</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="46"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Завод 3D: енергетика" string="Завод 3D: енергетика" name="factory3d_energy"
+                     groups="factory3d_base.group_f3d_admin">
+                    <block title="Стоп-крани" name="factory3d_energy_switches">
+                        <setting string="Читати лічильники" help="Стоп-кран читання: вимикає джерела й крони енергетики">
+                            <field name="f3d_energy_read_enabled"/>
+                        </setting>
+                        <setting string="Писати уставки в пристрої" help="Заборонено у v1">
+                            <field name="f3d_energy_write_enabled" readonly="1"/>
+                        </setting>
+                        <setting string="Енергія в собівартості МО">
+                            <field name="f3d_energy_costing_enabled"/>
+                        </setting>
+                        <setting string="Аналітичні рядки енергії">
+                            <field name="f3d_energy_analytic_enabled"/>
+                        </setting>
+                    </block>
+                    <block title="Профіль і баланс" name="factory3d_energy_balance">
+                        <setting string="Допуски й очікування">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_balance_tol_pct"/>
+                                    <field name="f3d_energy_balance_tol_pct"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_balance_tol_kwh"/>
+                                    <field name="f3d_energy_balance_tol_kwh"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_gap_alarm_min"/>
+                                    <field name="f3d_energy_gap_alarm_min"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_max_wait_h"/>
+                                    <field name="f3d_energy_max_wait_h"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_typical_days"/>
+                                    <field name="f3d_energy_typical_days"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_shift_calendar_id"/>
+                                    <field name="f3d_energy_shift_calendar_id"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Зберігання" name="factory3d_energy_storage">
+                        <setting string="Терміни зберігання">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_keep_interval_days"/>
+                                    <field name="f3d_energy_keep_interval_days"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_keep_event_days"/>
+                                    <field name="f3d_energy_keep_event_days"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="АВР і накопичувач" name="factory3d_energy_ats">
+                        <setting string="Пуск генератора й зрізання піків">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_ats_fail_start_s"/>
+                                    <field name="f3d_energy_ats_fail_start_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="f3d_energy_peak_shave_kw"/>
+                                    <field name="f3d_energy_peak_shave_kw"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Встановлення" name="factory3d_energy_install">
+                        <setting string="Стан встановлення">
+                            <div class="content-group">
+                                <div class="mt8"><field name="f3d_energy_install_state"/></div>
+                                <button name="%(factory3d_energy.action_f3d_energy_rebind)d" type="action"
+                                        string="Повторити прив'язку даних" class="btn-link"
+                                        groups="factory3d_base.group_f3d_admin"/>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_settings" model="ir.actions.act_window">
+        <field name="name">Налаштування енергетики</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{'module': 'factory3d_energy'}</field>
+    </record>
+</odoo>

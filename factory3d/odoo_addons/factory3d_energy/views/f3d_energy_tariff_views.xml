@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-09. Грошові поля — лише для group_f3d_energy_cost (groups на полі моделі) -->
+<odoo>
+    <record id="view_f3d_energy_tariff_list" model="ir.ui.view">
+        <field name="name">f3d.energy.tariff.list</field>
+        <field name="model">f3d.energy.tariff</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="contract_kw"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_tariff_form" model="ir.ui.view">
+        <field name="name">f3d.energy.tariff.form</field>
+        <field name="model">f3d.energy.tariff</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва тарифу"/></h1>
+                    </div>
+                    <group string="Договір">
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                        </group>
+                        <group>
+                            <field name="contract_kw"/>
+                            <field name="peak_warn_pct"/>
+                            <field name="export_price"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Зони" name="zones">
+                            <field name="zone_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="code"/>
+                                    <field name="weekdays"/>
+                                    <field name="hour_from" widget="float_time"/>
+                                    <field name="hour_to" widget="float_time"/>
+                                    <field name="price"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_tariff" model="ir.actions.act_window">
+        <field name="name">Тарифи й договір</field>
+        <field name="res_model">f3d.energy.tariff</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
