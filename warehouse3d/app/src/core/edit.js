@@ -4,7 +4,7 @@
 // Подписи изменений хранятся как данные { k, p } (ключ словаря и параметры) — текст собирает i18n на экране.
 import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, ROTS, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, normEdit, num, r1, r2 } from "./types.js";
 import { addrFromForm, findConflicts, isDefaultAddr, plan } from "./addressing.js";
-import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
+import { buildTree, cfgOf, nearest, refById, refOf, typeList } from "./tree.js";
 import { hhmm } from "./locks.js";
 import { layout } from "./layout.js";
 import { catalogType } from "./catalog.js";
@@ -208,11 +208,17 @@ function setPropE(e, id, patch) {
   e.prop = (e.prop || []).filter((p) => p.id !== id);
   if (Object.keys(cur).length > 1) e.prop.push(cur);
 }
-// убрать узел вместе с тем, что внутри: добавленный пропадает из слоя, узел из Odoo попадает в del
+// убрать узел вместе с тем, что внутри: добавленный пропадает из слоя, узел из Odoo попадает в del.
+// Если внутри есть место, уже применённое в Odoo (adopted, W-13), слой его сохраняет: добавленный корень помечается gone, узел из Odoo — в del,
+// и дерево отдаёт «убранное» плану изменений (архивация)
 function removeNode(e, x) {
-  const id = x.id, not = (q) => !inNode(q.id, id);
-  e.add = e.add.filter(not); e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not); e.codes = (e.codes || []).filter(not); e.addrZones = (e.addrZones || []).filter(not);
-  if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
+  const id = x.id, not = (q) => !inNode(q.id, id), sub = [];
+  const walk = (n) => { sub.push(n); n.kids.forEach(walk); }; walk(x);
+  const keep = sub.some((n) => n.adopted);
+  if (!keep) e.add = e.add.filter(not);
+  e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not); e.codes = (e.codes || []).filter(not); e.addrZones = (e.addrZones || []).filter(not);
+  if (keep && x.draft) e.add = e.add.map((a) => (a.id === id ? { ...a, gone: true } : a));
+  else if (!x.draft || keep) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
 }
 // число секций и ярусов ряда: лишние секции / верхние ярусы убираются, недостающие добавляются
 function resizeRack(s, e, r, nb, nl) {
@@ -451,7 +457,7 @@ export const OPS = {
     change(s, zid, () => ({ k: only ? "op.renumNew" : "op.renum", p: { ref: refById(s.tree, zid), places: places(cnt) } }), (e) => {
       const keep = new Map((e.codes || []).map((c) => [c.id, c]));
       for (const it of plan(s.tree, e, { scope: zid, onlyNew: only }).items) {
-        const nd = s.tree.nodes.get(it.id); if (!nd || nd.loc === it.code || (only && (!nd.draft || nd.from))) continue;
+        const nd = s.tree.nodes.get(it.id); if (!nd || nd.loc === it.code || (only && (!nd.draft || nd.from || nd.adopted))) continue;
         keep.delete(it.id); cnt++;
         if (it.code !== (nd.oloc ?? nd.loc)) keep.set(it.id, { id: it.id, code: it.code });
       }
@@ -552,6 +558,39 @@ export const OPS = {
     }, key || null, null, T.map((n) => n.id));
     if (gid && s.tree.nodes.has(gid)) { s.ui.msel = []; s.ui.esel = gid; s.emit({ type: "select" }); }
     return gid;
+  },
+  // «Залишити моє» при расхождениях с Odoo (G7, odoodiff.js): picks — выбранные расхождения нового снимка (s.tree уже построен по нему), old — прежний снимок склада.
+  // Появилось в Odoo → убирается из модели (план предложит архивацию); исчезло → возвращается в модель (план предложит создание); переименовано → прежнее имя
+  // (план предложит переименование); сменило родителя → переносится обратно (план предложит перенос)
+  keepMine(s, picks, old = null) {
+    const T = s.tree; let cnt = 0;
+    const find = (p) => (p.place ? T.byCode.get(p.code) : T.nodes.get(p.path));
+    change(s, "WH", () => ({ k: "op.keepMine", p: { n: cnt } }), (e) => {
+      const oldTree = old ? buildTree(old, emptyEdit(), [], cfgOf(s.wh)) : null, have = new Set(e.add.map((a) => a.id));
+      for (const p of picks) {
+        if (p.kind === "added") { const n = find(p); if (n && n.id !== "WH") { removeNode(e, n); cnt++; } }
+        else if (p.kind === "gone") {
+          const on = oldTree && (p.place ? oldTree.byCode.get(p.code) : oldTree.nodes.get(p.path)); if (!on) continue;
+          const chain = [], sub = [], walk = (x) => { sub.push(x); x.kids.forEach(walk); };
+          for (let x = on; x && x.parent && !T.nodes.has(x.id); x = oldTree.nodes.get(x.parent)) chain.unshift(x);
+          walk(on);
+          for (const x of [...chain.slice(0, -1), ...sub]) {
+            if (x.type === "cell" || T.nodes.has(x.id) || have.has(x.id)) continue;
+            const kind = x.type === "group" ? (x.loc && !x.kids.length ? "zone" : "group") : x.type === "rackset" ? "group" : x.type, a = { id: x.id, parent: x.parent, name: x.name, kind, tp: x.tp || null };
+            if (x.type === "level") { a.lvl = x.lvl; a.code = x.loc ?? x.base; } else if (x.loc) a.code = x.loc;
+            e.add.push(a); have.add(x.id);
+          }
+          cnt++;
+        } else if (p.kind === "renamed") {
+          const n = find(p); if (!n) continue;
+          if (p.place) { e.codes = (e.codes || []).filter((c) => c.id !== n.id); e.codes.push({ id: n.id, code: p.old.code }); } else setPropE(e, n.id, { name: p.old.name });
+          cnt++;
+        } else if (p.kind === "moved") {
+          const n = find(p), tid = n && nearest(T, p.old.dir); if (!n || !tid || n.parent === tid) continue;
+          reparent(s, e, n, tid, { x: n.ox || 0, y: n.oy || 0 }); cnt++;
+        }
+      }
+    });
   },
   // «Розгрупувати»: содержимое зоны возвращается в её родителя на прежние места, пустая зона убирается
   ungroup(s, id) {

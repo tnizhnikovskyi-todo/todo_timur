@@ -5,6 +5,8 @@ import { createPlan2D } from "./plan2d.js";
 import { createPlan3D } from "./plan3d.js";
 import { createSidePanel, renderLevelBar, updateEditBar } from "./panels.js";
 import { openTypes } from "./types.js";
+import { openPlan } from "./plan.js";
+import { openOdooDiff } from "./odoodiff.js";
 import { renderHelp } from "./help.js";
 import { createNotifier } from "./notify.js";
 import { bindKeys } from "./keys.js";
@@ -18,6 +20,7 @@ const HTML = `
     <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" data-i18n="top.building"></button></div>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
     <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
+    <button class="btn btn-secondary" id="plan-btn" data-i18n="top.plan" hidden></button>
     <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
     <span class="sp"></span>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
@@ -57,7 +60,8 @@ const HTML = `
   </div>
 </div>`;
 
-// host.odoo (только в странице из Odoo, W-11): { canRefresh, refresh() → Promise, newProject() → Promise } — кнопки «Оновити з Odoo» и «Проєкт з Odoo…»
+// host.odoo (только в странице из Odoo, W-11): { canRefresh, refresh() → Promise расхождений с Odoo, keepMine(склад, строки, прежний снимок), newProject() → Promise, plan } —
+// кнопки «Оновити з Odoo» (после неё окно расхождений, W-13), «План змін» (plan: применение, журнал, откат — plan.js) и «Проєкт з Odoo…»
 export function mountApp(root, { model, i18n, host = {} }) {
   root.innerHTML = HTML;
   const q = (s) => root.querySelector(s), t = (k, p) => i18n.t(k, p);
@@ -171,7 +175,14 @@ export function mountApp(root, { model, i18n, host = {} }) {
   if (host.odoo) {
     const rb = q("#odoo-refresh"), nb = q("#odoo-new"), busy = (b, on) => { b.disabled = on; b.setAttribute("aria-busy", String(on)); };
     rb.hidden = !host.odoo.canRefresh; nb.hidden = !host.odoo.newProject || model.readonly;
-    rb.onclick = async () => { busy(rb, true); try { await host.odoo.refresh(); } finally { busy(rb, false); } };
+    q("#plan-btn").hidden = !host.odoo.plan || !host.odoo.canRefresh; q("#plan-btn").onclick = () => openPlan({ model, i18n, host });
+    rb.onclick = async () => {
+      busy(rb, true);
+      try {
+        const diffs = await host.odoo.refresh(); // расхождения с прошлой загрузкой: «прийняти з Odoo» (по умолчанию) или «залишити моє»
+        if (diffs && diffs.length) { const picked = await openOdooDiff({ i18n, diffs }); if (picked) for (const x of picked) host.odoo.keepMine(x.whId, x.picks, x.old); }
+      } finally { busy(rb, false); }
+    };
     nb.onclick = async () => { busy(nb, true); try { await host.odoo.newProject(); } finally { busy(nb, false); } };
   }
   q("#ed-saveall").onclick = () => model.save("WH");

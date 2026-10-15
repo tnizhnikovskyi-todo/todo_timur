@@ -5,6 +5,24 @@ export const typeList = (edit) => edit.types || BASE_TYPES;
 // настройки склада, влияющие на дерево, вне слоя правок: код склада (подпись корня); глубина локаций — часть слоя правок (edit.depth / edit.depthZones)
 export const cfgOf = (wh) => ({ code: wh.code });
 
+// Путь локации в Odoo для id узла: корень «WH» (id узла) — код склада; пути остальных узлов совпадают с complete_name
+export const odooPath = (id, data, cfg = {}) => {
+  const code = (data && data.meta && data.meta.warehouse) || cfg.code || "WH";
+  return id === "WH" ? code : id.startsWith("WH/") ? code + id.slice(2) : id;
+};
+// запись локации Odoo (view и родительские) по id узла: контейнеры снимка лежат по пути; корень склада — по ключу WH
+export const containerOf = (data, id, cfg = {}) => {
+  const c = data && data.meta && data.meta.odoo && data.meta.odoo.containers;
+  if (!c) return null;
+  const r = id === "WH" ? c.WH : c[id] || c[odooPath(id, data, cfg)];
+  return r && r.id != null ? r : null;
+};
+// узел, созданный в модели и уже существующий в Odoo (применён): место — по коду (имя локации в Odoo = код), контейнер — по пути
+export const adoptedAdd = (data, a, cfg = {}) => {
+  if (a.from) return false;
+  if (a.code) { const r = data.locations[a.code]; return !!r && r.id != null; }
+  return !!containerOf(data, a.id, cfg);
+};
 export function codeSegs(code) {
   let m;
   if ((m = /^FUR-(R\d+)-(S\d+)-L(\d)$/.exec(code))) return { pre: "FUR", segs: [[m[1], "rack"], [m[2], "bay"]], leaf: `L${m[3]}`, lvl: +m[3] - 1 };
@@ -30,10 +48,14 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
     return nodes.get(id);
   };
   node("WH", cfg.code || "WH", null);
+  // места, созданные в модели и уже применённые в Odoo (W-13): в снимке они есть, но узел строится из слоя правок — снимок их не дублирует
+  const adopted = new Set(edit.add.filter((a) => a.code && adoptedAdd(data, a, cfg)).map((a) => a.code));
+  const addIds = new Set(edit.add.map((a) => a.id));
   for (const [code, l] of Object.entries(data.locations)) {
-    const parts = l.complete_name.split("/"), cs = codeSegs(code);
+    const parts = l.complete_name.split("/"), cs = codeSegs(code), own = adopted.has(code);
     let pid = "WH";
-    for (let i = 1; i < parts.length - 1; i++) { const id = parts.slice(0, i + 1).join("/"); node(id, parts[i], pid); pid = id; }
+    for (let i = 1; i < parts.length - 1; i++) { const id = parts.slice(0, i + 1).join("/"); if (own && addIds.has(id)) break; node(id, parts[i], pid); pid = id; } // дальше путь строят добавленные узлы слоя
+    if (own) continue;
     let n;
     if (cs) {
       if (cs.rackParent) { nodes.get(pid).type = "rack"; nodes.get(pid).tp = cs.pre; }
@@ -56,9 +78,11 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
       if (!nodes.has(a.parent)) return true;
       prog = true; if (nodes.has(a.id)) return false;
       const n = node(a.id, a.name, a.parent); n.type = KIND_TYPE[a.kind] || "group"; n.tp = a.tp || null; n.lvl = a.lvl || 0; n.draft = true; if (a.from) n.from = a.from; n.pend = pend.has(a.id);
+      if (a.gone) n.gone = true; // убран после применения: узел строится и сразу убирается (архивация в плане изменений)
+      if (adoptedAdd(data, a, cfg)) n.adopted = true;
       if (a.code) {
         n.loc = a.code; byCode.set(a.code, n);
-        draftLoc[a.code] = { complete_name: a.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: n.pend };
+        if (!n.adopted) draftLoc[a.code] = { complete_name: a.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: n.pend };
       }
       return false;
     });
@@ -66,6 +90,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   // смена типа ряда переходит на его стеллажи и ярусы
   const setTp = (n, tp) => { n.tp = tp; n.kids.forEach((k) => setTp(k, tp)); };
   for (const s of edit.set) { const n = nodes.get(s.id); if (n && types.has(s.tp)) setTp(n, s.tp); }
+  for (const a of edit.add) if (a.gone) delNode(a.id);
   for (const id of edit.del) if (!reborn.has(id)) delNode(id);
   // повёрнутый ряд (и место на полу): 90° / 270° — стеллажи идут вглубь, а не вдоль; 180° / 270° — порядок секций обратный
   const setRot = (n, deg) => { n.rotDeg = deg; if (deg % 180) n.rot = true; if (deg >= 180) n.flip = true; n.kids.forEach((k) => setRot(k, deg)); };
@@ -83,7 +108,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
     if (n.type !== "level") continue;
     n.cells = cellsOf.get(n.id) || 1; n.ldepth = depthOf(n);
     if (n.cells < 2 || n.ldepth !== "cell" || !n.loc) continue;
-    const base = n.loc; n.loc = null; byCode.delete(base); contained.add(base);
+    const base = n.loc; n.base = base; n.loc = null; byCode.delete(base); contained.add(base);
     for (let i = 1; i <= n.cells; i++) {
       const code = `${base}-${i}`, k = node(`${n.id}/${i}`, String(i), n.id), pd = pendCells.has(n.id) || !!n.pend;
       Object.assign(k, { type: "cell", tp: n.tp, lvl: n.lvl, ci: i - 1, loc: code, draft: true, pend: pd });

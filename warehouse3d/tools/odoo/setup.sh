@@ -11,6 +11,8 @@
 #       template  (пере)зібрати шаблонну базу $WH_TEMPLATE_DB без демо-даних. У повному запуску
 #                 пропускається, якщо шаблон уже зібраний з тим самим комітом Odoo і списком модулів;
 #                 явний `setup.sh template` перезбирає завжди.
+#       app       зібрати застосунок warehouse3d/app у static/app модуля wh_constructor (prepare_module.sh, I-02); у повному запуску — без зупинки,
+#                 якщо збірка не вдалась (для тестів вона не потрібна), а явний `setup.sh app` падає
 #       check     прогнати post_install-тести /maintenance (вкл. тур у Chrome) на копії шаблона (перевірка тестової інфраструктури)
 #
 # Усі шляхи — в env.sh. Мережа потрібна кроками pg (apt, лише якщо Postgres не встановлений),
@@ -26,6 +28,7 @@ REPORT_FILE="$ODOO_DATA_DIR/template-report.txt"
 STAMP_FILE="$ODOO_DATA_DIR/template.stamp"
 
 step_pg() { "$WH_TOOLS_DIR/pg.sh" init; }
+step_app() { "$WH_TOOLS_DIR/prepare_module.sh"; }
 
 clone_odoo() {
     # недокачаний клон з минулої спроби — прибираємо (каталог без odoo-bin, але з .git)
@@ -232,12 +235,13 @@ step_check() {
 
 steps=("$@")
 full=0
-if [[ ${#steps[@]} -eq 0 ]]; then steps=(pg odoo venv conf template_if_needed); full=1; fi
+if [[ ${#steps[@]} -eq 0 ]]; then steps=(pg odoo venv conf template_if_needed app_if_possible); full=1; fi
 for s in "${steps[@]}"; do
     case "$s" in
-        pg|odoo|venv|conf|template|check) "step_$s" ;;
+        pg|odoo|venv|conf|template|app|check) "step_$s" ;;
+        app_if_possible) [[ $full -eq 1 ]] && { step_app || wh_warn "застосунок не зібрано — модуль покаже підказку; виправте й запустіть: $WH_TOOLS_DIR/prepare_module.sh"; } ;;
         template_if_needed) [[ $full -eq 1 ]] && step_template_if_needed ;;
-        *) wh_die "невідомий крок '$s' (pg odoo venv conf template check)" 2 ;;
+        *) wh_die "невідомий крок '$s' (pg odoo venv conf template app check)" 2 ;;
     esac
 done
 

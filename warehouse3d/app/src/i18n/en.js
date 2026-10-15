@@ -488,6 +488,86 @@ export default {
     </ul>`,
   "top.odooRefresh": "Refresh from Odoo",
   "top.odooNew": "Project from Odoo…",
+  "top.plan": "Change plan",
+  "op.keepMine": "Kept mine on differences with Odoo: {n}",
+  "n.planApplied": "Applied in Odoo: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}",
+  "n.planRolled": "Apply rolled back",
+  "odoo.plan.title": "Change plan for Odoo",
+  "odoo.plan.intro": "What will change in the Odoo locations so that they match the model of warehouse {wh} (saved changes are used). Nothing changes until you press \"Apply in Odoo\".",
+  "odoo.plan.noOdoo": "This warehouse is not linked to Odoo, so there is no change plan.",
+  "odoo.plan.none": "The model matches Odoo: no changes.",
+  "odoo.plan.unsaved": "There are unsaved changes ({n}): only saved changes are in the plan.",
+  "odoo.plan.filter": "Kinds of changes",
+  "odoo.plan.kind.create": "Create",
+  "odoo.plan.kind.move": "Move",
+  "odoo.plan.kind.rename": "Rename",
+  "odoo.plan.kind.attrs": "Change attributes",
+  "odoo.plan.kind.archive": "Archive",
+  "odoo.plan.blockedN": "cannot be applied: {n}",
+  "odoo.plan.scope": "Zone or row:",
+  "odoo.plan.scopeAll": "Whole warehouse",
+  "odoo.plan.pickAll": "Select all",
+  "odoo.plan.pickNone": "Clear all",
+  "odoo.plan.row.create": "{name} — in {parent}",
+  "odoo.plan.container": "group",
+  "odoo.plan.row.move": "{name}: from {from} to {to}",
+  "odoo.plan.row.rename": "{old} → {name}",
+  "odoo.plan.row.attrs": "{name}: {fields}",
+  "odoo.plan.row.archive": "{name}",
+  "odoo.plan.blocked": "has stock — cannot be archived",
+  "odoo.plan.conflict": "barcode is already used in Odoo",
+  "odoo.plan.selected": "Operations selected: {n}",
+  "odoo.plan.deps": "(with required ones: {n})",
+  "odoo.plan.noRight": "Only a user with the \"Конструктор: застосування в Odoo\" right can apply; the file can be exported anyway.",
+  "odoo.plan.file": "CSV file",
+  "odoo.plan.apply": "Apply in Odoo",
+  "odoo.plan.close": "Close",
+  "odoo.plan.tabPlan": "Plan",
+  "odoo.plan.journal": "Journal",
+  "odoo.plan.applying": "Applying…",
+  "odoo.plan.done": "Applied: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}.",
+  "odoo.plan.fail": "Not applied, nothing was changed in Odoo: {msg}",
+  "odoo.plan.fileDone": "File saved, operations: {n}. It can be imported in Odoo (Inventory → Configuration → Locations → Import).",
+  "odoo.plan.copyTitle": "We recommend trying this on a copy of the database first",
+  "odoo.plan.copyText": "This is the first apply in this project. Location changes can be rolled back from the journal, but it is safer to run them on a copy of the database first.",
+  "odoo.plan.copyAck": "Do not remind me again for this project",
+  "odoo.plan.copyGo": "Apply anyway",
+  "odoo.plan.copyBack": "Back",
+  "odoo.log.loading": "Loading the journal…",
+  "odoo.log.empty": "Nothing has been applied yet.",
+  "odoo.log.when": "When",
+  "odoo.log.who": "Who",
+  "odoo.log.what": "What",
+  "odoo.log.state": "State",
+  "odoo.log.applied": "Applied",
+  "odoo.log.rolled": "Rolled back: {by} {at}",
+  "odoo.log.details": "Operations",
+  "odoo.log.more": "…{n} more",
+  "odoo.log.counts": "created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}",
+  "odoo.log.rollback": "Roll back",
+  "odoo.log.rollbackSure": "Confirm rollback",
+  "odoo.log.rolledOk": "The apply was rolled back.",
+  "odoo.log.rollbackFail": "Not rolled back: {msg}",
+  "odoo.log.op.create": "created {name}",
+  "odoo.log.op.move": "moved {name}",
+  "odoo.log.op.rename": "{old} → {name}",
+  "odoo.log.op.attrs": "attributes of {name} changed",
+  "odoo.log.op.archive": "archived {name}",
+  "odoo.diff.title": "Differences with Odoo",
+  "odoo.diff.intro": "Something was changed in Odoo since the last load. For each change choose: accept it from Odoo or keep it as in your model (the change plan will then offer to restore it in Odoo). By default everything is accepted from Odoo.",
+  "odoo.diff.kind.added": "Appeared",
+  "odoo.diff.kind.gone": "Gone",
+  "odoo.diff.kind.renamed": "Renamed",
+  "odoo.diff.kind.moved": "Other parent",
+  "odoo.diff.row.added": "Appeared in Odoo: {path}",
+  "odoo.diff.row.gone": "Gone from Odoo (archived or deleted): {path}",
+  "odoo.diff.row.renamed": "Renamed: {old} → {name}",
+  "odoo.diff.row.moved": "{name}: from {from} to {to}",
+  "odoo.diff.take": "Accept from Odoo",
+  "odoo.diff.keep": "Keep mine",
+  "odoo.diff.takeAll": "Accept all from Odoo",
+  "odoo.diff.keepAll": "Keep all mine",
+  "odoo.diff.done": "Done",
   "n.odooRefreshed": "Data refreshed from Odoo · places: {n}",
   "n.odooLoadFail": "Could not load warehouse {wh} from Odoo: {msg}",
   "n.odooProjectFail": "Could not create the project from Odoo: {msg}",
@@ -513,10 +593,23 @@ export default {
       <li><b>Where to open it.</b> In Odoo: <b>Inventory → Configuration → Конструктор складу</b> (the module menu is in Ukrainian; it needs the "Конструктор: перегляд" group). The app opens from your Odoo database address; no separate sign-in — your Odoo account is used. Outside Odoo (an opened file or a site) the app keeps the project in the browser, as described above.</li>
       <li><b>Where projects are stored.</b> In the Odoo database, not in the browser: the "Warehouse constructor" module (<span class="code">wh_constructor</span>) keeps projects, their versions and zone locks. There is one project for everyone with access to the company; project warehouses are linked to Odoo warehouses by code.</li>
       <li><b>Versions.</b> Every "Save" creates a new project version (the last 50 are kept); unsaved ("teal") changes are also stored in the project but create no versions. If someone saved the project while you were editing, your save is rejected with "The project was changed by another user" — reload the page to see the current state. Restoring an old version is done in the module (a versions menu in the app will come later).</li>
-      <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (coming in a later stage). An administrator assigns the groups on the user form.</li>
+      <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (see the "Change plan and applying in Odoo" section). An administrator assigns the groups on the user form.</li>
       <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
       <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
-      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; a detailed comparison of changes and applying them in Odoo will come later. The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
+      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
+    </ul>`,
+  "help.plan.title": "Change plan and applying in Odoo",
+  "help.plan.html": `
+    <ul>
+      <li><b>Change plan.</b> The "Change plan" button in the top bar (in the app opened from Odoo) compares the <b>saved</b> warehouse model with the current Odoo locations and shows what will change: <b>create</b> (new zones, rows, bays and places — with parent locations following the hierarchy), <b>move</b> (grouping and moving — moved places are moved, not created again), <b>rename</b> (after renumbering; zones and groups by name), <b>change attributes</b> (barcode and, in Odoo 18, the posx / posy / posz positions) and <b>archive</b> (removed places). A place is named by its code in Odoo and its barcode equals the code; a zone, row and bay are created as internal locations named like the node; empty groups without places do not reach Odoo. Unsaved changes are not in the plan — save first.</li>
+      <li><b>Counters and filters.</b> Above the list are the kinds of changes with their counts; a checkbox hides or shows a kind. The marks "has stock" and "barcode is already used" mean the operation cannot be applied.</li>
+      <li><b>Applying in parts.</b> Every operation has a checkbox. The "Zone or row" list selects only the operations inside the chosen zone or row; "Select all" and "Clear all" work on the whole plan. Required parent locations are added to the selection automatically (their number is shown).</li>
+      <li><b>Apply in Odoo.</b> The button runs the selection on the server <b>in one transaction</b> in the order: create (parents before children) → moves → renames → attributes → archive. If anything fails, nothing changes in Odoo. The "Конструктор: застосування в Odoo" right is required. Only <b>empty</b> locations are archived: the server itself checks that there is no stock and no unfinished moves (a place with stock is marked in the plan and is not applied).</li>
+      <li><b>As a file.</b> The "CSV file" button saves the selection as a file for import into Odoo (one row per location; columns <span class="code">.id, name, location_id, usage, barcode, posx, posy, posz, active</span>), so you can see exactly what is imported. A file is safer, applying through Odoo is faster.</li>
+      <li><b>After applying.</b> Created nodes become "existing" and get the Odoo location id; applied archiving, renames and moves are removed from the saved model changes, and whatever was not applied (when applying in parts) stays and remains in the plan.</li>
+      <li><b>Journal and rollback.</b> The "Journal" tab shows who applied what and when (with the operations). "Roll back" runs the reverse operations: created locations are archived, names, parent locations and attributes are restored, archived ones are restored. Rollback is possible only if the created locations have not been used since (no stock, no unfinished moves) and there is no later apply that touched the same locations — roll that one back first.</li>
+      <li><b>Differences with Odoo.</b> After "Refresh from Odoo" a window appears if something changed in Odoo since the last load: <b>appeared</b>, <b>gone</b> (archived or deleted), <b>renamed</b>, <b>other parent</b>. For each row choose "Accept from Odoo" (default) or "Keep mine": then the change becomes an unsaved edit of the model and the "Change plan" will offer to restore it in Odoo.</li>
+      <li><b>Test copy.</b> On the first apply in a project a reminder appears: we recommend running the changes on a copy of the database first. You can tick "Do not remind me again for this project".</li>
     </ul>`,
   "help.keys.title": "Hotkeys",
   "help.keys.html": `

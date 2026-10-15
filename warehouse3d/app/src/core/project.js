@@ -9,6 +9,7 @@
 //   Узлы склада (nodes) — производные: дерево строится из снимка и слоя правок (tree.js) и выгружается как nodesOf(tree, data).
 import { DEPTHS, normEdit } from "./types.js";
 import { normBuilding } from "./building.js";
+import { containerOf } from "./tree.js";
 
 export const PROJECT_SCHEMA = 2;
 export const SOURCE_KINDS = ["odoo", "file", "scratch"];
@@ -86,13 +87,13 @@ export async function openProject(storage, { bases, now = "", demo, stamp = "", 
 export const LEVEL_OF = { group: "zone", rackset: "zone", rack: "rack", bay: "bay", level: "level", bayleaf: "level", cell: "cell" };
 export function nodesOf(tree, data) {
   const odoo = (code) => { const r = code && data.locations[code]; return r && r.id != null ? r.id : null; };
-  const cont = (path) => { const r = data.meta && data.meta.odoo && data.meta.odoo.containers && data.meta.odoo.containers[path]; return r && r.id != null ? r.id : null; }; // зоны из Odoo (W-11)
+  const cont = (path) => { const r = containerOf(data, path); return r ? r.id : null; }; // зоны из Odoo (W-11)
   const out = [];
   for (const n of tree.nodes.values()) {
     const floor = n.type === "group" && !!n.loc && !n.kids.length;
     out.push({ id: n.id, parent: n.parent, level: floor ? "floor" : LEVEL_OF[n.type], tp: n.tp || null, form: n.tp ? tree.TY(n.tp).form : null,
-      x: n.x, y: n.y, rot: n.rotDeg || 0, w: n.w, d: n.d, h: n.h ?? 0, code: n.loc || null, odoo_id: n.draft && !n.from ? null : n.loc ? odoo(n.oloc ?? n.loc) : cont(n.id),
-      status: n.draft && !n.from ? "new" : tree.changed.has(n.id) ? "changed" : "existing", is_location: !!n.loc, cells: n.type === "level" ? n.cells : null });
+      x: n.x, y: n.y, rot: n.rotDeg || 0, w: n.w, d: n.d, h: n.h ?? 0, code: n.loc || null, odoo_id: n.draft && !n.from && !n.adopted ? null : n.loc ? odoo(n.oloc ?? n.loc) : cont(n.id),
+      status: n.draft && !n.from && !n.adopted ? "new" : tree.changed.has(n.id) ? "changed" : "existing", is_location: !!n.loc, cells: n.type === "level" ? n.cells : null });
   }
   for (const r of tree.removed) out.push({ id: r.id, parent: r.parent, level: LEVEL_OF[r.type] || "zone", tp: r.tp || null, form: null, x: null, y: null, rot: 0, w: null, d: null, h: null,
     code: r.loc || null, odoo_id: odoo(r.loc), status: "archived", is_location: !!r.loc, cells: null });
