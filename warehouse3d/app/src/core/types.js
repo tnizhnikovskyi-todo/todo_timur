@@ -1,6 +1,7 @@
 // Константи и мелкие чистые помощники ядра (без DOM).
 import { normAddr } from "./addressing.js";
 import { normBuilding } from "./building.js";
+import { normAttr } from "./attr.js";
 
 // Конструкции мест; подписи — в словаре i18n (form.<id>).
 export const FORM_IDS = ["shelf", "rolls", "pallet", "stack", "zone"];
@@ -33,8 +34,8 @@ export const FLOW = ["Вхід", "Приймання", "Контроль яко�
 export const KIND_TYPE = { group: "group", zone: "group", rack: "rack", bay: "bay", level: "level", bayleaf: "bayleaf" };
 
 export const clone = (x) => JSON.parse(JSON.stringify(x));
-export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], prop: [], cfg: [], chk: [], depth: null, depthZones: [], building: null, addr: null, addrZones: [], codes: [] });
-export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], prop: d.prop || [], cfg: (d.cfg || []).filter((c) => c && c.id), chk: (d.chk || []).filter((c) => c && typeof c.id === "string"), depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)), building: normBuilding(d.building),
+export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], prop: [], cfg: [], chk: [], attr: [], depth: null, depthZones: [], building: null, addr: null, addrZones: [], codes: [] });
+export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], prop: d.prop || [], cfg: (d.cfg || []).filter((c) => c && c.id), chk: (d.chk || []).filter((c) => c && typeof c.id === "string"), attr: normAttr(d.attr), depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)), building: normBuilding(d.building),
   addr: d.addr && typeof d.addr === "object" ? normAddr(d.addr) : null, addrZones: (d.addrZones || []).filter((z) => z && z.id).map((z) => ({ id: z.id, ...normAddr(z) })), codes: (d.codes || []).filter((c) => c && c.id && c.code) } : emptyEdit();
 export const zoneTp = (c) => /^PAL-/.test(c) ? "PAL" : /^(KIT|FRONTS)-/.test(c) ? "CART" : /^(POST|OUT)-/.test(c) ? "BIG" : /^UNLOAD-/.test(c) ? "DOCK" : "ZONE";
 

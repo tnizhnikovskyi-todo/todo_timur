@@ -774,6 +774,111 @@ try {
     expect((await pg.locator("#plan-dlg").count()) === 0 && !(await pg.locator("#problems").isHidden()), "переход к панели проблем не сработал");
     await ctx.close();
   });
+  await step("W-14: категория хранения (создать, назначить зоне), min/max в карточке места, операции в «Плані змін», применение, файл «як у плані»", async () => {
+    const W = 1000, P1 = { id: 1, default_code: "P-1", name: "Товар", uom: "шт", categ: "Різне" };
+    const rows = [{ id: W, name: "WH1", complete_name: "WH1", location_id: null, usage: "view" }, { id: W + 1, name: "Фурнітура", complete_name: "WH1/Фурнітура", location_id: W, usage: "internal" },
+      ...[1, 2].flatMap((b) => [1, 2].map((l) => ({ id: W + 10 * b + l, name: `FUR-R1-S0${b}-L${l}`, complete_name: `WH1/Фурнітура/FUR-R1-S0${b}-L${l}`, location_id: W + 1, usage: "internal", barcode: null, storage_category_id: null })))];
+    const state = { rows, applied: [], cats: [{ id: 7, name: "Стара", max_weight: 10, allow_new_product: "mixed", capacities: [] }], rules: [], projects: new Map(), log: [] };
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce", acceptDownloads: true });
+    await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; });
+    const page14 = (key, list) => ({ status: "ok", total: list.length, offset: 0, limit: 2000, next: null, [key]: list, products: { 1: P1 } });
+    await ctx.route("**/wh_constructor/api/**", async (route) => {
+      const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+      let out;
+      if (r === "/me") out = { uid: 1, name: "Аня", company: "Co", rights: { view: true, design: true, apply: true } };
+      else if (r === "/projects") out = { status: "ok", projects: [...state.projects.values()].map((x) => ({ id: x.data.id, name: x.data.name, source: x.data.source, loaded_at: x.data.loaded_at, warehouses: 1 })) };
+      else if (r === "/project/load") { const x = state.projects.get(params.key); out = x ? { status: "ok", found: true, data: x.data, rev: x.rev } : { status: "ok", found: false }; }
+      else if (r === "/project/save") { const x = state.projects.get(params.key), rev = x ? x.rev + 1 : 1; state.projects.set(params.key, { data: params.data, rev }); out = { status: "ok", rev }; }
+      else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [{ id: 1, code: "WH1", name: "Склад 1", company_id: 1, company: "Co", view_location_id: W, places: 4 }] };
+      else if (r === "/read/locations") { const path = (x) => (x.location_id ? `${path(state.rows.find((y) => y.id === x.location_id))}/${x.name}` : x.name); out = page14("locations", state.rows.map((x) => ({ ...x, complete_name: path(x) }))); }
+      else if (r === "/read/quants") out = page14("quants", [{ id: 1, location_id: W + 11, product_id: 1, quantity: 5, reserved_quantity: 0, lot: null, package: null }]);
+      else if (r === "/read/storage_categories") out = page14("storage_categories", state.cats);
+      else if (r === "/read/orderpoints") out = page14("orderpoints", state.rules);
+      else if (r === "/read/removal_strategies") out = { status: "ok", removal_strategies: [{ id: 1, name: "FIFO", method: "fifo" }, { id: 2, name: "LIFO", method: "lifo" }] };
+      else if (r === "/read/package_types") out = { status: "ok", package_types: [{ id: 1, name: "Піддон" }] };
+      else if (r.startsWith("/read/")) out = page14(r.slice(6), []);
+      else if (r === "/apply/run") {
+        state.applied.push(params); const refs = {}, c = { category: 0, create: 0, move: 0, rename: 0, attrs: 0, orderpoint: 0, archive: 0 };
+        for (const o of params.ops) {
+          c[o.kind]++;
+          if (o.kind === "category") { const id = 600 + state.cats.length; state.cats.push({ id, name: o.name, max_weight: o.vals.max_weight, allow_new_product: o.vals.allow_new_product, capacities: o.vals.capacities.map((k, i) => ({ id: i + 1, product_id: k.product ? 1 : null, package_type_id: k.package_type_id, package_type: null, quantity: k.quantity })) }); refs[o.ref] = id; }
+          else if (o.kind === "attrs") { const row = state.rows.find((x) => x.id === o.id), v = o.vals.storage_category_id; if (v !== undefined) row.storage_category_id = v && v.ref ? refs[v.ref] : v; }
+          else if (o.kind === "orderpoint") state.rules.push({ id: 700, name: "OP/700", location_id: o.location_id, product_id: 1, min: o.min, max: o.max, trigger: "auto", warehouse_id: 1 });
+        }
+        state.log.unshift({ id: 1, name: "WH1", date: "2026-10-15T12:00:00Z", user: "Аня", state: "applied", counts: c, ops: [], more: 0 });
+        out = { status: "ok", log_id: 1, refs, counts: c };
+      } else if (r === "/apply/log") out = { status: "ok", log: state.log };
+      else if (r.startsWith("/lock/")) out = { ok: true, owner: "Аня", mine: true };
+      else out = { status: "ok", found: false };
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+    });
+    state.projects.set("odoo-1", { rev: 1, data: { schema: 2, id: "odoo-1", name: "P", source: { kind: "odoo", name: "Odoo 19 · t" }, loaded_at: "2026-10-15 12:00", warehouses: [{ id: "wh-1", code: "WH1", name: "Склад 1", company: "Co", baseRef: "odoo:1", saved: null, pending: [], building: null }] } });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#ed-tg"); await pg.waitForSelector("#editbar:not([hidden])");
+    // окно категорий: категория Odoo из снимка; новая — название, вес, политика, ёмкость по товару; «Зберегти»
+    await pg.waitForSelector("#plan-side [data-cats]"); await pg.click("#plan-side [data-cats]"); await pg.waitForSelector("#cat-dlg tr[data-cat]");
+    expect((await pg.locator("#cat-dlg").innerText()).includes("Стара"), "категория Odoo не показана в окне");
+    await pg.click("#cat-dlg [data-newcat]"); await pg.fill('#cat-dlg [data-f="name"]', "Холодна"); await pg.fill('#cat-dlg [data-f="maxw"]', "120"); await pg.selectOption('#cat-dlg [data-f="policy"]', "same");
+    await pg.click("#cat-dlg [data-addcap]"); await pg.fill("#cat-dlg [data-cp]", "P-1"); await pg.fill("#cat-dlg [data-cq]", "5");
+    await pg.click("#cat-dlg [data-csave]"); await pg.waitForFunction(() => /Нова категорія/.test(document.querySelector("#cat-dlg .o_cat_list")?.textContent || "") && !document.querySelector("#cat-dlg [data-pend]")?.textContent);
+    expect((await pg.locator("#cat-dlg .o_cat_list").innerText()).includes("Холодна"), "новая категория не в списке");
+    await pg.click("#cat-dlg [data-close2]");
+    // назначить зоне «Фурнітура»: наследуется на места ниже
+    await pg.click('#plan-side [data-esel="WH1/Фурнітура"]'); await pg.waitForSelector('form[data-op="catAssign"]');
+    await pg.selectOption('form[data-op="catAssign"] select[name="cat"]', { label: "Холодна" });
+    await pg.click('form[data-op="catAssign"] [type="submit"]'); await pg.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect((await pg.locator("#plan-side [data-cat-eff]").innerText()).includes("Холодна"), "категория зоны не показана как действующая");
+    // карточка места: min / max (товар в остатке)
+    for (const id of ["WH1/Фурнітура/R1", "WH1/Фурнітура/R1/S01", "WH1/Фурнітура/R1/S01/L1"]) await pg.click(`#plan-side [data-esel="${id}"]`);
+    await pg.waitForSelector('form[data-op="minmax"]');
+    expect((await pg.locator("#plan-side [data-cat-eff]").innerText()).includes("Холодна"), "место не унаследовало категорию зоны");
+    await pg.fill('form[data-op="minmax"] [name="min"]', "2"); await pg.fill('form[data-op="minmax"] [name="max"]', "9");
+    await pg.click('form[data-op="minmax"] [data-show]'); await pg.waitForSelector("#plan-side .ed-pend");
+    await pg.click('form[data-op="minmax"] [type="submit"]'); await pg.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    // в «Плані змін»: категория (раньше мест), назначения на четыре места, правило поповнення; файл «як у плані»
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    const txt = await pg.locator("#plan-dlg").innerText();
+    expect(txt.includes("Категорії зберігання") && txt.includes("Правила поповнення") && txt.includes("Холодна") && /min 2 \/ max 9/.test(txt), `в плане нет категории или правила: ${txt.slice(0, 300)}`);
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 6, `в плане 1 категория + 4 назначения + 1 правило: ${await pg.locator("#plan-dlg [data-key]").count()}`);
+    await pg.click("#plan-dlg [data-csv]"); await pg.waitForSelector("#exp-dlg");
+    expect(await pg.locator('#exp-dlg input[name="mode"][value="plan"]').isChecked(), "режим «як у плані» не выбран по умолчанию");
+    expect(await pg.locator("#exp-dlg [data-limits]").isVisible() && (await pg.locator("#exp-dlg .o_limits li").count()) === 7, "ограничения импорта не перечислены");
+    await pg.check('#exp-dlg input[name="fmt"][value="csv"]');
+    const dl = pg.waitForEvent("download"); await pg.click("#exp-dlg [data-go]"); const csv = fs.readFileSync(await (await dl).path(), "utf8").replace(/^﻿/, "");
+    expect(csv.startsWith("name,location_id,usage,barcode,.id,active,storage_category_id") && csv.split("\n").filter(Boolean).length === 5, `файл «як у плані» неверный: ${csv.slice(0, 200)}`); // четыре существующих места: строка с .id у каждого
+    // применение: категория создаётся первой, потом назначения и правило; после перечитывания план пуст
+    await pg.click("#plan-dlg [data-apply]"); await pg.waitForSelector("#plan-dlg .o_remind"); await pg.check("#plan-dlg [data-ack]"); await pg.click("#plan-dlg [data-go]");
+    await pg.waitForSelector("#plan-dlg .o_msg.ok");
+    const ops = state.applied[0].ops.map((o) => o.kind);
+    expect(ops[0] === "category" && ops.filter((k) => k === "attrs").length === 4 && ops.filter((k) => k === "orderpoint").length === 1, `порядок операций: ${ops}`);
+    expect(state.applied[0].ops[0].vals.max_weight === 120 && state.applied[0].ops[0].vals.allow_new_product === "same" && state.applied[0].ops[0].vals.capacities[0].product === "P-1", "значения категории не доехали");
+    const op = state.applied[0].ops.find((o) => o.kind === "orderpoint"); expect(op.min === 2 && op.max === 9 && op.product === "P-1" && op.location_id === W + 11, "правило min/max не доехало");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 0, "после применения в плане остались операции");
+    expect((await pg.locator("#o_notifs").innerText()).includes("категорій 1"), "в уведомлении нет счётчика категорий");
+    await pg.click("#plan-dlg [data-close2]");
+    await ctx.close();
+  });
+  await step("W-14: функция зоны — цвет и подпись на модели, сводка ёмкости, габариты места, инструкция", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    expect((await pg.locator("#plan-side .cap-sum").innerText()).includes("Палетомісць"), "в просмотре склада нет сводки ёмкости");
+    await pg.click("#ed-tg"); await pg.waitForSelector("#editbar:not([hidden])");
+    await pg.click("#plan-side .ed-kids [data-esel], #plan-side .lowlist [data-esel]"); await pg.waitForSelector('form[data-op="zoneFn"]');
+    expect((await pg.locator("#plan-side .cap-sum").count()) === 1, "в панели зоны нет сводки ёмкости");
+    await pg.selectOption('form[data-op="zoneFn"] select[name="fn"]', "quarantine"); await pg.check('form[data-op="zoneFn"] input[name="at_hazmat"]');
+    await pg.click('form[data-op="zoneFn"] [data-show]'); await pg.waitForSelector("#plan-side .ed-pend");
+    expect((await pg.locator("#plan-view svg [data-fn]").count()) >= 1, "рамка зоны не получила цвет функции");
+    expect((await pg.locator('form[data-op="zoneFn"] select[name="fn"]').inputValue()) === "quarantine" && (await pg.locator('form[data-op="zoneFn"] input[name="at_hazmat"]').isChecked()), "форма функции потеряла значения после «Показати»");
+    await pg.keyboard.press("Control+KeyZ"); await pg.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect((await pg.locator("#plan-view svg [data-fn]").count()) === 0, "цвет функции не снят после Ctrl+Z");
+    // инструкция описывает ёмкость, категории, функции и атрибуты зон
+    await pg.click("#help-btn"); await pg.waitForSelector("#help-view:not([hidden]) .toc");
+    const h = await pg.locator("#h-capacity").innerText();
+    expect(h.includes("allow_new_product") && h.includes("min") && h.includes("replenish_location"), "в инструкции нет раздела о ёмкости и категориях");
+    await ctx.close();
+  });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForSelector("#plan-side h2");

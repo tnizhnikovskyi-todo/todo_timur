@@ -167,7 +167,8 @@ class TestWhConstructorReader(HttpCase):
         caps = {(k["product_id"], k["package_type"]): k["quantity"] for k in c["capacities"]}
         self.assertEqual(caps, {(self.p1.id, None): 50.0, (None, "Піддон тест"): 4.0})
         self.assertIn(str(self.p1.id), res["products"])
-        self.assertEqual(self.rpc(self.viewer, "/storage_categories", warehouse_id=self.wh2.id)["storage_categories"], [])
+        # W-14: категория без компании принадлежит всем складам (её можно назначить), даже если ещё не назначена локации склада
+        self.assertEqual([c["id"] for c in self.rpc(self.viewer, "/storage_categories", warehouse_id=self.wh2.id)["storage_categories"]], [self.cat.id])
 
     def test_putaway_rules(self):
         res = self.rpc(self.viewer, "/putaway_rules", warehouse_id=self.wh1.id)

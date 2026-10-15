@@ -6,6 +6,7 @@ import { isSel } from "../core/select.js";
 import { levelBase, levelH, levelsTop, shapeOf } from "../core/params.js";
 import { esc, reducedMotion, slotCls } from "./util.js";
 import { createBuilding3D } from "./building3d.js";
+import { funcColor } from "../core/attr.js";
 
 // стелаж, в котором стоит ярус или ячейка (для остальных — сам узел)
 const bayOf = (tree, n) => (n.type === "level" ? tree.nodes.get(n.parent) : n.type === "cell" ? tree.nodes.get(tree.nodes.get(n.parent).parent) : n);
@@ -56,9 +57,11 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const m = Math.max(0.25, Math.max(b.w, b.d) * 0.04), w = b.w + 2 * m, d = b.d + 2 * m;
     floor.position.set(X(b.x - m + w / 2), -0.05, Z(b.y - m + d / 2)); floor.scale.set(w, 0.1, d);
   }
+  // рамка зоны; у зоны с функцией (W-14) рамка цвета функции — по одному материалу на цвет (один InstancedMesh на цвет)
+  const fnMats = new Map(), fnMat = (col) => { if (!fnMats.has(col)) fnMats.set(col, new T.MeshStandardMaterial({ color: col, roughness: 1 })); return fnMats.get(col); };
   const frame = (n) => {
-    const t = Math.max(0.06, Math.min(0.18, n.w / 300)), c = { cast: false };
-    for (const [x, y, w, d] of [[n.x, n.y, n.w, t], [n.x, n.y + n.d - t, n.w, t], [n.x, n.y, t, n.d], [n.x + n.w - t, n.y, t, n.d]]) add(box, lineM, n.id, x, y, w, d, 0.02, 0.005 + n.depth * 0.002, c);
+    const col = funcColor(model.cap.zone(n.id).fn), t = Math.max(col ? 0.1 : 0.06, Math.min(0.18, n.w / 300)), c = { cast: false };
+    for (const [x, y, w, d] of [[n.x, n.y, n.w, t], [n.x, n.y + n.d - t, n.w, t], [n.x, n.y, t, n.d], [n.x + n.w - t, n.y, t, n.d]]) add(box, col ? fnMat(col) : lineM, n.id, x, y, w, d, 0.02, 0.005 + n.depth * 0.002, c);
   };
   // стос: сетка gx × gy блоков в основании (по умолчанию один блок на всё основание)
   const stackBlocks = (n, f, mat, hh, base, code, full = false) => {
@@ -263,11 +266,12 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   // подписи уровня ниже — клик выбирает уровень
   let lblItems = [];
   const v3 = new T.Vector3();
+  const fnLabel = (k) => { if (k.type !== "group" && k.type !== "rackset") return ""; const z = model.cap.zone(k.id); return z.fn ? ` · ${esc(i18n.t(`fn.${z.fn}`))}` : ""; };
   function makeLabels() {
     const tree = model.tree, f = tree.nodes.get(model.ui.focus), items = f.kids.length ? f.kids : [f];
     lblItems = items.map((k) => ({ k, p: new T.Vector3(X(k.x + k.w / 2), (k.h || 1) + 0.25, Z(k.y + (k.type === "level" || k.type === "cell" ? k.d / 2 : 0.3))) }));
     if (f.type === "bay") lblItems.forEach((it) => { it.p.set(X(f.x) - 0.15, levelBase(tree.EP(f), it.k.lvl) + 0.25, Z(f.y + f.d / 2)); });
-    lbl.innerHTML = lblItems.map((it) => `<span data-focus="${esc(it.k.id)}" title="${esc(i18n.t("plan.focusOnly"))}">${esc(i18n.node(it.k))}</span>`).join("");
+    lbl.innerHTML = lblItems.map((it) => `<span data-focus="${esc(it.k.id)}" title="${esc(i18n.t("plan.focusOnly"))}">${esc(i18n.node(it.k))}${fnLabel(it.k)}</span>`).join("");
     lbl.querySelectorAll("[data-focus]").forEach((s) => s.onclick = () => model.focusTo(s.dataset.focus));
   }
   function placeLabels() {
