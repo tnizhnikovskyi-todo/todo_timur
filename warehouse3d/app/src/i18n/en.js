@@ -321,6 +321,70 @@ export default {
   "side.cellsOn": "The level is split into cells: each is a separate place with the code “level code”-1…N.",
   "side.cellsOff": "The level stays one place: cells appear when the location depth is “Cell” (for the warehouse or a zone).",
   "side.cellOf": "A cell of a level. Change the number of cells in the field below.",
+  "op.addrWh": "Warehouse addressing: template “{tpl}”",
+  "op.addrZone": "{ref}: own addressing, template “{tpl}”",
+  "op.addrOff": "{ref}: addressing — as in the warehouse",
+  "op.renum": "{ref}: places renumbered ({places})",
+  "op.renumNew": "{ref}: new places numbered ({places})",
+  "n.renumNone": "Renumbering changes nothing: the codes already match the template",
+  "n.codeConflicts": "Not saved: duplicate place codes ({n}): {codes}",
+  "n.codeConflictsSub": "The conflict list is in the object panel. Change the template, renumber or undo the change",
+  "addr.title": "Addressing",
+  "addr.own": "Own settings for this zone",
+  "addr.tpl": "Code template",
+  "addr.sep": "Separator",
+  "addr.zoneCode": "Zone code instead of a number",
+  "addr.seg.zone": "Zone",
+  "addr.seg.row": "Row",
+  "addr.seg.bay": "Bay",
+  "addr.seg.level": "Level",
+  "addr.seg.pos": "Position (cell)",
+  "addr.kind": "Style",
+  "addr.kind.num": "digits",
+  "addr.kind.alpha": "letters",
+  "addr.width": "Width (zeros)",
+  "addr.start": "Start",
+  "addr.rowFrom": "Rows are numbered from the entrance",
+  "addr.from.top": "entrance at the top of the plan",
+  "addr.from.bottom": "entrance at the bottom of the plan",
+  "addr.from.left": "entrance on the left",
+  "addr.from.right": "entrance on the right",
+  "addr.rowMode": "Bay direction across rows",
+  "addr.mode.seq": "sequential: the same in every row",
+  "addr.mode.snake": "snake: reversed every other row",
+  "addr.bayDir": "Bays",
+  "addr.dir.ltr": "left to right",
+  "addr.dir.rtl": "right to left",
+  "addr.dir.oddeven": "odd and even by aisle side",
+  "addr.levelDir": "Levels",
+  "addr.lv.up": "bottom to top (A is the lowest)",
+  "addr.lv.down": "top to bottom (A is the highest)",
+  "addr.unknown": "Unknown segments (kept as text): {names}",
+  "addr.previewSum": "Preview: {n} places, codes changed: {changed}",
+  "addr.previewNone": "There are no places in rows in this part of the warehouse",
+  "addr.previewDup": "Duplicate codes: {n}. Add a row, bay or level to the template",
+  "addr.noteWh": "Applies to the whole warehouse; a zone can have its own settings. “Show” only changes the settings; place codes are changed by “Renumber”.",
+  "addr.noteZone": "The settings apply in this zone and the zones inside it. Clear the box to return to the warehouse settings.",
+  "addr.noteInherit": "The zone uses the warehouse settings (or those of a zone above). Tick “Own settings for this zone” to set its own.",
+  "addr.renumTitle": "Renumbering",
+  "addr.renumWarn": "Renumbering changes place barcodes, and with them the labels: labels already stuck on the racks will have to be printed again.",
+  "addr.renumOnly": "Number only new places",
+  "addr.renumShow": "Show renumbering",
+  "addr.renumSave": "Renumber and save",
+  "addr.renumNote": "New places continue the numbering after the existing ones; existing places and places moved by grouping keep their code. Without the tick everything is renumbered. The result is a change you can show and undo ({mod}+Z).",
+  "addr.conflictsTitle": "Code conflicts: {n}",
+  "addr.conflictNote": "Codes and barcodes must be unique. While conflicts remain, these places cannot be saved.",
+  "addr.conflictDup": "Code {code} is repeated ({n} places)",
+  "addr.conflictEx": "Code {code} matches an existing Odoo place ({n} places)",
+  "addr.conflictOther": "Code {code} already exists in warehouse {wh}",
+  "addr.conflictGo": "Go to the place",
+  "addr.conflictMore": "…and more conflicts: {n}",
+  "addr.placeTitle": "Odoo address (computed)",
+  "addr.name": "Name",
+  "addr.barcode": "Barcode",
+  "addr.byTpl": "By template",
+  "addr.posx": "posx / posy / posz",
+  "addr.placeNote": "The level name, barcode and posx (row) / posy (bay) / posz (level) are computed from the template; writing to Odoo comes with applying changes.",
   "help.button": "Help",
   "help.title": "How to work with the 3D warehouse model",
   "help.toc": "Contents",
@@ -384,6 +448,19 @@ export default {
       <li><b>Align</b> (the “N objects selected” panel): by left, right, top, bottom edge and by center X / Y; <b>distribute</b> with equal gaps along X or Y (three objects or more, the outer ones stay in place).</li>
       <li><b>Grouping:</b> “Group” moves the selected objects of one zone into a new zone with the given name (positions are kept); “Ungroup” in the panel of such a zone returns the contents to the parent zone and the zone disappears. Place codes do not change. Everything is undone with {mod}+Z.</li>
     </ul>`,
+  "help.addr.title": "Addressing",
+  "help.addr.html": `
+    <ul>
+      <li><b>Where.</b> Edit mode, warehouse or zone panel, the “Addressing” block. Like every change — through “Show” / “Save”, undone with {mod}+Z.</li>
+      <li><b>Code template</b> — words separated by spaces; a word is made of text and segments <span class="code">{zone}</span> <span class="code">{row}</span> <span class="code">{bay}</span> <span class="code">{level}</span> <span class="code">{pos}</span> (position is a cell of a level; the Ukrainian <span class="code">{зона}</span> <span class="code">{ряд}</span> <span class="code">{секція}</span> <span class="code">{ярус}</span> <span class="code">{позиція}</span> work too). Words are joined by the <b>separator</b>: “{zone} {row} {bay} {level}” with “-” gives <span class="code">1-01-01-A</span>, and “FUR R{row} S{bay} L{level}” gives <span class="code">FUR-R1-S01-L1</span>. A word with no value at all (a bay in a plate stack, a position in a level without cells) is skipped.</li>
+      <li><b>For every segment:</b> digits or letters (A, B … Z, AA), leading zeros (width) and the start value. <b>Zone</b> also has “Zone code instead of a number”.</li>
+      <li><b>Warehouse and zone settings.</b> The warehouse settings apply everywhere; a zone can set its own — the “Own settings for this zone” box (they apply in the zone and inside it, the nearest zone above wins). Under the form is the <b>preview</b>: the first 10 codes and the last one, how many codes will change, whether there are duplicates.</li>
+      <li><b>Directions.</b> Rows are numbered from the entrance (top, bottom, left or right of the plan). Bays: left to right, right to left, or “odd and even by aisle side” (an odd-numbered row gets odd bays 1, 3, 5…, an even-numbered row gets even bays 2, 4, 6…); “sequential” — every row the same, “snake” — reversed every other row. Levels — bottom to top (A is the lowest) or top to bottom. Positions (cells) — left to right. For rows rotated by 90° and 270°, “left to right” means top to bottom.</li>
+      <li><b>What goes to Odoo.</b> In the place panel: the level <b>name</b> (the last segment), the <b>barcode</b> (the full code) and <b>posx / posy / posz</b> — the row, bay and level numbers as integers (aisle, rack, height). For now this is only computed — writing to Odoo comes with applying changes.</li>
+      <li><b>Renumbering</b> (warehouse or zone panel, “Renumbering”): changes codes by the template — and therefore barcodes and labels, which will have to be printed again (a warning says so). The <b>“Number only new places”</b> box: existing places and places moved by grouping keep their code, new ones continue the numbering after them. The result is a change: show it, save it or undo it with {mod}+Z.</li>
+      <li><b>Uniqueness.</b> Codes and barcodes are unique in the project. If a code is repeated or matches an existing Odoo place or a place of another warehouse, the object panel shows a <b>conflict list</b> (click to go to the place), and <b>such places cannot be saved</b> until the conflicts are resolved. New places created by the app get a free code themselves. Give different zone codes to different warehouses, otherwise numbering will coincide.</li>
+      <li><b>Floor places</b> (gates, carts, floor zones) are numbered by the template of their zone: in order from the entrance, the number goes into <span class="code">{pos}</span>, or, if the template has none, into the first of <span class="code">{row}</span>, <span class="code">{bay}</span>, <span class="code">{level}</span>. Odoo codes stay as they are until renumbered; grouping does not change codes.</li>
+    </ul>`,
   "help.copy.title": "Copying",
   "help.copy.html": `
     <ul>
@@ -409,6 +486,27 @@ export default {
       <li><b>Cells per level</b> (level panel, 1–12) goes through “Show” / “Save” like other changes. With depth “Cell” and more than one cell the level stops being a place: separate places with codes <span class="code">&lt;level code&gt;-1…N</span> replace it, and in 2D and 3D the level is split into N parts. With depth “Level” the number is remembered but the level stays one place.</li>
       <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. If a project cannot be read, its raw record is kept under the key <span class="code">wh-app-project-&lt;id&gt;.broken-&lt;time&gt;</span> and a new demo project opens with a message — nothing is overwritten. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
     </ul>`,
+  "top.odooRefresh": "Refresh from Odoo",
+  "top.odooNew": "Project from Odoo…",
+  "n.odooRefreshed": "Data refreshed from Odoo · places: {n}",
+  "n.odooLoadFail": "Could not load warehouse {wh} from Odoo: {msg}",
+  "n.odooProjectFail": "Could not create the project from Odoo: {msg}",
+  "odoo.projName": "Odoo · {db}",
+  "odoo.pickTitle": "New project from Odoo",
+  "odoo.pickIntro": "Choose the warehouses of this database to put in the project. Locations, hierarchy, stock, storage categories and putaway rules are read from Odoo; this window cannot change anything in Odoo.",
+  "odoo.pickName": "Project name",
+  "odoo.pickNone": "This database has no warehouses available to you.",
+  "odoo.pickMin": "Choose at least one warehouse",
+  "odoo.pickCount": "Warehouses selected: {n}",
+  "odoo.create": "Create project",
+  "odoo.cancel": "Cancel",
+  "odoo.demo": "Demo project",
+  "odoo.loading": "Loading warehouses…",
+  "odoo.loadFail": "Could not read the warehouses from Odoo: {msg}",
+  "odoo.colCode": "Code",
+  "odoo.colName": "Warehouse",
+  "odoo.colCompany": "Company",
+  "odoo.colPlaces": "Places",
   "help.odoo.title": "Working from Odoo",
   "help.odoo.html": `
     <ul>
@@ -417,6 +515,8 @@ export default {
       <li><b>Versions.</b> Every "Save" creates a new project version (the last 50 are kept); unsaved ("teal") changes are also stored in the project but create no versions. If someone saved the project while you were editing, your save is rejected with "The project was changed by another user" — reload the page to see the current state. Restoring an old version is done in the module (a versions menu in the app will come later).</li>
       <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (coming in a later stage). An administrator assigns the groups on the user form.</li>
       <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
+      <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
+      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; a detailed comparison of changes and applying them in Odoo will come later. The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
     </ul>`,
   "help.keys.title": "Hotkeys",
   "help.keys.html": `
@@ -719,6 +819,7 @@ export default {
   "chk.heightSpr": "{a}: height {h} m reaches the sprinklers ({lim} m)",
   "chk.overload": "{a}: goods weigh {w} kg per level, allowed {cap} kg",
   "chk.stockMoved": "{a} with stock moved from zone {from} to {to}",
+  "chk.codeConflict": "{text}",
   "chk.forced": "placed despite the ban",
   "prob.button": "Problems",
   "prob.title": "Project problems",
@@ -741,6 +842,7 @@ export default {
   "prob.type.heightSpr": "Sprinklers",
   "prob.type.overload": "Load",
   "prob.type.stockMoved": "Place with stock moved",
+  "prob.type.codeConflict": "Code conflict",
   "prob.go": "Show on the model",
   "prob.tech": "Warehouse equipment",
   "prob.techNote": "Aisles and gaps between rows narrower than the equipment minimum are marked on the plan and listed here. The minimum width can be changed (it goes through “Show / Save”).",
@@ -764,5 +866,6 @@ export default {
       <li><b>Height and load.</b> The height of a row (top level plus cargo) is compared with the ceiling and sprinkler heights of the building plan (a building plan is required). The weight of goods on a level (or a stack section) is compared with the level load from the type parameters; if goods weights are unknown in the snapshot, the type maximum is assumed, so there is no complaint.</li>
       <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
       <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
+      <li><b>Code conflicts.</b> A repeated or already used place code (see “Addressing”) also appears in “Problems” as an error; a click goes to the place. While a conflict exists, those places cannot be saved.</li>
     </ul>`,
 };

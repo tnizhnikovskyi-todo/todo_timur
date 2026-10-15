@@ -9,12 +9,13 @@
 // Настройки проверок лежат в слое правок edit.chk [{ id, … }]: `t|WH` / `t|<id зоны>` — техника (t: id техники или "none"), `m|<id техники>` — минимальная ширина прохода (w), `f|<key>` — переопределение.
 import { rectInPoly } from "./building.js";
 import { codeSegs, refOf } from "./tree.js";
+import { findConflicts } from "./addressing.js";
 
 // техника и минимальная ширина прохода по умолчанию, м (редактируется в проекте: edit.chk `m|<id>`)
 export const TECH = [
   { id: "handcart", min: 1.2 }, { id: "stacker", min: 2.4 }, { id: "reach", min: 2.8 }, { id: "vna", min: 1.8 }, { id: "forklift", min: 3.6 },
 ];
-export const TYPES = ["overlap", "overlapBld", "outside", "gap", "aisle", "heightCeil", "heightSpr", "overload", "stockMoved"];
+export const TYPES = ["overlap", "overlapBld", "outside", "gap", "aisle", "heightCeil", "heightSpr", "overload", "stockMoved", "codeConflict"];
 export const BLOCK = new Set(["overlap", "overlapBld", "outside"]);
 export const BLOCK_GAP = 0.3; // зазор между рядами меньше этого — ряды стоят спиной к спине (проходом не считается)
 const EPS = 0.005; // допуск 5 мм: соприкосновение — не пересечение
@@ -117,7 +118,7 @@ function weightOf(tree, data, n) {
 }
 
 // ---------- главная функция
-export function runChecks({ tree, edit, data }) {
+export function runChecks({ tree, edit, data, others = null }) {
   const st = settings(edit), b = (edit && edit.building) || null, list = [];
   const add = (type, key, ids, p, extra = {}) => {
     const forced = st.force.has(key), sev = forced ? "warn" : extra.sev || "error";
@@ -187,6 +188,11 @@ export function runChecks({ tree, edit, data }) {
     add("stockMoved", `stockMoved|${r.n.id}`, [r.n.id], { a: refOf(r.n), from: refOf(tree.nodes.get(from)), to: refOf(tree.nodes.get(r.n.parent)) }, { sev: "warn" });
   }
 
+  // 8. конфликты кодов адресации (W-08, D6): код повторяется на складе, совпадает с местом Odoo или есть на другом складе проекта; с конфликтами не сохраняем
+  for (const c of findConflicts(tree, others)) {
+    const key = c.kind === "other" ? "addr.conflictOther" : c.existing ? "addr.conflictEx" : "addr.conflictDup";
+    add("codeConflict", `codeConflict|${c.code}`, c.ids, { code: c.code, text: { k: key, p: { code: c.code, n: c.ids.length, wh: c.wh } } });
+  }
   const rank = { error: 0, warn: 1 };
   list.sort((p, q) => rank[p.sev] - rank[q.sev] || TYPES.indexOf(p.type) - TYPES.indexOf(q.type) || (p.key < q.key ? -1 : p.key > q.key ? 1 : 0));
   const counts = { error: 0, warn: 0, forced: 0, total: list.length, byType: {} };

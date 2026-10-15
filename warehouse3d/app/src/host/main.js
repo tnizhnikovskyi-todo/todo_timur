@@ -1,5 +1,6 @@
 // Хост «отдельное приложение»: грузит снимок Odoo, открывает проект из хранилища и монтирует view. Хранилище: localStorage (ключи wh-app-*);
-// если страницу отдал модуль Odoo wh_constructor (window.__WH_ODOO__) — проекты, версии и блокировки в базе Odoo (odoo.js, W-21).
+// если страницу отдал модуль Odoo wh_constructor (window.__WH_ODOO__) — проекты, версии и блокировки в базе Odoo (odoo.js, W-21), а данные складов
+// читаются из Odoo адаптером (adapters/odoo-api.js, W-11): при создании проекта выбираются склады базы, «Оновити з Odoo» перечитывает снимки.
 import dataUrl from "../../../prototype/data.json?url";
 import "../view/style.css";
 import { createModel } from "../core/model.js";
@@ -12,6 +13,8 @@ import { mountApp } from "../view/shell.js";
 import { modKey } from "../view/util.js";
 import { createLocalStorage } from "./storage.js";
 import { createOdooStorage, odooConfig } from "./odoo.js";
+import { createOdooApi, odooIdOf, projectFromWarehouses } from "../adapters/odoo-api.js";
+import { openOdooPick } from "../view/odoopick.js";
 
 const LOCK_RENEW_MS = 60000; // срок блокировки на сервере — 5 минут, продлеваем раз в минуту
 
@@ -25,21 +28,63 @@ async function start() {
   const i18n = createI18n(saved === "en" ? "en" : "uk", { mod: modKey() });
   try {
     if (odoo) await storage.init(); // права пользователя: без «проектирования» — только просмотр
+    const adapter = odoo ? createOdooApi({ api: odoo.api }) : null;
+    // новый проект из складов базы Odoo: окно выбора → проект в хранилище → он же открывается (по умолчанию после перезагрузки страницы)
+    const newOdooProject = async (preloaded = null) => {
+      const r = await openOdooPick({ i18n, first: !!preloaded, load: () => preloaded || adapter.listWarehouses(), defaultName: i18n.t("odoo.projName", { db: odoo.db || "Odoo" }) });
+      if (!r) return null;
+      const info = adapter.info || {}, id = `odoo-${Date.now()}`;
+      const p = projectFromWarehouses(r.warehouses, { id, name: r.name, db: info.db || odoo.db || "", version: info.version, now: info.now || "" });
+      if ((await storage.saveProject(p, { commit: true })) === "fail") throw new Error("save");
+      storage.write("project", id);
+      return id;
+    };
     const res = await fetch(dataUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const bases = { [DEMO_REFS.main]: data, [DEMO_REFS.second]: demoBase2(data.meta) };
     if (syn > 0) bases[SYNTHETIC_REF] = syntheticBase(syn, data.meta);
     let notice = null;
+    // первый запуск в Odoo (проектов ещё нет): предлагаем выбрать склады базы; отказ, ошибка или пустая база — демо-проект, как раньше
+    if (odoo && !storage.readonly) {
+      try {
+        if (!(await storage.listProjects()).length) { const whs = await adapter.listWarehouses(); if (whs.length) await newOdooProject(whs); }
+      } catch (e) { console.error(e); }
+    }
     const project = await openProject(storage, { bases, now: data.meta.pulled_at, demo: syn > 0 ? syntheticProject : demoProject, stamp: Date.now(), onNotice: (n) => { notice = n; } });
+    // снимки складов проекта, взятых из Odoo: baseRef "odoo:<id>"; не загрузившийся склад остаётся пустым, пользователь получает уведомление
+    const failed = [];
+    const pullBases = async (whs) => {
+      const res = await Promise.allSettled(whs.map((w) => adapter.load(odooIdOf(w.baseRef))));
+      let places = 0;
+      res.forEach((r, i) => {
+        if (r.status === "fulfilled") { bases[whs[i].baseRef] = r.value; places += Object.keys(r.value.locations).length; }
+        else { failed.push({ wh: whs[i].code, msg: String(r.reason && r.reason.message || r.reason) }); console.error(r.reason); }
+      });
+      return places;
+    };
+    const odooWhs = () => (adapter ? project.warehouses.filter((w) => odooIdOf(w.baseRef) != null) : []);
+    await pullBases(odooWhs());
     let library = null; try { library = storage.listLibrary ? await storage.listLibrary() : null; } catch (e) { /* без общей библиотеки: типы каталога доступны, шаблоны — только после записи */ }
     const model = createModel(project, storage, { bases, library, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType"), newTpl: i18n.t("word.newTpl") }) });
-    mountApp(root, { model, i18n });
+    const hostOdoo = odoo && {
+      canRefresh: odooWhs().length > 0,
+      async newProject() { try { if (await newOdooProject()) location.reload(); } catch (e) { console.error(e); model.notify("bad", "n.odooProjectFail", { msg: String(e.message || e) }); } },
+      async refresh() {
+        failed.length = 0;
+        const places = await pullBases(odooWhs());
+        model.reloadBase();
+        if (failed.length) failed.forEach((f) => model.notify("bad", "n.odooLoadFail", f));
+        else model.notify("ok", "n.odooRefreshed", { n: places });
+      },
+    };
+    mountApp(root, { model, i18n, host: { odoo: hostOdoo || null } });
     if (odoo) {
       setInterval(() => model.locks.renew(), LOCK_RENEW_MS);
       addEventListener("pagehide", () => { if (model.locks.held().length) storage.unlock({ project: model.project.id }, { keepalive: true }).catch(() => {}); });
     }
     if (notice) model.notify("bad", notice.key);
+    failed.forEach((f) => model.notify("bad", "n.odooLoadFail", f));
   } catch (e) {
     root.textContent = `${i18n.t("app.loadFail")}: ${e.message}`;
     console.error(e);

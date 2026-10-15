@@ -178,6 +178,55 @@ try {
     await page.click("#ed-discall"); await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
     await page.keyboard.press("Escape");
   });
+  // W-08: адресация зоны — шаблон, предпросмотр, перенумерация, конфликт кодов (редактирование продолжается, выделен склад)
+  const EBZ = "WH/Сировина/Крайка", AF = '#plan-side form[data-op="addr"]';
+  const codesPut = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].pending.reduce((n, p) => n + (p.diff.codes ? p.diff.codes.put.length : 0), 0));
+  const noPend = () => page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+  const fillAddr = async (pre, extra) => {
+    await page.check(`${AF} [name="own"]`); await page.fill(`${AF} [name="tpl"]`, `${pre} R{ряд} S{секція} L{ярус}`);
+    await page.fill(`${AF} [name="row_width"]`, "1"); await page.selectOption(`${AF} [name="level_kind"]`, "num"); await page.fill(`${AF} [name="level_width"]`, "1");
+    if (extra) await page.selectOption(`${AF} [name="rowFrom"]`, extra);
+  };
+  await step("адресация: шаблон зоны, предпросмотр, «Показати» перенумерацию, Ctrl+Z", async () => {
+    await page.click('#plan-side [data-esel="WH/Сировина"]'); await page.click(`#plan-side [data-esel="${FURZ}"]`);
+    await page.waitForSelector(AF);
+    expect(await page.locator("#plan-side .ed-warn").filter({ hasText: /штрихкоди/ }).count() === 1, "нет предупреждения о штрихкодах и этикетках");
+    await fillAddr("FX", "bottom");
+    const prev = await page.locator(`${AF} [data-addr-preview]`).innerText();
+    expect(/FX-R1-S01-L1/.test(prev) && /FX-R1-S01-L4/.test(prev) && /змінюється кодів — [1-9]/.test(prev), `предпросмотр: ${prev}`);
+    expect(await page.locator(`${AF} [data-addr-preview] li`).count() === 10, "в предпросмотре не 10 кодов");
+    await page.click(`${AF} [data-show]`);
+    await page.waitForFunction(() => /власна адресація/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    await page.click('#plan-side form[data-op="renum"] [data-show]');
+    await page.waitForFunction(() => /перенумеровано/.test(document.querySelector("#plan-side .ed-pend")?.textContent || ""));
+    expect((await codesPut()) >= 100, `коды не изменены: ${await codesPut()}`);
+    expect(await page.locator("#plan-side [data-conflicts]").count() === 0, "перестановка рядов не должна давать конфликтов");
+    await page.keyboard.press("Control+KeyZ"); await page.keyboard.press("Control+KeyZ");
+    await noPend();
+    expect((await codesPut()) === 0, "Ctrl+Z не вернул коды");
+  });
+  await step("адресация: конфликт с существующим местом, переход к месту, запрет сохранения, Ctrl+Z", async () => {
+    await page.click('#plan-side [data-esel="WH/Сировина"]'); await page.click(`#plan-side [data-esel="${EBZ}"]`);
+    await page.waitForSelector(AF);
+    await fillAddr("FUR", null);
+    await page.click(`${AF} [data-show]`);
+    await page.waitForSelector("#plan-side .ed-pend");
+    await page.click('#plan-side form[data-op="renum"] [data-show]');
+    await page.waitForSelector("#plan-side [data-conflicts]");
+    const items = page.locator("#plan-side [data-conflicts] + ul button");
+    expect((await items.count()) > 0 && /збігається з наявним місцем Odoo/.test(await items.first().innerText()), "список конфліктов пуст или не про существующее место");
+    await page.click("#ed-saveall");
+    await page.waitForSelector("#o_notifs .o_notif.bad");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.codes.length) === 0, "сохранение с конфликтами прошло");
+    expect(await page.locator("#plan-side .ed-pend").count() === 1, "несохранённое исчезло");
+    await items.first().click();
+    await page.waitForSelector("#plan-side [data-addr-barcode]");
+    expect(/^FUR-R\d+-S0?\d-L\d$/.test(await text("#plan-side [data-addr-barcode]")), "панель места не показала код");
+    await page.keyboard.press("Control+KeyZ"); await page.keyboard.press("Control+KeyZ");
+    await noPend();
+    expect(await page.locator("#plan-side [data-conflicts]").count() === 0, "после Ctrl+Z конфликт остался");
+    await page.keyboard.press("Escape");
+  });
   await step("3D: клик по модели выделяет место", async () => {
     await page.click("#ed-tg"); // выйти из режима редактирования
     await page.click('#seg-pick [data-pk="place"]');
@@ -208,6 +257,8 @@ try {
     await page.click('#help-view .toc a[data-toc="keys"]');
     await page.waitForFunction(() => { const r = document.querySelector("#h-keys")?.getBoundingClientRect(); return r && r.top >= 0 && r.top < innerHeight; });
     expect(await page.locator('#help-view .toc a[data-toc="keys"][aria-current]').count() === 1, "раздел в оглавлении не отмечен");
+    await page.click('#help-view .toc a[data-toc="addr"]');
+    await page.waitForFunction(() => { const r = document.querySelector("#h-addr")?.getBoundingClientRect(); return r && r.top >= 0 && r.top < innerHeight; });
     await page.click('#help-view .toc a[data-toc="start"]');
     await page.waitForFunction(() => { const r = document.querySelector("#h-start")?.getBoundingClientRect(); return r && r.top >= 0 && r.top < innerHeight; });
     await page.click('#seg-lang [data-l="en"]');
@@ -460,6 +511,7 @@ try {
         const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
         const out = r === "/me" ? { uid: 1, name: "Аня", company: "Co", rights }
           : r === "/projects" ? { status: "ok", projects: [] }
+          : r === "/read/warehouses" ? { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [] }
           : r === "/project/save" ? (db.saves.push(params), { status: "ok", rev: db.saves.length })
           : r.startsWith("/lock/") ? { ok: true, owner: "Аня", mine: true } : { status: "ok", found: false };
         await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
@@ -480,6 +532,59 @@ try {
     expect((await ro.pg.locator("#ed-st").innerText()).startsWith("Лише перегляд"), "режим только просмотра");
     expect(ro.db.saves.length === 0, "режим просмотра отправил запись");
     await rw.pg.context().close(); await ro.pg.context().close();
+  });
+  await step("страница из Odoo: выбор складов базы, места из адаптера, «Оновити з Odoo»", async () => {
+    const state = { bays: 3, projects: new Map(), loads: 0 };
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; });
+    // фейковый сервер Odoo: два склада, у WH1 зона «Фурнітура» с ярусами FUR-R1-S0<b>-L1..3 (число стелажей меняется — «обновление в Odoo»)
+    const rows = (w) => {
+      const base = w * 1000, out = [{ id: base, name: `WH${w}`, complete_name: `WH${w}`, location_id: null, usage: "view" },
+        { id: base + 1, name: "Фурнітура", complete_name: `WH${w}/Фурнітура`, location_id: base, usage: "internal" }];
+      for (let b = 1; b <= (w === 1 ? state.bays : 1); b++) for (let l = 1; l <= 3; l++) out.push({ id: base + 10 * b + l, name: `FUR-R1-S0${b}-L${l}`, complete_name: `WH${w}/Фурнітура/FUR-R1-S0${b}-L${l}`, location_id: base + 1, usage: "internal", storage_category_id: null });
+      return out;
+    };
+    await ctx.route("**/wh_constructor/api/**", async (route) => {
+      const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+      let out;
+      if (r === "/me") out = { uid: 1, name: "Аня", company: "Co", rights: { view: true, design: true, apply: false } };
+      else if (r === "/projects") out = { status: "ok", projects: [...state.projects.values()].map((x) => ({ id: x.data.id, name: x.data.name, source: x.data.source, loaded_at: x.data.loaded_at, warehouses: x.data.warehouses.length })) };
+      else if (r === "/project/load") { const x = state.projects.get(params.key); out = x ? { status: "ok", found: true, data: x.data, rev: x.rev } : { status: "ok", found: false }; }
+      else if (r === "/project/save") { const x = state.projects.get(params.key), rev = x ? x.rev + 1 : 1; state.projects.set(params.key, { data: params.data, rev }); out = { status: "ok", rev }; }
+      else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [
+        { id: 1, code: "WH1", name: "Склад 1", company_id: 1, company: "Co", view_location_id: 1000, places: 9 }, { id: 2, code: "WH2", name: "Склад 2", company_id: 1, company: "Co", view_location_id: 2000, places: 3 }] };
+      else if (r.startsWith("/read/")) {
+        const key = r.slice(6), all = key === "locations" ? rows(params.warehouse_id) : [];
+        if (key === "locations") state.loads++;
+        out = { status: "ok", total: all.length, offset: 0, limit: params.limit, next: null, [key]: all, products: {} };
+      } else if (r.startsWith("/lock/")) out = { ok: true, owner: "Аня", mine: true };
+      else out = { status: "ok", found: false };
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+    });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url);
+    await pg.waitForSelector("#odoopick-dlg input[data-wh]");
+    expect((await pg.locator("#odoopick-dlg input[data-wh]").count()) === 2, "в окне выбора два склада");
+    await pg.click("#odoopick-dlg [data-create]");
+    await pg.waitForSelector("#plan-side h2");
+    const saved = [...state.projects.values()][0];
+    expect(saved && saved.data.source.kind === "odoo" && saved.data.warehouses.length === 2 && saved.data.warehouses[0].baseRef === "odoo:1", "проект с двумя складами Odoo не сохранён");
+    const places = async () => +((await pg.locator("#plan-side").innerText()).match(/(\d+)\s+місц/) || [])[1];
+    expect((await places()) === 9, `WH1: ожидалось 9 мест, получено ${await places()}`);
+    expect(await pg.locator("#odoo-refresh").isVisible() && await pg.locator("#odoo-new").isVisible(), "кнопки Odoo в панели");
+    await pg.selectOption("#wh-switch", "wh-2");
+    await pg.waitForFunction(() => /3\s+місц/.test(document.querySelector("#plan-side").innerText));
+    await pg.selectOption("#wh-switch", "wh-1");
+    state.bays = 4; const before = state.loads;
+    await pg.click("#odoo-refresh");
+    await pg.waitForFunction(() => /12\s+місц/.test(document.querySelector("#plan-side").innerText));
+    expect(state.loads >= before + 2, "обновление не перечитало склады");
+    expect((await pg.locator(".o_notif").first().innerText()).includes("Дані оновлено з Odoo"), "нет уведомления об обновлении");
+    await pg.click("#odoo-new");
+    await pg.waitForSelector("#odoopick-dlg");
+    await pg.click("#odoopick-dlg [data-cancel]");
+    expect((await pg.locator("#odoopick-dlg").count()) === 0, "окно выбора не закрылось");
+    await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });
