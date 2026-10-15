@@ -29,7 +29,7 @@ def collect_secrets(settings: Any = None) -> list[str]:
             found.add(value)
     if settings is not None:
         for name in ("api_token", "biostar_pass", "woodstore_apikey", "jobs_apikey", "opcua_pass",
-                     "odoo_apikey", "odoo_export_token", "genset_relay_token"):
+                     "odoo_apikey", "odoo_export_token", "genset_relay_token", "lpr_push_token"):
             v = getattr(settings, name, "") or ""
             if len(v) >= MIN_SECRET_LEN:
                 found.add(v)

@@ -142,7 +142,7 @@ class Service:
         add(BioStarApi(w, port_http=s.port_biostar_http, port_https=s.port_biostar_https,
                        user=s.biostar_user, password=s.biostar_pass, cert_dir=s.opcua_cert_dir))
         add(SicsServer(w, port=s.port_sics, write_accept=s.write_accept))
-        add(LprPusher(w, url=s.lpr_push_url, guard=self.guard))
+        add(LprPusher(w, url=s.lpr_push_url, guard=self.guard, token=s.lpr_push_token))
         add(ModbusServer(w, port=s.port_modbus))
         add(BacnetServer(w, address=f"{_local_bip(_mqtt_host(s.mqtt_url))}:{s.port_bacnet}"))
         add(HelvarServer(w, tcp_port=s.port_helvar_tcp, udp_port=s.port_helvar_udp,

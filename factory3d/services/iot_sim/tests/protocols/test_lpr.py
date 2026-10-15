@@ -120,3 +120,35 @@ async def test_outbound_guard_blocks_foreign_host(world):
     with pytest.raises(OutboundDenied):
         guard.check("evil.example")
     await p.stop()
+
+
+async def test_token_sent_as_x_f3d_token_header(world):
+    """ST-2: http_push колектора з `token_ref` чекає `X-F3D-Token` (SPEC §8.7) — інакше 401."""
+    rec = Recorder()
+    p = make(world, rec, token="tok-0123456789abcdef")
+    assert await p.deliver({"plateText": "AA1"}) is True
+    req = rec.calls[0]
+    assert req.headers["x-f3d-token"] == "tok-0123456789abcdef"
+    assert req.headers["content-type"] == "application/json"
+
+
+async def test_no_token_header_by_default(world):
+    rec = Recorder()
+    p = make(world, rec)
+    assert await p.deliver({"plateText": "AA1"}) is True
+    assert "x-f3d-token" not in rec.calls[0].headers
+
+
+async def test_token_resent_on_every_retry(world):
+    rec = Recorder(fail_first=2)
+    p = make(world, rec, token="tok-0123456789abcdef")
+    assert await p.deliver({"plateText": "AA1"}) is True
+    assert [c.headers.get("x-f3d-token") for c in rec.calls] == ["tok-0123456789abcdef"] * 3
+
+
+def test_settings_read_lpr_push_token_from_env(monkeypatch):
+    from iot_sim.config import Settings
+    monkeypatch.setenv("SIM_LPR_PUSH_TOKEN", "tok-0123456789abcdef")
+    assert Settings(_env_file=None).lpr_push_token == "tok-0123456789abcdef"
+    monkeypatch.delenv("SIM_LPR_PUSH_TOKEN")
+    assert Settings(_env_file=None).lpr_push_token == ""
