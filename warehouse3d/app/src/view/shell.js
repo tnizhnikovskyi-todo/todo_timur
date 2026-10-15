@@ -17,6 +17,10 @@ const HTML = `
     <select class="whsw" id="wh-switch" data-i18n-attr="aria-label:top.warehouse,title:top.warehouse"></select>
     <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" data-i18n="top.building"></button></div>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
+    <div class="filemenu"><button class="btn btn-secondary" id="file-btn" aria-haspopup="menu" aria-expanded="false" data-i18n="top.file"></button>
+      <div class="o_menu" id="file-list" role="menu" hidden data-i18n-attr="aria-label:file.menu">
+        <button role="menuitem" id="fm-imp-loc" data-i18n="file.impLoc"></button><button role="menuitem" id="fm-exp-loc" data-i18n="file.expLoc"></button>
+        <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button></div></div>
     <span class="sp"></span>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
     <div class="seg" id="seg-lang" role="group" data-i18n-attr="aria-label:lang.label"><button data-l="uk" title="Українська">UK</button><button data-l="en" title="English">EN</button></div>
@@ -55,7 +59,7 @@ const HTML = `
   </div>
 </div>`;
 
-export function mountApp(root, { model, i18n }) {
+export function mountApp(root, { model, i18n, host = {} }) {
   root.innerHTML = HTML;
   const q = (s) => root.querySelector(s), t = (k, p) => i18n.t(k, p);
   const vp = q("#vp"), tip = q("#tip"), notifier = createNotifier({ i18n });
@@ -167,6 +171,18 @@ export function mountApp(root, { model, i18n }) {
   q("#ed-reset").onclick = () => model.ops.reset();
   q("#ed-saveall").onclick = () => model.save("WH");
   q("#ed-discall").onclick = () => model.discard("WH");
+
+  // ---------- меню «Файл» (W-10): окна импорта и экспорта грузятся при первом обращении
+  const fileList = q("#file-list"), fileBtn = q("#file-btn");
+  const fileMenu = (open) => { fileList.hidden = !open; fileBtn.setAttribute("aria-expanded", String(open)); };
+  const fileDo = (fn) => { fileMenu(false); import("./files.js").then((f) => f[fn]({ model, i18n, host })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); };
+  fileBtn.onclick = (ev) => { ev.stopPropagation(); fileMenu(fileList.hidden); };
+  document.addEventListener("click", (ev) => { if (!fileList.hidden && !fileList.contains(ev.target)) fileMenu(false); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !fileList.hidden) { fileMenu(false); fileBtn.focus(); } });
+  q("#fm-imp-loc").onclick = () => fileDo("openImportLocations");
+  q("#fm-exp-loc").onclick = () => fileDo("openExportLocations");
+  q("#fm-exp-proj").onclick = () => fileDo("exportProjectFile");
+  q("#fm-imp-proj").onclick = () => fileDo("openImportProject");
 
   // ---------- инструкция
   function showView(v) {

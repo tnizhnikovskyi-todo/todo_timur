@@ -34,7 +34,7 @@ async function start() {
     const project = await openProject(storage, { bases, now: data.meta.pulled_at, demo: syn > 0 ? syntheticProject : demoProject, stamp: Date.now(), onNotice: (n) => { notice = n; } });
     let library = null; try { library = storage.listLibrary ? await storage.listLibrary() : null; } catch (e) { /* без общей библиотеки: типы каталога доступны, шаблоны — только после записи */ }
     const model = createModel(project, storage, { bases, library, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType"), newTpl: i18n.t("word.newTpl") }) });
-    mountApp(root, { model, i18n });
+    mountApp(root, { model, i18n, host: { storage, bases, reload: () => location.reload() } });
     if (odoo) {
       setInterval(() => model.locks.renew(), LOCK_RENEW_MS);
       addEventListener("pagehide", () => { if (model.locks.held().length) storage.unlock({ project: model.project.id }, { keepalive: true }).catch(() => {}); });
