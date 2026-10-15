@@ -1,5 +1,6 @@
 """Фікстури стенда телеметрії (SPEC §13.2): ``tests/stand/stand.sh up``; прогін ``.venv/bin/pytest -q -m stand tests/stand``.
 Якщо стенд не піднято — тести пропускаються з причиною."""
+
 from __future__ import annotations
 
 import sys
@@ -18,7 +19,7 @@ def pytest_collection_modifyitems(items):
         if "/stand/" in str(it.fspath):
             it.add_marker(pytest.mark.stand)
             if not it.get_closest_marker("timeout"):
-                it.add_marker(pytest.mark.timeout(1800))       # стендові ТК довші за 60 с з pyproject
+                it.add_marker(pytest.mark.timeout(1800))  # стендові ТК довші за 60 с з pyproject
 
 
 @pytest.fixture(scope="session")

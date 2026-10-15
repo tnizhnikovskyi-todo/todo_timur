@@ -5,6 +5,7 @@
 яких немає без `x_f3d_signal` (з каталогу `f3d.sim.signal`), і повторює кроки 3–4 міграції (каталог + CT-11) та
 лічильники ТО (крок 8). Ідемпотентний.
 """
+
 from odoo.addons.factory3d_telemetry import hooks
 
 mech_name = "Служба головного механіка"
@@ -20,9 +21,16 @@ for r in rows:
         codes_eq.add(parts[1])
     if r.get("equipment"):
         codes_eq.add(r["equipment"])
-NAMES = {"COMPRESSOR": "Компресорна станція", "AIR-RING": "Пневмомагістраль", "DUST-1": "Аспірація",
-         "BOILER": "Котельня Kalvis", "SPRINKLERS": "Спринклерна станція", "WATER": "Водомірний вузол",
-         "RV-05": "Припливно-витяжна установка RV-05", "FL-C1": "Навантажувач (резерв) FL-C1"}
+NAMES = {
+    "COMPRESSOR": "Компресорна станція",
+    "AIR-RING": "Пневмомагістраль",
+    "DUST-1": "Аспірація",
+    "BOILER": "Котельня Kalvis",
+    "SPRINKLERS": "Спринклерна станція",
+    "WATER": "Водомірний вузол",
+    "RV-05": "Припливно-витяжна установка RV-05",
+    "FL-C1": "Навантажувач (резерв) FL-C1",
+}
 Equip = env["maintenance.equipment"]  # noqa: F821
 for code in sorted(codes_eq):
     eq = Equip.search_f3d(code)
@@ -39,17 +47,36 @@ print("STAND seed: signals_catalog:", hooks.signals_catalog(env))  # noqa: F821
 
 # Пороги рівня 0 (у демо-базі приходять з x_f3d_signal; тут — із колонки `thresholds` каталогу iot_sim, SPEC §13.2)
 LEVEL0 = {
-    "equipment/COMPRESSOR/pressure_bar": {"alarm_low": 6.0, "alarm_low_on": True, "decimals": 1,
-                                          "alarm_title": "Компресорна станція: тиск {value} бар при нормі від {threshold}"},
-    "equipment/AIR-RING/pressure_bar": {"alarm_low": 6.0, "alarm_low_on": True, "decimals": 1, "hysteresis": 0.1,
-                                        "min_duration_s": 30,
-                                        "alarm_title": "Пневмомагістраль: тиск {value} бар при нормі від {threshold}"},
-    "equipment/SPRINKLERS/pressure_bar": {"alarm_low": 6.5, "alarm_low_on": True, "decimals": 1, "hysteresis": 0.1,
-                                          "min_duration_s": 30,
-                                          "alarm_title": "Спринклери: тиск {value} бар при нормі від {threshold}"},
-    "equipment/DUST-1/filter_dp_kpa": {"alarm_high": 1.8, "alarm_high_on": True, "decimals": 1, "hysteresis": 0.036,
-                                       "min_duration_s": 0,
-                                       "alarm_title": "Заміна фільтрів: перепад тиску {value} кПа при нормі до {threshold}"},
+    "equipment/COMPRESSOR/pressure_bar": {
+        "alarm_low": 6.0,
+        "alarm_low_on": True,
+        "decimals": 1,
+        "alarm_title": "Компресорна станція: тиск {value} бар при нормі від {threshold}",
+    },
+    "equipment/AIR-RING/pressure_bar": {
+        "alarm_low": 6.0,
+        "alarm_low_on": True,
+        "decimals": 1,
+        "hysteresis": 0.1,
+        "min_duration_s": 30,
+        "alarm_title": "Пневмомагістраль: тиск {value} бар при нормі від {threshold}",
+    },
+    "equipment/SPRINKLERS/pressure_bar": {
+        "alarm_low": 6.5,
+        "alarm_low_on": True,
+        "decimals": 1,
+        "hysteresis": 0.1,
+        "min_duration_s": 30,
+        "alarm_title": "Спринклери: тиск {value} бар при нормі від {threshold}",
+    },
+    "equipment/DUST-1/filter_dp_kpa": {
+        "alarm_high": 1.8,
+        "alarm_high_on": True,
+        "decimals": 1,
+        "hysteresis": 0.036,
+        "min_duration_s": 0,
+        "alarm_title": "Заміна фільтрів: перепад тиску {value} кПа при нормі до {threshold}",
+    },
     "energy/transformers/T1/temp_c": {"alarm_high": 140.0, "alarm_high_on": True, "decimals": 1, "hysteresis": 2.0},
     "energy/transformers/T2/temp_c": {"alarm_high": 140.0, "alarm_high_on": True, "decimals": 1, "hysteresis": 2.0},
 }
@@ -65,9 +92,14 @@ comp = Equip.search_f3d("COMPRESSOR")
 hsig = Signal.search([("code", "=", "equipment/COMPRESSOR/hours")], limit=1)
 Req = env["maintenance.request"].sudo().with_context(mail_notrack=True, tracking_disable=True)  # noqa: F821
 if comp and hsig and not comp.f3d_meter_request_id:
-    req = Req.search([("equipment_id", "=", comp.id), ("name", "=", "ТО на 18 000 мотогодин")], limit=1) or Req.create({
-        "name": "ТО на 18 000 мотогодин", "equipment_id": comp.id, "maintenance_type": "preventive",
-        "maintenance_team_id": team.id})
+    req = Req.search([("equipment_id", "=", comp.id), ("name", "=", "ТО на 18 000 мотогодин")], limit=1) or Req.create(
+        {
+            "name": "ТО на 18 000 мотогодин",
+            "equipment_id": comp.id,
+            "maintenance_type": "preventive",
+            "maintenance_team_id": team.id,
+        }
+    )
     req.write({"f3d_signal_id": hsig.id, "f3d_origin": "meter", "f3d_threshold": 18000.0})
     comp.with_context(mail_notrack=True).write({"f3d_meter_request_id": req.id})
     print("STAND seed: заявка ТО COMPRESSOR", req.id)

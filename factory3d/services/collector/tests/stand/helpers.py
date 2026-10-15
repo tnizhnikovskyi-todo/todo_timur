@@ -2,6 +2,7 @@
 F3D_STAND_SIM_URL, SIM_API_TOKEN, F3D_STAND_COLLECTOR_METRICS, F3D_STAND_DIR (логи/стан процесного стенда).
 Якщо стенд не піднято — усі тести пропускаються з причиною (а не падають).
 """
+
 from __future__ import annotations
 
 import json
@@ -107,7 +108,7 @@ class Metrics:
             if not line.startswith(name) or line.startswith("#"):
                 continue
             head, _, val = line.rpartition(" ")
-            if head[len(name):len(name) + 1] not in ("{", ""):
+            if head[len(name) : len(name) + 1] not in ("{", ""):
                 continue
             if all(f'{k}="{v}"' in head for k, v in labels.items()):
                 total += float(val)
@@ -127,8 +128,9 @@ class CollectorProc:
     @staticmethod
     def sh(*args: str, env: dict | None = None, timeout: int = 180) -> str:
         e = {**os.environ, **(env or {})}
-        r = subprocess.run([str(HERE / "stand.sh"), *args], capture_output=True, text=True, env=e, timeout=timeout,
-                           check=False)
+        r = subprocess.run(
+            [str(HERE / "stand.sh"), *args], capture_output=True, text=True, env=e, timeout=timeout, check=False
+        )
         return (r.stdout + r.stderr).strip()
 
     def restart(self, env: dict | None = None):
@@ -149,8 +151,6 @@ class CollectorProc:
 
     def cli(self, *args: str) -> str:
         return self.sh("cli", *args, timeout=120)
-
-
 
 
 def parse_title_number(text: str) -> float | None:

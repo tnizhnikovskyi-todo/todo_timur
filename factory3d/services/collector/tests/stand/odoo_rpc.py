@@ -2,6 +2,7 @@
 
 CLI: ``python odoo_rpc.py token`` — згенерувати токен колектора COL-MAIN і надрукувати (як кнопка «Згенерувати токен»).
 """
+
 from __future__ import annotations
 
 import os
@@ -47,8 +48,12 @@ class Odoo:
         return False
 
     def signal(self, code: str, fields=None) -> dict:
-        rows = self.search_read("f3d.signal", [("code", "=", code)], fields or ["code", "status", "last_value",
-                                "last_text", "last_ts", "last_quality"], limit=1)
+        rows = self.search_read(
+            "f3d.signal",
+            [("code", "=", code)],
+            fields or ["code", "status", "last_value", "last_text", "last_ts", "last_quality"],
+            limit=1,
+        )
         return rows[0] if rows else {}
 
     def requests(self, code: str, only_open: bool = False) -> list[dict]:
@@ -56,9 +61,22 @@ class Odoo:
         dom = [("f3d_signal_id.code", "=", code)]
         if only_open:
             dom.append(("stage_id.done", "=", False))
-        return self.search_read("maintenance.request", dom, ["name", "stage_id", "maintenance_team_id",
-                                "maintenance_type", "priority", "f3d_value", "f3d_threshold", "f3d_origin",
-                                "equipment_id"], order="id")
+        return self.search_read(
+            "maintenance.request",
+            dom,
+            [
+                "name",
+                "stage_id",
+                "maintenance_team_id",
+                "maintenance_type",
+                "priority",
+                "f3d_value",
+                "f3d_threshold",
+                "f3d_origin",
+                "equipment_id",
+            ],
+            order="id",
+        )
 
     def close_request(self, rid: int) -> None:
         """Стадія «Repaired» (done=True) — як закриття менеджером."""
