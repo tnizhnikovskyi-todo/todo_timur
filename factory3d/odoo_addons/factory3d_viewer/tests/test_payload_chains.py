@@ -210,3 +210,11 @@ class TestChains(F3dViewerCase):
         self.assertEqual(len(data["material_paths"]), 6)
         self.assertEqual(data["meta"]["sections"]["chains"], "live")
         self.assertEqual(check(data), [])
+
+    def test_delta_on_mrp_production_change(self):
+        """R-14: дельта chains викликає collect вбудованих провайдерів без помилок."""
+        from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder
+        res = DeltaBuilder(self.env(user=self.user_f3d), since=None,
+                           changes={"mrp.production": {"WH/MO/TST"}}).build()
+        self.assertFalse(res["patch"]["meta"].get("errors"))
+        self.assertIn("sheet_chain", res["patch"])

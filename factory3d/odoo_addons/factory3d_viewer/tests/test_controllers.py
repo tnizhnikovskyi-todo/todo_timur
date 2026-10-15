@@ -115,8 +115,9 @@ class TestControllers(HttpCase, F3dViewerBase):
 
     # --- API-10 ---
     def test_cycle_check(self):
-        if "f3d.viewer.provider.logistics" not in self.env:
-            raise unittest.SkipTest("немає вбудованих провайдерів (W1b): payload неповний")
+        from odoo.addons.factory3d_viewer.hooks import is_demo_db
+        if not is_demo_db(self.env):
+            raise unittest.SkipTest("потрібна демо-база: на порожній payload неповний")
         self.authenticate("f3d_manager", "f3d_manager")
         res = self.make_jsonrpc_request("/f3d/viewer/cycle_check", {})
         self.assertEqual(res, {"ok": True, "issues": []})

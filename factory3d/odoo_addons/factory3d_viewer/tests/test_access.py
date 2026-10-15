@@ -78,7 +78,8 @@ class TestAccess(F3dViewerBase):
     def test_stock_denied(self):
         if "f3d.viewer.provider.stock" not in self.env:
             self.skipTest("немає вбудованого провайдера stock")
-        data = PayloadBuilder(self.env(user=self.user_mrp_only)).build()
+        plain = self._make_user("f3d_plain_only", ["base.group_user", "factory3d_base.group_f3d_user"])
+        data = PayloadBuilder(self.env(user=plain)).build()
         self.assertEqual(data["locations"], {})
         self.assertEqual(data["meta"]["sections"]["locations"], "denied")
 

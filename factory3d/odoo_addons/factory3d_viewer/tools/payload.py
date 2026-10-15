@@ -249,6 +249,8 @@ class PayloadBuilder(_Base):
             if not group_ok(env, grp):
                 for k in secs:
                     sections[k] = "denied"
+                    if k in BASE_KEYS and k != "meta":  # §4.4: порожнє значення за типом ключа
+                        payload.setdefault(k, [] if k in LIST_SECTIONS else {})
                 continue
             seen = dict(sections)
             if self._call(p, lambda target, c=collect: c(target, ctx), payload, secs, errors):
