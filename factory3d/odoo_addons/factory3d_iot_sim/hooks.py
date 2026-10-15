@@ -47,12 +47,35 @@ for _roles, _proto, _driver in (
 ):
     for _role in _roles:
         ROLE_MAP[_role] = (_proto, _driver)
-CODE_MAP = {'SPRINKLERS': ('P-07', 'modbus_adam6017'), 'AIR-RING': ('P-07', 'modbus_adam6017')}
+CODE_MAP = {'SPRINKLERS': ('P-07', 'modbus_adam6017'), 'AIR-RING': ('P-07', 'modbus_adam6017'),
+            # §5.2: «FL-6 … у демо без сигналів, пасивний», «SMOKE-VENTS — пасивний»
+            'FL-6': ('P-06', 'passive'), 'SMOKE-VENTS': ('P-09', 'passive')}
+PASSIVE_CODES = ('FL-6', 'SMOKE-VENTS')
+_SMOKE = {'di_open': 4, 'di_fault': 5, 'do_open': 0}
+# §5.2: (unit_id, params) пристроїв з фіксованою розкладкою каналів ADAM; unit — за таблицею §8.4.1
+FIXED_LAYOUT = {
+    'T1': (96, {'rtd': [0, 1, 2]}), 'T2': (96, {'rtd': [3, 4, 5]}),
+    'SPRINKLERS': (90, {'ai': 2}), 'AIR-RING': (90, {'ai': 3}),
+    'DUST-1': (90, {'ai_airflow': 0, 'ai_dp': 1, 'di_run': 0, 'di_fault': 1}),
+    'WATER': (84, {'counter': 8}),
+    'SPARK-1': (85, {'di_spark': 0, 'di_ext': 1, 'di_fault': 2}),
+    'SMOKE-CTRL': (85, dict(_SMOKE)), 'SMOKE-VENTS': (None, dict(_SMOKE)),
+    'GATE-W': (86, {'di_open': 0, 'di_loop': 1, 'di_photo': 4, 'do_open': 0, 'do_close': 2, 'do_hold': 4}),
+    'GATE-E': (86, {'di_open': 2, 'di_loop': 3, 'di_photo': 5, 'do_open': 1, 'do_close': 3, 'do_hold': 5}),
+}
+# T1/T2: `_fill_addresses` раніше брав unit першого сигналу (PM5560 на вводі Q1/Q2) замість 96 (S-3)
+LEGACY_UNITS = {'T1': 1, 'T2': 2}
 FIXED_ADDRESS = {
     'rest_woodstore': 'http://iot-sim:8082/api/v1', 'sics_scale': 'iot-sim:4001', 'http_lpr': 'SIM_LPR_PUSH_URL'}
 UNIT_RE = re.compile(r'\bu(\d+)\b')
 INSTANCE_RE = re.compile(r'\bdev (\d+)\b')
 CONSUMER_RE = re.compile(r'^energy/consumers/([^/]+)/')
+P02_STATE_RE = re.compile(r'^workcenters/([^/]+)/state$')
+DI_RE = re.compile(r'\bfc2 pdu(\d+)\b')
+LSZ_CODE_RE = re.compile(r'^fire/groups/([^/]+)/state$')
+LSZ_RE = re.compile(r'\bLSZ:(\d+)\b')
+DALI_CODE_RE = re.compile(r'^lighting/groups/([^/]+)/level$')
+DALI_RE = re.compile(r'router (@[\d.]+)\) група G:(\d+)')
 
 
 def _read_catalog_rows():
@@ -125,6 +148,8 @@ def _fill_addresses(env):
     for dev in Device.search([('driver', '!=', 'passive')]):
         addr = first.get(dev.id, '')
         vals = {}
+        if dev.code in FIXED_LAYOUT:  # unit за таблицею §8.4.1 — `_fill_params`, а не адреса першого сигналу
+            continue
         if dev.driver.startswith('modbus') and not dev.unit_id:
             match = UNIT_RE.search(addr)
             if match:
@@ -139,6 +164,54 @@ def _fill_addresses(env):
                     dev.write(vals)
             except ValidationError as exc:
                 _logger.warning("f3d_iot_sim: адресу %s пристрою %s не призначено: %s", vals, dev.code, exc)
+
+
+def _catalog_params(rows):
+    """Params з адрес каталогу (§5.2): P-02 `{di_run, di_fault, counter}`, FA-* `{lsz}`, LT-* `{group, router}`."""
+    out = {}
+    for row in rows:
+        code, address = row['code'], row.get('address') or ''
+        match = P02_STATE_RE.match(code)
+        if match and row['protocol'] == 'P-02' and DI_RE.search(address):
+            n = int(DI_RE.search(address).group(1))  # DI(2m) = «в роботі», DI(2m+1) = «аварія», лічильник на DI(2m)
+            out[match.group(1)] = {'di_run': n, 'di_fault': n + 1, 'counter': n}
+            continue
+        match = LSZ_CODE_RE.match(code)
+        if match and LSZ_RE.search(address):
+            out[match.group(1)] = {'lsz': int(LSZ_RE.search(address).group(1))}
+            continue
+        match = DALI_CODE_RE.match(code)
+        if match and DALI_RE.search(address):
+            router, group = DALI_RE.search(address).groups()
+            out[match.group(1)] = {'group': int(group), 'router': router}
+    return out
+
+
+def _fill_params(env):
+    """Крок 3б (S-2, S-3): `params` і unit id за §5.2, пасивні FL-6/SMOKE-VENTS.
+
+    Ідемпотентно й без перезапису ручних правок: `params` — лише порожні; `unit_id` — порожній або хибний
+    (PM5560 вводу замість 96 у T1/T2); драйвер стає `passive` лише для пристрою без сигналів.
+    """
+    Device = env['f3d.sim.device'].sudo()
+    wanted = {code: (None, params) for code, params in _catalog_params(_read_catalog_rows()).items()}
+    wanted.update(FIXED_LAYOUT)
+    for dev in Device.search([('code', 'in', list(wanted) + list(PASSIVE_CODES))]):
+        unit, params = wanted.get(dev.code, (None, None))
+        vals = {}
+        if params and not dev.params:
+            vals['params'] = params
+        if dev.code in PASSIVE_CODES and dev.driver != 'passive' and not dev.signal_ids:
+            vals.update({'driver': 'passive', 'state': 'passive'})
+        if (unit and dev.driver.startswith('modbus') and dev.unit_id != unit
+                and (not dev.unit_id or dev.unit_id == LEGACY_UNITS.get(dev.code))):
+            vals['unit_id'] = unit
+        if vals:
+            try:
+                with env.cr.savepoint():
+                    dev.write(vals)
+            except ValidationError as exc:
+                _logger.warning("f3d_iot_sim: params/unit %s пристрою %s не призначено: %s", vals, dev.code, exc)
 
 
 def _check_level0(env):
@@ -160,14 +233,20 @@ def apply_read_enabled(env):
     ICP.set_param('factory3d.iot_sim.read_enabled', 'True' if environment == 'test' else 'False')
 
 
+def refresh_registry(env):
+    """Кроки 2–4 + 3б: пристрої, каталог, адреси, params (ідемпотентно; також post-migrate 19.0.2.0.1)."""
+    _ensure_devices(env)
+    env['f3d.sim.signal']._load_catalog(file_path(CATALOG))
+    _fill_addresses(env)
+    _fill_params(env)
+    _check_level0(env)
+
+
 def post_init_hook(env):
     Panel = env['f3d.sim.panel']
     panel = Panel.get_panel()
     apply_read_enabled(env)
-    _ensure_devices(env)
-    env['f3d.sim.signal']._load_catalog(file_path(CATALOG))
-    _fill_addresses(env)
-    _check_level0(env)
+    refresh_registry(env)
     if not (env['ir.config_parameter'].sudo().get_param('factory3d.iot_sim.url') or '').strip() \
             and panel.state != 'unconfigured':  # без зайвого запису: хук також виконує post-migrate (ідемпотентно)
         panel.sudo().state = 'unconfigured'

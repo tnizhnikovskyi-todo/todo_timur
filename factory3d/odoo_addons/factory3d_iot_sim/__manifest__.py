@@ -1,6 +1,6 @@
 {
     "name": "Factory3D: емулятор обладнання (пульт)",
-    "version": "19.0.2.0.0",
+    "version": "19.0.2.0.1",
     "summary": "Пульт емулятора обладнання factory3d: реєстр пристроїв, каталог сигналів, сценарії, рівень 0",
     "category": "Manufacturing/Maintenance",
     "author": "ToDo",

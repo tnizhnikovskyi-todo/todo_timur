@@ -11,6 +11,7 @@ from .sim_panel import parse_iso_utc
 _logger = logging.getLogger(__name__)
 CODE_RE = re.compile(r'^[a-z_]+(/[A-Za-z0-9_\-\.]+)+$')
 CONSUMER_RE = re.compile(r'^energy/consumers/([^/]+)/')
+PV_RE = re.compile(r'^infra/pv/(PV-INV-\d+)/')
 STATE_DTYPES = ('state', 'enum', 'bit', 'bool', 'boolean', 'text')
 
 
@@ -94,9 +95,16 @@ class F3dSimSignal(models.Model):
         return 'gauge'
 
     @api.model
-    def _catalog_device_code(self, row):
+    def _catalog_device_code(self, row, known=None):
+        """Пристрій сигналу: споживачі → `<X>-PM`, `infra/pv/PV-INV-n/*` → похідний `PV-INV-n` (§5.2: unit 60+n),
+        решта — колонка `device` (код сцени). `known` — коди наявних пристроїв (PV без похідних лишається на батьку)."""
         match = CONSUMER_RE.match(row['code'])
-        return match.group(1) + '-PM' if match else row['device']
+        if match:
+            return match.group(1) + '-PM'
+        match = PV_RE.match(row['code'])
+        if match and (known is None or match.group(1) in known):
+            return match.group(1)
+        return row['device']
 
     @api.model
     def _load_catalog(self, path):
@@ -111,7 +119,7 @@ class F3dSimSignal(models.Model):
         for row in rows:
             code = row['code'].strip()
             row['code'] = code
-            dev_code = self._catalog_device_code(row)
+            dev_code = self._catalog_device_code(row, devices)
             proto = (row.get('protocol') or '').strip()
             proto = 'none' if proto in ('—', '', '-') else proto
             device = devices.get(dev_code)

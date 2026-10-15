@@ -1,5 +1,13 @@
 # Changelog — factory3d_iot_sim
 
+## 19.0.2.0.1
+- S-2: `params` пристроїв за SPEC §5.2 — розкладка каналів ADAM (20 РЦ P-02 `di_run/di_fault/counter` з адрес каталогу, DUST-1,
+  T1/T2 `rtd`, SPRINKLERS/AIR-RING `ai`, WATER, SPARK-1, SMOKE-CTRL/VENTS, GATE-W/E), `lsz` для 35 зон FA-*, `group/router`
+  для 32 груп DALI LT-*. Було 8 з 276 (ACR, TURN-1, CAM).
+- S-3: T1/T2 — unit 96 (раніше 1/2 з адреси PM5560 першого сигналу); 32 сигнали `infra/pv/PV-INV-n/*` прив'язані до
+  похідних `PV-INV-n` (unit 60+n), а не до батька `PV-INV`; FL-6 і SMOKE-VENTS — пасивні (без сигналів, §5.2).
+- `migrations/19.0.2.0.1/post-migrate.py` виконує `refresh_registry` (ідемпотентно, без дублікатів, ручні `params` лишаються).
+
 ## 19.0.2.0.0
 - Фікс S-1: `migrations/19.0.2.0.0/post-migrate.py` виконує ті самі кроки, що й `post_init_hook` (Odoo не викликає його при `-u`),
   тож база з прототипом 19.0.1.0.0 отримує реєстр пристроїв і каталог сигналів; кроки ідемпотентні (без зайвих записів).
