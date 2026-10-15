@@ -1,13 +1,14 @@
-"""Хуки модуля (SPEC §5.3–§5.5, §13.0.1 п. 4).
-
-Каркас W0: `_csv_rows`, `_signal_rows`; `run_migration` повертає звіт `skipped` (кроки 0–7 — W8).
-"""
+"""Хуки модуля (SPEC §5.3–§5.5, R-27, §13.0.1 п. 4): `run_migration` (кроки 0–7), `post_init_hook`, `uninstall_hook`."""
 
 import csv
 import io
 import json
 import logging
+import re
+from datetime import datetime
 
+from odoo import fields
+from odoo.exceptions import AccessError
 from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
@@ -91,12 +92,380 @@ def _signal_rows(code, protocol, io_unit, io_slot, name=None, with_meta=False):
     return rows
 
 
+P = "factory3d.machine_connect."
+UK_LOSSES = {
+    "block_reason0": "Очікування матеріалу",
+    "block_reason1": "Поломка",
+    "block_reason2": "Налагодження",
+    "block_reason4": "Знижена швидкість",
+    "block_reason5": "Дефект процесу",
+    "block_reason6": "Знижений вихід",
+    "block_reason7": "Повністю продуктивний час",
+}
+ROLE_FIELDS = {
+    "state": "sig_state_id",
+    "mode": "sig_mode_id",
+    "alarm": "sig_alarm_id",
+    "pieces_out": "sig_pieces_id",
+    "job": "sig_job_id",
+    "event": "sig_event_id",
+    "job_cmd": "sig_job_cmd_id",
+    "machine_state": "sig_machine_state_id",
+}
+BIND_FIELDS = ("source_id", "address", "period_s", "store_period_s", "viewer_visible")
+SIZE_RE = re.compile(r"(\d{3,4})\s*[×xX]\s*(\d{3,4})")
+THICK_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*мм")
+COUNTERS = (
+    "loss_translated",
+    "loss_category_fixed",
+    "loss_planned",
+    "sheets_sized",
+    "machines",
+    "with_operator",
+    "with_equipment",
+    "signals_created",
+    "signals_bound",
+    "machines_wired",
+    "stacks",
+    "orderpoints_linked",
+    "timelog_marked",
+    "downtimes_created",
+    "downtimes_open",
+    "requests_linked",
+)
+
+
+def _slug(code):
+    return re.sub(r"[/.\-]", "_", code).lower()
+
+
+def _int(value):
+    return int(value) if value not in ("", None) else 0
+
+
+# --- крок 0 ------------------------------------------------------------------------------------------------
+def params(env):
+    """§5.3 крок 0: `read_enabled`, `cutting_mode` — лише якщо відсутні (за `factory3d.base.environment`)."""
+    icp = env["ir.config_parameter"].sudo()
+    test = icp.get_param("factory3d.base.environment", "") == "test"
+    for key, value in (
+        ("read_enabled", "True" if test else "False"),
+        ("cutting_mode", "collector" if test else "manual"),
+    ):
+        if not icp.get_param(P + key):
+            icp.set_param(P + key, value)
+    return {}
+
+
+# --- крок 1 ------------------------------------------------------------------------------------------------
+def losses(env):
+    """R-27 п. 1: переклади uk, категорія «Доступність», `f3d_planned` для «Перерви»."""
+    res = {"loss_translated": 0, "loss_category_fixed": 0, "loss_planned": 0}
+    if env["res.lang"]._lang_get("uk_UA"):
+        for xmlid, name in UK_LOSSES.items():
+            rec = env.ref("mrp." + xmlid, raise_if_not_found=False)
+            if not rec:
+                continue
+            en = rec.with_context(lang="en_US").name
+            if rec.with_context(lang="uk_UA").name == en and en != name:
+                rec.with_context(lang="uk_UA").write({"name": name})
+                res["loss_translated"] += 1
+    category = env.ref("mrp.category_availability", raise_if_not_found=False)
+    for xmlid in ("factory3d.loss_tool", "factory3d.loss_break"):
+        rec = env.ref(xmlid, raise_if_not_found=False)
+        if rec and category and not rec.loss_id:
+            rec.loss_id = category
+            res["loss_category_fixed"] += 1
+    brk = env.ref("factory3d.loss_break", raise_if_not_found=False)
+    if brk and not brk.f3d_planned:
+        brk.f3d_planned = True
+        res["loss_planned"] = 1
+    return res
+
+
+# --- крок 2 ------------------------------------------------------------------------------------------------
+def sheets(env):
+    """R-27 п. 2: розміри листа з назви для плитних матеріалів з нульовими полями."""
+    res = {"sheets_sized": 0}
+    cats = env["product.category"].search([("name", "=", "Плитні матеріали")])
+    if not cats:
+        return res
+    products = (
+        env["product.template"]
+        .with_context(active_test=False)
+        .search(
+            [
+                ("categ_id", "child_of", cats.ids),
+                ("f3d_sheet_length_mm", "=", 0),
+                ("f3d_sheet_width_mm", "=", 0),
+                ("f3d_thickness_mm", "=", 0),
+            ]
+        )
+    )
+    for tmpl in products:
+        size, thick = SIZE_RE.search(tmpl.name or ""), THICK_RE.search(tmpl.name or "")
+        if not (size and thick):
+            _logger.warning("machine_connect: розміри листа не розпізнано: %s", tmpl.name)
+            continue
+        tmpl.write(
+            {
+                "f3d_sheet_length_mm": int(size.group(1)),
+                "f3d_sheet_width_mm": int(size.group(2)),
+                "f3d_thickness_mm": round(float(thick.group(1).replace(",", "."))),
+            }
+        )
+        res["sheets_sized"] += 1
+    return res
+
+
+# --- крок 3 ------------------------------------------------------------------------------------------------
+def machines(env):
+    """§5.3 крок 3: upsert `f3d.machine` за РЦ з `mc_machines.csv` (наявним — лише порожні зв'язки)."""
+    res = {"machines": 0, "with_operator": 0, "with_equipment": 0}
+    Machine = env["f3d.machine"].with_context(active_test=False, tracking_disable=True)
+    Source = env["f3d.source"].with_context(active_test=False)
+    missing = []
+    for row in _csv_rows(env, "mc_machines"):
+        code = row["code"]
+        wc = env["mrp.workcenter"].search_f3d(code)
+        if not wc:
+            missing.append(code)
+            continue
+        eq = env["maintenance.equipment"].search_f3d(code)
+        source = Source.search([("code", "=", row["source"])], limit=1)
+        emp = env["hr.employee"].search_f3d(row["operator_code"]) if row["operator_code"] else env["hr.employee"]
+        if eq and source and not source.equipment_id and source.code.startswith("UA-"):
+            source.equipment_id = eq
+        machine = Machine.search([("workcenter_id", "=", wc.id)], limit=1)
+        if machine:
+            vals = {}
+            for fname, rec in (("source_id", source), ("equipment_id", eq), ("employee_id", emp)):
+                if rec and not machine[fname]:
+                    vals[fname] = rec.id
+            if vals:
+                machine.write(vals)
+        else:
+            # `protocol` виставляє крок 4 разом із сигналами (constraint: підключений верстат має сигнал стану).
+            machine = Machine.create(
+                {
+                    "workcenter_id": wc.id,
+                    "protocol": "manual",
+                    "io_slot": _int(row["io_slot"]),
+                    "auto_start_mode": row["auto_start_mode"],
+                    "source_id": source.id,
+                    "equipment_id": eq.id,
+                    "employee_id": emp.id,
+                }
+            )
+        res["machines"] += 1
+        res["with_operator"] += bool(machine.employee_id)
+        res["with_equipment"] += bool(machine.equipment_id)
+    if missing:
+        _logger.warning("machine_connect: немає РЦ для верстатів: %s", ", ".join(missing))
+    return res
+
+
+# --- крок 4 ------------------------------------------------------------------------------------------------
+def signals(env):
+    """R-27 п. 3: upsert сигналів за `code` (207 = 35 верстатів + GANTRY-1 + оптимізатор), проводка `sig_*`."""
+    res = {"signals_created": 0, "signals_bound": 0, "machines_wired": 0}
+    Signal = env["f3d.signal"].with_context(active_test=False, tracking_disable=True, mail_create_nolog=True)
+    Source = env["f3d.source"].with_context(active_test=False)
+    sources = {s.code: s for s in Source.search([])}
+    Machine = env["f3d.machine"].with_context(active_test=False, tracking_disable=True)
+    jobs = [(row["code"], row["protocol"], row["source"], _int(row["io_unit"]), _int(row["io_slot"]), row)
+            for row in _csv_rows(env, "mc_machines")]  # fmt: skip
+    jobs += [("GANTRY-1", "gantry", "", 0, 0, None), ("CUTOPT", "cutopt", "", 0, 0, None)]
+    for code, protocol, src_code, io_unit, io_slot, row in jobs:
+        wc = env["mrp.workcenter"].search_f3d(code) if row else env["mrp.workcenter"]
+        eq_code = code if row else ("GANTRY-1" if protocol == "gantry" else "")
+        eq = env["maintenance.equipment"].search_f3d(eq_code) if eq_code else env["maintenance.equipment"]
+        by_role = {}
+        for vals in _signal_rows(code, protocol, io_unit, io_slot, name=wc.name or None, with_meta=True):
+            template, source_key = vals.pop("template"), vals.pop("source")
+            source = sources.get(src_code if source_key == "{SRC}" else source_key)
+            vals["source_id"] = source.id if source else False
+            sig = Signal.search([("code", "=", vals["code"])], limit=1)
+            if not sig:
+                if template != "cut_cmd":
+                    vals["equipment_id"] = eq.id
+                if row and wc:
+                    vals["workcenter_id"] = wc.id
+                sig = Signal.create(vals)
+                env["ir.model.data"].create(
+                    {
+                        "module": MODULE,
+                        "name": "sig_" + _slug(vals["code"]),
+                        "model": "f3d.signal",
+                        "res_id": sig.id,
+                        "noupdate": True,
+                    }
+                )
+                res["signals_created"] += 1
+            elif sig.module != "machine_connect":
+                upd = {}
+                for fname in BIND_FIELDS:
+                    new = vals.get(fname)
+                    if fname == "source_id" and not new:
+                        continue
+                    cur = sig[fname].id if fname == "source_id" else sig[fname]
+                    if (cur or False) != (new or False):
+                        upd[fname] = new
+                if upd:
+                    sig.write(upd)
+                    res["signals_bound"] += 1
+            suffix = vals["code"].rsplit("/", 1)[-1]
+            if row and suffix in ROLE_FIELDS:
+                by_role[ROLE_FIELDS[suffix]] = sig.id
+        machine = Machine.search([("workcenter_id", "=", wc.id)], limit=1) if wc else Machine
+        if machine and row:
+            upd = {f: v for f, v in by_role.items() if machine[f].id != v}
+            if machine.protocol != row["protocol"]:
+                upd["protocol"] = row["protocol"]
+            if upd:
+                machine.write(upd)
+                res["machines_wired"] += 1
+    return res
+
+
+# --- крок 5 ------------------------------------------------------------------------------------------------
+def stacks(env):
+    """§5.3 крок 5: `f3d.gantry.stack` для локацій-стосів `PLT-*`, правила поповнення."""
+    res = {"stacks": 0, "orderpoints_linked": 0}
+    Stack = env["f3d.gantry.stack"].with_context(active_test=False, tracking_disable=True)
+    locs = env["stock.location"].search([("f3d_loc_kind", "=", "stack"), ("f3d_code", "=like", "PLT-%")])
+    for loc in locs:
+        stack = Stack.search([("location_id", "=", loc.id)], limit=1) or Stack.create({"location_id": loc.id})
+        if not stack.orderpoint_id:
+            op = env["stock.warehouse.orderpoint"].search([("location_id", "=", loc.id)], limit=1)
+            if op:
+                stack.orderpoint_id = op
+        stack._f3d_refresh()
+        res["stacks"] += 1
+        res["orderpoints_linked"] += bool(stack.orderpoint_id)
+    return res
+
+
+# --- крок 6 ------------------------------------------------------------------------------------------------
+def _state_kind(loss):
+    name = (loss.with_context(lang="en_US").name or "").strip().lower()
+    if name == "equipment failure":
+        return "fault"
+    if name in ("setup and adjustments", "заміна інструменту"):
+        return "setup"
+    return "idle"
+
+
+def demo_journal(env, install_ts):
+    """R-27 п. 4: позначити журнал часу `demo`, простої з записів втрат (нових записів журналу — 0)."""
+    res = {"timelog_marked": 0, "downtimes_created": 0, "downtimes_open": 0, "requests_linked": 0}
+    cr = env.cr
+    cr.execute(
+        "UPDATE mrp_workcenter_productivity SET f3d_source = 'demo' "
+        "WHERE f3d_source = 'operator' AND COALESCE(f3d_auto, false) = false AND f3d_downtime_id IS NULL "
+        "AND create_date < %s",
+        (install_ts,),
+    )
+    res["timelog_marked"] = cr.rowcount
+    env["mrp.workcenter.productivity"].invalidate_model(["f3d_source"])
+    Productivity = env["mrp.workcenter.productivity"].with_context(active_test=False)
+    Downtime = env["f3d.downtime"].with_context(tracking_disable=True)
+    recs = Productivity.search(
+        [
+            ("f3d_source", "=", "demo"),
+            ("f3d_downtime_id", "=", False),
+            ("workorder_id", "=", False),
+            ("loss_type", "in", ("availability", "quality")),
+        ],
+        order="date_start, id",
+    )
+    for rec in recs:
+        machine = rec.workcenter_id.f3d_machine_ids[:1]
+        if not machine:
+            continue
+        is_open = not rec.date_end
+        if is_open and Downtime.search_count([("machine_id", "=", machine.id), ("date_end", "=", False)]):
+            continue
+        dt = Downtime.create(
+            {
+                "machine_id": machine.id,
+                "date_start": rec.date_start,
+                "date_end": rec.date_end or False,
+                "state_kind": _state_kind(rec.loss_id),
+                "loss_id": rec.loss_id.id,
+                "reason_source": "demo",
+                "reason_state": "confirmed",
+                "ppt_min": 0.0 if is_open else rec.duration,
+            }
+        )
+        rec.f3d_downtime_id = dt
+        res["downtimes_created"] += 1
+        if not is_open:
+            continue
+        res["downtimes_open"] += 1
+        upd = {"state": "fault", "state_since": rec.date_start, "current_downtime_id": dt.id}
+        request = (
+            env["maintenance.request"].search(
+                [
+                    ("equipment_id", "=", machine.equipment_id.id),
+                    ("maintenance_type", "=", "corrective"),
+                    ("stage_id.done", "=", False),
+                ],
+                order="id desc",
+                limit=1,
+            )
+            if machine.equipment_id
+            else env["maintenance.request"]
+        )
+        if request:
+            dt.maintenance_request_id = request
+            res["requests_linked"] += 1
+        machine.with_context(tracking_disable=True).write(upd)
+    return res
+
+
+# --- крок 7 + керування -------------------------------------------------------------------------------------
+def report(env, rep):
+    """§5.3 крок 7: `migration_report` = JSON усіх лічильників."""
+    env["ir.config_parameter"].sudo().set_param(REPORT_KEY, json.dumps(rep, ensure_ascii=False, sort_keys=True))
+    return rep
+
+
+def _previous_install_ts(env):
+    raw = env["ir.config_parameter"].sudo().get_param(REPORT_KEY, "{}")
+    try:
+        value = json.loads(raw or "{}").get("install_ts")
+        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S") if value else None
+    except (ValueError, AttributeError, TypeError):
+        return None
+
+
 def run_migration(env):
-    """Кроки 0–7 (§5.3) — W8. Каркас: нічого не мігрує, звіт `skipped` (записується в `migration_report`)."""
-    report = {"state": "skipped"}
-    env["ir.config_parameter"].sudo().set_param(REPORT_KEY, json.dumps(report, ensure_ascii=False))
-    _logger.info("machine_connect: міграцію пропущено (каркас)")
-    return report
+    """Кроки 0–7 (§5.3); ідемпотентна. Повертає звіт (`state`: `done` | `partial` | `skipped`)."""
+    if not env.su and not env.user.has_group("factory3d_base.group_f3d_admin"):
+        raise AccessError("Запускати міграцію може лише адміністратор «Завод 3D».")
+    env = env(su=True)
+    # Позначка «до установки»: перший запуск — зараз; повтор (кнопка) — той самий момент (записи модуля не стають demo).
+    install_ts = _previous_install_ts(env) or fields.Datetime.now()
+    rep = {name: 0 for name in COUNTERS}
+    rep["timelog_created"] = 0
+    state = "done"
+    for step in (params, losses, sheets, machines, signals, stacks):
+        res = step(env) or {}
+        rep.update(res)
+        _logger.info("machine_connect: крок %s: %s", step.__name__, res)
+    try:
+        with env.cr.savepoint():
+            rep.update(demo_journal(env, install_ts))
+    except Exception:
+        _logger.exception("machine_connect: крок demo_journal не виконано")
+        state = "partial"
+    rep.update(
+        ts=fields.Datetime.to_string(fields.Datetime.now()),
+        install_ts=fields.Datetime.to_string(install_ts),
+        state=state,
+    )
+    return report(env, rep)
 
 
 def post_init_hook(env):
@@ -104,4 +473,8 @@ def post_init_hook(env):
 
 
 def uninstall_hook(env):
-    """§5.4 — W8. Каркас: порожній."""
+    """§5.4: крони модуля неактивні, параметри `factory3d.machine_connect.%` видалено; сигнали, джерела — лишаються."""
+    env = env(su=True)
+    cron_ids = env["ir.model.data"].search([("module", "=", MODULE), ("model", "=", "ir.cron")]).mapped("res_id")
+    env["ir.cron"].with_context(active_test=False).browse(cron_ids).exists().write({"active": False})
+    env["ir.config_parameter"].search([("key", "=like", P + "%")]).unlink()

@@ -28,3 +28,5 @@ access_f3d_cut_map_line_manager,f3d.cut.map.line manager,model_f3d_cut_map_line,
 access_f3d_downtime_reason_wizard,f3d.downtime.reason.wizard,model_f3d_downtime_reason_wizard,mrp.group_mrp_user,1,1,1,0
 access_f3d_cut_plan_import_wizard,f3d.cut.plan.import.wizard,model_f3d_cut_plan_import_wizard,factory3d_base.group_f3d_manager,1,1,1,0
 access_f3d_cut_part_import_wizard,f3d.cut.part.import.wizard,model_f3d_cut_part_import_wizard,factory3d_base.group_f3d_manager,1,1,1,0
+access_res_config_settings_f3d_manager,res.config.settings f3d manager,base.model_res_config_settings,factory3d_base.group_f3d_manager,1,1,1,0
+access_mrp_loss_f3d_user,mrp.workcenter.productivity.loss f3d user,mrp.model_mrp_workcenter_productivity_loss,factory3d_base.group_f3d_user,1,0,0,0

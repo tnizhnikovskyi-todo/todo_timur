@@ -13,3 +13,7 @@ from . import test_cutmap
 from . import test_api_export
 from . import test_autostart
 from . import test_counter_finish
+from . import test_migration
+from . import test_viewer_provider
+from . import test_security
+from . import test_hooks

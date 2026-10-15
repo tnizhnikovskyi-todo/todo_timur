@@ -1,0 +1,191 @@
+"""Побудова фрагментів payload переглядача (R-25, M-22). Без імпорту моделей viewer: працює з `env` і словниками."""
+
+from datetime import timezone
+
+from odoo import fields
+
+from ..models.f3d_machine import KYIV, local
+
+GANTRY = "GANTRY-1"
+STATUS = {"fault": "stop", "working": "work"}
+ACTIVE_JOB = ("queued", "active")
+
+
+def _nodes(container, key):
+    """Вузли-словники контейнера: `dict` за ключем або список словників за полем `key` → `{ключ: вузол}`."""
+    if isinstance(container, dict):
+        return {k: v for k, v in container.items() if isinstance(v, dict)}
+    if isinstance(container, list):
+        return {n[key]: n for n in container if isinstance(n, dict) and n.get(key)}
+    return {}
+
+
+def _num(value):
+    return int(value) if float(value).is_integer() else round(value, 1)
+
+
+def _shift_start(machine):
+    """Початок поточної зміни (naive UTC): `oee_shift_id.date_start`, інакше початок київської доби."""
+    shift = machine.oee_shift_id
+    if shift and shift.date_start:
+        return shift.date_start
+    now = fields.Datetime.now().replace(tzinfo=timezone.utc).astimezone(KYIV)
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _machine_node(env, machine):
+    """R-25 п. 1: живі поля одного верстата."""
+    node = {
+        "machine_state": machine.state,
+        "link": machine.protocol,
+        "online": machine.state != "nodata",
+    }
+    if machine.state_since:
+        node["state_since"] = local(machine.state_since, "%Y-%m-%d %H:%M")
+    shift = machine.oee_shift_id
+    if shift and shift.has_data:
+        node.update(
+            oee=round(shift.oee, 2),
+            availability=round(shift.availability, 2),
+            performance=round(shift.performance, 2),
+            quality=round(shift.quality, 2),
+        )
+    dt = machine.current_downtime_id
+    if dt and not dt.date_end:
+        down = {
+            "reason": dt.loss_id.name,
+            "since": local(dt.date_start, "%H:%M"),
+            "minutes": int(dt.duration_live),
+            "kind": dt.state_kind,
+            "state": dt.reason_state,
+        }
+        if dt.hint_text:
+            down["hint"] = dt.hint_text
+        node["downtime"] = down
+    logs = env["f3d.machine.state.log"].search(
+        [("machine_id", "=", machine.id), ("date_start", ">=", _shift_start(machine))]
+    )
+    node["pieces_shift"] = int(sum(logs.mapped("pieces")))
+    wo = machine.active_workorder_id
+    if wo:
+        node["counted"] = _num(wo.f3d_qty_counted)
+    if machine.state in STATUS:
+        node["status"] = STATUS[machine.state]
+    return node
+
+
+def _gantry_node(env):
+    """R-25 п. 2: стан порталу з `gantry_status` і активного завдання."""
+    Job = env["f3d.gantry.job"]
+    status = Job._f3d_gantry_status()
+    job = Job.search([("state", "=", "active")], order="started, id", limit=1)
+    return {
+        "state": status.get("state"),
+        "job": {
+            "id": job.ws_id,
+            "target": job.target_code or "",
+            "sheets": job.sheets,
+            "done": job.done,
+            "ref": job.external_ref or "",
+        }
+        if job
+        else None,
+        "stacks": env["f3d.gantry.stack"].search_count([("ws_qty", ">", 0)]),
+        "aisles_open": list(status.get("aisles_open") or []),
+        "alarms": list(status.get("alarms") or []),
+    }
+
+
+def build_machines(env, ctx, payload=None):
+    """Фрагмент payload R-25 п. 1–5 лише для вузлів, що є в `payload` (немає — пропускаються без помилок).
+
+    Результат: `{"workcenters": {код: {…}}, "equipment": {"GANTRY-1": {"gantry": {…}}}, "locations": {код: {"gantry":
+    {…}}}, "productions": {name: {"cut_map": {…}, "supply": {"gantry": {…}}}}, "sheet_chain": {"stock": str}}`;
+    застосовує його до payload `apply_machines`. `payload=None` — усі верстати й стоси (без МО та ланцюжка).
+    """
+    full = payload is None
+    payload = payload if isinstance(payload, dict) else {}
+    out = {}
+    wcs = _nodes(payload.get("workcenters"), "code")
+    machines = env["f3d.machine"].search(
+        [("active", "=", True), ("code", "in", list(wcs))] if not full else [("active", "=", True)]
+    )
+    if machines:
+        out["workcenters"] = {m.code: _machine_node(env, m) for m in machines}
+    if GANTRY in _nodes(payload.get("equipment"), "code") or full:
+        out["equipment"] = {GANTRY: {"gantry": _gantry_node(env)}}
+    plt = [c for c in _nodes(payload.get("locations"), "code") if c.startswith("PLT-")]
+    stacks = env["f3d.gantry.stack"].search([("code", "in", plt)] if not full else [])
+    stacks = stacks.filtered("ws_seen")
+    if stacks:
+        out["locations"] = {
+            s.code: {
+                "gantry": {
+                    "qty": s.ws_qty,
+                    "expected": round(s.expected_qty, 1),
+                    "diff": round(s.diff, 1),
+                    "state": s.state,
+                }
+            }
+            for s in stacks
+        }
+    prods = _nodes(payload.get("productions"), "name")
+    if prods:
+        out["productions"] = _productions(env, prods)
+    jobs = env["f3d.gantry.job"].search([("state", "in", ACTIVE_JOB)]) if payload.get("sheet_chain") else False
+    if jobs:
+        out["sheet_chain"] = {
+            "stock": "портал: %d завд. · %d арк." % (len(jobs), sum(max(j.sheets - j.done, 0) for j in jobs))
+        }
+    return out
+
+
+def _productions(env, prods):
+    res = {}
+    names = list(prods)
+    maps = env["f3d.cut.map"].search([("production_id.name", "in", names), ("state", "!=", "cancel")], order="id desc")
+    jobs = env["f3d.gantry.job"].search(
+        [("production_id.name", "in", names), ("state", "!=", "cancelled")], order="id desc"
+    )
+    map_of, job_of = {}, {}
+    for cmap in maps:
+        map_of.setdefault(cmap.production_id.name, cmap)
+    for job in jobs:
+        job_of.setdefault(job.production_id.name, job)
+    for name, node in prods.items():
+        item = {}
+        cmap, job = map_of.get(name), job_of.get(name)
+        if cmap:
+            item["cut_map"] = {
+                "name": cmap.name,
+                "state": cmap.state,
+                "sheets": cmap.plan_sheets,
+                "waste_pct": round(cmap.plan_waste_pct, 1),
+            }
+        if job and isinstance(node.get("supply"), dict):
+            item["supply"] = {"gantry": {"job": job.name, "sheets": job.sheets, "done": job.done, "state": job.state}}
+        if item:
+            res[name] = item
+    return res
+
+
+def apply_machines(payload, fragment):
+    """Дописує `fragment` (`build_machines`) у payload/patch: лише R-25 п. 1–5, інші ключі вузлів не чіпає."""
+    for code, data in (fragment.get("workcenters") or {}).items():
+        _nodes(payload.get("workcenters"), "code")[code].update(data)
+    for code, data in (fragment.get("equipment") or {}).items():
+        _nodes(payload.get("equipment"), "code")[code].update(data)
+    for code, data in (fragment.get("locations") or {}).items():
+        _nodes(payload.get("locations"), "code")[code].update(data)
+    prods = _nodes(payload.get("productions"), "name")
+    for name, data in (fragment.get("productions") or {}).items():
+        node = prods[name]
+        if "cut_map" in data:
+            node["cut_map"] = data["cut_map"]
+        if "supply" in data:
+            node["supply"].update(data["supply"])
+    stock = (fragment.get("sheet_chain") or {}).get("stock")
+    steps = (payload.get("sheet_chain") or {}).get("steps")
+    if stock and isinstance(steps, list) and len(steps) >= 5 and isinstance(steps[4], dict):
+        steps[4]["stock"] = stock

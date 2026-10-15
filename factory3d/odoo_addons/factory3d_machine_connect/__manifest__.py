@@ -37,6 +37,7 @@
         "views/mrp_production_views.xml",
         "views/product_views.xml",
         "views/mrp_workorder_views.xml",
+        "views/res_config_settings_views.xml",
         "views/menus.xml",
     ],
     "demo": [],
