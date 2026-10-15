@@ -5,5 +5,10 @@
         <field name="tag">f3d_viewer.action</field>
         <field name="target">current</field>
     </record>
-    <!-- Серверна дія «Новий токен кіоска» додається разом із res.config.settings (W3). -->
+    <record id="action_f3d_new_kiosk_token" model="ir.actions.server">
+        <field name="name">Новий токен кіоска</field>
+        <field name="model_id" ref="base.model_res_config_settings"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_f3d_new_kiosk_token()</field>
+    </record>
 </odoo>

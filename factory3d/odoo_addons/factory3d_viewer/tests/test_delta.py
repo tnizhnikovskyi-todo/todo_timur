@@ -1,6 +1,10 @@
 import unittest
+from datetime import timedelta
 
+from odoo import fields
 from odoo.tests import BaseCase, tagged
+
+from odoo.addons.factory3d_viewer.hooks import is_demo_db
 
 from odoo.addons.factory3d_viewer.tools import payload as payload_tools
 from odoo.addons.factory3d_viewer.tools.payload import DeltaBuilder, deep_merge, default_delta
@@ -126,3 +130,78 @@ class TestDelta(F3dViewerBase):
     def test_group_skip(self):
         res = DeltaBuilder(self.env(user=self.user_nobody), None, changes={"x": {"A"}}).build()
         self.assertNotIn("zz_duck", res["patch"])
+
+    # --- дельта за подіями шини (W3) ---------------------------------------
+
+    def _settle(self):
+        """Виконує накопичені precommit-обробники й скидає події фікстур."""
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+        self.env.flush_all()
+        self.env["f3d.viewer.event"].sudo().search([]).unlink()
+
+    def _delta_since(self, since):
+        return DeltaBuilder(self.env(user=self.user_f3d), since).build()
+
+    def _need_demo(self):
+        if not is_demo_db(self.env):
+            self.skipTest("потрібна демо-база")
+
+    def test_quant_change_patch(self):
+        """AC-16."""
+        self._need_demo()
+        self.demo_clock()
+        loc = self.env["stock.location"].search([("f3d_code", "=", "PLT-04C")], limit=1)
+        quant = self.env["stock.quant"].search([("location_id", "=", loc.id), ("quantity", ">", 0)], limit=1)
+        if not quant:
+            self.skipTest("немає залишку в PLT-04C")
+        self._settle()
+        since = fields.Datetime.now() - timedelta(seconds=2)
+        quant.sudo().write({"quantity": quant.quantity + 1})
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+        res = self._delta_since(since)
+        self.assertFalse(res["full"])
+        self.assertEqual(set(res["patch"]["locations"]), {"PLT-04C"})
+        self.assertTrue(res["patch"]["locations"]["PLT-04C"]["quants"])
+        old = self._delta_since(fields.Datetime.now() - timedelta(days=3))
+        self.assertEqual(old["full"], True)
+
+    def test_workorder_done_patch(self):
+        """AC-46."""
+        self._need_demo()
+        self.demo_clock()
+        wo = self.env["mrp.workorder"].search([("state", "in", ("ready", "progress"))], limit=1)
+        if not wo:
+            self.skipTest("немає активного завдання")
+        mo, wc = wo.production_id, wo.workcenter_id
+        self._settle()
+        since = fields.Datetime.now() - timedelta(seconds=2)
+        if wo.state == "ready":
+            wo.button_start()
+        wo.button_finish()
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+        patch_ = self._delta_since(since)["patch"]
+        self.assertEqual(patch_["workorders"]["WO%05d" % wo.id]["state"], "done")
+        if wc.f3d_code:
+            self.assertIn(wc.f3d_code, patch_["workcenters"])
+        self.assertIn(mo.name, [p["name"] for p in patch_["productions"]])
+        self.assertIn("sheet_chain", patch_)
+
+    def test_removed_cancelled_mo(self):
+        fin = self.env["product.product"].create({"name": "TST del", "default_code": "TST-DEL", "is_storable": True})
+        mo = self.env["mrp.production"].create({"product_id": fin.id, "product_qty": 1})
+        mo.action_confirm()
+        name = mo.name
+        self._settle()
+        since = fields.Datetime.now() - timedelta(seconds=2)
+        mo.action_cancel()
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+        res = self._delta_since(since)
+        self.assertIn(name, res["removed"]["productions"])
+        mo.unlink()
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+        self.assertIn(name, self._delta_since(since)["removed"]["productions"])

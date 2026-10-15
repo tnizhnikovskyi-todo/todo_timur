@@ -4,6 +4,8 @@ from . import test_access
 from . import test_resolver
 from . import test_payload_static
 from . import test_delta
+from . import test_bus
+from . import test_snapshot
 from . import test_cycle_check
 from . import test_controllers
 from . import test_payload_stock

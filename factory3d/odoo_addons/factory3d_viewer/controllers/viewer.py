@@ -1,5 +1,6 @@
 """API-01…04, 07, 10 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
 з `request.env` користувача кіоска."""
+import base64
 import gzip
 import json
 import logging
@@ -198,3 +199,41 @@ class F3dViewerController(http.Controller):
         if issues:
             return {"ok": False, "issues": issues, "count": len(issues)}
         return {"ok": True, "issues": []}
+
+    # --- знімки (API-05, API-06) -------------------------------------------
+
+    @staticmethod
+    def serve_snapshots(kw):
+        date = kw.get("date") or dates.today(request.env)
+        if not DATE_RE.match(date):
+            return bad_request("Невалідний параметр: date")
+        snaps = request.env["f3d.viewer.snapshot"].search([("shift_date", "=", date)], order="ts asc, id asc")
+        items = [{"id": s.id, "ts": dates.local(s.ts), "kind": s.kind, "size_kb": s.size_kb, "note": s.note or None}
+                 for s in snaps]
+        return json_response({"date": date, "snapshots": items, "mode": "snapshots" if len(items) >= 3 else "plan"})
+
+    @staticmethod
+    def serve_snapshot(snapshot_id):
+        snap = request.env["f3d.viewer.snapshot"].search([("id", "=", snapshot_id)], limit=1)
+        if not snap:
+            return error("not_found", "Знімок не знайдено", 404)
+        raw = base64.b64decode(snap.payload_file or b"")
+        headers = {"Content-Type": JSON_CT, "Cache-Control": "private, max-age=3600", "Vary": "Accept-Encoding"}
+        if "gzip" in (request.httprequest.headers.get("Accept-Encoding") or ""):
+            headers["Content-Encoding"] = "gzip"
+            body = raw
+        else:
+            body = gzip.decompress(raw)
+        return request.make_response(body, headers=list(headers.items()))
+
+    @http.route("/f3d/viewer/snapshots", type="http", auth="user", methods=["GET"])
+    def snapshots(self, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_snapshots(kw)
+
+    @http.route("/f3d/viewer/snapshot/<int:snapshot_id>", type="http", auth="user", methods=["GET"])
+    def snapshot(self, snapshot_id, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_snapshot(snapshot_id)

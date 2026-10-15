@@ -1,1 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_viewer_snapshot_user,f3d.viewer.snapshot user,model_f3d_viewer_snapshot,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_viewer_snapshot_kiosk,f3d.viewer.snapshot kiosk,model_f3d_viewer_snapshot,factory3d_viewer.group_f3d_kiosk,1,0,1,0
+access_f3d_viewer_snapshot_manager,f3d.viewer.snapshot manager,model_f3d_viewer_snapshot,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_viewer_event_user,f3d.viewer.event user,model_f3d_viewer_event,base.group_user,1,0,1,0
+access_f3d_viewer_event_manager,f3d.viewer.event manager,model_f3d_viewer_event,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_viewer_settings_admin,res.config.settings f3d admin,base.model_res_config_settings,factory3d_base.group_f3d_admin,1,1,1,0

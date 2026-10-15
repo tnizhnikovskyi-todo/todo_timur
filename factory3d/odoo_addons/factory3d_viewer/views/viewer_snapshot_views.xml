@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_viewer_snapshot_list" model="ir.ui.view">
+        <field name="name">f3d.viewer.snapshot.list</field>
+        <field name="model">f3d.viewer.snapshot</field>
+        <field name="arch" type="xml">
+            <list default_order="ts desc" create="0">
+                <field name="ts" widget="datetime"/>
+                <field name="shift_date"/>
+                <field name="kind" widget="badge"/>
+                <field name="size_kb"/>
+                <field name="event_count"/>
+                <field name="note"/>
+                <field name="user_id"/>
+                <button name="action_open_viewer" type="object" string="Відкрити в переглядачі" icon="fa-cube"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_viewer_snapshot_form" model="ir.ui.view">
+        <field name="name">f3d.viewer.snapshot.form</field>
+        <field name="model">f3d.viewer.snapshot</field>
+        <field name="arch" type="xml">
+            <form create="0">
+                <header>
+                    <button name="action_open_viewer" type="object" string="Відкрити в переглядачі"
+                            class="btn-primary" icon="fa-cube"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="ts" readonly="1"/>
+                            <field name="shift_date" readonly="1"/>
+                            <field name="kind" readonly="1"/>
+                            <field name="size_kb" readonly="1"/>
+                            <field name="schema" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="note" readonly="1"/>
+                            <field name="event_count" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="company_id" readonly="1" groups="base.group_multi_company"/>
+                            <field name="payload_name" invisible="1"/>
+                            <field name="payload_file" filename="payload_name" widget="binary" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_viewer_snapshot_search" model="ir.ui.view">
+        <field name="name">f3d.viewer.snapshot.search</field>
+        <field name="model">f3d.viewer.snapshot</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="note"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('shift_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="this_week" string="Цей тиждень"
+                        domain="[('shift_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                <group>
+                    <filter name="group_shift_date" string="Дата зміни" context="{'group_by': 'shift_date'}"/>
+                    <filter name="group_kind" string="Тип" context="{'group_by': 'kind'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_viewer_snapshot" model="ir.actions.act_window">
+        <field name="name">Знімки стану</field>
+        <field name="res_model">f3d.viewer.snapshot</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{"search_default_today": 1}</field>
+    </record>
+</odoo>

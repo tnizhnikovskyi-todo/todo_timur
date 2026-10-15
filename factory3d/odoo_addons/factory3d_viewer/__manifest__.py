@@ -15,6 +15,9 @@
         # kiosk_user.xml після actions.xml: користувач посилається на action_f3d_viewer
         "security/kiosk_user.xml",
         "data/cron.xml",
+        "views/viewer_snapshot_views.xml",
+        "views/viewer_event_views.xml",
+        "views/res_config_settings_views.xml",
         "views/menus.xml",
     ],
     "post_init_hook": "post_init",
