@@ -6,6 +6,8 @@ from odoo.exceptions import AccessError
 from odoo.addons.factory3d_telemetry.tools import thresholds
 
 from ..tools import rules, schedule, titles
+from .f3d_bms_hvac_unit import SIGNAL_FIELDS as _UNIT_FIELDS
+from .f3d_bms_light_group import SIGNAL_FIELDS as GROUP_SIGNAL_FIELDS
 
 _logger = logging.getLogger(__name__)
 
@@ -13,6 +15,7 @@ P = "factory3d.bms."
 MAINS_CODE = "infra/ats/src1_ok"
 FIRE_CODE = "fire/totals/system_state"
 DERIVED_CODE = "BMS-DERIVED"
+UNIT_SIGNAL_FIELDS = [f for f, _label in _UNIT_FIELDS]
 
 
 class F3dBmsCheck(models.AbstractModel):
@@ -167,6 +170,7 @@ class F3dBmsCheck(models.AbstractModel):
         try:
             with env.env.cr.savepoint():
                 env._run_checks(now, params)
+                env._notify_commands(now)
         except Exception as exc:
             _logger.exception("bms check")
             env.env.invalidate_all()
@@ -176,6 +180,38 @@ class F3dBmsCheck(models.AbstractModel):
         if source:
             source.write({"state": "online", "last_ok": now, "last_error": False})
         return True
+
+    def _notify_commands(self, now):
+        """§11 п. 11: чаттер групи/установки для команд `origin='bms'` у стані `failed`/`expired` (один раз)."""
+        Command = self.env["f3d.command"]
+        cmds = Command.search(
+            [
+                ("origin", "=", "bms"),
+                ("state", "in", ("failed", "expired")),
+                ("write_date", ">=", now - timedelta(days=2)),
+            ]
+        )
+        labels = dict(Command._fields["state"]._description_selection(self.env))
+        for cmd in cmds:
+            sig = cmd.signal_id
+            group = self.env["f3d.bms.light.group"].search(
+                ["|"] * (len(GROUP_SIGNAL_FIELDS) - 1) + [(f, "=", sig.id) for f in GROUP_SIGNAL_FIELDS], limit=1
+            )
+            unit = self.env["f3d.bms.hvac.unit"].search(
+                ["|"] * (len(UNIT_SIGNAL_FIELDS) - 1) + [(f, "=", sig.id) for f in UNIT_SIGNAL_FIELDS], limit=1
+            )
+            obj = group or unit
+            if not obj:
+                continue
+            marker = "Команда #%d: %s" % (cmd.id, labels.get(cmd.state, cmd.state))
+            if self.env["mail.message"].search_count(
+                [("model", "=", obj._name), ("res_id", "=", obj.id), ("body", "like", marker)]
+            ):
+                continue
+            obj.message_post(
+                body="%s — %s" % (_escape(marker), _escape(cmd.error or "без опису помилки")),
+                subtype_xmlid="mail.mt_note",
+            )
 
     def _reading(self, sig, text, now, params):
         """Показання стан-сигналу: лише при зміні тексту або через heartbeat (R-19, §10.1)."""

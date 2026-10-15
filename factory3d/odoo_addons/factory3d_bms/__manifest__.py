@@ -34,8 +34,17 @@
         "wizard/command_wizard_views.xml",
         "data/f3d_bms_actions.xml",
         "data/ir_cron.xml",
+        "views/f3d_bms_overview_views.xml",
         "views/menus.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "factory3d_bms/static/src/overview/overview.js",
+            "factory3d_bms/static/src/overview/overview.xml",
+            "factory3d_bms/static/src/overview/overview.scss",
+        ],
+        "web.assets_unit_tests": ["factory3d_bms/static/tests/overview.test.js"],
+    },
     "demo": [],
     "post_init_hook": "post_init_hook",
     "uninstall_hook": "uninstall_hook",

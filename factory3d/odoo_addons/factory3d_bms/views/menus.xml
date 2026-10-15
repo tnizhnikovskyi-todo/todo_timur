@@ -2,7 +2,7 @@
 <odoo>
     <!-- Каркас меню (W0): дії (action=) додають W1…W5 повторним оголошенням menuitem з тим самим id -->
     <menuitem id="menu_f3d_bms" name="Будівля" parent="factory3d_base.menu_f3d_root" sequence="80" groups="factory3d_base.group_f3d_user"/>
-    <menuitem id="menu_f3d_bms_overview" name="Огляд" parent="menu_f3d_bms" sequence="10" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_bms_overview" action="action_f3d_bms_overview" name="Огляд" parent="menu_f3d_bms" sequence="10" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_lighting" name="Освітлення" parent="menu_f3d_bms" sequence="20" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_light_group" action="action_f3d_bms_light_group" name="Групи" parent="menu_f3d_bms_lighting" sequence="10" groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_bms_light_panel" action="action_f3d_bms_light_panel" name="Щити" parent="menu_f3d_bms_lighting" sequence="20" groups="factory3d_base.group_f3d_user"/>
