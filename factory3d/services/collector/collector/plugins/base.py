@@ -7,11 +7,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from collector.core.errors import NotSupported
 from collector.core.types import Health, PushEvent, Reading, SignalCfg, SourceCfg
-
-
-class NotSupported(Exception):
-    """Операція не підтримується плагіном (тимчасово тут; остаточно — collector.core.errors)."""
 
 
 @dataclass

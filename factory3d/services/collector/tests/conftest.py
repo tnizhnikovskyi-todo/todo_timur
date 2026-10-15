@@ -50,6 +50,10 @@ class FakeOdoo:
         self.write_enabled = False
         self.commands: list[dict] = []
         self.calls: list[tuple[str, str, object]] = []
+        self.down = False  # True -> усі відповіді 503 (Odoo недоступний)
+        self.push_extra: dict = {}  # додаткові ключі відповіді push (config_etag, rejected, read_enabled ...)
+        self.push_headers: dict = {}  # заголовки відповіді push (напр. Retry-After для 429)
+        self.time_offset_s = 0  # зсув server_time у відповідях
         self.server: TestServer | None = None
 
     @property
@@ -63,19 +67,22 @@ class FakeOdoo:
     async def _handle(self, request: web.Request) -> web.Response:
         body = await request.json() if request.can_read_body else None
         self.calls.append((request.method, request.path, body))
+        if self.down:
+            return web.json_response({"error": "down"}, status=503)
         if not self._auth_ok(request):
             return web.json_response({"error": "unauthorized"}, status=401)
         path = request.path
-        now = datetime.now(UTC).isoformat()
+        now = (datetime.now(UTC) + timedelta(seconds=self.time_offset_s)).isoformat()
         if path.endswith("/config"):
-            if request.headers.get("If-None-Match") == self.etag:
+            if request.headers.get("If-None-Match", "").strip('"') == self.etag:
                 return web.Response(status=304)
             return web.json_response({**self.config, "config_etag": self.etag, "server_time": now},
                                      headers={"ETag": self.etag})
-        if path.endswith("/readings"):
+        if path.endswith("/push"):
             status = self.push_status.pop(0) if self.push_status else 200
-            return web.json_response({"accepted": len(body.get("readings", [])) if body else 0,
-                                      "server_time": now}, status=status)
+            resp = {"accepted": len(body.get("readings", [])) if body else 0, "server_time": now,
+                    "config_etag": self.etag, **self.push_extra}
+            return web.json_response(resp, status=status, headers=self.push_headers if status != 200 else None)
         if path.endswith("/commands"):
             return web.json_response({"commands": self.commands, "write_enabled": self.write_enabled,
                                       "server_time": now})
@@ -107,7 +114,7 @@ def vclock() -> VirtualClock:
 
 @pytest.fixture
 def settings(tmp_path, monkeypatch, fake_odoo):
-    from collector.core.settings import Settings
+    from collector.core.config import Settings
 
     monkeypatch.setenv("F3D_ODOO_URL", fake_odoo.url)
     monkeypatch.setenv("F3D_COLLECTOR_CODE", "COL-T")
