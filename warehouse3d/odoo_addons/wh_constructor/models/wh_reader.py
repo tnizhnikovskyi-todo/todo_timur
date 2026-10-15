@@ -99,13 +99,15 @@ class WhReader(models.AbstractModel):
     # ------------------------------------------------------------ категории хранения
     @api.model
     def api_storage_categories(self, warehouse_id=None, offset=0, limit=None):
-        """Категории хранения, назначенные локациям склада или правилам размещения в нём, с ёмкостями по товару и типу упаковки."""
+        """Категории хранения: назначенные локациям склада или правилам размещения в нём и все категории компании склада (или без компании), с ёмкостями по товару и типу упаковки."""
         env = self._reader()
         wh = self._warehouse(env, warehouse_id)
         view = wh.view_location_id.id
         used = env["stock.location"].search([("id", "child_of", view), ("storage_category_id", "!=", False)]).storage_category_id
         used |= self._rules(env, wh).storage_category_id
-        recs, page = self._page(env["stock.storage.category"], [("id", "in", used.ids)], offset, limit)
+        # назначенные и все свободные категории компании склада (W-14): новую категорию, ещё не назначенную, конструктор должен видеть, иначе создаст её повторно
+        domain = ["|", ("id", "in", used.ids), ("company_id", "in", [False, wh.company_id.id])]
+        recs, page = self._page(env["stock.storage.category"], domain, offset, limit)
         rows, products = [], env["product.product"]
         for c in recs:
             caps = [{"id": k.id, "product_id": k.product_id.id or None, "package_type_id": k.package_type_id.id or None,
@@ -144,6 +146,19 @@ class WhReader(models.AbstractModel):
         rows = [{"id": o.id, "name": o.name, "location_id": o.location_id.id, "product_id": o.product_id.id, "min": o.product_min_qty,
                  "max": o.product_max_qty, "trigger": o.trigger, "warehouse_id": o.warehouse_id.id or None} for o in recs]
         return {**page, "warehouse_id": wh.id, "orderpoints": rows, "products": self._products(recs.product_id)}
+
+    # ------------------------------------------------------------ справочники для правок (W-14)
+    @api.model
+    def api_removal_strategies(self):
+        """Стратегии списания базы (product.removal): id, название, метод (fifo, lifo, fefo, closest…); выбираются на зоне и месте (removal_strategy_id)."""
+        env = self._reader()
+        return {"removal_strategies": [{"id": r.id, "name": r.name, "method": r.method} for r in env["product.removal"].search([], order="id")]}
+
+    @api.model
+    def api_package_types(self):
+        """Типы упаковки (stock.package.type) — для ёмкости категории хранения по упаковке."""
+        env = self._reader()
+        return {"package_types": [{"id": r.id, "name": r.name} for r in env["stock.package.type"].search([], order="id")]}
 
     # ------------------------------------------------------------ движения (оборачиваемость ABC, W-17)
     @api.model

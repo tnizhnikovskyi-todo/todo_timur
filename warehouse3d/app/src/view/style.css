@@ -126,6 +126,16 @@ button, input, select { font: inherit; color: inherit; }
 .tip b { font: 600 12px var(--f-mono); display: block; }
 .tip span { color: var(--muted); display: block; }
 .tip[hidden] { display: none; }
+.tip .tip-zone { color: var(--text); }
+/* ёмкость и атрибуты (W-14): подпись функции зоны, легенда, окно категорий */
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+.cap-fn { margin: 6px 0; font-size: 13px; }
+.fn-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--o-muted); margin: 4px 0 8px; }
+.cap-sum td.n, .cap-info td.n { text-align: right; }
+.o_cat_list tbody tr[data-cat] { cursor: pointer; }
+.o_cat_list tr.on { background: var(--accent-soft); }
+.o_cat_form { margin-bottom: 4px; }
+.o_cat_dlg table input, .o_cat_dlg table select { width: 100%; min-width: 0; }
 
 /* 2D-схема */
 svg .bld { fill: var(--floor); stroke: var(--steel); stroke-width: 2; }

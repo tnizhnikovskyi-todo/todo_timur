@@ -3,7 +3,7 @@
 //   load(warehouseId) → снимок склада в формате data.json { meta, products, locations, purchase_orders, productions, quality_checks }
 // Отличия от data.json (только добавления): у мест есть `id` (из него `odoo_id` узлов), `usage`, `barcode`, `parent_id`, `storage_category_id`, позиции posx/posy/posz
 // и флаги — те, что есть в данной версии Odoo; у снимка в `meta.odoo` лежат `version`, `warehouse_id`, `view_location_id`, `containers` (родительские и
-// view-локации по пути — у них тоже есть id), `storage_categories`, `putaway_rules`, `orderpoints`. Ключи верхнего уровня те же, что у data.json.
+// view-локации по пути — у них тоже есть id), `storage_categories`, `putaway_rules`, `orderpoints`, `removal_strategies` (`[{ id, name, method }]`), `package_types` (`[{ id, name }]`). Ключи верхнего уровня те же, что у data.json.
 // W-17: у остатка есть `age` (дней с in_date партии до `now`), у снимка — `meta.activity { days, moves: { <ключ места>: { n, qty } } }` (выполненные движения за окно,
 // строка движения считается для места «откуда» и для места «куда»).
 // Места — локации без дочерних (и локации с остатком); ключ места — штрихкод локации, а без него имя (при совпадении — `ключ~id`): так короткое имя уровня (D-14) не ломает коды.
@@ -67,18 +67,20 @@ export function createOdooApi({ api = ODOO_READ_API, fetchImpl = globalThis.fetc
       const meta = await warehouses();
       const wh = meta.warehouses.find((w) => w.id === warehouseId);
       if (!wh) throw new Error(`warehouse ${warehouseId} not found`);
-      const [locs, quants, cats, rules, ops, moves] = await Promise.all([pages("locations", "locations", wh.id), pages("quants", "quants", wh.id),
+      // справочники (стратегии списания, типы упаковки) небольшие и необязательные: сервер без маршрута даёт пустой список
+      const list = (route) => rpc(route, {}).then((r) => r[route] || [], () => []);
+      const [locs, quants, cats, rules, ops, moves, strategies, packages] = await Promise.all([pages("locations", "locations", wh.id), pages("quants", "quants", wh.id),
         pages("storage_categories", "storage_categories", wh.id), pages("putaway_rules", "putaway_rules", wh.id), pages("orderpoints", "orderpoints", wh.id),
-        pages("moves", "moves", wh.id, { days: moveDays })]);
+        pages("moves", "moves", wh.id, { days: moveDays }), list("removal_strategies"), list("package_types")]);
       const products = Object.assign({}, quants.products, cats.products, rules.products, ops.products);
       return buildSnapshot({ warehouse: wh, db: meta.db, version: meta.version, now: meta.now, locations: locs.rows, quants: quants.rows, storageCategories: cats.rows,
-        putawayRules: rules.rows, orderpoints: ops.rows, moves: moves.rows, days: moveDays, products });
+        putawayRules: rules.rows, orderpoints: ops.rows, moves: moves.rows, days: moveDays, products, removalStrategies: strategies, packageTypes: packages });
     },
   };
 }
 
 // Ответы эндпоинтов → снимок формата data.json (чистая функция, без обращений к сети)
-export function buildSnapshot({ warehouse, db = "", version = {}, now = "", locations = [], quants = [], storageCategories = [], putawayRules = [], orderpoints = [], moves = [], days = MOVE_DAYS, products = {} }) {
+export function buildSnapshot({ warehouse, db = "", version = {}, now = "", locations = [], quants = [], storageCategories = [], putawayRules = [], orderpoints = [], moves = [], days = MOVE_DAYS, products = {}, removalStrategies = [], packageTypes = [] }) {
   const code = (pid) => { const p = products[String(pid)]; return p ? p.default_code || `ID${p.id}` : `ID${pid}`; };
   const prod = {};
   for (const p of Object.values(products)) prod[p.default_code || `ID${p.id}`] = { default_code: p.default_code || `ID${p.id}`, name: p.name, uom: p.uom, categ: p.categ };
@@ -101,7 +103,7 @@ export function buildSnapshot({ warehouse, db = "", version = {}, now = "", loca
   const out = {}, containers = {}, used = new Set(), keyOfId = new Map();
   const extra = (l) => {
     const r = {};
-    for (const k of ["usage", "barcode", "storage_category_id", "removal_strategy", "posx", "posy", "posz", "replenish_location", "scrap_location"]) if (l[k] != null && l[k] !== false) r[k] = l[k];
+    for (const k of ["usage", "barcode", "storage_category_id", "removal_strategy_id", "removal_strategy", "posx", "posy", "posz", "replenish_location", "scrap_location"]) if (l[k] != null && l[k] !== false) r[k] = l[k];
     if (l.location_id != null) r.parent_id = l.location_id;
     return r;
   };
@@ -140,7 +142,7 @@ export function buildSnapshot({ warehouse, db = "", version = {}, now = "", loca
   }
   return {
     meta: { source: `Odoo ${version.series || ""} · ${db}`.trim(), database: db, company: warehouse.company, warehouse: warehouse.code, now, pulled_at: now, activity: { days, moves: act },
-      odoo: { version, warehouse_id: warehouse.id, view_location_id: warehouse.view_location_id, containers,
+      odoo: { version, warehouse_id: warehouse.id, view_location_id: warehouse.view_location_id, containers, removal_strategies: removalStrategies, package_types: packageTypes,
         storage_categories: storageCategories.map((c) => ({ ...c, capacities: c.capacities.map((k) => ({ ...k, product: k.product_id != null ? code(k.product_id) : null })) })),
         putaway_rules: putawayRules.map((r) => ({ ...r, product: r.product_id != null ? code(r.product_id) : null })),
         orderpoints: orderpoints.map((o) => ({ ...o, product: code(o.product_id), min: num(o.min), max: num(o.max) })) } },
