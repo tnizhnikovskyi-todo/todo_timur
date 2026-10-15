@@ -1,7 +1,7 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
-Тесты: 131/131 пусто, 161/161 демо-шаблон (2026-10-15), ТК: —
-Решений без заказчика: 11 (ниже)
+Тесты: 131/131 пусто, 162/162 демо-шаблон (2026-10-15), ТК: —
+Решений без заказчика: 12 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: демо-тесты гоняются на CE-шаблоне f3d_demo_tpl (не копия `odoo`): ожидания OEE/локаций/MR-номеров считаются из базы (DEC-11)
 
@@ -14,8 +14,8 @@
 | W1c (демо-фиксы) | принят | edeb760 | 131/131 пусто; демо 161/161 |
 | W3 | принят | 45ff25b | 131/131 пусто; демо — те же 9 FAIL (W1c) |
 | W1b-2 | принят (дельта chains ждёт W1b-1) | 4a7da35 | 84/84 (демо skip) |
-| W2 | в работе | — | — |
-| W4 | — | — | — |
+| W2 | принят | 90dd23b | TestViewerHoot 52 hoot; демо 162/162 |
+| W4 | в работе | — | — |
 | W5 | — | — | — |
 | W6 | — | — | — |
 
@@ -33,3 +33,4 @@
 - DEC-9: `energy.profile_k` нет в model_static.json — запасная таблица PROFILE_KF из plant/energy.py; `next_maintenance` — ближайшая открытая preventive-заявка (в 19 нет next_action_date). — `models/viewer_provider_production.py`, `viewer_provider_maintenance.py`
 - DEC-10: эмиттеры шины перекрывают также `_write_multi` (вычисляемые state пишутся через flush); `_since` по `ts >= since` (точность — секунда); идемпотентность 60 с только для periodic; ACL res.config.settings для group_f3d_admin (иначе пункт меню не виден, сохранение — base.group_system). — `models/bus_emitters.py`, `viewer_event.py`, `viewer_snapshot.py`, `security/ir.model.access.csv`
 - DEC-11: отличия CE-шаблона от базы `odoo` (696 кодовых локаций вместо 689, пересекающиеся логи OEE, потери «Equipment Failure», нет нумерации MR/…) — тесты считают ожидание из данных по правилу SPEC, хардкод SPEC проверяется при совпадении данных; в коде: KIT-* получают picking/production, FR-компоненты → to=ASM, DOCK-* не в source_locations. — `tests/test_payload_*.py`, `tools/chains.py`, `models/viewer_provider_stock.py`, `viewer_provider_logistics.py`
+- DEC-12: клиент — панель/оверлей/поток/учения/энергия в одном `core.js` (общее замыкание), без разбиения на panel/overlay/flow/drill/energy.js; порог lite `deviceMemory <= 4` (Chrome отдаёт максимум 8 — при `<= 8` lite был бы всегда); вложенные шаблонные литералы запрещены (rjsmin их портит). — `static/src/viewer/core.js`, `lite.js`
