@@ -1,7 +1,7 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
 Тесты: 131/131 пусто, 162/162 демо-шаблон (2026-10-15), ТК: —
-Решений без заказчика: 14 (ниже)
+Решений без заказчика: 16 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: демо-тесты гоняются на CE-шаблоне f3d_demo_tpl (не копия `odoo`): ожидания OEE/локаций/MR-номеров считаются из базы (DEC-11)
 
@@ -17,7 +17,8 @@
 | W2 | принят | 90dd23b | TestViewerHoot 52 hoot; демо 162/162 |
 | W4 | принят | 2859c22 | демо 185/185, пусто 155/155, туры OK |
 | W5 | слит, доводка 2 FAIL cycle_check на демо | c6dcdb7 | пусто 140/140; TestDemoWizard 2/2 (326 с) |
-| W6 | — | — | — |
+| W6 | принят | 868aa12 | TestPerf+TestNeutralize 9/9; SQL-пороги AC-52 не держатся → W7 |
+| W7 (SQL AC-52, uninstall) | в работе | — | — |
 
 ## Решения без заказчика
 - DEC-1: §13.0 требует копию демо-базы `odoo`, её в среде нет — шаблон `f3d_demo_tpl` собирается из `f3d_template`
@@ -36,3 +37,5 @@
 - DEC-12: клиент — панель/оверлей/поток/учения/энергия в одном `core.js` (общее замыкание), без разбиения на panel/overlay/flow/drill/energy.js; порог lite `deviceMemory <= 4` (Chrome отдаёт максимум 8 — при `<= 8` lite был бы всегда); вложенные шаблонные литералы запрещены (rjsmin их портит). — `static/src/viewer/core.js`, `lite.js`
 - DEC-13: майстер демо не ставит модули (шаг modules → skipped с перечнем; button_immediate_install в кроне опасен); после шагов вызываются хуки base (codes, passports.link, docks.register, zones.bind); пункт «Демо-дані» в корне меню (seq 16, AC-64). — `wizard/demo_steps.py`, `views/menus.xml`
 - DEC-14: тур киоска — browser_js в test_tours.py (на странице киоска нет tour manager); click_open_record_tour — нулевой рендерер (f3d_test), т.к. WebGL в headless Chrome медленный; sale.order.action_f3d_show ищет МО по origin. — `tests/test_tours.py`, `factory3d_viewer_sale/models/sale_order.py`
+- DEC-15: `neutralize.sql` лежит в `data/` (Odoo читает только `data/neutralize.sql`), а не в корне модуля, как в дереве SPEC §0; дополнительно `bus_enabled=False` (§13.3). — `data/neutralize.sql`
+- DEC-16: AC-38 `dist/index.html` не пересобран — `build_scene.py --embed` требует Blender (`bpy`); `factory3d/viewer/index.html` уже обёртка над ядром, GLB в static совпадают с dist побайтно. eslint: конфиг Odoo требует prettier (нет сети) — прочие правила Odoo 0 ошибок. — `docs/modules/factory3d_viewer/DEPLOY_TEST.md`
