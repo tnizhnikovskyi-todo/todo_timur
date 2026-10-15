@@ -11,6 +11,15 @@ export class F3dViewerAction extends Component {
     static template = "factory3d_viewer.ViewerAction";
     static props = { ...standardActionServiceProps };
 
+    /** Тури вмикають нульовий рендерер через sessionStorage (параметри URL роутер відкидає). */
+    _testFlag() {
+        try {
+            return window.sessionStorage.getItem("f3d_test") === "1";
+        } catch {
+            return false;
+        }
+    }
+
     setup() {
         this.root = useRef("root");
         this.action = useService("action");
@@ -23,7 +32,7 @@ export class F3dViewerAction extends Component {
             this.viewer = new F3dViewer(this.root.el, {
                 client: this.client,
                 lite: p.lite ?? "auto",
-                testMode: !!p.f3d_test,
+                testMode: !!p.f3d_test || this._testFlag(),
                 onOpenRecord: (model, resId) =>
                     this.action.doAction({
                         type: "ir.actions.act_window",
