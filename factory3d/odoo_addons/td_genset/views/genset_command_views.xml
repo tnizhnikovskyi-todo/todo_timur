@@ -83,7 +83,7 @@
                 <filter name="open" string="Незавершені"
                         domain="[('state', 'in', ('queued_odoo', 'to_send', 'sent', 'awaiting', 'retry', 'waiting_link'))]"/>
                 <filter name="failed" string="Не підтверджені" domain="[('state', 'in', ('failed', 'auth_error', 'blocked'))]"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
                     <filter name="group_source" string="Джерело" context="{'group_by': 'source'}"/>
                 </group>

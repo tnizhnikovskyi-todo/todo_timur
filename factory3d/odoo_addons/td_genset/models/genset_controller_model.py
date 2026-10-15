@@ -22,6 +22,6 @@ class TdGensetControllerModel(models.Model):
         string='Активна', default=True,
         help='Архівна модель не пропонується для нових генераторів.')
 
-    _sql_constraints = [
-        ('code_uniq', 'unique(code)', 'Модель контролера з таким кодом уже є.'),
-    ]
+    _code_uniq = models.Constraint(
+        'unique(code)',
+        'Модель контролера з таким кодом уже є.')

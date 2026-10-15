@@ -138,7 +138,7 @@
                 <separator/>
                 <filter name="open" string="Триває" domain="[('is_open', '=', True)]"/>
                 <filter name="bad" string="Увага" domain="[('is_bad', '=', True)]"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>
                     <filter name="group_type" string="Тип" context="{'group_by': 'event_type'}"/>
                     <filter name="group_day" string="День" context="{'group_by': 'date_start:day'}"/>

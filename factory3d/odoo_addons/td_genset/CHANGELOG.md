@@ -1,8 +1,27 @@
 # Журнал змін `td_genset` («Генератори»)
 
-Формат версії — `18.0.<major>.<minor>.<patch>` (Odoo 18.0). Джерела вимог: ТР «Генератор SmartGen: моніторинг і
+Формат версії — `<Odoo>.<major>.<minor>.<patch>` (19.0 для Odoo 19.0, 18.0 для Odoo 18.0). Джерела вимог: ТР «Генератор SmartGen: моніторинг і
 керування в Odoo (erp.todo.ltd)» v1.2 (`../ТР_SmartGen_генератор.md`), `../SPEC.md` (AC-01…AC-69), API ретранслятора —
 `../relay_api.md`. Процедура розгортання — `../DEPLOY_TEST.md`.
+
+## 19.0.1.0.0 — 2026-10-15
+
+Перенос готового модуля Odoo 18.0 → 19.0 (чек-лист MG-01…MG-32, `SPEC.md` A.2; журнал — `MIGRATION_19.md`).
+Поведінка не змінена; XML id груп і даних збережено; 176 юніт-тестів зелені.
+
+- MG-01: `version` 19.0.1.0.0 (залежності й `assets` без змін — підтверджено).
+- MG-02: `odoo.osv.expression` → `odoo.fields.Domain` (`genset_reading.py`).
+- MG-04, MG-05, MG-06: перевірено — `<tree>`, `attrs`, `states`, `kanban-box` відсутні; у пошукових поданнях прибрано
+  `expand` і `string` з `<group>` (RNG 19), з дії налаштувань — `target="inline"` (значення прибране у 19).
+- MG-07: `active_id` лишено (19 передає його з кнопки форми — підтверджено).
+- MG-08: `res.groups.privilege` `res_groups_privilege_td_genset` замість `category_id` у групах; XML id груп без змін;
+  `implied_ids` через `Command.link`.
+- MG-09: `groups_id` → `group_ids` (меню/дія, тести); `res.groups.users` → `user_ids` (отримувачі тривог тех. групи).
+- MG-10: `_sql_constraints` → `models.Constraint` (8 обмежень, імена в БД без змін).
+- MG-13: `ir.cron._notify_progress` (deprecated 19) → `_commit_progress`; `uninstall_hook` без `alias_id` категорії
+  обладнання (у 19 його немає).
+- MG-12, MG-15…MG-30: перевірено, змін не потребують (докладно — `MIGRATION_19.md`).
+- MG-31, MG-32: за W4/W5 (docker-стенд, `relay_api.md`, `DEPLOY_TEST.md`).
 
 ## 18.0.1.0.0 — 2026-10-08
 

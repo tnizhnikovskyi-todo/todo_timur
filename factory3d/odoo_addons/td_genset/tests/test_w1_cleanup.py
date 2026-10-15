@@ -54,10 +54,10 @@ class TestW1Cleanup(TdGensetCase):
                                                         'source': 'button', 'state': 'done'})
         progress = []
 
-        def notify(cron, **kwargs):
-            progress.append((kwargs['done'], kwargs['remaining']))
+        def notify(cron, processed=0, **kwargs):
+            progress.append((processed, kwargs['remaining']))
 
-        with freeze_time(NOW), patch.object(type(self.env['ir.cron']), '_notify_progress', notify):
+        with freeze_time(NOW), patch.object(type(self.env['ir.cron']), '_commit_progress', notify):
             self.assertIsNone(self.env['td.genset.reading']._cron_cleanup())
         self.assertEqual(progress, [(29, 0)])
         remaining = self.env['td.genset.reading'].search([('genset_id', '=', self.genset.id)])
@@ -70,7 +70,7 @@ class TestW1Cleanup(TdGensetCase):
         self.assertEqual(event.reading_start_id, referenced)
 
     def test_ac58_cleanup_batches_and_disabled(self):
-        """AC-58: партіями (``_notify_progress`` з залишком); термін 0 — не чистити."""
+        """AC-58: партіями (``_commit_progress`` з залишком); термін 0 — не чистити."""
         self._create_history(days=100)
         reading_model = self.env['td.genset.reading']
         self.config.reading_retention_days = 0
@@ -80,10 +80,10 @@ class TestW1Cleanup(TdGensetCase):
         self.config.reading_retention_days = 90
         progress = []
 
-        def notify(cron, **kwargs):
-            progress.append((kwargs['done'], kwargs['remaining']))
+        def notify(cron, processed=0, **kwargs):
+            progress.append((processed, kwargs['remaining']))
 
-        with freeze_time(NOW), patch.object(type(self.env['ir.cron']), '_notify_progress', notify), \
+        with freeze_time(NOW), patch.object(type(self.env['ir.cron']), '_commit_progress', notify), \
                 patch('odoo.addons.td_genset.models.genset_reading.CLEANUP_BATCH', 4):
             reading_model._cron_cleanup()
             reading_model._cron_cleanup()

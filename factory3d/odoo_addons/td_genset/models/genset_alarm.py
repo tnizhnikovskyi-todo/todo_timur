@@ -510,7 +510,7 @@ class TdGensetAlarm(models.Model):
             return
         if self.tech_only:
             group = self.env.ref('td_genset.group_tech')
-            users = group.users.filtered(lambda user: user.active and not user.share)
+            users = group.user_ids.filtered(lambda user: user.active and not user.share)
             self._td_notify(users, _('Тех. адміністратори'))
             self.write({'escalation_level': 1, 'next_escalation_at': False,
                         'notified_user_ids': [(4, user.id) for user in users]})

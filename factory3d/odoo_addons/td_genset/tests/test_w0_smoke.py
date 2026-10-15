@@ -188,7 +188,7 @@ class TestW0Smoke(TdGensetCase):
         self.assertTrue(self.user_t.has_group('td_genset.group_user'))
         self.assertTrue(self.user_t.has_group('maintenance.group_equipment_manager'))
         self.assertFalse(self.user_s.has_group('td_genset.group_admin'))
-        self.assertEqual(self.group_tech.category_id, self.env.ref('td_genset.module_category_td_genset'))
+        self.assertEqual(self.group_tech.privilege_id.category_id, self.env.ref('td_genset.module_category_td_genset'))
 
     def test_w0_access_rules(self):
         """ACL — 34 рядки (ТР А.10); кожна не абстрактна модель модуля має права."""

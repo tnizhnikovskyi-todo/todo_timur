@@ -9,6 +9,7 @@ from datetime import timedelta
 
 from lxml import etree
 
+from odoo.fields import Command
 from odoo import fields
 from odoo.tests import HttpCase, tagged
 from odoo.tools.safe_eval import safe_eval
@@ -236,7 +237,7 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
         self.assertEqual(gensets, self.genset)
         self.assertEqual(other, ['broadcast'])
         outsider = self.env['res.users'].with_context(no_reset_password=True).create({
-            'name': 'Без доступу', 'login': 'td_outsider', 'groups_id': [(6, 0, [self.env.ref('base.group_user').id])]})
+            'name': 'Без доступу', 'login': 'td_outsider', 'group_ids': [Command.set([self.env.ref('base.group_user').id])]})
         _other, gensets = self.env['ir.websocket'].with_user(outsider)._td_genset_bus_channels(
             ['td_genset_%d' % self.genset.id])
         self.assertFalse(gensets)
@@ -262,8 +263,8 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             pultModule.PULT_TIMING.debounceMs = 50;
             pultModule.PULT_TIMING.pollMs = 400;
             let workerState = "CONNECTED";
-            Object.defineProperty(bus, "workerState", { get: () => workerState, configurable: true });
-            Object.defineProperty(bus, "isActive", { get: () => true, configurable: true });
+            Object.defineProperty(bus, "workerState", { get: () => workerState, set: () => {}, configurable: true });
+            Object.defineProperty(bus, "isActive", { get: () => true, set: () => {}, configurable: true });
             const channels = [];
             const callbacks = [];
             const addChannel = bus.addChannel;
@@ -312,8 +313,8 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
             const pultModule = odoo.loader.modules.get("@td_genset/pult/pult_widget");
             pultModule.PULT_TIMING.debounceMs = 50;
             pultModule.PULT_TIMING.pollMs = 400;
-            Object.defineProperty(bus, "workerState", { get: () => "CONNECTED", configurable: true });
-            Object.defineProperty(bus, "isActive", { get: () => true, configurable: true });
+            Object.defineProperty(bus, "workerState", { get: () => "CONNECTED", set: () => {}, configurable: true });
+            Object.defineProperty(bus, "isActive", { get: () => true, set: () => {}, configurable: true });
             const callbacks = [];
             const subscribe = bus.subscribe;
             bus.subscribe = (type, callback) => {
@@ -577,10 +578,10 @@ class TestW3UiHttp(TdGensetCase, HttpCase):
                 self.assertTrue(groupby, '%s: %s без групування' % (xmlid, mode))
                 groupby = default_groupby or groupby
                 web = Model.with_context(**dict(context, tz=self.user_s.tz))
-                if mode == 'graph':  # як graph_model.js: webReadGroup, lazy=False, fill_temporal
-                    data = web.with_context(fill_temporal=True).web_read_group(domain, measures, groupby, lazy=False)
-                else:  # як pivot_model.js: readGroup, lazy=False
-                    data = {'groups': web.read_group(domain, measures or ['__count'], groupby, lazy=False)}
+                # Odoo 19: graph і pivot викликають formatted_read_group (aggregates 'поле:агрегат'; MG-13)
+                if mode == 'graph':  # як graph_model.js: fill_temporal
+                    web = web.with_context(fill_temporal=True)
+                data = {'groups': web.formatted_read_group(domain, groupby, measures or ['__count'])}
                 self.assertTrue(data['groups'], '%s: %s без даних' % (xmlid, mode))
 
     def test_d01_graph_pivot_actions_open_in_browser(self):

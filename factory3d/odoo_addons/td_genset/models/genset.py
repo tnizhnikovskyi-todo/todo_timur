@@ -571,9 +571,9 @@ class TdGenset(models.Model):
         string='Правило повторів', compute='_compute_ui_texts',
         help='Як система підтверджує команди: інтервал і вікно повторів з налаштувань модуля.')
 
-    _sql_constraints = [
-        ('relay_hostid_uniq', 'unique(relay_hostid)', 'Такий hostid уже є в іншого генератора.'),
-    ]
+    _relay_hostid_uniq = models.Constraint(
+        'unique(relay_hostid)',
+        'Такий hostid уже є в іншого генератора.')
 
     # ================================================================== defaults, обмеження
     @api.model

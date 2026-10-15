@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 import pytz
 
 from odoo import api, fields, models
-from odoo.osv import expression
+from odoo.fields import Domain
 from odoo.tools import SQL, sql
 
 from .genset import CONTROLLER_MODES, FEED_SOURCES, FUEL_SOURCES, GENSET_STATUS
@@ -626,9 +626,9 @@ class TdGensetReading(models.Model):
         string="Пропущено запуск за розкладом", readonly=True,
         help="Пропущено запуск за розкладом (сигнал 01H 0078; ключ API «scheduled_not_run»). NULL — невідомо (ключа немає у знімку).")
 
-    _sql_constraints = [
-        ('relay_id_uniq', 'unique(genset_id, relay_id)', 'Знімок з таким ID уже збережено для цього генератора.'),
-    ]
+    _relay_id_uniq = models.Constraint(
+        'unique(genset_id, relay_id)',
+        'Знімок з таким ID уже збережено для цього генератора.')
 
     def init(self):
         """Індекси А.4: складений ``(genset_id, ts DESC)`` і частковий ``... WHERE is_journal``."""
@@ -782,7 +782,7 @@ class TdGensetReading(models.Model):
         keys = [key for key, name in self._alarm_flag_names().items() if term in name.lower() or term in key]
         if not keys:
             return [('id', '=', False)]
-        return expression.OR([[('alarm_flags', 'ilike', key)] for key in keys])
+        return Domain.OR([[('alarm_flags', 'ilike', key)] for key in keys])
 
     @api.model
     def _derive(self, values, genset):
@@ -878,7 +878,7 @@ class TdGensetReading(models.Model):
     def _cron_cleanup(self):
         """Cron ``cron_cleanup`` (1 день, 03:30 Kyiv): видалення сирих знімків старших за ``reading_retention_days``
         (крім журнальних, ``reason='change'`` і тих, на які посилаються генератор, події й команди) партіями
-        по 10 000 (``_notify_progress``); архів днів-винятків старших за 30 днів. Винятки перехоплюються (А.7).
+        по 10 000 (``_commit_progress``); архів днів-винятків старших за 30 днів. Винятки перехоплюються (А.7).
         """
         try:
             with self.env.cr.savepoint():
@@ -887,7 +887,7 @@ class TdGensetReading(models.Model):
         except Exception as exc:  # noqa: BLE001 — cron не має падати (А.7)
             _logger.warning('td_genset: чистка знімків не вдалася: %s', exc)
             return None
-        self.env['ir.cron']._notify_progress(done=deleted, remaining=1 if deleted >= CLEANUP_BATCH else 0)
+        self.env['ir.cron']._commit_progress(deleted, remaining=1 if deleted >= CLEANUP_BATCH else 0)
         return None
 
     @api.model

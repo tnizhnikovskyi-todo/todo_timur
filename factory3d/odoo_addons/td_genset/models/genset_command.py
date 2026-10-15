@@ -246,10 +246,9 @@ class TdGensetCommand(models.Model):
         string='Тривогу створено о',
         help='Коли створено тривогу «не підтверджено» (для політики «до наступного переходу» — один раз).')
 
-    _sql_constraints = [
-        ('relay_cmd_uniq', 'unique(genset_id, relay_cmd_id)',
-         'Команда ретранслятора з таким ID уже прив\'язана до цього генератора.'),
-    ]
+    _relay_cmd_uniq = models.Constraint(
+        'unique(genset_id, relay_cmd_id)',
+        'Команда ретранслятора з таким ID уже прив\'язана до цього генератора.')
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -29,7 +29,6 @@ def uninstall_hook(env):
     category = env.ref('td_genset.equipment_category_genset', raise_if_not_found=False)
     if category and env['maintenance.equipment'].with_context(active_test=False).search_count(
             [('category_id', '=', category.id)], limit=1):
-        keep |= env['ir.model.data'].search([('module', '=', 'td_genset'), '|',
-                                             ('name', '=', 'equipment_category_genset'),
-                                             '&', ('model', '=', 'mail.alias'), ('res_id', '=', category.alias_id.id)])
+        # Odoo 19: у категорії обладнання немає mail.alias (alias_id лишився лише в команди ТО) — MG-17
+        keep |= env['ir.model.data'].search([('module', '=', 'td_genset'), ('name', '=', 'equipment_category_genset')])
     keep.unlink()

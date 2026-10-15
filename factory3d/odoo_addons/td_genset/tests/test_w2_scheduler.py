@@ -131,9 +131,8 @@ class TestW2Scheduler(TdGensetW2Case):
         exceptions.create({'genset_id': self.genset.id, 'date': date(2027, 1, 1), 'action': 'skip'})
         with mute_logger('odoo.sql_db'), self.assertRaises(IntegrityError), self.env.cr.savepoint():
             exceptions.create({'genset_id': self.genset.id, 'date': date(2026, 12, 31), 'action': 'skip'})
-        constraint = dict((name, message) for name, _definition, message
-                          in type(self.env['td.genset.schedule.exception'])._sql_constraints)
-        self.assertEqual(constraint['date_uniq'], 'На цю дату виняток уже є.')
+        self.assertEqual(type(self.env['td.genset.schedule.exception'])._date_uniq.message,
+                         'На цю дату виняток уже є.')
         with self.assertRaisesRegex(ValidationError, 'Кінець має бути пізніше за початок.'), self.env.cr.savepoint():
             exceptions.create({'genset_id': self.genset.id, 'date': date(2027, 1, 2), 'action': 'custom',
                                'time_start': 14.0, 'time_end': 9.0})

@@ -74,7 +74,7 @@
                 <separator/>
                 <filter name="crit" string="Критичні" domain="[('level', '=', 'crit')]"/>
                 <filter name="warn" string="Попередження" domain="[('level', '=', 'warn')]"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_level" string="Рівень" context="{'group_by': 'level'}"/>
                     <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
                 </group>

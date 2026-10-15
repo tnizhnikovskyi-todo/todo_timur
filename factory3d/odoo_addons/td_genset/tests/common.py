@@ -34,6 +34,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import requests
 
+from odoo.fields import Command
 from odoo.tests import TransactionCase
 
 from ..models.td_logging import reset_log_state
@@ -710,11 +711,15 @@ class TdGensetCase(TransactionCase):
             'login': login,
             'email': '%s@example.com' % login,
             'tz': 'Europe/Kyiv',
-            'groups_id': [(6, 0, [group.id])],
+            'group_ids': [Command.set([group.id])],
         }
 
     def setUp(self):
         super().setUp()
+        # Odoo 19 (MG-13): ir.cron._commit_progress поза cron робить cr.commit(), у тесті це заборонено
+        patcher = patch.object(type(self.env['ir.cron']), '_commit_progress', return_value=float('inf'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         reset_log_state()   # стан «помилка вже в лозі» (td_logging) не переходить між тестами
         self.relay = RelayMock(version=self.relay_version)
         self.relay.start()

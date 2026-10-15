@@ -174,7 +174,7 @@
                 <separator/>
                 <filter name="not_empty" string="З паливом" domain="[('liters', '&gt;', 0)]"/>
                 <filter name="archived" string="Списані" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_location" string="Місце" context="{'group_by': 'location_id'}"/>
                     <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
                 </group>
@@ -258,7 +258,7 @@
                 <filter name="off" string="Списання" domain="[('kind', '=', 'off')]"/>
                 <separator/>
                 <filter name="filter_date" string="Дата" date="date"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
                     <filter name="group_canister" string="Каністра" context="{'group_by': 'canister_id'}"/>
                     <filter name="group_month" string="Місяць" context="{'group_by': 'date:month'}"/>
@@ -353,7 +353,7 @@
                 <filter name="unconfirmed" string="Не підтверджені" domain="[('sensor_state', 'in', ('unconfirmed', 'drain'))]"/>
                 <separator/>
                 <filter name="filter_date" string="Дата" date="date"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>
                     <filter name="group_state" string="Звірка" context="{'group_by': 'sensor_state'}"/>
                 </group>

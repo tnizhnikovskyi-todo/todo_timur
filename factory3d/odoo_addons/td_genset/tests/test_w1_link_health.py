@@ -126,7 +126,7 @@ class TestW1LinkHealth(TdGensetCase):
             self.assertFalse(self._alarms('relay_unavailable'))
             self.relay.fail('timeout')
             with freeze_time(T0 + timedelta(minutes=11)):
-                self.assertTrue(self.env.ref('td_genset.cron_pull_readings').method_direct_trigger())
+                self.env.ref('td_genset.cron_pull_readings').ir_actions_server_id.run()
         alarm = self._alarms('relay_unavailable')
         self.assertEqual(alarm.name, 'Ретранслятор недоступний 10 хв')
         self.assertTrue(alarm.tech_only)

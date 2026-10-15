@@ -180,9 +180,9 @@ class TdGensetStorageLocation(models.Model):
         string='Активне', default=True,
         help='Архівоване місце не пропонується для нових каністр.')
 
-    _sql_constraints = [
-        ('name_uniq', 'unique(name)', 'Місце зберігання з такою назвою вже є.'),
-    ]
+    _name_uniq = models.Constraint(
+        'unique(name)',
+        'Місце зберігання з такою назвою вже є.')
 
     @api.depends('canister_ids.liters', 'canister_ids.active')
     def _compute_totals(self):
@@ -233,9 +233,9 @@ class TdGensetCanister(models.Model):
         string='Активна', default=True,
         help='Списання каністри = архів.')
 
-    _sql_constraints = [
-        ('name_uniq', 'unique(name)', 'Каністра з таким номером уже є.'),
-    ]
+    _name_uniq = models.Constraint(
+        'unique(name)',
+        'Каністра з таким номером уже є.')
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -744,9 +744,9 @@ class TdGensetFuelCalibration(models.Model):
         string='Примітка',
         help='Звідки точка: крива датчика в налаштуваннях контролера або реальна заправка.')
 
-    _sql_constraints = [
-        ('ohm_uniq', 'unique(genset_id, ohm)', 'Точка з таким опором уже є в калібруванні цього генератора.'),
-    ]
+    _ohm_uniq = models.Constraint(
+        'unique(genset_id, ohm)',
+        'Точка з таким опором уже є в калібруванні цього генератора.')
 
     @api.constrains('ohm', 'liters', 'genset_id')
     def _check_calibration(self):
@@ -908,7 +908,7 @@ class TdGensetFuel(models.Model):
 
         Перша партія — до 10 000 найсвіжіших знімків — перераховується синхронно у виклику кнопки (на невеликій
         базі результат видно одразу); старші — фоновим завданням ``cron_recompute_liters`` партіями по 10 000
-        (``_trigger()`` + ``_notify_progress``), воркер не блокується. Події заднім числом не перераховуються.
+        (``_trigger()`` + ``_commit_progress``), воркер не блокується. Події заднім числом не перераховуються.
         Одна точка калібрування → помилка «Калібрування має бути монотонним…», літри лишаються за %.
 
         :return: дія ``display_notification``.
@@ -1017,7 +1017,7 @@ class TdGensetFuel(models.Model):
     @api.model
     def _cron_recompute_liters(self):
         """Крок cron ``cron_recompute_liters``: по одній партії (10 000 знімків, від свіжіших до старіших) на
-        генератор з незавершеним перерахунком літрів; ``ir.cron._notify_progress(done, remaining)`` —
+        генератор з незавершеним перерахунком літрів; ``ir.cron._commit_progress(processed, remaining=…)`` —
         планувальник Odoo повторює крок, доки є залишок (А.7). Винятки перехоплюються (cron не падає,
         перерахунок генератора зупиняється).
 
@@ -1035,7 +1035,7 @@ class TdGensetFuel(models.Model):
             except Exception as error:  # cron не кидає винятків назовні (А.7)
                 _logger.warning('td_genset: перерахунок літрів генератора %s зупинено: %s', genset.id, error)
                 genset.fuel_recompute_next_id = 0
-        self.env['ir.cron']._notify_progress(done=done, remaining=remaining)
+        self.env['ir.cron']._commit_progress(done, remaining=remaining)
         return remaining
 
     # ================================================================== ТО (ФВ-35, ФВ-36; AC-53, AC-54)

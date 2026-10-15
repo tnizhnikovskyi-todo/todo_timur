@@ -1,7 +1,7 @@
 # Part of td_genset (ToDo). Власник файлу: W1 «Моніторинг». Каркас (заглушки): W0.
 """``td.genset`` (inherit): забір показань і стан зв'язку — ТР 2.6.2, 2.8.6, 2.8.7, А.7, А.8; SPEC 9.
 
-Одна сторінка ``/readings`` = одна транзакція (``_notify_progress`` → планувальник комітить і кличе метод
+Одна сторінка ``/readings`` = одна транзакція (``_commit_progress`` → планувальник комітить і кличе метод
 знову); у тестах і при кількох генераторах сторінка кожного генератора — у власному savepoint. Жоден виняток
 не виходить назовні cron (інакше Odoo деактивує задачу після 5 невдач за 7 днів).
 """
@@ -50,7 +50,7 @@ class TdGensetMonitoring(models.Model):
 
         ``/status`` один раз → ``_apply_status`` для всіх генераторів з ``relay_enabled``; далі
         ``_pull_readings_page`` по генераторах (рядок генератора — ``FOR NO KEY UPDATE SKIP LOCKED``);
-        після сторінки — ``ir.cron._notify_progress(done=n, remaining=1 if n == 500 else 0)``;
+        після сторінки — ``ir.cron._commit_progress(n, remaining=1 if n == 500 else 0)``;
         усі винятки перехоплені (cron не падає, А.7). Недоступність API рахується від
         ``td.genset.config.relay_unavailable_since``; 401 — тривога тех. адміністратору (AC-10).
         """
@@ -99,7 +99,7 @@ class TdGensetMonitoring(models.Model):
         else:
             log_recovered(_logger, self.env, 'pull', 'td_genset: забір показань знову працює')
         finally:
-            self.env['ir.cron']._notify_progress(done=done, remaining=remaining)
+            self.env['ir.cron']._commit_progress(done, remaining=remaining)
         return None
 
     def _td_try_lock(self):

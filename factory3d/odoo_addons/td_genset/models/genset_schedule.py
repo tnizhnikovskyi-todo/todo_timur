@@ -135,9 +135,9 @@ class TdGensetScheduleException(models.Model):
         string='Активний', default=True,
         help='Дати старші за 30 днів архівуються щоденною чисткою.')
 
-    _sql_constraints = [
-        ('date_uniq', 'unique(genset_id, date)', 'На цю дату виняток уже є.'),
-    ]
+    _date_uniq = models.Constraint(
+        'unique(genset_id, date)',
+        'На цю дату виняток уже є.')
 
     @api.constrains('action', 'time_start', 'time_end')
     def _check_custom_time(self):

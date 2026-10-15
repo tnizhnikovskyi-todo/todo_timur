@@ -222,7 +222,7 @@
                 <filter name="with_alarms" string="Є тривоги" domain="[('alarm_flags', '!=', False)]"/>
                 <separator/>
                 <filter name="filter_ts" string="Час" date="ts"/>
-                <group expand="0" string="Групувати за">
+                <group>
                     <filter name="group_genset" string="Генератор" context="{'group_by': 'genset_id'}"/>
                     <filter name="group_day" string="День" context="{'group_by': 'ts:day'}"/>
                     <filter name="group_mode" string="Режим" context="{'group_by': 'controller_mode'}"/>

@@ -564,7 +564,7 @@ class TestW4Fuel(TdFuelCase):
 
     def test_ac69_recompute_in_batches(self):
         """AC-69 (ТР 2.9): «Перерахувати літри» — перша партія (найсвіжіші знімки) синхронно у виклику кнопки,
-        старші — cron ``cron_recompute_liters`` партіями (``_trigger()`` + ``_notify_progress``); події не
+        старші — cron ``cron_recompute_liters`` партіями (``_trigger()`` + ``_commit_progress``); події не
         перераховуються."""
         readings = [self._reading(snapshot(fuel_level=50 + index, fuel_sensor_ohm=100.0 + index))
                     for index in range(5)]

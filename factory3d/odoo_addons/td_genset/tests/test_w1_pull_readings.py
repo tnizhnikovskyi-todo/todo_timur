@@ -82,7 +82,7 @@ class TestW1PullReadings(TdGensetCase):
     def test_ac45_catchup_without_alarm_avalanche(self):
         """AC-45: 5 днів історії з 2 відключеннями, 1 роботою і тривогою, що минула → події заднім числом,
         без активних тривог і сповіщень; один підсумок «Догнано історію»; одна сторінка — один крок
-        (``_notify_progress``)."""
+        (``_commit_progress``)."""
         start = NOW - timedelta(days=5)
         step = timedelta(minutes=3)
         count = 5 * 24 * 20
@@ -103,10 +103,10 @@ class TestW1PullReadings(TdGensetCase):
             progress = []
             cron_model = type(self.env['ir.cron'])
 
-            def notify(cron, **kwargs):
-                progress.append((kwargs['done'], kwargs['remaining']))
+            def notify(cron, processed=0, **kwargs):
+                progress.append((processed, kwargs['remaining']))
 
-            with patch.object(cron_model, '_notify_progress', notify):
+            with patch.object(cron_model, '_commit_progress', notify):
                 for _i in range(6):
                     self.run_pull()
             self.assertEqual(progress[:5], [(500, 1)] * 4 + [(400, 0)])

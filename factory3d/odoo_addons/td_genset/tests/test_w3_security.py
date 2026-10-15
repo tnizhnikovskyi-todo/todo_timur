@@ -11,6 +11,7 @@ from datetime import datetime
 
 from lxml import etree
 
+from odoo.fields import Command
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import HttpCase, tagged
 from odoo.tools import mute_logger
@@ -241,7 +242,7 @@ class TestW3Security(TdGensetCase):
             self.assertFalse(request.stage_id.done)
             with self.assertRaisesRegex(AccessError, 'тех. адміністратор'):
                 Request.with_user(user).create({'name': 'Одразу виконано', 'equipment_id': equipment.id,
-                                                'stage_id': done.id, 'owner_user_id': user.id})
+                                                'stage_id': done.id, 'owner_user_id': user.id, 'user_id': user.id})
         request = Request.create({'name': 'ТО (Т)', 'equipment_id': equipment.id, 'maintenance_type': 'preventive'})
         request.with_user(self.user_t).write({'stage_id': done.id})
         self.assertTrue(request.stage_id.done)
@@ -319,7 +320,7 @@ class TestW3SecurityRpc(TdGensetCase, HttpCase):
         self.env['ir.config_parameter'].sudo().set_param('td_genset.relay_url', 'http://127.0.0.1:9/api/v1')
         plain = self.env['res.users'].with_context(no_reset_password=True).create({
             'name': 'Внутрішній користувач без груп модуля', 'login': 'td_user_plain', 'password': 'td_user_plain',
-            'email': 'td_user_plain@example.com', 'groups_id': [(6, 0, [self.env.ref('base.group_user').id])],
+            'email': 'td_user_plain@example.com', 'group_ids': [Command.set([self.env.ref('base.group_user').id])],
         })
         calls = (
             ('status', []),
