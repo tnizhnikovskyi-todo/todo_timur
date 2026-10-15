@@ -255,8 +255,9 @@ def _signal_vals(env, row, sources_by_code, thresholds_only=False):
     for col, field in (("alarm_title", "alarm_title"), ("hysteresis", "hysteresis"),
                        ("min_duration_s", "min_duration_s")):  # fmt: skip
         if row[col] != "":
-            vals[field] = float(row[col]) if field == "hysteresis" else (
-                int(row[col]) if field == "min_duration_s" else row[col])
+            vals[field] = (
+                float(row[col]) if field == "hysteresis" else (int(row[col]) if field == "min_duration_s" else row[col])
+            )
     if thresholds_only:
         return vals
     equipment = env["maintenance.equipment"].search_f3d(row["equipment"]) if row["equipment"] else None

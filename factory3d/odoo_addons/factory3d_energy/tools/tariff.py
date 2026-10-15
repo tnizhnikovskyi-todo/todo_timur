@@ -28,9 +28,7 @@ def hours_valid(hour_from, hour_to):
 def zone_valid(zone):
     """Зона, яку можна враховувати в покритті: формат днів/годин і ненульова тривалість."""
     return (
-        weekdays_valid(zone.weekdays)
-        and hours_valid(zone.hour_from, zone.hour_to)
-        and zone.hour_from != zone.hour_to
+        weekdays_valid(zone.weekdays) and hours_valid(zone.hour_from, zone.hour_to) and zone.hour_from != zone.hour_to
     )
 
 

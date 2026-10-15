@@ -14,7 +14,7 @@ STATUS_LEVEL = {"warn": "warn", "alarm": "bad"}
 
 
 class F3dEnergyEvent(models.Model):
-    """M-09. Журнал подій енергетики (R-13). Поле `outage_id` додає W4 разом з `f3d.energy.outage`."""
+    """M-09. Журнал подій енергетики (R-13). Поле `outage_id` — W4 (R-14)."""
 
     _name = "f3d.energy.event"
     _description = "Енергетика: подія"
@@ -43,6 +43,7 @@ class F3dEnergyEvent(models.Model):
     node_id = fields.Many2one("f3d.energy.node", string="Вузол", ondelete="set null")
     signal_id = fields.Many2one("f3d.signal", string="Сигнал", ondelete="set null")
     text = fields.Char(string="Текст", size=256, required=True)
+    outage_id = fields.Many2one("f3d.energy.outage", string="Відключення", ondelete="set null", index=True)  # W4
 
     @api.model
     def _f3d_log(self, level, kind, code, text, ts=None, node=None, signal=None, outage=None, dedup_min=0):
@@ -63,7 +64,7 @@ class F3dEnergyEvent(models.Model):
             vals["node_id"] = node.id
         if signal:
             vals["signal_id"] = signal.id
-        if outage and "outage_id" in self._fields:
+        if outage:
             vals["outage_id"] = outage.id
         rec = self.sudo().create(vals)
         if "f3d.viewer.event" in self.env:
@@ -83,6 +84,7 @@ class F3dEnergyEvent(models.Model):
     @api.model
     def _f3d_on_ingest_inner(self, before):
         Signal = self.env["f3d.signal"].sudo()
+        self._f3d_ats_hook(before)  # W4: R-14
         signals = Signal.search([("code", "in", list(before))])
         for sig in signals.sorted("code"):
             old_status, old_text, _old_value = before[sig.code]
@@ -91,6 +93,33 @@ class F3dEnergyEvent(models.Model):
                     self._f3d_machine_fault(sig)
             elif sig.module == "energy" and sig.status != old_status:
                 self._f3d_status_event(sig, old_status)
+
+    @api.model
+    def _f3d_ats_hook(self, before):
+        """W4, R-14 п. 1: похідні `src{1,2}_ok`; п. 2–10: автомат відключення (крок після кожного пакета АВР/вводів)."""
+        if self.env.context.get("f3d_ats_busy"):
+            return
+        from ..models.f3d_energy_outage import TRIGGER_CODES
+
+        if not any(c in TRIGGER_CODES for c in before):
+            return
+        self = self.with_context(f3d_ats_busy=True)
+        Signal = self.env["f3d.signal"].sudo()
+        derived = []
+        for n in (1, 2):
+            sig = Signal.search([("code", "=", "infra/ats/src%d_state" % n)], limit=1)
+            if sig and "infra/ats/src%d_state" % n in before and sig.last_ts:
+                derived.append(
+                    {
+                        "code": "infra/ats/src%d_ok" % n,
+                        "ts": sig.last_ts,
+                        "value": 1 if sig.last_text == "available" else 0,
+                        "q": "good",
+                    }
+                )
+        if derived:
+            Signal._f3d_energy_put(derived)
+        self.env["f3d.energy.outage"]._f3d_ats_step()
 
     @api.model
     def _f3d_status_event(self, sig, old_status):

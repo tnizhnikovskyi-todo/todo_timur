@@ -20,3 +20,7 @@ access_f3d_energy_event_user,f3d.energy.event user,model_f3d_energy_event,factor
 access_f3d_energy_event_f3d_user,f3d.energy.event f3d user,model_f3d_energy_event,factory3d_base.group_f3d_user,1,0,0,0
 access_f3d_energy_event_manager,f3d.energy.event manager,model_f3d_energy_event,factory3d_energy.group_f3d_energy_manager,1,1,1,0
 access_f3d_energy_event_admin,f3d.energy.event admin,model_f3d_energy_event,factory3d_base.group_f3d_admin,1,1,1,1
+access_f3d_energy_outage_user,f3d.energy.outage user,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_outage_f3d_user,f3d.energy.outage f3d user,model_f3d_energy_outage,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_energy_outage_manager,f3d.energy.outage manager,model_f3d_energy_outage,factory3d_energy.group_f3d_energy_manager,1,1,0,0
+access_f3d_energy_outage_admin,f3d.energy.outage admin,model_f3d_energy_outage,factory3d_base.group_f3d_admin,1,1,1,1

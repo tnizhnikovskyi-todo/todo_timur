@@ -143,6 +143,7 @@ class F3dEnergyNodeLive(models.Model):
             with self.env.cr.savepoint():
                 fresh = self._f3d_fresh_values()
                 self._f3d_live_write(self._f3d_live_snapshot(fresh), now)
+                self.env["f3d.energy.outage"]._f3d_ats_tick(now)  # W4: R-14 п. 8
                 if now.minute % 5 == 0:
                     self._f3d_asymmetry(now, fresh)
                 self.env["f3d.energy.meter"].sudo().search([("active", "=", True)])._f3d_update_state()

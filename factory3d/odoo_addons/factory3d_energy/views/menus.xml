@@ -18,6 +18,8 @@
               action="action_f3d_energy_interval" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_balance" name="Баланс обліку" parent="menu_f3d_energy" sequence="60"
               action="action_f3d_energy_balance" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_outage" name="Відключення" parent="menu_f3d_energy" sequence="70"
+              action="action_f3d_energy_outage" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_event" name="Журнал подій" parent="menu_f3d_energy" sequence="80"
               action="action_f3d_energy_event" groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_tariff" name="Тарифи й договір" parent="menu_f3d_energy_config" sequence="10"

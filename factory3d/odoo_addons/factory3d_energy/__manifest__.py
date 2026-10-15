@@ -27,7 +27,8 @@
         "views/f3d_energy_tariff_views.xml",
         "views/f3d_energy_pool_views.xml",
         # W3: "views/f3d_energy_alloc_views.xml",
-        # W4: "views/f3d_energy_outage_views.xml"; W3: "views/mrp_production_views.xml",
+        "views/f3d_energy_outage_views.xml",  # W4
+        # W3: "views/mrp_production_views.xml",
         # "views/mrp_workorder_views.xml", "views/mrp_workcenter_views.xml";
         # W5: "views/res_config_settings_views.xml", "views/dashboard_views.xml",
         "views/menus.xml",
