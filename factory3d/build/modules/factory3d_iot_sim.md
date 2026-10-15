@@ -1,9 +1,9 @@
 # factory3d_iot_sim
 Статус: IN_PROGRESS
-Тесты: svc 433/433 + Odoo 40/40 (2026-10-15), ТК: в работе (W6)
+Тесты: svc 448/448 + Odoo 40/40 + stand 46 (2026-10-15), ТК: 16 прогнаны, ТК-07 частично, ТК-18 нет (genset_relay)
 Решений без заказчика: 0 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: нет
+Требует внимания человека: прогон на копии демо-базы (ТК-01/15, 276 пристроїв); CI-02 td_genset (ТК-18); ТП-06 24 ч
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -15,7 +15,7 @@
 | W3 | принят | c833e68 | svc 159 (в worktree), ruff OK |
 | W4 | принят | afa7082 | svc 225 (в worktree), smoke health OK |
 | INT | принят | 7812c1e | svc 433/433, cov core+models 99 %, smoke 11 протоколов ok |
-| W6 | в работе | — | стенд docker compose |
+| W6 | принят (стенд), DoD-круг в работе | 95a4a9a | stand 43+fix/46, svc 448/448 |
 | W5 | принят | 6e43f5b | Odoo /factory3d_iot_sim 40/40 |
 
 ## Решения без заказчика
@@ -36,3 +36,5 @@
 - DEC-13 (W3): BACnet AI/AV не commandable (без priority-array); при нескольких сигналах на одну Modbus-адресу берётся первый по каталогу; AI:5 из сигнала filter_extract_dp_pa. Макет детекторов/групп DALI — из `dist/odoo_demo.json` (SIM_LAYOUT_PATH) — в образ Docker нужно положить файл.
 - DEC-14 (W4): SIM_CATALOG_SOURCE=odoo — реестр из локального каталога (API-01 только для bookings/employees через follow); reset не сбрасывает внутреннее состояние моделей; в Odoo пересылаются kind scenario/fault/alarm/error/info.
 - DEC-15 (INT): темы post ats/hvac/boiler/meter/modbus_cmd применяются протоколом напрямую (force/flag), очередь ограничена 256; короткий ключ сигнала при коллизии — первому по каталогу (+WARNING), полный код — `Device.by_code`. MQTT health=ok без брокера (буфер). — `core/world.py`, `__main__.py`
+- DEC-16 (W6): стенд без genset_relay — в td_genset (claude/dreamy-ramanujan-p2wlej) нет relay/ с /sim/v1 → запасной режим §8.14, ТК-18 не прогнан. ТК-01/10/15 — против Odoo на шаблоне (serve.sh) с сидингом через RPC. Длительные ТБ/ТП сокращены до ≤3 мин; ТП-04 p95 1,39 с (> 1 с) — только медиана в норме.
+- DEC-17: fire_drill без detector → детектор по AC-15 (2.CNC.05, LSP:21405); блочное чтение u69 через «дыры» карты → 0x02 (как прибор); Modbus 2020 обнуляет счётчики.
