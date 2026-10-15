@@ -1,7 +1,7 @@
 # factory3d_machine_connect
 Статус: IN_PROGRESS
 Тесты: —, ТК: ждут W9
-Решений без заказчика: 11 (ниже)
+Решений без заказчика: 12 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ISA95-структуры — допущение Q-01
 
@@ -12,6 +12,8 @@
 | W7 | принят | 7643fa9 | pytest unit 51/51, ruff |
 | W2 | принят | 98d7c3c | /factory3d_machine_connect 55/55 (с W5) |
 | W5 | принят | 0dce9e7 | /factory3d_machine_connect 55/55 |
+| W4 | принят | 57a6daf | /factory3d_machine_connect 68/68 |
+| W3, W6 | в работе | | |
 
 ## Решения без заказчика
 - DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
@@ -41,3 +43,6 @@
 - DEC-11: адаптер `cutopt` держит связь job_id→карта в памяти; после рестарта колектора `map` в событиях = null,
   Odoo сопоставляет по `job_id` (проверить в W6). Метрики `collector_mc_*` создаются лениво в реестре ядра;
   `mc_state_dir` → env `F3D_MC_STATE_DIR` → `buffer_dir`. — `f3d_collector_mc/{cutopt,events}.py`
+- DEC-12: OEE — категории timelog по xmlid (setup = `mrp.block_reason2` + `loss_tool`, fault = `mrp.block_reason1`,
+  прочие availability/quality = idle; productive/performance = run); запись смены не создаётся до её начала и в
+  выходной; действие «OEE за період» — `action_f3d_oee_period_sum` (id `action_f3d_oee_period` занят W0). — `models/f3d_oee_shift.py`
