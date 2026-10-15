@@ -1,0 +1,315 @@
+/* Згенеровано з viewer/index.html (макет): префікс o_f3d_, токени --f3d-*. */
+/* Розкладка: 3D на весь екран, ліворуч плаваюча панель видів і шарів, праворуч картка об'єкта.
+   Тон — технічна документація цеху: холодні сірі, жовта розмітка підлоги як єдиний акцент. */
+.o_f3d_viewer {
+  --f3d-scene: #e4e9ec;
+  --f3d-bg: var(--o-view-background-color, #eef1f3);
+  --f3d-panel: rgba(250, 251, 252, 0.92);
+  --f3d-panel-solid: #fafbfc;
+  --f3d-fg: #1d2833;
+  --f3d-muted: #5d6b78;
+  --f3d-line: #cfd7de;
+  --f3d-accent: #c99500;
+  --f3d-accent-fg: #1d2833;
+  --f3d-accent-soft: rgba(242, 194, 48, 0.22);
+  --f3d-ok: #1e9e57;
+  --f3d-warn: #d98a00;
+  --f3d-bad: #d63a2b;
+  --f3d-idle: #7f8c99;
+  --f3d-flow: #18a6c9;
+  --f3d-shadow: 0 6px 24px rgba(20, 35, 50, 0.12);
+  --f3d-f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f3d-f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f3d-f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+.o_f3d_viewer[data-theme="dark"] {
+  --f3d-scene: #1a2027; --f3d-bg: #12171c; --f3d-panel: rgba(27, 33, 40, 0.92); --f3d-panel-solid: #1b2128;
+  --f3d-fg: #e3e9ee; --f3d-muted: #93a1ae; --f3d-line: #33404c; --f3d-accent: #f2c230; --f3d-accent-fg: #12171c;
+  --f3d-accent-soft: rgba(242, 194, 48, 0.16); --f3d-ok: #3cc479; --f3d-warn: #f0a52a; --f3d-bad: #f0604f;
+  --f3d-idle: #8d9aa6; --f3d-flow: #39c0e0; --f3d-shadow: 0 6px 24px rgba(0, 0, 0, 0.4); color-scheme: dark;
+}
+.o_f3d_viewer,
+.o_f3d_viewer { height: 100%; }
+.o_f3d_viewer [hidden] { display: none !important; }
+.o_f3d_viewer { background: var(--f3d-bg); color: var(--f3d-fg); font: 14px/1.45 var(--f3d-f-body); overflow: hidden; }
+.o_f3d_viewer .o_f3d_app { position: relative; height: 100%; }
+.o_f3d_viewer .o_f3d_stage { position: absolute; inset: 0; background: var(--f3d-scene); }
+.o_f3d_viewer .o_f3d_stage canvas { display: block; outline: none; }
+.o_f3d_viewer .o_f3d_labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.o_f3d_viewer .o_f3d_panel,
+.o_f3d_viewer header.o_f3d_bar { z-index: 2; }
+
+.o_f3d_viewer .o_f3d_panel {
+  position: absolute; z-index: 2; background: var(--f3d-panel); border: 1px solid var(--f3d-line); border-radius: 10px;
+  box-shadow: var(--f3d-shadow); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.o_f3d_viewer header.o_f3d_bar {
+  position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: center;
+  gap: 12px; flex-wrap: wrap; pointer-events: none;
+}
+.o_f3d_viewer header.o_f3d_bar > * { pointer-events: auto; }
+.o_f3d_viewer .o_f3d_brand { padding: 8px 14px; display: flex; align-items: baseline; gap: 12px; position: static; }
+.o_f3d_viewer .o_f3d_brand h1 { margin: 0; font: 600 18px/1.2 var(--f3d-f-display); letter-spacing: 0.01em; text-wrap: balance; }
+.o_f3d_viewer .o_f3d_brand .o_f3d_dims { font: 12px var(--f3d-f-mono); color: var(--f3d-muted); font-variant-numeric: tabular-nums; }
+.o_f3d_viewer .o_f3d_toggle-side { display: none; }
+
+.o_f3d_viewer button { font: inherit; color: inherit; }
+.o_f3d_viewer .o_f3d_btn {
+  border: 1px solid var(--f3d-line); background: var(--f3d-panel-solid); border-radius: 7px; padding: 6px 10px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.o_f3d_viewer .o_f3d_btn:hover { border-color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_btn:focus-visible,
+.o_f3d_viewer .o_f3d_view:focus-visible,
+.o_f3d_viewer .o_f3d_layer input:focus-visible + span { outline: 2px solid var(--f3d-accent); outline-offset: 2px; }
+
+.o_f3d_viewer .o_f3d_side {
+  top: 68px; left: 12px; width: 236px; max-height: calc(100% - 132px); overflow: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.o_f3d_viewer .o_f3d_sec h2 {
+  margin: 0 0 6px; font: 600 11px/1 var(--f3d-f-display); text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--f3d-muted);
+}
+.o_f3d_viewer .o_f3d_views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.o_f3d_viewer .o_f3d_view {
+  border: 1px solid transparent; background: transparent; text-align: left; padding: 5px 7px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1.25;
+}
+.o_f3d_viewer .o_f3d_view:hover { background: var(--f3d-accent-soft); }
+.o_f3d_viewer .o_f3d_view[aria-pressed="true"] { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
+.o_f3d_viewer .o_f3d_view kbd { font: 10px var(--f3d-f-mono); color: var(--f3d-muted); margin-right: 4px; }
+.o_f3d_viewer .o_f3d_layers { display: flex; flex-direction: column; gap: 2px; }
+.o_f3d_viewer .o_f3d_shift { position: static; display: flex; align-items: center; gap: 8px; padding: 5px 8px; }
+.o_f3d_viewer .o_f3d_shift input[type=range] { width: 170px; accent-color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_shift .o_f3d_btn { font-size: 12px; padding: 4px 9px; }
+.o_f3d_viewer .o_f3d_shift .o_f3d_mono { min-width: 44px; }
+@media (max-width: 760px) { .o_f3d_viewer .o_f3d_shift input[type=range] { width: 110px; } .o_f3d_viewer .o_f3d_shift-now { display: none; } }
+.o_f3d_viewer .o_f3d_lgroup + .o_f3d_lgroup { border-top: 1px solid var(--f3d-line); padding-top: 2px; }
+.o_f3d_viewer .o_f3d_lg-head { display: flex; align-items: center; gap: 4px; }
+.o_f3d_viewer .o_f3d_lg-head { min-height: 30px; padding-left: 2px; }
+.o_f3d_viewer .o_f3d_lg-head .o_f3d_lg-all { accent-color: var(--f3d-accent); margin: 0 6px 0 0; width: 15px; height: 15px; cursor: pointer; }
+.o_f3d_viewer .o_f3d_lg-name { flex: 1; text-align: left; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
+  font: 600 13px var(--f3d-f-body); color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_lg-name:hover { color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_lg-bulk { display: flex; gap: 6px; margin: 2px 0 4px; }
+.o_f3d_viewer .o_f3d_lg-bulk .o_f3d_btn { font-size: 11px; padding: 2px 8px; }
+.o_f3d_viewer .o_f3d_lg-n { font: 11px var(--f3d-f-mono); color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_lg-tog { border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_lg-tog::before { content: ""; display: inline-block; width: 7px; height: 7px; border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.15s; }
+.o_f3d_viewer .o_f3d_lg-tog[aria-expanded="true"]::before { transform: translateY(1px) rotate(-135deg); }
+.o_f3d_viewer .o_f3d_lg-tog:hover { background: var(--f3d-accent-soft); color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_lg-items { display: flex; flex-direction: column; gap: 1px; padding: 0 0 4px 22px; }
+.o_f3d_viewer .o_f3d_lg-items[hidden] { display: none; }
+.o_f3d_viewer .o_f3d_layer { display: flex; align-items: center; gap: 8px; padding: 3px 2px; cursor: pointer; font-size: 13px; }
+.o_f3d_viewer .o_f3d_layer input { accent-color: var(--f3d-accent); margin: 0; width: 15px; height: 15px; }
+.o_f3d_viewer .o_f3d_row-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.o_f3d_viewer .o_f3d_row-btns .o_f3d_btn { font-size: 12px; padding: 4px 8px; }
+
+.o_f3d_viewer .o_f3d_card { top: 68px; right: 12px; width: 320px; max-height: calc(100% - 132px); overflow: auto; padding: 14px 16px; }
+.o_f3d_viewer .o_f3d_card .o_f3d_kind { font: 600 11px/1 var(--f3d-f-display); text-transform: uppercase; letter-spacing: 0.09em; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_card h3 { margin: 6px 0 2px; font: 600 20px/1.2 var(--f3d-f-display); text-wrap: balance; }
+.o_f3d_viewer .o_f3d_card .o_f3d_code { font: 12px var(--f3d-f-mono); color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_card p { margin: 10px 0 0; max-width: 60ch; }
+.o_f3d_viewer .o_f3d_card .o_f3d_actions { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.o_f3d_viewer .o_f3d_chip {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 3px 9px 3px 7px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid currentColor;
+}
+.o_f3d_viewer .o_f3d_chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.o_f3d_viewer .o_f3d_chip.o_f3d_ok { color: var(--f3d-ok); } .o_f3d_viewer .o_f3d_chip.o_f3d_warn { color: var(--f3d-warn); } .o_f3d_viewer .o_f3d_chip.o_f3d_bad { color: var(--f3d-bad); }
+.o_f3d_viewer .o_f3d_chip.o_f3d_idle { color: var(--f3d-idle); }
+.o_f3d_viewer .o_f3d_summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.o_f3d_viewer .o_f3d_summary div { border-top: 2px solid var(--f3d-line); padding-top: 6px; }
+.o_f3d_viewer .o_f3d_summary b { display: block; font: 600 22px/1.1 var(--f3d-f-display); font-variant-numeric: tabular-nums; }
+.o_f3d_viewer .o_f3d_summary span { font-size: 11px; color: var(--f3d-muted); line-height: 1.25; display: block; }
+.o_f3d_viewer .o_f3d_attn { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.o_f3d_viewer .o_f3d_attn button {
+  width: 100%; display: flex; gap: 8px; align-items: center; text-align: left; background: transparent;
+  border: 1px solid var(--f3d-line); border-radius: 7px; padding: 6px 8px; cursor: pointer; font-size: 13px;
+}
+.o_f3d_viewer .o_f3d_attn button:hover { border-color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.o_f3d_viewer .o_f3d_legend { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; font-size: 12px; color: var(--f3d-muted); margin-top: 6px; }
+.o_f3d_viewer .o_f3d_swatch { width: 14px; height: 10px; border-radius: 2px; }
+.o_f3d_viewer .o_f3d_hint { font-size: 12px; color: var(--f3d-muted); margin-top: 12px; border-top: 1px solid var(--f3d-line); padding-top: 10px; }
+
+.o_f3d_viewer .o_f3d_help {
+  bottom: 12px; left: 12px; padding: 6px 10px; font-size: 12px; color: var(--f3d-muted);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+.o_f3d_viewer .o_f3d_help b { color: var(--f3d-fg); font-weight: 500; }
+
+.o_f3d_viewer .o_f3d_lbl {
+  font: 500 12px/1.2 var(--f3d-f-display); color: var(--f3d-fg); background: var(--f3d-panel); border: 1px solid var(--f3d-line);
+  padding: 2px 7px; border-radius: 5px; white-space: nowrap; letter-spacing: 0.01em;
+}
+.o_f3d_viewer .o_f3d_lbl.o_f3d_zone { text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; background: transparent; border: 0; padding: 0;
+  text-shadow: 0 0 3px var(--f3d-scene), 0 0 6px var(--f3d-scene); color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_lbl .o_f3d_st { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+
+.o_f3d_viewer .o_f3d_loading {
+  position: absolute; inset: 0; display: grid; place-items: center; font: 500 14px var(--f3d-f-display);
+  color: var(--f3d-muted); letter-spacing: 0.04em; pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .o_f3d_viewer .o_f3d_toggle-side { display: inline-block; }
+  .o_f3d_viewer .o_f3d_brand .o_f3d_dims { display: none; }
+  .o_f3d_viewer .o_f3d_side { display: none; width: auto; right: 12px; max-height: 55%; }
+  .o_f3d_viewer .o_f3d_side.o_f3d_open { display: flex; }
+  .o_f3d_viewer .o_f3d_card { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 42%; }
+  .o_f3d_viewer .o_f3d_help { display: none; }
+  .o_f3d_viewer .o_f3d_views { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .o_f3d_viewer .o_f3d_btn,
+.o_f3d_viewer .o_f3d_view { transition: none; } }
+
+/* ---------- Odoo: індикатор, вкладки, списки, таблиці, мітки в 3D ---------- */
+.o_f3d_viewer .o_f3d_card { width: 360px; padding: 0; display: flex; flex-direction: column; }
+.o_f3d_viewer .o_f3d_card > .o_f3d_body { padding: 12px 16px 16px; overflow: auto; min-height: 0; }
+.o_f3d_viewer .o_f3d_odoo-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; font-size: 12px; position: static;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.o_f3d_viewer .o_f3d_odoo-pill .o_f3d_live { width: 8px; height: 8px; border-radius: 50%; background: var(--f3d-ok); box-shadow: 0 0 0 0 var(--f3d-ok); }
+.o_f3d_viewer .o_f3d_odoo-pill.o_f3d_on .o_f3d_live { animation: f3d-live 2s infinite; }
+.o_f3d_viewer .o_f3d_odoo-pill.o_f3d_off .o_f3d_live { background: var(--f3d-bad); }
+.o_f3d_viewer .o_f3d_odoo-pill b { font-weight: 600; }
+.o_f3d_viewer .o_f3d_odoo-pill .o_f3d_muted { color: var(--f3d-muted); font-family: var(--f3d-f-mono); }
+@keyframes f3d-live { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--f3d-ok) 60%, transparent); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .o_f3d_viewer .o_f3d_odoo-pill.o_f3d_on .o_f3d_live { animation: none; } }
+.o_f3d_viewer .o_f3d_tabs { display: flex; border-bottom: 1px solid var(--f3d-line); padding: 0 8px; flex: none; }
+.o_f3d_viewer .o_f3d_tab {
+  flex: 1; border: 0; background: transparent; padding: 10px 2px 8px; font: 600 11.5px var(--f3d-f-display);
+  letter-spacing: 0.01em; color: var(--f3d-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.o_f3d_viewer .o_f3d_tab[aria-selected="true"] { color: var(--f3d-fg); border-bottom-color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_tab:focus-visible { outline: 2px solid var(--f3d-accent); outline-offset: -2px; }
+.o_f3d_viewer .o_f3d_back { border: 0; background: transparent; color: var(--f3d-muted); padding: 0; cursor: pointer; font-size: 12px; margin-bottom: 8px; }
+.o_f3d_viewer .o_f3d_back:hover { color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 2px 0 12px; }
+.o_f3d_viewer .o_f3d_kpi { border: 1px solid var(--f3d-line); border-radius: 8px; padding: 8px 10px; }
+.o_f3d_viewer .o_f3d_kpi b { display: block; font: 600 22px/1.1 var(--f3d-f-display); font-variant-numeric: tabular-nums; }
+.o_f3d_viewer .o_f3d_kpi span { font-size: 11px; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_sub { margin: 14px 0 6px; font: 600 11px/1 var(--f3d-f-display); text-transform: uppercase; letter-spacing: 0.09em; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.o_f3d_viewer .o_f3d_row {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; text-align: left;
+  background: transparent; border: 1px solid var(--f3d-line); border-radius: 7px; padding: 7px 9px; cursor: pointer; font-size: 13px;
+}
+.o_f3d_viewer .o_f3d_row:hover,
+.o_f3d_viewer .o_f3d_row.o_f3d_active { border-color: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_row .o_f3d_t { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_f3d_viewer .o_f3d_row .o_f3d_m { grid-column: 1 / -1; color: var(--f3d-muted); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_f3d_viewer .o_f3d_row .o_f3d_pw { grid-column: 1 / -1; }
+.o_f3d_viewer .o_f3d_mono { font-family: var(--f3d-f-mono); font-size: 12px; }
+.o_f3d_viewer .o_f3d_pbar { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--f3d-line) 70%, transparent); overflow: hidden; }
+.o_f3d_viewer .o_f3d_pbar > i { display: block; height: 100%; background: var(--f3d-ok); border-radius: 3px; }
+.o_f3d_viewer .o_f3d_pbar.o_f3d_warn > i { background: var(--f3d-warn); } .o_f3d_viewer .o_f3d_pbar.o_f3d_bad > i { background: var(--f3d-bad); } .o_f3d_viewer .o_f3d_pbar.o_f3d_flow > i { background: var(--f3d-flow); }
+.o_f3d_viewer .o_f3d_pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+.o_f3d_viewer .o_f3d_pill.o_f3d_ok { color: var(--f3d-ok); } .o_f3d_viewer .o_f3d_pill.o_f3d_warn { color: var(--f3d-warn); } .o_f3d_viewer .o_f3d_pill.o_f3d_bad { color: var(--f3d-bad); } .o_f3d_viewer .o_f3d_pill.o_f3d_idle { color: var(--f3d-idle); }
+.o_f3d_viewer .o_f3d_pill.o_f3d_info { color: var(--f3d-flow); }
+.o_f3d_viewer .o_f3d_kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin-top: 10px; }
+.o_f3d_viewer .o_f3d_kv dt { color: var(--f3d-muted); } .o_f3d_viewer .o_f3d_kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.o_f3d_viewer .o_f3d_tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.o_f3d_viewer .o_f3d_tbl th { text-align: left; color: var(--f3d-muted); font-weight: 500; padding: 4px 4px; border-bottom: 1px solid var(--f3d-line); }
+.o_f3d_viewer .o_f3d_tbl td { padding: 5px 4px; border-bottom: 1px solid color-mix(in srgb, var(--f3d-line) 60%, transparent); vertical-align: top; }
+.o_f3d_viewer .o_f3d_tbl td.o_f3d_n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.o_f3d_viewer .o_f3d_tbl tr.o_f3d_click { cursor: pointer; } .o_f3d_viewer .o_f3d_tbl tr.o_f3d_click:hover td { background: var(--f3d-accent-soft); }
+.o_f3d_viewer .o_f3d_lnk { border: 0; background: transparent; padding: 0; color: var(--f3d-fg); text-decoration: underline; text-decoration-color: var(--f3d-accent);
+  text-underline-offset: 2px; cursor: pointer; font: inherit; }
+.o_f3d_viewer .o_f3d_note { margin-top: 10px; padding: 8px 10px; border-radius: 7px; background: var(--f3d-accent-soft); font-size: 12px; }
+.o_f3d_viewer .o_f3d_note.o_f3d_bad { background: color-mix(in srgb, var(--f3d-bad) 14%, transparent); }
+.o_f3d_viewer .o_f3d_search { width: 100%; box-sizing: border-box; border: 1px solid var(--f3d-line); background: var(--f3d-panel-solid); color: var(--f3d-fg);
+  border-radius: 7px; padding: 7px 10px; font: inherit; }
+.o_f3d_viewer .o_f3d_search:focus-visible { outline: 2px solid var(--f3d-accent); outline-offset: 1px; }
+.o_f3d_viewer .o_f3d_chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0; }
+.o_f3d_viewer .o_f3d_chipf { border: 1px solid var(--f3d-line); background: transparent; border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; }
+.o_f3d_viewer .o_f3d_chipf[aria-pressed="true"] { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
+.o_f3d_viewer .o_f3d_mk {
+  font: 600 11px/1 var(--f3d-f-display); padding: 4px 7px; border-radius: 6px; color: #fff; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); transform: translateY(-8px); position: relative;
+}
+.o_f3d_viewer .o_f3d_mk::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: inherit; }
+.o_f3d_viewer .o_f3d_mk.o_f3d_done { background: #1e9e57; border-color: #1e9e57; } .o_f3d_viewer .o_f3d_mk.o_f3d_prog { background: #d98a00; border-color: #d98a00; }
+.o_f3d_viewer .o_f3d_mk.o_f3d_pend { background: #6b7886; border-color: #6b7886; } .o_f3d_viewer .o_f3d_mk.o_f3d_hl { background: #0f7f9e; border-color: #0f7f9e; }
+.o_f3d_viewer .o_f3d_mk.o_f3d_bad { background: #d63a2b; border-color: #d63a2b; }
+.o_f3d_viewer .o_f3d_mo-tag { font: 600 10px/1 var(--f3d-f-mono, monospace); padding: 2px 4px; border-radius: 4px; color: #fff; white-space: nowrap;
+  transform: translate(10px, -10px); pointer-events: auto; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.o_f3d_viewer .o_f3d_mo-tag.o_f3d_bad { outline: 2px solid #d63a2b; }
+.o_f3d_viewer .o_f3d_layer.o_f3d_prod-ov { font-weight: 600; margin-bottom: 6px; padding: 6px 8px; border: 1px solid var(--f3d-line); border-radius: 8px; }
+.o_f3d_viewer .o_f3d_layer.o_f3d_prod-ov small { display: block; font-weight: 400; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_prod-legend { font-size: 11.5px; color: var(--f3d-muted); margin: -2px 0 8px; line-height: 1.6; }
+.o_f3d_viewer .o_f3d_prod-legend span { white-space: nowrap; margin-right: 6px; }
+.o_f3d_viewer .o_f3d_prod-legend i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+.o_f3d_viewer .o_f3d_radio { display: flex; flex-direction: column; gap: 2px; }
+.o_f3d_viewer ol.o_f3d_steps { margin: 4px 0 6px; padding-left: 20px; font-size: 13px; }
+.o_f3d_viewer ol.o_f3d_steps li { margin: 3px 0; }
+.o_f3d_viewer ol.o_f3d_steps .o_f3d_m { display: block; color: var(--f3d-muted); font-size: 12px; }
+.o_f3d_viewer .o_f3d_pp-head { font: 600 15px/1.3 var(--f3d-f-display); margin-top: 2px; }
+.o_f3d_viewer .o_f3d_chart { display: block; width: 100%; height: auto; margin-top: 4px; }
+.o_f3d_viewer .o_f3d_chart .o_f3d_typ { fill: none; stroke: var(--f3d-muted); stroke-width: 0.6; }
+.o_f3d_viewer .o_f3d_chart .o_f3d_day { fill: var(--f3d-accent); } .o_f3d_viewer .o_f3d_chart .o_f3d_now { fill: var(--f3d-warn); }
+.o_f3d_viewer .o_f3d_chart text { fill: var(--f3d-muted); font: 7px var(--f3d-f-mono); }
+.o_f3d_viewer .o_f3d_chart-key { display: flex; gap: 12px; font-size: 11px; color: var(--f3d-muted); margin-top: 2px; }
+.o_f3d_viewer .o_f3d_chart-key i { display: inline-block; width: 10px; height: 8px; margin-right: 4px; vertical-align: -1px; }
+.o_f3d_viewer .o_f3d_src { font-size: 11px; color: var(--f3d-muted); margin-top: 6px; }
+.o_f3d_viewer .o_f3d_src a { color: var(--f3d-fg); text-decoration-color: var(--f3d-accent); }
+@media (max-width: 760px) { .o_f3d_viewer .o_f3d_card { width: auto; } .o_f3d_viewer .o_f3d_odoo-pill .o_f3d_muted { display: none; } .o_f3d_viewer .o_f3d_side { top: 112px; } }
+
+/* ---------- Потік зміни: стрічка часу над сценою, поки грає таймер ---------- */
+.o_f3d_viewer .o_f3d_flow { top: 68px; left: 284px; right: 384px; padding: 8px 12px 8px; display: flex; flex-direction: column; gap: 4px; }
+.o_f3d_viewer .o_f3d_flow[hidden] { display: none; }
+.o_f3d_viewer .o_f3d_fl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.o_f3d_viewer .o_f3d_fl-head b { font: 600 14px/1.2 var(--f3d-f-display); letter-spacing: 0.01em; }
+.o_f3d_viewer .o_f3d_fl-head .o_f3d_mono { color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_fl-head .o_f3d_flow-time { color: var(--f3d-fg); font-weight: 500; }
+.o_f3d_viewer .o_f3d_fl-key { margin-left: auto; display: flex; gap: 10px; font-size: 11px; color: var(--f3d-muted); flex-wrap: wrap; }
+.o_f3d_viewer .o_f3d_fl-key i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
+.o_f3d_viewer .o_f3d_fl-key .o_f3d_tri { width: 0; height: 0; border: 5px solid transparent; border-top: 8px solid #2f80c0; border-bottom: 0; }
+.o_f3d_viewer .o_f3d_fl-key .o_f3d_tri.o_f3d_up { border-top: 0; border-bottom: 8px solid var(--f3d-ok); }
+.o_f3d_viewer .o_f3d_fl-key .o_f3d_dot2 { border-radius: 50%; background: var(--f3d-idle); }
+.o_f3d_viewer .o_f3d_flow-svg { display: block; width: 100%; }
+.o_f3d_viewer .o_f3d_flow-svg text { fill: var(--f3d-muted); font: 11px var(--f3d-f-body); }
+.o_f3d_viewer .o_f3d_flow-svg text.o_f3d_ax { font: 10px var(--f3d-f-mono); }
+.o_f3d_viewer .o_f3d_flow-svg text.o_f3d_ln { fill: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_lane { fill: color-mix(in srgb, var(--f3d-line) 28%, transparent); }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_grid { stroke: color-mix(in srgb, var(--f3d-line) 80%, transparent); stroke-width: 1; }
+.o_f3d_viewer .o_f3d_flow-svg [data-go] { cursor: pointer; }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_wo { transition: opacity 0.2s; }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_wo.o_f3d_act { stroke: var(--f3d-fg); stroke-width: 1; }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_wo.o_f3d_bad { stroke: var(--f3d-bad); stroke-width: 1.5; }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_wo:hover { stroke: var(--f3d-accent); stroke-width: 1.5; }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_past { fill: color-mix(in srgb, var(--f3d-fg) 5%, transparent); }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_now { stroke: var(--f3d-accent); stroke-width: 2; }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_nowlbl { fill: var(--f3d-accent-fg); font: 600 10px var(--f3d-f-mono); }
+.o_f3d_viewer .o_f3d_flow-svg .o_f3d_nowbg { fill: var(--f3d-accent); }
+.o_f3d_viewer .o_f3d_fl-feed { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; font-size: 12px; min-height: 34px; }
+.o_f3d_viewer .o_f3d_fl-feed li { display: flex; gap: 6px; min-width: 0; align-items: baseline; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_fl-feed li.o_f3d_new { color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_fl-feed .o_f3d_mono { flex: none; }
+.o_f3d_viewer .o_f3d_fl-feed .o_f3d_t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_f3d_viewer .o_f3d_fl-feed .o_f3d_sw { width: 8px; height: 8px; border-radius: 2px; flex: none; align-self: center; }
+@media (max-width: 1180px) {
+  .o_f3d_viewer .o_f3d_flow { left: 12px; right: 12px; }
+  .o_f3d_viewer.o_f3d_flow-on .o_f3d_side,
+.o_f3d_viewer.o_f3d_flow-on .o_f3d_card { top: calc(var(--f3d-flow-bottom, 68px) + 8px); max-height: calc(100% - var(--f3d-flow-bottom, 68px) - 72px); }
+}
+@media (max-width: 760px) {
+  .o_f3d_viewer .o_f3d_flow { padding: 6px 8px; }
+  .o_f3d_viewer .o_f3d_fl-key { display: none; }
+  .o_f3d_viewer .o_f3d_fl-feed { grid-template-columns: 1fr; min-height: 0; }
+  .o_f3d_viewer .o_f3d_fl-feed li:nth-child(n+3) { display: none; }
+  .o_f3d_viewer.o_f3d_flow-on .o_f3d_card { top: auto; max-height: 34%; }
+}
+
+/* Доповнення до макета: корінь у вебклієнті, банер, кіоск. */
+.o_f3d_viewer { position: relative; display: block; min-height: 0; }
+.o_f3d_viewer .o_f3d_banner {
+  position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 5; max-width: 90%;
+  background: var(--f3d-panel-solid); color: var(--f3d-fg); border: 1px solid var(--f3d-warn); border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; box-shadow: var(--f3d-shadow);
+}
+.o_f3d_viewer.o_f3d_is_kiosk .o_f3d_c-open { display: none; }

@@ -17,6 +17,16 @@
         "data/cron.xml",
         "views/menus.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "factory3d_viewer/static/src/viewer/viewer.scss",
+            "factory3d_viewer/static/src/viewer/*.js",
+            "factory3d_viewer/static/src/action/*",
+        ],
+        "web.assets_unit_tests": [
+            "factory3d_viewer/static/tests/hoot/*",
+        ],
+    },
     "post_init_hook": "post_init",
     "uninstall_hook": "uninstall",
     "external_dependencies": {},
