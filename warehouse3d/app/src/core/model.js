@@ -1,32 +1,50 @@
-// Фабрика модели: createModel(data, storage, opts) → объект с деревом, выделением, правками и операциями.
+// Фабрика модели: createModel(project, storage, opts) → объект с деревом активного склада, выделением, правками и операциями.
 // Никаких модульных переменных и обращений к DOM: всё состояние внутри замыкания, хранилище передаёт хост.
-//   data    — снимок Odoo { locations, products, meta, ... }
+//   project — проект v2 (project.js): склады со своими слоями правок; модель правит его на месте и сохраняет через storage.saveProject
 //   storage — интерфейс из storage.js
+//   opts.bases — { baseRef: снимок Odoo { locations, products, meta } } для складов, у которых нет своего снимка внутри проекта
 //   opts.words — () => ({ copy, newZone, newType }): слова, которые попадают в имена новых узлов (по языку интерфейса)
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
-//   { type: "focus" } сменился показанный уровень · { type: "notify", kind, key, params, sub } сообщение пользователю.
-import { PICKS, clone, emptyEdit, normEdit } from "./types.js";
-import { buildTree } from "./tree.js";
+//   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
+//   { type: "notify", kind, key, params, sub } сообщение пользователю.
+import { DEPTHS, PICKS, clone, normEdit } from "./types.js";
+import { buildTree, cfgOf, refById } from "./tree.js";
 import { layout } from "./layout.js";
+import { nodesOf } from "./project.js";
 import * as sel from "./select.js";
 import * as ed from "./edit.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип" };
+const EMPTY_BASE = { meta: {}, products: {}, locations: {} };
 
-export function createModel(data, storage, opts = {}) {
-  const s = { data, storage, words: opts.words || (() => DEFAULT_WORDS), saved: emptyEdit(), pending: [], redo: [], edit: emptyEdit(), clip: [],
+export function createModel(project, storage, opts = {}) {
+  const bases = opts.bases || {};
+  const s = { project, wh: null, data: null, storage, words: opts.words || (() => DEFAULT_WORDS), saved: null, pending: [], redo: [], edit: null, clip: [],
     tree: null, ui: null, listeners: new Set(), emit: null };
   s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); };
   const rd = (name) => { try { return storage.read(name); } catch (e) { return null; } };
   const wr = (name, v) => { try { return storage.write(name, v); } catch (e) { return "fail"; } };
+  const baseOf = (wh) => wh.base || bases[wh.baseRef] || EMPTY_BASE;
 
-  const sv = rd("edit"); if (sv && sv.v === 1) s.saved = normEdit(sv);
-  const pd = rd("pending"); if (Array.isArray(pd)) s.pending = pd.filter((p) => p && p.diff && p.diff.add);
+  // слой правок и дерево активного склада
+  function load(wh) {
+    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = [];
+    ed.recompute(s); s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(wh)));
+  }
+  const want = rd("wh");
+  load(project.warehouses.find((w) => w.id === want) || project.warehouses[0]);
   s.ui = sel.newUi(rd("pick"));
-  ed.recompute(s); s.tree = layout(buildTree(data, s.edit, s.pending));
 
   const ui = s.ui, patch = (p, type = "select") => { if (!p) return false; Object.assign(ui, p); s.emit({ type }); return true; };
   const bind = (name) => (...a) => ed.OPS[name](s, ...a);
+  // глубина узла: собственная настройка ("inherit" — как у склада) и действующая
+  const depthInfo = (id) => {
+    const wh = s.wh;
+    if (!id || id === "WH") return { own: wh.depth, eff: wh.depth };
+    let eff = wh.depth;
+    for (let x = s.tree.nodes.get(id); x; x = x.parent && s.tree.nodes.get(x.parent)) if (wh.depthZones[x.id]) { eff = wh.depthZones[x.id]; break; }
+    return { own: wh.depthZones[id] || "inherit", eff };
+  };
 
   return {
     // чтение состояния
@@ -37,10 +55,33 @@ export function createModel(data, storage, opts = {}) {
     get pending() { return s.pending; },
     get clip() { return s.clip.filter((id) => s.tree.nodes.has(id)); },
     get readonly() { return !!storage.readonly; },
-    data,
+    get data() { return s.data; }, // снимок Odoo активного склада
+    get project() { ed.sync(s); return s.project; },
+    get warehouse() { return s.wh; },
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.types); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.cells.length || v.types); },
+    // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
+    warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
+    setWarehouse(id) {
+      const wh = s.project.warehouses.find((w) => w.id === id);
+      if (!wh || wh === s.wh) return false;
+      ed.sync(s); load(wh); wr("wh", id);
+      Object.assign(ui, { focus: "WH", sel: null, esel: ui.edit ? "WH" : null, msel: [] });
+      s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" });
+      return true;
+    },
+    nodes: () => nodesOf(s.tree, s.data), // узлы склада в виде v2
+    // глубина локаций (D-11): "WH" — настройка склада, иначе зона; depth: "level" | "cell" | "inherit" (для зоны — как у склада). Действует сразу и сохраняется в проекте
+    depthInfo,
+    setDepth(zoneId, depth) {
+      if (storage.readonly || (depth !== "inherit" && !DEPTHS.includes(depth))) return false;
+      const wh = s.wh, whole = !zoneId || zoneId === "WH";
+      if (whole) { if (depth === "inherit") return false; wh.depth = depth; } else if (depth === "inherit") delete wh.depthZones[zoneId]; else wh.depthZones[zoneId] = depth;
+      ed.persist(s); ed.applyEdit(s);
+      ed.say(s, "info", "n.depthSet", { what: refById(s.tree, whole ? "WH" : zoneId), depth: { k: `depth.${depth}` } });
+      return true;
+    },
     // выделение
     selIds: () => sel.selIds(ui),
     select: (id) => patch(sel.selectNode(s.tree, ui, id)),
@@ -60,7 +101,7 @@ export function createModel(data, storage, opts = {}) {
     rackOf: (id) => sel.rackOf(s.tree, id),
     moveSet: (set, dx, dy) => ed.moveSet(s, set, dx, dy),
     // правки
-    ops: { rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), settp: bind("settp"),
+    ops: { rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), settp: bind("settp"),
       move: bind("move"), rotate: bind("rotate"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
@@ -71,7 +112,7 @@ export function createModel(data, storage, opts = {}) {
     copy: () => ed.copySel(s),
     paste: () => ed.pasteSel(s),
     dropInto: (src, tid) => ed.dropInto(s.tree, src, tid),
-    // каталог типов
+    // каталог типов (типы активного склада поверх общего справочника)
     types: { list: () => [...s.tree.types.values()], use: () => ed.typeUse(s.tree), isBase: ed.isBaseType, patch: (id, k, v) => ed.typePatch(s, id, k, v),
       remove: (id) => ed.typeRemove(s, id), add: () => ed.typeAdd(s) },
     // прочее хранилище (режим 2D/3D и т.п.)

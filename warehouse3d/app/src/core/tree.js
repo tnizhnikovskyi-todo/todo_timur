@@ -2,6 +2,8 @@
 import { BASE_TYPES, FLOW, KIND_TYPE, NODE_TYPE_LABELED, zoneTp } from "./types.js";
 
 export const typeList = (edit) => edit.types || BASE_TYPES;
+// настройки склада, влияющие на дерево: глубина локаций (по умолчанию и по зонам) и код склада (подпись корня)
+export const cfgOf = (wh) => ({ depth: wh.depth, zones: wh.depthZones, code: wh.code });
 
 export function codeSegs(code) {
   let m;
@@ -14,18 +16,20 @@ export function codeSegs(code) {
 }
 
 // Дерево: путь Odoo (complete_name) плюс уровни из кода места (ряд, стеллаж, ярус).
-// edit — слой правок (добавленные и убранные узлы, типы, положения, повороты); pending — несохранённые изменения.
-export function buildTree(data, edit, pending = []) {
+// edit — слой правок (добавленные и убранные узлы, типы, положения, повороты, ячейки); pending — несохранённые изменения;
+// cfg — настройки склада (cfgOf): глубина локаций, переопределение по зонам, код склада.
+export function buildTree(data, edit, pending = [], cfg = {}) {
   const types = new Map(typeList(edit).map((t) => [t.id, t]));
   const TY = (id) => types.get(id) || types.get("ZONE") || BASE_TYPES[9];
   const draftLoc = {}, pos = new Map(edit.pos.map((p) => [p.id, p]));
   const pend = new Set(pending.flatMap((p) => p.diff.add.put.map((a) => a.id)));
-  const nodes = new Map(), byCode = new Map();
+  const pendCells = new Set(pending.flatMap((p) => (p.diff.cells ? p.diff.cells.put.map((c) => c.id) : [])));
+  const nodes = new Map(), byCode = new Map(), removed = [], contained = new Set();
   const node = (id, name, parent) => {
     if (!nodes.has(id)) { const n = { id, name, parent, kids: [], type: "group", tp: null, loc: null, lvl: 0 }; nodes.set(id, n); if (parent) nodes.get(parent).kids.push(n); }
     return nodes.get(id);
   };
-  node("WH", "WH", null);
+  node("WH", cfg.code || "WH", null);
   for (const [code, l] of Object.entries(data.locations)) {
     const parts = l.complete_name.split("/"), cs = codeSegs(code);
     let pid = "WH";
@@ -60,8 +64,25 @@ export function buildTree(data, edit, pending = []) {
   const setRot = (n) => { n.rot = true; n.kids.forEach(setRot); };
   for (const r of edit.rot || []) { const n = nodes.get(r.id); if (n && n.type === "rack") setRot(n); }
   // убранные в модели узлы — вместе со всем, что внутри
-  const drop = (n) => { nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
+  const drop = (n) => { removed.push({ id: n.id, name: n.name, parent: n.parent, type: n.type, tp: n.tp, loc: n.loc }); nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
   for (const id of edit.del) { const n = nodes.get(id); if (!n || !n.parent) continue; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); }
+  // ярусы: число ячеек и глубина локаций. Ярус с N > 1 ячеек при глубине «ячейка» перестаёт быть местом:
+  // местами становятся его ячейки с кодами <код яруса>-1..N (сам ярус остаётся контейнером; в Odoo это его родитель)
+  const cellsOf = new Map(edit.cells.map((c) => [c.id, c.n])), zones = cfg.zones || {};
+  const depthOf = (n) => { for (let x = n.parent && nodes.get(n.parent); x; x = x.parent && nodes.get(x.parent)) if (zones[x.id]) return zones[x.id]; return cfg.depth || "level"; };
+  for (const n of [...nodes.values()]) {
+    if (n.type !== "level") continue;
+    n.cells = cellsOf.get(n.id) || 1; n.ldepth = depthOf(n);
+    if (n.cells < 2 || n.ldepth !== "cell" || !n.loc) continue;
+    const base = n.loc; n.loc = null; byCode.delete(base); contained.add(base);
+    for (let i = 1; i <= n.cells; i++) {
+      const code = `${base}-${i}`, k = node(`${n.id}/${i}`, String(i), n.id), pd = pendCells.has(n.id) || !!n.pend;
+      Object.assign(k, { type: "cell", tp: n.tp, lvl: n.lvl, ci: i - 1, loc: code, draft: true, pend: pd });
+      if (n.rot) k.rot = true;
+      byCode.set(code, k);
+      draftLoc[code] = { complete_name: k.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: pd };
+    }
+  }
   const rank = (n) => { const i = FLOW.indexOf(n.name); return i < 0 ? 99 : i; };
   const walk = (n) => {
     n.kids.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, "uk", { numeric: true }));
@@ -71,7 +92,8 @@ export function buildTree(data, edit, pending = []) {
   };
   walk(nodes.get("WH"));
   const loc = (c) => data.locations[c] || draftLoc[c];
-  return { nodes, byCode, root: nodes.get("WH"), types, TY, draftLoc, pos, pend, loc, W0: 0, D0: 0 };
+  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells].map((x) => x.id));
+  return { nodes, byCode, root: nodes.get("WH"), types, TY, draftLoc, pos, pend, loc, removed, contained, changed, W0: 0, D0: 0 };
 }
 
 export const pathOf = (tree, n) => { const p = []; for (let x = n; x; x = x.parent && tree.nodes.get(x.parent)) p.unshift(x); return p; };

@@ -3,6 +3,9 @@ import { inNode } from "../core/types.js";
 import { isSel } from "../core/select.js";
 import { esc, reducedMotion, slotCls } from "./util.js";
 
+// стелаж, в котором стоит ярус или ячейка (для остальных — сам узел)
+const bayOf = (tree, n) => (n.type === "level" ? tree.nodes.get(n.parent) : n.type === "cell" ? tree.nodes.get(tree.nodes.get(n.parent).parent) : n);
+
 export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick }) {
   const [T, { OrbitControls }] = await Promise.all([import("three"), import("three/examples/jsm/controls/OrbitControls.js")]);
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), col = (n) => new T.Color(css(n) || "#888");
@@ -33,7 +36,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   // пол — под выбранным уровнем (размер и положение меняются в paint)
   const floor = new T.Mesh(box, floorM); floor.receiveShadow = true; scene.add(floor);
   function fitFloor() {
-    const tree = model.tree, n = tree.nodes.get(model.ui.focus), b = n.type === "level" ? tree.nodes.get(n.parent) : n;
+    const tree = model.tree, n = tree.nodes.get(model.ui.focus), b = bayOf(tree, n);
     const m = Math.max(0.25, Math.max(b.w, b.d) * 0.04), w = b.w + 2 * m, d = b.d + 2 * m;
     floor.position.set(X(b.x - m + w / 2), -0.05, Z(b.y - m + d / 2)); floor.scale.set(w, 0.1, d);
   }
@@ -44,10 +47,11 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   const content = (n) => {
     const tree = model.tree, TY = tree.TY;
     const code = n.loc, l = tree.loc(code), cls = slotCls(l).split(" ")[0], m = status[cls] || status.area, qty = l.quants.reduce((s, q) => s + q.qty, 0);
-    const bay = n.type === "level" ? tree.nodes.get(n.parent) : n;
+    const bay = bayOf(tree, n);
     const empty = (base) => reg(add(box, status.bad, n.id, bay.x + 0.04, bay.y + 0.04, bay.w - 0.08, bay.d - 0.08, 0.03, base, { cast: false }), code);
     if (l.draft) { // новое место — полупрозрачный объём (бирюзовый, пока не сохранено)
       const nm = l.pend ? status.pend : status.new;
+      if (n.type === "cell") { const f = TY(n.tp); return reg(add(box, nm, n.id, n.x + 0.04, n.y + 0.05, n.w - 0.08, n.d - 0.1, Math.max(0.05, f.lh - 0.16), n.lvl * f.lh + 0.08), code); }
       if (n.type === "level") { const f = TY(n.tp); return reg(add(box, nm, n.id, bay.x + 0.06, bay.y + 0.05, bay.w - 0.12, bay.d - 0.1, Math.max(0.05, f.lh - 0.16), n.lvl * f.lh + 0.08), code); }
       if (n.type === "bayleaf") return reg(add(box, nm, n.id, n.x + 0.1, n.y + 0.1, n.w - 0.2, n.d - 0.2, 0.3, 0), code);
       return reg(add(box, nm, n.id, n.x, n.y, n.w, n.d, 0.06, 0, { cast: false }), code);
@@ -126,7 +130,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   const v3 = new T.Vector3();
   function makeLabels() {
     const tree = model.tree, f = tree.nodes.get(model.ui.focus), items = f.kids.length ? f.kids : [f];
-    lblItems = items.map((k) => ({ k, p: new T.Vector3(X(k.x + k.w / 2), (k.h || 1) + 0.25, Z(k.y + (k.type === "level" ? k.d / 2 : 0.3))) }));
+    lblItems = items.map((k) => ({ k, p: new T.Vector3(X(k.x + k.w / 2), (k.h || 1) + 0.25, Z(k.y + (k.type === "level" || k.type === "cell" ? k.d / 2 : 0.3))) }));
     if (f.type === "bay") lblItems.forEach((it) => { it.p.set(X(f.x) - 0.15, it.k.lvl * tree.TY(f.tp).lh + 0.25, Z(f.y + f.d / 2)); });
     lbl.innerHTML = lblItems.map((it) => `<span data-focus="${esc(it.k.id)}" title="${esc(i18n.t("plan.focusOnly"))}">${esc(i18n.node(it.k))}</span>`).join("");
     lbl.querySelectorAll("[data-focus]").forEach((s) => s.onclick = () => model.focusTo(s.dataset.focus));
@@ -151,8 +155,8 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   // приблизить к выбранному уровню: угол камеры тот же, расстояние — чтобы уровень весь влез
   let anim = 0;
   function fit(instant = false) {
-    const tree = model.tree, n = tree.nodes.get(model.ui.focus), bay = n.type === "level" ? tree.nodes.get(n.parent) : n;
-    const cx = X(bay.x + bay.w / 2), cz = Z(bay.y + bay.d / 2), cy = n.type === "level" ? n.lvl * tree.TY(n.tp).lh + 0.3 : Math.min(2, (n.h || 1) / 3);
+    const tree = model.tree, n = tree.nodes.get(model.ui.focus), bay = bayOf(tree, n);
+    const cx = X(bay.x + bay.w / 2), cz = Z(bay.y + bay.d / 2), cy = n.type === "level" || n.type === "cell" ? n.lvl * tree.TY(n.tp).lh + 0.3 : Math.min(2, (n.h || 1) / 3);
     const aspect = vp.clientWidth / Math.max(1, vp.clientHeight), fov = (camera.fov * Math.PI) / 180;
     const span = Math.max(bay.w / Math.max(aspect, 0.5), bay.d * 1.4, (n.h || 1) * 1.6, 1.6);
     const dist = (span / 2) / Math.tan(fov / 2) * 1.2;

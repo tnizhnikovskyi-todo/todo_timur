@@ -11,7 +11,16 @@ function measure(tree, n, depth = 0) {
   n.depth = depth;
   const t = tree.TY(n.tp);
   const [tw, td] = n.rot ? [t.d, t.w] : [t.w, t.d];
-  if (n.type === "level") { n.w = tw; n.d = td; n.h = (n.lvl + 1) * t.lh; return; }
+  if (n.type === "level") {
+    n.w = tw; n.d = td; n.h = (n.lvl + 1) * t.lh;
+    // ячейки яруса — части его основания: вдоль ширины стелажа (повёрнутый ряд — вдоль глубины)
+    const N = n.kids.length;
+    n.kids.forEach((k, i) => {
+      k.depth = depth + 1; k.h = n.h;
+      if (n.rot) { k.w = n.w; k.d = n.d / N; k.ox = 0; k.oy = i * k.d; } else { k.w = n.w / N; k.d = n.d; k.ox = i * k.w; k.oy = 0; }
+    });
+    return;
+  }
   if (n.type === "bayleaf") { n.w = tw; n.d = td; n.h = 1.1; return; }
   n.kids.forEach((k) => measure(tree, k, depth + 1));
   const H = n.kids.length ? Math.max(...n.kids.map((k) => k.h)) : 0.2;

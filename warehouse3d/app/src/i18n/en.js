@@ -240,6 +240,21 @@ export default {
   "types.inUse": "The type is in use or built in",
   "types.remove": "Delete type",
 
+  "top.warehouse": "Warehouse",
+  "node.cell": "Cell",
+  "depth.level": "Level",
+  "depth.cell": "Cell",
+  "depth.inherit": "as in the warehouse",
+  "n.depthSet": "Location depth · {what}: {depth}",
+  "op.cells": "{ref}: cells per level — {n}",
+  "form.cells": "Cells per level",
+  "side.depthTitle": "Location depth",
+  "side.depthWh": "The last level that becomes an Odoo location. Applies to the whole warehouse; a zone can override it.",
+  "side.depthZone": "The last level that becomes an Odoo location in this zone.",
+  "side.cellsTitle": "Cells per level",
+  "side.cellsOn": "The level is split into cells: each is a separate place with the code “level code”-1…N.",
+  "side.cellsOff": "The level stays one place: cells appear when the location depth is “Cell” (for the warehouse or a zone).",
+  "side.cellOf": "A cell of a level. Change the number of cells in the field below.",
   "help.button": "Help",
   "help.title": "How to work with the 3D warehouse model",
   "help.toc": "Contents",
@@ -248,7 +263,7 @@ export default {
   "help.start.html": `
     <p><b>Warehouse Builder</b> is a model of the warehouse built from Odoo storage locations (database snapshot of {date}). Every row, bay, level and floor place in the model is an Odoo location or a new place you added in the model.</p>
     <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot and is not updated in real time.</p>
-    <p>The top bar has the warehouse name, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
+    <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
   "help.view.title": "Viewing the model",
   "help.view.html": `
     <ul>
@@ -272,6 +287,7 @@ export default {
       <tr><td class="first">Warehouse or zone</td><td>“Add a row” (place type, number of bays and levels), “Add a floor place”, “Add a zone”</td></tr>
       <tr><td class="first">Row</td><td>change the row type, “Add a bay” (for boards — “Add a stack”), rotate, put back to the automatic position</td></tr>
       <tr><td class="first">Bay</td><td>“Add a level on top”</td></tr>
+      <tr><td class="first">Level or cell</td><td>“Cells per level” — split a level into cells (see “Warehouses, cells and the project”)</td></tr>
       <tr><td class="first">Anything</td><td>“⧉ Duplicate”, “Copy”, “Remove” (together with everything inside); × in the “Inside” list removes one nested object</td></tr>
     </tbody></table>
     <p><b>Place types</b> (the button above the model in edit mode) is the catalog of constructions: code, name, kind (shelf bay, roll rack, pallet rack, floor stack, floor place), width, depth, level height, levels in a new bay. Changing a size rebuilds all places of this type at once; you can add your own type. It is saved with the “Save types” button in the window.</p>
@@ -306,8 +322,16 @@ export default {
       <li>Unsaved changes are collected per object where they were made. The object panel lists them with the buttons <b>“Save &lt;object&gt;”</b> / “Discard”. Above the model there are “Save all”, “Discard all” and ↶.</li>
       <li><kbd>{mod}</kbd>+<kbd>Z</kbd> or ↶ — undo the last unsaved change, <kbd>{mod}</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>{mod}</kbd>+<kbd>Y</kbd> — redo it. Saved changes cannot be undone this way.</li>
       <li>After saving, a notification “Saved: … · N changes” appears in the top right corner.</li>
-      <li>Both the saved model and unsaved changes live in this browser (localStorage) and survive a reload; they will not be there in another browser or on another computer.</li>
+      <li>Both the saved model and unsaved changes live in the project in this browser (localStorage) and survive a reload; they will not be there in another browser or on another computer. More in “Warehouses, cells and the project”.</li>
       <li><b>“Reset to Odoo data”</b> removes all model changes (it is an unsaved change itself — you still have to save it, or you can discard it).</li>
+    </ul>`,
+  "help.project.title": "Warehouses, cells and the project",
+  "help.project.html": `
+    <ul>
+      <li>The <b>warehouse switch</b> in the top bar: a project holds several warehouses (the demo has WH from the Odoo snapshot and a synthetic WH2). Each has its own plan, its own saved and unsaved changes and its own place types; unsaved changes are kept when you switch.</li>
+      <li><b>Location depth</b> (edit mode, warehouse or zone panel) is the last level that becomes an Odoo location: <b>“Level”</b> (default) or <b>“Cell”</b>. A zone can have its own value or “as in the warehouse”. It applies at once and is stored in the project; there are no “Show / Save” buttons for it.</li>
+      <li><b>Cells per level</b> (level panel, 1–12) goes through “Show” / “Save” like other changes. With depth “Cell” and more than one cell the level stops being a place: separate places with codes <span class="code">&lt;level code&gt;-1…N</span> replace it, and in 2D and 3D the level is split into N parts. With depth “Level” the number is remembered but the level stays one place.</li>
+      <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
     </ul>`,
   "help.keys.title": "Hotkeys",
   "help.keys.html": `

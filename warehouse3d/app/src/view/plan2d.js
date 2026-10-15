@@ -22,6 +22,10 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
           const bay = tree.nodes.get(n.parent), k = bay.nLv;
           if (bay.rot) { d = bay.d / k; y = bay.y + n.lvl * d; x = bay.x; w = bay.w; } else { w = bay.w / k; x = bay.x + n.lvl * w; y = bay.y; d = bay.d; }
         }
+        if (n.type === "cell") { // ячейка — часть полосы своего яруса: поперёк полосы (повёрнутый стелаж — вдоль)
+          const lv = tree.nodes.get(n.parent), bay = tree.nodes.get(lv.parent), k = bay.nLv, N = lv.kids.length;
+          if (bay.rot) { const dd = bay.d / k; w = bay.w / N; x = bay.x + n.ci * w; y = bay.y + lv.lvl * dd; d = dd; } else { const ww = bay.w / k; d = bay.d / N; y = bay.y + n.ci * d; x = bay.x + lv.lvl * ww; w = ww; }
+        }
         h += `<rect data-node="${esc(n.id)}" data-code="${esc(n.loc)}" x="${x}" y="${y}" width="${w}" height="${d}" class="s"/>`;
       }
       n.kids.forEach(walk);
@@ -79,7 +83,9 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
     vb = { x: p.x - (p.x - vb.x) * f, y: p.y - (p.y - vb.y) * f, w: vb.w * f, h: vb.h * f }; setVB();
   }
   function fit() {
-    const n = model.tree.nodes.get(model.ui.focus), m = Math.max(n.w, n.d) * 0.08 + 0.3, extra = n.kids.length ? Math.max(n.w, n.d) * 0.03 : 0;
+    let n = model.tree.nodes.get(model.ui.focus);
+    if (n.type === "cell") n = model.tree.nodes.get(model.tree.nodes.get(n.parent).parent); // ячейка — на весь стелаж
+    const m = Math.max(n.w, n.d) * 0.08 + 0.3, extra = n.kids.length ? Math.max(n.w, n.d) * 0.03 : 0;
     vb = { x: n.x - m, y: n.y - m - extra, w: n.w + 2 * m, h: n.d + 2 * m + extra }; setVB();
   }
   function paint() {

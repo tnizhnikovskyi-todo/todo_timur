@@ -2,21 +2,21 @@
 // Все функции принимают состояние s (его создаёт createModel в model.js):
 //   s = { data, storage, words, saved, pending, redo, edit, tree, ui, clip, listeners, emit }
 // Подписи изменений хранятся как данные { k, p } (ключ словаря и параметры) — текст собирает i18n на экране.
-import { BASE_TYPES, RACKED, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, r1 } from "./types.js";
-import { buildTree, refById, refOf, typeList } from "./tree.js";
+import { BASE_TYPES, MAX_CELLS, RACKED, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, r1 } from "./types.js";
+import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
 import { layout } from "./layout.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
 
 // ---------- diff / apply
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
-  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
     types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null };
 }
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !d.delNew.length && !d.delRm.length && !d.types;
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !d.delNew.length && !d.delRm.length && !d.types;
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
-  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot);
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells);
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
   return s;
@@ -24,9 +24,15 @@ export function applyDiff(s, d) {
 
 // ---------- состояние: показ = сохранённое + несохранённое
 export function recompute(s) { s.edit = s.pending.reduce((e, p) => applyDiff(e, p.diff), clone(s.saved)); }
-export function rebuild(s) { s.tree = layout(buildTree(s.data, s.edit, s.pending)); Object.assign(s.ui, reconcile(s.tree, s.ui)); }
-const savePend = (s) => { try { s.storage.write("pending", s.pending); } catch (e) { /* хранилище недоступно — правки остаются в памяти */ } };
-function applyEdit(s) { rebuild(s); s.emit({ type: "rebuild" }); }
+export function rebuild(s) { s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(s.wh))); Object.assign(s.ui, reconcile(s.tree, s.ui)); }
+// слой правок и несохранённое активного склада переходят в проект; проект целиком уходит в хранилище (Promise со статусом записи)
+export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; }
+export function persist(s) {
+  sync(s);
+  try { return Promise.resolve(s.storage.saveProject(clone(s.project))).catch(() => "fail"); } catch (e) { return Promise.resolve("fail"); } // хранилище недоступно — правки остаются в памяти
+}
+const savePend = (s) => { persist(s); };
+export function applyEdit(s) { rebuild(s); s.emit({ type: "rebuild" }); }
 export const say = (s, kind, key, params = {}, sub = null) => s.emit({ type: "notify", kind, key, params, sub });
 const places = (n) => ({ k: "n.places", p: { n } });
 
@@ -44,7 +50,7 @@ function withDeps(s, sel) {
   const set = new Set(sel); let grow = true;
   while (grow) {
     grow = false;
-    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id)]);
+    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : [])]);
     for (const q of s.pending) if (!set.has(q) && q.diff.add.put.some((a) => need.some((id) => inNode(id, a.id)))) { set.add(q); grow = true; }
   }
   return s.pending.filter((p) => set.has(p));
@@ -56,14 +62,12 @@ export function saveObj(s, id) {
   const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
-  let res;
-  try { res = Promise.resolve(s.storage.write("edit", clone(s.saved))); } catch (e) { res = Promise.resolve("fail"); }
-  const done = res.catch(() => "fail").then((r) => {
+  const done = persist(s).then((r) => {
     if (r === "fail") say(s, "bad", "n.saveFail", { what });
     else say(s, "ok", "n.saved", { what, cnt }, { key: r === "local" ? "n.savedLocal" : "n.savedShared" });
     return r;
   });
-  recompute(s); savePend(s); applyEdit(s);
+  recompute(s); applyEdit(s);
   return done;
 }
 export function discardObj(s, id) {
@@ -82,7 +86,7 @@ export function redoEdit(s) {
   s.pending.push(p); recompute(s); savePend(s); applyEdit(s); say(s, "info", "n.redone", { label: p.label });
 }
 export const editStats = (s) => ({ added: Object.keys(s.tree.draftLoc).filter((c) => s.tree.byCode.has(c)).length,
-  removed: Object.keys(s.data.locations).filter((c) => !s.tree.byCode.has(c)).length, pending: s.pending.length });
+  removed: Object.keys(s.data.locations).filter((c) => !s.tree.byCode.has(c) && !s.tree.contained.has(c)).length, pending: s.pending.length });
 
 // ---------- буфер Ctrl+C / Ctrl+V
 export function copySel(s) {
@@ -202,7 +206,7 @@ export const OPS = {
   // копия рядом (target не задан) или вставка в target; та же постройка, места новые и пустые; несколько объектов — одним изменением
   dup(s, ids, target = null) {
     const tree = s.tree, ui = s.ui;
-    ids = [].concat(ids).filter((id) => id && id !== "WH" && tree.nodes.has(id));
+    ids = [].concat(ids).filter((id) => id && id !== "WH" && tree.nodes.has(id) && tree.nodes.get(id).type !== "cell"); // ячейки не копируются: их число задаётся у яруса
     ids = ids.filter((id) => !ids.some((o) => o !== id && inNode(id, o)));
     if (!ids.length) return [];
     const srcs = ids.map((id) => tree.nodes.get(id)), dests = srcs.map((x) => (target && dropInto(tree, x, target)) || tree.nodes.get(x.parent));
@@ -215,10 +219,11 @@ export const OPS = {
         if (n.type === "level") { const rid = pid.slice(0, pid.lastIndexOf("/")); a.lvl = n.lvl; a.code = uniqCode(s, `${ty}-${short(rid, ty)}-${lastSeg(pid)}-${u.name}`); }
         else if (n.type === "bayleaf") a.code = uniqCode(s, `${ty}-${short(pid, ty)}${u.name}`);
         else if (kind === "zone") { a.code = freeZone(n); a.name = a.code; a.id = uniqId(s, pid, a.code, bumpNum).id; }
-        if (a.code) cnt++;
+        if (a.code) cnt += n.type === "level" ? Math.max(1, n.codes.length) : 1;
         e.add.push(a);
+        if (n.type === "level" && n.cells > 1) e.cells = [...e.cells.filter((x) => x.id !== a.id), { id: a.id, n: n.cells }];
         if (n.type === "rack" && n.rot) e.rot = [...(e.rot || []).filter((x) => x.id !== a.id), { id: a.id, r: 90 }];
-        n.kids.forEach((k) => copy(k, a.id, k.name, tp));
+        if (n.type !== "level") n.kids.forEach((k) => copy(k, a.id, k.name, tp));
         return a.id;
       };
       const placed = [];
@@ -246,10 +251,16 @@ export const OPS = {
     if (ok.length) { ui.msel = ok.length > 1 ? ok : []; ui.esel = ok[ok.length - 1]; s.emit({ type: "select" }); }
     return made;
   },
+  // число ячеек яруса (1 — ярус сам место); ячейки становятся местами при глубине «ячейка» (настройка склада или зоны)
+  cells(s, lid, f, key) {
+    const n = s.tree.nodes.get(lid); if (!n || n.type !== "level") return;
+    const k = clampN(f.n, 1, MAX_CELLS, 1), ref = refOf(n);
+    change(s, lid, { k: "op.cells", p: { ref, n: k } }, (e) => { e.cells = e.cells.filter((x) => x.id !== lid); if (k > 1) e.cells.push({ id: lid, n: k }); }, key, f);
+  },
   unpos(s, rid) { change(s, rid, { k: "op.unpos", p: { ref: refById(s.tree, rid) } }, (e) => { e.pos = e.pos.filter((p) => p.id !== rid); }); },
   del(s, ids) {
     const ui = s.ui, tree = s.tree;
-    ids = [].concat(ids).filter((id) => id !== "WH" && tree.nodes.has(id)); ids = ids.filter((id) => !ids.some((o) => o !== id && inNode(id, o))); if (!ids.length) return;
+    ids = [].concat(ids).filter((id) => id !== "WH" && tree.nodes.has(id) && tree.nodes.get(id).type !== "cell"); ids = ids.filter((id) => !ids.some((o) => o !== id && inNode(id, o))); if (!ids.length) return;
     const ns = ids.map((id) => tree.nodes.get(id)), n = ns[0], k = ns.reduce((sum, x) => sum + x.codes.length, 0), par = ns.map((x) => x.parent), refs = ns.map((x) => refOf(x));
     if (ui.esel && ids.some((id) => inNode(ui.esel, id))) ui.esel = n.parent;
     ui.msel = ui.msel.filter((x) => !ids.some((id) => inNode(x, id))); if (ui.msel.length < 2) ui.msel = [];
@@ -258,7 +269,7 @@ export const OPS = {
     change(s, ns.length > 1 ? lca(par) : n.parent, lbl, (e) => {
       for (const x of ns) {
         const id = x.id;
-        e.add = e.add.filter((a) => !inNode(a.id, id)); e.set = e.set.filter((q) => !inNode(q.id, id)); e.pos = e.pos.filter((p) => !inNode(p.id, id));
+        e.add = e.add.filter((a) => !inNode(a.id, id)); e.set = e.set.filter((q) => !inNode(q.id, id)); e.pos = e.pos.filter((p) => !inNode(p.id, id)); e.cells = e.cells.filter((c) => !inNode(c.id, id));
         if (!x.draft) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
       }
     }, null, null, [...new Set(par)]);

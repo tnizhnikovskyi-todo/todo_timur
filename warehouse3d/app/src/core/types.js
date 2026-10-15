@@ -20,14 +20,17 @@ export const BASE_TYPES = [
 ];
 
 export const PICKS = ["place", "bay", "rack", "zone"];
-export const NODE_TYPE_LABELED = ["rack", "bay", "level", "bayleaf"];
+export const NODE_TYPE_LABELED = ["rack", "bay", "level", "bayleaf", "cell"];
+// глубина локаций (D-11): последний уровень дерева, который становится локацией Odoo
+export const DEPTHS = ["level", "cell"];
+export const MAX_CELLS = 12;
 // порядок зон по ходу потока (данные Odoo на украинском)
 export const FLOW = ["Вхід", "Приймання", "Контроль якості", "Сировина", "Стелажі", "Портал", "Плити", "Фурнітура", "Крайка", "Пакування", "ЛФМ", "Передвиробництво", "Фасади", "Пост-виробництво", "Готова продукція", "Відвантаження"];
 export const KIND_TYPE = { group: "group", zone: "group", rack: "rack", bay: "bay", level: "level", bayleaf: "bayleaf" };
 
 export const clone = (x) => JSON.parse(JSON.stringify(x));
-export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [] });
-export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [] } : emptyEdit();
+export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [] });
+export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [] } : emptyEdit();
 export const zoneTp = (c) => /^PAL-/.test(c) ? "PAL" : /^(KIT|FRONTS)-/.test(c) ? "CART" : /^(POST|OUT)-/.test(c) ? "BIG" : /^UNLOAD-/.test(c) ? "DOCK" : "ZONE";
 
 export const inNode = (id, f) => id === f || id.startsWith(`${f}/`);

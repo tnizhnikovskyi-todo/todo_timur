@@ -18,14 +18,15 @@ test("словари uk и en содержат одинаковые ключи �
 });
 
 test("каждый ключ, который код просит у t(), есть в словаре", () => {
-  const prefixes = ["app", "bar", "common", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type"];
+  const prefixes = ["app", "bar", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
   for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
   // семейства динамических ключей
   for (const f of FORM_IDS) used.add(`form.${f}`);
   for (const k of ["stack", "bin", "shelf", "pallet_cell", "kit", "area", "place"]) used.add(`kind.${k}`);
-  for (const k of ["rack", "bay", "level", "bayleaf"]) used.add(`node.${k}`);
+  for (const k of ["rack", "bay", "level", "bayleaf", "cell"]) used.add(`node.${k}`);
+  for (const k of ["level", "cell", "inherit"]) used.add(`depth.${k}`);
   for (const b of BASE_TYPES) used.add(`type.${b.id}`);
   for (const k of PICKS) used.add(`pick.${k}`);
   for (const id of HELP_SECTIONS) { used.add(`help.${id}.title`); used.add(`help.${id}.html`); }
