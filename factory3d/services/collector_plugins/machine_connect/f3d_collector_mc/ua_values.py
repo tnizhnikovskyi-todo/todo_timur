@@ -154,7 +154,7 @@ def event_payload(
         "texts": texts,
         "path": [str(p) for p in (_get(event, "PathParts", []) or [])],
         "group": str(_get(event, "Group", "")),
-        "active": bool(active_id) if active_id is not None else False,
+        "active": bool(active_id) if active_id is not None else True,
         "acked": bool(getattr(event, "AckedState/Id", False)),
         "args": {str(i): str(a) for i, a in enumerate(args)},
     }

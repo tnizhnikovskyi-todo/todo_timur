@@ -20,7 +20,9 @@ class MaintenanceRequest(models.Model):
                 continue
             machine = self.env["f3d.machine"].sudo().browse(machine_id)
             dt = machine.current_downtime_id
-            if dt and not dt.date_end and not dt.maintenance_request_id:
+            # Стенд ТК-02: заявка з тривоги створюється раніше за перехід у `fault` (показання сигналу йдуть до диспетчера
+            # верстата) — тоді поточний простій ще `idle`/`setup`; заявку на нього не вішаємо, її забере `_f3d_link_request`.
+            if dt and not dt.date_end and not dt.maintenance_request_id and dt.state_kind == "fault":
                 dt.write({"maintenance_request_id": rec.id})
                 machine._f3d_post_request_event(dt)
         return records

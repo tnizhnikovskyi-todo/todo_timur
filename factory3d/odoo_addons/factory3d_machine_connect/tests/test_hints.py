@@ -86,3 +86,28 @@ class TestHints(DowntimeMixin, F3DMachineCase):
         bodies = " ".join(requests.message_ids.mapped("body"))
         self.assertIn("Подія верстата: E0421 Помилка шпинделя осі Z", bodies)
         self.assertEqual(self.env["maintenance.request"].search_count([("equipment_id", "=", self.eq_ua.id)]), 1)
+
+    def test_plain_event_is_not_archived(self):
+        """Стенд ТК-02: звичайна подія (не тривога) з `active=false` не архівується, лишається у «Подіях верстатів»."""
+        m = self.m_ua
+        self.ev(m, "", 0, "CNC-2: Помилка шпинделя осі Z", "09:42:01", kind="event", active=False)
+        self.assertEqual(self.env["f3d.machine.event"].search_count([("machine_id", "=", m.id)]), 1)
+
+    def test_request_before_fault_goes_to_fault_downtime(self):
+        """Стенд ТК-02: заявка з тривоги, створена до переходу в `fault`, не прив'язується до простою «Очікування»."""
+        m = self.m_ua
+        self.feed(self.ua(m, "09:40:00", state="READY"))
+        idle = m.current_downtime_id
+        self.assertEqual(idle.state_kind, "idle")
+        req = self.env["maintenance.request"].create(
+            {
+                "name": "Верстат: аварія",
+                "equipment_id": self.eq_ua.id,
+                "f3d_signal_id": m.sig_alarm_id.id,
+                "maintenance_team_id": self.team_mech.id,
+            }
+        )
+        self.assertFalse(idle.maintenance_request_id)
+        self.feed(self.ua(m, "09:42:00", state="ERROR", alarm=True))
+        self.assertEqual(m.current_downtime_id.state_kind, "fault")
+        self.assertEqual(m.current_downtime_id.maintenance_request_id, req)

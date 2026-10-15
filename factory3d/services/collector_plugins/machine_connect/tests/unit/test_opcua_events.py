@@ -78,3 +78,14 @@ async def test_unknown_event_type_fallback(ctx, ua_server, make_opcua, caplog):
     await ua_server.fire_event("alarm", "E1", 5, "Помилка", "Error")
     await until(lambda: ctx.events, timeout=3)
     assert ctx.events[0].payload["machine"] == "SAW-T"
+
+
+def test_plain_event_without_activestate_is_active():
+    """Стенд ТК-02: подія BaseEventType (як у iot_sim) без ActiveState — `active=true`, інакше Odoo архівує запис."""
+    from types import SimpleNamespace
+
+    from f3d_collector_mc import ua_values
+
+    ev = SimpleNamespace(SourceName="CNC-2", Message=None, Severity=800, Time=None)
+    payload = ua_values.event_payload("UA-CNC-2", "CNC-2", ev, frozenset())
+    assert payload["kind"] == "event" and payload["active"] is True

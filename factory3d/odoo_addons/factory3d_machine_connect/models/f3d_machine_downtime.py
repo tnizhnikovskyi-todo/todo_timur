@@ -90,7 +90,7 @@ class F3dMachineDowntime(models.Model):
                 "severity": int(payload.get("severity") or 0),
                 "text": text,
                 "path": (" / ".join(path) if isinstance(path, list) else (path or ""))[:256] or False,
-                "active": True if active is None else bool(active),
+                "active": True if (payload["kind"] != "alarm" or active is None) else bool(active),
                 "acked": bool(payload.get("acked")),
                 "ext_event_id": ext_id,
                 "payload": payload,

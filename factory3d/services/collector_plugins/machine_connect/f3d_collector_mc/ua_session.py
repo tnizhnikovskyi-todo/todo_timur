@@ -121,7 +121,9 @@ class Session:
             raise
         except Exception as exc:  # noqa: BLE001 - будь-яка помилка asyncua -> ConnectError без секретів
             await self._quiet_disconnect(client)
-            raise ConnectError(f"opcua connect to {cfg.endpoint} failed: {type(exc).__name__}: {exc}") from exc
+            # asyncua при чужому сертифікаті сервера дає лише TimeoutError: підказка для ТБ-07
+            hint = " (check pinned server certificate: F3D_OPCUA_SERVER_CERT)" if cfg.security_mode != "None" else ""
+            raise ConnectError(f"opcua connect to {cfg.endpoint} failed: {type(exc).__name__}: {exc}{hint}") from exc
         try:
             self.ns_array = list(await client.get_namespace_array())
         except Exception as exc:  # noqa: BLE001

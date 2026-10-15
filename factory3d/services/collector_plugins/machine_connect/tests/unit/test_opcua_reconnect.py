@@ -56,3 +56,27 @@ async def test_backoff_sequence(ctx, ua_server, opcua_plugin, vclock):
         await until(lambda k=k: len(backoffs()) > k, timeout=10)
         await vclock.tick(61)
     assert backoffs()[:8] == [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 60.0, 60.0]
+
+
+async def test_secure_connect_failure_names_server_certificate(make_opcua, monkeypatch):
+    """Стенд ТБ-07: при SignAndEncrypt і чужому сертифікаті asyncua дає лише TimeoutError — у помилці джерела має бути
+    підказка про закріплений сертифікат сервера (без секретів)."""
+    import pytest
+    from collector.core.errors import ConnectError
+    from f3d_collector_mc import ua_session
+
+    async def no_security(self, client):
+        return None
+
+    async def boom(self, *a, **kw):
+        raise TimeoutError("")
+
+    monkeypatch.setattr(ua_session.Session, "_configure_security", no_security)
+    monkeypatch.setattr(ua_session.Client, "connect", boom)
+    plugin = make_opcua("SAW-T", security_mode="SignAndEncrypt", security_policy="Basic256Sha256")
+    with pytest.raises(ConnectError, match="server certificate"):
+        await plugin.connect()
+    plain = make_opcua("SAW-T2", security_mode="None")
+    with pytest.raises(ConnectError) as ei:
+        await plain.connect()
+    assert "server certificate" not in str(ei.value)
