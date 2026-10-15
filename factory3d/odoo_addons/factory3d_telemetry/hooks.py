@@ -232,17 +232,37 @@ def _level0_vals(x):
     return vals
 
 
-def signals_level0(env):
-    """Крок 2: `x_f3d_signal` → `f3d.signal` (upsert за `code`), xml-id `sig_<slug>`, `derived_from_id`."""
+def _level0_snapshot(x, written):
+    """Що саме перенесла міграція з `x_f3d_signal` (для кроку 8): значення, стан, час, поріг рівня 0."""
+    return {
+        "value": x.x_value or 0.0,
+        "state": x.x_state or "",
+        "ts": x.x_updated or False,
+        "alarm": (x["x_alarm"] if "x_alarm" in x._fields else "") or "",
+        "written": written,
+    }
+
+
+def signals_level0(env, snapshot=None):
+    """Крок 2: `x_f3d_signal` → `f3d.signal` (upsert за `code`), xml-id `sig_<slug>`, `derived_from_id`.
+
+    `snapshot` (dict, заповнюється тут) — знімок того, що перенесено; крок 8 звіряє саме його, а не живий
+    рівень 0, який між кроками продовжує змінюватись (T-1). При повторному запуску сигнал `sim_data`, чиє
+    значення на рівні 0 свіжіше за `last_ts`, підхоплюється з рівня 0 (рівень 0 ще живий); новіше значення
+    телеметрії не відкочується (R-17 п. 7).
+    """
     if not _level0(env):
         return {"skipped": True}
+    snapshot = {} if snapshot is None else snapshot
     Signal = _signals(env)
     xs = env["x_f3d_signal"].sudo().with_context(active_test=False).search([], order="x_sequence, id")
     existing = {s.code: s for s in Signal.search([("code", "in", xs.mapped("x_code"))])}
     by_code, created, to_create = {}, 0, []
+    refreshed = Signal
     for x in xs:
         vals = _level0_vals(x)
         sig = existing.get(x.x_code)
+        snapshot[x.x_code] = _level0_snapshot(x, written=True)
         if sig is None:
             vals.update(
                 last_value=x.x_value or 0.0,
@@ -256,6 +276,18 @@ def signals_level0(env):
             continue
         if sig.origin == "sim_data":
             vals = {k: v for k, v in vals.items() if k not in DEFINITION_ONLY}
+            if x.x_updated and (not sig.last_ts or x.x_updated > sig.last_ts):
+                refreshed |= sig
+                vals.update(
+                    last_value=x.x_value or 0.0,
+                    last_quality="good",
+                    last_ts=x.x_updated,
+                    last_stored_ts=x.x_updated,
+                )
+                if (x.x_state == "тривога") != (sig.status == "alarm"):
+                    vals.update(status="alarm" if x.x_state == "тривога" else "ok", status_since=x.x_updated)
+            else:
+                snapshot[x.x_code]["written"] = False
         else:
             vals.update(
                 last_value=x.x_value or 0.0,
@@ -273,6 +305,7 @@ def signals_level0(env):
         for sig in Signal.create(to_create):
             by_code[sig.code] = sig
             created += 1
+    refreshed._recompute_status()  # пороги каталогу (warn) для підхоплених значень, як при першому запуску
     for x in xs:  # другий прохід: похідні
         source = x.x_source_id if "x_source_id" in x._fields else False
         sig = by_code[x.x_code]
@@ -492,7 +525,7 @@ def readings_level0(env):
         inserted += cr.rowcount
         start += READINGS_BATCH
     env["f3d.reading"].invalidate_model()
-    report = {"readings_migrated": total, "skipped_null_ts": null_ts, "readings_inserted": inserted}
+    report = {"readings_migrated": total, "skipped_null_ts": null_ts, "readings_inserted": inserted, "max_id": high}
     _logger.info("readings_level0: %s", report)
     return report
 
@@ -545,34 +578,75 @@ def hours_rebuild(env):
     return {"hours": hours}
 
 
-# --- крок 8 --------------------------------------------------------------------------------------------
-def verify(env):
-    """Крок 8: звірка рівня 0 з f3d.*; повертає список розбіжностей."""
+# --- крок 8 -------------------------------------------------------------------------------------------
+READINGS_MISSING_SQL = """
+SELECT count(*)
+  FROM x_f3d_reading r
+  JOIN x_f3d_signal x ON x.id = r.x_signal_id
+  LEFT JOIN f3d_signal s ON s.code = x.x_code
+  LEFT JOIN f3d_reading fr ON fr.signal_id = s.id AND fr.ts = r.x_time
+ WHERE r.x_time IS NOT NULL AND fr.id IS NULL{bound}
+"""
+THRESHOLD_COLS = ("warn_low", "warn_high", "alarm_low", "alarm_high")
+
+
+def _status_from_catalog(sig, snap):
+    """Статус відрізняється від рівня 0 лише через пороги каталогу, яких на рівні 0 не було (T-1).
+
+    Рівень 0 знає лише «норма»/«тривога» і один поріг `x_alarm`; каталог (Додаток C.2) додає «увагу» й нижні/верхні
+    пороги. Якщо рівень 0 вважав значення нормою, а f3d.signal — «увага»/«тривога» через додаткові пороги, це не
+    розбіжність міграції. Тривога рівня 0, якої немає в f3d.signal, лишається розбіжністю.
+    """
+    if snap["state"] == "тривога" or sig.status not in ("warn", "alarm"):
+        return False
+    own = {"above": "alarm_high", "below": "alarm_low"}.get(snap["alarm"])
+    extra = [col for col in THRESHOLD_COLS if sig[col + "_on"] and col != own]
+    return bool(extra or sig.alarm_states)
+
+
+def verify(env, snapshot=None, notes=None, max_reading_id=None):
+    """Крок 8: звірка рівня 0 з f3d.*; повертає список розбіжностей.
+
+    Порівнюється зі знімком, який зробив крок 2 (`snapshot`), а не з живим рівнем 0: значення й стан
+    звіряються лише для сигналів, чиє `last_*` взято з цього знімка (записане цим запуском або з тим самим
+    `last_ts`); новіші дані телеметрії не перевіряються. Різниця статусу через пороги каталогу — не розбіжність,
+    вона додається в `notes` (якщо передано список). Показання: кожне `x_f3d_reading` (до `max_reading_id`,
+    знятого кроком 5) має мати `f3d.reading`; зайві (рівень 0 чистить свої рядки) не заважають.
+    """
     if not _level0(env):
         return []
     mismatches = []
-    xs = env["x_f3d_signal"].sudo().with_context(active_test=False).search([])
+    if snapshot is None:
+        snapshot = {}
+        for x in env["x_f3d_signal"].sudo().with_context(active_test=False).search([]):
+            snapshot[x.x_code] = _level0_snapshot(x, written=True)
     Signal = _signals(env)
     count = Signal.search_count([("origin", "=", "sim_data")])
-    if count != len(xs):
-        mismatches.append("signals: f3d.signal(sim_data) %d != x_f3d_signal %d" % (count, len(xs)))
-    sigs = {s.code: s for s in Signal.search([("code", "in", xs.mapped("x_code"))])}
-    for x in xs:
-        sig = sigs.get(x.x_code)
+    if count != len(snapshot):
+        mismatches.append("signals: f3d.signal(sim_data) %d != x_f3d_signal %d" % (count, len(snapshot)))
+    sigs = {s.code: s for s in Signal.search([("code", "in", list(snapshot))])}
+    for code, snap in snapshot.items():
+        sig = sigs.get(code)
         if not sig:
-            mismatches.append("%s: сигнал відсутній" % x.x_code)
+            mismatches.append("%s: сигнал відсутній" % code)
             continue
-        if abs(sig.last_value - (x.x_value or 0.0)) >= 1e-6:
-            mismatches.append("%s: last_value %.3f != x_value %.3f" % (x.x_code, sig.last_value, x.x_value or 0.0))
-        expected = "alarm" if x.x_state == "тривога" else "ok"
-        if (x.x_state or "") and sig.status != expected:
-            mismatches.append("%s: status %s != x_state %s" % (x.x_code, sig.status, x.x_state))
+        if not snap["written"] and not (snap["ts"] and (sig.last_ts or False) == snap["ts"]):
+            continue  # значення вже новіше за міграцію (телеметрія), порівнювати нема з чим
+        if abs(sig.last_value - snap["value"]) >= 1e-6:
+            mismatches.append("%s: last_value %.3f != x_value %.3f" % (code, sig.last_value, snap["value"]))
+        expected = "alarm" if snap["state"] == "тривога" else "ok"
+        if snap["state"] and sig.status != expected:
+            if _status_from_catalog(sig, snap):
+                if notes is not None:
+                    notes.append("%s: status %s (пороги каталогу), x_state %s" % (code, sig.status, snap["state"]))
+            else:
+                mismatches.append("%s: status %s != x_state %s" % (code, sig.status, snap["state"]))
     if "x_f3d_reading" in env:
-        env.cr.execute("SELECT count(*) FROM x_f3d_reading WHERE x_time IS NOT NULL")
-        expected_count = env.cr.fetchone()[0]
-        actual = env["f3d.reading"].sudo().search_count([("src", "=", "sim_data")])
-        if actual != expected_count:
-            mismatches.append("readings: f3d.reading(sim_data) %d != x_f3d_reading %d" % (actual, expected_count))
+        bound = " AND r.id <= %s" if max_reading_id is not None else ""
+        env.cr.execute(READINGS_MISSING_SQL.format(bound=bound), (max_reading_id,) if bound else ())
+        missing = env.cr.fetchone()[0]
+        if missing:
+            mismatches.append("readings: %d x_f3d_reading без відповідного f3d.reading(sim_data)" % missing)
     return mismatches
 
 
@@ -639,21 +713,29 @@ def report(env, data):
 
 
 def run_migration(env):
-    """Кроки 1…11 (§5.3); ідемпотентно. Крок 6 і 9–10 — лише при `mismatches == []`."""
+    """Кроки 1…11 (§5.3); ідемпотентно. Крок 6 і 9–10 — лише при `mismatches == []` (`status_notes` не рахуються)."""
     env = env(su=True)
     data = {"state": "pending", "ts": fields.Datetime.now().isoformat(), "mismatches": []}
     params(env)
-    level0 = signals_level0(env)
+    snapshot = {}  # що перенесено кроком 2: крок 8 звіряє його, а не живий рівень 0
+    level0 = signals_level0(env, snapshot)
     skipped = bool(level0.get("skipped"))
     if not skipped:
         data.update({k: level0[k] for k in ("signals_migrated", "created", "by_module", "alarm", "with_request")})
     data["signals_catalog"] = signals_catalog(env)
     data.update(meters(env))
     data["sim_catalog"] = sim_catalog(env)
+    max_reading_id = None
     if not skipped:
-        data.update({k: v for k, v in readings_level0(env).items() if k in ("readings_migrated", "skipped_null_ts")})
+        readings = readings_level0(env)
+        max_reading_id = readings.get("max_id")
+        data.update({k: v for k, v in readings.items() if k in ("readings_migrated", "skipped_null_ts")})
     data.update(hours_rebuild(env))
-    data["mismatches"] = verify(env)
+    notes = []  # різниця статусу через пороги каталогу — не розбіжність
+    data["mismatches"] = verify(env, snapshot, notes, max_reading_id)
+    if notes:
+        data["status_notes"] = notes[:20]
+        data["status_notes_total"] = len(notes)
     clean = not data["mismatches"]
     if not skipped and clean:
         data["requests_linked"] = requests_level0(env).get("requests_linked", 0)

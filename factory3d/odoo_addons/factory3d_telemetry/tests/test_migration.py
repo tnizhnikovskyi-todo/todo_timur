@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from unittest import mock
 
 from odoo.addons.factory3d_telemetry import hooks
@@ -24,6 +25,10 @@ STATE_ROW = {
 }
 
 
+# Додаток C.2: каталог додає пороги батареї (warn 25 / alarm 15), яких на рівні 0 не було (T-1)
+BATTERY_ROW = {"code": "equipment/FL-T/battery", "warn_low": "25", "alarm_low": "15", "new": "0"}
+
+
 class Level0Mixin:
     @classmethod
     def setUpClass(cls):
@@ -43,8 +48,8 @@ class Level0Mixin:
             }
         )
 
-    def migrate(self):
-        with self.with_catalog_rows([STATE_ROW]):
+    def migrate(self, rows=None):
+        with self.with_catalog_rows(rows or [STATE_ROW]):
             return hooks.run_migration(self.env)
 
     def sig(self, code):
@@ -145,6 +150,97 @@ class TestRerunPartial(Level0Mixin, F3DTelemetryCase):
             ],
             "partial",
         )
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
+class TestCatalogThresholds(Level0Mixin, F3DTelemetryCase):
+    """T-1: пороги каталогу дають статус, якого на рівні 0 не було; крок 8 це не розбіжність."""
+
+    def test_status_from_catalog_thresholds_is_not_mismatch(self):
+        self.l0["signals"]["bat"].x_value = 22.9  # нижче warn 25, вище alarm 15; рівень 0: «норма», порога немає
+        report = self.migrate([STATE_ROW, BATTERY_ROW])
+        battery = self.sig("equipment/FL-T/battery")
+        self.assertEqual((battery.status, battery.last_value), ("warn", 22.9))
+        self.assertEqual(report["mismatches"], [])
+        self.assertEqual(report["state"], "done")
+        self.assertEqual(report["status_notes_total"], 1)
+        self.assertIn("equipment/FL-T/battery", report["status_notes"][0])
+        # кроки після звірки виконані
+        self.assertEqual(report["requests_linked"], 2)
+        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE x_active")
+        self.assertEqual(self.env.cr.fetchone()[0], 0)
+
+    def test_alarm_threshold_from_catalog_is_not_mismatch(self):
+        self.l0["signals"]["bat"].x_value = 10.0  # нижче alarm 15: статус «тривога» лише за порогом каталогу
+        report = self.migrate([STATE_ROW, BATTERY_ROW])
+        self.assertEqual(self.sig("equipment/FL-T/battery").status, "alarm")
+        self.assertEqual((report["mismatches"], report["state"]), ([], "done"))
+
+    def test_level0_alarm_missing_in_f3d_is_still_mismatch(self):
+        dust = self.l0["signals"]["dust"]
+        dust.x_state = "тривога"  # рівень 0 у тривозі (89.3 при порозі 90 — стан від гістерезису)
+        report = self.migrate([STATE_ROW, {"code": "fire/groups/FA-T/dust", "alarm_high": "100", "new": "0"}])
+        self.assertEqual(report["state"], "partial")
+        self.assertTrue(
+            any(m.startswith("fire/groups/FA-T/dust: status") for m in report["mismatches"]), report["mismatches"]
+        )
+        self.assertTrue(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+        self.assertNotIn("requests_linked", report)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_telemetry")
+class TestRerunLiveLevel0(Level0Mixin, F3DTelemetryCase):
+    """T-1: повторний запуск при живому рівні 0 звіряє знімок міграції, а не значення, що змінились потім."""
+
+    def live_tick(self, minutes=60):
+        """Рівень 0 «працює»: нові значення й `x_updated`, свіжі показання, а старі показання він чистить."""
+        sigs = self.l0["signals"]
+        when = self.T0 + timedelta(minutes=minutes)
+        for key, value in (("bat", 21.6), ("rv", 330.1), ("press", 7.2), ("pnow", 13.4)):
+            sigs[key].write({"x_value": value, "x_updated": when})
+        sigs["bat"].x_state = "норма"
+        new = self.env["x_f3d_reading"].create(
+            {"x_name": "live", "x_signal_id": sigs["bat"].id, "x_value": 21.6, "x_unit": "%", "x_time": when}
+        )
+        self.l0["readings"][0].unlink()  # ротація iot_sim: рядок є в f3d.reading, а в x_f3d_reading його вже нема
+        return when, new
+
+    def test_rerun_after_live_changes_completes(self):
+        report = self.migrate([STATE_ROW, BATTERY_ROW])
+        self.assertEqual(report["state"], "done")
+        readings = self.env["f3d.reading"].search_count([("src", "=", "sim_data")])
+        when, _new = self.live_tick()
+        self.env.cr.execute("UPDATE x_f3d_signal SET x_active = true")  # як на живій базі: рівень 0 ще не вимкнено
+        self.env["x_f3d_signal"].invalidate_model()
+        report = self.migrate([STATE_ROW, BATTERY_ROW])
+        self.assertEqual(report["mismatches"], [])
+        self.assertEqual(report["state"], "done")
+        self.assertEqual(report["created"], 0)
+        battery = self.sig("equipment/FL-T/battery")
+        self.assertEqual((battery.last_value, battery.last_ts, battery.status), (21.6, when, "warn"))
+        self.assertEqual(self.sig("energy/consumers/SAW-T/p_now").last_value, 13.4)
+        self.assertEqual(self.env["f3d.reading"].search_count([("src", "=", "sim_data")]), readings + 1)
+        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+
+    def test_rerun_does_not_roll_back_newer_telemetry(self):
+        self.migrate([STATE_ROW, BATTERY_ROW])
+        when, _new = self.live_tick()
+        pnow = self.sig("energy/consumers/SAW-T/p_now")
+        newer = when + timedelta(minutes=30)
+        pnow.write({"last_value": 99.0, "last_ts": newer})  # колектор уже прислав свіжіше значення
+        report = self.migrate([STATE_ROW, BATTERY_ROW])
+        self.assertEqual((report["mismatches"], report["state"]), ([], "done"))
+        self.assertEqual((pnow.last_value, pnow.last_ts), (99.0, newer))
+
+    def test_missing_reading_still_reported_on_rerun(self):
+        self.migrate([STATE_ROW, BATTERY_ROW])
+        self.env.cr.execute("DELETE FROM f3d_reading WHERE id = (SELECT min(id) FROM f3d_reading)")
+        self.env["f3d.reading"].invalidate_model()
+        with mock.patch.object(hooks, "readings_level0", return_value={"max_id": 10**9}):
+            report = self.migrate([STATE_ROW, BATTERY_ROW])
+        self.assertEqual(report["state"], "partial")
+        self.assertTrue(any(m.startswith("readings:") for m in report["mismatches"]), report["mismatches"])
 
 
 class DropMixin(Level0Mixin):
