@@ -172,7 +172,8 @@ class F3dViewerProviderLogistics(models.AbstractModel):
         res = {}
         for c in env["quality.check"].search_fetch([
                 ("picking_id", "in", pickings.ids), ("quality_state", "=", "fail")]):
-            res.setdefault(c.picking_id.id, set()).add(c.lot_id.id)
+            # Odoo 19: лише lot_ids (m2m); перевірка без партій, як і раніше, відповідає рядкам без партії
+            res.setdefault(c.picking_id.id, set()).update(c.lot_ids.ids or [False])
         return res
 
     @api.model

@@ -200,8 +200,8 @@ class F3dViewerProviderStock(models.AbstractModel):
         env = self.env
         if not payload_tools.access_ok(env, "quality.check"):
             return {}
-        checks = env["quality.check"].search_fetch([("quality_state", "=", "fail"), ("lot_id", "!=", False)])
-        return {c.lot_id.id: c.name for c in checks}
+        checks = env["quality.check"].search_fetch([("quality_state", "=", "fail"), ("lot_ids", "!=", False)])
+        return {lot.id: c.name for c in checks for lot in c.lot_ids}
 
     @api.model
     def _orderpoints(self, locs):

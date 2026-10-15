@@ -33,15 +33,17 @@ class F3dViewerProviderQuality(models.AbstractModel):
         checks = env["quality.check"].search_fetch(["|", ("create_date", ">=", since), ("quality_state", "=", "fail")],
                                              order="id")
         quarantine = set()
-        if payload_tools.access_ok(env, "stock.quant") and checks.lot_id:
+        # Odoo 19: у quality.check немає lot_id, лише lot_ids (m2m) — перевірка у карантині, якщо хоч одна її партія там
+        if payload_tools.access_ok(env, "stock.quant") and checks.lot_ids:
             quarantine = {q.lot_id.id for q in env["stock.quant"].search_fetch([
-                ("lot_id", "in", checks.lot_id.ids), ("quantity", "!=", 0), ("location_id.f3d_code", "=", QC_CODE)])}
+                ("lot_id", "in", checks.lot_ids.ids), ("quantity", "!=", 0), ("location_id.f3d_code", "=", QC_CODE)])}
         fields = env["quality.check"]._fields
         out = []
         for c in checks:
             title = (c.point_id.title if "point_id" in fields else "") or (
                 c.test_type_id.name if "test_type_id" in fields else "") or c.name
-            location = QC_CODE if c.lot_id.id in quarantine else (c.picking_id.location_dest_id.f3d_code or "")
+            location = QC_CODE if quarantine.intersection(c.lot_ids.ids) else (
+                c.picking_id.location_dest_id.f3d_code or "")
             note = ""
             for f in ("additional_note", "note"):
                 if f in fields and c[f]:
@@ -50,8 +52,8 @@ class F3dViewerProviderQuality(models.AbstractModel):
                         break
             rec = {"name": c.name, "title": title, "product": c.product_id.default_code or "",
                    "state": c.quality_state, "location": location, "note": note[:300]}
-            if c.lot_id:
-                rec["lot"] = c.lot_id.name
+            if c.lot_ids:
+                rec["lot"] = ", ".join(c.lot_ids.mapped("name"))
             if c.picking_id:
                 rec["picking"] = c.picking_id.name
             if c.production_id:
