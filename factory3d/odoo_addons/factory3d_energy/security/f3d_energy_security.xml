@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §4.2 (групи), §4.3 (record rules — W1 додає разом із моделями) -->
+<odoo>
+    <record id="privilege_f3d_energy" model="res.groups.privilege">
+        <field name="name">Завод 3D: енергетика</field>
+        <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
+        <field name="sequence">50</field>
+    </record>
+    <record id="group_f3d_energy_user" model="res.groups">
+        <field name="name">Енергетика: перегляд</field>
+        <field name="privilege_id" ref="privilege_f3d_energy"/>
+        <field name="sequence">10</field>
+        <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+    </record>
+    <record id="group_f3d_energy_cost" model="res.groups">
+        <field name="name">Енергетика: вартість</field>
+        <field name="privilege_id" ref="privilege_f3d_energy"/>
+        <field name="sequence">20</field>
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_user'))]"/>
+    </record>
+    <record id="group_f3d_energy_manager" model="res.groups">
+        <field name="name">Енергетика: енергетик</field>
+        <field name="privilege_id" ref="privilege_f3d_energy"/>
+        <field name="sequence">30</field>
+        <field name="implied_ids"
+               eval="[Command.link(ref('group_f3d_energy_cost')), Command.link(ref('factory3d_base.group_f3d_manager'))]"/>
+    </record>
+    <record id="mrp.group_mrp_user" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_user'))]"/>
+    </record>
+    <record id="mrp.group_mrp_manager" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost'))]"/>
+    </record>
+    <record id="account.group_account_readonly" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost'))]"/>
+    </record>
+    <record id="account.group_account_invoice" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_cost'))]"/>
+    </record>
+    <record id="factory3d_base.group_f3d_admin" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_manager'))]"/>
+    </record>
+
+    <!-- W1: record rules §4.3 (глобальні, мультикомпанія), коли з'являться моделі:
+         f3d_energy_node_rule_company (f3d.energy.node), f3d_energy_meter_rule_company (f3d.energy.meter),
+         f3d_energy_tariff_rule_company (f3d.energy.tariff); W3: f3d_energy_alloc_rule_company (f3d.energy.alloc).
+         Домен: ['|', ('company_id','=',False), ('company_id','in',company_ids)]. -->
+</odoo>

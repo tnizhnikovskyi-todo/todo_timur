@@ -1,0 +1,68 @@
+code,name,node,model,role,source,p_signal,e_import_signal,e_export_signal,ct_ratio
+PM-Q1,PM5560 ввід Q1,Q1,pm5560,incomer,MB-U01-PM-Q1,energy/cells/Q1/p_now,energy/cells/Q1/kwh_total,energy/cells/Q1/kwh_export,1600/5
+PM-Q2,PM5560 ввід Q2,Q2,pm5560,incomer,MB-U02-PM-Q2,energy/cells/Q2/p_now,energy/cells/Q2/kwh_total,energy/cells/Q2/kwh_export,1600/5
+PM-QF-1,PM5560 фідер QF-1,QF-1,pm5560,feeder,MB-U03-PM-QF-1,energy/lines/BW-1/p_now,energy/lines/BW-1/kwh_total,,630/5
+PM-QF-2,PM5560 фідер QF-2,QF-2,pm5560,feeder,MB-U04-PM-QF-2,energy/lines/BW-2/p_now,energy/lines/BW-2/kwh_total,,630/5
+PM-QF-3,PM5560 фідер QF-3,QF-3,pm5560,feeder,MB-U05-PM-QF-3,energy/lines/BW-3/p_now,energy/lines/BW-3/kwh_total,,630/5
+PM-QF-4,PM5560 фідер QF-4,QF-4,pm5560,feeder,MB-U06-PM-QF-4,energy/lines/BW-4/p_now,energy/lines/BW-4/kwh_total,,630/5
+PM-QF-C1,PM5560 фідер QF-C1,QF-C1,pm5560,feeder,MB-U07-PM-QF-C1,energy/lines/C1/p_now,energy/lines/C1/kwh_total,,630/5
+PM-QF-C2,PM5560 фідер QF-C2,QF-C2,pm5560,feeder,MB-U08-PM-QF-C2,energy/lines/C2/p_now,energy/lines/C2/kwh_total,,400/5
+PM-SAW-1,PM5560 Розкрій 1,SAW-1,pm5560,consumer,MB-U11-PM-SAW-1,energy/consumers/SAW-1/p_now,energy/consumers/SAW-1/kwh_total,,100/5
+PM-SAW-2,PM5560 Розкрій 2,SAW-2,pm5560,consumer,MB-U12-PM-SAW-2,energy/consumers/SAW-2/p_now,energy/consumers/SAW-2/kwh_total,,100/5
+PM-SAW-3,PM5560 Пакетний розкрій,SAW-3,pm5560,consumer,MB-U13-PM-SAW-3,energy/consumers/SAW-3/p_now,energy/consumers/SAW-3/kwh_total,,100/5
+PM-SLIDE-1,PM5560 Форматно-розкрійний,SLIDE-1,pm5560,consumer,MB-U14-PM-SLIDE-1,energy/consumers/SLIDE-1/p_now,energy/consumers/SLIDE-1/kwh_total,,100/5
+PM-VSAW-1,PM5560 Вертикальна пила,VSAW-1,pm5560,consumer,MB-U15-PM-VSAW-1,energy/consumers/VSAW-1/p_now,energy/consumers/VSAW-1/kwh_total,,100/5
+PM-NEST-1,PM5560 Нестинг ЧПК,NEST-1,pm5560,consumer,MB-U16-PM-NEST-1,energy/consumers/NEST-1/p_now,energy/consumers/NEST-1/kwh_total,,100/5
+PM-EDGE-1,PM5560 Крайкооблицювання A,EDGE-1,pm5560,consumer,MB-U17-PM-EDGE-1,energy/consumers/EDGE-1/p_now,energy/consumers/EDGE-1/kwh_total,,100/5
+PM-EDGE-2,PM5560 Крайкооблицювання B,EDGE-2,pm5560,consumer,MB-U18-PM-EDGE-2,energy/consumers/EDGE-2/p_now,energy/consumers/EDGE-2/kwh_total,,100/5
+PM-EDGE-3,PM5560 Крайкооблицювання C,EDGE-3,pm5560,consumer,MB-U19-PM-EDGE-3,energy/consumers/EDGE-3/p_now,energy/consumers/EDGE-3/kwh_total,,100/5
+PM-CNC-3,PM5560 Присадка ЧПК D1,CNC-3,pm5560,consumer,MB-U20-PM-CNC-3,energy/consumers/CNC-3/p_now,energy/consumers/CNC-3/kwh_total,,100/5
+PM-CNC-1,PM5560 Присадка ЧПК A,CNC-1,pm5560,consumer,MB-U21-PM-CNC-1,energy/consumers/CNC-1/p_now,energy/consumers/CNC-1/kwh_total,,100/5
+PM-CNC-2,PM5560 Присадка ЧПК B,CNC-2,pm5560,consumer,MB-U22-PM-CNC-2,energy/consumers/CNC-2/p_now,energy/consumers/CNC-2/kwh_total,,100/5
+PM-BORE-1,PM5560 Прохідна присадка C,BORE-1,pm5560,consumer,MB-U23-PM-BORE-1,energy/consumers/BORE-1/p_now,energy/consumers/BORE-1/kwh_total,,100/5
+PM-CNC-4,PM5560 Присадка ЧПК D2,CNC-4,pm5560,consumer,MB-U24-PM-CNC-4,energy/consumers/CNC-4/p_now,energy/consumers/CNC-4/kwh_total,,100/5
+PM-DOWEL-1,PM5560 Шкантування C,DOWEL-1,pm5560,consumer,MB-U25-PM-DOWEL-1,energy/consumers/DOWEL-1/p_now,energy/consumers/DOWEL-1/kwh_total,,100/5
+PM-SORT-1,PM5560 Сортувальний робот,SORT-1,pm5560,consumer,MB-U26-PM-SORT-1,energy/consumers/SORT-1/p_now,energy/consumers/SORT-1/kwh_total,,100/5
+PM-SAND-1,PM5560 Шліфування фасадів,SAND-1,pm5560,consumer,MB-U27-PM-SAND-1,energy/consumers/SAND-1/p_now,energy/consumers/SAND-1/kwh_total,,100/5
+PM-AUTOSPRAY-1,PM5560 Автомат фарбування,AUTOSPRAY-1,pm5560,consumer,MB-U28-PM-AUTOSPRAY-1,energy/consumers/AUTOSPRAY-1/p_now,energy/consumers/AUTOSPRAY-1/kwh_total,,100/5
+PM-UV-1,PM5560 УФ-лакування,UV-1,pm5560,consumer,MB-U29-PM-UV-1,energy/consumers/UV-1/p_now,energy/consumers/UV-1/kwh_total,,100/5
+PM-HINGE-1,PM5560 Встановлення завіс,HINGE-1,pm5560,consumer,MB-U30-PM-HINGE-1,energy/consumers/HINGE-1/p_now,energy/consumers/HINGE-1/kwh_total,,100/5
+PM-GLUE-1,PM5560 Кабіна нанесення клею,GLUE-1,pm5560,consumer,MB-U31-PM-GLUE-1,energy/consumers/GLUE-1/p_now,energy/consumers/GLUE-1/kwh_total,,100/5
+PM-PRESS-1,PM5560 Мембранно-вакуумний прес,PRESS-1,pm5560,consumer,MB-U32-PM-PRESS-1,energy/consumers/PRESS-1/p_now,energy/consumers/PRESS-1/kwh_total,,100/5
+PM-SPRAY-1,PM5560 Фарбувальна камера,SPRAY-1,pm5560,consumer,MB-U33-PM-SPRAY-1,energy/consumers/SPRAY-1/p_now,energy/consumers/SPRAY-1/kwh_total,,100/5
+PM-DRY-1,PM5560 Сушильна камера,DRY-1,pm5560,consumer,MB-U34-PM-DRY-1,energy/consumers/DRY-1/p_now,energy/consumers/DRY-1/kwh_total,,100/5
+PM-ASMLINE-1,PM5560 Лінія збирання корпусів,ASMLINE-1,pm5560,consumer,MB-U35-PM-ASMLINE-1,energy/consumers/ASMLINE-1/p_now,energy/consumers/ASMLINE-1/kwh_total,,100/5
+PM-ASM-1,PM5560 Збирання 1,ASM-1,pm5560,consumer,MB-U36-PM-ASM-1,energy/consumers/ASM-1/p_now,energy/consumers/ASM-1/kwh_total,,100/5
+PM-ASM-2,PM5560 Збирання 2,ASM-2,pm5560,consumer,MB-U37-PM-ASM-2,energy/consumers/ASM-2/p_now,energy/consumers/ASM-2/kwh_total,,100/5
+PM-ASM-3,PM5560 Збирання 3,ASM-3,pm5560,consumer,MB-U38-PM-ASM-3,energy/consumers/ASM-3/p_now,energy/consumers/ASM-3/kwh_total,,100/5
+PM-ASM-4,PM5560 Збирання 4,ASM-4,pm5560,consumer,MB-U39-PM-ASM-4,energy/consumers/ASM-4/p_now,energy/consumers/ASM-4/kwh_total,,100/5
+PM-ASM-5,PM5560 Збирання 5,ASM-5,pm5560,consumer,MB-U40-PM-ASM-5,energy/consumers/ASM-5/p_now,energy/consumers/ASM-5/kwh_total,,100/5
+PM-ASM-6,PM5560 Збирання 6,ASM-6,pm5560,consumer,MB-U41-PM-ASM-6,energy/consumers/ASM-6/p_now,energy/consumers/ASM-6/kwh_total,,100/5
+PM-PACK-1,PM5560 Пакування 1,PACK-1,pm5560,consumer,MB-U42-PM-PACK-1,energy/consumers/PACK-1/p_now,energy/consumers/PACK-1/kwh_total,,100/5
+PM-PACK-2,PM5560 Пакування 2,PACK-2,pm5560,consumer,MB-U43-PM-PACK-2,energy/consumers/PACK-2/p_now,energy/consumers/PACK-2/kwh_total,,100/5
+PM-BOX-1,PM5560 Розкрій гофрокартону,BOX-1,pm5560,consumer,MB-U44-PM-BOX-1,energy/consumers/BOX-1/p_now,energy/consumers/BOX-1/kwh_total,,100/5
+PM-PACKLINE-1,PM5560 Термоусадка та обв'язка,PACKLINE-1,pm5560,consumer,MB-U45-PM-PACKLINE-1,energy/consumers/PACKLINE-1/p_now,energy/consumers/PACKLINE-1/kwh_total,,100/5
+PM-GANTRY-1,PM5560 Портальний склад плит,GANTRY-1,pm5560,consumer,MB-U46-PM-GANTRY-1,energy/consumers/GANTRY-1/p_now,energy/consumers/GANTRY-1/kwh_total,,100/5
+PM-COMPRESSOR,"PM5560 Компресорна (2 × GA 37 VSD+, осушувач)",COMPRESSOR,pm5560,consumer,MB-U47-PM-COMPRESSOR,energy/consumers/COMPRESSOR/p_now,energy/consumers/COMPRESSOR/kwh_total,,100/5
+PM-DUST-1,PM5560 Вентилятори аспірації,DUST-1,pm5560,consumer,MB-U48-PM-DUST-1,energy/consumers/DUST-1/p_now,energy/consumers/DUST-1/kwh_total,,100/5
+PM-BOILER,"PM5560 Котельня (2 котли), шнеки, брикетування",BOILER,pm5560,consumer,MB-U49-PM-BOILER,energy/consumers/BOILER/p_now,energy/consumers/BOILER/kwh_total,,100/5
+PM-CHARGING,PM5560 Зарядна станція (3 зарядні пристрої),CHARGING,pm5560,consumer,MB-U50-PM-CHARGING,energy/consumers/CHARGING/p_now,energy/consumers/CHARGING/kwh_total,,100/5
+PM-OFFICE,"PM5560 Офіс, побутові приміщення, серверна",OFFICE,pm5560,consumer,MB-U51-PM-OFFICE,energy/consumers/OFFICE/p_now,energy/consumers/OFFICE/kwh_total,,100/5
+PM-LP-1,"PM5560 Щит освітлення ЩО-1 · склади сировини, приймання",LP-1,pm5560,consumer,MB-U52-PM-LP-1,energy/consumers/LP-1/p_now,energy/consumers/LP-1/kwh_total,,100/5
+PM-LP-2,PM5560 Щит освітлення ЩО-2 · лінії й дільниця фасадів,LP-2,pm5560,consumer,MB-U53-PM-LP-2,energy/consumers/LP-2/p_now,energy/consumers/LP-2/kwh_total,,100/5
+PM-LP-3,"PM5560 Щит освітлення ЩО-3 · збирання, пакування, склад ГП, відвантаження",LP-3,pm5560,consumer,MB-U54-PM-LP-3,energy/consumers/LP-3/p_now,energy/consumers/LP-3/kwh_total,,100/5
+PM-RV-ALL,PM5560 Дахові установки вентиляції (25 шт.),RV-ALL,pm5560,consumer,MB-U55-PM-RV-ALL,energy/consumers/RV-ALL/p_now,energy/consumers/RV-ALL/kwh_total,,100/5
+PM-AHU-1,PM5560 Припливна установка дільниці фасадів,AHU-1,pm5560,consumer,MB-U56-PM-AHU-1,energy/consumers/AHU-1/p_now,energy/consumers/AHU-1/kwh_total,,100/5
+PM-EF-ELEC,PM5560 Витяжні вентилятори електрощитової,EF-ELEC,pm5560,consumer,MB-U57-PM-EF-ELEC,energy/consumers/EF-ELEC/p_now,energy/consumers/EF-ELEC/kwh_total,,100/5
+PM-EF-CMP,PM5560 Витяжний вентилятор компресорної,EF-CMP,pm5560,consumer,MB-U58-PM-EF-CMP,energy/consumers/EF-CMP/p_now,energy/consumers/EF-CMP/kwh_total,,100/5
+PM-EF-CHG,PM5560 Витяжка зарядної станції (Ex),EF-CHG,pm5560,consumer,MB-U59-PM-EF-CHG,energy/consumers/EF-CHG/p_now,energy/consumers/EF-CHG/kwh_total,,100/5
+SUN-1,Huawei SUN2000 PV-INV-1,PV-INV-1,sun2000,generation,MB-U61-SUN-1,infra/pv/PV-INV-1/p_kw,infra/pv/PV-INV-1/kwh_total,,
+SUN-2,Huawei SUN2000 PV-INV-2,PV-INV-2,sun2000,generation,MB-U62-SUN-2,infra/pv/PV-INV-2/p_kw,infra/pv/PV-INV-2/kwh_total,,
+SUN-3,Huawei SUN2000 PV-INV-3,PV-INV-3,sun2000,generation,MB-U63-SUN-3,infra/pv/PV-INV-3/p_kw,infra/pv/PV-INV-3/kwh_total,,
+SUN-4,Huawei SUN2000 PV-INV-4,PV-INV-4,sun2000,generation,MB-U64-SUN-4,infra/pv/PV-INV-4/p_kw,infra/pv/PV-INV-4/kwh_total,,
+SUN-5,Huawei SUN2000 PV-INV-5,PV-INV-5,sun2000,generation,MB-U65-SUN-5,infra/pv/PV-INV-5/p_kw,infra/pv/PV-INV-5/kwh_total,,
+SUN-6,Huawei SUN2000 PV-INV-6,PV-INV-6,sun2000,generation,MB-U66-SUN-6,infra/pv/PV-INV-6/p_kw,infra/pv/PV-INV-6/kwh_total,,
+SUN-7,Huawei SUN2000 PV-INV-7,PV-INV-7,sun2000,generation,MB-U67-SUN-7,infra/pv/PV-INV-7/p_kw,infra/pv/PV-INV-7/kwh_total,,
+SUN-8,Huawei SUN2000 PV-INV-8,PV-INV-8,sun2000,generation,MB-U68-SUN-8,infra/pv/PV-INV-8/p_kw,infra/pv/PV-INV-8/kwh_total,,
+LUNA-1,Huawei LUNA2000,BESS,luna2000,storage,MB-U69-BESS,infra/totals/bess_kw,infra/bess/kwh_charge_total,infra/bess/kwh_discharge_total,
+TEDOM-1,TEDOM Quanto D800,CHP,tedom,generation,MB-U72-CHP,infra/totals/chp_kw,infra/chp/kwh_total,,
