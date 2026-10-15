@@ -1,13 +1,13 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
 Тесты: — , ТК: —
-Решений без заказчика: 6 (ниже)
+Решений без заказчика: 7 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
-| D (демо-шаблон) | в работе | — | — |
+| D (демо-шаблон) | принят | 1bdb774 | f3d_demo_tpl: 35 РЦ, 731 лок., WH/MO/00231, base+iot_sim |
 | W0 | принят | e59553e | TestInstall 6/6 (1 skip без демо) |
 | W1a | принят | e3fcaea | /factory3d_viewer+/test_factory3d_viewer 60/60 (демо-тесты skip) |
 | W1b-1 | в работе (M-01a…f) | — | — |
@@ -27,3 +27,4 @@
 - DEC-4: `zz_fail` бросает ValueError только при context `zz_fail` или параметре `factory3d.test.zz_fail` — иначе ERROR в логе валит каждый прогон (run_tests strict). — `test_factory3d_viewer/models/providers.py`
 - DEC-5: встроенные провайдеры — по файлу на провайдер `models/viewer_provider_<key>.py` (а не все в `viewer_provider.py`) — параллельная сборка W1b-1/W1b-2 без конфликтов.
 - DEC-6: провайдеры chains/signals сами пишут свой статус в `meta.sections` (live/partial/missing/denied); `docks` пишет logistics, не chains. — `models/viewer_provider_chains.py`, `viewer_provider_signals.py`
+- DEC-7: в шаблоне f3d_demo_tpl шаги push `modules,iot_module,signals` пропущены (Enterprise iot, zip-импорт); `x_f3d_signal` пуст, сигналы есть в `f3d_sim_signal` (1168) — AC-17 на демо проверяется моками; `plant/odoo_push.py` получил CE-правки (поля Enterprise через fields_get, lot_name при приёмке). — `factory3d/tools/odoo/make_demo_tpl.sh`
