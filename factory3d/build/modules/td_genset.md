@@ -1,5 +1,5 @@
 # td_genset
-Статус: DONE (юнит-DoD); стенд: ТК-F01…F07 зелёные (relay в python:3.12-slim), ТК-G01…G13 и ТК-01…14 td_genset ждут стенд Odoo+iot_sim
+Статус: DONE (юнит-DoD); стенд: relay/tests (ТК-F01…F07) 20/20, на контейнере проверены F01, F02, ТК-G01…G13 и ТК-01…14 td_genset ждут стенд Odoo+iot_sim
 Тесты: 276/276 (/td_genset 176 + /factory3d_genset 100; совместно со всеми CE-модулями factory3d и viewer), мост без viewer 90/90, relay 20/20 (2026-10-15); ruff check/format OK
 Решений без заказчика: 16 (ниже)
 Упирался в лимит: 0
