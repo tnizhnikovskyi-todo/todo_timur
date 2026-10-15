@@ -199,6 +199,29 @@ class TestOee(F3DMachineCase):
         self.assertAlmostEqual(res["fault_min"], 30, 3)
         self.assertAlmostEqual(res["unexplained_min"], res["ppt_min"] - 150, 3)
 
+    def test_timelog_stale_open_record(self):
+        """M-2: відкритий запис журналу часу з минулих діб не дає роботи; закритий нічний обрізається вікном."""
+        Prod = self.env["mrp.workcenter.productivity"].sudo()
+        wc = self.wc_cnc
+        productive = self.env.ref("mrp.block_reason7")
+        old = Prod.create(
+            {"workcenter_id": wc.id, "loss_id": productive.id, "date_start": kt("06:36", D0 - timedelta(days=3))}
+        )
+        self.assertFalse(old.date_end)
+        res = self.m_cnc._f3d_oee(kt("07:00"), kt("10:30"))
+        self.assertEqual(res["source"], "timelog")
+        self.assertAlmostEqual(res["run_min"], 0, 3)
+        self.assertAlmostEqual(res["availability"], 0, 3)
+        # відкритий запис, що почався незадовго до початку вікна, рахується від початку вікна
+        Prod.create({"workcenter_id": wc.id, "loss_id": productive.id, "date_start": kt("06:30")})
+        res = self.m_cnc._f3d_oee(kt("07:00"), kt("10:30"))
+        self.assertAlmostEqual(res["run_min"], res["ppt_min"], 3)
+        self.assertGreater(res["run_min"], 0)
+        # закритий запис, що почався до вікна, обрізається до вікна
+        old.write({"date_end": kt("08:00")})
+        res = self.m_cnc._f3d_oee(kt("07:00"), kt("08:00"))
+        self.assertAlmostEqual(res["run_min"], 60, 3)
+
     def test_cron_open_close_rotate(self):
         Shift = self.env["f3d.oee.shift"]
         Log = self.env["f3d.machine.state.log"].sudo()
