@@ -41,10 +41,12 @@ class F3dPushHandlerMachineConnect(models.AbstractModel):
         for key in required:
             if key not in payload or payload[key] is None:
                 raise ValueError("%s: %s" % (route, key))
+        # id події колектора читають власники (W2 `_f3d_apply_event`: ext_event_id)
+        ctx = {"f3d_push_event_id": event.get("event_id")}
         if route == "mc_opcua":
-            return self.env["f3d.machine"].sudo()._f3d_apply_event(payload)
+            return self.env["f3d.machine"].sudo().with_context(**ctx)._f3d_apply_event(payload)
         model, method = ROUTES[(route, kind)]
-        owner = self.env[model].sudo()
+        owner = self.env[model].sudo().with_context(**ctx)
         func = getattr(owner, method, None)
         if func is None:
             raise ValueError("%s: обробник %s.%s ще не реалізовано" % (route, model, method))
