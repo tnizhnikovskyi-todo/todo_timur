@@ -3,6 +3,7 @@
 // элементов, у которых изменилось состояние (кэш на самих элементах).
 import { inNode } from "../core/types.js";
 import { isSel } from "../core/select.js";
+import { rect2d } from "../core/layout.js";
 import { esc, slotCls } from "./util.js";
 
 export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
@@ -20,15 +21,7 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       }
       if (n.type === "rack") h += `<rect data-node="${esc(n.id)}" class="rackbg" x="${n.x - 0.12}" y="${n.y - 0.12}" width="${n.w + 0.24}" height="${n.d + 0.24}"/>`;
       if (n.loc && (n.type !== "group" || !n.kids.length)) {
-        let { x, y, w, d } = n;
-        if (n.type === "level") {
-          const bay = tree.nodes.get(n.parent), k = bay.nLv;
-          if (bay.rot) { d = bay.d / k; y = bay.y + n.lvl * d; x = bay.x; w = bay.w; } else { w = bay.w / k; x = bay.x + n.lvl * w; y = bay.y; d = bay.d; }
-        }
-        if (n.type === "cell") { // ячейка — часть полосы своего яруса: поперёк полосы (повёрнутый стелаж — вдоль)
-          const lv = tree.nodes.get(n.parent), bay = tree.nodes.get(lv.parent), k = bay.nLv, N = lv.kids.length;
-          if (bay.rot) { const dd = bay.d / k; w = bay.w / N; x = bay.x + n.ci * w; y = bay.y + lv.lvl * dd; d = dd; } else { const ww = bay.w / k; d = bay.d / N; y = bay.y + n.ci * d; x = bay.x + lv.lvl * ww; w = ww; }
-        }
+        const { x, y, w, d } = rect2d(tree, n);
         h += `<rect data-node="${esc(n.id)}" data-code="${esc(n.loc)}" x="${x}" y="${y}" width="${w}" height="${d}" class="s"/>`;
       }
       n.kids.forEach(walk);
@@ -48,7 +41,7 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
     svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("role", "img"); svg.setAttribute("aria-label", i18n.t("plan.svgLabel"));
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    svg.innerHTML = `<g id="cont"></g><g id="dyn"></g>`;
+    svg.innerHTML = `<g id="cont"></g><g id="dyn"></g><rect id="mq" class="mq" style="display:none"></rect>`;
     svg.toggleAttribute("hidden", hidden);
     cont = svg.querySelector("#cont"); dyn = svg.querySelector("#dyn"); lastH = null; fill();
     vp.prepend(svg);
@@ -56,6 +49,8 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
     const nodeAt = (el) => el?.closest?.("[data-node]")?.dataset.node;
     svg.addEventListener("pointerdown", (e) => {
       drag = { x: e.clientX, y: e.clientY, vb: { ...vb }, moved: false, mod: e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId);
+      // Shift + протянуть в режиме редактирования — рамка выделения (Ctrl добавляет к выделению)
+      if (model.ui.edit && e.shiftKey) { drag.mq = toWorld(e.clientX, e.clientY); return; }
       // в режиме редактирования тянется ряд / место на полу под курсором или всё выделенное (если нажали на выделенное)
       const set = model.ui.edit && !drag.mod ? model.dragSet(nodeAt(e.target)) : [];
       if (set.length) {
@@ -67,6 +62,8 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       if (drag) {
         const s = Math.max(vb.w / svg.clientWidth, vb.h / svg.clientHeight), dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; svg.classList.add("drag"); tip.hidden = true; }
+        if (drag.mq) { if (drag.moved) { const a = drag.mq, b = toWorld(e.clientX, e.clientY), m = svg.querySelector("#mq"); drag.rect = { x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) };
+          m.setAttribute("x", drag.rect.x0); m.setAttribute("y", drag.rect.y0); m.setAttribute("width", drag.rect.x1 - drag.rect.x0); m.setAttribute("height", drag.rect.y1 - drag.rect.y0); m.style.display = ""; } return; }
         if (drag.moved && drag.set) { drag.dx = Math.max(-drag.mx, dx * s); drag.dy = Math.max(-drag.my, dy * s); drag.els.forEach((x) => x.setAttribute("transform", `translate(${drag.dx} ${drag.dy})`)); }
         else if (drag.moved) { vb.x = drag.vb.x - dx * s; vb.y = drag.vb.y - dy * s; setVB(); }
         return;
@@ -74,6 +71,7 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick }) {
       const t = e.target.closest?.("[data-code]"); showTip(t?.dataset.code, e.clientX, e.clientY);
     });
     svg.addEventListener("pointerup", (e) => {
+      if (drag && drag.mq && drag.moved) { const d = drag; drag = null; svg.classList.remove("drag"); svg.querySelector("#mq").style.display = "none"; if (d.rect) model.marquee(d.rect, d.mod); return; }
       if (drag && drag.moved && drag.set) { const d = drag; drag = null; svg.classList.remove("drag"); model.moveSet(d.set, d.dx, d.dy); d.els.forEach((x) => x.removeAttribute("transform")); return; }
       if (drag && !drag.moved) {
         const t = document.elementFromPoint(e.clientX, e.clientY), fl = t?.closest?.("[data-focus]"), id = nodeAt(t);

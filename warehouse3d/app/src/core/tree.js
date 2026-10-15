@@ -1,5 +1,5 @@
 // Данные Odoo (локации) + слой правок → дерево узлов модели.
-import { BASE_TYPES, FLOW, KIND_TYPE, NODE_TYPE_LABELED, zoneTp } from "./types.js";
+import { BASE_TYPES, FLOW, KIND_TYPE, NODE_TYPE_LABELED, ROTS, zoneTp } from "./types.js";
 
 export const typeList = (edit) => edit.types || BASE_TYPES;
 // настройки склада, влияющие на дерево, вне слоя правок: код склада (подпись корня); глубина локаций — часть слоя правок (edit.depth / edit.depthZones)
@@ -42,6 +42,12 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
     } else { n = node(parts.join("/"), parts[parts.length - 1], parts.length > 1 ? pid : null); n.tp = zoneTp(code); }
     n.loc = code; byCode.set(code, n);
   }
+  // убранные в модели узлы — вместе со всем, что внутри
+  const drop = (n) => { removed.push({ id: n.id, name: n.name, parent: n.parent, type: n.type, tp: n.tp, loc: n.loc }); nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
+  const delNode = (id) => { const n = nodes.get(id); if (!n || !n.parent) return; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); };
+  // узел из Odoo, убранный и тут же созданный заново (перенос в группу и обратно): сначала убирается старый
+  const reborn = new Set(edit.add.map((a) => a.id).filter((id) => edit.del.includes(id)));
+  for (const id of reborn) delNode(id);
   // добавленные в модели узлы; несколько проходов — родитель может стоять в списке после детей
   let rest = edit.add.slice(), prog = true;
   while (rest.length && prog) {
@@ -49,7 +55,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
     rest = rest.filter((a) => {
       if (!nodes.has(a.parent)) return true;
       prog = true; if (nodes.has(a.id)) return false;
-      const n = node(a.id, a.name, a.parent); n.type = KIND_TYPE[a.kind] || "group"; n.tp = a.tp || null; n.lvl = a.lvl || 0; n.draft = true; n.pend = pend.has(a.id);
+      const n = node(a.id, a.name, a.parent); n.type = KIND_TYPE[a.kind] || "group"; n.tp = a.tp || null; n.lvl = a.lvl || 0; n.draft = true; if (a.from) n.from = a.from; n.pend = pend.has(a.id);
       if (a.code) {
         n.loc = a.code; byCode.set(a.code, n);
         draftLoc[a.code] = { complete_name: a.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: n.pend };
@@ -60,12 +66,10 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   // смена типа ряда переходит на его стеллажи и ярусы
   const setTp = (n, tp) => { n.tp = tp; n.kids.forEach((k) => setTp(k, tp)); };
   for (const s of edit.set) { const n = nodes.get(s.id); if (n && types.has(s.tp)) setTp(n, s.tp); }
-  // ряд, повёрнутый на 90°: стеллажи идут вглубь, а не вдоль
-  const setRot = (n) => { n.rot = true; n.kids.forEach(setRot); };
-  for (const r of edit.rot || []) { const n = nodes.get(r.id); if (n && n.type === "rack") setRot(n); }
-  // убранные в модели узлы — вместе со всем, что внутри
-  const drop = (n) => { removed.push({ id: n.id, name: n.name, parent: n.parent, type: n.type, tp: n.tp, loc: n.loc }); nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
-  for (const id of edit.del) { const n = nodes.get(id); if (!n || !n.parent) continue; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); }
+  for (const id of edit.del) if (!reborn.has(id)) delNode(id);
+  // повёрнутый ряд (и место на полу): 90° / 270° — стеллажи идут вглубь, а не вдоль; 180° / 270° — порядок секций обратный
+  const setRot = (n, deg) => { n.rotDeg = deg; if (deg % 180) n.rot = true; if (deg >= 180) n.flip = true; n.kids.forEach((k) => setRot(k, deg)); };
+  for (const r of edit.rot || []) { const n = nodes.get(r.id), deg = ROTS.includes(r.r) ? r.r : 90; if (n && deg && (n.type === "rack" || (n.type === "group" && n.loc && !n.kids.length))) setRot(n, deg); }
   // ярусы: число ячеек и глубина локаций. Ярус с N > 1 ячеек при глубине «ячейка» перестаёт быть местом:
   // местами становятся его ячейки с кодами <код яруса>-1..N (сам ярус остаётся контейнером; в Odoo это его родитель)
   const cellsOf = new Map(edit.cells.map((c) => [c.id, c.n])), zones = Object.fromEntries(edit.depthZones.map((z) => [z.id, z.d]));
@@ -79,6 +83,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
       const code = `${base}-${i}`, k = node(`${n.id}/${i}`, String(i), n.id), pd = pendCells.has(n.id) || !!n.pend;
       Object.assign(k, { type: "cell", tp: n.tp, lvl: n.lvl, ci: i - 1, loc: code, draft: true, pend: pd });
       if (n.rot) k.rot = true;
+      if (n.flip) k.flip = true;
       byCode.set(code, k);
       draftLoc[code] = { complete_name: k.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: pd };
     }
@@ -91,8 +96,10 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
     n.codes = [...(n.loc ? [n.loc] : []), ...n.kids.flatMap((k) => k.codes)];
   };
   walk(nodes.get("WH"));
+  // свойства: имя (только подпись, id не меняется) и размеры (читает layout)
+  for (const p of edit.prop || []) { const n = nodes.get(p.id); if (n) { n.prop = p; if (p.name) n.name = p.name; } }
   const loc = (c) => data.locations[c] || draftLoc[c];
-  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells].map((x) => x.id));
+  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells, ...(edit.prop || [])].map((x) => x.id));
   return { nodes, byCode, root: nodes.get("WH"), types, TY, draftLoc, pos, pend, loc, removed, contained, changed, W0: 0, D0: 0 };
 }
 

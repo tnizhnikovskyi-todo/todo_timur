@@ -15,7 +15,8 @@ function measure(tree, n, depth = 0) {
     n.w = tw; n.d = td; n.h = (n.lvl + 1) * t.lh;
     // ячейки яруса — части его основания: вдоль ширины стелажа (повёрнутый ряд — вдоль глубины)
     const N = n.kids.length;
-    n.kids.forEach((k, i) => {
+    n.kids.forEach((k, i0) => {
+      const i = n.flip ? N - 1 - i0 : i0; // поворот на 180° / 270°: порядок ячеек обратный
       k.depth = depth + 1; k.h = n.h;
       if (n.rot) { k.w = n.w; k.d = n.d / N; k.ox = 0; k.oy = i * k.d; } else { k.w = n.w / N; k.d = n.d; k.ox = i * k.w; k.oy = 0; }
     });
@@ -28,7 +29,7 @@ function measure(tree, n, depth = 0) {
   if (n.type === "rack") {
     if (!n.kids.length) { n.w = tw; n.d = td; n.h = 0.2; return; }
     let a = 0; const g = t.form === "stack" ? 0.6 : 0.08;
-    n.kids.forEach((k) => { if (n.rot) { k.ox = 0; k.oy = a; a += k.d + g; } else { k.ox = a; k.oy = 0; a += k.w + g; } });
+    (n.flip ? n.kids.slice().reverse() : n.kids).forEach((k) => { if (n.rot) { k.ox = 0; k.oy = a; a += k.d + g; } else { k.ox = a; k.oy = 0; a += k.w + g; } }); // 180° / 270°: секции в обратном порядке
     if (n.rot) { n.w = Math.max(...n.kids.map((k) => k.w)); n.d = a - g; } else { n.w = a - g; n.d = Math.max(...n.kids.map((k) => k.d)); }
     n.h = H; return;
   }
@@ -37,7 +38,10 @@ function measure(tree, n, depth = 0) {
     n.kids.forEach((k) => { k.ox = 0; k.oy = y; y += k.d + g; });
     n.w = Math.max(...n.kids.map((k) => k.w)); n.d = y - g; posOverride(tree, n, 0); n.h = H; return;
   }
-  if (!n.kids.length) { if (n.loc) { n.w = t.w; n.d = t.d; } else { n.w = 4; n.d = 4; } n.h = 1.2; return; }
+  if (!n.kids.length) { // место на полу: свои размеры из свойств (до поворота)
+    const pr = n.prop || {}, bw = pr.w ?? (n.loc ? t.w : 4), bd = pr.d ?? (n.loc ? t.d : 4);
+    [n.w, n.d] = n.rot ? [bd, bw] : [bw, bd]; n.h = pr.h ?? 1.2; return;
+  }
   // группа: листья (ворота, тележки) — сеткой, подгруппы — справа по горизонтали;
   // порядок детей сохраняем; соседние листья собираем в один блок, больше 8 — в два ряда
   const pad = 1, head = 1.6, gap = depth <= 1 ? 4 : 2.5, blocks = [];
@@ -53,6 +57,21 @@ function measure(tree, n, depth = 0) {
   let x = pad;
   for (const b of blocks) { for (const k of b.items) { if (b.block) { k.ox += x; k.oy += head; } else { k.ox = x; k.oy = head; } } x += b.w + gap; }
   n.w = x - gap + pad; n.d = head + Math.max(...blocks.map((b) => b.d)) + pad; posOverride(tree, n, pad); n.h = H;
+  if (n.prop) { n.w = Math.max(n.w, n.prop.w || 0); n.d = Math.max(n.d, n.prop.d || 0); } // заданный размер зоны — не меньше содержимого
+}
+
+// прямоугольник узла на плане 2D (м): ярус — полоса своего стеллажа, ячейка — часть полосы; порядок обратный при повороте на 180° / 270°
+export function rect2d(tree, n) {
+  let { x, y, w, d } = n;
+  if (n.type === "level") {
+    const bay = tree.nodes.get(n.parent), k = bay.nLv, l = bay.flip ? k - 1 - n.lvl : n.lvl;
+    if (bay.rot) { d = bay.d / k; y = bay.y + l * d; x = bay.x; w = bay.w; } else { w = bay.w / k; x = bay.x + l * w; y = bay.y; d = bay.d; }
+  }
+  if (n.type === "cell") {
+    const lv = tree.nodes.get(n.parent), bay = tree.nodes.get(lv.parent), k = bay.nLv, N = lv.kids.length, l = bay.flip ? k - 1 - lv.lvl : lv.lvl, ci = bay.flip ? N - 1 - n.ci : n.ci;
+    if (bay.rot) { const dd = bay.d / k; w = bay.w / N; x = bay.x + ci * w; y = bay.y + l * dd; d = dd; } else { const ww = bay.w / k; d = bay.d / N; y = bay.y + ci * d; x = bay.x + l * ww; w = ww; }
+  }
+  return { x, y, w, d };
 }
 
 function place(n, x, y) { n.x = x; n.y = y; n.kids.forEach((k) => place(k, x + k.ox, y + k.oy)); }
