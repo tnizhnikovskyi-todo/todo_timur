@@ -1,9 +1,9 @@
 # factory3d_bms
 Статус: IN_PROGRESS
-Тесты: Odoo 68/68 (2026-10-15), плагин helvarnet 28/28; ТК: ждут W7
-Решений без заказчика: 3 (ниже)
+Тесты: Odoo 126/126 (2026-10-15), плагин helvarnet 28/28; ТК: ждут W7
+Решений без заказчика: 5 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: нет
+Требует внимания человека: group_f3d_admin не входит в base.group_system (расхождение SPEC §4.2 в factory3d_base, DEC-5)
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -12,8 +12,8 @@
 | W2 | принят | 53e22bf | /factory3d_bms 22/22; AC-17 → W4 |
 | W6 | принят | e46cfaf | pytest 28/28 (AC-64…78) |
 | W3 | принят | 56d12b2 | /factory3d_bms 68/68, pytest data_sync 6/6; демо-копия (AC-49/50/52) не прогонялась |
-| W4 | в работе | | |
-| W5 | ждёт | | |
+| W4 | принят | 0927f52 | /factory3d_bms 126/126; §11 п.11 чаттер failed/expired и тест f3d.fire.drill — нет |
+| W5 | в работе | | |
 | W7 | ждёт | | |
 
 ## Решения без заказчика
@@ -25,3 +25,6 @@
   обращается через getattr; пакет добавлен в `collector/requirements-extra.txt`. Слияние W1+W2: `ruff format` модуля.
 - DEC-4: uninstall_hook снимает xml-id сигналов модуля и деактивирует/отвязывает их вместо удаления (история и
   заявки сохраняются, AC-55). Коллектор unit: 173 passed + известный env-fail `test_load_real_plugins_exactly_four`. — `hooks.py`
+- DEC-5: «нет данных» установки — жив хотя бы один из airflow/state/mode; котельня — живых heat_kw < 50 % установок.
+  Включение write_enabled в настройках — только group_f3d_admin (иначе AccessError); тесты от base.group_system,
+  т.к. f3d_admin не подразумевает group_system. Майстр EF → ValidationError до проверки сигналов. — `models/res_config_settings.py`, `wizard/hvac_command_wizard.py`
