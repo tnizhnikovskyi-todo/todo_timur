@@ -115,7 +115,9 @@ class F3dOeeShift(models.Model):
     def _cron_oee(self):
         """R-14 п. 2: поточна зміна кожного підключеного верстата; вчорашня відкрита — закривається."""
         today = _local_date(fields.Datetime.now())
-        machines = self.env["f3d.machine"].sudo().search([("active", "=", True), ("read_enabled", "=", True)])
+        machines = (
+            self.env["f3d.machine"].sudo().search([("active", "=", True), ("read_enabled", "=", True)], order="id")
+        )  # DEC-19: стабільний порядок
         for machine in machines:
             try:
                 with self.env.cr.savepoint():

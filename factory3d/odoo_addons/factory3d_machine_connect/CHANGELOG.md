@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- DEC-19 (ТП-01): менше конкуруючих UPDATE `f3d_machine`/`f3d_collector` під навантаженням. Крон `_cron_tick` — верстати за id,
+  пачки по 10 з commit, `FOR UPDATE SKIP LOCKED` (зайнятий push верстат пропускається до наступного такту); push блокує
+  верстати за зростанням id; `raw_ts`/`pieces_ts` без інших змін пишуться раз на 30 с (лише інформаційні мітки).
+  Колектор: `last_seen`/`last_push_at` — не частіше за раз на 30 с (`factory3d_telemetry`, `f3d.collector._touch`).
 - DEC-20 (ТБ-03): одноразовий токен експорту API-01 — у заголовку `X-F3D-Token`; query `t` більше не приймається
   (токен не потрапляє в access-log werkzeug). Адаптер `cutopt` колектора передає токен заголовком.
 

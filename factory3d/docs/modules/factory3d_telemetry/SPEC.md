@@ -307,7 +307,7 @@ class F3dCollector(models.Model):
 | `action_generate_token(self)` | `ensure_one()`; перевірка `has_group('factory3d_base.group_f3d_admin')` інакше `AccessError`; `token = secrets.token_urlsafe(32)`; `write({'token_hash': hashlib.sha256(token.encode()).hexdigest(), 'token_hint': token[-4:], 'token_set_at': now})`; повідомлення в чаттер «Видано новий токен (…hint)»; повертає `act_window` на `f3d.collector.token.wizard` (`target='new'`, `context={'default_collector_id': id, 'default_token': token}`) |
 | `action_revoke_token(self)` | `token_hash=False`, `token_hint=False`; чаттер «Токен відкликано» |
 | `@api.model _authenticate(self, raw_token: str)` → recordset (0/1) | порожній/`len > 256` → порожньо; `h = sha256(raw).hexdigest()`; `cands = self.sudo().search([('active','=',True),('token_hash','!=',False)])`; повертає перший, для якого `hmac.compare_digest(c.token_hash, h)` (перебір усіх, без раннього виходу за `token_hash`) |
-| `_touch(self, ip, version=None)` | `last_seen=now`, `last_ip=ip`, `version` якщо передано, `state='online'` якщо було інакше (без tracking-шуму: `with_context(mail_notrack=True)`) |
+| `_touch(self, ip, version=None, pushed=False)` | `last_seen=now`, `last_ip=ip`, `version` якщо передано, `last_push_at=now` якщо `pushed`, `state='online'` якщо було інакше (без tracking-шуму: `with_context(mail_notrack=True)`). DEC-19: не частіше за раз на `min(factory3d.telemetry.touch_interval_s = 30, status_interval_s)` с; зміна `state`/IP/версії — одразу. Зміни: 15.10.2026 |
 | `_config_payload(self)` → dict | API-01 (R-16) |
 | `_etag(self)` → str | R-16 |
 | `_rate_check(self)` → bool | R-17 п. 2 |

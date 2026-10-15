@@ -9,6 +9,8 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
 GROUP_ADMIN = "factory3d_base.group_f3d_admin"
+TOUCH_INTERVAL_PARAM = "factory3d.telemetry.touch_interval_s"
+TOUCH_INTERVAL_S = 30  # DEC-19: мінімальний інтервал запису last_seen/last_push_at
 
 
 class F3dCollector(models.Model):
@@ -123,15 +125,36 @@ class F3dCollector(models.Model):
                 found = cand
         return found
 
-    def _touch(self, ip, version=None):
-        vals = {"last_seen": fields.Datetime.now(), "last_ip": ip}
-        if version:
-            vals["version"] = version
+    def _touch(self, ip, version=None, pushed=False):
+        """Контакт колектора: `last_seen`, `last_ip`, `version`, `state` → `online` (+ `last_push_at` при `pushed`).
+
+        DEC-19: рядок колектора спільний для всіх запитів, тому запис — не частіше ніж раз на
+        `min(touch_interval_s, status_interval_s)` с (параметр `factory3d.telemetry.touch_interval_s`, 30 за
+        замовчуванням; не більше `status_interval_s`, щоб `_cron_offline` — 3·status_interval_s — не спрацював хибно).
+        Негайно пишеться зміна стану (не `online`), IP чи версії. Один `write` на колектор.
+        """
+        now = fields.Datetime.now()
+        try:
+            interval = int(self.env["ir.config_parameter"].sudo().get_param(TOUCH_INTERVAL_PARAM, TOUCH_INTERVAL_S))
+        except ValueError:
+            interval = TOUCH_INTERVAL_S
         for rec in self.sudo().with_context(mail_notrack=True):
-            v = dict(vals)
+            if (
+                rec.state == "online"
+                and rec.last_seen
+                and rec.last_ip == ip
+                and (not version or rec.version == version)
+                and 0 <= (now - rec.last_seen).total_seconds() < min(interval, rec.status_interval_s)
+            ):
+                continue
+            vals = {"last_seen": now, "last_ip": ip}
+            if version:
+                vals["version"] = version
+            if pushed:
+                vals["last_push_at"] = now
             if rec.state != "online":
-                v["state"] = "online"
-            rec.write(v)
+                vals["state"] = "online"
+            rec.write(vals)
 
     # --- конфігурація для колектора (API-01, R-16) ---------------------------------------------------
     def _config_body(self):

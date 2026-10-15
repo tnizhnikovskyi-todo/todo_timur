@@ -3,7 +3,7 @@ import time
 from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from odoo import _, api, fields, models, tools
+from odoo import _, api, fields, models, modules, tools
 from odoo.exceptions import AccessError, ValidationError
 
 from ..tools.states import normalize, parse_ts
@@ -13,6 +13,8 @@ _logger = logging.getLogger(__name__)
 KYIV = ZoneInfo("Europe/Kyiv")
 ROLE_ORDER = {"state": 0, "mode": 1, "alarm": 2, "job": 3, "pieces": 4}
 TICK_BUDGET_S = 10
+HEARTBEAT_S = 30  # DEC-19: `raw_ts`/`pieces_ts` без інших змін пишуться не частіше за раз на стільки секунд
+TICK_BATCH = 10  # DEC-19: верстатів на транзакцію такту (після пачки — commit, нова знімка, блокування знято)
 PENDING_SLACK_S = 30
 
 STATES = [
@@ -298,7 +300,8 @@ class F3dMachine(models.Model):
                     "q": r.get("q") or "good",
                 }
             )
-        machines = self.sudo().browse(list(groups)).exists().filtered(lambda m: m.active and m.read_enabled)
+        # DEC-19: єдиний порядок блокування рядків — за id (push, такт і `_f3d_mark_nodata` не блокують навхрест)
+        machines = self.sudo().browse(sorted(groups)).exists().filtered(lambda m: m.active and m.read_enabled)
         machines = machines.with_context(f3d_mc_stats=stats)
         for machine in machines:
             try:
@@ -314,8 +317,21 @@ class F3dMachine(models.Model):
     def _f3d_lock(self):
         """Блокування рядків верстатів до зміни стану (R-04 п. 0, R-09 п. 7) і свіжий стан після блокування."""
         if self.ids:
-            self.env.cr.execute("SELECT id FROM f3d_machine WHERE id IN %s FOR UPDATE", (tuple(self.ids),))
+            self.env.cr.execute("SELECT id FROM f3d_machine WHERE id IN %s ORDER BY id FOR UPDATE", (tuple(self.ids),))
             self.invalidate_recordset()
+
+    def _f3d_lock_skip_locked(self):
+        """DEC-19: як `_f3d_lock`, але без очікування: рядки, зайняті іншою транзакцією (push), пропускаються.
+
+        Повертає підмножину `self`, яку вдалося заблокувати (за зростанням id), зі свіжим станом із бази.
+        """
+        if not self.ids:
+            return self
+        cr = self.env.cr
+        cr.execute("SELECT id FROM f3d_machine WHERE id IN %s ORDER BY id FOR UPDATE SKIP LOCKED", (tuple(self.ids),))
+        locked = [row[0] for row in cr.fetchall()]
+        self.invalidate_recordset()
+        return self.browse(locked)
 
     def _f3d_stat(self, key, n=1):
         """Лічильник для результату `_f3d_dispatch` (W3 рахує `autostarts`, `finished`)."""
@@ -335,6 +351,8 @@ class F3dMachine(models.Model):
         }
         job = self.raw_job
         raw_ts = self.raw_ts
+        before = (self.state, self.pending_state)
+        dirty = False  # у цьому push рядок верстата й так змінюється → `raw_ts` їде в тому самому UPDATE (DEC-19)
         i = 0
         while i < len(items):
             ts = items[i]["ts"]
@@ -360,6 +378,7 @@ class F3dMachine(models.Model):
                     changed = True
             if changed:
                 vals = {"raw_state": raw["state"] or False, "raw_mode": raw["mode"] or False, "raw_alarm": raw["alarm"]}
+                dirty = dirty or any(self[key] != val for key, val in vals.items())
                 self.write(vals)
                 raw["bad"] = raw["state"] is None
                 new = normalize(self.protocol, raw, key=self.code, now=ts)
@@ -369,13 +388,22 @@ class F3dMachine(models.Model):
                 if it["role"] == "job" and not late and it["q"] != "bad" and it["text"] is not None:
                     if it["text"] != job:
                         job = it["text"]
+                        dirty = True
                         self._f3d_on_job(job, ts)
                     raw_ts = max(raw_ts, ts) if raw_ts else ts
                 elif it["role"] == "pieces" and it["value"] is not None and it["q"] != "bad":
+                    dirty = dirty or it["value"] != self.pieces_last
                     self._f3d_count(it["value"], ts)
                     raw_ts = max(raw_ts, ts) if raw_ts else ts
-        if raw_ts != self.raw_ts:
+        if raw_ts != self.raw_ts and (
+            dirty or before != (self.state, self.pending_state) or self._f3d_heartbeat_due(self.raw_ts, raw_ts)
+        ):
             self.write({"raw_ts": raw_ts})
+
+    @staticmethod
+    def _f3d_heartbeat_due(stored, new):
+        """DEC-19: чи минуло `HEARTBEAT_S` від збереженої мітки (порожня мітка — пишемо одразу)."""
+        return not stored or abs((new - stored).total_seconds()) >= HEARTBEAT_S
 
     def _f3d_on_raw_state(self, new, ts):
         """R-02: мікрозупинки й момент фіксації стану."""
@@ -445,7 +473,7 @@ class F3dMachine(models.Model):
 
     def _f3d_mark_nodata(self, ts, reason):
         """R-03: сигнал стану `stale` → `nodata` (причина — у лог)."""
-        for rec in self.sudo().exists().filtered(lambda m: m.active and m.read_enabled):
+        for rec in self.sudo().exists().filtered(lambda m: m.active and m.read_enabled).sorted("id"):
             if not param_bool(rec.env, "read_enabled", env_default(rec.env)):
                 continue
             with rec.env.cr.savepoint():
@@ -482,7 +510,10 @@ class F3dMachine(models.Model):
             elif delta > 1000:
                 _logger.warning("f3d.machine %s: стрибок лічильника %s → %s", self.code, self.pieces_last, value)
                 delta = 0.0
-        self.write({"pieces_last": value, "pieces_ts": ts})
+        vals = {"pieces_last": value}
+        if value != self.pieces_last or self._f3d_heartbeat_due(self.pieces_ts, ts):
+            vals["pieces_ts"] = ts  # мітка без зміни лічильника — не частіше за HEARTBEAT_S (DEC-19)
+        self.write(vals)
         if delta and self.current_log_id:
             self.current_log_id.pieces += delta
         self._f3d_on_count(delta, ts)
@@ -571,23 +602,33 @@ class F3dMachine(models.Model):
             return True
         now = fields.Datetime.now()
         started = time.monotonic()
-        machines = (
-            self.sudo().with_context(f3d_mc_stats={}).search([("active", "=", True), ("read_enabled", "=", True)])
-        )
-        for machine in machines:
+        # DEC-19: стабільний порядок (id), пачки з commit між ними, рядки, зайняті push, — SKIP LOCKED (без очікування).
+        ids = self.sudo().search([("active", "=", True), ("read_enabled", "=", True)], order="id").ids
+        Machine = self.sudo().with_context(f3d_mc_stats={})
+        skipped = 0
+        for pos in range(0, len(ids), TICK_BATCH):
             if time.monotonic() - started > TICK_BUDGET_S:
                 _logger.warning("f3d.machine: такт перевищив %s с, решту верстатів пропущено", TICK_BUDGET_S)
                 break
-            try:
-                with self.env.cr.savepoint():
-                    machine._f3d_lock()
-                    if machine.pending_state and machine.pending_since:
-                        limit = machine.pending_since + timedelta(seconds=machine.micro_stop_s + PENDING_SLACK_S)
-                        if now >= limit:
-                            machine._f3d_commit_state(machine.pending_state, machine.pending_since)
-                    machine._f3d_tick_extra(now)
-            except Exception:
-                _logger.exception("f3d.machine %s: помилка такту", machine.code)
+            batch = Machine.browse(ids[pos : pos + TICK_BATCH])
+            locked = batch._f3d_lock_skip_locked()
+            skipped += len(batch) - len(locked)
+            for machine in locked:
+                try:
+                    with self.env.cr.savepoint():
+                        if machine.pending_state and machine.pending_since:
+                            limit = machine.pending_since + timedelta(seconds=machine.micro_stop_s + PENDING_SLACK_S)
+                            if now >= limit:
+                                machine._f3d_commit_state(machine.pending_state, machine.pending_since)
+                        machine._f3d_tick_extra(now)
+                except Exception:
+                    _logger.exception("f3d.machine %s: помилка такту", machine.code)
+            if not modules.module.current_test:  # у тестах commit курсора заборонено
+                self.env["ir.cron"]._commit_progress(len(batch), remaining=len(ids) - pos - len(batch))
+        if skipped:
+            _logger.info(
+                "f3d.machine: такт пропустив %s верстатів, зайнятих push (опрацюються наступним тактом)", skipped
+            )
         return True
 
     @api.model

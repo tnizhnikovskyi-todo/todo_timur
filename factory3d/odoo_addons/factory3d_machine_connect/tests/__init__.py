@@ -17,3 +17,4 @@ from . import test_migration
 from . import test_viewer_provider
 from . import test_security
 from . import test_hooks
+from . import test_concurrency
