@@ -1,0 +1,36 @@
+id,code,name,panel_id:id,loop_id:id,zone_id:id,lsz_instance,kind,spacing_m,wall_m,x0,y0,x1,y1,z_m
+fire_zone_fa_rcv_1,FA-RCV-1,Приймання плит · ворота 1,panel_facp_1,loop_1,factory3d_base.zone_z_rcv_1,1,smoke,8.8,4.4,0.6,0.6,13.4,9.85,8.85
+fire_zone_fa_rcv_2,FA-RCV-2,Приймання плит · ворота 2,panel_facp_1,loop_1,factory3d_base.zone_z_rcv_2,2,smoke,8.8,4.4,0.6,10.15,13.4,19.85,8.85
+fire_zone_fa_rcv_3,FA-RCV-3,Приймання плит · ворота 3,panel_facp_1,loop_1,factory3d_base.zone_z_rcv_3,3,smoke,8.8,4.4,0.6,20.15,13.4,29.85,8.85
+fire_zone_fa_rcv_4,FA-RCV-4,"Приймання фурнітури, контроль і карантин · ворота 4",panel_facp_1,loop_1,factory3d_base.zone_z_rcv_4,4,smoke,8.8,4.4,0.6,30.15,13.4,39.85,8.85
+fire_zone_fa_rcv_5,FA-RCV-5,Приймання крайки · ворота 5,panel_facp_1,loop_1,factory3d_base.zone_z_rcv_5,5,smoke,8.8,4.4,0.6,40.15,13.4,49.85,8.85
+fire_zone_fa_rcv_6,FA-RCV-6,Приймання ЛФМ · ворота 6,panel_facp_1,loop_1,factory3d_base.zone_z_rcv_6,6,smoke,8.8,4.4,0.6,50.15,13.4,59.85,8.85
+fire_zone_fa_rcv_7,FA-RCV-7,Приймання пакматеріалів · ворота 7,panel_facp_1,loop_1,factory3d_base.zone_z_rcv_7,7,smoke,8.8,4.4,0.6,60.15,13.4,71.4,8.85
+fire_zone_fa_sheets,FA-SHEETS,Склад плит,panel_facp_1,loop_1,factory3d_base.zone_z_sheets,8,smoke,8.8,4.4,14.6,0.6,41.4,45.4,8.85
+fire_zone_fa_hw,FA-HW,Склад фурнітури,panel_facp_1,loop_1,factory3d_base.zone_z_hw,9,smoke,8.8,4.4,14.6,46,28.4,71.4,8.85
+fire_zone_fa_edge,FA-EDGE,Склад крайки,panel_facp_1,loop_1,factory3d_base.zone_z_edge,10,smoke,8.8,4.4,28.8,46,35.4,71.4,8.85
+fire_zone_fa_pks,FA-PKS,Пакувальні матеріали,panel_facp_1,loop_1,factory3d_base.zone_z_pks,11,smoke,8.8,4.4,35.8,46,41.4,71.4,8.85
+fire_zone_fa_cut,FA-CUT,Розкрій,panel_facp_1,loop_2,factory3d_base.zone_z_cut,12,multi,8.8,4.4,41.8,0.6,55.4,45.4,8.85
+fire_zone_fa_eb,FA-EB,Крайкооблицювання,panel_facp_1,loop_2,factory3d_base.zone_z_eb,13,multi,8.8,4.4,55.8,0.6,68.4,45.4,8.85
+fire_zone_fa_cnc,FA-CNC,Присадка,panel_facp_1,loop_2,factory3d_base.zone_z_cnc,14,multi,8.8,4.4,68.8,0.6,81.4,45.4,8.85
+fire_zone_fa_sort,FA-SORT,Сортування деталей,panel_facp_1,loop_2,factory3d_base.zone_z_sort,15,multi,8.8,4.4,81.8,0.6,91.6,45.4,8.85
+fire_zone_fa_fac,FA-FAC,Дільниця фасадів МДФ,panel_facp_1,loop_2,factory3d_base.zone_z_fac,16,multi,8.8,4.4,42.2,46.4,91.6,71.4,8.85
+fire_zone_fa_asm,FA-ASM,Збирання,panel_facp_1,loop_3,factory3d_base.zone_z_asm,17,multi,8.8,4.4,92.4,0.6,109.6,29.6,8.85
+fire_zone_fa_pre,FA-PRE,Буфер комплектів,panel_facp_1,loop_3,factory3d_base.zone_z_pre,18,smoke,8.8,4.4,92.4,30,109.6,45.6,8.85
+fire_zone_fa_maint,FA-MAINT,Ремонтна дільниця,panel_facp_1,loop_3,factory3d_base.zone_z_maint,19,multi,8.8,4.4,92.4,46.4,103.6,57.6,8.85
+fire_zone_fa_pack,FA-PACK,Пакування,panel_facp_1,loop_3,factory3d_base.zone_z_pack,20,smoke,8.8,4.4,110,0.6,121.6,33.6,8.85
+fire_zone_fa_post,FA-POST,Вихід з пакування,panel_facp_1,loop_3,factory3d_base.zone_z_post,21,smoke,8.8,4.4,110,34,121.6,59.6,8.85
+fire_zone_fa_cmp,FA-CMP,Компресорна,panel_facp_1,loop_3,factory3d_base.zone_z_cmp,22,multi,8.8,4.4,110,60,115.6,71.4,8.85
+fire_zone_fa_chg,FA-CHG,Зарядна станція,panel_facp_1,loop_3,factory3d_base.zone_z_chg,23,multi,8.8,4.4,116,60,121.6,71.4,8.85
+fire_zone_fa_fg,FA-FG,Склад готової продукції,panel_facp_1,loop_4,factory3d_base.zone_z_fg,24,smoke,8.8,4.4,122,0.6,135.6,62,8.85
+fire_zone_fa_elec,FA-ELEC,Електрощитова,panel_facp_1,loop_4,factory3d_base.zone_z_elec,25,smoke,8.8,4.4,122.4,62.4,135.6,71.4,8.85
+fire_zone_fa_out_1,FA-OUT-1,Відвантаження · ворота 1,panel_facp_1,loop_4,factory3d_base.zone_z_out_1,26,smoke,8.8,4.4,136,0.6,149.4,9.85,8.85
+fire_zone_fa_out_2,FA-OUT-2,Відвантаження · ворота 2,panel_facp_1,loop_4,factory3d_base.zone_z_out_2,27,smoke,8.8,4.4,136,10.15,149.4,19.85,8.85
+fire_zone_fa_out_3,FA-OUT-3,Відвантаження · ворота 3,panel_facp_1,loop_4,factory3d_base.zone_z_out_3,28,smoke,8.8,4.4,136,20.15,149.4,29.85,8.85
+fire_zone_fa_out_4,FA-OUT-4,Відвантаження · ворота 4,panel_facp_1,loop_4,factory3d_base.zone_z_out_4,29,smoke,8.8,4.4,136,30.15,149.4,39.85,8.85
+fire_zone_fa_out_5,FA-OUT-5,Відвантаження · ворота 5,panel_facp_1,loop_4,factory3d_base.zone_z_out_5,30,smoke,8.8,4.4,136,40.15,149.4,49.85,8.85
+fire_zone_fa_out_6,FA-OUT-6,Відвантаження · ворота 6,panel_facp_1,loop_4,factory3d_base.zone_z_out_6,31,smoke,8.8,4.4,136,50.15,149.4,59.85,8.85
+fire_zone_fa_out_7,FA-OUT-7,Відвантаження · ворота 7,panel_facp_1,loop_4,factory3d_base.zone_z_out_7,32,smoke,8.8,4.4,136,60.15,149.4,71.4,8.85
+fire_zone_fa_boiler,FA-BOILER,Котельня,panel_facp_1,loop_2,factory3d_base.zone_z_boiler,33,heat,6.4,3.2,67.6,75,79.6,81,4.35
+fire_zone_fa_soc,FA-SOC,Побутові приміщення,panel_facp_1,loop_3,factory3d_base.zone_z_soc,34,smoke,8.8,4.4,104.2,46.6,109.4,57.4,3.35
+fire_zone_fa_office,FA-OFFICE,Офіс,panel_facp_1,loop_3,factory3d_base.zone_z_office,35,smoke,8.8,4.4,92.6,58.4,107.8,71,2.95

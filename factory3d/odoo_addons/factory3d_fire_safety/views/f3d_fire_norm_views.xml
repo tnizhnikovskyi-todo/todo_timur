@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-15 -->
+    <record id="view_f3d_fire_norm_list" model="ir.ui.view">
+        <field name="name">f3d.fire.norm.list</field>
+        <field name="model">f3d.fire.norm</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="group"/>
+                <field name="key" readonly="id"/>
+                <field name="name"/>
+                <field name="value"/>
+                <field name="value_set"/>
+                <field name="unit"/>
+                <field name="ref"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_f3d_fire_norm_form" model="ir.ui.view">
+        <field name="name">f3d.fire.norm.form</field>
+        <field name="model">f3d.fire.norm</field>
+        <field name="arch" type="xml">
+            <form string="Норма">
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Значення">
+                            <field name="key" readonly="id"/>
+                            <field name="group"/>
+                            <field name="sequence"/>
+                            <field name="value"/>
+                            <field name="value_set"/>
+                            <field name="unit"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Підстава">
+                            <field name="ref"/>
+                            <field name="note"/>
+                            <field name="sources"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_f3d_fire_norm_search" model="ir.ui.view">
+        <field name="name">f3d.fire.norm.search</field>
+        <field name="model">f3d.fire.norm</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="key"/>
+                <field name="name"/>
+                <field name="ref"/>
+                <filter name="filter_unset" string="Не задано" domain="[('value_set', '=', False)]"/>
+                <group>
+                    <filter name="group_group" string="Група" context="{'group_by': 'group'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_f3d_fire_norm" model="ir.actions.act_window">
+        <field name="name">Норми</field>
+        <field name="res_model">f3d.fire.norm</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_group': 1}</field>
+    </record>
+</odoo>

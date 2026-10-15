@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_fire_exit_list" model="ir.ui.view">
+        <field name="name">f3d.fire.exit.list</field>
+        <field name="model">f3d.fire.exit</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="side"/>
+                <field name="x"/>
+                <field name="y"/>
+                <field name="width_m"/>
+                <field name="route_count"/>
+                <field name="nearest_exit_m"/>
+                <field name="compliance" widget="badge" decoration-success="compliance == 'ok'"
+                       decoration-warning="compliance == 'warn'" decoration-danger="compliance == 'fail'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_fire_exit_form" model="ir.ui.view">
+        <field name="name">f3d.fire.exit.form</field>
+        <field name="model">f3d.fire.exit</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                            invisible="not equipment_id"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Вихід">
+                            <field name="code"/>
+                            <field name="name"/>
+                            <field name="kind"/>
+                            <field name="side"/>
+                            <field name="x"/>
+                            <field name="y"/>
+                            <field name="width_m"/>
+                            <field name="equipment_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Перевірка">
+                            <field name="width_ok"/>
+                            <field name="nearest_exit_m"/>
+                            <field name="compliance" widget="badge" decoration-success="compliance == 'ok'"
+                                   decoration-warning="compliance == 'warn'" decoration-danger="compliance == 'fail'"/>
+                            <field name="compliance_note"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Маршрути" name="routes">
+                            <field name="route_ids" readonly="1">
+                                <list>
+                                    <field name="zone_code"/>
+                                    <field name="name"/>
+                                    <field name="length_m"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_fire_exit_search" model="ir.ui.view">
+        <field name="name">f3d.fire.exit.search</field>
+        <field name="model">f3d.fire.exit</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code"/>
+                <field name="name"/>
+                <filter name="filter_fail" string="Не відповідає" domain="[('compliance', '=', 'fail')]"/>
+                <group>
+                    <filter name="group_side" string="Стіна" context="{'group_by': 'side'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_fire_exit" model="ir.actions.act_window">
+        <field name="name">Виходи</field>
+        <field name="res_model">f3d.fire.exit</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

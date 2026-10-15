@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_f3d_fire_drill_document">
+        <t t-call="web.html_container">
+            <t t-set="opt" t-value="{'widget': 'datetime', 'tz_name': 'Europe/Kyiv'}"/>
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Протокол навчальної тривоги <span t-out="o.name"/></h2>
+                        <p><strong t-out="o.title"/></p>
+
+                        <h3>1. Реквізити</h3>
+                        <table class="table table-sm">
+                            <tr><td>Режим</td><td t-out="dict(o._fields['mode'].selection).get(o.mode)"/></tr>
+                            <tr><td>Зона пожежі</td><td t-out="o.zone_id.display_name"/></tr>
+                            <tr><td>Сповіщувач</td><td t-out="o.device_id.address or '—'"/></tr>
+                            <tr><td>Заплановано на</td><td><span t-if="o.planned_ts" t-out="o.planned_ts" t-options="opt"/><span t-else="">—</span></td></tr>
+                            <tr><td>Початок</td><td><span t-if="o.start_ts" t-out="o.start_ts" t-options="opt"/><span t-else="">—</span></td></tr>
+                            <tr><td>Завершення</td><td><span t-if="o.end_ts" t-out="o.end_ts" t-options="opt"/><span t-else="">—</span></td></tr>
+                            <tr><td>Відповідальний</td><td t-out="o.responsible_id.name"/></tr>
+                        </table>
+
+                        <h3>2. Кроки сценарію</h3>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>План, с</th><th>Хто</th><th>Дія</th><th>Факт, с</th><th>Затримка, с</th><th>Відмітка</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.step_ids" t-as="s" class="f3d-drill-step">
+                                    <td t-out="s.t_plan_s"/>
+                                    <td t-out="s.who"/>
+                                    <td t-out="s.text"/>
+                                    <td><span t-if="s.done" t-out="s.t_fact_s"/><span t-else="">—</span></td>
+                                    <td><span t-if="s.done" t-out="s.delay_s"/><span t-else="">—</span></td>
+                                    <td t-out="dict(s._fields['done_by'].selection).get(s.done_by) or '—'"/>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>3. Евакуація</h3>
+                        <table class="table table-sm">
+                            <tr><td>На об'єкті на початку</td><td t-out="o.on_site_count"/></tr>
+                            <tr><td>Вийшли</td><td t-out="o.evacuated_count"/></tr>
+                            <tr><td>Є на перекличці</td><td t-out="o.present_count"/></tr>
+                            <tr><td>Не знайдено</td><td t-out="o.missing_count"/></tr>
+                            <tr><td>Час евакуації</td><td><span t-out="o.evac_time_s"/> с (норматив <span t-out="o.time_limit_s"/> с)</td></tr>
+                            <tr><td>Евакуйовано</td><td><span t-out="'%.1f' % o.evac_pct"/> %</td></tr>
+                            <tr><td>Якість даних</td><td t-out="dict(o._fields['data_quality'].selection).get(o.data_quality)"/></tr>
+                            <tr><td>Джерело проходів</td><td t-out="o.passage_source or '—'"/></tr>
+                        </table>
+
+                        <h3>4. Список людей</h3>
+                        <t t-if="o.print_names">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr><th>№</th><th>ПІБ</th><th>Вийшов о</th><th>Де</th><th>Перекличка</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="o.sudo().person_ids" t-as="p" class="f3d-drill-person">
+                                        <td t-out="p.seq"/>
+                                        <td t-out="p.employee_id.name or '—'"/>
+                                        <td><span t-if="p.exit_ts" t-out="p.exit_ts" t-options="opt"/><span t-else="">—</span></td>
+                                        <td t-out="p.exit_point or '—'"/>
+                                        <td t-out="dict(p._fields['rollcall'].selection).get(p.rollcall)"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </t>
+                        <p t-else="">Персональний список не друкується</p>
+
+                        <t t-if="o.real_alarm">
+                            <h3>5. Справжня тривога</h3>
+                            <p>Під час навчання прилад показав справжню тривогу.</p>
+                        </t>
+
+                        <h3>6. Результат</h3>
+                        <p>Результат: <strong t-out="dict(o._fields['result'].selection).get(o.result) or '—'"/></p>
+                        <p>Висновки: <span t-out="o.conclusions or '—'"/></p>
+                        <p>Зауваження й заходи: <span t-out="o.remarks or '—'"/></p>
+
+                        <h3>7. Підписи</h3>
+                        <p>Відповідальний: ____________________ / <span t-out="o.responsible_id.name"/> /</p>
+                        <p>Інженер з пожежної безпеки: ____________________</p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

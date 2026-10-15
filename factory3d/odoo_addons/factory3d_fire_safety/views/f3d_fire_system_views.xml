@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-10 -->
+    <record id="view_f3d_fire_system_list" model="ir.ui.view">
+        <field name="name">f3d.fire.system.list</field>
+        <field name="model">f3d.fire.system</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="system_type"/>
+                <field name="state" widget="badge" decoration-danger="state == 'active'"
+                       decoration-warning="state in ('fault','battery','low_pressure')"
+                       decoration-success="state == 'ok'" decoration-muted="state == 'unknown'"/>
+                <field name="state_text"/>
+                <field name="count_today"/>
+                <field name="detector_count" optional="show"/>
+                <field name="vent_count" optional="show"/>
+                <field name="pressure_bar" optional="show"/>
+                <field name="last_test_date"/>
+                <field name="stale" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- V-11 -->
+    <record id="view_f3d_fire_system_form" model="ir.ui.view">
+        <field name="name">f3d.fire.system.form</field>
+        <field name="model">f3d.fire.system</field>
+        <field name="arch" type="xml">
+            <form string="Система">
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"/>
+                    <button name="action_view_events" type="object" string="Події"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Стан">
+                            <field name="state" widget="badge" decoration-danger="state == 'active'"
+                                   decoration-warning="state in ('fault','battery','low_pressure')"
+                                   decoration-success="state == 'ok'" decoration-muted="state == 'unknown'"/>
+                            <field name="state_text"/>
+                            <field name="state_ts"/>
+                            <field name="stale"/>
+                            <field name="count_today" invisible="system_type != 'spark'"/>
+                            <field name="pressure_bar" invisible="system_type != 'sprinkler'"/>
+                            <field name="pressure_min_bar" invisible="system_type != 'sprinkler'"/>
+                        </group>
+                        <group string="Склад">
+                            <field name="code"/>
+                            <field name="system_type"/>
+                            <field name="equipment_id"/>
+                            <field name="vents_equipment_id" invisible="system_type != 'smoke'"/>
+                            <field name="detector_count"/>
+                            <field name="nozzle_count" invisible="system_type != 'spark'"/>
+                            <field name="vent_count"/>
+                            <field name="vent_area_m2"/>
+                            <field name="panels_needed"/>
+                            <field name="drive_current_a" invisible="system_type != 'smoke'"/>
+                            <field name="panel_current_a" invisible="system_type != 'smoke'"/>
+                            <field name="last_test_date"/>
+                        </group>
+                        <group string="Сигнали" groups="factory3d_base.group_f3d_manager">
+                            <field name="source_id"/>
+                            <field name="signal_state_id"/>
+                            <field name="signal_active_id"/>
+                            <field name="signal_fault_id"/>
+                            <field name="signal_water_id"/>
+                            <field name="signal_battery_id"/>
+                            <field name="signal_count_id"/>
+                            <field name="pressure_signal_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Пристрої" name="devices">
+                            <field name="device_ids" readonly="1">
+                                <list>
+                                    <field name="address"/>
+                                    <field name="type"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Димові зони" name="smoke_zones" invisible="system_type != 'smoke'">
+                            <field name="smoke_zone_ids" readonly="1"/>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_fire_system" model="ir.actions.act_window">
+        <field name="name">Системи</field>
+        <field name="res_model">f3d.fire.system</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

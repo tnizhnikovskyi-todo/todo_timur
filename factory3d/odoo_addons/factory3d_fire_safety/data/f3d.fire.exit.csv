@@ -1,0 +1,13 @@
+id,code,name,kind,x,y,side,width_m,note
+exit_ex_s1,EX-S1,"Аварійний вихід EX-S1, південна стіна",emergency,14,0,S,1.2,
+exit_ex_s2,EX-S2,"Аварійний вихід EX-S2, південна стіна",emergency,51,0,S,1.2,
+exit_ex_s3,EX-S3,"Аварійний вихід EX-S3, південна стіна",emergency,68.5,0,S,1.2,
+exit_ex_s4,EX-S4,"Аварійний вихід EX-S4, південна стіна",emergency,91,0,S,1.2,
+exit_ex_s5,EX-S5,"Аварійний вихід EX-S5, південна стіна",emergency,110.8,0,S,1.2,
+exit_ex_s6,EX-S6,"Аварійний вихід EX-S6, південна стіна",emergency,135.4,0,S,1.2,
+exit_ex_n1,EX-N1,"Аварійний вихід EX-N1, північна стіна",emergency,14,72,N,1.2,
+exit_ex_n2,EX-N2,"Аварійний вихід EX-N2, північна стіна",emergency,50,72,N,1.2,
+exit_ex_n3,EX-N3,"Аварійний вихід EX-N3, північна стіна",emergency,75,72,N,1.2,
+exit_ex_n5,EX-N5,"Аварійний вихід EX-N5 з компресорної, північна стіна",emergency,111,72,N,1.2,
+exit_ex_n4,EX-N4,"Аварійний вихід EX-N4, північна стіна",emergency,140,72,N,1.2,
+exit_ex_in,EX-IN,"Вхід персоналу EX-IN, південна стіна",staff,98.4,0,S,1.2,
