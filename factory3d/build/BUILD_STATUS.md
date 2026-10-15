@@ -20,7 +20,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
 | 7 | `factory3d_energy` | 3 | telemetry | IN_PROGRESS | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | | | |
-| 8 | `factory3d_yard` | 4 | base, telemetry | TODO | | | | | |
+| 8 | `factory3d_yard` | 4 | base, telemetry | IN_PROGRESS | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | | | |
 | 9 | `factory3d_bms` | 5 | telemetry | TODO | | | | | |
 | 10 | `factory3d_fire_safety` | 5 | telemetry | TODO | | | | | |
 | 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | TODO | | | | | |
@@ -69,3 +69,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 11:43 UTC factory3d_telemetry: DONE — смержен в `claude/factory3d-build` (`d10cd6e`), Odoo 541/541 (base, iot_sim, access, telemetry + мосты access_telemetry, telemetry_viewer), collector unit 174 + 2 skip (MQTT без docker), DEC 16. Не проверено: стенд ТК-03/09/10 (красные в полном прогоне), ТК-12, ТП-06 — на сервере с Docker; ТП-04 объём таблиц выше оценки (DEC-16).
 - 2026-10-15 11:44 UTC factory3d_machine_connect: запущена сессия session_015rKvjaStE6jPJzyWqGrcwf по указанию пользователя; одновременно 2 (viewer, machine_connect).
 - 2026-10-15 11:54 UTC factory3d_energy: запущена сессия session_018rtyAE7NdpmjQDfBdoewi1 по указанию пользователя сверх лимита одновременных (3: viewer, machine_connect, energy).
+- 2026-10-15 12:20 UTC factory3d_yard: запущена сессия session_01D3xkbVgCSWZFh4E4Agha1H по указанию пользователя сверх лимита одновременных (3: machine_connect, energy, yard); viewer DONE по отчёту (12:06), идёт мерж.
