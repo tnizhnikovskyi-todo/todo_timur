@@ -11,6 +11,7 @@ class TestNeutralize(HttpCase, F3dViewerBase):
     """ТК-12: `data/neutralize.sql` на копії бази (транзакція відкочується)."""
 
     def _neutralize(self):
+        self.env.flush_all()  # відкладений ORM-запис інакше перезапише результат SQL при invalidate_all
         with file_open("factory3d_viewer/data/neutralize.sql") as fh:
             self.env.cr.execute(fh.read())
         self.env.invalidate_all()
