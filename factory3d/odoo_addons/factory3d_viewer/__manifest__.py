@@ -18,6 +18,8 @@
         "views/viewer_snapshot_views.xml",
         "views/viewer_event_views.xml",
         "views/res_config_settings_views.xml",
+        "wizard/demo_wizard_views.xml",
+        "wizard/cycle_check_views.xml",
         "views/menus.xml",
     ],
     "post_init_hook": "post_init",

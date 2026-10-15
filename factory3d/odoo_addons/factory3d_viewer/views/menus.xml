@@ -11,4 +11,8 @@
               action="action_f3d_viewer_event" groups="factory3d_base.group_f3d_manager"/>
     <menuitem id="menu_f3d_settings" name="Налаштування переглядача" parent="factory3d_base.menu_f3d_config"
               sequence="10" action="action_f3d_config_settings" groups="factory3d_base.group_f3d_admin"/>
+    <menuitem id="menu_f3d_cycle_check" name="Перевірка циклу" parent="factory3d_base.menu_f3d_root"
+              sequence="14" action="action_f3d_cycle_check" groups="factory3d_base.group_f3d_manager"/>
+    <menuitem id="menu_f3d_demo" name="Демо-дані" parent="factory3d_base.menu_f3d_root" sequence="16"
+              action="action_f3d_demo_wizard" groups="factory3d_base.group_f3d_admin"/>
 </odoo>
