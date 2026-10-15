@@ -181,6 +181,7 @@ class F3dYardVisit(models.Model):
     cancelled_at = fields.Datetime(string="Скасовано о", readonly=True, copy=False)
     reject_reason = fields.Text(string="Причина відхилення", readonly=True, copy=False)
     day = fields.Date(string="День", compute="_compute_day", store=True, index=True)
+    is_today = fields.Boolean(string="Сьогодні", compute="_compute_is_today", search="_search_is_today")
     gross_kg = fields.Float(string="Брутто, кг", digits=(12, 1), compute="_compute_weights", store=True)
     tare_kg = fields.Float(string="Тара, кг", digits=(12, 1), compute="_compute_weights", store=True)
     net_kg = fields.Float(string="Нетто, кг", digits=(12, 1), compute="_compute_weights", store=True)
@@ -277,6 +278,16 @@ class F3dYardVisit(models.Model):
         for visit in self:
             ts = visit.planned_start or visit.arrived_at or visit.create_date or fields.Datetime.now()
             visit.day = tz.local_day(ts)
+
+    @api.depends("day")
+    def _compute_is_today(self):
+        today = tz.local_today(fields.Datetime.now())
+        for visit in self:
+            visit.is_today = visit.day == today
+
+    def _search_is_today(self, operator, value):
+        """Фільтр «Сьогодні»: київська доба сервера, а не `context_today()` браузера (Y-2)."""
+        return tz.today_domain(operator, value, fields.Datetime.now())
 
     def _f3d_yard_weighings(self):
         """Чинні (assigned) зважування рейсу; без моделі ваг (W3) — порожньо."""

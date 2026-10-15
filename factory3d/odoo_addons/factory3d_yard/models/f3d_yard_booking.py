@@ -42,6 +42,7 @@ class F3dYardBooking(models.Model):
     slot_end = fields.Datetime(string="Кінець", required=True, index=True, tracking=True)
     duration_min = fields.Integer(string="Тривалість, хв", compute="_compute_duration_min")
     day = fields.Date(string="День", compute="_compute_day", store=True, index=True)
+    is_today = fields.Boolean(string="Сьогодні", compute="_compute_is_today", search="_search_is_today")
     source = fields.Selection(
         [
             ("dispatcher", "Диспетчер"),
@@ -103,6 +104,16 @@ class F3dYardBooking(models.Model):
     def _compute_day(self):
         for rec in self:
             rec.day = tz.local_day(rec.slot_start) if rec.slot_start else False
+
+    @api.depends("day")
+    def _compute_is_today(self):
+        today = tz.local_today(fields.Datetime.now())
+        for rec in self:
+            rec.is_today = rec.day == today
+
+    def _search_is_today(self, operator, value):
+        """Фільтр «Сьогодні»: київська доба сервера, а не `context_today()` браузера (Y-2)."""
+        return tz.today_domain(operator, value, fields.Datetime.now())
 
     @api.depends("visit_id.side")
     def _compute_side_hint(self):

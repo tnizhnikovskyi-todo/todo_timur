@@ -82,7 +82,7 @@
                 <field name="partner_id"/>
                 <filter name="confirmed" string="Підтверджені" domain="[('state','=','confirmed')]"/>
                 <filter name="requested" string="Запити" domain="[('state','=','requested')]"/>
-                <filter name="today" string="Сьогодні" domain="[('day','=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today','=',True)]"/>
                 <filter name="west" string="Захід" domain="[('side','=','west')]"/>
                 <filter name="east" string="Схід" domain="[('side','=','east')]"/>
                 <group>

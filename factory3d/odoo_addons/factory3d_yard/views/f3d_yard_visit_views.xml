@@ -212,7 +212,7 @@
                 <field name="driver_id"/>
                 <field name="dock_id"/>
                 <field name="batch_id"/>
-                <filter name="today" string="Сьогодні" domain="[('day','=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today','=',True)]"/>
                 <filter name="on_site" string="На території" domain="[('state','in',('arrived','queued','at_dock','handling','weighed'))]"/>
                 <filter name="at_kpp" string="Очікують на КПП" domain="[('state','=','arrived')]"/>
                 <filter name="queued" string="У черзі" domain="[('state','=','queued')]"/>

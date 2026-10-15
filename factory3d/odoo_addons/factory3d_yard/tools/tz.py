@@ -22,6 +22,18 @@ def local_day(dt):
     return to_local(dt).date()
 
 
+def local_today(now=None):
+    """Поточна київська доба; `now` — UTC naive (сервер передає `fields.Datetime.now()`, у тестах він підміняється)."""
+    return local_day(now or datetime.now(UTC))
+
+
+def today_domain(operator, value, now=None, field="day"):
+    """Домен пошуку «Сьогодні» для поля київської доби `field` (замість `context_today()` браузера, Y-2)."""
+    if operator not in ("=", "!=") or not isinstance(value, bool):
+        raise NotImplementedError("Пошук «Сьогодні» підтримує лише = / != True/False")
+    return [(field, "=" if (operator == "=") == value else "!=", local_today(now))]
+
+
 def _to_utc_naive(local_naive):
     return local_naive.replace(tzinfo=KYIV).astimezone(UTC).replace(tzinfo=None)
 

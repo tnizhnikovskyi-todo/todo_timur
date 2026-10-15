@@ -219,6 +219,9 @@ class TestYardKpp(GateCase):
 
 @tagged("post_install", "-at_install", "f3d", "f3d_yard")
 class TestYardKppTours(HttpCase):
+    """Туры не залежать від години доби: «Сьогодні» рахує сервер за київською добою (Y-2), дата браузера (UTC на
+    стенді) у фільтрі не бере участі; сам фільтр на межі діб перевіряє `TestYardTodayFilter` із замороженим годинником."""
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
