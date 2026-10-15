@@ -18,7 +18,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 3 | `factory3d_telemetry` | 2 | base | DONE | session_01NF5Tuhsrpzgd1SMkYaMG8N | 2026-10-15 06:47 UTC | 2026-10-15 11:43 UTC | Odoo 541/541 (6 модулей), collector 174+2 skip | 16 |
 | 4 | `factory3d_viewer` | 1 | base | DONE | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | 2026-10-15 13:27 UTC | Odoo 711/711 (9 модулей), демо f3d_demo_tpl 211/211 | 20 |
 | 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 10:59 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
-| 6 | `factory3d_machine_connect` | 2 | telemetry | IN_PROGRESS | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | | | |
+| 6 | `factory3d_machine_connect` | 2 | telemetry | DONE | session_015rKvjaStE6jPJzyWqGrcwf | 2026-10-15 11:44 UTC | 2026-10-15 18:13 UTC | Odoo 1205/1205 (15 модулей), плагины 53/53, collector 174+2 skip | 18 |
 | 7 | `factory3d_energy` | 3 | telemetry | DONE | session_018rtyAE7NdpmjQDfBdoewi1 | 2026-10-15 11:54 UTC | 2026-10-15 17:42 UTC | Odoo 1076/1076 (14 модулей), демо viewer 211/211 | 18 |
 | 8 | `factory3d_yard` | 4 | base, telemetry | DONE | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | 2026-10-15 13:53 UTC | Odoo 831/831 (10 модулей), collector 174+2 skip, плагин sics 34/34 | 8 |
 | 9 | `factory3d_bms` | 5 | telemetry | IN_PROGRESS | session_01L43oC1FugyPdK6kpcRc1ij | 2026-10-15 13:54 UTC | | | |
@@ -80,3 +80,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 17:07 UTC менеджер: стендовые этапы затянулись (machine_connect W9 ~4 ч, energy W6 ~4 ч, bms W7 ~2 ч) — лидерам отправлено: ограничить стенд 30–45 мин, затем закрываться DONE (юнит-DoD), непрогнанные стендовые тесты — в «Требует внимания человека», найденные дефекты кода исправить.
 - 2026-10-15 17:42 UTC factory3d_energy: DONE — смержен в `claude/factory3d-build` (`c3056fb`), фикс кросс-модульных ожиданий тестов telemetry/viewer — `0c7a736`; Odoo 1076/1076, демо 211/211. Стенд частично (ТК-01/05/11, ТБ 6/6, ТП 5/6; ТК-02/07/08/09 красные — эмулятор/сценарий). Правки SPEC: AC-32, R-16 п.6, R-17.
 - 2026-10-15 17:43 UTC td_genset: запущена сессия session_013Ue8H7Af5WRGUBWdWKM5e4 (зависимости DONE). machine_connect DONE по отчёту (d29e2f3), идёт мерж.
+- 2026-10-15 18:13 UTC factory3d_machine_connect: DONE — смержен в `claude/factory3d-build` (`9e6004f`), фикс ожиданий тестов telemetry/energy — `0859a61`; Odoo 1205/1205. Правка telemetry DEC-7 (push_handler: в Odoo 19 registry.descendants отдаёт имена моделей) — после неё стал обнаруживаться push-обработчик lpr из yard, раньше не вызывался. Мост machine_connect_mrp_workorder не ставился (Enterprise). Открыто: ТБ-03 токен в логе, ТП-01 deadlock — разобрать.
