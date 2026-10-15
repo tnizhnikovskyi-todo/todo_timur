@@ -201,7 +201,8 @@ class TestProvider(AccessCase):
         bus.assert_called_once_with('f3d.access.visitor', {'V-%d' % visitor.id})
 
     def test_no_viewer_ok(self):  # AC-52
-        self.assertNotIn('f3d.viewer.event', self.env)
+        if 'f3d.viewer.event' in self.env:
+            self.skipTest('factory3d_viewer встановлено: перевірка лише для сценарію без viewer')
         self.assertIsNone(self.env['f3d.access.event']._f3d_bus('hr.employee', {'OP-TST-A'}))
         events = self.feed(self.prow(1, '2026-10-12T03:52:00.00Z', 4102, 'TSTA1', tna='1'))
         self.assertEqual(events.process_state, 'done')

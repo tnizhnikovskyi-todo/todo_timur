@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_f3d_viewer" model="ir.actions.client">
+        <field name="name">Завод 3D</field>
+        <field name="tag">f3d_viewer.action</field>
+        <field name="target">current</field>
+    </record>
+    <record id="action_f3d_new_kiosk_token" model="ir.actions.server">
+        <field name="name">Новий токен кіоска</field>
+        <field name="model_id" ref="base.model_res_config_settings"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_f3d_new_kiosk_token()</field>
+    </record>
+</odoo>

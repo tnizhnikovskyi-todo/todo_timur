@@ -1,0 +1,12 @@
+// Сторінка кіоска (§8.6): переглядач на весь екран, без навігації Odoo.
+body.o_f3d_kiosk {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: #12171c;
+
+    #f3d-kiosk {
+        position: fixed;
+        inset: 0;
+    }
+}

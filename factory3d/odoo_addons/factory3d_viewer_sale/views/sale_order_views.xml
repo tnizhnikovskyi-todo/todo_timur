@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-09: кнопка «Показати в 3D» у шапці замовлення клієнта (A-17). -->
+    <record id="view_order_form_f3d_show" model="ir.ui.view">
+        <field name="name">sale.order.form.f3d.show</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header//button[@id='action_confirm']" position="after">
+                <field name="f3d_has_3d" invisible="1"/>
+                <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                        class="btn-secondary" groups="factory3d_base.group_f3d_user" invisible="not f3d_has_3d"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Сторінка кіоска (SPEC §8.6, API-08): мінімальний вебклієнт без навігації, лише 3D-переглядач.
+         Контролер передає token і params; жодних даних Odoo у HTML. -->
+    <template id="kiosk_page" name="Завод 3D: кіоск">
+        <t t-call="web.layout">
+            <t t-set="html_data" t-value="{'lang': 'uk'}"/>
+            <t t-set="title">Завод 3D</t>
+            <t t-set="debug" t-value="''"/>
+            <t t-set="body_classname" t-value="'o_f3d_kiosk'"/>
+            <t t-set="head">
+                <script type="text/javascript">
+                    odoo.__session_info__ = <t t-out="session_info_json"/>;
+                </script>
+                <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+                <t t-call-assets="factory3d_viewer.assets_kiosk" t-js="false"/>
+                <t t-call-assets="factory3d_viewer.assets_kiosk" t-css="false"/>
+            </t>
+            <div id="f3d-kiosk" t-att-data-token="token" t-att-data-params="json.dumps(params or {})"/>
+        </t>
+    </template>
+</odoo>

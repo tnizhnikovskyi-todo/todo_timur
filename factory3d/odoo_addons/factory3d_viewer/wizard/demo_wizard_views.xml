@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_demo_wizard_form" model="ir.ui.view">
+        <field name="name">f3d.demo.wizard.form</field>
+        <field name="model">f3d.demo.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Заливка демо-даних" create="false" edit="true">
+                <header>
+                    <button name="action_run" type="object" string="Запустити" class="btn-primary"
+                            invisible="state in ('queued', 'running') or not enabled"/>
+                    <button name="action_refresh" type="object" string="Оновити"/>
+                    <button name="action_select_all" type="object" string="Усі кроки" invisible="state != 'draft'"/>
+                    <button name="action_select_none" type="object" string="Жодного" invisible="state != 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,queued,running,done,error"/>
+                </header>
+                <sheet>
+                    <field name="enabled" invisible="1"/>
+                    <div class="alert alert-danger" role="alert" invisible="enabled">
+                        Заливка демо вимкнена на цій базі. Увімкніть «Заливка демо дозволена» у Завод 3D →
+                        Налаштування → Налаштування переглядача лише на тестовому сервері.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="demo_clock" readonly="state != 'draft'"/>
+                            <field name="progress" widget="progressbar"/>
+                        </group>
+                        <group>
+                            <field name="current_step"/>
+                            <field name="new_records"/>
+                            <field name="cron_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Кроки" name="steps">
+                            <field name="step_ids" readonly="state != 'draft'">
+                                <list editable="bottom" create="false" delete="false"
+                                      decoration-muted="state == 'todo'" decoration-info="state == 'running'"
+                                      decoration-success="state == 'done'" decoration-warning="state == 'skipped'"
+                                      decoration-danger="state == 'error'">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="selected" widget="boolean_toggle"/>
+                                    <field name="label"/>
+                                    <field name="name" readonly="1" force_save="1"/>
+                                    <field name="state" widget="badge"
+                                           decoration-muted="state == 'todo'" decoration-info="state == 'running'"
+                                           decoration-success="state == 'done'"
+                                           decoration-warning="state == 'skipped'"
+                                           decoration-danger="state == 'error'"/>
+                                    <field name="duration_s"/>
+                                    <field name="message"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Лог" name="log">
+                            <field name="log" widget="text" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_demo_wizard" model="ir.actions.act_window">
+        <field name="name">Демо-дані</field>
+        <field name="res_model">f3d.demo.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
