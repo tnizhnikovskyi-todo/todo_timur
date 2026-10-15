@@ -14,8 +14,10 @@ class F3dPushHandler(models.AbstractModel):
     def _f3d_handler_models(self, route):
         """Імена моделей-обробників маршруту `route` (порядок за `_name`); абстрактна база не входить."""
         names = set()
-        for cls in self.env.registry.descendants(["f3d.push.handler"], "_inherit"):
-            name = getattr(cls, "_name", None)
-            if name and name != "f3d.push.handler" and name in self.env and route in (cls._f3d_push_routes or ()):
+        for name in self.env.registry.descendants(["f3d.push.handler"], "_inherit"):
+            if name == "f3d.push.handler" or name not in self.env:
+                continue
+            cls = self.env.registry[name]
+            if route in (cls._f3d_push_routes or ()):
                 names.add(name)
         return sorted(names)
