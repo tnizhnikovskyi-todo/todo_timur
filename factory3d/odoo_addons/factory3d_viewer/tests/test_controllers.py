@@ -114,8 +114,8 @@ class TestControllers(HttpCase, F3dViewerBase):
 
     # --- API-10 ---
     def test_cycle_check(self):
-        from odoo.addons.factory3d_viewer.hooks import is_demo_db
-        if not is_demo_db(self.env):
+        from .common import _has_demo_data
+        if not _has_demo_data(self.env):
             raise unittest.SkipTest("потрібна демо-база: на порожній payload неповний")
         # payload будується з правами користувача: менеджеру «Завод 3D» потрібен ще й доступ до складу/МО
         self.user_manager.group_ids = [(4, self.env.ref("stock.group_stock_user").id),

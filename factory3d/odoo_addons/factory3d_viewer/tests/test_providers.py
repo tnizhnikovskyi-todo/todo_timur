@@ -25,6 +25,10 @@ class TestProviders(F3dViewerBase):
             env = env(context=dict(env.context, **ctx))
         return PayloadBuilder(env, **kw)
 
+    def _is_own(self, name):
+        mod = self.env[name]._original_module
+        return name.startswith(ZZ) or mod in ("factory3d_viewer", "test_factory3d_viewer")
+
     def _record_calls(self):
         calls = []
         for p in get_providers(self.env):
@@ -98,7 +102,8 @@ class TestProviders(F3dViewerBase):
         calls = self._record_calls()
         data = self._builder().build()
         self.assertIn(ZZ + "duck", calls)
-        self.assertEqual(calls[-1], ZZ + "duck")
+        own = [c for c in calls if self._is_own(c)]  # без провайдерів інших модулів (access/telemetry)
+        self.assertEqual(own[-1], ZZ + "duck")
         self.assertEqual(data["infra"]["cards"]["ZZ-DUCK"], {"rows": [["Тест", "так"]]})
         self.assertEqual(data["zz_duck"], {"ok": True})
         self.assertEqual(data["meta"]["sections"]["infra"], "live")
@@ -110,7 +115,7 @@ class TestProviders(F3dViewerBase):
         base = [k for k in keys if k in BASE_KEYS]
         self.assertEqual(keys[:len(base)], base)
         self.assertEqual(base, [k for k in BASE_KEYS if k in base])
-        self.assertEqual(keys[len(base):], ["zz_duck"])
+        self.assertEqual([k for k in keys[len(base):] if k.startswith("zz_")], ["zz_duck"])
         self.assertEqual(data["meta"]["schema"], "1.1")
         for k in ("energy", "lighting", "ventilation", "evacuation", "passports"):
             self.assertEqual(data["meta"]["sections"].get(k), "static")

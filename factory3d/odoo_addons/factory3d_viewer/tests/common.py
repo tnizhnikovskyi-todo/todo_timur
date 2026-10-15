@@ -53,13 +53,21 @@ class F3dViewerBase(TransactionCase):
         return sent
 
 
+def _has_demo_data(env):
+    """Тестова перевірка: є самі демо-дані (MO WH/MO/00231 і локація PLT-04C), а не лише iot_sim."""
+    if not is_demo_db(env):
+        return False
+    return bool(env["mrp.production"].sudo().search_count([("name", "=", "WH/MO/00231")])
+                and env["stock.location"].sudo().search_count([("f3d_code", "=", "PLT-04C")]))
+
+
 class F3dViewerCase(F3dViewerBase):
     """Потребує демо-бази (factory3d_iot_sim / компанія демо); інакше skipTest (§13.0)."""
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.has_demo = is_demo_db(cls.env)
+        cls.has_demo = _has_demo_data(cls.env)
         if not cls.has_demo:
             cls.skipTest(cls, "немає демо-даних (factory3d_iot_sim)")
 

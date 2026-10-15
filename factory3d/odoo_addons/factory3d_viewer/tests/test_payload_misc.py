@@ -69,7 +69,8 @@ class TestQualityMaintenancePeople(F3dViewerBase):
             calls.append("employee")
             return orig_emp(this, *a, **kw)
         with patch.object(pub, "search_read", spy_pub), patch.object(emp, "search_read", spy_emp):
-            data = self.payload(self.user_mrp_only)
+            # лише секція employees (власний шлях viewer): сторонні провайдери (access) не виконуються
+            data = self.payload(self.user_mrp_only, sections={"employees"})
         self.assertIn("public", calls)
         self.assertNotIn("employee", calls)
         rec = data["employees"]["OP-TST-9"]
