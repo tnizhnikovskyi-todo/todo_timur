@@ -12,14 +12,20 @@ import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
   return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
-    types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null };
+    types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null,
+    // план здания (W-04): общие поля (контур, высоты) одним значением, объекты и узлы проходов — по id, как остальные списки
+    bld: JSON.stringify(bldMeta(a.building)) !== JSON.stringify(bldMeta(b.building)) ? { v: bldMeta(b.building) } : null, bi: kv(a.building?.items, b.building?.items), bn: kv(a.building?.nodes, b.building?.nodes) };
 }
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types;
+const bldMeta = (b) => (b ? { v: b.v, contour: b.contour, hCeil: b.hCeil, hSpr: b.hSpr } : null);
+const kvEmpty = (x) => !x || (!x.rm.length && !x.put.length);
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
   s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v;
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
+  if (d.bld) s.building = d.bld.v ? { ...clone(d.bld.v), items: s.building?.items || [], nodes: s.building?.nodes || [] } : null;
+  if (s.building) { if (d.bi) s.building.items = kv(s.building.items, d.bi); if (d.bn) s.building.nodes = kv(s.building.nodes, d.bn); }
   return s;
 }
 
@@ -27,7 +33,7 @@ export function applyDiff(s, d) {
 export function recompute(s) { s.edit = s.pending.reduce((e, p) => applyDiff(e, p.diff), clone(s.saved)); }
 export function rebuild(s) { s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(s.wh))); Object.assign(s.ui, reconcile(s.tree, s.ui)); }
 // слой правок и несохранённое активного склада переходят в проект; проект целиком уходит в хранилище (Promise со статусом записи)
-export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; }
+export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; s.wh.building = s.saved.building ?? null; }
 // commit — явное «Зберегти»: общее хранилище (Odoo) при нём заводит версию проекта, черновик (несохранённое) версий не плодит
 export function persist(s, commit = false) {
   sync(s);
@@ -64,7 +70,7 @@ function withDeps(s, sel) {
 export function saveObj(s, id) {
   if (s.storage.readonly) return Promise.resolve(null);
   const sel = withDeps(s, pendFor(s, id)); if (!sel.length) return Promise.resolve(null);
-  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : refById(s.tree, id);
+  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
   const done = persist(s, true).then((r) => {
@@ -462,7 +468,8 @@ export const OPS = {
       for (const x of ns) removeNode(e, x);
     }, null, null, [...new Set(par)]);
   },
-  reset(s) { change(s, "WH", { k: "op.reset" }, (e) => Object.assign(e, emptyEdit())); },
+  // план здания — не данные Odoo, сброс его не трогает
+  reset(s) { change(s, "WH", { k: "op.reset" }, (e) => Object.assign(e, emptyEdit(), { building: e.building })); },
 };
 
 // сдвиг выделенного перетаскиванием (dx, dy — метры)

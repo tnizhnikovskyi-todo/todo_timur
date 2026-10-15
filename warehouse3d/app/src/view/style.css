@@ -217,3 +217,69 @@ svg text.dlab:hover { text-decoration: underline; }
   .hl-sheet { padding: 18px 16px; border-left: 0; border-right: 0; } .hl-t td.first { white-space: normal; }
 }
 .vp svg .mq { fill: rgba(1, 126, 132, 0.12); stroke: var(--o-brand); stroke-width: 1.5; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; pointer-events: none; }
+
+/* ---------- W-04: план будівлі (режим «Будівля») */
+#bldg, #bldg * { pointer-events: none; }
+.bldmode #cont, .bldmode #dyn { pointer-events: none; }
+.bldmode #bldg [data-bid], .bldmode #bldg [data-bid] *, .bldmode #bldg [data-vtx], .bldmode #bldg [data-node] { pointer-events: auto; }
+.vp svg[data-tool]:not([data-tool=""]):not([data-tool="select"]) { cursor: crosshair; }
+svg .bd-floor { fill: var(--accent-soft); stroke: none; }
+svg .bd-contour { fill: none; stroke: var(--steel); stroke-width: 2.5px; vector-effect: non-scaling-stroke; }
+svg .bd-contour.sel { stroke: var(--accent); stroke-width: 3.5px; }
+svg .bd-chit { fill: none; stroke: transparent; stroke-width: 12px; vector-effect: non-scaling-stroke; }
+svg .bd-aisle { stroke: #f0c419; stroke-opacity: 0.28; }
+svg .bd-axis { stroke: #c9a200; stroke-width: 1.2px; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+svg .bd-ai.sel .bd-aisle { stroke: var(--accent); stroke-opacity: 0.4; }
+svg .bd-z rect { fill-opacity: 0.38; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+svg .bd-gate rect { fill: #2f80ed; stroke: #2f80ed; } svg .bd-dock rect { fill: #e0761c; stroke: #e0761c; } svg .bd-door rect { fill: #8a5a2b; stroke: #8a5a2b; }
+svg .bd-office rect { fill: #714b67; stroke: #714b67; } svg .bd-charge rect { fill: #28a745; stroke: #28a745; }
+svg .bd-z.sel rect { stroke: var(--accent); stroke-width: 3px; fill-opacity: 0.55; }
+svg .bd-t { fill: var(--fg); text-anchor: middle; dominant-baseline: central; font-family: var(--f-body); }
+svg .bd-wall { stroke: #9aa3ad; }
+svg .bd-wallg.sel .bd-wall { stroke: var(--accent); }
+svg .bd-hit { stroke: transparent; stroke-width: 10px; vector-effect: non-scaling-stroke; }
+svg .bd-col { fill: #6b7480; stroke: transparent; stroke-width: 10px; vector-effect: non-scaling-stroke; }
+svg .bd-col.sel { fill: var(--accent); }
+svg .bd-vtx, svg .bd-node { fill: var(--panel); stroke: var(--accent); stroke-width: 2px; vector-effect: non-scaling-stroke; cursor: move; }
+svg .bd-node { stroke: #c9a200; }
+svg .bd-vtx.on { fill: var(--accent); }
+svg .bd-first { fill: none; stroke: var(--accent); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+svg .bd-prev { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5px; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+svg line.bd-prev { fill: none; }
+svg .bd-snap { fill: none; stroke: var(--muted); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+svg .bd-snap.pt { fill: var(--accent); stroke: var(--accent); } svg .bd-snap.axis { stroke: var(--info); } svg .bd-snap.grid { stroke: var(--accent); }
+svg .bd-ruler { stroke: var(--bad); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+svg .bd-rend { fill: var(--bad); }
+svg .bd-rl { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+.vp .rulers { position: absolute; inset: 0; pointer-events: none; z-index: 2; font: 9px var(--f-mono); color: var(--muted); }
+.vp .rulers[hidden], .vp .bcur[hidden] { display: none; }
+.rulers .rx, .rulers .ry { position: absolute; background: color-mix(in srgb, var(--panel) 92%, transparent); overflow: hidden; }
+.rulers .rx { left: 0; right: 0; top: 0; height: 18px; border-bottom: 1px solid var(--line); }
+.rulers .ry { left: 0; top: 0; bottom: 0; width: 18px; border-right: 1px solid var(--line); }
+.rulers i { position: absolute; background: var(--muted); }
+.rulers .rx i { bottom: 0; width: 1px; height: 4px; } .rulers .rx i.mj { height: 8px; }
+.rulers .ry i { right: 0; height: 1px; width: 4px; } .rulers .ry i.mj { width: 8px; }
+.rulers b { position: absolute; font-weight: 400; white-space: nowrap; }
+.rulers .rx b { top: 1px; margin-left: 3px; }
+.rulers .ry b { left: 1px; margin-top: 3px; writing-mode: vertical-rl; transform: rotate(180deg); }
+.rulers u { position: absolute; background: var(--bad); }
+.rulers u.cx { top: 0; width: 1px; height: 18px; } .rulers u.cy { left: 0; height: 1px; width: 18px; }
+.vp .bcur { position: absolute; left: 26px; top: 24px; font: 11px var(--f-mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; z-index: 3; pointer-events: none; }
+.bld-tools { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 4px; }
+.bld-tools button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--o-border); background: var(--o-btn2); color: var(--o-text); border-radius: 4px; padding: 4px 9px; font-size: 12.5px; cursor: pointer; }
+.bld-tools button[aria-pressed="true"] { background: var(--o-brand); color: #fff; border-color: var(--o-brand); }
+.bld-tools .sw, .bld-list .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; }
+.bld-tools button .sw { margin-right: 0; }
+.bld-snap { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin: 6px 0; }
+.bld-snap label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--o-muted); }
+.bld-snap label.chk, .ed-form label.chk { flex-direction: row; align-items: center; gap: 6px; color: var(--o-text); }
+.bld-snap select { border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 4px 6px; font: 13px var(--f-body); }
+.ed-form label.chk input { width: auto; }
+.bld-ruler { border-left: 3px solid var(--bad); }
+.bld-list button.on { background: var(--accent-soft); }
+.side .sec.on { color: var(--accent); }
+.bld-vt { width: 100%; } .bld-vt td { padding: 2px 3px; } .bld-vt input { width: 100%; border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 3px 5px; font: 12px var(--f-mono); min-width: 0; }
+.bld-vt tr.on { background: var(--accent-soft); }
+.bld-vt .x { border: 0; background: transparent; cursor: pointer; font-size: 16px; color: var(--o-muted); }
+.bld-vt .x:disabled { opacity: 0.3; cursor: default; }
+.bld-form .ed-form { margin-bottom: 6px; }

@@ -4,6 +4,7 @@
 import { inNode } from "../core/types.js";
 import { isSel } from "../core/select.js";
 import { esc, reducedMotion, slotCls } from "./util.js";
+import { createBuilding3D } from "./building3d.js";
 
 // стелаж, в котором стоит ярус или ячейка (для остальных — сам узел)
 const bayOf = (tree, n) => (n.type === "level" ? tree.nodes.get(n.parent) : n.type === "cell" ? tree.nodes.get(tree.nodes.get(n.parent).parent) : n);
@@ -25,6 +26,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   scene.add(sun);
   let W0 = W1, D0 = D1;
   const X = (x) => x - W0 / 2, Z = (y) => y - D0 / 2;
+  const bld3 = createBuilding3D({ T, scene, X, Z }); // план здания (W-04): контур, стены, колонны, проёмы
   const box = new T.BoxGeometry(1, 1, 1), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 20);
   const themed = [], TM = (token, opts = {}) => { const m = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05, ...opts }); themed.push([m, token]); return m; };
   const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: TM("--ok"), warn: TM("--warn"), bad: TM("--bad"), area: TM("--idle", { transparent: true, opacity: 0.32 }), crate: TM("--idle") };
@@ -148,7 +150,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     W0 = tree.W0; D0 = tree.D0;
     const sx = (lastW - W0) / 2, sz = (lastD - D0) / 2; lastW = W0; lastD = D0;
     if (sx || sz) { camera.position.x += sx; camera.position.z += sz; controls.target.x += sx; controls.target.z += sz; controls.update(); }
-    disposeGroups(); items.length = 0; byCode.clear(); walk(tree.root); makeGroups();
+    disposeGroups(); items.length = 0; byCode.clear(); walk(tree.root); makeGroups(); bld3.build(model.building);
     Object.assign(sun.shadow.camera, { left: -W0 / 2 - 10, right: W0 / 2 + 10, top: D0, bottom: -D0 }); sun.shadow.camera.updateProjectionMatrix();
   }
   const t0 = performance.now(); build();

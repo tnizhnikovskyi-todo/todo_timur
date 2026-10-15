@@ -1,4 +1,5 @@
 // Константи и мелкие чистые помощники ядра (без DOM).
+import { normBuilding } from "./building.js";
 
 // Конструкции мест; подписи — в словаре i18n (form.<id>).
 export const FORM_IDS = ["shelf", "rolls", "pallet", "stack", "zone"];
@@ -31,8 +32,8 @@ export const FLOW = ["Вхід", "Приймання", "Контроль яко�
 export const KIND_TYPE = { group: "group", zone: "group", rack: "rack", bay: "bay", level: "level", bayleaf: "bayleaf" };
 
 export const clone = (x) => JSON.parse(JSON.stringify(x));
-export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], prop: [], depth: null, depthZones: [] });
-export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], prop: d.prop || [], depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)) } : emptyEdit();
+export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], prop: [], depth: null, depthZones: [], building: null });
+export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], prop: d.prop || [], depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)), building: normBuilding(d.building) } : emptyEdit();
 export const zoneTp = (c) => /^PAL-/.test(c) ? "PAL" : /^(KIT|FRONTS)-/.test(c) ? "CART" : /^(POST|OUT)-/.test(c) ? "BIG" : /^UNLOAD-/.test(c) ? "DOCK" : "ZONE";
 
 export const inNode = (id, f) => id === f || id.startsWith(`${f}/`);

@@ -4,6 +4,7 @@ import { RACKED, inNode } from "../core/types.js";
 import { pathOf } from "../core/tree.js";
 import { hhmm } from "../core/locks.js";
 import { esc, fillCls, isLow, modKey, pbar } from "./util.js";
+import { createBldPanel } from "./bldpanel.js";
 import { createTools } from "./tools.js";
 
 const KINDS = ["stack", "bin", "shelf", "pallet_cell", "kit", "area"];
@@ -161,7 +162,8 @@ export function createSidePanel({ model, i18n, root }) {
     });
   }
 
-  return { render() { const side = root; if (model.ui.edit) edit(side); else browse(side); } };
+  const bld = createBldPanel({ model, i18n });
+  return { render() { const side = root; if (model.bld.state.on) bld.render(side); else if (model.ui.edit) edit(side); else browse(side); } };
 }
 
 // ---------- панель уровней: на каждом уровне пути — список соседей, в конце — уровень ниже
@@ -180,12 +182,12 @@ export function renderLevelBar(bar, { model, i18n }) {
 
 // ---------- панель режима редактирования: счётчики, кнопки, статус хранилища
 export function updateEditBar(root, { model, i18n }) {
-  const ui = model.ui, on = ui.edit, s = model.stats(), q = (x) => root.querySelector(x), ro = model.readonly;
-  q("#editbar").hidden = !on && !s.pending;
-  q("#ed-title").textContent = i18n.t(on ? "bar.editing" : "bar.hasPending");
+  const ui = model.ui, on = ui.edit, bld = model.bld.state.on, s = model.stats(), q = (x) => root.querySelector(x), ro = model.readonly;
+  q("#editbar").hidden = !on && !bld && !s.pending;
+  q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
-  q("#ed-undo").hidden = q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
   q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");
