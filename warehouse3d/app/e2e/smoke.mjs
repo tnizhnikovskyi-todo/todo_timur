@@ -29,11 +29,8 @@ await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
 const url = `http://127.0.0.1:${server.address().port}/`;
 
 const steps = [], errors = [];
-// E2E_ONLY=<regexp> — выполнить только шаги с подходящим названием (отладка); E2E_VERBOSE=1 — полный текст ошибки
-const step = async (name, fn) => {
-  if (process.env.E2E_ONLY && !new RegExp(process.env.E2E_ONLY).test(name)) return;
-  try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n").slice(0, process.env.E2E_VERBOSE ? 40 : 4).join(" ").trim()}`); errors.push(name); }
-};
+const only = process.env.WH_E2E_ONLY ? new RegExp(process.env.WH_E2E_ONLY) : null; // WH_E2E_ONLY=<regexp>: только шаги, чьё имя подходит (отладка)
+const step = async (name, fn) => { if (only && !only.test(name)) return; try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n").slice(0, process.env.E2E_VERBOSE ? 40 : 4).join(" ").trim()}`); errors.push(name); } };
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
@@ -610,12 +607,12 @@ try {
     return pg;
   };
   const download = async (pg, trigger) => { const [dl] = await Promise.all([pg.waitForEvent("download"), trigger()]); const p = path.join(tmpDir, dl.suggestedFilename()); await dl.saveAs(p); return { name: dl.suggestedFilename(), data: fs.readFileSync(p) }; };
-  await step("меню «Файл»: четыре пункта, Esc закрывает", async () => {
+  await step("меню «Файл»: пять пунктов, Esc закрывает", async () => {
     files.pg = await openFiles();
     const pg = files.pg;
     expect(await pg.locator("#file-list").isHidden(), "меню открыто сразу");
     await pg.click("#file-btn");
-    expect((await pg.locator("#file-list [role=menuitem]").allInnerTexts()).join("|") === "Імпорт локацій…|Експорт локацій…|Експорт проєкту|Імпорт проєкту…", "пункты меню");
+    expect((await pg.locator("#file-list [role=menuitem]").allInnerTexts()).join("|") === "Імпорт локацій…|Експорт локацій…|Експорт проєкту|Імпорт проєкту…|Новий проєкт: з нуля…", "пункты меню");
     await pg.keyboard.press("Escape");
     expect(await pg.locator("#file-list").isHidden(), "Esc не закрыл меню");
     await pg.click("#file-btn"); await pg.click("body", { position: { x: 5, y: 700 } });
@@ -1217,6 +1214,123 @@ try {
     await pg.click("#help-btn"); await pg.waitForSelector("#help-view:not([hidden]) .toc");
     const h = await pg.locator("#h-capacity").innerText();
     expect(h.includes("allow_new_product") && h.includes("min") && h.includes("replenish_location"), "в инструкции нет раздела о ёмкости и категориях");
+    await ctx.close();
+  });
+  // W-16: мастер «З нуля» — отдельные контексты браузера (свой localStorage); общий проход по шагам
+  // ожидание с понятным сообщением: что ждали и что в панели мастера
+  const wizWait = async (pg, what, fn, arg) => { try { await pg.waitForFunction(fn, arg); } catch (e) { throw new Error(`${what}: ${(await pg.locator("#wizard").innerText().catch(() => "—")).replace(/\s+/g, " ").slice(0, 260)}`); } };
+  const wizStep = async (pg, k) => { await pg.waitForSelector(`#wizard [data-step-body="${k}"]`); };
+  const wizNext = async (pg, to) => { await pg.click("#wizard [data-act=next]"); await wizStep(pg, to); };
+  // здание 60×30 по умолчанию → 2 зоны (ровно пополам) → по 4 ряда × 10 секций × 4 яруса (R01 по умолчанию) → адресация → проверки → план
+  async function walkWizard(pg) {
+    await wizStep(pg, "building");
+    expect(await pg.locator("#wizard [data-act=next]").isDisabled(), "«Далі» доступна до создания здания");
+    await pg.click("#wizard [data-act=building]");
+    await pg.waitForSelector("#wizard [data-info]");
+    expect((await pg.locator("#wizard [data-info]").innerText()).includes("60 × 30"), "здание 60×30 не создано");
+    await wizNext(pg, "zones");
+    await pg.click("#wizard [data-act=zone-add]"); await pg.click("#wizard [data-act=zone-add]");
+    expect((await pg.locator("#wizard .wiz-zone").count()) === 2, "две зоны в форме");
+    expect(await pg.locator("#wizard [data-act=next]").isDisabled(), "«Далі» доступна до применения зон");
+    await pg.click("#wizard [data-act=zones]");
+    await wizWait(pg, "зоны не применились", () => document.querySelectorAll("#wizard .wiz-zone .o_tag").length === 2);
+    await wizNext(pg, "racks");
+    expect((await pg.locator("#wizard .wiz-zone").count()) === 2, "две карточки зон на шаге «Ряди»");
+    const zids = await pg.locator("#wizard [data-act=racks]").evaluateAll((bs) => bs.map((b) => b.dataset.zid));
+    for (const z of zids) { await pg.click(`#wizard [data-act=racks][data-zid="${z}"]`); await wizWait(pg, "ряды не созданы", (id) => /Створено/.test(document.querySelector(`#wizard [data-zid="${id}"] [data-made]`)?.textContent || ""), z); }
+    await wizNext(pg, "addr");
+    await pg.waitForSelector("#wizard [data-prev] .code");
+    await pg.click("#wizard [data-act=addr]"); await pg.waitForSelector("#wizard [data-info]");
+    await wizNext(pg, "checks");
+    expect((await pg.locator("#wizard [data-count]").innerText()).includes("Проблем немає"), "на шаге проверок должны быть чисто");
+    await wizNext(pg, "plan");
+    await wizWait(pg, "в плане нет 410 локаций", () => /410/.test(document.querySelector("#wizard [data-sum]")?.textContent || ""));
+  }
+  const wizCsv = async (pg) => {
+    await pg.click("#wizard [data-act=file]"); await pg.waitForSelector("#exp-dlg");
+    await pg.check("#exp-dlg input[name=mode][value=all]"); await pg.check("#exp-dlg input[name=fmt][value=csv]");
+    const dl = pg.waitForEvent("download"); await pg.click("#exp-dlg [data-go]"); const file = await dl;
+    return fs.readFileSync(await file.path(), "utf8").replace(/^﻿/, "");
+  };
+  await step("мастер «З нуля» вне Odoo: заготовка, шаги, выход и возврат, файл для импорта", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce", acceptDownloads: true });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    expect(await pg.locator("#wiz-btn").isHidden(), "кнопка «Майстер» видна в обычном проекте");
+    await pg.click("#file-btn"); await pg.click("#fm-new-scratch"); await pg.waitForSelector("#scratch-dlg");
+    await pg.fill("#scratch-dlg [data-code]", "WHX"); await pg.click("#scratch-dlg [data-go]");
+    await pg.waitForSelector("#wizard:not([hidden]) [data-step-body=building]"); // новый проект открыт сразу с мастером
+    expect((await pg.locator("#plan-side h2").innerText()) === "WHX", "заготовка со своим кодом");
+    await walkWizard(pg);
+    // выход (закрыть панель) и возврат (кнопка «Майстер», потом перезагрузка страницы): шаг и результат сохранены
+    await pg.click("#wizard [data-act=close]"); expect(await pg.locator("#wizard").isHidden(), "панель не закрылась");
+    await pg.click("#wiz-btn"); await wizStep(pg, "plan");
+    await pg.click("#wizard [data-act=step][data-step=racks]"); await wizStep(pg, "racks");
+    await pg.reload(); await pg.waitForSelector("#plan-side h2");
+    await wizStep(pg, "racks");
+    expect((await pg.locator("#wizard [data-made]").first().innerText()).includes("Створено"), "после перезагрузки ряды мастера пропали");
+    expect((await pg.locator("#wizard [data-act=racks]").count()) === 2, "после перезагрузки две зоны");
+    await pg.click("#wizard [data-act=step][data-step=plan]"); await wizStep(pg, "plan");
+    expect(await pg.locator("#wizard [data-act=odoo]").count() === 0, "вне Odoo нет применения через API");
+    const csv = await wizCsv(pg), lines = csv.trim().split("\n");
+    expect(csv.startsWith("name,location_id,usage,barcode") && csv.includes("WHX-1-01-01-A") && csv.includes("WHX-2-04-10-D"), "файл не содержит коды мест мастера");
+    expect(lines.filter((l) => /,internal,WHX-\d-\d\d-\d\d-[A-D],/.test(l)).length === 320, "в файле должно быть 320 мест");
+    // обычный проект: «Завершити» убирает мастер, правки слоя остались
+    await pg.click("#wizard [data-act=finish]");
+    expect(await pg.locator("#wizard").isHidden() && await pg.locator("#wiz-btn").isHidden(), "мастер не завершился");
+    expect((await pg.locator("#plan-side").innerText()).match(/(\d+)\s+місц/)?.[1] === "320", "после мастера в проекте 320 мест");
+    await ctx.close();
+  });
+  await step("мастер «З нуля» в Odoo: выбор существующего склада, шаги, применить (фейковый сервер)", async () => {
+    const W = 3000, state = { rows: [{ id: W, name: "WH3", complete_name: "WH3", location_id: null, usage: "view" }, { id: W + 1, name: "Stock", complete_name: "WH3/Stock", location_id: W, usage: "internal", barcode: "WH3-STOCK" }],
+      applied: [], log: [], next: 9000, projects: new Map(), saves: 0 };
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce", acceptDownloads: true });
+    await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; });
+    const path = (r) => (r.location_id ? `${path(state.rows.find((x) => x.id === r.location_id))}/${r.name}` : r.name);
+    await ctx.route("**/wh_constructor/api/**", async (route) => {
+      const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+      let out;
+      if (r === "/me") out = { uid: 1, name: "Аня", company: "Co", rights: { view: true, design: true, apply: true } };
+      else if (r === "/projects") out = { status: "ok", projects: [...state.projects.values()].map((x) => ({ id: x.data.id, name: x.data.name, source: x.data.source, loaded_at: x.data.loaded_at, warehouses: x.data.warehouses.length })) };
+      else if (r === "/project/load") { const x = state.projects.get(params.key); out = x ? { status: "ok", found: true, data: x.data, rev: x.rev } : { status: "ok", found: false }; }
+      else if (r === "/project/save") { const x = state.projects.get(params.key), rev = x ? x.rev + 1 : 1; state.projects.set(params.key, { data: params.data, rev }); state.saves++; out = { status: "ok", rev }; }
+      else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [{ id: 3, code: "WH3", name: "Склад 3", company_id: 1, company: "Co", view_location_id: W, places: 1 }] };
+      else if (r === "/read/locations") { const all = state.rows.filter((x) => x.active !== false).map((x) => ({ ...x, complete_name: path(x) })); out = { status: "ok", total: all.length, offset: 0, limit: params.limit, next: null, locations: all, products: {} }; }
+      else if (r.startsWith("/read/")) out = { status: "ok", total: 0, offset: 0, limit: params.limit, next: null, [r.slice(6)]: [], products: {} };
+      else if (r === "/apply/run") {
+        state.applied.push(params); const refs = {}, made = [];
+        for (const o of params.ops.filter((x) => x.kind === "create")) { const id = state.next++; refs[o.ref] = id; made.push(id); state.rows.push({ id, name: o.name, location_id: o.parent.ref ? refs[o.parent.ref] : o.parent.id, usage: o.usage, barcode: o.vals.barcode || null }); }
+        state.log.unshift({ id: state.log.length + 1, name: "WH3", date: "2026-10-15T12:00:00Z", user: "Аня", state: "applied", counts: { create: made.length }, made, ops: [], more: 0 });
+        out = { status: "ok", log_id: state.log[0].id, refs, counts: { create: made.length, move: 0, rename: 0, attrs: 0, archive: 0 } };
+      } else if (r === "/apply/log") out = { status: "ok", log: state.log };
+      else if (r.startsWith("/lock/")) out = { ok: true, owner: "Аня", mine: true };
+      else out = { status: "ok", found: false };
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+    });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url);
+    await pg.waitForSelector("#odoopick-dlg input[data-wh]"); await pg.click("#odoopick-dlg [data-create]"); // обычный проект из склада базы
+    await pg.waitForSelector("#plan-side h2");
+    expect(await pg.locator("#wiz-btn").isHidden(), "кнопка «Майстер» видна в обычном проекте из Odoo");
+    await pg.click("#file-btn"); await pg.click("#fm-new-scratch");
+    await pg.waitForSelector("#odoopick-dlg input[type=radio][data-wh]"); // выбор существующего склада (A6): один, радио
+    expect((await pg.locator("#odoopick-dlg input[data-wh]").count()) === 1, "в окне выбора один склад базы");
+    await pg.click("#odoopick-dlg [data-create]");
+    await pg.waitForSelector("#wizard:not([hidden]) [data-step-body=building]");
+    const proj = [...state.projects.values()].find((x) => x.data.warehouses[0].wizard);
+    expect(proj && proj.data.warehouses.length === 1 && proj.data.warehouses[0].baseRef === "odoo:3" && proj.data.source.kind === "odoo", "проект мастера с выбранным складом Odoo не сохранён");
+    await walkWizard(pg);
+    expect(await pg.locator("#wizard [data-act=odoo]").isEnabled(), "применение в Odoo недоступно");
+    await pg.click("#wizard [data-act=odoo]"); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 410, `в плане должно быть 410 операций: ${await pg.locator("#plan-dlg [data-key]").count()}`);
+    await pg.click("#plan-dlg [data-apply]"); await pg.waitForSelector("#plan-dlg .o_remind");
+    await pg.check("#plan-dlg [data-ack]"); await pg.click("#plan-dlg [data-go]"); await pg.waitForSelector("#plan-dlg .o_msg.ok");
+    expect(state.applied.length === 1 && state.applied[0].ops.length === 410 && state.applied[0].ops.every((o) => o.kind === "create"), "применены не 410 операций создания");
+    expect(state.applied[0].ops.filter((o) => o.vals && o.vals.barcode).length === 320, "320 мест со штрихкодом");
+    expect(state.rows.filter((r) => r.barcode && /^WH3-\d-\d\d-\d\d-[A-D]$/.test(r.barcode)).length === 320, "в Odoo создано 320 мест");
+    await pg.click("#plan-dlg [data-close2]");
+    await wizWait(pg, "после применения план не пуст", () => /Змін немає/.test(document.querySelector("#wizard [data-sum]")?.textContent || ""));
+    expect((await pg.locator("#plan-side").innerText()).match(/(\d+)\s+місц/)?.[1] === "320", "после применения в модели 320 мест");
     await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {

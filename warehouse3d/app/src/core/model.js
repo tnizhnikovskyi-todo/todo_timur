@@ -7,7 +7,7 @@
 //   opts.enforce — false: проверки W-07 не отклоняют правки (только для тестов; по умолчанию отклоняют)
 //   opts.library — общая библиотека (library.js: свои типы и шаблоны), прочитанная хостом из storage.listLibrary(); model.library правит её и пишет в storage.saveLibrary
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
-//   { type: "library" } изменилась библиотека типов и шаблонов ·
+//   { type: "library" } изменилась библиотека типов и шаблонов · { type: "wizard" } изменилось состояние мастера «З нуля» (wizard.js) ·
 //   { type: "heat" } сменился показатель тепловой карты · { type: "find" } изменился запрос поиска «где лежит» · { type: "data" } обновлены остатки снимка (W-17) ·
 //   { type: "comments" } изменились комментарии на объектах (comments.js, W-18) · { type: "variant" } сменился или изменился список вариантов планировки (variants.js) ·
 //   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
@@ -28,6 +28,7 @@ import { BLD_OPS } from "./bldops.js";
 import { compileRule, defaultRules, effectiveRules, parseStats, suggestMask } from "./parse.js";
 import { cleanApplied, computePlan } from "./plan.js";
 import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "./checks.js";
+import { newWizard, normWizard } from "./wizard.js";
 import { HEAT_KEYS, HEAT_MODES, heatHasData, heatMap } from "./metrics.js";
 import { activityOf, mergeStock, placeCard, searchStock } from "./stock.js";
 import { createComments } from "./comments.js";
@@ -60,6 +61,7 @@ export function createModel(project, storage, opts = {}) {
 
   // слой правок и дерево активного склада
   function load(wh) {
+    if (wh.wizard) wh.wizard = normWizard(wh.wizard);
     s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null; s.rejected = null; s.chkc = null;
     ed.recompute(s); s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(wh)));
   }
@@ -424,6 +426,15 @@ export function createModel(project, storage, opts = {}) {
       for (const [node, c] of s.comments.counts()) if (s.tree.nodes.has(node)) out.push({ node, kind: "comment", ...c });
       for (const l of s.locks.marks()) out.push({ node: l.zone, kind: "lock", by: l.by, mine: l.mine, until: l.until });
       return out;
+    },
+    // мастер «З нуля» (W-16, wizard.js): состояние лежит в складе проекта (warehouse.wizard) и пишется вместе с проектом; null — мастера нет.
+    // Шаги вызывают обычные операции модели, поэтому правки видны и отменяются как остальные; сам мастер слоя правок не меняет
+    wizard: {
+      get state() { return s.wh.wizard || null; },
+      get active() { return !!s.wh.wizard; },
+      start() { if (!s.wh.wizard) { s.wh.wizard = newWizard(); ed.persist(s); s.emit({ type: "wizard" }); } return s.wh.wizard; },
+      patch(fn) { if (!s.wh.wizard) return false; fn(s.wh.wizard); ed.persist(s); s.emit({ type: "wizard" }); return true; },
+      finish() { if (!s.wh.wizard) return false; s.wh.wizard = null; ed.persist(s); s.emit({ type: "wizard" }); return true; },
     },
     // ёмкость и атрибуты (W-14, capacity.js): категории хранения, габариты / вес / флаги / стратегия / min-max места, функция и атрибуты зоны, сводка ёмкости.
     // Правки — ops.capacity / catAssign / flags / removal / zoneFn / minmax / catSave / catDel (слой edit.attr, «Показати / Зберегти», в план изменений)

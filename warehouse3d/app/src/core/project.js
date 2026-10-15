@@ -5,7 +5,7 @@
 //     (файл, «с нуля»);
 //     saved / pending — слой правок: сохранённое (SAVED) и несохранённое (PENDING) этого склада; глубина локаций склада — saved.depth
 //     (null — "level", иначе "cell") и переопределение по зонам saved.depthZones [{ id узла, d }], как и ячейки яруса saved.cells; типы мест склада — saved.types
-//     (null — общий справочник BASE_TYPES, иначе свой список поверх него, D-12); building — сохранённый план здания и проходы (W-04, building.js; null — здания нет; правки — через слой правок, saved.building).
+//     (null — общий справочник BASE_TYPES, иначе свой список поверх него, D-12); wizard — состояние мастера «З нуля» (wizard.js; null — мастера нет); building — сохранённый план здания и проходы (W-04, building.js; null — здания нет; правки — через слой правок, saved.building).
 //   Узлы склада (nodes) — производные: дерево строится из снимка и слоя правок (tree.js) и выгружается как nodesOf(tree, data).
 import { DEPTHS, normEdit } from "./types.js";
 import { normBuilding } from "./building.js";
@@ -31,7 +31,7 @@ export function createWarehouse(o = {}, i = 0) {
   if (o.building && !saved.building) saved.building = normBuilding(o.building);
   // варианты планировки (W-18, variants.js): слой активного — saved / pending склада, слои остальных — в их записях
   return { id: o.id || `wh-${i + 1}`, code, name: o.name || code, company: o.company || "", baseRef: o.baseRef ?? null, base: o.base ?? null,
-    saved, pending: normPending(o.pending), building: saved.building ?? null, ...normVariants(o.variants, o.variant) };
+    saved, pending: normPending(o.pending), building: saved.building ?? null, wizard: o.wizard && typeof o.wizard === "object" ? o.wizard : null, ...normVariants(o.variants, o.variant) };
 }
 
 export function createProject(o = {}) {

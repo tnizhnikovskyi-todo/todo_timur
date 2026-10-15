@@ -18,6 +18,7 @@ import { createOdooApi, odooIdOf, projectFromWarehouses } from "../adapters/odoo
 import { openOdooPick } from "../view/odoopick.js";
 import { odooLocationUrl } from "../core/stock.js";
 import { diffSnapshots } from "../core/odoodiff.js";
+import { newWizard } from "../core/wizard.js";
 
 const LOCK_RENEW_MS = 60000; // срок блокировки на сервере — 5 минут, продлеваем раз в минуту
 const POLL_MS = 15000; // чужие блокировки и комментарии (W-18): список перечитывается, чтобы значки на плане не отставали
@@ -39,6 +40,17 @@ async function start() {
       if (!r) return null;
       const info = adapter.info || {}, id = `odoo-${Date.now()}`;
       const p = projectFromWarehouses(r.warehouses, { id, name: r.name, db: info.db || odoo.db || "", version: info.version, now: info.now || "" });
+      if ((await storage.saveProject(p, { commit: true })) === "fail") throw new Error("save");
+      storage.write("project", id);
+      return id;
+    };
+    // мастер «З нуля» в Odoo (W-16, A6): выбирается существующий склад базы (новый не создаётся), проект получает состояние мастера
+    const newOdooScratch = async () => {
+      const r = await openOdooPick({ i18n, single: true, load: () => adapter.listWarehouses(), defaultName: i18n.t("wiz.new.projName", { db: odoo.db || "Odoo" }) });
+      if (!r) return null;
+      const info = adapter.info || {}, id = `odoo-${Date.now()}`;
+      const p = projectFromWarehouses(r.warehouses.slice(0, 1), { id, name: r.name, db: info.db || odoo.db || "", version: info.version, now: info.now || "" });
+      p.warehouses.forEach((w) => { w.wizard = newWizard(); });
       if ((await storage.saveProject(p, { commit: true })) === "fail") throw new Error("save");
       storage.write("project", id);
       return id;
@@ -92,6 +104,7 @@ async function start() {
     const hostOdoo = odoo && {
       canRefresh: odooWhs().length > 0,
       rights: storage.rights,
+      async newScratch() { try { if (await newOdooScratch()) location.reload(); } catch (e) { console.error(e); model.notify("bad", "n.odooProjectFail", { msg: String(e.message || e) }); } },
       async newProject() { try { if (await newOdooProject()) location.reload(); } catch (e) { console.error(e); model.notify("bad", "n.odooProjectFail", { msg: String(e.message || e) }); } },
       // перечитывает склады проекта; возвращает расхождения с тем, что было загружено раньше (G7): [{ whId, code, items, old }] — выбор «прийняти з Odoo» / «залишити моє» делает окно
       async refresh() {

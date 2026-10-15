@@ -11,6 +11,7 @@ import { renderHelp } from "./help.js";
 import { createNotifier } from "./notify.js";
 import { createProblems } from "./problems.js";
 import { createTray } from "./tray.js";
+import { createWizard, openNewScratch } from "./wizard.js";
 import { openParse } from "./parse.js";
 import { openVariants, variantName } from "./variants.js";
 import { openHistory } from "./history.js";
@@ -31,10 +32,12 @@ const HTML = `
     <div class="filemenu"><button class="btn btn-secondary" id="file-btn" aria-haspopup="menu" aria-expanded="false" data-i18n="top.file"></button>
       <div class="o_menu" id="file-list" role="menu" hidden data-i18n-attr="aria-label:file.menu">
         <button role="menuitem" id="fm-imp-loc" data-i18n="file.impLoc"></button><button role="menuitem" id="fm-exp-loc" data-i18n="file.expLoc"></button>
-        <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button></div></div>
+        <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button>
+        <hr><button role="menuitem" id="fm-new-scratch" data-i18n="file.newScratch"></button></div></div>
     <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
     <button class="btn btn-secondary" id="plan-btn" data-i18n="top.plan" hidden></button>
     <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
+    <button class="btn btn-secondary" id="wiz-btn" aria-pressed="false" data-i18n="wiz.btn" hidden></button>
     <span class="sp"></span>
     <span class="role-badge" id="role-badge" hidden></span>
     <button class="btn btn-secondary" id="hist-btn" data-i18n="top.history" data-i18n-attr="title:top.historyTitle"></button>
@@ -79,6 +82,7 @@ const HTML = `
     <aside class="o_prob" id="problems" hidden aria-label="Problems"></aside>
     <aside class="o_prob o_tray" id="tray" hidden aria-label="Tray"></aside>
     <aside class="o_prob o_cmt" id="comments" hidden aria-label="Comments"></aside>
+    <aside class="o_prob o_wiz" id="wizard" hidden data-i18n-attr="aria-label:wiz.title"></aside>
   </div>
 </div>`;
 
@@ -120,7 +124,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
 
   const afterPick = () => scrollToSide(root);
   // панель проблем (W-07): переход к объекту — выделение и уровень на модели; у объекта здания — режим «Будівля»
-  let probs = null, tray = null, cm = null;
+  let probs = null, tray = null, cm = null, wiz = null;
   const goProblem = (p) => {
     if (!p) return;
     if ((p.ids || []).some((id) => model.tree.nodes.has(id))) { if (bldOn()) model.bld.setOn(false); model.checks.goTo(p); apply(); }
@@ -207,6 +211,8 @@ export function mountApp(root, { model, i18n, host = {} }) {
     pb.setAttribute("aria-pressed", String(!q("#problems").hidden)); pb.title = t("prob.count", { e: pc.error, w: pc.warn });
     const tc = model.tray.count(), tb = q("#tray-btn"), to = !q("#tray").hidden;
     q("#tray-cnt").textContent = String(tc); tb.hidden = !tc && !to; tb.setAttribute("aria-pressed", String(to)); tb.title = t("tray.count", { n: tc });
+    const wb = q("#wiz-btn"), wo = !q("#wizard").hidden;
+    wb.hidden = !model.wizard.active; wb.setAttribute("aria-pressed", String(wo && model.wizard.active)); wb.title = t("wiz.title");
     updateEditBar(root, { model, i18n });
     paintTop();
   }
@@ -234,6 +240,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   // ---------- события модели
   model.on((ev) => {
     if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); probs?.render(); tray?.render(); return; }
+    if (ev.type === "wizard") { paintBars(); return; } // сама панель мастера слушает модель (wizard.js)
     if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); renderHeat(); renderFind(); renderData(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); cm?.render(); return; }
     if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); renderHeat(); renderFind(); refresh(); }
     else if (ev.type === "comments" || ev.type === "locks" || ev.type === "variant") { refresh(); if (three && mode === "3d") three.makeMarks(); cm?.render(); }
@@ -295,6 +302,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   q("#fm-exp-loc").onclick = () => fileDo("openExportLocations");
   q("#fm-exp-proj").onclick = () => fileDo("exportProjectFile");
   q("#fm-imp-proj").onclick = () => fileDo("openImportProject");
+  q("#fm-new-scratch").onclick = () => { fileMenu(false); openNewScratch({ model, i18n, host }); }; // мастер «З нуля»: новый проект (склад-заготовка или выбор склада Odoo)
 
   // ---------- инструкция
   function showView(v) {
@@ -307,6 +315,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   q("#help-btn").onclick = () => showView(view === "help" ? "plan" : "help");
   q("#pr-btn").onclick = () => { probs.toggle(); paintBars(); };
   q("#tray-btn").onclick = () => tray.toggle();
+  q("#wiz-btn").onclick = () => wiz.toggle();
 
   bindKeys({ model, isActive: () => view === "plan" });
 
@@ -318,6 +327,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     side.render(); refresh(); q("#problems").setAttribute("aria-label", t("prob.title")); probs?.render();
     q("#tray").setAttribute("aria-label", t("tray.title")); tray?.render();
     q("#comments").setAttribute("aria-label", t("cmt.title")); cm?.refreshText();
+    q("#wizard").setAttribute("aria-label", t("wiz.title")); wiz?.render();
     if (view === "help") renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan") });
   });
 
@@ -327,5 +337,9 @@ export function mountApp(root, { model, i18n, host = {} }) {
   tray = createTray({ model, i18n, root: q("#tray"), onToggle: paintBars });
   // переход к объекту комментария: у объекта здания — режим «Будівля» (2D), у узла — уровень выше и выделение
   cm = createComments({ model, i18n, root: q("#comments"), onToggle: paintBars, onGo: (r) => { if (r === "bld") mode = "2d"; apply(); if (r === "bld") p2.fit(); afterPick(); } });
+  wiz = createWizard({ model, i18n, root: q("#wizard"), host, onGo: goProblem, onToggle: () => { model.pref.write("wizopen", !q("#wizard").hidden); paintBars(); } });
+  // проект, только что созданный мастером (или оставленный с открытой панелью), открывается с панелью мастера
+  const w0 = model.wizard.state;
+  if (w0 && (model.pref.read("wizopen") || (!w0.reached && !w0.form.building.done))) wiz.toggle(true);
   return { showView, get mode() { return mode; } };
 }

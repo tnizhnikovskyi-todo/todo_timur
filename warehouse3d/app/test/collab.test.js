@@ -11,6 +11,7 @@ import { filterComments, normComments, sortComments } from "../src/core/comments
 import { LOCAL_MAX, pushVersion } from "../src/core/history.js";
 import { odooRef, projectFromWarehouses } from "../src/adapters/odoo-api.js";
 import { createWorld } from "./fakeodoo.js";
+import { buildingApply, scratchProject, splitZones, zonesApply } from "../src/core/wizard.js";
 import { BASES, FUR, GP, fresh, node } from "./helpers.js";
 
 const tick = (ms = 0) => new Promise((r) => setTimeout(r, ms));
@@ -330,4 +331,22 @@ test("openProject: проект без вариантов и комментар�
   const storage = createMemoryStorage({ "project-old": { schema: 2, id: "old", name: "Старий", source: { kind: "scratch", name: "" }, loaded_at: "", warehouses: [{ id: "wh-1", code: "WH", saved: null, pending: [] }] } });
   const p = await openProject(storage, { bases: BASES, now: "", demo: demoProject, stamp: 1 });
   assert.equal(p.id, "old"); assert.equal(p.warehouses[0].variant, "v1"); assert.deepEqual(p.comments, []);
+});
+
+test("проект «з нуля» (W-16): есть variants и comments, мастер работает в активном варианте", async () => {
+  const storage = createMemoryStorage(), p = scratchProject({ id: "scr", name: "Новий", code: "WH" });
+  assert.deepEqual([p.warehouses[0].variant, p.warehouses[0].variants.length, p.comments], ["v1", 1, []]);
+  storage.saveProject(p);
+  const model = createModel(storage.peekProject(), storage, { bases: {} });
+  assert.ok(buildingApply(model, { mode: "rect", w: 60, d: 30 }).ok); await model.save("WH");
+  const id = model.variants.create("Проєкт A"); // копия слоя: здание есть и в новом варианте
+  assert.ok(model.building, "здание скопировано в новый вариант");
+  const zones = splitZones(model.building.contour, 2).map((r, i) => ({ key: `z${i + 1}`, name: `Зона ${i + 1}`, ...r, id: null, manual: false }));
+  assert.ok(zonesApply(model, zones).ok); await model.save("WH");
+  const inA = model.tree.nodes.get("WH").kids.length;
+  assert.ok(inA >= 2 && model.wizard.active);
+  model.variants.switch("v1"); // в «Як є» зон нет, состояние мастера общее для склада
+  assert.equal(model.tree.nodes.get("WH").kids.length, 0); assert.ok(model.wizard.active);
+  model.variants.switch(id); assert.equal(model.tree.nodes.get("WH").kids.length, inA);
+  assert.ok(await model.comments.add({ node: "WH", text: "Нотатка" })); assert.equal(model.project.comments.length, 1);
 });

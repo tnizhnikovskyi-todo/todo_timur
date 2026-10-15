@@ -18,11 +18,19 @@ function run(s, label, fn, key = null) {
 
 export const BLD_OPS = {
   // здание по габаритам раскладки + отступ margin (м); false — здание уже есть
+  // o.contour — вершины многоугольника (мастер «З нуля», W-16), o.rect — свой прямоугольник вместо габаритов раскладки, o.hCeil / o.hSpr — высоты
   create(s, o = {}) {
     if (s.edit.building) return false;
-    const r = B.rectAroundLayout(s.tree, o.margin);
-    change(s, "building", { k: "op.bldCreate" }, (e) => { e.building = B.createBuilding(r); });
-    return true;
+    const r = o.rect || (o.contour ? B.bbox(o.contour) : B.rectAroundLayout(s.tree, o.margin));
+    return change(s, "building", { k: "op.bldCreate" }, (e) => { e.building = o.contour ? B.normBuilding({ contour: o.contour, hCeil: o.hCeil ?? 8, hSpr: o.hSpr ?? 6.5 }) : B.createBuilding(r, o); }) !== false;
+  },
+  // контур вершинами и высоты одной правкой (мастер «З нуля»: повторное «Застосувати» на шаге «Будівля»); false — здания нет или правку отклонили проверки
+  shape(s, o = {}) {
+    return run(s, { k: "op.bldContour" }, (b) => {
+      const n = B.normBuilding({ contour: o.contour || b.contour, hCeil: o.hCeil ?? b.hCeil, hSpr: o.hSpr ?? b.hSpr });
+      if (n) { b.contour = n.contour; b.hCeil = n.hCeil; b.hSpr = n.hSpr; }
+      return !!n;
+    }) === true;
   },
   remove(s) {
     if (!s.edit.building) return false;
