@@ -428,7 +428,7 @@ function downloadAnswers(n) {
 }
 document.getElementById("send").onclick = async () => {
   const n = ALL.filter((q) => answered(q.id)).length;
-  if (!db) { downloadAnswers(n); return; }
+  if (!db) { if (window.claude) document.getElementById("copy").click(); else downloadAnswers(n); return; } // в окне артефакта сохранять файлы нельзя
   if (readOnly) { status("Отправлять ответы может только владелец страницы или редактор.", "warn"); return; }
   status("Отправляю…");
   try { const at = new Date().toISOString(); await db.doc("meta/status").set({ submitted: true, at, answered: n, total: ALL.length, by: uid });
