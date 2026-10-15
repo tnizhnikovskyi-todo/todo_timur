@@ -265,12 +265,23 @@ class ModbusTcpPlugin(SourcePlugin):
         blocks = self._blocks(needs)
         data: dict[tuple[int, int], list[tuple[int, int, list[int] | str]]] = {}
         errors: list[str] = []
-        for b in blocks:
+        pending = list(blocks)
+        reads = 0
+        while pending:
+            b = pending.pop(0)
             res = await self._read_block(b)
+            if isinstance(res, str) and "exception 0x02" in res and b.count > 1:
+                # у блоці є непризначені регістри (дірка між сигналами, gap_max): повторити по окремих сигналах
+                parts = {(n.addr, n.count): n for n in needs
+                         if n.unit == b.unit and n.fc == b.fc and b.addr <= n.addr and n.addr + n.count <= b.addr + b.count}
+                if len(parts) > 1 or (parts and next(iter(parts)) != (b.addr, b.count)):
+                    pending = list(parts.values()) + pending
+                    continue
             if isinstance(res, str):
                 errors.append(res)
             data.setdefault((b.unit, b.fc), []).append((b.addr, b.count, res))
-        if blocks and len(errors) == len(blocks):
+            reads += 1
+        if reads and len(errors) == reads:
             raise PollError(errors[0])
         ts = self.clock.now()
         out: list[Reading] = []
