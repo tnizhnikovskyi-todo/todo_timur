@@ -1,4 +1,5 @@
 """Параметри factory3d.yard.* (SPEC §5.1): умовчання й типізоване читання."""
+
 import logging
 
 _logger = logging.getLogger(__name__)

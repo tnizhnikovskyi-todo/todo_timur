@@ -1,1 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_yard_visit_user,f3d.yard.visit user,model_f3d_yard_visit,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_yard_visit_security,f3d.yard.visit security,model_f3d_yard_visit,group_f3d_yard_security,1,1,1,0
+access_f3d_yard_visit_dispatcher,f3d.yard.visit dispatcher,model_f3d_yard_visit,group_f3d_yard_dispatcher,1,1,1,1
+access_f3d_yard_booking_user,f3d.yard.booking user,model_f3d_yard_booking,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_yard_booking_dispatcher,f3d.yard.booking dispatcher,model_f3d_yard_booking,group_f3d_yard_dispatcher,1,1,1,1
+access_f3d_yard_reject_wizard_security,f3d.yard.reject.wizard security,model_f3d_yard_reject_wizard,group_f3d_yard_security,1,1,1,1

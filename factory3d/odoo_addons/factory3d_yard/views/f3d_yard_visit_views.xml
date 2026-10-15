@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_yard_visit_form" model="ir.ui.view">
+        <field name="name">f3d.yard.visit.form</field>
+        <field name="model">f3d.yard.visit</field>
+        <field name="arch" type="xml">
+            <form string="Рейс">
+                <header>
+                    <button name="action_plan" type="object" string="Запланувати" invisible="state != 'draft' or not booking_id" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                    <button name="action_arrive" type="object" string="Прибула" invisible="state not in ('draft','planned')" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_admit" type="object" string="Пропустити" class="btn-primary" invisible="state != 'arrived'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_call_to_dock" type="object" string="На ворота" class="btn-primary" invisible="state != 'queued'" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_start_handling" type="object" string="Початок операції" invisible="state not in ('queued','at_dock')" groups="factory3d_yard.group_f3d_yard_security,stock.group_stock_user"/>
+                    <button name="action_end_handling" type="object" string="Кінець операції" invisible="state != 'handling' or handling_end_at" groups="factory3d_yard.group_f3d_yard_security,stock.group_stock_user"/>
+                    <button name="action_weigh" type="object" string="Зважити" invisible="state not in ('queued','at_dock','handling')" groups="factory3d_yard.group_f3d_yard_security,stock.group_stock_user"/>
+                    <button name="action_leave" type="object" string="Виїхала" invisible="state not in ('queued','at_dock','handling','weighed')" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_reject_wizard" type="object" string="Відхилити" invisible="state not in ('draft','planned','arrived')" groups="factory3d_yard.group_f3d_yard_security"/>
+                    <button name="action_cancel" type="object" string="Скасувати" invisible="state not in ('draft','planned')" groups="factory3d_yard.group_f3d_yard_dispatcher" confirm="Скасувати рейс і бронювання?"/>
+                    <button name="action_draft" type="object" string="У чернетку" invisible="state != 'cancelled'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                    <button name="action_show_3d" type="object" string="Показати в 3D" icon="fa-cube" invisible="not scene_code and not dock_code"/>
+                    <field name="state" widget="statusbar" statusbar_visible="planned,arrived,queued,at_dock,handling,weighed,left"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_pickings" type="object" class="oe_stat_button" icon="fa-file-text-o" invisible="not batch_id">
+                            <field name="picking_count" widget="statinfo" string="Документи"/>
+                        </button>
+                        <button name="action_open_batch" type="object" class="oe_stat_button" icon="fa-cubes" string="Пакет" invisible="not batch_id"/>
+                    </div>
+                    <widget name="web_ribbon" title="Без броні" bg_color="text-bg-warning" invisible="not is_walk_in"/>
+                    <widget name="web_ribbon" title="Не приїхала" bg_color="text-bg-danger" invisible="not is_no_show"/>
+                    <div class="alert alert-warning" role="alert" invisible="weight_check != 'deviation'">
+                        Відхилення нетто: <field name="deviation_kg"/> кг (<field name="deviation_pct"/> %)
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Рейс">
+                            <field name="visit_type"/>
+                            <field name="priority" widget="priority"/>
+                            <field name="partner_id"/>
+                            <field name="carrier_id"/>
+                            <field name="delivery_carrier_id"/>
+                            <field name="batch_id"/>
+                            <field name="scene_code"/>
+                            <field name="weighing_policy" readonly="state not in ('draft','planned','arrived')"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Фура й водій">
+                            <field name="plate"/>
+                            <field name="driver_id"/>
+                            <field name="driver_phone" groups="factory3d_yard.group_f3d_yard_security"/>
+                            <field name="driver_doc" groups="factory3d_yard.group_f3d_yard_security"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="План і факт" name="plan_fact">
+                            <group>
+                                <group string="План">
+                                    <field name="booking_id"/>
+                                    <field name="dock_id"/>
+                                    <field name="planned_start"/>
+                                    <field name="planned_end"/>
+                                </group>
+                                <group string="Факт">
+                                    <field name="planned_at"/>
+                                    <field name="arrived_at"/>
+                                    <field name="admitted_at"/>
+                                    <field name="at_dock_at"/>
+                                    <field name="handling_start_at"/>
+                                    <field name="handling_end_at"/>
+                                    <field name="weighed_in_at"/>
+                                    <field name="weighed_out_at"/>
+                                    <field name="left_at"/>
+                                    <field name="rejected_at"/>
+                                    <field name="cancelled_at"/>
+                                </group>
+                                <group string="Тривалості">
+                                    <field name="wait_min"/>
+                                    <field name="dock_min"/>
+                                    <field name="total_min"/>
+                                    <field name="late_min"/>
+                                    <field name="progress" widget="percentage"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Бронювання" name="bookings">
+                            <field name="booking_ids" readonly="not id">
+                                <list editable="bottom">
+                                    <field name="dock_id"/>
+                                    <field name="slot_start"/>
+                                    <field name="slot_end"/>
+                                    <field name="source"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'confirmed'" decoration-warning="state == 'requested'" decoration-muted="state == 'cancelled'"/>
+                                    <button name="action_confirm" type="object" string="Підтвердити" invisible="state != 'requested'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                                    <button name="action_cancel" type="object" string="Скасувати" invisible="state == 'cancelled'" groups="factory3d_yard.group_f3d_yard_dispatcher"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Зважування" name="weighing">
+                            <group>
+                                <field name="gross_kg"/>
+                                <field name="tare_kg"/>
+                                <field name="net_kg"/>
+                                <field name="expected_kg"/>
+                                <field name="deviation_kg"/>
+                                <field name="deviation_pct"/>
+                                <field name="weight_check" widget="badge" decoration-success="weight_check == 'ok'" decoration-danger="weight_check == 'deviation'" decoration-muted="weight_check in ('none','no_reference')"/>
+                            </group>
+                        </page>
+                        <page string="Документи" name="pickings">
+                            <field name="picking_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="scheduled_date"/>
+                                    <field name="state"/>
+                                    <field name="f3d_net_weight_kg"/>
+                                    <field name="f3d_weight_check"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                            <group>
+                                <field name="reject_reason"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_visit_list" model="ir.ui.view">
+        <field name="name">f3d.yard.visit.list</field>
+        <field name="model">f3d.yard.visit</field>
+        <field name="arch" type="xml">
+            <list string="Рейси" decoration-muted="state in ('left','cancelled','rejected')" decoration-warning="is_walk_in and state in ('arrived','queued')" decoration-danger="weight_check == 'deviation'">
+                <field name="name"/>
+                <field name="day"/>
+                <field name="visit_type"/>
+                <field name="state" widget="badge" decoration-success="state == 'left'" decoration-info="state in ('planned','queued','at_dock','handling','weighed')" decoration-warning="state == 'arrived'" decoration-danger="state == 'rejected'" decoration-muted="state in ('cancelled','draft')"/>
+                <field name="plate"/>
+                <field name="partner_id"/>
+                <field name="carrier_id"/>
+                <field name="dock_id"/>
+                <field name="planned_start"/>
+                <field name="arrived_at"/>
+                <field name="left_at" optional="show"/>
+                <field name="wait_min" optional="hide"/>
+                <field name="dock_min" optional="hide"/>
+                <field name="net_kg" optional="hide"/>
+                <field name="weight_check" widget="badge" optional="hide" decoration-success="weight_check == 'ok'" decoration-danger="weight_check == 'deviation'" decoration-muted="weight_check in ('none','no_reference')"/>
+                <field name="is_walk_in" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_visit_kanban" model="ir.ui.view">
+        <field name="name">f3d.yard.visit.kanban</field>
+        <field name="model">f3d.yard.visit</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" default_order="priority desc, planned_start, arrived_at" records_draggable="0" group_create="0" quick_create="0">
+                <field name="name"/>
+                <field name="state"/>
+                <field name="priority"/>
+                <field name="is_walk_in"/>
+                <field name="weight_check"/>
+                <field name="plate_display"/>
+                <field name="partner_id"/>
+                <field name="dock_code"/>
+                <field name="planned_start"/>
+                <field name="planned_end"/>
+                <field name="progress"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="fw-bold"><field name="name"/></div>
+                        <div><field name="plate_display"/></div>
+                        <div><field name="partner_id"/></div>
+                        <div t-if="record.dock_code.raw_value or record.planned_start.raw_value">
+                            <field name="dock_code"/> · <field name="planned_start" widget="datetime" options="{'show_time': true}"/> – <field name="planned_end"/>
+                        </div>
+                        <div>
+                            <span t-if="record.is_walk_in.raw_value" class="badge text-bg-warning">Без броні</span>
+                            <span t-if="record.priority.raw_value == '1'" class="badge text-bg-danger">Терміново</span>
+                            <span t-if="record.weight_check.raw_value == 'deviation'" class="badge text-bg-danger">Відхилення ваги</span>
+                        </div>
+                        <field name="progress" widget="percentage" invisible="state not in ('at_dock','handling')"/>
+                        <footer>
+                            <button name="action_admit" type="object" class="btn btn-sm btn-primary" invisible="state != 'arrived'" groups="factory3d_yard.group_f3d_yard_security">Пропустити</button>
+                            <button name="action_call_to_dock" type="object" class="btn btn-sm btn-primary" invisible="state != 'queued'" groups="factory3d_yard.group_f3d_yard_security">На ворота</button>
+                            <button name="action_leave" type="object" class="btn btn-sm btn-primary" invisible="state != 'weighed'" groups="factory3d_yard.group_f3d_yard_security">Виїхала</button>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_visit_search" model="ir.ui.view">
+        <field name="name">f3d.yard.visit.search</field>
+        <field name="model">f3d.yard.visit</field>
+        <field name="arch" type="xml">
+            <search string="Рейси">
+                <field name="name"/>
+                <field name="plate" filter_domain="['|', ('plate','ilike',self), ('plate_norm','ilike',self)]"/>
+                <field name="partner_id"/>
+                <field name="carrier_id"/>
+                <field name="driver_id"/>
+                <field name="dock_id"/>
+                <field name="batch_id"/>
+                <filter name="today" string="Сьогодні" domain="[('day','=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="on_site" string="На території" domain="[('state','in',('arrived','queued','at_dock','handling','weighed'))]"/>
+                <filter name="at_kpp" string="Очікують на КПП" domain="[('state','=','arrived')]"/>
+                <filter name="queued" string="У черзі" domain="[('state','=','queued')]"/>
+                <filter name="at_dock" string="Біля воріт" domain="[('state','in',('at_dock','handling'))]"/>
+                <filter name="walk_in" string="Без броні" domain="[('is_walk_in','=',True)]"/>
+                <filter name="no_show" string="Не приїхала" domain="[('is_no_show','=',True)]"/>
+                <filter name="deviation" string="Відхилення ваги" domain="[('weight_check','=','deviation')]"/>
+                <filter name="done" string="Виїхали" domain="[('state','=','left')]"/>
+                <separator/>
+                <filter name="incoming" string="Приймання" domain="[('visit_type','=','incoming')]"/>
+                <filter name="outgoing" string="Відвантаження" domain="[('visit_type','=','outgoing')]"/>
+                <group>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="group_type" string="Тип" context="{'group_by': 'visit_type'}"/>
+                    <filter name="group_dock" string="Ворота" context="{'group_by': 'dock_id'}"/>
+                    <filter name="group_carrier" string="Перевізник" context="{'group_by': 'carrier_id'}"/>
+                    <filter name="group_partner" string="Контрагент" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_visit_pivot" model="ir.ui.view">
+        <field name="name">f3d.yard.visit.pivot</field>
+        <field name="model">f3d.yard.visit</field>
+        <field name="arch" type="xml">
+            <pivot string="Рейси (аналіз)">
+                <field name="carrier_id" type="row"/>
+                <field name="visit_type" type="col"/>
+                <field name="wait_min" type="measure"/>
+                <field name="dock_min" type="measure"/>
+                <field name="total_min" type="measure"/>
+                <field name="late_min" type="measure"/>
+                <field name="net_kg" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_visit_graph" model="ir.ui.view">
+        <field name="name">f3d.yard.visit.graph</field>
+        <field name="model">f3d.yard.visit</field>
+        <field name="arch" type="xml">
+            <graph string="Рейси по днях" type="bar" stacked="1">
+                <field name="day" interval="day" type="row"/>
+                <field name="visit_type" type="col"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_f3d_yard_dispatch" model="ir.actions.act_window">
+        <field name="name">Диспетчерська</field>
+        <field name="res_model">f3d.yard.visit</field>
+        <field name="view_mode">kanban,list,form,pivot,graph</field>
+        <field name="domain">[('state','not in',('cancelled',))]</field>
+        <field name="context">{'search_default_today': 1}</field>
+        <field name="help" type="html"><p class="o_view_nocontent_smiling_face">Немає рейсів на сьогодні. Створіть рейс або бронювання.</p></field>
+    </record>
+
+    <record id="action_f3d_yard_visit" model="ir.actions.act_window">
+        <field name="name">Рейси</field>
+        <field name="res_model">f3d.yard.visit</field>
+        <field name="view_mode">list,form,kanban,pivot,graph</field>
+    </record>
+</odoo>

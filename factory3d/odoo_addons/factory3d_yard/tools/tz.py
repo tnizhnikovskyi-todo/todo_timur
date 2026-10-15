@@ -1,4 +1,5 @@
 """Часові пояси двору (SPEC §11.5): БД — UTC naive, «доба» — Europe/Kyiv."""
+
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
