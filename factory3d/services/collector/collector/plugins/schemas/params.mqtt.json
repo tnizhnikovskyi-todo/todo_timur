@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "params mqtt (SPEC A.2)",
+  "type": "object",
+  "propertyNames": {"pattern": "^[^_]"},
+  "properties": {
+    "host": {"type": "string", "minLength": 1, "maxLength": 253},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "username": {"type": "string", "maxLength": 128},
+    "password_ref": {"type": "string", "pattern": "^F3D_[A-Z0-9_]{1,60}$"},
+    "client_id": {"type": "string", "pattern": "^[A-Za-z0-9_\\-]{1,64}$"},
+    "topics": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "string", "minLength": 1}},
+    "status_topic": {"type": "string"},
+    "status_online_path": {"type": "string", "pattern": "^\\$(\\.[A-Za-z_][A-Za-z0-9_\\-]*|\\[[0-9]+\\])+$"},
+    "keepalive_s": {"type": "integer", "minimum": 5, "maximum": 600},
+    "tls": {"type": "boolean"},
+    "qos": {"type": "integer", "minimum": 0, "maximum": 1}
+  },
+  "required": ["host", "client_id", "topics"]
+}
