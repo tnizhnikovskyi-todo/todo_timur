@@ -1,9 +1,9 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
-Тесты: — , ТК: —
-Решений без заказчика: 10 (ниже)
+Тесты: 131/131 пусто, 161/161 демо-шаблон (2026-10-15), ТК: —
+Решений без заказчика: 11 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: нет
+Требует внимания человека: демо-тесты гоняются на CE-шаблоне f3d_demo_tpl (не копия `odoo`): ожидания OEE/локаций/MR-номеров считаются из базы (DEC-11)
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 | W0 | принят | e59553e | TestInstall 6/6 (1 skip без демо) |
 | W1a | принят | e3fcaea | /factory3d_viewer+/test_factory3d_viewer 60/60 (демо-тесты skip) |
 | W1b-1 | принят (на демо 9 FAIL → W1c) | 3c285ed | 111/111 пусто; демо 132/141 |
-| W1c (демо-фиксы) | в работе | — | — |
+| W1c (демо-фиксы) | принят | edeb760 | 131/131 пусто; демо 161/161 |
 | W3 | принят | 45ff25b | 131/131 пусто; демо — те же 9 FAIL (W1c) |
 | W1b-2 | принят (дельта chains ждёт W1b-1) | 4a7da35 | 84/84 (демо skip) |
 | W2 | в работе | — | — |
@@ -32,3 +32,4 @@
 - DEC-8: ir.rule только чтение для group_f3d_user на maintenance.equipment/request с f3d_code (в Odoo 19 обычный пользователь видит лишь «свои» — противоречит §4.4). — `security/security.xml`
 - DEC-9: `energy.profile_k` нет в model_static.json — запасная таблица PROFILE_KF из plant/energy.py; `next_maintenance` — ближайшая открытая preventive-заявка (в 19 нет next_action_date). — `models/viewer_provider_production.py`, `viewer_provider_maintenance.py`
 - DEC-10: эмиттеры шины перекрывают также `_write_multi` (вычисляемые state пишутся через flush); `_since` по `ts >= since` (точность — секунда); идемпотентность 60 с только для periodic; ACL res.config.settings для group_f3d_admin (иначе пункт меню не виден, сохранение — base.group_system). — `models/bus_emitters.py`, `viewer_event.py`, `viewer_snapshot.py`, `security/ir.model.access.csv`
+- DEC-11: отличия CE-шаблона от базы `odoo` (696 кодовых локаций вместо 689, пересекающиеся логи OEE, потери «Equipment Failure», нет нумерации MR/…) — тесты считают ожидание из данных по правилу SPEC, хардкод SPEC проверяется при совпадении данных; в коде: KIT-* получают picking/production, FR-компоненты → to=ASM, DOCK-* не в source_locations. — `tests/test_payload_*.py`, `tools/chains.py`, `models/viewer_provider_stock.py`, `viewer_provider_logistics.py`
