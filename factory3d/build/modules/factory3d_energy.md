@@ -1,6 +1,6 @@
 # factory3d_energy
 Статус: IN_PROGRESS
-Тесты: 109/109 (и совместно с base/telemetry/viewer/iot_sim) (2026-10-15), ТК: ждут W6
+Тесты: 109/109 (и совместно с base/telemetry/viewer/iot_sim) (2026-10-15), ТК: прогнаны частично (TEST_REPORT.md)
 Решений без заказчика: 17 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правки SPEC: AC-32 (DEC-8), R-16 п.6 380 В (DEC-15), R-17 ключи (DEC-16)
@@ -13,7 +13,8 @@
 | W3 | принят | c72ce00 (+merge) | /factory3d_energy 91/91 |
 | W4 | принят | 6c2b011 | /factory3d_energy 73/73 |
 | W5 | принят | ce2b4df | /factory3d_energy 109/109 |
-| W6 | в работе | — | — |
+| W6 | принят (таймбокс менеджера) | f97a7f7 | стенд: ТК 01,05,11 зел.; 02,07,08,09 FAIL; 03,04,06,10,12 skip; ТБ 6/6; ТП 5/6 (ТП-01 FAIL→D-1) |
+| DoD | в работе | — | D-1, O-2, O-4, README, AC_COVERAGE |
 
 ## Решения без заказчика
 - DEC-1 (ENV-2): `mrp_workorder` (Enterprise) убран из `depends`; `time_ids` и V-16 — из CE `mrp`; что нет в CE — мост `factory3d_energy_mrp_workorder` (не тестирован — нет Enterprise) — `__manifest__.py`
