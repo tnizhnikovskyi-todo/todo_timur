@@ -1,0 +1,3 @@
+code,name,kind,unit,equipment,source,address,period_s,store_period_s,write_enabled,warn_high,min_duration_s,create_request,viewer_visible,owner,role
+yard/scale/TRUCK-SCALE/weight_kg,Автоваги: вага,gauge,кг,TRUCK-SCALE,SICS-TRUCK-SCALE,"{""cmd"":""SI"",""field"":""weight"",""doc"":""SICS SI/SIR, дискретність 20 кг""}",1,60,0,,0,0,0,scale_truck,weight
+yard/scale/TRUCK-SCALE/stable,Автоваги: стабільно,gauge,,TRUCK-SCALE,SICS-TRUCK-SCALE,"{""cmd"":""SI"",""field"":""stable"",""doc"":""SICS статус S/D""}",1,60,0,,0,0,0,scale_truck,stable

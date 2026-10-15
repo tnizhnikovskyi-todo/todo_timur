@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_yard_scale_form" model="ir.ui.view">
+        <field name="name">f3d.yard.scale.form</field>
+        <field name="model">f3d.yard.scale</field>
+        <field name="arch" type="xml">
+            <form string="Автоваги">
+                <sheet>
+                    <widget name="web_ribbon" title="Архів" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва"/></h1>
+                    </div>
+                    <group>
+                        <group string="Ваги">
+                            <field name="f3d_code"/>
+                            <field name="active" invisible="1"/>
+                            <field name="max_kg"/>
+                            <field name="min_kg"/>
+                            <field name="division_kg"/>
+                            <field name="auto_capture"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Зараз">
+                            <field name="capture_state" widget="badge" decoration-success="capture_state == 'captured'" decoration-warning="capture_state == 'settling'" decoration-danger="capture_state == 'offline'"/>
+                            <field name="last_weight_kg"/>
+                            <field name="last_stable"/>
+                            <field name="last_ts"/>
+                            <field name="last_weighing_id"/>
+                            <field name="today_count"/>
+                        </group>
+                    </group>
+                    <group string="Прив'язки">
+                        <group>
+                            <field name="source_id"/>
+                            <field name="weight_signal_id"/>
+                            <field name="stable_signal_id"/>
+                        </group>
+                        <group>
+                            <field name="equipment_id"/>
+                            <field name="zone_id"/>
+                            <field name="pos_x"/>
+                            <field name="pos_y"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_yard_scale_list" model="ir.ui.view">
+        <field name="name">f3d.yard.scale.list</field>
+        <field name="model">f3d.yard.scale</field>
+        <field name="arch" type="xml">
+            <list string="Автоваги">
+                <field name="f3d_code"/>
+                <field name="name"/>
+                <field name="max_kg"/>
+                <field name="min_kg"/>
+                <field name="division_kg"/>
+                <field name="auto_capture"/>
+                <field name="capture_state" widget="badge" decoration-success="capture_state == 'captured'" decoration-warning="capture_state == 'settling'" decoration-danger="capture_state == 'offline'"/>
+                <field name="last_weight_kg"/>
+                <field name="last_ts"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_f3d_yard_scale" model="ir.actions.act_window">
+        <field name="name">Автоваги</field>
+        <field name="res_model">f3d.yard.scale</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_f3d_yard_config_scale" action="action_f3d_yard_scale" name="Автоваги" parent="menu_f3d_yard_config" sequence="20" groups="group_f3d_yard_manager"/>
+</odoo>

@@ -4,3 +4,7 @@ from . import stock_picking_batch
 from . import stock_picking
 from . import res_partner
 from . import delivery_carrier
+from . import f3d_yard_scale
+from . import f3d_yard_weighing
+from . import f3d_yard_visit_weigh
+from . import f3d_signal
