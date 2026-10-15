@@ -70,3 +70,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 11:44 UTC factory3d_machine_connect: запущена сессия session_015rKvjaStE6jPJzyWqGrcwf по указанию пользователя; одновременно 2 (viewer, machine_connect).
 - 2026-10-15 11:54 UTC factory3d_energy: запущена сессия session_018rtyAE7NdpmjQDfBdoewi1 по указанию пользователя сверх лимита одновременных (3: viewer, machine_connect, energy).
 - 2026-10-15 12:20 UTC factory3d_yard: запущена сессия session_01D3xkbVgCSWZFh4E4Agha1H по указанию пользователя сверх лимита одновременных (3: machine_connect, energy, yard); viewer DONE по отчёту (12:06), идёт мерж.
+- 2026-10-15 12:36 UTC factory3d_viewer: мерж откатан (интеграция красная): 4 failed/671 из-за совместной установки с access (провайдер access в тестах viewer; тест access ждёт отсутствия viewer) и 24 failed+10 errors при установленном iot_sim (is_demo_db() истинно без демо-данных). Лидеру отправлено send_message с задачей; статус IN_PROGRESS.
