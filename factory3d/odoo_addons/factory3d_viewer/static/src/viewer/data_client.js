@@ -124,7 +124,12 @@ export class DataClient {
     }
 
     fetch(url, opts) {
-        return (this._fetch || window.fetch.bind(window))(url, opts);
+        if (this._ac?.signal.aborted) {
+            return Promise.reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        }
+        this._ac = this._ac || (typeof AbortController === "function" ? new AbortController() : null);
+        const o = this._ac ? { signal: this._ac.signal, ...opts } : opts;
+        return (this._fetch || window.fetch.bind(window))(url, o);
     }
 
     /** Індикатор (R2): `cb(state)` на кожну зміну `state`. */
@@ -223,6 +228,8 @@ export class DataClient {
     }
 
     unsubscribe() {
+        // скасувати запити в польоті: після закриття вкладки/дії не лишається «network error»
+        this._ac?.abort();
         clearTimeout(this.timer);
         clearInterval(this.poller);
         this.timer = this.poller = null;
@@ -315,7 +322,9 @@ export class DataClient {
             for (const c of codes) {
                 this.pending.add(c);
             }
-            this._failed(err);
+            if (!this._ac?.signal.aborted) {
+                this._failed(err);
+            }
         } finally {
             this.inflight = false;
             if (this.again) {
