@@ -229,7 +229,12 @@ class TestLocalSource(SourceCase):
         )
 
     def test_default_no_local_types(self):
-        self.assertEqual(self.env["f3d.source"]._f3d_local_types(), [])
+        # базова реалізація (telemetry) повертає []; модулі-розширення (td_genset, factory3d_energy…) дописують
+        # свої типи через super(), тому перевіряємо саме її, а не результат усього ланцюжка
+        Source = self.env["f3d.source"]
+        base_impl = next(vars(c)["_f3d_local_types"] for c in reversed(type(Source).__mro__)
+                         if "_f3d_local_types" in vars(c))
+        self.assertEqual(base_impl(Source), [])
         self.assertEqual(address_tools.validate_params("td_genset", {}), ["type: невідомий тип джерела «td_genset»"])
 
     def test_validate_params_local(self):
