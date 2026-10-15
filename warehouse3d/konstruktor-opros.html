@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Конструктор склада: опросник</title>
+</head>
+<body>
+
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Макет: спецификация-опросник — слева разделы с прогрессом, справа карточки предложений; снизу закреплённая панель отправки */
+:root {
+  --bg: #f3f4f1; --sheet: #ffffff; --ink: #1c232c; --muted: #5d6672; --line: #d9ddd6; --soft: #eceee9;
+  --accent: #245a86; --accent-ink: #ffffff; --accent-soft: #e1ebf3;
+  --mark: #e2b007; --mark-soft: #fbf1cf; --ok: #2f7d4f; --ok-soft: #e1f0e6; --warn: #9a5b00;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161a20; --sheet: #1f252d; --ink: #e3e6ea; --muted: #9aa3ae; --line: #343c47; --soft: #262d36;
+  --accent: #6fa7d6; --accent-ink: #0f1820; --accent-soft: #23344a;
+  --mark: #e9bf3a; --mark-soft: #3a3220; --ok: #5fbf86; --ok-soft: #1e3428; --warn: #e3a84a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #161a20; --sheet: #1f252d; --ink: #e3e6ea; --muted: #9aa3ae; --line: #343c47; --soft: #262d36;
+  --accent: #6fa7d6; --accent-ink: #0f1820; --accent-soft: #23344a;
+  --mark: #e9bf3a; --mark-soft: #3a3220; --ok: #5fbf86; --ok-soft: #1e3428; --warn: #e3a84a; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 120px; }
+header.top { display: grid; gap: 10px; margin-bottom: 22px; max-width: 78ch; }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.eyebrow::before { content: ""; width: 26px; height: 8px; background: repeating-linear-gradient(-45deg, var(--mark) 0 5px, var(--ink) 5px 10px); border-radius: 1px; }
+h1 { font: 600 34px/1.1 var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.lead { margin: 0; color: var(--muted); }
+.lead b { color: var(--ink); font-weight: 600; }
+.scope { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.scope span { font-size: 13px; padding: 3px 10px; border-radius: 3px; background: var(--soft); border: 1px solid var(--line); }
+.scope span.in { background: var(--ok-soft); border-color: transparent; }
+.scope span.out { background: var(--mark-soft); border-color: transparent; }
+
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 28px; align-items: start; }
+nav.toc { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); display: grid; gap: 2px; font-size: 14px; }
+nav.toc .h { font: 500 11px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 10px; }
+nav.toc a { display: grid; grid-template-columns: 28px 1fr auto; gap: 6px; align-items: baseline; padding: 6px 10px; border-radius: 4px; color: var(--ink); text-decoration: none; }
+nav.toc a:hover { background: var(--soft); }
+nav.toc a .k { font: 500 12px var(--f-mono); color: var(--muted); }
+nav.toc a .n { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+nav.toc a.done .n { color: var(--ok); }
+.legend { margin: 14px 10px 0; display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); }
+
+section.sec { margin-bottom: 34px; scroll-margin-top: 16px; }
+.sec-h { display: flex; gap: 12px; align-items: baseline; margin: 0 0 4px; }
+.sec-h .k { font: 500 14px var(--f-mono); color: var(--muted); }
+.sec-h h2 { font: 600 23px/1.2 var(--f-display); margin: 0; text-wrap: balance; }
+.sec-intro { margin: 0 0 14px; color: var(--muted); max-width: 72ch; }
+
+.q { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; display: grid; gap: 10px; margin-bottom: 10px; position: relative; }
+.q.answered { border-left: 4px solid var(--ok); padding-left: 15px; }
+.q-h { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.q-h .id { font: 500 13px var(--f-mono); color: var(--accent); }
+.q-h h3 { margin: 0; font: 600 16.5px/1.35 var(--f-body); text-wrap: balance; }
+.saved { font: 12px var(--f-mono); color: var(--muted); white-space: nowrap; }
+.saved.err { color: var(--warn); }
+.q p.d { margin: 0; max-width: 74ch; }
+.q p.d code, .q .rec code { font: 13px var(--f-mono); background: var(--soft); padding: 0 4px; border-radius: 3px; }
+.rec { font-size: 13.5px; color: var(--ink); background: var(--mark-soft); border-radius: 4px; padding: 6px 10px; max-width: 74ch; }
+.rec b { font-weight: 600; }
+.tag { display: inline-block; font: 500 11px var(--f-mono); letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; vertical-align: 1px; margin-right: 6px; }
+.tag.now { background: var(--ok); color: var(--sheet); }
+.tag.later { background: var(--accent); color: var(--accent-ink); }
+.tag.routes { background: var(--ink); color: var(--sheet); }
+.tag.choice { background: var(--mark); color: #1c232c; }
+
+.opts { display: flex; flex-wrap: wrap; gap: 6px; border: 0; padding: 0; margin: 2px 0 0; min-width: 0; }
+.opts legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opt span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; font-size: 14px; background: var(--sheet); cursor: pointer; user-select: none; }
+.opt span .r { font: 500 10.5px var(--f-mono); color: var(--warn); text-transform: uppercase; letter-spacing: 0.04em; }
+.opt input:hover + span { border-color: var(--accent); }
+.opt input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.opt input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.opt input:checked + span .r { color: var(--accent-ink); }
+.opt input:disabled + span { opacity: 0.6; cursor: default; }
+textarea { width: 100%; min-height: 40px; resize: vertical; font: 14px/1.45 var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+textarea::placeholder { color: var(--muted); }
+
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--sheet); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
+.bar .in { max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.prog { display: grid; gap: 4px; min-width: 180px; flex: 1; }
+.prog .t { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.prog .t b { font-weight: 600; }
+.prog .track { height: 6px; background: var(--soft); border-radius: 3px; overflow: hidden; }
+.prog .fill { height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+@media (prefers-reduced-motion: reduce) { .prog .fill { transition: none; } }
+.btn { font: 500 14px var(--f-body); padding: 8px 14px; border-radius: 4px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; }
+.btn:hover { background: var(--soft); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.status { font-size: 13px; color: var(--muted); max-width: 46ch; }
+.status.ok { color: var(--ok); }
+.status.warn { color: var(--warn); }
+.copybox { margin-top: 8px; width: 100%; height: 160px; font: 12.5px var(--f-mono); }
+.final textarea { min-height: 90px; }
+.hidden-by-filter { display: none; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  nav.toc { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.toc .h, .legend { display: none; }
+  nav.toc a { display: inline-flex; gap: 6px; border: 1px solid var(--line); background: var(--sheet); padding: 4px 10px; border-radius: 14px; font-size: 13px; }
+  nav.toc a .t { display: none; }
+  h1 { font-size: 28px; }
+  .q { padding: 14px; } .q.answered { padding-left: 11px; }
+  .q-h { grid-template-columns: auto minmax(0, 1fr); } .q-h .saved { grid-column: 1 / -1; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">ToDo · модуль «Склад» · Odoo</div>
+    <h1>Конструктор склада: что в нём будет</h1>
+    <p class="lead">Полный список предложений по конструктору. Он универсальный: подходит и для баз, где склад <b>уже настроен</b> (загружаем локации и рисуем по ним), и для баз, где склад <b>настраивают с нуля</b> (рисуем, а конструктор создаёт локации в Odoo).</p>
+    <p class="lead">У каждого пункта — моё предложение и варианты ответа. Отметьте ответ, при необходимости допишите комментарий; всё сохраняется сразу, можно закрыть и вернуться. Когда закончите, нажмите <b>«Отправить ответы»</b> внизу: <span id="howsend">сохранится файл с ответами — пришлите его в чат.</span></p>
+    <div class="scope"><span class="in">Сейчас: локации и размещение</span><span class="out">Позже: маршруты</span></div>
+  </header>
+  <div class="layout">
+    <nav class="toc" id="toc" aria-label="Разделы"></nav>
+    <main id="list"></main>
+  </div>
+</div>
+<div class="bar" role="region" aria-label="Отправка ответов">
+  <div class="in">
+    <div class="prog"><div class="t" id="prog-t">Отвечено 0</div><div class="track"><div class="fill" id="prog-f"></div></div></div>
+    <button class="btn" id="flt" aria-pressed="false">Только без ответа</button>
+    <button class="btn" id="copy">Скопировать ответы</button>
+    <button class="btn primary" id="send">Отправить ответы</button>
+    <div class="status" id="status" aria-live="polite">Подключаюсь к хранилищу ответов…</div>
+  </div>
+</div>
+
+<script>
+const P = [["now", "В первую очередь"], ["later", "Позже"], ["no", "Не нужно"], ["discuss", "Обсудить"]];
+const REC = { now: "Сразу", later: "Позже", routes: "С маршрутами", choice: "Выбор" };
+// rec: now | later | routes | choice; opts — свои варианты (иначе P); best — рекомендуемый вариант; multi — несколько ответов
+const S = [
+ { k: "0", t: "Общие вопросы", i: "Ответы на них определяют рамки всего остального.", q: [
+  { id: "Q1", t: "Кто работает в конструкторе", d: "От этого зависит, насколько подробным должен быть интерфейс и нужен ли упрощённый режим.", rec: "choice", multi: 1,
+    opts: [["analyst", "Аналитики и внедренцы ToDo"], ["head", "Руководитель склада клиента"], ["keeper", "Кладовщики, логисты клиента"], ["sales", "Продажи на пресейле"]], best: ["analyst", "head"],
+    r: "Аналитики ToDo и руководитель склада клиента. Кладовщикам — только просмотр (см. K2)." },
+  { id: "Q2", t: "Версии Odoo", d: "Поля и модели склада немного отличаются между версиями.", rec: "choice", multi: 1,
+    opts: [["v19", "Odoo 19"], ["v18", "Odoo 18"], ["v17", "Odoo 17"], ["ce", "Community"], ["ee", "Enterprise"]], best: ["v19", "v18", "v17", "ce", "ee"],
+    r: "Сначала 19, затем 17–18; Community и Enterprise одинаково — локации и правила размещения есть в обеих." },
+  { id: "Q3", t: "Размер складов", d: "Сколько мест хранения на одном складе нужно показывать без тормозов в 3D.", rec: "choice",
+    opts: [["1k", "до 1 000"], ["10k", "до 10 000"], ["50k", "до 50 000"], ["more", "больше 50 000"]], best: "50k",
+    r: "Закладываем до 50 000 мест: для этого 3D рисует одинаковые ячейки одним объектом и упрощает дальние." },
+  { id: "Q4", t: "Языки интерфейса", rec: "choice", multi: 1, opts: [["uk", "Украинский"], ["ru", "Русский"], ["en", "Английский"]], best: ["uk", "en"],
+    d: "Тексты интерфейса выносим в словарь, язык переключается.", r: "Украинский и английский; русский — по запросу клиентов." },
+  { id: "Q5", t: "Где живёт конструктор", rec: "choice", d: "Отдельная страница (как сейчас) быстрее развивать; модуль Odoo удобнее пользователям и не требует отдельного входа.",
+    opts: [["web", "Отдельное веб-приложение"], ["odoo", "Модуль Odoo внутри «Склада»"], ["both", "Сначала отдельное, потом модуль"]], best: "both",
+    r: "Сначала отдельное приложение, чтобы быстро отработать конструктор, затем модуль Odoo с тем же 3D-видом." },
+ ]},
+ { k: "A", t: "Подключение и режимы работы", i: "Два сценария: склад уже есть в Odoo — загружаем и раскладываем; склада нет — рисуем и создаём локации.", q: [
+  { id: "A1", t: "Как конструктор получает данные из Odoo", rec: "choice", d: "Склады, локации, остатки, категории хранения, правила размещения.",
+    opts: [["api", "API по ключу пользователя"], ["file", "Файл выгрузки (XLSX/CSV)"], ["module", "Через модуль Odoo"], ["all", "Все способы"]], best: "api",
+    r: "API по ключу; файл — запасной вариант для баз, куда нет доступа." },
+  { id: "A2", t: "Режим «Склад уже настроен»: импорт", rec: "now",
+    d: "Загружаем склад со всеми внутренними локациями, иерархией, остатками, категориями хранения и правилами размещения. Места, которые не удалось разложить, попадают в лоток «Не размещено» — их расставляют вручную." },
+  { id: "A3", t: "Распознавание структуры по кодам мест", rec: "now",
+    d: "Сейчас разбор зашит под коды этой базы (<code>FUR-R2-S01-L4</code> → ряд, секция, ярус). Нужен настраиваемый шаблон разбора для каждой базы с предпросмотром: «из 689 мест разобрано 650, вот 39 нераспознанных»." },
+  { id: "A4", t: "Автоматическая раскладка после импорта", rec: "now",
+    d: "Как сейчас: зоны по горизонтали, ряды вглубь. Это стартовая точка, дальше места двигают по реальному плану." },
+  { id: "A5", t: "Режим «С нуля»: мастер", rec: "now",
+    d: "Пошагово: здание → зоны → ряды по шаблону → адресация → проверки → план изменений → создание локаций в Odoo." },
+  { id: "A6", t: "Создавать ли сам склад Odoo", rec: "choice", d: "Создание склада (<code>stock.warehouse</code>) тянет за собой маршруты и типы операций.",
+    opts: [["inside", "Только внутри существующего склада"], ["create", "Создавать и склад"]], best: "inside",
+    r: "Работаем внутри существующего склада; создание склада — вместе с блоком маршрутов." },
+  { id: "A7", t: "Несколько складов и компаний", rec: "later", d: "Переключатель склада в проекте, у каждого свой план." },
+  { id: "A8", t: "Проекты по базам", rec: "now", d: "Конструктор хранит проекты: база → склад → план. Видно, к какой базе подключён проект, и когда загружались данные." },
+  { id: "A9", t: "Экспорт и импорт проекта файлом", rec: "now", d: "Перенос плана между базами (тест → прод) и типовые планы складов как заготовки." },
+ ]},
+ { k: "B", t: "План здания", i: "Основа, к которой привязаны все места. Геометрия здания — не локации Odoo.", q: [
+  { id: "B1", t: "Контур здания", rec: "now", d: "Прямоугольник или многоугольник, размеры в метрах, высота до потолка и до спринклеров." },
+  { id: "B2", t: "Препятствия и проёмы", rec: "now", d: "Колонны (с шагом сетки колонн), стены, ворота и доки, двери, офис, зарядка техники." },
+  { id: "B3", t: "Подложка-чертёж", rec: "now", d: "Загрузить PNG, JPG или PDF плана, задать масштаб по двум точкам с известным расстоянием и обвести." },
+  { id: "B4", t: "Импорт DXF/DWG", rec: "later", d: "Стены и колонны из чертежа автоматически. Сложнее и нужно не всем." },
+  { id: "B5", t: "Сетка, привязка, линейки", rec: "now", d: "Привязка к сетке и к соседним объектам, размеры на плане, инструмент «рулетка»." },
+  { id: "B6", t: "Этажи и мезонины", rec: "later", d: "Несколько уровней пола в одном здании." },
+  { id: "B7", t: "Ворота и зоны приёмки как локации Odoo", rec: "choice", d: "В многошаговых маршрутах есть локации входа и выхода (Вход, Выход, Упаковка).",
+    opts: [["geo", "Только геометрия"], ["loc", "Всегда локации"], ["opt", "По выбору на объекте"]], best: "opt",
+    r: "По выбору: объект плана можно связать с локацией Odoo или оставить просто геометрией." },
+ ]},
+ { k: "C", t: "Объекты и каталог конструкций", i: "Из чего собирается склад и как это редактировать.", q: [
+  { id: "C1", t: "До какого уровня места становятся локациями", rec: "choice",
+    d: "Цепочка: зона → подзона → ряд → секция → ярус → ячейка. Где-то последнее место — ярус, где-то каждая палета на ярусе.",
+    opts: [["cfg", "Настраивается на складе или зоне"], ["level", "Всегда до яруса"], ["cell", "Всегда до ячейки"]], best: "cfg",
+    r: "Настраивается по зоне: в фурнитуре место — ярус, в палетном хранении — ячейка." },
+  { id: "C2", t: "Ячейки внутри яруса", rec: "now", d: "N позиций на ярусе (например, 3 палеты на балку), каждая — отдельное место. Сейчас ярус = одно место." },
+  { id: "C3", t: "Какие конструкции нужны в каталоге первыми", rec: "choice", multi: 1, d: "Остальные можно добавить позже или собрать из своих типов.",
+    opts: [["pal", "Палетный стеллаж"], ["shelf", "Полочный стеллаж"], ["cant", "Консольный (длинномер, плита)"], ["drive", "Набивной (drive-in)"], ["mobile", "Мобильный"], ["flow", "Гравитационный"], ["mezz", "Мезонин"], ["stack", "Штабель на полу"], ["floor", "Зона на полу"], ["bin", "Ячеистый (мелочь, бины)"], ["cage", "Клетка (ценное)"], ["cold", "Камера (холод)"]],
+    best: ["pal", "shelf", "cant", "stack", "floor", "bin"], r: "Палетный, полочный, консольный, штабель, зона на полу и ячеистый — закрывают большинство складов." },
+  { id: "C4", t: "Параметры конструкции", rec: "now", d: "Высота каждого яруса отдельно, нижний ярус на полу, двусторонний ряд (спина к спине), зазоры, толщина балки, нагрузка на ярус." },
+  { id: "C5", t: "Свои шаблоны блоков", rec: "now", d: "Собрал секцию или ряд — сохранил как шаблон — ставишь много раз. Библиотека шаблонов общая для всех проектов." },
+  { id: "C6", t: "Панель свойств с вводом чисел", rec: "now", d: "X, Y, поворот, ширина, глубина, высота, число секций и ярусов, имя — точным вводом, а не только мышкой." },
+  { id: "C7", t: "Поворот", rec: "choice", opts: [["90", "Только на 90°"], ["15", "С шагом 15°"], ["any", "Любой угол"]], best: "90",
+    d: "Сейчас поворот на 90°.", r: "Оставить 90°: склады прямоугольные, адресация и проходы проще. Любой угол — если появится реальный случай." },
+  { id: "C8", t: "Массовое создание", rec: "now", d: "«10 рядов по 12 секций, проход 3 м» одной командой, массив по сетке." },
+  { id: "C9", t: "Выделение рамкой, выравнивание, распределение", rec: "now", d: "Выделить мышкой область, выровнять по краю, распределить с равным шагом, сгруппировать." },
+  { id: "C10", t: "Справочник типов мест", rec: "choice", opts: [["global", "Общий + правки в проекте"], ["project", "Свой в каждом проекте"]], best: "global",
+    d: "Типы мест (размеры секции, высота яруса, число ярусов) сейчас живут в одной модели.", r: "Общий справочник для всех проектов, в проекте можно переопределить." },
+ ]},
+ { k: "D", t: "Адресация", i: "Как места получают коды, имена и штрихкоды.", q: [
+  { id: "D1", t: "Шаблон кода по зоне", rec: "now", d: "<code>{зона}-{ряд}-{секция}-{ярус}-{позиция}</code>: разделитель, ведущие нули, буквы или цифры для каждого уровня, предпросмотр кодов." },
+  { id: "D2", t: "Направление нумерации", rec: "now", d: "От входа, змейкой, чётные и нечётные по сторонам прохода, ярусы снизу вверх (A — нижний), секции слева направо." },
+  { id: "D3", t: "Что из адреса пишется в Odoo", rec: "choice", multi: 1,
+    opts: [["name", "Имя уровня (name)"], ["barcode", "Штрихкод = полный код"], ["pos", "Коридор / стеллаж / высота (posx, posy, posz)"]], best: ["name", "barcode", "pos"],
+    d: "Полное имя места Odoo собирает само из иерархии.", r: "Все три: имя уровня, штрихкод и стандартные поля положения." },
+  { id: "D4", t: "Иерархия локаций в Odoo", rec: "choice",
+    opts: [["tree", "Каждый уровень — родительская локация"], ["flat", "Плоско: места сразу в зоне"], ["cfg", "Настраивается"]], best: "cfg",
+    d: "Дерево: WH/Сировина/R2/S01/L4, промежуточные уровни — локации типа «вид». Плоско: WH/Сировина/FUR-R2-S01-L4.",
+    r: "Настраивается по зоне, по умолчанию — дерево: в нём удобнее отчёты и правила размещения на ряд." },
+  { id: "D5", t: "Перенумерация существующих мест", rec: "now", d: "С предупреждением, что меняются штрихкоды и этикетки; опция «нумеровать только новые»." },
+  { id: "D6", t: "Проверка уникальности", rec: "now", d: "Коды и штрихкоды уникальны по всей базе, конфликты с существующими местами показываются до применения." },
+  { id: "D7", t: "Этикетки мест", rec: "choice", opts: [["pdf", "PDF на листах A4"], ["zpl", "Термопринтер (ZPL)"], ["both", "Оба"]], best: "pdf",
+    d: "Штрихкод или QR, размер этикетки, выбор мест (ряд, ярус), стрелки для верхних ярусов.", r: "Сначала PDF, ZPL — по запросу." },
+ ]},
+ { k: "E", t: "Ёмкость и правила размещения", i: "Главная часть текущего этапа: что и куда можно положить.", q: [
+  { id: "E1", t: "Габариты и максимальный вес места", rec: "now", d: "Берутся из типа места, на конкретном месте можно поправить." },
+  { id: "E2", t: "Категории хранения Odoo", rec: "now",
+    d: "Создавать и назначать из конструктора (<code>stock.storage.category</code>): максимальный вес, политика «только пустое / тот же товар / смешанное», ёмкость по товару и по типу упаковки." },
+  { id: "E3", t: "Правила размещения визуально", rec: "now",
+    d: "<code>stock.putaway.rule</code>: «товар / категория / тип упаковки → зона или место», с подсветкой на модели, куда ведёт правило." },
+  { id: "E4", t: "Проверка размещения товара", rec: "later",
+    d: "Выбрать товар и количество → подсветить, куда его положит Odoo по текущим правилам и ёмкости (расчёт через Odoo, чтобы совпадало с реальной работой)." },
+  { id: "E5", t: "Функция зоны", rec: "now", d: "Приёмка, контроль качества, карантин, хранение, комплектация, упаковка, отгрузка, брак, возвраты, буфер производства. Цвет и подпись на модели." },
+  { id: "E6", t: "Атрибуты зоны", rec: "later", d: "Температура, опасные грузы, ценное, длинномер — для подсказок и проверок." },
+  { id: "E7", t: "Флаги места в Odoo", rec: "now", d: "Тип (внутреннее / вид), «место пополнения», брак — меняются в панели места." },
+  { id: "E8", t: "Стратегия списания на зоне", rec: "choice", d: "FIFO, FEFO, LIFO, ближайшее место, меньше упаковок — это поле локации, но влияет на отбор.",
+    opts: [["edit", "Показывать и менять"], ["show", "Только показывать"], ["no", "Не трогать"]], best: "edit", r: "Показывать и менять: это настройка места, одно поле." },
+  { id: "E9", t: "Min/Max по местам", rec: "choice", d: "Правила пополнения на местах (в этой базе 144 ячейки фурнитуры).",
+    opts: [["show", "Только показывать"], ["edit", "Показывать и менять"], ["no", "Не нужно"]], best: "show", r: "Показывать на модели; редактирование — вместе с блоком пополнения." },
+  { id: "E10", t: "«Поместится ли товар»", rec: "later", d: "Размеры и вес товара или упаковки против ячейки, предупреждение при несоответствии." },
+  { id: "E11", t: "Сводка ёмкости", rec: "now", d: "Мест, палетомест, м², м³, свободно и занято — по зоне и складу." },
+ ]},
+ { k: "F", t: "Проверки и защита данных", i: "Чтобы план был выполнимым, а данные Odoo — целыми.", q: [
+  { id: "F1", t: "Пересечения объектов", rec: "choice", d: "Сейчас — только предупреждение.",
+    opts: [["block", "Запрещать"], ["warn", "Предупреждать"], ["cfg", "Настраивается"]], best: "block", r: "Запрещать, с явной кнопкой «поставить всё равно»." },
+  { id: "F2", t: "Ширина проходов по технике", rec: "now", d: "Тележка, штабелёр, ричтрак, узкопроходный, погрузчик: минимальная ширина, подсветка узких мест." },
+  { id: "F3", t: "Высота и нагрузка", rec: "later", d: "Верхний ярус с грузом против потолка и спринклеров; вес на ярус и секцию." },
+  { id: "F4", t: "Защита мест с товаром", rec: "now", d: "Место с остатком или в незавершённых документах нельзя удалить — только архивировать, и только пустое. Перенос такого места в иерархии — с предупреждением." },
+  { id: "F5", t: "Панель проблем", rec: "now", d: "Список всех ошибок и предупреждений с переходом к объекту на модели." },
+ ]},
+ { k: "G", t: "Применение в Odoo", i: "Как изменения из конструктора попадают в базу.", q: [
+  { id: "G1", t: "Связь объекта модели с местом Odoo", rec: "now", d: "У каждого узла — id локации Odoo; сопоставление при импорте и после применения." },
+  { id: "G2", t: "План изменений", rec: "now", d: "Перед применением: создать N, переименовать, сменить родителя, архивировать, изменить категорию, штрихкод, флаги — списком с фильтрами." },
+  { id: "G3", t: "Способ применения", rec: "choice", opts: [["file", "Файл для импорта в Odoo"], ["api", "Сразу через API"], ["both", "Оба, выбор при применении"]], best: "both",
+    d: "Файл безопаснее (видно, что импортируется), API быстрее.", r: "Оба: сначала делаем файл, затем применение через API." },
+  { id: "G4", t: "Применение частями", rec: "now", d: "Выбрать зону или ряд и применить только их." },
+  { id: "G5", t: "Откат применения", rec: "later", d: "По журналу применений: архивировать созданное, вернуть прежние имена и родителей." },
+  { id: "G6", t: "Где хранить геометрию", rec: "choice", d: "Координаты, размеры, поворот, тип конструкции. В стандартной локации Odoo есть только целые posx/posy/posz.",
+    opts: [["tool", "В конструкторе"], ["module", "В модуле Odoo (поля на локации + план)"], ["both", "В конструкторе, потом синхронизация в модуль"]], best: "both",
+    r: "Сейчас в конструкторе, с появлением модуля — синхронизация в Odoo." },
+  { id: "G7", t: "Изменения в Odoo во время работы", rec: "now", d: "Кнопка «Обновить из Odoo»: показать, что появилось, исчезло или переименовано, и выбрать, что оставить." },
+  { id: "G8", t: "Права и журнал", rec: "now", d: "Отдельное право «применять в Odoo»; журнал: кто, когда и что применил." },
+  { id: "G9", t: "Тестовая копия базы", rec: "choice", opts: [["advice", "Рекомендация"], ["required", "Обязательно для проекта"], ["no", "Не нужно"]], best: "advice",
+    d: "Перед применением в рабочую базу — прогон на копии.", r: "Рекомендация с напоминанием; обязательность — настройкой проекта." },
+ ]},
+ { k: "H", t: "Данные на модели", i: "Просмотр склада, а не только проектирование.", q: [
+  { id: "H1", t: "Живые данные вместо снимка", rec: "choice", d: "Остатки, заполненность, резервы.",
+    opts: [["button", "По кнопке и при открытии"], ["auto", "Автоматически каждые N минут"], ["open", "Только при открытии"]], best: "button", r: "При открытии и по кнопке «Обновить»." },
+  { id: "H2", t: "Тепловые карты", rec: "choice", multi: 1, d: "Цвет мест на модели по выбранному показателю.",
+    opts: [["fill", "Заполненность"], ["low", "Ниже минимума"], ["empty", "Пустые места"], ["abc", "Оборачиваемость (ABC)"], ["age", "Возраст запаса"]], best: ["fill", "low", "empty"],
+    r: "Заполненность, ниже минимума и пустые сразу; ABC и возраст — позже." },
+  { id: "H3", t: "Поиск: где лежит", rec: "now", d: "Товар, лот или упаковка → подсветка мест и переход к ним." },
+  { id: "H4", t: "Карточка места", rec: "now", d: "По клику: остатки, категория хранения, правила размещения, ёмкость, ссылка на место в Odoo." },
+ ]},
+ { k: "I", t: "Версии и совместная работа", i: "", q: [
+  { id: "I1", t: "Варианты планировки", rec: "later", d: "«Как есть», «проект A», «проект B» со сравнением цифр: места, палетоместа, площадь." },
+  { id: "I2", t: "История версий", rec: "now", d: "Каждое сохранение — версия, можно посмотреть и вернуться." },
+  { id: "I3", t: "Комментарии на объектах", rec: "later", d: "Заметки и задачи «проверить на месте», привязанные к ряду или месту." },
+  { id: "I4", t: "Роли", rec: "now", d: "Просмотр / проектирование / применение в Odoo." },
+  { id: "I5", t: "Одновременная работа", rec: "choice", opts: [["lock", "Блокировать зону, которую правит другой"], ["warn", "Предупреждать"], ["no", "Не нужно"]], best: "warn",
+    d: "Два человека правят один склад.", r: "Предупреждать и показывать, кто ещё в проекте." },
+ ]},
+ { k: "J", t: "Документы и выгрузки", i: "", q: [
+  { id: "J1", t: "Спецификация стеллажей", rec: "later", d: "Рамы, балки, полки, настил — штук и метров, для закупки и КП." },
+  { id: "J2", t: "План в PDF/PNG", rec: "later", d: "С размерами, легендой и адресами рядов." },
+  { id: "J3", t: "Выгрузка мест в Excel", rec: "now", d: "Код, штрихкод, зона, тип, ёмкость, категория хранения." },
+ ]},
+ { k: "K", t: "Удобство", i: "", q: [
+  { id: "K1", t: "Мини-карта и переход по коду", rec: "later", d: "Ввёл код места — модель показала его." },
+  { id: "K2", t: "Просмотр на телефоне и планшете", rec: "choice", opts: [["view", "Только просмотр и поиск"], ["edit", "Полное редактирование"], ["no", "Не нужно"]], best: "view",
+    d: "Кладовщик ищет место, руководитель смотрит план.", r: "Просмотр и поиск; редактирование — с компьютера." },
+  { id: "K3", t: "Подсказки и тур для новичков", rec: "later", d: "Пошаговое знакомство с конструктором при первом входе." },
+ ]},
+ { k: "L", t: "Задел под маршруты", i: "Маршруты делаем позже, но часть данных выгодно собирать уже сейчас.", q: [
+  { id: "L1", t: "Проходы как объекты", rec: "choice", d: "Проходы с шириной и связями между ними — основа будущих маршрутов отбора.",
+    opts: [["now", "Закладывать сейчас"], ["later", "Только с маршрутами"]], best: "now", r: "Закладывать сейчас: проходы всё равно нужны для проверки ширины (F2)." },
+  { id: "L2", t: "Точки старта и финиша", rec: "routes", d: "Ворота, зона комплектации, упаковка — помечать на плане." },
+  { id: "L3", t: "Порядок обхода мест", rec: "routes", d: "Последовательность мест для листа отбора — из адресации и проходов." },
+ ]},
+];
+const ALL = S.flatMap((s) => s.q);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ANS = {};          // id → {v, note}
+let FINAL = "";           // свободный комментарий в конце
+let db = null, uid = null, sentAt = null, readOnly = false;
+
+// ---------- разметка
+const optsOf = (q) => q.opts || P;
+const bestHas = (q, k) => Array.isArray(q.best) ? q.best.includes(k) : q.best === k;
+function recLine(q) {
+  if (q.rec === "choice") return `<div class="rec"><span class="tag choice">Предлагаю</span>${esc(q.r)}</div>`;
+  return `<div class="rec"><span class="tag ${q.rec}">${REC[q.rec]}</span>${q.rec === "now" ? "Делать в первой очереди." : q.rec === "later" ? "Следующим этапом, после основы." : "Вместе с блоком маршрутов."}</div>`;
+}
+function card(q) {
+  const type = q.multi ? "checkbox" : "radio";
+  return `<article class="q" id="q-${q.id}" data-id="${q.id}">
+    <div class="q-h"><span class="id">${q.id}</span><h3>${esc(q.t)}</h3><span class="saved" data-saved></span></div>
+    ${q.d ? `<p class="d">${q.d}</p>` : ""}
+    ${recLine(q)}
+    <fieldset class="opts"><legend>${esc(q.t)}${q.multi ? " — можно несколько" : ""}</legend>
+      ${optsOf(q).map(([k, l]) => `<label class="opt"><input type="${type}" name="o-${q.id}" id="o-${q.id}-${k}" value="${k}"><span>${esc(l)}${q.opts && bestHas(q, k) ? ' <i class="r">предлагаю</i>' : ""}</span></label>`).join("")}
+    </fieldset>
+    <textarea id="n-${q.id}" rows="1" placeholder="Комментарий (необязательно)" aria-label="Комментарий к ${q.id}"></textarea>
+  </article>`;
+}
+document.getElementById("list").innerHTML = S.map((s) => `<section class="sec" id="s-${s.k}">
+    <div class="sec-h"><span class="k">${s.k === "0" ? "—" : s.k}</span><h2>${esc(s.t)}</h2></div>
+    ${s.i ? `<p class="sec-intro">${esc(s.i)}</p>` : ""}${s.q.map(card).join("")}</section>`).join("") +
+  `<section class="sec final" id="s-end"><div class="sec-h"><span class="k">+</span><h2>Чего не хватает</h2></div>
+    <p class="sec-intro">Что ещё должно быть в конструкторе, чего нет в списке, и любые общие замечания.</p>
+    <article class="q"><textarea id="final" rows="4" placeholder="Ваши дополнения" aria-label="Дополнения к списку"></textarea></article></section>`;
+const LEG = `<div class="legend"><div><span class="tag now">Сразу</span>первая очередь</div><div><span class="tag later">Позже</span>следующий этап</div><div><span class="tag routes">С маршрутами</span>блок маршрутов</div><div><span class="tag choice">Предлагаю</span>выбор варианта</div></div>`;
+function renderToc() {
+  document.getElementById("toc").innerHTML = `<div class="h">Разделы</div>` + S.map((s) => {
+    const n = s.q.filter((q) => answered(q.id)).length;
+    return `<a href="#s-${s.k}" class="${n === s.q.length ? "done" : ""}"><span class="k">${s.k === "0" ? "—" : s.k}</span><span class="t">${esc(s.t)}</span><span class="n">${n}/${s.q.length}</span></a>`;
+  }).join("") + `<a href="#s-end"><span class="k">+</span><span class="t">Чего не хватает</span><span class="n"></span></a>` + LEG;
+}
+const answered = (id) => { const a = ANS[id]; return !!a && (Array.isArray(a.v) ? a.v.length > 0 : !!a.v); };
+function paintCard(q) {
+  const el = document.getElementById("q-" + q.id), a = ANS[q.id] || {};
+  const vals = Array.isArray(a.v) ? a.v : a.v ? [a.v] : [];
+  el.querySelectorAll("input").forEach((i) => { i.checked = vals.includes(i.value); i.disabled = readOnly; });
+  const ta = document.getElementById("n-" + q.id); if (document.activeElement !== ta) ta.value = a.note || ""; ta.disabled = readOnly;
+  el.classList.toggle("answered", answered(q.id));
+}
+function paintAll() { ALL.forEach(paintCard); const f = document.getElementById("final"); if (document.activeElement !== f) f.value = FINAL; f.disabled = readOnly; renderToc(); progress(); applyFilter(); }
+function progress() {
+  const n = ALL.filter((q) => answered(q.id)).length;
+  document.getElementById("prog-t").innerHTML = `Отвечено <b>${n}</b> из ${ALL.length}`;
+  document.getElementById("prog-f").style.width = `${(n / ALL.length) * 100}%`;
+}
+let onlyOpen = false;
+function applyFilter() { ALL.forEach((q) => document.getElementById("q-" + q.id).classList.toggle("hidden-by-filter", onlyOpen && answered(q.id))); }
+
+// ---------- сохранение: один документ на пункт, одна запись за раз на документ
+const local = { get() { try { return JSON.parse(localStorage.getItem("wh-kb-answers") || "{}"); } catch (e) { return {}; } },
+  put() { try { localStorage.setItem("wh-kb-answers", JSON.stringify({ ANS, FINAL })); } catch (e) {} } };
+const busy = {}, again = {};
+function mark(id, txt, err) { const s = document.querySelector(`#q-${id} [data-saved]`); if (s) { s.textContent = txt; s.classList.toggle("err", !!err); } }
+async function save(id) {
+  local.put();
+  if (!db) { mark(id, "в этом браузере"); return; }
+  if (busy[id]) { again[id] = true; return; }
+  busy[id] = true; mark(id, "сохраняю…");
+  try {
+    const body = id === "_final" ? { note: FINAL, at: new Date().toISOString(), by: uid } : { ...ANS[id], title: ALL.find((q) => q.id === id).t, at: new Date().toISOString(), by: uid };
+    await db.doc("answers/" + (id === "_final" ? "zz-final" : id)).set(body);
+    mark(id, "сохранено");
+  } catch (e) {
+    if (e && e.code === "invalid_argument") { readOnly = true; paintAll(); status("Сохранять ответы может только владелец страницы или редактор.", "warn"); }
+    else mark(id, "не сохранилось", true);
+  } finally { busy[id] = false; if (again[id]) { again[id] = false; save(id); } }
+}
+const timers = {};
+const later = (id) => { clearTimeout(timers[id]); timers[id] = setTimeout(() => save(id), 700); };
+
+document.getElementById("list").addEventListener("change", (ev) => {
+  const i = ev.target; if (i.tagName !== "INPUT") return;
+  const card = i.closest(".q"), id = card.dataset.id, q = ALL.find((x) => x.id === id);
+  ANS[id] = ANS[id] || { v: q.multi ? [] : "", note: "" };
+  ANS[id].v = q.multi ? [...card.querySelectorAll("input:checked")].map((x) => x.value) : i.value;
+  paintCard(q); renderToc(); progress(); save(id);
+});
+document.getElementById("list").addEventListener("input", (ev) => {
+  const t = ev.target; if (t.tagName !== "TEXTAREA") return;
+  t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px";
+  if (t.id === "final") { FINAL = t.value; local.put(); later("_final"); return; }
+  const id = t.id.slice(2), q = ALL.find((x) => x.id === id);
+  ANS[id] = ANS[id] || { v: q.multi ? [] : "", note: "" }; ANS[id].note = t.value; local.put(); later(id);
+});
+
+// ---------- панель
+function status(t, kind = "") { const s = document.getElementById("status"); s.textContent = t; s.className = "status" + (kind ? " " + kind : ""); }
+const fmt = (iso) => { try { return new Date(iso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso; } };
+document.getElementById("flt").onclick = (e) => { onlyOpen = !onlyOpen; e.currentTarget.setAttribute("aria-pressed", String(onlyOpen)); applyFilter(); };
+function asText() {
+  const lab = (q, k) => (optsOf(q).find((o) => o[0] === k) || [k, k])[1];
+  const lines = ALL.map((q) => { const a = ANS[q.id]; if (!answered(q.id) && !(a && a.note)) return `${q.id} ${q.t}: —`;
+    const v = a && a.v ? (Array.isArray(a.v) ? a.v.map((k) => lab(q, k)).join(", ") : lab(q, a.v)) : "без ответа";
+    return `${q.id} ${q.t}: ${v}${a && a.note ? ` — ${a.note.trim()}` : ""}`; });
+  return lines.join("\n") + (FINAL.trim() ? `\n\nДополнения: ${FINAL.trim()}` : "");
+}
+document.getElementById("copy").onclick = async () => {
+  const txt = asText();
+  try { await navigator.clipboard.writeText(txt); status("Ответы скопированы — можно вставить в чат.", "ok"); }
+  catch (e) { let box = document.getElementById("copybox"); if (!box) { box = document.createElement("textarea"); box.id = "copybox"; box.className = "copybox"; box.readOnly = true; document.querySelector(".bar .in").append(box); }
+    box.value = txt; box.focus(); box.select(); status("Скопируйте выделенный текст (Ctrl+C) и вставьте в чат.", "warn"); }
+};
+// без хранилища (страница открыта как файл): ответы сохраняются файлом, текст ещё и копируется
+function downloadAnswers(n) {
+  const day = new Date().toISOString().slice(0, 10), name = `konstruktor_otvety_${day}.txt`;
+  const body = `Конструктор склада — ответы (${n} из ${ALL.length}), ${new Date().toLocaleString("ru-RU")}\n\n${asText()}\n\n--- JSON ---\n${JSON.stringify({ answers: ANS, final: FINAL }, null, 1)}\n`;
+  try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body], { type: "text/plain;charset=utf-8" })); a.download = name;
+    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    status(`Файл ${name} сохранён в «Загрузки». Пришлите его в чат.`, "ok"); }
+  catch (e) { document.getElementById("copy").click(); }
+  try { navigator.clipboard.writeText(asText()).catch(() => {}); } catch (e) {}
+}
+document.getElementById("send").onclick = async () => {
+  const n = ALL.filter((q) => answered(q.id)).length;
+  if (!db) { downloadAnswers(n); return; }
+  if (readOnly) { status("Отправлять ответы может только владелец страницы или редактор.", "warn"); return; }
+  status("Отправляю…");
+  try { const at = new Date().toISOString(); await db.doc("meta/status").set({ submitted: true, at, answered: n, total: ALL.length, by: uid });
+    sentAt = at; status(`Отправлено ${fmt(at)}: ${n} из ${ALL.length}. Напишите в чат, что готово.`, "ok"); document.getElementById("send").textContent = "Отправить ещё раз"; }
+  catch (e) { status("Не удалось отправить. Попробуйте ещё раз или скопируйте ответы в чат.", "warn"); }
+};
+
+// ---------- старт
+(function boot() {
+  const l = local.get(); Object.assign(ANS, l.ANS || {}); FINAL = l.FINAL || ""; paintAll();
+  if (!window.claude || !window.claude.use) { status("Ответы сохраняются в этом браузере. «Отправить ответы» сохранит файл — пришлите его в чат."); return; }
+  Promise.all([window.claude.use("db"), window.claude.use("user")]).then(async ([d, u]) => {
+    if (!d) { status("Хранилище недоступно: ответы сохраняются в этом браузере. Нажмите «Скопировать ответы» и вставьте в чат.", "warn"); return; }
+    db = d; document.getElementById("howsend").textContent = "ответы уйдут мне, напишите в чат, что готово."; try { uid = u ? await u.id() : null; } catch (e) {}
+    try { if (u && (await u.can("data.write")) === false) readOnly = true; } catch (e) {}
+    db.collection("answers").onSnapshot((snap) => {
+      for (const doc of snap.docs) { const x = doc.data(); if (!x) continue;
+        if (doc.id === "zz-final") { if (document.activeElement?.id !== "final") FINAL = x.note || ""; continue; }
+        if (busy[doc.id] || timers[doc.id] && document.activeElement?.id === "n-" + doc.id) continue;
+        ANS[doc.id] = { v: x.v ?? "", note: x.note || "" }; }
+      local.put(); paintAll();
+    }, () => status("Связь с хранилищем прервалась — обновите страницу.", "warn"));
+    db.doc("meta/status").onSnapshot((s) => { const x = s.exists ? s.data() : null; sentAt = x && x.at;
+      if (readOnly) status("Только просмотр: отвечать может владелец страницы или редактор.", "warn");
+      else if (sentAt) { status(`Отправлено ${fmt(sentAt)}. Изменения после отправки тоже сохраняются — отправьте ещё раз, когда закончите.`, "ok"); document.getElementById("send").textContent = "Отправить ещё раз"; }
+      else status("Ответы сохраняются автоматически.");
+    }, () => {});
+    // перенести то, что успели отметить до подключения
+    const pending = Object.keys(ANS);
+    db.collection("answers").get().then((snap) => { const have = new Set(snap.docs.map((d) => d.id)); for (const id of pending) if (!have.has(id) && answered(id)) save(id); if (FINAL && !have.has("zz-final")) save("_final"); }).catch(() => {});
+  });
+})();
+</script>
+
+</body>
+</html>
