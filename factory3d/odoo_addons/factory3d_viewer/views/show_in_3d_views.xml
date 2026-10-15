@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-08a, V-08b: кнопка «Показати в 3D» у шапці форм документів. Форми носіїв домішки — у factory3d_base (CB-02, X-08). -->
+    <record id="view_mrp_production_form_f3d_show" model="ir.ui.view">
+        <field name="name">mrp.production.form.f3d.show</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="(//header//button[@name='button_mark_done'])[last()]" position="after">
+                <field name="f3d_has_3d" invisible="1"/>
+                <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                        class="btn-secondary" groups="factory3d_base.group_f3d_user" invisible="not f3d_has_3d"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_form_f3d_show" model="ir.ui.view">
+        <field name="name">stock.picking.form.f3d.show</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="(//header//button[@name='button_validate'])[last()]" position="after">
+                <field name="f3d_has_3d" invisible="1"/>
+                <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
+                        class="btn-secondary" groups="factory3d_base.group_f3d_user" invisible="not f3d_has_3d"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

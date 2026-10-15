@@ -18,6 +18,7 @@
         "views/viewer_snapshot_views.xml",
         "views/viewer_event_views.xml",
         "views/res_config_settings_views.xml",
+        "views/show_in_3d_views.xml",
         "views/templates_kiosk.xml",
         "wizard/demo_wizard_views.xml",
         "wizard/cycle_check_views.xml",
@@ -28,6 +29,22 @@
             "factory3d_viewer/static/src/viewer/viewer.scss",
             "factory3d_viewer/static/src/viewer/*.js",
             "factory3d_viewer/static/src/action/*",
+        ],
+        "factory3d_viewer.assets_kiosk": [
+            ("include", "web._assets_helpers"),
+            ("include", "web._assets_backend_helpers"),
+            "web/static/src/scss/pre_variables.scss",
+            "web/static/lib/bootstrap/scss/_variables.scss",
+            ("include", "web._assets_bootstrap_backend"),
+            ("include", "web._assets_core"),  # module_loader.js, owl.js, odoo_module.js — уже тут
+            "web/static/src/libs/fontawesome/css/font-awesome.css",
+            "factory3d_viewer/static/src/viewer/viewer.scss",
+            "factory3d_viewer/static/src/kiosk/kiosk.scss",
+            "factory3d_viewer/static/src/viewer/*.js",
+            "factory3d_viewer/static/src/kiosk/*.js",
+        ],
+        "web.assets_tests": [
+            "factory3d_viewer/static/tests/tours/*.js",
         ],
         "web.assets_unit_tests": [
             "factory3d_viewer/static/tests/hoot/*",
