@@ -8,11 +8,12 @@ import { esc, reducedMotion, slotCls } from "./util.js";
 import { createBuilding3D } from "./building3d.js";
 import { funcColor } from "../core/attr.js";
 import { heatColor } from "./heat.js";
+import { markClass, markText, markTitle, visibleMarks } from "./marks.js";
 
 // стелаж, в котором стоит ярус или ячейка (для остальных — сам узел)
 const bayOf = (tree, n) => (n.type === "level" ? tree.nodes.get(n.parent) : n.type === "cell" ? tree.nodes.get(tree.nodes.get(n.parent).parent) : n);
 
-export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick }) {
+export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, onMark = null }) {
   const [T, { OrbitControls }] = await Promise.all([import("three"), import("three/examples/jsm/controls/OrbitControls.js")]);
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), col = (n) => new T.Color(css(n) || "#888");
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -20,6 +21,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   renderer.shadowMap.autoUpdate = false; // тени статичны: пересчитываются только при изменении сцены (compose), а не при вращении камеры
   const canvas = renderer.domElement; canvas.setAttribute("aria-label", i18n.t("plan.canvasLabel")); vp.prepend(canvas);
   const lbl = document.createElement("div"); lbl.id = "labels3d"; vp.append(lbl);
+  const mkl = document.createElement("div"); mkl.id = "marks3d"; vp.append(mkl); // значки комментариев и чужих блокировок (W-18): HTML поверх сцены, как подписи
   const scene = new T.Scene(), camera = new T.PerspectiveCamera(36, 1, 0.05, 2000), controls = new OrbitControls(camera, canvas);
   controls.maxPolarAngle = Math.PI * 0.49; controls.minDistance = 1; controls.maxDistance = 600; controls.screenSpacePanning = true;
   const { W0: W1, D0: D1 } = model.tree;
@@ -282,8 +284,24 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     lbl.innerHTML = lblItems.map((it) => `<span data-focus="${esc(it.k.id)}" title="${esc(i18n.t("plan.focusOnly"))}">${esc(i18n.node(it.k))}${fnLabel(it.k)}</span>`).join("");
     lbl.querySelectorAll("[data-focus]").forEach((s) => s.onclick = () => model.focusTo(s.dataset.focus));
   }
+  // значки (W-18): комментарии и блокировки зон над объектами показанного уровня
+  let mkItems = [];
+  function makeMarks() {
+    const tree = model.tree;
+    mkItems = visibleMarks(model, inNode).map((m) => {
+      const n = tree.nodes.get(m.node), par = n.parent && tree.nodes.get(n.parent), top = n.h || (par && par.h) || 1;
+      return { m, p: new T.Vector3(X(n.x + n.w / 2), top + 0.6, Z(n.y + n.d / 2)) };
+    });
+    mkl.innerHTML = mkItems.map((it) => `<span class="${markClass(it.m)}" data-mark="${esc(it.m.node)}" data-kind="${it.m.kind}" title="${esc(markTitle(i18n, it.m))}">${esc(markText(it.m))}</span>`).join("");
+    mkl.querySelectorAll("[data-mark]").forEach((e) => e.onclick = () => onMark && onMark(e.dataset.mark, e.dataset.kind));
+    render();
+  }
   function placeLabels() {
     const w = vp.clientWidth, h = vp.clientHeight, els = lbl.children;
+    mkItems.forEach((it, i) => {
+      v3.copy(it.p).project(camera); const e = mkl.children[i]; if (!e) return;
+      e.hidden = v3.z > 1 || Math.abs(v3.x) > 1.02 || Math.abs(v3.y) > 1.02; e.style.left = `${(v3.x * 0.5 + 0.5) * w}px`; e.style.top = `${(-v3.y * 0.5 + 0.5) * h}px`;
+    });
     lblItems.forEach((it, i) => {
       v3.copy(it.p).project(camera); const e = els[i]; if (!e) return;
       e.hidden = v3.z > 1 || Math.abs(v3.x) > 1.02 || Math.abs(v3.y) > 1.02; e.style.left = `${(v3.x * 0.5 + 0.5) * w}px`; e.style.top = `${(-v3.y * 0.5 + 0.5) * h}px`;
@@ -407,7 +425,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const off = camera.position.clone().sub(controls.target).multiplyScalar(f);
     if (off.length() < controls.minDistance || off.length() > controls.maxDistance) return; camera.position.copy(controls.target).add(off); controls.update();
   };
-  const api = { paint, resize, zoom, fit, makeLabels, canvas, lbl, rebuild: () => { build(); makeLabels(); paint(); }, setLabelText: makeLabels };
+  const api = { paint, resize, zoom, fit, makeLabels, makeMarks, canvas, lbl, mkl, rebuild: () => { build(); makeLabels(); makeMarks(); paint(); }, setLabelText: makeLabels };
   if (dbg) dbg.rebuild = api.rebuild;
   return api;
 }

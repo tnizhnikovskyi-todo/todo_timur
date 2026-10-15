@@ -118,8 +118,19 @@ class WhProject(models.Model):
         return [v._summary() for v in self.env["wh.project.version"].search([("project_id", "=", p.id)], order="rev desc, id desc")]
 
     @api.model
+    def api_version(self, key, version_id):
+        """Данные одной версии для просмотра (только чтение; читает «перегляд»)."""
+        p = self._find(key)
+        v = self.env["wh.project.version"].browse(int(version_id or 0)).exists()
+        if not p or not v or v.project_id != p:
+            return {"status": "missing"}
+        return {"status": "ok", "data": v.data, **v._summary()}
+
+    @api.model
     def api_restore(self, key, version_id, base_rev=None):
-        """Вернуть данные версии как новую ревизию проекта (история не переписывается: появляется ещё одна версия)."""
+        """Вернуть данные версии как новую ревизию проекта (история не переписывается: появляется ещё одна версия).
+        Если текущее состояние не совпадает ни с одной сохранённой версией (черновик, правки без «Зберегти»), оно сначала сохраняется
+        отдельной версией «Перед відновленням версії №N»: восстановление можно отменить."""
         p = self._find(key)
         v = self.env["wh.project.version"].browse(int(version_id)).exists()
         if not p or not v or v.project_id != p:
@@ -127,6 +138,9 @@ class WhProject(models.Model):
         p._lock_row()
         if base_rev != p.rev:
             return p._stale()
+        last = self.env["wh.project.version"].search([("project_id", "=", p.id)], limit=1)  # _order: rev desc, id desc
+        if not last or last.data != p.data:
+            self.env["wh.project.version"].create({"project_id": p.id, "rev": p.rev, "data": p.data, "comment": _("Перед відновленням версії №%s", v.rev)})
         p.write({"data": v.data, "schema": (v.data or {}).get("schema") or 0, "rev": p.rev + 1, "warehouse_ids": p._link_warehouses(v.data or {})})
         new = self.env["wh.project.version"].create({
             "project_id": p.id, "rev": p.rev, "data": v.data, "comment": _("Відновлено версію №%s", v.rev)})

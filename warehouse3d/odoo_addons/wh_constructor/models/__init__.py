@@ -4,3 +4,4 @@ from . import wh_zone_lock
 from . import wh_reader
 from . import wh_library
 from . import wh_apply
+from . import wh_comment

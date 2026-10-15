@@ -21,6 +21,7 @@ import { diffSnapshots } from "../core/odoodiff.js";
 import { newWizard } from "../core/wizard.js";
 
 const LOCK_RENEW_MS = 60000; // срок блокировки на сервере — 5 минут, продлеваем раз в минуту
+const POLL_MS = 15000; // чужие блокировки и комментарии (W-18): список перечитывается, чтобы значки на плане не отставали
 
 async function start() {
   const root = document.getElementById("app");
@@ -82,7 +83,7 @@ async function start() {
     const odooWhs = () => (adapter ? project.warehouses.filter((w) => odooIdOf(w.baseRef) != null) : []);
     await pullBases(odooWhs());
     let library = null; try { library = storage.listLibrary ? await storage.listLibrary() : null; } catch (e) { /* без общей библиотеки: типы каталога доступны, шаблоны — только после записи */ }
-    const model = createModel(project, storage, { bases, library, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType"), newTpl: i18n.t("word.newTpl") }) });
+    const model = createModel(project, storage, { bases, library, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType"), newTpl: i18n.t("word.newTpl"), variant: i18n.t("word.variant"), beforeRestore: i18n.t("word.beforeRestore"), restored: i18n.t("word.restored") }) });
     // «Оновити дані» (W-17): остатки, заполненность, резервы и движения без перестройки плана; Odoo — свежие снимки складов проекта, иначе — пересчёт из текущего снимка
     const dataRefresh = async () => {
       const fresh = {}; failed.length = 0;
@@ -128,9 +129,12 @@ async function start() {
         async rollback(logId) { const r = await storage.rollback(logId); if (r && r.status === "ok") await reread(); return r; },
       },
     };
+    if (globalThis.__WH_DEBUG) globalThis.__WH_DEBUG.model = model; // отладка e2e: правки модели из теста (задаётся до загрузки страницы)
+    if (odoo) { await Promise.allSettled([model.comments.refresh(), model.locks.refresh()]); } // значки комментариев и чужих блокировок — с первого кадра
     mountApp(root, { model, i18n, host: { storage, bases, reload: () => location.reload(), odoo: hostOdoo || null, refreshData: dataRefresh, locationUrl: odoo ? odooLocationUrl : null } });
     if (odoo) {
       setInterval(() => model.locks.renew(), LOCK_RENEW_MS);
+      setInterval(() => { model.locks.refresh(); model.comments.refresh(); }, POLL_MS);
       addEventListener("pagehide", () => { if (model.locks.held().length) storage.unlock({ project: model.project.id }, { keepalive: true }).catch(() => {}); });
     }
     if (notice) model.notify("bad", notice.key);

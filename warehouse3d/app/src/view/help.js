@@ -4,7 +4,7 @@ import { esc, reducedMotion } from "./util.js";
 import { HEAT_KEYS, HEAT_MODES } from "../core/metrics.js";
 import { heatColor } from "./heat.js";
 
-export const HELP_SECTIONS = ["start", "view", "data", "select", "edit", "move", "multi", "tools", "addr", "copy", "catalog", "templates", "save", "project", "file", "building", "checks", "capacity", "parse", "tray", "auto", "odoo", "plan", "wizard", "keys"];
+export const HELP_SECTIONS = ["start", "view", "data", "select", "edit", "move", "multi", "tools", "addr", "copy", "catalog", "templates", "save", "project", "file", "building", "checks", "capacity", "parse", "tray", "auto", "odoo", "plan", "wizard", "variants", "history", "comments", "roles", "locks", "keys"];
 
 export function renderHelp(root, { i18n, model, onBack }) {
   const t = (k, p) => i18n.t(k, p), now = model.data.meta?.now || "";

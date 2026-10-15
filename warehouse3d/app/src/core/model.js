@@ -9,6 +9,7 @@
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
 //   { type: "library" } изменилась библиотека типов и шаблонов · { type: "wizard" } изменилось состояние мастера «З нуля» (wizard.js) ·
 //   { type: "heat" } сменился показатель тепловой карты · { type: "find" } изменился запрос поиска «где лежит» · { type: "data" } обновлены остатки снимка (W-17) ·
+//   { type: "comments" } изменились комментарии на объектах (comments.js, W-18) · { type: "variant" } сменился или изменился список вариантов планировки (variants.js) ·
 //   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
 //   { type: "notify", kind, key, params, sub } сообщение пользователю · { type: "locks" } изменились блокировки зон (locks.js).
 import { PICKS, clone, normEdit } from "./types.js";
@@ -30,8 +31,12 @@ import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "
 import { newWizard, normWizard } from "./wizard.js";
 import { HEAT_KEYS, HEAT_MODES, heatHasData, heatMap } from "./metrics.js";
 import { activityOf, mergeStock, placeCard, searchStock } from "./stock.js";
+import { createComments } from "./comments.js";
+import { MAX_VARIANTS, activate, normVariants, addVariant, entryOf, layerOf, removeVariant, renameVariant, variantList } from "./variants.js";
+import { layerStats, STAT_KEYS, treeStats } from "./varstats.js";
+import { canDo, rightsOf, roleOf } from "./roles.js";
 
-const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон" };
+const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон", variant: "Проєкт", beforeRestore: "Перед відновленням версії", restored: "Відновлено версію" };
 const EMPTY_BASE = { meta: {}, products: {}, locations: {} };
 
 // запись библиотеки в хранилище; об ошибке — уведомление, об успехе — своё (key)
@@ -42,6 +47,9 @@ function saveLib(s, okKey = null, okParams = {}) {
 
 export function createModel(project, storage, opts = {}) {
   const bases = opts.bases || {};
+  // проект, собранный не через createProject (адаптеры, тесты): варианты складов и список комментариев приводятся к норме (W-18)
+  for (const w of project.warehouses) if (!Array.isArray(w.variants) || !w.variants.length || !w.variants.some((v) => v.id === w.variant)) Object.assign(w, normVariants(w.variants, w.variant));
+  if (!Array.isArray(project.comments)) project.comments = [];
   const s = { project, wh: null, data: null, storage, words: opts.words || (() => DEFAULT_WORDS), saved: null, pending: [], redo: [], edit: null, clip: [], lib: normLibrary(opts.library), enforce: opts.enforce !== false,
     tree: null, ui: null, listeners: new Set(), emit: null };
   s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); };
@@ -82,6 +90,19 @@ export function createModel(project, storage, opts = {}) {
   const bb = () => s.edit.building || null, bemit = () => s.emit({ type: "bld" });
   const bclear = () => { bs.sel = []; bs.vtx = null; bs.first = null; bs.ruler = null; };
   const bsel = () => { const b = bb(); return b ? bs.sel.filter((id) => id === "contour" || B.itemOf(b, id)) : []; };
+  // роли (W-18, I4, roles.js): права хранилища; комментарии (I3, comments.js) — переход к объекту узла или здания
+  const rights = () => rightsOf(storage), can = (a) => canDo(rights(), a);
+  const word = (k) => (s.words() || {})[k] || DEFAULT_WORDS[k];
+  s.comments = createComments(s, {
+    can,
+    goBld: (id) => { if (!bs.on) { if (ui.edit) setEdit(false); bs.on = true; } bs.sel = [id]; bs.vtx = null; bemit(); },
+    focusNode: (id) => {
+      const n = s.tree.nodes.get(id); if (!n) return false;
+      if (bs.on) { bs.on = false; bs.tool = "select"; bclear(); bemit(); }
+      const par = n.parent && s.tree.nodes.get(n.parent);
+      return patch({ focus: par ? par.id : "WH", esel: id, sel: n.loc && !n.kids.length ? n.loc : null, msel: [] }, "focus");
+    },
+  });
   const bops = Object.fromEntries(Object.keys(BLD_OPS).map((k) => [k, (...a) => ed.exec(s, () => BLD_OPS[k](s, ...a))]));
   const ui = s.ui, patch = (p, type = "select") => { if (!p) return false; Object.assign(ui, p); s.emit({ type }); return true; };
   const setEdit = (on) => { if (on && bs.on) { bs.on = false; bs.tool = "select"; bclear(); bemit(); } patch({ edit: on, esel: on ? ui.focus : null, sel: null, msel: [] }); if (!on) s.locks.release(); };
@@ -95,6 +116,13 @@ export function createModel(project, storage, opts = {}) {
     return { own: zone(id) ? zone(id).d : "inherit", eff };
   };
 
+  // вариант сменился: слой и дерево склада перечитываются (как при смене склада), выделение сбрасывается
+  function reloadVariant() {
+    load(s.wh);
+    Object.assign(ui, { focus: s.tree.nodes.has(ui.focus) ? ui.focus : "WH", sel: null, esel: ui.edit ? (s.tree.nodes.has(ui.focus) ? ui.focus : "WH") : null, msel: [] }); bclear();
+    s.emit({ type: "rebuild" }); s.emit({ type: "focus" }); s.emit({ type: "warehouse" }); s.emit({ type: "variant" });
+  }
+
   return {
     // чтение состояния
     get tree() { return s.tree; },
@@ -104,6 +132,8 @@ export function createModel(project, storage, opts = {}) {
     get pending() { return s.pending; },
     get clip() { return s.clip.filter((id) => s.tree.nodes.has(id)); },
     get readonly() { return !!storage.readonly; },
+    // роли (D-19, I4): права группами Odoo (вне Odoo полные), role() — "view" | "design" | "apply", can(действие) — roles.js ACTIONS
+    rights: () => ({ ...rights() }), role: () => roleOf(rights()), can,
     get shared() { return !!storage.shared; }, // проект хранится в общей базе (модуль Odoo), а не в браузере
     get data() { return s.data; }, // снимок Odoo активного склада
     get project() { ed.sync(s); return s.project; },
@@ -193,7 +223,7 @@ export function createModel(project, storage, opts = {}) {
     setPick(p) { if (!PICKS.includes(p)) return; ui.pick = p; wr("pick", p); s.emit({ type: "select" }); },
     setEdit,
     // блокировки зон (locks.js): занятая другим зона для узла, продление и снятие (хост вызывает по таймеру и при закрытии страницы)
-    locks: { busyInfo: (id) => s.locks.busyInfo(id), zoneOf: (id) => s.locks.zoneOf(id), held: () => s.locks.held(), renew: () => s.locks.renew(), release: () => s.locks.release() },
+    locks: { busyInfo: (id) => s.locks.busyInfo(id), zoneOf: (id) => s.locks.zoneOf(id), held: () => s.locks.held(), renew: () => s.locks.renew(), release: () => s.locks.release(), refresh: () => s.locks.refresh(), marks: () => s.locks.marks() },
     dragSet: (id) => sel.dragSet(s.tree, ui, id),
     moveTargets: (ids) => sel.moveTargets(s.tree, ui, ids),
     rackOf: (id) => sel.rackOf(s.tree, id),
@@ -207,7 +237,7 @@ export function createModel(project, storage, opts = {}) {
       capacity: bind("capacity"), catAssign: bind("catAssign"), flags: bind("flags"), removal: bind("removal"), zoneFn: bind("zoneFn"), minmax: bind("minmax"), catSave: bind("catSave"), catDel: bind("catDel") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
-    save: (id) => ed.saveObj(s, id),
+    save: (id, comment = null) => ed.saveObj(s, id, comment),
     discard: (id) => ed.discardObj(s, id),
     undo: (verbose = false) => ed.undoEdit(s, verbose),
     redo: () => ed.redoEdit(s),
@@ -311,6 +341,91 @@ export function createModel(project, storage, opts = {}) {
         list: () => { const st = settings(s.edit); return TECH.map((x) => ({ id: x.id, min: techMin(st, x.id), def: x.min })); },
         of: (id = "WH") => { const st = settings(s.edit), own = st.tech.get(id) || (id === "WH" ? "none" : "inherit"); return { own, eff: techOf(s.tree, st, id) }; },
       },
+    },
+    // варианты планировки (D-19, I1, variants.js): у склада несколько слоёв правок; активный — живой слой, остальные лежат в записях склада.
+    // create — копия сохранённого слоя активного (и сразу активный), switch — переключение (несохранённое остаётся у своего варианта), compare — цифры двух вариантов.
+    // Применять в Odoo (план изменений) можно только активный вариант: план всегда считается по его сохранённому слою.
+    variants: {
+      max: MAX_VARIANTS,
+      list: () => { ed.sync(s); return variantList(s.wh); },
+      get active() { return s.wh.variant; },
+      create(name = "") {
+        if (!can("variant")) { ed.say(s, "bad", "n.varDenied"); return null; }
+        ed.sync(s);
+        if (s.wh.variants.length >= MAX_VARIANTS) { ed.say(s, "bad", "n.varMax", { n: MAX_VARIANTS }); return null; }
+        const taken = (x) => s.wh.variants.some((v) => (v.name || "").toLowerCase() === x.toLowerCase());
+        name = String(name || "").replace(/\s+/g, " ").trim();
+        if (name && taken(name)) { ed.say(s, "bad", "n.varNameTaken", { name }); return null; }
+        if (!name) { for (let i = s.wh.variants.length; ; i++) { name = `${word("variant")} ${String.fromCharCode(65 + ((i - 1) % 26))}${i > 26 ? Math.ceil(i / 26) : ""}`; if (!taken(name)) break; } }
+        const id = addVariant(s.wh, name); activate(s.wh, id); reloadVariant(); ed.persist(s, true);
+        ed.say(s, "ok", "n.varCreated", { name: s.wh.variants.find((v) => v.id === id).name }); return id;
+      },
+      switch(id) {
+        ed.sync(s);
+        if (!entryOf(s.wh, id) || id === s.wh.variant || !activate(s.wh, id)) return false;
+        reloadVariant(); ed.persist(s); return true;
+      },
+      rename(id, name) {
+        if (!can("variant")) { ed.say(s, "bad", "n.varDenied"); return false; }
+        name = String(name || "").replace(/\s+/g, " ").trim();
+        if (name && s.wh.variants.some((v) => v.id !== id && (v.name || "").toLowerCase() === name.toLowerCase())) { ed.say(s, "bad", "n.varNameTaken", { name }); return false; }
+        if (!renameVariant(s.wh, id, name)) return false;
+        ed.persist(s); s.emit({ type: "variant" }); return true;
+      },
+      remove(id) {
+        if (!can("variant")) { ed.say(s, "bad", "n.varDenied"); return false; }
+        ed.sync(s);
+        if (!removeVariant(s.wh, id)) { ed.say(s, "bad", "n.varRemoveActive"); return false; }
+        ed.persist(s, true); s.emit({ type: "variant" }); ed.say(s, "ok", "n.varRemoved"); return true;
+      },
+      // цифры сохранённого слоя варианта: { places, pallets, area, volume, capacity, capKnown, ops }
+      stats(id) { ed.sync(s); const l = layerOf(s.wh, id); return l ? layerStats(s.data, l, s.wh) : null; },
+      keys: STAT_KEYS,
+      // сравнение двух вариантов: { a, b: { id, stats }, rows: [{ key, a, b, delta }] }
+      compare(idA, idB) {
+        const a = this.stats(idA), b = this.stats(idB); if (!a || !b) return null;
+        return { a: { id: idA, stats: a }, b: { id: idB, stats: b }, rows: STAT_KEYS.map((key) => ({ key, a: a[key], b: b[key], delta: Math.round((b[key] - a[key]) * 100) / 100 })) };
+      },
+    },
+    // история версий (D-19, I2): список, просмотр (только чтение — отдельная модель в памяти, текущий проект не трогается), восстановление
+    history: {
+      available: () => typeof storage.versions === "function",
+      list: async () => (typeof storage.versions === "function" ? storage.versions(s.project.id) : []),
+      // версия как просмотр: склады с вариантами и цифрами, дерево активного варианта склада — для чертежа
+      async view(versionId) {
+        if (typeof storage.versionData !== "function") return null;
+        const vp = await storage.versionData(s.project.id, versionId); if (!vp) return null;
+        return { project: vp, warehouses: vp.warehouses.map((w) => {
+          const data = baseOf(w), now = s.project.warehouses.find((x) => x.id === w.id);
+          const act = (st) => { try { return st(); } catch (e) { return null; } };
+          const variants = w.variants.map((v) => ({ id: v.id, name: v.name, active: v.id === w.variant, stats: act(() => layerStats(data, layerOf(w, v.id), w)) }));
+          const tree = act(() => layout(buildTree(data, normEdit(w.saved), [], cfgOf(w))));
+          return { id: w.id, code: w.code, name: w.name, variants, tree, treeStats: tree && treeStats(tree, data, normEdit(w.saved)), current: now && now.id === s.wh.id ? this.currentStats() : null };
+        }) };
+      },
+      currentStats() { ed.sync(s); return layerStats(s.data, s.wh.saved, s.wh); },
+      // восстановить версию: текущее состояние (с несохранённым) сохраняется новой версией, затем версия становится проектом; хост перезагружает страницу.
+      // Возвращает восстановленный проект или null
+      async restore(versionId) {
+        if (!can("restore")) { ed.say(s, "bad", "n.histDenied"); return null; }
+        if (typeof storage.restore !== "function") return null;
+        ed.sync(s);
+        const v = (await this.list()).find((x) => String(x.id) === String(versionId)); if (!v) { ed.say(s, "bad", "n.histFail"); return null; }
+        const r = await Promise.resolve(storage.saveProject(clone(s.project), { commit: true, comment: `${word("beforeRestore")} №${v.rev}` })).catch(() => "fail");
+        if (r === "fail" || r === "stale") { ed.say(s, "bad", r === "stale" ? "n.saveStale" : "n.histFail"); return null; }
+        const p = await storage.restore(s.project.id, versionId, { comment: `${word("restored")} №${v.rev}` }).catch((e) => { console.error("restore", e); return null; });
+        if (!p) { ed.say(s, "bad", "n.histFail"); return null; }
+        ed.say(s, "ok", "n.histRestored", { n: v.rev }); return p;
+      },
+    },
+    // комментарии на объектах (D-19, I3, comments.js)
+    comments: s.comments,
+    // значки на плане (W-18): комментарии и блокировки зон по узлам показанного склада → [{ node, kind: "comment", open, done, task } | { node, kind: "lock", by, mine, until }]
+    marks() {
+      const out = [];
+      for (const [node, c] of s.comments.counts()) if (s.tree.nodes.has(node)) out.push({ node, kind: "comment", ...c });
+      for (const l of s.locks.marks()) out.push({ node: l.zone, kind: "lock", by: l.by, mine: l.mine, until: l.until });
+      return out;
     },
     // мастер «З нуля» (W-16, wizard.js): состояние лежит в складе проекта (warehouse.wizard) и пишется вместе с проектом; null — мастера нет.
     // Шаги вызывают обычные операции модели, поэтому правки видны и отменяются как остальные; сам мастер слоя правок не меняет

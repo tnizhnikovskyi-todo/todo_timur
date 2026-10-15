@@ -10,7 +10,10 @@
 import { DEPTHS, normEdit } from "./types.js";
 import { normBuilding } from "./building.js";
 import { containerOf } from "./tree.js";
+import { normVariants } from "./variants.js";
+import { normComments } from "./comments.js";
 
+//   Варианты планировки (W-18, D-19): warehouse.variants [{ id, name, saved, pending }] и warehouse.variant — см. variants.js; project.comments — комментарии (вне Odoo, comments.js).
 export const PROJECT_SCHEMA = 2;
 export const SOURCE_KINDS = ["odoo", "file", "scratch"];
 export const NODE_LEVELS = ["zone", "rack", "bay", "level", "cell", "floor"];
@@ -26,14 +29,15 @@ export function createWarehouse(o = {}, i = 0) {
   if (o.depthZones && typeof o.depthZones === "object" && !Array.isArray(o.depthZones)) for (const [id, d] of Object.entries(o.depthZones)) if (DEPTHS.includes(d) && !saved.depthZones.some((z) => z.id === id)) saved.depthZones.push({ id, d });
   // план здания (W-04) живёт в слое правок (saved.building); поле building склада — его сохранённая копия для чтения проектом
   if (o.building && !saved.building) saved.building = normBuilding(o.building);
+  // варианты планировки (W-18, variants.js): слой активного — saved / pending склада, слои остальных — в их записях
   return { id: o.id || `wh-${i + 1}`, code, name: o.name || code, company: o.company || "", baseRef: o.baseRef ?? null, base: o.base ?? null,
-    saved, pending: normPending(o.pending), building: saved.building ?? null, wizard: o.wizard && typeof o.wizard === "object" ? o.wizard : null };
+    saved, pending: normPending(o.pending), building: saved.building ?? null, wizard: o.wizard && typeof o.wizard === "object" ? o.wizard : null, ...normVariants(o.variants, o.variant) };
 }
 
 export function createProject(o = {}) {
   const src = o.source || {};
   return { schema: PROJECT_SCHEMA, id: o.id || "project", name: o.name || "", source: { kind: SOURCE_KINDS.includes(src.kind) ? src.kind : "scratch", name: src.name || "" },
-    loaded_at: o.loaded_at || "", warehouses: (o.warehouses || []).map(createWarehouse) };
+    loaded_at: o.loaded_at || "", warehouses: (o.warehouses || []).map(createWarehouse), comments: normComments(o.comments) };
 }
 
 export const summaryOf = (p) => (p ? { id: p.id, name: p.name, source: p.source, loaded_at: p.loaded_at, warehouses: p.warehouses.length } : null);

@@ -5,6 +5,7 @@ import path from "node:path";
 import { createI18n, DICTS } from "../src/i18n/index.js";
 import { BASE_TYPES, FORM_IDS, PICKS } from "../src/core/types.js";
 import { HELP_SECTIONS } from "../src/view/help.js";
+import { ROLES } from "../src/core/roles.js";
 import { CATALOG, CATALOG_GROUPS } from "../src/core/catalog.js";
 import { SHAPES, SHAPE_KEYS, VARIANTS } from "../src/core/params.js";
 import { OP_KINDS } from "../src/core/plan.js";
@@ -29,7 +30,7 @@ test("словари uk и en содержат одинаковые ключи �
 });
 
 test("каждый ключ, который код просит у t(), есть в словаре", () => {
-  const prefixes = ["wiz", "cap", "cats", "fn", "fnattr", "policy", "scat", "odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "parse", "tray", "heat", "find", "card"];
+  const prefixes = ["wiz", "cap", "cats", "fn", "fnattr", "policy", "scat", "odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "parse", "tray", "heat", "vr", "hist", "cmt", "role", "mk", "find", "card"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
   for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
@@ -72,6 +73,11 @@ test("каждый ключ, который код просит у t(), есть
   for (const k of STEPS) { used.add(`wiz.step.${k}`); used.add(`wiz.need.${k}`.replace("need.plan", "need.checks")); }
   for (const k of ["h", "v"]) used.add(`wiz.r.orient.${k}`);
   for (const k of ["notJson", "notProject", "newer", "noWarehouses", "badWarehouse", "dupWarehouse"]) used.add(`pf.${k}`);
+  for (const k of ["places", "pallets", "area", "volume", "capacity", "ops"]) used.add(`vr.st.${k}`);
+  for (const k of ["note", "task"]) used.add(`cmt.kind.${k}`);
+  for (const k of ["all", "open", "done"]) used.add(`cmt.fState.${k}`);
+  for (const k of ["open", "done"]) used.add(`cmt.state.${k}`);
+  for (const k of ROLES) { used.add(`role.${k}`); used.add(`role.${k}.tip`); }
   for (const m of HEAT_MODES) { used.add(`heat.${m}`); for (const k of HEAT_KEYS[m]) used.add(`heat.${m}.${k}`); }
   for (const id of HELP_SECTIONS) { used.add(`help.${id}.title`); used.add(`help.${id}.html`); }
   assert.ok(used.size > 100);

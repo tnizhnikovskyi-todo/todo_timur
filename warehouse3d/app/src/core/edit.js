@@ -43,10 +43,10 @@ export function rebuild(s) { s.tree = layout(buildTree(s.data, s.edit, s.pending
 // слой правок и несохранённое активного склада переходят в проект; проект целиком уходит в хранилище (Promise со статусом записи)
 export function sync(s) { s.wh.saved = s.saved; s.wh.pending = s.pending; s.wh.building = s.saved.building ?? null; }
 // commit — явное «Зберегти»: общее хранилище (Odoo) при нём заводит версию проекта, черновик (несохранённое) версий не плодит
-export function persist(s, commit = false) {
+export function persist(s, commit = false, comment = null) {
   sync(s);
   const done = (r) => { if (r === "stale" && !commit && !s.staleSaid) { s.staleSaid = true; say(s, "bad", "n.saveStale"); } return r; }; // про устаревшее — один раз
-  try { return Promise.resolve(s.storage.saveProject(clone(s.project), { commit })).then(done, () => "fail"); } catch (e) { return Promise.resolve("fail"); } // хранилище недоступно — правки остаются в памяти
+  try { return Promise.resolve(s.storage.saveProject(clone(s.project), { commit, comment })).then(done, () => "fail"); } catch (e) { return Promise.resolve("fail"); } // хранилище недоступно — правки остаются в памяти
 }
 const savePend = (s) => { persist(s); };
 export function applyEdit(s) { rebuild(s); s.emit({ type: "rebuild" }); }
@@ -119,8 +119,8 @@ function withDeps(s, sel) {
   }
   return s.pending.filter((p) => set.has(p));
 }
-// id: узел, массив узлов, "WH" (всё), "types" или "scat" (категории хранения); возвращает Promise с "local" | "shared" | "fail" | null (нечего сохранять)
-export function saveObj(s, id) {
+// comment — необязательный комментарий версии (история, W-18); id: узел, массив узлов, "WH" (всё), "types" или "scat" (категории хранения); возвращает Promise с "local" | "shared" | "fail" | null (нечего сохранять)
+export function saveObj(s, id, comment = null) {
   if (s.storage.readonly) return Promise.resolve(null);
   const sel = withDeps(s, pendFor(s, id)); if (!sel.length) return Promise.resolve(null);
   const bad = conflictsIn(s, sel); // коды должны быть уникальны (D6): с конфликтами не сохраняем
@@ -128,7 +128,7 @@ export function saveObj(s, id) {
   const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "scat" ? { k: "what.cats" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
-  const done = persist(s, true).then((r) => {
+  const done = persist(s, true, comment).then((r) => {
     if (r === "fail") say(s, "bad", "n.saveFail", { what });
     else if (r === "stale") say(s, "bad", "n.saveStale", {}, { key: "n.saveStaleSub" });
     else say(s, "ok", "n.saved", { what, cnt }, { key: r === "local" ? "n.savedLocal" : "n.savedShared" });
