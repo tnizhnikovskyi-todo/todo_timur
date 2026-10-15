@@ -1,9 +1,9 @@
 # factory3d_bms
-Статус: IN_PROGRESS
-Тесты: Odoo 139/139 чистая база (2026-10-15), hoot 2, плагин helvarnet 28/28; ТК: ждут W7
-Решений без заказчика: 5 (ниже)
+Статус: DONE (юнит-DoD); вне среды: копия демо-базы (AC-49/50/52, DEPLOY_TEST шаги 1, 8), ТК-11, 3D-часть ТК-10
+Тесты: Odoo 139/139 /factory3d_bms чистая база вкл. hoot 2 (2026-10-15), плагин helvarnet 28/28, collector unit 173+1 известный env-fail; ruff OK; ТК: 01–07, 09, 12 ✅, 08 частично, 10 числа, 11 ⏭; ТБ 10/10; ТП 01–05 (TEST_REPORT.md)
+Решений без заказчика: 6 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: group_f3d_admin не входит в base.group_system (расхождение SPEC §4.2 в factory3d_base, DEC-5)
+Требует внимания человека: прогон на копии демо (AC-49/50/52); ТК-11 с fire_safety; дефекты эмулятора iot_sim D-1…D-3, O-1/O-2 (TEST_REPORT.md); group_f3d_admin ⊄ base.group_system (DEC-5); подпись security-review §13.3
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -14,7 +14,7 @@
 | W3 | принят | 56d12b2 | /factory3d_bms 68/68, pytest data_sync 6/6; демо-копия (AC-49/50/52) не прогонялась |
 | W4 | принят | 0927f52 | /factory3d_bms 126/126; §11 п.11 чаттер failed/expired и тест f3d.fire.drill — нет |
 | W5 | принят | a26e8b8, 5a60039 | /factory3d_bms 139/139 (вкл. TestBmsHoot) |
-| W7 | в работе | | |
+| W7 | принят | 7fe4d59 | стенд: ТК 9 ✅, ТБ 10, ТП 5; дефекты только в iot_sim |
 
 ## Решения без заказчика
 - DEC-1 (ENV): тесты с `F3D_TEST_INSTALL=factory3d_base,factory3d_telemetry,factory3d_bms` (как yard DEC-2);
