@@ -28,8 +28,10 @@
 telemetry, джерело, сигнал; п'ятий — `F3D_WRITE_ENABLED` колектора). Формат — `tools/commands.py` (R-21);
 файл копіюється в пакет колектора як `cmdtext.py` і не імпортує Odoo.
 
-## Стан каркаса (W0)
+## Інструкції й тести
 
-Моделі (поля, обмеження, порожні гачки), безпека, дані, меню/дії, `f3d.command`, обробник push, `tools/commands.py`
-і фікстури тестів. Алгоритми R-01…R-28, представлення V-01…V-29, V-31, майстри, контролер API-01, хук міграції —
-у воркерах W1…W8 (`docs/modules/factory3d_machine_connect/ARCHITECTURE.md` §6).
+- Інструкції користувачів і налаштування — `docs/modules/factory3d_machine_connect/ARCHITECTURE.md` §3–§4.
+- Перший тиждень на проді — лише читання (стоп-крани `write_enabled` вимкнені): `DEPLOY_TEST.md`.
+- Тести: `F3D_TEST_INSTALL=factory3d_machine_connect factory3d/tools/odoo/run_tests.sh <db> /factory3d_machine_connect`;
+  пакет — `pytest services/collector_plugins/machine_connect -m "not stand"`; стенд — `-m stand` (`TEST_REPORT.md`).
+- Без Enterprise `mrp_workorder`: оператор завдання — `f3d_employee_id`; з Enterprise — `start_employee` (duck typing).
