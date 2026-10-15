@@ -1,12 +1,4 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Конструктор склада: опросник</title>
-</head>
-<body>
-
+<title>Вопросы по конструктору склада</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -111,6 +103,19 @@ textarea::placeholder { color: var(--muted); }
 .final textarea { min-height: 90px; }
 .hidden-by-filter { display: none; }
 
+.empty { color: var(--muted); }
+.scope-line { font-size: 13px; padding: 3px 10px; border-radius: 3px; background: var(--soft); border: 1px solid var(--line); justify-self: start; }
+.arch-r { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 10px; }
+.arch-r > summary { cursor: pointer; padding: 12px 16px; font-weight: 600; overflow-wrap: anywhere; }
+.arch-r > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.arch-r ul { list-style: none; margin: 0; padding: 0 16px 6px; }
+.ar { display: grid; grid-template-columns: minmax(34px, auto) minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.ar .id { font: 500 13px var(--f-mono); color: var(--accent); }
+.ar-t { font-weight: 600; overflow-wrap: anywhere; }
+.ar-a, .ar-n { color: var(--muted); overflow-wrap: anywhere; }
+.ar-a b { color: var(--ink); font-weight: 600; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
 @media (max-width: 860px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   nav.toc { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -123,22 +128,27 @@ textarea::placeholder { color: var(--muted); }
 }
 </style>
 
+
 <div class="wrap">
   <header class="top">
     <div class="eyebrow">ToDo · модуль «Склад» · Odoo</div>
-    <h1>Конструктор склада: что в нём будет</h1>
-    <p class="lead">Полный список предложений по конструктору. Он универсальный: подходит и для баз, где склад <b>уже настроен</b> (загружаем локации и рисуем по ним), и для баз, где склад <b>настраивают с нуля</b> (рисуем, а конструктор создаёт локации в Odoo).</p>
-    <p class="lead">У каждого пункта — моё предложение и варианты ответа. Отметьте ответ, при необходимости допишите комментарий; всё сохраняется сразу, можно закрыть и вернуться. Когда закончите, нажмите <b>«Отправить ответы»</b> внизу: <span id="howsend">сохранится файл с ответами — пришлите его в чат.</span></p>
-    <div class="scope"><span class="in">Сейчас: локации и размещение</span><span class="out">Позже: маршруты</span></div>
+    <h1>Вопросы по конструктору склада</h1>
+    <p class="lead">Здесь все вопросы менеджера проекта. <b>Открытые</b> — сверху: отметьте ответ, при необходимости допишите комментарий; всё сохраняется сразу, можно закрыть и вернуться. Когда закончите, нажмите <b>«Отправить ответы»</b> и напишите в чат «готово». Отвеченные и обработанные вопросы уходят в архив внизу страницы.</p>
+    <p class="scope-line">Рамки: локации и размещение; маршруты — позже</p>
   </header>
   <div class="layout">
     <nav class="toc" id="toc" aria-label="Разделы"></nav>
-    <main id="list"></main>
+    <main id="list">
+      <div id="open"></div>
+      <section class="sec" id="archive"><div class="sec-h"><span class="k">—</span><h2>Архив</h2></div>
+        <p class="sec-intro">Отвеченные и обработанные вопросы, только для чтения. Раунды свёрнуты.</p>
+        <div id="arch"></div></section>
+    </main>
   </div>
 </div>
 <div class="bar" role="region" aria-label="Отправка ответов">
   <div class="in">
-    <div class="prog"><div class="t" id="prog-t">Отвечено 0</div><div class="track"><div class="fill" id="prog-f"></div></div></div>
+    <div class="prog"><div class="t" id="prog-t">Загружаю…</div><div class="track"><div class="fill" id="prog-f"></div></div></div>
     <button class="btn" id="flt" aria-pressed="false">Только без ответа</button>
     <button class="btn" id="copy">Скопировать ответы</button>
     <button class="btn primary" id="send">Отправить ответы</button>
@@ -150,7 +160,7 @@ textarea::placeholder { color: var(--muted); }
 const P = [["now", "В первую очередь"], ["later", "Позже"], ["no", "Не нужно"], ["discuss", "Обсудить"]];
 const REC = { now: "Сразу", later: "Позже", routes: "С маршрутами", choice: "Выбор" };
 // rec: now | later | routes | choice; opts — свои варианты (иначе P); best — рекомендуемый вариант; multi — несколько ответов
-const S = [
+const ARCHIVE_R1 = [
  { k: "0", t: "Общие вопросы", i: "Ответы на них определяют рамки всего остального.", q: [
   { id: "Q1", t: "Кто работает в конструкторе", d: "От этого зависит, насколько подробным должен быть интерфейс и нужен ли упрощённый режим.", rec: "choice", multi: 1,
     opts: [["analyst", "Аналитики и внедренцы ToDo"], ["head", "Руководитель склада клиента"], ["keeper", "Кладовщики, логисты клиента"], ["sales", "Продажи на пресейле"]], best: ["analyst", "head"],
@@ -307,74 +317,113 @@ const S = [
   { id: "L3", t: "Порядок обхода мест", rec: "routes", d: "Последовательность мест для листа отбора — из адресации и проходов." },
  ]},
 ];
-const ALL = S.flatMap((s) => s.q);
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const ANS = {};          // id → {v, note}
-let FINAL = "";           // свободный комментарий в конце
-let db = null, uid = null, sentAt = null, readOnly = false;
+const ALL_R1 = ARCHIVE_R1.flatMap((s) => s.q);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const plural = (n, a, b, c) => { const m = n % 100, k = n % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k > 1 && k < 5 ? b : c; };
+const ANS = {};          // id → {v, note}: ответы из db и черновики
+let OPEN = [], DONE = [];  // вопросы из db: открытые и архивные
+let db = null, uid = null, sentAt = null, readOnly = false, loaded = false, gotQ = false, gotA = false, haveA = new Set();
 
 // ---------- разметка
 const optsOf = (q) => q.opts || P;
 const bestHas = (q, k) => Array.isArray(q.best) ? q.best.includes(k) : q.best === k;
+const findQ = (id) => OPEN.find((q) => q.id === id) || DONE.find((q) => q.id === id) || ALL_R1.find((q) => q.id === id);
+const answered = (id) => { const a = ANS[id]; return !!a && (Array.isArray(a.v) ? a.v.length > 0 : !!a.v); };
+const cmpId = (a, b) => String(a).localeCompare(String(b), "ru", { numeric: true });
+const byOrder = (a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || cmpId(a.id, b.id);
 function recLine(q) {
-  if (q.rec === "choice") return `<div class="rec"><span class="tag choice">Предлагаю</span>${esc(q.r)}</div>`;
+  if (q.rec === "choice") return q.r ? `<div class="rec"><span class="tag choice">Предлагаю</span>${esc(q.r)}</div>` : "";
+  if (!REC[q.rec]) return "";
   return `<div class="rec"><span class="tag ${q.rec}">${REC[q.rec]}</span>${q.rec === "now" ? "Делать в первой очереди." : q.rec === "later" ? "Следующим этапом, после основы." : "Вместе с блоком маршрутов."}</div>`;
 }
 function card(q) {
-  const type = q.multi ? "checkbox" : "radio";
-  return `<article class="q" id="q-${q.id}" data-id="${q.id}">
-    <div class="q-h"><span class="id">${q.id}</span><h3>${esc(q.t)}</h3><span class="saved" data-saved></span></div>
+  const type = q.multi ? "checkbox" : "radio", id = esc(q.id);
+  return `<article class="q" id="q-${id}" data-id="${id}">
+    <div class="q-h"><span class="id">${id}</span><h3>${esc(q.t)}</h3><span class="saved" data-saved></span></div>
     ${q.d ? `<p class="d">${q.d}</p>` : ""}
     ${recLine(q)}
     <fieldset class="opts"><legend>${esc(q.t)}${q.multi ? " — можно несколько" : ""}</legend>
-      ${optsOf(q).map(([k, l]) => `<label class="opt"><input type="${type}" name="o-${q.id}" id="o-${q.id}-${k}" value="${k}"><span>${esc(l)}${q.opts && bestHas(q, k) ? ' <i class="r">предлагаю</i>' : ""}</span></label>`).join("")}
+      ${optsOf(q).map(([k, l]) => `<label class="opt"><input type="${type}" name="o-${id}" value="${esc(k)}"><span>${esc(l)}${q.opts && bestHas(q, k) ? ' <i class="r">предлагаю</i>' : ""}</span></label>`).join("")}
     </fieldset>
-    <textarea id="n-${q.id}" rows="1" placeholder="Комментарий (необязательно)" aria-label="Комментарий к ${q.id}"></textarea>
+    <textarea rows="1" placeholder="Комментарий (необязательно)" aria-label="Комментарий к ${id}"></textarea>
   </article>`;
 }
-document.getElementById("list").innerHTML = S.map((s) => `<section class="sec" id="s-${s.k}">
-    <div class="sec-h"><span class="k">${s.k === "0" ? "—" : s.k}</span><h2>${esc(s.t)}</h2></div>
-    ${s.i ? `<p class="sec-intro">${esc(s.i)}</p>` : ""}${s.q.map(card).join("")}</section>`).join("") +
-  `<section class="sec final" id="s-end"><div class="sec-h"><span class="k">+</span><h2>Чего не хватает</h2></div>
-    <p class="sec-intro">Что ещё должно быть в конструкторе, чего нет в списке, и любые общие замечания.</p>
-    <article class="q"><textarea id="final" rows="4" placeholder="Ваши дополнения" aria-label="Дополнения к списку"></textarea></article></section>`;
+function groups() {
+  const g = [];
+  for (const q of [...OPEN].sort(byOrder)) { const name = q.group || "Без группы"; let x = g.find((y) => y.name === name); if (!x) g.push(x = { name, q: [] }); x.q.push(q); }
+  return g;
+}
+let lastOpenHtml = null;
+function renderOpen() {
+  const g = groups();
+  const html = !loaded ? `<article class="q empty">Загружаю вопросы…</article>`
+    : !g.length ? `<article class="q empty">Открытых вопросов нет. Новые появятся здесь.</article>`
+    : g.map((s, i) => `<section class="sec" id="g-${i}"><div class="sec-h"><span class="k">${i + 1}</span><h2>${esc(s.name)}</h2></div>${s.q.map(card).join("")}</section>`).join("");
+  if (html !== lastOpenHtml) { document.getElementById("open").innerHTML = html; lastOpenHtml = html; }
+}
+// ---------- архив (только чтение)
+const archOpen = new Set();
+const labOf = (q, k) => (optsOf(q).find((o) => o[0] === k) || [k, k])[1];
+function archItem(q) {
+  const a = ANS[q.id] || {}, vals = Array.isArray(a.v) ? a.v : a.v ? [a.v] : [];
+  const ans = vals.length ? vals.map((k) => labOf(q, k)).join(", ") : "";
+  return `<li class="ar"><span class="id">${esc(q.id)}</span><div><div class="ar-t">${esc(q.t)}</div>
+    <div class="ar-a">${ans ? `Ответ: <b>${esc(ans)}</b>` : "Ответ: —"}</div>
+    ${a.note ? `<div class="ar-n">Комментарий: ${esc(a.note)}</div>` : ""}${q.decision ? `<div class="ar-n">Решение: ${esc(q.decision)}</div>` : ""}</div></li>`;
+}
+function rounds() {
+  const m = new Map();
+  for (const q of DONE) { const r = q.round ?? "—"; if (!m.has(r)) m.set(r, []); m.get(r).push(q); }
+  const list = [...m].sort((a, b) => cmpId(b[0], a[0])).map(([r, qs]) => ({ key: "r-" + r, title: `${typeof r === "number" ? "Опрос " + r : r} · ${qs.length} ${plural(qs.length, "вопрос", "вопроса", "вопросов")}`, qs: qs.sort(byOrder) }));
+  list.push({ key: "r1", title: `Опрос 1 · 15.10.2026 · ${ALL_R1.length} ${plural(ALL_R1.length, "вопрос", "вопроса", "вопросов")} · обработан в плане v0.2`, qs: ALL_R1 });
+  return list;
+}
+let lastArchHtml = null;
+function renderArchive() {
+  const html = rounds().map((r) => `<details class="arch-r" data-r="${esc(r.key)}"${archOpen.has(r.key) ? " open" : ""}><summary>${esc(r.title)}</summary><ul>${r.qs.map(archItem).join("")}</ul></details>`).join("");
+  if (html !== lastArchHtml) { document.getElementById("arch").innerHTML = html; lastArchHtml = html; }
+}
+document.getElementById("arch").addEventListener("toggle", (ev) => { const d = ev.target; if (d.dataset && d.dataset.r) d.open ? archOpen.add(d.dataset.r) : archOpen.delete(d.dataset.r); }, true);
+
 const LEG = `<div class="legend"><div><span class="tag now">Сразу</span>первая очередь</div><div><span class="tag later">Позже</span>следующий этап</div><div><span class="tag routes">С маршрутами</span>блок маршрутов</div><div><span class="tag choice">Предлагаю</span>выбор варианта</div></div>`;
 function renderToc() {
-  document.getElementById("toc").innerHTML = `<div class="h">Разделы</div>` + S.map((s) => {
+  document.getElementById("toc").innerHTML = `<div class="h">Разделы</div>` + groups().map((s, i) => {
     const n = s.q.filter((q) => answered(q.id)).length;
-    return `<a href="#s-${s.k}" class="${n === s.q.length ? "done" : ""}"><span class="k">${s.k === "0" ? "—" : s.k}</span><span class="t">${esc(s.t)}</span><span class="n">${n}/${s.q.length}</span></a>`;
-  }).join("") + `<a href="#s-end"><span class="k">+</span><span class="t">Чего не хватает</span><span class="n"></span></a>` + LEG;
+    return `<a href="#g-${i}" class="${n === s.q.length ? "done" : ""}"><span class="k">${i + 1}</span><span class="t">${esc(s.name)}</span><span class="n">${n}/${s.q.length}</span></a>`;
+  }).join("") + `<a href="#archive"><span class="k">—</span><span class="t">Архив</span><span class="n"></span></a>` + LEG;
 }
-const answered = (id) => { const a = ANS[id]; return !!a && (Array.isArray(a.v) ? a.v.length > 0 : !!a.v); };
 function paintCard(q) {
-  const el = document.getElementById("q-" + q.id), a = ANS[q.id] || {};
-  const vals = Array.isArray(a.v) ? a.v : a.v ? [a.v] : [];
+  const el = document.getElementById("q-" + q.id); if (!el) return;
+  const a = ANS[q.id] || {}, vals = Array.isArray(a.v) ? a.v : a.v ? [a.v] : [];
   el.querySelectorAll("input").forEach((i) => { i.checked = vals.includes(i.value); i.disabled = readOnly; });
-  const ta = document.getElementById("n-" + q.id); if (document.activeElement !== ta) ta.value = a.note || ""; ta.disabled = readOnly;
+  const ta = el.querySelector("textarea"); if (document.activeElement !== ta) ta.value = a.note || ""; ta.disabled = readOnly;
   el.classList.toggle("answered", answered(q.id));
 }
-function paintAll() { ALL.forEach(paintCard); const f = document.getElementById("final"); if (document.activeElement !== f) f.value = FINAL; f.disabled = readOnly; renderToc(); progress(); applyFilter(); }
+function paintAll() {
+  renderOpen(); OPEN.forEach(paintCard); renderArchive(); renderToc(); progress(); applyFilter();
+  for (const id of ["flt", "copy", "send"]) document.getElementById(id).disabled = !OPEN.length;
+}
 function progress() {
-  const n = ALL.filter((q) => answered(q.id)).length;
-  document.getElementById("prog-t").innerHTML = `Отвечено <b>${n}</b> из ${ALL.length}`;
-  document.getElementById("prog-f").style.width = `${(n / ALL.length) * 100}%`;
+  const n = OPEN.filter((q) => answered(q.id)).length;
+  document.getElementById("prog-t").innerHTML = OPEN.length ? `Отвечено <b>${n}</b> из ${OPEN.length}` : "Открытых вопросов нет";
+  document.getElementById("prog-f").style.width = OPEN.length ? `${(n / OPEN.length) * 100}%` : "0";
 }
 let onlyOpen = false;
-function applyFilter() { ALL.forEach((q) => document.getElementById("q-" + q.id).classList.toggle("hidden-by-filter", onlyOpen && answered(q.id))); }
+function applyFilter() { OPEN.forEach((q) => { const el = document.getElementById("q-" + q.id); if (el) el.classList.toggle("hidden-by-filter", onlyOpen && answered(q.id)); }); }
 
-// ---------- сохранение: один документ на пункт, одна запись за раз на документ
-const local = { get() { try { return JSON.parse(localStorage.getItem("wh-kb-answers") || "{}"); } catch (e) { return {}; } },
-  put() { try { localStorage.setItem("wh-kb-answers", JSON.stringify({ ANS, FINAL })); } catch (e) {} } };
+// ---------- сохранение: один документ на вопрос, одна запись за раз на документ
+const local = { get() { try { return JSON.parse(localStorage.getItem("wh-questions") || "{}"); } catch (e) { return {}; } },
+  put() { if (!loaded) return; try { const d = {}; OPEN.forEach((q) => { if (ANS[q.id]) d[q.id] = ANS[q.id]; }); localStorage.setItem("wh-questions", JSON.stringify({ ANS: d })); } catch (e) {} } };
 const busy = {}, again = {};
-function mark(id, txt, err) { const s = document.querySelector(`#q-${id} [data-saved]`); if (s) { s.textContent = txt; s.classList.toggle("err", !!err); } }
+function mark(id, txt, err) { const el = document.getElementById("q-" + id), s = el && el.querySelector("[data-saved]"); if (s) { s.textContent = txt; s.classList.toggle("err", !!err); } }
 async function save(id) {
   local.put();
   if (!db) { mark(id, "в этом браузере"); return; }
   if (busy[id]) { again[id] = true; return; }
   busy[id] = true; mark(id, "сохраняю…");
   try {
-    const body = id === "_final" ? { note: FINAL, at: new Date().toISOString(), by: uid } : { ...ANS[id], title: ALL.find((q) => q.id === id).t, at: new Date().toISOString(), by: uid };
-    await db.doc("answers/" + (id === "_final" ? "zz-final" : id)).set(body);
+    const q = findQ(id);
+    await db.doc("answers/" + id).set({ ...ANS[id], title: q ? q.t : id, at: new Date().toISOString(), by: uid });
     mark(id, "сохранено");
   } catch (e) {
     if (e && e.code === "invalid_argument") { readOnly = true; paintAll(); status("Сохранять ответы может только владелец страницы или редактор.", "warn"); }
@@ -384,18 +433,17 @@ async function save(id) {
 const timers = {};
 const later = (id) => { clearTimeout(timers[id]); timers[id] = setTimeout(() => save(id), 700); };
 
-document.getElementById("list").addEventListener("change", (ev) => {
+document.getElementById("open").addEventListener("change", (ev) => {
   const i = ev.target; if (i.tagName !== "INPUT") return;
-  const card = i.closest(".q"), id = card.dataset.id, q = ALL.find((x) => x.id === id);
+  const card = i.closest(".q"), id = card.dataset.id, q = OPEN.find((x) => x.id === id); if (!q) return;
   ANS[id] = ANS[id] || { v: q.multi ? [] : "", note: "" };
   ANS[id].v = q.multi ? [...card.querySelectorAll("input:checked")].map((x) => x.value) : i.value;
-  paintCard(q); renderToc(); progress(); save(id);
+  paintCard(q); renderToc(); progress(); applyFilter(); save(id);
 });
-document.getElementById("list").addEventListener("input", (ev) => {
+document.getElementById("open").addEventListener("input", (ev) => {
   const t = ev.target; if (t.tagName !== "TEXTAREA") return;
   t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px";
-  if (t.id === "final") { FINAL = t.value; local.put(); later("_final"); return; }
-  const id = t.id.slice(2), q = ALL.find((x) => x.id === id);
+  const id = t.closest(".q").dataset.id, q = OPEN.find((x) => x.id === id); if (!q) return;
   ANS[id] = ANS[id] || { v: q.multi ? [] : "", note: "" }; ANS[id].note = t.value; local.put(); later(id);
 });
 
@@ -404,11 +452,9 @@ function status(t, kind = "") { const s = document.getElementById("status"); s.t
 const fmt = (iso) => { try { return new Date(iso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso; } };
 document.getElementById("flt").onclick = (e) => { onlyOpen = !onlyOpen; e.currentTarget.setAttribute("aria-pressed", String(onlyOpen)); applyFilter(); };
 function asText() {
-  const lab = (q, k) => (optsOf(q).find((o) => o[0] === k) || [k, k])[1];
-  const lines = ALL.map((q) => { const a = ANS[q.id]; if (!answered(q.id) && !(a && a.note)) return `${q.id} ${q.t}: —`;
-    const v = a && a.v ? (Array.isArray(a.v) ? a.v.map((k) => lab(q, k)).join(", ") : lab(q, a.v)) : "без ответа";
-    return `${q.id} ${q.t}: ${v}${a && a.note ? ` — ${a.note.trim()}` : ""}`; });
-  return lines.join("\n") + (FINAL.trim() ? `\n\nДополнения: ${FINAL.trim()}` : "");
+  return OPEN.slice().sort(byOrder).map((q) => { const a = ANS[q.id]; if (!answered(q.id) && !(a && a.note)) return `${q.id} ${q.t}: —`;
+    const v = a && a.v ? (Array.isArray(a.v) ? a.v.map((k) => labOf(q, k)).join(", ") : labOf(q, a.v)) : "без ответа";
+    return `${q.id} ${q.t}: ${v}${a && a.note ? ` — ${a.note.trim()}` : ""}`; }).join("\n");
 }
 document.getElementById("copy").onclick = async () => {
   const txt = asText();
@@ -416,52 +462,47 @@ document.getElementById("copy").onclick = async () => {
   catch (e) { let box = document.getElementById("copybox"); if (!box) { box = document.createElement("textarea"); box.id = "copybox"; box.className = "copybox"; box.readOnly = true; document.querySelector(".bar .in").append(box); }
     box.value = txt; box.focus(); box.select(); status("Скопируйте выделенный текст (Ctrl+C) и вставьте в чат.", "warn"); }
 };
-// без хранилища (страница открыта как файл): ответы сохраняются файлом, текст ещё и копируется
-function downloadAnswers(n) {
-  const day = new Date().toISOString().slice(0, 10), name = `konstruktor_otvety_${day}.txt`;
-  const body = `Конструктор склада — ответы (${n} из ${ALL.length}), ${new Date().toLocaleString("ru-RU")}\n\n${asText()}\n\n--- JSON ---\n${JSON.stringify({ answers: ANS, final: FINAL }, null, 1)}\n`;
-  try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body], { type: "text/plain;charset=utf-8" })); a.download = name;
-    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    status(`Файл ${name} сохранён в «Загрузки». Пришлите его в чат.`, "ok"); }
-  catch (e) { document.getElementById("copy").click(); }
-  try { navigator.clipboard.writeText(asText()).catch(() => {}); } catch (e) {}
-}
 document.getElementById("send").onclick = async () => {
-  const n = ALL.filter((q) => answered(q.id)).length;
-  if (!db) { if (window.claude) document.getElementById("copy").click(); else downloadAnswers(n); return; } // в окне артефакта сохранять файлы нельзя
+  if (!db) { document.getElementById("copy").click(); return; } // без хранилища — копируем текст
   if (readOnly) { status("Отправлять ответы может только владелец страницы или редактор.", "warn"); return; }
+  const ids = OPEN.filter((q) => answered(q.id)).map((q) => q.id);
   status("Отправляю…");
-  try { const at = new Date().toISOString(); await db.doc("meta/status").set({ submitted: true, at, answered: n, total: ALL.length, by: uid });
-    sentAt = at; status(`Отправлено ${fmt(at)}: ${n} из ${ALL.length}. Напишите в чат, что готово.`, "ok"); document.getElementById("send").textContent = "Отправить ещё раз"; }
+  try { const at = new Date().toISOString(); await db.doc("meta/status").set({ submitted: true, at, open: ids, by: uid });
+    sentAt = at; status(`Отправлено ${fmt(at)}: ${ids.length} из ${OPEN.length}. Напишите в чат «готово».`, "ok"); document.getElementById("send").textContent = "Отправить ещё раз"; }
   catch (e) { status("Не удалось отправить. Попробуйте ещё раз или скопируйте ответы в чат.", "warn"); }
 };
 
 // ---------- старт
+// перенести в db то, что успели отметить до подключения
+function maybeSync() {
+  if (!gotQ || !gotA) return;
+  for (const q of OPEN) if (!haveA.has(q.id) && answered(q.id)) save(q.id);
+  gotA = false;
+}
 (function boot() {
-  const l = local.get(); Object.assign(ANS, l.ANS || {}); FINAL = l.FINAL || ""; paintAll();
-  if (!window.claude || !window.claude.use) { status("Ответы сохраняются в этом браузере. «Отправить ответы» сохранит файл — пришлите его в чат."); return; }
+  Object.assign(ANS, local.get().ANS || {}); paintAll();
+  if (!window.claude || !window.claude.use) { loaded = true; paintAll(); status("Хранилище недоступно: открытых вопросов нет."); return; }
   Promise.all([window.claude.use("db"), window.claude.use("user")]).then(async ([d, u]) => {
-    if (!d) { status("Хранилище недоступно: ответы сохраняются в этом браузере. Нажмите «Скопировать ответы» и вставьте в чат.", "warn"); return; }
-    db = d; document.getElementById("howsend").textContent = "ответы уйдут мне, напишите в чат, что готово."; try { uid = u ? await u.id() : null; } catch (e) {}
+    if (!d) { loaded = true; paintAll(); status("Хранилище недоступно. Ответы сохраняются в этом браузере; «Скопировать ответы» и вставьте в чат.", "warn"); return; }
+    db = d; try { uid = u ? await u.id() : null; } catch (e) {}
     try { if (u && (await u.can("data.write")) === false) readOnly = true; } catch (e) {}
+    db.collection("questions").onSnapshot((snap) => {
+      const all = snap.docs.map((x) => x.data()).filter((x) => x && x.id);
+      OPEN = all.filter((x) => x.status === "open"); DONE = all.filter((x) => x.status === "archived");
+      loaded = true; gotQ = true; local.put(); paintAll(); maybeSync();
+    }, () => status("Связь с хранилищем прервалась — обновите страницу.", "warn"));
     db.collection("answers").onSnapshot((snap) => {
-      for (const doc of snap.docs) { const x = doc.data(); if (!x) continue;
-        if (doc.id === "zz-final") { if (document.activeElement?.id !== "final") FINAL = x.note || ""; continue; }
-        if (busy[doc.id] || timers[doc.id] && document.activeElement?.id === "n-" + doc.id) continue;
+      haveA = new Set(snap.docs.map((x) => x.id));
+      for (const doc of snap.docs) { const x = doc.data(); if (!x || doc.id === "zz-final") continue;
+        if (busy[doc.id] || timers[doc.id] && document.activeElement?.closest?.(".q")?.dataset.id === doc.id) continue;
         ANS[doc.id] = { v: x.v ?? "", note: x.note || "" }; }
-      local.put(); paintAll();
+      local.put(); gotA = true; paintAll(); maybeSync();
     }, () => status("Связь с хранилищем прервалась — обновите страницу.", "warn"));
     db.doc("meta/status").onSnapshot((s) => { const x = s.exists ? s.data() : null; sentAt = x && x.at;
       if (readOnly) status("Только просмотр: отвечать может владелец страницы или редактор.", "warn");
       else if (sentAt) { status(`Отправлено ${fmt(sentAt)}. Изменения после отправки тоже сохраняются — отправьте ещё раз, когда закончите.`, "ok"); document.getElementById("send").textContent = "Отправить ещё раз"; }
       else status("Ответы сохраняются автоматически.");
     }, () => {});
-    // перенести то, что успели отметить до подключения
-    const pending = Object.keys(ANS);
-    db.collection("answers").get().then((snap) => { const have = new Set(snap.docs.map((d) => d.id)); for (const id of pending) if (!have.has(id) && answered(id)) save(id); if (FINAL && !have.has("zz-final")) save("_final"); }).catch(() => {});
   });
 })();
 </script>
-
-</body>
-</html>
