@@ -17,7 +17,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 2 | `factory3d_iot_sim` | 1 | base | DONE | session_019MFyhB78Wd7hgrNLzgRGkP | 2026-10-14 23:18 UTC | 2026-10-15 04:30 UTC | Odoo 140/140, svc 451/451 | 18 |
 | 3 | `factory3d_telemetry` | 2 | base | IN_PROGRESS | session_01NF5Tuhsrpzgd1SMkYaMG8N | 2026-10-15 06:47 UTC | | | |
 | 4 | `factory3d_viewer` | 1 | base | IN_PROGRESS | session_01HJS765EQsGKtWkA6ocokUP | 2026-10-15 08:33 UTC | | | |
-| 5 | `factory3d_access` | 4 | base | IN_PROGRESS | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | | | |
+| 5 | `factory3d_access` | 4 | base | DONE | session_01VWzBg1ho7GaJgftY7d5EgN | 2026-10-15 08:55 UTC | 2026-10-15 11:05 UTC | 156/156 (вместе с base+iot_sim 296/296) | 13 |
 | 6 | `factory3d_machine_connect` | 2 | telemetry | TODO | | | | | |
 | 7 | `factory3d_energy` | 3 | telemetry | TODO | | | | | |
 | 8 | `factory3d_yard` | 4 | base, telemetry | TODO | | | | | |
@@ -63,3 +63,5 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 06:47 UTC factory3d_telemetry: запущена сессия session_01NF5Tuhsrpzgd1SMkYaMG8N по прямому указанию пользователя сверх лимита (3/2 за 24 ч). Пауза до 22:05 отменена. Дальше лимит «2 за 24 ч» снова действует: следующий запуск — когда в окне 24 ч останется меньше 2 сессий (после 2026-10-15 23:19 UTC).
 - 2026-10-15 08:33 UTC factory3d_viewer: запущена сессия session_01HJS765EQsGKtWkA6ocokUP по прямому указанию пользователя сверх лимита (4 за 24 ч); одновременно 2 (telemetry, viewer).
 - 2026-10-15 08:55 UTC factory3d_access: запущена сессия session_01VWzBg1ho7GaJgftY7d5EgN по прямому указанию пользователя сверх лимитов (5 за 24 ч; одновременно 3: telemetry, viewer, access).
+- 2026-10-15 10:30 UTC менеджер: правки SPEC по DEC (base DEC-5/11/15, iot_sim DEC-4/11, telemetry DEC-10, access AC-69) — `fa69787` в `claude/factory3d-build`; отчёт base (ТК-01 частично на timur-o19demo) смержен — `c3c845b`.
+- 2026-10-15 11:05 UTC factory3d_access: DONE — смержен в `claude/factory3d-build` (`9ab374a`), Odoo 296/296 (base+iot_sim+access), DEC 13. Не проверено: мост `factory3d_access_telemetry` (нет telemetry), ТК-09 (viewer), ТК-10 drill (fire_safety), копия базы `odoo`. Найдено: эмулятор iot_sim отдаёт 404 вместо 405 (D-2); ERROR FK `card.server_id` при деинсталляции (O-1); подпись security/pr-review — за человеком.
