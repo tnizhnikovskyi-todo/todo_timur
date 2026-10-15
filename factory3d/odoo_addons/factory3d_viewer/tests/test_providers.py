@@ -102,7 +102,14 @@ class TestProviders(F3dViewerBase):
         self.patch(cls, "_f3d_group", "factory3d_viewer.no_such_group")
         data = self._builder().build()
         self.assertEqual(data["meta"]["sections"]["zz_duck"], "denied")
-        self.assertEqual(data["meta"]["sections"]["infra"], "denied")
+        # інші провайдери «infra» (energy, genset…) виконуються після zz_duck і перекривають статус; перевіряємо
+        # відмову за кількома розділами лише тоді, коли пізніших провайдерів цього розділу немає
+        duck = self.env[ZZ + "duck"]
+        key = (getattr(duck, "_f3d_sequence", 1000), duck._name)
+        later = [p._name for p in get_providers(self.env)
+                 if (getattr(p, "_f3d_sequence", 1000), p._name) > key and "infra" in getattr(p, "_f3d_sections", ())]
+        if not later:
+            self.assertEqual(data["meta"]["sections"]["infra"], "denied")
         self.assertNotIn("zz_duck", data)
 
     def test_sections_filter(self):
