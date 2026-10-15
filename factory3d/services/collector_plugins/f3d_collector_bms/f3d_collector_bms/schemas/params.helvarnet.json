@@ -1,0 +1,13 @@
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "title": "params.helvarnet", "type": "object",
+ "required": ["host", "router"], "additionalProperties": false,
+ "properties": {
+   "host": {"type": "string", "minLength": 1, "maxLength": 253},
+   "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 50000},
+   "protocol": {"enum": ["tcp", "udp"], "default": "tcp"},
+   "timeout_s": {"type": "number", "minimum": 0.5, "maximum": 30, "default": 3},
+   "cluster": {"type": "integer", "minimum": 1, "maximum": 253, "default": 1},
+   "router": {"type": "integer", "minimum": 1, "maximum": 254},
+   "version": {"enum": [1, 2], "default": 2},
+   "rate_per_s": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+   "push": {"type": "boolean", "default": true},
+   "membership_ttl_s": {"type": "integer", "minimum": 60, "maximum": 86400, "default": 3600}}}
