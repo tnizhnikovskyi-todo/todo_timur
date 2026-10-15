@@ -5,6 +5,7 @@ from psycopg2 import errors as pg_errors
 
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
+from odoo.modules import module as odoo_module
 
 from ..tools import params as P
 from ..tools.biostar_client import BioStarClient, BioStarError
@@ -159,7 +160,7 @@ class F3dAccessServer(models.Model):
                 'params': {'title': title, 'message': message, 'type': kind, 'sticky': kind == 'danger'}}
 
     def _may_commit(self):
-        return not self.env.context.get('f3d_no_commit') and not self.env.registry.in_test_mode()
+        return not self.env.context.get('f3d_no_commit') and not odoo_module.current_test
 
     # ------------------------------------------------------------------ крони
     @api.model

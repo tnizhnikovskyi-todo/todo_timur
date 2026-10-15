@@ -271,3 +271,16 @@ class TestPoll(ServerCase):
             res = self.server._poll()
         self.assertEqual(res, {'skipped': True})
         self.assertEqual(fake.search_calls, [])
+
+
+@tagged('post_install', '-at_install', 'f3d', 'f3d_access')
+class TestCommitGuard(AccessCase):
+    """Регресія D-1: у Odoo 19 немає Registry.in_test_mode(); крони не мають падати."""
+
+    def test_may_commit_no_attribute_error(self):
+        server = self.server.with_context(f3d_no_commit=False)
+        self.assertFalse(server._may_commit())
+
+    def test_gc_without_no_commit(self):
+        Event = self.env['f3d.access.event'].with_context(f3d_no_commit=False)
+        self.assertEqual(Event._gc(90), 0)

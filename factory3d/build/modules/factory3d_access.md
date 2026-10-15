@@ -1,9 +1,9 @@
 # factory3d_access
-Статус: IN_PROGRESS
-Тесты: 154/154 (2026-10-15), ТК: ждут W5
-Решений без заказчика: 12 (ниже)
+Статус: DONE (юнит + стенд); вне среды: копия демо-базы, ТК-09 (viewer), мост telemetry, drill ТК-10 (fire_safety)
+Тесты: 156/156 (2026-10-15), ruff/xmllint OK; ТК: прогнаны 9/10 (ТК-09 skip), ТБ 8/8, ТП 4/4, stand 21 passed/1 skip
+Решений без заказчика: 13 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: мост factory3d_access_telemetry не установлен/не тестирован (нет factory3d_telemetry); AC-69 target inline→current (правка SPEC)
+Требует внимания человека: мост factory3d_access_telemetry не установлен/не тестирован (нет factory3d_telemetry); AC-69 target inline→current (правка SPEC); эмулятор: PUT /api/users и POST /api/cards дают 404 вместо 405 (D-2, iot_sim); деинсталляция с картами пишет ERROR FK card.server_id (O-1); подпись security-review и pr-review менеджером; повторить ТП-04 после фикса D-1
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -12,7 +12,7 @@
 | W2 | принят | 4194342 | /factory3d_access 83/83 |
 | W3 | принят | a7f9485 | /factory3d_access 116/116 |
 | W4 | принят | b5cd612 | /factory3d_access 154/154; мост не ставится (нет telemetry) |
-| W5 | в работе | — | — |
+| W5 | принят | 44e564b | stand 21/22 (1 skip), D-1 исправлен лидером |
 
 ## Решения без заказчика
 - DEC-1: factory3d_telemetry/viewer/fire_safety не смержены — мост factory3d_access_telemetry и опциональные интеграции тестируются только при наличии модулей (`'<model>' in env`), иначе тесты skip — tests/
@@ -27,3 +27,4 @@
 - DEC-10: action_f3d_access_settings target='current' — 'inline' недопустим в Odoo 19 (AC-69 в SPEC требует inline, нужна правка SPEC) — views/res_config_settings_views.xml
 - DEC-11: sudo-агрегаты провайдера вынесены в AbstractModel f3d.access.viewer.data (A-21, DoD «sudo только в _f3d_access_public_presence» буквально) — models/viewer_data.py
 - DEC-12: поле document_checked (V-08, Q-06) исключено из запрета AC-64 на поля «document» — tests/test_security.py
+- DEC-13: ТК-01 и стенд — на чистой базе (копии timur-o19demo в среде нет); ТК-06 — неверный пароль/недоступный порт вместо остановки контейнера (нет docker) — docs/modules/factory3d_access/TEST_REPORT.md

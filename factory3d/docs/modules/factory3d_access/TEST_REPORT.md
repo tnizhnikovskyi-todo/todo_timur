@@ -59,6 +59,8 @@
 
 ## Знахідки
 
+> **D-1 виправлено лідером модуля:** `registry.in_test_mode()` замінено на `odoo.modules.module.current_test`; регресійний тест `test_server.py::TestCommitGuard`. Повторний стендовий прогін ТП-04 без підміни — за менеджером.
+
 **D-1 (дефект модуля, високий).** `models/f3d_access_server.py:162` (`_may_commit`) і `models/f3d_access_event.py:520` (`_gc`) викликають
 `self.env.registry.in_test_mode()`, якого в Odoo 19 немає → `AttributeError`. Наслідки на живому сервері: крони `_cron_poll`,
 `_cron_sync_users`, `_cron_sync_devices` завершуються помилкою (`ir_cron` ERROR у лозі, 11 разів за 10 хв), ротація подій (`_gc`) не виконується

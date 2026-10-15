@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from odoo import api, fields, models
 from odoo.exceptions import AccessError
+from odoo.modules import module as odoo_module
 
 from ..tools import params as P
 from ..tools.dates import local_date, parse_bs_dt, to_local_str
@@ -517,7 +518,7 @@ class F3dAccessEvent(models.Model):
                 break
             batch.unlink()
             total += len(batch)
-            if not self.env.context.get('f3d_no_commit') and not self.env.registry.in_test_mode():
+            if not self.env.context.get('f3d_no_commit') and not odoo_module.current_test:
                 self.env.cr.commit()
         return total
 
