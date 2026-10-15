@@ -126,6 +126,16 @@ button, input, select { font: inherit; color: inherit; }
 .tip b { font: 600 12px var(--f-mono); display: block; }
 .tip span { color: var(--muted); display: block; }
 .tip[hidden] { display: none; }
+.tip .tip-zone { color: var(--text); }
+/* ёмкость и атрибуты (W-14): подпись функции зоны, легенда, окно категорий */
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+.cap-fn { margin: 6px 0; font-size: 13px; }
+.fn-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--o-muted); margin: 4px 0 8px; }
+.cap-sum td.n, .cap-info td.n { text-align: right; }
+.o_cat_list tbody tr[data-cat] { cursor: pointer; }
+.o_cat_list tr.on { background: var(--accent-soft); }
+.o_cat_form { margin-bottom: 4px; }
+.o_cat_dlg table input, .o_cat_dlg table select { width: 100%; min-width: 0; }
 
 /* 2D-схема */
 svg .bld { fill: var(--floor); stroke: var(--steel); stroke-width: 2; }
@@ -222,7 +232,7 @@ svg .shp { fill: none; stroke: var(--steel); stroke-width: 1; pointer-events: no
 .o_notif .act { margin-top: 6px; padding: 3px 10px; font-size: 12px; }
 .topbar #pr-btn .cnt { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--o-muted); color: #fff; font-size: 12px; text-align: center; }
 .topbar #pr-btn.has-err .cnt { background: var(--bad); } .topbar #pr-btn.has-warn .cnt { background: var(--warn); }
-.o_prob { position: absolute; top: 8px; right: 8px; z-index: 30; width: min(460px, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 6px; box-shadow: var(--shadow); padding: 12px 14px; }
+.o_prob { position: absolute; top: 8px; right: 48px; z-index: 30; width: min(460px, calc(100% - 56px)); max-height: calc(100% - 16px); overflow: auto; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 6px; box-shadow: var(--shadow); padding: 12px 14px; }
 .o_prob .ph { display: flex; align-items: center; justify-content: space-between; } .o_prob h2 { margin: 0; font-size: 16px; }
 .o_prob .x { border: 0; background: transparent; color: var(--o-muted); font-size: 20px; cursor: pointer; }
 .o_prob .row2 { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; align-items: end; } .o_prob label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--o-muted); }

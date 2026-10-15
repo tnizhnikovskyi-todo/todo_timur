@@ -8,6 +8,7 @@ import { esc, fillCls, isLow, modKey, pbar } from "./util.js";
 import { openTypes } from "./types.js";
 import { createBldPanel } from "./bldpanel.js";
 import { createTools } from "./tools.js";
+import { createCapacity } from "./capacity.js";
 import { cardHtml } from "./card.js";
 
 const KINDS = ["stack", "bin", "shelf", "pallet_cell", "kit", "area"];
@@ -48,19 +49,20 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
       <div class="acts" style="margin-top:6px"><button class="btn btn-secondary" data-cfgreset>${T("side.cfgReset")}</button></div><p class="ed-note">${T("side.cfgNote", { type: tname(model.tree.TY(n.tp)) })}</p>`;
   };
   const tools = createTools({ model, i18n, btns, typeOpts, fv }); // свойства, массовое создание, выравнивание, группировка (D-13)
+  const capUi = createCapacity({ model, i18n, btns, fv }); // ёмкость, категории хранения, флаги, стратегия, min / max, функция зоны, сводка (W-14)
 
   // ---------- просмотр
   function browse(side) {
     const tree = model.tree, ui = model.ui, code = ui.sel, l = code && tree.loc(code);
     if (l) {
-      const kind = KINDS.includes(l.kind) ? l.kind : "place", card = model.place(code);
+      const kind = KINDS.includes(l.kind) ? l.kind : "place", card = capUi.cardOf(model.place(code), tree.byCode.get(code));
       side.innerHTML = `<div class="lab">${T(`kind.${kind}`)}</div><h2>${esc(code)}</h2>
         <div class="sec">${T("side.selectLevelTitle")}</div><div class="o_chips">${selChips(tree.byCode.get(code))}</div>
         ${l.capacity ? `<div class="sec">${T("side.fill")}</div>${pbar(i18n, l.fill, fillCls(l))}` : ""}
-        ${l.orderpoint ? `<div class="sec">${T("side.rule")}</div><div>${T("side.minmax", { min: l.orderpoint.min, max: l.orderpoint.max })} ${isLow(l) ? `<span class="badge ${l.state === "out" ? "bad" : "warn"}">${T(l.state === "out" ? "side.empty" : "side.low")}</span>` : ""}</div>` : ""}
         <div class="sec">${T("side.stock")}</div>
         <table class="o_list"><tbody>${l.quants.map((q) => `<tr><td class="first">${esc(P(q.product).name)}${q.lot ? `<br><span class="code mut">${esc(q.lot)}</span>` : ""}${q.package ? `<br><span class="code mut">${esc(q.package)}</span>` : ""}${Number.isFinite(q.age) ? `<br><span class="mut" style="font-size:12px">${T("card.days", { n: q.age })}</span>` : ""}</td>
           <td class="n">${esc(i18n.int(q.qty))} ${esc(P(q.product).uom)}${q.reserved ? `<br><span style="color:var(--warn)">${T("side.reserved", { n: i18n.int(q.reserved) })}</span>` : ""}</td></tr>`).join("") || `<tr><td class="first"><span class="mut">${T("side.noStock")}</span></td></tr>`}</tbody></table>
+        ${capUi.browseHtml(tree.byCode.get(code))}
         ${cardHtml({ card, i18n, url: card && host.locationUrl ? host.locationUrl(card.id) : null })}
         ${tools.placeHtml(tree.byCode.get(code))}
         ${l.draft ? `<p class="ed-note">${T("side.draftNote")}</p>` : ""}<div class="acts"><button class="btn btn-secondary" data-unsel>${T("side.unselect")}</button></div>`;
@@ -75,6 +77,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
         ${asOf ? `<div class="mut" style="font-size:12px;margin-top:6px" data-asof>${T("top.dataAsOf", { time: asOf })}</div>` : ""}
         ${picked ? `<div class="acts"><button class="btn btn-primary" data-focus="${esc(f.id)}">${T("plan.focusOnly")}</button><button class="btn btn-secondary" data-unsel>${T("side.unselect")}</button></div>` : ""}
         <div class="sec">${esc(places(f.codes.length))}${fill != null ? ` · ${T("side.fillPct", { pct: i18n.pct(fill) })}` : ""}</div>${fill != null ? pbar(i18n, fill, fill < 0.3 ? "warn" : "") : ""}
+        ${capUi.browseHtml(f)}
         ${f.kids.length ? `<div class="sec">${T("side.below", { n: f.kids.length })}</div><ul class="lowlist">${f.kids.map((k) => { const kf = kidStat(k), kl = k.codes.filter((c) => isLow(tree.loc(c))).length;
           return `<li><button data-esel="${esc(k.id)}" title="${T("side.selectShort")}"><span class="t">${esc(label(k))}</span>${kl ? `<span class="badge warn">${T("side.lowN", { n: kl })}</span>` : kf != null ? `<span class="mut" style="font-size:12px">${esc(i18n.pct(kf))}</span>` : ""}
             <span class="m">${esc(places(k.codes.length))}${k.loc ? ` · ${esc(k.loc)}` : ""}</span></button></li>`; }).join("")}</ul>` : ""}
@@ -87,6 +90,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
     side.querySelectorAll("[data-focus]").forEach((b) => b.onclick = () => model.focusTo(b.dataset.focus));
     side.querySelectorAll("[data-esel]").forEach((b) => b.onclick = () => model.pickEsel(b.dataset.esel));
     side.querySelector("[data-unsel]")?.addEventListener("click", () => model.unselect());
+    capUi.bind(side);
   }
 
   // ---------- несколько объектов
@@ -171,6 +175,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
     if (lv) h += `<div class="sec">${T("side.cellsTitle")}</div>${isCell ? `<p class="ed-note">${T("side.cellOf")}</p>` : ""}<form class="ed-form" data-op="cells" data-target="${esc(lv.id)}">
         <label>${T("form.cells")}<input type="number" name="n" min="1" max="12" value="${esc(fv(K("cells"), "n", lv.cells))}"></label>${btns(ro)}</form>
         <p class="ed-note">${T(model.depthInfo(lv.id).eff === "cell" ? "side.cellsOn" : "side.cellsOff")}</p>`;
+    h += capUi.editHtml(n, K, ro);
     if (n.kids.length) h += `<div class="sec">${T("side.inside", { n: n.kids.length })}</div><ul class="lowlist ed-kids">${n.kids.map((k) => `<li><button data-esel="${esc(k.id)}"><span class="t">${esc(label(k))}${nameTag(k)}</span><span class="mut" style="font-size:12px">${k.codes.length}</span>
         <span class="m">${k.tp && k.type !== "group" ? esc(tname(tree.TY(k.tp))) : esc(places(k.codes.length))}${k.loc ? ` · ${esc(k.loc)}` : ""}</span></button>${k.type === "cell" ? "" : `<button class="x" data-del="${esc(k.id)}" aria-label="${T("side.delLabel", { name: label(k) })}" title="${T("side.delTitle")}">×</button>`}</li>`).join("")}</ul>`;
     h += `<p class="ed-note">${T("side.noteEdit")}${ro ? ` ${T("status.ro")}.` : ""}</p>`;
@@ -187,7 +192,7 @@ export function createSidePanel({ model, i18n, root, host = {} }) {
     side.querySelector("[data-dup]")?.addEventListener("click", () => model.ops.dup(n.id));
     side.querySelector("[data-copy]")?.addEventListener("click", () => model.copy());
     side.querySelector("[data-paste]")?.addEventListener("click", () => model.paste());
-    tools.bindSingle(side, n); tools.bindAddr(side, n);
+    tools.bindSingle(side, n); tools.bindAddr(side, n); capUi.bind(side);
     side.querySelectorAll("form.ed-form[data-op]").forEach((f) => {
       const op = f.dataset.op, k = K(op), tid = f.dataset.target || n.id, val = () => Object.fromEntries(new FormData(f));
       f.querySelector("[data-show]").onclick = () => { FORMV[k] = val(); model.ops[op](tid, val(), k); };

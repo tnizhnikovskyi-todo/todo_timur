@@ -16,7 +16,7 @@ import { openVariants, variantName } from "./variants.js";
 import { openHistory } from "./history.js";
 import { createComments } from "./comments.js";
 import { bindKeys } from "./keys.js";
-import { esc, isLow, scrollToSide } from "./util.js";
+import { esc, isLow, scrollToSide, zoneHint } from "./util.js";
 import { legendHtml } from "./heat.js";
 import { MIN_QUERY } from "../core/stock.js";
 
@@ -103,8 +103,9 @@ export function mountApp(root, { model, i18n, host = {} }) {
   const P = (code) => model.data.products[code] || { name: code };
   const tipText = (code) => {
     const l = model.tree.loc(code), qn = l.quants[0];
-    if (l.draft) return `<b>${esc(code)}</b><span>${esc(t(l.pend ? "tip.newPend" : "tip.new"))}</span>`;
-    return `<b>${esc(code)}</b><span>${qn ? `${esc(P(qn.product).name)}${l.quants.length > 1 ? ` ${esc(t("tip.more", { n: l.quants.length - 1 }))}` : ""}` : esc(t("tip.empty"))}</span>
+    const nd = model.tree.byCode.get(code), zh = nd ? zoneHint(i18n, model.cap.zone(nd.id)) : "", zl = zh ? `<span class="tip-zone">${esc(zh)}</span>` : ""; // функция и атрибуты зоны (W-14)
+    if (l.draft) return `<b>${esc(code)}</b><span>${esc(t(l.pend ? "tip.newPend" : "tip.new"))}</span>${zl}`;
+    return `<b>${esc(code)}</b>${zl}<span>${qn ? `${esc(P(qn.product).name)}${l.quants.length > 1 ? ` ${esc(t("tip.more", { n: l.quants.length - 1 }))}` : ""}` : esc(t("tip.empty"))}</span>
       <span>${esc(l.fill != null ? t("tip.filled", { pct: i18n.pct(l.fill) }) : t("n.positions", { n: l.quants.length }))}${isLow(l) ? ` · ${esc(t("tip.low"))}` : ""}</span>`;
   };
   const showTip = (code, cx, cy) => {

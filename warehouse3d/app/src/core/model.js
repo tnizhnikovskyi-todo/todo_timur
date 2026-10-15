@@ -23,6 +23,7 @@ import { infoOf, normAddr, parseTemplate, previewOf, resolver, addrFromForm } fr
 import { CATALOG, catalogType } from "./catalog.js";
 import { captureTemplate, normLibrary, uniqTemplate } from "./library.js";
 import * as B from "./building.js";
+import * as C from "./capacity.js";
 import { BLD_OPS } from "./bldops.js";
 import { compileRule, defaultRules, effectiveRules, parseStats, suggestMask } from "./parse.js";
 import { cleanApplied, computePlan } from "./plan.js";
@@ -138,7 +139,7 @@ export function createModel(project, storage, opts = {}) {
     get building() { return bb(); }, // план здания с учётом показанного (null — здания нет)
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.types || v.addr || v.addrZones.length || v.codes.length || v.parse); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.attr.length || v.types || v.addr || v.addrZones.length || v.codes.length || v.parse); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -230,7 +231,8 @@ export function createModel(project, storage, opts = {}) {
     moveSet: (set, dx, dy) => ed.exec(s, () => ed.moveSet(s, set, dx, dy)),
     // правки
     ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), tech: bind("tech"), techMin: bind("techMin"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
-      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), autoLayout: bind("autoLayout"), place: (codes, target, key) => ed.exec(s, () => ed.OPS.place(s, codes, target, key)), parse: (f, key) => ed.exec(s, () => ed.OPS.parse(s, f, key)), del: bind("del"), reset: bind("reset") },
+      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), autoLayout: bind("autoLayout"), place: (codes, target, key) => ed.exec(s, () => ed.OPS.place(s, codes, target, key)), parse: (f, key) => ed.exec(s, () => ed.OPS.parse(s, f, key)), del: bind("del"), reset: bind("reset"),
+      capacity: bind("capacity"), catAssign: bind("catAssign"), flags: bind("flags"), removal: bind("removal"), zoneFn: bind("zoneFn"), minmax: bind("minmax"), catSave: bind("catSave"), catDel: bind("catDel") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
     save: (id, comment = null) => ed.saveObj(s, id, comment),
@@ -396,7 +398,7 @@ export function createModel(project, storage, opts = {}) {
           const act = (st) => { try { return st(); } catch (e) { return null; } };
           const variants = w.variants.map((v) => ({ id: v.id, name: v.name, active: v.id === w.variant, stats: act(() => layerStats(data, layerOf(w, v.id), w)) }));
           const tree = act(() => layout(buildTree(data, normEdit(w.saved), [], cfgOf(w))));
-          return { id: w.id, code: w.code, name: w.name, variants, tree, treeStats: tree && treeStats(tree), current: now && now.id === s.wh.id ? this.currentStats() : null };
+          return { id: w.id, code: w.code, name: w.name, variants, tree, treeStats: tree && treeStats(tree, data, normEdit(w.saved)), current: now && now.id === s.wh.id ? this.currentStats() : null };
         }) };
       },
       currentStats() { ed.sync(s); return layerStats(s.data, s.wh.saved, s.wh); },
@@ -422,6 +424,22 @@ export function createModel(project, storage, opts = {}) {
       for (const [node, c] of s.comments.counts()) if (s.tree.nodes.has(node)) out.push({ node, kind: "comment", ...c });
       for (const l of s.locks.marks()) out.push({ node: l.zone, kind: "lock", by: l.by, mine: l.mine, until: l.until });
       return out;
+    },
+    // ёмкость и атрибуты (W-14, capacity.js): категории хранения, габариты / вес / флаги / стратегия / min-max места, функция и атрибуты зоны, сводка ёмкости.
+    // Правки — ops.capacity / catAssign / flags / removal / zoneFn / minmax / catSave / catDel (слой edit.attr, «Показати / Зберегти», в план изменений)
+    cap: {
+      categories: () => C.categories(s.data, s.edit),
+      removalStrategies: () => (C.odooOf(s.data) || {}).removal_strategies || [],
+      packageTypes: () => (C.odooOf(s.data) || {}).package_types || [],
+      products: () => Object.values(s.data.products || {}).map((p) => ({ code: p.default_code, name: p.name })),
+      // всё, что известно о месте / узле: категория (с наследованием), габариты, вес, флаги, стратегия, min / max, функция и атрибуты зоны
+      node(id) {
+        const n = s.tree.nodes.get(id); if (!n) return null;
+        const A = C.attrMap(s.edit), cats = C.categories(s.data, s.edit), cat = C.catOf(s.tree, A, cats, n);
+        return { cat, dims: n.loc ? C.dimsOf(s.tree, A, n) : null, maxw: n.loc ? C.maxwOf(s.tree, A, cats, n, cat) : null, flags: C.flagsOf(s.tree, A, s.data, n), minmax: n.loc ? C.minmaxOf(s.tree, A, s.data, n) : null, zone: C.zoneOf(s.tree, A, n), own: A.nodes.get(id) || null };
+      },
+      zone: (id) => C.zoneOf(s.tree, C.attrMap(s.edit), s.tree.nodes.get(id)),
+      summary: (id = "WH") => { const n = s.tree.nodes.get(id); return n ? C.summary(s.tree, s.data, s.edit, n) : null; },
     },
     // прочее хранилище (режим 2D/3D и т.п.)
     pref: { read: rd, write: wr },

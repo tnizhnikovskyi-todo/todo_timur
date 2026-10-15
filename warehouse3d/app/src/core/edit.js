@@ -10,6 +10,8 @@ import { layout } from "./layout.js";
 import { catalogType } from "./catalog.js";
 import { cleanParam, diffParams, shapeOf } from "./params.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
+import { NONE, USAGES, ZONE_ATTRS, ZONE_FUNCS, isCatId, isNodeId, nodeOf, normAttr } from "./attr.js";
+import { attrMap, capsKey, categories, flagsOf, minmaxOf, odooOf } from "./capacity.js";
 import { autoLayout } from "./autolayout.js";
 import { isDefaultRules, normRules } from "./parse.js";
 import { forceEntries, newBlocking, remapChk, runChecks, stockCodes, TECH } from "./checks.js";
@@ -17,17 +19,17 @@ import { forceEntries, newBlocking, remapChk, runChecks, stockCodes, TECH } from
 // ---------- diff / apply
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
-  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), cfg: kv(a.cfg, b.cfg), chk: kv(a.chk, b.chk), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, addrZones: kv(a.addrZones, b.addrZones), codes: kv(a.codes, b.codes), addr: JSON.stringify(a.addr || null) !== JSON.stringify(b.addr || null) ? { v: b.addr || null } : null, parse: JSON.stringify(a.parse || null) !== JSON.stringify(b.parse || null) ? { v: b.parse || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), prop: kv(a.prop, b.prop), cfg: kv(a.cfg, b.cfg), chk: kv(a.chk, b.chk), attr: kv(a.attr, b.attr), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, addrZones: kv(a.addrZones, b.addrZones), codes: kv(a.codes, b.codes), addr: JSON.stringify(a.addr || null) !== JSON.stringify(b.addr || null) ? { v: b.addr || null } : null, parse: JSON.stringify(a.parse || null) !== JSON.stringify(b.parse || null) ? { v: b.parse || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
     types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null,
     // план здания (W-04): общие поля (контур, высоты) одним значением, объекты и узлы проходов — по id, как остальные списки
     bld: JSON.stringify(bldMeta(a.building)) !== JSON.stringify(bldMeta(b.building)) ? { v: bldMeta(b.building) } : null, bi: kv(a.building?.items, b.building?.items), bn: kv(a.building?.nodes, b.building?.nodes) };
 }
 const bldMeta = (b) => (b ? { v: b.v, contour: b.contour, hCeil: b.hCeil, hSpr: b.hSpr } : null);
 const kvEmpty = (x) => !x || (!x.rm.length && !x.put.length);
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !(d.chk && (d.chk.rm.length || d.chk.put.length)) && !d.depth && !(d.addrZones && (d.addrZones.rm.length || d.addrZones.put.length)) && !(d.codes && (d.codes.rm.length || d.codes.put.length)) && !d.addr && !d.parse && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.prop && (d.prop.rm.length || d.prop.put.length)) && !(d.cfg && (d.cfg.rm.length || d.cfg.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !(d.chk && (d.chk.rm.length || d.chk.put.length)) && !(d.attr && (d.attr.rm.length || d.attr.put.length)) && !d.depth && !(d.addrZones && (d.addrZones.rm.length || d.addrZones.put.length)) && !(d.codes && (d.codes.rm.length || d.codes.put.length)) && !d.addr && !d.parse && !d.delNew.length && !d.delRm.length && !d.types && !d.bld && kvEmpty(d.bi) && kvEmpty(d.bn);
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
-  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.chk) s.chk = kv(s.chk || [], d.chk); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v; if (d.addrZones) s.addrZones = kv(s.addrZones, d.addrZones); if (d.codes) s.codes = kv(s.codes, d.codes); if (d.addr) s.addr = d.addr.v; if (d.parse) s.parse = d.parse.v;
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.prop) s.prop = kv(s.prop, d.prop); if (d.cfg) s.cfg = kv(s.cfg, d.cfg); if (d.chk) s.chk = kv(s.chk || [], d.chk); if (d.attr) s.attr = kv(s.attr || [], d.attr); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v; if (d.addrZones) s.addrZones = kv(s.addrZones, d.addrZones); if (d.codes) s.codes = kv(s.codes, d.codes); if (d.addr) s.addr = d.addr.v; if (d.parse) s.parse = d.parse.v;
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
   if (d.bld) s.building = d.bld.v ? { ...clone(d.bld.v), items: s.building?.items || [], nodes: s.building?.nodes || [] } : null;
@@ -111,18 +113,19 @@ function withDeps(s, sel) {
   const set = new Set(sel); let grow = true;
   while (grow) {
     grow = false;
-    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.prop ? p.diff.prop.put.map((x) => x.id) : []), ...(p.diff.cfg ? p.diff.cfg.put.map((x) => x.id) : []), ...(p.diff.rot ? p.diff.rot.put.map((x) => x.id) : []), ...(p.diff.codes ? p.diff.codes.put.map((x) => x.id) : [])]);
+    const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.prop ? p.diff.prop.put.map((x) => x.id) : []), ...(p.diff.cfg ? p.diff.cfg.put.map((x) => x.id) : []), ...(p.diff.rot ? p.diff.rot.put.map((x) => x.id) : []), ...(p.diff.codes ? p.diff.codes.put.map((x) => x.id) : []), ...(p.diff.attr ? p.diff.attr.put.filter((x) => isNodeId(x.id)).map((x) => nodeOf(x.id)) : [])]);
+    for (const q of s.pending) if (!set.has(q) && q.diff.attr && [...set].some((p) => p.diff.attr && p.diff.attr.put.some((x) => isNodeId(x.id) && x.cat && q.diff.attr.put.some((c) => c.id === `c|${x.cat}`)))) { set.add(q); grow = true; } // категория, назначенная узлом, сохраняется вместе с ним
     for (const q of s.pending) if (!set.has(q) && q.diff.add.put.some((a) => need.some((id) => inNode(id, a.id)))) { set.add(q); grow = true; }
   }
   return s.pending.filter((p) => set.has(p));
 }
-// comment — необязательный комментарий версии (история, W-18); id: узел, массив узлов, "WH" (всё) или "types"; возвращает Promise с "local" | "shared" | "fail" | null (нечего сохранять)
+// comment — необязательный комментарий версии (история, W-18); id: узел, массив узлов, "WH" (всё), "types" или "scat" (категории хранения); возвращает Promise с "local" | "shared" | "fail" | null (нечего сохранять)
 export function saveObj(s, id, comment = null) {
   if (s.storage.readonly) return Promise.resolve(null);
   const sel = withDeps(s, pendFor(s, id)); if (!sel.length) return Promise.resolve(null);
   const bad = conflictsIn(s, sel); // коды должны быть уникальны (D6): с конфликтами не сохраняем
   if (bad.length) { say(s, "bad", "n.codeConflicts", { n: bad.length, codes: bad.slice(0, 4).map((c) => c.code) }, { key: "n.codeConflictsSub" }); return Promise.resolve(null); }
-  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
+  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "scat" ? { k: "what.cats" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
   const done = persist(s, true, comment).then((r) => {
@@ -265,7 +268,7 @@ function removeNode(s, e, x) {
   const walk = (n) => { sub.push(n); n.kids.forEach(walk); }; walk(x);
   const keep = sub.some((n) => n.adopted);
   if (!keep) e.add = e.add.filter(not);
-  e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not); e.codes = (e.codes || []).filter(not); e.addrZones = (e.addrZones || []).filter(not);
+  e.set = e.set.filter(not); e.pos = e.pos.filter(not); e.cells = e.cells.filter(not); e.rot = (e.rot || []).filter(not); e.prop = (e.prop || []).filter(not); e.cfg = (e.cfg || []).filter(not); e.codes = (e.codes || []).filter(not); e.addrZones = (e.addrZones || []).filter(not); e.attr = (e.attr || []).filter((q) => !isNodeId(q.id) || not({ id: nodeOf(q.id) }));
   if (keep && x.draft) e.add = e.add.map((a) => (a.id === id ? { ...a, gone: true } : a));
   else if (!x.draft || keep) { e.del = e.del.filter((d) => !inNode(d, id)); e.del.push(id); }
 }
@@ -308,9 +311,26 @@ function reparent(s, e, src, pid, pos) {
   // переопределения ряда (cfg, I-01) и все слои правок переезжают на новые id
   for (const k of ["set", "rot", "cells", "prop", "cfg", "depthZones", "pos", "addrZones", "codes"]) e[k] = (e[k] || []).map((x) => (inNode(x.id, src.id) ? { ...x, id: nid(x.id) } : x));
   e.chk = remapChk(e.chk || [], (id) => (inNode(id, src.id) ? nid(id) : id));
+  e.attr = (e.attr || []).map((x) => (isNodeId(x.id) && inNode(nodeOf(x.id), src.id) ? { ...x, id: `n|${nid(nodeOf(x.id))}` } : x));
   setPosE(e, u.id, pos.x, pos.y);
   if (!src.draft && !e.del.includes(src.id)) e.del.push(src.id);
   return u.id;
+}
+
+// ---------- ёмкость и атрибуты (W-14): запись узла в слое edit.attr
+const r3 = (v) => Math.round(v * 1000) / 1000;
+function setNodeAttr(e, id, patch) {
+  const cur = { ...((e.attr || []).find((x) => x.id === `n|${id}`) || { id: `n|${id}` }) };
+  for (const [k, v] of Object.entries(patch)) { if (v === undefined || v === null) delete cur[k]; else cur[k] = v; }
+  e.attr = (e.attr || []).filter((x) => x.id !== `n|${id}`);
+  const [nx] = normAttr([cur]); if (nx) e.attr.push(nx);
+}
+// «место пополнения» нельзя ставить на вложенную локацию, если оно уже стоит выше или ниже (правило Odoo): узел, который мешает, либо null
+function replBlock(s, n) {
+  const A = attrMap(s.edit), eff = (x) => flagsOf(s.tree, A, s.data, x).repl;
+  for (let x = n.parent && s.tree.nodes.get(n.parent); x; x = x.parent && s.tree.nodes.get(x.parent)) if (x.id !== "WH" && eff(x)) return x;
+  const down = (x) => { for (const k of x.kids) { if (eff(k)) return k; const r = down(k); if (r) return r; } return null; };
+  return down(n);
 }
 const GROUPS = ["group", "rackset"];
 export const ALIGNS = ["left", "right", "top", "bottom", "cx", "cy"];
@@ -691,7 +711,7 @@ export const OPS = {
     change(s, P.id, { k: "op.ungroup", p: { ref: refOf(G) } }, (e) => {
       for (const k of kids) reparent(s, e, k, P.id, { x: k.x - P.x, y: k.y - P.y });
       const own = (q) => q.id !== G.id;
-      e.add = e.add.filter(own); e.pos = e.pos.filter(own); e.rot = (e.rot || []).filter(own); e.prop = (e.prop || []).filter(own); e.set = e.set.filter(own); e.depthZones = e.depthZones.filter(own); e.addrZones = e.addrZones.filter(own);
+      e.add = e.add.filter(own); e.pos = e.pos.filter(own); e.rot = (e.rot || []).filter(own); e.prop = (e.prop || []).filter(own); e.set = e.set.filter(own); e.depthZones = e.depthZones.filter(own); e.addrZones = e.addrZones.filter(own); e.attr = (e.attr || []).filter((q) => q.id !== `n|${G.id}`);
       if (!G.draft) e.del.push(G.id);
     }, null, null, [G.id]);
     s.ui.msel = []; s.ui.esel = s.tree.nodes.has(P.id) ? P.id : s.ui.focus; s.emit({ type: "select" });
@@ -729,6 +749,80 @@ export const OPS = {
       e.chk = (e.chk || []).filter((c) => c.id !== `m|${tid}`);
       if (v !== def.min) e.chk.push({ id: `m|${tid}`, w: v });
     }, key || `techmin@${tid}`, f);
+  },
+  // ---------- ёмкость и атрибуты (W-14, D-15): слой edit.attr; применяются в Odoo планом изменений (категории → локации → правила пополнения)
+  // габариты и максимальный вес места: пустое поле — «как у типа / категории»
+  capacity(s, id, f, key) {
+    const n = s.tree.nodes.get(id); if (!n || !n.loc) return false;
+    const dm = {}; for (const [k, name] of [["w", "dw"], ["d", "dd"], ["h", "dh"]]) { const v = num(f[name]); if (v != null && v > 0) dm[k] = r3(v); }
+    const mw = num(f.maxw);
+    return change(s, id, { k: "op.capacity", p: { ref: refById(s.tree, id) } }, (e) => setNodeAttr(e, id, { dm: Object.keys(dm).length ? dm : null, maxw: mw != null && mw >= 0 ? mw : null }), key, f);
+  },
+  // категория хранения узла: "inherit" — снять переопределение, "-" — без категории, иначе ключ категории (действует на места ниже)
+  catAssign(s, id, f, key) {
+    const n = s.tree.nodes.get(id), c = f && f.cat; if (!n) return false;
+    if (c !== "inherit" && c !== NONE && !categories(s.data, s.edit).get(c)) return false;
+    return change(s, id, () => ({ k: "op.catAssign", p: { ref: refById(s.tree, id), cat: c === "inherit" ? { k: "scat.inherit" } : c === NONE ? { k: "scat.none" } : categories(s.data, s.edit).get(c).name } }), (e) => setNodeAttr(e, id, { cat: c === "inherit" ? null : c }), key, f);
+  },
+  // флаги места: тип (внутреннее / вид), «место пополнения», брак (Odoo 18); пусто — как в Odoo
+  flags(s, id, f, key) {
+    const n = s.tree.nodes.get(id); if (!n) return false;
+    const tri = (v) => (v === "1" ? true : v === "0" ? false : null), patch = { repl: tri(f.repl) };
+    if (n.loc) { patch.usage = USAGES.includes(f.usage) ? f.usage : null; patch.scrap = tri(f.scrap); }
+    if (patch.usage === "view" && stockCodes(s.tree, n).length) { say(s, "bad", "n.viewStock"); return false; }
+    if (patch.repl === true) { const b = replBlock(s, n); if (b) { say(s, "bad", "n.replNested", { name: refOf(b) }); return false; } }
+    return change(s, id, { k: "op.flags", p: { ref: refById(s.tree, id) } }, (e) => setNodeAttr(e, id, patch), key, f);
+  },
+  // стратегия списания (removal_strategy_id): id из списка стратегий базы; пусто — как в Odoo
+  removal(s, id, f, key) {
+    const n = s.tree.nodes.get(id); if (!n) return false;
+    const list = (odooOf(s.data) || {}).removal_strategies || [], v = num(f.rs), st = v ? list.find((x) => x.id === v) : null;
+    if (v && !st) return false;
+    return change(s, id, { k: "op.removal", p: { ref: refById(s.tree, id), name: st ? st.name : "—" } }, (e) => setNodeAttr(e, id, { rs: st ? st.id : null }), key, f);
+  },
+  // функция и атрибуты зоны (только проект): fn — id функции или "inherit"; at_<атрибут> — флажки, tmin / tmax — температура
+  zoneFn(s, id, f, key) {
+    const n = s.tree.nodes.get(id); if (!n) return false;
+    const fn = ZONE_FUNCS.some((x) => x.id === f.fn) ? f.fn : null, at = ZONE_ATTRS.filter((a) => f[`at_${a}`]), t0 = num(f.tmin), t1 = num(f.tmax);
+    if (t0 != null && t1 != null && t0 > t1) { say(s, "bad", "n.tempRange"); return false; }
+    return change(s, id, { k: "op.zoneFn", p: { ref: refById(s.tree, id), fn: fn ? { k: `fn.${fn}` } : { k: "scat.inherit" } } }, (e) => setNodeAttr(e, id, { fn, at: at.length ? at : null, tmin: t0, tmax: t1 }), key, f);
+  },
+  // правило пополнения места (min / max): товар — из остатка места или существующего правила; пустые min и max убирают правку
+  minmax(s, id, f, key) {
+    const n = s.tree.nodes.get(id); if (!n || !n.loc) return false;
+    const mm = minmaxOf(s.tree, attrMap(s.edit), s.data, n), mn = num(f.min), mx = num(f.max), product = String(f.product || "");
+    if (mn == null && mx == null) return change(s, id, { k: "op.minmaxReset", p: { ref: refById(s.tree, id) } }, (e) => setNodeAttr(e, id, { mm: null }), key, f);
+    if (!mm.editable || !mm.products.includes(product)) { say(s, "bad", "n.mmNone"); return false; }
+    if (mn == null || mx == null || mn < 0 || mx < mn) { say(s, "bad", "n.mmRange"); return false; }
+    return change(s, id, { k: "op.minmax", p: { ref: refById(s.tree, id), min: mn, max: mx } }, (e) => setNodeAttr(e, id, { mm: { min: mn, max: mx, product } }), key, f);
+  },
+  // категория хранения: создать (ckey пуст) или править (`o<id>` — категория Odoo, ключ новой — новая); значения целиком; возвращает ключ или null
+  catSave(s, ckey, f, key) {
+    const cats = categories(s.data, s.edit), name = String(f.name || "").trim().slice(0, 80);
+    const cur = ckey ? cats.get(ckey) : null; if (ckey && !cur) return null;
+    if (!name) { say(s, "bad", "n.catName"); return null; }
+    if (cats.list.some((c) => c !== cur && c.name.trim().toLowerCase() === name.toLowerCase())) { say(s, "bad", "n.catDup", { name }); return null; }
+    const caps = (Array.isArray(f.caps) ? f.caps : []).map((c) => ({ p: String(c.p || "").trim(), pk: Math.round(num(c.pk) || 0), q: num(c.q) }));
+    if (caps.some((c) => (c.p && c.pk) || (!c.p && !c.pk) || !(c.q > 0))) { say(s, "bad", "n.catCaps"); return null; }
+    const used = new Set((s.edit.attr || []).filter((x) => isCatId(x.id)).map((x) => x.id.slice(2)));
+    let k = 1; while (used.has(`nc${k}`)) k++;
+    // запись слоя: у категории Odoo — её ключ, у применённой новой — прежний ключ новой (она в слое остаётся), у новой — свободный
+    const own = cur ? (cur.adopted ? [...cats.alias].find(([, ok]) => ok === cur.key)[0] : cur.key) : `nc${k}`, eid = `c|${own}`;
+    const entry = { id: eid, name, maxw: num(f.maxw) ?? 0, policy: f.policy, caps, nw: !/^o\d+$/.test(own) };
+    const base = cur && !cur.isNew && !cur.adopted ? cur.base : null;
+    const ok = change(s, "scat", { k: cur ? "op.catEdit" : "op.catNew", p: { name } }, (e) => {
+      e.attr = (e.attr || []).filter((x) => x.id !== eid);
+      if (base && base.name === name && +base.maxw === entry.maxw && base.policy === entry.policy && capsKey(base.caps) === capsKey(caps)) return; // как в Odoo — правки нет
+      const [nx] = normAttr([entry]); if (nx) e.attr.push(nx);
+    }, key || `cat@${own}`, f);
+    return ok ? own : null;
+  },
+  // убрать новую категорию (ещё не созданную в Odoo): назначения на неё снимаются
+  catDel(s, ckey) {
+    const c = categories(s.data, s.edit).get(ckey); if (!c || !c.isNew) return false;
+    return change(s, "scat", { k: "op.catDel", p: { name: c.name } }, (e) => {
+      e.attr = (e.attr || []).filter((x) => x.id !== `c|${ckey}`).map((x) => (isNodeId(x.id) && x.cat === ckey ? { ...x, cat: undefined } : x)).map((x) => normAttr([x])[0]).filter(Boolean);
+    });
   },
   // план здания — не данные Odoo, сброс его не трогает; настройки проверок (техника, ширины проходов) тоже остаются, переопределения проверок снимаются
   reset(s) { change(s, "WH", { k: "op.reset" }, (e) => Object.assign(e, emptyEdit(), { building: e.building, chk: (e.chk || []).filter((c) => !c.id.startsWith("f|")) })); },

@@ -39,23 +39,33 @@ export function exportProjectFile({ model, i18n, host = {} }) {
 }
 
 // ---------- экспорт локаций
-export function openExportLocations({ model, i18n }) {
+export function openExportLocations({ model, i18n, keys = null }) {
   const t = (k, p) => i18n.t(k, p), T = (k, p) => esc(i18n.t(k, p));
   const all = locationRows(model, { mode: "all" }), chg = locationRows(model, { mode: "changed" }), code = model.warehouse.code;
+  // «как в плане» (I-04): строки по операциям плана изменений — то же, что сделало бы применение через API; keys — выбор в окне плана
+  const plan = locationRows(model, { mode: "plan", keys }), pc = plan.counts, havePlan = pc.create + pc.update + pc.archive > 0, firstMode = havePlan ? "plan" : "all";
   const m = modal("exp-dlg", t("file.exp.title"), `
     <p class="mut">${T("file.exp.scope", { code })}</p>
     <fieldset class="ed-form"><legend>${T("file.exp.mode")}</legend>
-      <label class="chk"><input type="radio" name="mode" value="all" checked> ${T("file.exp.all", { n: all.counts.places })}</label>
+      <label class="chk"><input type="radio" name="mode" value="plan"${havePlan ? "" : " disabled"}${firstMode === "plan" ? " checked" : ""}> ${T("file.exp.plan", { c: pc.create, u: pc.update, a: pc.archive })}</label>
+      <label class="chk"><input type="radio" name="mode" value="all"${firstMode === "all" ? " checked" : ""}> ${T("file.exp.all", { n: all.counts.places })}</label>
       <label class="chk"><input type="radio" name="mode" value="changed"${chg.counts.places ? "" : " disabled"}> ${T("file.exp.changed", { n: chg.counts.places })}</label></fieldset>
     <fieldset class="ed-form"><legend>${T("file.exp.format")}</legend>
       <label class="chk"><input type="radio" name="fmt" value="xlsx" checked> XLSX</label><label class="chk"><input type="radio" name="fmt" value="csv"> CSV (UTF-8)</label></fieldset>
-    <p class="mut" data-sum></p><p class="mut">${T("file.exp.note")}</p><p class="o_err" data-err role="alert"></p>`,
+    <p class="mut" data-sum></p><p class="mut">${T("file.exp.note")}</p>
+    <div data-limits${firstMode === "plan" ? "" : " hidden"}><p class="o_warn" role="note"><b>${T("file.exp.limitsTitle")}</b></p><ul class="o_limits">${plan.limits.map((k) => `<li>${T(`file.exp.lim.${k}`)}</li>`).join("")}</ul>
+      <p class="mut" data-skipped>${T("file.exp.skipped", { k: pc.skipped.category, o: pc.skipped.orderpoint })}</p></div><p class="o_err" data-err role="alert"></p>`,
     `<span class="sp"></span><button class="btn btn-secondary" data-close>${T("common.close")}</button><button class="btn btn-primary" data-go>${T("file.exp.go")}</button>`, i18n);
   const val = (n) => m.dlg.querySelector(`input[name=${n}]:checked`).value;
-  const sum = () => { const c = (val("mode") === "all" ? all : chg).counts; m.q("[data-sum]").textContent = t("file.exp.sum", { places: c.places, structure: c.structure }); };
+  const rowsOf = (mode) => (mode === "plan" ? plan : mode === "all" ? all : chg);
+  const sum = () => {
+    const mode = val("mode"), r = rowsOf(mode), c = r.counts;
+    m.q("[data-sum]").textContent = mode === "plan" ? t("file.exp.sumPlan", { c: c.create, u: c.update, a: c.archive }) : t("file.exp.sum", { places: c.places, structure: c.structure });
+    m.q("[data-limits]").hidden = mode !== "plan";
+  };
   m.dlg.querySelectorAll("input").forEach((x) => x.onchange = sum); sum();
   m.q("[data-go]").onclick = async () => {
-    const mode = val("mode"), fmt = val("fmt"), r = mode === "all" ? all : chg, name = `locations-${asciiName(code) || "wh"}-${mode}-${stamp()}.${fmt}`;
+    const mode = val("mode"), fmt = val("fmt"), r = rowsOf(mode), name = `locations-${asciiName(code) || "wh"}-${mode}-${stamp()}.${fmt}`;
     try {
       const rows = [r.headers, ...r.rows];
       if (fmt === "csv") downloadBlob(name, writeCsv(rows), "text/csv;charset=utf-8");

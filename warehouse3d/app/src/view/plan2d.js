@@ -6,6 +6,7 @@ import { isSel } from "../core/select.js";
 import { shapeOf } from "../core/params.js";
 import { rect2d } from "../core/layout.js";
 import { esc, slotCls } from "./util.js";
+import { funcColor } from "../core/attr.js";
 import { heatColor } from "./heat.js";
 import * as B from "../core/building.js";
 import { createBldPlan } from "./bldplan.js";
@@ -34,7 +35,9 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
     let h = "";
     const walk = (n) => {
       if (n.type === "group" || n.type === "rackset") {
-        if (n.kids.length || n.id === "WH" || !n.loc) h += `<rect data-node="${esc(n.id)}" class="${n.id === "WH" ? "bld" : "zn"}" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.d}" rx="0.3"${n.loc ? ` data-code="${esc(n.loc)}"` : ""}/>`;
+        // функция зоны (W-14) — только цвет рамки (заливка мест — показатель тепловой карты, W-17, функцию не перекрывает); подпись — в слое подписей
+        const col = n.id !== "WH" ? funcColor(model.cap.zone(n.id).fn) : null;
+        if (n.kids.length || n.id === "WH" || !n.loc) h += `<rect data-node="${esc(n.id)}" class="${n.id === "WH" ? "bld" : "zn"}" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.d}" rx="0.3"${n.loc ? ` data-code="${esc(n.loc)}"` : ""}${col ? ` data-fn style="stroke:${col};stroke-width:2.2;stroke-dasharray:none"` : ""}/>`;
       }
       if (n.type === "rack") h += `<rect data-node="${esc(n.id)}" class="rackbg" x="${n.x - 0.12}" y="${n.y - 0.12}" width="${n.w + 0.24}" height="${n.d + 0.24}"/>`;
       if (n.loc && (n.type !== "group" || !n.kids.length)) {
@@ -159,6 +162,8 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
         + `<rect x="0" y="${-h}" width="${w}" height="${h}" rx="${h / 4}"/><text x="${ms * 0.45}" y="${-h * 0.27}" style="font-size:${ms}px">${esc(txt)}</text></g>`;
     }).join("");
   }
+  // подпись функции зоны рядом с названием (только у зон, где она задана или унаследована)
+  const fnLabel = (k) => { if (k.type !== "group" && k.type !== "rackset") return ""; const z = model.cap.zone(k.id); return z.fn ? ` · ${i18n.t(`fn.${z.fn}`)}${z.attrs.length ? " ⚑" : ""}` : ""; };
   function paint() {
     if (!svg) return;
     const { sel, focus: F } = model.ui, tree = model.tree, S = model.selIds(), pm = model.checks.marks().nodes; // pm — объекты с проблемами (W-07): подсвечиваются отдельным цветом
@@ -179,7 +184,7 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
     }
     // подписи уровня ниже — размер шрифта от размера выбранного уровня
     const f = tree.nodes.get(F), fs = Math.max(0.12, Math.min(2.2, Math.max(f.w, f.d) / 45));
-    dyn.innerHTML = (f.kids.length ? f.kids : [f]).map((k) => `<text class="dlab" data-focus="${esc(k.id)}" x="${k.x + fs * 0.2}" y="${k.y - fs * 0.35}" style="font-size:${fs}px">${esc(i18n.node(k))}</text>`).join("") + marksMarkup(f);
+    dyn.innerHTML = (f.kids.length ? f.kids : [f]).map((k) => `<text class="dlab" data-focus="${esc(k.id)}" x="${k.x + fs * 0.2}" y="${k.y - fs * 0.35}" style="font-size:${fs}px">${esc(i18n.node(k))}${fnLabel(k)}</text>`).join("") + marksMarkup(f);
   }
   // дерево перестроено: меняется содержимое слоя, масштаб и сдвиг сохраняются
   function rebuild() { build(); setVB(); bp?.render(); }

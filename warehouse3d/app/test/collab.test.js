@@ -101,6 +101,22 @@ test("варианты и план изменений: план строится
   model.variants.switch("v2"); assert.equal(model.changePlan().stats.total, n);
 });
 
+test("варианты и W-14: цифры — из сводки ёмкости, новый вариант копирует и слой attr", async () => {
+  const { model } = fresh({}, { noStock: true });
+  const L = `${FUR}/R1/S01/L1`;
+  assert.equal(model.ops.capacity(L, { dw: "2", dd: "1", dh: "1,5", maxw: "300" }), true); await model.save("WH");
+  assert.ok(model.saved.attr.length > 0);
+  const id = model.variants.create("Проєкт A");
+  assert.deepEqual(model.saved.attr, model.variants.list().length === 2 ? model.saved.attr : null); // слой attr скопирован в активный вариант
+  assert.ok(model.saved.attr.length > 0, "новый вариант без слоя attr");
+  const sum = model.cap.summary("WH"), st = model.variants.stats(id);
+  assert.deepEqual([st.places, st.pallets, st.area, st.volume], [sum.places, sum.pallets, sum.area, sum.volume]);
+  assert.equal(st.capacity, sum.weight); assert.ok(st.capacity >= 300 && st.capKnown >= 1);
+  model.ops.capacity(L, { dw: "", dd: "", dh: "", maxw: "" }); await model.save("WH"); // правка в варианте A не меняет «Як є»
+  model.variants.switch("v1"); assert.ok(model.saved.attr.length > 0);
+  assert.equal(model.variants.compare("v1", id).rows.find((r) => r.key === "capacity").a, st.capacity);
+});
+
 test("варианты: создавать, переименовывать и удалять без права «проектирование» нельзя; переключаться можно", () => {
   const { model, notes } = withRights({ view: true, design: false, apply: false });
   assert.equal(model.variants.create("X"), null); assert.ok(notes().some((n) => n.key === "n.varDenied"));

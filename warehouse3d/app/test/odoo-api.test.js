@@ -45,6 +45,8 @@ function server({ fail = null } = {}) {
     let result;
     if (fail === route) result = { status: "denied", message: "no access" };
     else if (route === "warehouses") result = { status: "ok", version: { series: "19.0", major: 19 }, db: "odoo19", now: "2026-10-15 12:00", warehouses: wh };
+    else if (route === "removal_strategies") result = fail === "no-lists" ? { status: "error", message: "unknown route" } : { status: "ok", removal_strategies: [{ id: 1, name: "FIFO", method: "fifo" }, { id: 2, name: "LIFO", method: "lifo" }] };
+    else if (route === "package_types") result = fail === "no-lists" ? { status: "error", message: "unknown route" } : { status: "ok", package_types: [{ id: 5, name: "Піддон" }] };
     else if (p.warehouse_id !== W1) result = { status: "error", message: "not found" };
     else {
       const rows = tables[route], off = p.offset || 0, lim = Math.min(p.limit || 2000, 5000), page = rows.slice(off, off + lim);
@@ -146,6 +148,9 @@ test("load: места, остатки, ёмкость, min/max, состоян�
   assert.equal(snap.meta.odoo.storage_categories[0].capacities[0].product, "FUR-HG-110");
   assert.equal(snap.meta.odoo.putaway_rules[0].product, "DSP-1");
   assert.equal(snap.meta.odoo.orderpoints.length, 4);
+  // справочники W-14: стратегии списания и типы упаковки; у мест — id стратегии
+  assert.deepEqual(snap.meta.odoo.removal_strategies.map((x) => x.name), ["FIFO", "LIFO"]); assert.deepEqual(snap.meta.odoo.package_types, [{ id: 5, name: "Піддон" }]);
+  assert.equal(a.removal_strategy_id, 1);
 });
 const round = (v) => Math.round(v * 10000) / 10000;
 
@@ -269,4 +274,9 @@ test("снимок Odoo + каталог типов W-05: дерево стро�
   assert.deepEqual(snapEdit(), before);
   assert.ok(model.tree.types.has("R01") && model.building);
   assert.equal(model.data.locations["PLT-01A"].quants.length, 0);
+});
+
+test("справочники W-14 необязательны: сервер без маршрутов даёт пустые списки, снимок строится", async () => {
+  const s = server({ fail: "no-lists" }), snap = await createOdooApi({ fetchImpl: s.fetchImpl }).load(1);
+  assert.deepEqual([snap.meta.odoo.removal_strategies, snap.meta.odoo.package_types], [[], []]); assert.ok(Object.keys(snap.locations).length > 10);
 });

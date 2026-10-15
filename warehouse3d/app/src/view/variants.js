@@ -9,7 +9,7 @@ export const variantName = (i18n, v, i = 0) => v.name || (v.first || i === 0 ? i
 // таблица цифр: cols — [{ title, stats }]; delta — добавить колонку «різниця» (для двух столбцов)
 export function statsTable(i18n, cols, delta = false) {
   const T = (k, p) => esc(i18n.t(k, p)), num = (x) => (Number.isInteger(x) ? i18n.int(x) : i18n.m(x));
-  const keys = ["places", "pallets", "area", "volume", "capacity", "ops"], unit = { area: ` ${i18n.t("unit.m2")}`, volume: ` ${i18n.t("unit.m3")}` };
+  const keys = ["places", "pallets", "area", "volume", "capacity", "ops"], unit = { area: ` ${i18n.t("unit.m2")}`, volume: ` ${i18n.t("unit.m3")}`, capacity: ` ${i18n.t("unit.kg")}` };
   const cell = (st, k) => (!st ? "—" : k === "capacity" && !st.capKnown ? "—" : `${esc(num(st[k]))}${unit[k] || ""}`);
   const d = (k) => { const a = cols[0].stats, b = cols[1].stats; if (!a || !b || (k === "capacity" && !(a.capKnown && b.capKnown))) return "—"; const x = Math.round((b[k] - a[k]) * 100) / 100; return `${x > 0 ? "+" : ""}${esc(num(x))}`; };
   return `<table class="o_tbl vr-stats"><thead><tr><th></th>${cols.map((c) => `<th>${esc(c.title)}</th>`).join("")}${delta ? `<th>${T("vr.delta")}</th>` : ""}</tr></thead>
