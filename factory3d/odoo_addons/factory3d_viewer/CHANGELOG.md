@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Y-2: фільтри «Сьогодні» і «Цей тиждень» журналу знімків — пошукові поля `is_today`, `is_this_week` за київською добою
+  сервера (шкала `demo_clock`), а не `context_today()` браузера (UTC на стенді: з 21:00 до 24:00 UTC доба зсувалась).
+
 ## 19.0.1.0.0
 - Перший випуск: 3D-переглядач заводу всередині Odoo (OWL-дія, ядро `F3dViewer`, `DataClient`, режим `lite`).
 - API `/f3d/viewer/{static,data,delta,resolve,snapshots,snapshot,parts/manifest.json,cycle_check}`: живі дані з ORM

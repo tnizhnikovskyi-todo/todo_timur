@@ -21,3 +21,4 @@ from . import test_kiosk
 from . import test_tours
 from . import test_perf
 from . import test_neutralize
+from . import test_day_filter  # Y-2

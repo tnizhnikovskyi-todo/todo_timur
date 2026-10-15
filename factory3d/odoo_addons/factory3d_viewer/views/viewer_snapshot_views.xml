@@ -55,10 +55,8 @@
         <field name="arch" type="xml">
             <search>
                 <field name="note"/>
-                <filter name="today" string="Сьогодні"
-                        domain="[('shift_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
-                <filter name="this_week" string="Цей тиждень"
-                        domain="[('shift_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today', '=', True)]"/>
+                <filter name="this_week" string="Цей тиждень" domain="[('is_this_week', '=', True)]"/>
                 <group>
                     <filter name="group_shift_date" string="Дата зміни" context="{'group_by': 'shift_date'}"/>
                     <filter name="group_kind" string="Тип" context="{'group_by': 'kind'}"/>

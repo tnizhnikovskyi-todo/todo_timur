@@ -5,7 +5,7 @@ import json
 import logging
 import re
 import time
-from datetime import timedelta
+from datetime import date, timedelta
 
 from odoo import api, fields, models
 
@@ -36,6 +36,8 @@ class F3dViewerSnapshot(models.Model):
     ts = fields.Datetime(string="Момент", required=True, index=True, default=fields.Datetime.now)
     shift_date = fields.Date(
         string="Дата зміни", required=True, index=True, compute="_compute_shift_date", store=True, precompute=True)
+    is_today = fields.Boolean(string="Сьогодні", compute="_compute_day_flags", search="_search_is_today")
+    is_this_week = fields.Boolean(string="Цей тиждень", compute="_compute_day_flags", search="_search_is_this_week")
     kind = fields.Selection(
         [("periodic", "Плановий"), ("event", "Подія"), ("install", "Установка"), ("manual", "Вручну")],
         string="Тип", required=True, default="periodic", index=True)
@@ -57,6 +59,37 @@ class F3dViewerSnapshot(models.Model):
     def _compute_shift_date(self):
         for rec in self:
             rec.shift_date = dates.local(rec.ts)[:10] if rec.ts else False
+
+    @api.model
+    def _today(self):
+        """Поточна доба за Києвом у шкалі `demo_clock` (R-21) — та сама, що «сьогодні» API-05 і `shift_date`."""
+        return date.fromisoformat(dates.today(self.env))
+
+    @api.depends("shift_date")
+    def _compute_day_flags(self):
+        today = self._today()
+        week = today - timedelta(days=today.weekday())
+        for rec in self:
+            rec.is_today = rec.shift_date == today
+            rec.is_this_week = bool(rec.shift_date) and rec.shift_date >= week
+
+    @staticmethod
+    def _day_domain(operator, value, first, last=None):
+        """`shift_date ∈ [first, last]` (`last=None` — без верхньої межі) для `= True` / `!= False`; інакше — доповнення."""
+        if operator not in ("=", "!=") or not isinstance(value, bool):
+            raise NotImplementedError("Пошук за добою підтримує лише = / != True/False")
+        if (operator == "=") == value:
+            return [("shift_date", ">=", first)] + ([("shift_date", "<=", last)] if last else [])
+        return ["|", ("shift_date", "<", first), ("shift_date", ">", last)] if last else [("shift_date", "<", first)]
+
+    def _search_is_today(self, operator, value):
+        """Фільтр «Сьогодні»: київська доба сервера, а не `context_today()` браузера (UTC на стенді)."""
+        today = self._today()
+        return self._day_domain(operator, value, today, today)
+
+    def _search_is_this_week(self, operator, value):
+        today = self._today()
+        return self._day_domain(operator, value, today - timedelta(days=today.weekday()))
 
     @api.depends("payload_file")
     def _compute_size_kb(self):
