@@ -35,10 +35,10 @@
 | G-1 | td_genset | P2 | ТО при просрочке мотогодин создаётся без priority '3' и без «прострочено на N мотогодин» в названии (AC-19), genset_fuel.py:1177 | FIX (batch 2b) |
 | V-2 | viewer | P3 | GET /f3d/viewer/data?codes=../../etc → 200 вместо 400: CODE_RE допускает «/» и «.» (controllers/viewer.py:18) | OPEN |
 | V-3 | viewer | P3 | /f3d/viewer/snapshot/abc → 303 на /uk/… вместо 404 (viewer.py:235) | OPEN |
-| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | FIX (ветка claude/f3d-fix-stand) |
-| ST-2 | iot_sim (сервис) | P2 | эмулятор шлёт LPR без токена → 401 (DEC-15); LPR дошёл только при снятом token_ref | FIX (ветка claude/f3d-fix-stand) |
-| ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | FIX (ветка claude/f3d-fix-stand) |
-| ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | FIX (ветка claude/f3d-fix-stand) |
+| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | OPEN → batch 3: решение менеджера — store_period_s=300 для io_state, io_alarm, g_state, g_job, ua_state, ua_mode, ua_alarm, ua_job (mc_signals.csv + миграция noupdate-данных + SPEC machine_connect C.2), по telemetry R-03/D-11 |
+| ST-2 | iot_sim (сервис) | P2 | эмулятор шлёт LPR без токена → 401 (DEC-15); LPR дошёл только при снятом token_ref | DONE 6f0ccd1 в claude/f3d-fix-stand (ждёт мержа) |
+| ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | DONE e64d479 в claude/f3d-fix-stand (ждёт мержа) |
+| ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | DONE 2b829ab в claude/f3d-fix-stand (ждёт мержа) |
 | E-4 | energy | P3 | 9 производных kwh_shift без данных и при живом стенде | OPEN |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
@@ -48,3 +48,4 @@
 Наблюдение (viewer): база на демо-часах 2026-10-12 10:30 (DEC-18 ждёт пустой demo_clock) — объясняет «старые» данные access/OEE; решить перед утренней сдачей.
 
 Долги после batch 2a: SPEC telemetry (строки 287–288 rate_*, 310 _touch/IP, R-17 п.2, AC-41) и SPEC machine_connect API-01 п.1 (правило владельца CUTOPT) устарели; форма двери для охраны не readonly (SPEC §4.1); uninstall_hook telemetry не дропает f3d_collector_push.
+Долг после фиксов стенда: SPEC iot_sim §8.13.2 («без автентифікації» → токен X-F3D-Token из SIM_LPR_PUSH_TOKEN).
