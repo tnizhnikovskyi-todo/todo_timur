@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-14 -->
+<odoo>
+    <record id="view_f3d_energy_outage_list" model="ir.ui.view">
+        <field name="name">f3d.energy.outage.list</field>
+        <field name="model">f3d.energy.outage</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="name"/>
+                <field name="ts_start"/>
+                <field name="ts_end"/>
+                <field name="duration_min"/>
+                <field name="state" widget="badge" decoration-danger="state == 'open'" decoration-success="state == 'closed'"/>
+                <field name="amf_master"/>
+                <field name="transfer_s"/>
+                <field name="shed_kw"/>
+                <field name="fail_start"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_outage_form" model="ir.ui.view">
+        <field name="name">f3d.energy.outage.form</field>
+        <field name="model">f3d.energy.outage</field>
+        <field name="arch" type="xml">
+            <form create="false" delete="false">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <h1><field name="name" readonly="1"/></h1>
+                    <group>
+                        <group string="Час">
+                            <field name="ts_start" readonly="1"/>
+                            <field name="ts_end" readonly="1"/>
+                            <field name="duration_min" readonly="1"/>
+                            <field name="source" readonly="1"/>
+                            <field name="grid_back_at"/>
+                        </group>
+                        <group string="Генератор і АВР">
+                            <field name="amf_master" readonly="1"/>
+                            <field name="transfer_s" readonly="1"/>
+                            <field name="return_s" readonly="1"/>
+                            <field name="gen_started" readonly="1"/>
+                            <field name="gen_start_at"/>
+                            <field name="fail_start" readonly="1"/>
+                        </group>
+                        <group string="Навантаження">
+                            <field name="load_before_kw" readonly="1"/>
+                            <field name="critical_kw" readonly="1"/>
+                            <field name="load_island_kw" readonly="1"/>
+                            <field name="shed_kw" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Події" name="events">
+                            <field name="event_ids" readonly="1">
+                                <list>
+                                    <field name="ts"/>
+                                    <field name="level"/>
+                                    <field name="text"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_outage" model="ir.actions.act_window">
+        <field name="name">Відключення мережі</field>
+        <field name="res_model">f3d.energy.outage</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

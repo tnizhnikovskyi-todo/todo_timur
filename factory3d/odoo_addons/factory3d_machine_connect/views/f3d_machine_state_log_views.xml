@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-05, V-06: f3d.machine.state.log (SPEC §3) -->
+<odoo>
+    <record id="view_f3d_machine_state_log_list" model="ir.ui.view">
+        <field name="name">f3d.machine.state.log.list</field>
+        <field name="model">f3d.machine.state.log</field>
+        <field name="arch" type="xml">
+            <list string="Журнал станів" create="0" edit="0" delete="0">
+                <field name="code"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'working'" decoration-info="state == 'setup'"
+                       decoration-warning="state == 'idle'" decoration-danger="state == 'fault'"
+                       decoration-muted="state in ('off', 'nodata')"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="duration_min" sum="Разом"/>
+                <field name="workorder_id"/>
+                <field name="production_id"/>
+                <field name="employee_id"/>
+                <field name="pieces" sum="Разом"/>
+                <field name="downtime_id"/>
+                <field name="source"/>
+                <field name="raw" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_machine_state_log_graph" model="ir.ui.view">
+        <field name="name">f3d.machine.state.log.graph</field>
+        <field name="model">f3d.machine.state.log</field>
+        <field name="arch" type="xml">
+            <graph string="Журнал станів" type="bar" stacked="1">
+                <field name="code" type="row"/>
+                <field name="state" type="col"/>
+                <field name="duration_min" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_machine_state_log_pivot" model="ir.ui.view">
+        <field name="name">f3d.machine.state.log.pivot</field>
+        <field name="model">f3d.machine.state.log</field>
+        <field name="arch" type="xml">
+            <pivot string="Журнал станів">
+                <field name="code" type="row"/>
+                <field name="state" type="col"/>
+                <field name="duration_min" type="measure"/>
+                <field name="pieces" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_machine_state_log_search" model="ir.ui.view">
+        <field name="name">f3d.machine.state.log.search</field>
+        <field name="model">f3d.machine.state.log</field>
+        <field name="arch" type="xml">
+            <search string="Журнал станів">
+                <field name="code"/>
+                <field name="workorder_id"/>
+                <field name="production_id"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('date_start', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter name="open" string="Відкриті" domain="[('date_end', '=', False)]"/>
+                <separator/>
+                <filter name="st_working" string="В роботі" domain="[('state', '=', 'working')]"/>
+                <filter name="st_setup" string="Налагодження" domain="[('state', '=', 'setup')]"/>
+                <filter name="st_idle" string="Очікування" domain="[('state', '=', 'idle')]"/>
+                <filter name="st_fault" string="Аварія" domain="[('state', '=', 'fault')]"/>
+                <filter name="st_off" string="Вимкнено" domain="[('state', '=', 'off')]"/>
+                <filter name="st_nodata" string="Немає даних" domain="[('state', '=', 'nodata')]"/>
+                <group>
+                    <filter name="group_machine" string="Верстат" context="{'group_by': 'machine_id'}"/>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'date_start:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,69 @@
+code,name,unit,equipment,host,port,timeout_s,retries,max_block,gap_max
+MB-U01-PM-Q1,PM5560 ввід Q1,1,Q1,iot-sim,502,3,2,125,8
+MB-U02-PM-Q2,PM5560 ввід Q2,2,Q2,iot-sim,502,3,2,125,8
+MB-U03-PM-QF-1,PM5560 фідер QF-1,3,QF-1,iot-sim,502,3,2,125,8
+MB-U04-PM-QF-2,PM5560 фідер QF-2,4,QF-2,iot-sim,502,3,2,125,8
+MB-U05-PM-QF-3,PM5560 фідер QF-3,5,QF-3,iot-sim,502,3,2,125,8
+MB-U06-PM-QF-4,PM5560 фідер QF-4,6,QF-4,iot-sim,502,3,2,125,8
+MB-U07-PM-QF-C1,PM5560 фідер QF-C1,7,QF-C1,iot-sim,502,3,2,125,8
+MB-U08-PM-QF-C2,PM5560 фідер QF-C2,8,QF-C2,iot-sim,502,3,2,125,8
+MB-U11-PM-SAW-1,PM5560 Розкрій 1,11,SAW-1,iot-sim,502,3,2,125,8
+MB-U12-PM-SAW-2,PM5560 Розкрій 2,12,SAW-2,iot-sim,502,3,2,125,8
+MB-U13-PM-SAW-3,PM5560 Пакетний розкрій,13,SAW-3,iot-sim,502,3,2,125,8
+MB-U14-PM-SLIDE-1,PM5560 Форматно-розкрійний,14,SLIDE-1,iot-sim,502,3,2,125,8
+MB-U15-PM-VSAW-1,PM5560 Вертикальна пила,15,VSAW-1,iot-sim,502,3,2,125,8
+MB-U16-PM-NEST-1,PM5560 Нестинг ЧПК,16,NEST-1,iot-sim,502,3,2,125,8
+MB-U17-PM-EDGE-1,PM5560 Крайкооблицювання A,17,EDGE-1,iot-sim,502,3,2,125,8
+MB-U18-PM-EDGE-2,PM5560 Крайкооблицювання B,18,EDGE-2,iot-sim,502,3,2,125,8
+MB-U19-PM-EDGE-3,PM5560 Крайкооблицювання C,19,EDGE-3,iot-sim,502,3,2,125,8
+MB-U20-PM-CNC-3,PM5560 Присадка ЧПК D1,20,CNC-3,iot-sim,502,3,2,125,8
+MB-U21-PM-CNC-1,PM5560 Присадка ЧПК A,21,CNC-1,iot-sim,502,3,2,125,8
+MB-U22-PM-CNC-2,PM5560 Присадка ЧПК B,22,CNC-2,iot-sim,502,3,2,125,8
+MB-U23-PM-BORE-1,PM5560 Прохідна присадка C,23,BORE-1,iot-sim,502,3,2,125,8
+MB-U24-PM-CNC-4,PM5560 Присадка ЧПК D2,24,CNC-4,iot-sim,502,3,2,125,8
+MB-U25-PM-DOWEL-1,PM5560 Шкантування C,25,DOWEL-1,iot-sim,502,3,2,125,8
+MB-U26-PM-SORT-1,PM5560 Сортувальний робот,26,SORT-1,iot-sim,502,3,2,125,8
+MB-U27-PM-SAND-1,PM5560 Шліфування фасадів,27,SAND-1,iot-sim,502,3,2,125,8
+MB-U28-PM-AUTOSPRAY-1,PM5560 Автомат фарбування,28,AUTOSPRAY-1,iot-sim,502,3,2,125,8
+MB-U29-PM-UV-1,PM5560 УФ-лакування,29,UV-1,iot-sim,502,3,2,125,8
+MB-U30-PM-HINGE-1,PM5560 Встановлення завіс,30,HINGE-1,iot-sim,502,3,2,125,8
+MB-U31-PM-GLUE-1,PM5560 Кабіна нанесення клею,31,GLUE-1,iot-sim,502,3,2,125,8
+MB-U32-PM-PRESS-1,PM5560 Мембранно-вакуумний прес,32,PRESS-1,iot-sim,502,3,2,125,8
+MB-U33-PM-SPRAY-1,PM5560 Фарбувальна камера,33,SPRAY-1,iot-sim,502,3,2,125,8
+MB-U34-PM-DRY-1,PM5560 Сушильна камера,34,DRY-1,iot-sim,502,3,2,125,8
+MB-U35-PM-ASMLINE-1,PM5560 Лінія збирання корпусів,35,ASMLINE-1,iot-sim,502,3,2,125,8
+MB-U36-PM-ASM-1,PM5560 Збирання 1,36,ASM-1,iot-sim,502,3,2,125,8
+MB-U37-PM-ASM-2,PM5560 Збирання 2,37,ASM-2,iot-sim,502,3,2,125,8
+MB-U38-PM-ASM-3,PM5560 Збирання 3,38,ASM-3,iot-sim,502,3,2,125,8
+MB-U39-PM-ASM-4,PM5560 Збирання 4,39,ASM-4,iot-sim,502,3,2,125,8
+MB-U40-PM-ASM-5,PM5560 Збирання 5,40,ASM-5,iot-sim,502,3,2,125,8
+MB-U41-PM-ASM-6,PM5560 Збирання 6,41,ASM-6,iot-sim,502,3,2,125,8
+MB-U42-PM-PACK-1,PM5560 Пакування 1,42,PACK-1,iot-sim,502,3,2,125,8
+MB-U43-PM-PACK-2,PM5560 Пакування 2,43,PACK-2,iot-sim,502,3,2,125,8
+MB-U44-PM-BOX-1,PM5560 Розкрій гофрокартону,44,BOX-1,iot-sim,502,3,2,125,8
+MB-U45-PM-PACKLINE-1,PM5560 Термоусадка та обв'язка,45,PACKLINE-1,iot-sim,502,3,2,125,8
+MB-U46-PM-GANTRY-1,PM5560 Портальний склад плит,46,GANTRY-1,iot-sim,502,3,2,125,8
+MB-U47-PM-COMPRESSOR,"PM5560 Компресорна (2 × GA 37 VSD+, осушувач)",47,COMPRESSOR,iot-sim,502,3,2,125,8
+MB-U48-PM-DUST-1,PM5560 Вентилятори аспірації,48,DUST-1,iot-sim,502,3,2,125,8
+MB-U49-PM-BOILER,"PM5560 Котельня (2 котли), шнеки, брикетування",49,BOILER,iot-sim,502,3,2,125,8
+MB-U50-PM-CHARGING,PM5560 Зарядна станція (3 зарядні пристрої),50,CHARGING,iot-sim,502,3,2,125,8
+MB-U51-PM-OFFICE,"PM5560 Офіс, побутові приміщення, серверна",51,,iot-sim,502,3,2,125,8
+MB-U52-PM-LP-1,"PM5560 Щит освітлення ЩО-1 · склади сировини, приймання",52,LP-1,iot-sim,502,3,2,125,8
+MB-U53-PM-LP-2,PM5560 Щит освітлення ЩО-2 · лінії й дільниця фасадів,53,LP-2,iot-sim,502,3,2,125,8
+MB-U54-PM-LP-3,"PM5560 Щит освітлення ЩО-3 · збирання, пакування, склад ГП, відвантаження",54,LP-3,iot-sim,502,3,2,125,8
+MB-U55-PM-RV-ALL,PM5560 Дахові установки вентиляції (25 шт.),55,,iot-sim,502,3,2,125,8
+MB-U56-PM-AHU-1,PM5560 Припливна установка дільниці фасадів,56,AHU-1,iot-sim,502,3,2,125,8
+MB-U57-PM-EF-ELEC,PM5560 Витяжні вентилятори електрощитової,57,EF-ELEC,iot-sim,502,3,2,125,8
+MB-U58-PM-EF-CMP,PM5560 Витяжний вентилятор компресорної,58,EF-CMP,iot-sim,502,3,2,125,8
+MB-U59-PM-EF-CHG,PM5560 Витяжка зарядної станції (Ex),59,EF-CHG,iot-sim,502,3,2,125,8
+MB-U61-SUN-1,Huawei SUN2000 PV-INV-1,61,PV-INV,iot-sim,502,3,2,125,8
+MB-U62-SUN-2,Huawei SUN2000 PV-INV-2,62,PV-INV,iot-sim,502,3,2,125,8
+MB-U63-SUN-3,Huawei SUN2000 PV-INV-3,63,PV-INV,iot-sim,502,3,2,125,8
+MB-U64-SUN-4,Huawei SUN2000 PV-INV-4,64,PV-INV,iot-sim,502,3,2,125,8
+MB-U65-SUN-5,Huawei SUN2000 PV-INV-5,65,PV-INV,iot-sim,502,3,2,125,8
+MB-U66-SUN-6,Huawei SUN2000 PV-INV-6,66,PV-INV,iot-sim,502,3,2,125,8
+MB-U67-SUN-7,Huawei SUN2000 PV-INV-7,67,PV-INV,iot-sim,502,3,2,125,8
+MB-U68-SUN-8,Huawei SUN2000 PV-INV-8,68,PV-INV,iot-sim,502,3,2,125,8
+MB-U69-BESS,Huawei LUNA2000,69,BESS,iot-sim,502,3,2,125,8
+MB-U71-ATS-1,Socomec ATyS p,71,ATS-1,iot-sim,502,3,2,125,8
+MB-U72-CHP,TEDOM Quanto D800,72,CHP,iot-sim,502,3,2,125,8

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §6. nextcall ротації ставить хук (03:10 Europe/Kyiv). -->
+<odoo noupdate="1">
+    <record id="cron_f3d_mc_tick" model="ir.cron">
+        <field name="name">Верстати: такт</field>
+        <field name="model_id" ref="model_f3d_machine"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_tick()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_mc_oee" model="ir.cron">
+        <field name="name">Верстати: OEE змін</field>
+        <field name="model_id" ref="model_f3d_oee_shift"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_oee()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_mc_gantry" model="ir.cron">
+        <field name="name">Портал: звірка й завдання</field>
+        <field name="model_id" ref="model_f3d_gantry_job"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_gantry()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_mc_cutmap" model="ir.cron">
+        <field name="name">Розкрій: стан оптимізації</field>
+        <field name="model_id" ref="model_f3d_cut_map"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_cutmap()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_mc_rotate" model="ir.cron">
+        <field name="name">Верстати: ротація журналів</field>
+        <field name="model_id" ref="model_f3d_machine_state_log"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_rotate()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

@@ -1,0 +1,77 @@
+# factory3d_machine_connect
+Статус: DONE (юнит-DoD); стенд частично — ТК-03/15, ТП-01/04 красные, ТК-14 не прогнан, ТБ-03 (лог) не выполнен
+Тесты: Odoo 129/129 (/factory3d_machine_connect, чистая база и с iot_sim), collector plugins unit 53/53 (2026-10-15); ruff OK; статика DoD (x_/TODO/print/overrides/cmdtext) чисто; ТК: прогнаны частично (TEST_REPORT.md): ТК 12/15 PASS, ТБ 9/10, ТП 2/4
+Решений без заказчика: 21 (ниже)
+Упирался в лимит: 0
+Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ТП-01 deadlock/serialization при 35 верстатах/с (DEC-19); ТБ-03 токен API-01 в access-log (DEC-20); ТП-04 500 только на стенде (DEC-21); ТК-03/15 не разобраны; ТК-14 и AC-70-подобные — до factory3d_viewer; копия демо-базы (AC-93, TestMigrationDemo, CHANGELOG «Міграція демо»); Docker-стенд и сертификаты HOMAG; ISA95-структуры — допущение Q-01; дефекты iot_sim (TEST_REPORT); мост mrp_workorder не тестирован (нет Enterprise)
+
+| Воркер | Статус | Коммит | Тест |
+|---|---|---|---|
+| W0 | принят | 34039a1 | TestCommands 5/5 |
+| W1 | принят | e202c60 | /factory3d_machine_connect 23/23 |
+| W7 | принят | 7643fa9 | pytest unit 51/51, ruff |
+| W2 | принят | 98d7c3c | /factory3d_machine_connect 55/55 (с W5) |
+| W5 | принят | 0dce9e7 | /factory3d_machine_connect 55/55 |
+| W4 | принят | 57a6daf | /factory3d_machine_connect 68/68 |
+| W6 | принят | ca5b681 | /factory3d_machine_connect 80/80 |
+| W3 | принят | 29ca2f4 | /factory3d_machine_connect 100/100 |
+| W8 | принят | e27cc6c | /factory3d_machine_connect 125/125 (и с iot_sim) |
+| W9 | принят (досрочно, по менеджеру) | 9eff23b, acaa5c8 | стенд частично; 3 дефекта исправлены с регресс-тестами |
+| DoD | принят | — | 129/129, unit 53/53, README/CHANGELOG |
+
+## Решения без заказчика
+- DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
+  `employee_ids`/`start_employee`/`stop_employee`. Ядро: собственное поле `mrp.workorder.f3d_employee_id` (оператор,
+  проставляется при автостарте), старт/стоп — через `start_employee`/`stop_employee`, если метод есть (duck typing),
+  иначе `button_start`/`button_finish`; разрешённые работники РЦ — `wc.employee_ids`, если поле есть, иначе пусто.
+  Мост `factory3d_machine_connect_mrp_workorder` (auto_install) — минимальный, не тестирован (нет Enterprise).
+  Тесты, требующие полей Enterprise, — с пропуском. — `models/mrp_workorder.py`, `models/f3d_machine_wo.py`
+- DEC-2: AC-58 требует ключ запобіжника telemetry в тексте ошибки, а telemetry его не пишет — проверки module/source/signal
+  продублированы в `_f3d_mc_create_command` до `create`; telemetry не менялся. — `models/f3d_command.py`
+- DEC-3: Odoo 19 не принимает `target='inline'` у act_window — `action_f3d_mc_settings` без target. — `views/menus.xml`
+- DEC-4: push-маршрут `mc_woodstore/status` → `f3d.gantry.job._f3d_apply_status` (SPEC не называет владельца). — `models/push_handler.py`
+- Тесты гонять с `F3D_TEST_INSTALL=factory3d_machine_connect` (иначе ставится мост base_mrp_maintenance без Enterprise).
+- DEC-5: kanban V-01 в Odoo 19 не берёт dotted-поля — вместо `current_downtime_id.loss_id` показан сам простой,
+  цвет OEE — фиксированные пороги 0.75/0.5 вместо `oee_color`. — `views/f3d_machine_views.xml`
+- DEC-6: пізні показання (`ts < state_since`) пропускают state/mode/alarm/job, счётчик обрабатывается; показания
+  с одним `ts` — один переход (AC-03). — `models/f3d_machine.py`
+- DEC-7: дефект в factory3d_telemetry `push_handler._f3d_handler_models` — `registry.descendants` в Odoo 19 возвращает
+  имена, а не классы; push-события не маршрутизировались никуда. Исправлено в telemetry (229/229 зелёные), коммит dfab530.
+  Обходы `patch.object` в тестах W2/W5 безвредны.
+- DEC-8: AC-13 (простой 1,5 хв «лишається») противоречит R-05 п.4 (micro_stop_s=120 → удаление). Реализовано по R-05,
+  тест AC-13 снижает `micro_stop_s` до 60. — `models/f3d_machine_downtime.py`, `tests/test_downtime.py`
+- DEC-9: R-06 п.5 — новый «Аварія триває» открывается, только если у простоя нет ни одного открытого записи
+  (машинного или оператора) — без перекрытий. — `models/mrp_workcenter_productivity.py`
+- DEC-10: портал — завдання `sent` без `ws_id` усыновляется событием woodStore с тем же МО и товаром (без дубля);
+  R-17 расщепляет зарезервированную строку при недоподаче; авто-поповнення не чаще раза в час на стос (`replenish_at`). — `models/f3d_gantry_*.py`
+- DEC-11: адаптер `cutopt` держит связь job_id→карта в памяти; после рестарта колектора `map` в событиях = null,
+  Odoo сопоставляет по `job_id` (проверить в W6). Метрики `collector_mc_*` создаются лениво в реестре ядра;
+  `mc_state_dir` → env `F3D_MC_STATE_DIR` → `buffer_dir`. — `f3d_collector_mc/{cutopt,events}.py`
+- DEC-12: OEE — категории timelog по xmlid (setup = `mrp.block_reason2` + `loss_tool`, fault = `mrp.block_reason1`,
+  прочие availability/quality = idle; productive/performance = run); запись смены не создаётся до её начала и в
+  выходной; действие «OEE за період» — `action_f3d_oee_period_sum` (id `action_f3d_oee_period` занят W0). — `models/f3d_oee_shift.py`
+- DEC-13: API-01 отдаёт карту в состояниях `exported` и `optimizing` (409 для прочих) — `action_send_optimizer` сразу
+  ставит `optimizing`, по букве SPEC колектор всегда получал бы 409; 413 — при >5000 строк карты или теле >1 МБ;
+  тайм-аут оптимизации 30 хв — от `optimizing_since` (запасной — `write_date`). — `controllers/cutmap.py`, `models/f3d_cut_map.py`
+- DEC-11 (доп.): push_handler `mc_cutopt` — `map` необязателен, карта через `f3d.cut.map._f3d_find_for_event(map, job_id)`. — `models/push_handler.py`
+- DEC-14: автостарт (DEC-1 в CE) — R-09 п.4(б) упрощён: «сегодня» = начало локального дня, а не первый интервал ППЧ;
+  работник записи = `wo.f3d_employee_id`, иначе работник пользователя; ответственный активности «нет задания» —
+  `equipment.technician_user_id`, иначе admin (у `mrp.workcenter` в CE нет technician). `f3d.machine` получил
+  `mail.activity.mixin`. `_f3d_close_timers` режет `date_end` до `ts` всегда (AC-11). — `models/f3d_machine_wo.py`
+- DEC-15: неполная партия снимает `active_workorder_id`, автостарт пропускает WO с `f3d_partial_hold`; отложенная
+  микрозупинка считается «не working» для завершения I/O по `finish_idle_s`. — `models/f3d_machine_wo.py`
+- DEC-16: права — `group_f3d_manager` получил rw/c на `res.config.settings` (иначе меню настроек невидимо, AC-89;
+  сохранение всё равно требует admin — `execute`), `group_f3d_user` — read на `mrp.workcenter.productivity.loss`
+  (провайдер переглядача падал на имени причины). — `security/ir.model.access.csv`
+- DEC-17: хук на чистой базе — отчёт `done` (а не `skipped`): по §5.3 крок 7 создаются 207 сигналов (для всех 35
+  строк CSV и GANTRY-1/CUTOPT без РЦ); существующим чужим сигналам дописываются лишь source/address/period/viewer_visible;
+  существующие `f3d.machine` не перезаписываются. TestMigrationDemo пропускается без копии демо. — `hooks.py`
+- DEC-18: провайдер переглядача M-22 — duck typing без `factory3d_viewer` (как telemetry DEC-8), payload меняется на месте;
+  тест bus `f3d.viewer.event` — skip до viewer. V-31 без `target='inline'` (Odoo 19). — `models/viewer_provider.py`
+- DEC-19: ТП-01 — 72 deadlock и 278 serialization errors при одновременных UPDATE `f3d_machine`/`f3d_collector`
+  (35 верстатов/с + крони); прочие метрики в пределах SPEC (p95 451 мс, 0×5xx). Нужна архитектурная правка
+  (порядок блокировок/батчинг) — человеку. Прогоны ТК-03/ТП-01/ТП-02 сокращены по времени.
+- DEC-20: ТБ-03 — одноразовый токен `t` API-01 попадает в access-log werkzeug (query); SPEC требует 0 совпадений.
+  Варианты: заголовок вместо query (правка адаптера cutopt и API-01) или правка SPEC — решение человека.
+- DEC-21: ТП-04 — 500 на EV-02 (27 стосов) на юнит/HttpCase не воспроизводится (200, тесты добавлены), в стендовом
+  payload не было `hash`; повторить на стенде с логом Odoo.

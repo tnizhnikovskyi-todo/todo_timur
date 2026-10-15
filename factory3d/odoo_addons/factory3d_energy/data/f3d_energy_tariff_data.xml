@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §5.2: умовний тариф (plant/energy.py:TARIFF) — до договору постачальника (Q-03) -->
+<odoo noupdate="1">
+    <record id="tariff_demo" model="f3d.energy.tariff">
+        <field name="name">Умовний тариф (демо)</field>
+        <field name="date_from">2026-01-01</field>
+        <field name="contract_kw">800</field>
+        <field name="peak_warn_pct">90</field>
+        <field name="export_price">0</field>
+    </record>
+    <record id="tariff_demo_zone_flat" model="f3d.energy.tariff.zone">
+        <field name="tariff_id" ref="tariff_demo"/>
+        <field name="name">Цілодобова</field>
+        <field name="code">flat</field>
+        <field name="weekdays">0123456</field>
+        <field name="hour_from">0</field>
+        <field name="hour_to">24</field>
+        <field name="price">8.4</field>
+    </record>
+</odoo>

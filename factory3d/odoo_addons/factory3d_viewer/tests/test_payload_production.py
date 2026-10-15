@@ -129,6 +129,9 @@ class TestProductionSynthetic(F3dViewerBase):
     def test_energy_cost_requires_group(self):
         """AC-60 (мок групи): із групою — ключ є, кіоск — немає."""
         orig = payload_tools.group_ok
+        group = self.env.ref(payload_tools.ENERGY_COST_GROUP, raise_if_not_found=False)
+        if group:  # factory3d_energy встановлено: його провайдер сам перевіряє реальну групу, а не мок
+            self.user_f3d.write({"group_ids": [(4, group.id)]})
 
         def fake(env, xmlid):
             return True if xmlid == payload_tools.ENERGY_COST_GROUP else orig(env, xmlid)

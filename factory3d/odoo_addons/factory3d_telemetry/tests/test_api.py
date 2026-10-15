@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from odoo import fields
+from odoo.addons.factory3d_telemetry.models.push_handler import F3dPushHandler
 from odoo.exceptions import ValidationError
 from odoo.modules.module import Manifest
 from odoo.tests import tagged
@@ -321,7 +322,9 @@ def _event(sig_provider="CAM-05", suffix="", seconds=-2, **extra):
 @tagged(*TAGS)
 class TestEvent(ApiCase):
     def test_event_ok(self):
-        status, res, _h = self.post("event", {"collector": "COL-T", "events": [_event()]})
+        # без обробників маршруту: модулі на кшталт factory3d_yard реєструють власні (`handled` залежить від них)
+        with patch.object(F3dPushHandler, "_f3d_handler_models", return_value=[]):
+            status, res, _h = self.post("event", {"collector": "COL-T", "events": [_event()]})
         self.assertEqual((status, res), (200, {"accepted": 1, "rejected": [], "handled": {}}))
         self.reload()
         ev = self.env["f3d.push.event"].search([("route", "=", "lpr")])

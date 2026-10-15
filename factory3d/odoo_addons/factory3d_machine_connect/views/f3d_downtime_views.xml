@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-07, V-08: f3d.downtime (SPEC §3) -->
+<odoo>
+    <record id="view_f3d_downtime_list" model="ir.ui.view">
+        <field name="name">f3d.downtime.list</field>
+        <field name="model">f3d.downtime</field>
+        <field name="arch" type="xml">
+            <list string="Простої" create="0" edit="0">
+                <field name="code"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="duration_live" sum="Разом" widget="float_time"/>
+                <field name="state_kind"/>
+                <field name="loss_id" options="{'no_create': True}"/>
+                <field name="hint_loss_id"/>
+                <field name="hint_text" optional="show"/>
+                <field name="reason_source"/>
+                <field name="reason_state" widget="badge"
+                       decoration-danger="reason_state == 'to_classify'"
+                       decoration-warning="reason_state == 'to_confirm'"
+                       decoration-success="reason_state == 'confirmed'"/>
+                <field name="workorder_id"/>
+                <field name="maintenance_request_id" optional="show"/>
+                <field name="employee_id" optional="hide"/>
+                <button name="action_confirm" type="object" string="Підтвердити" icon="fa-check"
+                        groups="mrp.group_mrp_manager" invisible="reason_state == 'confirmed'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_downtime_graph" model="ir.ui.view">
+        <field name="name">f3d.downtime.graph</field>
+        <field name="model">f3d.downtime</field>
+        <field name="arch" type="xml">
+            <graph string="Парето втрат" type="bar">
+                <field name="loss_id" type="row"/>
+                <field name="duration_min" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_downtime_pivot" model="ir.ui.view">
+        <field name="name">f3d.downtime.pivot</field>
+        <field name="model">f3d.downtime</field>
+        <field name="arch" type="xml">
+            <pivot string="Простої">
+                <field name="workcenter_id" type="row"/>
+                <field name="loss_id" type="col"/>
+                <field name="duration_min" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_downtime_kanban" model="ir.ui.view">
+        <field name="name">f3d.downtime.kanban</field>
+        <field name="model">f3d.downtime</field>
+        <field name="arch" type="xml">
+            <kanban string="Без причини" create="0" records_draggable="0" quick_create="0">
+                <field name="code"/>
+                <field name="state_kind"/>
+                <field name="date_start"/>
+                <field name="duration_live"/>
+                <field name="hint_text"/>
+                <field name="has_loss_tool"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="fw-bold fs-4"><field name="code"/> · <field name="state_kind"/></div>
+                        <div>з <field name="date_start" widget="datetime"/> · <field name="duration_live" widget="float_time"/> хв</div>
+                        <div class="text-muted" t-if="record.hint_text.raw_value"><field name="hint_text"/></div>
+                        <div><field name="loss_id"/></div>
+                        <div class="mt-2 d-flex flex-wrap gap-1">
+                            <button type="object" name="action_quick_reason" class="btn btn-lg btn-secondary"
+                                    context="{'f3d_loss_xmlid': 'mrp.block_reason0'}">Очікування матеріалу</button>
+                            <button type="object" name="action_quick_reason" class="btn btn-lg btn-secondary"
+                                    context="{'f3d_loss_xmlid': 'mrp.block_reason1'}">Поломка</button>
+                            <button type="object" name="action_quick_reason" class="btn btn-lg btn-secondary"
+                                    context="{'f3d_loss_xmlid': 'mrp.block_reason2'}">Налагодження</button>
+                            <button type="object" name="action_quick_reason" class="btn btn-lg btn-secondary"
+                                    invisible="not has_loss_tool"
+                                    context="{'f3d_loss_xmlid': 'factory3d.loss_tool'}">Заміна інструменту</button>
+                            <button type="object" name="action_open_reason_wizard" class="btn btn-lg btn-primary">Інше…</button>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_downtime_form" model="ir.ui.view">
+        <field name="name">f3d.downtime.form</field>
+        <field name="model">f3d.downtime</field>
+        <field name="arch" type="xml">
+            <form string="Простій" create="0">
+                <header>
+                    <button name="action_open_reason_wizard" type="object" string="Вказати причину"/>
+                    <button name="action_confirm" type="object" string="Підтвердити" class="btn-primary"
+                            groups="mrp.group_mrp_manager" invisible="reason_state == 'confirmed'"/>
+                    <field name="reason_state" widget="statusbar" statusbar_visible="to_classify,to_confirm,confirmed"/>
+                </header>
+                <sheet>
+                    <h1><field name="name"/></h1>
+                    <group>
+                        <group string="Простій">
+                            <field name="machine_id"/>
+                            <field name="state_kind"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                            <field name="duration_live" widget="float_time"/>
+                            <field name="ppt_min"/>
+                        </group>
+                        <group string="Причина">
+                            <field name="loss_id" readonly="1"/>
+                            <field name="reason_source"/>
+                            <field name="employee_id"/>
+                            <field name="reason_user_id"/>
+                            <field name="reason_at"/>
+                            <field name="confirmed_by"/>
+                            <field name="confirmed_at"/>
+                        </group>
+                        <group string="Підказка">
+                            <field name="hint_loss_id"/>
+                            <field name="hint_text"/>
+                            <field name="event_id"/>
+                        </group>
+                        <group string="Зв'язки">
+                            <field name="workorder_id"/>
+                            <field name="production_id"/>
+                            <field name="maintenance_request_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Журнал часу" name="productivity">
+                            <field name="productivity_ids" readonly="1">
+                                <list>
+                                    <field name="loss_id"/>
+                                    <field name="date_start"/>
+                                    <field name="date_end"/>
+                                    <field name="duration"/>
+                                    <field name="f3d_source"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_downtime_search" model="ir.ui.view">
+        <field name="name">f3d.downtime.search</field>
+        <field name="model">f3d.downtime</field>
+        <field name="arch" type="xml">
+            <search string="Простої">
+                <field name="code"/>
+                <field name="loss_id"/>
+                <field name="workorder_id"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('date_start', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter name="open" string="Триває" domain="[('is_open', '=', True)]"/>
+                <filter name="to_classify" string="Без причини" domain="[('reason_state', '=', 'to_classify')]"/>
+                <filter name="not_confirmed" string="Не підтверджено" domain="[('reason_state', '!=', 'confirmed')]"/>
+                <filter name="fault" string="Аварії" domain="[('state_kind', '=', 'fault')]"/>
+                <filter name="demo" string="Демо" domain="[('reason_source', '=', 'demo')]"/>
+                <group>
+                    <filter name="group_wc" string="Робочий центр" context="{'group_by': 'workcenter_id'}"/>
+                    <filter name="group_loss" string="Причина" context="{'group_by': 'loss_id'}"/>
+                    <filter name="group_kind" string="Стан" context="{'group_by': 'state_kind'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'date_start:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "address opcua: ключі-розширення (machine_connect SPEC §8.3, A-16)",
+  "type": "object",
+  "properties": {
+    "ns_uri": {"type": "string", "minLength": 1, "maxLength": 256},
+    "events": {"type": "boolean"},
+    "io": {"enum": ["read", "write"]},
+    "call": {"enum": ["job"]},
+    "job_select": {"enum": ["running_or_first"]},
+    "ww_uri": {"type": "string", "minLength": 1, "maxLength": 256},
+    "isa_uri": {"type": "string", "minLength": 1, "maxLength": 256}
+  }
+}

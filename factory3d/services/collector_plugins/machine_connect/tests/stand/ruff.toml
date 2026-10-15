@@ -1,0 +1,9 @@
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "B"]
+
+[lint.per-file-ignores]
+# стендові сценарії: довгі docstring з фактичними значеннями ТК/ТП
+"*" = ["E501"]

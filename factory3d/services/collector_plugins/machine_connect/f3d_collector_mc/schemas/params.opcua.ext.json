@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "params opcua: ключі-розширення (machine_connect SPEC §8.3, A-16)",
+  "type": "object",
+  "properties": {
+    "ns_uri": {"type": "string", "minLength": 1, "maxLength": 256},
+    "app_uri": {"type": "string", "minLength": 1, "maxLength": 256},
+    "server_cert_ref": {"type": "string", "pattern": "^F3D_[A-Z0-9_]+$"},
+    "heartbeat_s": {"type": "number", "minimum": 10, "maximum": 600}
+  }
+}

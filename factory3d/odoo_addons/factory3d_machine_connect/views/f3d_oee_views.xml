@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- V-12, V-13, V-14: f3d.oee.shift (SPEC §3) -->
+<odoo>
+    <record id="view_f3d_oee_shift_list" model="ir.ui.view">
+        <field name="name">f3d.oee.shift.list</field>
+        <field name="model">f3d.oee.shift</field>
+        <field name="arch" type="xml">
+            <list string="OEE за зміну" create="0" edit="0" delete="0"
+                  decoration-success="oee_color == 'good'" decoration-warning="oee_color == 'warn'"
+                  decoration-danger="oee_color == 'bad'">
+                <field name="oee_color" column_invisible="1"/>
+                <field name="date"/>
+                <field name="code"/>
+                <field name="zone_id"/>
+                <field name="availability" widget="percentage"/>
+                <field name="performance" widget="percentage"/>
+                <field name="quality" widget="percentage"/>
+                <field name="oee" widget="percentage"/>
+                <field name="ppt_min" sum="Разом"/>
+                <field name="run_min" sum="Разом"/>
+                <field name="down_min" sum="Разом"/>
+                <field name="qty_total" sum="Разом"/>
+                <field name="qty_bad" sum="Разом"/>
+                <field name="coverage" widget="percentage" optional="show"/>
+                <field name="incomplete" optional="show"/>
+                <field name="state"/>
+                <field name="source" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_oee_shift_pivot" model="ir.ui.view">
+        <field name="name">f3d.oee.shift.pivot</field>
+        <field name="model">f3d.oee.shift</field>
+        <field name="arch" type="xml">
+            <pivot string="OEE за зміну">
+                <field name="zone_id" type="row"/>
+                <field name="code" type="row"/>
+                <field name="date" interval="week" type="col"/>
+                <field name="run_min" type="measure"/>
+                <field name="ppt_min" type="measure"/>
+                <field name="ideal_min" type="measure"/>
+                <field name="qty_total" type="measure"/>
+                <field name="qty_bad" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_f3d_oee_shift_graph" model="ir.ui.view">
+        <field name="name">f3d.oee.shift.graph</field>
+        <field name="model">f3d.oee.shift</field>
+        <field name="arch" type="xml">
+            <graph string="OEE за зміну" type="line">
+                <field name="date" interval="day"/>
+                <field name="code"/>
+                <field name="oee" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_f3d_oee_shift_search" model="ir.ui.view">
+        <field name="name">f3d.oee.shift.search</field>
+        <field name="model">f3d.oee.shift</field>
+        <field name="arch" type="xml">
+            <search string="OEE за зміну">
+                <field name="code"/>
+                <field name="zone_id"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="this_week" string="Цей тиждень"
+                        domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                <filter name="this_month" string="Цей місяць"
+                        domain="[('date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <separator/>
+                <filter name="incomplete" string="Неповні дані" domain="[('incomplete', '=', True)]"/>
+                <filter name="low_oee" string="OEE &lt; порогу" domain="[('has_data', '=', True), ('oee', '&lt;', 0.5)]"/>
+                <filter name="closed" string="Закриті" domain="[('state', '=', 'closed')]"/>
+                <group>
+                    <filter name="group_zone" string="Зона" context="{'group_by': 'zone_id'}"/>
+                    <filter name="group_code" string="Верстат" context="{'group_by': 'code'}"/>
+                    <filter name="group_week" string="Тиждень" context="{'group_by': 'date:week'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_oee_shift_form" model="ir.ui.view">
+        <field name="name">f3d.oee.shift.form</field>
+        <field name="model">f3d.oee.shift</field>
+        <field name="arch" type="xml">
+            <form string="OEE за зміну" create="0" edit="0" delete="0">
+                <header>
+                    <button name="action_recompute" type="object" string="Перерахувати"
+                            groups="factory3d_base.group_f3d_manager"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Зміна">
+                            <field name="machine_id"/>
+                            <field name="code"/>
+                            <field name="zone_id"/>
+                            <field name="date"/>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                            <field name="source"/>
+                            <field name="has_data"/>
+                            <field name="computed_at"/>
+                        </group>
+                        <group string="Показники">
+                            <field name="oee_color" invisible="1"/>
+                            <field name="availability" widget="percentage"/>
+                            <field name="performance" widget="percentage"/>
+                            <field name="performance_raw" widget="percentage"/>
+                            <field name="quality" widget="percentage"/>
+                            <field name="oee" widget="percentage"/>
+                            <field name="coverage" widget="percentage"/>
+                            <field name="incomplete"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Час">
+                            <field name="ppt_min"/>
+                            <field name="planned_stop_min"/>
+                            <field name="nodata_min"/>
+                            <field name="run_min"/>
+                            <field name="run_wo_min"/>
+                            <field name="setup_min"/>
+                            <field name="fault_min"/>
+                            <field name="idle_min"/>
+                            <field name="off_min"/>
+                            <field name="unexplained_min"/>
+                            <field name="down_min"/>
+                            <field name="ideal_min"/>
+                        </group>
+                        <group string="Кількість">
+                            <field name="qty_total"/>
+                            <field name="qty_bad"/>
+                            <field name="qty_good"/>
+                        </group>
+                    </group>
+                    <group string="Втрати">
+                        <field name="losses" widget="json" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_oee_period_sum" model="ir.actions.server">
+        <field name="name">OEE за період</field>
+        <field name="model_id" ref="model_f3d_oee_shift"/>
+        <field name="binding_model_id" ref="model_f3d_oee_shift"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_oee_period()</field>
+        <field name="group_ids" eval="[(4, ref('factory3d_base.group_f3d_user'))]"/>
+    </record>
+</odoo>
