@@ -5,3 +5,5 @@ access_wh_project_version_view,wh.project.version view,model_wh_project_version,
 access_wh_project_version_design,wh.project.version design,model_wh_project_version,group_wh_design,1,0,1,0
 access_wh_zone_lock_view,wh.zone.lock view,model_wh_zone_lock,group_wh_view,1,0,0,0
 access_wh_zone_lock_design,wh.zone.lock design,model_wh_zone_lock,group_wh_design,1,1,1,1
+access_wh_library_view,wh.library view,model_wh_library,group_wh_view,1,0,0,0
+access_wh_library_design,wh.library design,model_wh_library,group_wh_design,1,1,1,1

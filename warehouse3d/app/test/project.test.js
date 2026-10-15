@@ -201,8 +201,8 @@ test("миграция: правки формата W-01 / прототипа д
   a.ops.rotate(`${GP}/R1`); a.ops.del(`${GP}/R2`); a.ops.move([{ id: `${FUR}/R1`, x: 5, y: 5 }]);
   await a.save("WH");
   a.ops.dup(`${FUR}/R3`); a.ops.rack(GP, { tp: "FG", nb: 1, nl: 1 });
-  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; delete old.prop; delete old.building; // слой прежнего формата — без ячеек, глубины и свойств
-  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.bld; delete p.diff.bi; delete p.diff.bn; });
+  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; delete old.prop; delete old.building; delete old.cfg; // слой прежнего формата — без ячеек, глубины, свойств, здания и параметров рядов
+  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.bld; delete p.diff.bi; delete p.diff.bn; delete p.diff.cfg; });
   assert.deepEqual(Object.keys(old).sort(), ["add", "del", "pos", "rot", "set", "types", "v"]);
   assert.equal(a.pending.length, 2);
   const storage = createMemoryStorage({}, { legacy: { edit: old, pending: pend } });

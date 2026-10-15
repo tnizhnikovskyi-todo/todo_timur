@@ -5,6 +5,10 @@ import path from "node:path";
 import { createI18n, DICTS } from "../src/i18n/index.js";
 import { BASE_TYPES, FORM_IDS, PICKS } from "../src/core/types.js";
 import { HELP_SECTIONS } from "../src/view/help.js";
+import { CATALOG, CATALOG_GROUPS } from "../src/core/catalog.js";
+import { SHAPES, SHAPE_KEYS, VARIANTS } from "../src/core/params.js";
+
+const SHAPE_KEYS_ALL = Object.values(SHAPE_KEYS).flat();
 import { fresh, node, FUR } from "./helpers.js";
 
 const { uk, en } = DICTS;
@@ -29,6 +33,14 @@ test("каждый ключ, который код просит у t(), есть
   for (const k of ["level", "cell", "inherit"]) used.add(`depth.${k}`);
   for (const b of BASE_TYPES) used.add(`type.${b.id}`);
   for (const k of PICKS) used.add(`pick.${k}`);
+  for (const k of [...new Set([...SHAPE_KEYS_ALL])]) used.add(`par.${k}`);
+  for (const k of VARIANTS) used.add(`var.${k}`);
+  for (const k of "NESW") used.add(`dir.${k}`);
+  for (const k of SHAPES) used.add(`shape.${k}`);
+  for (const k of ["all", ...CATALOG_GROUPS]) used.add(`types.grp.${k}`);
+  for (const k of [0, 1, 2]) used.add(`types.fac.${k}`);
+  for (const k of ["catalog", "project", "lib"]) used.add(`types.tab.${k}`);
+  for (const c of CATALOG) { used.add(`cat.${c.id}`); used.add(`catd.${c.id}`); }
   for (const k of ["col", "wall", "gate", "dock", "door", "office", "charge", "aisle", "contour"]) used.add(`bld.kind.${k}`);
   for (const k of ["select", "vertex", "ruler"]) used.add(`bld.tool.${k}`);
   for (const k of ["select", "put", "line", "rect", "vertex", "ruler"]) used.add(`bld.hint.${k}`);

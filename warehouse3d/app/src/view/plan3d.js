@@ -3,6 +3,7 @@
 // (матрица лежит в общем буфере mats); paint() решает, какие элементы видны и подсвечены, и собирает матрицы по группам (compose).
 import { inNode } from "../core/types.js";
 import { isSel } from "../core/select.js";
+import { levelBase, levelH, levelsTop, shapeOf } from "../core/params.js";
 import { esc, reducedMotion, slotCls } from "./util.js";
 import { createBuilding3D } from "./building3d.js";
 
@@ -26,16 +27,19 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   scene.add(sun);
   let W0 = W1, D0 = D1;
   const X = (x) => x - W0 / 2, Z = (y) => y - D0 / 2;
+  const box = new T.BoxGeometry(1, 1, 1), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 20), cone = new T.ConeGeometry(0.5, 1, 20);
   const bld3 = createBuilding3D({ T, scene, X, Z }); // план здания (W-04): контур, стены, колонны, проёмы
-  const box = new T.BoxGeometry(1, 1, 1), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 20);
   const themed = [], TM = (token, opts = {}) => { const m = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05, ...opts }); themed.push([m, token]); return m; };
   const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: TM("--ok"), warn: TM("--warn"), bad: TM("--bad"), area: TM("--idle", { transparent: true, opacity: 0.32 }), crate: TM("--idle") };
+  const wallM = TM("--steel", { metalness: 0.2, transparent: true, opacity: 0.5 });
   const hlM = TM("--accent"), steel = TM("--steel", { metalness: 0.4, roughness: 0.5 }), beam = TM("--beam"), upright = TM("--upright", { metalness: 0.3 }), wood = TM("--wood");
   const floorM = TM("--floor", { roughness: 1 }), lineM = TM("--mark", { roughness: 1 });
   const items = [], byCode = new Map(), G = new T.Group(); scene.add(G);
   let groups = [], pickMeshes = [], allMeshes = [], mats = new Float32Array(4096 * 16);
   const _m = new T.Matrix4(), _p = new T.Vector3(), _s = new T.Vector3(), Q0 = new T.Quaternion();
   const QX = new T.Quaternion().setFromEuler(new T.Euler(Math.PI / 2, 0, 0)), QZ = new T.Quaternion().setFromEuler(new T.Euler(0, 0, Math.PI / 2));
+  const QFLIP = new T.Quaternion().setFromEuler(new T.Euler(Math.PI, 0, 0)), AX = new T.Vector3(1, 0, 0), AZ = new T.Vector3(0, 0, 1);
+  const qa = (axis, a) => new T.Quaternion().setFromAxisAngle(axis, a);
   const push = (geo, mat, nodeId, px, py, pz, q, sx, sy, sz, { cast = true, recv = true } = {}) => {
     const i = items.length;
     if ((i + 1) * 16 > mats.length) { const n = new Float32Array(mats.length * 2); n.set(mats); mats = n; }
@@ -56,23 +60,70 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const t = Math.max(0.06, Math.min(0.18, n.w / 300)), c = { cast: false };
     for (const [x, y, w, d] of [[n.x, n.y, n.w, t], [n.x, n.y + n.d - t, n.w, t], [n.x, n.y, t, n.d], [n.x + n.w - t, n.y, t, n.d]]) add(box, lineM, n.id, x, y, w, d, 0.02, 0.005 + n.depth * 0.002, c);
   };
+  // стос: сетка gx × gy блоков в основании (по умолчанию один блок на всё основание)
+  const stackBlocks = (n, f, mat, hh, base, code, full = false) => {
+    const gx = Math.max(1, f.gx || 1), gy = Math.max(1, f.gy || 1), ins = full ? 0 : 0.1, gap = gx * gy > 1 ? 0.06 : 0, cw = (n.w - 2 * ins) / gx, cd = (n.d - 2 * ins) / gy;
+    let last = null;
+    for (let i = 0; i < gx; i++) for (let j = 0; j < gy; j++) last = reg(add(box, mat, n.id, n.x + ins + i * cw + gap / 2, n.y + ins + j * cd + gap / 2, cw - gap, cd - gap, hh, base), code);
+    return last;
+  };
+  // новые 3D-формы W-05 для места на полу: ограждение / камера, цилиндр / бункер, мобильный носитель, ворота / док; mat — материал состояния (место / новое / несохранённое)
+  const SHAPE_LEAF = ["enclosure", "cylinder", "mobile", "gate"];
+  const shapeLeaf = (n, sh, mat, code, draft) => {
+    const f = model.tree.EP(n), h = f.h > 0 ? f.h : 1.2, body = draft ? mat : wallM;
+    reg(add(box, status.area, n.id, n.x, n.y, n.w, n.d, 0.03, 0, { cast: false }), code);
+    if (sh === "enclosure") {
+      const th = Math.min(f.th || 0.1, n.w / 4, n.d / 4), wl = typeof f.wl === "string" ? f.wl : "NESW", door = f.door || "S", dw = Math.min(1.2, (door === "N" || door === "S" ? n.w : n.d) * 0.4);
+      const wall = (x, y, w, d) => reg(add(box, body, n.id, x, y, w, d, h, 0.03, { cast: false }), code);
+      for (const s of wl) {
+        const horiz = s === "N" || s === "S", len = horiz ? n.w : n.d, a = s === "N" || s === "W" ? 0 : (horiz ? n.d : n.w) - th;
+        const seg = (u, l) => (horiz ? wall(n.x + u, n.y + a, l, th) : wall(n.x + a, n.y + u, th, l));
+        if (s === door) { const g0 = (len - dw) / 2; seg(0, g0); seg(g0 + dw, g0); } else seg(0, len);
+      }
+      return;
+    }
+    if (sh === "cylinder") {
+      const dia = Math.min(n.w, n.d), cx = X(n.x + n.w / 2), cz = Z(n.y + n.d / 2), ch = f.cone ? Math.min(h * 0.3, dia * 0.6) : 0;
+      reg(push(cyl, mat, n.id, cx, ch + (h - ch) / 2, cz, Q0, dia, h - ch, dia), code);
+      if (ch) reg(push(cone, mat, n.id, cx, ch / 2, cz, QFLIP, dia, ch, dia), code);
+      return;
+    }
+    if (sh === "mobile") {
+      const top = Math.max(0.3, h);
+      reg(add(box, steel, n.id, n.x, n.y, n.w, n.d, 0.06, 0.12), code);
+      if (f.wheels) for (const [dx, dy] of [[0.1, 0.1], [n.w - 0.1, 0.1], [0.1, n.d - 0.1], [n.w - 0.1, n.d - 0.1]]) reg(push(cyl, steel, n.id, X(n.x + dx), 0.06, Z(n.y + dy), QZ, 0.12, 0.05, 0.12), code);
+      for (let i = 0; i < Math.min(4, f.walls || 0); i++) { // стенки: задняя, левая, правая, передняя
+        if (i === 0) reg(add(box, wallM, n.id, n.x, n.y, n.w, 0.03, top - 0.18, 0.18), code);
+        else if (i === 3) reg(add(box, wallM, n.id, n.x, n.y + n.d - 0.03, n.w, 0.03, top - 0.18, 0.18), code);
+        else reg(add(box, wallM, n.id, n.x + (i === 1 ? 0 : n.w - 0.03), n.y, 0.03, n.d, top - 0.18, 0.18), code);
+      }
+      for (let i = 0; i < (f.shelves || 0); i++) reg(add(box, steel, n.id, n.x + 0.02, n.y + 0.02, n.w - 0.04, n.d - 0.04, 0.03, 0.18 + ((top - 0.3) * (i + 1)) / (f.shelves + 1)), code);
+      for (let i = 0; i < (f.slots || 0); i++) reg(add(box, wood, n.id, n.x + ((i + 0.5) * n.w) / f.slots - 0.015, n.y + 0.05, 0.03, n.d - 0.1, top - 0.2, 0.18), code);
+      return;
+    }
+    // ворота / док: два косяка и перемычка; проём между ними
+    const jw = Math.min(0.25, n.w / 6);
+    reg(add(box, body, n.id, n.x, n.y, jw, n.d, h, 0.03, { cast: false }), code); reg(add(box, body, n.id, n.x + n.w - jw, n.y, jw, n.d, h, 0.03, { cast: false }), code);
+    reg(add(box, body, n.id, n.x + jw, n.y, n.w - 2 * jw, n.d, 0.25, h - 0.22, { cast: false }), code);
+  };
   const content = (n) => {
-    const tree = model.tree, TY = tree.TY;
+    const tree = model.tree, TY = tree.TY, EP = tree.EP;
     const code = n.loc, l = tree.loc(code), cls = slotCls(l).split(" ")[0], m = status[cls] || status.area, qty = l.quants.reduce((s, q) => s + q.qty, 0);
     const bay = bayOf(tree, n);
     const empty = (base) => reg(add(box, status.bad, n.id, bay.x + 0.04, bay.y + 0.04, bay.w - 0.08, bay.d - 0.08, 0.03, base, { cast: false }), code);
     if (l.draft) { // новое место — полупрозрачный объём (бирюзовый, пока не сохранено)
       const nm = l.pend ? status.pend : status.new;
-      if (n.type === "cell") { const f = TY(n.tp); return reg(add(box, nm, n.id, n.x + 0.04, n.y + 0.05, n.w - 0.08, n.d - 0.1, Math.max(0.05, f.lh - 0.16), n.lvl * f.lh + 0.08), code); }
-      if (n.type === "level") { const f = TY(n.tp); return reg(add(box, nm, n.id, bay.x + 0.06, bay.y + 0.05, bay.w - 0.12, bay.d - 0.1, Math.max(0.05, f.lh - 0.16), n.lvl * f.lh + 0.08), code); }
-      if (n.type === "bayleaf") return reg(add(box, nm, n.id, n.x + 0.1, n.y + 0.1, n.w - 0.2, n.d - 0.2, 0.3, 0), code);
+      if (n.type === "cell") { const f = EP(n); return reg(add(box, nm, n.id, n.x + 0.04, n.y + 0.05, n.w - 0.08, n.d - 0.1, Math.max(0.05, levelH(f, n.lvl) - 0.16), levelBase(f, n.lvl) + 0.08), code); }
+      if (n.type === "level") { const f = EP(n); return reg(add(box, nm, n.id, bay.x + 0.06, bay.y + 0.05, bay.w - 0.12, bay.d - 0.1, Math.max(0.05, levelH(f, n.lvl) - 0.16), levelBase(f, n.lvl) + 0.08), code); }
+      if (n.type === "bayleaf") { const f = EP(n); return stackBlocks(n, f, nm, f.h > 0 ? Math.max(0.3, f.h * 0.6) : 0.3, 0, code); }
+      if (n.type === "group" && SHAPE_LEAF.includes(shapeOf(TY(n.tp)))) return shapeLeaf(n, shapeOf(TY(n.tp)), nm, code, true);
       return reg(add(box, nm, n.id, n.x, n.y, n.w, n.d, 0.06, 0, { cast: false }), code);
     }
     if (n.type === "level") {
-      const f = TY(n.tp), base = n.lvl * f.lh + 0.08;
+      const f = EP(n), base = levelBase(f, n.lvl) + 0.08, lh = levelH(f, n.lvl);
       if (f.form === "rolls") {
         if (!qty) return empty(base);
-        const r = Math.min(0.26, (f.lh - 0.12) / 2), k = Math.max(1, Math.round(3 * (l.fill || 0.2)));
+        const r = Math.min(f.dia > 0 ? f.dia / 2 : 0.26, (lh - 0.12) / 2), k = Math.max(1, Math.round(3 * (l.fill || 0.2)));
         const along = bay.rot ? bay.d : bay.w, deep = bay.rot ? bay.w : bay.d;
         const kk = Math.max(1, Math.min(k, Math.floor((along - 0.14) / (r * 2 + 0.06))));
         for (let i = 0; i < kk; i++) {
@@ -84,7 +135,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
       if (f.form === "pallet") {
         const along = bay.rot ? bay.d : bay.w, pw = Math.min(1.2, along - 0.2), fit = Math.max(1, Math.floor((along - 0.1) / (pw + 0.1)));
         const k = Math.min(2, fit, l.quants.length ? Math.max(1, Math.round((l.fill || 0) * 2)) : 0); if (!k) return empty(base);
-        const ph = Math.max(0.2, Math.min(1.0, f.lh - 0.4));
+        const ph = Math.max(0.2, Math.min(1.0, lh - 0.4));
         for (let i = 0; i < k; i++) {
           const a = 0.1 + i * (pw + 0.1);
           if (bay.rot) { add(box, wood, n.id, bay.x + 0.05, bay.y + a, bay.w - 0.1, pw, 0.14, base, { cast: false }); reg(add(box, m, n.id, bay.x + 0.1, bay.y + a + 0.05, bay.w - 0.2, pw - 0.1, ph, base + 0.14), code); }
@@ -93,13 +144,14 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
         return;
       }
       if (!qty) return empty(base);
-      const hh = l.fill != null ? Math.max(0.04, (f.lh - 0.1) * (l.fill || 0.1)) : Math.max(0.03, Math.min(f.lh - 0.1, qty * 0.016));
+      const hh = l.fill != null ? Math.max(0.04, (lh - 0.1) * (l.fill || 0.1)) : Math.max(0.03, Math.min(lh - 0.1, qty * 0.016));
       return reg(add(box, m, n.id, bay.x + 0.06, bay.y + 0.05, bay.w - 0.12, bay.d - 0.1, hh, base), code);
     }
     if (n.type === "bayleaf") {
-      add(box, wood, n.id, n.x + 0.2, n.y + 0.2, n.w - 0.4, n.d - 0.4, 0.1, 0, { cast: false }); if (!qty) return empty(0.1);
-      return reg(add(box, m, n.id, n.x, n.y, n.w, n.d, Math.max(0.03, qty * 0.017), 0.1), code);
+      const f = EP(n); add(box, wood, n.id, n.x + 0.2, n.y + 0.2, n.w - 0.4, n.d - 0.4, 0.1, 0, { cast: false }); if (!qty) return empty(0.1);
+      return stackBlocks(n, f, m, Math.max(0.03, Math.min(f.h > 0 ? f.h : 9, qty * 0.017)), 0.1, code, true);
     }
+    if (n.type === "group" && SHAPE_LEAF.includes(shapeOf(TY(n.tp)))) return shapeLeaf(n, shapeOf(TY(n.tp)), m, code, false);
     // зоны, тележки, палеты: плитка + ящики по числу позиций
     reg(add(box, status.area, n.id, n.x, n.y, n.w, n.d, 0.04, 0, { cast: false }), code);
     const kit = /^(KIT|FRONTS)-/.test(code), cnt = Math.min(kit ? 3 : 6, l.quants.length);
@@ -109,13 +161,66 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
       reg(add(box, status.crate, n.id, n.x + 0.15 + (i % 3) * (cw + 0.04), n.y + 0.15 + Math.floor(i / 3) * (cd + 0.1), cw, Math.min(cd, (n.d - 0.4) / Math.ceil(cnt / 3)), kit ? 0.5 : 0.8, kit ? 0.41 : 0.04), code);
     }
   };
+  // стеллаж: стойки и балки; тип с вариантом яруса (params.js VARIANTS) и шкаф-машина рисуются своей формой
   const structure = (n) => {
     if (n.type !== "bay") return;
-    const f = model.tree.TY(n.tp), top = n.nLv * f.lh + 0.15, fg = f.form === "pallet", post = fg ? upright : steel, pw = fg ? 0.09 : 0.05;
-    for (const dx of [0, n.w]) for (const dy of [0, n.d]) add(box, post, n.id, n.x + dx - pw / 2, n.y + dy - pw / 2, pw, pw, top);
-    for (let l = 0; l < n.nLv; l++) for (const dd of n.rot ? [0, n.w] : [0, n.d]) {
-      if (n.rot) add(box, fg ? beam : steel, n.id, n.x + dd - 0.04, n.y, 0.08, n.d, 0.08, l * f.lh, { cast: false });
-      else add(box, fg ? beam : steel, n.id, n.x, n.y + dd - 0.04, n.w, 0.08, 0.08, l * f.lh, { cast: false });
+    const f = model.tree.EP(n), top = levelsTop(f, n.nLv) + 0.15, fg = f.form === "pallet", post = fg ? upright : steel, pw = fg ? 0.09 : 0.05, bt = f.bt > 0 ? f.bt : 0.08, sh = shapeOf(f);
+    if (!f.v && sh !== "cabinet") {
+      for (const dx of [0, n.w]) for (const dy of [0, n.d]) add(box, post, n.id, n.x + dx - pw / 2, n.y + dy - pw / 2, pw, pw, top);
+      for (let l = 0; l < n.nLv; l++) for (const dd of n.rot ? [0, n.w] : [0, n.d]) {
+        const b = levelBase(f, l);
+        if (n.rot) add(box, fg ? beam : steel, n.id, n.x + dd - 0.04, n.y, 0.08, n.d, bt, b, { cast: false });
+        else add(box, fg ? beam : steel, n.id, n.x, n.y + dd - 0.04, n.w, 0.08, bt, b, { cast: false });
+      }
+      return;
+    }
+    // локальные координаты: u вдоль фронта, v вглубь (у повёрнутого ряда оси меняются местами)
+    const U = n.rot ? n.d : n.w, V = n.rot ? n.w : n.d, rot = n.rot, id = n.id, lv = Array.from({ length: n.nLv }, (_, l) => levelBase(f, l));
+    const bx = (mat, u, v, su, sv, h, base, o) => (rot ? add(box, mat, id, n.x + v, n.y + u, sv, su, h, base, o) : add(box, mat, id, n.x + u, n.y + v, su, sv, h, base, o));
+    const along = (mat, v, y, len, r) => push(cyl, mat, id, rot ? X(n.x + v) : X(n.x + len / 2), y, rot ? Z(n.y + len / 2) : Z(n.y + v), rot ? QX : QZ, r * 2, len, r * 2); // цилиндр вдоль фронта
+    const deepRod = (mat, u, y, r) => push(cyl, mat, id, rot ? X(n.x + V / 2) : X(n.x + u), y, rot ? Z(n.y + u) : Z(n.y + V / 2), rot ? QZ : QX, r * 2, V, r * 2); // цилиндр вглубь
+    const nc = Math.max(1, (n.kids[0] && n.kids[0].cells) || f.pos || 1), c = { cast: false };
+    if (sh === "cabinet") { // шкаф-машина: корпус с открытым окном спереди и лотками по ярусам
+      const t = 0.05;
+      bx(steel, 0, 0, t, V, top, 0); bx(steel, U - t, 0, t, V, top, 0); bx(steel, 0, V - t, U, t, top, 0); bx(steel, 0, 0, U, V, t, top - t, c);
+      for (const b of lv) bx(wood, t, 0.02, U - 2 * t, V - 0.04, 0.02, b, c);
+      return;
+    }
+    const v = f.v;
+    if (v === "cant") { // консоли: колонны сзади, консоли вперёд
+      for (const u of [0, U]) bx(post, u - pw / 2, V - pw, pw, pw, top, 0);
+      for (const b of lv) for (const u of [0.1, U / 2, U - 0.1]) bx(steel, u - 0.025, 0, 0.05, V, 0.05, b, c);
+      return;
+    }
+    if (v === "aframe") { // А-рама: две наклонные панели сходятся вверху
+      const h = top - 0.15, ex = Math.min(V / 2, h / Math.tan(((f.ang || 75) * Math.PI) / 180)), L = Math.hypot(h, ex), th = Math.atan2(ex, h);
+      for (const side of [0, 1]) {
+        const dir = side ? -1 : 1, off = side ? V - ex / 2 : ex / 2, q = rot ? qa(AZ, -dir * th) : qa(AX, dir * th);
+        push(box, steel, id, rot ? X(n.x + off) : X(n.x + U / 2), h / 2, rot ? Z(n.y + U / 2) : Z(n.y + off), q, rot ? 0.04 : U, L, rot ? U : 0.04);
+      }
+      bx(wood, 0, 0, U, V, 0.06, 0, c);
+      return;
+    }
+    if (v === "hang") { // вешала: стойки и штанга сверху
+      for (const u of [0, U]) bx(post, u - pw / 2, V / 2 - pw / 2, pw, pw, top);
+      along(steel, V / 2, top - 0.1, U, 0.02);
+      return;
+    }
+    if (v === "honey") { // соты: вертикальные перегородки по числу ячеек
+      for (let i = 0; i <= nc; i++) bx(wood, Math.min(U - 0.03, Math.max(0, (U * i) / nc - 0.015)), 0, 0.03, V, top - 0.1, 0);
+      for (const b of lv) bx(steel, 0, 0, U, V, 0.03, b, c);
+      return;
+    }
+    // стойки; ярус — балки (beam), полка (deck), рельсы канала с уклоном (rails) или штанги (rod)
+    for (const dx of [0, U]) for (const dy of [0, V]) bx(post, dx - pw / 2, dy - pw / 2, pw, pw, top);
+    const tilt = v === "rails" && f.slope > 0 ? Math.atan(f.slope / 100) : 0;
+    for (const b of lv) {
+      if (v === "rails") for (const u of [0.05, U - 0.05]) {
+        if (tilt) push(box, steel, id, rot ? X(n.x + V / 2) : X(n.x + u), b + 0.03, rot ? Z(n.y + u) : Z(n.y + V / 2), rot ? qa(AZ, tilt) : qa(AX, tilt), rot ? V : 0.06, 0.05, rot ? 0.06 : V, c);
+        else bx(steel, u - 0.03, 0, 0.06, V, 0.05, b, c);
+      } else if (v === "rod") for (let i = 0; i < nc; i++) deepRod(steel, (U * (i + 0.5)) / nc, b + 0.03, 0.02);
+      else for (const dd of [0, V - 0.08]) bx(fg ? beam : steel, 0, dd, U, 0.08, bt, b, c);
+      if (v === "deck") bx(steel, 0, 0, U, V, 0.03, b, c);
     }
   };
   const walk = (n) => {
@@ -161,7 +266,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   function makeLabels() {
     const tree = model.tree, f = tree.nodes.get(model.ui.focus), items = f.kids.length ? f.kids : [f];
     lblItems = items.map((k) => ({ k, p: new T.Vector3(X(k.x + k.w / 2), (k.h || 1) + 0.25, Z(k.y + (k.type === "level" || k.type === "cell" ? k.d / 2 : 0.3))) }));
-    if (f.type === "bay") lblItems.forEach((it) => { it.p.set(X(f.x) - 0.15, it.k.lvl * tree.TY(f.tp).lh + 0.25, Z(f.y + f.d / 2)); });
+    if (f.type === "bay") lblItems.forEach((it) => { it.p.set(X(f.x) - 0.15, levelBase(tree.EP(f), it.k.lvl) + 0.25, Z(f.y + f.d / 2)); });
     lbl.innerHTML = lblItems.map((it) => `<span data-focus="${esc(it.k.id)}" title="${esc(i18n.t("plan.focusOnly"))}">${esc(i18n.node(it.k))}</span>`).join("");
     lbl.querySelectorAll("[data-focus]").forEach((s) => s.onclick = () => model.focusTo(s.dataset.focus));
   }
@@ -205,7 +310,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   let anim = 0;
   function fit(instant = false) {
     const tree = model.tree, n = tree.nodes.get(model.ui.focus), bay = bayOf(tree, n);
-    const cx = X(bay.x + bay.w / 2), cz = Z(bay.y + bay.d / 2), cy = n.type === "level" || n.type === "cell" ? n.lvl * tree.TY(n.tp).lh + 0.3 : Math.min(2, (n.h || 1) / 3);
+    const cx = X(bay.x + bay.w / 2), cz = Z(bay.y + bay.d / 2), cy = n.type === "level" || n.type === "cell" ? levelBase(tree.EP(n), n.lvl) + 0.3 : Math.min(2, (n.h || 1) / 3);
     const aspect = vp.clientWidth / Math.max(1, vp.clientHeight), fov = (camera.fov * Math.PI) / 180;
     const span = Math.max(bay.w / Math.max(aspect, 0.5), bay.d * 1.4, (n.h || 1) * 1.6, 1.6);
     const dist = (span / 2) / Math.tan(fov / 2) * 1.2;

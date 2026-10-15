@@ -179,6 +179,35 @@ svg text.dlab:hover { text-decoration: underline; }
 .o_list.ty input[name=id] { width: 72px; }
 .o_list.ty input[name=name] { min-width: 170px; }
 
+/* каталог типов (W-05) */
+.o_modal_wide { width: min(1180px, 100%); }
+.o_tabs { display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid var(--o-border); }
+.o_tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--o-muted); font: 14px var(--f-body); padding: 8px 12px; cursor: pointer; }
+.o_tab[aria-selected="true"] { color: var(--o-text); border-bottom-color: var(--o-brand); font-weight: 500; }
+.cat-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.cat-bar input[type=search] { flex: 1 1 260px; }
+.chk { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px !important; font-size: 13px; color: var(--o-text) !important; }
+.chk input, .ed-form input[type=checkbox], .o_modal input[type=checkbox] { width: auto; }
+.cat-grps { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.cat-main { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 14px; align-items: start; }
+.cat-list { list-style: none; margin: 0; padding: 0; max-height: 52vh; overflow: auto; border: 1px solid var(--o-border); border-radius: 4px; }
+.cat-it { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-bottom: 1px solid var(--o-border); background: transparent; color: var(--o-text); font: 13px var(--f-body); padding: 6px 8px; text-align: left; cursor: pointer; }
+.cat-it:hover { background: var(--o-btn2); } .cat-it.on { background: var(--accent-soft); }
+.cat-it .ref { flex: none; width: 34px; color: var(--o-muted); font-size: 12px; } .cat-it .nm { flex: 1; min-width: 0; } .cat-it .fm { flex: none; color: var(--o-muted); }
+.cat-card { min-width: 0; max-height: 52vh; overflow: auto; padding-right: 4px; }
+.cat-card h4 { margin: 0; font-size: 16px; font-weight: 500; }
+.cat-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+.cat-pv { flex: 0 0 240px; border: 1px solid var(--o-border); border-radius: 4px; background: var(--o-bg); }
+.cat-meta { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13px; } .cat-meta dt { color: var(--o-muted); } .cat-meta dd { margin: 0; }
+.cat-params, .cat-place { margin-bottom: 8px; } .cat-params label { flex-basis: 120px; }
+.ed-aux { margin: 0; }
+svg.pv { display: block; width: 100%; height: auto; color: var(--o-text); }
+.pv-s { fill: none; stroke: var(--steel); stroke-width: 1.5; } .pv-d { fill: none; stroke: var(--steel); stroke-width: 1; stroke-dasharray: 3 2; }
+.pv-b { fill: var(--beam); stroke: none; } .pv-f { fill: var(--steel); fill-opacity: 0.55; stroke: var(--steel); stroke-width: 1; } .pv-t { fill: var(--o-muted); font: 11px var(--f-body); stroke: none; }
+.pv-g { stroke: var(--idle); stroke-width: 1; } .pv-z { fill: none; stroke: var(--mark); stroke-width: 1; stroke-dasharray: 5 3; } .pv-h { fill: url(#pvh); stroke: var(--idle); stroke-width: 1; } .pv-hl { stroke: var(--idle); stroke-width: 1; }
+svg .shp { fill: none; stroke: var(--steel); stroke-width: 1; pointer-events: none; vector-effect: non-scaling-stroke; } svg .shp.dash { stroke-dasharray: 4 2; } svg .shp.fillj { fill: var(--steel); }
+@media (max-width: 900px) { .cat-main { grid-template-columns: 1fr; } .cat-list, .cat-card { max-height: none; } }
+
 /* уведомления */
 #o_notifs { position: fixed; top: 60px; right: 16px; z-index: 80; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); }
 .o_notif { display: flex; gap: 10px; align-items: flex-start; background: var(--o-bg); color: var(--o-text); border: 1px solid var(--o-border); border-left: 4px solid var(--ok); border-radius: 4px; padding: 10px 8px 10px 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); font-size: 14px; animation: notifIn 0.2s ease-out; transition: opacity 0.3s, transform 0.3s; }

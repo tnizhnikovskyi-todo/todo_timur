@@ -190,3 +190,28 @@ test("buildSnapshot: пустые ответы дают пустой, но по�
   assert.deepEqual(Object.keys(s), Object.keys(DATA));
   assert.deepEqual(s.locations, {});
 });
+
+test("снимок Odoo + каталог типов W-05: дерево строится, reloadBase сохраняет слои prop / building / cfg", async () => {
+  const { snap } = await load();
+  const bases = { [odooRef(1)]: snap };
+  const project = projectFromWarehouses([{ id: 1, code: "WH1", name: "Склад 1", company: "Co" }], { id: "odoo-1", name: "P" });
+  const model = createModel(project, createMemoryStorage(), { bases });
+  const zone = "WH1/Stock/Фурнітура", R1 = `${zone}/R1`;
+  assert.ok(model.types.import("R01"), "тип из каталога импортирован");
+  model.ops.rack(zone, { tp: "R01", nb: 2, nl: 2 });
+  assert.ok(model.tree.types.has("R01"));
+  assert.ok([...model.tree.nodes.values()].some((n) => n.draft && n.tp === "R01"), "ряд типа каталога построен");
+  model.ops.rackcfg(R1, { w: 3.6, gap: 0.5 });
+  model.ops.props(R1, { name: "Ряд А" }, "k");
+  assert.equal(model.bld.ops.create({ margin: 3 }), true);
+  await model.save("WH");
+  const snapEdit = () => JSON.parse(JSON.stringify({ cfg: model.edit.cfg, prop: model.edit.prop, building: model.edit.building, types: model.edit.types }));
+  const before = snapEdit();
+  assert.ok(before.cfg.length && before.prop.length && before.building && before.types);
+  const next = JSON.parse(JSON.stringify(snap)); next.locations["PLT-01A"].quants = [];
+  bases[odooRef(1)] = next;
+  model.reloadBase();
+  assert.deepEqual(snapEdit(), before);
+  assert.ok(model.tree.types.has("R01") && model.building);
+  assert.equal(model.data.locations["PLT-01A"].quants.length, 0);
+});

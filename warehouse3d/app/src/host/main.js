@@ -65,7 +65,8 @@ async function start() {
     };
     const odooWhs = () => (adapter ? project.warehouses.filter((w) => odooIdOf(w.baseRef) != null) : []);
     await pullBases(odooWhs());
-    const model = createModel(project, storage, { bases, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType") }) });
+    let library = null; try { library = storage.listLibrary ? await storage.listLibrary() : null; } catch (e) { /* без общей библиотеки: типы каталога доступны, шаблоны — только после записи */ }
+    const model = createModel(project, storage, { bases, library, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType"), newTpl: i18n.t("word.newTpl") }) });
     const hostOdoo = odoo && {
       canRefresh: odooWhs().length > 0,
       async newProject() { try { if (await newOdooProject()) location.reload(); } catch (e) { console.error(e); model.notify("bad", "n.odooProjectFail", { msg: String(e.message || e) }); } },
