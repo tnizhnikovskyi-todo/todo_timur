@@ -1,7 +1,10 @@
 import logging
+from datetime import timedelta
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError
 
+from ..tools import ppt
 from .f3d_machine import STATES, local
 
 _logger = logging.getLogger(__name__)
@@ -60,7 +63,46 @@ class F3dMachineStateLog(models.Model):
                 local(rec.date_end, "%H:%M") or "…",
             )
 
+    def _f3d_is_admin(self):
+        return self.env.su or self.env.user.has_group("factory3d_base.group_f3d_admin")
+
+    def _f3d_close(self, ts):
+        """R-04 п. 3: закрити інтервал, порахувати плановий час і хвилини завдання; повторно — нічого."""
+        for rec in self:
+            if rec.date_end:
+                continue
+            end = max(ts, rec.date_start)
+            minutes = (end - rec.date_start).total_seconds() / 60
+            in_ppt = ppt.total_min(ppt.ppt_intervals(self.env, rec.workcenter_id.sudo(), rec.date_start, end))
+            rec.write({"date_end": end, "in_ppt_min": in_ppt})
+            wo = rec.workorder_id.sudo()
+            if wo and rec.state in ("working", "setup"):
+                field = "f3d_run_min" if rec.state == "working" else "f3d_setup_min"
+                wo.write({field: wo[field] + minutes})
+
+    def write(self, vals):
+        if {"state", "date_start", "machine_id"} & set(vals) and not self._f3d_is_admin():
+            raise AccessError(_("Журнал станів змінює лише адміністратор."))
+        return super().write(vals)
+
+    def unlink(self):
+        if not self._f3d_is_admin():
+            raise AccessError(_("Журнал станів видаляє лише адміністратор."))
+        return super().unlink()
+
     @api.model
     def _cron_rotate(self):
-        """R-14 п. 6 (ротація журналів). Каркас: нічого не робить; реалізує W1."""
+        """R-14 п. 6 (ротація журналів): закриті інтервали старші за `keep_log_days`."""
+        days = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.machine_connect.keep_log_days", "400"))
+        limit = fields.Datetime.now() - timedelta(days=days)
+        old = self.sudo().search([("date_end", "!=", False), ("date_end", "<", limit)])
+        if old:
+            old.unlink()
+        ev_days = int(
+            self.env["ir.config_parameter"].sudo().get_param("factory3d.machine_connect.keep_event_days", "90")
+        )
+        ev_limit = fields.Datetime.now() - timedelta(days=ev_days)
+        events = self.env["f3d.machine.event"].sudo().search([("ts", "<", ev_limit)])
+        if events:
+            events.unlink()
         return True

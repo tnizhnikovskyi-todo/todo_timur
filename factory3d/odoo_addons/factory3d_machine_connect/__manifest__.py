@@ -23,6 +23,8 @@
         "data/mc_sources.xml",
         "data/ir_cron.xml",
         "data/f3d_actions.xml",
+        "views/f3d_machine_views.xml",
+        "views/f3d_machine_state_log_views.xml",
         "views/menus.xml",
     ],
     "demo": [],
