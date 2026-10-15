@@ -1,0 +1,22 @@
+# SPEC §8.1.2: закріплено «==» те, що встановлено у .venv при збиранні W1a;
+# не встановлені ще (протокольні воркери) — мінімальні версії.
+fastapi==0.143.1
+uvicorn[standard]==0.54.0
+httpx==0.28.1
+pydantic==2.14.1
+pydantic-settings==2.16.0
+astral==3.2
+PyYAML==6.0.3
+cryptography>=44
+prometheus-client>=0.21
+paho-mqtt==2.1.0
+# протокольні бібліотеки додають воркери відповідних протоколів:
+pymodbus==3.9.2
+bacpypes3==0.0.102
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-timeout==2.4.0
+pytest-cov==7.1.0
+ruff==0.17.0
+python-multipart>=0.0.20
+asyncua==1.1.6

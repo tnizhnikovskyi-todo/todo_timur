@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_mrp_workcenter_form_f3d_sim" model="ir.ui.view">
+    <field name="name">mrp.workcenter.form.f3d.sim</field>
+    <field name="model">mrp.workcenter</field>
+    <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
+    <field name="arch" type="xml">
+      <xpath expr="//div[@name='button_box']" position="inside">
+        <button name="action_f3d_sim_open_device" type="object" class="oe_stat_button" icon="fa-microchip"
+                invisible="not f3d_sim_device_id">
+          <field name="f3d_sim_device_id" invisible="1"/>
+          <field name="f3d_sim_state" widget="statinfo" string="Емулятор"/>
+        </button>
+      </xpath>
+    </field>
+  </record>
+</odoo>

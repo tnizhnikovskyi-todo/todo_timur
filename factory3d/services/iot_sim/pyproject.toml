@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iot_sim"
+version = "0.1.0"
+description = "Емулятор обладнання factory3d"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[project.scripts]
+iot-sim = "iot_sim.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["iot_sim*"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+timeout = 60
+markers = ["stand: тести проти compose-стенду", "unit: юніт-тести без мережі"]
+addopts = "-m 'not stand'"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["iot_sim"]
+
+[[tool.mypy.overrides]]
+# asyncua і bacpypes3 не мають заглушок/py.typed (X-91)
+module = ["asyncua.*", "bacpypes3.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# модулі, що наслідують класи bacpypes3/asyncua (Any без заглушок)
+module = ["iot_sim.protocols.bacnet_server", "iot_sim.protocols.opcua_server"]
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="view_f3d_sim_run_list" model="ir.ui.view">
+    <field name="name">f3d.sim.run.list</field>
+    <field name="model">f3d.sim.run</field>
+    <field name="arch" type="xml">
+      <list string="Запуски" create="false"
+            decoration-info="state in ('queued', 'running')" decoration-danger="state == 'failed'"
+            decoration-muted="state in ('done', 'stopped')">
+        <field name="name"/>
+        <field name="scenario_id"/>
+        <field name="state"/>
+        <field name="user_id"/>
+        <field name="start_ts"/>
+        <field name="stop_ts"/>
+        <field name="duration_s"/>
+        <button name="action_stop" type="object" string="Зупинити" icon="fa-stop"
+                invisible="state not in ('queued', 'running')"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_f3d_sim_run_form" model="ir.ui.view">
+    <field name="name">f3d.sim.run.form</field>
+    <field name="model">f3d.sim.run</field>
+    <field name="arch" type="xml">
+      <form string="Запуск сценарію" create="false">
+        <header>
+          <button name="action_stop" type="object" string="Зупинити"
+                  invisible="state not in ('queued', 'running')"/>
+          <field name="state" widget="statusbar" statusbar_visible="queued,running,done"/>
+        </header>
+        <sheet>
+          <div class="oe_title"><h1><field name="name"/></h1></div>
+          <group>
+            <group>
+              <field name="scenario_id" readonly="1"/>
+              <field name="user_id" readonly="1"/>
+              <field name="start_ts" readonly="1"/>
+              <field name="stop_ts" readonly="1"/>
+              <field name="duration_s"/>
+            </group>
+            <group>
+              <field name="sim_run_id" readonly="1"/>
+              <field name="params" widget="json" readonly="1"/>
+              <field name="message" readonly="1"/>
+            </group>
+          </group>
+          <notebook>
+            <page string="Події" name="events">
+              <field name="event_ids" readonly="1">
+                <list>
+                  <field name="ts"/>
+                  <field name="kind"/>
+                  <field name="device_code"/>
+                  <field name="message"/>
+                </list>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+        <chatter/>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_f3d_sim_run_search" model="ir.ui.view">
+    <field name="name">f3d.sim.run.search</field>
+    <field name="model">f3d.sim.run</field>
+    <field name="arch" type="xml">
+      <search string="Запуски">
+        <field name="name"/>
+        <field name="scenario_id"/>
+        <filter name="filter_active" string="Активні" domain="[('state', 'in', ['queued', 'running', 'stopping'])]"/>
+        <filter name="filter_failed" string="Невдалі" domain="[('state', '=', 'failed')]"/>
+        <group>
+          <filter name="group_scenario" string="Сценарій" context="{'group_by': 'scenario_id'}"/>
+          <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+          <filter name="group_user" string="Користувач" context="{'group_by': 'user_id'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_f3d_sim_run" model="ir.actions.act_window">
+    <field name="name">Запуски сценаріїв</field>
+    <field name="res_model">f3d.sim.run</field>
+    <field name="view_mode">list,form</field>
+  </record>
+</odoo>

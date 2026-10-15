@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+  <record id="param_f3d_iot_sim_url" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.url</field>
+    <field name="value"></field>
+  </record>
+  <record id="param_f3d_iot_sim_token" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.token</field>
+    <field name="value"></field>
+  </record>
+  <record id="param_f3d_iot_sim_export_token" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.export_token</field>
+    <field name="value"></field>
+  </record>
+  <record id="param_f3d_iot_sim_read_enabled" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.read_enabled</field>
+    <field name="value">True</field>
+  </record>
+  <record id="param_f3d_iot_sim_write_enabled" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.write_enabled</field>
+    <field name="value">False</field>
+  </record>
+  <record id="param_f3d_iot_sim_mode" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.mode</field>
+    <field name="value">follow_odoo</field>
+  </record>
+  <record id="param_f3d_iot_sim_level0_enabled" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.level0_enabled</field>
+    <field name="value">True</field>
+  </record>
+  <record id="param_f3d_iot_sim_level0_after_min" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.level0_after_min</field>
+    <field name="value">5</field>
+  </record>
+  <record id="param_f3d_iot_sim_timeout_s" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.timeout_s</field>
+    <field name="value">5</field>
+  </record>
+  <record id="param_f3d_iot_sim_keep_days" model="ir.config_parameter">
+    <field name="key">factory3d.iot_sim.keep_days</field>
+    <field name="value">14</field>
+  </record>
+</odoo>
