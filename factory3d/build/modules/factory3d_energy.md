@@ -1,9 +1,9 @@
 # factory3d_energy
-Статус: IN_PROGRESS
-Тесты: 109/109 (и совместно с base/telemetry/viewer/iot_sim) (2026-10-15), ТК: прогнаны частично (TEST_REPORT.md)
-Решений без заказчика: 17 (ниже)
+Статус: DONE (юнит-DoD); стенд частично — ТК-01/05/11, ТБ 6/6, ТП 5/6 зелёные; ТК-02/07/08/09 FAIL (эмулятор/сценарий), ТК-03/04/06/10/12 skip
+Тесты: Odoo 111/111 (/factory3d_energy; чистая база и совместно с base/telemetry/telemetry_viewer/iot_sim, 2026-10-15); ruff check/format OK; ТК: прогнаны частично (TEST_REPORT.md, AC_COVERAGE.md)
+Решений без заказчика: 18 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: правки SPEC: AC-32 (DEC-8), R-16 п.6 380 В (DEC-15), R-17 ключи (DEC-16)
+Требует внимания человека: правки SPEC AC-32 (DEC-8), R-16 п.6 380 В (DEC-15), R-17 ключи (DEC-16), ТК-02 ожидание ≥30 мин; повтор ТП-01 после D-1; демо-копия (AC-13, AC-53, AC-88, ТК-03/04, UT на копии демо); td_genset (ТК-06); viewer (ТК-12, MAN AC-63/65/76); ТК-10 (90 мин); DEPLOY_TEST этап 1; дефекты iot_sim: PM-Q2 reg 3059 ≠ REST, BESS заряжается из сети (ТК-07/08/09); мост factory3d_energy_mrp_workorder не нужен (V-16 на CE mrp)
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
@@ -14,7 +14,7 @@
 | W4 | принят | 6c2b011 | /factory3d_energy 73/73 |
 | W5 | принят | ce2b4df | /factory3d_energy 109/109 |
 | W6 | принят (таймбокс менеджера) | f97a7f7 | стенд: ТК 01,05,11 зел.; 02,07,08,09 FAIL; 03,04,06,10,12 skip; ТБ 6/6; ТП 5/6 (ТП-01 FAIL→D-1) |
-| DoD | в работе | — | D-1, O-2, O-4, README, AC_COVERAGE |
+| DoD | принят | 5fa28a9 | 111/111; D-1 перф профиля (≤40 SQL/99 слотов), O-2 OperationalError пробрасывается, README/CHANGELOG, AC_COVERAGE 92/92 |
 
 ## Решения без заказчика
 - DEC-1 (ENV-2): `mrp_workorder` (Enterprise) убран из `depends`; `time_ids` и V-16 — из CE `mrp`; что нет в CE — мост `factory3d_energy_mrp_workorder` (не тестирован — нет Enterprise) — `__manifest__.py`
@@ -34,3 +34,4 @@
 - DEC-15: `consumers.i_now` считается при 380 В (R-16 п.6 говорит 400 В; AC-64 12,18 кВт / 0,84 = 22 А сходится только при 380) — правка SPEC — `tools/payload.py`
 - DEC-16: `infra.totals` всегда содержит `shed_kw` (0 без отключения) и `bess_mode` — их требует AC-59, в списке R-17 их нет — `tools/payload.py`
 - DEC-17: цена тарифа и `contract_kw` в payload читаются через sudo (только чтение; group_f3d_user тарифы не читает); настройки (res.config.settings) — только base.group_system, f3d_admin без system их не открывает (по §5 ARCH admin входит в system) — `tools/payload.py`, `models/res_config_settings.py`
+- DEC-18: O-4 — `data_state='reset'` держится 24 ч после последнего сброса — по SPEC R-21, не дефект; стендовый ТК-02 падает из-за собственного сброса ТК-11b — `models/f3d_energy_meter.py`
