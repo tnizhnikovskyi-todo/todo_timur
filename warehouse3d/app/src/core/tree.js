@@ -63,6 +63,11 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   // ряд, повёрнутый на 90°: стеллажи идут вглубь, а не вдоль
   const setRot = (n) => { n.rot = true; n.kids.forEach(setRot); };
   for (const r of edit.rot || []) { const n = nodes.get(r.id); if (n && n.type === "rack") setRot(n); }
+  // переопределения параметров ряда (edit.cfg, params.js OV_KEYS) действуют на ряд и всё внутри него; EP(n) — параметры узла: тип + переопределения
+  const setOv = (n, ov) => { n.ov = ov; n.kids.forEach((k) => setOv(k, ov)); };
+  for (const c of edit.cfg || []) { const n = nodes.get(c.id); if (n && n.type === "rack") { const { id, ...o } = c; setOv(n, o); } }
+  const epc = new Map();
+  const EP = (n) => { if (!n.ov) return TY(n.tp); let e = epc.get(n.ov); if (!e) { e = { ...TY(n.tp), ...n.ov }; epc.set(n.ov, e); } return e; };
   // убранные в модели узлы — вместе со всем, что внутри
   const drop = (n) => { removed.push({ id: n.id, name: n.name, parent: n.parent, type: n.type, tp: n.tp, loc: n.loc }); nodes.delete(n.id); if (n.loc && byCode.get(n.loc) === n) byCode.delete(n.loc); n.kids.forEach(drop); };
   for (const id of edit.del) { const n = nodes.get(id); if (!n || !n.parent) continue; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); }
@@ -79,6 +84,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
       const code = `${base}-${i}`, k = node(`${n.id}/${i}`, String(i), n.id), pd = pendCells.has(n.id) || !!n.pend;
       Object.assign(k, { type: "cell", tp: n.tp, lvl: n.lvl, ci: i - 1, loc: code, draft: true, pend: pd });
       if (n.rot) k.rot = true;
+      if (n.ov) k.ov = n.ov;
       byCode.set(code, k);
       draftLoc[code] = { complete_name: k.id, kind: "internal", quants: [], capacity: null, fill: null, state: null, draft: true, pend: pd };
     }
@@ -92,8 +98,8 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   };
   walk(nodes.get("WH"));
   const loc = (c) => data.locations[c] || draftLoc[c];
-  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells].map((x) => x.id));
-  return { nodes, byCode, root: nodes.get("WH"), types, TY, draftLoc, pos, pend, loc, removed, contained, changed, W0: 0, D0: 0 };
+  const changed = new Set([...edit.pos, ...edit.set, ...edit.rot, ...edit.cells, ...(edit.cfg || [])].map((x) => x.id));
+  return { nodes, byCode, root: nodes.get("WH"), types, TY, EP, draftLoc, pos, pend, loc, removed, contained, changed, W0: 0, D0: 0 };
 }
 
 export const pathOf = (tree, n) => { const p = []; for (let x = n; x; x = x.parent && tree.nodes.get(x.parent)) p.unshift(x); return p; };

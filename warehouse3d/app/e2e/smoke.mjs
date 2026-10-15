@@ -214,6 +214,70 @@ try {
     await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
     await page.click("#ed-tg"); // выйти из режима редактирования
   });
+  await step("каталог типов: найти, добавить в зону, параметры ряда, шаблон → вставить, библиотека", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000);
+    pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    pg.on("console", (m) => { if (m.type() === "error") pageErrors.push(`console.error: ${m.text()}`); });
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#ed-tg"); await pg.click("#ed-types");
+    await pg.waitForSelector("#types-dlg .cat-it");
+    expect((await pg.locator("#types-dlg .cat-it").count()) === 50, "в каталоге не 50 типов");
+    expect((await pg.locator("#types-dlg .cat-grps .o_chip").count()) === 6, "нет групп каталога");
+    await pg.check("#types-dlg [data-fac]");
+    expect((await pg.locator("#types-dlg .cat-it").count()) === 41, "фильтр фабрики: не 41 тип (24 + 17)");
+    await pg.uncheck("#types-dlg [data-fac]");
+    await pg.fill("#types-dlg [data-q]", "рулон");
+    await pg.waitForFunction(() => document.querySelectorAll("#types-dlg .cat-it").length === 1);
+    await pg.click('#types-dlg .cat-it[data-cat="R19"]');
+    expect((await pg.locator("#types-dlg .cat-pv svg").count()) === 1, "нет превью формы");
+    expect((await pg.locator('#types-dlg .cat-params input[name="lv"]').count()) === 1, "нет параметров в карточке");
+    await pg.click("#types-dlg [data-import]");
+    await pg.waitForSelector('#types-dlg .cat-params input[name="name"]'); // тип в проекте — параметры редактируются
+    await pg.fill('#types-dlg .cat-params input[name="cap"]', "500"); await pg.dispatchEvent('#types-dlg .cat-params input[name="cap"]', "change");
+    const zid = await pg.locator("#types-dlg .cat-place [data-zone] option", { hasText: "Фурнітура" }).first().getAttribute("value");
+    await pg.selectOption("#types-dlg .cat-place [data-zone]", zid);
+    await pg.fill('#types-dlg .cat-place input[name="nb"]', "2");
+    await pg.click("#types-dlg [data-place]");
+    await pg.click("#types-dlg [data-close]");
+    await pg.waitForFunction(() => !document.querySelector("#types-dlg"));
+    await pg.click("#ed-saveall");
+    await pg.waitForFunction(() => { const w = JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved; return w.add.some((a) => a.tp === "R19") && w.types.some((t) => t.id === "R19" && t.cap === 500); });
+    // 2D и 3D рисуют новую конструкцию
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Фурнітура");
+    const kids = pg.locator("#plan-side .ed-kids [data-esel]");
+    await kids.last().click();
+    await pg.waitForFunction(() => /^Ряд /.test(document.querySelector("#plan-side h2")?.textContent || "") && document.querySelector("#plan-side [data-tplsave]"));
+    await pg.click('#seg-mode [data-m="2d"]');
+    expect((await pg.locator("#vp svg rect.s:visible").count()) > 0, "новый ряд не нарисован в 2D");
+    await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForSelector("#vp canvas:not([hidden])"); await pg.waitForTimeout(400);
+    await pg.click('#seg-mode [data-m="2d"]');
+    // параметры конкретного ряда: двусторонний ряд
+    const d0 = await pg.evaluate(() => document.querySelector("#plan-side .ed-info")?.textContent || "");
+    await pg.check('#plan-side form[data-op="rackcfg"] input[name="dbl"]');
+    await pg.click('#plan-side form[data-op="rackcfg"] [data-show]');
+    await pg.waitForFunction((x) => (document.querySelector("#plan-side .ed-info")?.textContent || "") !== x, d0);
+    await pg.keyboard.press("Control+KeyZ");
+    // сохранить ряд как шаблон и вставить
+    await pg.fill("#plan-side .ed-aux input", "Мій ряд e2e"); await pg.click("#plan-side [data-tplsave]");
+    await pg.waitForFunction(() => /e2e/.test(localStorage.getItem("wh-app-library") || ""));
+    await pg.click('#plan-side .o_chips [data-esel]:has-text("Фурнітура")');
+    await pg.waitForSelector('#plan-side form[data-op="template"]');
+    expect((await pg.locator('#plan-side form[data-op="template"] option', { hasText: "Мій ряд e2e" }).count()) === 1, "шаблона нет в списке");
+    await pg.fill('#plan-side form[data-op="template"] input[name="cnt"]', "2");
+    await pg.click('#plan-side form[data-op="template"] button[type="submit"]');
+    await pg.waitForFunction(() => { const w = JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved; return w.add.filter((a) => a.kind === "rack" && a.tp === "R19").length === 3; });
+    const rep = await pg.evaluate(() => { const w = JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved, ids = w.add.map((a) => a.id), codes = w.add.filter((a) => a.code).map((a) => a.code); return [ids.length === new Set(ids).size, codes.length === new Set(codes).size, JSON.parse(localStorage.getItem("wh-app-library")).templates.length]; });
+    expect(rep[0] && rep[1], "имена или коды после вставки шаблона не уникальны");
+    expect(rep[2] === 1, "в библиотеке не один шаблон");
+    // библиотека общая: в другом проекте/складе браузера (та же страница после перезагрузки) шаблон на месте
+    await pg.reload(); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#ed-tg"); await pg.click("#ed-types"); await pg.click('#types-dlg [data-tab="lib"]');
+    expect((await pg.locator("#types-dlg [data-tid]").count()) === 1, "шаблон не виден в библиотеке после перезагрузки");
+    await ctx.close();
+  });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
     await p2.goto(url);
