@@ -232,7 +232,7 @@ def test_tp04_gantry_and_maps(fresh, sim):
                 {
                     "event_id": hashlib.sha256(uuid.uuid4().bytes).hexdigest(), "route": "mc_woodstore",
                     "ts": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"), "remote": "REST-WOODSTORE", "headers": {},
-                    "payload": {"kind": "stacks", "source": "REST-WOODSTORE", "items": ws_items},
+                    "payload": {"kind": "stacks", "source": "REST-WOODSTORE", "hash": "ab" * 32, "items": ws_items},
                 }
             ]
         }  # fmt: skip

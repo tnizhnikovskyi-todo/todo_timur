@@ -1,10 +1,13 @@
 """AC-47…AC-51: звірка стосу порталу, статус і стоси woodStore, дії, поповнення."""
 
+import hashlib
 import json
+import uuid
+from datetime import datetime
 from unittest.mock import patch
 
 from odoo.exceptions import AccessError, UserError
-from odoo.tests import tagged
+from odoo.tests import HttpCase, tagged
 
 from .common import P, F3DMachineCase
 
@@ -229,3 +232,105 @@ class TestGantryStack(F3DMachineCase):
         self.assertEqual(s.odoo_qty, 50)
         acts = self.acts(s).filtered(lambda a: a.summary.startswith("Оновіть стос PLT-T1 у woodStore"))
         self.assertEqual(len(acts), 1)
+
+    def test_ev02_stacks_27_like_adapter(self):
+        """ТП-04: EV-02 `stacks` на 27 стосів, payload як від адаптера woodstore (kind/hash/items)."""
+        wh = self.env["stock.warehouse"].search([("company_id", "=", self.env.company.id)], limit=1)
+        stacks = self.stack_t1 | self.stack_t2
+        for i in range(25):
+            loc = self.env["stock.location"].create(
+                {
+                    "name": "PLT-W%02d" % i,
+                    "location_id": wh.lot_stock_id.id,
+                    "f3d_code": "PLT-W%02d" % i,
+                    "f3d_loc_kind": "stack",
+                    "f3d_capacity": 60,
+                }
+            )
+            stacks |= self.env["f3d.gantry.stack"].create({"location_id": loc.id})
+        items = [
+            {
+                "id": s.code,
+                "row": 1 + i // 6,
+                "col": 1 + i % 6,
+                "product": "DSP16-SON",
+                "lot": "DSP16-SON-2610-%03d" % i,
+                "qty": 20 + i,
+                "max": 60,
+                "reserved": 0,
+                "locked": False,
+                "updated": "2026-10-15T10:30:00+03:00",
+            }
+            for i, s in enumerate(stacks)
+        ]
+        self.assertEqual(len(items), 27)
+        res = self.push_event("mc_woodstore", {"kind": "stacks", "source": SRC, "hash": "ab" * 32, "items": items}, SRC)
+        self.assertEqual(res["accepted"], 1)
+        ev = self.env["f3d.push.event"].sudo().search([("route", "=", "mc_woodstore")], limit=1)
+        self.assertFalse(ev.error)
+        self.assertEqual(self.stack_t2.ws_qty, 21)
+        self.assertEqual(self.stack_t1.ws_qty, 20)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_machine_connect")
+class TestGantryStackHttp(HttpCase):
+    def test_ev02_stacks_27_http(self):
+        """ТП-04: POST /f3d/telemetry/event з EV-02 `stacks` (27 стосів) → 200, 27 стосів оновлено."""
+        env = self.env
+        env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.read_enabled", "True")
+        token = "tp04-" + uuid.uuid4().hex
+        env["f3d.collector"].create(
+            {"code": "COL-TP04", "name": "ТП-04", "token_hash": hashlib.sha256(token.encode()).hexdigest()}
+        )
+        wh = env["stock.warehouse"].search([("company_id", "=", env.company.id)], limit=1)
+        stacks = env["f3d.gantry.stack"]
+        items = []
+        for i in range(27):
+            code = "PLT-H%02d" % i
+            loc = env["stock.location"].create(
+                {
+                    "name": code,
+                    "location_id": wh.lot_stock_id.id,
+                    "f3d_code": code,
+                    "f3d_loc_kind": "stack",
+                    "f3d_capacity": 60,
+                }
+            )
+            stacks |= env["f3d.gantry.stack"].create({"location_id": loc.id})
+            items.append(
+                {
+                    "id": code,
+                    "row": 1 + i // 6,
+                    "col": 1 + i % 6,
+                    "product": "DSP16-SON",
+                    "lot": "DSP16-SON-2610-%03d" % i,
+                    "qty": 20 + i,
+                    "max": 60,
+                    "reserved": 0,
+                    "locked": False,
+                    "updated": datetime.now().astimezone().isoformat(),
+                }
+            )
+        body = {
+            "events": [
+                {
+                    "event_id": hashlib.sha256(uuid.uuid4().bytes).hexdigest(),
+                    "route": "mc_woodstore",
+                    "ts": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    "remote": "REST-WOODSTORE",
+                    "headers": {},
+                    "payload": {"kind": "stacks", "source": "REST-WOODSTORE", "hash": "ab" * 32, "items": items},
+                }
+            ]
+        }
+        resp = self.url_open(
+            "/f3d/telemetry/event",
+            data=json.dumps(body),
+            headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"},
+        )
+        self.assertEqual(resp.status_code, 200, resp.text[:300])
+        self.assertEqual(resp.json()["accepted"], 1)
+        ev = env["f3d.push.event"].sudo().search([("route", "=", "mc_woodstore")], limit=1)
+        self.assertFalse(ev.error)
+        stacks.invalidate_recordset()
+        self.assertEqual(sorted(stacks.mapped("ws_qty")), list(range(20, 47)))
