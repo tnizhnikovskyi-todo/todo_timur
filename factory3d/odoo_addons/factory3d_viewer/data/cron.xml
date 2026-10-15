@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Крони (SPEC §6) додаються разом із методами моделей: cron_f3d_snapshot, cron_f3d_rotate,
+         cron_f3d_signal_bus, cron_f3d_demo. -->
+</odoo>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Решта пунктів V-01 (знімки, події, перевірка циклу, демо, налаштування) додаються разом із діями. -->
+    <menuitem id="menu_f3d_viewer" name="Переглядач" parent="factory3d_base.menu_f3d_root" sequence="10"
+              action="action_f3d_viewer" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_journal" name="Журнал станів" parent="factory3d_base.menu_f3d_root" sequence="12"
+              groups="factory3d_base.group_f3d_manager"/>
+</odoo>

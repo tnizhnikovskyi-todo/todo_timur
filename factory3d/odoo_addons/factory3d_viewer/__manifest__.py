@@ -1,0 +1,25 @@
+{
+    "name": "Завод 3D: переглядач",
+    "summary": "3D-переглядач заводу всередині Odoo: живі дані з ORM, «Показати в 3D», журнал станів, кіоск",
+    "version": "19.0.1.0.0",
+    "author": "ToDo",
+    "license": "LGPL-3",
+    "category": "Manufacturing/Manufacturing",
+    "website": "https://todo.ltd",
+    "depends": ["factory3d_base", "bus", "web"],
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "data/params.xml",
+        "data/actions.xml",
+        # kiosk_user.xml після actions.xml: користувач посилається на action_f3d_viewer
+        "security/kiosk_user.xml",
+        "data/cron.xml",
+        "views/menus.xml",
+    ],
+    "post_init_hook": "post_init",
+    "uninstall_hook": "uninstall",
+    "external_dependencies": {},
+    "installable": True,
+    "application": False,
+}
