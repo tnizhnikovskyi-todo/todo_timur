@@ -3,3 +3,4 @@ from . import f3d_bms_light_norm
 from . import f3d_bms_light_panel
 from . import f3d_bms_light_group
 from . import f3d_bms_light_scene
+from . import f3d_bms_hvac_unit, f3d_bms_heat_balance  # noqa: F401

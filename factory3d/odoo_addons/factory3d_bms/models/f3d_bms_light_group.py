@@ -48,12 +48,8 @@ class F3dBmsLightGroup(models.Model):
         string="Тип світильника",
         required=True,
     )
-    lumen = fields.Integer(
-        string="Світловий потік, лм", compute="_compute_fixture", store=True, readonly=False
-    )
-    watt = fields.Integer(
-        string="Потужність світильника, Вт", compute="_compute_fixture", store=True, readonly=False
-    )
+    lumen = fields.Integer(string="Світловий потік, лм", compute="_compute_fixture", store=True, readonly=False)
+    watt = fields.Integer(string="Потужність світильника, Вт", compute="_compute_fixture", store=True, readonly=False)
     n_fixtures = fields.Integer(string="Світильників встановлено", required=True, tracking=True)
     uf = fields.Float(
         string="Коефіцієнт використання UF",
@@ -71,9 +67,7 @@ class F3dBmsLightGroup(models.Model):
     e_calc_raw = fields.Float(compute="_compute_design", store=True, digits=(10, 3))
     e_calc = fields.Integer(string="Розрахункова освітленість, лк", compute="_compute_design", store=True)
     design_ok = fields.Boolean(string="Норму виконано", compute="_compute_design", store=True)
-    p_inst_kw = fields.Float(
-        string="Встановлена потужність, кВт", compute="_compute_design", store=True, digits=(8, 2)
-    )
+    p_inst_kw = fields.Float(string="Встановлена потужність, кВт", compute="_compute_design", store=True, digits=(8, 2))
     level_design = fields.Float(string="Рівень за проєктом", required=True, digits=(3, 2))
     control_mode = fields.Selection(
         [("shift", "DALI: зміна, 100 %"), ("presence", "DALI: присутність і денне світло")],
@@ -81,9 +75,7 @@ class F3dBmsLightGroup(models.Model):
         required=True,
     )
     check_off = fields.Boolean(string="Перевіряти «вимкнено в робочий час»", default=True)
-    check_norm = fields.Boolean(
-        string="Перевіряти норму", compute="_compute_check_norm", store=True, readonly=False
-    )
+    check_norm = fields.Boolean(string="Перевіряти норму", compute="_compute_check_norm", store=True, readonly=False)
     calendar_id = fields.Many2one(
         "resource.calendar",
         string="Робочий час",
@@ -168,17 +160,13 @@ class F3dBmsLightGroup(models.Model):
                 raise ValidationError("Пристроїв DALI %s, а світильників %s." % (count, rec.n_fixtures))
             for c, r, s, d1, _d2 in items:
                 if (c, r) != (rec.panel_id.cluster, rec.panel_id.router):
-                    raise ValidationError(
-                        "Адреса @%d.%d.%d.%d не належить щиту %s." % (c, r, s, d1, rec.panel_id.code)
-                    )
+                    raise ValidationError("Адреса @%d.%d.%d.%d не належить щиту %s." % (c, r, s, d1, rec.panel_id.code))
 
     @api.constrains("zone_id")
     def _check_zone_area(self):
         for rec in self:
             if rec.zone_id.area_m2 <= 0:
-                raise ValidationError(
-                    "Зона %s без контуру: площа 0 м², розрахунок неможливий." % rec.zone_id.f3d_code
-                )
+                raise ValidationError("Зона %s без контуру: площа 0 м², розрахунок неможливий." % rec.zone_id.f3d_code)
 
     # --- обчислення -----------------------------------------------------------------------------------
     @api.depends("passport_id", "fixture_kind")
@@ -368,10 +356,14 @@ class F3dBmsLightGroup(models.Model):
         sig_ids = groups.power_signal_id.ids
         sums = {}
         if sig_ids:
-            rows = self.env["f3d.reading.hour"].sudo()._read_group(
-                [("signal_id", "in", sig_ids), ("hour", ">=", date_from), ("hour", "<", date_to)],
-                ["signal_id"],
-                ["v_avg:sum"],
+            rows = (
+                self.env["f3d.reading.hour"]
+                .sudo()
+                ._read_group(
+                    [("signal_id", "in", sig_ids), ("hour", ">=", date_from), ("hour", "<", date_to)],
+                    ["signal_id"],
+                    ["v_avg:sum"],
+                )
             )
             sums = {sig.id: total for sig, total in rows}
         return {g.code: round(sums.get(g.power_signal_id.id, 0.0), 2) for g in groups}

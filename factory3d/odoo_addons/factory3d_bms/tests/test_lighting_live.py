@@ -16,14 +16,25 @@ class LiveCase(F3DBmsLightCase):
             "LT-SHEETS", "Z-SHEETS", "storage_floor", cls.lp1, 12, level_design=0.8, control_mode="presence"
         )
         cls.cut_sig = {}
-        for key, kind in (("level", "gauge"), ("p_now", "gauge"), ("scene", "gauge"), ("faults", "gauge"),
-                          ("faulty", "state"), ("check", "state")):
+        for key, kind in (
+            ("level", "gauge"),
+            ("p_now", "gauge"),
+            ("scene", "gauge"),
+            ("faults", "gauge"),
+            ("faulty", "state"),
+            ("check", "state"),
+        ):
             cls.cut_sig[key] = cls.mk_signal("lighting/groups/LT-CUT/" + key, kind)
-        cls.cut.write({
-            "level_signal_id": cls.cut_sig["level"].id, "power_signal_id": cls.cut_sig["p_now"].id,
-            "scene_signal_id": cls.cut_sig["scene"].id, "faults_signal_id": cls.cut_sig["faults"].id,
-            "faulty_signal_id": cls.cut_sig["faulty"].id, "check_signal_id": cls.cut_sig["check"].id,
-        })
+        cls.cut.write(
+            {
+                "level_signal_id": cls.cut_sig["level"].id,
+                "power_signal_id": cls.cut_sig["p_now"].id,
+                "scene_signal_id": cls.cut_sig["scene"].id,
+                "faults_signal_id": cls.cut_sig["faults"].id,
+                "faulty_signal_id": cls.cut_sig["faulty"].id,
+                "check_signal_id": cls.cut_sig["check"].id,
+            }
+        )
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_bms")
@@ -94,8 +105,13 @@ class TestPanel(LiveCase):
         self.assertEqual(self.lp2.state, "ok")
         col = self.env["f3d.collector"].create({"code": "COL-BMS", "name": "COL-BMS"})
         src = self.env["f3d.source"].create(
-            {"code": "HN-LP-2", "name": "HN-LP-2", "type": "helvarnet", "collector_id": col.id,
-             "params": {"host": "iot-sim", "port": 50000}}
+            {
+                "code": "HN-LP-2",
+                "name": "HN-LP-2",
+                "type": "helvarnet",
+                "collector_id": col.id,
+                "params": {"host": "iot-sim", "port": 50000},
+            }
         )
         self.lp2.source_id = src
         self.cr.execute("UPDATE f3d_source SET state = 'error' WHERE id = %s", [src.id])

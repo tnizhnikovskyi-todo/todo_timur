@@ -29,9 +29,7 @@ class F3dBmsLightPanel(models.Model):
     group_ids = fields.One2many("f3d.bms.light.group", "panel_id", string="Групи")
     group_count = fields.Integer(compute="_compute_totals", store=True)
     n_fixtures = fields.Integer(string="Світильників", compute="_compute_totals", store=True)
-    p_inst_kw = fields.Float(
-        string="Встановлена потужність, кВт", compute="_compute_totals", store=True, digits=(8, 1)
-    )
+    p_inst_kw = fields.Float(string="Встановлена потужність, кВт", compute="_compute_totals", store=True, digits=(8, 1))
     state_signal_id = fields.Many2one("f3d.signal", string="Сигнал: стан щита", ondelete="set null")
     meter_code = fields.Char(compute="_compute_meter_code")
     p_now_kw = fields.Float(string="Потужність зараз, кВт", digits=(8, 1), compute="_compute_live")

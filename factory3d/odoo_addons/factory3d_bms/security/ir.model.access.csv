@@ -7,3 +7,9 @@ access_f3d_bms_light_group_user,f3d.bms.light.group user,model_f3d_bms_light_gro
 access_f3d_bms_light_group_manager,f3d.bms.light.group manager,model_f3d_bms_light_group,factory3d_base.group_f3d_manager,1,1,1,1
 access_f3d_bms_light_scene_user,f3d.bms.light.scene user,model_f3d_bms_light_scene,factory3d_base.group_f3d_user,1,0,0,0
 access_f3d_bms_light_scene_manager,f3d.bms.light.scene manager,model_f3d_bms_light_scene,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_bms_hvac_unit_user,f3d.bms.hvac.unit user,model_f3d_bms_hvac_unit,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_hvac_unit_manager,f3d.bms.hvac.unit manager,model_f3d_bms_hvac_unit,factory3d_base.group_f3d_manager,1,1,1,1
+access_f3d_bms_heat_balance_user,f3d.bms.heat.balance user,model_f3d_bms_heat_balance,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_heat_balance_manager,f3d.bms.heat.balance manager,model_f3d_bms_heat_balance,factory3d_base.group_f3d_manager,1,1,1,0
+access_f3d_bms_heat_balance_line_user,f3d.bms.heat.balance.line user,model_f3d_bms_heat_balance_line,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_bms_heat_balance_line_manager,f3d.bms.heat.balance.line manager,model_f3d_bms_heat_balance_line,factory3d_base.group_f3d_manager,1,1,1,1

@@ -1,1 +1,2 @@
 # Чисті функції модуля (без ORM): lighting (W1), heat/rules (W2…W3)
+from . import hvac, heat  # noqa: F401

@@ -40,9 +40,7 @@ class TestGroupDesign(F3DBmsLightCase):
     def test_groups_match_macro(self):
         for code, zone, norm, panel, n, kind, n_req, e_calc, p_inst in self.ROWS:
             passport = self.pass_rack if kind == "highbay_rack" else self.pass_hb
-            g = self.mk_group(
-                code, zone, norm, getattr(self, panel), n, fixture_kind=kind, passport_id=passport.id
-            )
+            g = self.mk_group(code, zone, norm, getattr(self, panel), n, fixture_kind=kind, passport_id=passport.id)
             with self.subTest(code=code):
                 self.assertEqual(g.n_required, n_req)
                 self.assertEqual(g.e_calc, e_calc)
@@ -76,11 +74,20 @@ class TestGroupDesign(F3DBmsLightCase):
 
     def test_zone_without_polygon(self):
         with self.assertRaises(ValidationError):
-            self.env["f3d.bms.light.group"].create({
-                "code": "LT-T0", "name": "x", "zone_id": self.zone_empty.id, "norm_id": self.norms["t_300"].id,
-                "panel_id": self.lp1.id, "n_fixtures": 1, "fixture_kind": "highbay", "level_design": 1.0,
-                "control_mode": "shift", "dali_group": 999,
-            })
+            self.env["f3d.bms.light.group"].create(
+                {
+                    "code": "LT-T0",
+                    "name": "x",
+                    "zone_id": self.zone_empty.id,
+                    "norm_id": self.norms["t_300"].id,
+                    "panel_id": self.lp1.id,
+                    "n_fixtures": 1,
+                    "fixture_kind": "highbay",
+                    "level_design": 1.0,
+                    "control_mode": "shift",
+                    "dali_group": 999,
+                }
+            )
 
     def test_check_norm_default(self):
         g = self.mk_group("LT-T3", "Z-T1", "t_300", self.lp1, 3, control_mode="presence")

@@ -21,6 +21,8 @@
         "views/f3d_bms_light_panel_views.xml",
         "views/f3d_bms_light_group_views.xml",
         "views/f3d_bms_light_scene_views.xml",
+        "views/f3d_bms_hvac_unit_views.xml",
+        "views/f3d_bms_heat_balance_views.xml",
         "views/menus.xml",
     ],
     "demo": [],

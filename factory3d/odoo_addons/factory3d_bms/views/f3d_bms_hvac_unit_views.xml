@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_bms_hvac_unit_list" model="ir.ui.view">
+        <field name="name">f3d.bms.hvac.unit.list</field>
+        <field name="model">f3d.bms.hvac.unit</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="name" optional="hide"/>
+                <field name="kind"/>
+                <field name="zone_name"/>
+                <field name="mode_label"/>
+                <field name="state" widget="badge" decoration-success="state == 'on'"
+                       decoration-warning="state == 'standby'" decoration-danger="state == 'fault'"/>
+                <field name="airflow_m3h"/>
+                <field name="airflow_nom" optional="hide"/>
+                <field name="supply_c"/>
+                <field name="indoor_c"/>
+                <field name="heating_valve" widget="percentage"/>
+                <field name="heat_kw"/>
+                <field name="filter_dp_pa" decoration-danger="filter_dp_pa > 250"/>
+                <field name="filter_extract_dp_pa" optional="hide"/>
+                <field name="p_now_kw"/>
+                <field name="deviation" widget="badge" decoration-success="deviation == 'none'"
+                       decoration-danger="deviation in ('not_running', 'cold', 'fire', 'no_mains')"
+                       decoration-warning="deviation == 'no_data'"/>
+                <field name="request_count" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_hvac_unit_form" model="ir.ui.view">
+        <field name="name">f3d.bms.hvac.unit.form</field>
+        <field name="model">f3d.bms.hvac.unit</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D"/>
+                    <button name="action_open_command" type="object" string="Керування"
+                            groups="factory3d_bms.group_f3d_bms_operator"
+                            invisible="not f3d_bms_write_enabled or kind not in ('roofvent', 'ahu')"/>
+                </header>
+                <sheet>
+                    <field name="f3d_bms_write_enabled" invisible="1"/>
+                    <field name="request_ids" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_requests" type="object" class="oe_stat_button" icon="fa-wrench">
+                            <field name="request_count" widget="statinfo" string="Заявки"/>
+                        </button>
+                        <button name="action_view_deviations" type="object" class="oe_stat_button" icon="fa-warning">
+                            <field name="deviation_count" widget="statinfo" string="Відхилення"/>
+                        </button>
+                        <button name="action_view_readings" type="object" class="oe_stat_button" icon="fa-line-chart">
+                            <div class="o_stat_info"><span class="o_stat_text">Графіки</span></div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва"/></h1>
+                        <h2><field name="code" placeholder="RV-01"/></h2>
+                    </div>
+                    <group>
+                        <group string="Установка">
+                            <field name="kind"/>
+                            <field name="zone_id"/>
+                            <field name="x"/>
+                            <field name="y"/>
+                            <field name="equipment_id"/>
+                            <field name="passport_id"/>
+                            <field name="source_id"/>
+                            <field name="bacnet_device"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Номінали">
+                            <field name="airflow_nom"/>
+                            <field name="heat_nom_kw"/>
+                            <field name="p_inst_kw"/>
+                            <field name="fan_count"/>
+                            <field name="required_m3h" invisible="kind != 'exfan'"/>
+                            <field name="t_supply_design" invisible="kind != 'ahu'"/>
+                            <field name="mode_design"/>
+                            <field name="required_in_work"/>
+                            <field name="calendar_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="live" string="Зараз">
+                            <group>
+                                <group>
+                                    <field name="mode_label"/>
+                                    <field name="mode_code"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="airflow_m3h"/>
+                                    <field name="k" widget="percentage"/>
+                                    <field name="supply_c"/>
+                                    <field name="indoor_c"/>
+                                    <field name="heating_valve" widget="percentage"/>
+                                    <field name="heat_kw"/>
+                                    <field name="p_now_kw"/>
+                                </group>
+                                <group>
+                                    <field name="filter_dp_pa"/>
+                                    <field name="filter_extract_dp_pa"/>
+                                    <field name="setpoint_day_c"/>
+                                    <field name="setpoint_night_c"/>
+                                    <field name="room_pressure_pa" invisible="kind != 'ahu'"/>
+                                    <field name="deviation" widget="badge"/>
+                                    <field name="deviation_text"/>
+                                    <field name="live_ts"/>
+                                    <field name="stale"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page name="bacnet" string="BACnet">
+                            <group>
+                                <group>
+                                    <field name="airflow_signal_id"/>
+                                    <field name="supply_signal_id"/>
+                                    <field name="indoor_signal_id"/>
+                                    <field name="filter_signal_id"/>
+                                    <field name="filter_extract_signal_id"/>
+                                    <field name="valve_signal_id"/>
+                                    <field name="heat_signal_id"/>
+                                    <field name="power_signal_id"/>
+                                </group>
+                                <group>
+                                    <field name="mode_signal_id"/>
+                                    <field name="state_signal_id"/>
+                                    <field name="sp_day_signal_id"/>
+                                    <field name="sp_night_signal_id"/>
+                                    <field name="pressure_signal_id"/>
+                                    <field name="interlock_signal_id"/>
+                                    <field name="check_signal_id"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page name="note" string="Примітка">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_hvac_unit_kanban" model="ir.ui.view">
+        <field name="name">f3d.bms.hvac.unit.kanban</field>
+        <field name="model">f3d.bms.hvac.unit</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="kind" quick_create="false">
+                <field name="plan_state"/>
+                <field name="filter_dp_pa"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <strong><field name="code"/></strong>
+                            <span t-attf-class="badge text-bg-#{record.plan_state.raw_value == 'on' ? 'success' : record.plan_state.raw_value == 'alarm' ? 'danger' : 'secondary'}"><field name="plan_state"/></span>
+                        </div>
+                        <div class="text-muted"><field name="zone_name"/></div>
+                        <div><field name="mode_label"/></div>
+                        <div><field name="airflow_m3h"/> м³/год</div>
+                        <div t-attf-class="#{record.filter_dp_pa.raw_value > 250 ? 'text-danger' : ''}">Фільтр <field name="filter_dp_pa"/> Па</div>
+                        <div><field name="heat_kw"/> кВт</div>
+                        <button name="action_f3d_show" type="object" class="btn btn-link p-0">3D</button>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_bms_hvac_unit_search" model="ir.ui.view">
+        <field name="name">f3d.bms.hvac.unit.search</field>
+        <field name="model">f3d.bms.hvac.unit</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code"/>
+                <field name="zone_id"/>
+                <field name="kind"/>
+                <filter name="deviation" string="Відхилення"
+                        domain="[('deviation', 'in', ['not_running', 'cold', 'fire', 'no_mains'])]"/>
+                <filter name="filter_alarm" string="Фільтр понад норму"
+                        domain="[('filter_signal_id.status', '=', 'alarm')]"/>
+                <filter name="roofvent" string="Дахові установки" domain="[('kind', '=', 'roofvent')]"/>
+                <filter name="fans" string="Вентилятори" domain="[('kind', 'in', ['fan', 'exfan'])]"/>
+                <group>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                    <filter name="group_zone" string="Зона" context="{'group_by': 'zone_id'}"/>
+                    <filter name="group_mode" string="Режим за проєктом" context="{'group_by': 'mode_design'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_bms_hvac_unit" model="ir.actions.act_window">
+        <field name="name">Установки вентиляції</field>
+        <field name="res_model">f3d.bms.hvac.unit</field>
+        <field name="view_mode">list,kanban,form</field>
+    </record>
+</odoo>
