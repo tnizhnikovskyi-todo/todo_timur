@@ -2,8 +2,8 @@
 import { BASE_TYPES, FLOW, KIND_TYPE, NODE_TYPE_LABELED, zoneTp } from "./types.js";
 
 export const typeList = (edit) => edit.types || BASE_TYPES;
-// настройки склада, влияющие на дерево: глубина локаций (по умолчанию и по зонам) и код склада (подпись корня)
-export const cfgOf = (wh) => ({ depth: wh.depth, zones: wh.depthZones, code: wh.code });
+// настройки склада, влияющие на дерево, вне слоя правок: код склада (подпись корня); глубина локаций — часть слоя правок (edit.depth / edit.depthZones)
+export const cfgOf = (wh) => ({ code: wh.code });
 
 export function codeSegs(code) {
   let m;
@@ -17,7 +17,7 @@ export function codeSegs(code) {
 
 // Дерево: путь Odoo (complete_name) плюс уровни из кода места (ряд, стеллаж, ярус).
 // edit — слой правок (добавленные и убранные узлы, типы, положения, повороты, ячейки); pending — несохранённые изменения;
-// cfg — настройки склада (cfgOf): глубина локаций, переопределение по зонам, код склада.
+// cfg — настройки склада (cfgOf): код склада.
 export function buildTree(data, edit, pending = [], cfg = {}) {
   const types = new Map(typeList(edit).map((t) => [t.id, t]));
   const TY = (id) => types.get(id) || types.get("ZONE") || BASE_TYPES[9];
@@ -68,8 +68,8 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   for (const id of edit.del) { const n = nodes.get(id); if (!n || !n.parent) continue; const p = nodes.get(n.parent); p.kids = p.kids.filter((k) => k !== n); drop(n); }
   // ярусы: число ячеек и глубина локаций. Ярус с N > 1 ячеек при глубине «ячейка» перестаёт быть местом:
   // местами становятся его ячейки с кодами <код яруса>-1..N (сам ярус остаётся контейнером; в Odoo это его родитель)
-  const cellsOf = new Map(edit.cells.map((c) => [c.id, c.n])), zones = cfg.zones || {};
-  const depthOf = (n) => { for (let x = n.parent && nodes.get(n.parent); x; x = x.parent && nodes.get(x.parent)) if (zones[x.id]) return zones[x.id]; return cfg.depth || "level"; };
+  const cellsOf = new Map(edit.cells.map((c) => [c.id, c.n])), zones = Object.fromEntries(edit.depthZones.map((z) => [z.id, z.d]));
+  const depthOf = (n) => { for (let x = n.parent && nodes.get(n.parent); x; x = x.parent && nodes.get(x.parent)) if (zones[x.id]) return zones[x.id]; return edit.depth || "level"; };
   for (const n of [...nodes.values()]) {
     if (n.type !== "level") continue;
     n.cells = cellsOf.get(n.id) || 1; n.ldepth = depthOf(n);

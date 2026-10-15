@@ -18,9 +18,9 @@ export function demoBase2(meta = {}) {
 }
 
 // Демо-проект: склад WH из снимка Odoo и синтетический WH2. Дата загрузки — из метаданных снимка (now — запасная)
-export function demoProject(bases, now = "") {
+export function demoProject(bases, now = "", id = "demo") {
   const m = (bases[DEMO_REFS.main] || {}).meta || {};
-  return createProject({ id: "demo", name: "Демо: меблева фабрика", source: { kind: "file", name: "data.json (знімок Odoo)" }, loaded_at: m.pulled_at || now,
+  return createProject({ id, name: "Демо: меблева фабрика", source: { kind: "file", name: "data.json (знімок Odoo)" }, loaded_at: m.pulled_at || now,
     warehouses: [
       { id: "wh-1", code: m.warehouse || "WH", name: m.warehouse || "WH", company: m.company || "", baseRef: DEMO_REFS.main },
       { id: "wh-2", code: "WH2", name: "Демо-склад 2", company: m.company || "", baseRef: DEMO_REFS.second },

@@ -180,9 +180,18 @@ try {
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0]);
   await step("ячейки на ярусе: глубина → показать → сохранить → перезагрузка", async () => {
     await page.click("#ed-tg");
-    await page.waitForSelector("#plan-side select[data-depth]");
-    await page.selectOption("#plan-side select[data-depth]", "cell");
-    await page.waitForFunction(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].depth === "cell");
+    await page.waitForSelector('#plan-side form[data-op="depth"]');
+    const dsel = '#plan-side form[data-op="depth"] select[name="depth"]', saved = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.depth);
+    await page.selectOption(dsel, "cell");
+    await page.click('#plan-side form[data-op="depth"] [data-show]'); // глубина — обычная правка: сначала показ, не сохранено
+    await page.waitForSelector("#plan-side .ed-pend");
+    expect((await saved()) === null, "глубина сохранилась без «Зберегти»");
+    await page.keyboard.press("Control+KeyZ"); // и отменяется
+    await page.waitForFunction(() => !document.querySelector("#plan-side .ed-pend"));
+    expect((await page.inputValue(dsel)) === "level", "после отмены глубина не «Ярус»");
+    await page.selectOption(dsel, "cell");
+    await page.click('#plan-side form[data-op="depth"] button[type="submit"]');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved.depth === "cell");
     await toLevel();
     await clickRect("FUR-R1-S01-L1");
     await page.waitForSelector('form[data-op="cells"]');
@@ -204,6 +213,20 @@ try {
     await page.click('#seg-mode [data-m="3d"]'); // 3D с ячейками строится без ошибок
     await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
     await page.click("#ed-tg"); // выйти из режима редактирования
+  });
+  await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
+    const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
+    await p2.goto(url);
+    await p2.waitForSelector("#plan-side h2");
+    await p2.evaluate(() => localStorage.setItem("wh-app-project-demo", "{не json"));
+    await p2.reload();
+    await p2.waitForSelector("#o_notifs .o_notif.bad");
+    expect((await p2.locator("#o_notifs .o_notif.bad").first().innerText()).includes("копія збережена"), "нет уведомления о копии");
+    const ks = await p2.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("wh-app-project")));
+    const broken = ks.find((k) => k.startsWith("wh-app-project-demo.broken-"));
+    expect(broken && (await p2.evaluate((k) => localStorage.getItem(k), broken)) === "{не json", "сырая копия не сохранена");
+    expect(ks.some((k) => /^wh-app-project-demo-\d+$/.test(k)), "демо-проект не создан под новым id");
+    await p2.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });

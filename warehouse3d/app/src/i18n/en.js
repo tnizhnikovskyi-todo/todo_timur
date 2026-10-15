@@ -245,7 +245,9 @@ export default {
   "depth.level": "Level",
   "depth.cell": "Cell",
   "depth.inherit": "as in the warehouse",
-  "n.depthSet": "Location depth · {what}: {depth}",
+  "n.projectBroken": "The project could not be read, a copy was saved, the demo project is open",
+  "n.projectBrokenNoCopy": "The project could not be read and no copy could be saved, the demo project is open (the old data is untouched)",
+  "op.depth": "{ref}: location depth — {depth}",
   "op.cells": "{ref}: cells per level — {n}",
   "form.cells": "Cells per level",
   "side.depthTitle": "Location depth",
@@ -329,9 +331,9 @@ export default {
   "help.project.html": `
     <ul>
       <li>The <b>warehouse switch</b> in the top bar: a project holds several warehouses (the demo has WH from the Odoo snapshot and a synthetic WH2). Each has its own plan, its own saved and unsaved changes and its own place types; unsaved changes are kept when you switch.</li>
-      <li><b>Location depth</b> (edit mode, warehouse or zone panel) is the last level that becomes an Odoo location: <b>“Level”</b> (default) or <b>“Cell”</b>. A zone can have its own value or “as in the warehouse”. It applies at once and is stored in the project; there are no “Show / Save” buttons for it.</li>
+      <li><b>Location depth</b> (edit mode, warehouse or zone panel) is the last level that becomes an Odoo location: <b>“Level”</b> (default) or <b>“Cell”</b>. A zone can have its own value or “as in the warehouse”. It goes through “Show” / “Save” like other changes and is undone with {mod}+Z.</li>
       <li><b>Cells per level</b> (level panel, 1–12) goes through “Show” / “Save” like other changes. With depth “Cell” and more than one cell the level stops being a place: separate places with codes <span class="code">&lt;level code&gt;-1…N</span> replace it, and in 2D and 3D the level is split into N parts. With depth “Level” the number is remembered but the level stays one place.</li>
-      <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
+      <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. If a project cannot be read, its raw record is kept under the key <span class="code">wh-app-project-&lt;id&gt;.broken-&lt;time&gt;</span> and a new demo project opens with a message — nothing is overwritten. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
     </ul>`,
   "help.keys.title": "Hotkeys",
   "help.keys.html": `

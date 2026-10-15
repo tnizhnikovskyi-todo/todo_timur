@@ -7,8 +7,8 @@
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
 //   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
 //   { type: "notify", kind, key, params, sub } сообщение пользователю.
-import { DEPTHS, PICKS, clone, normEdit } from "./types.js";
-import { buildTree, cfgOf, refById } from "./tree.js";
+import { PICKS, clone, normEdit } from "./types.js";
+import { buildTree, cfgOf } from "./tree.js";
 import { layout } from "./layout.js";
 import { nodesOf } from "./project.js";
 import * as sel from "./select.js";
@@ -39,11 +39,11 @@ export function createModel(project, storage, opts = {}) {
   const bind = (name) => (...a) => ed.OPS[name](s, ...a);
   // глубина узла: собственная настройка ("inherit" — как у склада) и действующая
   const depthInfo = (id) => {
-    const wh = s.wh;
-    if (!id || id === "WH") return { own: wh.depth, eff: wh.depth };
-    let eff = wh.depth;
-    for (let x = s.tree.nodes.get(id); x; x = x.parent && s.tree.nodes.get(x.parent)) if (wh.depthZones[x.id]) { eff = wh.depthZones[x.id]; break; }
-    return { own: wh.depthZones[id] || "inherit", eff };
+    const e = s.edit, zone = (x) => e.depthZones.find((z) => z.id === x);
+    if (!id || id === "WH") return { own: e.depth || "level", eff: e.depth || "level" };
+    let eff = e.depth || "level";
+    for (let x = s.tree.nodes.get(id); x; x = x.parent && s.tree.nodes.get(x.parent)) if (zone(x.id)) { eff = zone(x.id).d; break; }
+    return { own: zone(id) ? zone(id).d : "inherit", eff };
   };
 
   return {
@@ -60,7 +60,7 @@ export function createModel(project, storage, opts = {}) {
     get warehouse() { return s.wh; },
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.cells.length || v.types); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.cells.length || v.depth || v.depthZones.length || v.types); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -72,16 +72,11 @@ export function createModel(project, storage, opts = {}) {
       return true;
     },
     nodes: () => nodesOf(s.tree, s.data), // узлы склада в виде v2
-    // глубина локаций (D-11): "WH" — настройка склада, иначе зона; depth: "level" | "cell" | "inherit" (для зоны — как у склада). Действует сразу и сохраняется в проекте
+    // глубина локаций (D-11): настройка склада ("WH") и зон; меняется операцией ops.depth через «Показати / Зберегти», как другие правки.
+    // own — собственная настройка ("inherit" — как у склада), eff — действующая
     depthInfo,
-    setDepth(zoneId, depth) {
-      if (storage.readonly || (depth !== "inherit" && !DEPTHS.includes(depth))) return false;
-      const wh = s.wh, whole = !zoneId || zoneId === "WH";
-      if (whole) { if (depth === "inherit") return false; wh.depth = depth; } else if (depth === "inherit") delete wh.depthZones[zoneId]; else wh.depthZones[zoneId] = depth;
-      ed.persist(s); ed.applyEdit(s);
-      ed.say(s, "info", "n.depthSet", { what: refById(s.tree, whole ? "WH" : zoneId), depth: { k: `depth.${depth}` } });
-      return true;
-    },
+    // сообщение пользователю от хоста (например, о повреждённом проекте)
+    notify: (kind, key, params = {}, sub = null) => ed.say(s, kind, key, params, sub),
     // выделение
     selIds: () => sel.selIds(ui),
     select: (id) => patch(sel.selectNode(s.tree, ui, id)),
@@ -101,7 +96,7 @@ export function createModel(project, storage, opts = {}) {
     rackOf: (id) => sel.rackOf(s.tree, id),
     moveSet: (set, dx, dy) => ed.moveSet(s, set, dx, dy),
     // правки
-    ops: { rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), settp: bind("settp"),
+    ops: { rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
       move: bind("move"), rotate: bind("rotate"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),

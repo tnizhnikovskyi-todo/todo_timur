@@ -21,7 +21,7 @@ const fakeLs = (fail = false) => {
 test("проект с 2 складами: save → load → глубокое равенство, список, удаление", async () => {
   const st = createMemoryStorage();
   const p = demoProject(BASES);
-  p.warehouses[0].depth = "cell"; p.warehouses[1].depthZones = { [ZONE2]: "cell" };
+  p.warehouses[0].saved.depth = "cell"; p.warehouses[1].saved.depthZones = [{ id: ZONE2, d: "cell" }];
   assert.ok(st.saveProject(p) instanceof Promise && st.listProjects() instanceof Promise);
   const q = await st.loadProject(p.id);
   assert.deepEqual(q, p);
@@ -40,7 +40,7 @@ test("проект, изменённый моделью: сохранённый 
   m.ops.rack(FUR, { tp: "FUR", nb: 1, nl: 2 });
   m.setWarehouse("wh-2");
   m.ops.rack(ZONE2, { tp: "FUR", nb: 1, nl: 2 });
-  m.setDepth("WH", "cell");
+  m.ops.depth("WH", { depth: "cell" });
   assert.equal(await m.save("WH"), "local");
   assert.deepEqual(f.storage.peekProject(), m.project);
 });
@@ -79,7 +79,7 @@ test("правки одного склада не меняют другой; н�
   const pr = m.project;
   assert.equal(pr.warehouses[1].pending.length, 1); assert.equal(pr.warehouses[1].saved.add.length, 0);
   assert.equal(pr.warehouses[0].saved.add.length, 9);
-  assert.deepEqual(pr.warehouses[1].depthZones, {});
+  assert.deepEqual(pr.warehouses[1].saved.depthZones, []);
   // «перезагрузка»: открывается склад, выбранный последним, у второго склада несохранённое на месте
   const again = fresh(f.storage.dump()).model;
   assert.equal(again.warehouse.id, "wh-1"); assert.equal(again.pending.length, 1);
@@ -103,7 +103,7 @@ test("глубина «ячейка» + cells: 3 даёт 3 места с код
   m.ops.cells(LV, { n: 3 });
   // глубина «ярус» (по умолчанию): число запомнено, место одно
   assert.equal(node(m, LV).cells, 3); assert.equal(node(m, LV).loc, "FUR-R1-S01-L1"); assert.deepEqual(count(m), c0);
-  m.setDepth("WH", "cell");
+  m.ops.depth("WH", { depth: "cell" });
   const L = node(m, LV);
   assert.equal(L.loc, null); assert.deepEqual(L.kids.map((k) => k.loc), CELLS); assert.deepEqual(L.codes, CELLS);
   assert.equal(m.tree.byCode.has("FUR-R1-S01-L1"), false);
@@ -113,11 +113,11 @@ test("глубина «ячейка» + cells: 3 даёт 3 места с код
   assert.ok(Math.abs(L.kids.reduce((s, k) => s + k.w, 0) - L.w) < 1e-9 && L.kids.every((k) => k.d === L.d && k.h === L.h));
   assert.ok(Math.abs(L.kids[1].x - (L.x + L.w / 3)) < 1e-9);
   // статистика: ярус стал контейнером, а не «убранным» местом
-  assert.deepEqual(m.stats(), { added: 3, removed: 0, pending: 1 });
-  m.setDepth("WH", "level");
+  assert.deepEqual(m.stats(), { added: 3, removed: 0, pending: 2 }); // глубина и число ячеек
+  m.ops.depth("WH", { depth: "level" });
   assert.equal(node(m, LV).loc, "FUR-R1-S01-L1"); assert.equal(node(m, LV).kids.length, 0); assert.deepEqual(count(m), c0);
   // одна ячейка — это сам ярус
-  m.setDepth("WH", "cell"); m.ops.cells(LV, { n: 1 });
+  m.ops.depth("WH", { depth: "cell" }); m.ops.cells(LV, { n: 1 });
   assert.equal(node(m, LV).kids.length, 0); assert.equal(node(m, LV).loc, "FUR-R1-S01-L1"); assert.equal(m.edit.cells.length, 0);
   // границы: от 1 до 12
   m.ops.cells(LV, { n: 99 }); assert.equal(node(m, LV).cells, 12);
@@ -128,14 +128,14 @@ test("глубина «ячейка» + cells: 3 даёт 3 места с код
 
 test("число ячеек: «Показати» заменяет прошлый показ, «Зберегти» переживает перезагрузку", async () => {
   const f = fresh(), m = f.model;
-  m.setDepth("WH", "cell");
+  m.ops.depth("WH", { depth: "cell" });
   m.ops.cells(LV, { n: 2 }, "k1"); m.ops.cells(LV, { n: 3 }, "k1");
-  assert.equal(m.pending.length, 1); assert.equal(m.pending[0].label.k, "op.cells");
+  assert.equal(m.pending.length, 2); assert.equal(m.pending[1].label.k, "op.cells"); // глубина + ячейки
   // несохранённое переживает перезагрузку и помечено
   const withPend = fresh(f.storage.dump()).model;
   assert.deepEqual(node(withPend, LV).codes, CELLS); assert.ok(node(withPend, LV).kids[0].pend);
-  assert.equal(await m.save(LV), "local");
-  assert.equal(m.pending.length, 0); assert.deepEqual(m.saved.cells, [{ id: LV, n: 3 }]); assert.ok(!node(m, LV).kids[0].pend);
+  assert.equal(await m.save("WH"), "local");
+  assert.equal(m.pending.length, 0); assert.deepEqual(m.saved.cells, [{ id: LV, n: 3 }]); assert.equal(m.saved.depth, "cell"); assert.ok(!node(m, LV).kids[0].pend);
   const again = fresh(f.storage.dump()).model;
   assert.equal(node(again, LV).cells, 3); assert.deepEqual(node(again, LV).codes, CELLS);
   assert.equal(again.depthInfo("WH").own, "cell");
@@ -149,20 +149,40 @@ test("переопределение глубины на зоне", () => {
   const { model: m } = fresh(), LV2 = `${GP}/R1/B01/L1`;
   m.ops.cells(LV, { n: 3 }); m.ops.cells(LV2, { n: 2 });
   assert.deepEqual(m.depthInfo(FUR), { own: "inherit", eff: "level" });
-  m.setDepth(FUR, "cell");
+  m.ops.depth(FUR, { depth: "cell" });
   assert.deepEqual(m.depthInfo(FUR), { own: "cell", eff: "cell" }); assert.deepEqual(m.depthInfo(LV), { own: "inherit", eff: "cell" });
   assert.deepEqual(node(m, LV).codes, CELLS);
   assert.equal(node(m, LV2).loc, "FG-R1-B01-L1"); assert.equal(node(m, LV2).kids.length, 0);
   // склад — «ячейка», зона — «ярус»: наоборот
-  m.setDepth("WH", "cell"); m.setDepth(FUR, "level");
+  m.ops.depth("WH", { depth: "cell" }); m.ops.depth(FUR, { depth: "level" });
   assert.equal(node(m, LV).kids.length, 0); assert.equal(node(m, LV).ldepth, "level");
   assert.deepEqual(node(m, LV2).codes, ["FG-R1-B01-L1-1", "FG-R1-B01-L1-2"]);
   // «как на складе» убирает переопределение
-  m.setDepth(FUR, "inherit");
-  assert.deepEqual(m.project.warehouses[0].depthZones, {}); assert.equal(node(m, LV).kids.length, 3);
-  assert.equal(m.setDepth("WH", "inherit"), false); assert.equal(m.setDepth(FUR, "ряд"), false);
+  m.ops.depth(FUR, { depth: "inherit" });
+  assert.deepEqual(m.edit.depthZones, []); assert.equal(node(m, LV).kids.length, 3);
+  const np = m.pending.length; m.ops.depth("WH", { depth: "inherit" }); m.ops.depth(FUR, { depth: "ряд" }); assert.equal(m.pending.length, np); // не глубины — игнорируются
   // глубина — настройка склада: другой склад не затронут
   m.setWarehouse("wh-2"); assert.equal(m.depthInfo("WH").own, "level");
+});
+
+test("глубина локаций — обычная правка: показ, undo, сохранение, сброс", async () => {
+  const f = fresh(), m = f.model;
+  m.ops.cells(LV, { n: 3 });
+  m.ops.depth("WH", { depth: "cell" }, "k"); m.ops.depth("WH", { depth: "level" }, "k"); m.ops.depth("WH", { depth: "cell" }, "k");
+  assert.equal(m.pending.length, 2); assert.equal(m.pending[1].label.k, "op.depth"); // «Показати» заменяет прошлый показ
+  assert.deepEqual(m.saved.depthZones, []); assert.equal(m.saved.depth, null); assert.equal(m.depthInfo("WH").own, "cell");
+  assert.equal(node(m, LV).kids.length, 3);
+  m.undo(); assert.equal(m.depthInfo("WH").own, "level"); assert.equal(node(m, LV).kids.length, 0);
+  m.redo(); assert.equal(node(m, LV).kids.length, 3);
+  // зона: сохраняется отдельно от склада
+  m.ops.depth(FUR, { depth: "level" }); assert.equal(node(m, LV).kids.length, 0);
+  assert.equal(await m.save(FUR), "local"); assert.deepEqual(m.saved.depthZones, [{ id: FUR, d: "level" }]); assert.equal(m.saved.depth, null);
+  const again = fresh(f.storage.dump()).model;
+  assert.deepEqual(again.depthInfo(FUR), { own: "level", eff: "level" }); assert.equal(again.pending.length, 1); // осталась глубина склада; число ячеек сохранилось вместе с зоной
+  assert.equal(again.depthInfo("WH").own, "cell");
+  again.ops.reset(); assert.equal(again.depthInfo("WH").own, "level");
+  // сброс — тоже несохранённая правка: отмена возвращает глубину
+  again.undo(); assert.equal(again.depthInfo("WH").own, "cell");
 });
 
 test("числа прототипа сохраняются при глубине «ярус»: 891 узел / 689 мест на WH, даже если ячейки заданы", () => {
@@ -172,7 +192,7 @@ test("числа прототипа сохраняются при глубине
   assert.deepEqual(count(m), { nodes: 891, codes: 689 });
   m.ops.reset();
   assert.deepEqual(count(m), { nodes: 891, codes: 689 }); assert.equal(layoutHash(m), 974536979);
-  m.setDepth("WH", "cell"); assert.deepEqual(count(m), { nodes: 891, codes: 689 });
+  m.ops.depth("WH", { depth: "cell" }); assert.deepEqual(count(m), { nodes: 891, codes: 689 });
 });
 
 test("миграция: правки формата W-01 / прототипа дают то же дерево, что прежняя логика", async () => {
@@ -181,8 +201,8 @@ test("миграция: правки формата W-01 / прототипа д
   a.ops.rotate(`${GP}/R1`); a.ops.del(`${GP}/R2`); a.ops.move([{ id: `${FUR}/R1`, x: 5, y: 5 }]);
   await a.save("WH");
   a.ops.dup(`${FUR}/R3`); a.ops.rack(GP, { tp: "FG", nb: 1, nl: 1 });
-  const old = clone(a.saved); delete old.cells; // слой прежнего формата — без ячеек
-  const pend = clone(a.pending); pend.forEach((p) => delete p.diff.cells);
+  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; // слой прежнего формата — без ячеек и глубины
+  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; });
   assert.deepEqual(Object.keys(old).sort(), ["add", "del", "pos", "rot", "set", "types", "v"]);
   assert.equal(a.pending.length, 2);
   const storage = createMemoryStorage({}, { legacy: { edit: old, pending: pend } });
@@ -190,7 +210,7 @@ test("миграция: правки формата W-01 / прототипа д
   const m = createModel(project, storage, { bases: BASES });
   assert.deepEqual(count(m), count(a)); assert.equal(layoutHash(m), layoutHash(a));
   assert.equal(m.pending.length, 2); assert.deepEqual(m.saved, normEdit(old)); assert.deepEqual(m.pending, pend);
-  assert.deepEqual(m.warehouse.depth, "level");
+  assert.equal(m.depthInfo("WH").own, "level");
   // второй склад — чистый; проект записан, повторный запуск берёт его, а не старые ключи
   assert.deepEqual(project.warehouses[1].saved, normEdit(null)); assert.equal(project.warehouses[1].pending.length, 0);
   const reopened = await openProject(createMemoryStorage(storage.dump(), { legacy: { edit: null, pending: [] } }), { bases: BASES, demo: demoProject });
@@ -203,7 +223,7 @@ test("миграция: правки формата W-01 / прототипа д
 test("миграция из localStorage: ключи W-01 (wh-app-*) и прототипа (wh-model-*), W-01 в приоритете", async () => {
   const a = fresh().model;
   a.ops.rack(FUR, { tp: "FUR", nb: 1, nl: 2 }); await a.save("WH"); a.ops.rotate(`${GP}/R1`);
-  const edit = clone(a.saved); delete edit.cells; const pending = clone(a.pending); pending.forEach((p) => delete p.diff.cells);
+  const edit = clone(a.saved); delete edit.cells; delete edit.depth; delete edit.depthZones; const pending = clone(a.pending); pending.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; });
   const proto = fakeLs(); proto.setItem("wh-model-edit", JSON.stringify(edit)); proto.setItem("wh-model-pending", JSON.stringify(pending));
   const pst = createLocalStorage(proto);
   assert.deepEqual(pst.legacy(), { edit, pending });
@@ -219,10 +239,10 @@ test("миграция из localStorage: ключи W-01 (wh-app-*) и прот
 });
 
 test("версии формата проекта: нормализация, повторный прогон, неизвестное и новое отвергаются", () => {
-  const p = migrateProject({ schema: 2, id: "x", warehouses: [{ id: "a" }, { code: "B", depth: "ряд", depthZones: { z: "cell", y: "?" } }] });
+  const p = migrateProject({ schema: 2, id: "x", warehouses: [{ id: "a" }, { code: "B", depth: "ряд", depthZones: { z: "cell", y: "?" } }, { id: "c", depth: "cell" }] });
   assert.equal(p.name, ""); assert.equal(p.source.kind, "scratch");
-  assert.deepEqual(p.warehouses.map((w) => [w.id, w.code, w.depth]), [["a", "WH", "level"], ["wh-2", "B", "level"]]);
-  assert.deepEqual(p.warehouses[1].depthZones, { z: "cell" });
+  assert.deepEqual(p.warehouses.map((w) => [w.id, w.code, w.saved.depth]), [["a", "WH", null], ["wh-2", "B", null], ["c", "WH", "cell"]]); // старые depth / depthZones складов уходят в слой правок
+  assert.deepEqual(p.warehouses[1].saved.depthZones, [{ id: "z", d: "cell" }]);
   assert.ok(p.warehouses.every((w) => w.building === null && w.saved.v === 1 && Array.isArray(w.saved.cells) && w.pending.length === 0));
   assert.deepEqual(migrateProject(clone(p)), p); assert.deepEqual(createProject(p), p);
   for (const bad of [null, 5, "x", {}, { schema: 3, id: "z" }, { schema: 1 }]) assert.equal(migrateProject(bad), null);
@@ -231,7 +251,7 @@ test("версии формата проекта: нормализация, по
 test("узлы склада в виде v2: уровень, тип, геометрия, код, odoo_id, статус, флаг локации", () => {
   const { model: m } = fresh();
   m.ops.rack(FUR, { tp: "FUR", nb: 1, nl: 2 }); m.ops.rotate(`${GP}/R1`); m.ops.del(`${GP}/R2`);
-  m.setDepth("WH", "cell"); m.ops.cells(LV, { n: 3 });
+  m.ops.depth("WH", { depth: "cell" }); m.ops.cells(LV, { n: 3 });
   const ns = m.nodes(), by = Object.fromEntries(ns.map((n) => [n.id, n]));
   assert.ok(ns.every((n) => NODE_LEVELS.includes(n.level) && NODE_STATUSES.includes(n.status) && [0, 90, 180, 270].includes(n.rot)));
   assert.equal(ns.filter((n) => n.status !== "archived").length, m.tree.nodes.size);
@@ -249,7 +269,7 @@ test("узлы склада в виде v2: уровень, тип, геомет
 
 test("ячейки: копирование яруса переносит число ячеек, отдельную ячейку не копируют и не убирают", () => {
   const { model: m } = fresh(), BAY = `${FUR}/R2/S02`;
-  m.setDepth("WH", "cell"); m.ops.cells(LV, { n: 3 });
+  m.ops.depth("WH", { depth: "cell" }); m.ops.cells(LV, { n: 3 });
   const n0 = m.pending.length;
   assert.deepEqual(m.ops.dup(`${LV}/2`), []); m.ops.del(`${LV}/2`);
   assert.equal(m.pending.length, n0);
@@ -265,13 +285,47 @@ test("ячейки: копирование яруса переносит чис�
 
 test("подписи: ячейка и изменение числа ячеек на двух языках", () => {
   const { model: m } = fresh();
-  m.setDepth("WH", "cell"); m.ops.cells(LV, { n: 3 });
+  m.ops.depth("WH", { depth: "cell" }); m.ops.cells(LV, { n: 3 });
   const uk = createI18n("uk", { mod: "Ctrl" }), en = createI18n("en", { mod: "Ctrl" });
-  assert.equal(uk.text(m.pending[0].label), "Ярус L1: комірок на ярусі — 3"); assert.equal(en.text(m.pending[0].label), "Level L1: cells per level — 3");
+  assert.equal(uk.text(m.pending[1].label), "Ярус L1: комірок на ярусі — 3"); assert.equal(en.text(m.pending[1].label), "Level L1: cells per level — 3");
+  assert.equal(uk.text(m.pending[0].label), "WH: глибина локацій — Комірка"); assert.equal(en.text(m.pending[0].label), "WH: location depth — Cell");
   assert.equal(uk.node(node(m, `${LV}/2`)), "Комірка 2"); assert.equal(en.node(node(m, `${LV}/2`)), "Cell 2");
 });
 
-test("глубина: только чтение запрещает смену", () => {
+test("глубина: при только чтении правку можно показать, но не сохранить", async () => {
   const { model: m } = fresh({}, { readonly: true });
-  assert.equal(m.setDepth("WH", "cell"), false); assert.equal(m.depthInfo("WH").own, "level");
+  m.ops.depth("WH", { depth: "cell" });
+  assert.equal(await m.save("WH"), null); assert.equal(m.saved.depth, null);
+});
+
+test("нечитаемый проект не перезаписывается: копия под .broken-<время>, демо под новым id, уведомление", async () => {
+  for (const raw of ["{не json", '{"schema":3,"id":"demo"}']) {
+    const ls = fakeLs(); ls.setItem("wh-app-project-demo", raw); ls.setItem("wh-app-lang", '"en"');
+    const st = createLocalStorage(ls), notices = [];
+    assert.deepEqual(await st.listProjects(), [{ id: "demo", broken: true }]);
+    const p = await openProject(st, { bases: BASES, demo: demoProject, stamp: 1700, onNotice: (n) => notices.push(n) });
+    assert.equal(p.id, "demo-1700"); assert.equal(p.warehouses.length, 2);
+    assert.equal(ls.getItem("wh-app-project-demo.broken-1700"), raw); // сырая строка сохранена как есть
+    assert.equal(ls.getItem("wh-app-project-demo"), null); assert.ok(ls.getItem("wh-app-project-demo-1700"));
+    assert.deepEqual(notices, [{ key: "n.projectBroken", copy: true }]);
+    assert.equal(ls.getItem("wh-app-lang"), '"en"'); // настройки не тронуты
+    // следующий запуск открывает новый проект без уведомлений; копия не считается проектом
+    assert.deepEqual((await st.listProjects()).map((x) => x.id), ["demo-1700"]);
+    const again = await openProject(st, { bases: BASES, demo: demoProject, stamp: 1800, onNotice: (n) => notices.push(n) });
+    assert.equal(again.id, "demo-1700"); assert.equal(notices.length, 1);
+  }
+  // копию сохранить не удалось: исходная запись не тронута, демо — под новым id, другое сообщение
+  const ls = fakeLs(); ls.setItem("wh-app-project-demo", "{битий");
+  const setItem = ls.setItem.bind(ls); ls.setItem = (k, v) => { if (k.includes(".broken-")) throw new Error("quota"); setItem(k, v); };
+  const notices = [], p = await openProject(createLocalStorage(ls), { bases: BASES, demo: demoProject, stamp: 5, onNotice: (n) => notices.push(n) });
+  assert.equal(ls.getItem("wh-app-project-demo"), "{битий"); assert.equal(p.id, "demo-5"); assert.deepEqual(notices, [{ key: "n.projectBrokenNoCopy", copy: false }]);
+  // выбранный проект нечитаем, но есть другой читаемый: открывается он, копия нечитаемого сохраняется
+  const mem = createMemoryStorage({ "project-a": { schema: 3 }, project: "a", "project-b": demoProject(BASES, "", "b") });
+  const n2 = [], pb = await openProject(mem, { bases: BASES, demo: demoProject, stamp: 9, onNotice: (n) => n2.push(n) });
+  assert.equal(pb.id, "b"); assert.deepEqual(n2, [{ key: "n.projectBroken", copy: true }]);
+  assert.deepEqual(mem.dump()["project-a.broken-9"], { schema: 3 }); assert.ok(!("project-a" in mem.dump()));
+  // уведомление доходит до пользователя через модель, текст — на обоих языках
+  const f = fresh(), seen = []; f.model.on((e) => e.type === "notify" && seen.push(e)); f.model.notify("bad", "n.projectBroken");
+  assert.equal(createI18n("uk").t(seen[0].key), "Проєкт не прочитався, копія збережена, відкрито демо-проєкт");
+  assert.equal(createI18n("en").t(seen[0].key), "The project could not be read, a copy was saved, the demo project is open");
 });

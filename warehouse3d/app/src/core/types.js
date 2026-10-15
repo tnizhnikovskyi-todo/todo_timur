@@ -29,8 +29,8 @@ export const FLOW = ["Вхід", "Приймання", "Контроль яко�
 export const KIND_TYPE = { group: "group", zone: "group", rack: "rack", bay: "bay", level: "level", bayleaf: "bayleaf" };
 
 export const clone = (x) => JSON.parse(JSON.stringify(x));
-export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [] });
-export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [] } : emptyEdit();
+export const emptyEdit = () => ({ v: 1, types: null, add: [], del: [], set: [], pos: [], rot: [], cells: [], depth: null, depthZones: [] });
+export const normEdit = (d) => d && d.v === 1 ? { v: 1, types: d.types || null, add: d.add || [], del: d.del || [], set: d.set || [], pos: d.pos || [], rot: d.rot || [], cells: d.cells || [], depth: DEPTHS.includes(d.depth) ? d.depth : null, depthZones: (d.depthZones || []).filter((z) => z && DEPTHS.includes(z.d)) } : emptyEdit();
 export const zoneTp = (c) => /^PAL-/.test(c) ? "PAL" : /^(KIT|FRONTS)-/.test(c) ? "CART" : /^(POST|OUT)-/.test(c) ? "BIG" : /^UNLOAD-/.test(c) ? "DOCK" : "ZONE";
 
 export const inNode = (id, f) => id === f || id.startsWith(`${f}/`);

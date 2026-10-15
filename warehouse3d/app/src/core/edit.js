@@ -2,7 +2,7 @@
 // Все функции принимают состояние s (его создаёт createModel в model.js):
 //   s = { data, storage, words, saved, pending, redo, edit, tree, ui, clip, listeners, emit }
 // Подписи изменений хранятся как данные { k, p } (ключ словаря и параметры) — текст собирает i18n на экране.
-import { BASE_TYPES, MAX_CELLS, RACKED, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, r1 } from "./types.js";
+import { BASE_TYPES, DEPTHS, MAX_CELLS, RACKED, bumpNum, clampN, clone, emptyEdit, inNode, lastSeg, lca, nextNum, r1 } from "./types.js";
 import { buildTree, cfgOf, refById, refOf, typeList } from "./tree.js";
 import { layout } from "./layout.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
@@ -10,13 +10,13 @@ import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
 // ---------- diff / apply
 export function diffEdit(a, b) {
   const kv = (aa = [], bb = []) => { const A = new Map(aa.map((x) => [x.id, JSON.stringify(x)])); return { rm: [...A.keys()].filter((k) => !bb.some((x) => x.id === k && JSON.stringify(x) === A.get(k))), put: bb.filter((x) => A.get(x.id) !== JSON.stringify(x)) }; };
-  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
+  return { add: kv(a.add, b.add), set: kv(a.set, b.set), pos: kv(a.pos, b.pos), rot: kv(a.rot, b.rot), cells: kv(a.cells, b.cells), depthZones: kv(a.depthZones, b.depthZones), depth: (a.depth || null) !== (b.depth || null) ? { v: b.depth || null } : null, delNew: b.del.filter((x) => !a.del.includes(x)), delRm: a.del.filter((x) => !b.del.includes(x)),
     types: JSON.stringify(a.types) !== JSON.stringify(b.types) ? { v: b.types } : null };
 }
-export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !d.delNew.length && !d.delRm.length && !d.types;
+export const diffEmpty = (d) => !d.add.rm.length && !d.add.put.length && !d.set.rm.length && !d.set.put.length && !d.pos.rm.length && !d.pos.put.length && !(d.rot && (d.rot.rm.length || d.rot.put.length)) && !(d.cells && (d.cells.rm.length || d.cells.put.length)) && !(d.depthZones && (d.depthZones.rm.length || d.depthZones.put.length)) && !d.depth && !d.delNew.length && !d.delRm.length && !d.types;
 export function applyDiff(s, d) {
   const kv = (arr = [], x) => arr.filter((y) => !x.rm.includes(y.id) && !x.put.some((p) => p.id === y.id)).concat(clone(x.put));
-  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells);
+  s.add = kv(s.add, d.add); s.set = kv(s.set, d.set); s.pos = kv(s.pos, d.pos); if (d.rot) s.rot = kv(s.rot, d.rot); if (d.cells) s.cells = kv(s.cells, d.cells); if (d.depthZones) s.depthZones = kv(s.depthZones, d.depthZones); if (d.depth) s.depth = d.depth.v;
   s.del = s.del.filter((x) => !d.delRm.includes(x)).concat(d.delNew.filter((x) => !s.del.includes(x)));
   if (d.types) s.types = clone(d.types.v);
   return s;
@@ -256,6 +256,16 @@ export const OPS = {
     const n = s.tree.nodes.get(lid); if (!n || n.type !== "level") return;
     const k = clampN(f.n, 1, MAX_CELLS, 1), ref = refOf(n);
     change(s, lid, { k: "op.cells", p: { ref, n: k } }, (e) => { e.cells = e.cells.filter((x) => x.id !== lid); if (k > 1) e.cells.push({ id: lid, n: k }); }, key, f);
+  },
+  // глубина локаций (D-11): "WH" — склад целиком, иначе зона; f.depth: "level" | "cell" | "inherit" (только для зоны — как у склада)
+  depth(s, zid, f, key) {
+    const whole = !zid || zid === "WH", d = f && f.depth, id = whole ? "WH" : zid;
+    if (!s.tree.nodes.has(id) || !(d === "inherit" ? !whole : DEPTHS.includes(d))) return;
+    const ref = refById(s.tree, id);
+    change(s, id, { k: "op.depth", p: { ref, depth: { k: `depth.${d}` } } }, (e) => {
+      if (whole) e.depth = d === "level" ? null : d;
+      else { e.depthZones = e.depthZones.filter((z) => z.id !== id); if (d !== "inherit") e.depthZones.push({ id, d }); }
+    }, key, f);
   },
   unpos(s, rid) { change(s, rid, { k: "op.unpos", p: { ref: refById(s.tree, rid) } }, (e) => { e.pos = e.pos.filter((p) => p.id !== rid); }); },
   del(s, ids) {

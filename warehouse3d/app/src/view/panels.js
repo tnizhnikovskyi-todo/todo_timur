@@ -107,9 +107,9 @@ export function createSidePanel({ model, i18n, root }) {
           <label>${T("form.count")}<input type="number" name="cnt" min="1" max="30" value="${esc(fv(K("zone"), "cnt", 1))}"></label>${btns(ro)}</form>
         <div class="sec">${T("side.addGroup")}</div><form class="ed-form" data-op="group">
           <label class="wide">${T("form.name")}<input name="name" value="${esc(fv(K("group"), "name", t("word.newZone")))}" maxlength="40"></label>${btns(ro)}</form>`;
-      // глубина локаций: склад целиком или зона (действует сразу, без «Показати / Зберегти»)
-      const di = model.depthInfo(n.id), dopts = n.id === "WH" ? ["level", "cell"] : ["inherit", "level", "cell"];
-      h += `<div class="sec">${T("side.depthTitle")}</div><div class="ed-form"><label class="wide"><span class="sr">${T("side.depthTitle")}</span><select data-depth="${esc(n.id)}"${ro ? " disabled" : ""}>${dopts.map((o) => `<option value="${o}"${o === di.own ? " selected" : ""}>${T(`depth.${o}`)}</option>`).join("")}</select></label></div>
+      // глубина локаций: склад целиком или зона (как другие правки: «Показати» / «Зберегти», отменяется Ctrl+Z)
+      const di = model.depthInfo(n.id), dopts = n.id === "WH" ? ["level", "cell"] : ["inherit", "level", "cell"], d0 = di.own; // значение берётся из модели (с учётом показанного), а не из памяти формы
+      h += `<div class="sec">${T("side.depthTitle")}</div><form class="ed-form" data-op="depth"><label class="wide"><span class="sr">${T("side.depthTitle")}</span><select name="depth">${dopts.map((o) => `<option value="${o}"${o === d0 ? " selected" : ""}>${T(`depth.${o}`)}</option>`).join("")}</select></label>${btns(ro)}</form>
         <p class="ed-note">${T(n.id === "WH" ? "side.depthWh" : "side.depthZone")}</p>`;
     }
     if (n.type === "rack") {
@@ -134,7 +134,6 @@ export function createSidePanel({ model, i18n, root }) {
     side.querySelectorAll("[data-del]").forEach((b) => b.onclick = () => model.ops.del(b.dataset.del));
     side.querySelector("[data-save]")?.addEventListener("click", () => model.save(pid));
     side.querySelector("[data-discard]")?.addEventListener("click", () => model.discard(pid));
-    side.querySelector("select[data-depth]")?.addEventListener("change", (ev) => model.setDepth(ev.target.dataset.depth, ev.target.value));
     side.querySelector("[data-unpos]")?.addEventListener("click", () => model.ops.unpos(n.id));
     side.querySelector("[data-rot]")?.addEventListener("click", () => model.ops.rotate(n.id));
     side.querySelector("[data-dup]")?.addEventListener("click", () => model.ops.dup(n.id));

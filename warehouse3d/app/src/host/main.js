@@ -19,9 +19,11 @@ async function start() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const bases = { [DEMO_REFS.main]: data, [DEMO_REFS.second]: demoBase2(data.meta) };
-    const project = await openProject(storage, { bases, now: data.meta.pulled_at, demo: demoProject });
+    let notice = null;
+    const project = await openProject(storage, { bases, now: data.meta.pulled_at, demo: demoProject, stamp: Date.now(), onNotice: (n) => { notice = n; } });
     const model = createModel(project, storage, { bases, words: () => ({ copy: i18n.t("word.copy"), newZone: i18n.t("word.newZone"), newType: i18n.t("word.newType") }) });
     mountApp(root, { model, i18n });
+    if (notice) model.notify("bad", notice.key);
   } catch (e) {
     root.textContent = `${i18n.t("app.loadFail")}: ${e.message}`;
     console.error(e);
