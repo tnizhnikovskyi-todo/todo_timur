@@ -1,17 +1,17 @@
 # factory3d_machine_connect
 Статус: IN_PROGRESS
 Тесты: —, ТК: ждут W9
-Решений без заказчика: 6 (ниже)
+Решений без заказчика: 11 (ниже)
 Упирался в лимит: 0
-Требует внимания человека: нет
+Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ISA95-структуры — допущение Q-01
 
 | Воркер | Статус | Коммит | Тест |
 |---|---|---|---|
 | W0 | принят | 34039a1 | TestCommands 5/5 |
 | W1 | принят | e202c60 | /factory3d_machine_connect 23/23 |
-| W2 | в работе | | |
-| W5 | в работе | | |
-| W7 | в работе | | |
+| W7 | принят | 7643fa9 | pytest unit 51/51, ruff |
+| W2 | принят | 98d7c3c | /factory3d_machine_connect 55/55 (с W5) |
+| W5 | принят | 0dce9e7 | /factory3d_machine_connect 55/55 |
 
 ## Решения без заказчика
 - DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
@@ -29,3 +29,15 @@
   цвет OEE — фиксированные пороги 0.75/0.5 вместо `oee_color`. — `views/f3d_machine_views.xml`
 - DEC-6: пізні показання (`ts < state_since`) пропускают state/mode/alarm/job, счётчик обрабатывается; показания
   с одним `ts` — один переход (AC-03). — `models/f3d_machine.py`
+- DEC-7: дефект в factory3d_telemetry `push_handler._f3d_handler_models` — `registry.descendants` в Odoo 19 возвращает
+  имена, а не классы; push-события не маршрутизировались никуда. Исправлено в telemetry (229/229 зелёные), коммит dfab530.
+  Обходы `patch.object` в тестах W2/W5 безвредны.
+- DEC-8: AC-13 (простой 1,5 хв «лишається») противоречит R-05 п.4 (micro_stop_s=120 → удаление). Реализовано по R-05,
+  тест AC-13 снижает `micro_stop_s` до 60. — `models/f3d_machine_downtime.py`, `tests/test_downtime.py`
+- DEC-9: R-06 п.5 — новый «Аварія триває» открывается, только если у простоя нет ни одного открытого записи
+  (машинного или оператора) — без перекрытий. — `models/mrp_workcenter_productivity.py`
+- DEC-10: портал — завдання `sent` без `ws_id` усыновляется событием woodStore с тем же МО и товаром (без дубля);
+  R-17 расщепляет зарезервированную строку при недоподаче; авто-поповнення не чаще раза в час на стос (`replenish_at`). — `models/f3d_gantry_*.py`
+- DEC-11: адаптер `cutopt` держит связь job_id→карта в памяти; после рестарта колектора `map` в событиях = null,
+  Odoo сопоставляет по `job_id` (проверить в W6). Метрики `collector_mc_*` создаются лениво в реестре ядра;
+  `mc_state_dir` → env `F3D_MC_STATE_DIR` → `buffer_dir`. — `f3d_collector_mc/{cutopt,events}.py`
