@@ -1,7 +1,7 @@
 # factory3d_machine_connect
 Статус: IN_PROGRESS
 Тесты: —, ТК: ждут W9
-Решений без заказчика: 12 (ниже)
+Решений без заказчика: 13 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ISA95-структуры — допущение Q-01
 
@@ -13,7 +13,8 @@
 | W2 | принят | 98d7c3c | /factory3d_machine_connect 55/55 (с W5) |
 | W5 | принят | 0dce9e7 | /factory3d_machine_connect 55/55 |
 | W4 | принят | 57a6daf | /factory3d_machine_connect 68/68 |
-| W3, W6 | в работе | | |
+| W6 | принят | ca5b681 | /factory3d_machine_connect 80/80 |
+| W3 | в работе | | |
 
 ## Решения без заказчика
 - DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
@@ -46,3 +47,7 @@
 - DEC-12: OEE — категории timelog по xmlid (setup = `mrp.block_reason2` + `loss_tool`, fault = `mrp.block_reason1`,
   прочие availability/quality = idle; productive/performance = run); запись смены не создаётся до её начала и в
   выходной; действие «OEE за період» — `action_f3d_oee_period_sum` (id `action_f3d_oee_period` занят W0). — `models/f3d_oee_shift.py`
+- DEC-13: API-01 отдаёт карту в состояниях `exported` и `optimizing` (409 для прочих) — `action_send_optimizer` сразу
+  ставит `optimizing`, по букве SPEC колектор всегда получал бы 409; 413 — при >5000 строк карты или теле >1 МБ;
+  тайм-аут оптимизации 30 хв — от `optimizing_since` (запасной — `write_date`). — `controllers/cutmap.py`, `models/f3d_cut_map.py`
+- TODO лидера после W3: push_handler `mc_cutopt` — `map` необязателен, карта через `_f3d_find_for_event(map, job_id)` (DEC-11).
