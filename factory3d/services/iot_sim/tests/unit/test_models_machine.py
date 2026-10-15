@@ -331,3 +331,18 @@ def test_gantry_vacuum_alarm(world):
     world.advance(10)
     assert g.val("vacuum_kpa") == -55.0
     assert world.signals["equipment/GANTRY-1/vacuum_kpa"].status in ("alarm", "warn")
+
+
+def test_restore_keeps_relative_counters(world):
+    """AC-48 (ТК-16): після відновлення знімка нова зміна не обнуляє Relative* (shift_key у знімку)."""
+    world.set_flag("shift", {"speed": 2.0, "lines": ["A"], "trucks": False, "people": False})
+    zero_noise(world)
+    world.advance(450)
+    m = world.devices["SAW-1"].model
+    rel = m.relative["PiecesOut"]
+    assert rel > 0 and m.shift_key is not None
+    dump = m.to_dict()
+    m.shift_key = None  # свіжий процес
+    m.from_dict(dump)
+    world.advance(2)
+    assert m.relative["PiecesOut"] >= rel

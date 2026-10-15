@@ -160,3 +160,14 @@ def test_state_roundtrip_and_zones_override(world):
     finally:
         set_zones(None)
     assert mobile.zones()["Z-CHG"]["polygon"]
+
+
+def test_battery_low_scenario_flag_drives_model(world):
+    """ТК-04/AC-08: прапор сценарію battery_low (без ручного m.battery) переводить FL-2 у to_charge."""
+    zero_noise(world)
+    m = world.devices["FL-2"].model
+    world.advance(10)
+    world.flags.setdefault("battery_low", {})["FL-2"] = 18.0
+    world.advance(10)
+    assert m.mstate == "to_charge" and m.battery < 20
+    assert "FL-2" not in world.flags.get("battery_low", {})

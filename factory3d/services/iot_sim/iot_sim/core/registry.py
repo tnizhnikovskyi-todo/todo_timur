@@ -105,6 +105,10 @@ def parse_spec(row: dict[str, str]) -> SignalSpec:
     if m:
         s.alarm = "above" if m.group(1) == ">" else "below"
         s.threshold = _f(m.group(2))
+        if re.search(r"[·×*]\s*номінал", thr):  # «> 0,9·номінал»: множник номіналу, а не абсолютний поріг
+            s.threshold = s.threshold * s.nominal if s.nominal is not None else None
+            if s.threshold is None:
+                s.alarm = None
     m = re.match(rf"\s*межа ({_NUM})", thr)
     if m:
         s.limit = _f(m.group(1))

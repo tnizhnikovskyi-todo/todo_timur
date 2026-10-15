@@ -162,6 +162,9 @@ class Mobile(Model):
         w = self.world
         in_shift = w.shift.in_shift(w.now())
         fault = self.device.fault
+        bl = w.flags.get("battery_low")  # S-10: сценарій battery_low задає заряд моделі (прапор «одноразовий»)
+        if isinstance(bl, dict) and self.device.code in bl:
+            self.battery = max(0.0, min(100.0, float(bl.pop(self.device.code))))
         if fault == "comm":
             self._set_state("offline")
             self.speed_ms = 0.0

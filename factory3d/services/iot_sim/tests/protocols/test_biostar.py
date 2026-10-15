@@ -37,7 +37,8 @@ async def test_login_ok_and_failures(world, port, tmp_path):
             bad = await c.post("/api/login", json={"User": {"login_id": "admin", "password": "x"}})
             assert bad.status_code == 401 and bad.json()["Response"]["code"] == "101"
             assert (await c.post("/api/login", content=b"zzz")).status_code == 401
-            assert (await c.get("/api/users")).status_code == 401  # без сесії
+            noses = await c.get("/api/users")
+            assert noses.status_code == 401 and noses.json()["Response"]["code"] == "10"  # без сесії (AC-41)
             assert (await c.get("/api/users", headers={"bs-session-id": "nope"})).status_code == 401
     finally:
         await srv.stop()

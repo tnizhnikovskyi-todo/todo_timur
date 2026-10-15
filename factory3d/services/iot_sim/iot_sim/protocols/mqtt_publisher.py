@@ -68,6 +68,7 @@ class MqttPublisher(ProtocolServer):
         self._buffer: deque[tuple[float, str, str, int, bool]] = deque()
         self._last_tel: dict[str, float] = {}
         self._last_state: dict[str, str] = {}
+        self._last_online: dict[str, bool] = {}
         self._last_task: dict[str, Any] = {}
         self._low: dict[str, bool] = {}
         self._last_hb = -HEARTBEAT_S
@@ -163,6 +164,9 @@ class MqttPublisher(ProtocolServer):
         dev = self.world.devices[code]
         extra = (self.world.flags.get("mobile") or {}).get(code, {})
         state = str(self._sig(code, "state") or "idle")
+        mstate = getattr(getattr(dev, "model", None), "mstate", None)
+        if state == "busy" and mstate == "to_charge":  # сигнал віддає to_charge як busy (§8.8.1)
+            state = mstate
         if dev.fault and dev.fault != "comm":
             state = "fault"
         elif dev.fault == "comm":
@@ -205,6 +209,10 @@ class MqttPublisher(ProtocolServer):
             if changed:
                 self._derive_events(code, prev, tel)
             self._last_state[code] = tel["state"]
+            is_on = tel["state"] != "offline"
+            if self._last_online.get(code, True) != is_on:  # §8.8.1: status — «при з'єднанні/зміні» (AC-40)
+                self._publish(self.topic(code, "status"), self._status(code, online=is_on), 1, True)
+            self._last_online[code] = is_on
             moving = tel.get("speed_kmh", 0.0) > 0
             period = PERIOD_MOVING_S if moving else PERIOD_IDLE_S
             if changed or code not in self._last_tel or now - self._last_tel[code] >= period:

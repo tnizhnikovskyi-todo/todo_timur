@@ -109,3 +109,27 @@ async def test_methods_require_login(opc):
     async with c:
         ctl = c.get_node(f"ns={ns};s=SAW-1.JobManagement.JobOrderControl")
         assert await ctl.call_method(f"{ns}:Store", "WO00099", "") == 0
+
+
+async def test_flags_are_26_booleans(opc):
+    """AC-36: State.Machine.Flags.* — 26 булевих (9 обов'язкових + 17 опційних, SPEC §8.3)."""
+    async with Client(url(opc)) as c:
+        ns = await c.get_namespace_index(NS_INST)
+        flags = c.get_node(f"ns={ns};s=SAW-1.State.Machine.Flags")
+        kids = await flags.get_children()
+        assert len(kids) == 26
+        assert await c.get_node(f"ns={ns};s=SAW-1.State.Machine.Flags.ExternalEmergency").read_value() is False
+
+
+async def test_authenticated_write_denied(opc):
+    """ТБ-04: клієнтський Write у State.* відхилений і для автентифікованого collector."""
+    c = Client(url(opc))
+    c.set_user("collector")
+    c.set_password("pw")
+    async with c:
+        ns = await c.get_namespace_index(NS_INST)
+        st = c.get_node(f"ns={ns};s=SAW-1.State.Machine.Overview.CurrentState")
+        before = await st.read_value()
+        with pytest.raises(ua.UaStatusCodeError):
+            await st.write_value(ua.DataValue(ua.Variant(2, ua.VariantType.UInt32)))
+        assert await st.read_value() == before

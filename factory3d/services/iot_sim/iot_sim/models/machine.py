@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import date
 from typing import Any
 
 from iot_sim.models import register_model
@@ -287,10 +288,13 @@ class Machine(Model):
     # --- знімок -------------------------------------------------------------------------
     def get_state(self) -> dict[str, Any]:
         return {"pieces_acc": self.pieces_acc, "values": self.values,
-                "relative": self.relative, "msg_id": self.msg_id}
+                "relative": self.relative, "msg_id": self.msg_id,
+                "shift_key": [self.shift_key[0].isoformat(), self.shift_key[1]] if self.shift_key else None}
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.pieces_acc = d.get("pieces_acc", 0.0)
         self.values.update(d.get("values", {}))
         self.relative.update(d.get("relative", {}))
         self.msg_id = d.get("msg_id", "")
+        sk = d.get("shift_key")  # без цього після рестарту «нова зміна» обнуляла б Relative* (AC-48)
+        self.shift_key = (date.fromisoformat(sk[0]), bool(sk[1])) if sk else None

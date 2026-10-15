@@ -200,3 +200,18 @@ def test_metrics_and_catalog(api):
     csv = api.get("/sim/v1/catalog/signals.csv")
     assert csv.status_code == 200 and csv.text.startswith("n,code")
     assert len(api.get("/sim/v1/catalog/devices.json").json()) == len(api.world.devices)
+
+
+def test_tick_lag_is_overshoot_over_period(world):
+    """ТП-01: tick lag = запізнення понад період тіку (а не час від останнього тіку)."""
+    now = [100.0]
+    app = create_app(Settings(_env_file=None, api_token=TOKEN, tick_ms=1000), world=world, mono=lambda: now[0])
+
+    def lag():
+        text = TestClient(app).get("/sim/v1/metrics").text
+        return float(next(ln.split()[-1] for ln in text.splitlines() if ln.startswith("iot_sim_tick_lag_seconds ")))
+
+    world.last_tick_real = 99.4
+    assert lag() == 0.0
+    world.last_tick_real = 98.2
+    assert lag() == pytest.approx(0.8)

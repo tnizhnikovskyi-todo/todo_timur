@@ -97,3 +97,9 @@ def test_driver_rules_and_unknown_is_passive(registry, world):
     dev = world.devices["OFFICE"]
     assert isinstance(dev.model, PassiveModel)
     assert dev.signals["p_now"].value == pytest.approx(dev.signals["p_now"].params["nominal"])
+
+
+def test_relative_nominal_threshold_is_not_absolute(registry):
+    """«> 0,9·номінал» без номіналу — порога немає (інакше постійна хибна тривога QF-* i_now при 100 А)."""
+    s = next(x for x in registry.signals if x.code == "energy/lines/BW-1/i_now")
+    assert s.threshold is None and s.alarm is None

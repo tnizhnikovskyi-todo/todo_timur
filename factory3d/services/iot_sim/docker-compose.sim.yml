@@ -1,27 +1,35 @@
-# SPEC §8.1.4. Запуск з кореня проєкту: docker compose -f docker-compose.sim.yml --profile demo up
+# SPEC §8.1.4. Запуск з services/iot_sim: docker compose -f docker-compose.sim.yml --profile demo up  (dev — з портами на 127.0.0.1)
 networks:
   f3d_sim: {internal: true}
   odoo_default: {external: true}
+x-iot-sim: &iot_sim
+  build: .
+  networks: [f3d_sim, odoo_default]      # odoo_default — лише для API-01/follow_odoo (allow-list)
+  env_file: ./.env                       # SIM_* (§8.2.1); у репозиторії — .env.example без секретів
+  environment: {SIM_GENSET_RELAY_TOKEN: "${RELAY_SIM_TOKEN}", SIM_OPCUA_CERT_DIR: /app/state/certs}   # токен той самий, що в genset_relay (X-75); read_only FS — сертифікати у томі
+  volumes: ["iot_sim_state:/app/state"]
+  healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/sim/v1/health', timeout=3)"], interval: 30s, timeout: 5s, retries: 3}   # без curl у python:3.12-slim (X-90)
+  depends_on: [mosquitto]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp"]
+  user: "10001:10001"
 services:
-  iot_sim:
-    build: ./services/iot_sim
-    profiles: ["demo", "dev"]
-    networks: [f3d_sim, odoo_default]      # odoo_default — лише для API-01/follow_odoo (allow-list)
-    env_file: ./services/iot_sim/.env      # SIM_* (§8.2.1); у репозиторії — .env.example без секретів
-    environment: {SIM_GENSET_RELAY_TOKEN: "${RELAY_SIM_TOKEN}"}   # той самий токен, що в genset_relay (X-75)
-    volumes: ["iot_sim_state:/app/state"]
-    ports: ["127.0.0.1:8090:8090", "127.0.0.1:4840:4840"]   # лише профіль dev; у demo — без ports
-    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/sim/v1/health', timeout=3)"], interval: 30s, timeout: 5s, retries: 3}   # без curl у python:3.12-slim (X-90)
-    depends_on: [mosquitto]
-    cap_drop: [ALL]
-    read_only: true
-    tmpfs: ["/tmp"]
-    user: "10001:10001"
+  iot_sim:                               # профіль dev: порти 8090/4840 — лише на 127.0.0.1 хоста (ТБ-01)
+    <<: *iot_sim
+    profiles: ["dev"]
+    ports: ["127.0.0.1:8090:8090", "127.0.0.1:4840:4840"]
+  iot_sim_demo:                          # профіль demo: жодних ports (ТБ-01); у мережі доступний як iot_sim
+    <<: *iot_sim
+    profiles: ["demo"]
+    networks:
+      f3d_sim: {aliases: [iot_sim]}
+      odoo_default: {aliases: [iot_sim]}
   mosquitto:
     image: eclipse-mosquitto:2.0.20
     profiles: ["demo", "dev"]
     networks: [f3d_sim]
-    volumes: ["./services/iot_sim/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro", "./services/iot_sim/mosquitto/passwd:/mosquitto/config/passwd:ro"]
+    volumes: ["./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro", "./mosquitto/passwd:/mosquitto/config/passwd:ro"]
   genset_relay:                            # td_genset §8.5, запит CI-02 (X-75)
     build: ${TD_GENSET_PATH}/relay         # з репозиторію td_genset, профіль D700 (fake_relay.py)
     profiles: ["demo", "dev"]

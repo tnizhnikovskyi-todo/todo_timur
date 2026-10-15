@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 from collections import defaultdict, deque
 from collections.abc import Callable
@@ -204,6 +205,22 @@ class World:
             self.devices[ds.code] = dev
         for dev in self.devices.values():
             dev.model.attach()
+        self._initial_models = {c: copy.deepcopy(d.model.to_dict()) for c, d in self.devices.items()}
+
+    def reset_models(self) -> None:
+        """API-17 reset: внутрішній стан моделей (лічильники, АКБ, завдання) — початковий, ГПВЧ — за seed."""
+        for code, dev in self.devices.items():
+            init = self._initial_models.get(code)
+            if init is not None:
+                try:
+                    dev.model.from_dict(copy.deepcopy(init))
+                except Exception:
+                    log.exception("reset моделі %s", code)
+        if hasattr(self, "_yard"):  # двір: ворота, фури, імпульси, LPR-черги — спільний контролер (відтворюється ліниво)
+            del self._yard
+        self._rngs.clear()
+        if self.mode == "scenario":
+            self.jobs.clear()
 
     # --- час і шум -------------------------------------------------------------------
     def now(self) -> datetime:

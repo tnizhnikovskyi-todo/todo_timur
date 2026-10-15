@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MIN_TOKEN_LEN = 32
@@ -68,6 +69,12 @@ class Settings(BaseSettings):
     port_jobs: int = 8083
     port_sics: int = 4001
     port_control: int = 8090
+
+    @field_validator("helvar_version", mode="before")
+    @classmethod
+    def _helvar_int(cls, v):
+        """SIM_HELVAR_VERSION приходить з env рядком «1»/«2» (Literal[1, 2] його б відхилив — рестарт падав)."""
+        return int(v) if isinstance(v, str) and v.strip().isdigit() else v
 
     def allow_outbound_hosts(self) -> list[str]:
         return [h.strip() for h in self.allow_outbound.split(",") if h.strip()]

@@ -250,7 +250,7 @@ def create_app(store: BioStarStore) -> FastAPI:
         if store.touch(request.headers.get("bs-session-id")):
             return None
         log.warning("BioStar 401 invalid session", extra={"proto": "biostar"})
-        return fail(401, "1", "Invalid session")
+        return fail(401, "10", "Invalid session")
 
     @app.post("/api/login")
     async def login(request: Request):

@@ -208,3 +208,25 @@ async def test_stop_publishes_offline_status(world):
     off = client.by("/status")
     assert len(off) == 8 and all(o[1]["online"] is False and o[3] for o in off)
     assert ("disconnect",) in client.calls and ("loop_stop",) in client.calls
+
+
+async def test_status_republished_on_comm_fault_and_clear(pub, world):
+    """AC-40: після fault comm FL-3 → status online=false (retained); після clear — true."""
+    connect(pub)
+    pub.tick()
+    n0 = len(pub.fake.by("/FL-3/status"))
+    world.fault("FL-3", "comm")
+    pub.tick()
+    st = pub.fake.by("/FL-3/status")
+    assert len(st) == n0 + 1 and st[-1][1]["online"] is False and st[-1][3] is True
+    world.clear("FL-3")
+    pub.tick()
+    assert pub.fake.by("/FL-3/status")[-1][1]["online"] is True
+
+
+async def test_telemetry_state_to_charge_from_model(pub, world):
+    """AC-08: telemetry.state = to_charge (сигнал state віддає його як busy)."""
+    m = world.devices["FL-2"].model
+    m._set_state("to_charge")
+    world.devices["FL-2"].signals["state"].force("busy", world.now())
+    assert pub.telemetry("FL-2")["state"] == "to_charge"

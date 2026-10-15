@@ -38,17 +38,56 @@ def cmd_dump_catalog(settings: Settings) -> int:
     return 0
 
 
-def _local_bip() -> str:
-    """Адреса BACnet/IP ``<ip>/<prefix>`` (локальний інтерфейс; без мережі — loopback)."""
+def _prefix_of(ip: str) -> int:
+    """Довжина префікса інтерфейсу з адресою ``ip`` (SIOCGIFADDR/SIOCGIFNETMASK); без ioctl — 24."""
+    import fcntl
     import socket
+    import struct
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sk:
-            sk.connect(("10.255.255.255", 1))
-            ip = sk.getsockname()[0]
+            for _, name in socket.if_nameindex():
+                req = struct.pack("256s", name.encode()[:15])
+                try:
+                    addr = socket.inet_ntoa(fcntl.ioctl(sk.fileno(), 0x8915, req)[20:24])
+                    mask = fcntl.ioctl(sk.fileno(), 0x891B, req)[20:24]
+                except OSError:
+                    continue
+                if addr == ip:
+                    return struct.unpack("!I", mask)[0].bit_count()
     except OSError:
-        ip = "127.0.0.1"
-    return f"{ip}/24" if ip != "127.0.0.1" else "127.0.0.1/8"
+        pass
+    return 24
+
+
+def _local_bip(peer: str | None = None) -> str:
+    """Адреса BACnet/IP ``<ip>/<prefix>``.
+
+    Інтерфейс обирається за маршрутом до ``peer`` (хост брокера MQTT у мережі ``f3d_sim``, де живуть клієнти):
+    у контейнері є ще ``odoo_default``, а клієнти BACnet — лише в ``f3d_sim``. Без ``peer``/мережі — маршрут
+    за замовчуванням, без мережі — loopback.
+    """
+    import socket
+
+    ip = "127.0.0.1"
+    for target in ([(peer, 1)] if peer else []) + [("10.255.255.255", 1)]:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sk:
+                sk.connect(target)
+                ip = sk.getsockname()[0]
+            break
+        except OSError:
+            continue
+    return f"{ip}/{_prefix_of(ip)}" if ip != "127.0.0.1" else "127.0.0.1/8"
+
+
+def _mqtt_host(url: str) -> str | None:
+    from urllib.parse import urlparse
+
+    try:
+        return urlparse(url).hostname
+    except ValueError:
+        return None
 
 
 class Service:
@@ -105,7 +144,7 @@ class Service:
         add(SicsServer(w, port=s.port_sics, write_accept=s.write_accept))
         add(LprPusher(w, url=s.lpr_push_url, guard=self.guard))
         add(ModbusServer(w, port=s.port_modbus))
-        add(BacnetServer(w, address=f"{_local_bip()}:{s.port_bacnet}"))
+        add(BacnetServer(w, address=f"{_local_bip(_mqtt_host(s.mqtt_url))}:{s.port_bacnet}"))
         add(HelvarServer(w, tcp_port=s.port_helvar_tcp, udp_port=s.port_helvar_udp,
                          version=s.helvar_version))
 

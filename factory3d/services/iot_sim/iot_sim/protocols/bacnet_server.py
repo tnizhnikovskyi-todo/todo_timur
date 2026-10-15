@@ -124,7 +124,8 @@ def _lss(v: Any) -> int:
 def load_layout(path: str | Path | None = None) -> dict[str, Any]:
     """``dist/odoo_demo.json`` (макет): ``fire.groups``, ``lighting``. Порожній словник, якщо файлу немає."""
     cands = [path, os.environ.get("SIM_LAYOUT_PATH"),
-             Path(__file__).resolve().parents[4] / "dist" / "odoo_demo.json",
+             Path(__file__).resolve().parents[2] / "catalog" / "odoo_demo.json",  # fire+lighting; образ Docker (стенд ТК)
+             Path(__file__).resolve().parents[min(4, len(Path(__file__).resolve().parents) - 1)] / "dist" / "odoo_demo.json",
              Path("dist/odoo_demo.json")]
     for c in cands:
         if c and Path(c).is_file():
@@ -369,6 +370,13 @@ class Builder:
                 P(Point("lsp", pid, addr, self._lsp_reader(g, addr, nn), f"Сповіщувач {addr}"))
                 P(Point("piv", pid, f"{addr}_Contamination", self._dust_reader(g, addr, pid),
                         f"Запиленість сповіщувача {addr}", "percent"))
+        fdev = self.w.devices.get("FACP-1")  # ручні, оповіщувачі, полум'я: LSP без PIV (AC-66: разом 302, X-79)
+        for o in (fdev.model.lsp_catalog() if fdev is not None and hasattr(fdev.model, "lsp_catalog") else []):
+            if o["kind"] == "detector":
+                continue
+            addr = o["address"]
+            names = {"mcp": "Ручний сповіщувач", "sounder": "Оповіщувач", "flame": "Сповіщувач полум'я"}
+            P(Point("lsp", o["id"], addr, self._point_reader(addr), f"{names[o['kind']]} {addr}"))
         for lp in range(1, 5):
             code = f"fire/loops/{lp}/state"
             P(Point("bv", lp, f"FACP-1_Loop{lp}_Fault",
@@ -398,6 +406,12 @@ class Builder:
             if zone in (1, 2, 9) and (trig == addr or (trig is None and nn == 1)):
                 return zone
             return 0
+        return read
+
+    def _point_reader(self, addr: str) -> Callable[[], int]:
+        def read() -> int:
+            pts = self.w.flag("fire.points")
+            return _lss(pts[addr]) if isinstance(pts, dict) and addr in pts else 0
         return read
 
     def _dust_reader(self, g: str, addr: str, pid: int) -> Callable[[], int]:

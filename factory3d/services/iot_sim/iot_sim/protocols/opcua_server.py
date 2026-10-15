@@ -43,8 +43,12 @@ DEVICE_CLASS = {"SAW": "PanelSaw", "NEST": "NestingMachine", "EDGE": "EdgeBander
                 "CNC": "CNCMachiningCenter", "BORE": "ThroughfeedDrilling",
                 "DOWEL": "DowelInserting", "SORT": "SortingCell", "ASMLINE": "CaseClamp",
                 "GANTRY": "StorageSystem"}
+# 9 обов'язкових (M) + 17 опційних, SPEC §8.3 (AC-36: 26 булевих)
 FLAGS = ("MachineOn", "MachineInitialized", "PowerPresent", "Emergency", "Calibrated",
-         "Error", "Alarm", "Warning", "RecipeInRun", "Moving", "MaintenanceRequired")
+         "Error", "Alarm", "Warning", "RecipeInRun",
+         "AirPresent", "DustChipSuction", "Safety", "Remote", "WorkpiecePresent", "Moving", "Hold",
+         "RecipeInSetup", "RecipeInHold", "ManualActivityRequired", "LoadingEnabled", "WaitUnload",
+         "WaitLoad", "EnergySaving", "ExternalEmergency", "MaintenanceRequired", "FeedRuns")
 VALUES_U64 = ("AbsoluteMachineOnTime", "RelativeMachineOnTime", "AbsoluteProductionTime",
               "RelativeProductionTime", "AbsoluteWorkingTime", "RelativeWorkingTime",
               "AbsoluteErrorTime", "RelativeErrorTime", "AbsolutePiecesIn", "RelativePiecesIn",
@@ -80,6 +84,9 @@ class _Rules(PermissionRuleset):
 
     def check_validity(self, user, action_type, body):
         call_id = ua.NodeId(ua.ObjectIds.CallRequest_Encoding_DefaultBinary)
+        write_id = ua.NodeId(ua.ObjectIds.WriteRequest_Encoding_DefaultBinary)
+        if action_type == write_id:  # ТБ-04: клієнтський Write заборонений усім, включно з collector
+            return False
         if action_type == call_id and user.role != UserRole.Admin:
             return False
         if user.role == UserRole.Admin:
@@ -331,6 +338,15 @@ class OpcUaServer(ProtocolServer):
                      "Calibrated": True, "Error": cur == 4, "Alarm": alarmed,
                      "Warning": bool(alarm is not None and alarm.status == "warn"),
                      "RecipeInRun": cur == 3, "Moving": cur == 3, "MaintenanceRequired": False}
+            mf = getattr(getattr(dev, "model", None), "flags", None) or {}
+            flags.update({
+                "AirPresent": True, "Safety": True, "Remote": True, "DustChipSuction": cur == 3,
+                "WorkpiecePresent": cur == 3, "Hold": False, "RecipeInSetup": False, "RecipeInHold": False,
+                "ManualActivityRequired": False, "LoadingEnabled": cur in (2, 3), "WaitUnload": False,
+                "WaitLoad": cur == 2, "FeedRuns": cur == 3,
+                "EnergySaving": bool(mf.get("EnergySaving", cur == 1)),
+                "ExternalEmergency": bool(mf.get("ExternalEmergency", False))})
+            flags["Emergency"] = flags["Emergency"] or flags["ExternalEmergency"]
             await self._write(f"{mp}.Overview.CurrentState", cur, True, now)
             await self._write(f"{mp}.Overview.CurrentMode", mode_v, ok, now)
             for k, v in flags.items():

@@ -228,3 +228,16 @@ async def test_cov_notification_on_ai_change(bacnet, world):
             if str(pv.propertyIdentifier) == "present-value":
                 break
         assert any(str(g.propertyIdentifier) == "present-value" for g in got)
+
+
+async def test_facp_302_lsp_objects_and_names(bacnet):
+    """AC-66: 302 LSP (222 + 36 ручних + 41 оповіщувач + 3 полум'я); PIV лише для 222 сповіщувачів."""
+    c = bacnet.client
+    addr = await dev(bacnet, 200)
+    n = await c.read_property(addr, "device,200", "object-list", array_index=0)
+    ol = [await c.read_property(addr, "device,200", "object-list", array_index=i) for i in range(1, n + 1)]
+    assert sum(1 for o in ol if str(o[0]) == "life-safety-point") == 302
+    assert sum(1 for o in ol if str(o[0]) == "positive-integer-value") == 222 + 3
+    for inst, name in ((19001, "1.MCP.01"), (29113, "2.SND.13"), (29201, "2.FLM.01"), (49009, "4.MCP.09")):
+        assert await c.read_property(addr, f"life-safety-point,{inst}", "object-name") == name
+        assert str(await c.read_property(addr, f"life-safety-point,{inst}", "present-value")) == "quiet"

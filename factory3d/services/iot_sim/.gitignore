@@ -1,1 +1,4 @@
 .coverage
+mosquitto/passwd
+.env
+tests/stand/_*.yml

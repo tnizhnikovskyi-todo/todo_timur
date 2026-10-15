@@ -265,3 +265,24 @@ def test_snapshot_rejects_bad_and_old(registry, tmp_path, caplog, world):
 
 def test_models_module_registry_untouched():
     assert "passive" in MODELS
+
+
+def test_reset_models_restores_counters_and_rng(world):
+    """API-17 reset: лічильники моделей (pieces_acc/Relative*) і ГПВЧ — початкові (ТП-07: повторюваність)."""
+    world.set_flag("shift", {"speed": 2.0, "lines": ["A"], "trucks": False, "people": False})
+    world.advance(600)
+    m = world.devices["SAW-1"].model
+    assert m.pieces_acc > 0 and world._rngs
+    world.reset_models()
+    assert m.pieces_acc == 0 and m.relative["PiecesOut"] == 0 and not world._rngs
+
+
+def test_reset_models_resets_yard_controller(world):
+    """API-17 reset: ворота/фури двору — початкові (відкриті після fire_drill ворота не переживають reset)."""
+    from iot_sim.models.yard import ctl
+
+    world.advance(2)
+    c = ctl(world)
+    c.gates["GATE-W"]["state"] = "open"
+    world.reset_models()
+    assert ctl(world).gates["GATE-W"]["state"] == "closed" and ctl(world) is not c

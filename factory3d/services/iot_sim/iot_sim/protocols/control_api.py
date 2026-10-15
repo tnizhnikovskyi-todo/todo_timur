@@ -201,7 +201,8 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
             w = ctl.world
             yield GaugeMetricFamily("iot_sim_up", "Сервіс працює", value=1)
             if w is not None:
-                lag = 0.0 if w.last_tick_real is None else max(0.0, mono() - w.last_tick_real)
+                period = (ctl.settings.tick_ms if ctl.settings else 1000) / 1000  # лаг = запізнення понад період тіку
+                lag = 0.0 if w.last_tick_real is None else max(0.0, mono() - w.last_tick_real - period)
                 yield GaugeMetricFamily("iot_sim_tick_lag_seconds", "Відставання тіку", value=lag)
                 yield GaugeMetricFamily("iot_sim_signals_total", "Сигнали", value=len(w.signals))
                 yield GaugeMetricFamily("iot_sim_alarms", "Сигнали в alarm",
@@ -478,6 +479,7 @@ def create_app(settings: Settings | None = None, *, world: World | None = None,
             if dev.fault:
                 w.clear(code)
         ctl.fault_meta.clear()
+        w.reset_models()
         for sig in w.signals.values():
             sig.value, sig.held_until, sig.status = sig.spec.initial_value(), None, "ok"
             sig.ts = w.now()
