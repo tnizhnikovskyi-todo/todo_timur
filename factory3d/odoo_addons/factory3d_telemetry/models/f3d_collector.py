@@ -11,6 +11,8 @@ from odoo.exceptions import AccessError, ValidationError
 GROUP_ADMIN = "factory3d_base.group_f3d_admin"
 TOUCH_INTERVAL_PARAM = "factory3d.telemetry.touch_interval_s"
 TOUCH_INTERVAL_S = 30  # DEC-19: мінімальний інтервал запису last_seen/last_push_at
+RATE_WINDOW_S = 60  # R-17 п. 2: вікно ліміту частоти push
+RATE_KEEP_S = 600  # скільки секунд `_cron_offline` тримає журнал пакетів `f3d_collector_push`
 
 
 class F3dCollector(models.Model):
@@ -48,8 +50,6 @@ class F3dCollector(models.Model):
     buffer_dropped = fields.Integer(string="Втрачено з буфера", readonly=True)
     plugins = fields.Json(string="Плагіни", readonly=True)
     config_etag = fields.Char(string="ETag конфігурації", readonly=True)
-    rate_window_start = fields.Datetime()
-    rate_count = fields.Integer()
     source_ids = fields.One2many("f3d.source", "collector_id", string="Джерела")
     source_count = fields.Integer(string="Джерел", compute="_compute_counts")
     signal_count = fields.Integer(string="Сигналів", compute="_compute_counts")
@@ -67,6 +67,16 @@ class F3dCollector(models.Model):
         for rec in self:
             if not rec.code or not self.CODE_RE.match(rec.code):
                 raise ValidationError(_("Код колектора: великі латинські літери, цифри, дефіс (напр. COL-MAIN)."))
+
+    def init(self):
+        """DEC-19: журнал пакетів для ліміту частоти (лише вставки, без FK) — окремо від рядка колектора."""
+        super().init()
+        self.env.cr.execute(
+            "CREATE TABLE IF NOT EXISTS f3d_collector_push (collector_id integer NOT NULL, ts timestamp NOT NULL)"
+        )
+        self.env.cr.execute(
+            "CREATE INDEX IF NOT EXISTS f3d_collector_push_collector_ts_idx ON f3d_collector_push (collector_id, ts)"
+        )
 
     def _compute_counts(self):
         sources = {}
@@ -228,17 +238,23 @@ class F3dCollector(models.Model):
         return {"etag": etag, "generated_at": now, "server_time": now, **body}
 
     def _rate_check(self):
-        """R-17 п. 2: вікно 60 с, не більше `push_rate_per_min` пакетів."""
+        """R-17 п. 2: вікно 60 с, не більше `push_rate_per_min` пакетів (інакше `429`).
+
+        DEC-19: лічильник не лежить у рядку колектора. Кожен пакет — один `INSERT` у `f3d_collector_push`, далі
+        `COUNT` за останні 60 с. Рядки лише додаються, тож паралельні push одного колектора не блокують один
+        одного й не дають serialization failure (на відміну від `UPDATE` спільного рядка). Старі рядки
+        прибирає `_cron_offline`. Відхилені пакети теж рахуються, як і раніше.
+        """
         self.ensure_one()
         now = fields.Datetime.now()
         limit = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.push_rate_per_min", "60"))
-        rec = self.sudo().with_context(mail_notrack=True)
-        start = rec.rate_window_start
-        if not start or (now - start).total_seconds() >= 60:
-            rec.write({"rate_window_start": now, "rate_count": 1})
-            return True
-        rec.write({"rate_count": rec.rate_count + 1})
-        return rec.rate_count <= limit
+        cr = self.env.cr
+        cr.execute("INSERT INTO f3d_collector_push (collector_id, ts) VALUES (%s, %s)", (self.id, now))
+        cr.execute(
+            "SELECT COUNT(*) FROM f3d_collector_push WHERE collector_id = %s AND ts > %s",
+            (self.id, now - timedelta(seconds=RATE_WINDOW_S)),
+        )
+        return cr.fetchone()[0] <= limit
 
     # --- навігація, крон -----------------------------------------------------------------------------
     def action_view_sources(self):
@@ -256,6 +272,7 @@ class F3dCollector(models.Model):
     def _cron_offline(self):
         """R-25: онлайн-колектор без контакту > 3·status_interval_s → offline, його джерела й сигнали."""
         now = fields.Datetime.now()
+        self.env.cr.execute("DELETE FROM f3d_collector_push WHERE ts < %s", (now - timedelta(seconds=RATE_KEEP_S),))
         for col in self.sudo().search([("state", "=", "online"), ("last_seen", "!=", False)]):
             if col.last_seen < now - timedelta(seconds=3 * col.status_interval_s):
                 col.write({"state": "offline"})

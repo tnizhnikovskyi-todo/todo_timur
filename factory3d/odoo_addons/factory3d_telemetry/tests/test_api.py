@@ -296,7 +296,8 @@ class TestPush(ApiCase):
         self.assertEqual(codes, [200, 200, 200])
         status, res, headers = self.post("push", empty)
         self.assertEqual((status, res["error"]["code"], headers["Retry-After"]), (429, "rate_limited", "10"))
-        self.set_sql(self.col, rate_window_start=self.now(-61))
+        # вікно минуло: пакети в журналі ліміту старші за 60 с (AC-41)
+        self.env.cr.execute("UPDATE f3d_collector_push SET ts = ts - interval '61 seconds'")
         self.assertEqual(self.post("push", empty)[0], 200)
 
 

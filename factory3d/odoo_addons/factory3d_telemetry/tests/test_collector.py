@@ -193,6 +193,32 @@ class TestConfigPayload(F3DTelemetryCase):
         with freeze_time("2026-10-14 08:01:01"):
             self.assertTrue(self.col._rate_check())
 
+    def test_rate_check_not_in_collector_row(self):
+        """DEC-19 / T-2: ліміт частоти не пише рядок колектора (лише INSERT у журнал пакетів); колектори незалежні."""
+        writes = []
+        orig = self.registry["f3d.collector"].write
+
+        def spy(rec, vals):
+            writes.append(set(vals))
+            return orig(rec, vals)
+
+        self.env.cr.execute("SELECT write_date FROM f3d_collector WHERE id = %s", [self.col.id])
+        before = self.env.cr.fetchone()
+        self.env["ir.config_parameter"].sudo().set_param("factory3d.telemetry.push_rate_per_min", "3")
+        with freeze_time(NOW), patch.object(self.registry["f3d.collector"], "write", spy):
+            self.assertEqual([self.col._rate_check() for _i in range(4)], [True, True, True, False])
+            self.assertTrue(self.col2._rate_check())  # лічильник окремий для кожного колектора
+        self.assertEqual(writes, [])
+        self.env.cr.execute("SELECT write_date FROM f3d_collector WHERE id = %s", [self.col.id])
+        self.assertEqual(self.env.cr.fetchone(), before)
+        # прострочені рядки журналу прибирає крон
+        self.env.cr.execute("UPDATE f3d_collector_push SET ts = ts - interval '11 minutes'")
+        self.env["f3d.collector"]._cron_offline()
+        self.env.cr.execute(
+            "SELECT COUNT(*) FROM f3d_collector_push WHERE collector_id IN %s", [(self.col.id, self.col2.id)]
+        )
+        self.assertEqual(self.env.cr.fetchone()[0], 0)
+
 
 @tagged(*TAGS)
 class TestCollectorTouchThrottle(F3DTelemetryCase):
