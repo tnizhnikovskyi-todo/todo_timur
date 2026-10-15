@@ -15,7 +15,7 @@ class TestSources(FireCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.env['hr.attendance'].sudo().search([]).unlink()
-        cls.env['f3d.fire.drill'].sudo().search([]).unlink()
+        cls.env['f3d.fire.drill'].sudo().search([('origin', '!=', 'demo')]).unlink()
         cls.Base = cls.env['f3d.fire.passage.source']
 
     def setUp(self):

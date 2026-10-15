@@ -17,7 +17,7 @@ class TestDrill(FireCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.env['hr.attendance'].sudo().search([]).unlink()
-        cls.env['f3d.fire.drill'].sudo().search([]).unlink()
+        cls.env['f3d.fire.drill'].sudo().search([('origin', '!=', 'demo')]).unlink()
 
     def setUp(self):
         super().setUp()
@@ -181,7 +181,7 @@ class TestDrill(FireCase):
     def test_auto_create(self):
         with freeze_time(self.at(0)):
             self.z_cnc._set_state('test', 'test-alarm', self.at(0), self.dev_cnc05)
-        d = self.env['f3d.fire.drill'].search([])
+        d = self.env['f3d.fire.drill'].search([('origin', '!=', 'demo')])
         self.assertEqual(len(d), 1)
         self.assertEqual((d.origin, d.title, d.state), ('panel', 'Тест приладу: %s' % self.z_cnc.name, 'running'))
         self.assertTrue(self.ev('drill_auto', drill_id=d.id))
@@ -190,7 +190,7 @@ class TestDrill(FireCase):
         self.env['ir.config_parameter'].sudo().set_param('factory3d.fire_safety.drill_auto_create', 'False')
         with freeze_time(self.at(0)):
             self.z_cnc._set_state('test', 'test-alarm', self.at(0), self.dev_cnc05)
-        self.assertEqual(self.env['f3d.fire.drill'].search_count([]), 0)
+        self.assertEqual(self.env['f3d.fire.drill'].search_count([('origin', '!=', 'demo')]), 0)
 
     # --- AC-47 -------------------------------------------------------------------------------------------
     def test_real_alarm(self):
@@ -204,7 +204,7 @@ class TestDrill(FireCase):
     def test_real_alarm_without_drill(self):
         with freeze_time(self.at(5)):
             self.z_cut._set_state('alarm', 'alarm', self.at(5), None)
-        self.assertEqual(self.env['f3d.fire.drill'].search_count([]), 0)
+        self.assertEqual(self.env['f3d.fire.drill'].search_count([('origin', '!=', 'demo')]), 0)
 
     # --- AC-48 -------------------------------------------------------------------------------------------
     def test_auto_stop(self):

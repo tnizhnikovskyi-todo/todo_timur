@@ -111,7 +111,7 @@ class FireCase(TransactionCase):
             return self.panel._f3d_fire_sync(full=True)
 
     def ev(self, etype, **dom):
-        domain = [('etype', '=', etype)] + [(k, '=', v) for k, v in dom.items()]
+        domain = [('etype', '=', etype), ('source', '!=', 'demo')] + [(k, '=', v) for k, v in dom.items()]
         return self.env['f3d.fire.event'].search(domain)
 
     # --- люди й навчання ---------------------------------------------------------------------------------

@@ -11,3 +11,6 @@ from . import test_security_readonly
 from . import test_requests
 from . import test_drill
 from . import test_passage_source
+from . import test_hooks
+from . import test_viewer_provider
+from . import test_rights_ui

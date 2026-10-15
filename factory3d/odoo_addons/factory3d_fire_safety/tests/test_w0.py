@@ -1,4 +1,6 @@
 """W0-скелет: групи (§4.2), параметри (§5.1), меню (§3)."""
+import json
+
 from odoo.tests import TransactionCase, tagged
 
 PARAMS = {
@@ -29,6 +31,9 @@ class TestW0Skeleton(TransactionCase):
         icp = self.env['ir.config_parameter'].sudo()
         self.assertEqual(len(PARAMS), 17)
         for key, value in PARAMS.items():
+            if key == 'migration_report':  # після установки — звіт хука (§5.4 п. 9), а не '{}'
+                self.assertIn(json.loads(icp.get_param('factory3d.fire_safety.' + key))['state'], ('done', 'partial'))
+                continue
             self.assertEqual(icp.get_param('factory3d.fire_safety.' + key) or '', value, key)
         self.assertFalse(icp.get_param('factory3d.fire_safety.write_enabled'))
 
