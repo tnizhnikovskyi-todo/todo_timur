@@ -107,7 +107,7 @@ class FakeBioStar:
         self._write_guard()
 
     def create_user(self, user_id, name, start_dt, expiry_dt, user_group_id):
-        self._tick('create_user', user_id, name)
+        self._tick('create_user', user_id, name, start_dt, expiry_dt, user_group_id)
         self._write_guard()
 
 

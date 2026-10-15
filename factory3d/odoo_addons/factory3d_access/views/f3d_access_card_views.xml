@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_access_card_list" model="ir.ui.view">
+        <field name="name">f3d.access.card.list</field>
+        <field name="model">f3d.access.card</field>
+        <field name="arch" type="xml">
+            <list string="Картки доступу">
+                <field name="number"/>
+                <field name="card_type"/>
+                <field name="holder_type"/>
+                <field name="holder_name"/>
+                <field name="state" widget="badge" decoration-success="state == 'active'"
+                       decoration-danger="state in ('blocked', 'lost')" decoration-info="state == 'draft'"/>
+                <field name="sync_state" widget="badge" decoration-success="sync_state == 'synced'"
+                       decoration-info="sync_state == 'pending'" decoration-danger="sync_state == 'error'"
+                       decoration-muted="sync_state == 'local'"/>
+                <field name="issued_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_card_form" model="ir.ui.view">
+        <field name="name">f3d.access.card.form</field>
+        <field name="model">f3d.access.card</field>
+        <field name="arch" type="xml">
+            <form string="Картка доступу">
+                <header>
+                    <button name="action_issue" type="object" string="Видати" class="btn-primary"
+                            invisible="state not in ('draft', 'returned')"/>
+                    <button name="action_block" type="object" string="Заблокувати" invisible="state != 'active'"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_unblock" type="object" string="Розблокувати" invisible="state != 'blocked'"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_return" type="object" string="Повернути"
+                            invisible="state not in ('active', 'blocked')"/>
+                    <button name="action_mark_lost" type="object" string="Втрачена"
+                            invisible="state not in ('active', 'blocked')"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_retry_sync" type="object" string="Повторити запис у BioStar"
+                            invisible="sync_state not in ('error', 'local') or not pending_op"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <button name="action_mark_synced" type="object" string="Позначити синхронізованим"
+                            invisible="sync_state not in ('local', 'error') or not pending_op"
+                            groups="factory3d_access.group_f3d_access_admin"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,blocked,returned"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="sync_state != 'local' or not pending_op">Запис у BioStar вимкнено стоп-краном. Виконайте операцію в BioStar вручну і натисніть «Позначити синхронізованим».</div>
+                    <div class="alert alert-danger" role="alert" invisible="sync_state != 'error'">
+                        <field name="sync_error"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="number"/>
+                            <field name="card_type"/>
+                            <field name="server_id"/>
+                            <field name="holder_type"/>
+                            <field name="employee_id" invisible="holder_type != 'employee'"/>
+                            <field name="visitor_id" invisible="holder_type != 'visitor'"/>
+                            <field name="block_reason"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="issued_at"/>
+                            <field name="blocked_at"/>
+                            <field name="returned_at"/>
+                            <field name="biostar_card_id"/>
+                            <field name="sync_state"/>
+                            <field name="pending_op"/>
+                            <field name="sync_ts"/>
+                            <field name="sync_attempts"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_card_search" model="ir.ui.view">
+        <field name="name">f3d.access.card.search</field>
+        <field name="model">f3d.access.card</field>
+        <field name="arch" type="xml">
+            <search string="Картки доступу">
+                <field name="number"/>
+                <field name="holder_name"/>
+                <filter name="draft" string="Чернетка" domain="[('state', '=', 'draft')]"/>
+                <filter name="active_cards" string="Видані" domain="[('state', '=', 'active')]"/>
+                <filter name="blocked" string="Заблоковані" domain="[('state', '=', 'blocked')]"/>
+                <filter name="returned" string="Повернуті" domain="[('state', '=', 'returned')]"/>
+                <filter name="lost" string="Втрачені" domain="[('state', '=', 'lost')]"/>
+                <separator/>
+                <filter name="pool_free" string="Пул вільних"
+                        domain="[('holder_type', '=', 'pool'), ('state', 'in', ('draft', 'returned'))]"/>
+                <filter name="sync_error" string="Помилки запису" domain="[('sync_state', '=', 'error')]"/>
+                <filter name="sync_local" string="Не записано в BioStar"
+                        domain="[('sync_state', '=', 'local'), ('pending_op', '!=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_f3d_access_card" model="ir.actions.act_window">
+        <field name="name">Картки</field>
+        <field name="res_model">f3d.access.card</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_hr_employee_form_f3d_access_cards" model="ir.ui.view">
+        <field name="name">hr.employee.form.f3d.access.cards</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="factory3d_access.view_hr_employee_form_f3d_access"/>
+        <field name="arch" type="xml">
+            <field name="f3d_access_link_ids" position="after">
+                <field name="f3d_access_card_ids" groups="factory3d_access.group_f3d_access_security">
+                    <list>
+                        <field name="number"/>
+                        <field name="state"/>
+                        <field name="sync_state"/>
+                    </list>
+                </field>
+            </field>
+        </field>
+    </record>
+</odoo>

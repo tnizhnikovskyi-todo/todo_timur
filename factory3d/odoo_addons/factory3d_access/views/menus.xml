@@ -6,10 +6,14 @@
               groups="group_f3d_access_security" action="action_f3d_access_presence"/>
     <menuitem id="menu_f3d_access_event" name="Журнал подій" parent="menu_f3d_access" sequence="20"
               groups="group_f3d_access_security" action="action_f3d_access_event"/>
+    <menuitem id="menu_f3d_access_visitor" name="Відвідувачі" parent="menu_f3d_access" sequence="30"
+              groups="group_f3d_access_security" action="action_f3d_access_visitor"/>
     <menuitem id="menu_f3d_access_door" name="Двері" parent="menu_f3d_access" sequence="40"
               groups="group_f3d_access_security" action="action_f3d_access_door"/>
     <menuitem id="menu_f3d_access_device" name="Пристрої" parent="menu_f3d_access" sequence="50"
               groups="group_f3d_access_security" action="action_f3d_access_device"/>
+    <menuitem id="menu_f3d_access_card" name="Картки" parent="menu_f3d_access" sequence="60"
+              groups="group_f3d_access_security" action="action_f3d_access_card"/>
     <menuitem id="menu_f3d_access_user_link" name="Користувачі BioStar" parent="menu_f3d_access" sequence="70"
               groups="group_f3d_access_admin" action="action_f3d_access_user_link"/>
     <menuitem id="menu_f3d_access_reprocess" name="Повторна обробка" parent="menu_f3d_access" sequence="80"
@@ -22,5 +26,5 @@
     <menuitem id="menu_f3d_access_att_report" name="Проходи СКУД" parent="hr_attendance.menu_hr_attendance_reporting"
               sequence="20" groups="hr_attendance.group_hr_attendance_user,group_f3d_access_security"
               action="action_f3d_access_event_report"/>
-    <!-- W3: menu_f3d_access_visitor (30), menu_f3d_access_card (60); W4: menu_f3d_access_settings (SPEC §3 V-15) -->
+    <!-- W4: menu_f3d_access_settings (SPEC §3 V-15) -->
 </odoo>

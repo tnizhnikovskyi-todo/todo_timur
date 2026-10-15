@@ -3,3 +3,5 @@ from . import test_install
 from . import test_client, test_server, test_sync
 # W2
 from . import test_events, test_attendance, test_presence
+# W3
+from . import test_cards, test_visitors

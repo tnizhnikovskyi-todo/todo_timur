@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_f3d_access_visitor_list" model="ir.ui.view">
+        <field name="name">f3d.access.visitor.list</field>
+        <field name="model">f3d.access.visitor</field>
+        <field name="arch" type="xml">
+            <list string="Відвідувачі" decoration-danger="overdue or violation_count">
+                <field name="name"/>
+                <field name="visitor_company"/>
+                <field name="host_employee_id"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="state" widget="badge" decoration-info="state == 'expected'"
+                       decoration-success="state == 'on_site'" decoration-muted="state in ('closed', 'cancelled')"/>
+                <field name="card_id"/>
+                <field name="zone_id"/>
+                <field name="overdue"/>
+                <field name="violation_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_visitor_form" model="ir.ui.view">
+        <field name="name">f3d.access.visitor.form</field>
+        <field name="model">f3d.access.visitor</field>
+        <field name="arch" type="xml">
+            <form string="Відвідувач">
+                <header>
+                    <button name="action_expect" type="object" string="Очікується" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_arrive" type="object" string="Прийшов" invisible="state != 'expected'"/>
+                    <button name="action_leave" type="object" string="Вийшов" invisible="state != 'on_site'"/>
+                    <button name="action_close" type="object" string="Закрити"
+                            invisible="state not in ('expected', 'on_site', 'left')"/>
+                    <button name="action_cancel" type="object" string="Скасувати"
+                            invisible="state not in ('draft', 'expected')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,expected,on_site,left,closed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Візит">
+                            <field name="name"/>
+                            <field name="visitor_company"/>
+                            <field name="host_employee_id"/>
+                            <field name="purpose"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="allowed_zone_ids" widget="many2many_tags"/>
+                            <field name="document_checked"/>
+                            <field name="origin"/>
+                            <field name="origin_ref"/>
+                        </group>
+                        <group string="Доступ">
+                            <field name="card_id"/>
+                            <field name="server_id"/>
+                            <field name="company_id" invisible="1"/>
+                            <field name="biostar_user_id"/>
+                            <field name="link_id"/>
+                            <field name="sync_state"/>
+                            <field name="sync_error"/>
+                        </group>
+                        <group string="Зараз">
+                            <field name="present"/>
+                            <field name="zone_id"/>
+                            <field name="zone_since"/>
+                            <field name="arrived_at"/>
+                            <field name="left_at"/>
+                            <field name="overdue"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="events" string="Події">
+                            <field name="event_ids" readonly="1">
+                                <list>
+                                    <field name="ts"/>
+                                    <field name="door_id"/>
+                                    <field name="direction"/>
+                                    <field name="event_type"/>
+                                    <field name="zone_violation"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_visitor_search" model="ir.ui.view">
+        <field name="name">f3d.access.visitor.search</field>
+        <field name="model">f3d.access.visitor</field>
+        <field name="arch" type="xml">
+            <search string="Відвідувачі">
+                <field name="name"/>
+                <field name="visitor_company"/>
+                <field name="host_employee_id"/>
+                <filter name="today" string="Сьогодні"
+                        domain="[('date_from', '&lt;=', datetime.datetime.combine(context_today(), datetime.time.max)), ('date_to', '&gt;=', datetime.datetime.combine(context_today(), datetime.time.min))]"/>
+                <filter name="on_site" string="На території" domain="[('state', '=', 'on_site')]"/>
+                <filter name="expected" string="Очікуються" domain="[('state', '=', 'expected')]"/>
+                <filter name="overdue" string="Прострочені" domain="[('overdue', '=', True)]"/>
+                <filter name="violations" string="Порушення зон" domain="[('event_ids.zone_violation', '=', True)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_access_visitor_calendar" model="ir.ui.view">
+        <field name="name">f3d.access.visitor.calendar</field>
+        <field name="model">f3d.access.visitor</field>
+        <field name="arch" type="xml">
+            <calendar string="Відвідувачі" date_start="date_from" date_stop="date_to" color="state">
+                <field name="name"/>
+                <field name="host_employee_id"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="action_f3d_access_visitor" model="ir.actions.act_window">
+        <field name="name">Відвідувачі</field>
+        <field name="res_model">f3d.access.visitor</field>
+        <field name="view_mode">list,calendar,form</field>
+        <field name="context">{'search_default_today': 1}</field>
+    </record>
+
+    <!-- visitor_id у представленнях W1/W2 -->
+    <record id="view_f3d_access_user_link_list_visitor" model="ir.ui.view">
+        <field name="name">f3d.access.user.link.list.visitor</field>
+        <field name="model">f3d.access.user.link</field>
+        <field name="inherit_id" ref="factory3d_access.view_f3d_access_user_link_list"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="visitor_id"/>
+            </field>
+        </field>
+    </record>
+    <record id="view_f3d_access_user_link_form_visitor" model="ir.ui.view">
+        <field name="name">f3d.access.user.link.form.visitor</field>
+        <field name="model">f3d.access.user.link</field>
+        <field name="inherit_id" ref="factory3d_access.view_f3d_access_user_link_form"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="visitor_id"/>
+            </field>
+        </field>
+    </record>
+    <record id="view_f3d_access_user_link_search_visitor" model="ir.ui.view">
+        <field name="name">f3d.access.user.link.search.visitor</field>
+        <field name="model">f3d.access.user.link</field>
+        <field name="inherit_id" ref="factory3d_access.view_f3d_access_user_link_search"/>
+        <field name="arch" type="xml">
+            <filter name="disabled" position="after">
+                <filter name="visitors" string="Відвідувачі" domain="[('visitor_id', '!=', False)]"/>
+            </filter>
+        </field>
+    </record>
+    <record id="view_f3d_access_event_list_visitor" model="ir.ui.view">
+        <field name="name">f3d.access.event.list.visitor</field>
+        <field name="model">f3d.access.event</field>
+        <field name="inherit_id" ref="factory3d_access.view_f3d_access_event_list"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="visitor_id"/>
+            </field>
+        </field>
+    </record>
+    <record id="view_f3d_access_event_form_visitor" model="ir.ui.view">
+        <field name="name">f3d.access.event.form.visitor</field>
+        <field name="model">f3d.access.event</field>
+        <field name="inherit_id" ref="factory3d_access.view_f3d_access_event_form"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="visitor_id"/>
+            </field>
+        </field>
+    </record>
+    <record id="view_f3d_access_event_search_visitor" model="ir.ui.view">
+        <field name="name">f3d.access.event.search.visitor</field>
+        <field name="model">f3d.access.event</field>
+        <field name="inherit_id" ref="factory3d_access.view_f3d_access_event_search"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="visitor_id"/>
+            </field>
+        </field>
+    </record>
+</odoo>

@@ -41,7 +41,6 @@
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
     </record>
-    <!-- W3: cron_f3d_access_card_sync (model_f3d_access_card, f3d.access.visitor)
     <record id="cron_f3d_access_card_sync" model="ir.cron">
         <field name="name">СКУД: запис карток і відвідувачів у BioStar</field>
         <field name="model_id" ref="model_f3d_access_card"/>
@@ -53,7 +52,6 @@ env['f3d.access.visitor']._cron_user_sync()</field>
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
     </record>
-    -->
     <record id="cron_f3d_access_housekeeping" model="ir.cron">
         <field name="name">СКУД: ротація і закриття відміток</field>
         <field name="model_id" ref="model_f3d_access_event"/>
