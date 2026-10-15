@@ -1,0 +1,25 @@
+{
+    "name": "Завод 3D: телеметрія",
+    "summary": "Джерела, сигнали, показання з обладнання; пороги → заявки ТО; ТО за лічильником; API колектора",
+    "description": "Спільний хребет збору даних factory3d: f3d.collector, f3d.source, f3d.signal, f3d.reading, "
+                   "f3d.reading.hour, f3d.command; ендпоінти /f3d/telemetry/*; плагіни колектора modbus_tcp, mqtt, "
+                   "http_push, bacnet_ip (services/collector); міграція рівня 0 factory3d_iot_sim.",
+    "version": "19.0.1.1.0",
+    "category": "Manufacturing/Maintenance",
+    "author": "ToDo",
+    "website": "https://todo.ltd",
+    "license": "LGPL-3",
+    "depends": ["factory3d_base", "maintenance", "mail", "web"],
+    # Каркас W0: решту файлів SPEC §1 додає лідер при приймання воркерів (див. *.full у security/, data/, views/).
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "data/ir_config_parameter.xml",
+        "data/ir_cron.xml",
+        "views/menus.xml",
+    ],
+    "demo": [],
+    "external_dependencies": {"python": []},
+    "installable": True,
+    "application": False,
+}

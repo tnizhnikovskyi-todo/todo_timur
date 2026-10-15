@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_f3d_telemetry" name="Телеметрія" parent="factory3d_base.menu_f3d_root" sequence="30"
+              groups="factory3d_base.group_f3d_user"/>
+</odoo>
