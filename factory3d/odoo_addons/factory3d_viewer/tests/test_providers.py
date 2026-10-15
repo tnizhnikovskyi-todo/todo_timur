@@ -3,7 +3,7 @@ import unittest
 
 from odoo.tests import tagged
 
-from odoo.addons.factory3d_viewer.tools.payload import BASE_KEYS, PayloadBuilder, get_providers
+from odoo.addons.factory3d_viewer.tools.payload import BASE_KEYS, STATIC_SECTIONS, PayloadBuilder, get_providers
 
 from .common import F3dViewerBase
 
@@ -28,6 +28,29 @@ class TestProviders(F3dViewerBase):
     def _is_own(self, name):
         mod = self.env[name]._original_module
         return name.startswith(ZZ) or mod in ("factory3d_viewer", "test_factory3d_viewer")
+
+    def _covered_sections(self, exclude=()):
+        """Розділи, які обслуговує хоч один зареєстрований провайдер (крім `exclude`): очікування
+        «static/error» не мають залежати від того, які модулі з провайдерами (access, fire_safety…) встановлено."""
+        return {s for p in get_providers(self.env) if p._name not in exclude
+                for s in getattr(p, "_f3d_sections", ())}
+
+    def _patch_zz_fail_section(self):
+        """Переносить zz_fail на статичний розділ без «живого» провайдера й повертає його назву
+        (за замовчуванням zz_fail пише у `fire`, який перекриває провайдер factory3d_fire_safety_viewer)."""
+        covered = self._covered_sections(exclude=(ZZ + "fail",))
+        free = [k for k in ("lighting", "passports", "evacuation") if k not in covered]
+        self.assertTrue(free, "немає статичного розділу без провайдера для перевірки zz_fail")
+        section = free[0]
+        cls = type(self.env[ZZ + "fail"])
+        self.patch(cls, "_f3d_sections", (section,))
+
+        def collect(this, payload, ctx):
+            if this.env.context.get("zz_fail"):
+                payload.setdefault(section, {})["partial"] = True  # частковий запис, який має відкотитись
+                raise ValueError("boom")
+        self.patch(cls, "_f3d_viewer_collect", collect)
+        return section
 
     def _record_calls(self):
         calls = []
@@ -56,21 +79,23 @@ class TestProviders(F3dViewerBase):
     def test_failed_provider_isolated(self):
         """AC-13."""
         logger = "odoo.addons.factory3d_viewer.tools.payload"
+        section = self._patch_zz_fail_section()
         with self.assertLogs(logger, level="ERROR"):
             data = self._builder(ctx={"zz_fail": True}).build()
         meta = data["meta"]
-        self.assertEqual(meta["sections"]["fire"], "error")
+        self.assertEqual(meta["sections"][section], "error")
         errs = [e for e in meta["errors"] if e["provider"] == ZZ + "fail"]
         self.assertEqual(errs, [{"provider": ZZ + "fail", "error": "ValueError"}])
         self.assertNotIn("boom", json.dumps(meta))
         self.assertEqual(meta["sections"]["zones"], "live")
-        self.assertNotIn("partial", data["fire"])  # частковий запис відкотився
+        self.assertNotIn("partial", data.get(section, {}))  # частковий запис відкотився
 
     def test_failed_provider_restores_static_full(self):
         from odoo.addons.factory3d_viewer.tools import static_data
+        section = self._patch_zz_fail_section()
         with self.assertLogs("odoo.addons.factory3d_viewer.tools.payload", level="ERROR"):
             data = self._builder(ctx={"zz_fail": True}, full=True).build()
-        self.assertEqual(data["fire"], static_data.load()["fire"])
+        self.assertEqual(data[section], static_data.load()[section])
 
     def test_group_denied(self):
         cls = type(self.env[ZZ + "duck"])
@@ -117,7 +142,11 @@ class TestProviders(F3dViewerBase):
         self.assertEqual(base, [k for k in BASE_KEYS if k in base])
         self.assertEqual([k for k in keys[len(base):] if k.startswith("zz_")], ["zz_duck"])
         self.assertEqual(data["meta"]["schema"], "1.1")
-        for k in ("energy", "lighting", "ventilation", "evacuation", "passports"):
+        covered = self._covered_sections()
+        checked = [k for k in ("energy", "lighting", "ventilation", "evacuation", "passports")
+                   if k in STATIC_SECTIONS and k not in covered]
+        self.assertTrue(checked, "усі перевірювані статичні розділи вже мають провайдера")
+        for k in checked:
             self.assertEqual(data["meta"]["sections"].get(k), "static")
 
     def test_abstract_defaults(self):

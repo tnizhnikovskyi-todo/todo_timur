@@ -116,7 +116,7 @@ class TestDelta(F3dViewerBase):
             res = DeltaBuilder(self.env(user=self.user_f3d, context=dict(self.env.context, zz_fail=True)), None,
                                changes={"x": {"A"}}).build()
         self.assertIn({"provider": ZZ + "fail", "error": "ValueError"}, res["patch"]["meta"]["errors"])
-        self.assertNotIn("fire", res["patch"])
+        self.assertNotIn("partial", res["patch"].get("fire", {}))  # частковий запис zz_fail відкотився
 
     def test_delta_too_large(self):
         cls = type(self.env[ZZ + "test"])
