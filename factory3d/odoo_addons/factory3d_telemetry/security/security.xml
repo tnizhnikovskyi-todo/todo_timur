@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPEC §4.3. Додати в manifest "data" (перед ir.model.access.csv), коли з'являться моделі. -->
+<!-- SPEC §4.3 -->
 <odoo>
     <record id="f3d_reading_rule_all" model="ir.rule">
         <field name="name">f3d.reading: усі (без компанії)</field>
