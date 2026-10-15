@@ -7,6 +7,7 @@
 //       attrs   { key, kind, node, id, name, vals: { поле: новое }, prev: { поле: прежнее } }
 //       archive { key, kind, node, id, name, blocked?, stock? }       blocked — на месте (или внутри) есть остаток: архивировать нельзя (F4)
 //       category  { key, kind, node: "WH", id?, ref?, name, vals: { max_weight, allow_new_product, capacities: [{ product, package_type_id, quantity }] } }   категория хранения (W-14): создание (ref) или правка (id); идёт раньше локаций
+//       putaway { key, kind, node, act: create | update | delete, ref? | id?, name, ruleKey, rule: { product, category_id, package_type_ids, location_in, location_out ({ id } | { ref }), sublocation, storage_category_id, sequence }, conflict? }   правило размещения (W-15): после локаций и атрибутов
 //       orderpoint{ key, kind, node, id?, name, location_id, product, min, max, prev? }   правило пополнения места (stock.warehouse.orderpoint): создание (без id) или правка min / max
 //     В vals операций create и attrs у мест и контейнеров могут быть storage_category_id (id Odoo или { ref } новой категории; null — без категории), replenish_location, scrap_location (Odoo 18), usage, removal_strategy_id
 //     Место в Odoo называется коротким именем уровня (D-14, `name` из плана нумерации W-08), штрихкод — полный код (по нему снимок W-11 берёт ключ места); контейнер (зона, ряд, секция) — внутренняя локация с именем узла
@@ -21,14 +22,15 @@ import { layout } from "./layout.js";
 import { plan as numbering } from "./addressing.js";
 import { inNode, lastSeg } from "./types.js";
 import { attrMap, catOf, categories, odooOf, recFor } from "./capacity.js";
+import { resolveT, ruleName, rulesOf } from "./putaway.js";
 
-export const OP_KINDS = ["category", "create", "move", "rename", "attrs", "orderpoint", "archive"];
+export const OP_KINDS = ["category", "create", "move", "rename", "attrs", "putaway", "orderpoint", "archive"];
 export const POS_FIELDS = ["posx", "posy", "posz"];
 // posx / posy / posz есть у stock.location только в Odoo 18 (R-02)
 export const posSupported = (data) => { const v = data && data.meta && data.meta.odoo && data.meta.odoo.version; return !!v && typeof v.major === "number" && v.major < 19; };
 const dirname = (p) => (p && p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 
-export function emptyPlan() { return { linked: false, pos: false, ops: [], stats: { total: 0, category: 0, create: 0, move: 0, rename: 0, attrs: 0, orderpoint: 0, archive: 0, blocked: 0, conflict: 0 } }; }
+export function emptyPlan() { return { linked: false, pos: false, ops: [], stats: { total: 0, category: 0, create: 0, move: 0, rename: 0, attrs: 0, putaway: 0, orderpoint: 0, archive: 0, blocked: 0, conflict: 0 } }; }
 
 export function computePlan(data, edit, cfg = {}) {
   const odoo = data && data.meta && data.meta.odoo, out = emptyPlan();
@@ -39,6 +41,7 @@ export function computePlan(data, edit, cfg = {}) {
   const recOf = (c) => { const r = data.locations[c]; return r && r.id != null ? r : null; };
   const items = new Map(numbering(tree, edit, { scope: "WH" }).items.map((i) => [i.id, i]));
   const fromIds = new Set([...nodes.values()].filter((n) => n.from).map((n) => n.from));
+  const bcx = cfg.bcx || null; // штрихкоды, занятые в компании в Odoo (I-06): Map(штрихкод → { complete_name, warehouse, archived }), считает сервер заранее
   const barcodes = new Map([...Object.values(data.locations), ...Object.values(odoo.containers || {})].filter((r) => r.barcode).map((r) => [r.barcode, r.id])); // штрихкод места = ключ в снимке; занятый контейнером — конфликт
   // есть ли внутри узла места (кроме ячеек, которых ещё нет): без мест ряд или секция в Odoo не нужны
   const memo = new Map();
@@ -84,7 +87,7 @@ export function computePlan(data, edit, cfg = {}) {
         const vals = { barcode: n.loc };
         if (out.pos && it) POS_FIELDS.forEach((k) => { vals[k] = it[k]; });
         const o = op({ key: `create:${n.id}`, kind: "create", node: n.id, ref: refKey(n), name: nameOf(n), usage: "internal", parent: parentOf(n), vals });
-        if (barcodes.has(n.loc)) o.conflict = "barcode";
+        if (barcodes.has(n.loc) || (bcx && bcx.has(n.loc))) { o.conflict = "barcode"; if (bcx && bcx.has(n.loc)) o.conflictInfo = bcx.get(n.loc); }
         return;
       }
       const cur = lastSeg(rec.complete_name);
@@ -98,7 +101,10 @@ export function computePlan(data, edit, cfg = {}) {
         const vals = {}, prev = {};
         if (rec.barcode !== n.loc) { vals.barcode = n.loc; prev.barcode = rec.barcode || null; }
         if (out.pos && it) POS_FIELDS.forEach((k) => { if ((rec[k] ?? 0) !== it[k]) { vals[k] = it[k]; prev[k] = rec[k] ?? 0; } });
-        if (Object.keys(vals).length) op({ key: `attrs:${n.id}`, kind: "attrs", node: n.id, id: rec.id, name: nm, vals, prev });
+        if (Object.keys(vals).length) {
+          const o = op({ key: `attrs:${n.id}`, kind: "attrs", node: n.id, id: rec.id, name: nm, vals, prev });
+          if (vals.barcode && bcx && bcx.has(vals.barcode)) { o.conflict = "barcode"; o.conflictInfo = bcx.get(vals.barcode); }
+        }
       }
       return;
     }
@@ -153,6 +159,23 @@ export function computePlan(data, edit, cfg = {}) {
     op({ key: `orderpoint:${n.id}`, kind: "orderpoint", node: n.id, name: lastSeg(rec.complete_name), location_id: rec.id, product: e.mm.product, min: e.mm.min, max: e.mm.max, ...(ex ? { id: ex.id, prev: { min: ex.min, max: ex.max } } : {}) });
   }
 
+  // правила размещения (W-15, E3): создание, правка, удаление; цель — существующая локация Odoo или создаваемая этим планом (по ref), поэтому правила идут после создания локаций
+  for (const r of rulesOf(data, edit).list) {
+    if (!r.isNew && !r.changed && !r.deleted) continue;
+    const key = `putaway:${r.key}`, name = ruleName(data, r), outNode = resolveT(tree, data, r.out).node || "WH";
+    if (r.deleted) { op({ key, kind: "putaway", act: "delete", node: "WH", id: r.id, name, ruleKey: r.key }); continue; }
+    const tgt = (t) => {
+      if (typeof t === "number") return { id: t };
+      const n = typeof t === "string" ? nodes.get(t) : null; if (!n) return null;
+      const rec = recFor(tree, data, n), made = createOf.get(n.id);
+      return rec ? { id: rec.id } : made ? { ref: made.ref } : null;
+    };
+    const li = tgt(r.in), lo = tgt(r.out), sc = r.sub === "closest_location" ? catRef(r.sc) : null;
+    const o = op({ key, kind: "putaway", act: r.isNew ? "create" : "update", node: outNode, ...(r.isNew ? { ref: `p:${r.key}` } : { id: r.id }), name, ruleKey: r.key,
+      rule: { product: r.p || null, category_id: r.cg || null, package_type_ids: r.pk.slice(), location_in: li, location_out: lo, sublocation: r.sub, storage_category_id: sc, sequence: r.seq } });
+    if (!li || !lo || (r.sub === "closest_location" && !sc)) o.conflict = "target"; // цель правила не существует в Odoo и не создаётся этим планом
+  }
+
   // архивация убранного: только то, что есть в Odoo и не перенесено в другое место; дети раньше родителей
   const stockUnder = (path) => Object.entries(data.locations).filter(([k, r]) => r.complete_name.startsWith(`${path}/`) && r.quants && r.quants.length && !tree.byCode.has(k)).length;
   const arch = [];
@@ -188,6 +211,7 @@ export function closure(plan, keys) {
     if (par && par.ref) add(byRef.get(par.ref));
     const cr = o.vals && o.vals.storage_category_id; // назначение новой категории не применится без самой категории
     if (cr && cr.ref) add(byRef.get(cr.ref));
+    if (o.rule) for (const p of [o.rule.location_in, o.rule.location_out, o.rule.storage_category_id]) if (p && p.ref) add(byRef.get(p.ref)); // правило размещения — без созданной цели и категории не применится
   };
   const idx = new Map(plan.ops.map((o) => [o.key, o]));
   for (const k of keys) add(idx.get(k));
@@ -216,6 +240,7 @@ export function wireOps(plan, keys) {
     if (o.parent) w.parent = par(o.parent);
     if (o.to) w.to = par(o.to);
     if (o.vals) w.vals = o.vals;
+    if (o.kind === "putaway") { w.act = o.act; if (o.rule) w.rule = o.rule; }
     if (o.kind === "orderpoint") Object.assign(w, { location_id: o.location_id, product: o.product, min: o.min, max: o.max });
     return w;
   });
@@ -241,6 +266,8 @@ export function cleanApplied(edit, plan, keys) {
       // и узел слоя узнаётся как применённый (adopted), а не дублируется местом снимка (мастер «З нуля», W-16)
       const a = e.add.find((x) => x.id === o.node);
       if (a && a.code) { a.code = o.vals.barcode; e.codes = (e.codes || []).filter((c) => c.id !== o.node); }
+    } else if (o.kind === "putaway") { // применённое правило уходит из слоя: в снимке оно уже есть (или его там больше нет)
+      e.attr = (e.attr || []).filter((x) => x.id !== `r|${o.ruleKey}`);
     } else if (o.kind === "move") {
       e.add = e.add.map((a) => { if (!a.from || !inNode(a.id, o.node)) return a; fromOld.add(a.from); const { from, ...rest } = a; return rest; });
     }

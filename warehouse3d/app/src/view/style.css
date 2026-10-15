@@ -456,3 +456,14 @@ a.btn[data-odoo-link] { display: inline-block; text-decoration: none; }
 svg g.mk { cursor: pointer; } svg g.mk text { fill: #fff; font-family: var(--f-body); font-weight: 700; pointer-events: none; }
 svg g.mk-c rect { fill: var(--o-brand); } svg g.mk-t rect { fill: var(--warn); } svg g.mk-d rect { fill: var(--idle, #888); } svg g.mk-l rect { fill: var(--bad); } svg g.mk-lm rect { fill: var(--ok); }
 svg g.mk rect { vector-effect: non-scaling-stroke; stroke: rgba(0, 0, 0, .25); stroke-width: 0.5; }
+/* правила размещения (W-15): цель и условие правила на плане, окно, цветовые метки */
+svg .pa-dst { stroke: var(--accent); stroke-width: 3; fill-opacity: 0.85; }
+svg g.pa-dst > rect, svg .rack.pa-dst, svg .grp.pa-dst { stroke: var(--accent); stroke-width: 3; }
+svg .pa-src { stroke: #f2994a; stroke-width: 2.6; stroke-dasharray: 5 3; }
+#pa-clear { font-size: 12px; white-space: nowrap; }
+.o_pa_dlg { width: min(880px, 96vw); }
+.o_pa_list tr[data-rule] { cursor: pointer; }
+.o_pa_list tr.on td { background: var(--o-hover); }
+.o_pa_form label.chk { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+.o_pa_res { margin: 10px 0; padding: 8px 10px; border: 1px solid var(--o-border); border-radius: 6px; }
+.o_tag.warn { background: #f2994a33; color: inherit; }

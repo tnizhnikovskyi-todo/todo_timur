@@ -343,8 +343,10 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, o
     };
     // тепловая карта и поиск (W-17): цвет экземпляра — по ключу показателя места, найденные места подсвечиваются как выделенные
     const hm = model.heat.mode, hmap = hm !== "status" ? model.heat.map() : null, fq = model.find.query ? model.find.results().codes : null;
+    // правило размещения и «куди покладе» (W-15): цель и условие подсвечиваются как выделенные (цвет — как у выбора; различие цели и условия — в 2D)
+    const pl = model.putaway.hl, inPl = (id) => { if (!pl) return false; for (let n = model.tree.nodes.get(id); n; n = n.parent && model.tree.nodes.get(n.parent)) if (pl.dst.has(n.id) || pl.src.has(n.id)) return true; return false; };
     for (const it of items) {
-      it.vis = inF(it.node); it.hl = it.code ? (S.length ? inS(it.node) : it.code === sel) || !!(fq && fq.has(it.code)) : inS(it.node); it.pr = pm.size > 0 && inP(it.node);
+      it.vis = inF(it.node); it.hl = (it.code ? (S.length ? inS(it.node) : it.code === sel) || !!(fq && fq.has(it.code)) : inS(it.node)) || inPl(it.node); it.pr = pm.size > 0 && inP(it.node);
       if (it.cls) { const k = hmap && it.code ? hmap.get(it.code) : undefined; it.rgb = k ? heatRGB(hm, k) : tok[it.cls]; }
     }
     fitFloor(); compose(); render();

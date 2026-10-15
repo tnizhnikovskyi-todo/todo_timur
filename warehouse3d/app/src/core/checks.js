@@ -16,7 +16,7 @@ import { findConflicts } from "./addressing.js";
 export const TECH = [
   { id: "handcart", min: 1.2 }, { id: "stacker", min: 2.4 }, { id: "reach", min: 2.8 }, { id: "vna", min: 1.8 }, { id: "forklift", min: 3.6 },
 ];
-export const TYPES = ["overlap", "overlapBld", "outside", "gap", "aisle", "heightCeil", "heightSpr", "overload", "stockMoved", "codeConflict"];
+export const TYPES = ["overlap", "overlapBld", "outside", "gap", "aisle", "heightCeil", "heightSpr", "overload", "stockMoved", "codeConflict", "putawayFit", "barcodeCompany"];
 export const BLOCK = new Set(["overlap", "overlapBld", "outside"]);
 export const BLOCK_GAP = 0.3; // зазор между рядами меньше этого — ряды стоят спиной к спине (проходом не считается)
 const EPS = 0.005; // допуск 5 мм: соприкосновение — не пересечение
@@ -131,7 +131,7 @@ function weightOf(tree, data, n) {
 }
 
 // ---------- главная функция
-export function runChecks({ tree, edit, data, others = null }) {
+export function runChecks({ tree, edit, data, others = null, ext = null }) {
   const st = settings(edit), b = (edit && edit.building) || null, list = [];
   const add = (type, key, ids, p, extra = {}) => {
     const forced = st.force.has(key), sev = forced ? "warn" : extra.sev || "error";
@@ -206,6 +206,8 @@ export function runChecks({ tree, edit, data, others = null }) {
     const key = c.kind === "other" ? "addr.conflictOther" : c.existing ? "addr.conflictEx" : "addr.conflictDup";
     add("codeConflict", `codeConflict|${c.code}`, c.ids, { code: c.code, text: { k: key, p: { code: c.code, n: c.ids.length, wh: c.wh } } });
   }
+  // 9. внешние предупреждения (W-15): правила размещения в места, куда товар не помещается; штрихкоды, занятые другими локациями компании в Odoo (I-06) — их считает модель
+  for (const x of ext || []) add(x.type, x.key, x.ids, x.p, { sev: "warn" });
   const rank = { error: 0, warn: 1 };
   list.sort((p, q) => rank[p.sev] - rank[q.sev] || TYPES.indexOf(p.type) - TYPES.indexOf(q.type) || (p.key < q.key ? -1 : p.key > q.key ? 1 : 0));
   const counts = { error: 0, warn: 0, forced: 0, total: list.length, byType: {} };

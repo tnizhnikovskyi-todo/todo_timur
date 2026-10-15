@@ -6,8 +6,10 @@ from .wh_project import iso
 G_DESIGN = "wh_constructor.group_wh_design"
 G_APPLY = "wh_constructor.group_wh_apply"
 
-KINDS = ("category", "create", "move", "rename", "attrs", "orderpoint", "archive")
+KINDS = ("category", "create", "move", "rename", "attrs", "putaway", "orderpoint", "archive")
 USAGES = ("internal", "view")
+PUTAWAY_ACTS = ("create", "update", "delete")
+SUBLOCATIONS = ("no", "last_used", "closest_location")
 POLICIES = ("empty", "same", "mixed")
 # поля локации, которые план может писать (W-13, W-14); posx / posy / posz есть только в Odoo 18, остальные поля — по наличию в версии (R-02)
 ATTR_FIELDS = ("barcode", "posx", "posy", "posz", "storage_category_id", "replenish_location", "scrap_location", "removal_strategy_id", "usage")
@@ -39,6 +41,7 @@ class WhApplyLog(models.Model):
     n_archived = fields.Integer(string="Архівовано")
     n_categories = fields.Integer(string="Категорії зберігання")
     n_orderpoints = fields.Integer(string="Правила поповнення")
+    n_putaways = fields.Integer(string="Правила розміщення")
     comment = fields.Char(string="Коментар")
     rolled_back_by = fields.Many2one("res.users", string="Хто відкотив", ondelete="set null")
     rolled_back_at = fields.Datetime(string="Коли відкочено")
@@ -78,6 +81,9 @@ class WhApplyLog(models.Model):
                 continue
             if c["kind"] == "orderpoint":
                 out.append(self._clean_orderpoint(o, c))
+                continue
+            if c["kind"] == "putaway":
+                out.append(self._clean_putaway(o, c))
                 continue
             for k in ("id", "ref"):
                 if o.get(k) is not None:
@@ -158,6 +164,53 @@ class WhApplyLog(models.Model):
         return c
 
     @api.model
+    def _clean_putaway(self, o, c):
+        """Правило размещения (W-15): act = create (ref) | update (id) | delete (id); rule — product (код) или product_id, category_id, package_type_ids,
+        location_in / location_out ({id} или {ref} создаваемой локации), sublocation (no / last_used / closest_location), storage_category_id (id или {ref}), sequence."""
+        act = o.get("act")
+        if act not in PUTAWAY_ACTS:
+            raise UserError(_("Невідома дія з правилом розміщення «%s».", c["name"]))
+        c["act"] = act
+        if act == "create":
+            c["ref"] = str(o.get("ref") or "")
+        elif o.get("id") is None:
+            raise UserError(_("Правило розміщення «%s» без id.", c["name"]))
+        else:
+            c["id"] = int(o["id"])
+        if act == "delete":
+            return c
+        r = o.get("rule")
+        if not isinstance(r, dict):
+            raise UserError(_("Правило розміщення «%s»: немає умов і цілі.", c["name"]))
+
+        def ref(p, what):
+            if isinstance(p, dict) and p.get("id") is not None:
+                return {"id": int(p["id"])}
+            if isinstance(p, dict) and p.get("ref"):
+                return {"ref": str(p["ref"])}
+            raise UserError(_("Правило розміщення «%s»: не вказано %s.", c["name"], what))
+
+        sub = r.get("sublocation") or "no"
+        if sub not in SUBLOCATIONS:
+            raise UserError(_("Правило розміщення «%s»: невідоме значення «шукати всередині» (%s).", c["name"], sub))
+        sc = r.get("storage_category_id")
+        if isinstance(sc, (int, float)) and sc:
+            sc = {"id": int(sc)}
+        try:
+            seq = int(r.get("sequence") or 0)
+            pkgs = sorted({int(x) for x in (r.get("package_type_ids") or [])})
+            cat = int(r["category_id"]) if r.get("category_id") else None
+            prod_id = int(r["product_id"]) if r.get("product_id") else None
+        except (TypeError, ValueError):
+            raise UserError(_("Правило розміщення «%s»: некоректні значення.", c["name"]))
+        c["rule"] = {"product": str(r.get("product") or "") or None, "product_id": prod_id, "category_id": cat, "package_type_ids": pkgs,
+                     "location_in": ref(r.get("location_in"), _("звідки")), "location_out": ref(r.get("location_out"), _("куди")), "sublocation": sub,
+                     "storage_category_id": ref(sc, _("категорію зберігання")) if sc else None, "sequence": seq}
+        if sub == "closest_location" and not c["rule"]["storage_category_id"]:
+            raise UserError(_("Правило розміщення «%s»: для пошуку всередині потрібна категорія зберігання.", c["name"]))
+        return c
+
+    @api.model
     def _write_vals(self, Loc, vals, refs=None):
         """Значения полей атрибутов, которые есть в этой версии Odoo; остальные пропускаются. storage_category_id может быть { ref } категории, созданной этим же планом."""
         out, skipped = {}, []
@@ -229,6 +282,7 @@ class WhApplyLog(models.Model):
                 old = {k: (loc[k].id if Loc._fields[k].type == "many2one" else loc[k]) for k in vals}
                 journal.append({"op": "attrs", "id": loc.id, "name": loc.name, "old": old, "new": vals, "skipped": skipped})
                 loc.write(vals)
+            self._do_putaways(wh, Loc, inside, [o for o in ops if o["kind"] == "putaway"], refs, journal)  # после локаций: правило может вести в только что созданную
             self._do_orderpoints(wh, Loc, inside, [o for o in ops if o["kind"] == "orderpoint"], refs, journal)
             self._do_archive(wh, Loc, inside, [o for o in ops if o["kind"] == "archive"], journal)
             log = self.sudo().create({
@@ -240,12 +294,13 @@ class WhApplyLog(models.Model):
                 "n_archived": sum(1 for j in journal if j["op"] == "archive"),
                 "n_categories": sum(1 for j in journal if j["op"] in ("category_create", "category_update")),
                 "n_orderpoints": sum(1 for j in journal if j["op"] in ("orderpoint_create", "orderpoint_update")),
+                "n_putaways": sum(1 for j in journal if j["op"].startswith("putaway_")),
             })
         return {"status": "ok", "log_id": log.id, "refs": refs, "counts": self._counts(log)}
 
     @api.model
     def _counts(self, log):
-        return {"category": log.n_categories, "create": log.n_created, "move": log.n_moved, "rename": log.n_renamed, "attrs": log.n_attrs, "orderpoint": log.n_orderpoints, "archive": log.n_archived}
+        return {"category": log.n_categories, "create": log.n_created, "move": log.n_moved, "rename": log.n_renamed, "attrs": log.n_attrs, "putaway": log.n_putaways, "orderpoint": log.n_orderpoints, "archive": log.n_archived}
 
     @api.model
     def _existing(self, Loc, inside, loc_id):
@@ -358,6 +413,76 @@ class WhApplyLog(models.Model):
                                   "product_min_qty": o["min"], "product_max_qty": o["max"]})
                 journal.append({"op": "orderpoint_create", "id": rule.id, "name": rule.display_name, "location": loc.id})
 
+    # ------------------------------------------------------------ правила размещения (W-15)
+    @api.model
+    def _rule_state(self, rule):
+        """Значения правила размещения для журнала и отката."""
+        return {"location_in_id": rule.location_in_id.id, "location_out_id": rule.location_out_id.id, "product_id": rule.product_id.id or False,
+                "category_id": rule.category_id.id or False, "package_type_ids": rule.package_type_ids.ids, "sublocation": rule.sublocation or "no",
+                "storage_category_id": rule.storage_category_id.id or False, "sequence": rule.sequence, "company_id": rule.company_id.id}
+
+    @api.model
+    def _rule_write(self, st):
+        return {k: ([fields.Command.set(v)] if k == "package_type_ids" else v) for k, v in st.items() if k != "company_id"}
+
+    @api.model
+    def _rule_loc(self, Loc, inside, refs, p, what):
+        lid = refs.get(p["ref"]) if p.get("ref") else p.get("id")
+        if lid is None or lid not in inside and lid not in refs.values():
+            raise UserError(_("Правило розміщення: локація «%s» не належить цьому складу (%s).", what, p.get("ref") or p.get("id")))
+        loc = Loc.browse(lid)
+        if not loc.active:
+            raise UserError(_("Правило розміщення: локація «%s» в архіві.", loc.complete_name))
+        return loc
+
+    @api.model
+    def _do_putaways(self, wh, Loc, inside, ops, refs, journal):
+        """Правила размещения `stock.putaway.rule`: создание, правка, удаление. Цели — локации склада (существующие или созданные этим планом), «искать внутри» требует категорию хранения."""
+        Rule = self.with_context(allowed_company_ids=self.env.user.company_ids.ids).env["stock.putaway.rule"].sudo()
+        Prod, Pkg, Cat, Categ = self.env["product.product"].sudo(), self.env["stock.package.type"].sudo(), self.env["stock.storage.category"].sudo(), self.env["product.category"].sudo()
+        for o in ops:
+            rule = None
+            if o["act"] != "create":
+                rule = Rule.browse(o["id"]).exists()
+                if not rule or not rule.active or rule.company_id != wh.company_id or rule.location_in_id.id not in inside:
+                    raise UserError(_("Правило розміщення %s не належить цьому складу.", o["id"]))
+                old = self._rule_state(rule)
+                if o["act"] == "delete":  # «видалити» = в архів: Odoo перестаёт его применять, а откат возвращает то же правило (тот же id)
+                    journal.append({"op": "putaway_delete", "id": rule.id, "name": o["name"], "old": old})
+                    rule.write({"active": False})
+                    continue
+            r = o["rule"]
+            lin, lout = self._rule_loc(Loc, inside, refs, r["location_in"], _("звідки")), self._rule_loc(Loc, inside, refs, r["location_out"], _("куди"))
+            if not lout.parent_path.startswith(lin.parent_path):
+                raise UserError(_("Правило розміщення «%s»: «куди» («%s») має бути всередині «звідки» («%s»).", o["name"], lout.complete_name, lin.complete_name))
+            if r["product_id"]:
+                prod = Prod.browse(r["product_id"]).exists()
+                if not prod:
+                    raise UserError(_("Товар правила розміщення «%s» не знайдено.", o["name"]))
+            else:
+                prod = self._product(Prod, r["product"]) if r["product"] else Prod.browse()
+            if r["category_id"] and not Categ.browse(r["category_id"]).exists():
+                raise UserError(_("Категорію товарів %s не знайдено.", r["category_id"]))
+            pkgs = Pkg.browse(r["package_type_ids"]).exists()
+            if len(pkgs) != len(r["package_type_ids"]):
+                raise UserError(_("Тип упаковки правила розміщення «%s» не знайдено.", o["name"]))
+            sc = r["storage_category_id"]
+            sc_id = (refs.get(sc["ref"]) if sc.get("ref") else sc.get("id")) if sc else None
+            if r["sublocation"] != "closest_location":
+                sc_id = None
+            elif sc_id is None or not Cat.browse(sc_id).exists() or Cat.browse(sc_id).company_id.id not in (False, wh.company_id.id):
+                raise UserError(_("Правило розміщення «%s»: категорію зберігання не знайдено.", o["name"]))
+            vals = {"location_in_id": lin.id, "location_out_id": lout.id, "product_id": prod.id or False, "category_id": r["category_id"] or False,
+                    "package_type_ids": [fields.Command.set(pkgs.ids)], "sublocation": r["sublocation"], "storage_category_id": sc_id or False, "sequence": r["sequence"]}
+            if rule:
+                journal.append({"op": "putaway_update", "id": rule.id, "name": o["name"], "old": old})
+                rule.write(vals)
+            else:
+                rule = Rule.create({**vals, "company_id": wh.company_id.id})
+                if o.get("ref"):
+                    refs[o["ref"]] = rule.id
+                journal.append({"op": "putaway_create", "id": rule.id, "name": o["name"], "ref": o.get("ref")})
+
     @api.model
     def _do_archive(self, wh, Loc, inside, archives, journal):
         locs = Loc.browse([self._existing(Loc, inside, o["id"]).id for o in archives])
@@ -421,11 +546,19 @@ class WhApplyLog(models.Model):
     @api.model
     def _touched(self, ops):
         """Ключи затронутых записей: id локаций, категорий и правил пополнения не смешиваются."""
-        return {(j["op"].split("_")[0] if j["op"].startswith(("category", "orderpoint")) else "loc", j["id"]) for j in ops}
+        return {(j["op"].split("_")[0] if j["op"].startswith(("category", "orderpoint", "putaway")) else "loc", j["id"]) for j in ops}
 
     @api.model
     def _rollback_rules(self, Loc, ops):
         """Откат правил пополнения (вернуть min / max, созданные — в архив) и категорий хранения (вернуть значения, созданные — удалить, если ими не пользуются другие локации)."""
+        Rule = self.env["stock.putaway.rule"].sudo().with_context(active_test=False)
+        for j in reversed(ops):  # правила размещения (W-15): созданное убирается, изменённое возвращается, удалённое создаётся заново (с новым id)
+            if j["op"] == "putaway_create":
+                Rule.browse(j["id"]).exists().unlink()
+            elif j["op"] == "putaway_update":
+                Rule.browse(j["id"]).exists().write(self._rule_write(j["old"]))
+            elif j["op"] == "putaway_delete":
+                Rule.browse(j["id"]).exists().write({**self._rule_write(j["old"]), "active": True})
         OP = self.env["stock.warehouse.orderpoint"].sudo().with_context(active_test=False)
         for j in reversed(ops):
             rule = OP.browse(j["id"]).exists() if j["op"].startswith("orderpoint") else None

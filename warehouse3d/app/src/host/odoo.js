@@ -8,6 +8,7 @@
 //   lockList({ project }) → чужие и свои действующие блокировки проекта (читает и «перегляд»; значки на плане, W-18)
 //   listComments({ project }) / addComment({ project, warehouse, node, label, kind, text }) / setComment({ project, id, state }) / removeComment({ project, id }) —
 //   комментарии на объектах (W-18, модель wh.comment): читает и пишет «перегляд», решает и удаляет чужие «проектування»; ответ — запись комментария или null (отказ)
+//   putawayWhere({ warehouse, productId, quantity, packageTypeId, locationId }) / searchProducts({ query }) / checkBarcodes({ warehouse, items }) — «куда положит Odoo», поиск товаров, занятые штрихкоды компании (W-15)
 //   applyPlan({ project, warehouse, ops, comment }) / applyLog({ project, warehouse }) / rollback(logId) — применение плана изменений, журнал и откат (W-13)
 //   listLibrary() / saveLibrary(lib) — общая библиотека типов и шаблонов компании (модель wh.library): читать может «перегляд», писать «проектування»;
 //   если в базе она новее — записи объединяются по id и запись повторяется один раз
@@ -100,6 +101,10 @@ export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch
     // применение плана изменений к локациям Odoo (W-13): право «застосування в Odoo» проверяет сервер; одна транзакция, при ошибке ничего не применено.
     // → { status: "ok", log_id, refs, counts } | { status: "error" | "denied", message }
     applyPlan: ({ project, warehouse, ops, comment }) => rpc("/apply/run", { key: project || null, warehouse_id: warehouse, ops, comment: comment || null }),
+    // «куда положит Odoo» (E4), поиск товаров и проверка штрихкодов компании (I-06, W-15): читает группа «перегляд»; → { status: "ok", … } | { status: "error" | "denied", message }
+    putawayWhere: ({ warehouse, productId, quantity, packageTypeId, locationId }) => rpc("/read/putaway_where", { warehouse_id: warehouse, product_id: productId, quantity, package_type_id: packageTypeId || null, location_id: locationId || null }),
+    searchProducts: ({ query, limit }) => rpc("/read/products", { query, limit: limit || 20 }),
+    checkBarcodes: ({ warehouse, items }) => rpc("/read/barcodes", { warehouse_id: warehouse, items }),
     // журнал применений (проекта и склада Odoo) → [{ id, name, date, user, state, counts, ops, more, comment, rolled_back_by, rolled_back_at }]; откат записи журнала
     async applyLog({ project, warehouse } = {}) { const r = await rpc("/apply/log", { key: project || null, warehouse_id: warehouse || null }); return r.status === "ok" ? r.log : []; },
     rollback: (logId) => rpc("/apply/rollback", { log_id: logId }),

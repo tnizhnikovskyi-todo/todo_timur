@@ -43,10 +43,16 @@ export function openPlan({ model, i18n, host }) {
     if (o.kind === "rename") return T("odoo.plan.row.rename", { old: o.old, name: o.name });
     if (o.kind === "attrs") return T("odoo.plan.row.attrs", { name: o.name, fields: Object.keys(o.vals).join(", ") });
     if (o.kind === "category") return o.ref ? T("odoo.plan.row.categoryNew", { name: o.name }) : T("odoo.plan.row.categoryEdit", { old: o.old, name: o.name });
+    if (o.kind === "putaway") return T(o.act === "delete" ? "odoo.plan.row.putawayDel" : o.act === "create" ? "odoo.plan.row.putawayNew" : "odoo.plan.row.putawayEdit", { name: o.name, to: o.rule ? targetName(o.rule.location_out) : "" });
     if (o.kind === "orderpoint") return T(o.id != null ? "odoo.plan.row.orderpointEdit" : "odoo.plan.row.orderpointNew", { name: o.name, product: o.product, min: o.min, max: o.max, pmin: o.prev ? o.prev.min : "", pmax: o.prev ? o.prev.max : "" });
     return T("odoo.plan.row.archive", { name: o.name });
   };
-  const flag = (o) => (o.blocked ? `<span class="o_tag bad">${t("odoo.plan.blocked")}</span>` : o.conflict ? `<span class="o_tag bad">${t("odoo.plan.conflict")}</span>` : "");
+  // цель правила размещения: локация Odoo по id или создаваемая этим планом (ref)
+  const targetName = (p) => { if (!p) return "?"; if (p.id != null) return model.putaway.resolve(p.id).name || `#${p.id}`; const c = plan.ops.find((x) => x.ref === p.ref); return c ? c.name : "?"; };
+  // конфликт штрихкода: занят в снимке или другой локацией компании в Odoo (I-06: другой склад, архив) — с названием занявшей локации
+  const flag = (o) => (o.blocked ? `<span class="o_tag bad">${t("odoo.plan.blocked")}</span>`
+    : o.conflict === "target" ? `<span class="o_tag bad">${t("odoo.plan.conflictTarget")}</span>`
+    : o.conflict ? `<span class="o_tag bad" data-bc="${esc((o.vals && o.vals.barcode) || "")}">${o.conflictInfo ? t("odoo.plan.conflictCompany", { name: o.conflictInfo.complete_name || "", wh: o.conflictInfo.warehouse || "—" }) : t("odoo.plan.conflict")}</span>` : "");
 
   // ---------- вкладка «План»
   function planHtml() {
@@ -78,7 +84,7 @@ export function openPlan({ model, i18n, host }) {
   }
 
   // ---------- вкладка «Журнал»
-  const opText = (j) => (["category_create", "category_update", "orderpoint_create", "orderpoint_update"].includes(j.op) ? T(`odoo.log.op.${j.op}`, { name: j.name }) : j.op === "create" ? T("odoo.log.op.create", { name: j.name }) : j.op === "move" ? T("odoo.log.op.move", { name: j.name }) : j.op === "rename" ? T("odoo.log.op.rename", { old: j.old, name: j.new })
+  const opText = (j) => (["category_create", "category_update", "orderpoint_create", "orderpoint_update", "putaway_create", "putaway_update", "putaway_delete"].includes(j.op) ? T(`odoo.log.op.${j.op}`, { name: j.name }) : j.op === "create" ? T("odoo.log.op.create", { name: j.name }) : j.op === "move" ? T("odoo.log.op.move", { name: j.name }) : j.op === "rename" ? T("odoo.log.op.rename", { old: j.old, name: j.new })
     : j.op === "attrs" ? T("odoo.log.op.attrs", { name: j.name }) : T("odoo.log.op.archive", { name: j.name }));
   function journalHtml() {
     if (journal == null) return `<p class="mut">${t("odoo.log.loading")}</p>`;
@@ -86,7 +92,7 @@ export function openPlan({ model, i18n, host }) {
     const c = (n) => n || 0;
     return `<div class="listwrap"><table class="o_list"><thead><tr><th>${t("odoo.log.when")}</th><th>${t("odoo.log.who")}</th><th>${t("odoo.log.what")}</th><th>${t("odoo.log.state")}</th></tr></thead><tbody>${journal.map((r) => `<tr data-log="${r.id}">
       <td>${esc((r.date || "").replace("T", " ").slice(0, 16))}</td><td>${esc(r.user)}</td>
-      <td>${t("odoo.log.counts", { c: c(r.counts.create), m: c(r.counts.move), r: c(r.counts.rename), a: c(r.counts.attrs), x: c(r.counts.archive), k: c(r.counts.category), o: c(r.counts.orderpoint) })}
+      <td>${t("odoo.log.counts", { c: c(r.counts.create), m: c(r.counts.move), r: c(r.counts.rename), a: c(r.counts.attrs), x: c(r.counts.archive), k: c(r.counts.category), o: c(r.counts.orderpoint) })}${r.counts.putaway ? ` · ${t("odoo.log.putaways", { n: r.counts.putaway })}` : ""}
         <details><summary>${t("odoo.log.details")}</summary><ul class="o_logops">${r.ops.map((j) => `<li>${esc(opText(j))}</li>`).join("")}${r.more ? `<li>${t("odoo.log.more", { n: r.more })}</li>` : ""}</ul></details></td>
       <td>${r.state === "applied" ? `${t("odoo.log.applied")}${canApply ? ` <button class="btn btn-secondary" data-rb="${r.id}">${t(confirmId === r.id ? "odoo.log.rollbackSure" : "odoo.log.rollback")}</button>` : ""}`
         : t("odoo.log.rolled", { by: r.rolled_back_by || "", at: (r.rolled_back_at || "").replace("T", " ").slice(0, 16) })}</td></tr>`).join("")}</tbody></table></div>`;
@@ -173,5 +179,12 @@ export function openPlan({ model, i18n, host }) {
     else if (b.dataset.rb) rollback(+b.dataset.rb);
   });
   render();
+  // штрихкоды новых и перенумерованных мест заранее сверяются с локациями компании в Odoo (I-06): конфликт виден в плане до применения
+  if (hp && model.barcodes && plan.linked) {
+    model.barcodes.check("saved", true).then((ok) => {
+      if (!ok || !dlg.isConnected || busy) return;
+      plan = model.changePlan(); sel = new Set([...sel].filter((k) => plan.ops.some((o) => o.key === k && applicable(o)))); render();
+    }).catch((e) => console.error(e));
+  }
   return { close, get plan() { return plan; } };
 }

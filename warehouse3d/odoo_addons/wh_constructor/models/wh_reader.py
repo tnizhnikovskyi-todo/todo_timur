@@ -12,6 +12,13 @@ MOVES_DAYS, MOVES_DAYS_MAX = 90, 365  # окно движений для обо�
 LOC_POS = ("posx", "posy", "posz")
 LOC_FLAGS = ("replenish_location", "scrap_location")
 
+# Единицы измерения в базе (W-15, «поместится ли»): вес товара и упаковки — в единицах из настройки базы, длина упаковки — тоже; отдаём в кг, м и м³
+WEIGHT_KG = {"kg": 1.0, "g": 0.001, "t": 1000.0, "lb": 0.45359237, "lbs": 0.45359237, "oz": 0.028349523125}
+LENGTH_M = {"m": 1.0, "cm": 0.01, "mm": 0.001, "km": 1000.0, "in": 0.0254, "ft": 0.3048, "yd": 0.9144, "mi": 1609.344}
+FT3_M3 = 0.028316846592
+SEARCH_MAX = 50
+PACKAGE_MODEL = "stock.package"  # в Odoo 19 упаковка — stock.package (в 18 — stock.quant.package)
+
 
 class WhReader(models.AbstractModel):
     """Чтение данных склада для приложения (адаптер Odoo API, W-11): склады, локации, остатки, категории хранения,
@@ -45,9 +52,34 @@ class WhReader(models.AbstractModel):
         return recs, {"total": total, "offset": offset, "limit": limit, "next": nxt if nxt < total else None}
 
     @api.model
+    def _units(self, env):
+        """Множители перевода единиц базы в кг / м / м³ (настройки веса, длины и объёма Odoo)."""
+        tmpl = env["product.template"]
+        def name(method, default):
+            try:
+                return str(getattr(tmpl, method)() or default).strip().lower()
+            except Exception:  # noqa: BLE001 — метод есть не во всех сборках
+                return default
+        weight, length = name("_get_weight_uom_name_from_ir_config_parameter", "kg"), name("_get_length_uom_name_from_ir_config_parameter", "m")
+        feet = env["ir.config_parameter"].sudo().get_param("product.volume_in_cubic_feet") == "1"
+        return {"weight": WEIGHT_KG.get(weight, 1.0), "length": LENGTH_M.get(length, 1.0), "volume": FT3_M3 if feet else 1.0}
+
+    @api.model
+    def _categ_ids(self, categ):
+        """Категория товара и все её родители (правило размещения подходит и по родительской категории)."""
+        out = []
+        while categ:
+            out.append(categ.id)
+            categ = categ.parent_id
+        return out
+
+    @api.model
     def _products(self, products):
+        """Товары страницы: название, единица, категория (с родителями — для правил размещения), вес (кг) и объём (м³) — для «поместится ли» (W-15)."""
+        k = self._units(products.env)
         return {str(p.id): {"id": p.id, "default_code": p.default_code or None, "name": p.name, "uom": p.uom_id.name,
-                            "categ": p.categ_id.name} for p in products}
+                            "categ": p.categ_id.name, "categ_id": p.categ_id.id or None, "categ_ids": self._categ_ids(p.categ_id),
+                            "weight": round((p.weight or 0.0) * k["weight"], 6), "volume": round((p.volume or 0.0) * k["volume"], 6)} for p in products}
 
     # ------------------------------------------------------------ склады
     @api.model
@@ -158,7 +190,30 @@ class WhReader(models.AbstractModel):
     def api_package_types(self):
         """Типы упаковки (stock.package.type) — для ёмкости категории хранения по упаковке."""
         env = self._reader()
-        return {"package_types": [{"id": r.id, "name": r.name} for r in env["stock.package.type"].search([], order="id")]}
+        k = self._units(env)
+        return {"package_types": [{"id": r.id, "name": r.name, "length": round((r.packaging_length or 0.0) * k["length"], 6), "width": round((r.width or 0.0) * k["length"], 6),
+                                   "height": round((r.height or 0.0) * k["length"], 6), "base_weight": round((r.base_weight or 0.0) * k["weight"], 6),
+                                   "max_weight": round((r.max_weight or 0.0) * k["weight"], 6)} for r in env["stock.package.type"].search([], order="id")]}  # размеры — в метрах, вес — в кг (W-15)
+
+    @api.model
+    def api_product_categories(self):
+        """Категории товаров (для правил размещения по категории): id, название, полное имя, родитель (W-15)."""
+        env = self._reader()
+        return {"product_categories": [{"id": c.id, "name": c.name, "complete_name": c.complete_name, "parent_id": c.parent_id.id or None}
+                                       for c in env["product.category"].search([], order="complete_name")]}
+
+    @api.model
+    def api_products(self, query=None, limit=20):
+        """Поиск товаров по названию или артикулу (для «Куди покладе Odoo» и правил размещения): не больше 50, без услуг."""
+        env = self._reader()
+        query, limit = str(query or "").strip(), min(max(int(limit or 20), 1), SEARCH_MAX)
+        if len(query) < 2:
+            return {"products": {}, "ids": []}
+        domain = ["|", ("default_code", "ilike", query), ("name", "ilike", query)]
+        if "type" in env["product.product"]._fields:
+            domain.append(("type", "!=", "service"))
+        recs = env["product.product"].search(domain, limit=limit, order="default_code, id")
+        return {"products": self._products(recs), "ids": recs.ids}
 
     # ------------------------------------------------------------ движения (оборачиваемость ABC, W-17)
     @api.model
@@ -179,3 +234,87 @@ class WhReader(models.AbstractModel):
         nxt = offset + limit
         return {"total": len(rows), "offset": offset, "limit": limit, "next": nxt if nxt < len(rows) else None,
                 "warehouse_id": wh.id, "days": days, "moves": rows[offset:nxt]}
+
+    # ------------------------------------------------------------ «куда положит Odoo» (W-15, E4)
+    @api.model
+    def _putaway_rules_for(self, loc, product, package_type):
+        """Правила размещения локации, подходящие товару и типу упаковки, в порядке приоритета Odoo (тот же фильтр и сортировка, что в `stock.location._get_putaway_strategy`)."""
+        categ = product.categ_id
+        categs = categ
+        while categ.parent_id:
+            categ = categ.parent_id
+            categs |= categ
+        rules = loc.putaway_rule_ids.filtered(lambda r: (not r.product_id or r.product_id == product) and (not r.category_id or r.category_id in categs)
+                                              and (not r.package_type_ids or package_type in r.package_type_ids))
+        return rules.sorted(lambda r: (bool(r.package_type_ids), bool(r.product_id), bool(r.category_id == categs[:1]), bool(r.category_id)), reverse=True)
+
+    @api.model
+    def api_putaway_where(self, warehouse_id=None, product_id=None, quantity=1.0, package_type_id=None, location_id=None):
+        """Куда Odoo положит товар (и упаковку) указанного количества, пришедший на локацию `location_id` (по умолчанию — «Stock» склада):
+        результат метода стратегии размещения самой Odoo (`stock.location._get_putaway_strategy`), без записи в базу. Правила учитываются только применённые в Odoo.
+        Тип упаковки моделируется временной упаковкой в точке сохранения, которая откатывается (как при реальном поступлении упаковки)."""
+        env = self._reader()
+        wh = self._warehouse(env, warehouse_id)
+        product = env["product.product"].search([("id", "=", int(product_id or 0))], limit=1)
+        if not product:
+            raise UserError(_("Товар не знайдено."))
+        try:
+            qty = float(quantity or 0.0)
+        except (TypeError, ValueError):
+            qty = 0.0
+        if qty <= 0:
+            raise UserError(_("Кількість має бути більшою за нуль."))
+        arrival = env["stock.location"].search([("id", "=", int(location_id or 0))], limit=1) if location_id else wh.lot_stock_id
+        if not arrival or not arrival.parent_path.startswith(wh.view_location_id.parent_path):
+            raise UserError(_("Локація приймання не належить цьому складу."))
+        ptype = env["stock.package.type"].search([("id", "=", int(package_type_id or 0))], limit=1) if package_type_id else env["stock.package.type"]
+        if package_type_id and not ptype:
+            raise UserError(_("Тип упаковки не знайдено."))
+        rules = self._putaway_rules_for(arrival, product, ptype)
+        out = {}
+
+        class _Rollback(Exception):
+            pass
+
+        try:
+            with self.env.cr.savepoint():
+                pkg = env[PACKAGE_MODEL if PACKAGE_MODEL in env else "stock.quant.package"].sudo().create({"package_type_id": ptype.id}) if ptype else None  # 19: stock.package, 18: stock.quant.package
+                dest = arrival._get_putaway_strategy(product, quantity=qty, package=pkg)
+                matched = rules.filtered(lambda r: dest.parent_path.startswith(r.location_out_id.parent_path))[:1]
+                out = {"location_id": dest.id, "complete_name": dest.complete_name, "barcode": dest.barcode or None, "usage": dest.usage,
+                       "storage_category_id": dest.storage_category_id.id or None, "found": dest != arrival, "rule_id": matched.id or None}
+                raise _Rollback()
+        except _Rollback:
+            pass
+        env.invalidate_all()
+        return {"warehouse_id": wh.id, "arrival": {"id": arrival.id, "complete_name": arrival.complete_name}, "product_id": product.id, "quantity": qty,
+                "package_type_id": ptype.id or None, "rules": rules.ids, **out, "products": self._products(product)}
+
+    # ------------------------------------------------------------ штрихкоды компании (I-06)
+    @api.model
+    def api_barcodes(self, warehouse_id=None, items=None):
+        """Занятые штрихкоды: для каждого `{barcode, exclude_id}` — другие локации компании склада (в том числе других складов, архивные и не внутренние) с тем же штрихкодом.
+        Нужно плану изменений заранее: сервер при применении отказывает, если штрихкод уже занят (`wh.apply.log._check_barcode`), и откатывает всё."""
+        env = self._reader()
+        wh = self._warehouse(env, warehouse_id)
+        if not isinstance(items, list):
+            raise UserError(_("Очікується список штрихкодів."))
+        if len(items) > PAGE_MAX * 4:
+            raise UserError(_("Забагато штрихкодів за раз."))
+        want = {}
+        for it in items:
+            code = str((it or {}).get("barcode") or "").strip()
+            if code:
+                want.setdefault(code, set()).add(int((it or {}).get("exclude_id") or 0))
+        Loc = env["stock.location"].with_context(active_test=False)
+        found, codes = Loc.browse(), list(want)
+        for i in range(0, len(codes), 1000):
+            found |= Loc.search([("barcode", "in", codes[i:i + 1000]), ("company_id", "in", [wh.company_id.id, False])])
+        out = []
+        for loc in found:
+            if loc.id in want.get(loc.barcode, ()):
+                continue  # это сама локация, которую план переименовывает или обновляет
+            out.append({"barcode": loc.barcode, "location_id": loc.id, "complete_name": loc.complete_name, "warehouse": loc.warehouse_id.code or None,
+                        "same_warehouse": loc.warehouse_id.id == wh.id, "archived": not loc.active})
+        out.sort(key=lambda r: (r["barcode"], r["location_id"]))
+        return {"warehouse_id": wh.id, "checked": len(want), "conflicts": out}

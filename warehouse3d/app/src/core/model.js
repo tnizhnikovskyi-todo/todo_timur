@@ -31,6 +31,7 @@ import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "
 import { newWizard, normWizard } from "./wizard.js";
 import { HEAT_KEYS, HEAT_MODES, heatHasData, heatMap } from "./metrics.js";
 import { activityOf, mergeStock, placeCard, searchStock } from "./stock.js";
+import * as P from "./putaway.js";
 import { createComments } from "./comments.js";
 import { MAX_VARIANTS, activate, normVariants, addVariant, entryOf, layerOf, removeVariant, renameVariant, variantList } from "./variants.js";
 import { layerStats, STAT_KEYS, treeStats } from "./varstats.js";
@@ -52,7 +53,7 @@ export function createModel(project, storage, opts = {}) {
   if (!Array.isArray(project.comments)) project.comments = [];
   const s = { project, wh: null, data: null, storage, words: opts.words || (() => DEFAULT_WORDS), saved: null, pending: [], redo: [], edit: null, clip: [], lib: normLibrary(opts.library), enforce: opts.enforce !== false,
     tree: null, ui: null, listeners: new Set(), emit: null };
-  s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); };
+  s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); if (ev.type === "rebuild") bcSchedule(); };
   const rd = (name) => { try { return storage.read(name); } catch (e) { return null; } };
   const wr = (name, v) => { try { return storage.write(name, v); } catch (e) { return "fail"; } };
   // снимок хоста по baseRef (Odoo) важнее встроенной копии base: она — запасной вариант, если Odoo недоступна (импорт проекта кладёт её в файл)
@@ -62,8 +63,33 @@ export function createModel(project, storage, opts = {}) {
   // слой правок и дерево активного склада
   function load(wh) {
     if (wh.wizard) wh.wizard = normWizard(wh.wizard);
-    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null; s.rejected = null; s.chkc = null;
+    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null; s.rejected = null; s.chkc = null; s.bcx = new Map(); s.bcDone = new Set(); s.hl = null;
     ed.recompute(s); s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(wh)));
+  }
+  // штрихкоды компании (W-15, I-06): новые и перенумерованные коды плана заранее сверяются с локациями компании в Odoo (сервер; в ответе — занятые другими локациями, в том числе других складов и архивными)
+  const odooWh = () => (s.data.meta && s.data.meta.odoo && s.data.meta.odoo.warehouse_id != null ? s.data.meta.odoo.warehouse_id : null);
+  const bcItems = (layer) => {
+    const seen = new Map();
+    for (const o of computePlan(s.data, layer, cfgOf(s.wh)).ops) { const b = o.vals && o.vals.barcode; if ((o.kind === "create" || o.kind === "attrs") && b && !seen.has(b)) seen.set(b, { barcode: b, exclude_id: o.kind === "attrs" ? o.id : null }); }
+    return [...seen.values()];
+  };
+  async function bcCheck(layer = "edit", fresh = false) {
+    if (!s.storage.checkBarcodes || odooWh() == null) return false;
+    const wh = s.wh, items = bcItems(layer === "saved" ? s.saved : s.edit), need = fresh ? items : items.filter((i) => !s.bcDone.has(i.barcode));
+    if (!need.length) return true;
+    const r = await s.storage.checkBarcodes({ warehouse: odooWh(), items: need });
+    if (s.wh !== wh || !r || r.status !== "ok") return false;
+    for (const i of need) { s.bcDone.add(i.barcode); s.bcx.delete(i.barcode); }
+    for (const c of r.conflicts || []) s.bcx.set(c.barcode, c);
+    s.chkc = null; s.emit({ type: "putaway" });
+    return true;
+  }
+  let bct = null;
+  function bcSchedule() {
+    if (!s.storage || !s.storage.checkBarcodes) return;
+    clearTimeout(bct);
+    bct = setTimeout(() => { bcCheck("edit").catch(() => {}); }, 700);
+    if (bct && bct.unref) bct.unref();
   }
   const want = rd("wh");
   load(project.warehouses.find((w) => w.id === want) || project.warehouses[0]);
@@ -194,7 +220,7 @@ export function createModel(project, storage, opts = {}) {
     // карточка места (H4): остатки, категория хранения, правила размещения, ёмкость, min / max, движения; null — места нет или оно новое
     place: (code) => { const l = s.tree.loc(code); return l && !l.draft ? placeCard(s.data, code, l) : null; },
     // план изменений (W-13, plan.js): сохранённый слой правок против снимка Odoo активного склада; несохранённое в план не входит (unsaved — сколько его)
-    changePlan: () => ({ ...computePlan(s.data, s.saved, cfgOf(s.wh)), unsaved: s.pending.length }),
+    changePlan: () => ({ ...computePlan(s.data, s.saved, { ...cfgOf(s.wh), bcx: s.bcx }), unsaved: s.pending.length }),
     // применённое в Odoo (keys — ключи операций плана): слой правок очищается от применённого, остальное остаётся; вызывается после перечитывания снимка (reloadBase)
     applied(plan, keys) {
       cleanApplied(s.saved, plan, new Set(keys));
@@ -234,7 +260,7 @@ export function createModel(project, storage, opts = {}) {
     // правки
     ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), tech: bind("tech"), techMin: bind("techMin"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
       move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), autoLayout: bind("autoLayout"), place: (codes, target, key) => ed.exec(s, () => ed.OPS.place(s, codes, target, key)), parse: (f, key) => ed.exec(s, () => ed.OPS.parse(s, f, key)), del: bind("del"), reset: bind("reset"),
-      capacity: bind("capacity"), catAssign: bind("catAssign"), flags: bind("flags"), removal: bind("removal"), zoneFn: bind("zoneFn"), minmax: bind("minmax"), catSave: bind("catSave"), catDel: bind("catDel") },
+      capacity: bind("capacity"), catAssign: bind("catAssign"), flags: bind("flags"), removal: bind("removal"), zoneFn: bind("zoneFn"), minmax: bind("minmax"), catSave: bind("catSave"), catDel: bind("catDel"), rule: bind("rule"), ruleDel: bind("ruleDel") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
     save: (id, comment = null) => ed.saveObj(s, id, comment),
@@ -452,6 +478,64 @@ export function createModel(project, storage, opts = {}) {
       zone: (id) => C.zoneOf(s.tree, C.attrMap(s.edit), s.tree.nodes.get(id)),
       summary: (id = "WH") => { const n = s.tree.nodes.get(id); return n ? C.summary(s.tree, s.data, s.edit, n) : null; },
     },
+    // правила размещения (W-15, E3 / E4 / E10, putaway.js): список с правками слоя, цели, подсветка условия и цели на модели, «куда положит Odoo» (сервер Odoo или оценка), «поместится ли».
+    // Правки — ops.rule / ruleDel (слой edit.attr, объект правки "prules", «Показати / Зберегти», в план изменений)
+    putaway: {
+      rules: () => P.rulesOf(s.data, s.edit),
+      choices: (extra = []) => P.targetChoices(s.tree, s.data, extra),
+      resolve: (t) => P.resolveT(s.tree, s.data, t),
+      targetOf: (nodeId) => P.targetOf(s.tree, s.data, nodeId),
+      name: (r) => P.ruleName(s.data, r),
+      into: (nodeId) => P.rulesInto(s.tree, s.data, s.edit, nodeId),
+      fits: (r) => P.ruleFits(s.tree, s.data, s.edit, r),
+      productCategories: () => (C.odooOf(s.data) || {}).product_categories || [],
+      products: () => Object.values(s.data.products || {}).map((p) => ({ code: p.default_code, name: p.name })),
+      odoo: () => odooWh() != null && !!s.storage.putawayWhere,
+      get hl() { return s.hl; },
+      // подсветка на плане: src — узлы условия, dst — узлы цели; без аргументов снимает. focus — показать уровень, на котором видна цель
+      show({ src = [], dst = [], focus = true } = {}) {
+        s.hl = src.length || dst.length ? { src: new Set(src), dst: new Set(dst) } : null;
+        const n = dst.length ? s.tree.nodes.get(dst[0]) : null;
+        if (focus && n) { const par = n.parent && s.tree.nodes.get(n.parent); patch({ focus: par ? par.id : "WH", esel: n.id, sel: n.loc && !n.kids.length ? n.loc : null, msel: [] }, "focus"); }
+        s.emit({ type: "putaway" });
+      },
+      focusRule(key) { const r = P.rulesOf(s.data, s.edit).get(key); if (!r) return false; const f = P.ruleFocus(s.tree, s.data, s.edit, r); this.show({ src: [...f.src], dst: [...f.dst] }); return true; },
+      clear() { if (s.hl) { s.hl = null; s.emit({ type: "putaway" }); } },
+      estimate: (o) => P.estimate(s.tree, s.data, s.edit, o),
+      // товары базы по названию или артикулу (сервер Odoo; вне Odoo — только товары снимка) — для «Куди покладе Odoo»
+      async searchProducts(query) {
+        const q = String(query || "").trim().toLowerCase(); let found = [];
+        if (q.length >= 2) found = Object.values(s.data.products || {}).filter((p) => `${p.default_code} ${p.name}`.toLowerCase().includes(q)).slice(0, 20);
+        if (s.storage.searchProducts && odooWh() != null && q.length >= 2) {
+          try { const r = await s.storage.searchProducts({ query }); if (r && r.status === "ok") for (const id of r.ids) { const p = r.products[String(id)], code = p.default_code || `ID${p.id}`; s.px = s.px || new Map(); s.px.set(code, { ...p, default_code: code }); if (!found.some((x) => x.default_code === code)) found.push({ ...p, default_code: code }); } } catch (e) { /* остаются товары снимка */ }
+        }
+        return found.map((p) => ({ code: p.default_code, name: p.name }));
+      },
+      // куда положит Odoo товар (код) в количестве qty (с типом упаковки pkg); учитывает только применённые в Odoo правила, несохранённые и неприменённые не считает.
+      // Результат { ok, source: "odoo" | "estimate", found, node, code, name, ruleKey, fit } — подсветка места на плане уже включена
+      async where({ product, qty = 1, pkg = 0, arrival = null } = {}) {
+        const code = String(product || "").trim(), prod = (s.data.products || {})[code] || (s.px && s.px.get(code)) || null;
+        if (!code || !prod) return { ok: false, error: "product" };
+        const q = Number(qty) > 0 ? Number(qty) : 0; if (!q) return { ok: false, error: "qty" };
+        let res;
+        if (this.odoo()) {
+          try {
+            const r = await s.storage.putawayWhere({ warehouse: odooWh(), productId: prod.id, quantity: q, packageTypeId: pkg || null, locationId: typeof arrival === "number" ? arrival : null });
+            if (!r || r.status !== "ok") return { ok: false, error: "server", message: (r && r.message) || "" };
+            const node = P.nodeIndex(s.tree, s.data).get(r.location_id) || null, n = node && s.tree.nodes.get(node);
+            res = { ok: true, source: "odoo", found: !!r.found, node, code: (n && n.loc) || null, name: r.complete_name, ruleKey: r.rule_id ? `o${r.rule_id}` : null };
+          } catch (e) { return { ok: false, error: "server", message: String(e.message || e) }; }
+        } else res = { ok: true, ...P.estimate(s.tree, s.data, s.edit, { product: code, qty: q, pkg, arrival }), source: "estimate", ruleKey: undefined };
+        if (res.source === "estimate") { res.ruleKey = res.rule; delete res.rule; }
+        const n = res.node ? s.tree.nodes.get(res.node) : null, pk = pkg ? ((C.odooOf(s.data) || {}).package_types || []).find((x) => x.id === pkg) || null : null;
+        if (n && n.loc) res.fit = P.fitOf({ product: prod, pkg: pk, qty: q, place: P.placeBox(s.tree, s.data, s.edit, n) });
+        res.unsaved = s.pending.filter((p) => p.obj === "prules").length;
+        if (res.node) this.show({ dst: [res.node] }); else this.clear();
+        return res;
+      },
+    },
+    // штрихкоды компании (I-06): check — спросить сервер о новых и перенумерованных кодах (layer: "edit" — вся модель, "saved" — как в плане; fresh — спросить заново); map — занятые коды
+    barcodes: { check: (layer = "edit", fresh = false) => bcCheck(layer, fresh), map: () => s.bcx },
     // прочее хранилище (режим 2D/3D и т.п.)
     pref: { read: rd, write: wr },
     snapshot: () => clone({ saved: s.saved, pending: s.pending }),

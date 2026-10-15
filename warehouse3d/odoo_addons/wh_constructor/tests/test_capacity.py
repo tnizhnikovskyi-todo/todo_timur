@@ -60,7 +60,7 @@ class TestWhConstructorCapacity(HttpCase):
         self.assertEqual({(k.product_id.default_code or "", k.package_type_id.id or 0, k.quantity) for k in cat.capacity_ids}, {("CP-P1", 0, 5.0), ("", self.pkg.id, 2.0)})
         self.assertEqual(self.a.storage_category_id, cat)
         self.assertEqual(self.loc(res["refs"]["p"]).storage_category_id, cat)
-        self.assertEqual(res["counts"], {"category": 1, "create": 1, "move": 0, "rename": 0, "attrs": 1, "orderpoint": 0, "archive": 0})
+        self.assertEqual(res["counts"], {"category": 1, "create": 1, "move": 0, "rename": 0, "attrs": 1, "putaway": 0, "orderpoint": 0, "archive": 0})
         log = self.Log.browse(res["log_id"])
         self.assertEqual((log.n_categories, log.n_orderpoints, log.n_attrs), (1, 0, 1))
         # откат: категория удалена, назначение снято, созданная локация в архиве

@@ -16,11 +16,12 @@ export function createWorld({ major = 19, withStock = true } = {}) {
   add({ id: 120, name: "GL-1", location_id: 13 });
   add({ id: 121, name: "GL-2", location_id: 13 });
   if (withStock) quants.push({ id: 1, location_id: 120, product_id: 1, quantity: 5, reserved_quantity: 0, lot: null, package: null });
-  const products = { 1: { id: 1, default_code: "P-1", name: "Товар", uom: "шт", categ: "Різне" } };
+  const products = { 1: { id: 1, default_code: "P-1", name: "Товар", uom: "шт", categ: "Різне", categ_id: 5, categ_ids: [5, 1], weight: 2, volume: 0.05 } };
   // W-14: категории хранения, стратегии списания, типы упаковки, правила пополнения (orderpoint)
-  const cats = [], rules = [], strategies = [{ id: 1, name: "FIFO", method: "fifo" }, { id: 2, name: "LIFO", method: "lifo" }], pkgs = [{ id: 1, name: "Піддон" }];
+  const cats = [], rules = [], prules = [], strategies = [{ id: 1, name: "FIFO", method: "fifo" }, { id: 2, name: "LIFO", method: "lifo" }], pkgs = [{ id: 1, name: "Піддон", length: 1.2, width: 0.8, height: 0.15, base_weight: 20, max_weight: 1000 }];
+  const pcats = [{ id: 1, name: "All", complete_name: "All", parent_id: null }, { id: 5, name: "Різне", complete_name: "All / Різне", parent_id: 1 }];
   const world = {
-    major, locs, quants, cats, rules, strategies, pkgs, add, seq: () => seq++,
+    major, locs, quants, cats, rules, prules, strategies, pkgs, add, seq: () => seq++,
     byId: (i) => locs.find((l) => l.id === i),
     path(l) { return l.location_id ? `${world.path(world.byId(l.location_id))}/${l.name}` : l.name; },
     // снимок активных локаций склада в формате адаптера
@@ -31,7 +32,10 @@ export function createWorld({ major = 19, withStock = true } = {}) {
         storageCategories: cats.map((c) => ({ id: c.id, name: c.name, max_weight: c.max_weight, allow_new_product: c.allow_new_product, capacities: c.capacities.map((k) => ({ id: k.id, product_id: k.product_id ?? null, package_type_id: k.package_type_id ?? null,
           package_type: k.package_type_id ? (pkgs.find((x) => x.id === k.package_type_id) || {}).name : null, quantity: k.quantity })) })),
         orderpoints: rules.filter((r) => r.active !== false && world.byId(r.location_id).active).map((r) => ({ id: r.id, name: `OP/${r.id}`, location_id: r.location_id, product_id: r.product_id, min: r.min, max: r.max, trigger: "auto", warehouse_id: 1 })),
-        removalStrategies: strategies, packageTypes: pkgs });
+        removalStrategies: strategies, packageTypes: pkgs, productCategories: pcats,
+        // правила размещения (W-15): только активные
+        putawayRules: prules.filter((r) => r.active !== false).map((r) => ({ id: r.id, sequence: r.sequence || 0, product_id: r.product_id ?? null, category_id: r.category_id ?? null, category: null, location_in_id: r.location_in_id, location_out_id: r.location_out_id,
+          storage_category_id: r.storage_category_id ?? null, package_types: (r.package_type_ids || []).map((i) => ({ id: i, name: (pkgs.find((x) => x.id === i) || {}).name })), sublocation: r.sublocation || "no", company_id: 1 })) });
     },
     // применение плана, как это делает сервер: создание → переносы → переименования → атрибуты → архивация; refs — { ref: id }
     apply(ops) {
@@ -47,6 +51,15 @@ export function createWorld({ major = 19, withStock = true } = {}) {
       for (const o of ops.filter((x) => x.kind === "move")) world.byId(o.id).location_id = res(o.to);
       for (const o of ops.filter((x) => x.kind === "rename")) world.byId(o.id).name = o.name;
       for (const o of ops.filter((x) => x.kind === "attrs")) Object.assign(world.byId(o.id), fields(o.vals));
+      // правила размещения (W-15): после локаций и атрибутов; «удалить» — в архив, как на сервере
+      for (const o of ops.filter((x) => x.kind === "putaway")) {
+        if (o.act === "delete") { prules.find((r) => r.id === o.id).active = false; continue; }
+        const r = o.rule, sc = r.storage_category_id && typeof r.storage_category_id === "object" ? (r.storage_category_id.ref ? refs[r.storage_category_id.ref] : r.storage_category_id.id) : r.storage_category_id;
+        const row = { product_id: r.product ? prodId(r.product) : null, category_id: r.category_id || null, package_type_ids: r.package_type_ids, location_in_id: res(r.location_in), location_out_id: res(r.location_out),
+          sublocation: r.sublocation, storage_category_id: r.sublocation === "closest_location" ? sc : null, sequence: r.sequence };
+        if (o.act === "update") Object.assign(prules.find((x) => x.id === o.id), row);
+        else { const n = { id: 800 + prules.length, active: true, ...row }; prules.push(n); if (o.ref) refs[o.ref] = n.id; }
+      }
       for (const o of ops.filter((x) => x.kind === "orderpoint")) {
         if (o.id != null) Object.assign(rules.find((r) => r.id === o.id), { min: o.min, max: o.max });
         else rules.push({ id: 700 + rules.length, location_id: o.location_id, product_id: prodId(o.product), min: o.min, max: o.max });
