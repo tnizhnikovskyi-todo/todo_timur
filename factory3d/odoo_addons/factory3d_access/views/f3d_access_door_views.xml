@@ -51,6 +51,7 @@
                             invisible="not alarm" groups="factory3d_access.group_f3d_access_security"/>
                 </header>
                 <sheet>
+                    <field name="is_access_admin" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"
                                 class="btn-secondary"/>
@@ -59,29 +60,29 @@
                     </div>
                     <group>
                         <group string="Двері">
-                            <field name="code"/>
-                            <field name="name"/>
-                            <field name="kind"/>
-                            <field name="biostar_id"/>
-                            <field name="server_id"/>
+                            <field name="code" readonly="not is_access_admin"/>
+                            <field name="name" readonly="not is_access_admin"/>
+                            <field name="kind" readonly="not is_access_admin"/>
+                            <field name="biostar_id" readonly="not is_access_admin"/>
+                            <field name="server_id" readonly="not is_access_admin"/>
                             <field name="open_duration_s"/>
                         </group>
                         <group string="Граф зон">
-                            <field name="zone_from_id"/>
-                            <field name="zone_to_id"/>
-                            <field name="is_perimeter"/>
-                            <field name="dwell_min"/>
+                            <field name="zone_from_id" readonly="not is_access_admin"/>
+                            <field name="zone_to_id" readonly="not is_access_admin"/>
+                            <field name="is_perimeter" readonly="not is_access_admin"/>
+                            <field name="dwell_min" readonly="not is_access_admin"/>
                         </group>
                         <group string="Зчитувачі">
-                            <field name="entry_device_id"/>
-                            <field name="exit_device_id"/>
+                            <field name="entry_device_id" readonly="not is_access_admin"/>
+                            <field name="exit_device_id" readonly="not is_access_admin"/>
                         </group>
                         <group string="Стан">
                             <field name="state"/>
                             <field name="state_ts"/>
                             <field name="alarm"/>
                             <field name="alarm_reason"/>
-                            <field name="active"/>
+                            <field name="active" readonly="not is_access_admin"/>
                         </group>
                     </group>
                 </sheet>

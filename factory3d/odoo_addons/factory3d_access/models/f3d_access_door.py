@@ -43,6 +43,7 @@ class F3dAccessDoor(models.Model):
         [('forced', 'Відчинено силоміць'), ('held', 'Тримається відчиненим'), ('fire', 'Пожежна тривога')],
         readonly=True)
     passes_today = fields.Integer(compute='_compute_passes_today')
+    is_access_admin = fields.Boolean(compute='_compute_is_access_admin')  # форма: поля readonly для охорони (§4.1)
     active = fields.Boolean(default=True)
 
     _f3d_access_door_code_uniq = models.Constraint("UNIQUE(code)", "Код дверей має бути унікальним.")
@@ -67,6 +68,11 @@ class F3dAccessDoor(models.Model):
             for device in (rec.entry_device_id | rec.exit_device_id):
                 if device.server_id != rec.server_id:
                     raise ValidationError("Зчитувач має належати тому самому серверу BioStar.")
+
+    def _compute_is_access_admin(self):
+        is_admin = self.env.su or self.env.user.has_group('factory3d_access.group_f3d_access_admin')
+        for rec in self:
+            rec.is_access_admin = is_admin
 
     def _compute_passes_today(self):
         if 'f3d.access.event' not in self.env:

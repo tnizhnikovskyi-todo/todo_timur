@@ -3,7 +3,7 @@ import re
 from lxml import etree
 
 from odoo.exceptions import AccessError
-from odoo.tests import HttpCase, new_test_user, tagged
+from odoo.tests import Form, HttpCase, new_test_user, tagged
 from odoo.tests.common import JsonRpcException
 
 from ..tools import params as P
@@ -216,3 +216,21 @@ class TestGuardLogin(HttpCase):
         self.assertTrue(self._call('write', [self.door.id], {'alarm': False, 'alarm_reason': False}))
         self.env.invalidate_all()
         self.assertFalse(self.door.alarm)
+
+
+@tagged('post_install', '-at_install', 'f3d', 'f3d_access')
+class TestDoorFormReadonly(AccessCase):
+    """SPEC §4.1: поля дверей у формі readonly для охорони (не лише відмова при збереженні); адміністратор редагує."""
+
+    VIEW = 'factory3d_access.view_f3d_access_door_form'
+
+    def test_fields_readonly_for_guard_editable_for_admin(self):
+        door = self.env.ref('factory3d_access.door_turn_1')
+        with Form(door.with_user(self.user_security), view=self.VIEW) as form:
+            for fname, value in (('name', 'Зламано'), ('code', 'TURN-X'), ('dwell_min', 5), ('is_perimeter', True),
+                                 ('active', False), ('kind', 'door')):
+                with self.subTest(field=fname), self.assertRaises(AssertionError):
+                    setattr(form, fname, value)
+        with Form(door.with_user(self.user_admin), view=self.VIEW) as form:
+            form.dwell_min = 7
+        self.assertEqual(door.dwell_min, 7)
