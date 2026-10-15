@@ -16,6 +16,7 @@ import { nodesOf } from "./project.js";
 import * as sel from "./select.js";
 import { createLocks } from "./locks.js";
 import * as ed from "./edit.js";
+import { infoOf, normAddr, parseTemplate, previewOf, resolver, addrFromForm } from "./addressing.js";
 import { CATALOG, catalogType } from "./catalog.js";
 import { captureTemplate, normLibrary, uniqTemplate } from "./library.js";
 import * as B from "./building.js";
@@ -38,10 +39,11 @@ export function createModel(project, storage, opts = {}) {
   const rd = (name) => { try { return storage.read(name); } catch (e) { return null; } };
   const wr = (name, v) => { try { return storage.write(name, v); } catch (e) { return "fail"; } };
   const baseOf = (wh) => wh.base || bases[wh.baseRef] || EMPTY_BASE;
+  s.baseOf = baseOf;
 
   // слой правок и дерево активного склада
   function load(wh) {
-    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = [];
+    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null;
     ed.recompute(s); s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(wh)));
   }
   const want = rd("wh");
@@ -85,7 +87,7 @@ export function createModel(project, storage, opts = {}) {
     get building() { return bb(); }, // план здания с учётом показанного (null — здания нет)
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.types); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.types || v.addr || v.addrZones.length || v.codes.length); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -127,7 +129,7 @@ export function createModel(project, storage, opts = {}) {
     moveSet: (set, dx, dy) => ed.moveSet(s, set, dx, dy),
     // правки
     ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
-      move: bind("move"), rotate: bind("rotate"), props: bind("props"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
+      move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
     save: (id) => ed.saveObj(s, id),
@@ -137,6 +139,24 @@ export function createModel(project, storage, opts = {}) {
     copy: () => ed.copySel(s),
     paste: () => ed.pasteSel(s),
     dropInto: (src, tid) => ed.dropInto(s.tree, src, tid),
+    // адресация (W-08, D-14): настройки шаблона и нумерации, предпросмотр кодов, name / barcode / posx / posy / posz места, конфликты кодов.
+    // Настройки меняет ops.addr (склад "WH" или зона), перенумерует ops.renum; запись в Odoo — W-13
+    addr: {
+      // действующие настройки узла: eff — они же, own — заданы у самого узла (склад — всегда), from — узел, чьи настройки действуют ("WH" — склада)
+      settings(id) {
+        const R = resolver(s.tree, s.edit), whole = !id || id === "WH", f = whole ? null : R.find(id);
+        return { eff: whole ? R.base : f ? f.a : R.base, own: whole || (!!f && f.id === id), from: whole ? "WH" : f ? f.id : "WH" };
+      },
+      // первые 10 кодов и последний для зоны / склада; form — значения формы (без неё — действующие настройки)
+      preview(id, form = null) {
+        const zid = !id || id === "WH" ? "WH" : id, over = form && (zid === "WH" || form.own === "1") ? addrFromForm(form) : null;
+        return previewOf(s.tree, s.edit, { scope: zid, over });
+      },
+      info: (id) => infoOf(s.tree, s.edit, s.tree.nodes.get(id)),
+      conflicts: () => ed.conflicts(s),
+      check: (tpl) => { const p = parseTemplate(tpl); return { unknown: p.unknown, used: p.used }; },
+      norm: normAddr,
+    },
     // каталог типов (типы активного склада поверх общего справочника)
     types: { list: () => [...s.tree.types.values()], use: () => ed.typeUse(s.tree), isBase: ed.isBaseType, patch: (id, k, v) => ed.typePatch(s, id, k, v),
       remove: (id) => ed.typeRemove(s, id), add: () => ed.typeAdd(s), import: (id, from = "catalog") => ed.typeImport(s, id, from) },

@@ -3,6 +3,7 @@
 // их кнопки подключает panels.js; здесь — разметка и то, что нужно сверх (живая сводка, кнопки выравнивания).
 import { RACKED, ROTS } from "../core/types.js";
 import { ALIGNS } from "../core/edit.js";
+import { BAY_DIRS, LEVEL_DIRS, ROW_FROM, ROW_MODES, SEGS, SEG_KINDS } from "../core/addressing.js";
 import { esc } from "./util.js";
 
 const GROUPS = /^(group|rackset)$/;
@@ -83,5 +84,66 @@ export function createTools({ model, i18n, btns, typeOpts, fv }) {
       massSummary(f);
     }
   }
-  return { propsHtml, massHtml, gridHtml, multiHtml, bindMulti, bindSingle };
+
+  // ---------- адресация (W-08, D-14): шаблон кода, направления, предпросмотр, перенумерация, конфликты, name / barcode / pos места
+  const opts = (list, pre, cur) => list.map((o) => `<option value="${o}"${o === cur ? " selected" : ""}>${T(`addr.${pre}.${o}`)}</option>`).join("");
+  const prevHtml = (p) => (p.total
+    ? `<b>${T("addr.previewSum", { n: p.total, changed: p.changed })}</b><ol class="addr-prev">${p.first.map((c) => `<li><span class="code">${esc(c)}</span></li>`).join("")}</ol>${p.last ? `<div class="addr-last">… <span class="code">${esc(p.last)}</span></div>` : ""}`
+    : T("addr.previewNone")) + (p.dup ? `<div class="ed-warn">${T("addr.previewDup", { n: p.dup })}</div>` : "");
+  // настройки склада или зоны (форма data-op="addr")
+  function addrHtml(n, K, ro) {
+    const st = model.addr.settings(n.id), A = st.eff, zone = n.id !== "WH", own = !zone || st.own, dis = own ? "" : " disabled";
+    const seg = (k) => `<div class="wide addr-h">${T(`addr.seg.${k}`)}</div>
+      <label>${T("addr.kind")}<select name="${k}_kind"${dis}>${opts(SEG_KINDS, "kind", A.seg[k].kind)}</select></label>
+      <label>${T("addr.width")}<input type="number" name="${k}_width" min="1" max="8" value="${A.seg[k].width}"${dis}></label>
+      <label>${T("addr.start")}<input type="number" name="${k}_start" min="0" max="99999" value="${A.seg[k].start}"${dis}></label>`;
+    return `<div class="sec">${T("addr.title")}</div><form class="ed-form" data-op="addr" data-addr>
+      ${zone ? `<label class="wide" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="own" value="1"${st.own ? " checked" : ""}> ${T("addr.own")}</label>` : ""}
+      <label class="wide">${T("addr.tpl")}<input name="tpl" value="${esc(A.tpl)}" maxlength="80"${dis}></label>
+      <label>${T("addr.sep")}<input name="sep" value="${esc(A.sep)}" maxlength="3"${dis}></label>
+      ${zone ? `<label>${T("addr.zoneCode")}<input name="zoneCode" value="${esc(A.zoneCode)}" maxlength="20"${dis}></label>` : ""}
+      <div class="wide ed-warn" data-addr-warn hidden></div>
+      ${SEGS.map(seg).join("")}
+      <label class="wide">${T("addr.rowFrom")}<select name="rowFrom"${dis}>${opts(ROW_FROM, "from", A.rowFrom)}</select></label>
+      <label class="wide">${T("addr.rowMode")}<select name="rowMode"${dis}>${opts(ROW_MODES, "mode", A.rowMode)}</select></label>
+      <label class="wide">${T("addr.bayDir")}<select name="bayDir"${dis}>${opts(BAY_DIRS, "dir", A.bayDir)}</select></label>
+      <label class="wide">${T("addr.levelDir")}<select name="levelDir"${dis}>${opts(LEVEL_DIRS, "lv", A.levelDir)}</select></label>
+      <div class="ed-info wide addr-preview" data-addr-preview style="flex-basis:100%;margin-top:0">${prevHtml(model.addr.preview(n.id))}</div>${btns(ro)}</form>
+      <p class="ed-note">${T(zone ? (st.own ? "addr.noteZone" : "addr.noteInherit") : "addr.noteWh")}</p>`;
+  }
+  // перенумерация склада или зоны (форма data-op="renum")
+  function renumHtml(n, K, ro) {
+    return `<div class="sec">${T("addr.renumTitle")}</div><div class="ed-warn">${T("addr.renumWarn")}</div><form class="ed-form" data-op="renum">
+      <label class="wide" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="only" value="1"${fv(K("renum"), "only", "") ? " checked" : ""}> ${T("addr.renumOnly")}</label>
+      <div class="ed-btns"><button type="button" class="btn btn-secondary" data-show>${T("addr.renumShow")}</button>${ro ? "" : `<button type="submit" class="btn btn-primary">${T("addr.renumSave")}</button>`}</div></form>
+      <p class="ed-note">${T("addr.renumNote")}</p>`;
+  }
+  // конфликты кодов (D6): список с переходом к месту; пока они есть, сохранение этих мест запрещено
+  function conflictsHtml() {
+    const list = model.addr.conflicts(); if (!list.length) return "";
+    const item = (c) => `<li><button data-esel="${esc(c.ids[0])}" title="${T("addr.conflictGo")}"><span class="t">${esc(t(c.kind === "other" ? "addr.conflictOther" : c.existing ? "addr.conflictEx" : "addr.conflictDup", { code: c.code, n: c.ids.length, wh: c.wh }))}</span></button></li>`;
+    return `<div class="sec">${T("addr.conflictsTitle", { n: list.length })}</div><div class="ed-warn" data-conflicts>${T("addr.conflictNote")}</div><ul class="lowlist ed-kids">${list.slice(0, 20).map(item).join("")}</ul>${list.length > 20 ? `<p class="ed-note">${T("addr.conflictMore", { n: list.length - 20 })}</p>` : ""}`;
+  }
+  // что запишется в Odoo для места (D3): name, штрихкод, posx / posy / posz — пока только расчёт
+  function placeHtml(n) {
+    const i = model.addr.info(n.id); if (!i) return "";
+    return `<div class="sec">${T("addr.placeTitle")}</div><table class="o_list"><tbody>
+      <tr><td class="first">${T("addr.name")}</td><td class="n" data-addr-name>${esc(i.name)}</td></tr>
+      <tr><td class="first">${T("addr.barcode")}</td><td class="n code" data-addr-barcode>${esc(i.barcode)}</td></tr>
+      ${i.tplCode && !i.same ? `<tr><td class="first">${T("addr.byTpl")}</td><td class="n code">${esc(i.tplCode)}</td></tr>` : ""}
+      <tr><td class="first">${T("addr.posx")}</td><td class="n" data-addr-pos>${i.posx} / ${i.posy} / ${i.posz}</td></tr></tbody></table><p class="ed-note">${T("addr.placeNote")}</p>`;
+  }
+  function bindAddr(side, n) {
+    const f = side.querySelector("form[data-addr]"); if (!f) return;
+    const val = () => Object.fromEntries(new FormData(f)), warn = f.querySelector("[data-addr-warn]"), box = f.querySelector("[data-addr-preview]");
+    const upd = () => {
+      const v = val(), chk = model.addr.check(v.tpl);
+      warn.hidden = !chk.unknown.length; if (chk.unknown.length) warn.textContent = t("addr.unknown", { names: chk.unknown.join(" ") });
+      box.innerHTML = prevHtml(model.addr.preview(n.id, v));
+    };
+    const own = f.querySelector("[name=own]");
+    if (own) own.addEventListener("change", () => { f.querySelectorAll("input:not([name=own]), select").forEach((x) => { x.disabled = !own.checked; }); upd(); });
+    f.addEventListener("input", upd); upd();
+  }
+  return { propsHtml, massHtml, gridHtml, multiHtml, bindMulti, bindSingle, addrHtml, renumHtml, conflictsHtml, placeHtml, bindAddr };
 }
