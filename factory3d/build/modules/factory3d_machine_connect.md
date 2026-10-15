@@ -1,7 +1,7 @@
 # factory3d_machine_connect
 Статус: IN_PROGRESS
-Тесты: —, ТК: ждут W9
-Решений без заказчика: 15 (ниже)
+Тесты: Odoo 125/125, collector plugins unit 51/51 (2026-10-15), ТК: W9
+Решений без заказчика: 18 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: правка в factory3d_telemetry (DEC-7); AC-13 vs R-05 (DEC-8); ISA95-структуры — допущение Q-01
 
@@ -15,7 +15,8 @@
 | W4 | принят | 57a6daf | /factory3d_machine_connect 68/68 |
 | W6 | принят | ca5b681 | /factory3d_machine_connect 80/80 |
 | W3 | принят | 29ca2f4 | /factory3d_machine_connect 100/100 |
-| W8 | в работе | | |
+| W8 | принят | e27cc6c | /factory3d_machine_connect 125/125 (и с iot_sim) |
+| W9 | в работе | | |
 
 ## Решения без заказчика
 - DEC-1 (ENV-3): `mrp_workorder` (Enterprise) убран из `depends`; в CE 19.0 у `mrp.workorder`/`mrp.workcenter` нет
@@ -58,3 +59,11 @@
   `mail.activity.mixin`. `_f3d_close_timers` режет `date_end` до `ts` всегда (AC-11). — `models/f3d_machine_wo.py`
 - DEC-15: неполная партия снимает `active_workorder_id`, автостарт пропускает WO с `f3d_partial_hold`; отложенная
   микрозупинка считается «не working» для завершения I/O по `finish_idle_s`. — `models/f3d_machine_wo.py`
+- DEC-16: права — `group_f3d_manager` получил rw/c на `res.config.settings` (иначе меню настроек невидимо, AC-89;
+  сохранение всё равно требует admin — `execute`), `group_f3d_user` — read на `mrp.workcenter.productivity.loss`
+  (провайдер переглядача падал на имени причины). — `security/ir.model.access.csv`
+- DEC-17: хук на чистой базе — отчёт `done` (а не `skipped`): по §5.3 крок 7 создаются 207 сигналов (для всех 35
+  строк CSV и GANTRY-1/CUTOPT без РЦ); существующим чужим сигналам дописываются лишь source/address/period/viewer_visible;
+  существующие `f3d.machine` не перезаписываются. TestMigrationDemo пропускается без копии демо. — `hooks.py`
+- DEC-18: провайдер переглядача M-22 — duck typing без `factory3d_viewer` (как telemetry DEC-8), payload меняется на месте;
+  тест bus `f3d.viewer.event` — skip до viewer. V-31 без `target='inline'` (Odoo 19). — `models/viewer_provider.py`
