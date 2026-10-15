@@ -7,22 +7,16 @@
 Документация заморожена на коммите: `9b5cbb5`
 BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth-8tq7jy`; интеграция — в отдельном worktree `claude/factory3d-build`.
 
-## Сводка для продолжения (обновлено 2026-10-15 19:05 UTC)
+## Сводка для продолжения (обновлено 2026-10-15 19:45 UTC)
 
-Состояние: 10 из 11 модулей DONE и смержены в `claude/factory3d-build` @ `29e4340` (Odoo 1344/1344, 16 модулей вместе
-с iot_sim на пустом шаблоне). В работе:
-- `td_genset` + мост `factory3d_genset` — сессия session_013Ue8H7Af5WRGUBWdWKM5e4, ветка `claude/f3d-td_genset`
-  (18:39: W1, W3, W4 приняты; 254/254 с viewer, мост без viewer 73/73, relay 20/20).
-- Фикс machine_connect по решению менеджера (пользователь: «на твоё усмотрение»): DEC-20 — токен API-01 из query
-  в заголовок (адаптер cutopt + контроллер), DEC-19 — deadlock: троттлинг heartbeat коллектора, кроны ORDER BY id +
-  FOR UPDATE SKIP LOCKED. Делает агент coder в ветке `claude/f3d-fix-machine-connect` (worktree /home/user/f3d-mc-fix,
-  БД f3d_mcfix); в интеграцию сам НЕ пушит. Если отчёт агента потерян — смотреть ветку: есть 2 коммита → мержить.
+Состояние: 11 из 11 модулей DONE и смержены в `claude/factory3d-build` @ `44d71c4` (Odoo 1620/1620, 18 модулей вместе
+с iot_sim, td_genset и factory3d_genset; демо viewer 211/211). В работе:
+- Мерж фикса machine_connect DEC-19/20 (ветка `claude/f3d-fix-machine-connect`, ba25258 + 4198a49; у агента
+  фикса 482/482, pytest плагина 54 passed) — агент a5bedb35ea3301f92 в /home/user/f3d-build, БД f3d_int.
+  Если отчёт потерян — проверить, есть ли мерж-коммит фикса в origin/claude/factory3d-build.
 
 Дальше:
-1. Ветка `claude/f3d-fix-machine-connect` готова → мерж в интеграцию с полным прогоном (все модули) + pytest плагинов
-   machine_connect в отдельном venv (было 53 passed).
-2. td_genset DONE → мерж с полным прогоном (все модули + td_genset + factory3d_genset; мосты на Enterprise не ставить),
-   затем итоговое сообщение пользователю (MANAGER «Цикл» п. 5), send_later больше не ставить.
+1. Фикс machine_connect смержен зелёным → итоговое сообщение пользователю (MANAGER «Цикл» п. 5), send_later не ставить.
 
 Процедура мержа (работает агент coder в worktree /home/user/f3d-build, БД f3d_int): `git merge --no-ff`; проверить,
 что чужие модули не откатываются (ветки старые); прогон A — все DONE-модули вместе с iot_sim на пустом шаблоне;
@@ -63,7 +57,7 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 | 8 | `factory3d_yard` | 4 | base, telemetry | DONE | session_01D3xkbVgCSWZFh4E4Agha1H | 2026-10-15 12:20 UTC | 2026-10-15 13:53 UTC | Odoo 831/831 (10 модулей), collector 174+2 skip, плагин sics 34/34 | 8 |
 | 9 | `factory3d_bms` | 5 | telemetry | DONE | session_01L43oC1FugyPdK6kpcRc1ij | 2026-10-15 13:54 UTC | 2026-10-15 19:02 UTC | Odoo 1344/1344 (16 модулей), helvarnet 28/28, collector 174+2 skip | 7 |
 | 10 | `factory3d_fire_safety` | 5 | telemetry | DONE | session_01KJcdAJpD2ninHpqxDQv2FC | 2026-10-15 13:58 UTC | 2026-10-15 16:12 UTC | Odoo 965/965 (13 модулей), демо viewer 211/211 | 13 |
-| 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | MERGING | session_013Ue8H7Af5WRGUBWdWKM5e4 | 2026-10-15 17:43 UTC | лидер DONE 19:00 UTC | | |
+| 11 | `td_genset` + мост `factory3d_genset` | 3 | base, telemetry, energy | DONE | session_013Ue8H7Af5WRGUBWdWKM5e4 | 2026-10-15 17:43 UTC | 2026-10-15 19:00 UTC | Odoo 1620/1620 (18 модулей), демо viewer 211/211, relay 20/20 | 16 |
 
 Порядок строк — приоритет запуска. Эмулятор (`iot_sim`) и телеметрия идут раньше: от них зависят стендовые тесты.
 Мостики auto_install (`factory3d_viewer_sale`, `factory3d_telemetry_viewer`, `factory3d_fire_safety_viewer`,
@@ -125,3 +119,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-15 19:02 UTC factory3d_bms: DONE — со 2-й попытки смержен в `claude/factory3d-build` (`29e4340`), Odoo 1344/1344. Правка SPEC energy (AC-32, R-16, R-17) — `37182a6`. Фикс machine_connect DEC-19/DEC-20 (решение менеджера по поручению пользователя) — в работе в ветке claude/f3d-fix-machine-connect.
 - 2026-10-15 19:10 UTC td_genset: лидер DONE в 19:00 UTC (юнит-DoD, `ecd794a`): 276/276 (td_genset 176 + factory3d_genset 100), мост без viewer 90/90, relay 20/20, DEC 16. Мерж поручен агенту a5bedb35ea3301f92 (прогон всех модулей + td_genset + factory3d_genset). Фикс machine_connect DEC-19/20 — агент a3790e56e2dacc752 гоняет полный прогон в /home/user/f3d-mc-fix, ветка ещё не запушена.
 - 2026-10-15 19:15 UTC machine_connect фикс DEC-19/20: ветка `claude/f3d-fix-machine-connect` запушена (ba25258 DEC-20 токен в заголовок `X-F3D-Token`, query `t` → 400; 4198a49 DEC-19 крон по id батчами по 10 + FOR UPDATE SKIP LOCKED, троттлинг raw_ts/pieces_ts и telemetry `_touch` 30 с). Odoo mc+telemetry+energy 482/482, pytest плагина 54 passed. Ждёт мержа после td_genset. Не проверено: ТП-01/ТБ-03 на стенде; на стенде нужен ручной `-u`; query-токен больше не принимается (без обратной совместимости).
+- 2026-10-15 19:45 UTC td_genset: DONE — смержен в `claude/factory3d-build` (`9f4934d`), фикс ожиданий viewer test_group_denied (провайдер infra моста genset) — `44d71c4`; Odoo 1620/1620 (18 модулей), демо viewer 211/211, relay 20/20, DEC 16. Мерж фикса machine_connect DEC-19/20 поручен тому же агенту.
