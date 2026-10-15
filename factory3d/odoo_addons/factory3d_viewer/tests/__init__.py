@@ -10,3 +10,5 @@ from . import test_payload_stock
 from . import test_payload_production
 from . import test_payload_logistics
 from . import test_payload_misc
+from . import test_payload_chains
+from . import test_payload_signals

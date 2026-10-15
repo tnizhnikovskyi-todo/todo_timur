@@ -5,3 +5,5 @@ from . import viewer_provider_logistics
 from . import viewer_provider_quality
 from . import viewer_provider_maintenance
 from . import viewer_provider_people
+from . import viewer_provider_chains
+from . import viewer_provider_signals

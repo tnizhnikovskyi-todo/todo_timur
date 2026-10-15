@@ -88,7 +88,7 @@ class TestProviders(F3dViewerBase):
         with self.assertLogs("odoo.addons.factory3d_viewer.tools.payload", level="WARNING") as cm:
             data = self._builder().build()
         self.assertTrue(any("без _f3d_viewer_collect" in m for m in cm.output))
-        self.assertNotIn("zones", data["meta"]["sections"])
+        self.assertNotIn("Z-TEST", data.get("zones", {}))  # розділ zones тепер живий (chains M-01g)
 
     def test_duck_typed_provider_getattr(self):
         """AC-57."""

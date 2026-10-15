@@ -15,4 +15,25 @@
                                          Command.link(ref('stock.group_stock_user')),
                                          Command.link(ref('mrp.group_mrp_user'))]"/>
     </record>
+    <!-- Читання обладнання й заявок з кодом сцени для користувачів переглядача (M-01e); лише read -->
+    <record id="rule_f3d_viewer_equipment_read" model="ir.rule">
+        <field name="name">Завод 3D: обладнання з кодом сцени (читання)</field>
+        <field name="model_id" ref="maintenance.model_maintenance_equipment"/>
+        <field name="domain_force">[('f3d_code', '!=', False)]</field>
+        <field name="groups" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_f3d_viewer_request_read" model="ir.rule">
+        <field name="name">Завод 3D: заявки на обладнання з кодом сцени (читання)</field>
+        <field name="model_id" ref="maintenance.model_maintenance_request"/>
+        <field name="domain_force">[('equipment_id.f3d_code', '!=', False)]</field>
+        <field name="groups" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
 </odoo>

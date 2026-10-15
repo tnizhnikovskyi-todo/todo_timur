@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from odoo.exceptions import AccessError
 from odoo.tests import tagged
 
 from .common import F3dViewerBase
@@ -86,3 +87,15 @@ class TestQualityMaintenancePeople(F3dViewerBase):
         else:
             self.assertEqual(data["quality_checks"], [])
             self.assertEqual(data["meta"]["sections"]["quality_checks"], "missing")
+
+    def test_f3d_user_reads_coded_equipment_only(self):
+        """Правило viewer: user_f3d без maintenance-груп бачить обладнання з кодом, без коду — ні, не пише."""
+        plain = self.env["maintenance.equipment"].create({"name": "TST no code", "category_id": self.category.id})
+        eq = self.env["maintenance.equipment"].with_user(self.user_f3d)
+        names = eq.search([]).mapped("name")
+        self.assertIn("TST forklift", names)
+        self.assertNotIn(plain.name, names)
+        with self.assertRaises(AccessError):
+            eq.browse(self.equipment.id).write({"name": "x"})
+        data = self.payload(self.user_f3d)
+        self.assertIn("TST-FL-1", data["equipment"])
