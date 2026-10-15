@@ -7,7 +7,7 @@
 //   opts.enforce — false: проверки W-07 не отклоняют правки (только для тестов; по умолчанию отклоняют)
 //   opts.library — общая библиотека (library.js: свои типы и шаблоны), прочитанная хостом из storage.listLibrary(); model.library правит её и пишет в storage.saveLibrary
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
-//   { type: "library" } изменилась библиотека типов и шаблонов ·
+//   { type: "library" } изменилась библиотека типов и шаблонов · { type: "wizard" } изменилось состояние мастера «З нуля» (wizard.js) ·
 //   { type: "focus" } сменился показанный уровень · { type: "warehouse" } сменился активный склад (после rebuild и focus) ·
 //   { type: "notify", kind, key, params, sub } сообщение пользователю · { type: "locks" } изменились блокировки зон (locks.js).
 import { PICKS, clone, normEdit } from "./types.js";
@@ -25,6 +25,7 @@ import { BLD_OPS } from "./bldops.js";
 import { compileRule, defaultRules, effectiveRules, parseStats, suggestMask } from "./parse.js";
 import { cleanApplied, computePlan } from "./plan.js";
 import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "./checks.js";
+import { newWizard, normWizard } from "./wizard.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон" };
 const EMPTY_BASE = { meta: {}, products: {}, locations: {} };
@@ -48,6 +49,7 @@ export function createModel(project, storage, opts = {}) {
 
   // слой правок и дерево активного склада
   function load(wh) {
+    if (wh.wizard) wh.wizard = normWizard(wh.wizard);
     s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null; s.rejected = null; s.chkc = null;
     ed.recompute(s); s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(wh)));
   }
@@ -257,6 +259,15 @@ export function createModel(project, storage, opts = {}) {
         list: () => { const st = settings(s.edit); return TECH.map((x) => ({ id: x.id, min: techMin(st, x.id), def: x.min })); },
         of: (id = "WH") => { const st = settings(s.edit), own = st.tech.get(id) || (id === "WH" ? "none" : "inherit"); return { own, eff: techOf(s.tree, st, id) }; },
       },
+    },
+    // мастер «З нуля» (W-16, wizard.js): состояние лежит в складе проекта (warehouse.wizard) и пишется вместе с проектом; null — мастера нет.
+    // Шаги вызывают обычные операции модели, поэтому правки видны и отменяются как остальные; сам мастер слоя правок не меняет
+    wizard: {
+      get state() { return s.wh.wizard || null; },
+      get active() { return !!s.wh.wizard; },
+      start() { if (!s.wh.wizard) { s.wh.wizard = newWizard(); ed.persist(s); s.emit({ type: "wizard" }); } return s.wh.wizard; },
+      patch(fn) { if (!s.wh.wizard) return false; fn(s.wh.wizard); ed.persist(s); s.emit({ type: "wizard" }); return true; },
+      finish() { if (!s.wh.wizard) return false; s.wh.wizard = null; ed.persist(s); s.emit({ type: "wizard" }); return true; },
     },
     // прочее хранилище (режим 2D/3D и т.п.)
     pref: { read: rd, write: wr },

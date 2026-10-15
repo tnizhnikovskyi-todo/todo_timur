@@ -186,6 +186,11 @@ export function cleanApplied(edit, plan, keys) {
     } else if (o.kind === "rename") {
       e.codes = (e.codes || []).filter((c) => c.id !== o.node);
       e.prop = (e.prop || []).map((p) => { if (p.id !== o.node || !p.name) return p; const { name, ...rest } = p; return rest; }).filter((p) => Object.keys(p).length > 1);
+    } else if (o.kind === "create" && o.vals && o.vals.barcode) {
+      // созданное место получило в Odoo штрихкод = своему коду; перенумерация (W-08), сделанная до создания, сворачивается в код узла: снимок хранит место под этим штрихкодом,
+      // и узел слоя узнаётся как применённый (adopted), а не дублируется местом снимка (мастер «З нуля», W-16)
+      const a = e.add.find((x) => x.id === o.node);
+      if (a && a.code) { a.code = o.vals.barcode; e.codes = (e.codes || []).filter((c) => c.id !== o.node); }
     } else if (o.kind === "move") {
       e.add = e.add.map((a) => { if (!a.from || !inNode(a.id, o.node)) return a; fromOld.add(a.from); const { from, ...rest } = a; return rest; });
     }

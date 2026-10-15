@@ -50,6 +50,7 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
   // разбор кодов по правилам склада (edit.parse, W-12); место без зоны (не разобрано или не названо местом на полу, путь короче «склад / зона / место») уходит в лоток —
   // кроме тех, что уже поставлены правкой (запись add с этим кодом и from)
   const comp = compileRules(effectiveRules(edit)), known = new Set(types.keys()), parseOf = (c) => parseCode(c, comp, known);
+  const whCode = (data && data.meta && data.meta.warehouse) || cfg.code || "WH", rootId = (id) => (whCode !== "WH" && id.startsWith(`${whCode}/`) ? `WH${id.slice(whCode.length)}` : id);
   const adopted = new Set(edit.add.filter((a) => a.code && adoptedAdd(data, a, cfg)).map((a) => a.code)), addIds = new Set(edit.add.map((a) => a.id));
   const unplaced = [], putCodes = new Set(edit.add.filter((a) => a.code && a.from).map((a) => a.code));
   const P = new Map(), cont = new Set(); // части путей и пути-контейнеры (место, внутри которого лежат другие места, — зона со своим кодом, не бездомное)
@@ -61,7 +62,8 @@ export function buildTree(data, edit, pending = [], cfg = {}) {
       continue;
     }
     let pid = "WH";
-    for (let i = 1; i < parts.length - 1; i++) { const id = parts.slice(0, i + 1).join("/"); if (own && addIds.has(id)) break; node(id, parts[i], pid); pid = id; } // дальше путь строят добавленные узлы слоя
+    // узлы, добавленные слоем под корнем, носят id «WH/…», а в снимке путь начинается с кода склада («WH1/…», W-16): применённое в Odoo узнаётся по обоим видам
+    for (let i = 1; i < parts.length - 1; i++) { const id = parts.slice(0, i + 1).join("/"); if (own && (addIds.has(id) || addIds.has(rootId(id)))) break; node(id, parts[i], pid); pid = id; } // дальше путь строят добавленные узлы слоя
     if (own) continue;
     let n;
     if (cs && !cs.floor) {

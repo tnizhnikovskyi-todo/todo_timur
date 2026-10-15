@@ -372,3 +372,23 @@ svg .bd-rl { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; text
 .o_modal h4 { margin: 12px 0 6px; font-size: 14px; }
 .o_modal .o_err { color: var(--bad); margin: 6px 0; }
 .o_modal .o_err:empty { display: none; }
+
+/* мастер «З нуля» (W-16): панель справа поверх плана, шаги, форма шага, навигация */
+.o_prob.o_wiz { width: min(540px, calc(100% - 16px)); display: flex; flex-direction: column; gap: 8px; z-index: 31; }
+.o_wiz .wiz-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; flex-wrap: wrap; }
+.o_wiz .wiz-steps button { display: flex; align-items: center; gap: 5px; border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-muted); border-radius: 14px; padding: 2px 9px 2px 3px; font-size: 12px; cursor: pointer; }
+.o_wiz .wiz-steps button i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; background: var(--o-btn2); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+.o_wiz .wiz-steps button.done { color: var(--o-text); } .o_wiz .wiz-steps button.done i { background: var(--ok); color: #fff; }
+.o_wiz .wiz-steps button.cur { border-color: var(--o-brand); color: var(--o-text); font-weight: 600; } .o_wiz .wiz-steps button.cur i { background: var(--o-brand); color: #fff; }
+.o_wiz progress { width: 100%; height: 6px; accent-color: var(--o-brand); }
+.o_wiz .wiz-body h3 { margin: 4px 0 6px; font-size: 15px; } .o_wiz .wiz-body .mut { margin: 4px 0 8px; font-size: 13px; }
+.o_wiz .ed-form { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: end; } .o_wiz .ed-form label { flex: 1 1 110px; } .o_wiz .ed-form .wide { flex: 1 1 100%; }
+.o_wiz fieldset.wiz-zone { border: 1px solid var(--o-border); border-radius: 4px; margin: 0 0 8px; padding: 4px 8px 8px; } .o_wiz fieldset legend { font-weight: 600; font-size: 13px; padding: 0 4px; }
+.o_wiz textarea { width: 100%; border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 5px 7px; font: 13px ui-monospace, monospace; }
+.o_wiz .chk-row { display: flex; gap: 14px; margin: 4px 0 8px; } .o_wiz .chk { flex-direction: row; align-items: center; gap: 6px; color: var(--o-text); font-size: 13px; }
+.o_wiz .acts { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 0; align-items: center; }
+.o_wiz .wiz-issues { margin: 6px 0; padding-left: 18px; color: var(--bad); font-size: 13px; }
+.o_wiz .wiz-nav { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--o-border); padding-top: 8px; position: sticky; bottom: 0; background: var(--o-bg); }
+.o_wiz .wiz-nav .sp { flex: 1; text-align: center; font-size: 12px; } .o_wiz .wiz-need { margin: 0; font-size: 12px; }
+.o_wiz .ok { color: var(--ok); } .o_wiz .o_err { color: var(--bad); } .o_wiz .o_warn { color: var(--warn); }
+.o_wiz .addr-prev { columns: 2; margin: 4px 0; padding-left: 18px; font-size: 12px; } .o_wiz .code { font-family: ui-monospace, monospace; }
