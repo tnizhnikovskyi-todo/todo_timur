@@ -414,11 +414,11 @@ export default {
   "help.edit.html": `
     <p>The <b>“✎ Edit”</b> button turns edit mode on, <b>“Done”</b> turns it off. Select an object — the right panel shows the actions for it:</p>
     <table class="hl-t"><thead><tr><th class="first">Selected</th><th>What you can do</th></tr></thead><tbody>
-      <tr><td class="first">Warehouse or zone</td><td>“Add a row” (place type, number of bays and levels), “Add a floor place”, “Add a zone”</td></tr>
+      <tr><td class="first">Warehouse or zone</td><td>“Add a row” (place type, number of bays and levels), “Add a floor place”, “Add a zone”, “Zone equipment” (aisle width)</td></tr>
       <tr><td class="first">Row</td><td>change the row type, “Add a bay” (for boards — “Add a stack”), rotate, put back to the automatic position</td></tr>
       <tr><td class="first">Bay</td><td>“Add a level on top”</td></tr>
       <tr><td class="first">Level or cell</td><td>“Cells per level” — split a level into cells (see “Warehouses, cells and the project”)</td></tr>
-      <tr><td class="first">Anything</td><td>“⧉ Duplicate”, “Copy”, “Remove” (together with everything inside); × in the “Inside” list removes one nested object</td></tr>
+      <tr><td class="first">Anything</td><td>“⧉ Duplicate”, “Copy”, “Remove” (together with everything inside; places with stock cannot be removed); × in the “Inside” list removes one nested object</td></tr>
     </tbody></table>
     <p><b>Place types</b> (the button above the model in edit mode) is the catalog of constructions: code, name, kind (shelf bay, roll rack, pallet rack, floor stack, floor place), width, depth, level height, levels in a new bay. Changing a size rebuilds all places of this type at once; you can add your own type. It is saved with the “Save types” button in the window.</p>
     <p>New places get codes modeled on their neighbors (<span class="code">FUR-R7-S01-L1</span>) and are shown in blue.</p>`,
@@ -426,7 +426,7 @@ export default {
   "help.move.html": `
     <ul>
       <li><b>Drag</b> a row or a floor place with the mouse (in 2D and 3D). A zone can be dragged if you select it first. You can drag what stands inside the visible level: to move a row, open its zone, not the row itself.</li>
-      <li>The zone grows to fit the object. If a row overlaps a neighbor, the panel shows a warning.</li>
+      <li>The zone grows to fit the object. If a row overlaps a neighbor, a column, a wall, the office or goes beyond the building outline, the change is cancelled with a “Place anyway” button (see “Checks and problems”).</li>
       <li><b>“Automatic position”</b> in the row panel puts the row back to where the layout places it.</li>
       <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back. Other angles (180° and 270°) and exact coordinates are in “Properties” (see “Editing tools”).</li>
     </ul>`,
@@ -519,7 +519,9 @@ export default {
   "odoo.plan.selected": "Operations selected: {n}",
   "odoo.plan.deps": "(with required ones: {n})",
   "odoo.plan.noRight": "Only a user with the \"Конструктор: застосування в Odoo\" right can apply; the file can be exported anyway.",
-  "odoo.plan.file": "CSV file",
+  "odoo.plan.file": "Import file…",
+  "odoo.plan.errors": "The problems panel has errors: {n}. Applying is not allowed until they are fixed.",
+  "odoo.plan.showErrors": "Show errors",
   "odoo.plan.apply": "Apply in Odoo",
   "odoo.plan.close": "Close",
   "odoo.plan.tabPlan": "Plan",
@@ -527,7 +529,6 @@ export default {
   "odoo.plan.applying": "Applying…",
   "odoo.plan.done": "Applied: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}.",
   "odoo.plan.fail": "Not applied, nothing was changed in Odoo: {msg}",
-  "odoo.plan.fileDone": "File saved, operations: {n}. It can be imported in Odoo (Inventory → Configuration → Locations → Import).",
   "odoo.plan.copyTitle": "We recommend trying this on a copy of the database first",
   "odoo.plan.copyText": "This is the first apply in this project. Location changes can be rolled back from the journal, but it is safer to run them on a copy of the database first.",
   "odoo.plan.copyAck": "Do not remind me again for this project",
@@ -601,13 +602,13 @@ export default {
   "help.plan.title": "Change plan and applying in Odoo",
   "help.plan.html": `
     <ul>
-      <li><b>Change plan.</b> The "Change plan" button in the top bar (in the app opened from Odoo) compares the <b>saved</b> warehouse model with the current Odoo locations and shows what will change: <b>create</b> (new zones, rows, bays and places — with parent locations following the hierarchy), <b>move</b> (grouping and moving — moved places are moved, not created again), <b>rename</b> (after renumbering; zones and groups by name), <b>change attributes</b> (barcode and, in Odoo 18, the posx / posy / posz positions) and <b>archive</b> (removed places). A place is named by its code in Odoo and its barcode equals the code; a zone, row and bay are created as internal locations named like the node; empty groups without places do not reach Odoo. Unsaved changes are not in the plan — save first.</li>
+      <li><b>Change plan.</b> The "Change plan" button in the top bar (in the app opened from Odoo) compares the <b>saved</b> warehouse model with the current Odoo locations and shows what will change: <b>create</b> (new zones, rows, bays and places — with parent locations following the hierarchy), <b>move</b> (grouping and moving — moved places are moved, not created again), <b>rename</b> (after renumbering; zones and groups by name), <b>change attributes</b> (barcode and, in Odoo 18, the posx / posy / posz positions) and <b>archive</b> (removed places). A place is named in Odoo by a short level name (level or position per the addressing template) and its full code is in the barcode; a zone, row and bay are created as internal locations named like the node; empty groups without places do not reach Odoo. Unsaved changes are not in the plan — save first. While the problems panel has errors, applying (and exporting the file) is not allowed: the window shows their number and leads to them.</li>
       <li><b>Counters and filters.</b> Above the list are the kinds of changes with their counts; a checkbox hides or shows a kind. The marks "has stock" and "barcode is already used" mean the operation cannot be applied.</li>
       <li><b>Applying in parts.</b> Every operation has a checkbox. The "Zone or row" list selects only the operations inside the chosen zone or row; "Select all" and "Clear all" work on the whole plan. Required parent locations are added to the selection automatically (their number is shown).</li>
       <li><b>Apply in Odoo.</b> The button runs the selection on the server <b>in one transaction</b> in the order: create (parents before children) → moves → renames → attributes → archive. If anything fails, nothing changes in Odoo. The "Конструктор: застосування в Odoo" right is required. Only <b>empty</b> locations are archived: the server itself checks that there is no stock and no unfinished moves (a place with stock is marked in the plan and is not applied).</li>
-      <li><b>As a file.</b> The "CSV file" button saves the selection as a file for import into Odoo (one row per location; columns <span class="code">.id, name, location_id, usage, barcode, posx, posy, posz, active</span>), so you can see exactly what is imported. A file is safer, applying through Odoo is faster.</li>
+      <li><b>As a file.</b> The "Import file…" button opens the locations export (XLSX or CSV in the Odoo import format, all places or only changed ones), so you can see exactly what is imported. The file ignores the selection in the plan and does not archive or move existing locations. A file is safer, applying through Odoo is faster.</li>
       <li><b>After applying.</b> Created nodes become "existing" and get the Odoo location id; applied archiving, renames and moves are removed from the saved model changes, and whatever was not applied (when applying in parts) stays and remains in the plan.</li>
-      <li><b>Journal and rollback.</b> The "Journal" tab shows who applied what and when (with the operations). "Roll back" runs the reverse operations: created locations are archived, names, parent locations and attributes are restored, archived ones are restored. Rollback is possible only if the created locations have not been used since (no stock, no unfinished moves) and there is no later apply that touched the same locations — roll that one back first.</li>
+      <li><b>Journal and rollback.</b> The "Journal" tab shows who applied what and when (with the operations). "Roll back" runs the reverse operations: created locations are archived, names, parent locations and attributes are restored, archived ones are restored. Rollback is possible only if the created locations have not been used since (no stock, no unfinished moves) and there is no later apply that touched the same locations: an old apply can be rolled back only in order — roll back the later ones first.</li>
       <li><b>Differences with Odoo.</b> After "Refresh from Odoo" a window appears if something changed in Odoo since the last load: <b>appeared</b>, <b>gone</b> (archived or deleted), <b>renamed</b>, <b>other parent</b>. For each row choose "Accept from Odoo" (default) or "Keep mine": then the change becomes an unsaved edit of the model and the "Change plan" will offer to restore it in Odoo.</li>
       <li><b>Test copy.</b> On the first apply in a project a reminder appears: we recommend running the changes on a copy of the database first. You can tick "Do not remind me again for this project".</li>
     </ul>`,
@@ -839,7 +840,7 @@ export default {
   "bld.ruler.delta": "Δx {dx}, Δy {dy}",
   "bld.ruler.clear": "Clear measurement",
   "bld.out.title": "Outside the building outline: {n}",
-  "bld.out.note": "Warning: rows and zones that go beyond the outline. The plan check (W-07) will forbid it.",
+  "bld.out.note": "Error: rows and zones that go beyond the outline. A new such change is cancelled (see “Problems”).",
   "bld.selected": "Selected",
   "bld.selectedN": "Selected objects: {n}",
   "bld.del": "Delete selected",
@@ -889,10 +890,165 @@ export default {
       <li><b>Create.</b> If there is no plan yet, <b>“Create building from warehouse size”</b> makes a rectangular outline around the layout plus a margin (2 m by default). At first it is an unsaved (teal) change; save it with <b>“Save the building plan”</b> or “Save all”.</li>
       <li><b>Outline.</b> A rectangle (X, Y, width, depth as numbers) or a polygon: drag vertices with the mouse (select the outline by clicking its line), the <b>“+ Vertex”</b> tool adds a vertex on an edge, “Add vertex” splits the longest edge, <kbd>Delete</kbd> removes the selected vertex (three at least). The same place has the height to the ceiling and to the sprinklers, the area and the perimeter.</li>
       <li><b>Objects.</b> <b>Column</b> (click; or <b>“Columns on a grid”</b>: start, count and X / Y step — one change), <b>wall</b> (a segment with thickness, two clicks), <b>gate, dock, door, office, charging area</b> (rectangles: click — default size, drag — your own). A selected object is moved with the mouse; its numbers (coordinates, size, name) are edited in the panel. A gate or dock can be <b>linked to an Odoo location</b> (the “Link to location” field picks among floor places and zones of the warehouse); without a link it is just geometry.</li>
-      <li><b>Aisles.</b> An aisle is a strip with a width, drawn with two clicks (start and end). Aisle ends are graph nodes: when the end of a new aisle lands on a node or on the line of another aisle, they join (an aisle that is crossed splits in two). The aisle panel shows its length, width and <b>neighbouring aisles</b>. Moving an aisle drags its neighbours through the shared node; an end can be dragged on its own (it shows as a circle when selected) or typed in. Aisle width is needed for the plan checks (W-07); there are no routes yet.</li>
+      <li><b>Aisles.</b> An aisle is a strip with a width, drawn with two clicks (start and end). Aisle ends are graph nodes: when the end of a new aisle lands on a node or on the line of another aisle, they join (an aisle that is crossed splits in two). The aisle panel shows its length, width and <b>neighbouring aisles</b>. Moving an aisle drags its neighbours through the shared node; an end can be dragged on its own (it shows as a circle when selected) or typed in. Aisle width is compared with the minimum for the warehouse equipment (see “Checks and problems”); there are no routes yet.</li>
       <li><b>Snapping.</b> The grid step <b>0.1 / 0.5 / 1 m</b> is chosen in the panel; points snap to vertices and corners of neighbouring objects, to corners of rows and places of the layout and to aisle ends (and align to their axes). The “Snap” checkbox turns it off, <kbd>Alt</kbd> while moving does it temporarily. The grid step is remembered.</li>
       <li><b>Rulers and the ruler tool.</b> Along the top and left edges of 2D are rulers in metres (with a cursor mark); the bottom shows the cursor coordinates. The <b>“Ruler”</b> tool: two clicks — the distance (and Δx, Δy) is shown on the plan and in the panel; <b>“Clear measurement”</b> or Esc removes it. The measurement is not stored in the project.</li>
-      <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is only a warning; the plan check (W-07) will forbid it.</li>
+      <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is a check error: a new change that takes a place beyond the outline is cancelled (there is “Place anyway”), and current cases are listed in “Problems”.</li>
       <li><b>In 3D</b> you see the floor outline, walls, columns (instanced), gates, docks, doors, office, charging area and aisles; the upper orange line is the sprinkler level. Editing is done in 2D.</li>
+    </ul>`,
+  "top.file": "File",
+  "file.menu": "File menu",
+  "file.impLoc": "Import locations…",
+  "file.expLoc": "Export locations…",
+  "file.expProj": "Export project",
+  "file.impProj": "Import project…",
+  "file.readonly": "View only: import is not available",
+  "file.err.empty": "The file is empty",
+  "file.err.xlsx": "Could not read the XLSX (is the file damaged?)",
+  "file.err.read": "Could not read the file",
+  "file.err.write": "Could not create the file",
+  "file.err.save": "Could not save the project",
+  "file.exp.title": "Export locations",
+  "file.exp.scope": "Warehouse {code}: places as shown in the model (including unsaved changes).",
+  "file.exp.mode": "What to export",
+  "file.exp.all": "All places ({n})",
+  "file.exp.changed": "New and changed only ({n})",
+  "file.exp.format": "Format",
+  "file.exp.go": "Download",
+  "file.exp.sum": "In the file: places — {places}, structure rows (type \"view\") — {structure}.",
+  "file.exp.note": "Columns follow the Odoo stock.location import: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level). Applying changes to Odoo is a separate step (the full change plan).",
+  "file.imp.title": "Import locations from a file",
+  "file.imp.pick": "XLSX or CSV file",
+  "file.imp.hint": "Columns as in the standard Odoo stock.location export: Full Location Name, Location Type, Barcode, Parent Location; optionally stock: Product, Quantity, Lot.",
+  "file.imp.map": "Column mapping",
+  "file.imp.codeFrom": "Place code",
+  "file.imp.code.auto": "Barcode if present, otherwise name",
+  "file.imp.code.name": "Always the name",
+  "file.imp.preview": "Preview",
+  "file.imp.stats": "Places: {places}; structure rows: {structure}; stock lines: {quants}.",
+  "file.imp.unrec": "Rows not recognized: {n}; skipped (other location types: customers, vendors…): {skipped}; duplicates: {dup}.",
+  "file.imp.wh": "Warehouses: {list}",
+  "file.imp.nodata": "No places found in the file: check the column mapping.",
+  "file.imp.issues": "Which rows were not recognized",
+  "file.imp.name": "Project name",
+  "file.imp.note": "A new project will be created (source — the file, load date — today) and opened instead of the current one; the current project stays in storage.",
+  "file.imp.apply": "Create project from file",
+  "file.role.path": "Full name (path)",
+  "file.role.name": "Name",
+  "file.role.parent": "Parent location",
+  "file.role.usage": "Location type",
+  "file.role.barcode": "Barcode",
+  "file.role.posx": "Corridor (X)",
+  "file.role.posy": "Shelves (Y)",
+  "file.role.posz": "Height (Z)",
+  "file.role.product": "Product",
+  "file.role.qty": "Quantity",
+  "file.role.lot": "Lot",
+  "file.role.none": "— not used —",
+  "file.issue.empty": "row {row}: no location name",
+  "file.issue.noparent": "row {row}: place without a parent location (warehouse)",
+  "file.issue.usage": "row {row}: unknown location type",
+  "file.issue.dupcode": "row {row}: this code already belongs to another place",
+  "file.issue.qty": "row {row}: quantity not recognized (place taken without stock)",
+  "pf.title": "Import project",
+  "pf.pick": "Project file (.whproj.json)",
+  "pf.info": "id {id}, warehouses: {wh} ({codes})",
+  "pf.migrated": "The file is in an older format: it will be converted to the current version.",
+  "pf.exists": "A project with id {id} already exists. What to do?",
+  "pf.copy": "Import as a copy (new id)",
+  "pf.replace": "Replace the existing project",
+  "pf.go": "Import",
+  "pf.notJson": "The file is not valid JSON",
+  "pf.notProject": "This is not a warehouse constructor project file",
+  "pf.newer": "The file was created by a newer version of the app (version {v}): update the app",
+  "pf.noWarehouses": "The project has no warehouses",
+  "pf.badWarehouse": "Warehouse {code} in the file is damaged",
+  "pf.dupWarehouse": "Warehouse id {id} is repeated in the file",
+  "n.fileSaved": "File saved: {name}",
+  "n.fileFail": "Could not open the files window",
+  "help.file.title": "Files: import and export",
+  "help.file.html": `
+    <p>The <b>"File"</b> menu in the top bar. Files are read and created in the browser itself; nothing is sent to a server.</p>
+    <ul>
+      <li><b>Import locations…</b> — XLSX or CSV (UTF-8 or Windows-1251, comma, semicolon or tab separated). Columns follow the standard Odoo export of <span class="code">stock.location</span>:
+        Full Location Name (<span class="code">complete_name</span>), Location Type (<span class="code">usage</span>), Barcode, Parent Location; optionally Corridor / Shelves / Height (<span class="code">posx / posy / posz</span>) and stock: Product, Quantity, Lot.
+        Headers are recognized automatically in English, Ukrainian and Russian; any column can be assigned by hand in the "Column mapping" block.</li>
+      <li><b>Preview.</b> Before the project is created you see how many places, structure rows (type "view") and stock lines were found, which warehouses are in the file (a warehouse is the first segment of the full name) and how many rows were not recognized and why
+        (no name, no parent location, unknown type, repeated code). Locations of non-warehouse types (customers, vendors, production…) are skipped. The place code is the barcode if there is one, otherwise the name (can be changed).
+        If name and parent are separate columns, the full name is built as "parent/name".</li>
+      <li><b>Result</b> — a new project "from a file" (source — the file, load date): each warehouse keeps its snapshot inside the project, and everything then works as with Odoo data. The new project opens instead of the current one; the current one stays in storage.</li>
+      <li><b>Export locations…</b> — the active warehouse in the Odoo <span class="code">stock.location</span> import format: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level numbers where they exist).
+        Choose <b>all places</b> (with structure rows of type "view") or <b>new and changed only</b> (with the parents that do not exist in Odoo yet); XLSX or CSV. This is the basis for applying changes by file; the full change plan (ids, archiving, write order) is a separate step.</li>
+      <li><b>Export project</b> — a <span class="code">.whproj.json</span> file: the whole project (warehouses, saved and unsaved changes, building, addressing, types). The shared library of types and templates is not included.
+        Warehouse snapshots that the app takes from outside (not the built-in demo data) are put into the file so a warehouse is not empty on another computer.</li>
+      <li><b>Import project…</b> — the file is checked (format, version, warehouses) and converted to the current version if needed. If a project with the same id already exists, choose: <b>replace</b> it or <b>import as a copy</b> (new id, name marked "copy").
+        A file from a newer version of the app is not opened. After the import the page reloads and opens the project.</li>
+    </ul>`,
+  // ---------- checks and problems panel (W-07)
+  "n.chkBlock": "Change cancelled: {what}",
+  "n.chkBlockSub": "Violations: {n}. If this is intended, use “Place anyway”.",
+  "n.chkForce": "Place anyway",
+  "n.delStock": "Not removed: places with stock ({codes})",
+  "n.delStockSub": "A place with stock cannot be removed: move the goods first, then archive the empty place.",
+  "n.stockMoved": "{a} with stock moved to another zone ({to})",
+  "n.stockMovedSub": "The stock stays under the same place code; check the addressing.",
+  "chk.overlap": "Overlap: {a} and {b}",
+  "chk.overlapBld": "{a} overlaps a building object: {item} {id}",
+  "chk.outside": "{a} goes beyond the building outline",
+  "chk.gap": "Narrow gap {w} m between {a} and {b}: “{tech}” needs at least {min} m",
+  "chk.aisle": "Aisle {name} of {w} m is narrower than {min} m (“{tech}”)",
+  "chk.heightCeil": "{a}: height {h} m is above the ceiling ({lim} m)",
+  "chk.heightSpr": "{a}: height {h} m reaches the sprinklers ({lim} m)",
+  "chk.overload": "{a}: goods weigh {w} kg per level, allowed {cap} kg",
+  "chk.stockMoved": "{a} with stock moved from zone {from} to {to}",
+  "chk.codeConflict": "{text}",
+  "chk.forced": "placed despite the ban",
+  "prob.button": "Problems",
+  "prob.title": "Project problems",
+  "prob.count": "Errors: {e} · warnings: {w}",
+  "prob.none": "No problems",
+  "prob.rejected": "The last change was rejected by a check (overlap or another prohibition).",
+  "prob.more": "Showing the first {n} of {m}",
+  "prob.filter": "Show",
+  "prob.fAll": "All",
+  "prob.fError": "Errors",
+  "prob.fWarn": "Warnings",
+  "prob.fType": "All types",
+  "prob.sev.error": "Error",
+  "prob.sev.warn": "Warning",
+  "prob.type.overlap": "Overlap",
+  "prob.type.overlapBld": "Overlap with building",
+  "prob.type.outside": "Outside the outline",
+  "prob.type.gap": "Narrow gap",
+  "prob.type.aisle": "Narrow aisle",
+  "prob.type.heightCeil": "Above the ceiling",
+  "prob.type.heightSpr": "Sprinklers",
+  "prob.type.overload": "Load",
+  "prob.type.stockMoved": "Place with stock moved",
+  "prob.type.codeConflict": "Code conflict",
+  "prob.go": "Show on the model",
+  "prob.tech": "Warehouse equipment",
+  "prob.techNote": "Aisles and gaps between rows narrower than the equipment minimum are marked on the plan and listed here. The minimum width can be changed (it goes through “Show / Save”).",
+  "prob.minw": "Minimum aisle width, m",
+  "tech.handcart": "Hand cart",
+  "tech.stacker": "Stacker",
+  "tech.reach": "Reach truck",
+  "tech.vna": "Narrow-aisle truck",
+  "tech.forklift": "Forklift",
+  "tech.none": "Do not check",
+  "tech.inherit": "Same as warehouse",
+  "op.tech": "{ref}: equipment — {tech}",
+  "op.techMin": "Minimum aisle width ({tech}): {w} m",
+  "side.techTitle": "Zone equipment",
+  "side.techNote": "Aisle widths in this zone are checked for the chosen equipment; “Same as warehouse” uses the warehouse equipment.",
+  "help.checks.title": "Checks and problems",
+  "help.checks.html": `
+    <ul>
+      <li><b>Overlaps are forbidden.</b> Rows, floor places, columns, walls and the office cannot overlap, and places cannot go beyond the building outline. Touching edges is not an overlap. If a drag, a number in the panel, mass creation, paste, a copy or a rotation causes an overlap, the change is <b>cancelled</b> and the notification (it does not disappear by itself until closed or the next change) and the top of the “Problems” panel have a <b>“Place anyway”</b> button that repeats the action and keeps it. Such an override is marked in the change itself and shows in “Problems” as the warning “placed despite the ban”.</li>
+      <li><b>Aisle width.</b> The “Problems” panel (top) lets you choose the <b>warehouse equipment</b>: hand cart, stacker, reach truck, narrow-aisle truck or forklift; a zone can be set separately in its panel (“Zone equipment”). Every equipment has a <b>minimum aisle width</b> (editable). Building-plan aisles and gaps between rows narrower than the minimum are highlighted in 2D and 3D and listed. Rows closer than 0.3 m count as one block.</li>
+      <li><b>Height and load.</b> The height of a row (top level plus cargo) is compared with the ceiling and sprinkler heights of the building plan (a building plan is required). The weight of goods on a level (or a stack section) is compared with the level load from the type parameters; if goods weights are unknown in the snapshot, the type maximum is assumed, so there is no complaint.</li>
+      <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
+      <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
+      <li><b>Code conflicts.</b> A repeated or already used place code (see “Addressing”) also appears in “Problems” as an error; a click goes to the place. While a conflict exists, those places cannot be saved.</li>
     </ul>`,
 };

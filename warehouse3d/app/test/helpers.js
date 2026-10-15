@@ -6,12 +6,16 @@ import { demoBase2, demoProject } from "../src/core/demo.js";
 export const DATA = JSON.parse(fs.readFileSync(new URL("../../prototype/data.json", import.meta.url), "utf8"));
 
 export const BASES = { "data.json": DATA, "demo-2": demoBase2(DATA.meta) };
+// снимок без остатков: места можно убирать (W-07, F4: место с остатком убрать нельзя), раскладка и id те же
+export const EMPTY = (() => { const d = JSON.parse(JSON.stringify(DATA)); for (const l of Object.values(d.locations)) l.quants = []; return d; })();
+export const BASES_EMPTY = { ...BASES, "data.json": EMPTY };
 
 // initial — то, что лежало в хранилище (storage.dump()): «перезагрузка страницы»; без него — новый демо-проект
+// opts.noStock — снимок без остатков (можно убирать места); opts.enforce === false — проверки не отклоняют правки (старые тесты, которым нужно свободное положение)
 export function fresh(initial = {}, opts = {}) {
-  const { words, library, ...so } = opts;
+  const { words, library, noStock, enforce, ...so } = opts;
   const storage = createMemoryStorage(initial, so);
-  const model = createModel(storage.peekProject() || demoProject(BASES), storage, { bases: BASES, words, library });
+  const model = createModel(storage.peekProject() || demoProject(BASES), storage, { bases: noStock ? BASES_EMPTY : BASES, words, library, enforce });
   const events = [];
   model.on((e) => events.push(e));
   return { model, storage, events, notes: () => events.filter((e) => e.type === "notify") };

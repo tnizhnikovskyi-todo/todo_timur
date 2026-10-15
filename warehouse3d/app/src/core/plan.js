@@ -6,14 +6,13 @@
 //       rename  { key, kind, node, id, old, name }
 //       attrs   { key, kind, node, id, name, vals: { поле: новое }, prev: { поле: прежнее } }
 //       archive { key, kind, node, id, name, blocked?, stock? }       blocked — на месте (или внутри) есть остаток: архивировать нельзя (F4)
-//     Место в Odoo называется своим кодом (так читает снимок W-11), штрихкод — код; контейнер (зона, ряд, секция) — внутренняя локация с именем узла
+//     Место в Odoo называется коротким именем уровня (D-14, `name` из плана нумерации W-08), штрихкод — полный код (по нему снимок W-11 берёт ключ места); контейнер (зона, ряд, секция) — внутренняя локация с именем узла
 //     (не view: у view-локации complete_name в Odoo начинается заново, и путь узла перестаёт совпадать с путём в Odoo); контейнер без мест не создаётся.
 //     Родитель в Odoo — ближайший предок, который есть в Odoo или создаётся этим планом (ряды и секции, которых в Odoo нет, пропускаются).
 //   closure(plan, keys) — выбранное вместе с тем, без чего оно не применится (родители новых локаций)
 //   scopeOptions(plan) / inScope(op, id) — выбор зоны или ряда для частичного применения (G4)
 //   cleanApplied(edit, plan, keys) — слой правок без применённого (архивация, переименование, перенос)
 //   wireOps(plan, keys) — операции для сервера (wh.apply.log.api_apply)
-//   planCsv(plan, keys) — простой CSV для импорта в Odoo (файл вместо API, G3)
 import { buildTree, containerOf, odooPath } from "./tree.js";
 import { layout } from "./layout.js";
 import { plan as numbering } from "./addressing.js";
@@ -36,12 +35,14 @@ export function computePlan(data, edit, cfg = {}) {
   const recOf = (c) => { const r = data.locations[c]; return r && r.id != null ? r : null; };
   const items = new Map(numbering(tree, edit, { scope: "WH" }).items.map((i) => [i.id, i]));
   const fromIds = new Set([...nodes.values()].filter((n) => n.from).map((n) => n.from));
-  const barcodes = new Map(Object.values(data.locations).filter((r) => r.barcode).map((r) => [r.barcode, r.id]));
+  const barcodes = new Map([...Object.values(data.locations), ...Object.values(odoo.containers || {})].filter((r) => r.barcode).map((r) => [r.barcode, r.id])); // штрихкод места = ключ в снимке; занятый контейнером — конфликт
   // есть ли внутри узла места (кроме ячеек, которых ещё нет): без мест ряд или секция в Odoo не нужны
   const memo = new Map();
   const places = (n) => { if (!memo.has(n.id)) memo.set(n.id, !!n.loc || n.kids.some(places)); return memo.get(n.id); };
   const needs = places;
   const refKey = (n) => `n:${n.id}`;
+  // имя локации в Odoo (D-14): короткое имя уровня или позиции из плана нумерации, у ячейки — её код; полный код места — в штрихкоде
+  const nameOf = (n) => (n.type === "cell" ? n.loc : (items.get(n.id) || {}).name || n.name);
 
   // локация Odoo, которую представляет узел как родитель: { id, path } существующая, { ref, path } создаваемая, null — узла в Odoo нет
   const objOf = (n) => {
@@ -69,7 +70,7 @@ export function computePlan(data, edit, cfg = {}) {
       if (!rec) {
         const vals = { barcode: n.loc };
         if (out.pos && it) POS_FIELDS.forEach((k) => { vals[k] = it[k]; });
-        const o = op({ key: `create:${n.id}`, kind: "create", node: n.id, ref: refKey(n), name: n.loc, usage: "internal", parent: parentOf(n), vals });
+        const o = op({ key: `create:${n.id}`, kind: "create", node: n.id, ref: refKey(n), name: nameOf(n), usage: "internal", parent: parentOf(n), vals });
         if (barcodes.has(n.loc)) o.conflict = "barcode";
         return;
       }
@@ -78,12 +79,13 @@ export function computePlan(data, edit, cfg = {}) {
         const to = parentOf(n);
         if (to && !sameParent(to, rec)) op({ key: `move:${n.id}`, kind: "move", node: n.id, id: rec.id, name: cur, from: { id: rec.parent_id, path: dirname(rec.complete_name) }, to, fromNode: n.from || null });
       }
-      if (n.oloc && n.oloc !== n.loc) { // перенумерация (W-08): имя и штрихкод — новый код, позиции — из плана нумерации
-        if (cur !== n.loc) op({ key: `rename:${n.id}`, kind: "rename", node: n.id, id: rec.id, old: cur, name: n.loc });
+      if (n.oloc && n.oloc !== n.loc) { // перенумерация (W-08): имя уровня, штрихкод = новый код, позиции — из плана нумерации
+        const nm = nameOf(n);
+        if (cur !== nm) op({ key: `rename:${n.id}`, kind: "rename", node: n.id, id: rec.id, old: cur, name: nm });
         const vals = {}, prev = {};
-        if (rec.barcode !== n.loc && (!rec.barcode || rec.barcode === n.oloc)) { vals.barcode = n.loc; prev.barcode = rec.barcode || null; }
+        if (rec.barcode !== n.loc) { vals.barcode = n.loc; prev.barcode = rec.barcode || null; }
         if (out.pos && it) POS_FIELDS.forEach((k) => { if ((rec[k] ?? 0) !== it[k]) { vals[k] = it[k]; prev[k] = rec[k] ?? 0; } });
-        if (Object.keys(vals).length) op({ key: `attrs:${n.id}`, kind: "attrs", node: n.id, id: rec.id, name: n.loc, vals, prev });
+        if (Object.keys(vals).length) op({ key: `attrs:${n.id}`, kind: "attrs", node: n.id, id: rec.id, name: nm, vals, prev });
       }
       return;
     }
@@ -190,27 +192,4 @@ export function cleanApplied(edit, plan, keys) {
   }
   if (fromOld.size) e.del = e.del.filter((d) => !fromOld.has(d));
   return e;
-}
-
-// ---------- файл для импорта в Odoo (G3): одна строка на локацию, итоговое состояние; колонки — поля stock.location
-const CSV_COLS = [".id", "name", "location_id", "usage", "barcode", "posx", "posy", "posz", "active"];
-const csvCell = (v) => { if (v == null) return ""; const s = String(v); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-export function planCsv(plan, keys = null) {
-  const sel = plan.ops.filter((o) => applicable(o) && (!keys || keys.has(o.key))), rows = new Map();
-  const row = (o) => { const k = o.id != null ? `id:${o.id}` : `ref:${o.ref}`; if (!rows.has(k)) rows.set(k, {}); return rows.get(k); };
-  for (const o of sel) {
-    const r = row(o);
-    if (o.kind === "create") Object.assign(r, { name: o.name, location_id: o.parent.path, usage: o.usage, ...o.vals });
-    else if (o.kind === "move") Object.assign(r, { ".id": o.id, location_id: o.to.path, name: r.name ?? o.name });
-    else if (o.kind === "rename") Object.assign(r, { ".id": o.id, name: o.name });
-    else if (o.kind === "attrs") Object.assign(r, { ".id": o.id, name: r.name ?? o.name, ...o.vals });
-    else if (o.kind === "archive") Object.assign(r, { ".id": o.id, name: o.name, active: "False" });
-  }
-  const sorted = ["create", "move", "rename", "attrs", "archive"].flatMap((k) => sel.filter((o) => o.kind === k));
-  const seen = new Set(), lines = [CSV_COLS.join(",")];
-  for (const o of sorted) {
-    const k = o.id != null ? `id:${o.id}` : `ref:${o.ref}`; if (seen.has(k)) continue; seen.add(k);
-    const r = rows.get(k); lines.push(CSV_COLS.map((c) => csvCell(r[c])).join(","));
-  }
-  return `${lines.join("\n")}\n`;
 }

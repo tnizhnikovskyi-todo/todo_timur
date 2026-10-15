@@ -8,10 +8,11 @@ const kindOf = (e, id) => (e.building && B.itemOf(e.building, id)?.k) || "col";
 const lbl = (k) => ({ k: `bld.kind.${k}` });
 
 // выполняет fn(здание) как одну правку; возвращает то, что вернул fn (или undefined, если здания нет)
+// правка, отклонённая проверками (W-07), ничего не возвращает
 function run(s, label, fn, key = null) {
   let out;
   if (!s.edit.building) return out;
-  change(s, "building", label, (e) => { if (e.building) out = fn(e.building); }, key);
+  if (change(s, "building", label, (e) => { if (e.building) out = fn(e.building); }, key) === false) return undefined;
   return out;
 }
 
@@ -40,21 +41,16 @@ export const BLD_OPS = {
   heights(s, o) { return run(s, { k: "op.bldHeights" }, (b) => B.setHeights(b, o), "bheights"); },
   // новый объект (col, wall, gate, dock, door, office, charge); props — поля объекта; возвращает id
   add(s, kind, props = {}) {
-    let id = null;
-    run(s, () => ({ k: "op.bldAdd", p: { kind: lbl(kind) } }), (b) => { id = B.addItem(b, kind, props)?.id ?? null; });
-    return id;
+    return run(s, () => ({ k: "op.bldAdd", p: { kind: lbl(kind) } }), (b) => B.addItem(b, kind, props)?.id ?? null) ?? null;
   },
   // колонны сеткой (одна правка); возвращает id созданных
   grid(s, o) {
     let ids = [];
-    run(s, () => ({ k: "op.bldGrid", p: { n: ids.length } }), (b) => { ids = B.gridColumns(b, o); });
-    return ids;
+    return run(s, () => ({ k: "op.bldGrid", p: { n: ids.length } }), (b) => { ids = B.gridColumns(b, o); return ids; }) || [];
   },
   // проход между двумя точками (концы соединяются с существующими узлами); возвращает id
   aisle(s, p, q, w, name) {
-    let id = null;
-    run(s, () => ({ k: "op.bldAdd", p: { kind: lbl("aisle") } }), (b) => { id = B.addAisle(b, p, q, w, name)?.id ?? null; });
-    return id;
+    return run(s, () => ({ k: "op.bldAdd", p: { kind: lbl("aisle") } }), (b) => B.addAisle(b, p, q, w, name)?.id ?? null) ?? null;
   },
   move(s, ids, dx, dy) {
     const e = s.edit; if (!e.building || !(dx || dy)) return;

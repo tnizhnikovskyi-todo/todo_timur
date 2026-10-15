@@ -25,7 +25,7 @@ export function diffSnapshots(old, next) {
   for (const i of goneIds) if (top(goneIds, i, A)) { const e = A.get(i); items.push({ key: `gone:${i}`, kind: "gone", id: i, place: e.place, code: e.code, path: e.path }); }
   for (const [i, b] of B) {
     const a = A.get(i); if (!a) continue;
-    if (lastSeg(a.path) !== lastSeg(b.path)) items.push({ key: `renamed:${i}`, kind: "renamed", id: i, place: b.place, code: b.code, path: b.path, old: { name: lastSeg(a.path), code: a.code, path: a.path } });
+    if (lastSeg(a.path) !== lastSeg(b.path) || (b.place && a.code !== b.code)) items.push({ key: `renamed:${i}`, kind: "renamed", id: i, place: b.place, code: b.code, path: b.path, old: { name: lastSeg(a.path), code: a.code, path: a.path } }); // для места смена штрихкода (= кода) тоже переименование
     if (a.parent !== b.parent) items.push({ key: `moved:${i}`, kind: "moved", id: i, place: b.place, code: b.code, path: b.path, old: { path: a.path, parent: a.parent, dir: dirname(a.path) } });
   }
   const ord = Object.fromEntries(DIFF_KINDS.map((k, i) => [k, i]));

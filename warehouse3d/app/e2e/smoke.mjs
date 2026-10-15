@@ -414,7 +414,7 @@ try {
     await page.waitForSelector("#vp svg .bd-contour");
     await page.waitForSelector("#plan-side .ed-pend");
     expect((await saved()).building === null, "здание сохранилось без «Зберегти»");
-    await tool("col"); await click(14.3, 9.7);
+    await tool("col"); await click(-1, -1); // колонна в отступе контура: на ряд колонну ставить нельзя (W-07)
     await page.waitForSelector("#vp svg rect.bd-col");
     await tool("aisle"); await click(6, 4); await click(36, 4);
     await page.waitForSelector("#vp svg .bd-ai");
@@ -425,7 +425,7 @@ try {
     const shown = parseFloat((await text("#bld-ruler b")).replace(/[^\d,]/g, "").replace(",", "."));
     const want = Math.hypot(b.x - a.x, b.y - a.y) / a.k;
     expect(Math.abs(shown - want) < 0.02, `рулетка: ${shown} м, ожидалось ${want.toFixed(2)} м`);
-    await tool("select"); await tool("col"); await click(22.4, 14.2); // вторая колона — её отменим
+    await tool("select"); await tool("col"); await click(-1, 6); // вторая колона — её отменим
     await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 2);
     await page.keyboard.press("Control+KeyZ");
     await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 1);
@@ -447,6 +447,48 @@ try {
     await page.click('#seg-mode [data-m="3d"]'); // 3D со зданием строится без ошибок
     await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
     expect(await page.locator("#vp .rulers").isHidden(), "линейки остались в 3D");
+  });
+  // W-07: проверки — пересечение отклоняется, «Поставити все одно», панель проблем, защита мест с товаром
+  await step("проверки: перетаскивание на соседний ряд отклонено, «Поставити все одно», панель проблем, место с товаром не убирается", async () => {
+    await page.evaluate(() => localStorage.clear()); await page.goto(url); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="2d"]'); await page.click('#seg-pick [data-pk="rack"]');
+    await page.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await page.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    await page.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Фурнітура");
+    await page.click("#ed-tg"); await page.waitForSelector("#editbar:not([hidden])");
+    expect((await text("#pr-cnt")) === "0", "до правок проблем нет");
+    const mid = async (n) => { const b = await rackBox(n); return { x: b.x + b.w / 2, y: b.y + b.h / 2 }; };
+    const a = await mid(2), c = await mid(1);
+    await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move((a.x + c.x) / 2, (a.y + c.y) / 2, { steps: 5 }); await page.mouse.move(c.x, c.y, { steps: 5 }); await page.mouse.up();
+    await page.waitForSelector("#o_notifs .o_notif.bad [data-force]");
+    expect(/Перетин/.test(await text("#o_notifs .o_notif.bad")), `в уведомлении нет «Перетин»: ${await text("#o_notifs .o_notif.bad")}`);
+    expect(await page.locator("#plan-side .ed-pend").count() === 0, "отклонённая правка попала в список");
+    expect((await text("#pr-cnt")) === "0", "счётчик проблем вырос после отклонённой правки");
+    const y1 = await page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("y"), `${FURZ}/R2`), y0 = await page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("y"), `${FURZ}/R1`);
+    expect(y1 > y0 + 1, "ряд R2 сдвинулся, хотя правка отклонена");
+    await page.click("#pr-btn"); await page.waitForSelector("#problems:not([hidden]) [data-pforce]"); // кнопка в панели проблем не зависит от таймера уведомления
+    await page.click("#problems [data-pforce]");
+    await page.waitForSelector("#plan-side .ed-pend");
+    await page.waitForFunction(() => document.querySelector("#pr-cnt")?.textContent === "1");
+    expect(Math.abs((await page.evaluate((id) => +document.querySelector(`rect.rackbg[data-node="${id}"]`).getAttribute("y"), `${FURZ}/R2`)) - y0) < 0.05, "«Поставити все одно» не поставило ряд на ряд");
+    expect(await page.locator("svg rect.rackbg.prob").count() === 2, "оба ряда должны подсвечиваться как проблемные");
+    // панель проблем: запись, фильтр, переход к объекту
+    await page.waitForSelector("#problems:not([hidden]) .plist li");
+    const row = await text("#problems .plist li");
+    expect(/Перетин/.test(row) && /попри заборону/.test(row) && /Попередження/i.test(row), `строка панели проблем: ${row}`);
+    await page.selectOption("#problems [data-fsev]", "error"); await page.waitForSelector("#problems #prob-none");
+    await page.selectOption("#problems [data-fsev]", "all"); await page.waitForSelector("#problems .plist li");
+    await page.keyboard.press("Escape");
+    await page.click("#problems .plist li button");
+    await page.waitForFunction(() => /^Ряд R[12]$/.test(document.querySelector("#plan-side h2")?.textContent || ""));
+    expect(await page.locator("#vp svg .esel").count() > 0, "объект проблемы не выделен на модели");
+    // место с товаром: «Прибрати» отклоняется, ряд остаётся
+    await page.click("#problems [data-close]");
+    await page.click("#plan-side [data-del]");
+    await page.waitForFunction(() => /залишок/.test(document.querySelector("#o_notifs")?.textContent || ""));
+    expect(await page.locator(`rect.rackbg[data-node="${FURZ}/R1"]`).count() === 1 && await page.locator(`rect.rackbg[data-node="${FURZ}/R2"]`).count() === 1, "ряд с товаром убран");
+    await page.click("#ed-discall"); await page.waitForFunction(() => document.querySelector("#pr-cnt")?.textContent === "0");
+    await page.click("#ed-tg");
   });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
@@ -491,6 +533,108 @@ try {
     expect((await ro.pg.locator("#ed-st").innerText()).startsWith("Лише перегляд"), "режим только просмотра");
     expect(ro.db.saves.length === 0, "режим просмотра отправил запись");
     await rw.pg.context().close(); await ro.pg.context().close();
+  });
+  // W-10: файлы — отдельный контекст браузера (свой localStorage), чтобы не трогать проект остальных шагов
+  const files = { pg: null };
+  const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "locations.csv");
+  const tmpDir = fs.mkdtempSync(path.join(process.env.TMPDIR || "/tmp", "wh-e2e-"));
+  const openFiles = async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce", acceptDownloads: true });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000);
+    pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    return pg;
+  };
+  const download = async (pg, trigger) => { const [dl] = await Promise.all([pg.waitForEvent("download"), trigger()]); const p = path.join(tmpDir, dl.suggestedFilename()); await dl.saveAs(p); return { name: dl.suggestedFilename(), data: fs.readFileSync(p) }; };
+  await step("меню «Файл»: четыре пункта, Esc закрывает", async () => {
+    files.pg = await openFiles();
+    const pg = files.pg;
+    expect(await pg.locator("#file-list").isHidden(), "меню открыто сразу");
+    await pg.click("#file-btn");
+    expect((await pg.locator("#file-list [role=menuitem]").allInnerTexts()).join("|") === "Імпорт локацій…|Експорт локацій…|Експорт проєкту|Імпорт проєкту…", "пункты меню");
+    await pg.keyboard.press("Escape");
+    expect(await pg.locator("#file-list").isHidden(), "Esc не закрыл меню");
+    await pg.click("#file-btn"); await pg.click("body", { position: { x: 5, y: 700 } });
+    expect(await pg.locator("#file-list").isHidden(), "клик снаружи не закрыл меню");
+  });
+  await step("экспорт локаций: CSV и XLSX, «только новые» недоступно без изменений", async () => {
+    const pg = files.pg;
+    await pg.click("#file-btn"); await pg.click("#fm-exp-loc");
+    await pg.waitForSelector("#exp-dlg");
+    expect((await pg.locator("#exp-dlg [data-sum]").innerText()).includes("689"), "счётчик мест");
+    expect(await pg.locator('#exp-dlg input[name=mode][value=changed]').isDisabled(), "«изменённые» доступны без изменений");
+    await pg.check('#exp-dlg input[name=fmt][value=csv]');
+    const csv = await download(pg, () => pg.click("#exp-dlg [data-go]"));
+    expect(/^locations-WH-all-.*\.csv$/.test(csv.name), `имя ${csv.name}`);
+    const lines = csv.data.toString("utf8").trim().split("\r\n");
+    expect(lines[0] === "name,location_id,usage,barcode,posx,posy,posz" && lines.length === 690 + 21, `строк в CSV: ${lines.length}`);
+    await pg.click("#file-btn"); await pg.click("#fm-exp-loc"); await pg.waitForSelector("#exp-dlg");
+    const x = await download(pg, () => pg.click("#exp-dlg [data-go]"));
+    expect(x.name.endsWith(".xlsx") && x.data[0] === 0x50 && x.data[1] === 0x4b, "XLSX — не ZIP");
+    await pg.keyboard.press("Escape");
+    expect(await pg.locator("#exp-dlg").count() === 0, "окно не закрылось");
+  });
+  await step("экспорт проекта и импорт как копия", async () => {
+    const pg = files.pg;
+    await pg.click("#file-btn");
+    const f = await download(pg, () => pg.click("#fm-exp-proj"));
+    expect(f.name.endsWith(".whproj.json"), `имя ${f.name}`);
+    const j = JSON.parse(f.data.toString("utf8"));
+    expect(j.format === "whproj" && j.project.id === "demo" && j.project.warehouses.length === 2, "содержимое файла проекта");
+    await pg.click("#file-btn"); await pg.click("#fm-imp-proj");
+    await pg.waitForSelector("#pimp-dlg");
+    await pg.setInputFiles("#pimp-dlg [data-file]", path.join(tmpDir, f.name));
+    await pg.waitForSelector("#pimp-dlg input[name=how]");
+    expect(await pg.locator("#pimp-dlg input[name=how][value=copy]").isChecked(), "по умолчанию — копия");
+    await Promise.all([pg.waitForEvent("load"), pg.click("#pimp-dlg [data-go]")]);
+    await pg.waitForSelector("#plan-side h2");
+    const st = await pg.evaluate(() => ({ cur: JSON.parse(localStorage["wh-app-project"]), keys: Object.keys(localStorage).filter((k) => k.startsWith("wh-app-project-")) }));
+    expect(st.cur === "demo-copy" && st.keys.includes("wh-app-project-demo") && st.keys.includes("wh-app-project-demo-copy"), `проекты: ${JSON.stringify(st)}`);
+    // «заменить»: тот же id остаётся один
+    await pg.click("#file-btn"); await pg.click("#fm-imp-proj"); await pg.waitForSelector("#pimp-dlg");
+    await pg.setInputFiles("#pimp-dlg [data-file]", path.join(tmpDir, f.name));
+    await pg.waitForSelector("#pimp-dlg input[name=how]"); await pg.check("#pimp-dlg input[name=how][value=replace]");
+    await Promise.all([pg.waitForEvent("load"), pg.click("#pimp-dlg [data-go]")]);
+    await pg.waitForSelector("#plan-side h2");
+    expect(await pg.evaluate(() => JSON.parse(localStorage["wh-app-project"])) === "demo" && await pg.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("wh-app-project-")).length) === 2, "замена проекта");
+    // не проект и файл новой версии — понятная ошибка, ничего не меняется
+    fs.writeFileSync(path.join(tmpDir, "bad.json"), "{\"format\":\"whproj\",\"v\":9,\"project\":{}}");
+    await pg.click("#file-btn"); await pg.click("#fm-imp-proj"); await pg.waitForSelector("#pimp-dlg");
+    await pg.setInputFiles("#pimp-dlg [data-file]", path.join(tmpDir, "bad.json"));
+    await pg.waitForFunction(() => document.querySelector("#pimp-dlg [data-err]")?.textContent.length > 0);
+    expect((await pg.locator("#pimp-dlg [data-err]").innerText()).includes("новішою"), "ошибка версии");
+    expect(await pg.locator("#pimp-dlg [data-go]").isDisabled(), "кнопка доступна при ошибке");
+    await pg.keyboard.press("Escape");
+  });
+  await step("импорт CSV из фикстуры: сопоставление, предпросмотр, проект из файла", async () => {
+    const pg = files.pg;
+    await pg.click("#file-btn"); await pg.click("#fm-imp-loc"); await pg.waitForSelector("#imp-dlg");
+    expect(await pg.locator("#imp-dlg [data-go]").isDisabled(), "кнопка доступна без файла");
+    await pg.setInputFiles("#imp-dlg [data-file]", fixture);
+    await pg.waitForSelector("#imp-dlg [data-stats]");
+    const stats = await pg.locator("#imp-dlg [data-stats]").innerText(), bad = await pg.locator("#imp-dlg [data-bad]").innerText();
+    expect(stats.includes("Місць: 3") && stats.includes("рядків структури: 1") && stats.includes("залишків: 1"), `предпросмотр: ${stats}`);
+    expect(bad.includes("Не розпізнано рядків: 1") && bad.includes("постачальники…): 1;"), `нераспознанное: ${bad}`);
+    expect((await pg.locator("#imp-dlg [data-whs]").innerText()).includes("WH (3)"), "список складов");
+    expect(await pg.locator('#imp-dlg [data-role="path"]').inputValue() === "0" && await pg.locator('#imp-dlg [data-role="qty"]').inputValue() === "4" && await pg.locator('#imp-dlg [data-role="parent"]').inputValue() === "-1", "автоопределение колонок");
+    // ручной выбор: отключаем колонку количества — остатки перестают считаться
+    await pg.selectOption('#imp-dlg [data-role="qty"]', "-1");
+    expect((await pg.locator("#imp-dlg [data-stats]").innerText()).includes("залишків: 1"), "остаток без колонки количества пропал");
+    await pg.selectOption('#imp-dlg [data-role="product"]', "-1");
+    expect((await pg.locator("#imp-dlg [data-stats]").innerText()).includes("залишків: 0"), "без колонки товара остатки остались");
+    await pg.selectOption('#imp-dlg [data-role="product"]', "3");
+    await Promise.all([pg.waitForEvent("load"), pg.click("#imp-dlg [data-go]")]);
+    await pg.waitForSelector("#plan-side h2");
+    const info = await pg.evaluate(() => { const id = JSON.parse(localStorage["wh-app-project"]), p = JSON.parse(localStorage[`wh-app-project-${id}`]); return { id, p: { source: p.source, name: p.name, at: p.loaded_at, wh: p.warehouses.map((w) => [w.code, Object.keys(w.base.locations)]) } }; });
+    expect(info.p.source.kind === "file" && info.p.source.name === "locations.csv" && info.p.name === "locations" && /^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(info.p.at), `проект: ${JSON.stringify(info.p)}`);
+    expect(JSON.stringify(info.p.wh) === '[["WH",["SH-A","SH-B","SH-C"]]]', `склады: ${JSON.stringify(info.p.wh)}`);
+    expect((await pg.locator("#plan-side h2").innerText()) === "WH", "модель не открылась");
+  });
+  await step("инструкция описывает файлы", async () => {
+    const pg = files.pg;
+    await pg.click("#help-btn"); await pg.waitForSelector('#help-view .toc a[data-toc="file"]');
+    expect((await pg.locator("#h-file").innerText()).includes("whproj.json"), "раздел «Файли» пуст");
+    await pg.close(); await pg.context().close(); fs.rmSync(tmpDir, { recursive: true, force: true });
   });
   await step("страница из Odoo: выбор складов базы, места из адаптера, «Оновити з Odoo»", async () => {
     const state = { bays: 3, projects: new Map(), loads: 0 };
@@ -549,7 +693,7 @@ try {
     expect((await pg.locator("#odoopick-dlg").count()) === 0, "окно выбора не закрылось");
     await ctx.close();
   });
-  await step("страница из Odoo: «План змін» — частичное применение, файл CSV, журнал и откат, расхождения «залишити моє»", async () => {
+  await step("страница из Odoo: «План змін» — частичное применение, файл (экспорт W-10), проверки, журнал и откат, расхождения «залишити моє»", async () => {
     const W = 1000, rows = [{ id: W, name: "WH1", complete_name: "WH1", location_id: null, usage: "view" }, { id: W + 1, name: "Фурнітура", complete_name: "WH1/Фурнітура", location_id: W, usage: "internal" },
       ...[1, 2].flatMap((b) => [1, 2].map((l) => ({ id: W + 10 * b + l, name: `FUR-R1-S0${b}-L${l}`, complete_name: `WH1/Фурнітура/FUR-R1-S0${b}-L${l}`, location_id: W + 1, usage: "internal", barcode: null })))];
     const state = { rows, applied: [], log: [], next: 5000, rights: { view: true, design: true, apply: true }, projects: new Map() };
@@ -588,10 +732,12 @@ try {
     await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
     expect((await pg.locator("#plan-dlg [data-key]").count()) === 6, `в плане должно быть 6 операций (два ряда по ряд+секция+место): ${await pg.locator("#plan-dlg [data-key]").count()}`);
     expect((await pg.locator("#plan-dlg .o_chip").first().innerText()).includes("Створити"), "нет счётчика создания");
-    // файл CSV для выбранного
-    const dl = pg.waitForEvent("download"); await pg.click("#plan-dlg [data-csv]"); const file = await dl;
-    const csv = fs.readFileSync(await file.path(), "utf8").replace(/^﻿/, "");
-    expect(csv.startsWith(".id,name,location_id,usage,barcode") && csv.trim().split("\n").length === 7 && csv.includes("FUR-R2-S01-L1"), "CSV плана неверный");
+    // файл — экспорт локаций W-10 (только изменённые, CSV)
+    await pg.click("#plan-dlg [data-csv]"); await pg.waitForSelector("#exp-dlg");
+    await pg.check("#exp-dlg input[name=mode][value=changed]"); await pg.check("#exp-dlg input[name=fmt][value=csv]");
+    const dl = pg.waitForEvent("download"); await pg.click("#exp-dlg [data-go]"); const file = await dl;
+    const csv = fs.readFileSync(await file.path(), "utf8").replace(/^\ufeff/, "");
+    expect(csv.startsWith("name,location_id,usage,barcode") && csv.includes("FUR-R2-S01-L1") && csv.includes("FUR-R3-S01-L1"), "экспорт локаций из плана неверный");
     // частичное применение: только ряд R2 (зона/ряд — по списку); первое применение — напоминание о тестовой копии
     await pg.selectOption("#plan-dlg [data-scope]", "WH1/Фурнітура/R2");
     expect((await pg.locator("#plan-dlg [data-key]:checked").count()) === 3, "выбор ряда R2 должен отметить три операции");
@@ -601,7 +747,7 @@ try {
     await pg.waitForSelector("#plan-dlg .o_msg.ok");
     expect(state.applied.length === 1 && state.applied[0].ops.length === 3 && state.applied[0].ops.every((o) => o.kind === "create" && !/R3/.test(o.name)), "применены не три операции ряда R2");
     expect((await pg.locator("#plan-dlg [data-key]").count()) === 3, "в плане остался ряд R3");
-    expect((await pg.locator("#o_notifs .o_notif").first().innerText()).includes("Застосовано в Odoo"), "нет уведомления о применении");
+    expect((await pg.locator("#o_notifs").innerText()).includes("Застосовано в Odoo"), "нет уведомления о применении");
     expect((await pg.evaluate(() => localStorage.getItem("wh-odoo-t-copyack-odoo-1"))) === "true", "«не нагадувати» не запомнилось");
     // журнал и откат (с подтверждением вторым нажатием)
     await pg.click('#plan-dlg [data-tab="journal"]'); await pg.waitForSelector("#plan-dlg [data-rb]");
@@ -619,6 +765,13 @@ try {
     await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg .o_warn"); // «моё» — несохранённая правка модели: в план попадёт после «Зберегти»
     expect((await pg.locator("#plan-dlg .o_warn").innerText()).includes("незбережені"), "нет предупреждения о несохранённом");
     await pg.click("#plan-dlg [data-close2]");
+    // ошибки панели проблем (W-07) запрещают применение: два ряда на одном месте → пересечение
+    const proj = state.projects.get("odoo-1").data.warehouses[0].saved; proj.pos = [{ id: "WH1/Фурнітура/R2", x: 0, y: 0 }, { id: "WH1/Фурнітура/R3", x: 0, y: 0 }];
+    await pg.reload(); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    expect((await pg.locator("#plan-dlg .o_errs").count()) === 1 && (await pg.locator("#plan-dlg [data-apply]").isDisabled()) && (await pg.locator("#plan-dlg [data-csv]").isDisabled()), "при ошибках проверок применение не заблокировано");
+    await pg.click("#plan-dlg [data-errs]");
+    expect((await pg.locator("#plan-dlg").count()) === 0 && !(await pg.locator("#problems").isHidden()), "переход к панели проблем не сработал");
     await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {

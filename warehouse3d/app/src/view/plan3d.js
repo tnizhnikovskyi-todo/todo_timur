@@ -32,7 +32,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   const themed = [], TM = (token, opts = {}) => { const m = new T.MeshStandardMaterial({ roughness: 0.8, metalness: 0.05, ...opts }); themed.push([m, token]); return m; };
   const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: TM("--ok"), warn: TM("--warn"), bad: TM("--bad"), area: TM("--idle", { transparent: true, opacity: 0.32 }), crate: TM("--idle") };
   const wallM = TM("--steel", { metalness: 0.2, transparent: true, opacity: 0.5 });
-  const hlM = TM("--accent"), steel = TM("--steel", { metalness: 0.4, roughness: 0.5 }), beam = TM("--beam"), upright = TM("--upright", { metalness: 0.3 }), wood = TM("--wood");
+  const hlM = TM("--accent"), probM = TM("--prob"), steel = TM("--steel", { metalness: 0.4, roughness: 0.5 }), beam = TM("--beam"), upright = TM("--upright", { metalness: 0.3 }), wood = TM("--wood");
   const floorM = TM("--floor", { roughness: 1 }), lineM = TM("--mark", { roughness: 1 });
   const items = [], byCode = new Map(), G = new T.Group(); scene.add(G);
   let groups = [], pickMeshes = [], allMeshes = [], mats = new Float32Array(4096 * 16);
@@ -44,7 +44,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const i = items.length;
     if ((i + 1) * 16 > mats.length) { const n = new Float32Array(mats.length * 2); n.set(mats); mats = n; }
     _m.compose(_p.set(px, py, pz), q, _s.set(sx, sy, sz)).toArray(mats, i * 16);
-    const it = { i, geo, mat, node: nodeId, code: null, cast, recv, hl: false, vis: true, drag: false, gBase: null, gHl: null };
+    const it = { i, geo, mat, node: nodeId, code: null, cast, recv, hl: false, pr: false, vis: true, drag: false, gBase: null, gHl: null };
     items.push(it); return it;
   };
   const add = (geo, mat, nodeId, x, y, w, d, h, base = 0, o) => push(geo, mat, nodeId, X(x + w / 2), base + h / 2, Z(y + d / 2), Q0, w, h, d, o);
@@ -241,7 +241,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
       let g = by.get(key); if (!g) { g = { key, geo: it.geo, mat, cast: it.cast, recv: it.recv, pick: !!it.code, cap: 0, n: 0, mesh: null, ids: null, arr: null }; by.set(key, g); }
       g.cap++; return g;
     };
-    for (const it of items) { it.gBase = grp(it, it.mat); it.gHl = grp(it, hlM); }
+    for (const it of items) { it.gBase = grp(it, it.mat); it.gHl = grp(it, hlM); it.gPr = grp(it, probM); }
     groups = [...by.values()];
     for (const g of groups) {
       const m = new T.InstancedMesh(g.geo, g.mat, g.cap);
@@ -286,7 +286,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const dr = drag && drag.moved ? drag : null;
     for (const it of items) {
       if (!it.vis) continue;
-      const g = it.hl ? it.gHl : it.gBase, k = g.n++, o = k * 16, src = it.i * 16, arr = g.arr;
+      const g = it.hl ? it.gHl : it.pr ? it.gPr : it.gBase, k = g.n++, o = k * 16, src = it.i * 16, arr = g.arr;
       g.ids[k] = it.i;
       for (let j = 0; j < 16; j++) arr[o + j] = mats[src + j];
       if (dr && it.drag) { arr[o + 12] += dr.dx; arr[o + 14] += dr.dz; }
@@ -303,7 +303,13 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const { sel, focus: F } = model.ui, S = model.selIds(), vis = new Map(), hl = new Map();
     const inF = (id) => { let v = vis.get(id); if (v === undefined) vis.set(id, v = inNode(id, F)); return v; };
     const inS = (id) => { let v = hl.get(id); if (v === undefined) hl.set(id, v = isSel(id, S)); return v; };
-    for (const it of items) { it.vis = inF(it.node); it.hl = it.code ? (S.length ? inS(it.node) : it.code === sel) : inS(it.node); }
+    // объекты с проблемами (W-07: пересечение, узкий проезд, высота…) — отдельный материал; ряд подсвечивается целиком
+    const pm = model.checks.marks().nodes, pr = new Map(), inP = (id) => {
+      let v = pr.get(id); if (v !== undefined) return v;
+      v = false; for (let i = id.length; i > 0 && !v; i = id.lastIndexOf("/", i - 1)) v = pm.has(id.slice(0, i));
+      pr.set(id, v); return v;
+    };
+    for (const it of items) { it.vis = inF(it.node); it.hl = it.code ? (S.length ? inS(it.node) : it.code === sel) : inS(it.node); it.pr = pm.size > 0 && inP(it.node); }
     fitFloor(); compose(); render();
   }
   // приблизить к выбранному уровню: угол камеры тот же, расстояние — чтобы уровень весь влез

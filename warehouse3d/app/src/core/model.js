@@ -4,6 +4,7 @@
 //   storage — интерфейс из storage.js
 //   opts.bases — { baseRef: снимок Odoo { locations, products, meta } } для складов, у которых нет своего снимка внутри проекта
 //   opts.words — () => ({ copy, newZone, newType, newTpl }): слова, которые попадают в имена новых узлов (по языку интерфейса)
+//   opts.enforce — false: проверки W-07 не отклоняют правки (только для тестов; по умолчанию отклоняют)
 //   opts.library — общая библиотека (library.js: свои типы и шаблоны), прочитанная хостом из storage.listLibrary(); model.library правит её и пишет в storage.saveLibrary
 // События (model.on): { type: "rebuild" } дерево перестроено · { type: "select" } выделение изменилось ·
 //   { type: "library" } изменилась библиотека типов и шаблонов ·
@@ -22,6 +23,7 @@ import { captureTemplate, normLibrary, uniqTemplate } from "./library.js";
 import * as B from "./building.js";
 import { BLD_OPS } from "./bldops.js";
 import { cleanApplied, computePlan } from "./plan.js";
+import { TECH, TYPES as CHECK_TYPES, marksOf, settings, techMin, techOf } from "./checks.js";
 
 const DEFAULT_WORDS = { copy: "копія", newZone: "Нова зона", newType: "Новий тип", newTpl: "Шаблон" };
 const EMPTY_BASE = { meta: {}, products: {}, locations: {} };
@@ -34,17 +36,18 @@ function saveLib(s, okKey = null, okParams = {}) {
 
 export function createModel(project, storage, opts = {}) {
   const bases = opts.bases || {};
-  const s = { project, wh: null, data: null, storage, words: opts.words || (() => DEFAULT_WORDS), saved: null, pending: [], redo: [], edit: null, clip: [], lib: normLibrary(opts.library),
+  const s = { project, wh: null, data: null, storage, words: opts.words || (() => DEFAULT_WORDS), saved: null, pending: [], redo: [], edit: null, clip: [], lib: normLibrary(opts.library), enforce: opts.enforce !== false,
     tree: null, ui: null, listeners: new Set(), emit: null };
   s.emit = (ev) => { for (const f of [...s.listeners]) f(ev); };
   const rd = (name) => { try { return storage.read(name); } catch (e) { return null; } };
   const wr = (name, v) => { try { return storage.write(name, v); } catch (e) { return "fail"; } };
-  const baseOf = (wh) => wh.base || bases[wh.baseRef] || EMPTY_BASE;
+  // снимок хоста по baseRef (Odoo) важнее встроенной копии base: она — запасной вариант, если Odoo недоступна (импорт проекта кладёт её в файл)
+  const baseOf = (wh) => (wh.baseRef && bases[wh.baseRef]) || wh.base || EMPTY_BASE;
   s.baseOf = baseOf;
 
   // слой правок и дерево активного склада
   function load(wh) {
-    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null;
+    s.wh = wh; s.data = baseOf(wh); s.saved = normEdit(wh.saved); s.pending = wh.pending.filter((p) => p && p.diff && p.diff.add); s.redo = []; s.clip = []; s.otherCache = null; s.rejected = null; s.chkc = null;
     ed.recompute(s); s.tree = layout(buildTree(s.data, s.edit, s.pending, cfgOf(wh)));
   }
   const want = rd("wh");
@@ -59,10 +62,10 @@ export function createModel(project, storage, opts = {}) {
   const bb = () => s.edit.building || null, bemit = () => s.emit({ type: "bld" });
   const bclear = () => { bs.sel = []; bs.vtx = null; bs.first = null; bs.ruler = null; };
   const bsel = () => { const b = bb(); return b ? bs.sel.filter((id) => id === "contour" || B.itemOf(b, id)) : []; };
-  const bops = Object.fromEntries(Object.keys(BLD_OPS).map((k) => [k, (...a) => BLD_OPS[k](s, ...a)]));
+  const bops = Object.fromEntries(Object.keys(BLD_OPS).map((k) => [k, (...a) => ed.exec(s, () => BLD_OPS[k](s, ...a))]));
   const ui = s.ui, patch = (p, type = "select") => { if (!p) return false; Object.assign(ui, p); s.emit({ type }); return true; };
   const setEdit = (on) => { if (on && bs.on) { bs.on = false; bs.tool = "select"; bclear(); bemit(); } patch({ edit: on, esel: on ? ui.focus : null, sel: null, msel: [] }); if (!on) s.locks.release(); };
-  const bind = (name) => (...a) => ed.OPS[name](s, ...a);
+  const bind = (name) => (...a) => ed.exec(s, () => ed.OPS[name](s, ...a)); // exec — чтобы отклонённую проверками операцию можно было повторить («Поставити все одно»)
   // глубина узла: собственная настройка ("inherit" — как у склада) и действующая
   const depthInfo = (id) => {
     const e = s.edit, zone = (x) => e.depthZones.find((z) => z.id === x);
@@ -88,7 +91,7 @@ export function createModel(project, storage, opts = {}) {
     get building() { return bb(); }, // план здания с учётом показанного (null — здания нет)
     on(fn) { s.listeners.add(fn); return () => s.listeners.delete(fn); },
     stats: () => ed.editStats(s),
-    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.types || v.addr || v.addrZones.length || v.codes.length); },
+    canReset: () => { const v = s.saved; return !!(v.add.length || v.del.length || v.set.length || v.pos.length || v.rot.length || v.prop.length || v.cells.length || v.depth || v.depthZones.length || v.cfg.length || v.chk.some((c) => c.id.startsWith("f|")) || v.types || v.addr || v.addrZones.length || v.codes.length); },
     // склады проекта (D-09): у каждого свой план и свои правки; несохранённое остаётся в складе при переключении
     warehouses: () => s.project.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name, company: w.company })),
     setWarehouse(id) {
@@ -143,9 +146,9 @@ export function createModel(project, storage, opts = {}) {
     // выделение рамкой (метры плана { x0, y0, x1, y1 }); add — добавить к выделению (Ctrl)
     marquee: (rect, add = false) => patch(sel.marqueePick(s.tree, ui, rect, add)),
     massInfo: (f) => ed.massPlan(s.tree.TY, f),
-    moveSet: (set, dx, dy) => ed.moveSet(s, set, dx, dy),
+    moveSet: (set, dx, dy) => ed.exec(s, () => ed.moveSet(s, set, dx, dy)),
     // правки
-    ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
+    ops: { rackcfg: bind("rackcfg"), template: bind("template"), rack: bind("rack"), zone: bind("zone"), tech: bind("tech"), techMin: bind("techMin"), group: bind("group"), bay: bind("bay"), level: bind("level"), cells: bind("cells"), depth: bind("depth"), settp: bind("settp"),
       move: bind("move"), rotate: bind("rotate"), props: bind("props"), addr: bind("addr"), renum: bind("renum"), mass: bind("mass"), grid: bind("grid"), align: bind("align"), distribute: bind("distribute"), groupSel: bind("groupSel"), ungroup: bind("ungroup"), dup: bind("dup"), unpos: bind("unpos"), del: bind("del"), reset: bind("reset") },
     pendFor: (id) => ed.pendFor(s, id),
     hasPending: (key, params) => s.pending.some((p) => p.key === key && p.params === params),
@@ -154,7 +157,7 @@ export function createModel(project, storage, opts = {}) {
     undo: (verbose = false) => ed.undoEdit(s, verbose),
     redo: () => ed.redoEdit(s),
     copy: () => ed.copySel(s),
-    paste: () => ed.pasteSel(s),
+    paste: () => ed.exec(s, () => ed.pasteSel(s)),
     dropInto: (src, tid) => ed.dropInto(s.tree, src, tid),
     // адресация (W-08, D-14): настройки шаблона и нумерации, предпросмотр кодов, name / barcode / posx / posy / posz места, конфликты кодов.
     // Настройки меняет ops.addr (склад "WH" или зона), перенумерует ops.renum; запись в Odoo — W-13
@@ -175,8 +178,8 @@ export function createModel(project, storage, opts = {}) {
       norm: normAddr,
     },
     // каталог типов (типы активного склада поверх общего справочника)
-    types: { list: () => [...s.tree.types.values()], use: () => ed.typeUse(s.tree), isBase: ed.isBaseType, patch: (id, k, v) => ed.typePatch(s, id, k, v),
-      remove: (id) => ed.typeRemove(s, id), add: () => ed.typeAdd(s), import: (id, from = "catalog") => ed.typeImport(s, id, from) },
+    types: { list: () => [...s.tree.types.values()], use: () => ed.typeUse(s.tree), isBase: ed.isBaseType, patch: (id, k, v) => ed.exec(s, () => ed.typePatch(s, id, k, v)),
+      remove: (id) => ed.exec(s, () => ed.typeRemove(s, id)), add: () => ed.exec(s, () => ed.typeAdd(s)), import: (id, from = "catalog") => ed.exec(s, () => ed.typeImport(s, id, from)) },
     // каталог из 50 типов (catalog.js): запись каталога и готовая запись типа места; добавление типа в проект — types.import или сразу вместе с постройкой (ops.rack / ops.zone)
     catalog: { list: () => CATALOG, type: catalogType },
     // общая библиотека (D-12, C5, C10): свои типы и шаблоны, общие для всех проектов; хранилище — storage.listLibrary / saveLibrary
@@ -221,6 +224,27 @@ export function createModel(project, storage, opts = {}) {
       },
       outside: () => B.outsidePlaces(bb(), s.tree), // ряды и места за контуром — предупреждение
       targets: () => B.linkTargets(s.tree), // места, к которым привязываются ворота и доки
+    },
+    // проверки и панель проблем (W-07, checks.js): список проблем, счётчики, подсветка, переход к объекту, техника и ширина проходов, «Поставити все одно»
+    checks: {
+      run: () => ed.checksOf(s),
+      problems: () => ed.checksOf(s).problems,
+      counts: () => ed.checksOf(s).counts,
+      types: CHECK_TYPES,
+      marks: () => marksOf(ed.checksOf(s)), // { nodes: Map(id → "error" | "warn"), bld: Map }
+      canForce: () => !!s.rejected,
+      force: () => ed.forceRejected(s),
+      // перейти к объекту проблемы: уровень (зона над объектом) и выделение объекта; false — объекта нет (проблема только у объекта здания)
+      goTo(p) {
+        const id = (p.ids || []).find((x) => s.tree.nodes.has(x)); if (!id) return false;
+        const n = s.tree.nodes.get(id), par = n.parent && s.tree.nodes.get(n.parent);
+        return patch({ focus: par ? par.id : "WH", esel: id, sel: n.loc && !n.kids.length ? n.loc : null, msel: [] }, "focus");
+      },
+      // техника: список с минимальной шириной (с учётом правок проекта), собственная и действующая техника узла
+      tech: {
+        list: () => { const st = settings(s.edit); return TECH.map((x) => ({ id: x.id, min: techMin(st, x.id), def: x.min })); },
+        of: (id = "WH") => { const st = settings(s.edit), own = st.tech.get(id) || (id === "WH" ? "none" : "inherit"); return { own, eff: techOf(s.tree, st, id) }; },
+      },
     },
     // прочее хранилище (режим 2D/3D и т.п.)
     pref: { read: rd, write: wr },

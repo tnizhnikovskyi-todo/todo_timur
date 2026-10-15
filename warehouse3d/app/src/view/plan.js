@@ -1,7 +1,8 @@
 // Окно «План змін» (W-13, D-17): что изменится в локациях Odoo, чтобы они совпали с моделью; выбор зоны или ряда для частичного применения,
-// применение через API модуля (одна транзакция на сервере) или файлом CSV, журнал применений и откат.
+// применение через API модуля (одна транзакция на сервере) или файлом (экспорт локаций W-10: XLSX / CSV для импорта в Odoo), журнал применений и откат.
+// Пока в панели проблем (W-07) есть ошибки, применять нельзя: окно показывает их число и ведёт к ним.
 // host.odoo.plan (host/main.js): { rights, apply(ops, comment), applied(plan, keys), journal(), rollback(id) } — только в странице из Odoo.
-import { OP_KINDS, applicable, closure, planCsv, scopeOptions, wireOps } from "../core/plan.js";
+import { OP_KINDS, applicable, closure, scopeOptions, wireOps } from "../core/plan.js";
 import { esc } from "./util.js";
 
 export function openPlan({ model, i18n, host }) {
@@ -25,6 +26,15 @@ export function openPlan({ model, i18n, host }) {
   dlg.addEventListener("mousedown", (ev) => { if (ev.target === dlg) close(); });
 
   const keysNow = () => closure(plan, [...sel]);
+  const errors = () => (model.checks ? model.checks.counts().error : 0);
+  // к ошибкам панели проблем: окно закрывается, панель открывается, выбирается первая ошибка
+  function showErrors() {
+    const first = model.checks.problems().find((p) => p.sev === "error");
+    close();
+    const panel = document.getElementById("problems"), btn = document.getElementById("pr-btn");
+    if (panel && panel.hidden && btn) btn.click();
+    if (first) model.checks.goTo(first);
+  }
   const label = (o) => {
     if (o.kind === "create") return T("odoo.plan.row.create", { name: o.name, parent: o.parent.path || "" }) + (o.container ? ` · ${T("odoo.plan.container")}` : "");
     if (o.kind === "move") return T("odoo.plan.row.move", { name: o.name, from: o.from.path || "", to: o.to.path || "" });
@@ -40,6 +50,7 @@ export function openPlan({ model, i18n, host }) {
     if (!plan.linked) return `<p class="mut">${t("odoo.plan.noOdoo")}</p>`;
     let h = `<p class="mut" style="margin:0 0 10px;font-size:13px">${t("odoo.plan.intro", { wh: model.warehouse.code })}</p>`;
     if (plan.unsaved) h += `<p class="o_warn">${t("odoo.plan.unsaved", { n: plan.unsaved })}</p>`;
+    if (errors()) h += `<p class="o_warn o_errs" role="alert">${t("odoo.plan.errors", { n: errors() })} <button class="btn btn-link" data-errs>${t("odoo.plan.showErrors")}</button></p>`;
     if (!s.total) return `${h}<p>${t("odoo.plan.none")}</p>`;
     h += `<div class="o_chips" role="group" aria-label="${t("odoo.plan.filter")}">${OP_KINDS.filter((k) => s[k]).map((k) => `<label class="o_chip"><input type="checkbox" data-kind="${k}"${kinds.has(k) ? " checked" : ""}> ${t(`odoo.plan.kind.${k}`)}: <b>${s[k]}</b></label>`).join("")}${s.blocked ? `<span class="o_tag bad">${t("odoo.plan.blockedN", { n: s.blocked })}</span>` : ""}</div>`;
     const opts = scopeOptions(plan);
@@ -83,8 +94,8 @@ export function openPlan({ model, i18n, host }) {
     foot.innerHTML = tab === "plan" && plan.linked && plan.stats.total
       ? `<span class="mut" data-count style="font-size:13px">${t("odoo.plan.selected", { n })}${deps > 0 ? ` ${t("odoo.plan.deps", { n: deps })}` : ""}</span><span class="sp"></span>
         ${canApply ? "" : `<span class="mut" style="font-size:12px">${t("odoo.plan.noRight")}</span>`}
-        <button class="btn btn-secondary" data-csv${n ? "" : " disabled"}>${t("odoo.plan.file")}</button>
-        <button class="btn btn-primary" data-apply${n && canApply && !busy ? "" : " disabled"}>${t("odoo.plan.apply")}${n ? ` (${n})` : ""}</button>
+        <button class="btn btn-secondary" data-csv${n && !errors() ? "" : " disabled"}>${t("odoo.plan.file")}</button>
+        <button class="btn btn-primary" data-apply${n && canApply && !busy && !errors() ? "" : " disabled"}>${t("odoo.plan.apply")}${n ? ` (${n})` : ""}</button>
         <button class="btn btn-secondary" data-close2>${t("odoo.plan.close")}</button>`
       : `<span class="sp"></span><button class="btn btn-secondary" data-close2>${t("odoo.plan.close")}</button>`;
     foot.querySelector("[data-close2]").onclick = close;
@@ -93,17 +104,12 @@ export function openPlan({ model, i18n, host }) {
     if (ap) ap.onclick = () => run(false);
   }
 
-  function download() {
-    const keys = keysNow(), text = planCsv(plan, keys), a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob(["﻿", text], { type: "text/csv;charset=utf-8" }));
-    a.download = `plan-${model.warehouse.code}.csv`; document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    msg = { kind: "ok", text: T("odoo.plan.fileDone", { n: plan.ops.filter((o) => keys.has(o.key) && applicable(o)).length }) }; render();
-  }
+  // файл — экспорт локаций W-10 (все места или только изменённые, XLSX / CSV в формате импорта Odoo)
+  function download() { import("./files.js").then((f) => f.openExportLocations({ model, i18n })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); }
 
   async function run(force) {
     const keys = keysNow(), ops = wireOps(plan, keys);
-    if (!ops.length || !hp || busy) return;
+    if (!ops.length || !hp || busy || errors()) return;
     if (!force && !model.pref.read(ackKey) && !model.pref.read(doneKey)) { remind = true; render(); return; }
     remind = false; busy = true; msg = { kind: "info", text: T("odoo.plan.applying") }; render();
     let r;
@@ -155,6 +161,7 @@ export function openPlan({ model, i18n, host }) {
     if (b.dataset.pick === "all") { sel = new Set(plan.ops.filter(applicable).map((o) => o.key)); scope = ""; render(); }
     else if (b.dataset.pick === "none") { sel = new Set(); render(); }
     else if (b.dataset.tab) { tab = b.dataset.tab; msg = null; remind = false; if (tab === "journal") loadJournal(); else render(); }
+    else if ("errs" in b.dataset) showErrors();
     else if ("go" in b.dataset) run(true);
     else if ("back" in b.dataset) { remind = false; render(); }
     else if (b.dataset.rb) rollback(+b.dataset.rb);

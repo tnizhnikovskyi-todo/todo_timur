@@ -55,14 +55,14 @@ test("«залишити моє»: исчезнувшее в Odoo возвращ
   assert.ok(!model.tree.byCode.has("GL-2"));
   model.keepMine(pick("gone"), old); assert.ok(model.tree.byCode.has("GL-2")); await model.save("WH");
   const p = model.changePlan(), c = p.ops.find((o) => o.kind === "create");
-  assert.equal(p.stats.total, 1); assert.equal(c.name, "GL-2"); assert.equal(c.parent.id, 13); assert.equal(c.vals.barcode, "GL-2");
+  assert.equal(p.stats.total, 1); assert.equal(c.parent.id, 13); assert.equal(c.vals.barcode, "GL-2"); assert.ok(c.name && c.name !== "GL-2", "короткое имя уровня");
 });
 
 test("«залишити моє»: переименованное — прежнее имя → план переименования обратно", async () => {
   const { model, pick } = scenario();
   model.keepMine(pick("renamed"), null); assert.ok(model.tree.byCode.has("GL-1")); await model.save("WH");
   const p = model.changePlan(), rn = p.ops.find((o) => o.kind === "rename");
-  assert.deepEqual([rn.id, rn.old, rn.name], [120, "GL-1X", "GL-1"]); assert.deepEqual(p.ops.map((o) => o.kind).sort(), ["attrs", "rename"], "штрихкод ставится вместе с именем");
+  assert.deepEqual([rn.id, rn.old], [120, "GL-1X"]); const at = p.ops.find((o) => o.kind === "attrs"); assert.equal(at.vals.barcode, "GL-1", "штрихкод (= код) ставится вместе с именем");
 });
 
 test("«залишити моє»: перенесённое — прежний родитель → план переноса обратно", async () => {

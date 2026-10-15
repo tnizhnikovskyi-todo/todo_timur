@@ -5,7 +5,7 @@ import { odooRef, projectFromWarehouses } from "../src/adapters/odoo-api.js";
 import { createModel } from "../src/core/model.js";
 import { createMemoryStorage } from "../src/core/storage.js";
 import { nodesOf } from "../src/core/project.js";
-import { applicable, closure, computePlan, emptyPlan, inScope, planCsv, scopeOptions } from "../src/core/plan.js";
+import { applicable, closure, computePlan, emptyPlan, inScope, scopeOptions } from "../src/core/plan.js";
 import { createWorld } from "./fakeodoo.js";
 
 const ZONE = "WH1/Stock/Фурнітура", GLASS = "WH1/Stock/Скло";
@@ -46,7 +46,7 @@ test("новый ряд: создание с иерархией (ряд → се
   assert.equal(rk.parent.id, 12, "ряд лежит прямо в зоне Odoo"); assert.equal(rk.name, rack.name);
   const bay = views.find((o) => o.parent.ref === rk.ref);
   assert.ok(bay, "секция внутри ряда"); assert.ok(places.every((o) => views.some((v) => v.ref === o.parent.ref)), "места внутри секций");
-  for (const o of places) { assert.equal(o.vals.barcode, o.name); assert.deepEqual(Object.keys(o.vals).sort(), ["barcode", "posx", "posy", "posz"]); }
+  for (const o of places) { assert.ok(/^R01-R\d+-S0\d-L\d$/.test(o.vals.barcode) && o.name !== o.vals.barcode, "имя — короткое имя уровня, штрихкод — полный код (D-14)"); assert.deepEqual(Object.keys(o.vals).sort(), ["barcode", "posx", "posy", "posz"]); }
   // родители раньше детей
   const order = creates.map((o) => o.ref); for (const o of creates) if (o.parent.ref) assert.ok(order.indexOf(o.parent.ref) < order.indexOf(o.ref));
   assert.equal(setup({ major: 19 }).model.changePlan().pos, false);
@@ -63,7 +63,10 @@ test("применение создания: узлы получают odoo_id �
   const t = setup({ major: 18 });
   t.model.ops.rack(ZONE, { tp: "R01", nb: 2, nl: 2 }); await t.model.save("WH");
   const before = t.model.changePlan(), saved = JSON.stringify(t.model.saved.add);
+  const sig = () => [...t.model.tree.nodes.values()].map((n) => [n.id, n.type, n.tp, n.loc, n.parent].join("|")).sort();
+  const tree0 = sig();
   const { refs } = t.run(before);
+  assert.deepEqual(sig(), tree0, "применить → прочитать снимок → то же дерево (id, типы, коды, родители)");
   assert.equal(Object.keys(refs).length, 7); assert.equal(t.world.locs.filter((l) => l.id >= 1000).length, 7);
   assert.equal(JSON.stringify(t.model.saved.add), saved, "создание слой не меняет: узел хранит структуру");
   assert.equal(t.model.changePlan().stats.total, 0);
@@ -102,14 +105,16 @@ test("перенумерация: переименование места, шт�
     assert.equal(t.model.saved.codes.length, 9);
     t.run(p);
     assert.equal(t.model.saved.codes.length, 0, "применённые перенумерации убраны из слоя");
-    assert.equal(t.world.locs.filter((l) => l.id >= 100 && l.id < 109 && l.name === l.barcode).length, 9);
+    assert.equal(t.world.locs.filter((l) => l.id >= 100 && l.id < 109 && l.barcode && l.name !== l.barcode).length, 9, "короткое имя уровня, полный код — в штрихкоде");
+    assert.equal(new Set([...t.model.tree.byCode.keys()].filter((c) => c.startsWith("A-") || c.includes("-"))).size > 0, true);
     assert.equal(t.model.changePlan().stats.total, 0);
   });
 });
 
 test("убранные места: пустое архивируется, с остатком — blocked (F4); после применения слой чист", async () => {
-  const t = setup();
+  const t = setup({ withStock: false });
   t.model.ops.del(["WH1/Stock/Скло/GL-1", "WH1/Stock/Скло/GL-2"]); await t.model.save("WH");
+  t.world.quants.push({ id: 9, location_id: 120, product_id: 1, quantity: 5, reserved_quantity: 0, lot: null, package: null }); t.refresh(); // пока план не применён, на месте появился остаток
   const p = t.model.changePlan(), a1 = p.ops.find((o) => o.name === "GL-1"), a2 = p.ops.find((o) => o.name === "GL-2");
   assert.equal(p.stats.archive, 2); assert.equal(a1.blocked, true); assert.equal(a1.stock, 1); assert.ok(!a2.blocked);
   assert.equal(p.stats.blocked, 1); assert.deepEqual(p.ops.filter(applicable).map((o) => o.name), ["GL-2"]);
@@ -154,7 +159,7 @@ test("убрать применённое место: архивация, узе
   t.model.ops.del([rack.id]); await t.model.save("WH");
   assert.ok(!t.model.tree.nodes.has(rack.id), "ряд убран из модели");
   const p = t.model.changePlan(); assert.equal(p.stats.archive, 3, "ряд, секция и место"); assert.ok(p.ops.every((o) => o.kind === "archive"));
-  assert.deepEqual(p.ops.map((o) => o.name).slice(0, 1).map((n) => /^R01-/.test(n)), [true], "дети раньше родителя");
+  assert.ok(p.ops[0].path.split("/").length > p.ops[2].path.split("/").length, "дети раньше родителя");
   t.run(p);
   assert.equal(t.world.locs.filter((l) => l.id >= 1000 && l.active).length, 0);
   assert.equal(t.model.saved.add.length, 0, "убранное и применённое ушло из слоя");
@@ -163,19 +168,8 @@ test("убрать применённое место: архивация, узе
 
 test("повтор штрихкода — конфликт (не применяется)", async () => {
   const t = setup();
-  t.world.byId(121).barcode = "R01-R2-S01-L1"; t.refresh();
+  t.world.byId(13).barcode = "R01-R2-S01-L1"; t.refresh(); // штрихкод занят контейнером Odoo
   t.model.ops.rack(ZONE, { tp: "R01", nb: 1, nl: 1 }); await t.model.save("WH");
   const p = t.model.changePlan(), bad = p.ops.filter((o) => o.conflict);
   assert.equal(p.stats.conflict, bad.length); assert.ok(bad.length >= 1 && bad.every((o) => o.conflict === "barcode"));
-});
-
-test("CSV для импорта: создание с родителем-путём, перенос, архивация", async () => {
-  const t = setup();
-  t.model.ops.rack(ZONE, { tp: "R01", nb: 1, nl: 1 }); t.model.ops.del(["WH1/Stock/Скло/GL-2"]); await t.model.save("WH");
-  const p = t.model.changePlan(), csv = planCsv(p), lines = csv.trim().split("\n");
-  assert.equal(lines[0], ".id,name,location_id,usage,barcode,posx,posy,posz,active");
-  assert.equal(lines.length, 1 + p.ops.filter(applicable).length);
-  assert.ok(lines.some((l) => l.startsWith(",R2,") && l.includes(`${ZONE},internal`)), "ряд — локация под зоной");
-  assert.ok(lines.some((l) => l.startsWith("121,GL-2,") && l.endsWith("False")), "архивация — active False");
-  assert.equal(planCsv(p, new Set()).trim().split("\n").length, 1);
 });

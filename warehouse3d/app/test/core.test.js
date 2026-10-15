@@ -148,7 +148,7 @@ test("поворот нескольких рядов одной правкой",
 });
 
 test("перемещение нескольких объектов одной правкой", () => {
-  const { model } = fresh();
+  const { model } = fresh({}, { enforce: false });
   const a = node(model, `${GP}/R1`), b = node(model, `${GP}/R3`);
   const oa = [a.ox, a.oy], ob = [b.ox, b.oy];
   model.ui.edit = true;
@@ -214,7 +214,7 @@ test("добавление ряда, стеллажа, яруса, места н
 });
 
 test("удаление: нового — без следа, из Odoo — в слое del; сохранение с зависимостями", async () => {
-  const { model } = fresh();
+  const { model } = fresh({}, { noStock: true });
   const c0 = count(model);
   model.ops.dup(`${FUR}/R3`);
   const copy = `${FUR}/R7`;
