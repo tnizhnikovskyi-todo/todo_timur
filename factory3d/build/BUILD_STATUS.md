@@ -7,6 +7,46 @@
 Документация заморожена на коммите: `9b5cbb5`
 BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth-8tq7jy`; интеграция — в отдельном worktree `claude/factory3d-build`.
 
+## Сводка для продолжения (обновлено 2026-10-15 19:05 UTC)
+
+Состояние: 10 из 11 модулей DONE и смержены в `claude/factory3d-build` @ `29e4340` (Odoo 1344/1344, 16 модулей вместе
+с iot_sim на пустом шаблоне). В работе:
+- `td_genset` + мост `factory3d_genset` — сессия session_013Ue8H7Af5WRGUBWdWKM5e4, ветка `claude/f3d-td_genset`
+  (18:39: W1, W3, W4 приняты; 254/254 с viewer, мост без viewer 73/73, relay 20/20).
+- Фикс machine_connect по решению менеджера (пользователь: «на твоё усмотрение»): DEC-20 — токен API-01 из query
+  в заголовок (адаптер cutopt + контроллер), DEC-19 — deadlock: троттлинг heartbeat коллектора, кроны ORDER BY id +
+  FOR UPDATE SKIP LOCKED. Делает агент coder в ветке `claude/f3d-fix-machine-connect` (worktree /home/user/f3d-mc-fix,
+  БД f3d_mcfix); в интеграцию сам НЕ пушит. Если отчёт агента потерян — смотреть ветку: есть 2 коммита → мержить.
+
+Дальше:
+1. Ветка `claude/f3d-fix-machine-connect` готова → мерж в интеграцию с полным прогоном (все модули) + pytest плагинов
+   machine_connect в отдельном venv (было 53 passed).
+2. td_genset DONE → мерж с полным прогоном (все модули + td_genset + factory3d_genset; мосты на Enterprise не ставить),
+   затем итоговое сообщение пользователю (MANAGER «Цикл» п. 5), send_later больше не ставить.
+
+Процедура мержа (работает агент coder в worktree /home/user/f3d-build, БД f3d_int): `git merge --no-ff`; проверить,
+что чужие модули не откатываются (ветки старые); прогон A — все DONE-модули вместе с iot_sim на пустом шаблоне;
+прогон B — демо-набор viewer на f3d_demo_tpl, только если менялся viewer; плагины коллектора — в отдельных venv
+(test_load_real_plugins_exactly_four падает, если плагины в одном venv). Кросс-модульные падения тестов, где неверны
+именно ожидания теста, чинить отдельным коммитом; дефект кода — откат и `send_message` лидеру. Среда: Postgres
+после перезапуска контейнера — `pg.sh start`; у f3d_demo_tpl могут сбиться сиквенсы (setval или make_demo_tpl.sh --force).
+
+Указания пользователя: лимиты «Темп» сняты (запускать сразу, как зависимости DONE); отчёты в чат — по-русски, таблица
+модулей с колонкой «Время в работе»; время для пользователя — по Киеву (UTC+3) в ответах на его вопросы о времени;
+стенд лидерам ограничивать по времени (30–45 мин), закрывать DONE (юнит-DoD).
+
+Требует внимания человека (сводно, подробности — в `factory3d/build/modules/<m>.md`):
+- Прогоны на копии демо-базы `odoo` (все модули); стендовые ТК/ТБ/ТП на сервере с Docker (telemetry ТК-03/09/10/12,
+  ТП-06; energy ТК-02/07/08/09; machine_connect ТК-03/15, ТП-01/04; iot_sim ТП-06 24 ч; fire_safety весь стенд).
+- Подписи security-review (iot_sim, access, viewer, yard, bms, fire_safety) и pr-review (access).
+- iot_sim: ТП-04 p95 1,39 с > 1 с; эмулятор D-1…D-3, O-1/O-2 (bms TEST_REPORT); td_genset relay для ТК-18 (CI-02).
+- Расхождения SPEC: base §4.2 group_f3d_admin ⊄ base.group_system (bms DEC-5); fire_safety AC-77 45 vs 46;
+  machine_connect AC-13 vs R-05 (DEC-8); yard AC-58 1 с vs 50 мс, AC-76 частично, sudo шире §4.4; telemetry ТП-04 объём
+  таблиц (DEC-16); viewer ARCHITECTURE.md строки 337/483 — старый состав файлов.
+- Enterprise-мосты не тестированы: base_mrp_maintenance, yard_gantt, machine_connect_mrp_workorder.
+- viewer: ТК-07 планшет, AC-38 пересборка dist (Blender), eslint+prettier; повторный ▶ не останавливает проигрывание.
+- Правки SPEC по DEC уже внесены: base, iot_sim, telemetry, access, viewer, energy.
+
 ## Модули
 
 Статусы: `TODO` → `IN_PROGRESS` → `DONE`; `BLOCKED` (причина в отчёте модуля); `BLOCKED-ENV` (зависимость не ставится в среде).
