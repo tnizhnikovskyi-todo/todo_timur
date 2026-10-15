@@ -1,4 +1,6 @@
 // 3D-вид на three.js (подгружается лениво при первом переходе в 3D).
+// D-03: одинаковые элементы (геометрия + материал + флаги теней) рисуются одним InstancedMesh. Элемент сцены — запись в items
+// (матрица лежит в общем буфере mats); paint() решает, какие элементы видны и подсвечены, и собирает матрицы по группам (compose).
 import { inNode } from "../core/types.js";
 import { isSel } from "../core/select.js";
 import { esc, reducedMotion, slotCls } from "./util.js";
@@ -11,6 +13,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), col = (n) => new T.Color(css(n) || "#888");
   const renderer = new T.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false; // тени статичны: пересчитываются только при изменении сцены (compose), а не при вращении камеры
   const canvas = renderer.domElement; canvas.setAttribute("aria-label", i18n.t("plan.canvasLabel")); vp.prepend(canvas);
   const lbl = document.createElement("div"); lbl.id = "labels3d"; vp.append(lbl);
   const scene = new T.Scene(), camera = new T.PerspectiveCamera(36, 1, 0.05, 2000), controls = new OrbitControls(camera, canvas);
@@ -27,12 +30,19 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   const status = { pend: TM("--pend", { transparent: true, opacity: 0.6 }), new: TM("--new", { transparent: true, opacity: 0.55 }), ok: TM("--ok"), warn: TM("--warn"), bad: TM("--bad"), area: TM("--idle", { transparent: true, opacity: 0.32 }), crate: TM("--idle") };
   const hlM = TM("--accent"), steel = TM("--steel", { metalness: 0.4, roughness: 0.5 }), beam = TM("--beam"), upright = TM("--upright", { metalness: 0.3 }), wood = TM("--wood");
   const floorM = TM("--floor", { roughness: 1 }), lineM = TM("--mark", { roughness: 1 });
-  const all = [], byCode = new Map(), pickables = [], G = new T.Group(); scene.add(G);
-  const add = (geo, mat, nodeId, x, y, w, d, h, base = 0, { cast = true, recv = true } = {}) => {
-    const m = new T.Mesh(geo, mat); m.position.set(X(x + w / 2), base + h / 2, Z(y + d / 2)); m.scale.set(w, h, d); m.castShadow = cast; m.receiveShadow = recv;
-    m.userData.node = nodeId; m.userData.base0 = mat; G.add(m); all.push(m); return m;
+  const items = [], byCode = new Map(), G = new T.Group(); scene.add(G);
+  let groups = [], pickMeshes = [], allMeshes = [], mats = new Float32Array(4096 * 16);
+  const _m = new T.Matrix4(), _p = new T.Vector3(), _s = new T.Vector3(), Q0 = new T.Quaternion();
+  const QX = new T.Quaternion().setFromEuler(new T.Euler(Math.PI / 2, 0, 0)), QZ = new T.Quaternion().setFromEuler(new T.Euler(0, 0, Math.PI / 2));
+  const push = (geo, mat, nodeId, px, py, pz, q, sx, sy, sz, { cast = true, recv = true } = {}) => {
+    const i = items.length;
+    if ((i + 1) * 16 > mats.length) { const n = new Float32Array(mats.length * 2); n.set(mats); mats = n; }
+    _m.compose(_p.set(px, py, pz), q, _s.set(sx, sy, sz)).toArray(mats, i * 16);
+    const it = { i, geo, mat, node: nodeId, code: null, cast, recv, hl: false, vis: true, drag: false, gBase: null, gHl: null };
+    items.push(it); return it;
   };
-  const reg = (m, code) => { m.userData.code = code; m.userData.base = m.material; pickables.push(m); if (!byCode.has(code)) byCode.set(code, []); byCode.get(code).push(m); return m; };
+  const add = (geo, mat, nodeId, x, y, w, d, h, base = 0, o) => push(geo, mat, nodeId, X(x + w / 2), base + h / 2, Z(y + d / 2), Q0, w, h, d, o);
+  const reg = (it, code) => { it.code = code; if (!byCode.has(code)) byCode.set(code, []); byCode.get(code).push(it); return it; };
   // пол — под выбранным уровнем (размер и положение меняются в paint)
   const floor = new T.Mesh(box, floorM); floor.receiveShadow = true; scene.add(floor);
   function fitFloor() {
@@ -64,9 +74,8 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
         const along = bay.rot ? bay.d : bay.w, deep = bay.rot ? bay.w : bay.d;
         const kk = Math.max(1, Math.min(k, Math.floor((along - 0.14) / (r * 2 + 0.06))));
         for (let i = 0; i < kk; i++) {
-          const mm = new T.Mesh(cyl, m), a = 0.1 + r + i * (r * 2 + 0.06);
-          if (bay.rot) { mm.rotation.z = Math.PI / 2; mm.position.set(X(bay.x + bay.w / 2), base + r, Z(bay.y + a)); } else { mm.rotation.x = Math.PI / 2; mm.position.set(X(bay.x + a), base + r, Z(bay.y + bay.d / 2)); }
-          mm.scale.set(r * 2, deep - 0.12, r * 2); mm.castShadow = mm.receiveShadow = true; mm.userData.node = n.id; G.add(mm); all.push(mm); reg(mm, code);
+          const a = 0.1 + r + i * (r * 2 + 0.06);
+          reg(bay.rot ? push(cyl, m, n.id, X(bay.x + bay.w / 2), base + r, Z(bay.y + a), QZ, r * 2, deep - 0.12, r * 2) : push(cyl, m, n.id, X(bay.x + a), base + r, Z(bay.y + bay.d / 2), QX, r * 2, deep - 0.12, r * 2), code);
         }
         return;
       }
@@ -90,7 +99,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
       return reg(add(box, m, n.id, n.x, n.y, n.w, n.d, Math.max(0.03, qty * 0.017), 0.1), code);
     }
     // зоны, тележки, палеты: плитка + ящики по числу позиций
-    const tile = reg(add(box, status.area, n.id, n.x, n.y, n.w, n.d, 0.04, 0, { cast: false }), code); tile.userData.area = true;
+    reg(add(box, status.area, n.id, n.x, n.y, n.w, n.d, 0.04, 0, { cast: false }), code);
     const kit = /^(KIT|FRONTS)-/.test(code), cnt = Math.min(kit ? 3 : 6, l.quants.length);
     if (kit) add(box, steel, n.id, n.x + 0.08, n.y + 0.08, n.w - 0.16, n.d - 0.16, 0.06, 0.35, { cast: false });
     for (let i = 0; i < cnt; i++) {
@@ -111,19 +120,38 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     if ((n.type === "group" || n.type === "rackset") && n.id !== "WH" && (n.kids.length || !n.loc)) frame(n);
     structure(n);
     if (n.loc && (n.type !== "group" || !n.kids.length)) content(n);
-    else if (n.loc) { const t = reg(add(box, status.area, n.id, n.x + 0.2, n.y + 1.2, n.w - 0.4, n.d - 1.4, 0.02, 0, { cast: false }), n.loc); t.userData.area = true; }
+    else if (n.loc) { reg(add(box, status.area, n.id, n.x + 0.2, n.y + 1.2, n.w - 0.4, n.d - 1.4, 0.02, 0, { cast: false }), n.loc); }
     n.kids.forEach(walk);
   };
+  // освобождение инстанс-мешей: буфер матриц уходит с видеокарты; геометрии и материалы общие и живут столько же, сколько вид
+  function disposeGroups() { for (const g of groups) { G.remove(g.mesh); g.mesh.dispose(); } groups = []; pickMeshes = []; allMeshes = []; }
+  // по одному InstancedMesh на сочетание «геометрия + материал + тени + можно ли выбрать»; ёмкость — все элементы, которые могут туда попасть
+  // (с родным материалом или с подсветкой hlM)
+  function makeGroups() {
+    const ids = new Map(), id = (o) => { if (!ids.has(o)) ids.set(o, ids.size); return ids.get(o); }, by = new Map();
+    const grp = (it, mat) => {
+      const key = `${id(it.geo)}|${id(mat)}|${+it.cast}|${+it.recv}|${+!!it.code}`;
+      let g = by.get(key); if (!g) { g = { key, geo: it.geo, mat, cast: it.cast, recv: it.recv, pick: !!it.code, cap: 0, n: 0, mesh: null, ids: null, arr: null }; by.set(key, g); }
+      g.cap++; return g;
+    };
+    for (const it of items) { it.gBase = grp(it, it.mat); it.gHl = grp(it, hlM); }
+    groups = [...by.values()];
+    for (const g of groups) {
+      const m = new T.InstancedMesh(g.geo, g.mat, g.cap);
+      m.instanceMatrix.setUsage(T.DynamicDrawUsage); m.castShadow = g.cast; m.receiveShadow = g.recv; m.frustumCulled = false; m.count = 0; m.visible = false; m.userData.g = g;
+      g.mesh = m; g.ids = new Int32Array(g.cap); g.arr = m.instanceMatrix.array; G.add(m);
+    }
+  }
   let lastW = W0, lastD = D0;
   function build() {
     const tree = model.tree;
     W0 = tree.W0; D0 = tree.D0;
     const sx = (lastW - W0) / 2, sz = (lastD - D0) / 2; lastW = W0; lastD = D0;
     if (sx || sz) { camera.position.x += sx; camera.position.z += sz; controls.target.x += sx; controls.target.z += sz; controls.update(); }
-    G.clear(); all.length = 0; byCode.clear(); pickables.length = 0; walk(tree.root);
+    disposeGroups(); items.length = 0; byCode.clear(); walk(tree.root); makeGroups();
     Object.assign(sun.shadow.camera, { left: -W0 / 2 - 10, right: W0 / 2 + 10, top: D0, bottom: -D0 }); sun.shadow.camera.updateProjectionMatrix();
   }
-  build();
+  const t0 = performance.now(); build();
 
   // подписи уровня ниже — клик выбирает уровень
   let lblItems = [];
@@ -145,12 +173,31 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   let raf = 0;
   const render = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; renderer.render(scene, camera); placeLabels(); }); };
   function applyTheme() { scene.background = col("--scene"); for (const [m, tok] of themed) if (tok) m.color.copy(col(tok)); hlM.emissive.copy(col("--accent")).multiplyScalar(0.35); render(); }
+  // раскладка матриц по группам: видимые элементы с текущим материалом (родной или подсветка); перетаскиваемые сдвигаются на drag.dx / drag.dz
+  function compose() {
+    for (const g of groups) g.n = 0;
+    const dr = drag && drag.moved ? drag : null;
+    for (const it of items) {
+      if (!it.vis) continue;
+      const g = it.hl ? it.gHl : it.gBase, k = g.n++, o = k * 16, src = it.i * 16, arr = g.arr;
+      g.ids[k] = it.i;
+      for (let j = 0; j < 16; j++) arr[o + j] = mats[src + j];
+      if (dr && it.drag) { arr[o + 12] += dr.dx; arr[o + 14] += dr.dz; }
+    }
+    pickMeshes = []; allMeshes = [];
+    for (const g of groups) {
+      const m = g.mesh; m.count = g.n; m.visible = g.n > 0; m.boundingSphere = null;
+      m.instanceMatrix.clearUpdateRanges(); if (g.n) m.instanceMatrix.addUpdateRange(0, g.n * 16); m.instanceMatrix.needsUpdate = true;
+      if (g.n) { allMeshes.push(m); if (g.pick) pickMeshes.push(m); }
+    }
+    renderer.shadowMap.needsUpdate = true;
+  }
   function paint() {
-    const { sel, focus: F } = model.ui, S = model.selIds();
-    for (const m of all) { m.visible = inNode(m.userData.node, F); if (!m.userData.code) m.material = isSel(m.userData.node, S) ? hlM : m.userData.base0; }
-    fitFloor();
-    for (const [code, ms] of byCode) for (const m of ms) m.material = (S.length ? isSel(m.userData.node, S) : code === sel) ? hlM : m.userData.base;
-    render();
+    const { sel, focus: F } = model.ui, S = model.selIds(), vis = new Map(), hl = new Map();
+    const inF = (id) => { let v = vis.get(id); if (v === undefined) vis.set(id, v = inNode(id, F)); return v; };
+    const inS = (id) => { let v = hl.get(id); if (v === undefined) hl.set(id, v = isSel(id, S)); return v; };
+    for (const it of items) { it.vis = inF(it.node); it.hl = it.code ? (S.length ? inS(it.node) : it.code === sel) : inS(it.node); }
+    fitFloor(); compose(); render();
   }
   // приблизить к выбранному уровню: угол камеры тот же, расстояние — чтобы уровень весь влез
   let anim = 0;
@@ -174,9 +221,10 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
   controls.addEventListener("change", () => { tip.hidden = true; render(); });
   const ray = new T.Raycaster(), ndc = new T.Vector2();
   const setRay = (e) => { const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); };
-  const hit = (e) => { setRay(e); return ray.intersectObjects(pickables.filter((m) => m.visible), false)[0]?.object.userData.code; };
+  const itemAt = (h) => items[h.object.userData.g.ids[h.instanceId]];
+  const hit = (e) => { setRay(e); const h = ray.intersectObjects(pickMeshes, false)[0]; return h ? itemAt(h).code : undefined; };
   // в режиме редактирования выбирается любой узел: ярус, стойки стеллажа, рамка зоны; клик по полу — текущий уровень
-  const hitNode = (e) => { setRay(e); const h = ray.intersectObjects([...all.filter((m) => m.visible), floor], false)[0]; return h ? (h.object === floor ? model.ui.focus : h.object.userData.node) : null; };
+  const hitNode = (e) => { setRay(e); const h = ray.intersectObjects([...allMeshes, floor], false)[0]; return h ? (h.object === floor ? model.ui.focus : itemAt(h).node) : null; };
   let down = null, hov = 0, drag = null;
   const ground = new T.Plane(new T.Vector3(0, 1, 0), 0);
   const groundAt = (e) => { setRay(e); return ray.ray.intersectPlane(ground, new T.Vector3()); };
@@ -187,10 +235,11 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const p0 = groundAt(e); if (!p0) return;
     controls.enabled = false; canvas.setPointerCapture(e.pointerId); const ids = set.map((r) => r.id);
     drag = { set, p0, x: e.clientX, y: e.clientY, dx: 0, dz: 0, moved: false, mx: Math.min(...set.map((r) => r.ox)), my: Math.min(...set.map((r) => r.oy)),
-      ms: all.filter((m) => isSel(m.userData.node, ids)).map((m) => [m, m.position.clone()]) };
+      its: items.filter((it) => it.vis && isSel(it.node, ids)) };
+    for (const it of drag.its) it.drag = true;
   }, true);
   const endDrag = () => {
-    controls.enabled = true; const d = drag; drag = null; canvas.style.cursor = "";
+    controls.enabled = true; const d = drag; drag = null; canvas.style.cursor = ""; for (const it of d?.its || []) it.drag = false;
     if (d && d.moved) { model.moveSet(d.set, d.dx, d.dz); return true; } return false;
   };
   canvas.addEventListener("pointermove", (e) => {
@@ -199,11 +248,10 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     const p = groundAt(e); if (!p) return;
     drag.moved = true; tip.hidden = true; canvas.style.cursor = "grabbing";
     drag.dx = Math.max(-drag.mx, Math.round((p.x - drag.p0.x) * 10) / 10); drag.dz = Math.max(-drag.my, Math.round((p.z - drag.p0.z) * 10) / 10);
-    for (const [m, o] of drag.ms) m.position.set(o.x + drag.dx, o.y, o.z + drag.dz);
-    render();
+    compose(); render();
   });
   canvas.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
-  canvas.addEventListener("pointercancel", () => { if (drag) { for (const [m, o] of drag.ms) m.position.copy(o); drag = null; controls.enabled = true; render(); } });
+  canvas.addEventListener("pointercancel", () => { if (drag) { for (const it of drag.its) it.drag = false; drag = null; controls.enabled = true; compose(); render(); } });
   canvas.addEventListener("pointerup", (e) => {
     if (drag && endDrag()) { down = null; return; }
     if (drag) endDrag();
@@ -214,16 +262,20 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick })
     }
     down = null;
   });
-  canvas.addEventListener("pointermove", (e) => { if (e.buttons || drag) return; cancelAnimationFrame(hov); hov = requestAnimationFrame(() => { const c = hit(e); canvas.style.cursor = c ? "pointer" : "grab"; showTip(c, e.clientX, e.clientY); }); });
+  canvas.addEventListener("pointermove", (e) => { if (e.buttons || drag) return; cancelAnimationFrame(hov); hov = requestAnimationFrame(() => { const t = performance.now(), c = hit(e); if (dbg) dbg.hoverMs = performance.now() - t; canvas.style.cursor = c ? "pointer" : "grab"; showTip(c, e.clientX, e.clientY); }); });
   canvas.addEventListener("pointerleave", () => { tip.hidden = true; });
   const resize = () => { const w = vp.clientWidth, h = vp.clientHeight; if (!w || !h) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); render(); };
   new ResizeObserver(resize).observe(vp);
   globalThis.matchMedia?.("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
   new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  applyTheme(); resize(); fit(true);
+  paint(); applyTheme(); resize(); fit(true);
+  const dbg = globalThis.__WH_DEBUG; // отладочные данные для e2e/perf.mjs
+  if (dbg) Object.assign(dbg, { renderer, camera, controls, scene, itemCount: () => items.length, groupCount: () => G.children.length, buildMs: performance.now() - t0 });
   const zoom = (f) => {
     const off = camera.position.clone().sub(controls.target).multiplyScalar(f);
     if (off.length() < controls.minDistance || off.length() > controls.maxDistance) return; camera.position.copy(controls.target).add(off); controls.update();
   };
-  return { paint, resize, zoom, fit, makeLabels, canvas, lbl, rebuild: () => { build(); makeLabels(); paint(); }, setLabelText: makeLabels };
+  const api = { paint, resize, zoom, fit, makeLabels, canvas, lbl, rebuild: () => { build(); makeLabels(); paint(); }, setLabelText: makeLabels };
+  if (dbg) dbg.rebuild = api.rebuild;
+  return api;
 }
