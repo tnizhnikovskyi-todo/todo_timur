@@ -1,7 +1,7 @@
 # factory3d_viewer
 Статус: IN_PROGRESS
 Тесты: — , ТК: —
-Решений без заказчика: 5 (ниже)
+Решений без заказчика: 6 (ниже)
 Упирался в лимит: 0
 Требует внимания человека: нет
 
@@ -11,7 +11,7 @@
 | W0 | принят | e59553e | TestInstall 6/6 (1 skip без демо) |
 | W1a | принят | e3fcaea | /factory3d_viewer+/test_factory3d_viewer 60/60 (демо-тесты skip) |
 | W1b-1 | в работе (M-01a…f) | — | — |
-| W1b-2 | в работе (M-01g, h) | — | — |
+| W1b-2 | принят (дельта chains ждёт W1b-1) | 4a7da35 | 84/84 (демо skip) |
 | W2 | в работе | — | — |
 | W3 | — | — | — |
 | W4 | — | — | — |
@@ -26,3 +26,4 @@
 - DEC-3: W1 разбит на W1a (M-01, tools, API, test_factory3d_viewer) и W1b (провайдеры M-01a…h) — объём не помещается в один контекст воркера; порядок слияния W1a → W1b → W3.
 - DEC-4: `zz_fail` бросает ValueError только при context `zz_fail` или параметре `factory3d.test.zz_fail` — иначе ERROR в логе валит каждый прогон (run_tests strict). — `test_factory3d_viewer/models/providers.py`
 - DEC-5: встроенные провайдеры — по файлу на провайдер `models/viewer_provider_<key>.py` (а не все в `viewer_provider.py`) — параллельная сборка W1b-1/W1b-2 без конфликтов.
+- DEC-6: провайдеры chains/signals сами пишут свой статус в `meta.sections` (live/partial/missing/denied); `docks` пишет logistics, не chains. — `models/viewer_provider_chains.py`, `viewer_provider_signals.py`
