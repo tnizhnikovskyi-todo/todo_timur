@@ -9,6 +9,7 @@ STATES = [
     ('open', 'Відчинено'), ('closed', 'Зачинено'), ('forced', 'Відчинено силоміць'),
     ('held', 'Тримається відчиненим'),
 ]
+ALARM_FIELDS = frozenset({'alarm', 'alarm_reason'})
 
 
 class F3dAccessDoor(models.Model):
@@ -77,9 +78,14 @@ class F3dAccessDoor(models.Model):
                 [('door_id', '=', rec.id), ('event_type', '=', 'pass'), ('ts', '>=', start)])
 
     def write(self, vals):
-        if (not self.env.su and set(vals) - {'alarm', 'alarm_reason'}
-                and not self.env.user.has_group('factory3d_access.group_f3d_access_admin')):
-            raise AccessError("Змінювати двері може лише адміністратор СКУД.")
+        # SPEC §4.1/§13.3 (A-1): охорона має RW на двері лише заради підтвердження тривоги: вона змінює тільки
+        # `alarm`/`alarm_reason` і лише знімає тривогу (не виставляє). Усе інше — адміністратор СКУД або sudo()
+        # (обробка подій, `action_ack_alarm`).
+        if not self.env.su and not self.env.user.has_group('factory3d_access.group_f3d_access_admin'):
+            if set(vals) - ALARM_FIELDS:
+                raise AccessError("Змінювати двері може лише адміністратор СКУД.")
+            if any(vals.values()):
+                raise AccessError("Охорона може лише зняти тривогу дверей.")
         return super().write(vals)
 
     def _f3d_publish_change(self):

@@ -3,7 +3,8 @@ import re
 from lxml import etree
 
 from odoo.exceptions import AccessError
-from odoo.tests import tagged
+from odoo.tests import HttpCase, new_test_user, tagged
+from odoo.tests.common import JsonRpcException
 
 from ..tools import params as P
 from .common import AccessCase, FakeBioStar
@@ -166,3 +167,52 @@ class TestSecurity(AccessCase):
         visible_security = self.env['ir.ui.menu'].with_user(self.user_security)._visible_menu_ids()
         self.assertNotIn(menu.id, visible_security)
         self.assertIn(menu.id, self.env['ir.ui.menu'].with_user(self.env.ref('base.user_admin'))._visible_menu_ids())
+
+
+@tagged('post_install', '-at_install', 'f3d', 'f3d_access')
+class TestGuardLogin(HttpCase):
+    """A-1, ТБ-01: під реальним логіном охорони двері змінюються лише зняттям тривоги (SPEC §4.1, §13.3)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.login = 'f3d_guard_login'
+        new_test_user(cls.env, cls.login, groups='base.group_user,factory3d_access.group_f3d_access_security',
+                      password=cls.login)
+        cls.door = cls.env.ref('factory3d_access.door_turn_1')
+
+    def _call(self, method, *args):
+        model = 'f3d.access.door'
+        return self.make_jsonrpc_request(
+            '/web/dataset/call_kw/%s/%s' % (model, method),
+            {'model': model, 'method': method, 'args': list(args), 'kwargs': {}})
+
+    def test_guard_only_acks_alarm(self):
+        name, dwell = self.door.name, self.door.dwell_min
+        self.door.sudo().write({'alarm': True, 'alarm_reason': 'fire'})
+        self.authenticate(self.login, self.login)
+        attempts = [
+            ('write', [self.door.id], {'name': 'Зламано'}),
+            ('write', [self.door.id], {'dwell_min': 5}),
+            ('write', [self.door.id], {'active': False}),
+            ('write', [self.door.id], {'alarm': True, 'alarm_reason': 'forced'}),  # тривогу не виставляють
+            ('write', [self.door.id], {'name': 'Зламано', 'alarm': False}),
+            ('unlink', [self.door.id]),
+            ('create', {'name': 'Нові', 'code': 'TURN-X', 'server_id': self.door.server_id.id}),
+        ]
+        for method, *args in attempts:
+            with self.subTest(method=method, args=args):
+                with self.assertRaises(JsonRpcException) as cm:
+                    self._call(method, *args)
+                self.assertIn('AccessError', str(cm.exception))
+        self.env.invalidate_all()
+        self.assertEqual((self.door.name, self.door.dwell_min, self.door.active), (name, dwell, True))
+        self.assertEqual((self.door.alarm, self.door.alarm_reason), (True, 'fire'))
+        # підтвердження тривоги працює і кнопкою, і прямим записом alarm*
+        self.assertTrue(self._call('action_ack_alarm', [self.door.id]))
+        self.env.invalidate_all()
+        self.assertEqual((self.door.alarm, self.door.alarm_reason), (False, False))
+        self.door.sudo().write({'alarm': True, 'alarm_reason': 'held'})
+        self.assertTrue(self._call('write', [self.door.id], {'alarm': False, 'alarm_reason': False}))
+        self.env.invalidate_all()
+        self.assertFalse(self.door.alarm)
