@@ -2,6 +2,8 @@
 
 Версія 0.3 · 14.10.2026 (0.2 — 14.10.2026, 0.1 — 13.10.2026) · технічне рішення — `ARCHITECTURE.md` (поруч). Мова: українська; технічні імена — англійською.
 
+Зміни: 16.10.2026 — QA-фікс ST-2: LPR push (§8.13.2) шле `X-F3D-Token` зі змінної `SIM_LPR_PUSH_TOKEN` (маска в логах); заголовок не додається, якщо змінну не задано; змінна додана в таблицю змінних середовища.
+
 Зміни: 15.10.2026 — за рішеннями модуля (build/modules/factory3d_iot_sim.md): DEC-4 (§11 і `test_clock.py`: перехід на зимовий час 25.10.2026, а не 26.10), DEC-11 (AC-11: коефіцієнт `0,92 + 0,08·r` дає 0,84…1,0, а не 0,92…1,0).
 
 Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-75 (§8.1.3–8.1.4: `genset_relay` за td_genset §8.5 CI-02 — `RELAY_PROFILE=d700`, `RELAY_PORT=8000`, `RELAY_SIM_TOKEN`, `RELAY_TIME_FACTOR`, `RELAY_TZ`, healthcheck, мережі `f3d_sim` + `odoo_default`; `SIM_GENSET_RELAY_TOKEN` = `${RELAY_SIM_TOKEN}`), X-76 (Додаток A: рядок 334 `equipment/GANTRY-1/stacks` → `protocol=none`, обчислює machine_connect; новий рядок 1 166 `equipment/CUTOPT/cmd` `protocol=none`, пасивний пристрій `CUTOPT`; каталог 1 166 = 1 015 + 151, пристроїв 274), X-78 (межа генератора — ESP 558 кВт, перевірено; примітка в `SIM_GENSET_KW_MAX`), X-79 (§8.11.1 LSP id ручних/оповіщувачів/полум'я за fire R-23/A-09, 292 LSP; примітка про LSP-рядки в Додатку A); нові AC-66…AC-68, ТК-18 (v0.3).
@@ -796,6 +798,7 @@ volumes: {iot_sim_state: {}}
 | `SIM_MQTT_URL` | `mqtt://user:pass@mosquitto:1883` | брокер |
 | `SIM_MQTT_PREFIX` | str / `f3d` | префікс топіків |
 | `SIM_LPR_PUSH_URL` | URL / `http://127.0.0.1:8090/sim/v1/lpr-sink` | приймач подій LPR |
+| `SIM_LPR_PUSH_TOKEN` | рядок / порожньо | токен `X-F3D-Token` для push LPR (ST-2, §8.13.2); у логах маскується |
 | `SIM_ALLOW_OUTBOUND` | CSV хостів / `mosquitto,odoo19,collector,genset_relay,127.0.0.1` | allow-list вихідних з'єднань (перевірка hostname перед кожним connect) |
 | `SIM_GENSET_RELAY_URL` | URL / `http://genset_relay:8000` | P-12: REST `fake_relay` `/sim/v1/*` (td_genset §8.4, API-F-01…API-F-09) |
 | `SIM_GENSET_RELAY_TOKEN` | str / порожньо | Bearer для API-F (= `RELAY_SIM_TOKEN` контейнера `genset_relay`; compose передає обом `${RELAY_SIM_TOKEN}`, §8.1.4, X-75); порожньо → запасний режим §8.14 (генератор «запущений» через 15 с), X-59 |
@@ -1398,7 +1401,7 @@ AHU-1 (130): ті самі об'єкти з `object-name` `AHU-1_*`; додат�
 
 #### 8.13.2 Axis P1488-LE + AXIS License Plate Verifier — HTTP POST JSON
 
-**Еталон:** Axis «License plate verifier API» (https://developer.axis.com/vapix/applications/license-plate-verifier-api/, переглянуто 13.10.2026): push подій HTTP POST `application/json` (або `multipart/form-data`) на налаштований URL; поля — як у документі. Емулятор (`lpr_push.py`) надсилає на `SIM_LPR_PUSH_URL` подію при `carState=new` (в'їзд у кадр) і `lost`; 3 повтори через 2/5/10 с при помилці; `Content-Type: application/json`; без автентифікації (як камера; споживач обмежує за IP/секретним шляхом). Приклад тіла (плоский JSON, значення — рядки, як в Axis):
+**Еталон:** Axis «License plate verifier API» (https://developer.axis.com/vapix/applications/license-plate-verifier-api/, переглянуто 13.10.2026): push подій HTTP POST `application/json` (або `multipart/form-data`) на налаштований URL; поля — як у документі. Емулятор (`lpr_push.py`) надсилає на `SIM_LPR_PUSH_URL` подію при `carState=new` (в'їзд у кадр) і `lost`; 3 повтори через 2/5/10 с при помилці; `Content-Type: application/json`; з автентифікацією (ST-2): якщо задано `SIM_LPR_PUSH_TOKEN`, емулятор шле заголовок `X-F3D-Token: <токен>` — токен http_push-маршруту колектора (telemetry §8.7); порожня змінна — заголовок не додається, і маршрут колектора з токеном відповість `401`. Значення токена в логах маскується (`logging_conf`, ключ `lpr_push_token`). Колектор додатково обмежує за IP (`allow_ips`) і секретним шляхом. Приклад тіла (плоский JSON, значення — рядки, як в Axis):
 
 ```json
 {"packetCounter": "2117397", "capture_timestamp": "1791954905507", "frame_timestamp": "1791954905507", "capture_ts": "1791954905507000000",
