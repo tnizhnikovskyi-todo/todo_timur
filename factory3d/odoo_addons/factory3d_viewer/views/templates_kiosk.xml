@@ -9,6 +9,9 @@
             <t t-set="debug" t-value="''"/>
             <t t-set="body_classname" t-value="'o_f3d_kiosk'"/>
             <t t-set="head">
+                <script type="text/javascript">
+                    odoo.__session_info__ = <t t-out="session_info_json"/>;
+                </script>
                 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
                 <t t-call-assets="factory3d_viewer.assets_kiosk" t-js="false"/>
                 <t t-call-assets="factory3d_viewer.assets_kiosk" t-css="false"/>

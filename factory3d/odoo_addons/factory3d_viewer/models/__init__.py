@@ -11,3 +11,5 @@ from . import viewer_event
 from . import viewer_snapshot
 from . import bus_emitters
 from . import res_config_settings
+from . import mrp_production
+from . import stock_picking
