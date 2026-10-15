@@ -126,6 +126,16 @@ button, input, select { font: inherit; color: inherit; }
 .tip b { font: 600 12px var(--f-mono); display: block; }
 .tip span { color: var(--muted); display: block; }
 .tip[hidden] { display: none; }
+.tip .tip-zone { color: var(--text); }
+/* ёмкость и атрибуты (W-14): подпись функции зоны, легенда, окно категорий */
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+.cap-fn { margin: 6px 0; font-size: 13px; }
+.fn-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--o-muted); margin: 4px 0 8px; }
+.cap-sum td.n, .cap-info td.n { text-align: right; }
+.o_cat_list tbody tr[data-cat] { cursor: pointer; }
+.o_cat_list tr.on { background: var(--accent-soft); }
+.o_cat_form { margin-bottom: 4px; }
+.o_cat_dlg table input, .o_cat_dlg table select { width: 100%; min-width: 0; }
 
 /* 2D-схема */
 svg .bld { fill: var(--floor); stroke: var(--steel); stroke-width: 2; }
@@ -392,3 +402,25 @@ svg .bd-rl { fill: var(--fg); font-family: var(--f-mono); font-weight: 600; text
 .o_wiz .wiz-nav .sp { flex: 1; text-align: center; font-size: 12px; } .o_wiz .wiz-need { margin: 0; font-size: 12px; }
 .o_wiz .ok { color: var(--ok); } .o_wiz .o_err { color: var(--bad); } .o_wiz .o_warn { color: var(--warn); }
 .o_wiz .addr-prev { columns: 2; margin: 4px 0; padding-left: 18px; font-size: 12px; } .o_wiz .code { font-family: ui-monospace, monospace; }
+/* показатель, поиск «где лежит», карточка места, обновление данных (W-17) */
+.legendrow { margin: 0 0 8px; }
+.legendrow[hidden] { display: none; }
+.heatsel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--o-muted); }
+.heatsel select, .findbox input { border: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); border-radius: 4px; padding: 4px 8px; font: 13px var(--f-body); }
+.findbox { position: relative; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.findbox input { width: 190px; max-width: 100%; }
+.findbox .btn-link { padding: 2px 4px; }
+.findbox #find-n { font-size: 12px; }
+.o_find { position: absolute; z-index: 20; top: 100%; left: 0; width: 360px; max-width: 90vw; max-height: 320px; overflow: auto; list-style: none; margin: 4px 0 0; padding: 0; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 4px; box-shadow: var(--shadow); }
+.o_find button { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; text-align: left; border: 0; border-bottom: 1px solid var(--o-border); background: transparent; color: var(--o-text); padding: 6px 10px; cursor: pointer; font: 13px var(--f-body); }
+.o_find button:hover, .o_find button:focus-visible { background: var(--o-hover); }
+.o_find .m { color: var(--o-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.o_find .more { padding: 6px 10px; font-size: 12px; }
+.legend .n { font-weight: 600; margin-left: 2px; }
+.legend .note { flex-basis: 100%; }
+svg .s.hit { stroke: var(--accent); stroke-width: 2.4; }
+table.o_card { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.o_card th, table.o_card td { padding: 4px 4px; border-bottom: 1px solid var(--o-border); text-align: left; vertical-align: top; }
+table.o_card th { width: 42%; font-size: 12px; color: var(--o-muted); font-weight: 600; }
+.o_rules { margin: 0; padding-left: 18px; font-size: 13px; }
+a.btn[data-odoo-link] { display: inline-block; text-decoration: none; }

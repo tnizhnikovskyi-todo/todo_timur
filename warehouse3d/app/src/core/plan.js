@@ -6,6 +6,9 @@
 //       rename  { key, kind, node, id, old, name }
 //       attrs   { key, kind, node, id, name, vals: { поле: новое }, prev: { поле: прежнее } }
 //       archive { key, kind, node, id, name, blocked?, stock? }       blocked — на месте (или внутри) есть остаток: архивировать нельзя (F4)
+//       category  { key, kind, node: "WH", id?, ref?, name, vals: { max_weight, allow_new_product, capacities: [{ product, package_type_id, quantity }] } }   категория хранения (W-14): создание (ref) или правка (id); идёт раньше локаций
+//       orderpoint{ key, kind, node, id?, name, location_id, product, min, max, prev? }   правило пополнения места (stock.warehouse.orderpoint): создание (без id) или правка min / max
+//     В vals операций create и attrs у мест и контейнеров могут быть storage_category_id (id Odoo или { ref } новой категории; null — без категории), replenish_location, scrap_location (Odoo 18), usage, removal_strategy_id
 //     Место в Odoo называется коротким именем уровня (D-14, `name` из плана нумерации W-08), штрихкод — полный код (по нему снимок W-11 берёт ключ места); контейнер (зона, ряд, секция) — внутренняя локация с именем узла
 //     (не view: у view-локации complete_name в Odoo начинается заново, и путь узла перестаёт совпадать с путём в Odoo); контейнер без мест не создаётся.
 //     Родитель в Odoo — ближайший предок, который есть в Odoo или создаётся этим планом (ряды и секции, которых в Odoo нет, пропускаются).
@@ -17,14 +20,15 @@ import { buildTree, containerOf, odooPath } from "./tree.js";
 import { layout } from "./layout.js";
 import { plan as numbering } from "./addressing.js";
 import { inNode, lastSeg } from "./types.js";
+import { attrMap, catOf, categories, odooOf, recFor } from "./capacity.js";
 
-export const OP_KINDS = ["create", "move", "rename", "attrs", "archive"];
+export const OP_KINDS = ["category", "create", "move", "rename", "attrs", "orderpoint", "archive"];
 export const POS_FIELDS = ["posx", "posy", "posz"];
 // posx / posy / posz есть у stock.location только в Odoo 18 (R-02)
 export const posSupported = (data) => { const v = data && data.meta && data.meta.odoo && data.meta.odoo.version; return !!v && typeof v.major === "number" && v.major < 19; };
 const dirname = (p) => (p && p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "");
 
-export function emptyPlan() { return { linked: false, pos: false, ops: [], stats: { total: 0, create: 0, move: 0, rename: 0, attrs: 0, archive: 0, blocked: 0, conflict: 0 } }; }
+export function emptyPlan() { return { linked: false, pos: false, ops: [], stats: { total: 0, category: 0, create: 0, move: 0, rename: 0, attrs: 0, orderpoint: 0, archive: 0, blocked: 0, conflict: 0 } }; }
 
 export function computePlan(data, edit, cfg = {}) {
   const odoo = data && data.meta && data.meta.odoo, out = emptyPlan();
@@ -58,6 +62,15 @@ export function computePlan(data, edit, cfg = {}) {
   const parentOf = (n) => { for (let x = n.parent && nodes.get(n.parent); x; x = x.parent && nodes.get(x.parent)) { const o = objOf(x); if (o) return o; } return objOf(tree.root); };
   const sameParent = (to, rec) => to.id != null && to.id === rec.parent_id;
   const op = (o) => { out.ops.push(o); return o; };
+
+  // категории хранения (W-14): новая создаётся, изменённая правится — раньше всех локаций
+  const cats = categories(data, edit), A = attrMap(edit);
+  const catRef = (key) => { const c = key ? cats.get(key) : null; return c ? (c.id != null ? c.id : { ref: `c:${c.key}` }) : null; };
+  const catVals = (c) => ({ max_weight: c.maxw, allow_new_product: c.policy, capacities: c.caps.map((k) => ({ product: k.p || null, package_type_id: k.pk || null, quantity: k.q })) });
+  for (const c of cats.list) {
+    if (c.isNew) op({ key: `category:${c.key}`, kind: "category", node: "WH", ref: `c:${c.key}`, name: c.name, vals: catVals(c) });
+    else if (c.changed) op({ key: `category:${c.key}`, kind: "category", node: "WH", id: c.id, name: c.name, old: c.base.name, vals: catVals(c) });
+  }
 
   const walk = (n) => {
     if (n !== tree.root) visit(n);
@@ -106,6 +119,40 @@ export function computePlan(data, edit, cfg = {}) {
   };
   walk(tree.root);
 
+  // атрибуты и флаги узлов (W-14): категория хранения (с наследованием по дереву), «место пополнения», брак, тип, стратегия списания — к существующей локации (attrs) или к создаваемой (vals);
+  // правила пополнения мест (min / max) — по месту с записью в Odoo
+  const createOf = new Map(out.ops.filter((o) => o.kind === "create").map((o) => [o.node, o])), attrsOf = new Map(out.ops.filter((o) => o.kind === "attrs").map((o) => [o.node, o]));
+  for (const n of nodes.values()) {
+    const e = A.nodes.get(n.id), isPlace = !!n.loc, want = {};
+    if (isPlace) { const c = catOf(tree, A, cats, n); if (c.project) want.storage_category_id = c.cat ? catRef(c.key) : null; }
+    if (e) {
+      if (e.repl !== undefined) want.replenish_location = e.repl;
+      if (isPlace && e.scrap !== undefined && out.pos) want.scrap_location = e.scrap;
+      if (isPlace && e.usage) want.usage = e.usage;
+      if (e.rs) want.removal_strategy_id = e.rs;
+    }
+    if (!Object.keys(want).length) continue;
+    const rec = recFor(tree, data, n), made = createOf.get(n.id);
+    if (!rec) { // создаваемая локация: значения уходят вместе с созданием (usage задаёт само создание)
+      if (made) for (const [k, v] of Object.entries(want)) if (k !== "usage" && v !== null && v !== false) made.vals[k] = v;
+      continue;
+    }
+    const cur = { storage_category_id: rec.storage_category_id ?? null, replenish_location: !!rec.replenish_location, scrap_location: !!rec.scrap_location, usage: rec.usage || "internal", removal_strategy_id: rec.removal_strategy_id ?? null };
+    const vals = {}, prev = {};
+    for (const [k, v] of Object.entries(want)) { const same = v !== null && typeof v === "object" ? false : (v ?? null) === cur[k]; if (!same) { vals[k] = v; prev[k] = cur[k]; } }
+    if (!Object.keys(vals).length) continue;
+    const ex = attrsOf.get(n.id);
+    if (ex) { Object.assign(ex.vals, vals); Object.assign(ex.prev, prev); }
+    else attrsOf.set(n.id, op({ key: `attrs:${n.id}`, kind: "attrs", node: n.id, id: rec.id, name: isPlace ? lastSeg(rec.complete_name) : n.id === "WH" ? code : lastSeg(P(n.from ?? n.id)), vals, prev }));
+  }
+  for (const n of nodes.values()) {
+    const e = A.nodes.get(n.id); if (!n.loc || !e || !e.mm || !e.mm.product) continue;
+    const rec = recFor(tree, data, n); if (!rec) continue;
+    const ex = ((odooOf(data) || {}).orderpoints || []).find((o) => o.location_id === rec.id && o.product === e.mm.product);
+    if (ex && ex.min === e.mm.min && ex.max === e.mm.max) continue;
+    op({ key: `orderpoint:${n.id}`, kind: "orderpoint", node: n.id, name: lastSeg(rec.complete_name), location_id: rec.id, product: e.mm.product, min: e.mm.min, max: e.mm.max, ...(ex ? { id: ex.id, prev: { min: ex.min, max: ex.max } } : {}) });
+  }
+
   // архивация убранного: только то, что есть в Odoo и не перенесено в другое место; дети раньше родителей
   const stockUnder = (path) => Object.entries(data.locations).filter(([k, r]) => r.complete_name.startsWith(`${path}/`) && r.quants && r.quants.length && !tree.byCode.has(k)).length;
   const arch = [];
@@ -139,6 +186,8 @@ export function closure(plan, keys) {
     set.add(o.key);
     const par = o.kind === "create" ? o.parent : o.kind === "move" ? o.to : null;
     if (par && par.ref) add(byRef.get(par.ref));
+    const cr = o.vals && o.vals.storage_category_id; // назначение новой категории не применится без самой категории
+    if (cr && cr.ref) add(byRef.get(cr.ref));
   };
   const idx = new Map(plan.ops.map((o) => [o.key, o]));
   for (const k of keys) add(idx.get(k));
@@ -167,6 +216,7 @@ export function wireOps(plan, keys) {
     if (o.parent) w.parent = par(o.parent);
     if (o.to) w.to = par(o.to);
     if (o.vals) w.vals = o.vals;
+    if (o.kind === "orderpoint") Object.assign(w, { location_id: o.location_id, product: o.product, min: o.min, max: o.max });
     return w;
   });
 }

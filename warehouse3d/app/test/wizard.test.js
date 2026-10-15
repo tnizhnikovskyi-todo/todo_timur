@@ -173,6 +173,30 @@ test("техника зоны задаёт проход, ошибки прове
   assert.ok(stepState(model).checks.ok);
 });
 
+test("W-14: функция зоны и новая категория хранения — правки attr; план начинается с операции category", async () => {
+  const { model } = open();
+  assert.ok(buildingApply(model, { mode: "rect", w: 60, d: 30 }).ok);
+  const zs = zonesOf(model, 2); zs[0].fn = "picking"; zs[0].cat = "new"; zs[0].catName = "Паллетная"; zs[1].fn = "receiving";
+  assert.equal(zonesApply(model, [{ ...zs[0], catName: "" }, zs[1]]).err, "wiz.err.catName");
+  assert.ok(zonesApply(model, zs).ok);
+  const [z1, z2] = model.wizard.state.form.zones;
+  assert.equal(model.cap.zone(z1.id).fn, "picking"); assert.equal(model.cap.zone(z2.id).fn, "receiving");
+  assert.ok(z1.cat && z1.cat !== "new" && z1.catName === "", "новая категория создана и выбрана");
+  assert.equal(model.cap.categories().list.filter((c) => c.name === "Паллетная").length, 1);
+  assert.ok(zonesApply(model, model.wizard.state.form.zones).ok, "повтор не плодит категории");
+  assert.equal(model.cap.categories().list.filter((c) => c.name === "Паллетная").length, 1);
+  for (const z of model.wizard.state.form.zones) assert.ok(racksApply(model, z.id, { tp: "R01", nr: 2, nb: 4, nl: 2 }).ok);
+  addrApply(model, {});
+  await model.save("WH");
+  const plan = model.changePlan();
+  assert.equal(plan.ops[0].kind, "category"); assert.equal(plan.stats.category, 1);
+  assert.ok(plan.ops.filter((o) => o.kind === "create" && !o.container && o.node.startsWith(z1.id)).every((o) => o.vals.storage_category_id && o.vals.storage_category_id.ref), "места зоны ссылаются на новую категорию");
+  assert.equal(model.checks.counts().error, 0);
+  // снять категорию и функцию
+  const f = model.wizard.state.form.zones.map((z, i) => (i ? z : { ...z, cat: "", fn: "" }));
+  assert.ok(zonesApply(model, f).ok); assert.equal(model.cap.zone(z1.id).fn, null);
+});
+
 test("миграции: проект без мастера читается, мусор вместо состояния отбрасывается", () => {
   const p = scratchProject({ id: "x", code: "AB" });
   assert.equal(p.warehouses[0].wizard.step, "building");

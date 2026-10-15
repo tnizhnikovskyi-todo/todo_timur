@@ -3,7 +3,7 @@
 // обычные правки слоя (видны в списке несохранённого, отменяются Ctrl+Z, сохраняются «Зберегти»). Состояние мастера — поле warehouse.wizard проекта (шаг,
 // значения форм, id созданных узлов): можно выйти и вернуться; после «Завершити» поле убирается и проект остаётся обычным.
 //
-//   warehouse.wizard = { v: 1, step, reached, form: { building, zones [{ key, name, x, y, w, d, id, manual }], racks { <id зоны>: { tp, nr, nb, nl, gap, orient, tech, ids } },
+//   warehouse.wizard = { v: 1, step, reached, form: { building, zones [{ key, name, x, y, w, d, id, manual, fn, cat, catName }], racks { <id зоны>: { tp, nr, nb, nl, gap, orient, tech, ids } },
 //                        addr { <id зоны>: форма адресации }, addrDone } }
 //   Здание — контур в метрах от (0, 0) (корень склада стоит в нуле: координаты зон — как на плане). Зона — группа с положением и размером (прямоугольник внутри контура);
 //   ряды зоны создаёт ops.mass (тип каталога, N рядов × M секций × K ярусов, проход между рядами — по технике); адресация — ops.addr + ops.renum зон мастера.
@@ -37,7 +37,8 @@ export function normWizard(raw) {
   const f = raw.form && typeof raw.form === "object" ? raw.form : {}, d = newWizard();
   const step = STEPS.includes(raw.step) ? raw.step : STEPS[0];
   const zones = (Array.isArray(f.zones) ? f.zones : []).filter((z) => z && typeof z === "object").slice(0, MAX_ZONES).map((z, i) => ({
-    key: String(z.key || `z${i + 1}`), name: String(z.name || "").slice(0, 40), x: num(z.x, 0), y: num(z.y, 0), w: num(z.w, 10), d: num(z.d, 10), id: typeof z.id === "string" ? z.id : null, manual: !!z.manual }));
+    key: String(z.key || `z${i + 1}`), name: String(z.name || "").slice(0, 40), x: num(z.x, 0), y: num(z.y, 0), w: num(z.w, 10), d: num(z.d, 10), id: typeof z.id === "string" ? z.id : null, manual: !!z.manual,
+    fn: typeof z.fn === "string" ? z.fn : "", cat: typeof z.cat === "string" ? z.cat : "", catName: String(z.catName || "").slice(0, 80) }));
   const map = (o, def) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).map(([k, v]) => [k, { ...def(), ...(v && typeof v === "object" ? v : {}) }]));
   return { v: WIZ_V, step, reached: Math.max(STEPS.indexOf(step), int(raw.reached, 0, STEPS.length - 1, 0)),
     form: { building: { ...d.form.building, ...(f.building && typeof f.building === "object" ? f.building : {}) }, zones, racks: map(f.racks, defaultRacks), addr: map(f.addr, defaultAddr), addrDone: !!f.addrDone } };
@@ -102,6 +103,7 @@ export function zoneIssues(model, zones) {
   if (!b) return [{ key: "wiz.err.noBuilding", p: {} }];
   zones.forEach((z, i) => {
     const r = zoneRect(z), nm = z.name || `#${i + 1}`;
+    if (z.cat === "new" && !String(z.catName || "").trim()) out.push({ key: "wiz.err.catName", p: { name: nm } });
     if (!String(z.name || "").trim()) out.push({ key: "wiz.err.zoneName", p: { n: i + 1 } });
     else if (r.w < 1 || r.d < 1) out.push({ key: "wiz.err.zoneSize", p: { name: nm } });
     else if (!B.rectInPoly(r, b.contour)) out.push({ key: "wiz.err.zoneOut", p: { name: nm } });
@@ -124,7 +126,26 @@ export function zonesApply(model, list) {
   model.ops.move(zones.map((z) => ({ id: z.id, x: z.x, y: z.y })));
   for (const z of zones) model.ops.props(z.id, { w: z.w, d: z.d });
   if (zones.some((z) => { const n = model.tree.nodes.get(z.id); return !n || Math.abs(n.x - z.x) > 0.01 || Math.abs(n.y - z.y) > 0.01; })) return { ok: false, err: "wiz.err.rejected" }; // проверки отклонили сдвиг зоны с рядами
+  const r = zoneAttrs(model, zones); if (!r.ok) { model.wizard.patch((w) => { w.form.zones = zones; }); return r; }
   model.wizard.patch((w) => { w.form.zones = zones; });
+  return { ok: true };
+}
+
+// функция зоны (W-14: ops.zoneFn) и необязательная категория хранения (ops.catSave для новой, ops.catAssign): обычные правки слоя attr; новая категория создаётся один раз — дальше выбирается из списка
+function zoneAttrs(model, zones) {
+  for (const z of zones) {
+    const own = model.cap.zone(z.id).own, fn = z.fn || "";
+    if (fn !== (own.fn || "")) { const f = { fn, tmin: own.tmin ?? "", tmax: own.tmax ?? "" }; for (const a of own.at || []) f[`at_${a}`] = true; if (model.ops.zoneFn(z.id, f) === false) return { ok: false, err: "wiz.err.rejected" }; }
+    let cat = z.cat || "";
+    if (cat === "new") {
+      const name = String(z.catName || "").trim(), cats = model.cap.categories(), have = cats.list.find((c) => c.name.trim().toLowerCase() === name.toLowerCase());
+      cat = have ? have.key : model.ops.catSave("", { name, maxw: 0, policy: "mixed", caps: [] });
+      if (!cat) return { ok: false, err: "wiz.err.rejected" };
+      z.cat = cat; z.catName = "";
+    }
+    const cur = ((model.edit.attr || []).find((x) => x.id === `n|${z.id}`) || {}).cat || "";
+    if (cat !== cur && model.ops.catAssign(z.id, { cat: cat || "inherit" }) === false) return { ok: false, err: "wiz.err.rejected" };
+  }
   return { ok: true };
 }
 

@@ -146,12 +146,13 @@ test("экспорт «только новые и изменённые»: нов
   const all = locationRows(model, { mode: "all" }), ch = locationRows(model, { mode: "changed" });
   assert.equal(all.counts.places, 689 + 6);
   assert.deepEqual(ch.counts, { places: 6, structure: 3 });
-  const places = ch.rows.filter((r) => r[2] === "internal"), views = ch.rows.filter((r) => r[2] === "view");
+  const places = ch.rows.filter((r) => r[3]), views = ch.rows.filter((r) => !r[3]); // I-04: контейнеры тоже internal, но без штрихкода
+  assert.ok(ch.rows.every((r) => r[2] === "internal"), "контейнеры в файле — internal, не view");
   assert.deepEqual(places.map((r) => r[3]), ["FUR-R7-S01-L1", "FUR-R7-S01-L2", "FUR-R7-S01-L3", "FUR-R7-S02-L1", "FUR-R7-S02-L2", "FUR-R7-S02-L3"]);
   assert.deepEqual(views.map((r) => `${r[1]}/${r[0]}`), ["WH/Сировина/Фурнітура/R7", "WH/Сировина/Фурнітура/R7/S01", "WH/Сировина/Фурнітура/R7/S02"]);
   assert.deepEqual(places[0].slice(4), [7, 1, 1]); // posx / posy / posz: ряд / секция / ярус
   // родители «из Odoo» (WH/Сировина/Фурнітура) в файл изменений не попадают; в полном — попадают
-  assert.ok(!ch.rows.some((r) => r[0] === "Фурнітура")); assert.ok(all.rows.some((r) => r[0] === "Фурнітура" && r[2] === "view"));
+  assert.ok(!ch.rows.some((r) => r[0] === "Фурнітура")); assert.ok(all.rows.some((r) => r[0] === "Фурнітура" && r[2] === "internal" && !r[3]));
   // существующее место с перенумерованным кодом — «изменённое»
   model.ops.rotate(`${FUR}/R1`);
   assert.ok(locationRows(model, { mode: "changed" }).counts.places >= 6);

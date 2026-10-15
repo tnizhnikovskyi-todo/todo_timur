@@ -14,7 +14,9 @@ import { createTray } from "./tray.js";
 import { createWizard, openNewScratch } from "./wizard.js";
 import { openParse } from "./parse.js";
 import { bindKeys } from "./keys.js";
-import { esc, isLow, scrollToSide } from "./util.js";
+import { esc, isLow, scrollToSide, zoneHint } from "./util.js";
+import { legendHtml } from "./heat.js";
+import { MIN_QUERY } from "../core/stock.js";
 
 const HTML = `
 <div class="app">
@@ -54,13 +56,12 @@ const HTML = `
         </div>
         <div class="planbar2" id="planbar2">
           <div class="seg pick" id="seg-pick" role="group" data-i18n-attr="aria-label:pick.aria"><span class="lbl" data-i18n="pick.label"></span>${PICKS.map((k) => `<button data-pk="${k}" data-i18n="pick.${k}"></button>`).join("")}</div>
-          <div class="legend"><span><i class="sw" style="background:var(--ok)"></i><em data-i18n="legend.ok"></em></span>
-            <span><i class="sw" style="background:var(--warn)"></i><em data-i18n="legend.warn"></em></span>
-            <span><i class="sw" style="background:var(--bad)"></i><em data-i18n="legend.bad"></em></span>
-            <span><i class="sw" style="border:1.5px solid var(--idle)"></i><em data-i18n="legend.idle"></em></span>
-            <span><i class="sw" style="background:var(--new)"></i><em data-i18n="legend.new"></em></span>
-            <span><i class="sw" style="background:var(--pend)"></i><em data-i18n="legend.pend"></em></span></div>
+          <label class="heatsel"><span class="lbl" data-i18n="heat.label"></span><select id="heat-sel" data-i18n-attr="aria-label:heat.label"></select></label>
+          <div class="findbox"><input type="search" id="find-q" autocomplete="off" data-i18n-attr="placeholder:find.placeholder,aria-label:find.label"><button class="btn btn-link" id="find-x" hidden data-i18n-attr="aria-label:find.clear,title:find.clear">✕</button><span id="find-n" class="mut" aria-live="polite"></span>
+            <ul class="o_find" id="find-list" hidden></ul></div>
+          <button class="btn btn-secondary" id="data-refresh" data-i18n-attr="title:top.dataRefreshTitle"><span data-i18n="top.dataRefresh"></span></button>
         </div>
+        <div class="legendrow" id="legendrow"><div class="legend" id="legend"></div></div>
         <div class="vp" id="vp">
           <div class="tools"><button id="z-up" data-i18n-attr="aria-label:plan.up,title:plan.up">↑</button><button id="z-in" data-i18n-attr="aria-label:plan.zoomIn">+</button><button id="z-out" data-i18n-attr="aria-label:plan.zoomOut">−</button><button id="z-reset" data-i18n-attr="aria-label:plan.fit,title:plan.fit">⟲</button></div>
           <div class="status" id="vp-status"></div>
@@ -97,8 +98,9 @@ export function mountApp(root, { model, i18n, host = {} }) {
   const P = (code) => model.data.products[code] || { name: code };
   const tipText = (code) => {
     const l = model.tree.loc(code), qn = l.quants[0];
-    if (l.draft) return `<b>${esc(code)}</b><span>${esc(t(l.pend ? "tip.newPend" : "tip.new"))}</span>`;
-    return `<b>${esc(code)}</b><span>${qn ? `${esc(P(qn.product).name)}${l.quants.length > 1 ? ` ${esc(t("tip.more", { n: l.quants.length - 1 }))}` : ""}` : esc(t("tip.empty"))}</span>
+    const nd = model.tree.byCode.get(code), zh = nd ? zoneHint(i18n, model.cap.zone(nd.id)) : "", zl = zh ? `<span class="tip-zone">${esc(zh)}</span>` : ""; // функция и атрибуты зоны (W-14)
+    if (l.draft) return `<b>${esc(code)}</b><span>${esc(t(l.pend ? "tip.newPend" : "tip.new"))}</span>${zl}`;
+    return `<b>${esc(code)}</b>${zl}<span>${qn ? `${esc(P(qn.product).name)}${l.quants.length > 1 ? ` ${esc(t("tip.more", { n: l.quants.length - 1 }))}` : ""}` : esc(t("tip.empty"))}</span>
       <span>${esc(l.fill != null ? t("tip.filled", { pct: i18n.pct(l.fill) }) : t("n.positions", { n: l.quants.length }))}${isLow(l) ? ` · ${esc(t("tip.low"))}` : ""}</span>`;
   };
   const showTip = (code, cx, cy) => {
@@ -120,7 +122,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     else if ((p.bld || []).length) { mode = "2d"; model.bld.setOn(true); model.bld.select(p.bld); apply(); p2.fit(); }
   };
   const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick });
-  const side = createSidePanel({ model, i18n, root: q("#plan-side") });
+  const side = createSidePanel({ model, i18n, root: q("#plan-side"), host });
 
   // ---------- 3D: загрузка по первому обращению
   function ensureThree() {
@@ -142,13 +144,54 @@ export function mountApp(root, { model, i18n, host = {} }) {
   }
   q("#wh-switch").onchange = (ev) => model.setWarehouse(ev.target.value);
 
+  // ---------- тепловые карты, поиск «где лежит», обновление данных (W-17)
+  const heatSel = q("#heat-sel"), legend = q("#legend"), findQ = q("#find-q"), findList = q("#find-list");
+  let findOpen = false;
+  function renderHeat() {
+    const mode = model.heat.mode;
+    heatSel.innerHTML = model.heat.modes.map((m) => `<option value="${m}"${m === mode ? " selected" : ""}>${esc(t(`heat.${m}`))}</option>`).join("");
+    legend.innerHTML = legendHtml({ mode, keys: model.heat.keys(), counts: model.heat.counts(), t, demo: model.heat.demo(), hasData: model.heat.hasData(), days: model.heat.days() });
+    legend.dataset.mode = mode;
+  }
+  heatSel.onchange = () => model.heat.set(heatSel.value);
+  const hitText = (r) => {
+    const h = r.hits[0], u = (model.data.products[h.product] || {}).uom || "", more = r.hits.length > 1 ? ` ${t("tip.more", { n: r.hits.length - 1 })}` : "";
+    return `${h.name} · ${i18n.int(h.qty)} ${u}${h.lot ? ` · ${h.lot}` : ""}${h.package ? ` · ${h.package}` : ""}${more}`;
+  };
+  function renderFind() {
+    const query = model.find.query.trim(), r = model.find.results();
+    q("#find-x").hidden = !model.find.query;
+    q("#find-n").textContent = !query ? "" : query.length < MIN_QUERY ? t("find.hint") : r.n ? t("find.count", { n: r.n }) : t("find.none");
+    const show = findOpen && r.n > 0;
+    findList.hidden = !show;
+    findList.innerHTML = show ? r.items.slice(0, 50).map((x) => `<li><button data-go="${esc(x.code)}" title="${esc(t("find.go", { code: x.code }))}"><span class="t">${esc(x.code)}</span><span class="m">${esc(hitText(x))}</span></button></li>`).join("")
+      + (r.n > 50 ? `<li class="mut more">${esc(t("find.more", { n: r.n - 50 }))}</li>` : "") : "";
+    findList.querySelectorAll("[data-go]").forEach((b) => b.onclick = () => { findOpen = false; model.find.go(b.dataset.go); renderFind(); afterPick(); });
+  }
+  let findTimer = 0;
+  findQ.oninput = () => { findOpen = true; clearTimeout(findTimer); findTimer = setTimeout(() => { model.find.set(findQ.value); renderFind(); }, 120); };
+  findQ.onfocus = () => { if (model.find.query) { findOpen = true; renderFind(); } };
+  findQ.onkeydown = (ev) => {
+    if (ev.key === "Enter") { clearTimeout(findTimer); model.find.set(findQ.value); const f = model.find.results().items[0]; if (f) { findOpen = false; model.find.go(f.code); afterPick(); } renderFind(); }
+    else if (ev.key === "Escape") { if (findOpen) { findOpen = false; renderFind(); } else { findQ.value = ""; model.find.set(""); renderFind(); } ev.stopPropagation(); }
+  };
+  q("#find-x").onclick = () => { findQ.value = ""; findOpen = false; model.find.set(""); renderFind(); findQ.focus(); };
+  document.addEventListener("click", (ev) => { if (findOpen && !ev.target.closest(".findbox")) { findOpen = false; renderFind(); } });
+  // время снимка — в подсказке кнопки «Оновити дані» и в панели склада
+  function renderData() { const m = model.data.meta || {}, at = m.pulled_at || m.now; q("#data-refresh").title = t("top.dataRefreshTitle") + (at ? ` · ${t("top.dataAsOf", { time: at })}` : ""); }
+  const dr = q("#data-refresh");
+  dr.onclick = async () => {
+    dr.disabled = true; dr.setAttribute("aria-busy", "true");
+    try { if (host.refreshData) await host.refreshData(); else { const r = model.refreshData(); model.notify("ok", "n.dataRefreshed", { n: r.updated || r.places }); } } finally { dr.disabled = false; dr.setAttribute("aria-busy", "false"); }
+  };
+
   const bldOn = () => model.bld.state.on;
   const statusTxt = () => bldOn() ? t("status.hintBld") : model.ui.edit ? t("status.hintEdit") : t(mode === "2d" ? "status.hint2d" : "status.hint3d");
   function paintBars() {
     const on = model.ui.edit, tg = q("#ed-tg");
     tg.textContent = t(on ? "top.done" : "top.edit"); tg.className = `btn ${on ? "btn-primary" : "btn-secondary"}`; tg.setAttribute("aria-pressed", String(on));
     root.querySelectorAll("#seg-mode [data-m]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === (bldOn() ? "bld" : mode))));
-    q("#planbar2").hidden = bldOn();
+    q("#planbar2").hidden = bldOn(); q("#legendrow").hidden = bldOn();
     root.querySelectorAll("#seg-pick [data-pk]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pk === model.ui.pick)));
     root.querySelectorAll("#seg-lang [data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === i18n.lang())));
     q("#vp-status").textContent = statusTxt();
@@ -178,8 +221,11 @@ export function mountApp(root, { model, i18n, host = {} }) {
   model.on((ev) => {
     if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); probs?.render(); tray?.render(); return; }
     if (ev.type === "wizard") { paintBars(); return; } // сама панель мастера слушает модель (wizard.js)
-    if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); return; }
-    if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); refresh(); }
+    if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); renderHeat(); renderFind(); renderData(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); return; }
+    if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); renderHeat(); renderFind(); refresh(); }
+    else if (ev.type === "heat") { renderHeat(); refresh(); }
+    else if (ev.type === "find") { renderFind(); refresh(); }
+    else if (ev.type === "data") { p2.paint(); if (three) three.rebuild(); renderHeat(); renderFind(); renderData(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.paint(); three.fit(); } }
     else if (ev.type === "bld") p2.bldRefresh(); // режим «Будівля»: слой здания, панель, строка состояния
     else refresh();
@@ -251,7 +297,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   // ---------- смена языка
   i18n.onChange((l) => {
     document.documentElement.lang = l; model.pref.write("lang", l);
-    applyStatic(); paintBars(); renderLvl(); p2.rebuild(); p2.setHidden(mode !== "2d"); p2.paint();
+    applyStatic(); renderHeat(); renderFind(); renderData(); paintBars(); renderLvl(); p2.rebuild(); p2.setHidden(mode !== "2d"); p2.paint();
     if (three) { three.canvas.setAttribute("aria-label", t("plan.canvasLabel")); three.makeLabels(); }
     side.render(); refresh(); q("#problems").setAttribute("aria-label", t("prob.title")); probs?.render();
     q("#tray").setAttribute("aria-label", t("tray.title")); tray?.render();
@@ -260,7 +306,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   });
 
   document.documentElement.lang = i18n.lang();
-  applyStatic(); renderSwitch(); apply(); side.render();
+  applyStatic(); renderSwitch(); renderHeat(); renderFind(); renderData(); apply(); side.render();
   probs = createProblems({ model, i18n, root: q("#problems"), onGo: goProblem });
   tray = createTray({ model, i18n, root: q("#tray"), onToggle: paintBars });
   wiz = createWizard({ model, i18n, root: q("#wizard"), host, onGo: goProblem, onToggle: () => { model.pref.write("wizopen", !q("#wizard").hidden); paintBars(); } });

@@ -1,4 +1,6 @@
-from odoo import Command, release
+from datetime import timedelta
+
+from odoo import Command, fields, release
 from odoo.tests import HttpCase, tagged
 
 from .common import G_VIEW, make_user
@@ -41,6 +43,8 @@ class TestWhConstructorReader(HttpCase):
         Quant._update_available_quantity(cls.p2, cls.l1[4], 7.0)
         Quant._update_available_quantity(cls.p3, cls.l2[0], 3.0)
         cls.l1[0].quant_ids.filtered(lambda q: q.product_id == cls.p2).reserved_quantity = 2.0
+        cls.old_in = fields.Datetime.now() - timedelta(days=200)  # возраст запаса (W-17): in_date читается как есть
+        cls.l1[0].quant_ids.filtered(lambda q: q.product_id == cls.p1).in_date = cls.old_in
         pt = env["stock.package.type"].create({"name": "Піддон тест"})
         cls.cat = env["stock.storage.category"].create({"name": "Категорія тест", "max_weight": 100.0, "capacity_ids": [
             Command.create({"product_id": cls.p1.id, "quantity": 50.0}), Command.create({"package_type_id": pt.id, "quantity": 4.0})]})
@@ -84,7 +88,7 @@ class TestWhConstructorReader(HttpCase):
 
     def test_foreign_company_hidden(self):
         self.assertEqual(self.locations(self.wh_other)["status"], "error")
-        for route in ("/quants", "/storage_categories", "/putaway_rules", "/orderpoints"):
+        for route in ("/quants", "/storage_categories", "/putaway_rules", "/orderpoints", "/moves"):
             self.assertEqual(self.rpc(self.viewer, route, warehouse_id=self.wh_other.id)["status"], "error", route)
 
     def test_multi_company_user_sees_all_own_companies(self):
@@ -143,6 +147,9 @@ class TestWhConstructorReader(HttpCase):
         q = rows[(self.l1[0].id, self.p2.id)]
         self.assertEqual((q["quantity"], q["reserved_quantity"], q["lot"]), (5.0, 2.0, None))
         self.assertEqual(rows[(self.l1[4].id, self.p2.id)]["quantity"], 7.0)
+        # возраст запаса: in_date — строка UTC «YYYY-MM-DD HH:MM:SS»
+        self.assertEqual(rows[(self.l1[0].id, self.p1.id)]["in_date"], fields.Datetime.to_string(self.old_in))
+        self.assertRegex(rows[(self.l1[4].id, self.p2.id)]["in_date"], r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
         prod = res["products"][str(self.p1.id)]
         self.assertEqual((prod["default_code"], prod["name"]), ("RD-P1", "Плита тест"))
         self.assertTrue(prod["uom"])
@@ -167,7 +174,8 @@ class TestWhConstructorReader(HttpCase):
         caps = {(k["product_id"], k["package_type"]): k["quantity"] for k in c["capacities"]}
         self.assertEqual(caps, {(self.p1.id, None): 50.0, (None, "Піддон тест"): 4.0})
         self.assertIn(str(self.p1.id), res["products"])
-        self.assertEqual(self.rpc(self.viewer, "/storage_categories", warehouse_id=self.wh2.id)["storage_categories"], [])
+        # W-14: категория без компании принадлежит всем складам (её можно назначить), даже если ещё не назначена локации склада
+        self.assertEqual([c["id"] for c in self.rpc(self.viewer, "/storage_categories", warehouse_id=self.wh2.id)["storage_categories"]], [self.cat.id])
 
     def test_putaway_rules(self):
         res = self.rpc(self.viewer, "/putaway_rules", warehouse_id=self.wh1.id)
@@ -188,7 +196,75 @@ class TestWhConstructorReader(HttpCase):
 
     # ------------------------------------------------------------ права
     def test_denied_without_group(self):
-        for route in ("/warehouses", "/locations", "/quants", "/storage_categories", "/putaway_rules", "/orderpoints"):
+        for route in ("/warehouses", "/locations", "/quants", "/storage_categories", "/putaway_rules", "/orderpoints", "/moves"):
             res = self.rpc(self.plain, route, warehouse_id=self.wh1.id)
             self.assertEqual(res["status"], "denied", route)
             self.assertNotIn("locations", res)
+
+
+@tagged("post_install", "-at_install")
+class TestWhConstructorMoves(HttpCase):
+    """Движения за N дней (W-17, оборачиваемость ABC): агрегат выполненных строк движений по паре «откуда → куда»."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        env = cls.env
+        Location, Quant = env["stock.location"], env["stock.quant"]
+        cls.wh = env["stock.warehouse"].create({"name": "Moves склад", "code": "MV1"})
+        vals = {"type": "consu"}
+        if "is_storable" in env["product.product"]._fields:
+            vals["is_storable"] = True
+        cls.p = env["product.product"].create({"name": "Рух тест", "default_code": "MV-P1", **vals})
+        cls.s1, cls.s2, cls.s3 = [Location.create({"name": n, "location_id": cls.wh.lot_stock_id.id, "usage": "internal"}) for n in ("M01", "M02", "M03")]
+        Quant._update_available_quantity(cls.p, cls.s1, 100.0)
+        Quant._update_available_quantity(cls.p, cls.s2, 100.0)
+        cls.move(cls.s1, cls.s3, 10.0)
+        cls.move(cls.s1, cls.s3, 5.0)
+        cls.move(cls.s2, cls.s3, 4.0, date=fields.Datetime.now() - timedelta(days=200))  # старое движение: вне окна 90 дней
+        cls.other = env["res.company"].create({"name": "Чужа компанія рухи"})
+        cls.wh_other = env["stock.warehouse"].search([("company_id", "=", cls.other.id)], limit=1)
+        cls.viewer = make_user(env, "wh_mv_viewer", G_VIEW)
+        cls.plain = make_user(env, "wh_mv_plain")
+
+    @classmethod
+    def move(cls, src, dst, qty, date=None):
+        env = cls.env
+        picking = env["stock.picking"].create({"picking_type_id": cls.wh.int_type_id.id, "location_id": src.id, "location_dest_id": dst.id})
+        vals = {"name": "t"} if "name" in env["stock.move"]._fields else {}  # поле name есть в 18, нет в 19
+        mv = env["stock.move"].create({**vals, "product_id": cls.p.id, "product_uom_qty": qty, "product_uom": cls.p.uom_id.id,
+                                       "picking_id": picking.id, "location_id": src.id, "location_dest_id": dst.id})
+        picking.action_confirm()
+        picking.action_assign()
+        mv.quantity = qty
+        mv.picked = True
+        picking._action_done()
+        if date:
+            mv.move_line_ids.write({"date": date})
+
+    def rpc(self, user, **params):
+        self.authenticate(user.login, f"{user.login}-pass-1")
+        return self.make_jsonrpc_request(f"{API}/moves", params)
+
+    def pairs(self, res):
+        return {(r["location_id"], r["location_dest_id"]): (r["n"], r["qty"]) for r in res["moves"]}
+
+    def test_window(self):
+        res = self.rpc(self.viewer, warehouse_id=self.wh.id)  # по умолчанию 90 дней
+        self.assertEqual(res["status"], "ok")
+        self.assertEqual((res["days"], res["total"], res["next"]), (90, 1, None))
+        self.assertEqual(self.pairs(res), {(self.s1.id, self.s3.id): (2, 15.0)})
+        res = self.rpc(self.viewer, warehouse_id=self.wh.id, days=365)
+        self.assertEqual(self.pairs(res), {(self.s1.id, self.s3.id): (2, 15.0), (self.s2.id, self.s3.id): (1, 4.0)})
+        self.assertEqual(self.rpc(self.viewer, warehouse_id=self.wh.id, days=100000)["days"], 365)  # потолок окна
+
+    def test_paging(self):
+        a = self.rpc(self.viewer, warehouse_id=self.wh.id, days=365, offset=0, limit=1)
+        b = self.rpc(self.viewer, warehouse_id=self.wh.id, days=365, offset=a["next"], limit=1)
+        self.assertEqual((a["total"], len(a["moves"]), len(b["moves"]), b["next"]), (2, 1, 1, None))
+        self.assertNotEqual(a["moves"][0]["location_dest_id"] and (a["moves"][0]["location_id"], a["moves"][0]["location_dest_id"]),
+                            (b["moves"][0]["location_id"], b["moves"][0]["location_dest_id"]))
+
+    def test_denied_and_foreign(self):
+        self.assertEqual(self.rpc(self.plain, warehouse_id=self.wh.id)["status"], "denied")
+        self.assertEqual(self.rpc(self.viewer, warehouse_id=self.wh_other.id)["status"], "error")

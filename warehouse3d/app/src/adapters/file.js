@@ -87,6 +87,10 @@ export function parseLocations(table, mapping, { codeFrom = "auto", now = defaul
   const issues = [], snaps = {}, structure = new Map(), roots = new Set(), byPath = new Map(), byCode = new Map();
   const snap = (wh) => (snaps[wh] ||= { meta: { source: source ? `${source}` : "", database: "", company: "", warehouse: wh, now, pulled_at: now }, products: {}, locations: {} });
   const bad = (row, reason, skip = true) => { issues.push({ row, reason, skip }); if (skip) stats.unrecognized++; else stats.warnings++; };
+  // контейнеры в файле — `internal`, как их создаёт применение через API (I-04): строка без остатка и штрихкода, на которую ссылаются пути других строк, — структура, а не место
+  const rowSegs = (row) => { let g = splitPath(cell(row, "path")); if (!g.length) { const nm = cell(row, "name"); if (nm) g = [...splitPath(cell(row, "parent")), ...splitPath(nm)]; } return g; };
+  const parents = new Set();
+  for (const row of table.rows) { const g = rowSegs(row); for (let i = 2; i < g.length; i++) parents.add(g.slice(0, i).join("/")); }
   table.rows.forEach((row, ri) => {
     if (row.every((x) => String(x ?? "").trim() === "")) return;
     const rowNo = (table.first || 1) + 1 + ri; stats.rows++;
@@ -98,6 +102,7 @@ export function parseLocations(table, mapping, { codeFrom = "auto", now = defaul
     if (usage == null) { bad(rowNo, "usage"); return; }
     const path = segs.join("/");
     if (usage === "other") { stats.skipped++; return; }
+    if (usage === "internal" && parents.has(path) && !cell(row, "product") && !cell(row, "barcode")) { if (!structure.has(path)) structure.set(path, segs[0]); return; }
     if (usage === "view") { if (segs.length === 1) roots.add(path); else if (!structure.has(path)) structure.set(path, segs[0]); return; }
     if (segs.length < 2) { bad(rowNo, "noparent"); return; }
     // остаток: строки stock.quant повторяют место — по одной на товар и партию

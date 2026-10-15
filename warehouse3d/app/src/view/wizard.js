@@ -5,6 +5,7 @@ import { esc } from "./util.js";
 import { BAY_DIRS, LEVEL_DIRS, ROW_FROM, ROW_MODES } from "../core/addressing.js";
 import * as B from "../core/building.js";
 import * as Wz from "../core/wizard.js";
+import { ZONE_FUNCS } from "../core/attr.js";
 import { openPlan } from "./plan.js";
 
 export function createWizard({ model, i18n, root, host = {}, onGo, onToggle }) {
@@ -15,7 +16,7 @@ export function createWizard({ model, i18n, root, host = {}, onGo, onToggle }) {
   const later = () => { clearTimeout(timer); timer = setTimeout(render, 0); };
   const say = (kind, key, p) => { msg = key ? { kind, text: t(key, p) } : null; };
   const num = (v) => (v === "" || v == null ? "" : esc(v));
-  const AP = "addr", WP = "wiz"; // префиксы семейств ключей (динамические ключи не ищет тест словаря)
+  const AP = "addr", WP = "wiz", FP = "fn"; // префиксы семейств ключей (динамические ключи не ищет тест словаря)
   const opt = (list, cur, pre) => list.map((o) => `<option value="${esc(o)}"${o === cur ? " selected" : ""}>${T(`${pre}.${o}`)}</option>`).join("");
   const dis = () => (ro() || busy ? " disabled" : "");
   const input = (name, label, v, a = "") => `<label>${T(label)}<input name="${name}" value="${num(v)}" ${a}${dis()}></label>`;
@@ -39,11 +40,14 @@ export function createWizard({ model, i18n, root, host = {}, onGo, onToggle }) {
   const r1 = (v) => Math.round(v * 10) / 10;
 
   function zonesHtml(w) {
-    const zs = w.form.zones, issues = model.building ? Wz.zoneIssues(model, zs) : [{ key: "wiz.err.noBuilding", p: {} }];
+    const zs = w.form.zones, cats = model.cap.categories(), issues = model.building ? Wz.zoneIssues(model, zs) : [{ key: "wiz.err.noBuilding", p: {} }];
     return `<p class="mut">${T("wiz.z.intro")}</p>
       ${zs.length ? zs.map((z, i) => `<fieldset class="ed-form wiz-zone" data-zone="${esc(z.key)}"><legend>${esc(zoneName(z, i))}${z.id ? ` <span class="o_tag">${T("wiz.z.created")}</span>` : ""}</legend>
         ${input(`z.${z.key}.name`, "wiz.z.name", z.name, 'maxlength="40" class="wide"')}
         ${["x", "y", "w", "d"].map((k) => input(`z.${z.key}.${k}`, `wiz.z.${k}`, z[k], 'type="number" step="0.5"')).join("")}
+        <label>${T("wiz.z.fn")}<select name="z.${esc(z.key)}.fn"${dis()}><option value="">${T("wiz.z.fnNone")}</option>${ZONE_FUNCS.map((f) => `<option value="${f.id}"${f.id === z.fn ? " selected" : ""}>${T(`${FP}.${f.id}`)}</option>`).join("")}</select></label>
+        <label>${T("wiz.z.cat")}<select name="z.${esc(z.key)}.cat"${dis()}><option value="">${T("wiz.z.catNone")}</option>${cats.list.map((c) => `<option value="${esc(c.key)}"${c.key === z.cat ? " selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="new"${z.cat === "new" ? " selected" : ""}>${T("wiz.z.catNew")}</option></select></label>
+        ${z.cat === "new" ? input(`z.${z.key}.catName`, "wiz.z.catName", z.catName, 'maxlength="80"') : ""}
         <button class="btn btn-link" data-act="zone-del" data-key="${esc(z.key)}"${dis()}>${T("wiz.z.remove")}</button></fieldset>`).join("") : `<p class="mut">${T("wiz.z.empty")}</p>`}
       ${issues.length ? `<ul class="wiz-issues" role="alert">${issues.map((x) => `<li>${T(x.key, x.p)}</li>`).join("")}</ul>` : ""}
       <p class="acts"><button class="btn btn-secondary" data-act="zone-add"${dis()}${zs.length >= Wz.MAX_ZONES || !model.building ? " disabled" : ""}>${T("wiz.z.add")}</button>
@@ -147,7 +151,7 @@ export function createWizard({ model, i18n, root, host = {}, onGo, onToggle }) {
     "zone-add": () => {
       patch((w) => {
         const zs = w.form.zones, n = zs.length + 1, key = `z${1 + Math.max(0, ...zs.map((z) => parseInt(z.key.slice(1), 10) || 0))}`;
-        zs.push({ key, name: t("wiz.z.defName", { n }), x: 0, y: 0, w: 10, d: 10, id: null, manual: false });
+        zs.push({ key, name: t("wiz.z.defName", { n }), x: 0, y: 0, w: 10, d: 10, id: null, manual: false, fn: "", cat: "", catName: "" });
         if (!zs.some((z) => z.manual) && model.building) Wz.splitZones(model.building.contour, zs.length).forEach((r, i) => Object.assign(zs[i], r));
         else if (model.building) Object.assign(zs[zs.length - 1], Wz.splitZones(model.building.contour, zs.length)[zs.length - 1]);
       }); msg = null; render();
@@ -171,7 +175,7 @@ export function createWizard({ model, i18n, root, host = {}, onGo, onToggle }) {
     const el = ev.target, name = el.name; if (!name || ro()) return;
     const v = el.type === "checkbox" ? el.checked : el.value, [kind, ...rest] = name.split("."), k = rest.pop(), id = rest.join(".");
     if (kind === "b") patch((w) => { w.form.building[k] = v; });
-    else if (kind === "z") patch((w) => { const z = w.form.zones.find((x) => x.key === id); if (z) { z[k] = k === "name" ? v : v === "" ? "" : parseFloat(v); if (k !== "name") z.manual = true; } });
+    else if (kind === "z") patch((w) => { const z = w.form.zones.find((x) => x.key === id); if (z) { const txt = ["name", "fn", "cat", "catName"].includes(k); z[k] = txt ? v : v === "" ? "" : parseFloat(v); if (!txt) z.manual = true; } });
     else if (kind === "r") patch((w) => {
       const r = (w.form.racks[id] = { ...Wz.defaultRacks(), ...(w.form.racks[id] || {}) }); r[k] = v;
       if (k === "tech") r.gap = Wz.techGap(model, v);

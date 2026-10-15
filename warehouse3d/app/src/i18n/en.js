@@ -392,7 +392,7 @@ export default {
   "help.start.title": "What this is",
   "help.start.html": `
     <p><b>Warehouse Builder</b> is a model of the warehouse built from Odoo storage locations (database snapshot of {date}). Every row, bay, level and floor place in the model is an Odoo location or a new place you added in the model.</p>
-    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot and is not updated in real time.</p>
+    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot: it is read when the page opens and by the “Refresh data” button (see “Metrics, search and data”).</p>
     <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
   "help.view.title": "Viewing the model",
   "help.view.html": `
@@ -401,7 +401,7 @@ export default {
       <li><b>Level</b> — the lists above the model (WH › zone › row › bay › level). Pick a level — the rest is hidden and the camera moves closer. The labels in the model and the “Show this level only” button in the right panel do the same. <b>↑</b> — level up, <b>⟲</b> — fit the level, <b>+ / −</b> — zoom.</li>
       <li><b>Mouse in 3D</b>: left button — orbit, right button — pan, wheel — zoom. <b>In 2D</b>: drag — pan the plan, wheel — zoom.</li>
       <li>Hover over a place — a tooltip shows the code, product and fill level.</li>
-      <li>The color of a place shows its fill level:</li>
+      <li>The color of a place shows its fill level; the other metrics (below minimum, empty places, ABC, stock age) are chosen with the “Metric” switch (see “Metrics, search and data”). A click on a place opens its card. In the “Place status” mode the colors are:</li>
     </ul>`,
   "help.select.title": "Selection",
   "help.select.html": `
@@ -490,7 +490,7 @@ export default {
   "top.odooNew": "Project from Odoo…",
   "top.plan": "Change plan",
   "op.keepMine": "Kept mine on differences with Odoo: {n}",
-  "n.planApplied": "Applied in Odoo: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}",
+  "n.planApplied": "Applied in Odoo: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}, categories {k}, rules {o}",
   "n.planRolled": "Apply rolled back",
   "odoo.plan.title": "Change plan for Odoo",
   "odoo.plan.intro": "What will change in the Odoo locations so that they match the model of warehouse {wh} (saved changes are used). Nothing changes until you press \"Apply in Odoo\".",
@@ -527,7 +527,7 @@ export default {
   "odoo.plan.tabPlan": "Plan",
   "odoo.plan.journal": "Journal",
   "odoo.plan.applying": "Applying…",
-  "odoo.plan.done": "Applied: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}.",
+  "odoo.plan.done": "Applied: created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}, categories {k}, rules {o}.",
   "odoo.plan.fail": "Not applied, nothing was changed in Odoo: {msg}",
   "odoo.plan.copyTitle": "We recommend trying this on a copy of the database first",
   "odoo.plan.copyText": "This is the first apply in this project. Location changes can be rolled back from the journal, but it is safer to run them on a copy of the database first.",
@@ -544,7 +544,7 @@ export default {
   "odoo.log.rolled": "Rolled back: {by} {at}",
   "odoo.log.details": "Operations",
   "odoo.log.more": "…{n} more",
-  "odoo.log.counts": "created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}",
+  "odoo.log.counts": "created {c}, moved {m}, renamed {r}, attributes {a}, archived {x}, categories {k}, rules {o}",
   "odoo.log.rollback": "Roll back",
   "odoo.log.rollbackSure": "Confirm rollback",
   "odoo.log.rolledOk": "The apply was rolled back.",
@@ -597,7 +597,7 @@ export default {
       <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (see the "Change plan and applying in Odoo" section). An administrator assigns the groups on the user form.</li>
       <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
       <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
-      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
+      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. The “Refresh data” button above the plan refreshes only stock, fill levels, reservations and moves, without rebuilding the plan. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
     </ul>`,
   "help.plan.title": "Change plan and applying in Odoo",
   "help.plan.html": `
@@ -915,8 +915,8 @@ export default {
   "file.exp.changed": "New and changed only ({n})",
   "file.exp.format": "Format",
   "file.exp.go": "Download",
-  "file.exp.sum": "In the file: places — {places}, structure rows (type \"view\") — {structure}.",
-  "file.exp.note": "Columns follow the Odoo stock.location import: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level). Applying changes to Odoo is a separate step (the full change plan).",
+  "file.exp.sum": "In the file: places — {places}, structure rows (containers) — {structure}.",
+  "file.exp.note": "Columns follow the Odoo stock.location import: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level). Containers (zone, row, bay) are internal too, as when applying through the API.",
   "file.imp.title": "Import locations from a file",
   "file.imp.pick": "XLSX or CSV file",
   "file.imp.hint": "Columns as in the standard Odoo stock.location export: Full Location Name, Location Type, Barcode, Parent Location; optionally stock: Product, Quantity, Lot.",
@@ -973,7 +973,7 @@ export default {
       <li><b>Import locations…</b> — XLSX or CSV (UTF-8 or Windows-1251, comma, semicolon or tab separated). Columns follow the standard Odoo export of <span class="code">stock.location</span>:
         Full Location Name (<span class="code">complete_name</span>), Location Type (<span class="code">usage</span>), Barcode, Parent Location; optionally Corridor / Shelves / Height (<span class="code">posx / posy / posz</span>) and stock: Product, Quantity, Lot.
         Headers are recognized automatically in English, Ukrainian and Russian; any column can be assigned by hand in the "Column mapping" block.</li>
-      <li><b>Preview.</b> Before the project is created you see how many places, structure rows (type "view") and stock lines were found, which warehouses are in the file (a warehouse is the first segment of the full name) and how many rows were not recognized and why
+      <li><b>Preview.</b> Before the project is created you see how many places, structure rows (containers) and stock lines were found, which warehouses are in the file (a warehouse is the first segment of the full name) and how many rows were not recognized and why
         (no name, no parent location, unknown type, repeated code). Locations of non-warehouse types (customers, vendors, production…) are skipped. The place code is the barcode if there is one, otherwise the name (can be changed).
         If name and parent are separate columns, the full name is built as "parent/name".</li>
       <li><b>Result</b> — a new project "from a file" (source — the file, load date): each warehouse keeps its snapshot inside the project, and everything then works as with Odoo data. The new project opens instead of the current one; the current one stays in storage.</li>
@@ -1050,6 +1050,238 @@ export default {
       <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
       <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
       <li><b>Code conflicts.</b> A repeated or already used place code (see “Addressing”) also appears in “Problems” as an error; a click goes to the place. While a conflict exists, those places cannot be saved.</li>
+    </ul>`,
+
+  // ---- W-14: ёмкость, категории хранения, функции зон, флаги, стратегия списания, min / max
+  "n.viewStock": "A place with stock cannot become a “view” location",
+  "n.replNested": "“Replenishment place” cannot be set here: the flag is already set above or below ({name}) — an Odoo rule",
+  "n.mmNone": "A min / max rule can only be set for an Odoo place that has stock or an existing rule, and only for such a product",
+  "n.mmRange": "Set min and max: min at least 0, max at least min",
+  "n.tempRange": "Temperature “from” cannot be greater than “to”",
+  "n.catName": "Enter the category name",
+  "n.catDup": "Category “{name}” already exists",
+  "n.catCaps": "A capacity is either a product or a package type, and the quantity must be greater than zero",
+  "what.cats": "storage categories",
+  "op.capacity": "{ref}: place size and weight",
+  "op.catAssign": "{ref}: storage category — {cat}",
+  "op.flags": "{ref}: place flags",
+  "op.removal": "{ref}: removal strategy — {name}",
+  "op.zoneFn": "{ref}: zone function — {fn}",
+  "op.minmax": "{ref}: min {min} / max {max}",
+  "op.minmaxReset": "{ref}: min / max edit cleared",
+  "op.catNew": "New storage category “{name}”",
+  "op.catEdit": "Storage category “{name}” changed",
+  "op.catDel": "New category “{name}” removed",
+  "scat.inherit": "inherit",
+  "scat.none": "no category",
+  "cap.title": "Capacity and attributes",
+  "cap.dimsTitle": "Place size and weight",
+  "cap.dw": "Width, m",
+  "cap.dd": "Depth, m",
+  "cap.dh": "Height, m",
+  "cap.maxw": "Max weight, kg",
+  "cap.dimsEff": "Now: {w} × {d} × {h} m, {v} m³",
+  "cap.maxwEff": "max weight {kg} kg ({src})",
+  "cap.maxwNone": "max weight not set",
+  "cap.src.own": "set on the place",
+  "cap.src.cat": "from the category",
+  "cap.src.type": "from the place type",
+  "cap.dimsNote": "An empty field means “as in the type” ({w} × {d} × {h} m) and the category. Place size and weight are kept in the project; in Odoo the weight lives on the storage category.",
+  "cap.catTitle": "Storage category",
+  "cap.catInherit": "Inherit (from the level above or from Odoo)",
+  "cap.catEff": "In effect: {name}",
+  "cap.catFrom": " (set on “{name}”)",
+  "cap.catFromOdoo": " (from Odoo)",
+  "cap.catEffNone": "no category",
+  "cap.catEffNoneOdoo": "no category (as in Odoo)",
+  "cap.catManage": "Storage categories…",
+  "cap.catNote": "A category applies to every place below the chosen node; a lower level can change it. The choice goes to the Change plan and is applied to the Odoo places.",
+  "cap.flagsTitle": "Place flags",
+  "cap.usage": "Location type",
+  "cap.usage.internal": "Internal",
+  "cap.usage.view": "View",
+  "cap.asOdoo": "As in Odoo",
+  "cap.yes": "Yes",
+  "cap.no": "No",
+  "cap.repl": "Replenishment place",
+  "cap.scrap": "Scrap",
+  "cap.flagsNote": "Flags are written to Odoo through the Change plan. “Replenishment place” cannot be set if the flag already exists above or below (an Odoo rule). For a row or bay that is not an Odoo location the value does not reach Odoo.",
+  "cap.flagsNote19": "Flags are written to Odoo through the Change plan. “Replenishment place” cannot be set if the flag already exists above or below (an Odoo rule). Odoo 19 has no separate scrap flag: scrap is an “inventory” location.",
+  "cap.rsTitle": "Removal strategy",
+  "cap.rsNote": "A strategy from the Odoo list (FIFO, LIFO, FEFO…): applies to the location and everything inside unless a lower level sets another one. It is written to the Odoo location of this node; if the node has no location in Odoo (a row or bay derived from codes), the value does not reach Odoo.",
+  "cap.rsNoList": "The strategy list is unavailable: the app is not opened from Odoo or the snapshot has no strategies.",
+  "cap.mmTitle": "Replenishment rule (min / max)",
+  "cap.mmProduct": "Product",
+  "cap.mmMin": "Min",
+  "cap.mmMax": "Max",
+  "cap.mmNone": "A replenishment rule can only be set for an Odoo place that has stock or an existing rule.",
+  "cap.mmRules": "Rules in Odoo: {list}.",
+  "cap.mmNoRule": "There are no replenishment rules for this place in Odoo.",
+  "cap.mmOwn": "project edit",
+  "cap.mmNote": "The change goes to the Change plan: the rule is created or changed (stock.warehouse.orderpoint).",
+  "cap.fnTitle": "Zone function and attributes",
+  "cap.fnInherit": "Inherit (from the level above)",
+  "cap.tmin": "Temperature from, °C",
+  "cap.tmax": "to, °C",
+  "cap.fnNote": "Kept in the project (Odoo has no such field): the zone's colour and label on the model, hover hints.",
+  "fn.receiving": "Receiving",
+  "fn.quality": "Quality control",
+  "fn.quarantine": "Quarantine",
+  "fn.storage": "Storage",
+  "fn.picking": "Picking",
+  "fn.packing": "Packing",
+  "fn.shipping": "Shipping",
+  "fn.defect": "Defects",
+  "fn.returns": "Returns",
+  "fn.buffer": "Production buffer",
+  "fnattr.temp": "temperature range",
+  "fnattr.hazmat": "hazardous goods",
+  "fnattr.valuable": "valuable",
+  "fnattr.long": "long items",
+  "cap.sumTitle": "Capacity",
+  "cap.sum.places": "Places",
+  "cap.sum.pallets": "Pallet places",
+  "cap.sum.area": "Area, m²",
+  "cap.sum.volume": "Volume, m³",
+  "cap.sum.occupied": "Occupied",
+  "cap.sum.free": "Free",
+  "cap.sum.weight": "Total max weight, kg",
+  "cap.sum.noWeight": "weight not set for {n} places",
+  "cap.sum.withCat": "With a category",
+  "cap.sum.fill": "Fill by capacity",
+  "policy.empty": "Only if empty",
+  "policy.same": "Same product only",
+  "policy.mixed": "Mixed products",
+  "cats.title": "Storage categories",
+  "cats.intro": "Warehouse {wh}: Odoo storage categories (stock.storage.category) from the snapshot and new ones created here. A new category is created in Odoo when the Change plan is applied — before the locations that refer to it.",
+  "cats.newBtn": "＋ New category",
+  "cats.name": "Name",
+  "cats.maxw": "Max weight, kg",
+  "cats.policy": "New products",
+  "cats.caps": "Capacities",
+  "cats.used": "Places in Odoo",
+  "cats.new": "New category",
+  "cats.changed": "changed",
+  "cats.empty": "No categories yet",
+  "cats.edit": "Category",
+  "cats.policyNote": "“Only if empty” — a product goes only to an empty place; “Same product only” — only next to the same one; “Mixed products” — no limit (the allow_new_product field).",
+  "cats.capProduct": "Product (code)",
+  "cats.capPkg": "Package type",
+  "cats.capQty": "Quantity",
+  "cats.addCap": "＋ Capacity",
+  "cats.rmCap": "Remove capacity",
+  "cats.capNote": "A capacity is either per product (product code) or per package type; the quantity is greater than zero. A product with that code must exist in Odoo.",
+  "cats.del": "Remove category",
+  "cats.pending": "Unsaved category changes: {n}",
+  "odoo.plan.kind.category": "Storage categories",
+  "odoo.plan.kind.orderpoint": "Replenishment rules",
+  "odoo.plan.row.categoryNew": "{name} — new category",
+  "odoo.plan.row.categoryEdit": "{old} → {name}",
+  "odoo.plan.row.orderpointNew": "{name}: {product} — new rule, min {min} / max {max}",
+  "odoo.plan.row.orderpointEdit": "{name}: {product} — min {pmin} → {min}, max {pmax} → {max}",
+  "odoo.log.op.category_create": "category {name} created",
+  "odoo.log.op.category_update": "category {name} changed",
+  "odoo.log.op.orderpoint_create": "rule {name} created",
+  "odoo.log.op.orderpoint_update": "rule {name} changed",
+  "file.exp.plan": "As in the Change plan: create {c}, change {u}, archive {a} (recommended)",
+  "file.exp.sumPlan": "In the file: new locations — {c}, changed — {u}, to archive — {a}.",
+  "file.exp.limitsTitle": "What the Odoo import cannot do:",
+  "file.exp.lim.dbid": "Existing locations are updated by the “.id” column (Database ID). If Odoo did not recognise it automatically, map the column to the “Database ID” field by hand. Every column is filled in every row: an empty cell in an import erases the value.",
+  "file.exp.lim.category": "Storage categories and their capacities: the location import does not create them. Create the categories first (or apply the plan through the API), then assign; the file contains only names of categories that already exist.",
+  "file.exp.lim.orderpoint": "Replenishment rules (min / max) are a separate import of stock.warehouse.orderpoint; they are not in this file.",
+  "file.exp.lim.project": "Sizes, place weight, zone functions and attributes are kept only in the project — Odoo has no such fields.",
+  "file.exp.lim.empty": "The import does not check that an archived location is empty (the API refuses if there is stock or an unfinished move). Only locations without stock in the snapshot are in the file: press “Refresh from Odoo” before importing.",
+  "file.exp.lim.journal": "There is no apply journal and no rollback: after the import the changes can only be reverted by hand.",
+  "file.exp.lim.order": "Rows go in the order “create → change → archive”. If one file renames a parent location and creates its new child, import in two files or apply the plan through the API.",
+  "file.exp.skipped": "Not in the file: categories — {k}, replenishment rules — {o}.",
+  "help.capacity.title": "Capacity, categories and attributes",
+  "help.capacity.html": `
+    <p>All of this is edits of the “Show / Save” layer with Ctrl+Z. What concerns Odoo goes to the “Change plan” and is applied through the module API in this order: <b>categories → locations → replenishment rules</b>. The blocks are in the side panel in “Edit” mode (select a place, row or zone); in view mode the same data is shown without editing, and for a zone or the warehouse the total capacity as well.</p>
+    <ul>
+      <li><b>Place size and weight.</b> Width, depth, height and maximum weight come from the place type and the storage category; on a specific place you can set your own (an empty field means “as in the type”). The effective values are shown, and where the weight comes from (the place, the category or the type). Size and weight of a place are kept in the project: in Odoo the weight lives on the storage category.</li>
+      <li><b>Storage categories.</b> “Storage categories…” opens the list of Odoo categories from the snapshot and creates new ones: name, maximum weight, policy “only if empty / same product / mixed” (<span class="code">allow_new_product</span>), capacities per product and per package type. A category is assigned to a <b>place, row or zone</b>: it applies to every place below, and a lower level can set its own or “no category”. A new category is created in Odoo when the plan is applied — before the locations that refer to it. Only a category that is not created yet can be removed.</li>
+      <li><b>Zone function and attributes.</b> The function (receiving, quality control, quarantine, storage, picking, packing, shipping, defects, returns, production buffer) gives the zone a frame colour and a label on the plan and in 3D; the attributes (temperature range, hazardous goods, valuable, long items) appear in the hover hints. All this is kept only in the project — Odoo has no such fields. A function applies to the nested zones until a lower level sets another one.</li>
+      <li><b>Place flags.</b> Location type (internal / view), “replenishment place” (<span class="code">replenish_location</span>), and in Odoo 18 “scrap” (<span class="code">scrap_location</span>; Odoo 19 has no such flag). An empty choice means “as in Odoo”. A place with stock cannot become a “view”; “replenishment place” cannot be set if the flag already exists above or below (an Odoo rule) — the app warns you.</li>
+      <li><b>Removal strategy.</b> Choose from the strategies of the database (<span class="code">removal_strategy_id</span>: FIFO, LIFO, FEFO…) on a zone, row or place; it applies to the location and everything inside.</li>
+      <li><b>Min / Max.</b> In the place card: the replenishment rule — product, min, max. It can only be set for a place that has stock or an existing rule. In the plan these are “Replenishment rules”: a rule is created or changed (<span class="code">stock.warehouse.orderpoint</span>).</li>
+      <li><b>Capacity summary.</b> In the zone and warehouse panel: places, pallet places, area, volume, occupied / free (from stock), total maximum weight; calculated from the capacities of the places and types.</li>
+    </ul>`,
+  "heat.label": "Metric",
+  "heat.status": "Place status",
+  "heat.fill": "Fill level",
+  "heat.low": "Below minimum",
+  "heat.empty": "Empty places",
+  "heat.abc": "Turnover ABC",
+  "heat.age": "Stock age",
+  "heat.fill.f0": "empty",
+  "heat.fill.f25": "up to 25 %",
+  "heat.fill.f50": "25–50 %",
+  "heat.fill.f75": "50–75 %",
+  "heat.fill.f100": "over 75 %",
+  "heat.fill.none": "no capacity",
+  "heat.low.out": "out of stock",
+  "heat.low.low": "below minimum",
+  "heat.low.ok": "not below minimum",
+  "heat.low.none": "no reorder rule",
+  "heat.empty.empty": "empty place",
+  "heat.empty.used": "has stock",
+  "heat.abc.A": "A · 80 % of moves",
+  "heat.abc.B": "B · next 15 %",
+  "heat.abc.C": "C · last 5 %",
+  "heat.abc.none": "no moves",
+  "heat.age.d30": "up to 30 days",
+  "heat.age.d90": "31–90 days",
+  "heat.age.d180": "91–180 days",
+  "heat.age.d365": "181–365 days",
+  "heat.age.dmax": "over 365 days",
+  "heat.age.none": "no stock or no date",
+  "heat.days": "moves in {n} d",
+  "heat.demo": "demo: moves and age are synthetic",
+  "heat.demoShort": "demo",
+  "heat.noData": "The snapshot has no data for this metric",
+  "find.label": "Where is it",
+  "find.placeholder": "Where is it: product, code, lot, package…",
+  "find.hint": "Type at least 2 characters",
+  "find.count": "Places found: {n}",
+  "find.none": "Nothing found",
+  "find.clear": "Clear search",
+  "find.go": "Go to place {code}",
+  "find.more": "…{n} more",
+  "card.title": "Place card",
+  "card.category": "Storage category",
+  "card.maxWeight": "max weight {n}",
+  "card.capacity": "Capacity",
+  "card.unitQty": "units",
+  "card.unitPkg": "packages",
+  "card.minmax": "Min / max",
+  "card.age": "Stock age",
+  "card.days": "{n} d",
+  "card.moves": "Moves",
+  "card.movesVal": "{n} in {days} d",
+  "card.rules": "Putaway rules leading here",
+  "card.noRules": "No rules lead here.",
+  "card.none": "none",
+  "card.ruleAny": "any product",
+  "card.ruleCat": "by storage category",
+  "card.openOdoo": "Open in Odoo",
+  "top.dataRefresh": "Refresh data",
+  "top.dataRefreshTitle": "Refresh stock, fill levels and reservations without rebuilding the plan",
+  "top.dataAsOf": "data as of {time}",
+  "n.dataRefreshed": "Data refreshed · places: {n}",
+  "n.dataAdded": "Odoo has new places: {added}. The structure is updated by the “Refresh from Odoo” button.",
+  "help.data.title": "Metrics, search and data",
+  "help.data.html": `
+    <ul>
+      <li><b>Metric.</b> The <b>“Metric”</b> switch above the plan changes what the color of a place means, and the legend next to it changes with it and shows how many places fall in each class. <b>“Place status”</b> is the usual coloring (see “Viewing the model”); the other five are heat maps, identical in 2D and 3D. New and unsaved places stay teal and orange under any metric. The choice is remembered.</li>
+      <li><b>Fill level</b> — the share of the place capacity: empty, up to 25 %, 25–50 %, 50–75 %, over 75 %; gray — places without capacity (zones, carts).</li>
+      <li><b>Below minimum</b> — by the place reorder rule (min / max): red — out of stock, yellow — below minimum, green — not below, gray — places without a rule.</li>
+      <li><b>Empty places</b> — places without stock are yellow (room to put things), the rest are gray.</li>
+      <li><b>Turnover ABC</b> — by the number of moves (done moves out of and into the place) over the last 90 days: <b>A</b> — places that together give the first 80 % of moves, <b>B</b> — the next 15 %, <b>C</b> — the last 5 %; gray — no moves.</li>
+      <li><b>Stock age</b> — by the oldest lot of the place (the incoming date of the stock in Odoo): up to 30, 31–90, 91–180, 181–365, over 365 days; gray — the place is empty or has no date.</li>
+      <li><b>Demo.</b> The demo snapshot has neither moves nor incoming dates, so ABC and age show synthetic values, marked “demo” in the legend and in the place card. Odoo supplies real data (moves for 90 days and the incoming date).</li>
+      <li><b>Where is it.</b> The search box above the plan looks for a product name or code, a lot and a package; several words must all match within one stock line. Found places are highlighted on the plan (2D and 3D), a counter sits next to the box, and the list below it shows each place and what lies there. Click a list row (or press <kbd>Enter</kbd> for the first) to show the level that holds the place and select it. <kbd>Esc</kbd> closes the list, pressed again it clears the search.</li>
+      <li><b>Place card.</b> Click a place and the right panel shows: stock (product, quantity, reservation, lot, age), storage category, capacity and fill level, min / max, putaway rules that lead here (direct ones and by storage category), moves for 90 days and the stock age. In the app opened from Odoo there is an <b>“Open in Odoo”</b> button — the form of this location.</li>
+      <li><b>“Refresh data”.</b> The button above the plan refreshes stock, fill levels, reservations and moves <b>without rebuilding the plan</b>, leaving your saved and unsaved model changes alone (the stock snapshot only). New Odoo locations do not appear this way: the structure is updated by “Refresh from Odoo”. The snapshot time is shown next to it. The data is also read every time the page opens. Outside Odoo the button recomputes the metrics from the current snapshot.</li>
     </ul>`,
   // W-12: code parsing, "Unplaced" tray, auto-layout
   "op.parse": "Code parsing rules: {n}",
@@ -1185,7 +1417,7 @@ export default {
   "wiz.b.make": "Create building",
   "wiz.b.update": "Update building",
   "wiz.b.done": "Building: {w} × {d} m, area {area} m², columns: {cols}. The outline and columns can still be edited in “Building” mode.",
-  "wiz.z.intro": "Add zones and give each a rectangle inside the outline (X, Y from the 0,0 corner; width and depth). Rectangles must not overlap. A zone has only a name for now.",
+  "wiz.z.intro": "Add zones and give each a rectangle inside the outline (X, Y from the 0,0 corner; width and depth). Rectangles must not overlap. Each zone may get a function and a storage category (a new category is created with the zone and comes first in the change plan).",
   "wiz.z.name": "Name",
   "wiz.z.x": "X, m",
   "wiz.z.y": "Y, m",
@@ -1196,6 +1428,13 @@ export default {
   "wiz.z.remove": "Remove zone",
   "wiz.z.defName": "Zone {n}",
   "wiz.z.created": "created",
+  "wiz.z.fn": "Zone function",
+  "wiz.z.fnNone": "— no function",
+  "wiz.z.cat": "Storage category (optional)",
+  "wiz.z.catNone": "— no category",
+  "wiz.z.catNew": "New category…",
+  "wiz.z.catName": "New category name",
+  "wiz.err.catName": "Zone “{name}”: enter the name of the new storage category",
   "wiz.z.empty": "No zones yet — add the first one.",
   "wiz.r.noZones": "Apply the zones on the previous step first.",
   "wiz.r.intro": "For every zone pick a rack type from the catalog and the block size: rows × bays × levels. The aisle between rows follows the zone's equipment (minimum width from the problems panel).",
@@ -1250,7 +1489,7 @@ export default {
     <ul>
       <li><b>Purpose.</b> An empty Odoo warehouse becomes a planned one created in Odoo: the wizard leads step by step and uses the same tools as the rest of the app.</li>
       <li><b>Entry.</b> “File → New project: from scratch…”. On an Odoo page you choose an existing warehouse of the database (the wizard does not create a warehouse). Outside Odoo an empty draft warehouse with the code you give is created; the result is then exported as a file.</li>
-      <li><b>Steps</b> (panel on the right, “Back” / “Next”, progress bar): <i>Building</i> — size (width × depth, heights) or a polygon outline (x,y vertices), column grid; <i>Zones</i> — named zones with a rectangle each inside the outline, “Spread evenly”; <i>Rows</i> — for every zone a rack type from the catalog, rows × bays × levels, zone equipment (the aisle between rows is at least the equipment minimum); <i>Addressing</i> — code template and numbering directions per zone with a preview (by default the code starts with the warehouse code: a location barcode in Odoo is unique within the company); <i>Checks</i> — the problems panel, you cannot go on while there are errors; <i>Change plan</i> — what will be created in Odoo.</li>
+      <li><b>Steps</b> (panel on the right, “Back” / “Next”, progress bar): <i>Building</i> — size (width × depth, heights) or a polygon outline (x,y vertices), column grid; <i>Zones</i> — named zones with a function, an optional storage category and a rectangle each inside the outline, “Spread evenly” (function and category are ordinary zone-attribute changes); <i>Rows</i> — for every zone a rack type from the catalog, rows × bays × levels, zone equipment (the aisle between rows is at least the equipment minimum); <i>Addressing</i> — code template and numbering directions per zone with a preview (by default the code starts with the warehouse code: a location barcode in Odoo is unique within the company); <i>Checks</i> — the problems panel, you cannot go on while there are errors; <i>Change plan</i> — what will be created in Odoo.</li>
       <li><b>These are ordinary changes.</b> Every step adds changes to the unsaved list (“Show / Save”), you can see them and undo them with Ctrl+Z; pressing “Apply” of a step again replaces what the wizard made instead of duplicating it. Leaving the “Checks” step saves the project, because the change plan is built from what is saved.</li>
       <li><b>Leave and come back.</b> The state of the steps (form values, created zones and rows) is kept in the project. Close the panel with ×, come back with the “Wizard” button in the top bar — even after a page reload.</li>
       <li><b>Result.</b> On the “Change plan” step: “Apply in Odoo…” (the change plan window: one transaction, journal, rollback; on an Odoo page with the apply right) or “Import file…” (XLSX / CSV). “Finish the wizard” removes the “Wizard” button: the project stays an ordinary one edited with all the tools.</li>
