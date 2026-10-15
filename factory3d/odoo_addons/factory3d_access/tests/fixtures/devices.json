@@ -1,0 +1,52 @@
+{
+ "DeviceCollection": {
+  "total": "5",
+  "rows": [
+   {
+    "id": "5390001",
+    "name": "ACR-IN BioEntry W3 (прохідна)",
+    "device_type_id": {
+     "name": "BioEntry W3"
+    },
+    "status": "1",
+    "ip": "192.168.10.11"
+   },
+   {
+    "id": "5390002",
+    "name": "ACR-OUT BioEntry W3 (прохідна)",
+    "device_type_id": {
+     "name": "BioEntry W3"
+    },
+    "status": "1",
+    "ip": "192.168.10.12"
+   },
+   {
+    "id": "5390003",
+    "name": "ACR-ELEC BioLite N2 (електрощитова)",
+    "device_type_id": {
+     "name": "BioLite N2"
+    },
+    "status": "1",
+    "ip": "192.168.10.13"
+   },
+   {
+    "id": "5390004",
+    "name": "ACR-PAINT BioLite N2 (фарбування)",
+    "device_type_id": {
+     "name": "BioLite N2"
+    },
+    "status": "1",
+    "ip": "192.168.10.14"
+   },
+   {
+    "id": "5390005",
+    "name": "ACR-SRV BioLite N2 (серверна)",
+    "device_type_id": {
+     "name": "BioLite N2"
+    },
+    "status": "0",
+    "ip": "192.168.10.15"
+   }
+  ]
+ }
+}

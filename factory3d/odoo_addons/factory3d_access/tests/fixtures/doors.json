@@ -1,0 +1,50 @@
+{
+ "DoorCollection": {
+  "total": "5",
+  "rows": [
+   {
+    "id": "1",
+    "name": "Турнікет TURN-1",
+    "entry_device_id": {
+     "id": "5390001"
+    },
+    "open_duration": "3",
+    "exit_device_id": {
+     "id": "5390002"
+    }
+   },
+   {
+    "id": "2",
+    "name": "Двері DOOR-ELEC",
+    "entry_device_id": {
+     "id": "5390003"
+    },
+    "open_duration": "3"
+   },
+   {
+    "id": "3",
+    "name": "Двері DOOR-CHG",
+    "entry_device_id": {
+     "id": "5390004"
+    },
+    "open_duration": "3"
+   },
+   {
+    "id": "4",
+    "name": "Двері DOOR-PAINT",
+    "entry_device_id": {
+     "id": "5390004"
+    },
+    "open_duration": "3"
+   },
+   {
+    "id": "5",
+    "name": "Двері DOOR-SRV",
+    "entry_device_id": {
+     "id": "5390005"
+    },
+    "open_duration": "3"
+   }
+  ]
+ }
+}

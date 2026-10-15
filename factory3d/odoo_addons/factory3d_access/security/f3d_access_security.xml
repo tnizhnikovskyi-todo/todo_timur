@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="privilege_f3d_access" model="res.groups.privilege">
+        <field name="name">Завод 3D: доступ (СКУД)</field>
+        <field name="category_id" ref="factory3d_base.module_category_factory3d"/>
+        <field name="sequence">70</field>
+    </record>
+    <record id="group_f3d_access_security" model="res.groups">
+        <field name="name">Охорона</field>
+        <field name="privilege_id" ref="privilege_f3d_access"/>
+        <field name="sequence">10</field>
+        <field name="implied_ids" eval="[Command.link(ref('factory3d_base.group_f3d_user'))]"/>
+    </record>
+    <record id="group_f3d_access_admin" model="res.groups">
+        <field name="name">Адміністратор СКУД</field>
+        <field name="privilege_id" ref="privilege_f3d_access"/>
+        <field name="sequence">20</field>
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_access_security')), Command.link(ref('factory3d_base.group_f3d_manager'))]"/>
+    </record>
+    <record id="factory3d_base.group_f3d_admin" model="res.groups">
+        <field name="implied_ids" eval="[Command.link(ref('group_f3d_access_admin'))]"/>
+    </record>
+    <!-- W1: record rules (SPEC §4.3) для моделей W1-W4 додаються після появи моделей -->
+</odoo>

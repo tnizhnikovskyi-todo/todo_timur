@@ -1,0 +1,473 @@
+{
+ "UserCollection": {
+  "total": "36",
+  "rows": [
+   {
+    "user_id": "1",
+    "name": "Administrator",
+    "user_group_id": {
+     "id": "1",
+     "name": "All Users"
+    },
+    "disabled": "false",
+    "card_count": "0",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST01",
+    "name": "Працівник Тест 1",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST02",
+    "name": "Працівник Тест 2",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST03",
+    "name": "Працівник Тест 3",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST04",
+    "name": "Працівник Тест 4",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST05",
+    "name": "Працівник Тест 5",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST06",
+    "name": "Працівник Тест 6",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST07",
+    "name": "Працівник Тест 7",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST08",
+    "name": "Працівник Тест 8",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST09",
+    "name": "Працівник Тест 9",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST10",
+    "name": "Працівник Тест 10",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST11",
+    "name": "Працівник Тест 11",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST12",
+    "name": "Працівник Тест 12",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST13",
+    "name": "Працівник Тест 13",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST14",
+    "name": "Працівник Тест 14",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST15",
+    "name": "Працівник Тест 15",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST16",
+    "name": "Працівник Тест 16",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST17",
+    "name": "Працівник Тест 17",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST18",
+    "name": "Працівник Тест 18",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST19",
+    "name": "Працівник Тест 19",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST20",
+    "name": "Працівник Тест 20",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST21",
+    "name": "Працівник Тест 21",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST22",
+    "name": "Працівник Тест 22",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST23",
+    "name": "Працівник Тест 23",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST24",
+    "name": "Працівник Тест 24",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST25",
+    "name": "Працівник Тест 25",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST26",
+    "name": "Працівник Тест 26",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST27",
+    "name": "Працівник Тест 27",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST28",
+    "name": "Працівник Тест 28",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST29",
+    "name": "Працівник Тест 29",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST30",
+    "name": "Працівник Тест 30",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST31",
+    "name": "Працівник Тест 31",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST32",
+    "name": "Працівник Тест 32",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST33",
+    "name": "Працівник Тест 33",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   },
+   {
+    "user_id": "OPTST34",
+    "name": "Працівник Тест 34",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "0"
+   },
+   {
+    "user_id": "OPTST35",
+    "name": "Працівник Тест 35",
+    "user_group_id": {
+     "id": "2",
+     "name": "Виробництво"
+    },
+    "start_datetime": "2001-01-01T00:00:00.00Z",
+    "expiry_datetime": "2030-12-31T23:59:00.00Z",
+    "disabled": "false",
+    "card_count": "1",
+    "face_count": "1"
+   }
+  ]
+ }
+}

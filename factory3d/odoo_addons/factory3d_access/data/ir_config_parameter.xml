@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="param_write_enabled" model="ir.config_parameter">
+        <field name="key">factory3d.access.write_enabled</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_biostar_login" model="ir.config_parameter">
+        <field name="key">factory3d.access.biostar_login</field>
+        <field name="value">admin</field>
+    </record>
+    <record id="param_poll_interval" model="ir.config_parameter">
+        <field name="key">factory3d.access.poll_interval_s</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_page_size" model="ir.config_parameter">
+        <field name="key">factory3d.access.page_size</field>
+        <field name="value">500</field>
+    </record>
+    <record id="param_max_pages" model="ir.config_parameter">
+        <field name="key">factory3d.access.max_pages_per_run</field>
+        <field name="value">20</field>
+    </record>
+    <record id="param_overlap" model="ir.config_parameter">
+        <field name="key">factory3d.access.overlap_s</field>
+        <field name="value">120</field>
+    </record>
+    <record id="param_future_tolerance" model="ir.config_parameter">
+        <field name="key">factory3d.access.future_tolerance_s</field>
+        <field name="value">300</field>
+    </record>
+    <record id="param_initial_lookback" model="ir.config_parameter">
+        <field name="key">factory3d.access.initial_lookback_h</field>
+        <field name="value">24</field>
+    </record>
+    <record id="param_recheck_hours" model="ir.config_parameter">
+        <field name="key">factory3d.access.recheck_hours</field>
+        <field name="value">24</field>
+    </record>
+    <record id="param_paging_mode" model="ir.config_parameter">
+        <field name="key">factory3d.access.paging_mode</field>
+        <field name="value">offset</field>
+    </record>
+    <record id="param_dup_window" model="ir.config_parameter">
+        <field name="key">factory3d.access.dup_window_min</field>
+        <field name="value">20</field>
+    </record>
+    <record id="param_merge_gap" model="ir.config_parameter">
+        <field name="key">factory3d.access.merge_gap_min</field>
+        <field name="value">0</field>
+    </record>
+    <record id="param_max_shift" model="ir.config_parameter">
+        <field name="key">factory3d.access.max_shift_h</field>
+        <field name="value">16</field>
+    </record>
+    <record id="param_stale_close" model="ir.config_parameter">
+        <field name="key">factory3d.access.stale_close_enabled</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_stale_fallback" model="ir.config_parameter">
+        <field name="key">factory3d.access.stale_close_fallback_min</field>
+        <field name="value">60</field>
+    </record>
+    <record id="param_keep_days" model="ir.config_parameter">
+        <field name="key">factory3d.access.keep_days</field>
+        <field name="value">90</field>
+    </record>
+    <record id="param_keep_raw" model="ir.config_parameter">
+        <field name="key">factory3d.access.keep_raw</field>
+        <field name="value">False</field>
+    </record>
+    <record id="param_publish_signals" model="ir.config_parameter">
+        <field name="key">factory3d.access.publish_signals</field>
+        <field name="value">True</field>
+    </record>
+    <record id="param_last_events_limit" model="ir.config_parameter">
+        <field name="key">factory3d.access.last_events_limit</field>
+        <field name="value">20</field>
+    </record>
+    <record id="param_card_sync_max" model="ir.config_parameter">
+        <field name="key">factory3d.access.card_sync_max_attempts</field>
+        <field name="value">10</field>
+    </record>
+    <record id="param_visitor_hours" model="ir.config_parameter">
+        <field name="key">factory3d.access.visitor_default_hours</field>
+        <field name="value">8</field>
+    </record>
+    <record id="param_visitor_prefix" model="ir.config_parameter">
+        <field name="key">factory3d.access.visitor_user_prefix</field>
+        <field name="value">V-</field>
+    </record>
+    <record id="param_visitor_group" model="ir.config_parameter">
+        <field name="key">factory3d.access.visitor_user_group_id</field>
+        <field name="value">1</field>
+    </record>
+    <record id="param_migration_state" model="ir.config_parameter">
+        <field name="key">factory3d.access.migration_state</field>
+        <field name="value">pending</field>
+    </record>
+    <record id="param_migration_report" model="ir.config_parameter">
+        <field name="key">factory3d.access.migration_report</field>
+        <field name="value">{}</field>
+    </record>
+</odoo>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="cron_f3d_access_poll" model="ir.cron">
+        <field name="name">СКУД: опитування подій BioStar</field>
+        <field name="model_id" ref="model_f3d_access_server"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_poll()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_access_sync_users" model="ir.cron">
+        <field name="name">СКУД: синхронізація користувачів</field>
+        <field name="model_id" ref="model_f3d_access_server"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_sync_users()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_access_sync_devices" model="ir.cron">
+        <field name="name">СКУД: синхронізація пристроїв і дверей</field>
+        <field name="model_id" ref="model_f3d_access_server"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_sync_devices()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall">2026-10-16 00:10:00</field>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_access_zone_dwell" model="ir.cron">
+        <field name="name">СКУД: повернення з технічних приміщень</field>
+        <field name="model_id" ref="model_f3d_access_event"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_zone_dwell()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_access_card_sync" model="ir.cron">
+        <field name="name">СКУД: запис карток і відвідувачів у BioStar</field>
+        <field name="model_id" ref="model_f3d_access_card"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_card_sync()
+env['f3d.access.visitor']._cron_user_sync()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">10</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_f3d_access_housekeeping" model="ir.cron">
+        <field name="name">СКУД: ротація і закриття відміток</field>
+        <field name="model_id" ref="model_f3d_access_event"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_housekeeping()</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall">2026-10-16 23:30:00</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

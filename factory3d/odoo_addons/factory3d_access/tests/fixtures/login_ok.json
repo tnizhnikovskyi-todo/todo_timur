@@ -1,0 +1,11 @@
+{
+  "Response": {
+    "code": "0",
+    "message": "Success"
+  },
+  "User": {
+    "user_id": "1",
+    "name": "Administrator",
+    "login_id": "admin"
+  }
+}
