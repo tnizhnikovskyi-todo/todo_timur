@@ -10,4 +10,12 @@
               groups="factory3d_energy.group_f3d_energy_user"/>
     <menuitem id="menu_f3d_energy_config" name="Налаштування" parent="menu_f3d_energy" sequence="90"
               groups="factory3d_energy.group_f3d_energy_cost"/>
+    <menuitem id="menu_f3d_energy_scheme" name="Схема мережі" parent="menu_f3d_energy" sequence="20"
+              action="action_f3d_energy_node_tree" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_meter" name="Лічильники" parent="menu_f3d_energy" sequence="30"
+              action="action_f3d_energy_meter" groups="factory3d_energy.group_f3d_energy_user"/>
+    <menuitem id="menu_f3d_energy_tariff" name="Тарифи й договір" parent="menu_f3d_energy_config" sequence="10"
+              action="action_f3d_energy_tariff" groups="factory3d_energy.group_f3d_energy_cost"/>
+    <menuitem id="menu_f3d_energy_pool" name="Пули спільних споживачів" parent="menu_f3d_energy_config" sequence="20"
+              action="action_f3d_energy_pool" groups="factory3d_energy.group_f3d_energy_manager"/>
 </odoo>

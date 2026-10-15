@@ -1,1 +1,13 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_f3d_energy_node_user,f3d.energy.node user,model_f3d_energy_node,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_node_manager,f3d.energy.node manager,model_f3d_energy_node,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_node_f3d_user,f3d.energy.node f3d user,model_f3d_energy_node,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_energy_meter_user,f3d.energy.meter user,model_f3d_energy_meter,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_meter_manager,f3d.energy.meter manager,model_f3d_energy_meter,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_meter_f3d_user,f3d.energy.meter f3d user,model_f3d_energy_meter,factory3d_base.group_f3d_user,1,0,0,0
+access_f3d_energy_tariff_user,f3d.energy.tariff user,model_f3d_energy_tariff,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_tariff_manager,f3d.energy.tariff manager,model_f3d_energy_tariff,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_tariff_zone_user,f3d.energy.tariff.zone user,model_f3d_energy_tariff_zone,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_tariff_zone_manager,f3d.energy.tariff.zone manager,model_f3d_energy_tariff_zone,factory3d_energy.group_f3d_energy_manager,1,1,1,1
+access_f3d_energy_pool_user,f3d.energy.pool user,model_f3d_energy_pool,factory3d_energy.group_f3d_energy_user,1,0,0,0
+access_f3d_energy_pool_manager,f3d.energy.pool manager,model_f3d_energy_pool,factory3d_energy.group_f3d_energy_manager,1,1,1,1

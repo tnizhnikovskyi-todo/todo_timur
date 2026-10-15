@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-01…V-04, дія «Схема мережі» -->
+<odoo>
+    <record id="view_f3d_energy_node_hierarchy" model="ir.ui.view">
+        <field name="name">f3d.energy.node.hierarchy</field>
+        <field name="model">f3d.energy.node</field>
+        <field name="arch" type="xml">
+            <hierarchy parent_field="parent_id" child_field="child_ids" draggable="0" icon="fa-bolt">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="kind"/>
+                <field name="p_now"/>
+                <field name="rating_a"/>
+                <field name="rating_kva"/>
+                <field name="live_status"/>
+                <field name="is_critical"/>
+                <templates>
+                    <t t-name="hierarchy-box">
+                        <div class="o_hierarchy_node_header d-flex justify-content-between align-items-center px-2">
+                            <field name="name"/>
+                            <field name="code" widget="badge"/>
+                        </div>
+                        <div class="o_hierarchy_node_body d-flex flex-column px-2">
+                            <div>
+                                <field name="kind"/>
+                                <i t-if="record.is_critical.raw_value" class="fa fa-shield ms-1" title="Критичний"/>
+                            </div>
+                            <div>
+                                <field name="p_now"/> кВт зараз
+                            </div>
+                            <div t-if="record.rating_a.raw_value">
+                                <field name="rating_a"/> А
+                            </div>
+                            <div t-if="record.rating_kva.raw_value">
+                                <field name="rating_kva"/> кВА
+                            </div>
+                            <div>
+                                <field name="live_status" widget="badge"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </hierarchy>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_node_form" model="ir.ui.view">
+        <field name="name">f3d.energy.node.form</field>
+        <field name="model">f3d.energy.node</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D"
+                            invisible="not equipment_id"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_meters" type="object" class="oe_stat_button" icon="fa-tachometer">
+                            <field name="meter_count" widget="statinfo" string="Лічильники"/>
+                        </button>
+                        <button name="action_view_intervals" type="object" class="oe_stat_button" icon="fa-bar-chart"
+                                string="Профіль"/>
+                        <button name="action_view_balance" type="object" class="oe_stat_button" icon="fa-balance-scale"
+                                string="Баланс" invisible="kind != 'cell'"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва"/></h1>
+                        <h2><field name="code" placeholder="Код"/></h2>
+                    </div>
+                    <group>
+                        <group string="Схема">
+                            <field name="kind"/>
+                            <field name="cell_type" invisible="kind != 'cell'"/>
+                            <field name="line_kind" invisible="kind != 'line'"/>
+                            <field name="gen_kind" invisible="kind != 'generator'"/>
+                            <field name="parent_id"/>
+                            <field name="cabinet_id"/>
+                            <field name="peer_id" invisible="cell_type != 'coupler'"/>
+                            <field name="section"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Прив'язка">
+                            <field name="equipment_id"/>
+                            <field name="workcenter_id" invisible="kind != 'consumer'"/>
+                            <field name="zone_id"/>
+                            <field name="unit_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Номінали">
+                            <field name="voltage_kv"/>
+                            <field name="rating_a"/>
+                            <field name="rating_kva"/>
+                            <field name="rating_kvar"/>
+                            <field name="p_inst_kw"/>
+                            <field name="p_inst_source"/>
+                            <field name="load_factor"/>
+                            <field name="idle_factor"/>
+                            <field name="cos_phi_nominal"/>
+                        </group>
+                        <group string="Розподіл">
+                            <field name="alloc_role"/>
+                            <field name="pool_id" invisible="alloc_role != 'shared'"/>
+                            <field name="is_critical"/>
+                            <field name="group"/>
+                        </group>
+                        <group string="Зараз">
+                            <field name="p_now" readonly="1"/>
+                            <field name="kwh_today" readonly="1"/>
+                            <field name="live_status" widget="badge" readonly="1"
+                                   decoration-success="live_status == 'ok'"
+                                   decoration-warning="live_status in ('gap', 'reset')"
+                                   decoration-danger="live_status == 'stale'"
+                                   decoration-muted="live_status in ('no_data', 'none')"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Живить" name="children">
+                            <field name="child_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="kind"/>
+                                    <field name="p_now"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Лічильники" name="meters">
+                            <field name="meter_ids">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="model"/>
+                                    <field name="role"/>
+                                    <field name="data_state" widget="badge"/>
+                                    <field name="last_value"/>
+                                    <field name="p_now"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Примітка" name="note">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_node_list" model="ir.ui.view">
+        <field name="name">f3d.energy.node.list</field>
+        <field name="model">f3d.energy.node</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="cell_type" optional="hide"/>
+                <field name="parent_id"/>
+                <field name="section"/>
+                <field name="equipment_id" optional="show"/>
+                <field name="workcenter_id" optional="show"/>
+                <field name="p_inst_kw"/>
+                <field name="p_now"/>
+                <field name="kwh_today" optional="hide"/>
+                <field name="alloc_role" optional="hide"/>
+                <field name="pool_id" optional="hide"/>
+                <field name="is_critical" optional="hide"/>
+                <field name="live_status" widget="badge"
+                       decoration-success="live_status == 'ok'"
+                       decoration-warning="live_status in ('gap', 'reset')"
+                       decoration-danger="live_status == 'stale'"
+                       decoration-muted="live_status in ('no_data', 'none')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_node_search" model="ir.ui.view">
+        <field name="name">f3d.energy.node.search</field>
+        <field name="model">f3d.energy.node</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="equipment_id"/>
+                <field name="workcenter_id"/>
+                <filter name="kind_input" string="Ввід мережі" domain="[('kind', '=', 'input')]"/>
+                <filter name="kind_substation" string="РУ 10 кВ" domain="[('kind', '=', 'substation')]"/>
+                <filter name="kind_transformer" string="Трансформатор" domain="[('kind', '=', 'transformer')]"/>
+                <filter name="kind_switchboard" string="ГРЩ" domain="[('kind', '=', 'switchboard')]"/>
+                <filter name="kind_section" string="Секція шин" domain="[('kind', '=', 'section')]"/>
+                <filter name="kind_cell" string="Шафа ГРЩ" domain="[('kind', '=', 'cell')]"/>
+                <filter name="kind_line" string="Лінія" domain="[('kind', '=', 'line')]"/>
+                <filter name="kind_tapoff" string="Відгалуження" domain="[('kind', '=', 'tapoff')]"/>
+                <filter name="kind_consumer" string="Споживач" domain="[('kind', '=', 'consumer')]"/>
+                <filter name="kind_generator" string="Генерація" domain="[('kind', '=', 'generator')]"/>
+                <filter name="kind_storage" string="Накопичувач" domain="[('kind', '=', 'storage')]"/>
+                <filter name="kind_ats" string="АВР" domain="[('kind', '=', 'ats')]"/>
+                <separator/>
+                <filter name="critical" string="Критичні" domain="[('is_critical', '=', True)]"/>
+                <filter name="role_direct" string="Прямі" domain="[('alloc_role', '=', 'direct')]"/>
+                <filter name="role_shared" string="Спільні" domain="[('alloc_role', '=', 'shared')]"/>
+                <filter name="role_overhead" string="Накладні" domain="[('alloc_role', '=', 'overhead')]"/>
+                <separator/>
+                <filter name="no_meter" string="Без лічильника" domain="[('meter_ids', '=', False)]"/>
+                <filter name="no_data" string="Немає даних"
+                        domain="[('meter_ids.data_state', 'in', ('stale', 'gap', 'no_data'))]"/>
+                <group>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                    <filter name="group_section" string="Секція" context="{'group_by': 'section'}"/>
+                    <filter name="group_parent" string="Живиться від" context="{'group_by': 'parent_id'}"/>
+                    <filter name="group_pool" string="Пул" context="{'group_by': 'pool_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- hierarchy_res_id (корінь GRID-10KV) не задається: вузли створює хук, id невідомий на момент встановлення -->
+    <record id="action_f3d_energy_node_tree" model="ir.actions.act_window">
+        <field name="name">Схема мережі</field>
+        <field name="res_model">f3d.energy.node</field>
+        <field name="view_mode">hierarchy,list,form</field>
+    </record>
+</odoo>

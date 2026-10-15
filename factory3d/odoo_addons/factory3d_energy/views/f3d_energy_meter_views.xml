@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPEC §3 V-05, V-06 -->
+<odoo>
+    <record id="view_f3d_energy_meter_list" model="ir.ui.view">
+        <field name="name">f3d.energy.meter.list</field>
+        <field name="model">f3d.energy.meter</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="node_id"/>
+                <field name="model"/>
+                <field name="role"/>
+                <field name="p_now"/>
+                <field name="last_value"/>
+                <field name="last_ts"/>
+                <field name="data_state" widget="badge"
+                       decoration-success="data_state == 'ok'"
+                       decoration-warning="data_state in ('gap', 'reset')"
+                       decoration-danger="data_state == 'stale'"
+                       decoration-muted="data_state == 'no_data'"/>
+                <field name="data_state_since"/>
+                <field name="last_interval_start" optional="hide"/>
+                <field name="source_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_meter_form" model="ir.ui.view">
+        <field name="name">f3d.energy.meter.form</field>
+        <field name="model">f3d.energy.meter</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="data_state" widget="statusbar" statusbar_visible="no_data,ok,gap,stale"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_intervals" type="object" class="oe_stat_button" icon="fa-bar-chart"
+                                string="Профіль"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="name"/>
+                            <field name="node_id"/>
+                            <field name="model"/>
+                            <field name="role"/>
+                            <field name="ct_ratio"/>
+                            <field name="max_kw"/>
+                            <field name="unit_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Сигнали">
+                            <field name="source_id"/>
+                            <field name="p_signal_id"/>
+                            <field name="e_import_signal_id"/>
+                            <field name="e_export_signal_id"/>
+                        </group>
+                        <group string="Стан">
+                            <field name="last_value" readonly="1"/>
+                            <field name="last_ts" readonly="1"/>
+                            <field name="p_now" readonly="1"/>
+                            <field name="counter_offset"/>
+                            <field name="counter_offset_export"/>
+                            <field name="data_state_since"/>
+                            <field name="last_interval_start"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_meter_search" model="ir.ui.view">
+        <field name="name">f3d.energy.meter.search</field>
+        <field name="model">f3d.energy.meter</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="node_id"/>
+                <filter name="state_ok" string="Норма" domain="[('data_state', '=', 'ok')]"/>
+                <filter name="state_stale" string="Немає даних" domain="[('data_state', '=', 'stale')]"/>
+                <filter name="state_gap" string="Пропуск" domain="[('data_state', '=', 'gap')]"/>
+                <filter name="state_reset" string="Скидання" domain="[('data_state', '=', 'reset')]"/>
+                <filter name="state_no_data" string="Ще не було даних" domain="[('data_state', '=', 'no_data')]"/>
+                <separator/>
+                <filter name="role_incomer" string="Вводи" domain="[('role', '=', 'incomer')]"/>
+                <filter name="role_feeder" string="Фідери" domain="[('role', '=', 'feeder')]"/>
+                <filter name="role_consumer" string="Споживачі" domain="[('role', '=', 'consumer')]"/>
+                <filter name="role_generation" string="Генерація" domain="[('role', '=', 'generation')]"/>
+                <filter name="role_storage" string="Накопичувач" domain="[('role', '=', 'storage')]"/>
+                <separator/>
+                <filter name="model_pm5560" string="PM5560" domain="[('model', '=', 'pm5560')]"/>
+                <filter name="model_sun2000" string="SUN2000" domain="[('model', '=', 'sun2000')]"/>
+                <filter name="model_luna2000" string="LUNA2000" domain="[('model', '=', 'luna2000')]"/>
+                <filter name="model_tedom" string="TEDOM" domain="[('model', '=', 'tedom')]"/>
+                <group>
+                    <filter name="group_role" string="Роль" context="{'group_by': 'role'}"/>
+                    <filter name="group_model" string="Модель" context="{'group_by': 'model'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_f3d_energy_meter_kanban" model="ir.ui.view">
+        <field name="name">f3d.energy.meter.kanban</field>
+        <field name="model">f3d.energy.meter</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="role">
+                <field name="code"/>
+                <field name="node_id"/>
+                <field name="p_now"/>
+                <field name="last_value"/>
+                <field name="data_state"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between">
+                            <strong><field name="code"/></strong>
+                            <field name="data_state" widget="badge"
+                                   decoration-success="data_state == 'ok'"
+                                   decoration-warning="data_state in ('gap', 'reset')"
+                                   decoration-danger="data_state == 'stale'"
+                                   decoration-muted="data_state == 'no_data'"/>
+                        </div>
+                        <div><field name="node_id"/></div>
+                        <div><field name="p_now"/> кВт</div>
+                        <div><field name="last_value"/> кВт·год</div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_f3d_energy_meter" model="ir.actions.act_window">
+        <field name="name">Лічильники</field>
+        <field name="res_model">f3d.energy.meter</field>
+        <field name="view_mode">list,kanban,form</field>
+    </record>
+</odoo>

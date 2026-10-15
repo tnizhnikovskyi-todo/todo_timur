@@ -41,8 +41,20 @@
         <field name="implied_ids" eval="[Command.link(ref('group_f3d_energy_manager'))]"/>
     </record>
 
-    <!-- W1: record rules §4.3 (глобальні, мультикомпанія), коли з'являться моделі:
-         f3d_energy_node_rule_company (f3d.energy.node), f3d_energy_meter_rule_company (f3d.energy.meter),
-         f3d_energy_tariff_rule_company (f3d.energy.tariff); W3: f3d_energy_alloc_rule_company (f3d.energy.alloc).
-         Домен: ['|', ('company_id','=',False), ('company_id','in',company_ids)]. -->
+    <!-- §4.3: глобальні правила мультикомпанії. W3 додає f3d_energy_alloc_rule_company (f3d.energy.alloc). -->
+    <record id="f3d_energy_node_rule_company" model="ir.rule">
+        <field name="name">Енергетика: вузли — компанія</field>
+        <field name="model_id" ref="model_f3d_energy_node"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="f3d_energy_meter_rule_company" model="ir.rule">
+        <field name="name">Енергетика: лічильники — компанія</field>
+        <field name="model_id" ref="model_f3d_energy_meter"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="f3d_energy_tariff_rule_company" model="ir.rule">
+        <field name="name">Енергетика: тарифи — компанія</field>
+        <field name="model_id" ref="model_f3d_energy_tariff"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
 </odoo>
