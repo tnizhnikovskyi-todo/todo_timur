@@ -167,17 +167,21 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
   function paint() {
     if (!svg) return;
     const { sel, focus: F } = model.ui, tree = model.tree, S = model.selIds(), pm = model.checks.marks().nodes; // pm — объекты с проблемами (W-07): подсвечиваются отдельным цветом
+    // подсветка правила размещения или результата «куди покладе» (W-15): цель (dst) — узел и всё внутри него, условие (src) — места, где лежит подходящий товар
+    const hl = model.putaway.hl, inH = (set, id) => { if (!set || !set.size) return false; for (let n = tree.nodes.get(id); n; n = n.parent && tree.nodes.get(n.parent)) if (set.has(n.id)) return true; return false; };
+    const paOf = (id) => (hl ? (inH(hl.dst, id) ? 2 : inH(hl.src, id) ? 1 : 0) : 0);
     for (const el of els) {
       const v = inNode(el._n, F); if (v !== el._v) { el._v = v; el.style.display = v ? "" : "none"; }
       if (el._c === undefined) {
         const e = S.length > 0 && isSel(el._n, S); if (e !== el._e) { el._e = e; el.classList.toggle("esel", e); } // у мест подсветку задаёт класс sel
         const pr = pm.has(el._n); if (pr !== !!el._p) { el._p = pr; el.classList.toggle("prob", pr); }
+        const pa = paOf(el._n); if (pa !== (el._pa || 0)) { el._pa = pa; el.classList.toggle("pa-dst", pa === 2); el.classList.toggle("pa-src", pa === 1); }
       }
     }
     // тепловая карта (W-17): цвет места — inline fill по ключу показателя; найденные поиском места — класс hit
     const hm =model.heat.mode, hmap = hm !== "status" ? model.heat.map() : null, fq = model.find.query ? model.find.results().codes : null;
     for (const el of slots) {
-      const c = el.dataset.code, hk = hmap && hmap.get(c), tail = `${c === sel ? " sel" : ""}${fq && fq.has(c) ? " hit" : ""}${pm.has(el._n) ? " prob" : ""}`;
+      const c = el.dataset.code, hk = hmap && hmap.get(c), tail = `${c === sel ? " sel" : ""}${fq && fq.has(c) ? " hit" : ""}${pm.has(el._n) ? " prob" : ""}${hl ? (paOf(el._n) === 2 ? " pa-dst" : paOf(el._n) === 1 ? " pa-src" : "") : ""}`;
       const cls = hk ? `s heat${tail}` : `s ${slotCls(tree.loc(c))}${tail}`, fc = hk ? heatColor(hm, hk) : "";
       if (cls !== el._c) { el._c = cls; el.setAttribute("class", cls); }
       if (fc !== (el._f || "")) { el._f = fc; el.style.fill = fc; }

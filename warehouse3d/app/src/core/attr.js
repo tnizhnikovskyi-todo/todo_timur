@@ -8,6 +8,9 @@
 //       mm { min, max, product } — правило пополнения места (код товара): `stock.warehouse.orderpoint` при применении.
 //   { id: "c|<ключ>", name, maxw, policy, caps: [{ p: код товара, pk: id типа упаковки, q: количество }], nw? } — категория хранения:
 //       ключ `o<id>` — правка существующей категории Odoo (значения целиком), иначе — новая (создаётся при применении); новая с именем, которое уже есть в Odoo, считается применённой.
+//   { id: "r|<ключ>", p, cg, pk, in, out, sub, sc, seq, nw?, del? } — правило размещения (W-15, E3; `stock.putaway.rule`): ключ `o<id>` — правка существующего правила Odoo (значения целиком) или `del: true` (убрать в Odoo),
+//       иначе — новое (`nr1`, `nr2`…, `nw`). p — код товара ("" — любой), cg — id категории товаров Odoo (0 — любая), pk — id типов упаковки ([] — любая), in / out — «когда товар приходит в» и «положить в»:
+//       число — id локации Odoo, строка — id узла дерева (новая локация плана), sub — искать внутри: no | closest_location (по категории хранения `sc`, ключ категории) | last_used, seq — приоритет.
 
 export const ZONE_FUNCS = [
   { id: "receiving", color: "#2f80ed" }, { id: "quality", color: "#9b51e0" }, { id: "quarantine", color: "#eb5757" }, { id: "storage", color: "#27ae60" }, { id: "picking", color: "#f2994a" },
@@ -46,6 +49,19 @@ function normCat(x) {
   if (x.nw) o.nw = true;
   return o;
 }
+export const SUBLOCATIONS = ["no", "closest_location", "last_used"];
+const target = (v) => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : typeof v === "string" && v.trim() ? v.trim().slice(0, 300) : null);
+function normRule(x) {
+  const key = x.id.slice(2);
+  if (x.del) return /^o\d+$/.test(key) ? { id: x.id, del: true } : null; // убрать можно только правило Odoo; новое просто удаляется из слоя
+  const inn = target(x.in), out = target(x.out); if (inn == null || out == null) return null;
+  const sub = SUBLOCATIONS.includes(x.sub) ? x.sub : "no", sc = sub === "closest_location" ? str(x.sc, 40) : "";
+  const pk = [...new Set((Array.isArray(x.pk) ? x.pk : []).map((v) => Math.round(nn(v) || 0)).filter((v) => v > 0))].sort((a, b) => a - b);
+  const o = { id: x.id, p: str(x.p, 80), cg: Math.max(0, Math.round(nn(x.cg) || 0)), pk, in: inn, out, sub, sc, seq: Math.round(nn(x.seq) || 0) };
+  if (!/^o\d+$/.test(key)) o.nw = true;
+  return o;
+}
+export const isRuleId = (id) => typeof id === "string" && id.startsWith("r|");
 export const isNodeId = (id) => typeof id === "string" && id.startsWith("n|");
 export const isCatId = (id) => typeof id === "string" && id.startsWith("c|");
 export const nodeOf = (id) => id.slice(2);
@@ -55,7 +71,7 @@ export function normAttr(list) {
   const m = new Map();
   for (const x of Array.isArray(list) ? list : []) {
     if (!x || typeof x.id !== "string") continue;
-    const o = isNodeId(x.id) && x.id.length > 2 ? normNode(x) : isCatId(x.id) && x.id.length > 2 ? normCat(x) : null;
+    const o = isNodeId(x.id) && x.id.length > 2 ? normNode(x) : isCatId(x.id) && x.id.length > 2 ? normCat(x) : isRuleId(x.id) && x.id.length > 2 ? normRule(x) : null;
     if (o) m.set(x.id, o); else m.delete(x.id);
   }
   return [...m.values()];

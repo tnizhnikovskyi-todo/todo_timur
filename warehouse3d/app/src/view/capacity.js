@@ -76,8 +76,16 @@ export function createCapacity({ model, i18n, btns, fv }) {
     if (n.loc) h += dimsForm(n, K, info, ro);
     h += catForm(n, K, info, ro) + flagsForm(n, K, info, ro) + removalForm(n, K, info, ro);
     if (n.loc) h += minmaxForm(n, K, info, ro);
-    if (isGroup) h += fnForm(n, K, info, ro);
+    if (isGroup) h += fnForm(n, K, info, ro) + rulesHtml(n);
     return h;
+  }
+
+  // правила размещения, ведущие в узел (W-15, E3): цель правила — сам узел или место внутри; клик открывает окно правил на этом правиле
+  function rulesHtml(n) {
+    const rs = model.putaway.into(n.id);
+    if (n.loc && !rs.length) return "";
+    const list = rs.length ? `<ul class="o_rules" data-into>${rs.map((r) => `<li><button type="button" class="btn btn-link" data-parule="${esc(r.key)}">${esc(model.putaway.name(r))}</button>${r.sub === "closest_location" ? ` <span class="o_tag">${T("pa.inside")}</span>` : ""}</li>`).join("")}</ul>` : `<p class="mut">${T("cap.rulesNone")}</p>`;
+    return `${sec("cap.rulesTitle")}${list}<div class="acts"><button type="button" class="btn btn-secondary" data-parules>${T("cap.rulesOpen")}</button></div>`;
   }
 
   // ---------- просмотр (без правки): коротко о месте и зоне
@@ -94,6 +102,7 @@ export function createCapacity({ model, i18n, btns, fv }) {
     const hint = zoneHint(i18n, z);
     if (hint) h += `${n.loc ? "" : sec("cap.fnTitle")}<p class="cap-fn" data-fn="${esc(z.fn || "")}">${z.fn ? `<i class="sw" style="background:${(ZONE_FUNCS.find((x) => x.id === z.fn) || {}).color}"></i>` : ""}${esc(hint)}</p>`;
     if (!n.loc || n.kids.length) h += summaryHtml(n);
+    h += rulesHtml(n);
     if (n.id === "WH") h += `<div class="acts" style="margin-top:8px"><button type="button" class="btn btn-secondary" data-cats>${T("cap.catManage")}</button></div>`;
     return h;
   }
@@ -108,6 +117,9 @@ export function createCapacity({ model, i18n, btns, fv }) {
 
   // кнопки «Категорії зберігання…» открывают окно (грузится лениво)
   function bind(root) {
+    const openPa = (rule) => import("./putaway.js").then((m) => m.openPutaway({ model, i18n, rule })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); });
+    root.querySelectorAll("[data-parule]").forEach((b) => b.onclick = () => openPa(b.dataset.parule));
+    root.querySelectorAll("[data-parules]").forEach((b) => b.onclick = () => openPa(null));
     root.querySelectorAll("[data-cats]").forEach((b) => b.onclick = () => import("./storage.js").then((m) => m.openCategories({ model, i18n })));
   }
   return { editHtml, browseHtml, summaryHtml, cardOf, bind };

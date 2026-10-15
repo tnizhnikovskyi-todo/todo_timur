@@ -59,7 +59,7 @@ class TestWhConstructorApply(HttpCase):
         self.assertEqual(p.barcode, "AP-R7-S01-L1")
         self.assertEqual(p.complete_name, f"{self.zone.complete_name}/R7/S01/AP-R7-S01-L1")
         self.assertEqual(p.company_id, self.wh.company_id)
-        self.assertEqual(res["counts"], {"category": 0, "create": 3, "move": 0, "rename": 0, "attrs": 0, "orderpoint": 0, "archive": 0})
+        self.assertEqual(res["counts"], {"category": 0, "create": 3, "move": 0, "rename": 0, "attrs": 0, "putaway": 0, "orderpoint": 0, "archive": 0})
 
     def test_positions_where_supported(self):
         res = self.apply([self.create_op("p", "AP-POS", {"id": self.zone.id}, posx=3, posy=2, posz=1, barcode="AP-POS")])
@@ -75,7 +75,7 @@ class TestWhConstructorApply(HttpCase):
         ops = [{"kind": "move", "id": self.b.id, "to": {"id": other.id}, "name": "B-1"}, {"kind": "rename", "id": self.a.id, "name": "A-2"},
                {"kind": "attrs", "id": self.a.id, "name": "A-2", "vals": {"barcode": "AP-A-2"}}, {"kind": "archive", "id": self.empty.id, "name": "E-1"}]
         res = self.apply(ops)
-        self.assertEqual(res["counts"], {"category": 0, "create": 0, "move": 1, "rename": 1, "attrs": 1, "orderpoint": 0, "archive": 1})
+        self.assertEqual(res["counts"], {"category": 0, "create": 0, "move": 1, "rename": 1, "attrs": 1, "putaway": 0, "orderpoint": 0, "archive": 1})
         self.assertEqual(self.b.location_id, other)
         self.assertEqual((self.a.name, self.a.barcode), ("A-2", "AP-A-2"))
         self.assertFalse(self.empty.active)

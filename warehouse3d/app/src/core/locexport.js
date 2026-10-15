@@ -84,9 +84,9 @@ export function planRows(model, keys = null) {
       else if (k === "posx" || k === "posy" || k === "posz") r[k] = v ?? 0;
     }
   };
-  const creates = [], updates = new Map(), archives = [], skipped = { category: 0, orderpoint: 0 };
+  const creates = [], updates = new Map(), archives = [], skipped = { category: 0, orderpoint: 0, putaway: 0 };
   for (const o of ops) {
-    if (o.kind === "category" || o.kind === "orderpoint") { skipped[o.kind]++; continue; }
+    if (o.kind === "category" || o.kind === "orderpoint" || o.kind === "putaway") { skipped[o.kind]++; continue; } // у o.id правила размещения — id правила, не локации
     if (o.kind === "create") { const r = { id: "", name: o.name, parent: o.parent.path || "", usage: o.usage, barcode: "", posx: 0, posy: 0, posz: 0, active: 1, cat: "", repl: 0, scrap: 0, rs: "" }; apply(r, o.vals); creates.push(r); continue; }
     const rec = byId.get(o.id); if (!rec) continue;
     if (o.kind === "archive") { const r = rowOf(rec); r.active = 0; archives.push(r); continue; }

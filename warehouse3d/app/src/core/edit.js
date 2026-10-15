@@ -10,9 +10,10 @@ import { layout } from "./layout.js";
 import { catalogType } from "./catalog.js";
 import { cleanParam, diffParams, shapeOf } from "./params.js";
 import { moveTargets, reconcile, rackOf, selIds } from "./select.js";
-import { NONE, USAGES, ZONE_ATTRS, ZONE_FUNCS, isCatId, isNodeId, nodeOf, normAttr } from "./attr.js";
+import { NONE, SUBLOCATIONS, USAGES, ZONE_ATTRS, ZONE_FUNCS, isCatId, isNodeId, isRuleId, nodeOf, normAttr } from "./attr.js";
 import { attrMap, capsKey, categories, flagsOf, minmaxOf, odooOf } from "./capacity.js";
 import { autoLayout } from "./autolayout.js";
+import { extProblems, resolveT, rulesOf, tFromStr, under } from "./putaway.js";
 import { isDefaultRules, normRules } from "./parse.js";
 import { forceEntries, newBlocking, remapChk, runChecks, stockCodes, TECH } from "./checks.js";
 
@@ -55,7 +56,7 @@ const places = (n) => ({ k: "n.places", p: { n } });
 
 // Проверки (W-07, checks.js): результат считается один раз на дерево (кэш по объекту дерева — дерево новое после каждой перестройки)
 export function checksOf(s) {
-  if (!s.chkc || s.chkc.tree !== s.tree) s.chkc = { tree: s.tree, res: runChecks({ tree: s.tree, edit: s.edit, data: s.data, others: otherCodes(s) }) };
+  if (!s.chkc || s.chkc.tree !== s.tree) s.chkc = { tree: s.tree, res: runChecks({ tree: s.tree, edit: s.edit, data: s.data, others: otherCodes(s), ext: extProblems({ tree: s.tree, data: s.data, edit: s.edit, bcx: s.bcx }) }) };
   return s.chkc.res;
 }
 // точка входа операции: правка, которую отклонили проверки, запоминает вызов целиком (s.rejected) — «Поставити все одно» повторяет его без проверки
@@ -115,6 +116,9 @@ function withDeps(s, sel) {
     grow = false;
     const need = [...set].flatMap((p) => [...p.diff.add.put.map((a) => a.parent), ...p.diff.pos.put.map((x) => x.id), ...p.diff.set.put.map((x) => x.id), ...(p.diff.cells ? p.diff.cells.put.map((x) => x.id) : []), ...(p.diff.prop ? p.diff.prop.put.map((x) => x.id) : []), ...(p.diff.cfg ? p.diff.cfg.put.map((x) => x.id) : []), ...(p.diff.rot ? p.diff.rot.put.map((x) => x.id) : []), ...(p.diff.codes ? p.diff.codes.put.map((x) => x.id) : []), ...(p.diff.attr ? p.diff.attr.put.filter((x) => isNodeId(x.id)).map((x) => nodeOf(x.id)) : [])]);
     for (const q of s.pending) if (!set.has(q) && q.diff.attr && [...set].some((p) => p.diff.attr && p.diff.attr.put.some((x) => isNodeId(x.id) && x.cat && q.diff.attr.put.some((c) => c.id === `c|${x.cat}`)))) { set.add(q); grow = true; } // категория, назначенная узлом, сохраняется вместе с ним
+    const ruleRefs = [...set].flatMap((p) => (p.diff.attr ? p.diff.attr.put.filter((x) => isRuleId(x.id) && !x.del) : [])); // правило размещения (W-15) не сохраняется без своей категории и новых узлов
+    for (const x of ruleRefs) for (const t of [x.in, x.out]) if (typeof t === "string") need.push(t);
+    for (const q of s.pending) if (!set.has(q) && q.diff.attr && ruleRefs.some((x) => x.sc && q.diff.attr.put.some((c) => c.id === `c|${x.sc}`))) { set.add(q); grow = true; }
     for (const q of s.pending) if (!set.has(q) && q.diff.add.put.some((a) => need.some((id) => inNode(id, a.id)))) { set.add(q); grow = true; }
   }
   return s.pending.filter((p) => set.has(p));
@@ -125,7 +129,7 @@ export function saveObj(s, id, comment = null) {
   const sel = withDeps(s, pendFor(s, id)); if (!sel.length) return Promise.resolve(null);
   const bad = conflictsIn(s, sel); // коды должны быть уникальны (D6): с конфликтами не сохраняем
   if (bad.length) { say(s, "bad", "n.codeConflicts", { n: bad.length, codes: bad.slice(0, 4).map((c) => c.code) }, { key: "n.codeConflictsSub" }); return Promise.resolve(null); }
-  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "scat" ? { k: "what.cats" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
+  const what = Array.isArray(id) ? { k: "what.sel", p: { n: id.length } } : id === "WH" ? { k: "what.all" } : id === "types" ? { k: "what.types" } : id === "scat" ? { k: "what.cats" } : id === "prules" ? { k: "what.rules" } : id === "building" ? { k: "what.building" } : refById(s.tree, id);
   s.saved = sel.reduce((st, p) => applyDiff(st, p.diff), clone(s.saved)); s.pending = s.pending.filter((p) => !sel.includes(p)); s.redo = [];
   const cnt = { k: "n.changes", p: { n: sel.length } };
   const done = persist(s, true, comment).then((r) => {
@@ -312,6 +316,8 @@ function reparent(s, e, src, pid, pos) {
   for (const k of ["set", "rot", "cells", "prop", "cfg", "depthZones", "pos", "addrZones", "codes"]) e[k] = (e[k] || []).map((x) => (inNode(x.id, src.id) ? { ...x, id: nid(x.id) } : x));
   e.chk = remapChk(e.chk || [], (id) => (inNode(id, src.id) ? nid(id) : id));
   e.attr = (e.attr || []).map((x) => (isNodeId(x.id) && inNode(nodeOf(x.id), src.id) ? { ...x, id: `n|${nid(nodeOf(x.id))}` } : x));
+  const tgt = (t) => (typeof t === "string" && inNode(t, src.id) ? nid(t) : t); // цели правил размещения (W-15): ссылки на узлы переезжают вместе с ними
+  e.attr = e.attr.map((x) => (isRuleId(x.id) && !x.del ? { ...x, in: tgt(x.in), out: tgt(x.out) } : x));
   setPosE(e, u.id, pos.x, pos.y);
   if (!src.draft && !e.del.includes(src.id)) e.del.push(src.id);
   return u.id;
@@ -816,6 +822,39 @@ export const OPS = {
       const [nx] = normAttr([entry]); if (nx) e.attr.push(nx);
     }, key || `cat@${own}`, f);
     return ok ? own : null;
+  },
+  // правило размещения (W-15, E3): создать (rkey пуст) или править (`o<id>` — правило Odoo, ключ нового — новое); значения целиком; возвращает ключ или null.
+  // f: product (код), cg (id категории товаров), pk ([id типов упаковки]), in / out (`o<id>` локация Odoo или id узла), sub (no | closest_location | last_used), sc (ключ категории хранения), seq
+  rule(s, rkey, f, key) {
+    const R = rulesOf(s.data, s.edit), cur = rkey ? R.get(rkey) : null;
+    if (rkey && (!cur || cur.deleted)) return null;
+    const inT = tFromStr(String(f.in || "")), outT = tFromStr(String(f.out || ""));
+    if (inT == null || outT == null) { say(s, "bad", "n.ruleTarget"); return null; }
+    const a = resolveT(s.tree, s.data, inT), b = resolveT(s.tree, s.data, outT);
+    if (a.missing || b.missing) { say(s, "bad", "n.ruleTarget"); return null; }
+    if (a.node && b.node && !under(s.tree, b.node, a.node)) { say(s, "bad", "n.ruleInside", { a: a.name, b: b.name }); return null; } // «куди» должно быть внутри «звідки» (как в Odoo)
+    const sub = SUBLOCATIONS.includes(f.sub) ? f.sub : "no", sc = sub === "closest_location" ? String(f.sc || "") : "";
+    if (sub === "closest_location" && !(sc && categories(s.data, s.edit).get(sc))) { say(s, "bad", "n.ruleCat"); return null; }
+    const used = new Set((s.edit.attr || []).filter((x) => isRuleId(x.id)).map((x) => x.id.slice(2)));
+    let k = 1; while (used.has(`nr${k}`)) k++;
+    const own = cur ? cur.key : `nr${k}`, eid = `r|${own}`;
+    const entry = { id: eid, p: String(f.product || "").trim(), cg: Math.round(num(f.cg) || 0), pk: (Array.isArray(f.pk) ? f.pk : []).map((v) => Math.round(num(v) || 0)), in: inT, out: outT, sub, sc, seq: Math.round(num(f.seq) || 0) };
+    const [norm] = normAttr([entry]); if (!norm) return null;
+    const name = [norm.p, norm.cg ? `#${norm.cg}` : "", b.name].filter(Boolean).join(" → ");
+    const ok = change(s, "prules", { k: cur ? "op.ruleEdit" : "op.ruleNew", p: { name } }, (e) => {
+      e.attr = (e.attr || []).filter((x) => x.id !== eid);
+      if (cur && cur.base && JSON.stringify(["p", "cg", "pk", "in", "out", "sub", "sc", "seq"].map((q) => norm[q])) === JSON.stringify(["p", "cg", "pk", "in", "out", "sub", "sc", "seq"].map((q) => cur.base[q]))) return; // как в Odoo — правки нет
+      e.attr.push(norm);
+    }, key || `rule@${own}`, f);
+    return ok ? own : null;
+  },
+  // убрать правило: новое просто пропадает, правило Odoo помечается к удалению (в Odoo — при применении плана)
+  ruleDel(s, rkey) {
+    const cur = rulesOf(s.data, s.edit).get(rkey); if (!cur || cur.deleted) return false;
+    return change(s, "prules", { k: "op.ruleDel", p: { name: cur.p || (cur.cg ? `#${cur.cg}` : "*") } }, (e) => {
+      e.attr = (e.attr || []).filter((x) => x.id !== `r|${rkey}`);
+      if (!cur.isNew) e.attr.push({ id: `r|${rkey}`, del: true });
+    });
   },
   // убрать новую категорию (ещё не созданную в Odoo): назначения на неё снимаются
   catDel(s, ckey) {

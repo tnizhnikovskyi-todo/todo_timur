@@ -69,21 +69,27 @@ export function createOdooApi({ api = ODOO_READ_API, fetchImpl = globalThis.fetc
       if (!wh) throw new Error(`warehouse ${warehouseId} not found`);
       // справочники (стратегии списания, типы упаковки) небольшие и необязательные: сервер без маршрута даёт пустой список
       const list = (route) => rpc(route, {}).then((r) => r[route] || [], () => []);
-      const [locs, quants, cats, rules, ops, moves, strategies, packages] = await Promise.all([pages("locations", "locations", wh.id), pages("quants", "quants", wh.id),
+      const [locs, quants, cats, rules, ops, moves, strategies, packages, pcats] = await Promise.all([pages("locations", "locations", wh.id), pages("quants", "quants", wh.id),
         pages("storage_categories", "storage_categories", wh.id), pages("putaway_rules", "putaway_rules", wh.id), pages("orderpoints", "orderpoints", wh.id),
-        pages("moves", "moves", wh.id, { days: moveDays }), list("removal_strategies"), list("package_types")]);
+        pages("moves", "moves", wh.id, { days: moveDays }), list("removal_strategies"), list("package_types"), list("product_categories")]);
       const products = Object.assign({}, quants.products, cats.products, rules.products, ops.products);
       return buildSnapshot({ warehouse: wh, db: meta.db, version: meta.version, now: meta.now, locations: locs.rows, quants: quants.rows, storageCategories: cats.rows,
-        putawayRules: rules.rows, orderpoints: ops.rows, moves: moves.rows, days: moveDays, products, removalStrategies: strategies, packageTypes: packages });
+        putawayRules: rules.rows, orderpoints: ops.rows, moves: moves.rows, days: moveDays, products, removalStrategies: strategies, packageTypes: packages, productCategories: pcats });
     },
   };
 }
 
 // Ответы эндпоинтов → снимок формата data.json (чистая функция, без обращений к сети)
-export function buildSnapshot({ warehouse, db = "", version = {}, now = "", locations = [], quants = [], storageCategories = [], putawayRules = [], orderpoints = [], moves = [], days = MOVE_DAYS, products = {}, removalStrategies = [], packageTypes = [] }) {
+export function buildSnapshot({ warehouse, db = "", version = {}, now = "", locations = [], quants = [], storageCategories = [], putawayRules = [], orderpoints = [], moves = [], days = MOVE_DAYS, products = {}, removalStrategies = [], packageTypes = [], productCategories = [] }) {
   const code = (pid) => { const p = products[String(pid)]; return p ? p.default_code || `ID${p.id}` : `ID${pid}`; };
   const prod = {};
-  for (const p of Object.values(products)) prod[p.default_code || `ID${p.id}`] = { default_code: p.default_code || `ID${p.id}`, name: p.name, uom: p.uom, categ: p.categ };
+  for (const p of Object.values(products)) { // id, вес (кг), объём (м³) и категории (с родителями) нужны правилам размещения и «поместится ли» (W-15)
+    const e = { default_code: p.default_code || `ID${p.id}`, name: p.name, uom: p.uom, categ: p.categ, id: p.id };
+    if (p.categ_id != null) { e.categ_id = p.categ_id; e.categ_ids = p.categ_ids || [p.categ_id]; }
+    if (p.weight != null) e.weight = p.weight;
+    if (p.volume != null) e.volume = p.volume;
+    prod[e.default_code] = e;
+  }
   const byId = new Map(locations.map((l) => [l.id, l]));
   const hasKids = new Set(locations.filter((l) => byId.has(l.location_id)).map((l) => l.location_id));
   const cats = new Map(storageCategories.map((c) => [c.id, c]));
@@ -142,7 +148,7 @@ export function buildSnapshot({ warehouse, db = "", version = {}, now = "", loca
   }
   return {
     meta: { source: `Odoo ${version.series || ""} · ${db}`.trim(), database: db, company: warehouse.company, warehouse: warehouse.code, now, pulled_at: now, activity: { days, moves: act },
-      odoo: { version, warehouse_id: warehouse.id, view_location_id: warehouse.view_location_id, containers, removal_strategies: removalStrategies, package_types: packageTypes,
+      odoo: { version, warehouse_id: warehouse.id, view_location_id: warehouse.view_location_id, containers, removal_strategies: removalStrategies, package_types: packageTypes, product_categories: productCategories,
         storage_categories: storageCategories.map((c) => ({ ...c, capacities: c.capacities.map((k) => ({ ...k, product: k.product_id != null ? code(k.product_id) : null })) })),
         putaway_rules: putawayRules.map((r) => ({ ...r, product: r.product_id != null ? code(r.product_id) : null })),
         orderpoints: orderpoints.map((o) => ({ ...o, product: code(o.product_id), min: num(o.min), max: num(o.max) })) } },

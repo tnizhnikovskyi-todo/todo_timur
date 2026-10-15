@@ -40,6 +40,7 @@ const HTML = `
     <button class="btn btn-secondary" id="wiz-btn" aria-pressed="false" data-i18n="wiz.btn" hidden></button>
     <span class="sp"></span>
     <span class="role-badge" id="role-badge" hidden></span>
+    <button class="btn btn-secondary" id="pa-btn" data-i18n="pa.btn" data-i18n-attr="title:pa.btnTitle"></button>
     <button class="btn btn-secondary" id="hist-btn" data-i18n="top.history" data-i18n-attr="title:top.historyTitle"></button>
     <button class="btn btn-secondary" id="cm-btn" aria-pressed="false" data-i18n-attr="title:top.commentsTitle"><span data-i18n="top.comments"></span> <span class="cnt" id="cm-cnt">0</span></button>
     <button class="btn btn-secondary" id="tray-btn" aria-pressed="false" hidden><span data-i18n="tray.button"></span> <span class="cnt" id="tray-cnt">0</span></button>
@@ -67,6 +68,7 @@ const HTML = `
           <label class="heatsel"><span class="lbl" data-i18n="heat.label"></span><select id="heat-sel" data-i18n-attr="aria-label:heat.label"></select></label>
           <div class="findbox"><input type="search" id="find-q" autocomplete="off" data-i18n-attr="placeholder:find.placeholder,aria-label:find.label"><button class="btn btn-link" id="find-x" hidden data-i18n-attr="aria-label:find.clear,title:find.clear">✕</button><span id="find-n" class="mut" aria-live="polite"></span>
             <ul class="o_find" id="find-list" hidden></ul></div>
+          <button class="btn btn-link" id="pa-clear" hidden data-i18n-attr="title:pa.clearTitle"><span data-i18n="pa.chip"></span> ×</button>
           <button class="btn btn-secondary" id="data-refresh" data-i18n-attr="title:top.dataRefreshTitle"><span data-i18n="top.dataRefresh"></span></button>
         </div>
         <div class="legendrow" id="legendrow"><div class="legend" id="legend"></div></div>
@@ -206,6 +208,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     root.querySelectorAll("#seg-pick [data-pk]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pk === model.ui.pick)));
     root.querySelectorAll("#seg-lang [data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === i18n.lang())));
     q("#vp-status").textContent = statusTxt();
+    q("#pa-clear").hidden = !model.putaway.hl; // подсветка правила или результата «куди покладе» (W-15)
     const pc = model.checks.counts(), pb = q("#pr-btn");
     q("#pr-cnt").textContent = String(pc.total); pb.classList.toggle("has-err", pc.error > 0); pb.classList.toggle("has-warn", !pc.error && pc.total > 0);
     pb.setAttribute("aria-pressed", String(!q("#problems").hidden)); pb.title = t("prob.count", { e: pc.error, w: pc.warn });
@@ -246,6 +249,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     else if (ev.type === "comments" || ev.type === "locks" || ev.type === "variant") { refresh(); if (three && mode === "3d") three.makeMarks(); cm?.render(); }
     else if (ev.type === "heat") { renderHeat(); refresh(); }
     else if (ev.type === "find") { renderFind(); refresh(); }
+    else if (ev.type === "putaway") { refresh(); probs?.render(); }
     else if (ev.type === "data") { p2.paint(); if (three) three.rebuild(); renderHeat(); renderFind(); renderData(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.makeMarks(); three.paint(); three.fit(); } cm?.render(); }
     else if (ev.type === "bld") p2.bldRefresh(); // режим «Будівля»: слой здания, панель, строка состояния
@@ -287,6 +291,8 @@ export function mountApp(root, { model, i18n, host = {} }) {
   }
   q("#ed-saveall").onclick = () => { const n = q("#ed-note"), c = n.value.trim(); n.value = ""; model.save("WH", c || null); }; // необязательный комментарий версии (W-18)
   q("#var-btn").onclick = () => openVariants({ model, i18n });
+  q("#pa-btn").onclick = () => import("./putaway.js").then((m) => m.openPutaway({ model, i18n })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); // правила размещения (W-15): окно грузится лениво
+  q("#pa-clear").onclick = () => model.putaway.clear();
   q("#hist-btn").onclick = () => openHistory({ model, i18n, host });
   q("#cm-btn").onclick = () => cm.toggle();
   q("#ed-discall").onclick = () => model.discard("WH");

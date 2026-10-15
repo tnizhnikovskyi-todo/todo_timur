@@ -55,3 +55,24 @@ class WhConstructorRead(http.Controller):
     @_guard
     def read_moves(self, warehouse_id=None, days=None, offset=0, limit=None, **kw):
         return {"status": "ok", **request.env["wh.reader"].api_moves(warehouse_id, days, offset, limit)}
+
+    @http.route(BASE + "/api/read/product_categories", type=JSON, auth="user")
+    @_guard
+    def read_product_categories(self, **kw):
+        return {"status": "ok", **request.env["wh.reader"].api_product_categories()}
+
+    @http.route(BASE + "/api/read/products", type=JSON, auth="user")
+    @_guard
+    def read_products(self, query=None, limit=20, **kw):
+        return {"status": "ok", **request.env["wh.reader"].api_products(query, limit)}
+
+    # «куда положит Odoo» (W-15, E4) и проверка штрихкодов компании (I-06)
+    @http.route(BASE + "/api/read/putaway_where", type=JSON, auth="user")
+    @_guard
+    def read_putaway_where(self, warehouse_id=None, product_id=None, quantity=1.0, package_type_id=None, location_id=None, **kw):
+        return {"status": "ok", **request.env["wh.reader"].api_putaway_where(warehouse_id, product_id, quantity, package_type_id, location_id)}
+
+    @http.route(BASE + "/api/read/barcodes", type=JSON, auth="user")
+    @_guard
+    def read_barcodes(self, warehouse_id=None, items=None, **kw):
+        return {"status": "ok", **request.env["wh.reader"].api_barcodes(warehouse_id, items)}

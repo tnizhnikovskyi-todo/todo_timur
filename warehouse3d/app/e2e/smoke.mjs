@@ -1333,6 +1333,128 @@ try {
     expect((await pg.locator("#plan-side").innerText()).match(/(\d+)\s+місц/)?.[1] === "320", "после применения в модели 320 мест");
     await ctx.close();
   });
+  await step("W-15 правила розміщення (демо, без Odoo): створити правило, підсвітка цілі й умови, «Куди покладе» — оцінка, інструкція", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#pa-btn"); await pg.waitForSelector("#pa-dlg .o_pa_list");
+    expect((await pg.locator("#pa-dlg .o_pa_list").innerText()).includes("немає правил"), "в демо-складе не должно быть правил");
+    await pg.click("#pa-dlg [data-new]"); await pg.waitForSelector('#pa-dlg [data-f="out"]');
+    await pg.fill('#pa-dlg [data-f="product"]', "DSP16-WNG"); await pg.selectOption('#pa-dlg [data-f="out"]', "WH/Вхід");
+    await pg.click("#pa-dlg [data-show]"); await pg.waitForSelector("#pa-dlg tr[data-rule]");
+    expect((await pg.locator("#pa-dlg [data-pend]").innerText()).includes("1"), "правка правила не отмечена как несохранённая");
+    expect((await pg.locator("#pa-dlg .o_pa_list").innerText()).includes("нове"), "новое правило не помечено");
+    // выбранное правило подсвечивает цель (зона) и условие (места, где лежит товар)
+    await pg.waitForFunction(() => document.querySelectorAll("#plan-view svg .pa-dst").length > 0 && document.querySelectorAll("#plan-view svg .pa-src").length > 0);
+    expect(await pg.locator("#pa-clear").isVisible(), "нет кнопки «Зняти підсвітку»");
+    await pg.click("#pa-dlg [data-clearhl]"); await pg.waitForFunction(() => document.querySelectorAll("#plan-view svg .pa-dst, #plan-view svg .pa-src").length === 0);
+    // Куди покладе: вне Odoo — оценка, цель по правилу
+    await pg.click('#pa-dlg [data-tab="where"]'); await pg.fill('#pa-dlg [data-w="product"]', "DSP16-WNG"); await pg.fill('#pa-dlg [data-w="qty"]', "2");
+    await pg.click("#pa-dlg [data-go]"); await pg.waitForSelector("#pa-dlg [data-res]");
+    const res = await pg.locator("#pa-dlg [data-res]").innerText();
+    expect(res.includes("оцінка") && res.includes("Вхід"), `результат оценки: ${res}`);
+    expect((await pg.locator("#pa-dlg [data-note]").innerText()).includes("лише правила, застосовані в Odoo"), "нет пояснения про применённые правила");
+    await pg.waitForFunction(() => document.querySelectorAll("#plan-view svg .pa-dst").length > 0);
+    await pg.click("#pa-dlg [data-close2]");
+    // правило сохраняется и переживает перезагрузку
+    await pg.click("#pa-btn"); await pg.click('#pa-dlg [data-tab="rules"]'); await pg.click("#pa-dlg tr[data-rule]"); await pg.click("#pa-dlg [data-save]");
+    await pg.waitForFunction(() => !document.querySelector("#pa-dlg [data-pend]")?.textContent); await pg.click("#pa-dlg [data-close2]");
+    await pg.reload(); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#pa-btn"); await pg.waitForSelector("#pa-dlg tr[data-rule]");
+    expect((await pg.locator("#pa-dlg .o_pa_list").innerText()).includes("ДСП"), "правило не пережило перезагрузку"); await pg.click("#pa-dlg [data-close2]");
+    // инструкция
+    await pg.click("#help-btn"); await pg.waitForSelector("#help-view:not([hidden]) .toc");
+    const h = await pg.locator("#h-putaway").innerText();
+    expect(h.includes("Куди покладе Odoo") && h.includes("Чи поміститься") && h.includes("лише правила, застосовані в Odoo"), "инструкция не описывает правила размещения");
+    await ctx.close();
+  });
+  await step("W-15 в Odoo: правило из снимка, «не поміститься» в панели проблем, «Куди покладе» (сервер), новое правило в «Плані змін», конфликт штрихкода заранее", async () => {
+    const W = 1000, P1 = { id: 1, default_code: "P-1", name: "Товар", uom: "шт", categ: "Різне", categ_id: 5, categ_ids: [5, 1], weight: 30, volume: 0.2 };
+    const rows = [{ id: W, name: "WH1", complete_name: "WH1", location_id: null, usage: "view" }, { id: W + 1, name: "Фурнітура", complete_name: "WH1/Фурнітура", location_id: W, usage: "internal" },
+      ...[1, 2].flatMap((b) => [1, 2].map((l) => ({ id: W + 10 * b + l, name: `FUR-R1-S0${b}-L${l}`, complete_name: `WH1/Фурнітура/FUR-R1-S0${b}-L${l}`, location_id: W + 1, usage: "internal", barcode: null })))];
+    const state = { rows, applied: [], where: [], asked: [], prules: [{ id: 31, sequence: 0, product_id: 1, category_id: null, location_in_id: W, location_out_id: W + 1, storage_category_id: null, package_types: [], sublocation: "no", company_id: 1 }], projects: new Map(), log: [] };
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { window.__WH_ODOO__ = { api: "/wh_constructor/api", db: "t" }; window.__WH_DEBUG = {}; });
+    const page15 = (key, list) => ({ status: "ok", total: list.length, offset: 0, limit: 2000, next: null, [key]: list, products: { 1: P1 } });
+    await ctx.route("**/wh_constructor/api/**", async (route) => {
+      const r = new URL(route.request().url()).pathname.replace("/wh_constructor/api", ""), params = JSON.parse(route.request().postData() || "{}").params || {};
+      let out;
+      if (r === "/me") out = { uid: 1, name: "Аня", company: "Co", rights: { view: true, design: true, apply: true } };
+      else if (r === "/projects") out = { status: "ok", projects: [...state.projects.values()].map((x) => ({ id: x.data.id, name: x.data.name, source: x.data.source, loaded_at: x.data.loaded_at, warehouses: 1 })) };
+      else if (r === "/project/load") { const x = state.projects.get(params.key); out = x ? { status: "ok", found: true, data: x.data, rev: x.rev } : { status: "ok", found: false }; }
+      else if (r === "/project/save") { const x = state.projects.get(params.key), rev = x ? x.rev + 1 : 1; state.projects.set(params.key, { data: params.data, rev }); out = { status: "ok", rev }; }
+      else if (r === "/read/warehouses") out = { status: "ok", version: { series: "19.0", major: 19 }, db: "t", now: "2026-10-15 12:00", warehouses: [{ id: 1, code: "WH1", name: "Склад 1", company_id: 1, company: "Co", view_location_id: W, places: 4 }] };
+      else if (r === "/read/locations") { const path = (x) => (x.location_id ? `${path(state.rows.find((y) => y.id === x.location_id))}/${x.name}` : x.name); out = page15("locations", state.rows.map((x) => ({ ...x, complete_name: path(x) }))); }
+      else if (r === "/read/quants") out = page15("quants", [{ id: 1, location_id: W + 11, product_id: 1, quantity: 5, reserved_quantity: 0, lot: null, package: null }]);
+      else if (r === "/read/putaway_rules") out = page15("putaway_rules", state.prules);
+      else if (r === "/read/product_categories") out = { status: "ok", product_categories: [{ id: 1, name: "All", complete_name: "All", parent_id: null }, { id: 5, name: "Різне", complete_name: "All / Різне", parent_id: 1 }] };
+      else if (r === "/read/package_types") out = { status: "ok", package_types: [{ id: 1, name: "Піддон", length: 1.2, width: 0.8, height: 0.15, base_weight: 20, max_weight: 1000 }] };
+      else if (r === "/read/putaway_where") { state.where.push(params); out = { status: "ok", location_id: W + 11, complete_name: "WH1/Фурнітура/FUR-R1-S01-L1", found: true, rule_id: 31, rules: [31], arrival: { id: W, complete_name: "WH1" }, products: { 1: P1 } }; }
+      else if (r === "/read/barcodes") { state.asked.push(params); const f = params.items[0]; out = { status: "ok", checked: params.items.length, conflicts: f ? [{ barcode: f.barcode, location_id: 4444, complete_name: "WH2/Stock/Зайнято", warehouse: "WH2", same_warehouse: false, archived: false }] : [] }; }
+      else if (r.startsWith("/read/")) out = page15(r.slice(6), []);
+      else if (r === "/apply/run") {
+        state.applied.push(params); const c = { category: 0, create: 0, move: 0, rename: 0, attrs: 0, putaway: 0, orderpoint: 0, archive: 0 };
+        for (const o of params.ops) {
+          c[o.kind]++;
+          if (o.kind === "putaway" && o.act === "create") state.prules.push({ id: 32, sequence: o.rule.sequence, product_id: 1, category_id: null, location_in_id: o.rule.location_in.id, location_out_id: o.rule.location_out.id, storage_category_id: null, package_types: [], sublocation: o.rule.sublocation, company_id: 1 });
+        }
+        state.log.unshift({ id: 1, name: "WH1", date: "2026-10-15T12:00:00Z", user: "Аня", state: "applied", counts: c, ops: [], more: 0 });
+        out = { status: "ok", log_id: 1, refs: {}, counts: c };
+      } else if (r === "/apply/log") out = { status: "ok", log: state.log };
+      else if (r.startsWith("/lock/")) out = { ok: true, owner: "Аня", mine: true };
+      else out = { status: "ok", found: false };
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jsonrpc: "2.0", id: null, result: out }) });
+    });
+    state.projects.set("odoo-1", { rev: 1, data: { schema: 2, id: "odoo-1", name: "P", source: { kind: "odoo", name: "Odoo 19 · t" }, loaded_at: "2026-10-15 12:00", warehouses: [{ id: "wh-1", code: "WH1", name: "Склад 1", company: "Co", baseRef: "odoo:1", saved: null, pending: [], building: null }] } });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    // правило из снимка Odoo: условие и цель; выбор подсвечивает цель
+    await pg.click("#pa-btn"); await pg.waitForSelector("#pa-dlg tr[data-rule]");
+    expect((await pg.locator("#pa-dlg tr[data-rule]").count()) === 1 && (await pg.locator("#pa-dlg .o_pa_list").innerText()).includes("Фурнітура"), "правило Odoo не показано");
+    await pg.click("#pa-dlg tr[data-rule]");
+    await pg.waitForFunction(() => document.querySelectorAll("#plan-view svg .pa-dst").length > 0);
+    await pg.click("#pa-dlg [data-close2]");
+    // габариты и максимальный вес мест зоны: товар (30 кг, 0,2 м³) не помещается ни в одно → предупреждение в панели проблем и в списке правил
+    await pg.evaluate(() => { const m = window.__WH_DEBUG.model; for (const id of ["S01/L1", "S01/L2", "S02/L1", "S02/L2"]) m.ops.capacity(`WH1/Фурнітура/R1/${id}`, { maxw: 10, dw: 0.5, dd: 0.5, dh: 0.5 }); });
+    await pg.click("#pr-btn"); await pg.waitForSelector("#problems:not([hidden]) .plist");
+    expect((await pg.locator("#problems .plist").innerText()).includes("не вміститься"), `в панели проблем нет «не вміститься»: ${await pg.locator("#problems").innerText()}`);
+    await pg.click("#pr-btn");
+    await pg.click("#pa-btn"); await pg.waitForSelector("#pa-dlg [data-fit]");
+    // Куди покладе — сервер Odoo; результат — место на модели; «не поміститься»
+    await pg.click('#pa-dlg [data-tab="where"]'); await pg.fill('#pa-dlg [data-w="product"]', "P-1"); await pg.fill('#pa-dlg [data-w="qty"]', "3"); await pg.selectOption('#pa-dlg [data-w="pkg"]', "1");
+    await pg.click("#pa-dlg [data-go]"); await pg.waitForSelector("#pa-dlg [data-res]");
+    const res = await pg.locator("#pa-dlg [data-res]").innerText();
+    expect(res.includes("Odoo") && res.includes("FUR-R1-S01-L1") && !res.includes("оцінка"), `результат сервера: ${res}`);
+    expect((await pg.locator("#pa-dlg [data-fitbad]").count()) === 1, "нет предупреждения «не поміститься»");
+    expect(state.where.length === 1 && state.where[0].product_id === 1 && state.where[0].quantity === 3 && state.where[0].package_type_id === 1 && state.where[0].warehouse_id === 1, `запрос к серверу: ${JSON.stringify(state.where)}`);
+    await pg.waitForFunction(() => document.querySelectorAll("#plan-view svg .pa-dst").length > 0);
+    // новое правило: создать, «Зберегти», «План змін» — операция putaway, применение, снимок перечитан
+    await pg.click('#pa-dlg [data-tab="rules"]'); await pg.click("#pa-dlg [data-new]"); await pg.waitForSelector('#pa-dlg [data-f="out"]');
+    await pg.fill('#pa-dlg [data-f="product"]', "P-1"); await pg.selectOption('#pa-dlg [data-f="in"]', `o${W}`); await pg.selectOption('#pa-dlg [data-f="out"]', `o${W + 1}`); await pg.fill('#pa-dlg [data-f="seq"]', "5");
+    await pg.click("#pa-dlg [data-save]"); await pg.waitForFunction(() => !document.querySelector("#pa-dlg [data-pend]")?.textContent && document.querySelectorAll("#pa-dlg tr[data-rule]").length === 2);
+    await pg.click("#pa-dlg [data-close2]");
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    const ptxt = await pg.locator("#plan-dlg").innerText();
+    expect(ptxt.includes("Правила розміщення") && ptxt.includes("нове правило розміщення") && (await pg.locator("#plan-dlg [data-key]").count()) === 1, `в плане нет правила: ${ptxt.slice(0, 300)}`);
+    await pg.click("#plan-dlg [data-apply]"); await pg.waitForSelector("#plan-dlg .o_remind"); await pg.check("#plan-dlg [data-ack]"); await pg.click("#plan-dlg [data-go]"); await pg.waitForSelector("#plan-dlg .o_msg.ok");
+    const wo = state.applied[0].ops;
+    expect(wo.length === 1 && wo[0].kind === "putaway" && wo[0].act === "create" && wo[0].rule.product === "P-1" && wo[0].rule.location_in.id === W && wo[0].rule.location_out.id === W + 1 && wo[0].rule.sequence === 5, `операция правила: ${JSON.stringify(wo)}`);
+    expect((await pg.locator("#plan-dlg [data-key]").count()) === 0, "после применения в плане остались операции");
+    await pg.click("#plan-dlg [data-close2]");
+    await pg.click("#pa-btn"); await pg.waitForSelector("#pa-dlg tr[data-rule]");
+    expect((await pg.locator("#pa-dlg tr[data-rule]").count()) === 2, "после применения правило должно быть из снимка, а не дублем слоя"); await pg.click("#pa-dlg [data-close2]");
+    // I-06: штрихкод нового места занят в компании — конфликт виден в плане до применения и в панели проблем
+    await pg.evaluate(async () => { const m = window.__WH_DEBUG.model; m.ops.rack("WH1/Фурнітура", { tp: "FUR", nb: 1, nl: 1 }); await m.save("WH"); });
+    await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
+    await pg.waitForFunction(() => /зайнятий в Odoo/.test(document.querySelector("#plan-dlg")?.textContent || ""));
+    expect(state.asked.length >= 1 && state.asked[state.asked.length - 1].warehouse_id === 1, "штрихкоды не отправлены на проверку");
+    expect((await pg.locator("#plan-dlg [data-bc]").count()) === 1 && (await pg.locator("#plan-dlg [data-bc]").innerText()).includes("WH2/Stock/Зайнято"), "конфликт штрихкода не показан в плане");
+    expect((await pg.locator("#plan-dlg [data-key]:disabled").count()) === 1, "конфликтная операция должна быть недоступна");
+    await pg.click("#plan-dlg [data-close2]");
+    await pg.click("#pr-btn"); await pg.waitForSelector("#problems:not([hidden]) .plist");
+    expect((await pg.locator("#problems .plist").innerText()).includes("Штрихкод зайнятий в Odoo"), "конфликт штрихкода не в панели проблем");
+    await ctx.close();
+  });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForSelector("#plan-side h2");

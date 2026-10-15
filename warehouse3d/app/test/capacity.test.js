@@ -277,7 +277,7 @@ test("I-04: файл «как в плане» учитывает выбор оп
   const key = m.ops.catSave("", { name: "Хол", maxw: 5, policy: "mixed", caps: [] }); m.ops.catAssign(GL, { cat: key }); m.ops.minmax(GL, { product: "P-1", min: "1", max: "4" }); m.ops.flags(`${GLASS}/GL-2`, { repl: "1" });
   await m.save("WH");
   const p = m.changePlan(), all = locationRows(m, { mode: "plan" });
-  assert.deepEqual(all.counts.skipped, { category: 1, orderpoint: 1 });
+  assert.deepEqual(all.counts.skipped, { category: 1, orderpoint: 1, putaway: 0 });
   assert.deepEqual([all.counts.create, all.counts.update, all.counts.archive], [0, 2, 0], "строки только для изменяемых локаций");
   const cat = all.rows.find((r) => r[0] === "GL-1")[all.headers.indexOf("storage_category_id")]; assert.equal(cat, "", "категорию, которой в Odoo ещё нет, файл назначить не может");
   const one = locationRows(m, { mode: "plan", keys: new Set([p.ops.find((o) => o.kind === "attrs" && o.name === "GL-2").key]) });
