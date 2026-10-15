@@ -55,7 +55,8 @@ class Water(Model):
         span = sum(d for d, _ in self.samples)
         while span - self.samples[0][0] >= WINDOW_S:
             span -= self.samples.popleft()[0]
-        self.set("flow_m3h", sum(d * v for d, v in self.samples) / span)
+        if span > 0:  # тік dt = 0 (world.step(0)) не дає вікна усереднення
+            self.set("flow_m3h", sum(d * v for d, v in self.samples) / span)
 
     def get_state(self) -> dict[str, Any]:
         return {"pulses": self.pulses, "frac": self.frac}
