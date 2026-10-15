@@ -6,3 +6,5 @@ from . import test_payload_static
 from . import test_delta
 from . import test_cycle_check
 from . import test_controllers
+from . import test_payload_chains
+from . import test_payload_signals
