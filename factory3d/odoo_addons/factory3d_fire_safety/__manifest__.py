@@ -17,31 +17,31 @@
         "data/ir_config_parameter.xml",
         "data/ir_sequence.xml",
         "data/mail_activity_type.xml",
-        # "data/f3d_fire_norm.csv",               # M-08
-        # "data/f3d_fire_panel.xml",              # M-01, M-02
-        # "data/f3d_fire_zone.csv",               # M-03
-        # "data/f3d_fire_system.xml",             # M-06
-        # "data/f3d_fire_smoke_zone.csv",         # M-07
-        # "data/f3d_fire_device.csv",             # M-04
-        # "data/f3d_fire_exit.csv",               # M-09
+        "data/f3d.fire.norm.csv",               # M-08
+        "data/f3d_fire_panel.xml",              # M-01, M-02
+        "data/f3d.fire.zone.csv",               # M-03
+        "data/f3d_fire_system.xml",             # M-06
+        "data/f3d.fire.smoke.zone.csv",         # M-07
+        "data/f3d.fire.device.csv",             # M-04
+        # "data/f3d.fire.exit.csv",               # M-09
         # "data/f3d_fire_route.xml",              # M-10
         # "data/f3d_fire_drill_template.xml",     # M-11c, M-11e
         # "data/f3d_source_data.xml",             # поле f3d_fire_readonly на f3d.source (M-15)
         # "data/f3d_signal_data.xml",             # M-01…M-06 (signal_*), M-15
         # "data/ir_cron.xml",                     # panel, drill
-        # "views/f3d_fire_norm_views.xml",
-        # "views/f3d_fire_panel_views.xml",
-        # "views/f3d_fire_zone_views.xml",
-        # "views/f3d_fire_device_views.xml",
-        # "views/f3d_fire_event_views.xml",
-        # "views/f3d_fire_system_views.xml",
+        "views/f3d_fire_norm_views.xml",
+        "views/f3d_fire_panel_views.xml",
+        "views/f3d_fire_zone_views.xml",
+        "views/f3d_fire_device_views.xml",
+        "views/f3d_fire_event_views.xml",
+        "views/f3d_fire_system_views.xml",
         # "views/f3d_fire_exit_views.xml",
         # "views/f3d_fire_route_views.xml",
         # "views/f3d_fire_smoke_zone_views.xml",
         # "views/f3d_fire_drill_views.xml",
         # "wizard/drill_rollcall_views.xml",
         # "wizard/bacnet_device_views.xml",
-        # "views/f3d_zone_views.xml",
+        "views/f3d_zone_views.xml",
         # "views/f3d_source_views.xml",
         # "views/maintenance_request_views.xml",
         # "views/res_config_settings_views.xml",

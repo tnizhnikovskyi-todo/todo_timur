@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-08 -->
+    <record id="view_f3d_fire_event_list" model="ir.ui.view">
+        <field name="name">f3d.fire.event.list</field>
+        <field name="model">f3d.fire.event</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false" default_order="ts desc"
+                  decoration-bf="level == 'alarm' and not ack">
+                <header>
+                    <button name="action_ack" type="object" string="Підтвердити"/>
+                </header>
+                <field name="ts"/>
+                <field name="level" widget="badge" decoration-danger="level == 'alarm'"
+                       decoration-warning="level == 'warn'" decoration-info="level == 'info'"/>
+                <field name="kind"/>
+                <field name="etype" optional="hide"/>
+                <field name="object_code"/>
+                <field name="text"/>
+                <field name="in_drill" optional="hide"/>
+                <field name="ack" widget="boolean"/>
+                <field name="ack_user_id" optional="hide"/>
+                <field name="request_id" optional="hide"/>
+                <field name="source" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_f3d_fire_event_search" model="ir.ui.view">
+        <field name="name">f3d.fire.event.search</field>
+        <field name="model">f3d.fire.event</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="text"/>
+                <field name="object_code"/>
+                <field name="zone_id"/>
+                <field name="drill_id"/>
+                <filter name="filter_alarm" string="Тривоги" domain="[('level', '=', 'alarm')]"/>
+                <filter name="filter_warn" string="Попередження" domain="[('level', '=', 'warn')]"/>
+                <filter name="filter_unack" string="Непідтверджені тривоги"
+                        domain="[('level', '=', 'alarm'), ('ack', '=', False)]"/>
+                <filter name="filter_drill" string="Під час навчань" domain="[('in_drill', '=', True)]"/>
+                <filter name="filter_today" string="Сьогодні"
+                        domain="[('ts', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0, 0, 0)))]"/>
+                <filter name="filter_7d" string="7 діб"
+                        domain="[('ts', '&gt;=', datetime.datetime.combine(context_today() - datetime.timedelta(days=7), datetime.time(0, 0, 0)))]"/>
+                <group>
+                    <filter name="group_kind" string="Категорія" context="{'group_by': 'kind'}"/>
+                    <filter name="group_level" string="Рівень" context="{'group_by': 'level'}"/>
+                    <filter name="group_object" string="Об'єкт" context="{'group_by': 'object_code'}"/>
+                    <filter name="group_day" string="День" context="{'group_by': 'ts:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="view_f3d_fire_event_graph" model="ir.ui.view">
+        <field name="name">f3d.fire.event.graph</field>
+        <field name="model">f3d.fire.event</field>
+        <field name="arch" type="xml">
+            <graph type="bar">
+                <field name="ts" interval="day"/>
+                <field name="kind"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- V-09 -->
+    <record id="view_f3d_fire_event_form" model="ir.ui.view">
+        <field name="name">f3d.fire.event.form</field>
+        <field name="model">f3d.fire.event</field>
+        <field name="arch" type="xml">
+            <form string="Подія журналу" create="false" delete="false">
+                <header>
+                    <button name="action_ack" type="object" string="Підтвердити" class="btn-primary"
+                            invisible="ack or level != 'alarm'"/>
+                    <button name="action_open_object" type="object" string="Відкрити об'єкт"/>
+                    <button name="action_f3d_show" type="object" string="Показати в 3D" icon="fa-cube"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Подія">
+                            <field name="ts" readonly="1"/>
+                            <field name="level" readonly="1"/>
+                            <field name="kind" readonly="1"/>
+                            <field name="etype" readonly="1"/>
+                            <field name="object_code" readonly="1"/>
+                            <field name="text" readonly="1"/>
+                            <field name="message_text" readonly="1"/>
+                            <field name="raw_from" readonly="1"/>
+                            <field name="raw_to" readonly="1"/>
+                            <field name="source" readonly="1"/>
+                            <field name="in_drill" readonly="1"/>
+                        </group>
+                        <group string="Зв'язки">
+                            <field name="panel_id" readonly="1"/>
+                            <field name="loop_id" readonly="1"/>
+                            <field name="zone_id" readonly="1"/>
+                            <field name="device_id" readonly="1"/>
+                            <field name="system_id" readonly="1"/>
+                            <field name="drill_id" readonly="1"/>
+                            <field name="signal_id" readonly="1"/>
+                            <field name="request_id" readonly="1"/>
+                        </group>
+                        <group string="Підтвердження">
+                            <field name="ack" readonly="1"/>
+                            <field name="ack_user_id" readonly="1"/>
+                            <field name="ack_ts" readonly="1"/>
+                            <field name="note"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_f3d_fire_event_form_manual" model="ir.ui.view">
+        <field name="name">f3d.fire.event.form.manual</field>
+        <field name="model">f3d.fire.event</field>
+        <field name="arch" type="xml">
+            <form string="Коментар у журнал">
+                <sheet>
+                    <field name="etype" invisible="1"/>
+                    <group>
+                        <field name="object_code"/>
+                        <field name="text"/>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Зберегти" special="save" class="btn-primary" data-hotkey="s"/>
+                    <button string="Скасувати" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_f3d_fire_event" model="ir.actions.act_window">
+        <field name="name">Журнал подій</field>
+        <field name="res_model">f3d.fire.event</field>
+        <field name="view_mode">list,form,graph</field>
+        <field name="context">{'search_default_filter_7d': 1}</field>
+    </record>
+</odoo>

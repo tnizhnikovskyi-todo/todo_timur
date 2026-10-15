@@ -15,8 +15,8 @@ DATA_DIR = os.path.join(MODULE_DIR, 'data')
 
 # SPEC §5.2: записів у кожному згенерованому файлі
 EXPECTED_ROWS = {
-    'f3d_fire_norm.csv': 27, 'f3d_fire_panel.xml': 5, 'f3d_fire_zone.csv': 35, 'f3d_fire_system.xml': 3,
-    'f3d_fire_smoke_zone.csv': 8, 'f3d_fire_device.csv': 353, 'f3d_fire_exit.csv': 12, 'f3d_fire_route.xml': 32,
+    'f3d.fire.norm.csv': 27, 'f3d_fire_panel.xml': 5, 'f3d.fire.zone.csv': 35, 'f3d_fire_system.xml': 3,
+    'f3d.fire.smoke.zone.csv': 8, 'f3d.fire.device.csv': 353, 'f3d.fire.exit.csv': 12, 'f3d_fire_route.xml': 32,
     'f3d_fire_drill_template.xml': 9, 'f3d_source_data.xml': 2, 'f3d_signal_data.xml': 54,
 }
 

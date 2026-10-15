@@ -31,12 +31,12 @@ class FireCase(TransactionCase):
         cls.dev_fac07 = ref('factory3d_fire_safety.dev_2_fac_07')
         cls.dev_cnc05 = ref('factory3d_fire_safety.dev_2_cnc_05')
         cls.loop2 = ref('factory3d_fire_safety.loop_2')
-        cls.src_bac = ref('factory3d_fire_safety.source_bacnet_facp_1')
-        cls.src_io = ref('factory3d_fire_safety.source_mb_u85_io6')
+        cls.src_bac = ref('factory3d_fire_safety.source_bacnet_facp_1', raise_if_not_found=False)
+        cls.src_io = ref('factory3d_fire_safety.source_mb_u85_io6', raise_if_not_found=False)
         cls.sys_spark = ref('factory3d_fire_safety.system_spark_1')
         cls.sys_smoke = ref('factory3d_fire_safety.system_smoke_ctrl')
         cls.sys_spr = ref('factory3d_fire_safety.system_sprinklers')
-        cls.tpl = ref('factory3d_fire_safety.drill_template_default')
+        cls.tpl = ref('factory3d_fire_safety.drill_template_default', raise_if_not_found=False)  # W4
         # обладнання: чиста база не має демо
         cls.team = env['maintenance.team'].create({'name': 'Тестова команда ПБ'})
         cls.equipment = {
