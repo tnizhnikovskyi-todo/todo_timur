@@ -21,7 +21,7 @@ def test_catalog_load_1168(registry):
     assert len(registry.served()) == 1017  # без protocol=none (X-35)
     assert sum(1 for s in registry.signals if not s.emulated) == 151
     # ASSUMPTION: devices.yaml W0 — 184 пристрої (повні 276 генерує tools/gen_devices.py пізніше)
-    assert len(registry.devices) >= 184
+    assert len(registry.devices) >= 276
 
 
 def test_computed_rows(registry):

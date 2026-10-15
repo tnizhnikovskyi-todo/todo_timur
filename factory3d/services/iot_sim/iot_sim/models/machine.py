@@ -11,7 +11,7 @@
 * ``world.workcenters[code]`` — ``{"working_state": "blocked"|…}`` (Odoo ``mrp.workcenter``).
 * ``world.flags["shift"]`` (S-01): ``speed`` множить темп завдань і лічильник деталей.
 
-``kwh_total``/``kwh_shift`` споживача інтегрує ця модель (R-03) — лічильники ведуть ``p_now``.
+``kwh_total``/``kwh_shift`` споживача веде ``meter`` (R-03); тут лише ``p_now``.
 Публічні атрибути для протоколів: ``flags`` (прапори §7.7), ``current_state``, ``values``
 (лічильники/часи), ``job_list()`` (JobOrderList). ``IoMachine`` (``io_machine``, P-02) — той самий
 автомат, але ``state``/``alarm`` віддаються бітом DI (``di_run``/``di_fault``).
@@ -107,8 +107,6 @@ class Machine(Model):
                              "RunsTotal")}
         self.relative: dict[str, float] = dict(self.values)
         self.shift_key: Any = None
-        self.energy_wh = 0.0
-        self.energy_shift_wh = 0.0
         self.msg_id = ""
         self.fault_msg: tuple[str, str, str, str] | None = None
         self.mode = MODE_SLEEP
@@ -187,7 +185,6 @@ class Machine(Model):
         self.pieces_acc = 0.0
         self.pieces_in = 0
         self.relative = dict.fromkeys(self.relative, 0.0)
-        self.energy_shift_wh = 0.0
 
     # --- тік ----------------------------------------------------------------------------
     def tick(self, dt_s: float) -> None:
@@ -239,11 +236,6 @@ class Machine(Model):
             p = 0.0
         self.p_now = p
         self.set("p_now", p)
-        wh = p * 1000 * self.dt_s / 3600
-        self.energy_wh += wh
-        self.energy_shift_wh += wh
-        self.set("kwh_total", self.energy_wh / 1000)
-        self.set("kwh_shift", self.energy_shift_wh / 1000)
 
     def _counters(self, cs: int, dt_s: float) -> None:
         for name, on in (("MachineOnTime", cs != OFFLINE), ("WorkingTime", cs == WORKING),
@@ -294,14 +286,11 @@ class Machine(Model):
 
     # --- знімок -------------------------------------------------------------------------
     def get_state(self) -> dict[str, Any]:
-        return {"pieces_acc": self.pieces_acc, "energy_wh": self.energy_wh,
-                "energy_shift_wh": self.energy_shift_wh, "values": self.values,
+        return {"pieces_acc": self.pieces_acc, "values": self.values,
                 "relative": self.relative, "msg_id": self.msg_id}
 
     def set_state(self, d: dict[str, Any]) -> None:
         self.pieces_acc = d.get("pieces_acc", 0.0)
-        self.energy_wh = d.get("energy_wh", 0.0)
-        self.energy_shift_wh = d.get("energy_shift_wh", 0.0)
         self.values.update(d.get("values", {}))
         self.relative.update(d.get("relative", {}))
         self.msg_id = d.get("msg_id", "")

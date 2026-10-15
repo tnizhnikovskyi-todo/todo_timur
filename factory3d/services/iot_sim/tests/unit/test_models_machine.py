@@ -96,12 +96,13 @@ def test_pieces_counter(world):
     assert m.relative["PiecesIn"] == 7  # +1 деталь на столі (WorkpiecePresent)
 
 
-def test_kwh_counters(world):
+def test_machine_does_not_write_kwh(world):
+    """kwh_total/kwh_shift потребителей ведёт meter (R-03), машина пишет только p_now."""
     zero_noise(world)
+    assert world.devices["SAW-1"].model.driver == "machine"
     world.advance(3600)
-    m = world.devices["SAW-1"].model
-    assert sig(world, "energy/consumers/SAW-1/kwh_total") == pytest.approx(12.18, rel=1e-3)
-    assert sig(world, "energy/consumers/SAW-1/kwh_shift") == pytest.approx(m.energy_shift_wh / 1000)
+    assert sig(world, "energy/consumers/SAW-1/kwh_total") == pytest.approx(12.18, rel=0.02)
+    assert sig(world, "energy/consumers/SAW-1/p_now") == pytest.approx(12.18)
 
 
 def test_fault_clear(world):
