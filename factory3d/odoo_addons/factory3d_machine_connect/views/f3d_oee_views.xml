@@ -65,12 +65,9 @@
             <search string="OEE за зміну">
                 <field name="code"/>
                 <field name="zone_id"/>
-                <filter name="today" string="Сьогодні"
-                        domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
-                <filter name="this_week" string="Цей тиждень"
-                        domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
-                <filter name="this_month" string="Цей місяць"
-                        domain="[('date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today', '=', True)]"/>
+                <filter name="this_week" string="Цей тиждень" domain="[('is_this_week', '=', True)]"/>
+                <filter name="this_month" string="Цей місяць" domain="[('is_this_month', '=', True)]"/>
                 <separator/>
                 <filter name="incomplete" string="Неповні дані" domain="[('incomplete', '=', True)]"/>
                 <filter name="low_oee" string="OEE &lt; порогу" domain="[('has_data', '=', True), ('oee', '&lt;', 0.5)]"/>

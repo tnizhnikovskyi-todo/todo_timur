@@ -63,9 +63,8 @@
                 <filter name="overhead" string="Накладні" domain="[('kind', '=', 'overhead')]"/>
                 <separator/>
                 <filter name="locked" string="Зафіксовані" domain="[('locked', '=', True)]"/>
-                <filter name="today" string="Сьогодні" domain="[('day', '=', context_today().strftime('%Y-%m-%d'))]"/>
-                <filter name="week" string="Тиждень"
-                        domain="[('day', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today', '=', True)]"/>
+                <filter name="week" string="Тиждень" domain="[('is_last_7d', '=', True)]"/>
                 <group>
                     <filter name="group_day" string="Дата" context="{'group_by': 'day'}"/>
                     <filter name="group_production" string="МО" context="{'group_by': 'production_id'}"/>

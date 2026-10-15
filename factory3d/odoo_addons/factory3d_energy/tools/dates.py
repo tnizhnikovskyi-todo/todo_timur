@@ -38,6 +38,19 @@ def local_day(dt_utc):
     return to_local(dt_utc).date()
 
 
+def day_window_domain(operator, value, now_utc, back_from=0, back_to=0, field="day"):
+    """Домен пошукових полів `is_today`/`is_yesterday`/`is_last_7d` (Y-2): `field` — київська доба, вікно —
+    доби `[today − back_from, today − back_to]`, де `today` — доба за Києвом для `now_utc` (naive UTC сервера),
+    а не `context_today()` браузера."""
+    if operator not in ("=", "!=") or not isinstance(value, bool):
+        raise NotImplementedError("Пошук за добою підтримує лише = / != True/False")
+    today = local_day(now_utc)
+    first, last = today - timedelta(days=back_from), today - timedelta(days=back_to)
+    if (operator == "=") == value:
+        return [(field, ">=", first), (field, "<=", last)]
+    return ["|", (field, "<", first), (field, ">", last)]
+
+
 def shift_start(now_utc, hours_by_weekday):
     """R-11: початок поточної зміни (UTC naive). `hours_by_weekday` — {weekday: мінімальний hour_from атендансів}.
     `now_local` раніше початку зміни дня або день без атендансів — попередній день з атендансами (≤ 7 діб);

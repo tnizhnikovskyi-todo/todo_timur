@@ -18,6 +18,7 @@ class F3dEnergyBalance(models.Model):
     """M-08. Погодинна перевірка балансу обліку (R-07)."""
 
     _name = "f3d.energy.balance"
+    _inherit = ["f3d.energy.day.mixin"]
     _description = "Енергетика: баланс обліку"
     _order = "hour desc, node_id"
     _log_access = False

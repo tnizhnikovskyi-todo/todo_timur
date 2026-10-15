@@ -74,7 +74,41 @@ class F3dOeeShift(models.Model):
         [("good", "Добре"), ("warn", "Увага"), ("bad", "Погано")], compute="_compute_oee_color"
     )
 
+    # Y-2: фільтри пошуку за київською добою сервера, а не `context_today()` браузера (UTC на стенді)
+    is_today = fields.Boolean(string="Сьогодні", compute="_compute_day_flags", search="_search_is_today")
+    is_this_week = fields.Boolean(string="Цей тиждень", compute="_compute_day_flags", search="_search_is_this_week")
+    is_this_month = fields.Boolean(string="Цей місяць", compute="_compute_day_flags", search="_search_is_this_month")
+
     _f3d_oee_uniq = models.Constraint("UNIQUE(machine_id, date)", "OEE за цю зміну вже є.")
+
+    @api.depends("date")
+    def _compute_day_flags(self):
+        today = _local_date(fields.Datetime.now())
+        week, month = today - timedelta(days=today.weekday()), today.replace(day=1)
+        for rec in self:
+            rec.is_today = rec.date == today
+            rec.is_this_week = bool(rec.date) and rec.date >= week
+            rec.is_this_month = bool(rec.date) and rec.date >= month
+
+    @staticmethod
+    def _day_domain(operator, value, first, last=None):
+        """`date ∈ [first, last]` (`last=None` — без верхньої межі) для `= True` / `!= False`; інакше — доповнення."""
+        if operator not in ("=", "!=") or not isinstance(value, bool):
+            raise NotImplementedError("Пошук за добою підтримує лише = / != True/False")
+        if (operator == "=") == value:
+            return [("date", ">=", first)] + ([("date", "<=", last)] if last else [])
+        return ["|", ("date", "<", first), ("date", ">", last)] if last else [("date", "<", first)]
+
+    def _search_is_today(self, operator, value):
+        today = _local_date(fields.Datetime.now())
+        return self._day_domain(operator, value, today, today)
+
+    def _search_is_this_week(self, operator, value):
+        today = _local_date(fields.Datetime.now())
+        return self._day_domain(operator, value, today - timedelta(days=today.weekday()))
+
+    def _search_is_this_month(self, operator, value):
+        return self._day_domain(operator, value, _local_date(fields.Datetime.now()).replace(day=1))
 
     @api.depends("oee")
     def _compute_oee_color(self):

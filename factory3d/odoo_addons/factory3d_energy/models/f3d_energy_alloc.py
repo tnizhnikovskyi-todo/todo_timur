@@ -14,6 +14,7 @@ EPS = 5e-4  # половина одиниці останнього знака kw
 
 class F3dEnergyAlloc(models.Model):
     _name = "f3d.energy.alloc"
+    _inherit = ["f3d.energy.day.mixin"]
     _description = "Енергетика: розподіл на виробництво"
     _order = "day desc, production_id, workorder_id, kind"
 

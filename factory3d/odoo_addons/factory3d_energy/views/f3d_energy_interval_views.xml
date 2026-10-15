@@ -54,11 +54,9 @@
             <search>
                 <field name="meter_id"/>
                 <field name="node_id"/>
-                <filter name="today" string="Сьогодні" domain="[('day', '=', context_today().strftime('%Y-%m-%d'))]"/>
-                <filter name="yesterday" string="Вчора"
-                        domain="[('day', '=', (context_today() - relativedelta(days=1)).strftime('%Y-%m-%d'))]"/>
-                <filter name="week" string="7 днів"
-                        domain="[('day', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today', '=', True)]"/>
+                <filter name="yesterday" string="Вчора" domain="[('is_yesterday', '=', True)]"/>
+                <filter name="week" string="7 днів" domain="[('is_last_7d', '=', True)]"/>
                 <separator/>
                 <filter name="not_measured" string="Не виміряно" domain="[('quality', '!=', 'measured')]"/>
                 <separator/>

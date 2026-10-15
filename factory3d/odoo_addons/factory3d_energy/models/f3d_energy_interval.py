@@ -28,6 +28,7 @@ class F3dEnergyInterval(models.Model):
     """M-03. 15-хвилинний профіль лічильника; запис — лише кроном і майстром (R-04)."""
 
     _name = "f3d.energy.interval"
+    _inherit = ["f3d.energy.day.mixin"]
     _description = "Енергетика: 15-хвилинний інтервал"
     _order = "ts_start desc, meter_id"
     _log_access = False
