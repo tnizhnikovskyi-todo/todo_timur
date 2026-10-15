@@ -308,8 +308,12 @@ class TestUninstall(Level0Mixin, F3DTelemetryCase):
     def test_uninstall_restores_level0(self):
         """AC-57."""
         self.migrate()
+        self.env.cr.execute("SELECT to_regclass('f3d_collector_push')")
+        self.assertTrue(self.env.cr.fetchone()[0], "таблиця журналу пакетів колектора є до видалення")
         with self.assertLogs("odoo.addons.factory3d_telemetry.hooks", "WARNING") as logs:
             hooks.uninstall_hook(self.env)
+        self.env.cr.execute("SELECT to_regclass('f3d_collector_push')")
+        self.assertFalse(self.env.cr.fetchone()[0], "uninstall_hook видаляє f3d_collector_push")
         self.assertTrue(any("рівень 0 вимкнено; увімкніть вручну або через пульт" in line for line in logs.output))
         self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE NOT x_active")
         self.assertEqual(self.env.cr.fetchone()[0], 0)

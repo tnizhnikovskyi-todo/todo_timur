@@ -785,4 +785,5 @@ def uninstall_hook(env):
             if rec:
                 rec.write({"active": True})
         _logger.warning("рівень 0 вимкнено; увімкніть вручну або через пульт")
+    env.cr.execute("DROP TABLE IF EXISTS f3d_collector_push")  # DEC-19: журнал пакетів колектора — не модель ORM
     env["ir.config_parameter"].sudo().search([("key", "=like", "factory3d.telemetry.%")]).unlink()
