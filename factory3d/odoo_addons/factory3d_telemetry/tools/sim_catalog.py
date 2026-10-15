@@ -3,6 +3,7 @@
 Чисті функції без ORM: `parse_sim_address`, `source_key` (Додаток C.3), `module_for_code` / `kind_for_mode`
 (R-15), `equipment_code`, `parse_nominal`, `parse_enum_map`.
 """
+
 import re
 
 # --- Modbus: вендорська нотація (R-24 (б), iot_sim §8.4.1) ---------------------------------------------
@@ -15,9 +16,17 @@ TEDOM_UNIT = 72
 
 TYPES = ("bool", "u16", "i16", "u32", "i32", "f32", "u64", "i64", "f64")
 OBJECTS = {
-    "AI": "analog-input", "AO": "analog-output", "AV": "analog-value", "BI": "binary-input",
-    "BO": "binary-output", "BV": "binary-value", "MSI": "multi-state-input", "MSV": "multi-state-value",
-    "LSZ": "life-safety-zone", "LSP": "life-safety-point", "PIV": "positive-integer-value",
+    "AI": "analog-input",
+    "AO": "analog-output",
+    "AV": "analog-value",
+    "BI": "binary-input",
+    "BO": "binary-output",
+    "BV": "binary-value",
+    "MSI": "multi-state-input",
+    "MSV": "multi-state-value",
+    "LSZ": "life-safety-zone",
+    "LSP": "life-safety-point",
+    "PIV": "positive-integer-value",
 }
 OBJ_RE = "|".join(OBJECTS)
 
@@ -120,11 +129,11 @@ def _parse_modbus(text, dtype, scale, unit):
         tm = re.match(r"\s*(%s)\b" % "|".join(TYPES), rest)
         if tm:
             vals["type"] = tm.group(1)
-            rest_after = rest[tm.end():]
+            rest_after = rest[tm.end() :]
             am = re.match(r"\s+(max|min|sum|avg|first)\b", rest_after)
             if am:
                 vals["agg"] = am.group(1)
-                rest_after = rest_after[am.end():]
+                rest_after = rest_after[am.end() :]
             wm = re.match(r"\s+(little|big)\b", rest_after)
             if wm:
                 vals["wordorder"] = wm.group(1)
@@ -159,7 +168,7 @@ def _parse_modbus(text, dtype, scale, unit):
         enum = parse_enum_map(unit)
         if enum:
             vals["map"] = enum
-        vals["doc"] = text[text.index("HR "):].strip()[:256]
+        vals["doc"] = text[text.index("HR ") :].strip()[:256]
         return vals
     m = RE_DI.match(text)
     if m:
@@ -220,8 +229,10 @@ def _parse_bacnet(text, unit):
         return None
     kind, instance = normal[0]
     obj = OBJECTS[kind]
-    states = faults + [{"object": obj, "instance": instance, "eq": 1, "text": "running"},
-                       {"object": obj, "instance": instance, "eq": 0, "text": "stopped"}]
+    states = faults + [
+        {"object": obj, "instance": instance, "eq": 1, "text": "running"},
+        {"object": obj, "instance": instance, "eq": 0, "text": "stopped"},
+    ]
     return {"device": device, "states": states}
 
 
@@ -266,9 +277,14 @@ def source_key(text):
     """Додаток C.3: ключ джерела за адресою (Modbus — `u<unit>`, MQTT — `mqtt`, BACnet — `dev<n>` …)."""
     text = (text or "").strip()
     for regex, fmt in (
-            (r"^Modbus u(\d+)", "u%s"), (r"^MQTT\b", "mqtt"), (r"^BACnet dev (\d+)", "dev%s"),
-            (r"^HTTP POST <collector>/f3d/(\w+)", "http:%s"), (r"^(?:OPC UA\||ns=\d+;)", "opcua"),
-            (r"^GET /", "rest"), (r"^SICS\b", "sics")):
+        (r"^Modbus u(\d+)", "u%s"),
+        (r"^MQTT\b", "mqtt"),
+        (r"^BACnet dev (\d+)", "dev%s"),
+        (r"^HTTP POST <collector>/f3d/(\w+)", "http:%s"),
+        (r"^(?:OPC UA\||ns=\d+;)", "opcua"),
+        (r"^GET /", "rest"),
+        (r"^SICS\b", "sics"),
+    ):
         m = re.match(regex, text)
         if m:
             return fmt % m.groups() if m.groups() else fmt
@@ -286,8 +302,15 @@ def module_for_code(code):
         if head == "infra" and len(parts) > 1 and parts[1] == "genset":
             return "genset"
         return "energy"
-    return {"ventilation": "bms", "lighting": "bms", "fire": "fire_safety", "equipment": "telemetry",
-            "workcenters": "machine_connect", "yard": "yard", "access": "access"}.get(head, "other")
+    return {
+        "ventilation": "bms",
+        "lighting": "bms",
+        "fire": "fire_safety",
+        "equipment": "telemetry",
+        "workcenters": "machine_connect",
+        "yard": "yard",
+        "access": "access",
+    }.get(head, "other")
 
 
 def kind_for_mode(mode):

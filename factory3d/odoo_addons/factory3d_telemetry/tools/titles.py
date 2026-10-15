@@ -1,4 +1,5 @@
 """Заголовки заявок ТО (R-05, A-21): форматування чисел і шаблон `alarm_title`. Чисті функції."""
+
 import re
 from decimal import ROUND_HALF_UP, Decimal
 

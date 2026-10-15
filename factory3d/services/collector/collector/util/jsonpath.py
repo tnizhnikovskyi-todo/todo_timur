@@ -1,4 +1,5 @@
 """Підмножина JSONPath: `$.a.b[0].c` (SPEC §8.6.2)."""
+
 from __future__ import annotations
 
 import re

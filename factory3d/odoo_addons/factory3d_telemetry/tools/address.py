@@ -2,6 +2,7 @@
 
 Кожна помилка — рядок виду «<ключ>: <проблема>»; порожній список — усе гаразд.
 """
+
 import ipaddress
 import json
 import math
@@ -26,10 +27,29 @@ MAX_STR = 1024
 MAX_JSON = 8 * 1024
 
 BACNET_OBJECTS = (
-    "analog-input", "analog-output", "analog-value", "binary-input", "binary-output", "binary-value",
-    "multi-state-input", "multi-state-value", "life-safety-zone", "life-safety-point",
-    "positive-integer-value", "device",
-    "AI", "AO", "AV", "BI", "BO", "BV", "MSI", "MSV", "LSZ", "LSP", "PIV",
+    "analog-input",
+    "analog-output",
+    "analog-value",
+    "binary-input",
+    "binary-output",
+    "binary-value",
+    "multi-state-input",
+    "multi-state-value",
+    "life-safety-zone",
+    "life-safety-point",
+    "positive-integer-value",
+    "device",
+    "AI",
+    "AO",
+    "AV",
+    "BI",
+    "BO",
+    "BV",
+    "MSI",
+    "MSV",
+    "LSZ",
+    "LSP",
+    "PIV",
 )
 MODBUS_TYPES = ("bool", "u16", "i16", "u32", "i32", "f32", "u64", "i64", "f64")
 MODBUS_WIDTH = {"bool": 1, "u16": 1, "i16": 1, "u32": 2, "i32": 2, "f32": 2, "u64": 4, "i64": 4, "f64": 4}
@@ -170,19 +190,23 @@ def _scale_offset(obj):
 
 # --- address -----------------------------------------------------------------------------------------
 def _addr_modbus(a):
-    errors = _check_spec(a, {
-        "fc": lambda k, v: _int(k, v, 1, 4),
-        "addr": lambda k, v: _int(k, v, 0, 65535),
-        "unit": lambda k, v: _int(k, v, 1, 247),
-        "type": lambda k, v: _str(k, v, enum=MODBUS_TYPES),
-        "count": lambda k, v: _int(k, v, 1, 125),
-        "agg": lambda k, v: _str(k, v, enum=("max", "min", "sum", "avg", "first")),
-        "wordorder": lambda k, v: _str(k, v, enum=("big", "little")),
-        "byteorder": lambda k, v: _str(k, v, enum=("big", "little")),
-        "bit": lambda k, v: _int(k, v, 0, 15),
-        "doc": lambda k, v: _str(k, v, maxlen=256),
-        "map": lambda k, v: _str_map(k, v, int_keys=True),
-    }, required=("fc",))
+    errors = _check_spec(
+        a,
+        {
+            "fc": lambda k, v: _int(k, v, 1, 4),
+            "addr": lambda k, v: _int(k, v, 0, 65535),
+            "unit": lambda k, v: _int(k, v, 1, 247),
+            "type": lambda k, v: _str(k, v, enum=MODBUS_TYPES),
+            "count": lambda k, v: _int(k, v, 1, 125),
+            "agg": lambda k, v: _str(k, v, enum=("max", "min", "sum", "avg", "first")),
+            "wordorder": lambda k, v: _str(k, v, enum=("big", "little")),
+            "byteorder": lambda k, v: _str(k, v, enum=("big", "little")),
+            "bit": lambda k, v: _int(k, v, 0, 15),
+            "doc": lambda k, v: _str(k, v, maxlen=256),
+            "map": lambda k, v: _str_map(k, v, int_keys=True),
+        },
+        required=("fc",),
+    )
     if "addr" not in a and not a.get("states"):
         errors.append("addr: обов'язковий (якщо немає states)")
     fc, typ = a.get("fc"), a.get("type")
@@ -218,22 +242,32 @@ def _addr_modbus(a):
                 if not isinstance(item, dict):
                     errors.append("states[%s]: має бути об'єкт" % i)
                     continue
-                errors += _check_spec(item, {
-                    "addr": lambda k, v: _int(k, v, 0, 65535),
-                    "eq": lambda k, v: _int(k, v),
-                    "text": lambda k, v: _str(k, v, maxlen=64),
-                    "fc": lambda k, v: _int(k, v, 1, 4),
-                }, required=("addr", "eq", "text"), prefix=p)
+                errors += _check_spec(
+                    item,
+                    {
+                        "addr": lambda k, v: _int(k, v, 0, 65535),
+                        "eq": lambda k, v: _int(k, v),
+                        "text": lambda k, v: _str(k, v, maxlen=64),
+                        "fc": lambda k, v: _int(k, v, 1, 4),
+                    },
+                    required=("addr", "eq", "text"),
+                    prefix=p,
+                )
     if a.get("write") is not None:
         w = a["write"]
         if not isinstance(w, dict):
             errors.append("write: має бути об'єкт")
         else:
-            errors += _check_spec(w, {
-                "fc": lambda k, v: _int(k, v, 5, 16),
-                "addr": lambda k, v: _int(k, v, 0, 65535),
-                "pulse_ms": lambda k, v: _int(k, v, 100, 10000),
-            }, required=("fc", "addr"), prefix="write.")
+            errors += _check_spec(
+                w,
+                {
+                    "fc": lambda k, v: _int(k, v, 5, 16),
+                    "addr": lambda k, v: _int(k, v, 0, 65535),
+                    "pulse_ms": lambda k, v: _int(k, v, 100, 10000),
+                },
+                required=("fc", "addr"),
+                prefix="write.",
+            )
             if _is_int(w.get("fc")) and w["fc"] not in (5, 6, 16):
                 errors.append("write.fc: недопустиме значення «%s»; дозволено: 5, 6, 16" % w["fc"])
             if "pulse_ms" in w and w.get("fc") not in (5, 6):
@@ -251,31 +285,44 @@ def _topic(key, v):
 
 
 def _addr_mqtt(a):
-    errors = _check_spec(a, {
-        "topic": _topic,
-        "path": _path,
-        "ts_path": _path,
-        "device": lambda k, v: _str(k, v, maxlen=32),
-        "map": lambda k, v: _str_map(k, v),
-    }, required=("topic", "path"))
+    errors = _check_spec(
+        a,
+        {
+            "topic": _topic,
+            "path": _path,
+            "ts_path": _path,
+            "device": lambda k, v: _str(k, v, maxlen=32),
+            "map": lambda k, v: _str_map(k, v),
+        },
+        required=("topic", "path"),
+    )
     if a.get("write") is not None:
         w = a["write"]
         if not isinstance(w, dict):
             errors.append("write: має бути об'єкт")
         else:
-            errors += _check_spec(w, {
-                "topic": _topic,
-                "template": lambda k, v: _str(k, v, maxlen=1024),
-            }, required=("topic", "template"), prefix="write.")
+            errors += _check_spec(
+                w,
+                {
+                    "topic": _topic,
+                    "template": lambda k, v: _str(k, v, maxlen=1024),
+                },
+                required=("topic", "template"),
+                prefix="write.",
+            )
     return errors
 
 
 def _addr_http_push(a):
-    errors = _check_spec(a, {
-        "route": lambda k, v: _str(k, v, ROUTE_RE, "^[a-z][a-z0-9_]{0,31}$"),
-        "path": _path,
-        "ts_path": _path,
-    }, required=("route", "path"))
+    errors = _check_spec(
+        a,
+        {
+            "route": lambda k, v: _str(k, v, ROUTE_RE, "^[a-z][a-z0-9_]{0,31}$"),
+            "path": _path,
+            "ts_path": _path,
+        },
+        required=("route", "path"),
+    )
     if a.get("match") is not None:
         m = a["match"]
         if not isinstance(m, dict):
@@ -288,18 +335,22 @@ def _addr_http_push(a):
 
 
 def _addr_bacnet(a):
-    errors = _check_spec(a, {
-        "object": lambda k, v: _str(k, v, enum=BACNET_OBJECTS),
-        "instance": lambda k, v: _int(k, v, 0, 4194302),
-        "property": lambda k, v: _str(k, v, PROP_RE, "^[a-z][a-z0-9\\-]{0,63}$"),
-        "index": lambda k, v: _int(k, v, 0),
-        "device": lambda k, v: _int(k, v, 0, 4194302),
-        "mode": lambda k, v: _str(k, v, enum=("cov", "poll")),
-        "priority": lambda k, v: _int(k, v, 1, 16),
-        "map": lambda k, v: _str_map(k, v),
-        "check_reliability": _bool,
-        "read_priority_array": _bool,
-    }, required=("object", "instance"))
+    errors = _check_spec(
+        a,
+        {
+            "object": lambda k, v: _str(k, v, enum=BACNET_OBJECTS),
+            "instance": lambda k, v: _int(k, v, 0, 4194302),
+            "property": lambda k, v: _str(k, v, PROP_RE, "^[a-z][a-z0-9\\-]{0,63}$"),
+            "index": lambda k, v: _int(k, v, 0),
+            "device": lambda k, v: _int(k, v, 0, 4194302),
+            "mode": lambda k, v: _str(k, v, enum=("cov", "poll")),
+            "priority": lambda k, v: _int(k, v, 1, 16),
+            "map": lambda k, v: _str_map(k, v),
+            "check_reliability": _bool,
+            "read_priority_array": _bool,
+        },
+        required=("object", "instance"),
+    )
     if a.get("cov_increment") is not None:
         errors += _num("cov_increment", a["cov_increment"])
         if not errors and a["cov_increment"] <= 0:
@@ -315,50 +366,67 @@ def _addr_bacnet(a):
                 if not isinstance(item, dict):
                     errors.append("states[%s]: має бути об'єкт" % i)
                     continue
-                errors += _check_spec(item, {
-                    "object": lambda k, v: _str(k, v, enum=BACNET_OBJECTS),
-                    "instance": lambda k, v: _int(k, v, 0, 4194302),
-                    "text": lambda k, v: _str(k, v, maxlen=64),
-                }, required=("object", "instance", "text"), prefix="states[%s]." % i)
+                errors += _check_spec(
+                    item,
+                    {
+                        "object": lambda k, v: _str(k, v, enum=BACNET_OBJECTS),
+                        "instance": lambda k, v: _int(k, v, 0, 4194302),
+                        "text": lambda k, v: _str(k, v, maxlen=64),
+                    },
+                    required=("object", "instance", "text"),
+                    prefix="states[%s]." % i,
+                )
                 if "eq" not in item:
                     errors.append("states[%s].eq: обов'язковий" % i)
     return errors
 
 
 def _addr_opcua(a):
-    return _check_spec(a, {
-        "nodeid": lambda k, v: _str(k, v, NODEID_RE, "ns=<n>;s|i|g|b=<id>"),
-        "mode": lambda k, v: _str(k, v, enum=("subscribe", "poll")),
-        "sampling_ms": lambda k, v: _int(k, v, 0, 60000),
-        "map": lambda k, v: _str_map(k, v),
-    }, required=("nodeid",))
+    return _check_spec(
+        a,
+        {
+            "nodeid": lambda k, v: _str(k, v, NODEID_RE, "ns=<n>;s|i|g|b=<id>"),
+            "mode": lambda k, v: _str(k, v, enum=("subscribe", "poll")),
+            "sampling_ms": lambda k, v: _int(k, v, 0, 60000),
+            "map": lambda k, v: _str_map(k, v),
+        },
+        required=("nodeid",),
+    )
 
 
 def _addr_helvarnet(a):
-    errors = _check_spec(a, {
-        "group": lambda k, v: _int(k, v, 1, 16383),
-        "device": lambda k, v: _str(k, v, DEVICE_RE, "@c.r.s.d"),
-        "query": lambda k, v: _str(k, v, maxlen=64),
-        "map": lambda k, v: _str_map(k, v),
-    })
+    errors = _check_spec(
+        a,
+        {
+            "group": lambda k, v: _int(k, v, 1, 16383),
+            "device": lambda k, v: _str(k, v, DEVICE_RE, "@c.r.s.d"),
+            "query": lambda k, v: _str(k, v, maxlen=64),
+            "map": lambda k, v: _str_map(k, v),
+        },
+    )
     if a.get("group") is None and a.get("device") is None:
         errors.append("group: потрібен один із group або device")
     return errors
 
 
 def _addr_sics(a):
-    errors = _check_spec(a, {
-        "field": lambda k, v: _str(k, v, enum=("weight", "stable")),
-        "cmd": lambda k, v: _str(k, v, enum=("SI",)),
-        "doc": lambda k, v: _str(k, v, maxlen=128),
-    }, required=("field",))
+    errors = _check_spec(
+        a,
+        {
+            "field": lambda k, v: _str(k, v, enum=("weight", "stable")),
+            "cmd": lambda k, v: _str(k, v, enum=("SI",)),
+            "doc": lambda k, v: _str(k, v, maxlen=128),
+        },
+        required=("field",),
+    )
     if a.get("write") is not None:
         w = a["write"]
         if not isinstance(w, dict):
             errors.append("write: має бути об'єкт")
         else:
-            errors += _check_spec(w, {"cmd": lambda k, v: _str(k, v, enum=("Z", "T", "TAC"))},
-                                  required=("cmd",), prefix="write.")
+            errors += _check_spec(
+                w, {"cmd": lambda k, v: _str(k, v, enum=("Z", "T", "TAC"))}, required=("cmd",), prefix="write."
+            )
             for k in w:
                 if k != "cmd":
                     errors.append("write.%s: невідомий ключ" % k)
@@ -366,11 +434,15 @@ def _addr_sics(a):
 
 
 def _addr_rest(a):
-    errors = _check_spec(a, {
-        "method": lambda k, v: _str(k, v, enum=("GET", "POST")),
-        "path": lambda k, v: _str(k, v, REST_PATH_RE, "/шлях"),
-        "json_path": _path,
-    }, required=("path", "json_path"))
+    errors = _check_spec(
+        a,
+        {
+            "method": lambda k, v: _str(k, v, enum=("GET", "POST")),
+            "path": lambda k, v: _str(k, v, REST_PATH_RE, "/шлях"),
+            "json_path": _path,
+        },
+        required=("path", "json_path"),
+    )
     if a.get("query") is not None:
         q = a["query"]
         if not isinstance(q, dict):
@@ -383,8 +455,14 @@ def _addr_rest(a):
 
 
 ADDRESS_VALIDATORS = {
-    "modbus_tcp": _addr_modbus, "mqtt": _addr_mqtt, "http_push": _addr_http_push, "bacnet_ip": _addr_bacnet,
-    "opcua": _addr_opcua, "helvarnet": _addr_helvarnet, "sics": _addr_sics, "rest_vendor": _addr_rest,
+    "modbus_tcp": _addr_modbus,
+    "mqtt": _addr_mqtt,
+    "http_push": _addr_http_push,
+    "bacnet_ip": _addr_bacnet,
+    "opcua": _addr_opcua,
+    "helvarnet": _addr_helvarnet,
+    "sics": _addr_sics,
+    "rest_vendor": _addr_rest,
 }
 ADDRESS_STRICT = {
     "sics": ("field", "cmd", "write", "doc"),
@@ -434,96 +512,128 @@ def _list_of(key, v, item_fn, lo, hi):
 
 
 def _params_modbus(p):
-    return _check_spec(p, {
-        "host": _host,
-        "port": lambda k, v: _int(k, v, 1, 65535),
-        "unit": lambda k, v: _int(k, v, 1, 247),
-        "timeout_s": lambda k, v: _num(k, v, 0.5, 60),
-        "retries": lambda k, v: _int(k, v, 0, 5),
-        "max_block": lambda k, v: _int(k, v, 1, 125),
-        "gap_max": lambda k, v: _int(k, v, 0, 32),
-    }, required=("host",))
+    return _check_spec(
+        p,
+        {
+            "host": _host,
+            "port": lambda k, v: _int(k, v, 1, 65535),
+            "unit": lambda k, v: _int(k, v, 1, 247),
+            "timeout_s": lambda k, v: _num(k, v, 0.5, 60),
+            "retries": lambda k, v: _int(k, v, 0, 5),
+            "max_block": lambda k, v: _int(k, v, 1, 125),
+            "gap_max": lambda k, v: _int(k, v, 0, 32),
+        },
+        required=("host",),
+    )
 
 
 def _params_mqtt(p):
-    return _check_spec(p, {
-        "host": _host,
-        "port": lambda k, v: _int(k, v, 1, 65535),
-        "username": lambda k, v: _str(k, v, maxlen=256),
-        "password_ref": _ref,
-        "client_id": lambda k, v: _str(k, v, CLIENT_ID_RE, "^[A-Za-z0-9_\\-]{1,64}$"),
-        "topics": lambda k, v: _list_of(k, v, _topic_filter, 1, 32),
-        "status_topic": lambda k, v: _str(k, v, maxlen=256),
-        "status_online_path": _path,
-        "keepalive_s": lambda k, v: _int(k, v, 5, 600),
-        "tls": _bool,
-        "qos": lambda k, v: _int(k, v, 0, 1),
-    }, required=("host", "client_id", "topics"))
+    return _check_spec(
+        p,
+        {
+            "host": _host,
+            "port": lambda k, v: _int(k, v, 1, 65535),
+            "username": lambda k, v: _str(k, v, maxlen=256),
+            "password_ref": _ref,
+            "client_id": lambda k, v: _str(k, v, CLIENT_ID_RE, "^[A-Za-z0-9_\\-]{1,64}$"),
+            "topics": lambda k, v: _list_of(k, v, _topic_filter, 1, 32),
+            "status_topic": lambda k, v: _str(k, v, maxlen=256),
+            "status_online_path": _path,
+            "keepalive_s": lambda k, v: _int(k, v, 5, 600),
+            "tls": _bool,
+            "qos": lambda k, v: _int(k, v, 0, 1),
+        },
+        required=("host", "client_id", "topics"),
+    )
 
 
 def _params_http_push(p):
-    return _check_spec(p, {
-        "routes": lambda k, v: _list_of(
-            k, v, lambda kk, vv: _str(kk, vv, ROUTE_RE, "^[a-z][a-z0-9_]{0,31}$"), 1, 16),
-        "allow_ips": lambda k, v: _list_of(k, v, lambda kk, vv: _str(kk, vv, maxlen=256, minlen=1), 0, 256),
-        "token_ref": _ref,
-        "secret_ref": _ref,
-        "max_body_kb": lambda k, v: _int(k, v, 1, 1024),
-    }, required=("routes",))
+    return _check_spec(
+        p,
+        {
+            "routes": lambda k, v: _list_of(
+                k, v, lambda kk, vv: _str(kk, vv, ROUTE_RE, "^[a-z][a-z0-9_]{0,31}$"), 1, 16
+            ),
+            "allow_ips": lambda k, v: _list_of(k, v, lambda kk, vv: _str(kk, vv, maxlen=256, minlen=1), 0, 256),
+            "token_ref": _ref,
+            "secret_ref": _ref,
+            "max_body_kb": lambda k, v: _int(k, v, 1, 1024),
+        },
+        required=("routes",),
+    )
 
 
 def _params_bacnet(p):
-    return _check_spec(p, {
-        "host": _host,
-        "port": lambda k, v: _int(k, v, 1, 65535),
-        "device": lambda k, v: _int(k, v, 0, 4194302),
-        "address": lambda k, v: _str(k, v, maxlen=64),
-        "network": lambda k, v: _int(k, v, 1, 65534),
-        "timeout_s": lambda k, v: _num(k, v, 1, 60),
-        "rpm": _bool,
-        "rpm_max": lambda k, v: _int(k, v, 1, 200),
-        "cov_lifetime_s": lambda k, v: _int(k, v, 60, 3600),
-        "read_only": _bool,
-        "events": _bool,
-    }, required=("host", "device"))
+    return _check_spec(
+        p,
+        {
+            "host": _host,
+            "port": lambda k, v: _int(k, v, 1, 65535),
+            "device": lambda k, v: _int(k, v, 0, 4194302),
+            "address": lambda k, v: _str(k, v, maxlen=64),
+            "network": lambda k, v: _int(k, v, 1, 65534),
+            "timeout_s": lambda k, v: _num(k, v, 1, 60),
+            "rpm": _bool,
+            "rpm_max": lambda k, v: _int(k, v, 1, 200),
+            "cov_lifetime_s": lambda k, v: _int(k, v, 60, 3600),
+            "read_only": _bool,
+            "events": _bool,
+        },
+        required=("host", "device"),
+    )
 
 
 def _params_opcua(p):
-    return _check_spec(p, {
-        "endpoint": lambda k, v: _str(k, v, ENDPOINT_RE, "opc.tcp://…"),
-        "security_mode": lambda k, v: _str(k, v, enum=("None", "Sign", "SignAndEncrypt")),
-        "security_policy": lambda k, v: _str(
-            k, v, enum=("None", "Basic256Sha256", "Aes128_Sha256_RsaOaep", "Aes256_Sha256_RsaPss")),
-        "username": lambda k, v: _str(k, v, maxlen=256),
-        "password_ref": _ref, "cert_ref": _ref, "key_ref": _ref,
-        "timeout_s": lambda k, v: _num(k, v, 0.1, 600),
-        "publishing_interval_ms": lambda k, v: _int(k, v, 50, 60000),
-    }, required=("endpoint",))
+    return _check_spec(
+        p,
+        {
+            "endpoint": lambda k, v: _str(k, v, ENDPOINT_RE, "opc.tcp://…"),
+            "security_mode": lambda k, v: _str(k, v, enum=("None", "Sign", "SignAndEncrypt")),
+            "security_policy": lambda k, v: _str(
+                k, v, enum=("None", "Basic256Sha256", "Aes128_Sha256_RsaOaep", "Aes256_Sha256_RsaPss")
+            ),
+            "username": lambda k, v: _str(k, v, maxlen=256),
+            "password_ref": _ref,
+            "cert_ref": _ref,
+            "key_ref": _ref,
+            "timeout_s": lambda k, v: _num(k, v, 0.1, 600),
+            "publishing_interval_ms": lambda k, v: _int(k, v, 50, 60000),
+        },
+        required=("endpoint",),
+    )
 
 
 def _params_helvarnet(p):
-    return _check_spec(p, {
-        "host": _host,
-        "port": lambda k, v: _int(k, v, 1, 65535),
-        "protocol": lambda k, v: _str(k, v, enum=("tcp", "udp")),
-        "timeout_s": lambda k, v: _num(k, v, 0.1, 600),
-    }, required=("host",))
+    return _check_spec(
+        p,
+        {
+            "host": _host,
+            "port": lambda k, v: _int(k, v, 1, 65535),
+            "protocol": lambda k, v: _str(k, v, enum=("tcp", "udp")),
+            "timeout_s": lambda k, v: _num(k, v, 0.1, 600),
+        },
+        required=("host",),
+    )
 
 
 SICS_PARAM_KEYS = ("host", "port", "mode", "period_s", "timeout_s", "unit", "dialect", "reset_on_connect")
 
 
 def _params_sics(p):
-    errors = _check_spec(p, {
-        "host": lambda k, v: _str(k, v, maxlen=253, minlen=1),
-        "port": lambda k, v: _int(k, v, 1, 65535),
-        "mode": lambda k, v: _str(k, v, enum=("stream", "poll")),
-        "period_s": lambda k, v: _num(k, v, 0.2, 60),
-        "timeout_s": lambda k, v: _num(k, v, 0.5, 30),
-        "unit": lambda k, v: _str(k, v, enum=("kg", "t", "lb", "g")),
-        "dialect": lambda k, v: _str(k, v, enum=("mt_sics",)),
-        "reset_on_connect": _bool,
-    }, required=("host",))
+    errors = _check_spec(
+        p,
+        {
+            "host": lambda k, v: _str(k, v, maxlen=253, minlen=1),
+            "port": lambda k, v: _int(k, v, 1, 65535),
+            "mode": lambda k, v: _str(k, v, enum=("stream", "poll")),
+            "period_s": lambda k, v: _num(k, v, 0.2, 60),
+            "timeout_s": lambda k, v: _num(k, v, 0.5, 30),
+            "unit": lambda k, v: _str(k, v, enum=("kg", "t", "lb", "g")),
+            "dialect": lambda k, v: _str(k, v, enum=("mt_sics",)),
+            "reset_on_connect": _bool,
+        },
+        required=("host",),
+    )
     for k in p:
         if k not in SICS_PARAM_KEYS and not str(k).startswith("_"):
             errors.append("%s: невідомий ключ (схема sics не допускає додаткових)" % k)
@@ -531,22 +641,31 @@ def _params_sics(p):
 
 
 def _params_rest(p):
-    return _check_spec(p, {
-        "base_url": lambda k, v: _str(k, v, HTTP_URL_RE, "http(s)://…"),
-        "auth": lambda k, v: _str(k, v, enum=("none", "api_key", "bearer", "basic")),
-        "header": lambda k, v: _str(k, v, maxlen=128),
-        "key_ref": _ref,
-        "user": lambda k, v: _str(k, v, maxlen=256),
-        "password_ref": _ref,
-        "verify_tls": _bool,
-        "timeout_s": lambda k, v: _num(k, v, 1, 60),
-    }, required=("base_url",))
+    return _check_spec(
+        p,
+        {
+            "base_url": lambda k, v: _str(k, v, HTTP_URL_RE, "http(s)://…"),
+            "auth": lambda k, v: _str(k, v, enum=("none", "api_key", "bearer", "basic")),
+            "header": lambda k, v: _str(k, v, maxlen=128),
+            "key_ref": _ref,
+            "user": lambda k, v: _str(k, v, maxlen=256),
+            "password_ref": _ref,
+            "verify_tls": _bool,
+            "timeout_s": lambda k, v: _num(k, v, 1, 60),
+        },
+        required=("base_url",),
+    )
 
 
 PARAMS_VALIDATORS = {
-    "modbus_tcp": _params_modbus, "mqtt": _params_mqtt, "http_push": _params_http_push,
-    "bacnet_ip": _params_bacnet, "opcua": _params_opcua, "helvarnet": _params_helvarnet,
-    "sics": _params_sics, "rest_vendor": _params_rest,
+    "modbus_tcp": _params_modbus,
+    "mqtt": _params_mqtt,
+    "http_push": _params_http_push,
+    "bacnet_ip": _params_bacnet,
+    "opcua": _params_opcua,
+    "helvarnet": _params_helvarnet,
+    "sics": _params_sics,
+    "rest_vendor": _params_rest,
 }
 
 

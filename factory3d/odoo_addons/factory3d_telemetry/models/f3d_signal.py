@@ -14,13 +14,46 @@ from ..tools.titles import fmt_num, render_title
 from .f3d_source import F3dSource
 
 KYIV = ZoneInfo("Europe/Kyiv")
-ETAG_FIELDS = {"address", "address_text", "period_s", "scale", "source_id", "active", "write_enabled", "states",
-               "kind", "unit", "decimals", "code"}
-THRESHOLD_FIELDS = {"warn_low", "warn_high", "alarm_low", "alarm_high", "warn_low_on", "warn_high_on",
-                    "alarm_low_on", "alarm_high_on", "hysteresis", "alarm_states", "kind"}
+ETAG_FIELDS = {
+    "address",
+    "address_text",
+    "period_s",
+    "scale",
+    "source_id",
+    "active",
+    "write_enabled",
+    "states",
+    "kind",
+    "unit",
+    "decimals",
+    "code",
+}
+THRESHOLD_FIELDS = {
+    "warn_low",
+    "warn_high",
+    "alarm_low",
+    "alarm_high",
+    "warn_low_on",
+    "warn_high_on",
+    "alarm_low_on",
+    "alarm_high_on",
+    "hysteresis",
+    "alarm_states",
+    "kind",
+}
 COV_DEFAULT_OBJECTS = {
-    "analog-input", "binary-input", "multi-state-input", "multi-state-value", "life-safety-zone",
-    "life-safety-point", "AI", "BI", "MSI", "MSV", "LSZ", "LSP",
+    "analog-input",
+    "binary-input",
+    "multi-state-input",
+    "multi-state-value",
+    "life-safety-zone",
+    "life-safety-point",
+    "AI",
+    "BI",
+    "MSI",
+    "MSV",
+    "LSZ",
+    "LSP",
 }
 
 
@@ -37,8 +70,13 @@ class F3dSignal(models.Model):
     _rec_names_search = ["name", "code"]
     CODE_RE = re.compile(r"^[a-z_]+(/[A-Za-z0-9_\-\.]+)+$")
     KINDS = [("gauge", "Величина"), ("counter", "Лічильник"), ("state", "Стан"), ("event", "Подія")]
-    STATUSES = [("unknown", "Невідомо"), ("ok", "Норма"), ("warn", "Увага"), ("alarm", "Тривога"),
-                ("stale", "Немає даних")]
+    STATUSES = [
+        ("unknown", "Невідомо"),
+        ("ok", "Норма"),
+        ("warn", "Увага"),
+        ("alarm", "Тривога"),
+        ("stale", "Немає даних"),
+    ]
 
     code = fields.Char(string="Код (шлях)", required=True, index=True, copy=False, tracking=True)
     name = fields.Char(string="Назва", required=True)
@@ -48,25 +86,30 @@ class F3dSignal(models.Model):
     kind = fields.Selection(KINDS, string="Вид", required=True, default="gauge", tracking=True)
     unit = fields.Char(string="Одиниця")
     states = fields.Json(string="Допустимі стани")
-    equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", ondelete="set null", index=True,
-                                   tracking=True)
+    equipment_id = fields.Many2one(
+        "maintenance.equipment", string="Обладнання", ondelete="set null", index=True, tracking=True
+    )
     equipment_code = fields.Char(string="Код обладнання", related="equipment_id.f3d_code")
     workcenter_id = fields.Many2one("mrp.workcenter", string="Робочий центр", ondelete="set null")
     source_id = fields.Many2one("f3d.source", string="Джерело", ondelete="set null", index=True, tracking=True)
     source_type = fields.Selection(related="source_id.type")
     collector_id = fields.Many2one("f3d.collector", related="source_id.collector_id", store=True, index=True)
     address = fields.Json(string="Адреса в джерелі", default=lambda self: {})
-    address_text = fields.Text(string="Адреса (JSON)", compute="_compute_address_text",
-                               inverse="_inverse_address_text")
+    address_text = fields.Text(string="Адреса (JSON)", compute="_compute_address_text", inverse="_inverse_address_text")
     period_s = fields.Integer(string="Період, с", default=10)
     store_period_s = fields.Integer(
         string="Зберігати не частіше, с",
-        default=lambda self: int(self.env["ir.config_parameter"].sudo().get_param(
-            "factory3d.telemetry.default_store_period_s", "300")))
+        default=lambda self: int(
+            self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.default_store_period_s", "300")
+        ),
+    )
     scale = fields.Float(
-        string="Множник", digits=(16, 6), default=1.0,
+        string="Множник",
+        digits=(16, 6),
+        default=1.0,
         help="Множник сигналу: ядро колектора один раз множить на нього інженерне значення, яке повернув "
-             "плагін (масштаб і зсув адреси плагін уже застосував). R-02.")
+        "плагін (масштаб і зсув адреси плагін уже застосував). R-02.",
+    )
     decimals = fields.Integer(string="Знаків після коми", default=2)
     nominal = fields.Float(string="Номінал")
     warn_low = fields.Float(string="Увага, нижче", tracking=True)
@@ -82,47 +125,62 @@ class F3dSignal(models.Model):
     alarm_states = fields.Json(string="Стани-тривоги")
     alarm_title = fields.Char(string="Заголовок заявки")
     alarm_priority = fields.Selection(
-        [("0", "Дуже низький"), ("1", "Низький"), ("2", "Звичайний"), ("3", "Високий")], default="2",
-        string="Пріоритет заявки")
+        [("0", "Дуже низький"), ("1", "Низький"), ("2", "Звичайний"), ("3", "Високий")],
+        default="2",
+        string="Пріоритет заявки",
+    )
     create_request = fields.Boolean(string="Створювати заявку ТО", default=True)
     write_enabled = fields.Boolean(string="Дозволити запис", default=False, tracking=True)
     viewer_visible = fields.Boolean(string="Показувати в 3D", default=True)
     last_value = fields.Float(string="Останнє значення", readonly=True)
     last_text = fields.Char(string="Останній стан", readonly=True)
     last_ts = fields.Datetime(string="Час останнього", readonly=True, index=True)
-    last_quality = fields.Selection([("good", "Добра"), ("uncertain", "Непевна"), ("bad", "Погана")],
-                                    string="Якість", readonly=True)
+    last_quality = fields.Selection(
+        [("good", "Добра"), ("uncertain", "Непевна"), ("bad", "Погана")], string="Якість", readonly=True
+    )
     last_stored_ts = fields.Datetime()
     status = fields.Selection(STATUSES, string="Статус", default="unknown", index=True, readonly=True, tracking=True)
     status_since = fields.Datetime(string="Статус з", readonly=True)
     breach_since = fields.Datetime()
-    maintenance_request_id = fields.Many2one("maintenance.request", string="Відкрита заявка", ondelete="set null",
-                                             readonly=True, copy=False)
+    maintenance_request_id = fields.Many2one(
+        "maintenance.request", string="Відкрита заявка", ondelete="set null", readonly=True, copy=False
+    )
     request_closed_at = fields.Datetime()
     last_notified_ts = fields.Datetime()
     origin = fields.Selection(
-        [("sim_data", "Рівень 0 (макет)"), ("catalog", "Каталог емулятора"), ("manual", "Вручну"),
-         ("module", "Дані модуля")], default="manual", string="Походження")
+        [
+            ("sim_data", "Рівень 0 (макет)"),
+            ("catalog", "Каталог емулятора"),
+            ("manual", "Вручну"),
+            ("module", "Дані модуля"),
+        ],
+        default="manual",
+        string="Походження",
+    )
     module = fields.Selection(F3dSource.MODULES, string="Модуль-власник", default="telemetry", index=True)
     derived_from_id = fields.Many2one("f3d.signal", string="Похідний від", ondelete="set null")
-    derive_rule = fields.Selection([("none", "—"), ("rate_h", "Швидкість за годину (Δ/Δt)")], default="none",
-                                   string="Правило похідної")
+    derive_rule = fields.Selection(
+        [("none", "—"), ("rate_h", "Швидкість за годину (Δ/Δt)")], default="none", string="Правило похідної"
+    )
     sim_mode = fields.Char(string="Режим макета")
     sim_params = fields.Json(string="Параметри макета")
     note = fields.Text(string="Примітка")
     reading_count = fields.Integer(string="Показань за 2 доби", compute="_compute_reading_count")
     meter_equipment_ids = fields.One2many("maintenance.equipment", "f3d_meter_signal_id", string="ТО за лічильником")
     is_f3d_manager = fields.Boolean(compute="_compute_is_f3d_manager")
-    states_text = fields.Char(string="Допустимі стани (через кому)", compute="_compute_states_text",
-                              inverse="_inverse_states_text")
-    alarm_states_text = fields.Char(string="Стани-тривоги (через кому)", compute="_compute_states_text",
-                                    inverse="_inverse_alarm_states_text")
+    states_text = fields.Char(
+        string="Допустимі стани (через кому)", compute="_compute_states_text", inverse="_inverse_states_text"
+    )
+    alarm_states_text = fields.Char(
+        string="Стани-тривоги (через кому)", compute="_compute_states_text", inverse="_inverse_alarm_states_text"
+    )
     sim_params_text = fields.Text(compute="_compute_sim_params_text")
 
     _f3d_signal_code_uniq = models.Constraint("UNIQUE(code)", "Код сигналу має бути унікальним.")
     _f3d_signal_periods = models.Constraint(
         "CHECK(period_s >= 1 AND store_period_s >= 0 AND min_duration_s >= 0 AND hysteresis >= 0)",
-        "Період ≥ 1 с, інтервал зберігання ≥ 0, тривалість і гістерезис ≥ 0.")
+        "Період ≥ 1 с, інтервал зберігання ≥ 0, тривалість і гістерезис ≥ 0.",
+    )
 
     # --- обчислювані ---------------------------------------------------------------------------------
     @api.depends("name", "code")
@@ -170,8 +228,11 @@ class F3dSignal(models.Model):
         counts = {}
         if self.ids:
             since = fields.Datetime.now() - timedelta(hours=48)
-            for sig, count in self.env["f3d.reading"].sudo()._read_group(
-                    [("signal_id", "in", self.ids), ("ts", ">=", since)], ["signal_id"], ["__count"]):
+            for sig, count in (
+                self.env["f3d.reading"]
+                .sudo()
+                ._read_group([("signal_id", "in", self.ids), ("ts", ">=", since)], ["signal_id"], ["__count"])
+            ):
                 counts[sig.id] = count
         for rec in self:
             rec.reading_count = counts.get(rec.id, 0)
@@ -181,9 +242,13 @@ class F3dSignal(models.Model):
     def _check_code(self):
         for rec in self:
             if not rec.code or len(rec.code) > 128 or not self.CODE_RE.match(rec.code):
-                raise ValidationError(_(
-                    "Код сигналу %s: шлях виду energy/consumers/SAW-1/p_now (малі літери групи, далі сегменти "
-                    "через /).", rec.code))
+                raise ValidationError(
+                    _(
+                        "Код сигналу %s: шлях виду energy/consumers/SAW-1/p_now (малі літери групи, далі сегменти "
+                        "через /).",
+                        rec.code,
+                    )
+                )
 
     @api.constrains("source_id", "address")
     def _check_address(self):
@@ -194,8 +259,16 @@ class F3dSignal(models.Model):
                 if errors:
                     raise ValidationError(_("Адреса сигналу %s: %s", rec.code, "; ".join(errors)))
 
-    @api.constrains("warn_low_on", "warn_low", "alarm_low_on", "alarm_low", "warn_high_on", "warn_high",
-                    "alarm_high_on", "alarm_high")
+    @api.constrains(
+        "warn_low_on",
+        "warn_low",
+        "alarm_low_on",
+        "alarm_low",
+        "warn_high_on",
+        "warn_high",
+        "alarm_high_on",
+        "alarm_high",
+    )
     def _check_thresholds(self):
         for rec in self:
             if rec.alarm_low_on and rec.warn_low_on and rec.alarm_low > rec.warn_low:
@@ -205,12 +278,12 @@ class F3dSignal(models.Model):
             if rec.alarm_low_on and rec.alarm_high_on and rec.alarm_low >= rec.alarm_high:
                 raise ValidationError(_("«Тривога, нижче» має бути < «Тривога, вище»."))
 
-    @api.constrains("kind", "warn_low_on", "warn_high_on", "alarm_low_on", "alarm_high_on", "derive_rule",
-                    "derived_from_id")
+    @api.constrains(
+        "kind", "warn_low_on", "warn_high_on", "alarm_low_on", "alarm_high_on", "derive_rule", "derived_from_id"
+    )
     def _check_kind(self):
         for rec in self:
-            if rec.kind == "state" and (rec.warn_low_on or rec.warn_high_on or rec.alarm_low_on
-                                        or rec.alarm_high_on):
+            if rec.kind == "state" and (rec.warn_low_on or rec.warn_high_on or rec.alarm_low_on or rec.alarm_high_on):
                 raise ValidationError(_("Для стану задайте «Стани-тривоги», а не числові пороги."))
             if rec.derive_rule == "rate_h" and (not rec.derived_from_id or rec.derived_from_id.kind != "counter"):
                 raise ValidationError(_("Похідна «за годину» потребує лічильника-джерела."))
@@ -219,8 +292,13 @@ class F3dSignal(models.Model):
     def _check_write_enabled(self):
         for rec in self:
             src = rec.source_id
-            if rec.write_enabled and src and src.type == "bacnet_ip" and isinstance(src.params, dict) \
-                    and src.params.get("read_only"):
+            if (
+                rec.write_enabled
+                and src
+                and src.type == "bacnet_ip"
+                and isinstance(src.params, dict)
+                and src.params.get("read_only")
+            ):
                 raise ValidationError(_("Запис у пожежну панель заборонено (D-07)."))
 
     # --- запис ---------------------------------------------------------------------------------------
@@ -243,8 +321,7 @@ class F3dSignal(models.Model):
     def unlink(self):
         used = self.meter_equipment_ids
         if used:
-            raise UserError(_("Сигнал використовується для ТО за лічильником на %s.",
-                              ", ".join(used.mapped("name"))))
+            raise UserError(_("Сигнал використовується для ТО за лічильником на %s.", ", ".join(used.mapped("name"))))
         return super().unlink()
 
     def _f3d_cfg(self):
@@ -258,12 +335,16 @@ class F3dSignal(models.Model):
         now = fields.Datetime.now()
         for rec in self.filtered(lambda r: r.last_ts and r.status in ("ok", "warn", "alarm")):
             new, _since = thresholds.eval_status(
-                {"status": rec.status, "breach_since": False}, rec.last_value, rec.last_text, now, rec._f3d_cfg(),
-                ignore_min_duration=True)
+                {"status": rec.status, "breach_since": False},
+                rec.last_value,
+                rec.last_text,
+                now,
+                rec._f3d_cfg(),
+                ignore_min_duration=True,
+            )
             if new != rec.status:
                 old = rec.status
-                rec.with_context(mail_notrack=True).write(
-                    {"status": new, "status_since": now, "breach_since": False})
+                rec.with_context(mail_notrack=True).write({"status": new, "status_since": now, "breach_since": False})
                 rec.message_post(body=rec._status_message(old, new), subtype_xmlid="mail.mt_note")
 
     def _status_message(self, old, new):
@@ -272,8 +353,11 @@ class F3dSignal(models.Model):
             detail = self.last_text or ""
         else:
             detail = ("%s %s" % (fmt_num(self.last_value, self.decimals), self.unit or "")).strip()
-        return "Стан: %s → %s%s" % (STATUS_LABELS.get(old, old), STATUS_LABELS.get(new, new),
-                                    " (%s)" % detail if detail else "")
+        return "Стан: %s → %s%s" % (
+            STATUS_LABELS.get(old, old),
+            STATUS_LABELS.get(new, new),
+            " (%s)" % detail if detail else "",
+        )
 
     # --- інгест (CT-10) ------------------------------------------------------------------------------
     @api.model
@@ -314,7 +398,8 @@ class F3dSignal(models.Model):
                 continue
             text = row.get("address") or ""
             address = sim_catalog.parse_sim_address(
-                row.get("protocol"), text, row.get("dtype"), row.get("scale"), row.get("unit"))
+                row.get("protocol"), text, row.get("dtype"), row.get("scale"), row.get("unit")
+            )
             if address is None:
                 result["unparsed"].append(code)
                 continue
@@ -325,8 +410,15 @@ class F3dSignal(models.Model):
                 result["unparsed"].append(code)
                 continue
             nominal = sim_catalog.parse_nominal(row.get("nominal"))
-            params = {k: v for k, v in (("nominal", nominal), ("thresholds", row.get("thresholds") or None),
-                                        ("catalog_address", text)) if v is not None}
+            params = {
+                k: v
+                for k, v in (
+                    ("nominal", nominal),
+                    ("thresholds", row.get("thresholds") or None),
+                    ("catalog_address", text),
+                )
+                if v is not None
+            }
             if sig:
                 vals = {}
                 if not sig.address:
@@ -343,9 +435,14 @@ class F3dSignal(models.Model):
                 result["updated"] += 1
                 continue
             vals = {
-                "code": code, "name": row.get("name") or code, "origin": origin, "address": address,
-                "module": defaults.get("module") or sim_catalog.module_for_code(code), "sim_params": params,
-                "source_id": source.id if source else False, "nominal": nominal or 0.0,
+                "code": code,
+                "name": row.get("name") or code,
+                "origin": origin,
+                "address": address,
+                "module": defaults.get("module") or sim_catalog.module_for_code(code),
+                "sim_params": params,
+                "source_id": source.id if source else False,
+                "nominal": nominal or 0.0,
             }
             if row.get("kind") in ("gauge", "counter", "state", "event"):
                 vals["kind"] = row["kind"]
@@ -367,12 +464,17 @@ class F3dSignal(models.Model):
         if not self.env.user.has_group("factory3d_base.group_f3d_admin"):
             raise AccessError(_("Запускати міграцію може лише адміністратор «Завод 3D»."))
         from .. import hooks  # noqa: PLC0415
+
         data = hooks.run_migration(self.sudo().env)
         return {
-            "type": "ir.actions.client", "tag": "display_notification",
-            "params": {"title": _("Міграція рівня 0"),
-                       "message": _("Міграцію виконано: %s", json.dumps(data, ensure_ascii=False)),
-                       "type": "success", "sticky": True},
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Міграція рівня 0"),
+                "message": _("Міграцію виконано: %s", json.dumps(data, ensure_ascii=False)),
+                "type": "success",
+                "sticky": True,
+            },
         }
 
     def _apply_reading(self, ts, value, text, quality):
@@ -380,11 +482,20 @@ class F3dSignal(models.Model):
         self.ensure_one()
         vals = {}
         if quality != "bad" and (not self.last_ts or ts > self.last_ts):
-            vals.update(last_value=value if value is not None else self.last_value, last_text=text or self.last_text,
-                        last_ts=ts, last_quality=quality)
+            vals.update(
+                last_value=value if value is not None else self.last_value,
+                last_text=text or self.last_text,
+                last_ts=ts,
+                last_quality=quality,
+            )
             status, since = thresholds.eval_status(
-                {"status": self.status, "breach_since": self.breach_since}, value, text, ts, self._f3d_cfg(),
-                quality=quality)
+                {"status": self.status, "breach_since": self.breach_since},
+                value,
+                text,
+                ts,
+                self._f3d_cfg(),
+                quality=quality,
+            )
             vals.update(breach_since=since)
             if status != self.status:
                 vals.update(status=status, status_since=ts)
@@ -406,22 +517,25 @@ class F3dSignal(models.Model):
             what = "стан «%s»" % (text or "")
         else:
             what = "показник %s %s %s порогу %s %s" % (
-                fmt_num(value, self.decimals), self.unit or "", rel, fmt_num(threshold, self.decimals),
-                self.unit or "")
+                fmt_num(value, self.decimals),
+                self.unit or "",
+                rel,
+                fmt_num(threshold, self.decimals),
+                self.unit or "",
+            )
         vals = {
             "name": render_title(self, value, rel, threshold, text),
             "equipment_id": eq.id,
             "maintenance_type": "corrective",
             "maintenance_team_id": team.id if team else False,
             "priority": self.alarm_priority or "2",
-            "description": "Автоматично з телеметрії: сигнал %s, %s, джерело %s, час %s." % (
-                self.code, re.sub(r"\s+", " ", what).strip(), source, local_ts),
+            "description": "Автоматично з телеметрії: сигнал %s, %s, джерело %s, час %s."
+            % (self.code, re.sub(r"\s+", " ", what).strip(), source, local_ts),
             "request_date": fields.Date.today(),
             "schedule_date": fields.Datetime.now(),
         }
         Request = self.env["maintenance.request"].sudo()
-        extra = {"f3d_signal_id": self.id, "f3d_origin": "threshold", "f3d_value": value,
-                 "f3d_threshold": threshold}
+        extra = {"f3d_signal_id": self.id, "f3d_origin": "threshold", "f3d_value": value, "f3d_threshold": threshold}
         vals.update({k: v for k, v in extra.items() if k in Request._fields and v is not None})
         request = Request.create(vals)
         self.sudo().with_context(mail_notrack=True).write({"maintenance_request_id": request.id})
@@ -431,8 +545,9 @@ class F3dSignal(models.Model):
     def _on_request_closed(self, request):
         """R-06: заявку закрито — звільнити сигнал, перерахувати статус без мін. тривалості."""
         now = fields.Datetime.now()
-        cooldown = int(self.env["ir.config_parameter"].sudo().get_param(
-            "factory3d.telemetry.realarm_cooldown_s", "3600") or 3600)
+        cooldown = int(
+            self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.realarm_cooldown_s", "3600") or 3600
+        )
         for rec in self:
             vals = {}
             if rec.maintenance_request_id == request:
@@ -440,8 +555,13 @@ class F3dSignal(models.Model):
             status = rec.status
             if rec.last_ts and status in ("ok", "warn", "alarm"):
                 new, _since = thresholds.eval_status(
-                    {"status": status, "breach_since": False}, rec.last_value, rec.last_text, now,
-                    rec._f3d_cfg(), ignore_min_duration=True)
+                    {"status": status, "breach_since": False},
+                    rec.last_value,
+                    rec.last_text,
+                    now,
+                    rec._f3d_cfg(),
+                    ignore_min_duration=True,
+                )
                 if new != status:
                     vals.update(status=new, status_since=now, breach_since=False)
                     status = new
@@ -484,10 +604,15 @@ class F3dSignal(models.Model):
         now = fields.Datetime.now()
         min_s = int(self.env["ir.config_parameter"].sudo().get_param("factory3d.telemetry.stale_min_s", "60") or 60)
         local = self.env["f3d.source"]._f3d_local_types()
-        cands = self.sudo().search([
-            ("status", "in", ("ok", "warn", "alarm")), ("source_id", "!=", False),
-            ("source_id.type", "not in", local), ("last_ts", "<", now - timedelta(seconds=min_s)),
-        ], limit=2000)
+        cands = self.sudo().search(
+            [
+                ("status", "in", ("ok", "warn", "alarm")),
+                ("source_id", "!=", False),
+                ("source_id.type", "not in", local),
+                ("last_ts", "<", now - timedelta(seconds=min_s)),
+            ],
+            limit=2000,
+        )
         stale = cands.filtered(lambda s: s.last_ts < now - timedelta(seconds=s._f3d_stale_after()))
         stale._mark_stale("timeout")
         self.env["f3d.collector"]._cron_offline()
@@ -502,23 +627,32 @@ class F3dSignal(models.Model):
         errors = []
         if self.source_id:
             errors = address_tools.validate_address(
-                self.source_id.type, self.address or {}, self.env["f3d.source"]._f3d_local_types())
+                self.source_id.type, self.address or {}, self.env["f3d.source"]._f3d_local_types()
+            )
         message, kind = ("; ".join(errors), "danger") if errors else (_("Адреса коректна"), "success")
-        return {"type": "ir.actions.client", "tag": "display_notification",
-                "params": {"title": _("Перевірка адреси"), "message": message, "type": kind, "sticky": False}}
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {"title": _("Перевірка адреси"), "message": message, "type": kind, "sticky": False},
+        }
 
     def action_view_readings(self):
         self.ensure_one()
         return {
-            "type": "ir.actions.act_window", "name": _("Показання"), "res_model": "f3d.reading",
-            "view_mode": "graph,list", "domain": [("signal_id", "=", self.id)],
+            "type": "ir.actions.act_window",
+            "name": _("Показання"),
+            "res_model": "f3d.reading",
+            "view_mode": "graph,list",
+            "domain": [("signal_id", "=", self.id)],
             "context": {"search_default_last_48h": 1},
         }
 
     def action_open_request(self):
         self.ensure_one()
         return {
-            "type": "ir.actions.act_window", "res_model": "maintenance.request", "view_mode": "form",
+            "type": "ir.actions.act_window",
+            "res_model": "maintenance.request",
+            "view_mode": "form",
             "res_id": self.maintenance_request_id.id,
         }
 
@@ -527,7 +661,10 @@ class F3dSignal(models.Model):
         if not self.write_enabled:
             raise UserError(_("Запис у сигнал не дозволено."))
         return {
-            "type": "ir.actions.act_window", "name": _("Команда на пристрій"), "res_model": "f3d.command",
-            "view_mode": "form", "target": "new", "context": {"default_signal_id": self.id},
+            "type": "ir.actions.act_window",
+            "name": _("Команда на пристрій"),
+            "res_model": "f3d.command",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_signal_id": self.id},
         }
-

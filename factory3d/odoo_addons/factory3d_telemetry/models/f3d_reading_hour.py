@@ -44,8 +44,9 @@ class F3dReadingHour(models.Model):
     _log_access = False
 
     signal_id = fields.Many2one("f3d.signal", string="Сигнал", required=True, ondelete="cascade", index=True)
-    equipment_id = fields.Many2one("maintenance.equipment", string="Обладнання", related="signal_id.equipment_id",
-                                   store=True, index=True)
+    equipment_id = fields.Many2one(
+        "maintenance.equipment", string="Обладнання", related="signal_id.equipment_id", store=True, index=True
+    )
     hour = fields.Datetime(string="Година (UTC)", required=True)
     v_min = fields.Float(string="Мін.")
     v_avg = fields.Float(string="Серед.")

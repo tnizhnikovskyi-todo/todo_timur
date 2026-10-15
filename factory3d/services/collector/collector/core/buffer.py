@@ -1,4 +1,5 @@
 """SQLite-буфер показань, подій і результатів команд (SPEC §8.3.4, R-19)."""
+
 from __future__ import annotations
 
 import json
@@ -73,9 +74,7 @@ class Buffer:
     async def take(self, limit: int) -> list[tuple[int, Reading]]:
         """Найстаріші `limit` показань (FIFO) разом з id; видаляються лише через ack()."""
         db = await self.open()
-        async with db.execute(
-            "SELECT id, code, ts, value, text, q FROM readings ORDER BY id LIMIT ?", (limit,)
-        ) as cur:
+        async with db.execute("SELECT id, code, ts, value, text, q FROM readings ORDER BY id LIMIT ?", (limit,)) as cur:
             rows = await cur.fetchall()
         return [(r[0], Reading(code=r[1], ts=parse_iso(r[2]), value=r[3], text=r[4], q=r[5])) for r in rows]
 
@@ -103,8 +102,17 @@ class Buffer:
         ) as cur:
             rows = await cur.fetchall()
         return [
-            (r[0], PushEvent(event_id=r[1], route=r[2], ts=parse_iso(r[3]), remote=r[4],
-                             headers=json.loads(r[5]), payload=json.loads(r[6])))
+            (
+                r[0],
+                PushEvent(
+                    event_id=r[1],
+                    route=r[2],
+                    ts=parse_iso(r[3]),
+                    remote=r[4],
+                    headers=json.loads(r[5]),
+                    payload=json.loads(r[6]),
+                ),
+            )
             for r in rows
         ]
 
@@ -119,8 +127,14 @@ class Buffer:
         db = await self.open()
         await db.execute(
             "INSERT INTO results(cmd_id, state, ts, result, error, data) VALUES (?,?,?,?,?,?)",
-            (res.id, res.state, to_iso_z(res.ts), res.result, res.error,
-             None if res.data is None else json.dumps(res.data)),
+            (
+                res.id,
+                res.state,
+                to_iso_z(res.ts),
+                res.result,
+                res.error,
+                None if res.data is None else json.dumps(res.data),
+            ),
         )
         await db.commit()
 
@@ -131,8 +145,17 @@ class Buffer:
         ) as cur:
             rows = await cur.fetchall()
         return [
-            (r[0], CommandResult(id=r[1], state=r[2], ts=parse_iso(r[3]), result=r[4], error=r[5],
-                                 data=None if r[6] is None else json.loads(r[6])))
+            (
+                r[0],
+                CommandResult(
+                    id=r[1],
+                    state=r[2],
+                    ts=parse_iso(r[3]),
+                    result=r[4],
+                    error=r[5],
+                    data=None if r[6] is None else json.loads(r[6]),
+                ),
+            )
             for r in rows
         ]
 
@@ -155,7 +178,7 @@ class Buffer:
             return
         db = await self.open()
         for i in range(0, len(ids), 500):
-            chunk = ids[i:i + 500]
+            chunk = ids[i : i + 500]
             marks = ",".join("?" * len(chunk))
             await db.execute(f"DELETE FROM {table} WHERE id IN ({marks})", chunk)
         await db.commit()
@@ -194,7 +217,8 @@ class Buffer:
         dropped = 0
         while await self.size_bytes() > self.max_bytes:
             cur = await db.execute(
-                "DELETE FROM readings WHERE id IN (SELECT id FROM readings ORDER BY id LIMIT ?)", (DROP_BATCH,))
+                "DELETE FROM readings WHERE id IN (SELECT id FROM readings ORDER BY id LIMIT ?)", (DROP_BATCH,)
+            )
             await db.commit()
             n = cur.rowcount
             if n <= 0:

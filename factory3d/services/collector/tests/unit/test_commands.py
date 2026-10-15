@@ -1,4 +1,5 @@
 """AC-75, AC-95: цикл команд."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -27,25 +28,55 @@ def _reset():
 
 @pytest_asyncio.fixture
 async def env(fake_odoo, settings, vclock, buffer):
-    fake_odoo.config = {"read_enabled": True, "write_enabled": True, "sources": [
-        src_json("S", write=True, signals=[sig_json(WR, write=True), sig_json(RO, write=False),
-                                           sig_json("equipment/X/pulse", write=True,
-                                                    address={"write": {"pulse_ms": 5000}})])]}
+    fake_odoo.config = {
+        "read_enabled": True,
+        "write_enabled": True,
+        "sources": [
+            src_json(
+                "S",
+                write=True,
+                signals=[
+                    sig_json(WR, write=True),
+                    sig_json(RO, write=False),
+                    sig_json("equipment/X/pulse", write=True, address={"write": {"pulse_ms": 5000}}),
+                ],
+            )
+        ],
+    }
     fake_odoo.write_enabled = True
     settings.write_enabled = True
     client = OdooClient(fake_odoo.url, TOKEN, collector="COL-T", clock=vclock)
     reg = Registry(client, settings, lambda s: None, vclock, Metrics(vclock), plugin_classes={"fake": FakePlugin})
     await reg.load()
     loop = CommandLoop(client, reg, buffer, settings, clock=vclock, call_timeout_s=0.05)
-    yield type("Env", (), {"loop": loop, "plugin": reg.plugins["S"], "odoo": fake_odoo, "client": client,
-                           "buffer": buffer, "vclock": vclock, "reg": reg})
+    yield type(
+        "Env",
+        (),
+        {
+            "loop": loop,
+            "plugin": reg.plugins["S"],
+            "odoo": fake_odoo,
+            "client": client,
+            "buffer": buffer,
+            "vclock": vclock,
+            "reg": reg,
+        },
+    )
     await client.close()
 
 
 def _cmd(env, code=WR, cid=1, payload=None, expires=3600, value=1.0, text=None):
-    return {"id": cid, "code": code, "source": "S", "value": value, "text": text, "payload": payload,
-            "requested_at": to_iso_z(env.vclock.now()), "expires_at": to_iso_z(env.vclock.now() + timedelta(seconds=expires)),
-            "address": {}}
+    return {
+        "id": cid,
+        "code": code,
+        "source": "S",
+        "value": value,
+        "text": text,
+        "payload": payload,
+        "requested_at": to_iso_z(env.vclock.now()),
+        "expires_at": to_iso_z(env.vclock.now() + timedelta(seconds=expires)),
+        "address": {},
+    }
 
 
 def _results(env):
@@ -130,8 +161,9 @@ async def test_results_buffered(env):
     from collector.core.types import Command
     from collector.util.timeutil import parse_iso
 
-    cmd = Command(id=1, code=WR, source="S", value=1.0, text=None, address={},
-                  expires_at=parse_iso(cmds[0]["expires_at"]))
+    cmd = Command(
+        id=1, code=WR, source="S", value=1.0, text=None, address={}, expires_at=parse_iso(cmds[0]["expires_at"])
+    )
     await env.loop.process(cmd)
     assert await flush_results(env.client, env.buffer) == 0
     assert await env.buffer.count_results() == 1

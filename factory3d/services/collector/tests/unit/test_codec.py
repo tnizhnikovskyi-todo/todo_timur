@@ -1,4 +1,5 @@
 """AC-77: декодування регістрів."""
+
 from __future__ import annotations
 
 import pytest
@@ -32,9 +33,18 @@ def test_bit_and_bool():
     assert decode_registers([5], "bool") == 1
 
 
-@pytest.mark.parametrize(("value", "type_", "word"), [
-    (6772, "u16", "big"), (1_846_826, "u32", "big"), (1_846_826, "u32", "little"), (6.28125, "f32", "big"),
-    (-5, "i16", "big"), (2**40 + 3, "u64", "little"), (-123456.5, "f64", "big")])
+@pytest.mark.parametrize(
+    ("value", "type_", "word"),
+    [
+        (6772, "u16", "big"),
+        (1_846_826, "u32", "big"),
+        (1_846_826, "u32", "little"),
+        (6.28125, "f32", "big"),
+        (-5, "i16", "big"),
+        (2**40 + 3, "u64", "little"),
+        (-123456.5, "f64", "big"),
+    ],
+)
 def test_roundtrip(value, type_, word):
     assert decode_registers(encode_registers(value, type_, word), type_, word) == pytest.approx(value)
 

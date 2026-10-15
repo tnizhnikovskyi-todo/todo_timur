@@ -7,8 +7,14 @@ class MaintenanceRequest(models.Model):
     f3d_signal_id = fields.Many2one("f3d.signal", string="Сигнал", ondelete="set null", index=True)
     f3d_equipment_code = fields.Char(related="equipment_id.f3d_code", store=True, string="Код обладнання")
     f3d_origin = fields.Selection(
-        [("threshold", "Поріг сигналу"), ("meter", "ТО за лічильником"), ("stale", "Немає даних"),
-         ("manual", "Вручну")], string="Джерело заявки")
+        [
+            ("threshold", "Поріг сигналу"),
+            ("meter", "ТО за лічильником"),
+            ("stale", "Немає даних"),
+            ("manual", "Вручну"),
+        ],
+        string="Джерело заявки",
+    )
     f3d_value = fields.Float(string="Показник при створенні")
     f3d_threshold = fields.Float(string="Поріг")
     f3d_signal_status = fields.Selection(related="f3d_signal_id.status", string="Стан сигналу")
@@ -36,5 +42,6 @@ class MaintenanceRequest(models.Model):
         signals = self.env["f3d.signal"].sudo().search([("maintenance_request_id", "in", self.ids)])
         if signals:
             signals.with_context(mail_notrack=True).write(
-                {"maintenance_request_id": False, "request_closed_at": fields.Datetime.now()})
+                {"maintenance_request_id": False, "request_closed_at": fields.Datetime.now()}
+            )
         return super().unlink()

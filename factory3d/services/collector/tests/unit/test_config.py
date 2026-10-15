@@ -1,4 +1,5 @@
 """AC-74, AC-82: конфігурація з env, код виходу 2, відсутній секрет."""
+
 from __future__ import annotations
 
 import os
@@ -17,16 +18,27 @@ from collector.core.registry import Registry
 from . import FakePlugin, sig_json, src_json
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE_ENV = {"F3D_ODOO_URL": "http://127.0.0.1:1", "F3D_COLLECTOR_CODE": "COL-T", "F3D_COLLECTOR_TOKEN": TOKEN,
-            "F3D_ALLOW_HOSTS": "iot-sim"}
+BASE_ENV = {
+    "F3D_ODOO_URL": "http://127.0.0.1:1",
+    "F3D_COLLECTOR_CODE": "COL-T",
+    "F3D_COLLECTOR_TOKEN": TOKEN,
+    "F3D_ALLOW_HOSTS": "iot-sim",
+}
 
 
 def _run(env_over: dict, drop: tuple = ()):
     env = {k: v for k, v in os.environ.items() if not k.startswith("F3D_")}
     env.update({k: v for k, v in BASE_ENV.items() if k not in drop})
     env.update(env_over)
-    return subprocess.run([sys.executable, "-m", "collector", "run"], env=env, cwd=ROOT, capture_output=True,
-                          text=True, timeout=30, check=False)
+    return subprocess.run(
+        [sys.executable, "-m", "collector", "run"],
+        env=env,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
 
 
 def test_token_too_short_exit2():
@@ -50,7 +62,12 @@ def test_settings_defaults_and_csv(monkeypatch):
     s = Settings()
     assert s.allow_hosts == ["iot-sim", "mosquitto", "10.0.3.0/24"]
     assert (s.config_poll_s, s.push_interval_s, s.push_max, s.status_interval_s, s.commands_poll_s) == (
-        60, 5, 1000, 60, 5)
+        60,
+        5,
+        1000,
+        60,
+        5,
+    )
     assert s.write_enabled is False and s.metrics_port == 9108 and s.http_push_port == 8080
     assert s.buffer_max_mb == 200 and s.log_json is True and s.clock_skew_warn_s == 30
     monkeypatch.setenv("F3D_WRITE_ENABLED", "1")
@@ -59,9 +76,12 @@ def test_settings_defaults_and_csv(monkeypatch):
 
 async def test_missing_secret_ref(fake_odoo, settings, monkeypatch):
     monkeypatch.delenv("F3D_MQTT_PASSWORD", raising=False)
-    fake_odoo.config = {"sources": [
-        src_json("MQ", params={"password_ref": "F3D_MQTT_PASSWORD"}, signals=[sig_json("equipment/A/x")]),
-        src_json("OK", signals=[sig_json("equipment/B/x")])]}
+    fake_odoo.config = {
+        "sources": [
+            src_json("MQ", params={"password_ref": "F3D_MQTT_PASSWORD"}, signals=[sig_json("equipment/A/x")]),
+            src_json("OK", signals=[sig_json("equipment/B/x")]),
+        ]
+    }
     client = OdooClient(fake_odoo.url, TOKEN, clock=VirtualClock())
     reg = Registry(client, settings, lambda s: None, VirtualClock(), Metrics(), plugin_classes={"fake": FakePlugin})
     await reg.load()

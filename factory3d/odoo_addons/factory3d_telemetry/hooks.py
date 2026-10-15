@@ -3,6 +3,7 @@
 `run_migration(env) -> dict` — кроки 1…11; `post_init_hook` = `run_migration` + розклад ротації.
 Кроки 2, 5, 6, 9, 10 потребують моделей рівня 0 (`x_f3d_signal`, `x_f3d_reading`) і без них пропускаються.
 """
+
 import csv
 import io
 import json
@@ -29,19 +30,40 @@ READINGS_BATCH = 5000
 CATALOG_FILE = "factory3d_telemetry/data/signal_catalog.csv"
 
 # Додаток C.3: ключ джерела з адреси → код джерела
-SOURCE_MAP = {"mqtt": "MQTT-MOBILE", "u70": "MB-U70-COMPRESSOR", "u84": "MB-U84-IO5", "u90": "MB-U90-AI1",
-              "u96": "MB-U96-RTD1", "dev140": "BAC-140-BOILER", "http:lpr": "HTTP-PUSH"}
+SOURCE_MAP = {
+    "mqtt": "MQTT-MOBILE",
+    "u70": "MB-U70-COMPRESSOR",
+    "u84": "MB-U84-IO5",
+    "u90": "MB-U90-AI1",
+    "u96": "MB-U96-RTD1",
+    "dev140": "BAC-140-BOILER",
+    "http:lpr": "HTTP-PUSH",
+}
 # Додаток C.1: головне обладнання джерела (ставиться, якщо порожнє)
 SOURCE_EQUIPMENT = {"MB-U70-COMPRESSOR": "COMPRESSOR", "BAC-140-BOILER": "BOILER"}
 # Додаток C.4: (обладнання, сигнал, інтервал, значення останнього ТО або None = floor(last_value / інтервал))
 MOBILE = ["FL-1", "FL-2", "FL-3", "FL-4", "FL-5", "FL-C1", "FL-C2", "TUGGER-1"]
 METERS = [("COMPRESSOR", "equipment/COMPRESSOR/hours", 2000.0, 16000.0)] + [
-    (c, "equipment/%s/hours" % c, 1000.0, None) for c in MOBILE]
+    (c, "equipment/%s/hours" % c, 1000.0, None) for c in MOBILE
+]
 # Представлення, меню й дії рівня 0 (xml-id `factory3d_iot_sim.*`)
-LEVEL0_VIEWS = ["view_signal_list", "view_signal_form", "view_signal_search", "view_reading_list",
-                "view_reading_graph", "view_reading_search", "view_equipment_form_signals"]
-LEVEL0_MENUS = ["menu_iot_tick", "menu_iot_start", "menu_iot_stop", "menu_iot_signals", "menu_iot_readings",
-                "menu_iot_root"]
+LEVEL0_VIEWS = [
+    "view_signal_list",
+    "view_signal_form",
+    "view_signal_search",
+    "view_reading_list",
+    "view_reading_graph",
+    "view_reading_search",
+    "view_equipment_form_signals",
+]
+LEVEL0_MENUS = [
+    "menu_iot_tick",
+    "menu_iot_start",
+    "menu_iot_stop",
+    "menu_iot_signals",
+    "menu_iot_readings",
+    "menu_iot_root",
+]
 LEVEL0_ACTIONS = ["action_signals", "action_readings"]
 
 ALARM_TITLES = {
@@ -53,9 +75,29 @@ ALARM_TITLES = {
 }
 DEFINITION_ONLY = ("last_value", "last_ts", "last_quality", "last_stored_ts", "status", "status_since")
 SIGNAL_CTX = {"active_test": False, "tracking_disable": True, "mail_create_nolog": True, "mail_notrack": True}
-XFIELDS = ("x_code", "x_name", "x_sequence", "x_equipment_id", "x_workcenter_id", "x_source_id", "x_kind", "x_unit",
-           "x_mode", "x_value", "x_nominal", "x_noise", "x_rate", "x_limit", "x_seed", "x_alarm", "x_threshold",
-           "x_state", "x_charging", "x_updated", "x_request_id")
+XFIELDS = (
+    "x_code",
+    "x_name",
+    "x_sequence",
+    "x_equipment_id",
+    "x_workcenter_id",
+    "x_source_id",
+    "x_kind",
+    "x_unit",
+    "x_mode",
+    "x_value",
+    "x_nominal",
+    "x_noise",
+    "x_rate",
+    "x_limit",
+    "x_seed",
+    "x_alarm",
+    "x_threshold",
+    "x_state",
+    "x_charging",
+    "x_updated",
+    "x_request_id",
+)
 
 
 # --- допоміжне -----------------------------------------------------------------------------------------
@@ -152,17 +194,36 @@ def _level0_vals(x):
     mode, alarm, threshold = get("x_mode") or "", get("x_alarm") or "", get("x_threshold") or 0.0
     unit, quantity = get("x_unit") or "", get("x_kind") or ""
     vals = {
-        "code": x.x_code, "name": get("x_name") or x.x_code, "sequence": get("x_sequence") or 10,
-        "equipment_id": _m2o(get("x_equipment_id")), "workcenter_id": _m2o(get("x_workcenter_id")),
-        "quantity": quantity, "unit": unit, "sim_mode": mode, "kind": simcat.kind_for_mode(mode),
-        "module": simcat.module_for_code(x.x_code), "decimals": _decimals(unit),
-        "nominal": get("x_nominal") or 0.0, "origin": "sim_data", "period_s": 60, "store_period_s": 300,
-        "viewer_visible": True, "create_request": True, "active": True,
+        "code": x.x_code,
+        "name": get("x_name") or x.x_code,
+        "sequence": get("x_sequence") or 10,
+        "equipment_id": _m2o(get("x_equipment_id")),
+        "workcenter_id": _m2o(get("x_workcenter_id")),
+        "quantity": quantity,
+        "unit": unit,
+        "sim_mode": mode,
+        "kind": simcat.kind_for_mode(mode),
+        "module": simcat.module_for_code(x.x_code),
+        "decimals": _decimals(unit),
+        "nominal": get("x_nominal") or 0.0,
+        "origin": "sim_data",
+        "period_s": 60,
+        "store_period_s": 300,
+        "viewer_visible": True,
+        "create_request": True,
+        "active": True,
         "alarm_title": ALARM_TITLES.get((quantity, alarm), False),
         "hysteresis": abs(threshold) * 0.02 if mode == "drift" and alarm in ("above", "below") else 0.0,
-        "sim_params": {"nominal": get("x_nominal"), "noise": get("x_noise"), "rate": get("x_rate"),
-                       "limit": get("x_limit"), "seed": get("x_seed"), "alarm": alarm or None,
-                       "threshold": get("x_threshold"), "charging": bool(get("x_charging"))},
+        "sim_params": {
+            "nominal": get("x_nominal"),
+            "noise": get("x_noise"),
+            "rate": get("x_rate"),
+            "limit": get("x_limit"),
+            "seed": get("x_seed"),
+            "alarm": alarm or None,
+            "threshold": get("x_threshold"),
+            "charging": bool(get("x_charging")),
+        },
     }
     if alarm == "above":
         vals.update(alarm_high=threshold, alarm_high_on=True)
@@ -183,17 +244,27 @@ def signals_level0(env):
         vals = _level0_vals(x)
         sig = existing.get(x.x_code)
         if sig is None:
-            vals.update(last_value=x.x_value or 0.0, last_quality="good", last_ts=x.x_updated or False,
-                        last_stored_ts=x.x_updated or False, status_since=x.x_updated or False,
-                        status="alarm" if x.x_state == "тривога" else "ok")
+            vals.update(
+                last_value=x.x_value or 0.0,
+                last_quality="good",
+                last_ts=x.x_updated or False,
+                last_stored_ts=x.x_updated or False,
+                status_since=x.x_updated or False,
+                status="alarm" if x.x_state == "тривога" else "ok",
+            )
             to_create.append(vals)
             continue
         if sig.origin == "sim_data":
             vals = {k: v for k, v in vals.items() if k not in DEFINITION_ONLY}
         else:
-            vals.update(last_value=x.x_value or 0.0, last_quality="good", last_ts=x.x_updated or False,
-                        last_stored_ts=x.x_updated or False, status_since=x.x_updated or False,
-                        status="alarm" if x.x_state == "тривога" else "ok")
+            vals.update(
+                last_value=x.x_value or 0.0,
+                last_quality="good",
+                last_ts=x.x_updated or False,
+                last_stored_ts=x.x_updated or False,
+                status_since=x.x_updated or False,
+                status="alarm" if x.x_state == "тривога" else "ok",
+            )
         diff = _changed(sig, vals)
         if diff:
             sig.write(diff)
@@ -207,12 +278,17 @@ def signals_level0(env):
         sig = by_code[x.x_code]
         if source and by_code.get(source.x_code) and sig.derived_from_id != by_code[source.x_code]:
             sig.write({"derived_from_id": by_code[source.x_code].id, "derive_rule": "none"})
-    env["ir.model.data"]._update_xmlids([
-        {"xml_id": "factory3d_telemetry.sig_" + _slug(code), "record": sig, "noupdate": True}
-        for code, sig in by_code.items()])
+    env["ir.model.data"]._update_xmlids(
+        [
+            {"xml_id": "factory3d_telemetry.sig_" + _slug(code), "record": sig, "noupdate": True}
+            for code, sig in by_code.items()
+        ]
+    )
     by_module = Counter(s.module for s in by_code.values())
     report = {
-        "signals_migrated": len(xs), "created": created, "by_module": dict(by_module),
+        "signals_migrated": len(xs),
+        "created": created,
+        "by_module": dict(by_module),
         "alarm": sum(1 for x in xs if x.x_state == "тривога"),
         "with_request": sum(1 for x in xs if "x_request_id" in x._fields and x.x_request_id),
     }
@@ -251,7 +327,9 @@ def _binding_vals(row, sources, stats):
 
 def _create_vals(row, derived):
     vals = {
-        "code": row["code"], "name": row.get("name") or row["code"], "kind": row.get("kind") or "gauge",
+        "code": row["code"],
+        "name": row.get("name") or row["code"],
+        "kind": row.get("kind") or "gauge",
         "origin": row.get("origin") or "catalog",
         "module": row.get("module") or simcat.module_for_code(row["code"]),
         "viewer_visible": _flag(row["viewer_visible"]) if row.get("viewer_visible") not in (None, "") else True,
@@ -294,8 +372,9 @@ def signals_catalog(env):
         if equipment:
             vals["equipment_id"] = equipment.id
         if not sig:
-            derived = Signal.search([("code", "=", row["derived_from"])], limit=1) if row.get("derived_from") \
-                else Signal
+            derived = (
+                Signal.search([("code", "=", row["derived_from"])], limit=1) if row.get("derived_from") else Signal
+            )
             sig = Signal.create({**_create_vals(row, derived), **vals})
             stats["created"] += 1
         else:
@@ -339,12 +418,24 @@ def meters(env):
             continue
         if last is None:
             last = math.floor(sig.last_value / interval) * interval
-        equipment.with_context(mail_notrack=True).write({
-            "f3d_meter_signal_id": sig.id, "f3d_meter_interval": interval, "f3d_meter_last_value": last,
-            "f3d_meter_lead_pct": lead})
+        equipment.with_context(mail_notrack=True).write(
+            {
+                "f3d_meter_signal_id": sig.id,
+                "f3d_meter_interval": interval,
+                "f3d_meter_last_value": last,
+                "f3d_meter_lead_pct": lead,
+            }
+        )
         done += 1
-        request = Request.search([("equipment_id", "=", equipment.id), ("maintenance_type", "=", "preventive"),
-                                  ("stage_id.done", "=", False)], order="id desc", limit=1)
+        request = Request.search(
+            [
+                ("equipment_id", "=", equipment.id),
+                ("maintenance_type", "=", "preventive"),
+                ("stage_id.done", "=", False),
+            ],
+            order="id desc",
+            limit=1,
+        )
         if request:
             request.write({"f3d_signal_id": sig.id, "f3d_origin": "meter", "f3d_threshold": last + interval})
             equipment.with_context(mail_notrack=True).write({"f3d_meter_request_id": request.id})
@@ -362,8 +453,12 @@ def sim_catalog(env):
         return {"state": "skipped"}
     codes = _signals(env).search([("origin", "in", ("sim_data", "catalog"))]).mapped("code")
     report = env["f3d.signal"].sudo()._f3d_import_sim_catalog(codes=codes, source_map=SOURCE_MAP, defaults={})
-    report = {"created": report["created"], "updated": report["updated"], "unparsed": len(report["unparsed"]),
-              "skipped": len(report["skipped"])}
+    report = {
+        "created": report["created"],
+        "updated": report["updated"],
+        "unparsed": len(report["unparsed"]),
+        "skipped": len(report["skipped"]),
+    }
     _logger.info("sim_catalog: %s", report)
     return report
 
@@ -385,8 +480,10 @@ def readings_level0(env):
     if "x_f3d_reading" not in env:
         return {"skipped": True}
     cr = env.cr
-    cr.execute("SELECT count(*) FILTER (WHERE x_time IS NOT NULL), count(*) FILTER (WHERE x_time IS NULL), "
-               "min(id), max(id) FROM x_f3d_reading")
+    cr.execute(
+        "SELECT count(*) FILTER (WHERE x_time IS NOT NULL), count(*) FILTER (WHERE x_time IS NULL), "
+        "min(id), max(id) FROM x_f3d_reading"
+    )
     total, null_ts, low, high = cr.fetchone()
     inserted = 0
     start = low or 0
@@ -413,8 +510,14 @@ def requests_level0(env):
         if not sig or not request.exists():
             continue
         threshold = sig.alarm_high if sig.alarm_high_on else (sig.alarm_low if sig.alarm_low_on else 0.0)
-        request.write({"f3d_signal_id": sig.id, "f3d_origin": "threshold", "f3d_value": sig.last_value,
-                       "f3d_threshold": threshold})
+        request.write(
+            {
+                "f3d_signal_id": sig.id,
+                "f3d_origin": "threshold",
+                "f3d_value": sig.last_value,
+                "f3d_threshold": threshold,
+            }
+        )
         if request.stage_id.done:
             sig.write({"maintenance_request_id": False, "request_closed_at": request.write_date})
         else:
@@ -491,8 +594,13 @@ def level0_off(env):
     param = env["ir.config_parameter"].sudo().search([("key", "=", "factory3d.iot_sim.level0_enabled")])
     if param:
         param.write({"value": "False"})
-    report = {"cron_off": bool(cron), "x_inactive": x_inactive, "menu_off": 1 if menu else 0,
-              "view_off": 1 if view else 0, "iot_sim_param": bool(param)}
+    report = {
+        "cron_off": bool(cron),
+        "x_inactive": x_inactive,
+        "menu_off": 1 if menu else 0,
+        "view_off": 1 if view else 0,
+        "iot_sim_param": bool(param),
+    }
     _logger.info("level0_off: %s", report)
     return report
 
@@ -501,17 +609,18 @@ def level0_off(env):
 def drop_level0(env):
     """Крок 10: видалити представлення, меню, поле й моделі рівня 0 (лише `drop_level0=True`)."""
     from odoo.addons.factory3d_base.hooks.x_fields import drop_manual_fields  # noqa: PLC0415
+
     views = env["ir.ui.view"]
     for name in LEVEL0_VIEWS:
         views |= _ref(env, name) or views.browse()
     views.sudo().unlink()
     menus = env["ir.ui.menu"]
     for name in LEVEL0_MENUS:
-        menus |= (_ref(env, name) or menus.browse())
+        menus |= _ref(env, name) or menus.browse()
     menus.sudo().unlink()
     actions = env["ir.actions.act_window"]
     for name in LEVEL0_ACTIONS:
-        actions |= (_ref(env, name) or actions.browse())
+        actions |= _ref(env, name) or actions.browse()
     actions.sudo().unlink()
     fields_dropped = drop_manual_fields(env, "maintenance.equipment", ["x_f3d_signal_ids"])
     Model = env["ir.model"].sudo()
@@ -524,8 +633,9 @@ def drop_level0(env):
 
 # --- крок 11 -------------------------------------------------------------------------------------------
 def report(env, data):
-    env["ir.config_parameter"].sudo().set_param(P + "level0_migrated", json.dumps(data, ensure_ascii=False,
-                                                                                    default=str))
+    env["ir.config_parameter"].sudo().set_param(
+        P + "level0_migrated", json.dumps(data, ensure_ascii=False, default=str)
+    )
 
 
 def run_migration(env):

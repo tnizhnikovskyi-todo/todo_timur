@@ -1,4 +1,5 @@
 """AC-74, AC-76: реєстр джерел і плагіни."""
+
 from __future__ import annotations
 
 import asyncio
@@ -33,14 +34,26 @@ async def client(fake_odoo):
 
 
 def _cfg(fake_odoo, extra=None):
-    fake_odoo.config = {"read_enabled": True, "write_enabled": False, "sources": [
-        src_json("S1", signals=[sig_json("equipment/A/x")], params={"host": "h1"}),
-        src_json("S2", signals=[sig_json("equipment/B/x")], params={"host": "h2"}), *(extra or [])]}
+    fake_odoo.config = {
+        "read_enabled": True,
+        "write_enabled": False,
+        "sources": [
+            src_json("S1", signals=[sig_json("equipment/A/x")], params={"host": "h1"}),
+            src_json("S2", signals=[sig_json("equipment/B/x")], params={"host": "h2"}),
+            *(extra or []),
+        ],
+    }
 
 
 def _reg(client, settings, vclock, classes=None, clock=None):
-    return Registry(client, settings, lambda s: None, clock or vclock, Metrics(vclock),
-                    plugin_classes={"fake": FakePlugin} if classes is None else classes)
+    return Registry(
+        client,
+        settings,
+        lambda s: None,
+        clock or vclock,
+        Metrics(vclock),
+        plugin_classes={"fake": FakePlugin} if classes is None else classes,
+    )
 
 
 async def test_load_and_connect(fake_odoo, client, settings, vclock):

@@ -1,4 +1,5 @@
 """Плагін `http_push` (SPEC §8.7, R-22): реєструє маршрути джерела в HttpPushServer; сигнали обробляє Odoo."""
+
 from __future__ import annotations
 
 from typing import ClassVar
@@ -45,11 +46,20 @@ class HttpPushPlugin(SourcePlugin):
         secret = self._secret(p.get("secret_ref"))
         token = self._secret(p.get("token_ref"))
         for route in p.get("routes", []):
-            ts_paths = [s.address["ts_path"] for s in self.source.signals
-                        if s.address and s.address.get("route") == route and s.address.get("ts_path")]
-            cfg = RouteCfg(route=route, source=self.source.code, emit_event=self.ctx.emit_event, secret=secret,
-                           token=token, max_bytes=int(p.get("max_body_kb", 1024)) * 1024 or DEFAULT_MAX_BODY,
-                           ts_paths=ts_paths)
+            ts_paths = [
+                s.address["ts_path"]
+                for s in self.source.signals
+                if s.address and s.address.get("route") == route and s.address.get("ts_path")
+            ]
+            cfg = RouteCfg(
+                route=route,
+                source=self.source.code,
+                emit_event=self.ctx.emit_event,
+                secret=secret,
+                token=token,
+                max_bytes=int(p.get("max_body_kb", 1024)) * 1024 or DEFAULT_MAX_BODY,
+                ts_paths=ts_paths,
+            )
             try:
                 await self.server.register(cfg, list(p.get("allow_ips", [])))
             except ValueError as e:

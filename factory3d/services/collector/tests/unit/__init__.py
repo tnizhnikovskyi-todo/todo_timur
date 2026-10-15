@@ -1,4 +1,5 @@
 """Спільні помічники юніт-тестів ядра: фейковий плагін, конфіг-фабрики, годинник з лімітом сліпів."""
+
 from __future__ import annotations
 
 import asyncio
@@ -29,28 +30,78 @@ class CountingClock(VirtualClock):
         await super().sleep(s)
 
 
-def mk_signal(code: str, kind: str = "gauge", period_s: int = 10, scale: float = 1.0, write: bool = False,
-              address: dict | None = None, source: str = "S") -> SignalCfg:
-    return SignalCfg(code=code, kind=kind, unit="", period_s=period_s, scale=scale, write_enabled=write,
-                     states=None, decimals=2, address=address or {}, source_code=source)
+def mk_signal(
+    code: str,
+    kind: str = "gauge",
+    period_s: int = 10,
+    scale: float = 1.0,
+    write: bool = False,
+    address: dict | None = None,
+    source: str = "S",
+) -> SignalCfg:
+    return SignalCfg(
+        code=code,
+        kind=kind,
+        unit="",
+        period_s=period_s,
+        scale=scale,
+        write_enabled=write,
+        states=None,
+        decimals=2,
+        address=address or {},
+        source_code=source,
+    )
 
 
-def mk_source(code: str = "S", type_: str = "fake", signals: Sequence[SignalCfg] = (), write: bool = False,
-              params: dict | None = None) -> SourceCfg:
-    return SourceCfg(code=code, type=type_, read_enabled=True, write_enabled=write, params=params or {},
-                     signals=tuple(signals))
+def mk_source(
+    code: str = "S",
+    type_: str = "fake",
+    signals: Sequence[SignalCfg] = (),
+    write: bool = False,
+    params: dict | None = None,
+) -> SourceCfg:
+    return SourceCfg(
+        code=code, type=type_, read_enabled=True, write_enabled=write, params=params or {}, signals=tuple(signals)
+    )
 
 
-def sig_json(code: str, kind: str = "gauge", period_s: int = 10, scale: float = 1.0, write: bool = False,
-             address: dict | None = None) -> dict:
-    return {"code": code, "kind": kind, "unit": "", "period_s": period_s, "scale": scale, "write_enabled": write,
-            "states": None, "decimals": 2, "address": address or {"a": 1}}
+def sig_json(
+    code: str,
+    kind: str = "gauge",
+    period_s: int = 10,
+    scale: float = 1.0,
+    write: bool = False,
+    address: dict | None = None,
+) -> dict:
+    return {
+        "code": code,
+        "kind": kind,
+        "unit": "",
+        "period_s": period_s,
+        "scale": scale,
+        "write_enabled": write,
+        "states": None,
+        "decimals": 2,
+        "address": address or {"a": 1},
+    }
 
 
-def src_json(code: str, type_: str = "fake", signals: list[dict] | None = None, write: bool = False,
-             params: dict | None = None, read: bool = True) -> dict:
-    return {"code": code, "type": type_, "read_enabled": read, "write_enabled": write, "params": params or {},
-            "signals": signals or []}
+def src_json(
+    code: str,
+    type_: str = "fake",
+    signals: list[dict] | None = None,
+    write: bool = False,
+    params: dict | None = None,
+    read: bool = True,
+) -> dict:
+    return {
+        "code": code,
+        "type": type_,
+        "read_enabled": read,
+        "write_enabled": write,
+        "params": params or {},
+        "signals": signals or [],
+    }
 
 
 class FakePlugin(SourcePlugin):

@@ -1,4 +1,5 @@
 """Час: utcnow(), parse_iso(), to_iso_z(); годинник Clock/SystemClock (SPEC §13.0.2)."""
+
 from __future__ import annotations
 
 import asyncio

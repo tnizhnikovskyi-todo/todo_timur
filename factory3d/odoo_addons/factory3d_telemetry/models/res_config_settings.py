@@ -11,32 +11,40 @@ class ResConfigSettings(models.TransientModel):
 
     f3d_telemetry_read_enabled = fields.Boolean(string="Приймати показання", config_parameter=P + "read_enabled")
     f3d_telemetry_write_enabled = fields.Boolean(
-        string="Дозволяти команди на пристрої", config_parameter=P + "write_enabled")
+        string="Дозволяти команди на пристрої", config_parameter=P + "write_enabled"
+    )
     f3d_telemetry_keep_days = fields.Integer(string="Зберігати показання, діб", config_parameter=P + "keep_days")
     f3d_telemetry_keep_hours_days = fields.Integer(
-        string="Зберігати годинні агрегати, діб", config_parameter=P + "keep_hours_days")
+        string="Зберігати годинні агрегати, діб", config_parameter=P + "keep_hours_days"
+    )
     f3d_telemetry_default_store_period_s = fields.Integer(
-        string="Період збереження за умовчанням, с", config_parameter=P + "default_store_period_s")
+        string="Період збереження за умовчанням, с", config_parameter=P + "default_store_period_s"
+    )
     f3d_telemetry_stale_periods = fields.Integer(
-        string="Періодів до «немає даних»", config_parameter=P + "stale_periods")
-    f3d_telemetry_stale_min_s = fields.Integer(
-        string="Мінімум до «немає даних», с", config_parameter=P + "stale_min_s")
+        string="Періодів до «немає даних»", config_parameter=P + "stale_periods"
+    )
+    f3d_telemetry_stale_min_s = fields.Integer(string="Мінімум до «немає даних», с", config_parameter=P + "stale_min_s")
     f3d_telemetry_bus_min_interval_s = fields.Integer(
-        string="Мін. інтервал шини, с", config_parameter=P + "bus_min_interval_s")
+        string="Мін. інтервал шини, с", config_parameter=P + "bus_min_interval_s"
+    )
     f3d_telemetry_realarm_cooldown_s = fields.Integer(
-        string="Пауза до нової заявки, с", config_parameter=P + "realarm_cooldown_s")
+        string="Пауза до нової заявки, с", config_parameter=P + "realarm_cooldown_s"
+    )
     f3d_telemetry_push_max_readings = fields.Integer(
-        string="Макс. показань у пакеті", config_parameter=P + "push_max_readings")
+        string="Макс. показань у пакеті", config_parameter=P + "push_max_readings"
+    )
     f3d_telemetry_push_rate_per_min = fields.Integer(
-        string="Макс. пакетів на хвилину", config_parameter=P + "push_rate_per_min")
+        string="Макс. пакетів на хвилину", config_parameter=P + "push_rate_per_min"
+    )
     f3d_telemetry_meter_lead_pct = fields.Float(
-        string="Планувати ТО за лічильником за, %", config_parameter=P + "meter_lead_pct")
+        string="Планувати ТО за лічильником за, %", config_parameter=P + "meter_lead_pct"
+    )
     f3d_telemetry_default_team_id = fields.Many2one("maintenance.team", string="Команда ТО за умовчанням")
     f3d_telemetry_drop_level0 = fields.Boolean(
-        string="Видалити дані рівня 0 після міграції", config_parameter=P + "drop_level0")
+        string="Видалити дані рівня 0 після міграції", config_parameter=P + "drop_level0"
+    )
     f3d_telemetry_level0_state = fields.Char(string="Міграція рівня 0", compute="_compute_f3d_telemetry_info")
-    f3d_telemetry_collector_count = fields.Integer(
-        string="Активних колекторів", compute="_compute_f3d_telemetry_info")
+    f3d_telemetry_collector_count = fields.Integer(string="Активних колекторів", compute="_compute_f3d_telemetry_info")
 
     @api.depends_context("uid")
     def _compute_f3d_telemetry_info(self):

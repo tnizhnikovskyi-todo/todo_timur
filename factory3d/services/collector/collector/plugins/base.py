@@ -1,4 +1,5 @@
 """Інтерфейс плагіна джерела (SPEC §8.3.2, CT-02)."""
+
 from __future__ import annotations
 
 import logging

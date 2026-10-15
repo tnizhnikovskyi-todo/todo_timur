@@ -1,4 +1,5 @@
 """Клієнт Odoo (API-01…API-07), Pusher і StatusReporter (SPEC §8.3.5, §8.4)."""
+
 from __future__ import annotations
 
 import logging
@@ -150,8 +151,7 @@ class OdooClient:
             if r.value is not None or r.text is None:
                 item["value"] = r.value
             items.append(item)
-        body = {"collector": self.collector, "seq": self._seq, "sent_at": to_iso_z(self.clock.now()),
-                "readings": items}
+        body = {"collector": self.collector, "seq": self._seq, "sent_at": to_iso_z(self.clock.now()), "readings": items}
         _, data = await self.request("POST", "/f3d/telemetry/push", body)
         return data if isinstance(data, dict) else {}
 
@@ -162,8 +162,17 @@ class OdooClient:
 
     async def event(self, events: Iterable[PushEvent]) -> dict:
         """API-05."""
-        items = [{"event_id": e.event_id, "route": e.route, "ts": to_iso_z(e.ts), "remote": e.remote,
-                  "headers": e.headers, "payload": e.payload} for e in events]
+        items = [
+            {
+                "event_id": e.event_id,
+                "route": e.route,
+                "ts": to_iso_z(e.ts),
+                "remote": e.remote,
+                "headers": e.headers,
+                "payload": e.payload,
+            }
+            for e in events
+        ]
         _, data = await self.request("POST", "/f3d/telemetry/event", {"collector": self.collector, "events": items})
         return data if isinstance(data, dict) else {}
 
@@ -173,18 +182,29 @@ class OdooClient:
         data = data if isinstance(data, dict) else {}
         out = []
         for c in data.get("commands") or []:
-            out.append(Command(
-                id=int(c["id"]), code=c["code"], source=c.get("source", ""), value=c.get("value"),
-                text=c.get("text"), address=c.get("address") or {}, expires_at=parse_iso(c["expires_at"]),
-                payload=c.get("payload")))
+            out.append(
+                Command(
+                    id=int(c["id"]),
+                    code=c["code"],
+                    source=c.get("source", ""),
+                    value=c.get("value"),
+                    text=c.get("text"),
+                    address=c.get("address") or {},
+                    expires_at=parse_iso(c["expires_at"]),
+                    payload=c.get("payload"),
+                )
+            )
         return out, bool(data.get("write_enabled", False))
 
     async def commands_result(self, results: Iterable[CommandResult]) -> dict:
         """API-07."""
-        items = [{"id": r.id, "state": r.state, "ts": to_iso_z(r.ts), "result": r.result, "error": r.error,
-                  "data": r.data} for r in results]
+        items = [
+            {"id": r.id, "state": r.state, "ts": to_iso_z(r.ts), "result": r.result, "error": r.error, "data": r.data}
+            for r in results
+        ]
         _, data = await self.request(
-            "POST", "/f3d/telemetry/commands/result", {"collector": self.collector, "results": items})
+            "POST", "/f3d/telemetry/commands/result", {"collector": self.collector, "results": items}
+        )
         return data if isinstance(data, dict) else {}
 
 
@@ -393,19 +413,31 @@ class StatusReporter:
         sources = []
         for code in reg.sources:
             h = self.source_health(code)
-            sources.append({
-                "code": code, "state": h.state, "error": (h.error or None) and h.error[:512],
-                "last_ok": to_iso_z(h.last_ok) if h.last_ok else None, "stats": h.stats})
+            sources.append(
+                {
+                    "code": code,
+                    "state": h.state,
+                    "error": (h.error or None) and h.error[:512],
+                    "last_ok": to_iso_z(h.last_ok) if h.last_ok else None,
+                    "stats": h.stats,
+                }
+            )
         by_type: dict[str, list] = {}
         for plugin in reg.plugins.values():
             by_type.setdefault(plugin.type, []).append(plugin)
         plugins = [{"type": t, "version": ps[0].version, "sources": len(ps)} for t, ps in by_type.items()]
         return {
-            "collector": self.client.collector, "version": __version__,
-            "uptime_s": int(self.clock.monotonic() - self._started), "ts": to_iso_z(self.clock.now()),
-            "buffer": {"rows": await self.buffer.count(), "dropped_total": self.buffer.dropped_total,
-                       "bytes": await self.buffer.size_bytes()},
-            "plugins": plugins, "sources": sources,
+            "collector": self.client.collector,
+            "version": __version__,
+            "uptime_s": int(self.clock.monotonic() - self._started),
+            "ts": to_iso_z(self.clock.now()),
+            "buffer": {
+                "rows": await self.buffer.count(),
+                "dropped_total": self.buffer.dropped_total,
+                "bytes": await self.buffer.size_bytes(),
+            },
+            "plugins": plugins,
+            "sources": sources,
         }
 
     async def send_once(self) -> dict | None:
@@ -415,7 +447,9 @@ class StatusReporter:
             log.warning("status not delivered: %s", exc)
             return None
         if self.on_flags is not None and "read_enabled" in resp:
-            await self.on_flags(bool(resp["read_enabled"]), bool(resp.get("write_enabled", self.registry.write_enabled)))
+            await self.on_flags(
+                bool(resp["read_enabled"]), bool(resp.get("write_enabled", self.registry.write_enabled))
+            )
         etag = resp.get("config_etag")
         if etag and etag != self.registry.etag:
             await self.registry.refresh()
@@ -425,4 +459,3 @@ class StatusReporter:
         while True:
             await self.send_once()
             await self.clock.sleep(self.interval_s)
-

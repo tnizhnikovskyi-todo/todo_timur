@@ -1,13 +1,13 @@
-# SPEC §8.1.2: закріплення «==» — при першому збиранні (версії SPEC; pydantic/prometheus — мінімальні).
+# SPEC §8.1.2: усі версії закріплені через «==» (зафіксовано при першому збиранні).
 aiohttp==3.11.18
 pymodbus==3.9.2
 paho-mqtt==2.1.0
 bacpypes3==0.0.102
-pydantic>=2.11,<3
-pydantic-settings>=2.9,<3
+pydantic==2.14.1
+pydantic-settings==2.16.0
 jsonschema==4.23.0
-prometheus-client>=0.21
+prometheus-client==0.26.0
 aiosqlite==0.21.0
-pytest>=8.3
-pytest-asyncio>=0.25
-pytest-timeout>=2.3
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-timeout==2.4.0

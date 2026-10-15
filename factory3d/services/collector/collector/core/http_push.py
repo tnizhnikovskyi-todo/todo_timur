@@ -1,4 +1,5 @@
 """Приймач http_push: один aiohttp-застосунок на процес (SPEC §8.7, R-22)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -41,8 +42,9 @@ class RouteCfg:
     token: str | None = None
     max_bytes: int = DEFAULT_MAX_BODY
     ts_paths: list[str] = field(default_factory=list)
-    stats: dict[str, int] = field(default_factory=lambda: {"requests": 0, "rejected_ip": 0, "rejected_auth": 0,
-                                                            "events": 0})
+    stats: dict[str, int] = field(
+        default_factory=lambda: {"requests": 0, "rejected_ip": 0, "rejected_auth": 0, "events": 0}
+    )
 
 
 async def resolve_allow(entries: list[str]) -> list[_Net]:
@@ -68,8 +70,16 @@ async def resolve_allow(entries: list[str]) -> list[_Net]:
 class HttpPushServer:
     _instance: ClassVar[HttpPushServer | None] = None
 
-    def __init__(self, settings: Any = None, clock: Clock | None = None, buffer: Any = None, registry: Any = None,
-                 metrics: Any = None, allowlist: Any = None, emitter: Any = None) -> None:
+    def __init__(
+        self,
+        settings: Any = None,
+        clock: Clock | None = None,
+        buffer: Any = None,
+        registry: Any = None,
+        metrics: Any = None,
+        allowlist: Any = None,
+        emitter: Any = None,
+    ) -> None:
         self.settings = settings
         self.clock: Clock = clock or SystemClock()
         self.buffer = buffer
@@ -171,8 +181,9 @@ class HttpPushServer:
 
     @staticmethod
     def _json_from_multipart(content_type: str, body: bytes) -> Any:
-        msg = email.message_from_bytes(b"Content-Type: " + content_type.encode() + b"\r\n\r\n" + body,
-                                       policy=email.policy.HTTP)
+        msg = email.message_from_bytes(
+            b"Content-Type: " + content_type.encode() + b"\r\n\r\n" + body, policy=email.policy.HTTP
+        )
         for part in msg.iter_parts():
             if part.get_content_type() == "application/json":
                 raw = part.get_payload(decode=True)
@@ -196,7 +207,8 @@ class HttpPushServer:
             return 403, self._fail(403, "forbidden")
         secret = request.match_info.get("secret")
         if (cfg.secret is not None) != (secret is not None) or (
-                cfg.secret is not None and not hmac.compare_digest(str(secret).encode(), cfg.secret.encode())):
+            cfg.secret is not None and not hmac.compare_digest(str(secret).encode(), cfg.secret.encode())
+        ):
             cfg.stats["rejected_auth"] += 1
             return 404, self._fail(404, "unknown route")
         if cfg.token is not None and not self._token_ok(request, cfg.token):
@@ -220,8 +232,14 @@ class HttpPushServer:
         remote = request.remote or ""
         event_id = hashlib.sha256(f"{cfg.route}\n{remote}\n{canonical_json(payload)}".encode()).hexdigest()
         headers = {k: request.headers[k] for k in _KEEP_HEADERS if k in request.headers}
-        event = PushEvent(event_id=event_id, route=cfg.route, ts=self._event_ts(cfg, payload), remote=remote,
-                          headers=headers, payload=payload)
+        event = PushEvent(
+            event_id=event_id,
+            route=cfg.route,
+            ts=self._event_ts(cfg, payload),
+            remote=remote,
+            headers=headers,
+            payload=payload,
+        )
         cfg.stats["events"] += 1
         try:
             cfg.emit_event(event)

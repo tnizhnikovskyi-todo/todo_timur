@@ -3,6 +3,7 @@
 Викликається лише з `f3d.signal._f3d_ingest` (CT-10): контролери й модулі напряму Ingester не використовують.
 «Зараз» — `fields.Datetime.now()` (не SQL `now()`), щоб працював `freezegun`.
 """
+
 import math
 import re
 from datetime import datetime, timedelta, timezone
@@ -18,12 +19,42 @@ FUTURE_S = 60
 DERIVE_WINDOW = (300, 60)
 
 SIGNAL_FIELDS = [
-    "code", "name", "active", "kind", "unit", "decimals", "equipment_id", "collector_id", "states",
-    "store_period_s", "sim_params", "derive_rule", "derived_from_id", "create_request",
-    "warn_low_on", "warn_low", "warn_high_on", "warn_high", "alarm_low_on", "alarm_low",
-    "alarm_high_on", "alarm_high", "hysteresis", "min_duration_s", "alarm_states",
-    "last_value", "last_text", "last_ts", "last_quality", "last_stored_ts", "status", "status_since",
-    "breach_since", "maintenance_request_id", "request_closed_at", "last_notified_ts",
+    "code",
+    "name",
+    "active",
+    "kind",
+    "unit",
+    "decimals",
+    "equipment_id",
+    "collector_id",
+    "states",
+    "store_period_s",
+    "sim_params",
+    "derive_rule",
+    "derived_from_id",
+    "create_request",
+    "warn_low_on",
+    "warn_low",
+    "warn_high_on",
+    "warn_high",
+    "alarm_low_on",
+    "alarm_low",
+    "alarm_high_on",
+    "alarm_high",
+    "hysteresis",
+    "min_duration_s",
+    "alarm_states",
+    "last_value",
+    "last_text",
+    "last_ts",
+    "last_quality",
+    "last_stored_ts",
+    "status",
+    "status_since",
+    "breach_since",
+    "maintenance_request_id",
+    "request_closed_at",
+    "last_notified_ts",
 ]
 LAST_FIELDS = ["last_value", "last_text", "last_ts", "last_quality", "last_stored_ts"]
 STATUS_LABELS = {"unknown": "невідомо", "ok": "норма", "warn": "увага", "alarm": "тривога", "stale": "немає даних"}
@@ -64,7 +95,7 @@ class Ingester:
         self.keep_days = int(icp.get_param("factory3d.telemetry.keep_days", "30") or 30)
         self.bus_min = int(icp.get_param("factory3d.telemetry.bus_min_interval_s", "10") or 10)
         self.cooldown = int(icp.get_param("factory3d.telemetry.realarm_cooldown_s", "3600") or 3600)
-        self.states = {}      # signal_id -> рабочий стан
+        self.states = {}  # signal_id -> рабочий стан
         self.rejected = []
         self.accepted = 0
         self.stored = 0
@@ -121,8 +152,17 @@ class Ingester:
         st["last_notified_ts"] = rec["last_notified_ts"] or None
         st["request_closed_at"] = rec["request_closed_at"] or None
         st["orig"] = {k: st[k] for k in ("last_value", "last_text", "status", "breach_since")}
-        st.update(fresh=False, status_changed=False, last_dirty=False, seen=set(), batch_stored=[],
-                  decreased=False, last_bad=False, last_item=None, text_changed=False)
+        st.update(
+            fresh=False,
+            status_changed=False,
+            last_dirty=False,
+            seen=set(),
+            batch_stored=[],
+            decreased=False,
+            last_bad=False,
+            last_item=None,
+            text_changed=False,
+        )
         return st
 
     def _load_signals(self, domain):
@@ -136,7 +176,8 @@ class Ingester:
             return True
         self.cr.execute(
             "SELECT 1 FROM f3d_reading WHERE signal_id = %s AND ts > %s AND ts < %s AND quality <> 'bad' LIMIT 1",
-            (st["id"], lo, hi))
+            (st["id"], lo, hi),
+        )
         return bool(self.cr.fetchone())
 
     def _last_bad(self, st):
@@ -182,8 +223,13 @@ class Ingester:
         if fresh:
             old_status = st["status"]
             new_status, since = thresholds.eval_status(
-                {"status": old_status, "breach_since": st["breach_since"]}, v, text, ts, st,
-                quality="bad" if force_last else q)
+                {"status": old_status, "breach_since": st["breach_since"]},
+                v,
+                text,
+                ts,
+                st,
+                quality="bad" if force_last else q,
+            )
             st["breach_since"] = since
             if new_status != old_status:
                 st["status"], st["status_since"] = new_status, ts
@@ -205,8 +251,9 @@ class Ingester:
                 self.maybe_dup.append((st["id"], ts))
             return None
         if q == "bad":
-            st["last_bad"] = ts if (st["last_bad"] is None or st["last_bad"] is False or ts > st["last_bad"]) \
-                else st["last_bad"]
+            st["last_bad"] = (
+                ts if (st["last_bad"] is None or st["last_bad"] is False or ts > st["last_bad"]) else st["last_bad"]
+            )
         st["batch_stored"].append(ts)
         return (st["id"], st["equipment_id"] or None, ts, v, text, q, it["src"], self.now)
 
@@ -227,7 +274,10 @@ class Ingester:
         if rows:
             res = self.cr.execute_values(
                 "INSERT INTO f3d_reading (signal_id, equipment_id, ts, value, text, quality, src, received_at) "
-                "VALUES %s ON CONFLICT (signal_id, ts) DO NOTHING RETURNING signal_id, ts", rows, fetch=True)
+                "VALUES %s ON CONFLICT (signal_id, ts) DO NOTHING RETURNING signal_id, ts",
+                rows,
+                fetch=True,
+            )
             got = {(r[0], r[1]) for r in res}
             self.stored += len(got)
             self.duplicates += len(rows) - len(got)
@@ -237,7 +287,8 @@ class Ingester:
     def _derive(self, sources):
         """R-08: похідні `rate_h` від лічильників, чиї показання збережено в цьому виклику."""
         derived = self.Signal.with_context(active_test=False).search_read(
-            [("derived_from_id", "in", [s for s in sources]), ("derive_rule", "=", "rate_h")], SIGNAL_FIELDS)
+            [("derived_from_id", "in", [s for s in sources]), ("derive_rule", "=", "rate_h")], SIGNAL_FIELDS
+        )
         if not derived:
             return
         items = []
@@ -251,8 +302,18 @@ class Ingester:
                 if not prev or prev[1] is None or ts <= prev[0]:
                     continue
                 rate = (v - prev[1]) / ((ts - prev[0]).total_seconds() / 3600.0)
-                items.append({"i": -1, "code": st["code"], "ts": ts, "value": rate, "text": None,
-                              "q": "good", "src": self.src, "st": st})
+                items.append(
+                    {
+                        "i": -1,
+                        "code": st["code"],
+                        "ts": ts,
+                        "value": rate,
+                        "text": None,
+                        "q": "good",
+                        "src": self.src,
+                        "st": st,
+                    }
+                )
         if items:
             self._process(items, derived=True)
 
@@ -300,13 +361,21 @@ class Ingester:
         self._check_duplicates()
         changed = self._finish()
         self.rejected.sort(key=lambda r: r["i"])
-        return {"accepted": self.accepted, "stored": self.stored, "duplicates": self.duplicates,
-                "rejected": self.rejected, "changed_codes": changed[0], "alarms_opened": changed[1]}
+        return {
+            "accepted": self.accepted,
+            "stored": self.stored,
+            "duplicates": self.duplicates,
+            "rejected": self.rejected,
+            "changed_codes": changed[0],
+            "alarms_opened": changed[1],
+        }
 
     def _check_duplicates(self):
         pairs = list({p for p in self.maybe_dup})
         for k in range(0, len(pairs), 500):
-            self.cr.execute("SELECT count(*) FROM f3d_reading WHERE (signal_id, ts) IN %s", (tuple(pairs[k:k + 500]),))
+            self.cr.execute(
+                "SELECT count(*) FROM f3d_reading WHERE (signal_id, ts) IN %s", (tuple(pairs[k : k + 500]),)
+            )
             self.duplicates += self.cr.fetchone()[0]
 
     # --- завершення: last_*, статуси, заявки, ТО, шина -----------------------------------------------
@@ -314,14 +383,18 @@ class Ingester:
         sts = [s for s in self.states.values() if s["last_dirty"]]
         if not sts:
             return [], 0
-        rows = [(s["id"], s["last_value"], s["last_text"], s["last_ts"], s["last_quality"], s["last_stored_ts"])
-                for s in sts]
+        rows = [
+            (s["id"], s["last_value"], s["last_text"], s["last_ts"], s["last_quality"], s["last_stored_ts"])
+            for s in sts
+        ]
         self.cr.execute_values(
             "UPDATE f3d_signal AS s SET last_value = v.last_value, last_text = v.last_text, last_ts = v.last_ts, "
             "last_quality = v.last_quality, last_stored_ts = v.last_stored_ts "
             "FROM (VALUES %s) AS v(id, last_value, last_text, last_ts, last_quality, last_stored_ts) "
-            "WHERE s.id = v.id AND (s.last_ts IS NULL OR s.last_ts < v.last_ts)", rows,
-            template="(%s::int, %s::float8, %s::varchar, %s::timestamp, %s::varchar, %s::timestamp)")
+            "WHERE s.id = v.id AND (s.last_ts IS NULL OR s.last_ts < v.last_ts)",
+            rows,
+            template="(%s::int, %s::float8, %s::varchar, %s::timestamp, %s::varchar, %s::timestamp)",
+        )
         self.Signal.invalidate_model(LAST_FIELDS)
         Signal = self.Signal.with_context(mail_notrack=True, mail_create_nolog=True)
         opened = 0
@@ -358,13 +431,24 @@ class Ingester:
 
     def _post_decrease(self, rec, s):
         since = self.now - timedelta(days=1)
-        exists = self.env["mail.message"].sudo().search_count([
-            ("model", "=", "f3d.signal"), ("res_id", "=", s["id"]),
-            ("body", "ilike", "Лічильник зменшився"), ("date", ">=", since)])
+        exists = (
+            self.env["mail.message"]
+            .sudo()
+            .search_count(
+                [
+                    ("model", "=", "f3d.signal"),
+                    ("res_id", "=", s["id"]),
+                    ("body", "ilike", "Лічильник зменшився"),
+                    ("date", ">=", since),
+                ]
+            )
+        )
         if not exists:
-            rec.message_post(body="Лічильник зменшився: %s → %s (можливий ролловер або заміна лічильника)" % (
-                fmt_num(s["orig"]["last_value"], s["decimals"]), fmt_num(s["last_value"], s["decimals"])),
-                subtype_xmlid="mail.mt_note")
+            rec.message_post(
+                body="Лічильник зменшився: %s → %s (можливий ролловер або заміна лічильника)"
+                % (fmt_num(s["orig"]["last_value"], s["decimals"]), fmt_num(s["last_value"], s["decimals"])),
+                subtype_xmlid="mail.mt_note",
+            )
 
     def _maybe_open_request(self, rec, s):
         if s["status"] != "alarm" or not s["last_item"] or not s["create_request"]:
@@ -398,12 +482,17 @@ class Ingester:
                 continue
             o = s["orig"]
             last = s["last_notified_ts"]
-            if (last is None or (self.now - last).total_seconds() >= self.bus_min
-                    or s["status"] != o["status"] or s["last_text"] != o["last_text"]):
+            if (
+                last is None
+                or (self.now - last).total_seconds() >= self.bus_min
+                or s["status"] != o["status"]
+                or s["last_text"] != o["last_text"]
+            ):
                 notify.append(s)
         if not notify:
             return
-        self.cr.execute("UPDATE f3d_signal SET last_notified_ts = %s WHERE id IN %s",
-                        (self.now, tuple(s["id"] for s in notify)))
+        self.cr.execute(
+            "UPDATE f3d_signal SET last_notified_ts = %s WHERE id IN %s", (self.now, tuple(s["id"] for s in notify))
+        )
         self.Signal.invalidate_model(["last_notified_ts"])
         self.Signal._notify_viewer([s["code"] for s in notify])

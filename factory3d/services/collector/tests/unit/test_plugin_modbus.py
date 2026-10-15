@@ -1,4 +1,5 @@
 """AC-78, AC-100: плагін modbus_tcp на pymodbus-сервері (R-20, X-46, X-81)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -34,9 +35,12 @@ def _addr(**kw):
 
 async def _plugin(h, make_ctx, signals, unit=70, clock=None, **params):
     box = make_ctx(clock=clock)
-    src = mk_source("M-" + str(unit), "modbus_tcp", signals,
-                    params={"host": "127.0.0.1", "port": h.port, "unit": unit, "timeout_s": 0.5, "retries": 0,
-                            **params})
+    src = mk_source(
+        "M-" + str(unit),
+        "modbus_tcp",
+        signals,
+        params={"host": "127.0.0.1", "port": h.port, "unit": unit, "timeout_s": 0.5, "retries": 0, **params},
+    )
     p = ModbusTcpPlugin(src, box.ctx)
     await p.connect()
     return p, box
@@ -300,17 +304,26 @@ async def test_level_write_no_reset(srv, make_ctx, vclock):
 
 
 def test_validate_ok_and_errors():
-    good = mk_source("M", "modbus_tcp", [_sig("equipment/a/b", {"fc": 3, "addr": 1, "range": [0, 10]})],
-                     params={"host": "iot-sim", "unit": 70})
+    good = mk_source(
+        "M",
+        "modbus_tcp",
+        [_sig("equipment/a/b", {"fc": 3, "addr": 1, "range": [0, 10]})],
+        params={"host": "iot-sim", "unit": 70},
+    )
     assert ModbusTcpPlugin.validate(good) == []
-    bad = mk_source("M", "modbus_tcp", [
-        _sig("equipment/a/b", {"fc": 3, "addr": 70000}),
-        _sig("equipment/a/c", {"fc": 1, "addr": 1, "type": "u16"}),
-        _sig("equipment/a/d", {"fc": 3, "addr": 1, "write": {"fc": 16, "addr": 1, "pulse_ms": 500}}),
-        _sig("equipment/a/e", {"fc": 3, "addr": 1, "range": [5, 1]}),
-        _sig("equipment/a/g", {"fc": 3, "addr": 1, "_x": 1}),
-        _sig("equipment/a/f", {}),
-    ], params={"unit": 70, "token": "x"})
+    bad = mk_source(
+        "M",
+        "modbus_tcp",
+        [
+            _sig("equipment/a/b", {"fc": 3, "addr": 70000}),
+            _sig("equipment/a/c", {"fc": 1, "addr": 1, "type": "u16"}),
+            _sig("equipment/a/d", {"fc": 3, "addr": 1, "write": {"fc": 16, "addr": 1, "pulse_ms": 500}}),
+            _sig("equipment/a/e", {"fc": 3, "addr": 1, "range": [5, 1]}),
+            _sig("equipment/a/g", {"fc": 3, "addr": 1, "_x": 1}),
+            _sig("equipment/a/f", {}),
+        ],
+        params={"unit": 70, "token": "x"},
+    )
     text = "\n".join(ModbusTcpPlugin.validate(bad))
     assert "host" in text and "секрети" in text and "70000" in text
     assert "equipment/a/c" in text and "pulse_ms" in text and "range" in text and "_x" in text

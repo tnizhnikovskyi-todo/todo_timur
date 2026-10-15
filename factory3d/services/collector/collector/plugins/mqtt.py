@@ -1,4 +1,5 @@
 """Плагін `mqtt` (SPEC §8.6, R-21): підписка paho у власному потоці, черга -> корутина-споживач."""
+
 from __future__ import annotations
 
 import asyncio
@@ -98,8 +99,9 @@ class MqttPlugin(SourcePlugin):
         p = self.source.params
         self._loop = asyncio.get_running_loop()
         client_id = f"{p.get('client_id', 'f3d')}-{getattr(self.ctx.settings, 'collector_code', 'col')}"
-        c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id, protocol=mqtt.MQTTv311,
-                        clean_session=False)
+        c = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2, client_id=client_id, protocol=mqtt.MQTTv311, clean_session=False
+        )
         if p.get("username"):
             password = None
             if p.get("password_ref"):
@@ -211,7 +213,9 @@ class MqttPlugin(SourcePlugin):
         else:
             online = jsonpath.get(self.status_path, obj, None)
             if isinstance(online, str):
-                online = False if online.lower() in _OFFLINE_WORDS else True if online.lower() in _ONLINE_WORDS else None
+                online = (
+                    False if online.lower() in _OFFLINE_WORDS else True if online.lower() in _ONLINE_WORDS else None
+                )
         if online is False:
             self._offline_devices.add(device)
         elif online is True:
@@ -281,5 +285,3 @@ class MqttPlugin(SourcePlugin):
     def health(self) -> Health:
         stats = {**self.stats, "offline_devices": sorted(self._offline_devices)}
         return Health(state=self._state, error=self._error, stats=stats)
-
-

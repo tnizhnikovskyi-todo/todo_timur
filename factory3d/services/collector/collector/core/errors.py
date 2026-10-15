@@ -1,4 +1,5 @@
 """Винятки ядра колектора (SPEC §8.3.2). Тексти — без секретів."""
+
 from __future__ import annotations
 
 

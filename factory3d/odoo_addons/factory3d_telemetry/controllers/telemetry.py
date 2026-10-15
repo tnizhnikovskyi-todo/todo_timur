@@ -3,6 +3,7 @@
 Контролер лише автентифікує колектор, розбирає й перевіряє тіло; показання проходять через
 `f3d.signal._f3d_ingest` (X-02), події — через `f3d.push.event._f3d_receive` (R-22).
 """
+
 import hashlib
 import json
 import re
@@ -48,7 +49,6 @@ class _Abort(Exception):
 
 
 class F3dTelemetryController(http.Controller):
-
     # --- спільне --------------------------------------------------------------------------------------
     def _authenticate(self):
         """Колектор за Bearer-токеном; `_Abort` з 401/403."""
@@ -60,12 +60,12 @@ class F3dTelemetryController(http.Controller):
             if token and len(token) <= 256:
                 digest = hashlib.sha256(token.encode()).hexdigest()
                 inactive = Collector.with_context(active_test=False).search(
-                    [("active", "=", False), ("token_hash", "=", digest)], limit=1)
+                    [("active", "=", False), ("token_hash", "=", digest)], limit=1
+                )
                 if inactive:
                     raise _Abort(_error(403, "forbidden", "Колектор вимкнено"))
             raise _Abort(_error(401, "unauthorized", "Невірний токен колектора"))
-        env = request.env(user=SUPERUSER_ID, context=dict(request.env.context, f3d_collector_id=collector.id,
-                                                          tz="UTC"))
+        env = request.env(user=SUPERUSER_ID, context=dict(request.env.context, f3d_collector_id=collector.id, tz="UTC"))
         return collector.with_env(env), env
 
     def _body(self, limit=BODY_MAX):
@@ -93,8 +93,12 @@ class F3dTelemetryController(http.Controller):
             raise _Abort(_error(423, "read_disabled", "Приймання показань вимкнено"))
 
     def _flags(self, collector, env):
-        return {"config_etag": collector._etag(), "read_enabled": _param_flag(env, "read_enabled"),
-                "write_enabled": _param_flag(env, "write_enabled"), "server_time": _iso(fields.Datetime.now())}
+        return {
+            "config_etag": collector._etag(),
+            "read_enabled": _param_flag(env, "read_enabled"),
+            "write_enabled": _param_flag(env, "write_enabled"),
+            "server_time": _iso(fields.Datetime.now()),
+        }
 
     def _guard(self, fn):
         try:
@@ -115,6 +119,7 @@ class F3dTelemetryController(http.Controller):
             if inm and etag in [p.strip().removeprefix("W/").strip('"') for p in inm.split(",")]:
                 return request.make_response(b"", headers=headers, status=304)
             return _json(body, 200, headers)
+
         return self._guard(run)
 
     # --- API-02 ---------------------------------------------------------------------------------------
@@ -136,10 +141,18 @@ class F3dTelemetryController(http.Controller):
             collector._touch(request.httprequest.remote_addr)
             collector.sudo().with_context(mail_notrack=True).write({"last_push_at": fields.Datetime.now()})
             res = env["f3d.signal"].sudo()._f3d_ingest(readings, src="collector", collector=collector)
-            return _json({
-                "accepted": res["accepted"], "stored": res["stored"], "duplicates": res["duplicates"],
-                "rejected": res["rejected"], "changed": res["changed_codes"], "alarms_opened": res["alarms_opened"],
-                **self._flags(collector, env)})
+            return _json(
+                {
+                    "accepted": res["accepted"],
+                    "stored": res["stored"],
+                    "duplicates": res["duplicates"],
+                    "rejected": res["rejected"],
+                    "changed": res["changed_codes"],
+                    "alarms_opened": res["alarms_opened"],
+                    **self._flags(collector, env),
+                }
+            )
+
         return self._guard(run)
 
     # --- API-03 ---------------------------------------------------------------------------------------
@@ -177,6 +190,7 @@ class F3dTelemetryController(http.Controller):
                 else:
                     rejected.append(item.get("code"))
             return _json({"ok": True, "rejected": rejected, **self._flags(collector, env)})
+
         return self._guard(run)
 
     # --- API-04 ---------------------------------------------------------------------------------------
@@ -195,8 +209,11 @@ class F3dTelemetryController(http.Controller):
         if collector:
             su = env(user=SUPERUSER_ID)
             Signal = su["f3d.signal"]
-            data["collector"] = {"code": collector.code, "state": collector.state,
-                                 "last_seen": _iso(collector.last_seen)}
+            data["collector"] = {
+                "code": collector.code,
+                "state": collector.state,
+                "last_seen": _iso(collector.last_seen),
+            }
             data["counts"] = {
                 "signals": Signal.search_count([]),
                 "alarms": Signal.search_count([("status", "=", "alarm")]),
@@ -227,6 +244,7 @@ class F3dTelemetryController(http.Controller):
             collector._touch(request.httprequest.remote_addr)
             res = env["f3d.push.event"]._f3d_receive(clean, collector)
             return _json(res)
+
         return self._guard(run)
 
     @staticmethod
@@ -246,8 +264,14 @@ class F3dTelemetryController(http.Controller):
         remote = ev.get("remote")
         headers = ev.get("headers")
         headers = {k: v for k, v in headers.items() if k in EVENT_HEADERS} if isinstance(headers, dict) else {}
-        return {"event_id": event_id, "route": route, "ts": ts, "payload": payload, "headers": headers,
-                "remote": remote if isinstance(remote, str) else None}
+        return {
+            "event_id": event_id,
+            "route": route,
+            "ts": ts,
+            "payload": payload,
+            "headers": headers,
+            "remote": remote if isinstance(remote, str) else None,
+        }
 
     # --- API-06 ---------------------------------------------------------------------------------------
     @http.route("/f3d/telemetry/commands", type="http", auth="public", methods=["GET"], csrf=False)
@@ -262,17 +286,34 @@ class F3dTelemetryController(http.Controller):
             except ValueError:
                 limit = 50
             now = fields.Datetime.now()
-            cmds = env["f3d.command"].search([
-                ("state", "=", "queued"), ("collector_id", "=", collector.id), ("expires_at", ">", now),
-                ("signal_id.write_enabled", "=", True), ("source_id.write_enabled", "=", True),
-            ], order="requested_at, id", limit=limit)
-            out = [{
-                "id": c.id, "code": c.signal_id.code, "source": c.source_id.code, "value": c.value,
-                "text": c.text or None, "payload": c.payload or None, "requested_at": _iso(c.requested_at),
-                "expires_at": _iso(c.expires_at), "address": c.signal_id.address or {},
-            } for c in cmds]
+            cmds = env["f3d.command"].search(
+                [
+                    ("state", "=", "queued"),
+                    ("collector_id", "=", collector.id),
+                    ("expires_at", ">", now),
+                    ("signal_id.write_enabled", "=", True),
+                    ("source_id.write_enabled", "=", True),
+                ],
+                order="requested_at, id",
+                limit=limit,
+            )
+            out = [
+                {
+                    "id": c.id,
+                    "code": c.signal_id.code,
+                    "source": c.source_id.code,
+                    "value": c.value,
+                    "text": c.text or None,
+                    "payload": c.payload or None,
+                    "requested_at": _iso(c.requested_at),
+                    "expires_at": _iso(c.expires_at),
+                    "address": c.signal_id.address or {},
+                }
+                for c in cmds
+            ]
             cmds.with_context(mail_notrack=True).write({"state": "sent", "sent_at": now})
             return _json({"write_enabled": True, "server_time": _iso(now), "commands": out})
+
         return self._guard(run)
 
     # --- API-07 ---------------------------------------------------------------------------------------
@@ -290,8 +331,9 @@ class F3dTelemetryController(http.Controller):
                 if not isinstance(rid, int) or isinstance(rid, bool):
                     return _error(400, "bad_schema", "Невалідний елемент results")
                 data = item.get("data")
-                if data is not None and (not isinstance(data, dict)
-                                         or len(json.dumps(data, ensure_ascii=False).encode()) > RESULT_DATA_MAX):
+                if data is not None and (
+                    not isinstance(data, dict) or len(json.dumps(data, ensure_ascii=False).encode()) > RESULT_DATA_MAX
+                ):
                     return _error(400, "bad_schema", "data має бути об'єктом ≤ 64 КБ")
             Command = env["f3d.command"]
             accepted, rejected = 0, []
@@ -309,6 +351,7 @@ class F3dTelemetryController(http.Controller):
                     self._apply_result(cmd, item)
                     accepted += 1
             return _json({"accepted": accepted, "rejected": rejected})
+
         return self._guard(run)
 
     @staticmethod
@@ -320,8 +363,12 @@ class F3dTelemetryController(http.Controller):
         result, error = item.get("result"), item.get("error")
         if result is not None and not isinstance(result, str):
             result = json.dumps(result, ensure_ascii=False)
-        vals = {"state": item["state"], "done_at": done_at, "result": result or False,
-                "error": str(error)[:512] if error else False}
+        vals = {
+            "state": item["state"],
+            "done_at": done_at,
+            "result": result or False,
+            "error": str(error)[:512] if error else False,
+        }
         if item.get("data") is not None:
             vals["result_data"] = item["data"]
         cmd = cmd.with_context(mail_notrack=True)

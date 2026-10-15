@@ -1,4 +1,5 @@
 """AC-82: allow-list."""
+
 from __future__ import annotations
 
 import asyncio
