@@ -272,8 +272,11 @@ class ModbusTcpPlugin(SourcePlugin):
             res = await self._read_block(b)
             if isinstance(res, str) and "exception 0x02" in res and b.count > 1:
                 # у блоці є непризначені регістри (дірка між сигналами, gap_max): повторити по окремих сигналах
-                parts = {(n.addr, n.count): n for n in needs
-                         if n.unit == b.unit and n.fc == b.fc and b.addr <= n.addr and n.addr + n.count <= b.addr + b.count}
+                parts = {
+                    (n.addr, n.count): n
+                    for n in needs
+                    if n.unit == b.unit and n.fc == b.fc and b.addr <= n.addr and n.addr + n.count <= b.addr + b.count
+                }
                 if len(parts) > 1 or (parts and next(iter(parts)) != (b.addr, b.count)):
                     pending = list(parts.values()) + pending
                     continue
