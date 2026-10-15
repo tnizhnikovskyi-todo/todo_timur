@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "address rest_vendor: ключі-розширення (machine_connect SPEC §8.4)",
+  "type": "object",
+  "properties": {
+    "cmd": {"enum": ["gantry", "cutopt"]},
+    "default": {"type": ["number", "string", "boolean"]},
+    "io": {"enum": ["read", "write"]}
+  }
+}
