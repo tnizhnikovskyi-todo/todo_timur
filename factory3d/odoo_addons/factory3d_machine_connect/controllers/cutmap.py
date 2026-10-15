@@ -29,7 +29,8 @@ class F3dCutMapController(http.Controller):
         header = request.httprequest.headers.get("Authorization", "")
         token = header[7:].strip() if header[:7].lower() == "bearer " else ""
         collector = request.env["f3d.collector"].sudo()._authenticate(token) if token and len(token) <= 256 else None
-        if not collector:
+        # AC-67: токен колектора іншого (не власника джерела команд оптимізатора) → 401
+        if not collector or collector != request.env["f3d.cut.map"].sudo()._f3d_export_collector():
             return _error(401, "unauthorized", "Невірний токен колектора")
         t = request.httprequest.headers.get(EXPORT_TOKEN_HEADER, "").strip()
         if not TOKEN_RE.match(t):

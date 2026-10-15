@@ -60,6 +60,16 @@ class TestApiExport(F3DMachineHttpCase):
         self.assertEqual(self._get().status_code, 403)  # одноразовий
         self.assertTrue(self.map.message_ids.filtered(lambda m: "COL-T" in (m.body or "")))
 
+    def test_other_collector_401(self):
+        """AC-67: токен активного колектора, що не обслуговує оптимізатор розкрою → 401; токен експорту не витрачено."""
+        other = self.env["f3d.collector"].create({"code": "COL-T2", "name": "Інший колектор"})
+        other_token = self._gen_token(other)
+        resp = self._get(token=other_token)
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.json()["error"]["code"], "unauthorized")
+        self.assertTrue(self.map.sudo().export_token_hash)
+        self.assertEqual(self._get().status_code, 200)  # власник джерела REST-CUTOPT — проходить
+
     def test_token_header_only(self):
         """DEC-20: токен `t` — лише в заголовку; у query не приймається; без заголовка — 400."""
         resp = self._get(t=None, query="?t=%s" % self.t)

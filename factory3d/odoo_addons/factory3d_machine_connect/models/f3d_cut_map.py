@@ -372,6 +372,13 @@ class F3dCutMap(models.Model):
 
     # --- R-20: оптимізація, план, випуск -------------------------------------------------------------
     @api.model
+    def _f3d_export_collector(self):
+        """API-01 п. 1 / AC-67: колектор, якому дозволено забирати список деталей, — власник джерела сигналу
+        команд CMD-03 (`equipment/CUTOPT/cmd`): саме йому йде команда `upload` з токеном експорту."""
+        sig = self.env["f3d.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
+        return sig.collector_id
+
+    @api.model
     def _f3d_cutopt_signal(self):
         sig = self.env["f3d.signal"].sudo().search([("code", "=", CUTOPT_CMD_CODE)], limit=1)
         if not sig:
