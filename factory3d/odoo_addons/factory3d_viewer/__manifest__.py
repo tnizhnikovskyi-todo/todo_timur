@@ -18,8 +18,19 @@
         "views/viewer_snapshot_views.xml",
         "views/viewer_event_views.xml",
         "views/res_config_settings_views.xml",
+        "views/templates_kiosk.xml",
         "views/menus.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "factory3d_viewer/static/src/viewer/viewer.scss",
+            "factory3d_viewer/static/src/viewer/*.js",
+            "factory3d_viewer/static/src/action/*",
+        ],
+        "web.assets_unit_tests": [
+            "factory3d_viewer/static/tests/hoot/*",
+        ],
+    },
     "post_init_hook": "post_init",
     "uninstall_hook": "uninstall",
     "external_dependencies": {},

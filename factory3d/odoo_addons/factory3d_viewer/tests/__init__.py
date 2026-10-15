@@ -14,3 +14,4 @@ from . import test_payload_logistics
 from . import test_payload_misc
 from . import test_payload_chains
 from . import test_payload_signals
+from . import test_hoot
