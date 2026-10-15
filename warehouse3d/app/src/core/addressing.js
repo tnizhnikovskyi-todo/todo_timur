@@ -84,9 +84,11 @@ export function resolver(tree, edit) {
   const find = (id) => { for (let n = tree.nodes.get(id); n; n = n.parent && tree.nodes.get(n.parent)) if (zs.has(n.id)) return { id: n.id, a: zs.get(n.id) }; return null; };
   return { base, find, of: (id) => (find(id) || { a: base }).a };
 }
-// зоны, которые содержат ряды (в порядке обхода дерева)
+// место на полу (ворота, тележка, зона на полу): место-лист группы
+export const isFloor = (n) => n.type === "group" && !!n.loc && !n.kids.length;
+// зоны, которые содержат ряды или места на полу (в порядке обхода дерева)
 export function zonesOf(tree) {
-  const out = [], walk = (n) => { if (n.kids.some((k) => k.type === "rack")) out.push(n); n.kids.forEach(walk); };
+  const out = [], walk = (n) => { if (n.kids.some((k) => k.type === "rack" || isFloor(k))) out.push(n); n.kids.forEach(walk); };
   walk(tree.root); return out;
 }
 const isNew = (n) => !!n.draft && !n.from;
@@ -128,13 +130,21 @@ export function plan(tree, edit, opts = {}) {
       let leaves = visual(R0.kids.filter((k) => k.type === "bayleaf")); if (A.levelDir === "down") leaves.reverse();
       seq(leaves).forEach((L, li) => add(L, null, A.seg.level.start + li, null));
     });
+    // места на полу: номер по порядку от входа идёт в {позиція}, а если её в шаблоне нет — в {ряд}, {секція}, {ярус}; без них — отдельным словом в конце
+    const used = parseTemplate(A.tpl).used, slot = ["pos", "row", "bay", "level"].find((k) => used.includes(k)) || "pos";
+    seq(Z.kids.filter(isFloor).sort(rk[A.rowFrom] || rk.top)).forEach((F, i) => {
+      const v = A.seg[slot].start + i, vals = { zone: zoneText, row: null, bay: null, level: null, pos: null };
+      vals[slot] = v;
+      const base = renderCode(A, vals), code = used.length ? base : `${base}${A.sep}${fmtSeg(A.seg.pos, v)}`;
+      items.push({ id: F.id, code, name: fmtSeg(A.seg[slot], v), row: null, bay: null, level: null, pos: v, posx: 0, posy: 0, posz: 0, zone: Z.id, floor: true });
+    });
   }
   return { items, zones: nz };
 }
 
 // ближайшая зона с рядами для узла (откуда берётся план места)
 export function zoneOf(tree, n) {
-  for (let x = n; x; x = x.parent && tree.nodes.get(x.parent)) if (x.kids.some((k) => k.type === "rack")) return x;
+  for (let x = n; x; x = x.parent && tree.nodes.get(x.parent)) if (x.kids.some((k) => k.type === "rack" || isFloor(k))) return x;
   return null;
 }
 

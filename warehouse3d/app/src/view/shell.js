@@ -15,7 +15,7 @@ const HTML = `
   <header class="topbar">
     <div class="brand"><span class="logo" aria-hidden="true">⬡</span><b data-i18n="app.title"></b><span class="sub" id="wh-sub"></span></div>
     <select class="whsw" id="wh-switch" data-i18n-attr="aria-label:top.warehouse,title:top.warehouse"></select>
-    <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button></div>
+    <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" data-i18n="top.building"></button></div>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
     <span class="sp"></span>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
@@ -34,7 +34,7 @@ const HTML = `
           <button class="btn btn-link" id="ed-reset" data-i18n="bar.reset"></button>
           <span id="ed-st" class="ed-st"></span>
         </div>
-        <div class="planbar2">
+        <div class="planbar2" id="planbar2">
           <div class="seg pick" id="seg-pick" role="group" data-i18n-attr="aria-label:pick.aria"><span class="lbl" data-i18n="pick.label"></span>${PICKS.map((k) => `<button data-pk="${k}" data-i18n="pick.${k}"></button>`).join("")}</div>
           <div class="legend"><span><i class="sw" style="background:var(--ok)"></i><em data-i18n="legend.ok"></em></span>
             <span><i class="sw" style="background:var(--warn)"></i><em data-i18n="legend.warn"></em></span>
@@ -112,11 +112,13 @@ export function mountApp(root, { model, i18n }) {
   }
   q("#wh-switch").onchange = (ev) => model.setWarehouse(ev.target.value);
 
-  const statusTxt = () => model.ui.edit ? t("status.hintEdit") : t(mode === "2d" ? "status.hint2d" : "status.hint3d");
+  const bldOn = () => model.bld.state.on;
+  const statusTxt = () => bldOn() ? t("status.hintBld") : model.ui.edit ? t("status.hintEdit") : t(mode === "2d" ? "status.hint2d" : "status.hint3d");
   function paintBars() {
     const on = model.ui.edit, tg = q("#ed-tg");
     tg.textContent = t(on ? "top.done" : "top.edit"); tg.className = `btn ${on ? "btn-primary" : "btn-secondary"}`; tg.setAttribute("aria-pressed", String(on));
-    root.querySelectorAll("#seg-mode [data-m]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === mode)));
+    root.querySelectorAll("#seg-mode [data-m]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === (bldOn() ? "bld" : mode))));
+    q("#planbar2").hidden = bldOn();
     root.querySelectorAll("#seg-pick [data-pk]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.pk === model.ui.pick)));
     root.querySelectorAll("#seg-lang [data-l]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.l === i18n.lang())));
     q("#vp-status").textContent = statusTxt();
@@ -141,12 +143,18 @@ export function mountApp(root, { model, i18n }) {
     if (ev.type === "warehouse") { renderSwitch(); applyStatic(); side.render(); paintBars(); refresh(); return; }
     if (ev.type === "rebuild") { p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.paint(); three.fit(); } }
+    else if (ev.type === "bld") p2.bldRefresh(); // режим «Будівля»: слой здания, панель, строка состояния
     else refresh();
     side.render(); paintBars();
   });
 
   // ---------- кнопки
-  root.querySelectorAll("#seg-mode [data-m]").forEach((b) => b.onclick = () => { mode = b.dataset.m; model.pref.write("mode", mode); apply(); });
+  // переключатель вида: 2D, 3D или «Будівля» (план здания в 2D: редактор); режим здания не запоминается между запусками
+  root.querySelectorAll("#seg-mode [data-m]").forEach((b) => b.onclick = () => {
+    const m = b.dataset.m;
+    if (m === "bld") { mode = "2d"; model.bld.setOn(true); } else { mode = m; model.pref.write("mode", mode); model.bld.setOn(false); }
+    apply(); if (m === "bld") p2.fit();
+  });
   root.querySelectorAll("#seg-pick [data-pk]").forEach((b) => b.onclick = () => model.setPick(b.dataset.pk));
   root.querySelectorAll("#seg-lang [data-l]").forEach((b) => b.onclick = () => i18n.setLang(b.dataset.l));
   q("#ed-tg").onclick = () => model.setEdit(!model.ui.edit);

@@ -5,9 +5,10 @@
 //     (файл, «с нуля»);
 //     saved / pending — слой правок: сохранённое (SAVED) и несохранённое (PENDING) этого склада; глубина локаций склада — saved.depth
 //     (null — "level", иначе "cell") и переопределение по зонам saved.depthZones [{ id узла, d }], как и ячейки яруса saved.cells; типы мест склада — saved.types
-//     (null — общий справочник BASE_TYPES, иначе свой список поверх него, D-12); building — заготовка под W-04 (пока null).
+//     (null — общий справочник BASE_TYPES, иначе свой список поверх него, D-12); building — сохранённый план здания и проходы (W-04, building.js; null — здания нет; правки — через слой правок, saved.building).
 //   Узлы склада (nodes) — производные: дерево строится из снимка и слоя правок (tree.js) и выгружается как nodesOf(tree, data).
 import { DEPTHS, normEdit } from "./types.js";
+import { normBuilding } from "./building.js";
 
 export const PROJECT_SCHEMA = 2;
 export const SOURCE_KINDS = ["odoo", "file", "scratch"];
@@ -22,8 +23,10 @@ export function createWarehouse(o = {}, i = 0) {
   // проекты, записанные до того, как глубина перешла в слой правок: настройки склада переносятся в слой
   if (!saved.depth && DEPTHS.includes(o.depth) && o.depth !== "level") saved.depth = o.depth;
   if (o.depthZones && typeof o.depthZones === "object" && !Array.isArray(o.depthZones)) for (const [id, d] of Object.entries(o.depthZones)) if (DEPTHS.includes(d) && !saved.depthZones.some((z) => z.id === id)) saved.depthZones.push({ id, d });
+  // план здания (W-04) живёт в слое правок (saved.building); поле building склада — его сохранённая копия для чтения проектом
+  if (o.building && !saved.building) saved.building = normBuilding(o.building);
   return { id: o.id || `wh-${i + 1}`, code, name: o.name || code, company: o.company || "", baseRef: o.baseRef ?? null, base: o.base ?? null,
-    saved, pending: normPending(o.pending), building: o.building ?? null };
+    saved, pending: normPending(o.pending), building: saved.building ?? null };
 }
 
 export function createProject(o = {}) {

@@ -201,8 +201,8 @@ test("миграция: правки формата W-01 / прототипа д
   a.ops.rotate(`${GP}/R1`); a.ops.del(`${GP}/R2`); a.ops.move([{ id: `${FUR}/R1`, x: 5, y: 5 }]);
   await a.save("WH");
   a.ops.dup(`${FUR}/R3`); a.ops.rack(GP, { tp: "FG", nb: 1, nl: 1 });
-  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; delete old.prop; delete old.addr; delete old.addrZones; delete old.codes; // слой прежнего формата — без ячеек, глубины и свойств
-  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.addr; delete p.diff.addrZones; delete p.diff.codes; });
+  const old = clone(a.saved); delete old.cells; delete old.depth; delete old.depthZones; delete old.prop; delete old.building; delete old.cfg; delete old.addr; delete old.addrZones; delete old.codes; // слой прежнего формата — без ячеек, глубины, свойств, здания и параметров рядов
+  const pend = clone(a.pending); pend.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.bld; delete p.diff.bi; delete p.diff.bn; delete p.diff.cfg; delete p.diff.addr; delete p.diff.addrZones; delete p.diff.codes; });
   assert.deepEqual(Object.keys(old).sort(), ["add", "del", "pos", "rot", "set", "types", "v"]);
   assert.equal(a.pending.length, 2);
   const storage = createMemoryStorage({}, { legacy: { edit: old, pending: pend } });
@@ -223,7 +223,7 @@ test("миграция: правки формата W-01 / прототипа д
 test("миграция из localStorage: ключи W-01 (wh-app-*) и прототипа (wh-model-*), W-01 в приоритете", async () => {
   const a = fresh().model;
   a.ops.rack(FUR, { tp: "FUR", nb: 1, nl: 2 }); await a.save("WH"); a.ops.rotate(`${GP}/R1`);
-  const edit = clone(a.saved); delete edit.cells; delete edit.depth; delete edit.depthZones; const pending = clone(a.pending); pending.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.addr; delete p.diff.addrZones; delete p.diff.codes; });
+  const edit = clone(a.saved); delete edit.cells; delete edit.depth; delete edit.depthZones; const pending = clone(a.pending); pending.forEach((p) => { delete p.diff.cells; delete p.diff.depth; delete p.diff.depthZones; delete p.diff.prop; delete p.diff.bld; delete p.diff.bi; delete p.diff.bn; delete p.diff.addr; delete p.diff.addrZones; delete p.diff.codes; });
   const proto = fakeLs(); proto.setItem("wh-model-edit", JSON.stringify(edit)); proto.setItem("wh-model-pending", JSON.stringify(pending));
   const pst = createLocalStorage(proto);
   assert.deepEqual(pst.legacy(), { edit, pending });

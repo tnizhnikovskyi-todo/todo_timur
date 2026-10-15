@@ -114,3 +114,14 @@ class WhConstructor(http.Controller):
     @_guard
     def lock_list(self, key=None, **kw):
         return {"status": "ok", "locks": request.env["wh.zone.lock"].api_list(key)}
+
+    # ------------------------------------------------------------ общий справочник (типы и шаблоны, W-05)
+    @http.route(BASE + "/api/library/load", type=JSON, auth="user")
+    @_guard
+    def library_load(self, **kw):
+        return {"status": "ok", **request.env["wh.library"].api_load()}
+
+    @http.route(BASE + "/api/library/save", type=JSON, auth="user")
+    @_guard
+    def library_save(self, data=None, base_rev=None, **kw):
+        return request.env["wh.library"].api_save(data, base_rev=base_rev)

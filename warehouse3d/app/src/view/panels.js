@@ -3,7 +3,10 @@
 import { RACKED, inNode } from "../core/types.js";
 import { pathOf } from "../core/tree.js";
 import { hhmm } from "../core/locks.js";
+import { DEFAULTS } from "../core/params.js";
 import { esc, fillCls, isLow, modKey, pbar } from "./util.js";
+import { openTypes } from "./types.js";
+import { createBldPanel } from "./bldpanel.js";
 import { createTools } from "./tools.js";
 
 const KINDS = ["stack", "bin", "shelf", "pallet_cell", "kit", "area"];
@@ -26,6 +29,23 @@ export function createSidePanel({ model, i18n, root }) {
   const pendBox = (list, saveLabel, ro) => list.length ? `<div class="ed-pend"><b>${T("side.pending", { n: list.length })}</b><ul>${list.map((p) => `<li>${esc(pendLabel(p))}</li>`).join("")}</ul>
     <div class="acts" style="margin-top:8px">${ro ? "" : `<button class="btn btn-primary" data-save>${esc(saveLabel)}</button>`}<button class="btn btn-secondary" data-discard>${T("side.discard")}</button></div></div>` : "";
 
+  // ---------- параметры конструкции ряда, шаблоны (W-05)
+  const tplList = (kind, stack) => model.library.templates().filter((x) => x.kind === kind && (kind === "rack" || (x.type.form === "stack") === stack));
+  const tplForm = (kind, stack, ro) => { const l = tplList(kind, stack); return `<div class="sec">${T("side.tplInsert")}</div>${l.length ? `<form class="ed-form" data-op="template">
+      <label class="wide">${T("form.tpl")}<select name="tpl">${l.map((x) => `<option value="${esc(x.id)}">${esc(x.name)} · ${esc(x.tp)}</option>`).join("")}</select></label>
+      <label>${T("form.count")}<input type="number" name="cnt" min="1" max="${kind === "rack" ? 20 : 40}" value="1"></label>${btns(ro)}</form>` : `<p class="ed-note">${T("side.tplNone")}</p>`}`; };
+  const tplSave = (n, ro) => (ro ? "" : `<div class="sec">${T("side.tplSave")}</div><div class="ed-form ed-aux"><label class="wide"><span class="sr">${T("side.tplName")}</span><input name="tplname" maxlength="40" aria-label="${T("side.tplName")}" value="${esc(label(n))}"></label>
+    <div class="ed-btns"><button type="button" class="btn btn-secondary" data-tplsave="${esc(n.id)}">${T("side.tplSave")}</button></div></div>`);
+  const cfgForm = (n, ro) => {
+    const e = model.tree.EP(n), pos = (n.kids[0] && n.kids[0].kids[0] && n.kids[0].kids[0].cells) || 1;
+    const num = (k, step, min, max, v = e[k]) => `<label>${T(`par.${k}`)}<input type="number" name="${k}" step="${step}" min="${min}" max="${max}" value="${esc(v ?? "")}"></label>`;
+    return `<div class="sec">${T("side.cfgTitle")}</div><form class="ed-form" data-op="rackcfg">${num("w", 0.1, 0.3, 12)}${num("d", 0.1, 0.3, 12)}${num("lh", 0.05, 0.2, 3)}${num("pos", 1, 1, 12, pos)}
+      <label class="wide">${T("par.lhs")}<input name="lhs" value="${esc((e.lhs || []).join(", "))}"></label>
+      <label class="chk wide"><input type="checkbox" name="ground"${e.ground !== false ? " checked" : ""}> ${T("par.ground")}</label>
+      <label class="chk wide"><input type="checkbox" name="dbl"${e.dbl ? " checked" : ""}> ${T("par.dbl")}</label>
+      ${num("gap", 0.01, 0, 3, e.gap ?? DEFAULTS.gap)}${num("rg", 0.01, 0, 1.5, e.rg ?? DEFAULTS.rg)}${num("bt", 0.01, 0.02, 0.3, e.bt ?? DEFAULTS.bt)}${num("cap", 10, 10, 5000)}${btns(ro)}</form>
+      <div class="acts" style="margin-top:6px"><button class="btn btn-secondary" data-cfgreset>${T("side.cfgReset")}</button></div><p class="ed-note">${T("side.cfgNote", { type: tname(model.tree.TY(n.tp)) })}</p>`;
+  };
   const tools = createTools({ model, i18n, btns, typeOpts, fv }); // свойства, массовое создание, выравнивание, группировка (D-13)
 
   // ---------- просмотр
@@ -116,6 +136,7 @@ export function createSidePanel({ model, i18n, root }) {
         <div class="sec">${T("side.addZone")}</div><form class="ed-form" data-op="zone">
           <label class="wide">${T("form.placeType")}<select name="tp">${typeOpts(["zone"], fv(K("zone"), "tp", "ZONE"))}</select></label>
           <label>${T("form.count")}<input type="number" name="cnt" min="1" max="30" value="${esc(fv(K("zone"), "cnt", 1))}"></label>${btns(ro)}</form>
+        ${tplForm("rack", false, ro)}<div class="acts"><button class="btn btn-secondary" data-catalog="${esc(n.id)}">${T("side.catalog")}</button></div>
         <div class="sec">${T("side.addGroup")}</div><form class="ed-form" data-op="group">
           <label class="wide">${T("form.name")}<input name="name" value="${esc(fv(K("group"), "name", t("word.newZone")))}" maxlength="40"></label>${btns(ro)}</form>`;
       h += tools.massHtml(n, K, ro);
@@ -133,9 +154,11 @@ export function createSidePanel({ model, i18n, root }) {
         <div class="sec">${T("side.rackType")}</div><form class="ed-form" data-op="settp"><label class="wide"><span class="sr">${T("side.rackType")}</span><select name="tp">${typeOpts(stack ? ["stack"] : RACKED, fv(K("settp"), "tp", n.tp))}</select></label>${btns(ro)}</form>
         <div class="sec">${T(stack ? "side.addStack" : "side.addBay")}</div><form class="ed-form" data-op="bay">
           <label>${T("form.count")}<input type="number" name="cnt" min="1" max="40" value="${esc(fv(K("bay"), "cnt", 1))}"></label>
-          ${stack ? "" : `<label>${T("form.levels")}<input type="number" name="nl" min="1" max="12" value="${esc(fv(K("bay"), "nl", lv))}"></label>`}${btns(ro)}</form>`;
+          ${stack ? "" : `<label>${T("form.levels")}<input type="number" name="nl" min="1" max="12" value="${esc(fv(K("bay"), "nl", lv))}"></label>`}${btns(ro)}</form>
+        ${stack ? "" : cfgForm(n, ro)}${tplForm("bay", stack, ro)}${tplSave(n, ro)}`;
     }
-    if (n.type === "bay") h += `<div class="sec">${T("side.addLevel")}</div><form class="ed-form" data-op="level"><input type="hidden" name="at" value="${n.nLv}">${btns(ro)}</form>`;
+    if (n.type === "bay") h += `<div class="sec">${T("side.addLevel")}</div><form class="ed-form" data-op="level"><input type="hidden" name="at" value="${n.nLv}">${btns(ro)}</form>${tplSave(n, ro)}`;
+    if (n.type === "bayleaf") h += tplSave(n, ro);
     if (lv) h += `<div class="sec">${T("side.cellsTitle")}</div>${isCell ? `<p class="ed-note">${T("side.cellOf")}</p>` : ""}<form class="ed-form" data-op="cells" data-target="${esc(lv.id)}">
         <label>${T("form.cells")}<input type="number" name="n" min="1" max="12" value="${esc(fv(K("cells"), "n", lv.cells))}"></label>${btns(ro)}</form>
         <p class="ed-note">${T(model.depthInfo(lv.id).eff === "cell" ? "side.cellsOn" : "side.cellsOff")}</p>`;
@@ -147,6 +170,9 @@ export function createSidePanel({ model, i18n, root }) {
     side.querySelectorAll("[data-del]").forEach((b) => b.onclick = () => model.ops.del(b.dataset.del));
     side.querySelector("[data-save]")?.addEventListener("click", () => model.save(pid));
     side.querySelector("[data-discard]")?.addEventListener("click", () => model.discard(pid));
+    side.querySelectorAll("[data-tplsave]").forEach((b) => b.onclick = () => model.library.saveTemplate(b.dataset.tplsave, b.closest(".ed-aux").querySelector("input").value));
+    side.querySelector("[data-cfgreset]")?.addEventListener("click", () => model.ops.rackcfg(n.id, { reset: true }, K("rackcfg")));
+    side.querySelector("[data-catalog]")?.addEventListener("click", (ev) => openTypes({ model, i18n, zone: ev.currentTarget.dataset.catalog }));
     side.querySelector("[data-unpos]")?.addEventListener("click", () => model.ops.unpos(n.id));
     side.querySelector("[data-rot]")?.addEventListener("click", () => model.ops.rotate(n.id));
     side.querySelector("[data-dup]")?.addEventListener("click", () => model.ops.dup(n.id));
@@ -165,7 +191,8 @@ export function createSidePanel({ model, i18n, root }) {
     });
   }
 
-  return { render() { const side = root; if (model.ui.edit) edit(side); else browse(side); } };
+  const bld = createBldPanel({ model, i18n });
+  return { render() { const side = root; if (model.bld.state.on) bld.render(side); else if (model.ui.edit) edit(side); else browse(side); } };
 }
 
 // ---------- панель уровней: на каждом уровне пути — список соседей, в конце — уровень ниже
@@ -184,12 +211,12 @@ export function renderLevelBar(bar, { model, i18n }) {
 
 // ---------- панель режима редактирования: счётчики, кнопки, статус хранилища
 export function updateEditBar(root, { model, i18n }) {
-  const ui = model.ui, on = ui.edit, s = model.stats(), q = (x) => root.querySelector(x), ro = model.readonly;
-  q("#editbar").hidden = !on && !s.pending;
-  q("#ed-title").textContent = i18n.t(on ? "bar.editing" : "bar.hasPending");
+  const ui = model.ui, on = ui.edit, bld = model.bld.state.on, s = model.stats(), q = (x) => root.querySelector(x), ro = model.readonly;
+  q("#editbar").hidden = !on && !bld && !s.pending;
+  q("#ed-title").textContent = i18n.t(on || bld ? "bar.editing" : "bar.hasPending");
   q("#ed-count").textContent = `· ${s.pending ? i18n.t("bar.pending", { n: s.pending }) : i18n.t("bar.allSaved")}${s.added || s.removed ? ` · ${i18n.t("bar.stats", { added: s.added, removed: s.removed })}` : ""}`;
   q("#ed-saveall").disabled = !s.pending; q("#ed-saveall").hidden = ro; q("#ed-discall").disabled = !s.pending; q("#ed-undo").disabled = !s.pending;
-  q("#ed-undo").hidden = q("#ed-types").hidden = q("#ed-reset").hidden = !on;
+  q("#ed-undo").hidden = !on && !bld; q("#ed-types").hidden = q("#ed-reset").hidden = !on;
   q("#ed-reset").disabled = !model.canReset();
   const busy = !ro && on ? model.locks.busyInfo(ui.esel || ui.focus) : null; // зону правит другой пользователь (W-21)
   q("#ed-st").textContent = ro ? i18n.t("status.ro") : busy ? i18n.t("status.zoneBusy", { zone: model.tree.nodes.has(busy.zone) ? i18n.node(model.tree.nodes.get(busy.zone)) : busy.zone, by: busy.by, until: hhmm(busy.until) }) : i18n.t(model.shared ? "status.odoo" : "status.local");

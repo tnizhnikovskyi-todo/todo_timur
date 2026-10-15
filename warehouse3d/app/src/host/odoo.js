@@ -5,7 +5,10 @@
 //   saveProject(p, { commit }) → "shared" | "stale" (в базе проект новее) | "fail"; commit — версия проекта (иначе черновик, версий нет)
 //   lock({ project, warehouse, warehouseCode, zone }) → { ok, owner, expires, mine } · unlock({ project, warehouse, zone }) · me()
 //   versions(id) / restore(id, versionId) — история версий (интерфейс — W-18)
+//   listLibrary() / saveLibrary(lib) — общая библиотека типов и шаблонов компании (модель wh.library): читать может «перегляд», писать «проектування»;
+//   если в базе она новее — записи объединяются по id и запись повторяется один раз
 import { migrateProject } from "../core/project.js";
+import { mergeLibrary, normLibrary } from "../core/library.js";
 
 export const ODOO_API = "/wh_constructor/api";
 export const odooConfig = (w = globalThis.window) => (w && w.__WH_ODOO__ ? w.__WH_ODOO__ : null); // задаёт страница, отданная модулем
@@ -14,7 +17,7 @@ export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch
   const pre = `wh-odoo-${db}-`;
   const get = (k) => { try { const v = ls.getItem(pre + k); return v == null ? null : JSON.parse(v); } catch (e) { return null; } };
   const revs = new Map(); // id проекта → ревизия, на которой основаны правки (base_rev при сохранении)
-  let tail = Promise.resolve(), draft = null, rights = { view: true, design: true, apply: false }, user = null;
+  let libRev = 0, tail = Promise.resolve(), draft = null, rights = { view: true, design: true, apply: false }, user = null;
 
   async function rpc(route, params = {}, { keepalive = false } = {}) {
     const res = await fetchImpl(`${api}${route}`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, keepalive,
@@ -91,6 +94,25 @@ export function createOdooStorage({ api = ODOO_API, fetchImpl = globalThis.fetch
     },
     lock: ({ project, warehouse, warehouseCode, zone }) => rpc("/lock/acquire", { key: project, warehouse, zone, warehouse_code: warehouseCode || null }),
     unlock: ({ project, warehouse, zone }, opts) => rpc("/lock/release", { key: project, warehouse: warehouse || null, zone: zone || null }, opts), // без warehouse/zone — все свои блокировки проекта
+    async listLibrary() {
+      const r = await rpc("/library/load");
+      if (r.status !== "ok") return null;
+      libRev = r.rev || 0;
+      return r.found ? normLibrary(r.data) : null;
+    },
+    async saveLibrary(lib) {
+      if (storage.readonly) return "fail";
+      return queue(async () => {
+        let data = lib;
+        for (let i = 0; i < 2; i++) {
+          const r = await rpc("/library/save", { data, base_rev: libRev });
+          if (r.status === "ok") { libRev = r.rev; return "shared"; }
+          if (r.status !== "stale") return "fail";
+          libRev = r.rev; data = mergeLibrary(r.data, data);
+        }
+        return "fail";
+      }).catch((e) => { console.error("library", e); return "fail"; });
+    },
     legacy: () => null,
   };
   return storage;

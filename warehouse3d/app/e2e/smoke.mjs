@@ -29,7 +29,7 @@ await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
 const url = `http://127.0.0.1:${server.address().port}/`;
 
 const steps = [], errors = [];
-const step = async (name, fn) => { try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n")[0]}`); errors.push(name); } };
+const step = async (name, fn) => { try { await fn(); steps.push(`ok   ${name}`); } catch (e) { steps.push(`FAIL ${name}: ${String(e.message).split("\n").slice(0, 4).join(" ").trim()}`); errors.push(name); } };
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
@@ -336,6 +336,117 @@ try {
     await page.click('#seg-mode [data-m="3d"]'); // 3D с ячейками строится без ошибок
     await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
     await page.click("#ed-tg"); // выйти из режима редактирования
+  });
+  await step("каталог типов: найти, добавить в зону, параметры ряда, шаблон → вставить, библиотека", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000);
+    pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    pg.on("console", (m) => { if (m.type() === "error") pageErrors.push(`console.error: ${m.text()}`); });
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#ed-tg"); await pg.click("#ed-types");
+    await pg.waitForSelector("#types-dlg .cat-it");
+    expect((await pg.locator("#types-dlg .cat-it").count()) === 50, "в каталоге не 50 типов");
+    expect((await pg.locator("#types-dlg .cat-grps .o_chip").count()) === 6, "нет групп каталога");
+    await pg.check("#types-dlg [data-fac]");
+    expect((await pg.locator("#types-dlg .cat-it").count()) === 41, "фильтр фабрики: не 41 тип (24 + 17)");
+    await pg.uncheck("#types-dlg [data-fac]");
+    await pg.fill("#types-dlg [data-q]", "рулон");
+    await pg.waitForFunction(() => document.querySelectorAll("#types-dlg .cat-it").length === 1);
+    await pg.click('#types-dlg .cat-it[data-cat="R19"]');
+    expect((await pg.locator("#types-dlg .cat-pv svg").count()) === 1, "нет превью формы");
+    expect((await pg.locator('#types-dlg .cat-params input[name="lv"]').count()) === 1, "нет параметров в карточке");
+    await pg.click("#types-dlg [data-import]");
+    await pg.waitForSelector('#types-dlg .cat-params input[name="name"]'); // тип в проекте — параметры редактируются
+    await pg.fill('#types-dlg .cat-params input[name="cap"]', "500"); await pg.dispatchEvent('#types-dlg .cat-params input[name="cap"]', "change");
+    const zid = await pg.locator("#types-dlg .cat-place [data-zone] option", { hasText: "Фурнітура" }).first().getAttribute("value");
+    await pg.selectOption("#types-dlg .cat-place [data-zone]", zid);
+    await pg.fill('#types-dlg .cat-place input[name="nb"]', "2");
+    await pg.click("#types-dlg [data-place]");
+    await pg.click("#types-dlg [data-close]");
+    await pg.waitForFunction(() => !document.querySelector("#types-dlg"));
+    await pg.click("#ed-saveall");
+    await pg.waitForFunction(() => { const w = JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved; return w.add.some((a) => a.tp === "R19") && w.types.some((t) => t.id === "R19" && t.cap === 500); });
+    // 2D и 3D рисуют новую конструкцию
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Фурнітура" });
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "Фурнітура");
+    const kids = pg.locator("#plan-side .ed-kids [data-esel]");
+    await kids.last().click();
+    await pg.waitForFunction(() => /^Ряд /.test(document.querySelector("#plan-side h2")?.textContent || "") && document.querySelector("#plan-side [data-tplsave]"));
+    await pg.click('#seg-mode [data-m="2d"]');
+    expect((await pg.locator("#vp svg rect.s:visible").count()) > 0, "новый ряд не нарисован в 2D");
+    await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForSelector("#vp canvas:not([hidden])"); await pg.waitForTimeout(400);
+    await pg.click('#seg-mode [data-m="2d"]');
+    // параметры конкретного ряда: двусторонний ряд
+    const d0 = await pg.evaluate(() => document.querySelector("#plan-side .ed-info")?.textContent || "");
+    await pg.check('#plan-side form[data-op="rackcfg"] input[name="dbl"]');
+    await pg.click('#plan-side form[data-op="rackcfg"] [data-show]');
+    await pg.waitForFunction((x) => (document.querySelector("#plan-side .ed-info")?.textContent || "") !== x, d0);
+    await pg.keyboard.press("Control+KeyZ");
+    // сохранить ряд как шаблон и вставить
+    await pg.fill("#plan-side .ed-aux input", "Мій ряд e2e"); await pg.click("#plan-side [data-tplsave]");
+    await pg.waitForFunction(() => /e2e/.test(localStorage.getItem("wh-app-library") || ""));
+    await pg.click('#plan-side .o_chips [data-esel]:has-text("Фурнітура")');
+    await pg.waitForSelector('#plan-side form[data-op="template"]');
+    expect((await pg.locator('#plan-side form[data-op="template"] option', { hasText: "Мій ряд e2e" }).count()) === 1, "шаблона нет в списке");
+    await pg.fill('#plan-side form[data-op="template"] input[name="cnt"]', "2");
+    await pg.click('#plan-side form[data-op="template"] button[type="submit"]');
+    await pg.waitForFunction(() => { const w = JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved; return w.add.filter((a) => a.kind === "rack" && a.tp === "R19").length === 3; });
+    const rep = await pg.evaluate(() => { const w = JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0].saved, ids = w.add.map((a) => a.id), codes = w.add.filter((a) => a.code).map((a) => a.code); return [ids.length === new Set(ids).size, codes.length === new Set(codes).size, JSON.parse(localStorage.getItem("wh-app-library")).templates.length]; });
+    expect(rep[0] && rep[1], "имена или коды после вставки шаблона не уникальны");
+    expect(rep[2] === 1, "в библиотеке не один шаблон");
+    // библиотека общая: в другом проекте/складе браузера (та же страница после перезагрузки) шаблон на месте
+    await pg.reload(); await pg.waitForSelector("#plan-side h2");
+    await pg.click("#ed-tg"); await pg.click("#ed-types"); await pg.click('#types-dlg [data-tab="lib"]');
+    expect((await pg.locator("#types-dlg [data-tid]").count()) === 1, "шаблон не виден в библиотеке после перезагрузки");
+    await ctx.close();
+  });
+  await step("план будівлі: створити за розміром складу, колона, прохід, рулетка, Ctrl+Z, зберегти, перезавантаження", async () => {
+    const toScreen = (x, y) => page.evaluate(([x, y]) => { const svg = document.querySelector("#vp svg"), p = svg.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(svg.getScreenCTM()); return { x: q.x, y: q.y, k: svg.getScreenCTM().a }; }, [x, y]);
+    const click = async (x, y, mods = []) => { const p = await toScreen(x, y); for (const m of mods) await page.keyboard.down(m); await page.mouse.click(p.x, p.y); for (const m of mods) await page.keyboard.up(m); return p; };
+    const tool = (k) => page.click(`#plan-side [data-tool="${k}"]`);
+    const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem("wh-app-project-demo")).warehouses[0]);
+    await page.click('#seg-mode [data-m="bld"]');
+    await page.waitForSelector("#bld-create");
+    expect(await page.locator("#vp svg:not([hidden])").count() === 1 && await page.locator("#vp canvas").isHidden(), "режим «Будівля» не показав 2D");
+    expect(await page.locator("#vp .rulers:not([hidden]) .rx b").count() > 3, "нет линеек по краям 2D");
+    await page.click("#bld-create");
+    await page.waitForSelector("#vp svg .bd-contour");
+    await page.waitForSelector("#plan-side .ed-pend");
+    expect((await saved()).building === null, "здание сохранилось без «Зберегти»");
+    await tool("col"); await click(14.3, 9.7);
+    await page.waitForSelector("#vp svg rect.bd-col");
+    await tool("aisle"); await click(6, 4); await click(36, 4);
+    await page.waitForSelector("#vp svg .bd-ai");
+    expect((await text("#plan-side")).includes("Прохід"), "в панелі нет проходу");
+    await tool("ruler");
+    const a = await click(8, 12, ["Alt"]), b = await click(33, 17, ["Alt"]);
+    await page.waitForSelector("#bld-ruler");
+    const shown = parseFloat((await text("#bld-ruler b")).replace(/[^\d,]/g, "").replace(",", "."));
+    const want = Math.hypot(b.x - a.x, b.y - a.y) / a.k;
+    expect(Math.abs(shown - want) < 0.02, `рулетка: ${shown} м, ожидалось ${want.toFixed(2)} м`);
+    await tool("select"); await tool("col"); await click(22.4, 14.2); // вторая колона — её отменим
+    await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 2);
+    await page.keyboard.press("Control+KeyZ");
+    await page.waitForFunction(() => document.querySelectorAll("#vp svg rect.bd-col").length === 1);
+    expect(await page.locator("#vp svg .bd-ai").count() === 1, "Ctrl+Z убрал и проход");
+    await tool("select");
+    await page.click('#plan-side .bld-list [data-bsel="c1"]'); // выделить колонну из списка и поправить координату числом
+    await page.waitForSelector('#plan-side [data-item] input[data-f="x"]');
+    await page.fill('#plan-side [data-item] input[data-f="x"]', "20");
+    await page.keyboard.press("Tab"); // число фиксируется при выходе из поля (change)
+    await page.waitForFunction(() => Math.abs(+document.querySelector("#vp svg rect.bd-col").getAttribute("x") - 19.8) < 0.01);
+    await page.click("#plan-side [data-save]");
+    await page.waitForFunction(() => { const b = JSON.parse(localStorage.getItem("wh-app-project-demo") || "null")?.warehouses[0]; return b && b.saved.building && !b.pending.some((p) => p.obj === "building"); });
+    const wh = await saved();
+    expect(wh.building.items.filter((i) => i.k === "col").length === 1 && wh.building.items.filter((i) => i.k === "aisle").length === 1 && wh.building.nodes.length === 2, "в проекте нет колонны и прохода");
+    await page.reload(); await page.waitForSelector("#plan-side h2");
+    await page.click('#seg-mode [data-m="bld"]');
+    await page.waitForSelector("#vp svg rect.bd-col");
+    expect(await page.locator("#vp svg .bd-ai").count() === 1 && await page.locator("#plan-side .ed-pend").count() === 0, "после перезагрузки здание не на месте");
+    await page.click('#seg-mode [data-m="3d"]'); // 3D со зданием строится без ошибок
+    await page.waitForSelector("#vp canvas:not([hidden])"); await page.waitForTimeout(500);
+    expect(await page.locator("#vp .rulers").isHidden(), "линейки остались в 3D");
   });
   await step("нечитаемый проект: копия сохранена, открыт демо-проект, уведомление", async () => {
     const p2 = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();

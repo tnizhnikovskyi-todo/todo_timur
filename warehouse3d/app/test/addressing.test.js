@@ -181,3 +181,23 @@ test("уникальность между складами проекта: но�
   m.undo(); m.undo();
   assert.equal(m.addr.conflicts().length, 0);
 });
+
+test("места на полу (ворота, тележки): нумерация по шаблону зоны", () => {
+  const { model: m } = fresh(); m.setEdit(true);
+  m.ops.group("WH", { name: "Пол" }); m.ops.zone("WH/Пол", { tp: "CART", cnt: 3 });
+  const ids = () => m.tree.nodes.get("WH/Пол").kids.map((k) => k.id);
+  m.ops.addr("WH/Пол", { own: "1", zoneCode: "G" }); m.ops.renum("WH/Пол", {});
+  assert.deepEqual(ids().map((i) => node(m, i).loc), ["G-01", "G-02", "G-03"], "номер идёт в первый сегмент шаблона (ряд)");
+  m.ops.addr("WH/Пол", { own: "1", zoneCode: "G", tpl: "{зона} {позиція}", pos_width: "2" }); m.ops.renum("WH/Пол", {});
+  assert.deepEqual(ids().map((i) => node(m, i).loc), ["G-01", "G-02", "G-03"]);
+  m.ops.addr("WH/Пол", { own: "1", zoneCode: "G", tpl: "{зона} {позиція}", pos_width: "2", rowFrom: "bottom" }); m.ops.renum("WH/Пол", {});
+  assert.equal(new Set(ids().map((i) => node(m, i).loc)).size, 3);
+  assert.equal(m.addr.info(ids()[0]).posx, 0);
+  // новое место на полу продолжает нумерацию; существующие коды остаются
+  m.ops.addr("WH/Пол", { own: "1", zoneCode: "G", tpl: "{зона} {позиція}", pos_width: "2" });
+  m.ops.zone("WH/Пол", { tp: "CART", cnt: 1 });
+  const before = ids().slice(0, 3).map((i) => node(m, i).loc), id4 = ids()[3];
+  m.ops.renum("WH/Пол", { only: "1" });
+  assert.deepEqual(ids().slice(0, 3).map((i) => node(m, i).loc), before); assert.equal(node(m, id4).loc, "G-04");
+  assert.equal(m.addr.conflicts().length, 0);
+});
