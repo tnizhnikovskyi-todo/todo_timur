@@ -8,7 +8,8 @@ import { HISTORY_PREFIX, entryById, pushVersion, readHistory, summaries } from "
 export const PREFIX = "wh-app-";
 export const PROTOTYPE_PREFIX = "wh-model-"; // ключи прототипа: wh-model-edit, wh-model-pending
 
-export function createLocalStorage(ls = globalThis.localStorage) {
+const safeLs = () => { try { return globalThis.localStorage || null; } catch (e) { return null; } }; // по file:// или в приватном режиме доступ может бросать SecurityError
+export function createLocalStorage(ls = safeLs()) {
   const get = (key) => { try { const v = ls.getItem(key); return v == null ? null : JSON.parse(v); } catch (e) { return null; } };
   const keys = () => { try { return Array.from({ length: ls.length }, (_, i) => ls.key(i)); } catch (e) { return []; } };
   const load = (id) => migrateProject(get(PREFIX + PROJECT_PREFIX + id));

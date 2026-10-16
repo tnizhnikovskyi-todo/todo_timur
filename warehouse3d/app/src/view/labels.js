@@ -3,16 +3,11 @@
 import { esc } from "./util.js";
 import { ARROWS, DPIS, PRESETS, SYMS, filterOptions, labelIssues, labelPlaces, layoutLabel, normLabel, pageCount, selectPlaces, sheetOf, translit, zplFile } from "../core/labels.js";
 import { code128Rects } from "../core/code128.js";
+import { saveFile } from "./save.js";
 import { qrEncode } from "../core/qr.js";
 import LB from "../i18n/labels.js";
 
 const PREVIEW = 6;
-// скачивание: Blob + ссылка (как в files.js; свой экземпляр, чтобы окно не тянуло чанк файлов)
-function downloadBlob(name, data, mime) {
-  const url = URL.createObjectURL(new Blob([data], { type: mime })), a = document.createElement("a");
-  a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
 const f2 = (v) => String(Math.round(v * 100) / 100);
 
 // SVG одной этикетки по раскладке (мм → единицы viewBox)
@@ -113,17 +108,18 @@ export function openLabels({ model, i18n }) {
   m.dlg.addEventListener("input", (ev) => { if (ev.target.type === "number") paint(); });
   const name = (ext) => `labels-${translit(model.warehouse.code).replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "") || "wh"}-${new Date().toISOString().slice(0, 10)}.${ext}`;
   const fail = (e) => { console.error(e); m.q("[data-err]").textContent = `${t("file.err.write")}: ${e.message}`; };
-  m.q("[data-zpl]").onclick = () => {
+  const done = (r, n) => { if (r === "saved") model.notify("ok", "n.fileSaved", { name: n }); };
+  m.q("[data-zpl]").onclick = async () => {
     try {
       const { cfg, sheet, list } = state(), txt = zplFile(list, cfg, { w: sheet.w, h: sheet.h }, +val("dpi"), words), n = name("zpl");
-      downloadBlob(n, txt, "text/plain;charset=utf-8"); model.notify("ok", "n.fileSaved", { name: n });
+      done(await saveFile(n, txt, "text/plain;charset=utf-8"), n);
     } catch (e) { fail(e); }
   };
   m.q("[data-pdf]").onclick = async () => {
     const btn = m.q("[data-pdf]"); btn.disabled = true;
     try {
       const { cfg, sheet, list } = state(), n = name("pdf"), bytes = await (await import("../adapters/pdf.js")).labelsPdf(list, cfg, sheet, words, { title: n });
-      downloadBlob(n, bytes, "application/pdf"); model.notify("ok", "n.fileSaved", { name: n });
+      done(await saveFile(n, bytes, "application/pdf"), n);
     } catch (e) { fail(e); }
     btn.disabled = false;
   };

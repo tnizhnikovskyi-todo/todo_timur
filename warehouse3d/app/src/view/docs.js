@@ -5,6 +5,7 @@ import { rackBom, bomTables } from "../core/rackbom.js";
 import { PLACE_COLS, placeRows } from "../core/placexport.js";
 import { asciiName } from "../core/projfile.js";
 import { translit } from "../core/labels.js";
+import { saveFile } from "./save.js";
 import { planScene } from "./planscene.js";
 import { drawPlanPage, pageSize } from "./planpage.js";
 import { variantName } from "./variants.js";
@@ -13,11 +14,6 @@ import DOCS from "../i18n/docs.js";
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const stamp = () => new Date().toISOString().slice(0, 10);
 
-function downloadBlob(name, data, mime) {
-  const url = URL.createObjectURL(new Blob([data], { type: mime })), a = document.createElement("a");
-  a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
 function modal(id, title, body, footer, i18n) {
   document.getElementById(id)?.remove();
   const dlg = document.createElement("div"); dlg.className = "o_modal_bg"; dlg.id = id;
@@ -147,7 +143,7 @@ const wire = (m, i18n, paint) => {
 };
 const footer = (i18n, ...btns) => `<span class="sp"></span><button class="btn btn-secondary" data-close>${esc(i18n.t("doc.close"))}</button>${btns.join("")}`;
 const btn = (i18n, id, key, primary) => `<button class="btn ${primary ? "btn-primary" : "btn-secondary"}" data-go="${id}">${esc(i18n.t(key))}</button>`;
-const saved = (model, name) => model.notify("ok", "n.fileSaved", { name });
+const saved = (model, name, r) => { if (r === "saved") model.notify("ok", "n.fileSaved", { name }); };
 
 export function openBom({ model, i18n }) {
   i18n.extend(DOCS);
@@ -163,7 +159,7 @@ export function openBom({ model, i18n }) {
   }
   const run = (id, ext, mime, make) => m.q(`[data-go=${id}]`).onclick = async () => {
     const b = m.q(`[data-go=${id}]`); b.disabled = true;
-    try { const n = fileName(model, "rack-bom", ext); downloadBlob(n, await make(), mime); saved(model, n); } catch (e) { fail(e, model); }
+    try { const n = fileName(model, "rack-bom", ext); saved(model, n, await saveFile(n, await make(), mime)); } catch (e) { fail(e, model); }
     b.disabled = false;
   };
   run("xlsx", "xlsx", XLSX_MIME, () => bomXlsx({ model, i18n, scope: scopeVal(m) }));
@@ -180,7 +176,7 @@ export function openPlaces({ model, i18n }) {
   function paint() { const r = placesOf(model, i18n, scopeVal(m)); m.q("[data-sum] b").textContent = i18n.t("doc.places.count", { n: r.count }); m.q("[data-go=xlsx]").disabled = !r.count; }
   m.q("[data-go=xlsx]").onclick = async () => {
     const b = m.q("[data-go=xlsx]"); b.disabled = true;
-    try { const n = fileName(model, "places", "xlsx"); downloadBlob(n, await placesXlsx({ model, i18n, scope: scopeVal(m) }), XLSX_MIME); saved(model, n); } catch (e) { fail(e, model); }
+    try { const n = fileName(model, "places", "xlsx"); saved(model, n, await saveFile(n, await placesXlsx({ model, i18n, scope: scopeVal(m) }), XLSX_MIME)); } catch (e) { fail(e, model); }
     b.disabled = false;
   };
   paint();
@@ -213,12 +209,12 @@ export function openPlan({ model, i18n }) {
   }
   m.q("[data-go=pdf]").onclick = async () => {
     const b = m.q("[data-go=pdf]"); b.disabled = true;
-    try { const n = fileName(model, "plan", "pdf"); downloadBlob(n, await planPdf({ model, i18n, ...opts(), translit: m.q('[data-f="translit"]').checked }), "application/pdf"); saved(model, n); } catch (e) { fail(e, model); }
+    try { const n = fileName(model, "plan", "pdf"); saved(model, n, await saveFile(n, await planPdf({ model, i18n, ...opts(), translit: m.q('[data-f="translit"]').checked }), "application/pdf")); } catch (e) { fail(e, model); }
     b.disabled = false;
   };
   m.q("[data-go=png]").onclick = async () => {
     const b = m.q("[data-go=png]"); b.disabled = true;
-    try { const n = fileName(model, "plan", "png"); downloadBlob(n, await planPng({ model, i18n, ...opts(), long: +val("res") }), "image/png"); saved(model, n); } catch (e) { fail(e, model); }
+    try { const n = fileName(model, "plan", "png"); saved(model, n, await saveFile(n, await planPng({ model, i18n, ...opts(), long: +val("res") }), "image/png")); } catch (e) { fail(e, model); }
     b.disabled = false;
   };
   paint();

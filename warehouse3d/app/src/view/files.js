@@ -1,19 +1,13 @@
 // Меню «Файл» (W-10, D-06, D-09): импорт и экспорт локаций (XLSX / CSV), экспорт и импорт проекта (.whproj.json). Грузится лениво при первом открытии меню.
 // host — { storage, bases, reload }: хост задаёт хранилище проектов, снимки по baseRef и перезагрузку страницы после импорта (импортированный проект открывается при запуске).
 import { esc } from "./util.js";
+import { saveFile } from "./save.js";
 import { locationRows } from "../core/locexport.js";
 import { writeCsv } from "../adapters/csv.js";
 import { ROLES, createFileAdapter } from "../adapters/file.js";
 import { asciiName, copyProject, parseProjectFile, projectFileName, serializeProject } from "../core/projfile.js";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-// скачивание: Blob + ссылка (работает и в модуле Odoo)
-export function downloadBlob(name, data, mime) {
-  const url = URL.createObjectURL(new Blob([data], { type: mime })), a = document.createElement("a");
-  a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
 
 function modal(id, title, body, footer, i18n) {
   document.getElementById(id)?.remove();
@@ -32,10 +26,12 @@ const finish = (host) => (host.reload ? host.reload() : location.reload());
 const stamp = () => new Date().toISOString().slice(0, 10);
 
 // ---------- экспорт проекта: сразу скачивание
-export function exportProjectFile({ model, i18n, host = {} }) {
+export async function exportProjectFile({ model, i18n, host = {} }) {
   const p = model.project, name = projectFileName(p);
-  downloadBlob(name, serializeProject(p, { bases: host.bases || {}, exportedAt: new Date().toISOString() }), "application/json");
-  model.notify("ok", "n.fileSaved", { name });
+  try {
+    const r = await saveFile(name, serializeProject(p, { bases: host.bases || {}, exportedAt: new Date().toISOString() }), "application/json");
+    if (r === "saved") model.notify("ok", "n.fileSaved", { name });
+  } catch (e) { console.error(e); model.notify("bad", "n.fileFail"); }
 }
 
 // ---------- экспорт локаций
@@ -68,9 +64,9 @@ export function openExportLocations({ model, i18n, keys = null }) {
     const mode = val("mode"), fmt = val("fmt"), r = rowsOf(mode), name = `locations-${asciiName(code) || "wh"}-${mode}-${stamp()}.${fmt}`;
     try {
       const rows = [r.headers, ...r.rows];
-      if (fmt === "csv") downloadBlob(name, writeCsv(rows), "text/csv;charset=utf-8");
-      else downloadBlob(name, await (await import("../adapters/xlsx.js")).writeXlsx(rows, "stock.location"), XLSX_MIME);
-      model.notify("ok", "n.fileSaved", { name }); m.close();
+      const r2 = fmt === "csv" ? await saveFile(name, writeCsv(rows), "text/csv;charset=utf-8")
+        : await saveFile(name, await (await import("../adapters/xlsx.js")).writeXlsx(rows, "stock.location"), XLSX_MIME);
+      if (r2 === "saved") { model.notify("ok", "n.fileSaved", { name }); m.close(); }
     } catch (e) { m.q("[data-err]").textContent = `${t("file.err.write")}: ${e.message}`; }
   };
 }
