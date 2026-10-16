@@ -65,6 +65,23 @@ class TestControllers(HttpCase, F3dViewerBase):
                 self.assertEqual(res.status_code, 400)
                 self.assertEqual(res.json()["error"]["code"], "bad_request")
 
+    def test_data_code_traversal_rejected(self):  # V-2
+        for codes in ("../../etc", "..", "/etc", "A//B", "A/../B", ".hidden"):
+            with self.subTest(codes=codes):
+                res = self._get("/f3d/viewer/data?codes=" + codes)
+                self.assertEqual(res.status_code, 400)
+                self.assertEqual(res.json()["error"]["code"], "bad_request")
+        for codes in ("WH/MO/00231", "TST/MR/00031", "SAW-1,ZZ-WC-1", "PLT-04.C_1"):
+            with self.subTest(codes=codes):
+                self.assertEqual(self._get("/f3d/viewer/data?codes=" + codes).status_code, 200)
+
+    def test_snapshot_bad_id_404(self):  # V-3
+        for sid in ("abc", "-1", "1.5", "0", "99999999999"):
+            with self.subTest(sid=sid):
+                res = self._get("/f3d/viewer/snapshot/" + sid)
+                self.assertEqual(res.status_code, 404)
+                self.assertEqual(res.json()["error"]["code"], "not_found")
+
     def test_data_forbidden(self):
         res = self._get("/f3d/viewer/data", user="f3d_nobody")
         self.assertEqual(res.status_code, 403)

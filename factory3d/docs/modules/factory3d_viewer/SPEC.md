@@ -869,7 +869,7 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
 Спільне: усі маршрути `type="http"` повертають `Response` з `Content-Type: application/json; charset=utf-8`
 і `Cache-Control: no-store` (крім API-01, API-07). Помилки — JSON `{"error": {"code": "<snake>", "message":
 "<укр.>"}}` з HTTP-статусом. Параметри валідуються до звернення до ORM: `code`/`codes` —
-`^[A-Za-z0-9/_.\-]{1,64}$` кожен, ≤ 200 кодів; `since` — ISO-8601 UTC (`2026-10-12T07:30:12Z` або без `Z`);
+`^[A-Za-z0-9_\-][A-Za-z0-9_.\-]*(/[A-Za-z0-9_\-][A-Za-z0-9_.\-]*)*$`, ≤ 64 символи, кожен (сегменти через `/` — назви документів, `WH/MO/00231`; сегмент не починається з `.`, тож `..` і `../x` — `400`), ≤ 200 кодів; `<snapshot_id>` — лише цифри, інакше `404 not_found`; `since` — ISO-8601 UTC (`2026-10-12T07:30:12Z` або без `Z`);
 `date` — `^\d{4}-\d\d-\d\d$`; `sections` — ключі з контракту через кому; `full`, `lite`, `kiosk` — `0|1`.
 Невалідний параметр → `400 {"code": "bad_request"}`. `auth="user"` → без сесії Odoo віддає стандартний
 редирект на `/web/login` (для `type=http`), тести перевіряють `401/303`.

@@ -15,7 +15,8 @@ from ..tools.cycle_check import check
 
 _logger = logging.getLogger(__name__)
 
-CODE_RE = re.compile(r"^[A-Za-z0-9/_.\-]{1,64}$")
+# сегменти через «/» (назви документів `WH/MO/00231`) не починаються з «.», тож `..`, `../x`, `/x`, `x//y` не проходять (V-2)
+CODE_RE = re.compile(r"^(?=.{1,64}\Z)[A-Za-z0-9_\-][A-Za-z0-9_.\-]*(?:/[A-Za-z0-9_\-][A-Za-z0-9_.\-]*)*\Z")
 SECTION_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
 SINCE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
@@ -214,7 +215,10 @@ class F3dViewerController(http.Controller):
 
     @staticmethod
     def serve_snapshot(snapshot_id):
-        snap = request.env["f3d.viewer.snapshot"].search([("id", "=", snapshot_id)], limit=1)
+        """`snapshot_id` приходить рядком: нечисловий id → 404 JSON (а не редирект маршрутизатора, V-3)."""
+        raw_id = str(snapshot_id)
+        sid = int(raw_id) if raw_id.isascii() and raw_id.isdigit() and len(raw_id) <= 9 else 0
+        snap = request.env["f3d.viewer.snapshot"].search([("id", "=", sid)], limit=1)
         if not snap:
             return error("not_found", "Знімок не знайдено", 404)
         raw = base64.b64decode(snap.payload_file or b"")
@@ -232,7 +236,7 @@ class F3dViewerController(http.Controller):
             return forbidden()
         return self.serve_snapshots(kw)
 
-    @http.route("/f3d/viewer/snapshot/<int:snapshot_id>", type="http", auth="user", methods=["GET"])
+    @http.route("/f3d/viewer/snapshot/<string:snapshot_id>", type="http", auth="user", methods=["GET"])
     def snapshot(self, snapshot_id, **kw):
         if not self._allowed():
             return forbidden()

@@ -141,7 +141,7 @@ class F3dKioskController(http.Controller):
     def kiosk_snapshots(self, token, **kw):
         return self._guard(token) or F3dViewerController.serve_snapshots(kw)
 
-    @http.route("/f3d/kiosk/<string:token>/snapshot/<int:snapshot_id>", type="http", auth="public",
+    @http.route("/f3d/kiosk/<string:token>/snapshot/<string:snapshot_id>", type="http", auth="public",
                 methods=["GET"], csrf=False, save_session=False)
     def kiosk_snapshot(self, token, snapshot_id, **kw):
         return self._guard(token) or F3dViewerController.serve_snapshot(snapshot_id)
