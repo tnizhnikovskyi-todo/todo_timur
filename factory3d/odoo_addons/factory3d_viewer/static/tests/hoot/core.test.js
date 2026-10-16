@@ -675,3 +675,70 @@ test("snapshots_tag (R-17): мітка «знімки» при режимі snap
     viewer.setPlaybackMode("plan");
     expect(q(el, ".o_f3d_snap-tag").hidden).toBe(true);
 });
+
+// ------------------------------------------------------------------ згортання панелей і секцій
+
+const memStorage = (init = {}) => {
+    const data = { ...init };
+    return { data, getItem: (k) => data[k] ?? null, setItem: (k, v) => { data[k] = String(v); } };
+};
+const bracket = (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code, key: code === "BracketLeft" ? "х" : "ї", bubbles: true }));
+
+test("ui_panels: краєві кнопки й клавіші [ ] згортають панелі, стан зберігається", async () => {
+    const storage = memStorage();
+    const { viewer, el } = await mountViewer({ model: "none", viewerOpts: { storage } });
+    const side = q(el, ".o_f3d_edge-side");
+    const card = q(el, ".o_f3d_edge-card");
+    expect(el.classList.contains("o_f3d_side-off")).toBe(false);
+    expect(side.getAttribute("aria-expanded")).toBe("true");
+    side.click();
+    expect(el.classList.contains("o_f3d_side-off")).toBe(true);
+    expect(side.getAttribute("aria-expanded")).toBe("false");
+    expect(viewer.getState().ui).toEqual({ side: false, card: true, collapsed: [] });
+    expect(JSON.parse(storage.data["f3d.ui"])).toEqual({ side: false, card: true, collapsed: [] });
+    bracket("BracketRight");
+    expect(el.classList.contains("o_f3d_card-off")).toBe(true);
+    expect(card.getAttribute("aria-expanded")).toBe("false");
+    bracket("BracketLeft");
+    expect(el.classList.contains("o_f3d_side-off")).toBe(false);
+    // новий екземпляр із тим самим сховищем: права панель лишається згорнутою
+    const again = await mountViewer({ model: "none", viewerOpts: { storage } });
+    expect(again.el.classList.contains("o_f3d_card-off")).toBe(true);
+    expect(again.el.classList.contains("o_f3d_side-off")).toBe(false);
+    // явний показ документа розгортає панель, але не змінює збережений стан
+    again.viewer.showMO("WH/MO/00231");
+    expect(again.el.classList.contains("o_f3d_card-off")).toBe(false);
+    expect(JSON.parse(storage.data["f3d.ui"]).card).toBe(false);
+});
+
+test("ui_panels: недоступне або пошкоджене сховище не ламає переглядач", async () => {
+    const broken = { getItem: () => "{не json", setItem: () => { throw new Error("quota"); } };
+    const { viewer, el } = await mountViewer({ model: "none", viewerOpts: { storage: broken } });
+    expect(el.classList.contains("o_f3d_side-off")).toBe(false);
+    q(el, ".o_f3d_edge-card").click();
+    expect(viewer.getState().ui.card).toBe(false);
+});
+
+test("ui_folds: секції згортаються кліком по заголовку, стан переживає перемальовування й збереження", async () => {
+    const storage = memStorage();
+    const { viewer, el } = await mountViewer({ model: "none", viewerOpts: { storage } });
+    const toggle = (id) => q(el, `[data-fold="${id}"] .o_f3d_fold-t`).click();
+    expect(qa(el, ".o_f3d_side [data-fold]").map((s) => s.dataset.fold)).toEqual(["views", "color", "layers", "show"]);
+    expect(qa(el, ".o_f3d_card [data-fold]").map((s) => s.dataset.fold)).toEqual(["kpi", "attn"]);
+    toggle("views");
+    toggle("attn");
+    expect(q(el, '[data-fold="views"]').classList.contains("o_f3d_collapsed")).toBe(true);
+    expect(q(el, '[data-fold="views"] .o_f3d_fold-t').getAttribute("aria-expanded")).toBe("false");
+    expect(q(el, '[data-fold="color"]').classList.contains("o_f3d_collapsed")).toBe(false);
+    viewer.openTab("production");
+    viewer.openTab("overview");
+    expect(q(el, '[data-fold="attn"]').classList.contains("o_f3d_collapsed")).toBe(true);
+    expect(q(el, '[data-fold="kpi"]').classList.contains("o_f3d_collapsed")).toBe(false);
+    expect(qa(el, ".o_f3d_kpis .o_f3d_kpi").length).toBe(4);
+    expect(JSON.parse(storage.data["f3d.ui"]).collapsed.sort()).toEqual(["attn", "views"]);
+    const again = await mountViewer({ model: "none", viewerOpts: { storage } });
+    expect(q(again.el, '[data-fold="views"]').classList.contains("o_f3d_collapsed")).toBe(true);
+    expect(q(again.el, '[data-fold="attn"]').classList.contains("o_f3d_collapsed")).toBe(true);
+    q(again.el, '[data-fold="views"] .o_f3d_fold-t').click();
+    expect(q(again.el, '[data-fold="views"]').classList.contains("o_f3d_collapsed")).toBe(false);
+});

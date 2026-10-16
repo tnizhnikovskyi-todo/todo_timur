@@ -58,12 +58,12 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
   </section>
 
   <nav class="o_f3d_panel o_f3d_side" aria-label="Види і шари">
-    <div class="o_f3d_sec">
-      <h2>Види</h2>
+    <div class="o_f3d_sec" data-fold="views">
+      <h2 class="o_f3d_fold-h"><button class="o_f3d_fold-t" type="button" aria-expanded="true">Види</button></h2>
       <div class="o_f3d_views o_f3d_views"></div>
     </div>
-    <div class="o_f3d_sec">
-      <h2>Розфарбування</h2>
+    <div class="o_f3d_sec" data-fold="color">
+      <h2 class="o_f3d_fold-h"><button class="o_f3d_fold-t" type="button" aria-expanded="true">Розфарбування</button></h2>
       <div class="o_f3d_radio">
         <label class="o_f3d_layer"><input class="o_f3d_cm-none" type="radio" name="cmode" value="none" checked><span>Звичайні кольори</span></label>
         <label class="o_f3d_layer"><input class="o_f3d_cm-fill" type="radio" name="cmode" value="fill"><span>Заповненість складу</span></label>
@@ -72,8 +72,8 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
         <label class="o_f3d_layer"><input class="o_f3d_cm-lux" type="radio" name="cmode" value="lux"><span>Освітленість відносно норми</span></label>
       </div>
     </div>
-    <div class="o_f3d_sec">
-      <h2>Шари</h2>
+    <div class="o_f3d_sec" data-fold="layers">
+      <h2 class="o_f3d_fold-h"><button class="o_f3d_fold-t" type="button" aria-expanded="true">Шари</button></h2>
       <label class="o_f3d_layer o_f3d_prod-ov"><input class="o_f3d_opt-prod" type="checkbox"><span>Замовлення в роботі<small>весь цикл кожного замовлення: від фури з плитами через верстати до фури клієнта, і де воно зараз · вид згори без інженерії</small></span></label>
       <div class="o_f3d_prod-legend o_f3d_prod-legend" hidden>Матеріали:
         <span><i style="background:#2f80c0"></i>плита, ХДФ</span><span><i style="background:#8e44ad"></i>фурнітура</span>
@@ -86,8 +86,8 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
         <button class="o_f3d_btn o_f3d_eng-only">Інженерія</button>
       </div>
     </div>
-    <div class="o_f3d_sec">
-      <h2>Показ</h2>
+    <div class="o_f3d_sec" data-fold="show">
+      <h2 class="o_f3d_fold-h"><button class="o_f3d_fold-t" type="button" aria-expanded="true">Показ</button></h2>
       <div class="o_f3d_layers">
         <label class="o_f3d_layer"><input class="o_f3d_opt-labels" type="checkbox" checked><span>Підписи</span></label>
         <label class="o_f3d_layer"><input class="o_f3d_opt-motion" type="checkbox" checked><span>Анімація маршруту замовлення</span></label>
@@ -107,9 +107,14 @@ const SKELETON = `  <div class="o_f3d_stage" aria-label="3D-модель під�
     <div class="o_f3d_body o_f3d_cardbody"></div>
   </aside>
 
+  <button class="o_f3d_edge o_f3d_edge-side" type="button" aria-expanded="true" aria-label="Сховати панель видів і шарів" title="Сховати панель видів і шарів ( [ )">
+    <i class="o_f3d_chev"></i><span class="o_f3d_edge-l">Види і шари</span></button>
+  <button class="o_f3d_edge o_f3d_edge-card" type="button" aria-expanded="true" aria-label="Сховати панель даних" title="Сховати панель даних ( ] )">
+    <i class="o_f3d_chev"></i><span class="o_f3d_edge-l">Дані</span></button>
+
   <div class="o_f3d_panel o_f3d_help">
     <span><b>ЛКМ</b> обертати</span><span><b>ПКМ</b> зсув</span><span><b>Коліщатко</b> масштаб</span>
-    <span><b>Клік</b> вибрати</span><span><b>Подвійний клік</b> наблизити</span><span><b>1–9, 0</b> види · <b>Esc</b> скинути</span>
+    <span><b>Клік</b> вибрати</span><span><b>Подвійний клік</b> наблизити</span><span><b>1–9, 0</b> види · <b>[</b> <b>]</b> панелі · <b>Esc</b> скинути</span>
   </div>`;
 
 /** Нульовий рендерер (§8.7): без GPU; `setAnimationLoop(fn)` викликає fn кожні 100 мс. */
@@ -359,6 +364,74 @@ function resize() {
 }
 on(window, "resize", resize);
 resize();
+
+// ---------------------------------------------------------------- панелі: згортання
+// Ліва й права панелі згортаються краєвою кнопкою (клавіші [ і ]), секції — кліком по заголовку.
+// Стан — у localStorage["f3d.ui"] (у кіоску окремо: "f3d.ui.kiosk"); читання й запис у try/catch.
+const UI_KEY = kiosk ? "f3d.ui.kiosk" : "f3d.ui";
+const ui = { side: true, card: true, secs: new Set() }; // side/card: true — панель розгорнута; secs — id згорнутих секцій
+try {
+  const saved = JSON.parse(storage?.getItem(UI_KEY) || "null");
+  if (saved && typeof saved === "object") {
+    ui.side = saved.side !== false;
+    ui.card = saved.card !== false;
+    if (Array.isArray(saved.collapsed)) {saved.collapsed.forEach((id) => ui.secs.add(String(id)));}
+  }
+} catch { /* пошкоджене значення або сховище недоступне — усе розгорнуто */ }
+const saveUi = () => store(UI_KEY, JSON.stringify({ side: ui.side, card: ui.card, collapsed: [...ui.secs] }));
+const PANELS = {
+  side: { cls: "side-off", btn: ".o_f3d_edge-side", name: "панель видів і шарів", key: "[" },
+  card: { cls: "card-off", btn: ".o_f3d_edge-card", name: "панель даних", key: "]" },
+};
+function syncPanels() {
+  for (const [k, p] of Object.entries(PANELS)) {
+    const b = $(p.btn);
+    root.classList.toggle(cx(p.cls), !ui[k]);
+    b.setAttribute("aria-expanded", String(ui[k]));
+    b.setAttribute("aria-label", (ui[k] ? "Сховати " : "Показати ") + p.name);
+    b.title = `${ui[k] ? "Сховати" : "Показати"} ${p.name} ( ${p.key} )`;
+  }
+}
+function syncFolds() {
+  root.querySelectorAll("[data-fold]").forEach((sec) => {
+    const folded = ui.secs.has(sec.dataset.fold);
+    sec.classList.toggle(cx("collapsed"), folded);
+    sec.querySelector(".o_f3d_fold-t")?.setAttribute("aria-expanded", String(!folded));
+  });
+}
+// секції правої панелі перемальовуються разом із вкладкою, тому беруть стан із ui.secs
+function foldHtml(id, title, inner) {
+  const folded = ui.secs.has(id);
+  return "<div class=\"o_f3d_fsec" + (folded ? " o_f3d_collapsed" : "") + "\" data-fold=\"" + id + "\">"
+    + "<div class=\"o_f3d_sub o_f3d_fold-h\"><button class=\"o_f3d_fold-t\" type=\"button\" aria-expanded=\"" + !folded + "\">" + title + "</button></div>"
+    + inner + "</div>";
+}
+function toggleFold(id) {
+  if (!ui.secs.delete(id)) {ui.secs.add(id);}
+  syncFolds();
+  saveUi();
+}
+// полотно лежить під панелями на весь екран, але після зміни розкладки перераховуємо рендерер, камеру й «Потік зміни»
+function layoutChanged() {
+  resize();
+  if (!$(".o_f3d_flow").hidden && flow.built) { flowRender(); flowUpdate(simOverride); }
+  flowViewOffset();
+}
+function setPanel(k, open, persist = true) {
+  if (ui[k] === open) {return;}
+  ui[k] = open;
+  syncPanels();
+  if (persist) {saveUi();}
+  layoutChanged();
+}
+for (const k of Object.keys(PANELS)) { $(PANELS[k].btn).onclick = () => setPanel(k, !ui[k]); }
+on(root, "click", (e) => {
+  const t = e.target?.closest?.(".o_f3d_fold-t");
+  const id = t?.closest("[data-fold]")?.dataset.fold;
+  if (id) {toggleFold(id);}
+});
+syncPanels();
+syncFolds();
 
 // ---------------------------------------------------------------- модель
 const layers = new Map();
@@ -1161,6 +1234,11 @@ on(window, "keydown", (e) => {
     const v = VIEWS[(parseInt(e.key, 10) + 9) % 10];
     if (v) {goView(v);}
   }
+  // [ і ] — згорнути/розгорнути ліву й праву панелі (за кодом клавіші: розкладка може бути й українською)
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && !matchMedia("(max-width: 760px)").matches) {
+    if (e.code === "BracketLeft") {setPanel("side", !ui.side);}
+    else if (e.code === "BracketRight") {setPanel("card", !ui.card);}
+  }
 });
 
 // ================================================================ ДАНІ
@@ -1557,6 +1635,7 @@ root.querySelectorAll(".o_f3d_tab").forEach((b) => {
 function openTab(tab) { panel = { type: "tab", tab }; setTabs(tab); renderPanel(); }
 function openView(v, scroll = true) {
   panel = { ...v, tab: panel.tab || "overview" };
+  if (scroll) {setPanel("card", true, false);} // явний показ документа (showMO, посилання) розгортає панель, не змінюючи збереженого стану
   renderPanel();
   if (scroll) {body().scrollTop = 0;}
 }
@@ -1642,15 +1721,16 @@ function renderOverview() {
   for (const p of outs) {if (p.state === "waiting") {attention.push(["warn", `${p.name} (${p.partner}) — ${p.note}`, `pick:${p.name}`]);}}
   const lowBins = Object.entries(D.locations).filter(([, l]) => l.state && l.state !== "ok");
   if (lowBins.length) {attention.push(["warn", `${lowBins.length} комірок фурнітури нижче мінімуму — закупівлі ${D.purchase_orders.filter((p) => p.locations.length).map((p) => p.name).join(", ")}`, `locs:${lowBins.map(([c]) => c).join(",")}`]);}
-  body().innerHTML = `
-    <div class="o_f3d_kpis">
+  const kpisHtml = `<div class="o_f3d_kpis">
       <div class="o_f3d_kpi"><b>${working}/${wcs.length}</b><span>верстатів у роботі</span></div>
       <div class="o_f3d_kpi"><b>${pct(oee)}</b><span>середній OEE за зміну</span></div>
       <div class="o_f3d_kpi"><b>${moProg}</b><span>виробничих замовлень у роботі</span></div>
       <div class="o_f3d_kpi"><b>${outs.length} / ${ins.length}</b><span>відвантажень / приймань сьогодні</span></div>
-    </div>
-    <div class="o_f3d_sub">Потребує уваги</div>
-    <ul class="o_f3d_rows">${attention.map(([c, t, go]) => ("<li><button class=\"o_f3d_row\" data-go=\"" + (esc(go)) + "\">\n      <span class=\"o_f3d_t\" style=\"white-space:normal\"><span class=\"o_f3d_dot\" style=\"display:inline-block;margin-right:6px;background:var(--f3d-" + (c) + ")\"></span>" + (esc(t)) + "</span></button></li>")).join("")}</ul>
+    </div>`;
+  const attnHtml = `<ul class="o_f3d_rows">${attention.map(([c, t, go]) => ("<li><button class=\"o_f3d_row\" data-go=\"" + (esc(go)) + "\">\n      <span class=\"o_f3d_t\" style=\"white-space:normal\"><span class=\"o_f3d_dot\" style=\"display:inline-block;margin-right:6px;background:var(--f3d-" + (c) + ")\"></span>" + (esc(t)) + "</span></button></li>")).join("")}</ul>`;
+  body().innerHTML = `
+    ${foldHtml("kpi", "Показники", kpisHtml)}
+    ${foldHtml("attn", "Потребує уваги", attnHtml)}
     ${fireSummary()}
     ${fleetHtml()}
     ${legendHtml()}
@@ -2863,6 +2943,7 @@ function getState() {
     simMinutes: simOverride, lite, live: !!D?.meta?.live, playbackMode, renderer: nullR ? "null" : "webgl",
     drill: { on: drill.on, t: drill.on ? Math.floor((performance.now() - drill.t0) / 1000) : 0 },
     clientState: client?.state ?? null,
+    ui: { side: ui.side, card: ui.card, collapsed: [...ui.secs] },
   };
 }
 async function applyParams(p = {}) {

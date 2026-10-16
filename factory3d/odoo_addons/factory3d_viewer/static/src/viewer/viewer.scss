@@ -17,6 +17,9 @@
   --f3d-bad: #d63a2b;
   --f3d-idle: #7f8c99;
   --f3d-flow: #18a6c9;
+  --f3d-side-w: 280px;
+  --f3d-card-w: 360px;
+  --f3d-edge-top: 82px;
   --f3d-shadow: 0 6px 24px rgba(20, 35, 50, 0.12);
   --f3d-f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --f3d-f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -64,17 +67,19 @@
 .o_f3d_viewer .o_f3d_layer input:focus-visible + span { outline: 2px solid var(--f3d-accent); outline-offset: 2px; }
 
 .o_f3d_viewer .o_f3d_side {
-  top: 68px; left: 12px; width: 236px; max-height: calc(100% - 132px); overflow: auto; padding: 12px;
+  top: 68px; left: 12px; width: var(--f3d-side-w); box-sizing: border-box; max-height: calc(100% - 132px);
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 12px;
   display: flex; flex-direction: column; gap: 14px;
 }
+.o_f3d_viewer .o_f3d_side > .o_f3d_sec { flex: none; min-width: 0; }
 .o_f3d_viewer .o_f3d_sec h2 {
   margin: 0 0 6px; font: 600 11px/1 var(--f3d-f-display); text-transform: uppercase; letter-spacing: 0.09em;
   color: var(--f3d-muted);
 }
-.o_f3d_viewer .o_f3d_views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.o_f3d_viewer .o_f3d_views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 .o_f3d_viewer .o_f3d_view {
-  border: 1px solid transparent; background: transparent; text-align: left; padding: 5px 7px;
-  border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1.25;
+  border: 1px solid transparent; background: transparent; text-align: left; padding: 5px 6px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1.25; min-width: 0; overflow-wrap: break-word;
 }
 .o_f3d_viewer .o_f3d_view:hover { background: var(--f3d-accent-soft); }
 .o_f3d_viewer .o_f3d_view[aria-pressed="true"] { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
@@ -89,7 +94,7 @@
 .o_f3d_viewer .o_f3d_lg-head { display: flex; align-items: center; gap: 4px; }
 .o_f3d_viewer .o_f3d_lg-head { min-height: 30px; padding-left: 2px; }
 .o_f3d_viewer .o_f3d_lg-head .o_f3d_lg-all { accent-color: var(--f3d-accent); margin: 0 6px 0 0; width: 15px; height: 15px; cursor: pointer; }
-.o_f3d_viewer .o_f3d_lg-name { flex: 1; text-align: left; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
+.o_f3d_viewer .o_f3d_lg-name { flex: 1; min-width: 0; overflow-wrap: anywhere; text-align: left; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
   font: 600 13px var(--f3d-f-body); color: var(--f3d-fg); }
 .o_f3d_viewer .o_f3d_lg-name:hover { color: var(--f3d-accent); }
 .o_f3d_viewer .o_f3d_lg-bulk { display: flex; gap: 6px; margin: 2px 0 4px; }
@@ -103,7 +108,8 @@
 .o_f3d_viewer .o_f3d_lg-items { display: flex; flex-direction: column; gap: 1px; padding: 0 0 4px 22px; }
 .o_f3d_viewer .o_f3d_lg-items[hidden] { display: none; }
 .o_f3d_viewer .o_f3d_layer { display: flex; align-items: center; gap: 8px; padding: 3px 2px; cursor: pointer; font-size: 13px; }
-.o_f3d_viewer .o_f3d_layer input { accent-color: var(--f3d-accent); margin: 0; width: 15px; height: 15px; }
+.o_f3d_viewer .o_f3d_layer input { accent-color: var(--f3d-accent); margin: 0; width: 15px; height: 15px; flex: none; }
+.o_f3d_viewer .o_f3d_layer span { min-width: 0; overflow-wrap: anywhere; }
 .o_f3d_viewer .o_f3d_row-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .o_f3d_viewer .o_f3d_row-btns .o_f3d_btn { font-size: 12px; padding: 4px 8px; }
 
@@ -161,13 +167,13 @@
   .o_f3d_viewer .o_f3d_side.o_f3d_open { display: flex; }
   .o_f3d_viewer .o_f3d_card { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 42%; }
   .o_f3d_viewer .o_f3d_help { display: none; }
-  .o_f3d_viewer .o_f3d_views { grid-template-columns: 1fr 1fr; }
+  .o_f3d_viewer .o_f3d_views { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) { .o_f3d_viewer .o_f3d_btn,
 .o_f3d_viewer .o_f3d_view { transition: none; } }
 
 /* ---------- Odoo: індикатор, вкладки, списки, таблиці, мітки в 3D ---------- */
-.o_f3d_viewer .o_f3d_card { width: 360px; padding: 0; display: flex; flex-direction: column; }
+.o_f3d_viewer .o_f3d_card { width: var(--f3d-card-w); box-sizing: border-box; padding: 0; display: flex; flex-direction: column; }
 .o_f3d_viewer .o_f3d_card > .o_f3d_body { padding: 12px 16px 16px; overflow: auto; min-height: 0; }
 .o_f3d_viewer .o_f3d_odoo-pill {
   display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; font-size: 12px; position: static;
@@ -260,7 +266,7 @@
 @media (max-width: 760px) { .o_f3d_viewer .o_f3d_card { width: auto; } .o_f3d_viewer .o_f3d_odoo-pill .o_f3d_muted { display: none; } .o_f3d_viewer .o_f3d_side { top: 112px; } }
 
 /* ---------- Потік зміни: стрічка часу над сценою, поки грає таймер ---------- */
-.o_f3d_viewer .o_f3d_flow { top: 68px; left: 284px; right: 384px; padding: 8px 12px 8px; display: flex; flex-direction: column; gap: 4px; }
+.o_f3d_viewer .o_f3d_flow { top: 68px; left: calc(var(--f3d-side-w) + 44px); right: calc(var(--f3d-card-w) + 48px); padding: 8px 12px 8px; display: flex; flex-direction: column; gap: 4px; }
 .o_f3d_viewer .o_f3d_flow[hidden] { display: none; }
 .o_f3d_viewer .o_f3d_fl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .o_f3d_viewer .o_f3d_fl-head b { font: 600 14px/1.2 var(--f3d-f-display); letter-spacing: 0.01em; }
@@ -315,3 +321,58 @@
 .o_f3d_viewer.o_f3d_is_kiosk .o_f3d_c-open { display: none; }
 .o_f3d_viewer .o_f3d_snap-tag { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--f3d-accent-soft); }
 .o_f3d_viewer .o_f3d_sec-banner { bottom: auto; top: 64px; border-color: var(--f3d-bad); }
+
+/* ---------- Згортання панелей (краєві кнопки) і секцій (клік по заголовку) ---------- */
+.o_f3d_viewer .o_f3d_fold-t {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; margin: 0; padding: 3px 0;
+  border: 0; background: transparent; cursor: pointer; text-align: left;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+}
+.o_f3d_viewer .o_f3d_fold-t:hover { color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_fold-t:focus-visible { outline: 2px solid var(--f3d-accent); outline-offset: 2px; border-radius: 4px; }
+.o_f3d_viewer .o_f3d_fold-t::after {
+  content: ""; flex: none; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg); transition: transform 0.15s;
+}
+.o_f3d_viewer .o_f3d_collapsed > .o_f3d_fold-h .o_f3d_fold-t::after { transform: translateX(-2px) rotate(-45deg); }
+.o_f3d_viewer .o_f3d_collapsed > :not(.o_f3d_fold-h) { display: none; }
+.o_f3d_viewer .o_f3d_collapsed > .o_f3d_fold-h { margin-bottom: 0; }
+.o_f3d_viewer .o_f3d_body > .o_f3d_fsec:first-child > .o_f3d_sub { margin-top: 0; }
+
+.o_f3d_viewer .o_f3d_edge {
+  position: absolute; z-index: 3; top: var(--f3d-edge-top); width: 22px; height: 56px; padding: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--f3d-line); background: var(--f3d-panel-solid); color: var(--f3d-fg);
+  box-shadow: var(--f3d-shadow); cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.o_f3d_viewer .o_f3d_edge:hover { border-color: var(--f3d-accent); background: var(--f3d-accent-soft); }
+.o_f3d_viewer .o_f3d_edge:focus-visible { outline: 2px solid var(--f3d-accent); outline-offset: 2px; }
+.o_f3d_viewer .o_f3d_edge-side { left: calc(12px + var(--f3d-side-w) - 1px); border-radius: 0 8px 8px 0; }
+.o_f3d_viewer .o_f3d_edge-card { right: calc(12px + var(--f3d-card-w) - 1px); border-radius: 8px 0 0 8px; }
+.o_f3d_viewer .o_f3d_chev { width: 8px; height: 8px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-left: 4px; }
+.o_f3d_viewer .o_f3d_edge-card .o_f3d_chev { transform: rotate(-135deg); margin: 0 4px 0 0; } /* відкрита права панель: шеврон «>» */
+.o_f3d_viewer .o_f3d_edge-l {
+  display: none; writing-mode: vertical-rl; font: 600 11px/1 var(--f3d-f-display); text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--f3d-muted); white-space: nowrap;
+}
+@media (min-width: 761px) {
+  .o_f3d_viewer.o_f3d_side-off .o_f3d_side { display: none; }
+  .o_f3d_viewer.o_f3d_card-off .o_f3d_card { display: none; }
+  .o_f3d_viewer.o_f3d_side-off .o_f3d_edge-side { left: 0; width: 28px; height: auto; padding: 12px 0; border-left: 0; }
+  .o_f3d_viewer.o_f3d_card-off .o_f3d_edge-card { right: 0; width: 28px; height: auto; padding: 12px 0; border-right: 0; }
+  .o_f3d_viewer.o_f3d_side-off .o_f3d_edge-side .o_f3d_chev { transform: rotate(-135deg); margin: 0 4px 0 0; }
+  .o_f3d_viewer.o_f3d_card-off .o_f3d_edge-card .o_f3d_chev { transform: rotate(45deg); margin: 0 0 0 4px; }
+  .o_f3d_viewer.o_f3d_side-off .o_f3d_edge-side .o_f3d_edge-l,
+  .o_f3d_viewer.o_f3d_card-off .o_f3d_edge-card .o_f3d_edge-l { display: block; }
+}
+@media (min-width: 1181px) {
+  .o_f3d_viewer.o_f3d_side-off .o_f3d_flow { left: 44px; }
+  .o_f3d_viewer.o_f3d_card-off .o_f3d_flow { right: 44px; }
+}
+@media (max-width: 1180px) {
+  .o_f3d_viewer.o_f3d_flow-on { --f3d-edge-top: calc(var(--f3d-flow-bottom, 68px) + 22px); }
+}
+@media (max-width: 760px) {
+  .o_f3d_viewer .o_f3d_edge { display: none; } /* на телефоні — кнопка «Види і шари» в шапці й картка знизу */
+}
+@media (prefers-reduced-motion: reduce) { .o_f3d_viewer .o_f3d_edge, .o_f3d_viewer .o_f3d_fold-t::after { transition: none; } }
