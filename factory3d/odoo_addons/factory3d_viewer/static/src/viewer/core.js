@@ -2048,9 +2048,9 @@ function renderObject(code) {
     <h3>${esc(u.label || u.code)}</h3>
     <div class="o_f3d_code">${esc(u.code)}</div>
     ${chip}
+    <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${opts.onOpenRecord && !kiosk ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
     ${u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : ""}
-    ${extra}
-    <div class="o_f3d_actions"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${opts.onOpenRecord && !kiosk ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>`;
+    ${extra}`;
   $(".o_f3d_c-focus").onclick = () => focusOn(obj);
   $(".o_f3d_c-close").onclick = () => select(null);
   const open = $(".o_f3d_c-open");

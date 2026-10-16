@@ -225,6 +225,40 @@ test("R19 картка 3D-об'єкта: назва, код, дані центр
     expect(viewer.getState().selected).toBe(null);
 });
 
+test("R19a картка 3D-об'єкта: ряд кнопок угорі, перед даними і таблицею паспорта, «липкий»", async () => {
+    const { viewer, el } = await mountViewer({
+        model: "core",
+        mutate: (fx) => {
+            fx.data.passports = {
+                "SAW-1": {
+                    manufacturer: "HOMAG", model: "CENTATEQ", reason: "тест",
+                    specs: { "Потужність": "10 кВт", "Маса": "5 т" }, sources: ["https://example.com/a"],
+                    connected_note: "тест", connected_kw: 12,
+                },
+            };
+        },
+    });
+    viewer.select("SAW-1");
+    const before = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const actions = q(el, ".o_f3d_cardbody .o_f3d_actions");
+    expect(actions).not.toBe(null);
+    expect(qa(el, ".o_f3d_cardbody .o_f3d_actions").length).toBe(1);
+    // порядок кнопок і клас «липкого» ряду
+    expect(actions.classList.contains("o_f3d_actions-top")).toBe(true);
+    expect(qa(actions, "button").slice(0, 2).map((b) => b.className.includes("o_f3d_c-focus") ? "focus" : "close"))
+        .toEqual(["focus", "close"]);
+    // ряд — після заголовка і коду, але перед таблицею паспорта, джерелами і даними центру
+    expect(before(q(el, ".o_f3d_cardbody h3"), actions)).toBe(true);
+    expect(before(q(el, ".o_f3d_cardbody .o_f3d_code"), actions)).toBe(true);
+    expect(before(actions, q(el, ".o_f3d_cardbody .o_f3d_tbl"))).toBe(true);
+    expect(before(actions, q(el, ".o_f3d_cardbody .o_f3d_src"))).toBe(true);
+    expect(before(actions, q(el, ".o_f3d_cardbody .o_f3d_kv"))).toBe(true);
+    expect(getComputedStyle(actions).position).toBe("sticky");
+    // кнопки лишаються робочими
+    q(el, ".o_f3d_c-close").click();
+    expect(viewer.getState().selected).toBe(null);
+});
+
 test("R20 живі дані: прогрес імітується лише при meta.live=false", async () => {
     const sim = await mountViewer({ model: "none" });
     const wo = Object.values(sim.viewer.D.workorders).find((w) => w.state === "progress" && !w.blocked);
