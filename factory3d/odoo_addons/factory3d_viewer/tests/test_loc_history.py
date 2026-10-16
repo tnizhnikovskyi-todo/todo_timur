@@ -38,7 +38,8 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         pick = self.env["stock.picking"].create({
             "picking_type_id": ptype.id, "location_id": src.id, "location_dest_id": dest.id,
             "move_ids": [Command.create({
-                "product_id": product.id, "product_uom_qty": qty, "location_id": src.id, "location_dest_id": dest.id})]})
+                "product_id": product.id, "product_uom_qty": qty,
+                "location_id": src.id, "location_dest_id": dest.id})]})
         if confirm:
             pick.action_confirm()
             pick.action_assign()
