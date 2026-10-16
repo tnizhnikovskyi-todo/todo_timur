@@ -1,4 +1,4 @@
-"""API-01…04, 07, 10 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
+"""API-01…04, 07, 10, 11 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
 з `request.env` користувача кіоска."""
 import base64
 import gzip
@@ -10,6 +10,7 @@ from odoo import http
 from odoo.exceptions import AccessError
 from odoo.http import request
 
+from ..models.viewer_provider_maintenance import GROUP_KIOSK, plan_error
 from ..tools import dates, payload as payload_tools, static_data
 from ..tools.cycle_check import check
 
@@ -200,6 +201,23 @@ class F3dViewerController(http.Controller):
         if issues:
             return {"ok": False, "issues": issues, "count": len(issues)}
         return {"ok": True, "issues": []}
+
+    @http.route("/f3d/viewer/maintenance/plan", type="jsonrpc", auth="user", methods=["POST"])
+    def maintenance_plan(self, code=None, equipment_id=None, **kw):
+        """API-11: «Запланувати ТО». jsonrpc (JSON-тіло, без CSRF-токена), помилки — у тілі `{ok:false,status,error}`."""
+        if request.env.user.has_group(GROUP_KIOSK):
+            return plan_error(403, "kiosk", "Екран цеху не може створювати заявки на обслуговування.")
+        if not self._allowed():
+            return plan_error(403, "forbidden", "Немає доступу до переглядача «Завод 3D»")
+        if (code is None) == (equipment_id is None):
+            return plan_error(400, "bad_request", "Потрібен рівно один параметр: code або equipment_id")
+        if code is not None and not (isinstance(code, str) and CODE_RE.match(code)):
+            return plan_error(400, "bad_request", "Невалідний параметр: code")
+        if equipment_id is not None and (isinstance(equipment_id, bool) or not isinstance(equipment_id, int)
+                                         or not 0 < equipment_id < 2 ** 31):
+            return plan_error(400, "bad_request", "Невалідний параметр: equipment_id")
+        return request.env["f3d.viewer.provider.maintenance"]._f3d_plan_maintenance(
+            code=code, equipment_id=equipment_id)
 
     # --- знімки (API-05, API-06) -------------------------------------------
 

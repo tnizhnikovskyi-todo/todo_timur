@@ -1254,6 +1254,7 @@ function indexData() {
   idx.so = new Map(D.sale_orders.map((s) => [s.name, s]));
   idx.po = new Map(D.purchase_orders.map((p) => [p.name, p]));
   idx.mr = new Map(D.maintenance_requests.map((m) => [m.id, m]));
+  idx.mrRes = new Map(D.maintenance_requests.filter((m) => m.res_id != null).map((m) => [m.res_id, m]));
   idx.qc = new Map(D.quality_checks.map((q) => [q.name, q]));
   idx.prodLocs = new Map();
   for (const [code, loc] of Object.entries(D.locations)) {
@@ -1327,7 +1328,7 @@ function syncConnState(s) {
 // ---- R-14 крок 7: злиття дельти
 function mergeList(list, items_, key) {
   for (const it of items_) {
-    const cur = list.find((x) => x[key] === it[key]);
+    const cur = list.find((x) => (x.res_id != null && it.res_id != null ? x.res_id === it.res_id : x[key] === it[key]));
     if (cur) {deepMerge(cur, it);} else {list.push(deepMerge({}, it));}
   }
 }
@@ -1673,6 +1674,10 @@ body().addEventListener("click", (e) => {
   if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) {prodFocus(null);} openTab(panel.tab || "overview"); return; }
   const op = e.target.closest("[data-open]");
   if (op) { openByName(op.dataset.open); return; }
+  const omr = e.target.closest("[data-open-mr]");
+  if (omr) { opts.onOpenRecord?.("maintenance.request", +omr.dataset.openMr); return; }
+  const pmr = e.target.closest("[data-plan-mr]");
+  if (pmr) { planMaintenance(pmr.dataset.planMr); return; }
   const a = e.target.closest("[data-go]");
   if (!a) {return;}
   const [t, ...rest] = a.dataset.go.split(":");
@@ -1705,17 +1710,20 @@ function renderOverview() {
   const moProg = D.productions.filter((m) => m.state === "progress").length;
   const attention = [];
   for (const w of wcs) {
-    if (w.status === "stop") {attention.push(["bad", `${w.name} — зупинено${w.maintenance_request ? (" · " + (w.maintenance_request)) : ""}`, `obj:${w.code}`]);}
+    if (w.status === "stop") {attention.push(["bad", `${w.name} — зупинено${w.maintenance_request ? (" · " + mrText(w)) : ""}`, `obj:${w.code}`]);}
   }
   for (const q of D.quality_checks) {if (q.state === "fail") {attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);}}
   for (const m of D.productions) {if (m.reservation_state === "waiting") {attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);}}
   for (const [k, c] of Object.entries(D.infra?.cards || {})) {if (c.warn) {attention.push(["warn", c.warn, `obj:${k}`]);}}
   for (const [k, g] of Object.entries(D.fire?.groups || {})) {
     if (g.state === "alarm" || g.state === "fault") {attention.unshift(["bad", `Пожежна сигналізація: ${FIRE_STATE[g.state][1]} · ${g.zone_name}`, `obj:${k}`]);}
-    else if (g.state !== "ok") {attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${g.maintenance_request || ""}`, `obj:${k}`]);}
+    else if (g.state !== "ok") {attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${mrText(g)}`, `obj:${k}`]);}
   }
   for (const [k, u] of Object.entries(D.ventilation?.units || {})) {
-    if (u.filter_dp_pa > 250) {attention.push(["warn", `${k}: забитий фільтр вентиляції (${u.filter_dp_pa} Па) · ${u.maintenance_request || ""}`, `obj:${k}`]);}
+    if (u.filter_dp_pa > 250) {attention.push(["warn", `${k}: забитий фільтр вентиляції (${u.filter_dp_pa} Па) · ${mrText(u)}`, `obj:${k}`]);}
+  }
+  for (const [k, e] of Object.entries(D.equipment || {})) {
+    if (e.maintenance_due && !e.maintenance_request) {attention.push([e.maintenance_due === "overdue" ? "bad" : "warn", `${e.name} — ${mrDueText(e)}`, `obj:${k}`]);}
   }
   for (const w of wcs) {if (w.status === "idle") {attention.push(["warn", `${w.name} — ${w.idle_reason || "простій"}`, `obj:${w.code}`]);}}
   for (const p of outs) {if (p.state === "waiting") {attention.push(["warn", `${p.name} (${p.partner}) — ${p.note}`, `pick:${p.name}`]);}}
@@ -2033,7 +2041,7 @@ function renderObject(code) {
     if (wc) {extra += wcHtml(wc);}
     if (loc) {extra += locHtml(code, loc);}
     if (emp) {extra += empHtml(emp);}
-    if (eq) {extra += eqHtml(eq);}
+    if (eq) {extra += eqHtml(eq, code);}
     if (u.kind === "dock" && D.docks[code]) {extra += `<div class="o_f3d_sub">Документ на воротах</div><ul class="o_f3d_rows">${pickRow(idx.pick.get(D.docks[code]))}</ul>`;}
     if (u.kind === "vehicle" && idx.truck.has(code)) {extra += `<div class="o_f3d_sub">Документ</div><ul class="o_f3d_rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;}
     if (u.kind === "zone" && D.zones[code]) {extra += zoneHtml(D.zones[code]);}
@@ -2062,10 +2070,53 @@ function renderObject(code) {
     } catch { notify("У базі немає запису з кодом " + code, "info"); }
   };}
 }
+// ---------------------------------------------------------------- заявки ТО (SPEC R-22)
+// заявка за res_id (назви однакові: «Планове ТО»), інакше за назвою — статичні дані без res_id
+function mrOf(rec) {
+  if (!rec) {return null;}
+  return (rec.maintenance_request_id != null ? idx.mrRes.get(rec.maintenance_request_id) : null)
+    || (rec.maintenance_request ? idx.mr.get(rec.maintenance_request) : null) || null;
+}
+const dm = (s) => (s ? `${s.slice(8, 10)}.${s.slice(5, 7)}${s.slice(0, 4) === D.meta.now.slice(0, 4) ? "" : "." + s.slice(0, 4)}` : "");
+const mrEqName = (mr) => mr.equipment_name || D.equipment?.[mr.equipment]?.name || D.workcenters?.[mr.equipment]?.name || mr.equipment || "";
+// «<тема> · <обладнання> · <стадія> · ДД.ММ, прострочено N дн.»; без eqName — для рядків, де обладнання вже названо
+function mrLabel(mr, eqName) {
+  const over = !mr.done && mr.overdue_days != null ? (mr.overdue_days > 0 ? `прострочено ${mr.overdue_days} дн.` : "прострочено") : "";
+  const when = [dm(mr.schedule_date || mr.request_date), over].filter(Boolean).join(", ");
+  // назва, створена «Запланувати ТО», вже містить обладнання («Планове ТО · Розкрій 2») — вдруге його не пишемо
+  return [mr.name, eqName && !mr.name.includes(eqName) ? eqName : "", mr.stage, when].filter((p, i, a) => p && a.indexOf(p) === i).join(" · ");
+}
+const mrText = (rec) => { const mr = mrOf(rec); return mr ? mrLabel(mr) : (rec.maintenance_request || ""); };
+const mrDueText = (eq) => `ТО ${eq.maintenance_due === "overdue" ? "прострочено" : "незабаром"}${eq.next_maintenance ? " · " + dm(eq.next_maintenance) : ""}`;
+function mrNoteHtml(mr) {
+  const link = mr.res_id != null && opts.onOpenRecord && !kiosk
+    ? `<div class="o_f3d_row-btns"><button class="o_f3d_lnk" data-open-mr="${esc(mr.res_id)}">Відкрити заявку в Odoo</button></div>` : "";
+  return `<div class="o_f3d_note o_f3d_bad o_f3d_mr"><b>${esc(mrLabel(mr, mrEqName(mr)))}</b>${mr.technician ? ("<br>Виконавець: " + esc(mr.technician)) : ""}${link}</div>`;
+}
+// «Запланувати ТО»: планова дата настала, відкритої заявки немає (лише на живих даних, не в кіоску)
+function mrPlanHtml(code, eq) {
+  if (!eq.maintenance_due || eq.maintenance_request || eq.maintenance_request_id != null || kiosk || !D.meta.live
+    || client.kiosk || typeof client.planMaintenance !== "function") {return "";}
+  return `<div class="o_f3d_note ${eq.maintenance_due === "overdue" ? "o_f3d_bad" : "o_f3d_warn"}"><b>${esc(mrDueText(eq))}</b>
+    <div class="o_f3d_row-btns"><button class="o_f3d_btn" data-plan-mr="${esc(code)}">Запланувати ТО</button></div></div>`;
+}
+const planning = new Set();
+async function planMaintenance(code) {
+  if (planning.has(code)) {return;}
+  planning.add(code);
+  try {
+    const r = await client.planMaintenance({ code });
+    if (!r?.ok) {notify(r?.error?.message || "Не вдалося створити заявку на ТО", r?.status >= 500 ? "danger" : "warning"); return;}
+    applyPatch({ maintenance_requests: [r.request], equipment: r.equipment });
+    notify(`${r.created ? "Створено заявку" : "Заявка вже існує"}: ${r.request.name}`, "success");
+  } catch (err) {
+    notify("Не вдалося створити заявку на ТО: " + (err?.message || err), "danger");
+  } finally { planning.delete(code); }
+}
 function wcHtml(wc) {
   const cur = wc.current_workorder ? D.workorders[wc.current_workorder] : null;
   const mo = cur ? idx.mo.get(cur.production) : null;
-  const mr = wc.maintenance_request ? idx.mr.get(wc.maintenance_request) : null;
+  const mr = mrOf(wc);
   const emp = D.employees[`OP-${wc.code}`];
   const oeeCls = wc.oee >= 0.75 ? "" : wc.oee >= 0.5 ? "warn" : "bad";
   return `
@@ -2074,7 +2125,7 @@ function wcHtml(wc) {
       <dt>Продуктивно</dt><dd>${wc.productive_minutes} хв</dd>
       ${emp ? ("<dt>" + (esc(emp.job)) + "</dt><dd><button class=\"o_f3d_lnk\" data-go=\"obj:OP-" + (esc(wc.code)) + "\">" + (esc(emp.name)) + "</button></dd>") : ""}</dl>
     ${wc.idle_reason ? ("<div class=\"o_f3d_note\">" + (esc(wc.idle_reason)) + "</div>") : ""}
-    ${mr ? ("<div class=\"o_f3d_note o_f3d_bad\"><b>" + (esc(mr.id)) + "</b> · " + (esc(mr.name)) + "<br>Заявка о " + (hm(mr.request_date)) + ", етап «" + (esc(mr.stage)) + "», виконавець " + (esc(mr.technician)) + ".</div>") : ""}
+    ${mr ? mrNoteHtml(mr) : ""}
     ${cur ? ("<div class=\"o_f3d_sub\">Поточне завдання</div><ul class=\"o_f3d_rows\"><li><button class=\"o_f3d_row\" data-go=\"mo:" + (esc(mo.name)) + "\">\n      <span class=\"o_f3d_t\">" + (esc(cur.name)) + " · " + (esc(mo.name)) + "</span>" + (pill(cur.blocked ? ["bad", "Зупинка"] : WO_STATE[cur.state])) + "\n      <span class=\"o_f3d_m\">" + (esc(mo.product_name)) + " × " + (mo.qty) + " · до " + (hm(cur.date_planned_finished)) + "</span>\n      <span class=\"o_f3d_pw\">" + (bar(cur.progress, cur.blocked ? "bad" : "warn", ("wo:" + (cur.id)))) + "</span></button></li></ul>") : ""}
     ${wc.queue.length ? ("<div class=\"o_f3d_sub\">Черга · " + (wc.queue.length) + "</div><ul class=\"o_f3d_rows\">" + (wc.queue.map((id) => {
       const w = D.workorders[id], m = idx.mo.get(w.production);
@@ -2114,7 +2165,7 @@ function empHtml(emp) {
     <dt>Підрозділ</dt><dd>${esc(emp.department)}</dd><dt>Зміна</dt><dd>${esc(emp.shift)}</dd>
     ${wo ? ("<dt>Завдання</dt><dd><button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(wo.production)) + "\">" + (esc(wo.name)) + " · " + (esc(wo.production)) + "</button></dd>") : ""}${accessRows(emp)}</dl>`;
 }
-function eqHtml(eq) {
+function eqHtml(eq, code) {
   const rows = [];
   if (eq.battery != null) {rows.push(["Заряд АКБ", `${pct(eq.battery)} ${bar(eq.battery, eq.battery < 0.3 ? "bad" : eq.battery < 0.5 ? "warn" : "")}`]);}
   if (eq.hours != null) {rows.push(["Мотогодини", nf.format(eq.hours)]);}
@@ -2140,10 +2191,10 @@ function eqHtml(eq) {
   if (eq.next_maintenance) {rows.push(["Наступне ТО", dayHm(eq.next_maintenance)]);}
   if (eq.current_task) {rows.push(["Завдання", `<button class="o_f3d_lnk" data-go="pick:${esc(eq.current_task)}">${esc(eq.current_task)}</button>`]);}
   if (D.meta.iot && rows.length) {rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);}
-  const mr = eq.maintenance_request ? idx.mr.get(eq.maintenance_request) : null;
+  const mr = mrOf(eq);
   return `<dl class="o_f3d_kv"><dt>Обладнання</dt><dd>${esc(eq.name)}${eq.serial ? (" <span class=\"o_f3d_mono\">" + (esc(eq.serial)) + "</span>") : ""}</dd>
     ${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>
-    ${mr ? ("<div class=\"o_f3d_note o_f3d_bad\"><b>" + (esc(mr.id)) + "</b> · " + (esc(mr.name)) + "</div>") : ""}`;
+    ${mr ? (mr === mrOf(D.workcenters?.[code]) ? "" : mrNoteHtml(mr)) : mrPlanHtml(code, eq)}`;
 }
 // паспорт реального обладнання: виробник, модель, опубліковані параметри, джерела
 function passportHtml(pp) {
@@ -2459,10 +2510,10 @@ function ventHtml(code) {
   if (u.heating_valve != null) {rows.push(["Клапан нагріву", `${pct(u.heating_valve)} · ${nf1.format(u.heat_kw)} кВт тепла`]);}
   if (u.filter_dp_pa != null) {rows.push(["Фільтр", `${u.filter_dp_pa} Па ${u.filter_dp_pa > 250 ? pill(["warn", "замінити"]) : ""}`]);}
   rows.push(["Вентилятори", `${kwU(u.p_now)} з ${kwU(u.p_inst)}`]);
-  const mr = u.maintenance_request ? idx.mr.get(u.maintenance_request) : null;
+  const mr = mrOf(u);
   return `<dl class="o_f3d_kv">${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>
     ${u.note ? ("<div class=\"o_f3d_note\">" + (esc(u.note)) + "</div>") : ""}
-    ${mr ? ("<div class=\"o_f3d_note o_f3d_bad\"><b>" + (esc(mr.id)) + "</b> · " + (esc(mr.name)) + "</div>") : ""}`;
+    ${mr ? mrNoteHtml(mr) : ""}`;
 }
 
 // ---------------------------------------------------------------- пожежна сигналізація
@@ -2482,14 +2533,14 @@ function fireHtml(code) {
   if (!F) {return "";}
   const g = F.groups[code];
   if (g) {
-    const mr = g.maintenance_request ? idx.mr.get(g.maintenance_request) : null;
+    const mr = mrOf(g);
     return `<dl class="o_f3d_kv"><dt>Зона</dt><dd><button class="o_f3d_lnk" data-go="obj:${esc(g.zone)}">${esc(g.zone_name)}</button> · ${nf.format(g.area)} м²</dd>
         <dt>Тип</dt><dd>${esc(g.kind_name)}</dd>
         <dt>Кількість</dt><dd>${g.n} · крок ≤ ${nf1.format(g.spacing)} м</dd>
         <dt>Шлейф</dt><dd>${g.loop ?? "—"} приладу <button class="o_f3d_lnk" data-go="obj:FACP-1">FACP-1</button></dd>
         <dt>Стан</dt><dd>${pill(FIRE_STATE[g.state] || ["warn", "Попередження"])}</dd></dl>
       ${g.warning ? ("<div class=\"o_f3d_note\">" + (esc(g.warning)) + "</div>") : ""}
-      ${mr ? ("<div class=\"o_f3d_note o_f3d_bad\"><b>" + (esc(mr.id)) + "</b> · " + (esc(mr.name)) + "</div>") : ""}`;
+      ${mr ? mrNoteHtml(mr) : ""}`;
   }
   const T = F.totals;
   if (code === "FACP-1") {
