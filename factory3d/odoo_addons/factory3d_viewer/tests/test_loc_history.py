@@ -110,7 +110,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         first = lot["arrived"][0]
         self.assertEqual(first["doc"], {"name": recs["receipts"][-1].name, "model": "stock.picking",
                                         "id": recs["receipts"][-1].id, "kind": "picking", "state": "done"})
-        self.assertEqual(first["from"]["name"], self.supplier.complete_name)
+        self.assertEqual(first["from"]["name"], "Постачальники")  # віртуальна локація — українською
         self.assertRegex(first["date"], r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
 
         # «Резерв» і злиття з «Іде з комірки»: частково зарезервований документ — один запис з pending
@@ -119,7 +119,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         self.assertEqual((reserve[recs["res"].name]["qty"], reserve[recs["res"].name]["pending"]), (5, 0))
         part = reserve[recs["part"].name]
         self.assertEqual((part["qty"], part["pending"], part["doc"]["state"]), (15, 15, "assigned"))
-        self.assertEqual(part["to"]["name"], self.customer.complete_name)
+        self.assertEqual(part["to"]["name"], "Клієнти")
         self.assertEqual(plate["out"], [])
 
         # «Очікується»: відкрите приймання в комірку
@@ -146,6 +146,15 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         doc = fit["lots"][0]["arrived"][0]["doc"]
         self.assertEqual(doc, {"name": "Інвентаризація", "model": None, "id": None, "kind": "inventory",
                                "state": None})
+        self.assertIsNone(fit["lots"][0]["arrived"][0]["from"])  # не «з Inventory adjustment»
+
+    def test_virtual_places_ukrainian(self):
+        """Віртуальні локації Odoo (англійські назви з даних) — українською за usage."""
+        from odoo.addons.factory3d_viewer.tools.loc_history import _place
+        Loc = self.env["stock.location"]
+        self.assertEqual(_place(Loc.search([("usage", "=", "customer")], limit=1))["name"], "Клієнти")
+        self.assertEqual(_place(Loc.search([("usage", "=", "supplier")], limit=1))["name"], "Постачальники")
+        self.assertIsNone(_place(Loc.search([("usage", "=", "inventory")], limit=1)))
 
     def test_empty_cell(self):
         data = self._get("/f3d/viewer/loc/ZZ-H-DEST").json()

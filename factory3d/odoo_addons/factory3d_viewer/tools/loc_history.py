@@ -54,8 +54,16 @@ def _doc(env, mv, ml=None):
             "state": None}
 
 
+# віртуальні локації Odoo мають англійські назви з даних («Inventory adjustment», «Partners/Customers»)
+VIRTUAL = {"customer": "Клієнти", "supplier": "Постачальники", "production": "Виробництво", "transit": "Транзит"}
+
+
 def _place(loc):
-    """Локація як {name, code}: код 3D-об'єкта (якщо є) і повна назва."""
+    """Локація як {name, code}: код 3D-об'єкта (якщо є) і повна назва; інвентаризація — None (документ уже каже)."""
+    if loc.usage == "inventory":
+        return None
+    if loc.usage in VIRTUAL:
+        return {"code": None, "name": VIRTUAL[loc.usage]}
     return {"code": loc.f3d_code or None, "name": loc.complete_name or loc.name}
 
 
@@ -118,8 +126,12 @@ def build(env, loc, code=None):
                 "from": _place(ml.location_id)})
     for ml in lines_res:
         row = lot_of(ml.product_id, ml.lot_id)
-        row["reserve"].append({"doc": _doc(env, ml.move_id, ml), "qty": _num(ml.quantity_product_uom),
-                               "pending": 0, "to": _place(ml.location_dest_id)})
+        doc, to = _doc(env, ml.move_id, ml), _place(ml.location_dest_id)
+        same = next((r for r in row["reserve"] if _key(r["doc"]) == _key(doc) and r["to"] == to), None)
+        if same:                # кілька рядків (пакунків) одного документа — один рядок із сумою
+            same["qty"] = _num(same["qty"] + ml.quantity_product_uom)
+        else:
+            row["reserve"].append({"doc": doc, "qty": _num(ml.quantity_product_uom), "pending": 0, "to": to})
     for mv in moves_out:
         reserved = sum(mv.move_line_ids.mapped("quantity_product_uom"))
         left = mv.product_qty - reserved
