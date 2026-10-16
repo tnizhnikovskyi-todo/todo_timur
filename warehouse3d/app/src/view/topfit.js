@@ -1,7 +1,7 @@
 // Верхняя панель на компьютере (W-22, I-09): на ширине от 900 px панель в одну строку; когда кнопки не помещаются, самые редкие
 // переезжают в меню «Ще» (сами кнопки — те же узлы с теми же обработчиками, ничего не теряется). Порядок переноса — MOVABLE: первая уходит первой.
 // До 900 px панель переносится на несколько строк, на телефоне (≤ 768 px) работает меню «☰» (mobile.js) — здесь ничего не делаем.
-export const MOVABLE = ["lb-btn", "pa-btn", "hist-btn", "var-btn", "wiz-btn", "tray-btn", "cm-btn", "odoo-new", "odoo-refresh", "plan-btn"];
+export const MOVABLE = ["lb-btn", "pa-btn", "hist-btn", "var-btn", "wiz-btn", "tray-btn", "cm-btn", "odoo-new", "odoo-refresh", "plan-btn", "tours-btn"];
 export const WIDE_Q = "(min-width: 900px)";
 
 export function createTopFit({ root }) {

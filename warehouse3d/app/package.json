@@ -10,9 +10,10 @@
     "build:single": "vite build --mode single && node tools/build-single.mjs && node -e \"require('fs').copyFileSync('dist-single/konstruktor-skladu.html','../konstruktor-skladu.html')\"",
     "build:odoo": "vite build --outDir ../odoo_addons/wh_constructor/static/app --emptyOutDir",
     "test": "node --test test/*.test.js",
-    "e2e": "node e2e/smoke.mjs",
+    "e2e": "node e2e/smoke.mjs && node e2e/tours.mjs",
     "e2e:publish": "node e2e/publish.mjs",
-    "perf": "node e2e/perf.mjs"
+    "perf": "node e2e/perf.mjs",
+    "e2e:tours": "node e2e/tours.mjs"
   },
   "dependencies": {
     "three": "0.186.1"

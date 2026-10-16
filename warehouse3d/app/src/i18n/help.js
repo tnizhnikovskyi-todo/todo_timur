@@ -6,7 +6,8 @@ export default {
   "help.start.html": `
     <p><b>Конструктор складу</b> — модель складу, побудована з місць зберігання Odoo (знімок бази на {date}). Кожен ряд, стелаж, ярус і місце на підлозі в моделі — це локація Odoo або нове місце, яке ви додали в моделі.</p>
     <p>Усе, що ви змінюєте в моделі, стосується <b>лише моделі</b>: в Odoo нічого не створюється й не видаляється. Дані Odoo — знімок: він читається при відкритті сторінки й кнопкою «Оновити дані» (див. «Показники, пошук і дані»).</p>
-    <p>У верхній панелі: назва складу, <b>перемикач складу</b>, перемикач <b>2D / 3D</b>, кнопка <b>«✎ Редагувати»</b>, ця <b>«Інструкція»</b> і перемикач мови <b>UK / EN</b> — вибір мови запам'ятовується в браузері.</p>`,
+    <p>У верхній панелі: назва складу, <b>перемикач складу</b>, перемикач <b>2D / 3D</b>, кнопка <b>«✎ Редагувати»</b>, ця <b>«Інструкція»</b> і перемикач мови <b>UK / EN</b> — вибір мови запам'ятовується в браузері.</p>
+    <p><b>Як повернутися до моделі:</b> кнопка <b>«← До моделі»</b> угорі цієї сторінки, повторний клік по «Інструкція», кнопки 2D / 3D / «Редагувати» або клавіша <kbd>Esc</kbd> — вигляд, рівень і виділення в моделі лишаються як були.</p>`,
   "help.view.title": "Перегляд моделі",
   "help.view.html": `
     <ul>
@@ -23,6 +24,15 @@ export default {
       <li><b>Мінікарта</b> — у куті плану (2D і 3D): схема всього складу з рамкою поточного виду. Клацніть або потягніть по схемі — вид перейде в це місце; клац по іншій зоні переводить на неї рівень. Кнопка <b>«−»</b> ховає мінікарту, <b>«▦»</b> повертає (вибір запам'ятовується). Відкрита панель (проблеми, коментарі) мінікарту не закриває: вона зсувається ліворуч або ховається.</li>
       <li><b>Перейти до місця</b> — поле над планом: введіть код або штрихкод місця (без урахування регістру й розділників: <i>plt01a</i> знайде <i>PLT-01A</i>) — з'являться підказки. Вибір (або <b>Enter</b>) підводить на рівень вище місця й виділяє його. Сканер штрихкодів вводить код і Enter — місце відкривається одразу. Клавіша <b>«/»</b> або <b>Ctrl+K</b> (⌘+K) ставить курсор у це поле. Якщо збігів кілька, Enter лише залишає список: оберіть місце.</li>
       <li><b>Тур для новичків</b> — короткий покроковий огляд (план 2D / 3D, рівні, виділення, мінікарта, перехід по коду, «Редагувати», каталог типів, перевірки, план змін, інструкція) з підсвіткою елемента. Показується при першому вході; кнопки <b>«Далі», «Назад», «Пропустити»</b> (клавіші ← → Esc). Позначка «пройдено» зберігається лише в цьому браузері. <button class="btn btn-secondary" data-tour>Показати тур знову</button></li>
+    </ul>`,
+  "help.tours.title": "Тури за типовими завданнями",
+  "help.tours.html": `
+    <p>Тур — покрокова підказка для типового завдання: програма підсвічує потрібний елемент і пояснює, що робити. Кроки двох видів: «прочитати» (кнопка <b>«Далі»</b>) і «дія» — тур чекає, поки ви зробите дію, а кнопка <b>«Показати мені»</b> робить її за вас. <b>«Назад»</b> повертає на крок, <b>«Пропустити крок»</b> йде далі без дії, <b>«Вийти»</b> (або <kbd>Esc</kbd>) закриває тур.</p>
+    <div data-tour-list></div>
+    <ul>
+      <li><b>Запуск:</b> кнопка <b>«Тури»</b> у верхній панелі (коли місця мало — у меню «Ще», на телефоні — у меню «☰»), цей список або посилання на сторінку з <code>#tour-rack</code>, <code>#tour-import</code>, <code>#tour-scratch</code>, <code>#tour-address</code>, <code>#tour-putaway</code>, <code>#tour-apply</code>, <code>#tour-find</code>, <code>#tour-labels</code>, <code>#tour-docs</code>, <code>#tour-team</code>, <code>#tour-basic</code>. Біля пройденого туру стоїть позначка «пройдено» (лише в цьому браузері). При першому вході пропонується «Перший огляд».</li>
+      <li><b>Навчальна копія.</b> Тури, що змінюють дані (позначені «навчальна копія»), працюють у тимчасовому варіанті планування, а ваш склад лишається недоторканим. Наприкінці — вибір: <b>«Залишити зміни»</b> (окремим варіантом або злити зі складом) чи <b>«Скасувати зміни туру»</b> (варіант і створені туром коментарі зникають). Якщо тур перервано (закрили сторінку), при наступному відкритті програма запропонує прибрати копію. Для таких турів потрібне право «проєктування»; на телефоні вони недоступні — редагування лише з комп'ютера.</li>
+      <li><b>Без Odoo й в Odoo.</b> Де потрібна Odoo, тур каже це прямо. «Склад з Odoo» поза Odoo бере вбудований файл-приклад (імпорт локацій); «Перевірити й застосувати» поза Odoo завершується файлом «Експорт локацій…», а в Odoo відкриває «План змін». «Налаштувати розміщення» поза Odoo показує оцінку, а не відповідь Odoo. Тур <b>нічого не застосовує в Odoo</b> і не завантажує файлів.</li>
     </ul>`,
   "help.mobile.title": "Робота з телефона й планшета",
   "help.mobile.html": `
@@ -356,7 +366,8 @@ export default {
   "help.start.html": `
     <p><b>Warehouse Builder</b> is a model of the warehouse built from Odoo storage locations (database snapshot of {date}). Every row, bay, level and floor place in the model is an Odoo location or a new place you added in the model.</p>
     <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot: it is read when the page opens and by the “Refresh data” button (see “Metrics, search and data”).</p>
-    <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
+    <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>
+    <p><b>How to get back to the model:</b> the <b>“← Back to model”</b> button at the top of this page, a second click on “Help”, the 2D / 3D / “Edit” buttons, or the <kbd>Esc</kbd> key — the view, level and selection in the model stay as they were.</p>`,
   "help.view.title": "Viewing the model",
   "help.view.html": `
     <ul>
@@ -373,6 +384,15 @@ export default {
       <li><b>Minimap</b> — in the corner of the plan (2D and 3D): a scheme of the whole warehouse with a frame for the current view. Click or drag on it to move the view; a click on another zone switches the level to it. The <b>“−”</b> button hides the minimap, <b>“▦”</b> brings it back (remembered). An open panel (problems, comments) is never covered: the minimap moves left or hides.</li>
       <li><b>Go to place</b> — the field above the plan: type a place code or barcode (case, spaces and separators are ignored: <i>plt01a</i> finds <i>PLT-01A</i>) to see suggestions. Choosing one (or <b>Enter</b>) goes one level above the place and selects it. A barcode scanner types the code and Enter, so the place opens at once. The <b>“/”</b> key or <b>Ctrl+K</b> (⌘+K) puts the cursor in this field. If several places match, Enter only keeps the list: pick one.</li>
       <li><b>Tour for newcomers</b> — a short step-by-step overview (2D / 3D plan, levels, selection, minimap, go to code, Edit mode, type catalog, checks, change plan, help) with the element highlighted. Shown on first entry; <b>Next, Back, Skip</b> (keys ← → Esc). The “done” mark is kept in this browser only. <button class="btn btn-secondary" data-tour>Show the tour again</button></li>
+    </ul>`,
+  "help.tours.title": "Tours for common tasks",
+  "help.tours.html": `
+    <p>A tour is a step-by-step guide for a common task: the program highlights the element and explains what to do. Steps are of two kinds: “read” (the <b>“Next”</b> button) and “action” — the tour waits until you do the action, and <b>“Show me”</b> does it for you. <b>“Back”</b> returns a step, <b>“Skip step”</b> goes on without the action, <b>“Exit”</b> (or <kbd>Esc</kbd>) closes the tour.</p>
+    <div data-tour-list></div>
+    <ul>
+      <li><b>Starting:</b> the <b>“Tours”</b> button in the top bar (in the “More” menu when space is short, in the “☰” menu on a phone), this list, or a link to the page with <code>#tour-rack</code>, <code>#tour-import</code>, <code>#tour-scratch</code>, <code>#tour-address</code>, <code>#tour-putaway</code>, <code>#tour-apply</code>, <code>#tour-find</code>, <code>#tour-labels</code>, <code>#tour-docs</code>, <code>#tour-team</code>, <code>#tour-basic</code>. A finished tour gets a “done” mark (in this browser only). On the first visit “First look” is offered.</li>
+      <li><b>Training copy.</b> Tours that change data (marked “training copy”) work in a temporary layout variant, and your warehouse stays untouched. At the end you choose: <b>“Keep changes”</b> (as a separate variant or merged into the warehouse) or <b>“Cancel the tour changes”</b> (the variant and the comments created by the tour disappear). If a tour is interrupted (the page is closed), the program offers to remove the copy next time. Such tours need the “design” right; on a phone they are unavailable — editing is desktop only.</li>
+      <li><b>Without Odoo and in Odoo.</b> Where Odoo is needed, the tour says so plainly. “Warehouse from Odoo” outside Odoo uses a built-in sample file (import of locations); “Check and apply” outside Odoo ends with the “Export locations…” file, and in Odoo it opens the “Change plan”. “Set up putaway” outside Odoo shows an estimate, not Odoo's answer. A tour <b>applies nothing in Odoo</b> and downloads no files.</li>
     </ul>`,
   "help.mobile.title": "Using a phone or tablet",
   "help.mobile.html": `
