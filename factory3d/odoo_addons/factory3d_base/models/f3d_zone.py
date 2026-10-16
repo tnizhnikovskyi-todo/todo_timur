@@ -213,6 +213,11 @@ class F3dZone(models.Model):
     def action_view_equipment(self):
         return self._action_view('maintenance.equipment', 'Обладнання')
 
+    def action_view_docks(self):
+        action = self._action_view('stock.location', 'Ворота')
+        action['domain'] = [('id', 'in', self.dock_location_ids.ids)]
+        return action
+
 
 class StockLocation(models.Model):
     _inherit = 'stock.location'

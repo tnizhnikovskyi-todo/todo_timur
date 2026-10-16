@@ -9,7 +9,7 @@
     </record>
 
     <menuitem id="menu_f3d_root" name="Завод 3D" sequence="75"
-              web_icon="factory3d_base,static/src/img/menu_icon.png"
+              web_icon="factory3d_base,static/src/img/app_icon.png"
               groups="factory3d_base.group_f3d_user"/>
     <menuitem id="menu_f3d_plant" name="Завод" parent="menu_f3d_root" sequence="20"
               groups="factory3d_base.group_f3d_user"/>
