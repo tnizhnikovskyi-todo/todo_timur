@@ -627,7 +627,9 @@ test("open_record (AC-08): «Відкрити в Odoo»", async () => {
     q(r.el, ".o_f3d_c-open").click();
     await tick();
     await tick();
-    expect(r.notes.some(([m, t]) => m.includes("SAW-2") && t === "info")).toBe(true);
+    // запису немає: без повідомлення «немає запису» — кнопка просто зникає (див. docs.test.js, open_group)
+    expect(r.notes.some(([m]) => m.includes("SAW-2"))).toBe(false);
+    expect(q(r.el, ".o_f3d_c-open")).toBe(null);
 });
 
 test("open_record (AC-08): картки документів ведуть через resolve({name})", async () => {

@@ -1,4 +1,7 @@
-from odoo import Command
+from datetime import timedelta
+from unittest.mock import patch
+
+from odoo import Command, fields
 from odoo.tests import HttpCase, tagged
 
 from odoo.addons.factory3d_viewer.tools import docs as docs_tools
@@ -45,10 +48,18 @@ class TestLocHistory(HttpCase, F3dViewerBase):
             pick.action_assign()
         return pick
 
-    def _receive(self, qty):
-        """Виконане приймання партії `lot` у комірку."""
+    def _receive(self, qty, lot=None):
+        """Виконане приймання партії `lot` (за замовчуванням ZZ-LOT-1) у комірку."""
         pick = self._picking(self.wh.in_type_id, self.supplier, self.cell, self.plate, qty)
-        pick.move_ids.move_line_ids.write({"lot_id": self.lot.id, "quantity": qty})
+        pick.move_ids.move_line_ids.write({"lot_id": (lot or self.lot).id, "quantity": qty})
+        pick.move_ids.picked = True
+        pick.with_context(skip_backorder=True).button_validate()
+        self.assertEqual(pick.state, "done")
+        return pick
+
+    def _ship(self, qty):
+        """Виконане відвантаження `qty` арк. плити з комірки клієнту (резервує те, що є в комірці)."""
+        pick = self._picking(self.wh.out_type_id, self.cell, self.customer, self.plate, qty)
         pick.move_ids.picked = True
         pick.with_context(skip_backorder=True).button_validate()
         self.assertEqual(pick.state, "done")
@@ -98,6 +109,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         recs = self._fixture()
         data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
         self.assertEqual((data["code"], data["truncated"]), ("ZZ-H-CELL", False))
+        self.assertEqual(data["left"], [])      # усе, що приймали, ще в комірці
         by = {p["product"]: p for p in data["products"]}
         self.assertEqual(list(by), ["ZZ-FIT", "ZZ-PLATE"])
         plate = by["ZZ-PLATE"]
@@ -155,6 +167,52 @@ class TestLocHistory(HttpCase, F3dViewerBase):
         self.assertEqual(_place(Loc.search([("usage", "=", "customer")], limit=1))["name"], "Клієнти")
         self.assertEqual(_place(Loc.search([("usage", "=", "supplier")], limit=1))["name"], "Постачальники")
         self.assertIsNone(_place(Loc.search([("usage", "=", "inventory")], limit=1)))
+
+    # --- «Раніше в комірці» (left) ----------------------------------------------
+    def test_left_lot(self):
+        """Партія, яка зайшла й повністю вийшла, — у `left` з документом виходу й надходженням; зі списку
+        поточних товарів вона зникає."""
+        arrival = self._receive(5)
+        shipped = self._ship(5)
+        data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
+        self.assertEqual(data["products"], [])
+        self.assertEqual((data["left_days"], data["truncated"]), (30, False))
+        self.assertEqual(len(data["left"]), 1)
+        row = data["left"][0]
+        self.assertEqual((row["product"], row["name"], row["lot"]), ("ZZ-PLATE", "ZZ Плита", "ZZ-LOT-1"))
+        self.assertEqual(row["out"]["doc"], {"name": shipped.name, "model": "stock.picking", "id": shipped.id,
+                                              "kind": "picking", "state": "done"})
+        self.assertEqual((row["out"]["qty"], row["out"]["to"]), (5, {"code": None, "name": "Клієнти"}))
+        self.assertRegex(row["out"]["date"], r"^\d{4}-\d\d-\d\d \d\d:\d\d$")
+        self.assertEqual(len(row["arrived"]), 1)
+        self.assertEqual((row["arrived"][0]["doc"]["name"], row["arrived"][0]["qty"], row["arrived"][0]["from"]["name"]),
+                         (arrival.name, 5, "Постачальники"))
+
+    def test_left_not_listed_while_in_cell(self):
+        """Партія, що частково вийшла (залишок у комірці), лишається в `products`, а не в `left`."""
+        self._receive(10)
+        self._ship(4)
+        data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
+        self.assertEqual(data["left"], [])
+        self.assertEqual(data["products"][0]["lots"][0]["qty"], 6)
+
+    def test_left_window_and_limit(self):
+        """Вихід старший за вікно не потрапляє в `left`; понад KEEP_LEFT товарів/партій — найсвіжіші й `truncated`."""
+        lots = [self.env["stock.lot"].create({"name": "ZZ-LOT-W%d" % i, "product_id": self.plate.id,
+                                              "company_id": self.wh.company_id.id}) for i in range(1, 5)]
+        ships = []
+        for lot in lots:
+            self._receive(2, lot)
+            ships.append(self._ship(2))
+        old = ships[0].move_line_ids
+        old.date = fields.Datetime.now() - timedelta(days=loc_history.LEFT_DAYS + 5)
+        data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
+        self.assertEqual([r["lot"] for r in data["left"]], ["ZZ-LOT-W4", "ZZ-LOT-W3", "ZZ-LOT-W2"])
+        self.assertFalse(data["truncated"])
+        with patch.object(loc_history, "KEEP_LEFT", 2):
+            data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
+        self.assertEqual([r["lot"] for r in data["left"]], ["ZZ-LOT-W4", "ZZ-LOT-W3"])
+        self.assertTrue(data["truncated"])
 
     def test_empty_cell(self):
         data = self._get("/f3d/viewer/loc/ZZ-H-DEST").json()

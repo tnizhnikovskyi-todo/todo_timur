@@ -2103,23 +2103,29 @@ function stockLine(code, u) {
   return "<p class=\"o_f3d_live" + (text === "Порожньо" ? " o_f3d_live-empty" : "") + "\">" + text + "</p>";
 }
 // ---------------------------------------------------------------- «Відкрити в Odoo» для об'єкта сцени (R-16 п. 5)
-// Власного запису в Odoo немає в стелажів і груп — лише в їхніх комірок (stock.location): тоді кнопка відкриває список
-// комірок (client.resolve({code, codes})), а якщо нічого не знайдено — кнопки немає. Рішення без запиту, коли дані
-// його підказують (запис центру, співробітника, комірки…, живі комірки всередині); інакше один дешевий resolve на картку.
+// Кнопка відкриває запис об'єкта за його кодом, а якщо такого запису немає — список записів комірок (stock.location)
+// усередині об'єкта: для будь-якого виду (стелаж, група обладнання, зона…) — `client.resolve({code, codes})`, один запит,
+// сервер віддає перевагу власному запису. Не знайшлося ні того, ні іншого — кнопка зникає (повідомлень немає). Рішення
+// без запиту, коли дані його підказують (запис центру, співробітника, комірки…, живі комірки всередині); інакше один
+// дешевий resolve({code}) на картку. Відповідь кешується за кодом: відкриття картки коштує щонайбільше один запит,
+// а клік по кнопці користується тією самою відповіддю.
 const OPEN_KIDS_MAX = 200; // стільки кодів приймає сервер (CODE_RE, MAX_CODES)
-const openInfo = new Map(); // code -> { kids: [codes], show: true | false | null (невідомо), busy, until }
+// code -> { kids: [codes], show: true | false | null (невідомо), res: відповідь resolve | null (немає) | undefined (не питали), pending, until }
+const openInfo = new Map();
 const liveBin = (c) => Array.isArray(D.locations?.[c]?.quants);
-// комірки об'єкта: нащадки з кодом; у плоскій сцені — комірки в межах габариту стелажа; запасний варіант — префікс коду
+// комірки об'єкта: нащадки з кодом; у плоскій сцені — живі комірки, чий центр лежить у габариті об'єкта (будь-який вид);
+// запасний варіант — префікс коду
 function openKids(obj) {
   const code = obj.userData.code;
   const kids = new Set();
   obj.traverse((o) => { const c = o !== obj && o.userData?.code; if (c && liveBin(c)) {kids.add(c);} });
-  if (!kids.size && obj.userData.kind === "rack") {
+  if (!kids.size) {
     const box = new THREE.Box3().setFromObject(obj).expandByScalar(0.25);
     const tmp = new THREE.Box3(), v = new THREE.Vector3();
     if (!box.isEmpty()) {
-      for (const [c, o] of items) {
-        if (o !== obj && liveBin(c) && box.containsPoint(tmp.setFromObject(o).getCenter(v))) {kids.add(c);}
+      for (const c of Object.keys(D.locations || {})) {
+        const o = liveBin(c) && c !== code ? items.get(c) : null;
+        if (o && o !== obj && box.containsPoint(tmp.setFromObject(o).getCenter(v))) {kids.add(c);}
       }
     }
   }
@@ -2134,19 +2140,27 @@ function openInfoFor(obj) {
   if (!info) {
     const own = !!(D.workcenters[code] || D.employees[code] || D.equipment[code] || D.zones[code] || liveBin(code)
       || idx.truck.has(code) || D.docks?.[code]);
-    const kids = own && obj.userData.kind !== "rack" ? [] : openKids(obj); // сервер віддає перевагу власному запису
-    info = { kids, show: own || kids.length ? true : null, busy: false, until: 0 };
+    const kids = liveBin(code) ? [] : openKids(obj); // власний запис, якщо є, має перевагу на сервері
+    info = { kids, show: own || kids.length ? true : null, res: undefined, pending: null, until: 0 };
     openInfo.set(code, info);
   }
   return info;
 }
-function probeOpen(code, info) {
-  if (info.busy || Date.now() < info.until || typeof client.resolve !== "function") {return;}
-  info.busy = true;
-  client.resolve({ code }).then((r) => { info.show = !!r?.model; }, () => { info.until = Date.now() + 30000; }).then(() => {
-    info.busy = false;
-    if (info.show === true && !destroyed && panel.type === "object" && panel.code === code) {renderPanel(true);}
-  });
+// один запит resolve на код (власний запис, інакше комірки всередині): відповідь, також «нічого» (null), кешується
+function openResolve(code, info) {
+  if (info.res !== undefined) {return Promise.resolve(info.res);}
+  if (info.pending) {return info.pending;}
+  if (typeof client.resolve !== "function") {return Promise.resolve(undefined);}
+  info.pending = client.resolve(info.kids.length ? { code, codes: info.kids.slice(0, OPEN_KIDS_MAX) } : { code }).then((r) => {
+    info.res = r?.res_id || (r?.res_ids?.length && opts.onOpenRecords) ? r : null;
+    info.show = !!info.res;
+    return info.res;
+  }, () => { info.until = Date.now() + 30000; return undefined; }).then((res) => { info.pending = null; return res; });
+  return info.pending;
+}
+// картка ще показує кнопку, яка тепер зайва (чи нова) — перемалювати
+function openRefresh(code, wasShown, info) {
+  if (!destroyed && panel.type === "object" && panel.code === code && wasShown !== !!info.show) {renderPanel(true);}
 }
 
 function renderObject(code) {
@@ -2154,7 +2168,7 @@ function renderObject(code) {
   if (!obj) {return;}
   const u = obj.userData;
   const oi = canOpen ? openInfoFor(obj) : null;
-  if (oi && oi.show === null) {probeOpen(code, oi);}
+  if (oi && oi.show === null && !oi.pending && Date.now() >= oi.until) {openResolve(code, oi).then(() => openRefresh(code, false, oi));}
   let chip = "", extra = "";
   const mst = machStatus(u), bst = binState(u);
   if (u.kind === "machine" && MACHINE_STATUS[mst]) {chip = `<span class="o_f3d_chip ${cx(MACHINE_STATUS[mst][0])}">${MACHINE_STATUS[mst][1]}</span>`;}
@@ -2187,12 +2201,11 @@ function renderObject(code) {
   $(".o_f3d_c-close").onclick = () => select(null);
   const open = $(".o_f3d_c-open");
   if (open) {open.onclick = async () => {
-    try {
-      const r = await client.resolve(oi.kids.length ? { code, codes: oi.kids.slice(0, OPEN_KIDS_MAX) } : { code });
-      if (r?.res_ids?.length && opts.onOpenRecords) {opts.onOpenRecords(r.model, r.res_ids, u.label || code);}
-      else if (r?.res_id) {opts.onOpenRecord(r.model, r.res_id);}
-      else {notify("У базі немає запису з кодом " + code, "info");}
-    } catch { notify("У базі немає запису з кодом " + code, "info"); }
+    const r = await openResolve(code, oi);
+    if (r?.res_ids?.length && opts.onOpenRecords) {opts.onOpenRecords(r.model, r.res_ids, u.label || code);}
+    else if (r?.res_id) {opts.onOpenRecord(r.model, r.res_id);}
+    else if (r === null) {openRefresh(code, true, oi);} // запису немає ні за кодом, ні в комірках усередині: кнопка зникає
+    else {notify("Не вдалося перевірити запис у Odoo, спробуйте ще раз", "warning");} // збій мережі, не «немає запису»
   };}
   if (D?.locations?.[code]) {loadLocHist(code);}
 }
@@ -2278,6 +2291,7 @@ function histRow(kind, it, uom) {
   if (kind === "arrived") {meta = [dayHm(it.date), q, it.from ? ("з " + histPlace(it.from)) : ""];}
   else if (kind === "reserve") {meta = [q + (it.pending ? (" + " + nfq(it.pending, uom) + " ще не зарезервовано") : ""), it.to ? ("→ " + histPlace(it.to)) : ""];}
   else if (kind === "out") {meta = [q, it.to ? ("→ " + histPlace(it.to)) : ""];}
+  else if (kind === "gone") {meta = [dayHm(it.date), q, it.to ? ("→ " + histPlace(it.to)) : ""];}
   else {meta = [q, dayHm(it.date), it.from ? ("з " + histPlace(it.from)) : ""];}
   return "<div class=\"o_f3d_hrow\" data-hk=\"" + kind + "\">" + recA(it.doc) + " <span class=\"o_f3d_m\">" + meta.filter(Boolean).join(" · ") + "</span></div>";
 }
@@ -2286,8 +2300,16 @@ function histGroup(title, kind, list, uom) {
     ? ("<div class=\"o_f3d_hgrp\"><span class=\"o_f3d_hlbl\">" + title + "</span>" + list.map((it) => histRow(kind, it, uom)).join("") + "</div>")
     : "";
 }
+// «Раніше в комірці»: товари/партії, що вже вибули (останній вихід + як надійшла партія), компактно під поточними
+function histLeft(h) {
+  if (!h.left?.length) {return "";}
+  return "<div class=\"o_f3d_hleft\"><span class=\"o_f3d_hlbl\">Раніше в комірці · вибуло за " + (h.left_days || 30) + " дн.</span>"
+    + h.left.map((r) => ("<div class=\"o_f3d_hprod o_f3d_hgone\" data-left=\"" + esc(r.product) + "\"><div class=\"o_f3d_hph\">" + esc(r.name)
+      + (r.lot ? (" <span class=\"o_f3d_mono o_f3d_hlh\">партія " + esc(r.lot) + "</span>") : "") + "</div>"
+      + histGroup("Вибуло", "gone", [r.out], r.uom) + histGroup("Надійшло", "arrived", r.arrived, r.uom) + "</div>")).join("") + "</div>";
+}
 function locHistHtml(h) {
-  if (!h.products.length) {return "<div class=\"o_f3d_m\">Рухів по комірці немає.</div>";}
+  if (!h.products.length && !h.left?.length) {return "<div class=\"o_f3d_m\">Рухів по комірці немає.</div>";}
   const more = h.truncated ? "<div class=\"o_f3d_m\">Показано не всі записи (обмеження вибірки).</div>" : "";
   return h.products.map((pr) => {
     const lots = pr.lots.map((l) => ("<div class=\"o_f3d_hlot\"><div class=\"o_f3d_hlh\">"
@@ -2296,7 +2318,7 @@ function locHistHtml(h) {
       + histGroup("Надійшло", "arrived", l.arrived, pr.uom) + histGroup("Резерв", "reserve", l.reserve, pr.uom) + "</div>")).join("");
     return "<div class=\"o_f3d_hprod\" data-prod=\"" + esc(pr.product) + "\"><div class=\"o_f3d_hph\">" + esc(pr.name) + "</div>" + lots
       + histGroup("Іде з комірки", "out", pr.out, pr.uom) + histGroup("Очікується", "incoming", pr.incoming, pr.uom) + "</div>";
-  }).join("") + more;
+  }).join("") + histLeft(h) + more;
 }
 function histBody(h) {
   if (h?.at) {return h.data ? locHistHtml(h.data) : "<div class=\"o_f3d_m\">Комірки немає в Odoo.</div>";}

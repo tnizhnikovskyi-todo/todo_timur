@@ -8,7 +8,12 @@
 (рух не прив'язаний до партії) — `out` (з комірки, ще не зарезервовано) і `incoming` (очікується в комірку).
 Документ, що є і в `reserve`, і в `out` (частково резервоване переміщення), показується один раз: у `reserve`
 з `pending` (скільки ще не зарезервовано).
+
+Окремо `left` («Раніше в комірці»): товари/партії, яких у комірці вже немає, але які вибули з неї за `LEFT_DAYS` днів —
+останнє виконане переміщення з комірки (`out`) і як партія туди потрапила (`arrived`, ≤ 1 запис).
 """
+from datetime import timedelta
+
 from . import dates
 from . import docs as docs_tools
 from . import payload as payload_tools
@@ -17,6 +22,10 @@ LIMIT_QUANTS = 50
 LIMIT_DONE = 300        # виконані рядки в комірку: вибірка, з якої беруться останні KEEP_DONE для товару/партії
 LIMIT_OPEN = 200        # відкриті рядки й переміщення (кожна вибірка окремо)
 KEEP_DONE = 3
+LIMIT_LEFT = 200        # виконані рядки з комірки за вікно LEFT_DAYS: з них беруться останні KEEP_LEFT товарів/партій
+LIMIT_HERE = 1000       # перевірка «ще в комірці» за кандидатами, коли квантів комірки більше за LIMIT_QUANTS
+LEFT_DAYS = 30          # вікно «Раніше в комірці»
+KEEP_LEFT = 5           # товарів/партій у «Раніше в комірці»
 KEEP_OPEN = 10          # записів кожного виду на товар / партію
 OPEN_OUT = ("confirmed", "waiting", "partially_available")        # ще не (повністю) зарезервовано
 OPEN_IN = ("draft", "waiting", "confirmed", "partially_available", "assigned")
@@ -73,11 +82,13 @@ def _key(doc):
 
 def build(env, loc, code=None):
     """Історія комірки `loc` (stock.location, не порожня); `code` — запитаний код (код або аліас 3D-об'єкта)."""
-    out = {"code": code or loc.f3d_code, "complete_name": loc.complete_name, "products": [], "truncated": False}
+    out = {"code": code or loc.f3d_code, "complete_name": loc.complete_name, "products": [], "left": [],
+           "left_days": LEFT_DAYS, "truncated": False}
     quants = env["stock.quant"].search_fetch(
         [("location_id", "=", loc.id), ("quantity", "!=", 0)],
         ["product_id", "lot_id", "quantity", "reserved_quantity"], order="id", limit=LIMIT_QUANTS + 1)
-    if len(quants) > LIMIT_QUANTS:
+    quants_cut = len(quants) > LIMIT_QUANTS
+    if quants_cut:
         out["truncated"] = True
         quants = quants[:LIMIT_QUANTS]
 
@@ -170,4 +181,75 @@ def build(env, loc, code=None):
             "product": p.default_code or p.name, "name": p.name, "uom": p.uom_id.name,
             "qty": _num(sum(x["qty"] for x in lots)), "reserved": _num(sum(x["reserved"] for x in lots)),
             "lots": lots, "out": pr["out"][:KEEP_OPEN], "incoming": pr["incoming"][:KEEP_OPEN]})
+    out["left"], left_cut = _left(env, loc, quants, quants_cut)
+    out["truncated"] = out["truncated"] or left_cut
     return out
+
+
+def _left(env, loc, quants, quants_cut):
+    """«Раніше в комірці»: (товар, партія), яких зараз у комірці немає, з останнім виконаним виходом за LEFT_DAYS днів
+    і останнім виконаним надходженням цієї партії в комірку. Дві вибірки (вихід, надходження) на комірку.
+    Повертає (список, обрізано)."""
+    Line = env["stock.move.line"]
+    since = dates.now(env) - timedelta(days=LEFT_DAYS)
+    lines = Line.search_fetch(
+        [("location_id", "=", loc.id), ("location_dest_id", "!=", loc.id), ("state", "=", "done"),
+         ("date", ">=", since)],
+        ["product_id", "lot_id", "quantity_product_uom", "date", "move_id", "picking_id", "location_dest_id"],
+        order="date desc, id desc", limit=LIMIT_LEFT)
+    if not lines:
+        return [], False
+    cut = len(lines) >= LIMIT_LEFT
+
+    def key(ml):
+        return ml.product_id.id, ml.lot_id.id or 0
+
+    here = {key(q) for q in quants}
+    if quants_cut:          # квантів більше, ніж у вибірці комірки: «ще є в комірці» перевіряємо за кандидатами
+        extra = env["stock.quant"].search_fetch(
+            [("location_id", "=", loc.id), ("quantity", "!=", 0), ("product_id", "in", lines.product_id.ids)],
+            ["product_id", "lot_id"], limit=LIMIT_HERE)
+        here |= {key(q) for q in extra}
+        cut = cut or len(extra) >= LIMIT_HERE
+    lines.move_id.mapped("picking_id.name")      # попереднє читання для пакетного доступу до m2o
+    gone = {}       # (товар, партія) -> запис; порядок вставки = свіжі першими
+    for ml in lines:
+        k = key(ml)
+        if k in here:
+            continue
+        row = gone.get(k)
+        if row is None and len(gone) >= KEEP_LEFT:
+            cut = True
+            continue
+        doc, to = _doc(env, ml.move_id, ml), _place(ml.location_dest_id)
+        if row is None:
+            gone[k] = {"ml": ml, "out": {"doc": doc, "qty": _num(ml.quantity_product_uom), "to": to,
+                                         "date": dates.local(ml.date)}, "date": ml.date}
+        elif _key(row["out"]["doc"]) == _key(doc) and row["out"]["to"] == to:
+            # кілька рядків (пакунків) одного документа — один запис із сумою
+            row["out"]["qty"] = _num(row["out"]["qty"] + ml.quantity_product_uom)
+    if not gone:
+        return [], cut
+
+    lots = [k[1] or False for k in gone]
+    arrivals = Line.search_fetch(
+        [("location_dest_id", "=", loc.id), ("location_id", "!=", loc.id), ("state", "=", "done"),
+         ("product_id", "in", [k[0] for k in gone]), ("lot_id", "in", lots)],
+        ["product_id", "lot_id", "quantity_product_uom", "date", "move_id", "picking_id", "location_id"],
+        order="date desc, id desc", limit=LIMIT_DONE)
+    arrivals.move_id.mapped("picking_id.name")
+    arrived = {}
+    for ml in arrivals:     # остання (не пізніша за вихід) за партією
+        k = key(ml)
+        if k in gone and k not in arrived and ml.date <= gone[k]["date"]:
+            arrived[k] = {"doc": _doc(env, ml.move_id, ml), "date": dates.local(ml.date),
+                          "qty": _num(ml.quantity_product_uom), "from": _place(ml.location_id)}
+    if len(arrivals) >= LIMIT_DONE and len(arrived) < len(gone):
+        cut = True
+    res = []
+    for k, row in gone.items():
+        ml = row["ml"]
+        res.append({"product": ml.product_id.default_code or ml.product_id.name, "name": ml.product_id.name,
+                    "uom": ml.product_id.uom_id.name, "lot": ml.lot_id.name or None, "out": row["out"],
+                    "arrived": [arrived[k]] if k in arrived else []})
+    return res, cut
