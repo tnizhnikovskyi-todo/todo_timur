@@ -72,7 +72,7 @@
                     </group>
                     <notebook>
                         <page string="Параметри" name="params">
-                            <field name="params_text" widget="ace" options="{'mode': 'json'}"/>
+                            <field name="params_text" widget="ace" options="{'mode': 'javascript'}"/>
                             <div class="text-muted" invisible="type != 'modbus_tcp'">
                                 Приклад: {"host": "iot-sim", "port": 502, "unit": 70, "timeout_s": 3, "retries": 2}
                             </div>

@@ -116,7 +116,7 @@
                     </group>
                     <notebook>
                         <page string="Адреса" name="address">
-                            <field name="address_text" widget="ace" options="{'mode': 'json'}"
+                            <field name="address_text" widget="ace" options="{'mode': 'javascript'}"
                                    readonly="not is_f3d_manager"/>
                             <div class="text-muted">Схема адреси залежить від типу джерела (modbus_tcp: fc, addr, type; mqtt: topic, path; bacnet_ip: object, instance; http_push: route, path, match).</div>
                         </page>
@@ -129,7 +129,7 @@
                         <page string="Макет" name="sim">
                             <group>
                                 <field name="sim_mode"/>
-                                <field name="sim_params_text" widget="ace" options="{'mode': 'json'}" readonly="1"/>
+                                <field name="sim_params_text" widget="ace" options="{'mode': 'javascript'}" readonly="1"/>
                             </group>
                         </page>
                         <page string="ТО за лічильником" name="meter">

@@ -3,8 +3,10 @@
 * канбан `t-*`: Odoo 19 (OWL) компілює їх як JS — `x in ('a','b')` дає TypeError, `True/False/None`, `not`, `not in` не існують;
 * домени/контексти фільтрів обчислює py.js: `datetime.time.min/max` він не знає (OwlError у «Відвідувачі»);
 * домен не вміє порівнювати поле з полем: `('ws_qty', '<', 'min_qty')` порівнює з рядком (ValueError у search_count).
+* віджет ace/code: CodeEditor Odoo 19 приймає лише режими з CodeEditor.MODES; `'json'` дає OwlError «Invalid props» (у debug).
 Перевіряються усі встановлені factory3d_* і td_genset (у прогоні «Run A» — всі 18 модулів).
 """
+import ast
 import re
 
 from lxml import etree
@@ -21,6 +23,7 @@ _JS_PYISMS = (
 _T_SKIP = {"t-name", "t-call", "t-set", "t-as", "t-key", "t-slot", "t-translation", "t-ref", "t-inherit", "t-inherit-mode"}
 _ATTF = re.compile(r"(?:#|\$)\{(.*?)\}|\{\{(.*?)\}\}")
 _TIME_MINMAX = re.compile(r"\btime\.(?:min|max)\b|\bdate(?:time)?\.(?:min|max)\b")
+_ACE_MODES = {"javascript", "xml", "qweb", "scss", "python"}  # web/static/src/core/code_editor/code_editor.js
 _ORDER_LEAF = re.compile(r"\(\s*'([\w.]+)'\s*,\s*'(<|>|<=|>=)'\s*,\s*'([a-z_][a-z_0-9]*)'\s*\)")
 
 
@@ -79,3 +82,17 @@ class TestViewJsGuards(TransactionCase):
                                 problems.append("%s: домен порівнює поле з полем ('%s' %s '%s'); потрібне булеве поле з _search/store"
                                                 % (label, field, op, rhs))
         self.assertFalse(problems, "Домени, які клієнт або ORM не обчислять:\n" + "\n".join(problems))
+
+    def test_code_editor_modes(self):
+        problems = []
+        for view in self._f3d_views():
+            for el in self._arch(view).iter('field'):
+                if el.get('widget') not in ('ace', 'code') or not el.get('options'):
+                    continue
+                try:
+                    mode = ast.literal_eval(el.get('options')).get('mode')
+                except (ValueError, SyntaxError):
+                    continue
+                if mode and mode not in _ACE_MODES:
+                    problems.append("%s: <field %s widget=%s> mode=%r" % (view.xml_id or view.name, el.get('name'), el.get('widget'), mode))
+        self.assertFalse(problems, "Режим CodeEditor поза %s:\n%s" % (sorted(_ACE_MODES), "\n".join(problems)))

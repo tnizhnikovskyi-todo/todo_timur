@@ -47,7 +47,7 @@
                         </group>
                     </group>
                     <group string="Дані команди">
-                        <field name="payload_text" widget="ace" options="{'mode': 'json'}" nolabel="1"/>
+                        <field name="payload_text" widget="ace" options="{'mode': 'javascript'}" nolabel="1"/>
                         <div class="text-muted">Лише для команд-викликів модулів; порожньо — звичайний запис значення.</div>
                     </group>
                 </sheet>

@@ -45,7 +45,7 @@
                             <field name="active" widget="boolean_toggle"/>
                         </group>
                         <group string="Геометрія" name="zone_geometry">
-                            <field name="polygon_text" widget="ace" options="{'mode': 'json'}"/>
+                            <field name="polygon_text" widget="ace" options="{'mode': 'javascript'}"/>
                             <field name="area_m2"/>
                             <label for="x_min" string="Габарит, м"/>
                             <div class="o_row">

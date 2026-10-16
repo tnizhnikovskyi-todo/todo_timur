@@ -46,7 +46,7 @@
                             <field name="compliance_note"/>
                         </group>
                     </group>
-                    <field name="path_text" widget="ace" options="{'mode': 'json'}"/>
+                    <field name="path_text" widget="ace" options="{'mode': 'javascript'}"/>
                 </sheet>
             </form>
         </field>

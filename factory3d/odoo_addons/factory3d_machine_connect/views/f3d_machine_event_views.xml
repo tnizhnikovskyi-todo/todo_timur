@@ -44,7 +44,7 @@
                             <field name="ext_event_id"/>
                         </group>
                     </group>
-                    <field name="payload" widget="ace" options="{'mode': 'json'}"/>
+                    <field name="payload" widget="ace" options="{'mode': 'javascript'}"/>
                 </sheet>
             </form>
         </field>

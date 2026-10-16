@@ -29,7 +29,7 @@
           <field name="scenario_id" readonly="1"/>
           <field name="device_id" invisible="not has_device"/>
           <field name="zone_id" invisible="not has_zone"/>
-          <field name="params_text" widget="ace" options="{'mode': 'json'}"/>
+          <field name="params_text" widget="ace" options="{'mode': 'javascript'}"/>
         </group>
         <footer>
           <button name="action_confirm" type="object" string="Запустити" class="btn-primary"/>
