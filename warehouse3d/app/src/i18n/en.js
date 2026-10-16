@@ -403,6 +403,34 @@ export default {
       <li>Hover over a place — a tooltip shows the code, product and fill level.</li>
       <li>The color of a place shows its fill level; the other metrics (below minimum, empty places, ABC, stock age) are chosen with the “Metric” switch (see “Metrics, search and data”). A click on a place opens its card. In the “Place status” mode the colors are:</li>
     </ul>`,
+  "help.nav.title": "Minimap, go to code, tour",
+  "help.nav.html": `
+    <ul>
+      <li><b>Minimap</b> — in the corner of the plan (2D and 3D): a scheme of the whole warehouse with a frame for the current view. Click or drag on it to move the view; a click on another zone switches the level to it. The <b>“−”</b> button hides the minimap, <b>“▦”</b> brings it back (remembered). An open panel (problems, comments) is never covered: the minimap moves left or hides.</li>
+      <li><b>Go to place</b> — the field above the plan: type a place code or barcode (case, spaces and separators are ignored: <i>plt01a</i> finds <i>PLT-01A</i>) to see suggestions. Choosing one (or <b>Enter</b>) goes one level above the place and selects it. A barcode scanner types the code and Enter, so the place opens at once. The <b>“/”</b> key or <b>Ctrl+K</b> (⌘+K) puts the cursor in this field. If several places match, Enter only keeps the list: pick one.</li>
+      <li><b>Tour for newcomers</b> — a short step-by-step overview (2D / 3D plan, levels, selection, minimap, go to code, Edit mode, type catalog, checks, change plan, help) with the element highlighted. Shown on first entry; <b>Next, Back, Skip</b> (keys ← → Esc). The “done” mark is kept in this browser only. <button class="btn btn-secondary" data-tour>Show the tour again</button></li>
+    </ul>`,
+  "help.mobile.title": "Using a phone or tablet",
+  "help.mobile.html": `
+    <p>On a narrow screen (up to 768 px — a phone, a tablet in portrait) the constructor works as a <b>viewer and search</b> for warehouse staff.</p>
+    <ul>
+      <li><b>The top bar</b> collapses: title, 2D / 3D and the <b>☰</b> button — the rest (warehouse, language, problems, comments, help) is in the menu.</li>
+      <li><b>“Where is it” search</b> and <b>“Go to place”</b> are at the top, above the plan, with large buttons and fields. A found place opens as a <b>full-screen card</b>; <b>✕</b> returns to the plan.</li>
+      <li><b>The side panel</b> slides up from the bottom with the “Object panel” button; picking a place on the plan opens its card at once.</li>
+      <li><b>Gestures</b>: in 3D one finger rotates, pinch zooms, two fingers pan (pinch and two-finger pan also work in 2D); a tap on a place selects it.</li>
+      <li><b>Editing is off</b>: the “Edit” button only says “Editing is available from a computer”. Building mode, the wizard, files, labels, variants and the change plan are not available on a phone.</li>
+    </ul>`,
+  "go.label": "Go to place",
+  "go.placeholder": "Go to place: code or barcode…",
+  "go.none": "No such place",
+  "go.many": "{n} matches — pick a place from the list",
+  "mm.title": "Warehouse minimap",
+  "mm.show": "Show minimap",
+  "mm.hide": "Hide minimap",
+  "mob.menu": "Menu",
+  "mob.panel": "▲ Object panel",
+  "mob.close": "Close card",
+  "n.editDesktop": "Editing is available from a computer",
   "help.select.title": "Selection",
   "help.select.html": `
     <ul>

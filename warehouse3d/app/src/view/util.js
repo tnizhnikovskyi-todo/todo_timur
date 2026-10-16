@@ -20,7 +20,11 @@ export function zoneHint(i18n, z) {
 }
 
 // на узком экране после выбора прокручиваем к боковой панели
+// узкий экран (W-20, D-01): телефон и планшет в портрете — режим просмотра и поиска
+export const NARROW_Q = "(max-width: 768px)";
+export const isNarrow = () => !!globalThis.matchMedia?.(NARROW_Q).matches;
+export const PANEL_SEL = "aside.o_prob:not([hidden])"; // плавающие панели: проблемы, лоток, комментарии, мастер
 export function scrollToSide(root) {
-  if (!globalThis.matchMedia?.("(max-width: 900px)").matches) return;
+  if (!globalThis.matchMedia?.("(max-width: 900px)").matches || isNarrow()) return; // на узком экране панель — выдвижная, прокручивать не нужно
   root.querySelector(".side")?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
 }

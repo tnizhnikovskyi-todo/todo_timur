@@ -13,7 +13,7 @@ import { markClass, markText, markTitle, visibleMarks } from "./marks.js";
 // стелаж, в котором стоит ярус или ячейка (для остальных — сам узел)
 const bayOf = (tree, n) => (n.type === "level" ? tree.nodes.get(n.parent) : n.type === "cell" ? tree.nodes.get(tree.nodes.get(n.parent).parent) : n);
 
-export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, onMark = null }) {
+export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, onMark = null, onView = null }) {
   const [T, { OrbitControls }] = await Promise.all([import("three"), import("three/examples/jsm/controls/OrbitControls.js")]);
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), col = (n) => new T.Color(css(n) || "#888");
   const renderer = new T.WebGLRenderer({ antialias: true });
@@ -370,7 +370,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, o
     };
     anim = requestAnimationFrame(step);
   }
-  controls.addEventListener("change", () => { tip.hidden = true; render(); });
+  controls.addEventListener("change", () => { tip.hidden = true; render(); onView?.(); });
   const ray = new T.Raycaster(), ndc = new T.Vector2();
   const setRay = (e) => { const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); };
   const itemAt = (h) => items[h.object.userData.g.ids[h.instanceId]];
@@ -402,7 +402,7 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, o
     drag.dx = Math.max(-drag.mx, Math.round((p.x - drag.p0.x) * 10) / 10); drag.dz = Math.max(-drag.my, Math.round((p.z - drag.p0.z) * 10) / 10);
     compose(); render();
   });
-  canvas.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener("pointerdown", (e) => { down = e.isPrimary ? { x: e.clientX, y: e.clientY } : null; }); // второй палец (щипок, сдвиг двумя пальцами) — не нажатие
   canvas.addEventListener("pointercancel", () => { if (drag) { for (const it of drag.its) it.drag = false; drag = null; controls.enabled = true; compose(); render(); } });
   canvas.addEventListener("pointerup", (e) => {
     if (drag && endDrag()) { down = null; return; }
@@ -427,7 +427,13 @@ export async function createPlan3D({ model, i18n, vp, tip, showTip, afterPick, o
     const off = camera.position.clone().sub(controls.target).multiplyScalar(f);
     if (off.length() < controls.minDistance || off.length() > controls.maxDistance) return; camera.position.copy(controls.target).add(off); controls.update();
   };
-  const api = { paint, resize, zoom, fit, makeLabels, makeMarks, canvas, lbl, mkl, rebuild: () => { build(); makeLabels(); makeMarks(); paint(); }, setLabelText: makeLabels };
+  // мини-карта (W-20): площадь пола в кадре (метры склада) и сдвиг центра вида: камера и цель сдвигаются вместе
+  const view = () => {
+    const tg = controls.target, dist = camera.position.distanceTo(tg), hh = dist * Math.tan((camera.fov * Math.PI) / 360), el = Math.max(0.3, (camera.position.y - tg.y) / (dist || 1)), w = 2 * hh * camera.aspect, h = (2 * hh) / el;
+    return { x: tg.x + W0 / 2 - w / 2, y: tg.z + D0 / 2 - h / 2, w, h };
+  };
+  const panTo = (x, y) => { const dx = x - W0 / 2 - controls.target.x, dz = y - D0 / 2 - controls.target.z; camera.position.x += dx; camera.position.z += dz; controls.target.x += dx; controls.target.z += dz; controls.update(); };
+  const api = { paint, resize, zoom, fit, view, panTo, makeLabels, makeMarks, canvas, lbl, mkl, rebuild: () => { build(); makeLabels(); makeMarks(); paint(); }, setLabelText: makeLabels };
   if (dbg) dbg.rebuild = api.rebuild;
   return api;
 }

@@ -35,6 +35,9 @@ const step = async (name, fn) => { if (only && !only.test(name)) return; try { a
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+// тур для новичков (W-20) показывается при первом входе и перекрывает страницу: во всех контекстах, кроме проверки самого тура, он помечен пройденным
+const rawContext = browser.newContext.bind(browser);
+browser.newContext = async (o) => { const c = await rawContext(o); await c.addInitScript(() => { try { if (!localStorage.getItem("wh-app-tour")) localStorage.setItem("wh-app-tour", "skipped"); } catch (e) { /* без хранилища */ } }); return c; };
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
 const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
@@ -1554,12 +1557,213 @@ try {
     expect((await pg.locator("#h-docs").innerText()).includes("Специфікація стелажів"), "раздел «Документи» пуст");
     fs.rmSync(dir, { recursive: true, force: true }); await ctx.close();
   });
+  // ---------- W-20: мини-карта, переход по коду, тур, телефон и планшет
+  const w20 = async (o = {}, { tour = false, debug = true } = {}) => {
+    const ctx = await (tour ? rawContext : browser.newContext)({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce", ...o });
+    if (debug) await ctx.addInitScript(() => { window.__WH_DEBUG = {}; });
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000);
+    pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2", { state: "attached" });
+    return { ctx, pg };
+  };
+  const tx = (pg, sel) => pg.locator(sel).first().innerText();
+  const vbOf = (pg) => pg.evaluate(() => document.querySelector("#vp svg:not(#minimap svg)").getAttribute("viewBox").split(" ").map(Number));
+  const box = async (pg, sel) => { const b = await pg.locator(sel).first().boundingBox(); if (!b) throw new Error(`нет рамки ${sel}`); return b; };
+  const hscroll = (pg) => pg.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth && document.body.scrollWidth <= document.body.clientWidth);
+  await step("W-20 мини-карта: рамка вида, нажатие и перетаскивание сдвигают вид, кнопка прячет, панели не закрыты", async () => {
+    const { ctx, pg } = await w20();
+    await pg.click('#seg-mode [data-m="2d"]'); await pg.waitForSelector("#minimap svg");
+    expect(await pg.locator("#minimap .mm-r").getAttribute("d") !== "", "в мини-карте нет схемы");
+    for (let i = 0; i < 3; i++) await pg.click("#z-in");
+    const v1 = await vbOf(pg), fr = await pg.evaluate(() => { const r = document.querySelector("#minimap .mm-fr"); return { d: r.style.display, w: +r.getAttribute("width") }; });
+    expect(fr.d !== "none" && fr.w > 0 && fr.w < +(await pg.evaluate(() => document.querySelector("#minimap svg").getAttribute("viewBox").split(" ")[2])), `рамка вида: ${JSON.stringify(fr)}`);
+    const mb = await box(pg, "#minimap svg");
+    await pg.mouse.click(mb.x + 12, mb.y + 12);
+    const v2 = await vbOf(pg);
+    expect(v2[2] === v1[2] && (v2[0] !== v1[0] || v2[1] !== v1[1]), `нажатие не сдвинуло вид: ${v1} → ${v2}`);
+    await pg.mouse.move(mb.x + 12, mb.y + 12); await pg.mouse.down(); await pg.mouse.move(mb.x + mb.width / 2, mb.y + mb.height / 2, { steps: 4 }); await pg.mouse.up();
+    const v3 = await vbOf(pg);
+    expect(v3[0] !== v2[0] || v3[1] !== v2[1], "перетаскивание не сдвинуло вид");
+    // 3D: рамка и сдвиг камеры
+    await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForFunction(() => !document.querySelector("#vp .loading") && window.__WH_DEBUG.camera);
+    const cam0 = await pg.evaluate(() => window.__WH_DEBUG.controls.target.toArray());
+    expect(await pg.locator("#minimap .mm-fr").evaluate((r) => r.style.display !== "none"), "в 3D нет рамки вида");
+    const mb3 = await box(pg, "#minimap svg");
+    await pg.mouse.click(mb3.x + mb3.width * 0.15, mb3.y + mb3.height * 0.2);
+    const cam1 = await pg.evaluate(() => window.__WH_DEBUG.controls.target.toArray());
+    expect(Math.abs(cam1[0] - cam0[0]) + Math.abs(cam1[2] - cam0[2]) > 0.5, `нажатие не сдвинуло камеру: ${cam0} → ${cam1}`);
+    // панели: проблемы и комментарии не пересекаются с мини-картой
+    for (const b of ["#pr-btn", "#cm-btn"]) {
+      await pg.click(b); await pg.waitForSelector("aside.o_prob:not([hidden])");
+      const m = await pg.evaluate(() => { const e = document.querySelector("#minimap"), p = document.querySelector("aside.o_prob:not([hidden])"), a = e.getBoundingClientRect(), c = p.getBoundingClientRect();
+        return { hidden: e.hidden, over: !e.hidden && a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom }; });
+      expect(!m.over, `мини-карта закрыта панелью ${b}`);
+      await pg.click(b);
+    }
+    // кнопка прячет и запоминается
+    await pg.click("#mm-tg"); expect(await pg.locator("#minimap.off").count() === 1 && await pg.locator("#minimap svg").isHidden(), "карта не спряталась");
+    await pg.reload(); await pg.waitForSelector("#minimap.off");
+    await pg.click("#mm-tg"); await pg.waitForSelector("#minimap:not(.off) svg");
+    // нажатие вне показанного уровня переводит фокус на зону под точкой
+    await pg.click('#seg-mode [data-m="2d"]'); await pg.selectOption('#lvlbar select[data-lvl="next"]', { label: "Сировина" });
+    await pg.waitForFunction(() => window.__WH_DEBUG.model.ui.focus !== "WH");
+    const tgt = await pg.evaluate(() => { const m = window.__WH_DEBUG.model, tr = m.tree, F = tr.nodes.get(m.ui.focus), has = (n, x, y) => x >= n.x && x <= n.x + n.w && y >= n.y && y <= n.y + n.d;
+      const z = [...tr.nodes.values()].find((n) => (n.type === "group" || n.type === "rackset") && n.kids.length && n.id !== "WH" && n.id !== F.id && !has(F, n.x + n.w / 2, n.y + n.d / 2)); if (!z) return null;
+      const svg = document.querySelector("#minimap svg"), p = svg.createSVGPoint(); p.x = z.x + z.w / 2; p.y = z.y + z.d / 2; const s = p.matrixTransform(svg.getScreenCTM()); return { x: s.x, y: s.y, cx: p.x, cy: p.y, was: F.id }; });
+    expect(tgt, "нет другой зоны для проверки");
+    await pg.mouse.click(tgt.x, tgt.y);
+    expect(await pg.evaluate((t) => { const m = window.__WH_DEBUG.model, f = m.tree.nodes.get(m.ui.focus); return m.ui.focus !== t.was && t.cx >= f.x && t.cx <= f.x + f.w && t.cy >= f.y && t.cy <= f.y + f.d; }, tgt), "фокус не перешёл на зону под точкой");
+    await ctx.close();
+  });
+  await step("W-20 переход по коду: подсказки без регистра, Enter (сканер), «/» и Ctrl+K", async () => {
+    const { ctx, pg } = await w20();
+    await pg.click('#seg-mode [data-m="2d"]');
+    await pg.keyboard.press("/");
+    expect(await pg.evaluate(() => document.activeElement.id) === "go-q", "«/» не ставит курсор в поле");
+    await pg.keyboard.type("plt-01");
+    await pg.waitForSelector("#go-list:not([hidden]) [data-go]");
+    const first = await pg.locator("#go-list [data-go]").first().getAttribute("data-go");
+    expect(/^PLT-01/.test(first) && await pg.locator("#go-list [data-go]").count() >= 2, `подсказки по префиксу: ${first}`);
+    await pg.fill("#go-q", "plt01a");
+    await pg.waitForFunction(() => document.querySelector("#go-list [data-go]")?.dataset.go === "PLT-01A");
+    await pg.keyboard.press("Enter");
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "PLT-01A");
+    expect(await pg.locator("#vp svg rect.s.sel").count() === 1, "место не выделено на плане");
+    expect(await pg.locator("#go-list").isHidden(), "список не закрылся");
+    // несуществующий код
+    await pg.fill("#go-q", "нема-такого"); await pg.keyboard.press("Enter");
+    expect(/немає/.test(await tx(pg, "#go-n")), "нет сообщения «Такого місця немає»");
+    expect(await tx(pg, "#plan-side h2") === "PLT-01A", "выделение сбилось");
+    // выбор мышью и Ctrl+K
+    await pg.click("#vp svg"); await pg.keyboard.press("Control+k");
+    expect(await pg.evaluate(() => document.activeElement.id) === "go-q", "Ctrl+K не ставит курсор в поле");
+    await pg.fill("#go-q", "PLT-02"); await pg.waitForSelector("#go-list [data-go]");
+    const pick = await pg.locator("#go-list [data-go]").nth(1).getAttribute("data-go");
+    await pg.click("#go-list [data-go] >> nth=1");
+    await pg.waitForFunction((c) => document.querySelector("#plan-side h2")?.textContent === c, pick);
+    // 3D: тот же переход
+    await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForFunction(() => !document.querySelector("#vp .loading"));
+    await pg.fill("#go-q", "PLT-03A"); await pg.keyboard.press("Enter");
+    await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "PLT-03A");
+    await ctx.close();
+  });
+  await step("W-20 тур: проходится, назад, пропускается, повторный запуск из инструкции", async () => {
+    const { ctx, pg } = await w20({}, { tour: true });
+    await pg.waitForSelector("#tour");
+    const ids = [];
+    for (let i = 0; i < 12; i++) {
+      const d = await pg.evaluate(() => { const t = document.querySelector("#tour"), r = t.querySelector(".tour-hl").getBoundingClientRect(), c = t.querySelector(".tour-card").getBoundingClientRect();
+        return { id: t.dataset.step, r: [r.width, r.height], inView: c.left >= 0 && c.top >= 0 && c.right <= innerWidth && c.bottom <= innerHeight, next: t.querySelector("#tour-next").textContent }; });
+      expect(d.r[0] > 10 && d.r[1] > 10, `у шага ${d.id} нет подсвеченного элемента`);
+      expect(d.inView, `подсказка шага ${d.id} вышла за экран`);
+      ids.push(d.id);
+      if (i === 1) { await pg.click("#tour-back"); expect(await pg.evaluate(() => document.querySelector("#tour").dataset.i) === "0", "«Назад» не вернул"); await pg.click("#tour-next"); }
+      if (d.next === "Готово") { await pg.click("#tour-next"); break; }
+      await pg.click("#tour-next");
+    }
+    expect(ids.join() === "mode,levels,select,minimap,goto,edit,catalog,checks,plan,help", `шаги тура: ${ids}`);
+    expect(await pg.locator("#tour").count() === 0, "тур не закрылся");
+    expect(await pg.evaluate(() => localStorage.getItem("wh-app-tour")) === "done", "нет отметки «пройден»");
+    await pg.reload(); await pg.waitForSelector("#plan-side h2", { state: "attached" }); await pg.waitForTimeout(900);
+    expect(await pg.locator("#tour").count() === 0, "тур показан повторно");
+    // повторный запуск из инструкции: пропуск кнопкой, затем Esc
+    await pg.click("#help-btn"); await pg.click("[data-tour]"); await pg.waitForSelector("#tour");
+    expect(await pg.locator("#plan-view").isVisible(), "после запуска тура не открыт план");
+    expect(await tx(pg, "#tour .tour-n") === "Крок 1 з 10", `счётчик: ${await tx(pg, "#tour .tour-n")}`);
+    await pg.click("#tour-skip"); expect(await pg.locator("#tour").count() === 0, "тур не пропускается");
+    expect(await pg.evaluate(() => localStorage.getItem("wh-app-tour")) === "skipped", "нет отметки «пропущен»");
+    await pg.evaluate(() => localStorage.removeItem("wh-app-tour")); await pg.reload(); await pg.waitForSelector("#tour");
+    await pg.keyboard.press("ArrowRight"); expect(await pg.evaluate(() => document.querySelector("#tour").dataset.i) === "1", "стрелка вправо");
+    await pg.keyboard.press("Escape"); expect(await pg.locator("#tour").count() === 0, "Esc не закрывает тур");
+    // английский
+    await pg.click('#seg-lang [data-l="en"]'); await pg.click("#help-btn"); await pg.click("[data-tour]"); await pg.waitForSelector("#tour");
+    expect(/Step 1 of 10/.test(await tx(pg, "#tour .tour-n")) && /Plan: 2D and 3D/.test(await tx(pg, "#tour h2")), "английские тексты тура");
+    await pg.keyboard.press("Escape");
+    // справка описывает новое
+    await pg.click("#help-btn"); expect(await pg.locator("#h-nav").innerText().then((x) => /Minimap/.test(x)) && await pg.locator("#h-mobile").innerText().then((x) => /phone/.test(x)), "в инструкции нет разделов");
+    await ctx.close();
+  });
+  for (const vs of [{ width: 390, height: 844 }, { width: 768, height: 1024 }]) {
+    await step(`W-20 ${vs.width}×${vs.height} (касания): без горизонтальной прокрутки, правки нет, поиск, переход и карточка места, жесты`, async () => {
+      const { ctx, pg } = await w20({ viewport: vs, hasTouch: true, isMobile: true });
+      expect(await hscroll(pg), "прокрутка по горизонтали при открытии");
+      expect(await pg.locator("#menu-btn").isVisible() && !(await pg.locator("#ed-tg").isVisible()) && !(await pg.locator("#bld-tg").isVisible()), "верхняя панель не свёрнута");
+      // поиск и переход по коду — на первом плане: выше плана, крупные поля
+      const fb = await box(pg, "#find-q"), gb = await box(pg, "#go-q"), vpb = await box(pg, "#vp");
+      expect(fb.y < vpb.y && gb.y < vpb.y && fb.height >= 40 && gb.height >= 40, `поля поиска: find ${fb.y}/${fb.height}, go ${gb.y}/${gb.height}, vp ${vpb.y}`);
+      // редактирование отключено с подсказкой
+      await pg.tap("#menu-btn"); await pg.waitForSelector("#ed-tg", { state: "visible" });
+      expect(await hscroll(pg), "прокрутка по горизонтали при открытом меню");
+      await pg.tap("#ed-tg");
+      await pg.waitForFunction(() => /Редагування — з комп.ютера/.test(document.querySelector("#o_notifs")?.textContent || ""));
+      expect(await pg.locator("#editbar").isHidden() && await pg.locator("#ed-tg").getAttribute("aria-pressed") === "false", "режим правки включился");
+      expect(await pg.evaluate(() => window.__WH_DEBUG.model.viewOnly && !window.__WH_DEBUG.model.ui.edit), "модель не в режиме просмотра");
+      expect(await pg.evaluate(() => { window.__WH_DEBUG.model.setEdit(true); return window.__WH_DEBUG.model.ui.edit; }) === false, "model.setEdit(true) не отклонён");
+      await pg.tap("#menu-btn"); await pg.waitForSelector("#ed-tg", { state: "hidden" });
+      // поиск «где лежит» → карточка места на весь экран
+      await pg.tap('#seg-mode [data-m="2d"]');
+      await pg.fill("#find-q", "ДСП"); await pg.waitForSelector("#find-list:not([hidden]) [data-go]");
+      const code = await pg.locator("#find-list [data-go]").first().getAttribute("data-go");
+      await pg.tap("#find-list [data-go]");
+      await pg.waitForFunction((c) => document.querySelector("#plan-side h2")?.textContent === c, code);
+      const sb = await box(pg, "#plan-side");
+      expect(sb.width >= vs.width - 1 && sb.height >= vs.height - 2 && sb.y <= 1, `карточка не на весь экран: ${JSON.stringify(sb)}`);
+      expect(await pg.locator("#plan-side table.o_list tr").count() > 0, "в карточке нет остатков");
+      expect(await hscroll(pg), "прокрутка по горизонтали с карточкой");
+      await pg.tap("#sheet-x"); await pg.waitForSelector("#plan-side", { state: "hidden" });
+      expect(await pg.locator("#sheet-grip").isVisible(), "нет ручки панели");
+      // переход по коду
+      await pg.fill("#go-q", "plt01b"); await pg.keyboard.press("Enter");
+      await pg.waitForFunction(() => document.querySelector("#plan-side h2")?.textContent === "PLT-01B");
+      expect(await pg.locator("#plan-side").isVisible(), "карточка не открылась после перехода по коду");
+      await pg.tap("#sheet-x");
+      // ручка выдвигает панель наполовину
+      await pg.tap("#sheet-grip"); await pg.waitForSelector("#plan-side", { state: "visible" });
+      const hb = await box(pg, "#plan-side"); expect(hb.height < vs.height * 0.7 && hb.y > vs.height * 0.3, `панель не снизу: ${JSON.stringify(hb)}`);
+      await pg.tap("#sheet-x");
+      // инструкция: без горизонтальной прокрутки (после жестов через CDP касания Playwright не работают, поэтому — до них)
+      await pg.tap("#menu-btn"); await pg.tap("#help-btn"); await pg.waitForSelector("#help-view:not([hidden])");
+      expect(await hscroll(pg), "прокрутка по горизонтали в инструкции");
+      await pg.tap("#help-view [data-back]"); await pg.waitForSelector("#help-view", { state: "hidden" });
+      // жесты двумя пальцами: щипок в 2D меняет масштаб, в 3D — расстояние до цели; одним пальцем 3D вращается
+      const cdp = await ctx.newCDPSession(pg), vb = await box(pg, "#vp"), cx = vb.x + vb.width / 2, cy = vb.y + vb.height / 2;
+      const touch = async (type, pts) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: pts.map(([x, y], id) => ({ x, y, id })) });
+      const pinch = async (d0, d1) => { await touch("touchStart", [[cx - d0, cy], [cx + d0, cy]]); for (let k = 1; k <= 6; k++) { const d = d0 + ((d1 - d0) * k) / 6; await touch("touchMove", [[cx - d, cy], [cx + d, cy]]); } await touch("touchEnd", []); };
+      const w0 = (await vbOf(pg))[2]; await pinch(30, 90);
+      expect((await vbOf(pg))[2] < w0 * 0.8, "щипок в 2D не меняет масштаб");
+      await pg.tap('#seg-mode [data-m="3d"]'); await pg.waitForFunction(() => !document.querySelector("#vp .loading") && window.__WH_DEBUG.camera);
+      const dist = () => pg.evaluate(() => window.__WH_DEBUG.camera.position.distanceTo(window.__WH_DEBUG.controls.target));
+      const d0 = await dist(); await pinch(30, 90);
+      expect(await dist() < d0 * 0.85, "щипок в 3D не приближает");
+      const p0 = await pg.evaluate(() => window.__WH_DEBUG.camera.position.toArray());
+      await touch("touchStart", [[cx, cy]]); for (let k = 1; k <= 6; k++) await touch("touchMove", [[cx + k * 15, cy]]); await touch("touchEnd", []);
+      const p1 = await pg.evaluate(() => window.__WH_DEBUG.camera.position.toArray());
+      expect(Math.abs(p1[0] - p0[0]) + Math.abs(p1[2] - p0[2]) > 0.05, "один палец не вращает 3D");
+      expect(await hscroll(pg), "прокрутка по горизонтали после жестов");
+      await ctx.close();
+    });
+  }
+  await step("W-20 тур на телефоне: шаг «Меню», без шагов правки", async () => {
+    const { ctx, pg } = await w20({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, { tour: true });
+    await pg.waitForSelector("#tour");
+    const ids = [];
+    for (let i = 0; i < 12; i++) {
+      ids.push(await pg.evaluate(() => document.querySelector("#tour").dataset.step));
+      const hl = await pg.evaluate(() => { const r = document.querySelector("#tour .tour-hl").getBoundingClientRect(), c = document.querySelector("#tour .tour-card").getBoundingClientRect(); return r.width > 10 && c.left >= 0 && c.right <= innerWidth + 1 && c.bottom <= innerHeight + 1; });
+      expect(hl, `шаг ${ids.at(-1)} вне экрана`);
+      if (await tx(pg, "#tour-next") === "Готово") break;
+      await pg.tap("#tour-next");
+    }
+    expect(ids.includes("menu") && !ids.includes("edit") && ids.length >= 5, `шаги на телефоне: ${ids}`);
+    await pg.tap("#tour-next"); await pg.waitForFunction(() => !document.querySelector("#tour"));
+    await ctx.close();
+  });
   await step("390 px: нет горизонтальной прокрутки", async () => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForSelector("#plan-side h2");
+    await page.waitForSelector("#plan-side h2", { state: "attached" });
     expect(await noHScroll(), "прокрутка по горизонтали в плане");
-    await page.click("#ed-tg");
-    expect(await noHScroll(), "прокрутка по горизонтали в режиме редактирования");
+    await page.click("#menu-btn"); await page.click("#ed-tg"); // правка на узком экране отключена (W-20): кнопка только подсказывает
+    expect(await noHScroll(), "прокрутка по горизонтали при открытом меню");
     await page.click("#help-btn");
     await page.waitForSelector("#help-view:not([hidden])");
     expect(await noHScroll(), "прокрутка по горизонтали в инструкции");

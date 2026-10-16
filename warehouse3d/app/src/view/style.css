@@ -58,7 +58,7 @@ button, input, select { font: inherit; color: inherit; }
 
 /* вид «План» */
 .o_plan { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 100%; }
-.o_plan .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 12px 12px 12px max(16px, env(safe-area-inset-left, 0px)); }
+.o_plan .main { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 12px 12px 12px max(16px, env(safe-area-inset-left, 0px)); }
 .o_plan .side { border-left: 1px solid var(--o-border); overflow: auto; padding: 14px 16px; padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--o-bg); min-width: 0; }
 .side h2 { margin: 0; font-size: 20px; font-weight: 500; overflow-wrap: anywhere; }
 .side .lab { font-size: 12px; color: var(--o-muted); }
@@ -475,3 +475,52 @@ svg .pa-src { stroke: #f2994a; stroke-width: 2.6; stroke-dasharray: 5 3; }
 .o_lb_card { width: 100%; height: auto; background: #fff; border-radius: 2px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
 .o_lb .chk { flex: 1 1 100%; }
 .o_lb .chk input { flex: none; }
+
+/* ---------- W-20: мини-карта, переход по коду, тур для новичков, узкий экран (просмотр и поиск) */
+.vp .status { right: 200px; }
+.minimap { position: absolute; right: 8px; bottom: 8px; z-index: 3; width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); overflow: hidden; }
+.minimap[hidden] { display: none; }
+.minimap svg { display: block; width: 100%; max-height: 130px; cursor: crosshair; touch-action: none; }
+.minimap .mm-tg { position: absolute; top: 2px; right: 2px; z-index: 1; width: 24px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--o-bg); color: var(--fg); font: 600 13px/1 var(--f-mono); cursor: pointer; }
+.minimap.off { width: 30px; height: 30px; } .minimap.off svg { display: none; } .minimap.off .mm-tg { top: 2px; right: 2px; }
+.mm-z { fill: none; stroke: var(--steel); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.mm-r { fill: var(--steel); fill-opacity: 0.55; stroke: none; }
+.mm-fr { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.findbox #go-n { font-size: 12px; }
+#menu-btn, .sheet-grip, .sheet-x { display: none; }
+#tour { position: fixed; inset: 0; z-index: 100; }
+.tour-shade { position: absolute; inset: 0; }
+.tour-hl { position: fixed; border: 2px solid var(--o-brand); border-radius: 6px; box-shadow: 0 0 0 9999px rgba(15, 18, 28, 0.55); pointer-events: none; transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s; }
+.tour-card { position: fixed; padding: 12px 14px; background: var(--o-bg); color: var(--o-text); border: 1px solid var(--o-border); border-radius: 8px; box-shadow: var(--shadow); }
+.tour-card h2 { margin: 2px 0 6px; font-size: 16px; } .tour-card p { margin: 0 0 10px; font-size: 13px; line-height: 1.45; }
+.tour-n { font-size: 11px; color: var(--o-muted); } .tour-act { display: flex; align-items: center; gap: 6px; } .tour-act .sp { flex: 1; }
+.tour-act [hidden] { display: none; }
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  .app { height: 100dvh; min-height: 0; } .content { overflow: hidden; } .o_plan { height: 100%; }
+  .o_plan .main { padding: 8px; }
+  .topbar { padding: 6px 10px; gap: 6px; }
+  .topbar .brand { flex: 1 1 0; order: 0; } .topbar .brand b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .topbar .sub { display: none; }
+  #seg-mode { order: 1; } #menu-btn { display: inline-flex; align-items: center; justify-content: center; order: 2; min-width: 44px; }
+  .topbar:not(.open) > :not(.brand):not(#menu-btn):not(#seg-mode) { display: none !important; }
+  .topbar > :not(.brand):not(#menu-btn):not(#seg-mode) { order: 3; }
+  .topbar.open > .sp { display: none; }
+  .topbar.open > .btn, .topbar.open > .seg, .topbar.open > select { flex: 1 1 calc(50% - 6px); }
+  .vo { display: none !important; }
+  .btn, .seg button, .topbar select, .planbar2 select, .findbox input, .o_lvlbar select { min-height: 44px; font-size: 16px; }
+  #ed-tg { opacity: 0.55; }
+  .planbar2 { order: -1; gap: 6px; } .planbar2 .findbox { flex: 1 1 100%; display: flex; } .findbox input { flex: 1; width: auto; min-width: 0; }
+  .o_find { width: 100%; max-width: 100%; max-height: 40dvh; } .o_find button { min-height: 44px; }
+  .legendrow, .vp .status { display: none; }
+  .vp { flex: 1; height: auto; min-height: 200px; }
+  .vp .tools button { width: 40px; height: 40px; } .minimap { width: 112px; }
+  .o_prob { left: 8px; right: 8px; top: 8px; width: auto; max-height: 75%; }
+  .o_plan .side { position: fixed; left: 0; right: 0; bottom: 0; top: auto; height: 55dvh; z-index: 40; border: 0; border-top: 1px solid var(--o-border); border-radius: 12px 12px 0 0; box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18); padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transition: transform 0.2s; }
+  .app[data-sheet="closed"] .o_plan .side { transform: translateY(100%); visibility: hidden; }
+  .app[data-sheet="full"] .o_plan .side { top: 0; height: auto; border-radius: 0; padding-top: 56px; }
+  .sheet-grip { position: fixed; left: 0; right: 0; bottom: 0; z-index: 39; min-height: 48px; padding-bottom: env(safe-area-inset-bottom, 0px); border: 0; border-top: 1px solid var(--o-border); background: var(--o-bg); color: var(--o-text); font: 600 15px var(--f-body); }
+  .app[data-sheet="closed"] .sheet-grip { display: block; } .app:not([data-sheet="closed"]) .sheet-x { display: block; }
+  .sheet-x { position: fixed; z-index: 42; right: 8px; bottom: calc(55dvh - 52px); width: 44px; height: 44px; border: 1px solid var(--o-border); border-radius: 22px; background: var(--o-bg); color: var(--o-text); font-size: 18px; cursor: pointer; }
+  .app[data-sheet="full"] .sheet-x { top: 6px; bottom: auto; }
+  .tour-card { max-width: calc(100vw - 16px); }
+}
