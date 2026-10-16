@@ -72,7 +72,7 @@ export function openLabels({ model, i18n }) {
         <label>${T("lb.mx")}<input type="number" data-f="mx" min="0" step="any" placeholder="${T("lb.auto")}"></label><label>${T("lb.my")}<input type="number" data-f="my" min="0" step="any" placeholder="${T("lb.auto")}"></label>
         ${num("gx", "lb.gx", 'min="0" value="0"')}${num("gy", "lb.gy", 'min="0" value="0"')}${num("skip", "lb.skip", 'min="0" step="1" value="0"')}
         <label>${T("lb.dpi")}<select data-f="dpi">${DPIS.map((d) => `<option value="${d}">${d}</option>`).join("")}</select></label>
-        ${chk("pageLabel", "lb.pageLabel", false)}${chk("frame", "lb.frame", false)}${chk("translit", "lb.translit", true)}
+        ${chk("pageLabel", "lb.pageLabel", false)}${chk("frame", "lb.frame", false)}${chk("translit", "lb.translit", true)}${chk("translitPdf", "lb.translitPdf", false)}
         <p class="mut" style="flex-basis:100%;margin:0">${T("lb.translitNote")}</p></fieldset>
     </div>
     <p data-count><b></b></p><p class="o_warn" data-warn role="note" hidden></p><p class="o_err" data-err role="alert"></p>
@@ -88,7 +88,7 @@ export function openLabels({ model, i18n }) {
   el("preset").value = PRESETS[0].id; setPreset(PRESETS[0].id);
   const state = () => {
     const scope = val("scope"), filter = { ids: scope === "sel" ? sel : null, zone: scope === "zone" ? val("zoneId") : null, row: scope === "row" ? val("rowId") : null, level: val("level") || null, onlyNew: val("onlyNew"), onlyApplied: val("onlyApplied") };
-    const cfg = normLabel({ sym: val("sym"), zone: val("lnZone"), row: val("lnRow"), type: val("lnType"), arrow: val("arrow"), scan: val("scan"), translit: val("translit"), frame: val("frame"), dpi: val("dpi") });
+    const cfg = normLabel({ sym: val("sym"), zone: val("lnZone"), row: val("lnRow"), type: val("lnType"), arrow: val("arrow"), scan: val("scan"), translit: val("translit"), translitPdf: val("translitPdf"), frame: val("frame"), dpi: val("dpi") });
     const sheet = sheetOf({ preset: val("preset") === "custom" ? null : val("preset"), w: val("w"), h: val("h"), cols: val("cols"), rows: val("rows"), mx: val("mx"), my: val("my"), gx: val("gx"), gy: val("gy"), skip: val("skip"), page: val("pageLabel") ? "label" : "a4" });
     return { filter, cfg, sheet, list: selectPlaces(places, filter) };
   };
