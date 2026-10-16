@@ -85,6 +85,13 @@ class F3dGantryStack(models.Model):
     diff_since = fields.Datetime()
     replenish_at = fields.Datetime(string="Останнє поповнення", copy=False)
     fill = fields.Float(compute="_compute_fill", string="Заповнення")
+    below_min = fields.Boolean(
+        compute="_compute_below_min",
+        store=True,
+        index=True,
+        string="Нижче мінімуму",
+        help="Є правило поповнення, і кількість у порталі менша за його мінімум (домен не вміє порівнювати поле з полем).",
+    )
     job_ids = fields.One2many("f3d.gantry.job", "stack_id", string="Завдання")
     note = fields.Text()
 
@@ -111,6 +118,11 @@ class F3dGantryStack(models.Model):
     def _compute_fill(self):
         for rec in self:
             rec.fill = rec.ws_qty / rec.capacity if rec.capacity > 0 else 0.0
+
+    @api.depends("ws_qty", "orderpoint_id.product_min_qty")
+    def _compute_below_min(self):
+        for rec in self:
+            rec.below_min = bool(rec.orderpoint_id) and rec.ws_qty < rec.orderpoint_id.product_min_qty
 
     # --- R-15: звірка стосу ---------------------------------------------------------------------------
     def _f3d_odoo_side(self):

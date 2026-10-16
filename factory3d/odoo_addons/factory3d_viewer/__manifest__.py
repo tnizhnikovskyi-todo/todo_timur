@@ -35,6 +35,8 @@
             ("include", "web._assets_backend_helpers"),
             "web/static/src/scss/pre_variables.scss",
             "web/static/lib/bootstrap/scss/_variables.scss",
+            "web/static/lib/bootstrap/scss/_variables-dark.scss",
+            "web/static/lib/bootstrap/scss/_maps.scss",  # $theme-colors-rgb для utilities/_api.scss
             ("include", "web._assets_bootstrap_backend"),
             ("include", "web._assets_core"),  # module_loader.js, owl.js, odoo_module.js — уже тут
             "web/static/src/libs/fontawesome/css/font-awesome.css",

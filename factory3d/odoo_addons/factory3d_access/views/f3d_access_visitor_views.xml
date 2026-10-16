@@ -95,8 +95,7 @@
                 <field name="name"/>
                 <field name="visitor_company"/>
                 <field name="host_employee_id"/>
-                <filter name="today" string="Сьогодні"
-                        domain="[('date_from', '&lt;=', datetime.datetime.combine(context_today(), datetime.time.max)), ('date_to', '&gt;=', datetime.datetime.combine(context_today(), datetime.time.min))]"/>
+                <filter name="today" string="Сьогодні" domain="[('is_today', '=', True)]"/>
                 <filter name="on_site" string="На території" domain="[('state', '=', 'on_site')]"/>
                 <filter name="expected" string="Очікуються" domain="[('state', '=', 'expected')]"/>
                 <filter name="overdue" string="Прострочені" domain="[('overdue', '=', True)]"/>

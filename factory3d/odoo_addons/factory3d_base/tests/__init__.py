@@ -8,3 +8,4 @@ from . import test_batch
 from . import test_migration
 from . import test_hooks
 from . import test_security
+from . import test_view_js_guards

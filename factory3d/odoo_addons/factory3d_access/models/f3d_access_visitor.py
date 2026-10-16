@@ -5,6 +5,7 @@ from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..tools import params as P
+from ..tools.dates import local_day_bounds_utc
 from ..tools.biostar_client import BioStarError, BioStarWriteDisabled
 from .f3d_access_card import SYNC_STATES
 
@@ -70,6 +71,7 @@ class F3dAccessVisitor(models.Model):
     sync_error = fields.Char(size=255, readonly=True)
     event_ids = fields.One2many('f3d.access.event', 'visitor_id', readonly=True)
     violation_count = fields.Integer(compute='_compute_violation_count')
+    is_today = fields.Boolean(string='Сьогодні', compute='_compute_is_today', search='_search_is_today')
 
     def init(self):
         # presence (SQL-представлення) створюється раніше за таблицю відвідувачів: перебудувати з UNION
@@ -84,6 +86,20 @@ class F3dAccessVisitor(models.Model):
             counts = {visitor.id: count for visitor, count in groups}
         for rec in self:
             rec.violation_count = counts.get(rec.id, 0)
+
+    def _compute_is_today(self):
+        start, end = local_day_bounds_utc(fields.Datetime.now())
+        for rec in self:
+            rec.is_today = bool(rec.date_from and rec.date_to and rec.date_from < end and rec.date_to >= start)
+
+    def _search_is_today(self, operator, value):
+        """Фільтр «Сьогодні»: візит перетинає київську добу сервера (а не `context_today()` браузера з py.js без datetime.time.min/max)."""
+        if operator not in ('=', '!=') or not isinstance(value, bool):
+            raise NotImplementedError("Пошук «Сьогодні» підтримує лише = / != True/False")
+        start, end = local_day_bounds_utc(fields.Datetime.now())
+        if (operator == '=') == value:
+            return ['&', ('date_from', '<', end), ('date_to', '>=', start)]
+        return ['|', ('date_from', '>=', end), ('date_to', '<', start)]
 
     @api.depends('name', 'visitor_company')
     def _compute_display_name(self):
