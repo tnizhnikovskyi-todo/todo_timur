@@ -24,10 +24,10 @@ function deco(n, f, x, y, w, d) {
   return "";
 }
 
-export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark = null }) {
+export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark = null, onView = null }) {
   let svg = null, cont = null, dyn = null, bp = null, hidden = false, lastH = null, els = [], slots = [];
   let vb = { x: -2, y: -2, w: model.tree.W0 + 4, h: model.tree.D0 + 4 };
-  const setVB = () => { if (svg) { svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); bp?.onView(); } };
+  const setVB = () => { if (svg) { svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); bp?.onView(); onView?.(); } };
 
   // разметка плана из дерева (строка); элементы слоя и их кэш состояния собирает fill
   function markup() {
@@ -68,6 +68,24 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
     vp.prepend(svg);
     bp = createBldPlan({ model, i18n, svg, vp, view: viewInfo, toWorld }); bp.render(); // план здания (W-04): слой, редактор, линейки
     let drag = null, own = false; // own — жест ведёт редактор здания
+    // два пальца (W-20): щипок — масштаб, сдвиг середины — сдвиг плана; жест одним пальцем при этом не начинается
+    const pts = new Map(); let pinch = null;
+    const mid = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    svg.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch") return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) { drag = null; own = false; svg.classList.remove("drag"); pinch = mid(); e.stopImmediatePropagation(); }
+    }, true);
+    svg.addEventListener("pointermove", (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (!pinch || pts.size !== 2) return;
+      e.stopImmediatePropagation();
+      const m = mid(); zoom(pinch.d / m.d, toWorld(m.x, m.y));
+      const s = Math.max(vb.w / svg.clientWidth, vb.h / svg.clientHeight); vb.x -= (m.x - pinch.x) * s; vb.y -= (m.y - pinch.y) * s; setVB(); pinch = m;
+    }, true);
+    const endPt = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; };
+    svg.addEventListener("pointerup", endPt, true); svg.addEventListener("pointercancel", endPt, true);
     const W = (e) => toWorld(e.clientX, e.clientY);
     const nodeAt = (el) => el?.closest?.("[data-node]")?.dataset.node;
     svg.addEventListener("pointerdown", (e) => {
@@ -142,6 +160,9 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
     p = p || { x: vb.x + vb.w / 2, y: vb.y + vb.h / 2 };
     vb = { x: p.x - (p.x - vb.x) * f, y: p.y - (p.y - vb.y) * f, w: vb.w * f, h: vb.h * f }; setVB();
   }
+  // мини-карта (W-20): видимая область в метрах и перемещение центра вида
+  const view = () => { if (!svg) return null; const v = viewInfo(); return v.s ? { x: v.ox, y: v.oy, w: v.w * v.s, h: v.h * v.s } : null; };
+  function panTo(x, y) { vb.x = x - vb.w / 2; vb.y = y - vb.h / 2; setVB(); }
   function fit() {
     if (model.bld.state.on) { // режим «Будівля»: весь склад (корень раскладки) вместе с контуром здания, если он есть
       const b = model.building, r = model.tree.root, c = b ? B.bbox(b.contour) : { x: r.x, y: r.y, w: r.w, d: r.d }, x0 = Math.min(c.x, r.x), y0 = Math.min(c.y, r.y), x1 = Math.max(c.x + c.w, r.x + r.w), y1 = Math.max(c.y + c.d, r.y + r.d), m = Math.max(x1 - x0, y1 - y0) * 0.06 + 0.5;
@@ -192,5 +213,5 @@ export function createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark 
   }
   // дерево перестроено: меняется содержимое слоя, масштаб и сдвиг сохраняются
   function rebuild() { build(); setVB(); bp?.render(); }
-  return { build, rebuild, paint, zoom, fit, exists: () => !!svg, bldRefresh: () => bp?.render(), bldView: () => (svg ? viewInfo() : null), setHidden(b) { hidden = b; svg?.toggleAttribute("hidden", b); } };
+  return { build, rebuild, paint, zoom, fit, view, panTo, exists: () => !!svg, bldRefresh: () => bp?.render(), bldView: () => (svg ? viewInfo() : null), setHidden(b) { hidden = b; svg?.toggleAttribute("hidden", b); } };
 }

@@ -121,7 +121,7 @@ export function createModel(project, storage, opts = {}) {
   const word = (k) => (s.words() || {})[k] || DEFAULT_WORDS[k];
   s.comments = createComments(s, {
     can,
-    goBld: (id) => { if (!bs.on) { if (ui.edit) setEdit(false); bs.on = true; } bs.sel = [id]; bs.vtx = null; bemit(); },
+    goBld: (id) => { if (noEdit()) return; if (!bs.on) { if (ui.edit) setEdit(false); bs.on = true; } bs.sel = [id]; bs.vtx = null; bemit(); },
     focusNode: (id) => {
       const n = s.tree.nodes.get(id); if (!n) return false;
       if (bs.on) { bs.on = false; bs.tool = "select"; bclear(); bemit(); }
@@ -131,7 +131,9 @@ export function createModel(project, storage, opts = {}) {
   });
   const bops = Object.fromEntries(Object.keys(BLD_OPS).map((k) => [k, (...a) => ed.exec(s, () => BLD_OPS[k](s, ...a))]));
   const ui = s.ui, patch = (p, type = "select") => { if (!p) return false; Object.assign(ui, p); s.emit({ type }); return true; };
-  const setEdit = (on) => { if (on && bs.on) { bs.on = false; bs.tool = "select"; bclear(); bemit(); } patch({ edit: on, esel: on ? ui.focus : null, sel: null, msel: [] }); if (!on) s.locks.release(); };
+  let vOnly = false; // просмотр без правки (W-20: узкий экран): режим «Редагувати» и «Будівля» не включаются
+  const noEdit = () => { if (vOnly) ed.say(s, "info", "n.editDesktop"); return vOnly; };
+  const setEdit = (on) => { if (on && noEdit()) return; if (on && bs.on) { bs.on = false; bs.tool = "select"; bclear(); bemit(); } patch({ edit: on, esel: on ? ui.focus : null, sel: null, msel: [] }); if (!on) s.locks.release(); };
   const bind = (name) => (...a) => ed.exec(s, () => ed.OPS[name](s, ...a)); // exec — чтобы отклонённую проверками операцию можно было повторить («Поставити все одно»)
   // глубина узла: собственная настройка ("inherit" — как у склада) и действующая
   const depthInfo = (id) => {
@@ -248,6 +250,8 @@ export function createModel(project, storage, opts = {}) {
     focusUp: () => { const f = s.tree.nodes.get(ui.focus); if (f.parent) patch(sel.focusTo(s.tree, ui, f.parent), "focus"); },
     setPick(p) { if (!PICKS.includes(p)) return; ui.pick = p; wr("pick", p); s.emit({ type: "select" }); },
     setEdit,
+    setViewOnly(b) { vOnly = !!b; if (vOnly && ui.edit) setEdit(false); },
+    get viewOnly() { return vOnly; },
     // блокировки зон (locks.js): занятая другим зона для узла, продление и снятие (хост вызывает по таймеру и при закрытии страницы)
     locks: { busyInfo: (id) => s.locks.busyInfo(id), zoneOf: (id) => s.locks.zoneOf(id), held: () => s.locks.held(), renew: () => s.locks.renew(), release: () => s.locks.release(), refresh: () => s.locks.refresh(), marks: () => s.locks.marks() },
     dragSet: (id) => sel.dragSet(s.tree, ui, id),
@@ -327,7 +331,7 @@ export function createModel(project, storage, opts = {}) {
       get building() { return bb(); },
       get saved() { return s.saved.building || null; },
       tools: B.TOOLS, grids: B.GRIDS, ops: bops,
-      setOn(on) { on = !!on; if (on === bs.on) return; if (on) { if (ui.edit) setEdit(false); bs.on = true; } else { bs.on = false; bs.tool = "select"; bclear(); } bemit(); },
+      setOn(on) { on = !!on; if (on === bs.on || (on && noEdit())) return; if (on) { if (ui.edit) setEdit(false); bs.on = true; } else { bs.on = false; bs.tool = "select"; bclear(); } bemit(); },
       setTool(t) { if (!B.TOOLS.includes(t)) return; bs.tool = t; bs.first = null; bemit(); },
       set(p) { for (const k of ["grid", "snap", "first", "ruler"]) if (k in p) bs[k] = p[k]; if ("grid" in p) wr("bgrid", bs.grid); bemit(); },
       select(ids, vtx = null) { bs.sel = [...new Set([].concat(ids || []))]; bs.vtx = vtx; bemit(); },

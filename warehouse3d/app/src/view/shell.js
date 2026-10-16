@@ -20,32 +20,37 @@ import { bindKeys } from "./keys.js";
 import { esc, isLow, scrollToSide, zoneHint } from "./util.js";
 import { legendHtml } from "./heat.js";
 import { MIN_QUERY } from "../core/stock.js";
+import { createMinimap } from "./minimap.js";
+import { createGoto } from "./goto.js";
+import { createMobile } from "./mobile.js";
+import { TOUR_KEY } from "../core/tour.js";
 
 const HTML = `
 <div class="app">
   <header class="topbar">
     <div class="brand"><span class="logo" aria-hidden="true">⬡</span><b data-i18n="app.title"></b><span class="sub" id="wh-sub"></span></div>
     <select class="whsw" id="wh-switch" data-i18n-attr="aria-label:top.warehouse,title:top.warehouse"></select>
-    <button class="btn btn-secondary" id="var-btn" data-i18n-attr="title:top.variantsTitle"></button>
-    <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" data-i18n="top.building"></button></div>
+    <button class="btn btn-secondary vo" id="var-btn" data-i18n-attr="title:top.variantsTitle"></button>
+    <div class="seg" id="seg-mode" role="group" data-i18n-attr="aria-label:plan.viewLabel"><button data-m="2d">2D</button><button data-m="3d">3D</button><button data-m="bld" id="bld-tg" class="vo" data-i18n="top.building"></button></div>
+    <button class="btn btn-secondary" id="menu-btn" aria-expanded="false" data-i18n-attr="aria-label:mob.menu,title:mob.menu">☰</button>
     <button class="btn btn-secondary" id="ed-tg" aria-pressed="false"></button>
-    <div class="filemenu"><button class="btn btn-secondary" id="file-btn" aria-haspopup="menu" aria-expanded="false" data-i18n="top.file"></button>
+    <div class="filemenu vo"><button class="btn btn-secondary" id="file-btn" aria-haspopup="menu" aria-expanded="false" data-i18n="top.file"></button>
       <div class="o_menu" id="file-list" role="menu" hidden data-i18n-attr="aria-label:file.menu">
         <button role="menuitem" id="fm-imp-loc" data-i18n="file.impLoc"></button><button role="menuitem" id="fm-exp-loc" data-i18n="file.expLoc"></button>
         <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button>
         <hr><button role="menuitem" id="fm-new-scratch" data-i18n="file.newScratch"></button>
         <hr><div class="mut" role="presentation" style="padding:2px 12px;font-size:11px" data-i18n="file.docs"></div><button role="menuitem" id="fm-doc-bom" data-i18n="file.docBom"></button><button role="menuitem" id="fm-doc-plan" data-i18n="file.docPlan"></button><button role="menuitem" id="fm-doc-places" data-i18n="file.docPlaces"></button></div></div>
     <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
-    <button class="btn btn-secondary" id="plan-btn" data-i18n="top.plan" hidden></button>
-    <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
-    <button class="btn btn-secondary" id="wiz-btn" aria-pressed="false" data-i18n="wiz.btn" hidden></button>
+    <button class="btn btn-secondary vo" id="plan-btn" data-i18n="top.plan" hidden></button>
+    <button class="btn btn-secondary vo" id="odoo-new" data-i18n="top.odooNew" hidden></button>
+    <button class="btn btn-secondary vo" id="wiz-btn" aria-pressed="false" data-i18n="wiz.btn" hidden></button>
     <span class="sp"></span>
     <span class="role-badge" id="role-badge" hidden></span>
-    <button class="btn btn-secondary" id="lb-btn" data-i18n="lb.btn" data-i18n-attr="title:lb.btnTitle"></button>
-    <button class="btn btn-secondary" id="pa-btn" data-i18n="pa.btn" data-i18n-attr="title:pa.btnTitle"></button>
-    <button class="btn btn-secondary" id="hist-btn" data-i18n="top.history" data-i18n-attr="title:top.historyTitle"></button>
+    <button class="btn btn-secondary vo" id="lb-btn" data-i18n="lb.btn" data-i18n-attr="title:lb.btnTitle"></button>
+    <button class="btn btn-secondary vo" id="pa-btn" data-i18n="pa.btn" data-i18n-attr="title:pa.btnTitle"></button>
+    <button class="btn btn-secondary vo" id="hist-btn" data-i18n="top.history" data-i18n-attr="title:top.historyTitle"></button>
     <button class="btn btn-secondary" id="cm-btn" aria-pressed="false" data-i18n-attr="title:top.commentsTitle"><span data-i18n="top.comments"></span> <span class="cnt" id="cm-cnt">0</span></button>
-    <button class="btn btn-secondary" id="tray-btn" aria-pressed="false" hidden><span data-i18n="tray.button"></span> <span class="cnt" id="tray-cnt">0</span></button>
+    <button class="btn btn-secondary vo" id="tray-btn" aria-pressed="false" hidden><span data-i18n="tray.button"></span> <span class="cnt" id="tray-cnt">0</span></button>
     <button class="btn btn-secondary" id="pr-btn" aria-pressed="false"><span data-i18n="prob.button"></span> <span class="cnt" id="pr-cnt">0</span></button>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
     <div class="seg" id="seg-lang" role="group" data-i18n-attr="aria-label:lang.label"><button data-l="uk" title="Українська">UK</button><button data-l="en" title="English">EN</button></div>
@@ -66,8 +71,10 @@ const HTML = `
           <span id="ed-st" class="ed-st"></span>
         </div>
         <div class="planbar2" id="planbar2">
-          <div class="seg pick" id="seg-pick" role="group" data-i18n-attr="aria-label:pick.aria"><span class="lbl" data-i18n="pick.label"></span>${PICKS.map((k) => `<button data-pk="${k}" data-i18n="pick.${k}"></button>`).join("")}</div>
+          <div class="seg pick vo" id="seg-pick" role="group" data-i18n-attr="aria-label:pick.aria"><span class="lbl" data-i18n="pick.label"></span>${PICKS.map((k) => `<button data-pk="${k}" data-i18n="pick.${k}"></button>`).join("")}</div>
           <label class="heatsel"><span class="lbl" data-i18n="heat.label"></span><select id="heat-sel" data-i18n-attr="aria-label:heat.label"></select></label>
+          <div class="findbox" id="go-box"><input type="search" id="go-q" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="go-list" data-i18n-attr="placeholder:go.placeholder,aria-label:go.label"><span id="go-n" class="mut" aria-live="polite"></span>
+            <ul class="o_find" id="go-list" role="listbox" hidden></ul></div>
           <div class="findbox"><input type="search" id="find-q" autocomplete="off" data-i18n-attr="placeholder:find.placeholder,aria-label:find.label"><button class="btn btn-link" id="find-x" hidden data-i18n-attr="aria-label:find.clear,title:find.clear">✕</button><span id="find-n" class="mut" aria-live="polite"></span>
             <ul class="o_find" id="find-list" hidden></ul></div>
           <button class="btn btn-link" id="pa-clear" hidden data-i18n-attr="title:pa.clearTitle"><span data-i18n="pa.chip"></span> ×</button>
@@ -81,6 +88,8 @@ const HTML = `
         </div>
       </div>
       <aside class="side" id="plan-side" aria-live="polite"></aside>
+      <button type="button" class="sheet-grip" id="sheet-grip" aria-expanded="false" data-i18n="mob.panel"></button>
+      <button type="button" class="sheet-x" id="sheet-x" data-i18n-attr="aria-label:mob.close,title:mob.close">✕</button>
     </div>
     <div class="help-view" id="help-view" hidden></div>
     <aside class="o_prob" id="problems" hidden aria-label="Problems"></aside>
@@ -126,7 +135,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     tip.style.left = `${Math.max(4, x)}px`; tip.style.top = `${Math.max(4, y)}px`;
   };
 
-  const afterPick = () => scrollToSide(root);
+  const afterPick = () => { scrollToSide(root); mob?.card(); }; // выбрано место: на широком экране — к боковой панели, на узком — карточка на весь экран
   // панель проблем (W-07): переход к объекту — выделение и уровень на модели; у объекта здания — режим «Будівля»
   let probs = null, tray = null, cm = null, wiz = null;
   const goProblem = (p) => {
@@ -136,15 +145,20 @@ export function mountApp(root, { model, i18n, host = {} }) {
   };
   // значок на плане (W-18): комментарии объекта — в панели «Коментарі», блокировка — уровень выше зоны с выделением
   const goMark = (node, kind) => { if (kind === "comment") cm?.showNode(node); else { model.focusTo(node); apply(); } };
-  const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark });
+  let mini = null, mob = null;
+  mob = createMobile({ model, root, onChange: () => mini?.place() });
+  const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark, onView: () => mini?.frame() });
   const side = createSidePanel({ model, i18n, root: q("#plan-side"), host });
+  // мини-карта (W-20): схема склада и рамка вида; в 3D рамка — площадь пола в кадре
+  mini = createMinimap({ model, i18n, vp, narrow: mob.narrow,
+    view: () => (mode === "2d" ? p2.view() : three?.view() || null), panTo: (x, y) => (mode === "2d" ? p2.panTo(x, y) : three?.panTo(x, y)) });
 
   // ---------- 3D: загрузка по первому обращению
   function ensureThree() {
     if (three) return Promise.resolve(three);
     if (!threeLoading) {
       const ld = document.createElement("div"); ld.className = "loading"; ld.textContent = t("plan.loading3d"); vp.append(ld);
-      threeLoading = createPlan3D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark })
+      threeLoading = createPlan3D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark, onView: () => mini?.frame() })
         .then((x) => { three = x; ld.remove(); return x; })
         .catch((e) => { ld.textContent = t("plan.fail3d"); threeLoading = null; console.error(e); });
     }
@@ -192,6 +206,8 @@ export function mountApp(root, { model, i18n, host = {} }) {
   };
   q("#find-x").onclick = () => { findQ.value = ""; findOpen = false; model.find.set(""); renderFind(); findQ.focus(); };
   document.addEventListener("click", (ev) => { if (findOpen && !ev.target.closest(".findbox")) { findOpen = false; renderFind(); } });
+  // переход по коду места (W-20): поле, подсказки, Enter от сканера, «/» и Ctrl+K
+  const go = createGoto({ model, i18n, root, isActive: () => view === "plan", onGo: () => afterPick() });
   // время снимка — в подсказке кнопки «Оновити дані» и в панели склада
   function renderData() { const m = model.data.meta || {}, at = m.pulled_at || m.now; q("#data-refresh").title = t("top.dataRefreshTitle") + (at ? ` · ${t("top.dataAsOf", { time: at })}` : ""); }
   const dr = q("#data-refresh");
@@ -219,7 +235,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     const wb = q("#wiz-btn"), wo = !q("#wizard").hidden;
     wb.hidden = !model.wizard.active; wb.setAttribute("aria-pressed", String(wo && model.wizard.active)); wb.title = t("wiz.title");
     updateEditBar(root, { model, i18n });
-    paintTop();
+    paintTop(); mini?.place();
   }
   // вариант планировки, роль, число открытых комментариев (W-18)
   function paintTop() {
@@ -239,20 +255,20 @@ export function mountApp(root, { model, i18n, host = {} }) {
     tip.hidden = true;
     paintBars(); renderLvl();
     if (mode === "3d") ensureThree().then((x) => { if (x && mode === "3d") { x.canvas.hidden = false; x.lbl.hidden = false; x.mkl.hidden = false; x.resize(); x.makeLabels(); x.makeMarks(); x.paint(); x.fit(true); } });
-    refresh();
+    refresh(); mini?.frame();
   }
 
   // ---------- события модели
   model.on((ev) => {
     if (ev.type === "notify") { notifier.fromEvent(ev, () => model.checks.force()); probs?.render(); tray?.render(); return; }
     if (ev.type === "wizard") { paintBars(); return; } // сама панель мастера слушает модель (wizard.js)
-    if (ev.type === "warehouse") { notifier.dropForce(); renderSwitch(); applyStatic(); renderHeat(); renderFind(); renderData(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); cm?.render(); return; }
-    if (ev.type === "rebuild") { notifier.dropForce(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); renderHeat(); renderFind(); refresh(); }
+    if (ev.type === "warehouse") { notifier.dropForce(); mini?.build(); go.reset(); renderSwitch(); applyStatic(); renderHeat(); renderFind(); renderData(); side.render(); paintBars(); refresh(); probs?.render(); tray?.render(); cm?.render(); return; }
+    if (ev.type === "rebuild") { notifier.dropForce(); mini?.build(); go.reset(); p2.rebuild(); p2.setHidden(mode !== "2d"); if (three) three.rebuild(); renderLvl(); renderHeat(); renderFind(); refresh(); }
     else if (ev.type === "comments" || ev.type === "locks" || ev.type === "variant") { refresh(); if (three && mode === "3d") three.makeMarks(); cm?.render(); }
     else if (ev.type === "heat") { renderHeat(); refresh(); }
     else if (ev.type === "find") { renderFind(); refresh(); }
     else if (ev.type === "putaway") { refresh(); probs?.render(); }
-    else if (ev.type === "data") { p2.paint(); if (three) three.rebuild(); renderHeat(); renderFind(); renderData(); refresh(); }
+    else if (ev.type === "data") { go.reset(); p2.paint(); if (three) three.rebuild(); renderHeat(); renderFind(); renderData(); refresh(); }
     else if (ev.type === "focus") { renderLvl(); p2.paint(); p2.fit(); if (three) { three.makeLabels(); three.makeMarks(); three.paint(); three.fit(); } cm?.render(); }
     else if (ev.type === "bld") p2.bldRefresh(); // режим «Будівля»: слой здания, панель, строка состояния
     else refresh();
@@ -321,10 +337,12 @@ export function mountApp(root, { model, i18n, host = {} }) {
     view = v;
     q("#plan-view").hidden = v !== "plan"; q("#help-view").hidden = v !== "help";
     q("#help-btn").setAttribute("aria-pressed", String(v === "help"));
-    if (v === "help") { renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan") }); q("#help-view").scrollTop = 0; }
+    if (v === "help") { renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); } }); q("#help-view").scrollTop = 0; }
     else if (three) three.resize();
   }
-  q("#help-btn").onclick = () => showView(view === "help" ? "plan" : "help");
+  // тур для новичков (W-20): при первом входе и по кнопке в инструкции; модуль грузится лениво
+  const startTour = () => import("./tour.js").then((m) => m.startTour({ root, i18n })).catch((e) => console.error(e));
+  q("#help-btn").onclick = () => { mob.closeMenu(); showView(view === "help" ? "plan" : "help"); };
   q("#pr-btn").onclick = () => { probs.toggle(); paintBars(); };
   q("#tray-btn").onclick = () => tray.toggle();
   q("#wiz-btn").onclick = () => wiz.toggle();
@@ -334,13 +352,13 @@ export function mountApp(root, { model, i18n, host = {} }) {
   // ---------- смена языка
   i18n.onChange((l) => {
     document.documentElement.lang = l; model.pref.write("lang", l);
-    applyStatic(); renderHeat(); renderFind(); renderData(); paintBars(); renderLvl(); p2.rebuild(); p2.setHidden(mode !== "2d"); p2.paint();
+    applyStatic(); mini.refreshText(); renderHeat(); renderFind(); renderData(); paintBars(); renderLvl(); p2.rebuild(); p2.setHidden(mode !== "2d"); p2.paint();
     if (three) { three.canvas.setAttribute("aria-label", t("plan.canvasLabel")); three.makeLabels(); }
     side.render(); refresh(); q("#problems").setAttribute("aria-label", t("prob.title")); probs?.render();
     q("#tray").setAttribute("aria-label", t("tray.title")); tray?.render();
     q("#comments").setAttribute("aria-label", t("cmt.title")); cm?.refreshText();
     q("#wizard").setAttribute("aria-label", t("wiz.title")); wiz?.render();
-    if (view === "help") renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan") });
+    if (view === "help") renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); } });
   });
 
   document.documentElement.lang = i18n.lang();
@@ -353,5 +371,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   // проект, только что созданный мастером (или оставленный с открытой панелью), открывается с панелью мастера
   const w0 = model.wizard.state;
   if (w0 && (model.pref.read("wizopen") || (!w0.reached && !w0.form.building.done))) wiz.toggle(true);
+  let seen = true; try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) { /* без хранилища тур не навязываем */ }
+  if (!seen) setTimeout(() => { if (view === "plan") startTour(); }, 400);
   return { showView, get mode() { return mode; } };
 }

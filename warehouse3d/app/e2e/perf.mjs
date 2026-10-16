@@ -46,7 +46,9 @@ const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=sw
 const errors = [];
 
 async function measure(name, query, prep = null) {
-  const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+  await ctx.addInitScript(() => { try { localStorage.setItem("wh-app-tour", "skipped"); } catch (e) { /* без хранилища */ } }); // тур для новичков (W-20) не мешает замеру
+  const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${name} pageerror: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${name} console.error: ${m.text()}`); });
   page.setDefaultTimeout(120000);

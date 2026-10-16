@@ -4,9 +4,9 @@ import { esc, reducedMotion } from "./util.js";
 import { HEAT_KEYS, HEAT_MODES } from "../core/metrics.js";
 import { heatColor } from "./heat.js";
 
-export const HELP_SECTIONS = ["start", "view", "data", "select", "edit", "move", "multi", "tools", "addr", "labels", "copy", "catalog", "templates", "save", "project", "file", "docs", "building", "checks", "capacity", "putaway", "parse", "tray", "auto", "odoo", "plan", "wizard", "variants", "history", "comments", "roles", "locks", "keys"];
+export const HELP_SECTIONS = ["start", "view", "nav", "mobile", "data", "select", "edit", "move", "multi", "tools", "addr", "labels", "copy", "catalog", "templates", "save", "project", "file", "docs", "building", "checks", "capacity", "putaway", "parse", "tray", "auto", "odoo", "plan", "wizard", "variants", "history", "comments", "roles", "locks", "keys"];
 
-export function renderHelp(root, { i18n, model, onBack }) {
+export function renderHelp(root, { i18n, model, onBack, onTour = null }) {
   const t = (k, p) => i18n.t(k, p), now = model.data.meta?.now || "";
   const date = now ? `${now.slice(8, 10)}.${now.slice(5, 7)}.${now.slice(0, 4)}` : "";
   const sw = (v, border) => `<i class="sw" style="${border ? `border:1.5px solid var(${v})` : `background:var(${v})`}"></i>`;
@@ -23,4 +23,5 @@ export function renderHelp(root, { i18n, model, onBack }) {
     root.querySelector(`#h-${a.dataset.toc}`).scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
   });
   root.querySelector("[data-back]").onclick = onBack;
+  root.querySelectorAll("[data-tour]").forEach((b) => b.onclick = () => onTour?.()); // повторный запуск тура (W-20)
 }
