@@ -9,7 +9,7 @@ from .common import F3dViewerBase
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestLocHistory(HttpCase, F3dViewerBase):
-    """API-11 `GET /f3d/viewer/loc/<code>` (R-24): як товар потрапив у комірку і куди він іде."""
+    """API-12 `GET /f3d/viewer/loc/<code>` (R-24): як товар потрапив у комірку і куди він іде."""
 
     @classmethod
     def setUpClass(cls):

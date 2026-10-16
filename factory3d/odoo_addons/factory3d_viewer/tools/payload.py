@@ -34,7 +34,9 @@ LIST_SECTIONS = ("productions", "pickings", "sale_orders", "purchase_orders", "q
 # opt-ключі власників (Додаток A.2–A.11): якщо в новому записі їх немає, дельта дописує null (R-14 п. 4)
 OPT_KEYS = {
     "locations": ("state", "orderpoint", "production", "picking", "fronts_mo", "note", "reserved_for"),
-    "workcenters": ("idle_reason", "maintenance_request", "current_task"),
+    "workcenters": ("idle_reason", "maintenance_request", "maintenance_request_id", "current_task"),
+    "equipment": ("maintenance_request", "maintenance_request_id", "maintenance_due", "next_maintenance"),
+    "maintenance_requests": ("overdue_days",),
     "productions": ("child_productions", "reservation_state"),
     "workorders": ("date_start", "date_finished", "duration", "date_planned_finished", "blocked"),
     "pickings": ("dock", "truck", "location_dest", "source_locations", "vehicle", "note", "carrier"),
