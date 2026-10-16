@@ -171,6 +171,25 @@ class TestCatalogThresholds(Level0Mixin, F3DTelemetryCase):
         self.env.cr.execute("SELECT count(*) FROM x_f3d_signal WHERE x_active")
         self.assertEqual(self.env.cr.fetchone()[0], 0)
 
+    def test_stale_status_is_not_mismatch(self):
+        """T-1b: статус stale (немає свіжих даних) залежить від часу, а не від значення — не розбіжність."""
+        real = hooks.hours_rebuild
+
+        def go_stale(env):
+            res = real(env)
+            env["f3d.signal"].search([("origin", "=", "sim_data")]).with_context(mail_notrack=True).write(
+                {"status": "stale"}
+            )
+            return res
+
+        with mock.patch.object(hooks, "hours_rebuild", side_effect=go_stale):
+            report = self.migrate([STATE_ROW, BATTERY_ROW])
+        self.assertEqual((report["mismatches"], report["state"]), ([], "done"))
+        self.assertGreaterEqual(report["status_notes_total"], 1)
+        self.assertTrue(all("stale" in note for note in report["status_notes"]), report["status_notes"])
+        self.assertEqual(report["requests_linked"], 2)
+        self.assertFalse(self.env.ref("factory3d_iot_sim.cron_iot_sim").active)
+
     def test_alarm_threshold_from_catalog_is_not_mismatch(self):
         self.l0["signals"]["bat"].x_value = 10.0  # нижче alarm 15: статус «тривога» лише за порогом каталогу
         report = self.migrate([STATE_ROW, BATTERY_ROW])

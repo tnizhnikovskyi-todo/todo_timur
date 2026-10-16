@@ -590,6 +590,9 @@ SELECT count(*)
 THRESHOLD_COLS = ("warn_low", "warn_high", "alarm_low", "alarm_high")
 
 
+TIME_DERIVED_STATUSES = ("stale", "offline", "unknown")  # статус від часу (немає свіжих даних), а не від значення
+
+
 def _status_from_catalog(sig, snap):
     """Статус відрізняється від рівня 0 лише через пороги каталогу, яких на рівні 0 не було (T-1).
 
@@ -609,8 +612,8 @@ def verify(env, snapshot=None, notes=None, max_reading_id=None):
 
     Порівнюється зі знімком, який зробив крок 2 (`snapshot`), а не з живим рівнем 0: значення й стан
     звіряються лише для сигналів, чиє `last_*` взято з цього знімка (записане цим запуском або з тим самим
-    `last_ts`); новіші дані телеметрії не перевіряються. Різниця статусу через пороги каталогу — не розбіжність,
-    вона додається в `notes` (якщо передано список). Показання: кожне `x_f3d_reading` (до `max_reading_id`,
+    `last_ts`); новіші дані телеметрії не перевіряються. Різниця статусу через пороги каталогу або через час
+    (`stale`/`offline`/`unknown` — немає свіжих даних) — не розбіжність, вона додається в `notes` (якщо передано список). Показання: кожне `x_f3d_reading` (до `max_reading_id`,
     знятого кроком 5) має мати `f3d.reading`; зайві (рівень 0 чистить свої рядки) не заважають.
     """
     if not _level0(env):
@@ -636,7 +639,11 @@ def verify(env, snapshot=None, notes=None, max_reading_id=None):
             mismatches.append("%s: last_value %.3f != x_value %.3f" % (code, sig.last_value, snap["value"]))
         expected = "alarm" if snap["state"] == "тривога" else "ok"
         if snap["state"] and sig.status != expected:
-            if _status_from_catalog(sig, snap):
+            if sig.status in TIME_DERIVED_STATUSES:
+                # T-1b: «немає даних» залежить від часу (стенд зупинено), а не від значення — не розбіжність
+                if notes is not None:
+                    notes.append("%s: status %s (немає свіжих даних), x_state %s" % (code, sig.status, snap["state"]))
+            elif _status_from_catalog(sig, snap):
                 if notes is not None:
                     notes.append("%s: status %s (пороги каталогу), x_state %s" % (code, sig.status, snap["state"]))
             else:
