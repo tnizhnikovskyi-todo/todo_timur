@@ -85,10 +85,19 @@ class F3dSimRun(models.Model):
         return validate_params(schema, params)
 
     @api.model
+    def _check_device(self, schema, params):
+        """Параметр device має вказувати на наявний пристрій емулятора (S-02/S-04/S-09/S-10)."""
+        code = params.get('device')
+        if code and 'device' in ((schema or {}).get('properties') or {}):
+            if not self.env['f3d.sim.device'].sudo().search_count([('code', '=', code)]):
+                raise ValidationError("Невідомий пристрій «%s»: такого коду немає в каталозі емулятора" % code)
+
+    @api.model
     def _create_and_start(self, scenario, params):
         params = params or {}
         self._sim_require_write()
         self._validate_params(scenario.params_schema, params)
+        self._check_device(scenario.params_schema, params)
         run = self.create({'scenario_id': scenario.id, 'params': params})
         try:
             data = run.with_context(f3d_sim_run_id=run.id)._sim_post(

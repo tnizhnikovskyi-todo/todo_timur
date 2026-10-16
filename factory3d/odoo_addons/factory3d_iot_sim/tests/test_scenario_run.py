@@ -51,6 +51,15 @@ class TestScenarioRun(SimCase):
             with self.assertRaises(ValidationError, msg=str(bad)):
                 Run._validate_params(schema, bad)
 
+    def test_unknown_device_rejected(self):  # S-5
+        scenario = self.env.ref('factory3d_iot_sim.scenario_filter_clogged')
+        self.env['f3d.sim.device'].search([('code', '=', 'RV-05')]) or self.make_device('RV-05')
+        self.respond('POST', '/scenario/filter_clogged/start', 201, {'id': 'r-02', 'state': 'running'})
+        with self.assertRaisesRegex(ValidationError, 'NOPE-1'):
+            self.env['f3d.sim.run']._create_and_start(scenario, {'device': 'NOPE-1'})
+        self.assertFalse(self.calls)
+        self.assertEqual(self.env['f3d.sim.run']._create_and_start(scenario, {'device': 'RV-05'}).state, 'running')
+
     def test_write_disabled_blocks_start(self):
         self.set_params(write_enabled='False')
         scenario = self.env.ref('factory3d_iot_sim.scenario_spark')

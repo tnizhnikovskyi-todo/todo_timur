@@ -48,6 +48,17 @@ class TestPanel(SimCase):
         self.assertEqual(self.panel.level0_state, 'auto_on')
         self.assertTrue(self.panel.message_ids)
 
+    def test_check_empty_url_unconfigured(self):  # S-4, §5.3 п.7
+        self.set_params(url='')
+        self.panel.write({'state': 'online'})
+        action = self.panel.action_check()
+        self.assertEqual(self.panel.state, 'unconfigured')
+        self.assertEqual(action['params']['type'], 'danger')
+        self.assertFalse(self.calls)
+        self.panel.write({'state': 'offline'})
+        self.env['f3d.sim.panel']._cron_poll_status()
+        self.assertEqual(self.panel.state, 'unconfigured')
+
     def test_offline_shorter_than_threshold_keeps_level0(self):
         self.cron.active = False
         self.panel.write({'state': 'offline', 'last_contact': fields.Datetime.now() - timedelta(minutes=1)})

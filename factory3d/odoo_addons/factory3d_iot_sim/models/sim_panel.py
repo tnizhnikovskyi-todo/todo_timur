@@ -113,8 +113,12 @@ class F3dSimPanel(models.Model):
                 'params': {'title': 'Емулятор', 'message': message, 'type': kind, 'sticky': False}}
 
     def _poll(self):
-        """GET /status → _apply_status; помилка → offline. Повертає текст помилки або ''."""
+        """GET /status → _apply_status; помилка → offline, порожній url → unconfigured (§5.3 п.7).
+        Повертає текст помилки або ''."""
         self.ensure_one()
+        if not (self._sim_param('url') or '').strip():
+            self.sudo().write({'state': 'unconfigured', 'last_error': False})
+            return "Адресу сервісу емулятора не налаштовано (Налаштування → Factory3D → Емулятор)"
         try:
             payload = self._sim_get('/status')
         except UserError as exc:
@@ -262,7 +266,10 @@ class F3dSimPanel(models.Model):
     @api.model
     def _cron_poll_status(self):
         panel = self.sudo().get_panel()
-        if self._sim_flag('read_enabled') and (self._sim_param('url') or '').strip():
+        if not (self._sim_param('url') or '').strip():
+            if panel.state != 'unconfigured':
+                panel.write({'state': 'unconfigured', 'last_error': False})
+        elif self._sim_flag('read_enabled'):
             panel._poll()
         elif panel.state in ('online', 'degraded', 'locked'):
             panel.state = 'offline'

@@ -566,7 +566,7 @@ UPDATE f3d_sim_panel SET state = 'unconfigured', level0_state = 'forced_off';
 1. Створити `f3d.sim.panel` (1).
 1а. Стоп-кран опитування за середовищем (base CB-10, X-56; як у всіх модулів зі стоп-кранами): `factory3d.iot_sim.read_enabled = 'True'`, якщо `factory3d.base.environment == 'test'`, інакше `'False'` (перезапис при кожному запуску хука); `write_enabled` не змінюється (умовчання `False`); `neutralize.sql` — без змін. Очікувано на копії демо (`environment=test`): `read_enabled=True`; на проді (`prod`) — `False`.
 2. Для кожного `maintenance.equipment` з `f3d_code` (після `factory3d_base` — 210, з `FA-SOC`, `FA-OFFICE`): створити/оновити `f3d.sim.device` за таблицею §5.2 (ключ `code = f3d_code`); для `ACCESS`, `CCTV`, `PV-INV` створити похідні пристрої (`ACR-*` ×5, `TURN-1`, `CAM-05/06`, `PV-INV-1..8`), для лічильників споживачів — `<code>-PM` (49) з `equipment_id` того самого обладнання; пасивний пристрій `CUTOPT` (оптимізатор розкрою P-04, без `equipment_id`, `protocol='none'`) — для довідкового рядка `equipment/CUTOPT/cmd` (X-76). Очікувано: 210 + 5 + 1 + 2 + 8 + 49 + 1 = **276** пристроїв, з них `passive` ≈ 100 (стелажі, світильники-групи, сповіщувачі-групи, ІТ, принтери, ваги Odoo IoT, двері…).
-3. Завантажити `data/f3d_sim_signal.csv` → `f3d.sim.signal` (**1 168**: `protocol≠none` — 1 017, `none` — 151), прив'язка `device_id` за колонкою `device` (пристрої з кроку 2; для `energy/consumers/<X>/*` — пристрій `<X>-PM`, 49 шт. включно з unit 51–59, X-61; для `energy/cells/Q1` — `Q1`; для `energy/lines/BW-1` — `QF-1`; для `equipment/CUTOPT/cmd` — `CUTOPT`); очікувано 0 рядків без пристрою.
+3. Завантажити `data/f3d_sim_signal.csv` → `f3d.sim.signal` (**1 168**: `protocol≠none` — 1 017, `none` — 151), прив'язка `device_id` за колонкою `device` (пристрої з кроку 2; для `energy/consumers/<X>/*` — пристрій `<X>-PM`, 49 шт. включно з unit 51–59, X-61; для `energy/cells/Q1` — `Q1`; для `energy/lines/BW-1` — `QF-1`; для `equipment/CUTOPT/cmd` — `CUTOPT`; для `infra/pv/PV-INV-n/*` (32 сигнали: `p_kw`, `status`, `kwh_today`, `kwh_total` × 8) — похідний пристрій `PV-INV-n` (unit 60+n), а не батьківський `PV-INV`: колонка `device` каталогу лишається `PV-INV`, прив'язку за шляхом сигналу виконує `_catalog_device_code`; якщо похідних пристроїв немає — сигнал лишається на `PV-INV`; `infra/totals/pv_now` — на `PV-INV`); очікувано 0 рядків без пристрою.
 4. Для `origin=mock` (196): `level0_code = code`; перевірити наявність `x_f3d_signal` з таким `x_code` — очікувано 196/196; невідповідності → WARNING зі списком.
 5. Сценарії — з data (15).
 6. Крон рівня 0: не чіпати (стан вирішить перший прогін C-01).
@@ -1796,6 +1796,8 @@ Odoo (`odoo_addons/factory3d_iot_sim/tests`, теги `post_install, -at_install
 
 LSP-рядки (X-79): сигнали окремих адресних пристроїв панелі FACP-1 — `fire/devices/<address>/state` (LSP:<id>) і, для сповіщувачів, `fire/devices/<address>/dust` (PIV:<id>) — у каталог не входять: їх створює `factory3d_fire_safety` (M-04 `action_create_signals`) з `lsp_instance` за правилом fire R-23 (A-09); емулятор віддає ці 302 об'єкти LSP (222 сповіщувачі, 36 ручних, 41 оповіщувач, 3 полум'я) з тими самими id — §8.11.1. У каталозі LSP id згадано лише в рядку 189 (`2.FAC.07` → PIV:21607 = LSP:21607).
 
+Сигнали `infra/pv/PV-INV-n/*` (рядки № 394…417 і 792…799) прив'язані до похідних пристроїв `PV-INV-n` (§5.3 п. 3, колонка «Пристрій» нижче); у `signals.csv` каталогу колонка `device` для них лишається `PV-INV`.
+
 | № | Код-шлях (`f3d.signal.code`) | Пристрій (код сцени) | P-xx | Адреса в джерелі | Тип | Одиниця | Масштаб | Номінал (старт) | Пороги | Модель поведінки | Статус |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | `energy/consumers/SAW-1/p_now` | SAW-1 | P-05 | Modbus u11 fc3 pdu3059+2 f32 · PM5560 3060–3061 Active Power Total | F32 | кВт | ×1 | 12.18 (шум 0.08, швидк. 1.92/хв) | — | machine (R-02 потужність верстата за станом РЦ) | макет |
@@ -2191,30 +2193,30 @@ LSP-рядки (X-79): сигнали окремих адресних прист
 | 391 | `energy/transformers/T2/i_a` | T2 | P-05 | Modbus u2 fc3 pdu3009+2 f32 · PM5560 3010–3011 Current Avg | F32 | А | ×1 | 498 / 433 | — | R-04 | новий |
 | 392 | `energy/transformers/T2/cos_phi` | T2 | P-05 | Modbus u2 fc3 pdu3083+2 f32 · PM5560 3084–3085 Power Factor Total | F32 | — | ×1 | 0,97 | — | R-04 | новий |
 | 393 | `energy/transformers/T2/s_kva` | T2 | P-05 | Modbus u2 fc3 pdu3075+2 f32 · PM5560 3076–3077 Apparent Power Total | F32 | кВА | ×1 | 345 / 300 | > 1000 → заявка | R-04 | новий |
-| 394 | `infra/pv/PV-INV-1/p_kw` | PV-INV | P-07 | Modbus u61 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 395 | `infra/pv/PV-INV-1/status` | PV-INV | P-07 | Modbus u61 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 396 | `infra/pv/PV-INV-1/kwh_today` | PV-INV | P-07 | Modbus u61 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 397 | `infra/pv/PV-INV-2/p_kw` | PV-INV | P-07 | Modbus u62 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 398 | `infra/pv/PV-INV-2/status` | PV-INV | P-07 | Modbus u62 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 399 | `infra/pv/PV-INV-2/kwh_today` | PV-INV | P-07 | Modbus u62 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 400 | `infra/pv/PV-INV-3/p_kw` | PV-INV | P-07 | Modbus u63 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 401 | `infra/pv/PV-INV-3/status` | PV-INV | P-07 | Modbus u63 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 402 | `infra/pv/PV-INV-3/kwh_today` | PV-INV | P-07 | Modbus u63 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 403 | `infra/pv/PV-INV-4/p_kw` | PV-INV | P-07 | Modbus u64 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 404 | `infra/pv/PV-INV-4/status` | PV-INV | P-07 | Modbus u64 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 405 | `infra/pv/PV-INV-4/kwh_today` | PV-INV | P-07 | Modbus u64 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 406 | `infra/pv/PV-INV-5/p_kw` | PV-INV | P-07 | Modbus u65 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 407 | `infra/pv/PV-INV-5/status` | PV-INV | P-07 | Modbus u65 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 408 | `infra/pv/PV-INV-5/kwh_today` | PV-INV | P-07 | Modbus u65 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 409 | `infra/pv/PV-INV-6/p_kw` | PV-INV | P-07 | Modbus u66 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 410 | `infra/pv/PV-INV-6/status` | PV-INV | P-07 | Modbus u66 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 411 | `infra/pv/PV-INV-6/kwh_today` | PV-INV | P-07 | Modbus u66 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 412 | `infra/pv/PV-INV-7/p_kw` | PV-INV | P-07 | Modbus u67 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 413 | `infra/pv/PV-INV-7/status` | PV-INV | P-07 | Modbus u67 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 414 | `infra/pv/PV-INV-7/kwh_today` | PV-INV | P-07 | Modbus u67 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
-| 415 | `infra/pv/PV-INV-8/p_kw` | PV-INV | P-07 | Modbus u68 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
-| 416 | `infra/pv/PV-INV-8/status` | PV-INV | P-07 | Modbus u68 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
-| 417 | `infra/pv/PV-INV-8/kwh_today` | PV-INV | P-07 | Modbus u68 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 394 | `infra/pv/PV-INV-1/p_kw` | PV-INV-1 | P-07 | Modbus u61 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 395 | `infra/pv/PV-INV-1/status` | PV-INV-1 | P-07 | Modbus u61 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 396 | `infra/pv/PV-INV-1/kwh_today` | PV-INV-1 | P-07 | Modbus u61 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 397 | `infra/pv/PV-INV-2/p_kw` | PV-INV-2 | P-07 | Modbus u62 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 398 | `infra/pv/PV-INV-2/status` | PV-INV-2 | P-07 | Modbus u62 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 399 | `infra/pv/PV-INV-2/kwh_today` | PV-INV-2 | P-07 | Modbus u62 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 400 | `infra/pv/PV-INV-3/p_kw` | PV-INV-3 | P-07 | Modbus u63 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 401 | `infra/pv/PV-INV-3/status` | PV-INV-3 | P-07 | Modbus u63 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 402 | `infra/pv/PV-INV-3/kwh_today` | PV-INV-3 | P-07 | Modbus u63 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 403 | `infra/pv/PV-INV-4/p_kw` | PV-INV-4 | P-07 | Modbus u64 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 404 | `infra/pv/PV-INV-4/status` | PV-INV-4 | P-07 | Modbus u64 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 405 | `infra/pv/PV-INV-4/kwh_today` | PV-INV-4 | P-07 | Modbus u64 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 406 | `infra/pv/PV-INV-5/p_kw` | PV-INV-5 | P-07 | Modbus u65 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 407 | `infra/pv/PV-INV-5/status` | PV-INV-5 | P-07 | Modbus u65 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 408 | `infra/pv/PV-INV-5/kwh_today` | PV-INV-5 | P-07 | Modbus u65 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 409 | `infra/pv/PV-INV-6/p_kw` | PV-INV-6 | P-07 | Modbus u66 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 410 | `infra/pv/PV-INV-6/status` | PV-INV-6 | P-07 | Modbus u66 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 411 | `infra/pv/PV-INV-6/kwh_today` | PV-INV-6 | P-07 | Modbus u66 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 412 | `infra/pv/PV-INV-7/p_kw` | PV-INV-7 | P-07 | Modbus u67 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 413 | `infra/pv/PV-INV-7/status` | PV-INV-7 | P-07 | Modbus u67 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 414 | `infra/pv/PV-INV-7/kwh_today` | PV-INV-7 | P-07 | Modbus u67 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
+| 415 | `infra/pv/PV-INV-8/p_kw` | PV-INV-8 | P-07 | Modbus u68 fc3 pdu32080+2 i32 · SUN2000 32080–32081 Active power | I32 | кВт | ×0,001 | до 115 | — | R-11 | новий |
+| 416 | `infra/pv/PV-INV-8/status` | PV-INV-8 | P-07 | Modbus u68 fc3 pdu32089 u16 · SUN2000 32089 Device status | U16 | enum Huawei | — | 0x0200 On-grid | 0x0300… → заявка | R-11 | новий |
+| 417 | `infra/pv/PV-INV-8/kwh_today` | PV-INV-8 | P-07 | Modbus u68 fc3 pdu32114+2 u32 · SUN2000 32114–32115 Daily energy yield | U32 | кВт·год | ×0,01 | — | — | R-11 | новий |
 | 418 | `infra/totals/grid_kw` | EMS-1 | — | обчислює energy (R-06 (вводи u1/u2, СЕС, КГУ, BESS)) — без адреси (X-35) | number | кВт | — | 0 удень | — | обчислює energy (R-13 емулятора — баланс) | новий |
 | 419 | `infra/totals/export_kw` | EMS-1 | — | обчислює energy (R-06 (вводи u1/u2, СЕС, КГУ, BESS)) — без адреси (X-35) | number | кВт | — | 42 | — | обчислює energy (R-13 емулятора — баланс) | новий |
 | 420 | `infra/totals/bess_kw` | BESS | P-07 | Modbus u69 fc3 pdu37001+2 i32 · LUNA2000 37001–37002 Charge/Discharge power, + заряд | I32 | кВт | ×0,001 | 200 (заряд) | — | R-13 | новий |
@@ -2589,14 +2591,14 @@ LSP-рядки (X-79): сигнали окремих адресних прист
 | 789 | `energy/lines/C2/i_c` | QF-C2 | P-05 | Modbus u8 fc3 pdu3003+2 f32 · PM5560 3004–3005 Current C | F32 | А | ×1 | ≈ `i_now` ± 3 % | — | R-01 | новий |
 | 790 | `energy/lines/C2/kwh_total` | QF-C2 | P-05 | Modbus u8 fc3 pdu3203+4 i64 · PM5560 3204–3207 Active Energy Delivered (Into Load), Вт·год | I64 | Вт·год→кВт·год | ×0,001 | накопич. | — | R-03 | новий |
 | 791 | `energy/lines/C2/state` | QF-C2 | P-05 | Modbus u8 fc3 pdu2017 u16 · PM5560 2018 Breaker state (ПРИПУЩЕННЯ, §8.7.1) | U16 | 0 open/1 closed/2 tripped | — | 1 | 2 tripped → заявка | R-15 / R-22 | новий |
-| 792 | `infra/pv/PV-INV-1/kwh_total` | PV-INV | P-07 | Modbus u61 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 793 | `infra/pv/PV-INV-2/kwh_total` | PV-INV | P-07 | Modbus u62 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 794 | `infra/pv/PV-INV-3/kwh_total` | PV-INV | P-07 | Modbus u63 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 795 | `infra/pv/PV-INV-4/kwh_total` | PV-INV | P-07 | Modbus u64 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 796 | `infra/pv/PV-INV-5/kwh_total` | PV-INV | P-07 | Modbus u65 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 797 | `infra/pv/PV-INV-6/kwh_total` | PV-INV | P-07 | Modbus u66 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 798 | `infra/pv/PV-INV-7/kwh_total` | PV-INV | P-07 | Modbus u67 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
-| 799 | `infra/pv/PV-INV-8/kwh_total` | PV-INV | P-07 | Modbus u68 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 792 | `infra/pv/PV-INV-1/kwh_total` | PV-INV-1 | P-07 | Modbus u61 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 793 | `infra/pv/PV-INV-2/kwh_total` | PV-INV-2 | P-07 | Modbus u62 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 794 | `infra/pv/PV-INV-3/kwh_total` | PV-INV-3 | P-07 | Modbus u63 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 795 | `infra/pv/PV-INV-4/kwh_total` | PV-INV-4 | P-07 | Modbus u64 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 796 | `infra/pv/PV-INV-5/kwh_total` | PV-INV-5 | P-07 | Modbus u65 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 797 | `infra/pv/PV-INV-6/kwh_total` | PV-INV-6 | P-07 | Modbus u66 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 798 | `infra/pv/PV-INV-7/kwh_total` | PV-INV-7 | P-07 | Modbus u67 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
+| 799 | `infra/pv/PV-INV-8/kwh_total` | PV-INV-8 | P-07 | Modbus u68 fc3 pdu32106+2 u32 · SUN2000 32106–32107 Accumulated energy yield | U32 | кВт·год | ×0,01 | накопич. | — | R-11 | новий |
 | 800 | `infra/bess/kwh_charge_total` | BESS | P-07 | Modbus u69 fc3 pdu37014+2 u32 · LUNA2000 37014–37015 Total charge (ПРИПУЩЕННЯ, §8.9.2) | U32 | кВт·год | ×0,01 | накопич. | — | R-13 | новий |
 | 801 | `infra/bess/kwh_discharge_total` | BESS | P-07 | Modbus u69 fc3 pdu37016+2 u32 · LUNA2000 37016–37017 Total discharge (ПРИПУЩЕННЯ, §8.9.2) | U32 | кВт·год | ×0,01 | накопич. | — | R-13 | новий |
 | 802 | `infra/chp/kwh_total` | CHP | P-07 | Modbus u72 fc3 pdu40014+2 u32 · TEDOM 40014–40015 Energy produced total (ПРИПУЩЕННЯ) | U32 | кВт·год | ×1 | накопич. | — | R-12 | новий |
