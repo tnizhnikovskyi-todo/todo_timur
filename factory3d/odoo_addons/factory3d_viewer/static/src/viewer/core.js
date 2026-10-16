@@ -179,6 +179,7 @@ export class F3dViewer {
         this.client = opts.client;
         this.storage = "storage" in opts ? opts.storage : safeStorage();
         this._c = null;
+        this._destroyed = false;
     }
 
     async mount() {
@@ -192,6 +193,9 @@ export class F3dViewer {
         const lite = detectLite({ lite: o.lite, kiosk: !!o.kiosk, params: o.params || {}, storage: this.storage });
         const T = await loadThree(o.threeUrl);
         const manifest = await loadManifest(o, this.client);
+        if (this._destroyed) {
+            return this; // дію закрили під час завантаження маніфесту: ядро не створюємо
+        }
         this._c = createCore(this, el, o, T, manifest, lite, this.storage);
         if (o.testMode || new URLSearchParams(window.location.search).has("debug")) {
             window.odoo = window.odoo || {};
@@ -202,7 +206,7 @@ export class F3dViewer {
     }
 
     async load() {
-        return this._c.load();
+        return this._c?.load(); // після destroy() — тихо нічого (див. core.load: перевірка destroyed після кожного await)
     }
 
     get D() { return this._c?.D; }
@@ -216,7 +220,7 @@ export class F3dViewer {
     get lite() { return this._c?.lite; }
 
     applyPatch(p) { return this._c.applyPatch(p); }
-    applyParams(p) { return this._c.applyParams(p); }
+    applyParams(p) { return this._c?.applyParams(p); }
     select(o, opts) { return this._c.select(typeof o === "string" ? this._c.items.get(o) ?? null : o, opts); }
     ensureCode(c) { return this._c.ensureCode(c); }
     focusOn(o) { return this._c.focusOn(typeof o === "string" ? this._c.items.get(o) : o); }
@@ -242,6 +246,7 @@ export class F3dViewer {
     partsReady() { return this._c.partsReady(); }
     getState() { return this._c.getState(); }
     destroy() {
+        this._destroyed = true;
         this._c?.destroy();
         this._c = null;
         if (window.odoo?.f3d === this) {
@@ -502,7 +507,7 @@ function loadPart(key) {
   if (partState.has(key)) {return partState.get(key);}
   const p = MANIFEST.parts.find((x) => x.key === key);
   const pr = new Promise((res, rej) => {
-    const done = (g) => { onPart(g); res(); };
+    const done = (g) => { if (!destroyed) {onPart(g);} res(); };
     const emb = document.getElementById("part-" + key);
     if (emb) {
       const bin = Uint8Array.from(atob(emb.textContent.trim()), (c) => c.charCodeAt(0));
@@ -527,6 +532,7 @@ async function ensureCode(code) {
   return items.get(code);
 }
 function onModelError(err) {
+  if (destroyed) { modelReady(); return; } // вийшли зі сторінки під час завантаження моделі: DOM уже знесено
   $(".o_f3d_loading").textContent = "Не вдалося завантажити модель";
   console.error(err);
   modelReady();
@@ -535,6 +541,7 @@ buildLayersUI();
 if (LS.lite || kiosk) {$(".o_f3d_opt-shadows").closest("label").hidden = true;}
 let bgReady = Promise.resolve();
 const coreReady = (MANIFEST.parts[0] ? loadPart(MANIFEST.parts[0].key) : Promise.resolve()).then(() => {
+  if (destroyed) { modelReady(); return; }
   if (noWebgl) {banner("3D недоступне на цьому пристрої — показано лише дані");}
   const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
   $(".o_f3d_dims").textContent = `${MANIFEST.dims} · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
@@ -1294,9 +1301,12 @@ function setData(d, first) {
   syncSectionErrors();
 }
 function loadFailed(err) {
+  // після destroy() DOM знесено, а відхилений fetch — наслідок виходу зі сторінки, а не збій: мовчки виходимо
+  if (destroyed) {return;}
   console.error(err);
-  $(".o_f3d_odoo-pill").classList.add(cx("off"));
-  $(".o_f3d_odoo-state").textContent = "немає даних";
+  $(".o_f3d_odoo-pill")?.classList.add(cx("off"));
+  const st = $(".o_f3d_odoo-state");
+  if (st) {st.textContent = "немає даних";}
   notify(err instanceof SchemaError ? err.message : `Не вдалося завантажити дані: ${err.message}`, "danger");
   renderNoData();
 }
@@ -1304,11 +1314,14 @@ async function load() {
   let first;
   try {
     staticD = await client.loadStatic();
+    if (destroyed) {return;}
     const live = await client.loadData();
+    if (destroyed) {return;}
     await modelLoaded;
+    if (destroyed) {return;}
     first = mergeData(staticD, live);
   } catch (err) {
-    loadFailed(err);
+    loadFailed(err); // після destroy — без повідомлення й без звернення до DOM
     return;
   }
   setData(first, true);
@@ -1321,12 +1334,12 @@ async function load() {
 }
 let offBanner = null;
 function syncConnState(s) {
-  if (!D) {return;}
-  const pill_ = $(".o_f3d_odoo-pill");
+  const pill_ = $(".o_f3d_odoo-pill"), state_ = $(".o_f3d_odoo-state");
+  if (!D || destroyed || !pill_ || !state_) {return;}
   const bad = s === "offline" || !!client.degraded;
   pill_.classList.toggle(cx("off"), !!bad);
-  if (bad) {$(".o_f3d_odoo-state").textContent = "немає зв'язку";}
-  else {$(".o_f3d_odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";}
+  if (bad) {state_.textContent = "немає зв'язку";}
+  else {state_.textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";}
   if (s === "offline" && !offBanner) {offBanner = banner("Немає мережі — показано останні отримані дані");}
   if (s !== "offline" && offBanner) { offBanner.remove(); offBanner = null; }
 }
@@ -1532,6 +1545,7 @@ async function ensurePlayback() {
   snapChecked = true;
   try {
     const r = await client.snapshots(D.meta.now.slice(0, 10));
+    if (destroyed) {return;}
     snapList = r.snapshots || [];
     if (r.mode === "snapshots" && !userPlan) { playbackMode = "snapshots"; syncSnapTag(); if (simOverride != null) {applySimTime(simOverride);} }
   } catch (err) { console.warn(err); }
@@ -1539,8 +1553,9 @@ async function ensurePlayback() {
 async function loadSnapshotById(id) {
   try {
     const payload = await client.snapshot(id);
+    if (destroyed) {return;}
     applySnapshot(payload);
-  } catch { notify(`Знімок ${id} недоступний`, "warning"); }
+  } catch { if (destroyed) {return;} notify(`Знімок ${id} недоступний`, "warning"); }
 }
 function applySnapshot(payload) {
   if (!staticD) {return;}
@@ -2964,7 +2979,7 @@ function getState() {
 }
 async function applyParams(p = {}) {
   if (p.layers) {
-    if (p.layers === "prod") {await setProdOverlay(true);}
+    if (p.layers === "prod") {await setProdOverlay(true); if (destroyed) {return;}}
     else {
       const keys = new Set(String(p.layers).split(","));
       layers.forEach((_, k) => setLayer(k, keys.has(k)));
@@ -2972,7 +2987,7 @@ async function applyParams(p = {}) {
   }
   if (p.mode) {setMode(p.mode);}
   if (p.tab) {openTab(p.tab);}
-  if (p.snapshot) {await loadSnapshotById(+p.snapshot);}
+  if (p.snapshot) {await loadSnapshotById(+p.snapshot); if (destroyed) {return;}}
   soLabel = p.so || null;
   if (p.mo) {
     if (idx.mo?.has(p.mo)) {showMO(p.mo);}
@@ -2982,12 +2997,14 @@ async function applyParams(p = {}) {
     else {notify(`Об'єкта ${p.picking} немає в даних`, "warning");}
   } else if (p.code) {
     const o = await ensureCode(p.code);
+    if (destroyed) {return;}
     if (o) { select(o); focusOn(o); } else {notify(`Об'єкта ${p.code} немає в моделі`, "warning");}
   }
   if (soLabel) {renderPanel(true);}
 }
 function destroy() {
   destroyed = true;
+  modelReady(); // відпустити load()/setProdOverlay, що чекають модель: вони побачать destroyed і вийдуть
   stockLoad.dispose();
   client?.unsubscribe?.();
   timers.forEach((t) => clearInterval(t));

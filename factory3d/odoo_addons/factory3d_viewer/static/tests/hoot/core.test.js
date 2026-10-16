@@ -1,7 +1,7 @@
 /** @odoo-module */
 // HOOT-тести ядра переглядача на demo_payload.json + model_static.json (мок /static і /data), testMode=true.
 // Сценарії R1…R23 — по одному test() на рядок реєстру (AC-06), далі AC-02/03/05/07/08/09/30/31/37/38/47/51/58/61/62/63.
-import { describe, expect, test } from "@odoo/hoot";
+import { after, describe, expect, test } from "@odoo/hoot";
 import { advanceTime, animationFrame, tick } from "@odoo/hoot-mock";
 import { FileClient, SchemaError, deepMerge, mergeData } from "@factory3d_viewer/viewer/data_client";
 import { detectLite } from "@factory3d_viewer/viewer/lite";
@@ -380,6 +380,127 @@ test("R19f палети й рядок картки: чисті функції", 
     expect(liveLine({ kind: "pallet_cell", quants: [{ product: "P1", qty: 12, package: "A" }, { product: "P2", qty: 8, package: "B" }] }, deps))
         .toBe("За Odoo: 2 палети · N-P1 12 шт, N-P2 8 шт");
     expect(liveLine({ kind: "stack", quants: [{ product: "P1", qty: 40 }] }, deps)).toBe("За Odoo: N-P1 40 шт");
+});
+
+// ------------------------------------------------------------------ вихід зі сторінки під час load() (R-14, збій loadFailed)
+
+/** Відкладена відповідь: resolve/reject після destroy() (запит у польоті в момент виходу зі сторінки). */
+const deferred = () => {
+    const d = {};
+    d.promise = new Promise((res, rej) => {
+        d.resolve = res;
+        d.reject = rej;
+    });
+    return d;
+};
+/** Перехопити console.error на час тесту: після destroy() помилок бути не повинно. */
+const spyConsoleErrors = () => {
+    const errs = [];
+    const orig = console.error;
+    console.error = (...a) => errs.push(a);
+    after(() => {
+        console.error = orig;
+    });
+    return errs;
+};
+const waitCall = async (fetch, part) => {
+    for (let i = 0; i < 200 && !fetch.calls.some((u) => u.includes(part)); i++) {
+        await tick();
+    }
+};
+
+test("R19g destroy під час load(): відхилений /data не дає ні помилки в консолі, ні сповіщення", async () => {
+    const errs = spyConsoleErrors();
+    const gate = deferred();
+    const { viewer, notes, fetch } = await mountViewer({
+        model: "none",
+        skipLoad: true,
+        routes: { "/data": () => gate.promise },
+    });
+    const loading = viewer.load();
+    await waitCall(fetch, "/data");
+    viewer.destroy();
+    gate.reject(new TypeError("Failed to fetch"));
+    await loading; // не кидає: «Cannot read properties of null (reading 'classList')» був саме тут
+    await tick();
+    expect(notes).toEqual([]);
+    expect(errs).toEqual([]);
+});
+
+test("R19h destroy під час load(): /static відхилено, /data успішний — тиша й без підписки на шину", async () => {
+    const errs = spyConsoleErrors();
+    const gate = deferred();
+    const { viewer, notes, client, fetch } = await mountViewer({
+        model: "none",
+        skipLoad: true,
+        routes: { "/static": () => gate.promise },
+    });
+    const loading = viewer.load();
+    await waitCall(fetch, "/static");
+    viewer.destroy();
+    gate.reject(new Error("/static: 500"));
+    await loading;
+    await tick();
+    expect(notes).toEqual([]);
+    expect(errs).toEqual([]);
+    expect(fetch.calls.some((u) => u.includes("/data"))).toBe(false); // після destroy наступний запит не йде
+    expect(client.cb).toBe(null);
+});
+
+test("R19i destroy під час load(): успішні відповіді — DOM не чіпаємо, дані не застосовуємо", async () => {
+    const errs = spyConsoleErrors();
+    const gate = deferred();
+    const { viewer, notes, fetch, fx } = await mountViewer({
+        model: "none",
+        skipLoad: true,
+        routes: { "/data": () => gate.promise },
+    });
+    const loading = viewer.load();
+    await waitCall(fetch, "/data");
+    viewer.destroy();
+    gate.resolve(json(fx.data));
+    await loading;
+    await tick();
+    expect(notes).toEqual([]);
+    expect(errs).toEqual([]);
+    expect(viewer.D).toBe(undefined);
+});
+
+test("R19j після destroy: зміна стану клієнта й дельта-«full» не торкаються DOM", async () => {
+    const errs = spyConsoleErrors();
+    const { viewer, client, notes } = await mountViewer({ model: "none" });
+    const core = viewer.core;
+    viewer.destroy();
+    client._setState("offline"); // syncConnState: пігулки вже немає
+    core.applyPatch({ full: { bogus: true } }); // loadFailed після destroy мовчить
+    await tick();
+    expect(notes).toEqual([]);
+    expect(errs).toEqual([]);
+});
+
+test("R19k без destroy збій /data лишається видимим: повідомлення й «немає даних»", async () => {
+    const errs = spyConsoleErrors();
+    const { el, notes } = await mountViewer({
+        model: "none",
+        routes: { "/data": () => new Response("", { status: 500 }) },
+    });
+    expect(notes.length).toBe(1);
+    expect(notes[0][0].startsWith("Не вдалося завантажити дані")).toBe(true);
+    expect(txt(el, ".o_f3d_odoo-state")).toBe("немає даних");
+    expect(errs.length).toBe(1);
+});
+
+test("R19l destroy до завершення mount(): ядро не створюється, load() і applyParams() тихі", async () => {
+    const errs = spyConsoleErrors();
+    const { viewer, notes } = await mountViewer({ model: "none", skipMount: true });
+    const mounting = viewer.mount();
+    viewer.destroy();
+    await mounting;
+    await viewer.load();
+    await viewer.applyParams({});
+    expect(viewer.core).toBe(null);
+    expect(notes).toEqual([]);
+    expect(errs).toEqual([]);
 });
 
 test("R20 живі дані: прогрес імітується лише при meta.live=false", async () => {
