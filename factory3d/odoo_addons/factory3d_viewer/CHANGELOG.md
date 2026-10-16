@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Кіоск: бандл `assets_kiosk` не компілювався (SCSS «Undefined variable $theme-colors-rgb» у bootstrap `_utilities.scss`), сторінка `/f3d/kiosk/<токен>` була без стилів. Додано `_variables-dark.scss` і `_maps.scss` (як у `web.assets_backend`); тест `TestKioskAssets` компілює бандл.
 - Y-2: фільтри «Сьогодні» і «Цей тиждень» журналу знімків — пошукові поля `is_today`, `is_this_week` за київською добою
   сервера (шкала `demo_clock`), а не `context_today()` браузера (UTC на стенді: з 21:00 до 24:00 UTC доба зсувалась).
 

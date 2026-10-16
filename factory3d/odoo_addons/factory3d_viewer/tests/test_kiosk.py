@@ -3,7 +3,7 @@ import re
 from unittest.mock import patch
 
 from odoo.exceptions import AccessError
-from odoo.tests import HttpCase, tagged
+from odoo.tests import HttpCase, TransactionCase, tagged
 
 from odoo.addons.factory3d_viewer.controllers import kiosk as kiosk_ctrl
 
@@ -126,3 +126,13 @@ class TestKioskHttp(HttpCase, F3dViewerBase):
         self.assertEqual(codes[:10], [200] * 10)
         self.assertEqual(codes[10], 429)
         self.assertNotIn("Set-Cookie", self._get("/delta?since=2026-10-12T00:00:00Z").headers)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_viewer")
+class TestKioskAssets(TransactionCase):
+    """QA 16.10.2026: бандл `assets_kiosk` не компілювався (Undefined variable $theme-colors-rgb) -> кіоск без стилів."""
+
+    def test_kiosk_bundle_compiles(self):
+        bundle = self.env["ir.qweb"]._get_asset_bundle("factory3d_viewer.assets_kiosk", css=True, js=False)
+        bundle.css()
+        self.assertFalse(bundle.css_errors, "SCSS бандла assets_kiosk: %s" % "\n".join(bundle.css_errors))
