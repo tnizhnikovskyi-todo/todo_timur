@@ -91,7 +91,48 @@ class TestViewerProvider(F3DBmsCase):
             {"name": "Заявка RV-05 тест", "f3d_signal_id": unit.state_signal_id.id, "stage_id": stage.id}
         )
         self.env.invalidate_all()
-        self.assertEqual(self._vent()["units"]["RV-05"]["maintenance_request"], req.name)
+        rec = self._vent()["units"]["RV-05"]
+        self.assertEqual((rec["maintenance_request"], rec["maintenance_request_id"]), (req.name, req.id))
+
+    def _request(self, unit, name="Планове ТО"):
+        stage = self.env["maintenance.stage"].search([("done", "=", False)], limit=1)
+        return self.env["maintenance.request"].create(
+            {"name": name, "f3d_signal_id": unit.state_signal_id.id, "stage_id": stage.id}
+        )
+
+    def test_maintenance_request_id_same_name(self):
+        """Viewer R-22: заявки з однаковою назвою на різних установках не змішуються, ключ — `maintenance_request_id`."""
+        units = self.env["f3d.bms.hvac.unit"].search([("state_signal_id", "!=", False)], order="sequence, code", limit=2)
+        self.assertEqual(len(units), 2)
+        first, second = (self._request(u) for u in units)
+        self.assertEqual(first.name, second.name)
+        self.assertNotEqual(first.id, second.id)
+        self.env.invalidate_all()
+        got = self._vent()["units"]
+        for unit, req in zip(units, (first, second)):
+            self.assertEqual(
+                (got[unit.code]["maintenance_request"], got[unit.code]["maintenance_request_id"]),
+                (req.name, req.id),
+            )
+        # дві однойменні заявки на одній установці: береться найстаріша (за id), а не будь-яка з тією ж назвою
+        older = self._request(units[0])
+        self.env.invalidate_all()
+        self.assertEqual(self._vent()["units"][units[0].code]["maintenance_request_id"], first.id)
+        self.assertNotEqual(older.id, first.id)
+
+    def test_maintenance_request_id_cleared(self):
+        """Повний payload без заявки не містить ключів; delta пише null, щоб клієнт скинув стару заявку."""
+        unit = self.env["f3d.bms.hvac.unit"].search([("code", "=", "RV-05")])
+        self.assertNotIn("maintenance_request_id", self._vent()["units"]["RV-05"])
+        req = self._request(unit)
+        self.env.invalidate_all()
+        self.assertEqual(self._vent()["units"]["RV-05"]["maintenance_request_id"], req.id)
+        req.stage_id = self.env["maintenance.stage"].search([("done", "=", True)], limit=1)
+        self.env.invalidate_all()
+        self.assertNotIn("maintenance_request_id", self._vent()["units"]["RV-05"])
+        rec = self._vent(self._ctx(delta=True))["units"]["RV-05"]
+        self.assertIsNone(rec["maintenance_request"])
+        self.assertIsNone(rec["maintenance_request_id"])
 
     def _vent(self, ctx=None):
         payload = {}

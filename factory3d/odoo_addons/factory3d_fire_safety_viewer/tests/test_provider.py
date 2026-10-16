@@ -47,3 +47,20 @@ class TestProvider(FireCase):
         self.assertNotIn("fire", other["patch"])
         drill = DeltaBuilder(self.env(user=self.u), since=since, changes={"f3d.fire.drill": {"DRILL/1"}}).build()
         self.assertIn("evacuation", drill["patch"])
+
+    def test_group_request_id_resolves_in_requests(self):
+        """Viewer R-22: `maintenance_request_id` групи == `res_id` заявки в `maintenance_requests` (не за назвою)."""
+        self.push_value("fire/groups/FA-FAC/dust", 90.1, self.at(0))
+        request = self.env["maintenance.request"].search([("f3d_fire_zone_id", "=", self.z_fac.id)])
+        self.assertEqual(len(request), 1)
+        twin = self.env["maintenance.request"].create({
+            "name": request.name, "equipment_id": request.equipment_id.id,
+            "stage_id": self.env["maintenance.stage"].search([("done", "=", False)], limit=1).id})
+        self.assertNotEqual(twin.id, request.id)
+        self.env.invalidate_all()
+        data = PayloadBuilder(self.env(user=self.u), sections=["fire", "maintenance_requests", "equipment"]).build()
+        group = data["fire"]["groups"]["FA-FAC"]
+        by_res_id = {r["res_id"]: r for r in data["maintenance_requests"]}
+        self.assertEqual(group["maintenance_request_id"], request.id)
+        self.assertEqual(by_res_id[group["maintenance_request_id"]]["name"], group["maintenance_request"])
+        self.assertIn(twin.id, by_res_id)

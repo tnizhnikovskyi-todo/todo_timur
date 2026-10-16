@@ -1581,6 +1581,10 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
   в демо однакові — «Планове ТО», тож клієнт шукає заявку за `res_id`, а злиття delta — за `res_id`, якщо він є),
   `equipment_name`, `done` (стадія `done`) і `overdue_days` — лише для відкритої заявки з `schedule_date < ctx.now`:
   різниця календарних днів за Києвом (`0`, якщо прострочено сьогодні). Рядок обладнання й центру: `maintenance_request_id`.
+  Так само `maintenance_request_id` (id тієї ж заявки, що й `maintenance_request`) віддають вентустановки
+  (`ventilation.units[*]`, factory3d_bms R-27) і групи пожежної сигналізації (`fire.groups[*]`, factory3d_fire_safety R-20);
+  клієнт знаходить їхню заявку за цим id (`mrOf`), за назвою — лише коли id немає. У delta ці провайдери (повний розділ у `patch`)
+  самі дописують `maintenance_request` і `maintenance_request_id` зі значенням `null`, коли заявки більше немає.
 - **Пілюля** у картках обладнання, робочого центру, вентустановки й групи пожежної сигналізації:
   `<тема> · <обладнання> · <стадія> · <ДД.ММ>[, прострочено N дн.]` (дата — `schedule_date`, інакше `request_date`), поруч —
   кнопка «Відкрити заявку в Odoo» (`onOpenRecord("maintenance.request", res_id)`; у кіоску й без `res_id` її немає).
@@ -2156,14 +2160,14 @@ dict[`LP-1…3` → {name, groups list[str], n int, p_inst float, p_now float}];
 `ventilation`: `units` dict[29 (`RV-01…25`, `AHU-1`, `EF-ELEC`, `EF-CMP`, `EF-CHG`) → {name, kind, zone, mode,
 airflow_m3h float, airflow_nom int, supply_c float opt (26), indoor_c float opt (28), heating_valve float opt (26),
 heat_kw float opt (26), p_inst float, p_now float, filter_dp_pa float opt (26), state str (`on`/`off`),
-maintenance_request str opt (1), note str opt (4)}]; `totals` {units int, airflow_m3h float, heat_kw int, p_now,
+maintenance_request str opt (1), maintenance_request_id int opt (R-22), note str opt (4)}]; `totals` {units int, airflow_m3h float, heat_kw int, p_now,
 p_inst float, outdoor_c, indoor_set_c float, boilers int, boiler_kw int, boilers_on int, boiler_load float,
 design_heat_kw int, chp_heat_kw int, chp_heat_now int, chp_heat_rated int}; `heat_balance` {t_out float, items
 list[{name, kw int}], total int, capacity int, chp_kw int, reserve float, note str}.
 `fire`: `rules` dict (10 ключів: `smoke_spacing_6_12m` 8.8, `smoke_wall_6_12m` 4.4, `heat_spacing` 6.4,
 `mcp_spacing` 30, `sounder_level` 65, решта null); `loops` dict[`"1"…"4"` → {detectors, mcp, sounders, flame,
 modules int}]; `groups` dict[35 `FA-*` → {zone, zone_name, kind (`smoke`/`multi`/`heat`), kind_name, n int,
-spacing float, area int, loop int, state (`ok`/`warn`), warning str opt, maintenance_request str opt, dust float opt}];
+spacing float, area int, loop int, state (`ok`/`warn`), warning str opt, maintenance_request str opt, maintenance_request_id int opt (R-22), dust float opt}];
 `totals` {detectors 222, mcp 36, sounders 41, mcp_max_m 26.9, flame 3, spark_detectors 4, state str, sprinkler str};
 `events` list[{time, level, code, text}] (4).
 `infra`: `cards` dict[30 кодів → {rows list[[str, str]], note str opt, items list[str] opt, warn str opt}]

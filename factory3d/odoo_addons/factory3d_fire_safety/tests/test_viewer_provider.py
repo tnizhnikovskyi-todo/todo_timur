@@ -64,7 +64,27 @@ class TestPayload(FireCase):
         self.push_value(DUST, 90.1, self.at(70))
         request = self.env['maintenance.request'].search([('f3d_fire_zone_id', '=', self.z_fac.id)])
         self.assertEqual(len(request), 1)
-        self.assertEqual(self.fire()['groups']['FA-FAC']['maintenance_request'], request.name)
+        fac = self.fire()['groups']['FA-FAC']
+        self.assertEqual((fac['maintenance_request'], fac['maintenance_request_id']), (request.name, request.id))
+
+    def test_request_id_same_name(self):
+        """Viewer R-22: однойменні заявки на двох групах — кожна група віддає id своєї заявки."""
+        Request = self.env['maintenance.request']
+        stage = self.env['maintenance.stage'].search([('done', '=', False)], limit=1)
+        req_cut = Request.create({'name': 'Планове ТО', 'f3d_fire_zone_id': self.z_cut.id, 'stage_id': stage.id})
+        req_fac = Request.create({'name': 'Планове ТО', 'f3d_fire_zone_id': self.z_fac.id, 'stage_id': stage.id})
+        self.assertNotEqual(req_cut.id, req_fac.id)
+        groups = self.fire()['groups']
+        self.assertEqual(groups['FA-CUT']['maintenance_request_id'], req_cut.id)
+        self.assertEqual(groups['FA-FAC']['maintenance_request_id'], req_fac.id)
+        self.assertEqual(groups['FA-CUT']['maintenance_request'], groups['FA-FAC']['maintenance_request'])
+        # повний payload групи без заявки — без ключів, delta зливається поверх даних клієнта і скидає їх у null
+        self.assertNotIn('maintenance_request_id', groups['FA-EB'])
+        self.assertNotIn('maintenance_request_id', groups['FA-EB'])
+        delta = build_fire(self.env, {'now': self.T0, 'delta': True})['groups']
+        self.assertEqual(delta['FA-CUT']['maintenance_request_id'], req_cut.id)
+        self.assertIsNone(delta['FA-EB']['maintenance_request'])
+        self.assertIsNone(delta['FA-EB']['maintenance_request_id'])
 
     def test_evacuation_structure(self):
         data = build_evacuation(self.env(user=self.u), {'now': self.T0})
