@@ -186,7 +186,7 @@
                 <field name="comm"/>
                 <templates>
                     <t t-name="card">
-                        <div t-attf-class="p-2 fs-3 text-center #{record.state.raw_value in ('alarm','prealarm') ? 'text-bg-danger' : record.state.raw_value in ('fault','disabled') ? 'text-bg-warning' : record.state.raw_value == 'test' ? 'text-bg-info' : record.state.raw_value == 'normal' ? 'text-bg-success' : 'text-bg-secondary'}">
+                        <div t-attf-class="p-2 fs-3 text-center #{['alarm','prealarm'].includes(record.state.raw_value) ? 'text-bg-danger' : ['fault','disabled'].includes(record.state.raw_value) ? 'text-bg-warning' : record.state.raw_value == 'test' ? 'text-bg-info' : record.state.raw_value == 'normal' ? 'text-bg-success' : 'text-bg-secondary'}">
                             <field name="state_text"/>
                         </div>
                         <div class="mt-2">Зв'язок: <field name="comm"/> · останнє показання <field name="last_seen"/></div>
