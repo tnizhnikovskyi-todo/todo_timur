@@ -7,15 +7,65 @@
 Документация заморожена на коммите: `9b5cbb5`
 BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth-8tq7jy`; интеграция — в отдельном worktree `claude/factory3d-build`.
 
-## Сводка для продолжения (обновлено 2026-10-15 20:15 UTC)
+## Сводка для продолжения (обновлено 2026-10-16 ~07:45 UTC, фаза QA на тестовом сервере)
 
-Сборка завершена: 11 из 11 модулей DONE и смержены в `claude/factory3d-build` @ `29a088e` (Odoo 1633/1633, 18 модулей
-вместе с iot_sim, td_genset и factory3d_genset; демо viewer 211/211; фикс machine_connect DEC-19/20 включён).
-Итоговое сообщение отправлено, send_later не ставится.
+**Сборка завершена:** 11/11 модулей в `claude/factory3d-build`. Сейчас идёт QA и доработки на тестовом сервере по указаниям пользователя.
 
-Дальше — QA на тестовой базе `timur-o19demo` (см. журнал 20:05 и 20:07 UTC): ждём от пользователя «готово» после
-установки модулей из `29a088e`; затем проверить установку через коннектор, агенты по модулям (≤3 одновременно),
-этап 2 — стенд в контейнере (таймбокс 1 ч). Отчёты — `factory3d/build/qa/<m>.md`.
+**Тестовый сервер.** https://timur-o19demo.todo.ltd, DB `odoo`, Odoo 19.0+e (Enterprise), демо-данные загружены odoo_push.py, демо-часы viewer 2026-10-12 10:30 (решено оставить).
+- Коннектор odoo-mcp: `connection_id = "AxI--dg8QCmJAxW_"`. Ставить/обновлять модули — через JSON-RPC (коннектор падает по таймауту).
+- Доступы и хелперы — в scratchpad `/tmp/claude-0/-home-user-todo-timur/c00ab7e6-c2ea-5355-9cae-b7d9087feae4/scratchpad/`, в репо их нет:
+  - `o19demo.cred` — admin для RPC/браузера;
+  - `o19demo.ssh` — SSH, но порт 22 из контейнера закрыт;
+  - `qa/rpc_call.py <cred> <model> <method> '<args>' '<kwargs>'` — JSON-RPC с полным трейсбеком;
+  - `qa/odoo_rpc.py` — для button_immediate_install/upgrade.
+- Деплой: на сервере таймер `f3d-update` раз в 2 мин тянет `claude/factory3d-build` в `/mnt/f3d-addons`, по изменённым модулям делает `-u` + рестарт (дамп, при ошибке откат). Пушить только зелёное. Новые модули ставить через Odoo.
+- 22:01→23:28 UTC таймер молчал, причина неизвестна; пользователю предложено посмотреть `journalctl -u f3d-update`.
+- Установлены все 19 модулей, включая Enterprise-мосты base_mrp_maintenance, machine_connect_mrp_workorder, yard_gantt.
+- Миграция telemetry завершена (state done). Повтор: `f3d.signal.f3d_run_migration`, отчёт в `factory3d.telemetry.level0_migrated`. Уровень 0 iot_sim выключен по дизайну.
+
+**Тесты.** Run A: 18 модулей (15 factory3d_* без 3 Enterprise-мостов + td_genset + 2 test_*), тесты каждого модуля с тегами по умолчанию, НЕ тег `f3d`; последний результат 1682/1682. Run B: демо-набор viewer на f3d_demo_tpl (211/211). Скрипты — `factory3d/tools/odoo/`.
+
+**QA (итог ночи).** Отчёты `factory3d/build/qa/*.md`, реестр `qa/DEFECTS.md` (исправлено 22, на сервере подтверждено 17, 6 — не дефекты). Регресс — `qa/regress_1.md`, `qa/regress_2.md`. Стенд — `qa/stand.md`: §1 запуск, §5 постоянный стенд на сервере. Мусор QA в базе — `qa/CLEANUP.md` (удалять только с подтверждением пользователя). Процедура QA-агентов — `factory3d/build/QA.md`.
+- Стенд в контейнере менеджера умирает, когда контейнер засыпает (07:46 Kyiv). Токен COL-MAIN отозван, `stop_stand.sh` выполнен. Для живых данных нужен постоянный стенд на сервере.
+
+**Обход меню** (`qa/menus.md`, скрипты в scratchpad `menus/`): 168 пунктов, 119 OK, 30 родительских, 7 мутирующих не запускались. Ошибки:
+- access «Відвідувачі» (фильтр today: datetime.time.min/max);
+- fire_safety «Огляд пожежної сигналізації» (Python `in (...)` в QWeb kanban);
+- фильтр «Нижче мінімуму» f3d.gantry.stack (сравнение поля с полем);
+- нет icon.png у bms (404 на 10 страницах настроек).
+
+**В РАБОТЕ (агенты; если отчёт потерян — смотреть ветки):**
+1. Исправление ошибок меню + статический скан видов + перепроверка всех фильтров + kiosk SCSS (`assets_kiosk`: Undefined $theme-colors-rgb).
+   - worktree `/home/user/f3d-menufix`, ветка `claude/f3d-fix-menus`, DB f3d_int2; сам НЕ мержит.
+   - Дальше: менеджер мержит в `claude/factory3d-build` (`git merge --no-ff`, проверить diff), пуш → деплой таймером → повторный обход меню скриптами `scratchpad/menus/` → таблица пользователю.
+2. viewer: кнопки «Наблизити / Закрити / Відкрити в Odoo» в карточке выбранного объекта — наверх, sticky.
+   - Делает coder в `/home/user/f3d-build`, пушит сам.
+   - Скриншоты будут в `scratchpad/viewer_ui/card_top.png` и `card_scrolled.png` → отправить пользователю (SendUserFile).
+   - Уже сделано: `b29ad12` — сворачивание панелей и секций, левая панель без обрезки, клавиши [ ], localStorage `f3d.ui`; скриншоты `scratchpad/viewer_ui/srv_*.png`. dist/ не трогали (старый монолит).
+
+**Ждут решения пользователя:**
+- B-3: противоречие SPEC base AC-05/AC-06;
+- E-3: моста energy↔mrp_workorder нет;
+- уборка мусора QA по CLEANUP.md;
+- смена паролей admin и SSH, засвеченных в чате;
+- постоянный стенд на сервере;
+- journalctl f3d-update.
+
+**Указания пользователя:**
+- отвечать по-русски;
+- полномочия на тестовую базу полные («делай всё, что нужно»), но удаление записей — только с подтверждением;
+- решения принимает менеджер;
+- беречь лимиты: QA-агенты на haiku, код — coder (sonnet), не больше 3 агентов одновременно;
+- утром всё должно работать;
+- UI-правки по скриншотам пользователя проверять на сервере и присылать скриншоты.
+
+**Worktree:**
+- `/home/user/todo_timur` — ветка менеджера `claude/funny-knuth-8tq7jy`;
+- `/home/user/f3d-build` — `claude/factory3d-build`;
+- `/home/user/f3d-stand` — `claude/f3d-fix-stand`, смержена;
+- `/home/user/f3d-menufix` — `claude/f3d-fix-menus`.
+
+Будильников (send_later) нет.
 
 Процедура мержа (работает агент coder в worktree /home/user/f3d-build, БД f3d_int): `git merge --no-ff`; проверить,
 что чужие модули не откатываются (ветки старые); прогон A — все DONE-модули вместе с iot_sim на пустом шаблоне;
