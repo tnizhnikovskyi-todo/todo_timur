@@ -5,6 +5,7 @@ from odoo import api, models
 from odoo.exceptions import AccessError
 
 from ..tools import chains as chains_tools
+from ..tools import docs as docs_tools
 from ..tools import payload as payload_tools
 
 _logger = logging.getLogger(__name__)
@@ -39,9 +40,30 @@ class F3dViewerProviderChains(models.AbstractModel):
             payload["full_cycle_mo"] = productions[0]["name"] if productions else None
         else:
             payload.update(chains_tools.compute(payload))
+            self._f3d_doc_states(payload)
         if isinstance(sections, dict):
             sections["chains"] = "partial" if partial else "live"
         self._f3d_chains_zones(payload, ctx)
+
+    @api.model
+    def _f3d_doc_states(self, payload):
+        """R-23: стани документів, названих у кроках `productions[].supply|delivery` (`doc`, `note`), яких немає в
+        `pickings` / `quality_checks` / `productions` payload (напр. внутрішнє переміщення `WH/INT/00061` з нотатки
+        контролю): `supply.docs` / `delivery.docs` = {назва: {kind, state}}. Один пакетний запит на модель."""
+        known = {x["name"] for key in ("pickings", "quality_checks", "productions") for x in payload.get(key) or []}
+        blocks = []
+        for mo in payload.get("productions") or []:
+            for key in ("supply", "delivery"):
+                blk = mo.get(key)
+                if blk:
+                    steps = blk.get("steps") or []
+                    texts = [blk.get("note")] + [t for st in steps for t in (st.get("doc"), st.get("note"))]
+                    blocks.append((blk, docs_tools.names_in(*texts) - known))
+        wanted = set().union(*(n for _blk, n in blocks)) if blocks else set()
+        found = docs_tools.lookup_states(self.env, wanted) if wanted else {}
+        for blk, names in blocks:
+            if names & found.keys():
+                blk["docs"] = {n: found[n] for n in sorted(names) if n in found}
 
     @api.model
     def _f3d_chains_zones(self, payload, ctx):
@@ -106,6 +128,7 @@ class F3dViewerProviderChains(models.AbstractModel):
         if any(k not in tmp for k in NEEDED) or not env.user.has_group("stock.group_stock_user"):
             return
         patch.update(copy.deepcopy(chains_tools.compute(tmp)))
+        self._f3d_doc_states(tmp)
         fresh = {m["name"]: m for m in tmp["productions"]}
         for rec in patch.get("productions") or []:
             src = fresh.get(rec.get("name"))

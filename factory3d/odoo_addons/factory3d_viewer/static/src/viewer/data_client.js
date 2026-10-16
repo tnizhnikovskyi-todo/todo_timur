@@ -356,9 +356,27 @@ export class DataClient {
         this.timer = setTimeout(() => this._delta(), backoff * 1000);
     }
 
-    async resolve({ code, name }) {
-        const r = await this._json("/resolve", { query: code ? { code } : { name } });
+    /** `codes` (лише з `code`): коди дочірніх об'єктів — коли власного запису немає, сервер віддає `res_ids` їхніх записів. */
+    async resolve({ code, name, codes }) {
+        const query = code ? { code } : { name };
+        if (code && codes?.length) {
+            query.codes = codes.join(",");
+        }
+        const r = await this._json("/resolve", { query });
         return r.json();
+    }
+
+    /** API-11: історія комірки (ліниво, лише для відкритої картки); `null` — комірки немає (404). */
+    async locHistory(code) {
+        try {
+            const r = await this._json(`/loc/${encodeURIComponent(code)}`);
+            return await r.json();
+        } catch (e) {
+            if (e.status === 404) {
+                return null;
+            }
+            throw e;
+        }
     }
 
     async snapshots(date) {
@@ -417,6 +435,10 @@ export class FileClient extends DataClient {
 
     async resolve() {
         return { model: null, res_id: null, reason: "not_found" };
+    }
+
+    async locHistory() {
+        return null;
     }
 
     async snapshots() {

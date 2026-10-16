@@ -385,3 +385,18 @@
 /* рядок картки комірки за живими залишками Odoo (замість статичного опису) */
 .o_f3d_viewer .o_f3d_card p.o_f3d_live { font-weight: 500; }
 .o_f3d_viewer .o_f3d_card p.o_f3d_live-empty { color: var(--f3d-muted); }
+
+// документи в картках: посилання на форму Odoo + бейдж стану (R-23); історія комірки (R-24)
+.o_f3d_viewer .o_f3d_doc { white-space: nowrap; }
+.o_f3d_viewer .o_f3d_doc + .o_f3d_pill { margin-left: 2px; vertical-align: 1px; }
+.o_f3d_viewer .o_f3d_hist { font-size: 12px; }
+.o_f3d_viewer .o_f3d_hprod { margin: 6px 0 10px; padding: 6px 8px; border: 1px solid var(--f3d-line); border-radius: 7px; }
+.o_f3d_viewer .o_f3d_hph { font-weight: 600; }
+.o_f3d_viewer .o_f3d_hlot { margin-top: 4px; }
+.o_f3d_viewer .o_f3d_hlh { color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_hlh b { color: var(--f3d-fg); }
+.o_f3d_viewer .o_f3d_hres-on { color: var(--f3d-warn); }
+.o_f3d_viewer .o_f3d_hgrp { margin: 3px 0 0 8px; }
+.o_f3d_viewer .o_f3d_hlbl { display: block; font: 600 10px/1.6 var(--f3d-f-display); text-transform: uppercase; letter-spacing: 0.08em; color: var(--f3d-muted); }
+.o_f3d_viewer .o_f3d_hrow { padding: 1px 0; }
+.o_f3d_viewer .o_f3d_hrow .o_f3d_m { color: var(--f3d-muted); }

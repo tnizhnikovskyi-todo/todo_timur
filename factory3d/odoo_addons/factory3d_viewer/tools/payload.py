@@ -399,6 +399,24 @@ def _not_found():
     return {"model": None, "res_id": None, "reason": "not_found"}
 
 
+RESOLVE_GROUP_MAX = 200
+
+
+def _resolve_group(env, codes):
+    """R-16 п. 5: об'єкт сцени без власного запису (стелаж, група) -> записи його дочірніх кодів (комірок): перша за
+    порядком домішки модель, у якій знайшлось хоч щось. {model, res_id: None, res_ids, display_name, kind, count}."""
+    codes = list(dict.fromkeys(codes))[:RESOLVE_GROUP_MAX]
+    for model in env["f3d.scene.mixin"]._f3d_resolve_order:
+        if not codes or model not in env or not hasattr(env[model], "search_f3d") or not access_ok(env, model):
+            continue
+        recs = env[model].search(["|", ("f3d_code", "in", codes), ("f3d_alias", "in", codes)],
+                                 limit=RESOLVE_GROUP_MAX)
+        if recs:
+            return {"model": model, "res_id": None, "res_ids": recs.ids, "display_name": None, "kind": "group",
+                    "count": len(recs)}
+    return _not_found()
+
+
 def _operator_of(env, wc_code):
     """OP-<wc> без запису -> співробітник оператора поточного завдання на центрі."""
     if not (access_ok(env, "mrp.workcenter") and access_ok(env, "mrp.workorder") and access_ok(env, "hr.employee")):
@@ -412,8 +430,9 @@ def _operator_of(env, wc_code):
     return env["hr.employee"].search([("user_id", "in", wo.working_user_ids.ids)], limit=1) or None
 
 
-def resolve(env, code=None, name=None):
-    """{model, res_id, display_name, kind} або {model: None, res_id: None, reason: "not_found"}."""
+def resolve(env, code=None, name=None, codes=None):
+    """{model, res_id, display_name, kind} або {model: None, res_id: None, reason: "not_found"}.
+    `codes` (лише з `code`): коди дочірніх об'єктів — якщо власного запису немає, відповідь `_resolve_group`."""
     if code:
         m = WO_RE.match(code)
         if m and access_ok(env, "mrp.workorder"):
@@ -431,7 +450,7 @@ def resolve(env, code=None, name=None):
             emp = _operator_of(env, code[3:])
             if emp:
                 return _found(emp)
-        return _not_found()
+        return _resolve_group(env, codes) if codes else _not_found()
     if name:
         for model in DOC_MODELS:
             if model in env and access_ok(env, model):

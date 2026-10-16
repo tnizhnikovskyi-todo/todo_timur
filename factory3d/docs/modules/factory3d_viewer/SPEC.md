@@ -869,7 +869,7 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
 Спільне: усі маршрути `type="http"` повертають `Response` з `Content-Type: application/json; charset=utf-8`
 і `Cache-Control: no-store` (крім API-01, API-07). Помилки — JSON `{"error": {"code": "<snake>", "message":
 "<укр.>"}}` з HTTP-статусом. Параметри валідуються до звернення до ORM: `code`/`codes` —
-`^[A-Za-z0-9_\-][A-Za-z0-9_.\-]*(/[A-Za-z0-9_\-][A-Za-z0-9_.\-]*)*$`, ≤ 64 символи, кожен (сегменти через `/` — назви документів, `WH/MO/00231`; сегмент не починається з `.`, тож `..` і `../x` — `400`), ≤ 200 кодів; `<snapshot_id>` — лише цифри, інакше `404 not_found`; `since` — ISO-8601 UTC (`2026-10-12T07:30:12Z` або без `Z`);
+`^[A-Za-z0-9_\-][A-Za-z0-9_.\-]*(/[A-Za-z0-9_\-][A-Za-z0-9_.\-]*)*$`, ≤ 64 символи, кожен (сегменти через `/` — назви документів, `WH/MO/00231`; сегмент не починається з `.`, тож `..` і `../x` — `400`), ≤ 200 кодів; `<snapshot_id>` — лише цифри, інакше `404 not_found`; `<code>` маршруту API-11 — той самий `CODE_RE` (невалідний — `400`, немає в базі — `404 not_found`); `since` — ISO-8601 UTC (`2026-10-12T07:30:12Z` або без `Z`);
 `date` — `^\d{4}-\d\d-\d\d$`; `sections` — ключі з контракту через кому; `full`, `lite`, `kiosk` — `0|1`.
 Невалідний параметр → `400 {"code": "bad_request"}`. `auth="user"` → без сесії Odoo віддає стандартний
 редирект на `/web/login` (для `type=http`), тести перевіряють `401/303`.
@@ -950,6 +950,11 @@ access_f3d_viewer_cycle_check_manager,f3d.viewer.cycle.check manager,model_f3d_v
 Відповідь `{"model": "mrp.workcenter", "res_id": 12, "display_name": "Розкрій 1", "kind": "workcenter"}`
 або `{"model": null, "res_id": null, "reason": "not_found"}` (`200`, не помилка). Алгоритм R-16.
 
+Необов'язковий `codes` (лише з `code`; через кому, кожен за `CODE_RE`, ≤ 200, інакше `400`): коди дочірніх об'єктів сцени
+(комірки стелажа). Якщо власного запису `code` немає, відповідь — список записів дочірніх кодів:
+`{"model": "stock.location", "res_id": null, "res_ids": [11, 12, …], "display_name": null, "kind": "group", "count": 72}`
+(R-16 п. 5). Власний запис має перевагу: відповідь тоді без `res_ids`.
+
 ### API-05 `GET /f3d/viewer/snapshots`
 
 `auth="user"`, `group_f3d_user`. Параметри: `date` (`YYYY-MM-DD`, за замовчуванням сьогодні за Києвом).
@@ -990,6 +995,19 @@ API-01…API-07. Rate-limit: ≤ 10 запитів/с на IP — лічильн
 `type="jsonrpc"`, `auth="user"`, `group_f3d_manager`. Параметри: `{"as_user": <id> | null}` (лише admin може
 вказати іншого). Відповідь `{"ok": true, "issues": []}` або `{"ok": false, "issues": ["WH/IN/00134: приймання без
 західних воріт", …], "count": 1}`. Той самий код, що M-05.
+
+### API-11 `GET /f3d/viewer/loc/<code>`
+
+Історія однієї комірки для її картки (R-24); окремо від `/data`, щоб не роздувати періодичний payload.
+`auth="user"`, `group_f3d_user` **і** `stock.group_stock_user` (як провайдер `stock`; інакше `403 forbidden`); запит
+виконується з правами користувача (без `sudo`). `<code>` — `f3d_code` або `f3d_alias` локації: невалідний за `CODE_RE` —
+`400 bad_request`, немає в базі — `404 not_found`. `Cache-Control: no-store`, gzip. Кіоск (API-09) маршруту не має.
+Відповідь: `{"code", "complete_name", "truncated", "products": [{"product" (default_code), "name", "uom", "qty",
+"reserved", "lots": [{"lot", "qty", "reserved", "arrived": [{"doc", "date", "qty", "from"}], "reserve": [{"doc", "qty",
+"pending", "to"}]}], "out": [{"doc", "qty", "to", "date"}], "incoming": [{"doc", "qty", "from", "date"}]}]}`;
+`doc` = `{"name", "model", "id", "kind": "picking|production|scrap|inventory|move", "state"}` (`model`/`id` порожні для
+«Інвентаризації» й довільних рухів), `from`/`to` = `{"code" (f3d_code або null), "name" (complete_name)}`, `date` — київський
+час `YYYY-MM-DD HH:MM`.
 
 ## 8. Клієнтська частина
 
@@ -1127,7 +1145,8 @@ registry.category("actions").add("f3d_viewer.action", F3dViewerAction);
 | `subscribe(cb)` | бекенд: `bus.addChannel("f3d_viewer")`, `bus.subscribe("f3d_viewer", msg => this._queue(msg))`; кіоск або `bus_enabled=false` (`meta.bus=false`): `setInterval(() => this._delta(), refreshS*1000)` |
 | `_queue(msg)` | `pending.codes ∪= msg.codes`; `clearTimeout(t); t = setTimeout(_delta, debounceMs)` |
 | `_delta()` | якщо `inflight` — позначити `again=true` і вийти; `GET {base}/delta?since=lastTs&codes=…`; `full` → `loadData()` і `cb({full: payload})`; інакше `cb(patch)`, `lastTs = ts`; помилка → лічильник `errors++`, `backoff = min(60, 2^errors)` с; після 5 помилок у кіоску — `location.reload()`; у бекенді — індикатор «немає зв'язку» і опитування кожні 30 с |
-| `resolve({code \| name})` | `GET {base}/resolve` |
+| `resolve({code \| name, codes})` | `GET {base}/resolve`; `codes` — коди дочірніх об'єктів (API-04, R-16 п. 5) |
+| `locHistory(code)` | `GET {base}/loc/<code>` (API-11, R-24); `404` → `null`; кіоск і `FileClient` — `null` |
 | `snapshots(date)`, `snapshot(id)` | API-05/06, кеш `Map<id, payload>` ≤ 20 записів |
 | `state` | `"loading" \| "live" \| "polling" \| "offline"`; подія `statechange` для індикатора (R2) |
 | `bus` подія `disconnect`/`reconnect` (Odoo `bus_service` емітує `BUS:DISCONNECT`/`BUS:RECONNECT`) | → `polling`/`live`; після `reconnect` — негайний `_delta()` |
@@ -1494,6 +1513,17 @@ round(Σ product_uom_qty), available: Σ quantity (зарезервовано) �
 limit=1)`, моделі, яких немає в `env`, пропускаються. Результат `{model, res_id, display_name, kind}`; `kind` —
 з `f3d_kind` домішки або `"document"`.
 
+П. 5 (`codes`, API-04): якщо за `code` нічого не знайдено, а передано `codes` — одним запитом на модель шукаються записи з
+`f3d_code ∈ codes` або `f3d_alias ∈ codes` (порядок моделей домішки, ≤ 200, з правами користувача); перша модель, де щось є,
+дає `{model, res_id: null, res_ids, kind: "group", count}`; нічого немає — `not_found`. Клієнт (`core.js`, картка 3D-об'єкта)
+збирає `codes` так: нащадки об'єкта з кодом живих комірок (`D.locations[c].quants` — масив); якщо їх немає, а об'єкт —
+стелаж (`kind = "rack"`), то комірки, чий центр лежить у габариті стелажа (+0,25 м; сцена плоска, ієрархії стелаж→комірка
+у GLB немає); інакше комірки з префіксом `<code>-`. Більше 200 кодів — список не пропонується. Кнопка «Відкрити в Odoo»:
+показується одразу, якщо дані підказують запис (`D.workcenters|employees|equipment|zones[code]`, жива комірка, фура,
+ворота) або є живі комірки всередині; інакше — один `resolve({code})` на картку (результат кешується), кнопки немає, доки
+запис не знайдено. Знайдено `res_ids` — `opts.onOpenRecords(model, ids, label)` (дія: список `stock.location` з доменом
+`id in ids`); кіоск кнопки не має.
+
 ### R-17 Вибір режиму програвання на клієнті
 
 При першому русі повзунка/▶: `client.snapshots(D.meta.now[:10])` → якщо `mode == "snapshots"` і користувач
@@ -1534,6 +1564,49 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 ### R-21 Знімок — вибір часу
 
 Крон о `HH:MM` у вікні → знімок; якщо `snapshot_hours` порожній — завжди. `shift_date` = дата `ts` за Києвом.
+
+### R-23 Документи в картках: стан-бейдж і посилання на форму Odoo
+
+Скрізь, де картка називає документ, поруч стоїть бейдж його стану (клас `o_f3d_pill`, як «Готово» у «Документ на воротах»),
+а назва відкриває форму Odoo (`client.resolve({name})` → `onOpenRecord`; у кіоску — лише текст і бейдж). Назва документа —
+`^(?:[A-Z][A-Z0-9]{0,5}/){1,3}\d{3,}$` (`WH/IN/00128`, `WH/INT/00061`, `QC/00413`); у вільному тексті (нотатки кроків,
+`supply.note`, `delivery.note`, `loc.note`, `q.note`, `p.note`, `p.origin`, `c.expected`) такі назви знаходяться регулярним
+виразом і розмічаються самі. Джерело стану (клієнт, `docInfo(name)`): `pickings[].state` → `quality_checks[].state` →
+`productions[].state` → `productions[].supply|delivery.docs[name]`. Мітки (`format.js`): `stock.picking`
+`draft/waiting/assigned/done/cancel` = Чернетка / Очікує / Готово / Виконано / Скасовано; `quality.check.quality_state`
+`none/pass/fail` = Очікує / Пройдено / Брак; `mrp.production` `draft/confirmed/progress/done/cancel` = Чернетка /
+Підтверджено / У роботі / Виконано / Скасовано; невідомий стан — сірий бейдж із сирим текстом. Провайдер `chains` для назв у
+кроках `supply|delivery`, яких немає в payload (напр. внутрішнє переміщення `WH/INT/00061` у нотатці контролю плит), одним
+запитом на модель (`stock.picking`, `mrp.production`, `quality.check`; з правами користувача) додає
+`supply.docs` / `delivery.docs` = `{назва: {"kind": "picking|production|quality", "state"}}` (нормалізований стан: picking
+`confirmed → waiting`, МО `to_close → progress`); у дельті — разом із `supply`/`delivery` змінених МО. Назва — `span[role=link]`
+(не `button`: вона може стояти всередині рядка-кнопки, а вкладений `button` HTML не допускає), Enter = клік.
+QC-посилання (`QC/…`) у рядку кванта («брак QC/00412»), червоному блоці комірки карантину, «Потребує уваги» і кроку «Контроль»
+шляху плити відкривають `quality.check` і показують `quality_state`.
+
+### R-24 Історія комірки (API-11)
+
+Картка 3D-об'єкта, якому відповідає `D.locations[code]`, під таблицею залишків показує блок «Рух по комірці» з API-11
+(кіоск його не показує). Клієнт: `DataClient.locHistory(code)` (`null` для `404`), кеш `locHist[code]`; запит іде при
+відкритті картки; жива дельта, що зачепила `locations | pickings | productions | quality_checks` (або `full`), позначає
+кеш застарілим, і відкрита картка перечитує його (запит не частіше одного одночасно; якщо дельта прийшла під час запиту —
+повторно через 0,7 с); страховка — кеш старіший 60 с. `/data` і `/delta` не змінюються. Сервер
+(`tools/loc_history.build`, одна вибірка на вид, ліміти `LIMIT_QUANTS = 50`, `LIMIT_DONE = 300`, `LIMIT_OPEN = 200`,
+`truncated` — якщо хоч одна вперлась у ліміт; по ≤ 10 записів кожного виду на товар/партію):
+1. Рядки = квант `stock.quant` комірки (товар, партія): залишок і резерв. Товар без залишку з'являється, якщо має відкритий рух
+   із/у комірку.
+2. `arrived` — останні (≤ 3, новіші першими) виконані `stock.move.line` з `location_dest_id = комірка` для цього товару й
+   партії: документ (`picking`, інакше МО, утилізація, «Інвентаризація», інакше `reference`), дата, кількість (в од. виміру
+   товару), звідки.
+3. `reserve` — відкриті рядки `stock.move.line` з `location_id = комірка`, `quantity > 0`, стан не `done/cancel`: документ,
+   кількість, куди.
+4. `out` (на рівні товару: рух не прив'язаний до партії) — відкриті `stock.move` з `location_id = комірка`,
+   `location_dest_id ≠ комірка`, стан `confirmed/waiting/partially_available`, ще не зарезервована частина
+   (`product_qty − Σ рядків`); документ, що вже є в `reserve` того ж товару, зливається в той запис (`pending` = залишок) і в
+   `out` не дублюється.
+5. `incoming` (на рівні товару) — відкриті `stock.move` з `location_dest_id = комірка`, `location_id ≠ комірка`, стан не
+   `done/cancel`: документ, кількість, звідки, планова дата.
+Кожен `doc` з `model`/`id` на клієнті — посилання на форму (`data-rec="model:id"` → `onOpenRecord`) і бейдж стану (R-23).
 
 ## 10. Стани й переходи
 
@@ -1938,10 +2011,11 @@ A.5.1 `components[]`: `product` str req; `qty` num req; `available` bool req; `l
 `receipt` str opt (94/200); `expected` str opt (14/200, `"WH/IN/00132 о 14:00"`).
 
 A.5.2 `supply`: `product` str; `steps` list[{code: str, label: str, note: str, doc: str|null opt}] (у файлі `note`
-є в усіх 188 кроках, `doc` — у 54); `lot` str|null; `warn` str|null; `note` str|null.
+є в усіх 188 кроках, `doc` — у 54); `lot` str|null; `warn` str|null; `note` str|null; `docs` dict opt (R-23: назви документів із кроків і нотаток, яких немає в
+`pickings`/`quality_checks`/`productions`: `{назва: {kind, state}}`).
 
 A.5.3 `delivery`: `picking` str; `partner` str; `steps` list[{code, label, note, doc opt}] (284 кроки, `doc` у 64);
-`note` str|null; `via` str opt (8 — МО фасадів: назва МО корпусу).
+`note` str|null; `via` str opt (8 — МО фасадів: назва МО корпусу); `docs` dict opt (як у A.5.2).
 
 ### A.6 `workorders[id]`
 
