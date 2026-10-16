@@ -395,6 +395,14 @@ export function createModel(project, storage, opts = {}) {
         if (!entryOf(s.wh, id) || id === s.wh.variant || !activate(s.wh, id)) return false;
         reloadVariant(); ed.persist(s); return true;
       },
+      // слить вариант id в активный (учебная копия тура, W-24): сохранённый слой активного заменяется слоем id, вариант id удаляется; нельзя, пока у активного есть несохранённое
+      merge(id) {
+        if (!can("variant")) { ed.say(s, "bad", "n.varDenied"); return false; }
+        ed.sync(s);
+        const from = entryOf(s.wh, id); if (!from || id === s.wh.variant || s.wh.pending.length) return false;
+        s.wh.saved = clone(normEdit(from.saved)); s.wh.building = s.wh.saved.building ?? null; removeVariant(s.wh, id);
+        reloadVariant(); ed.persist(s, true); return true;
+      },
       rename(id, name) {
         if (!can("variant")) { ed.say(s, "bad", "n.varDenied"); return false; }
         name = String(name || "").replace(/\s+/g, " ").trim();

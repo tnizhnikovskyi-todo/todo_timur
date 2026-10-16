@@ -55,6 +55,7 @@ const HTML = `
     <button class="btn btn-secondary" id="pr-btn" aria-pressed="false"><span data-i18n="prob.button"></span> <span class="cnt" id="pr-cnt">0</span></button>
     <div class="filemenu more" id="more-wrap" hidden><button class="btn btn-secondary" id="more-btn" aria-haspopup="true" aria-expanded="false" data-i18n="top.more" data-i18n-attr="title:top.moreTitle"></button>
       <div class="o_menu" id="more-list" role="group" hidden data-i18n-attr="aria-label:top.moreTitle"></div></div>
+    <button class="btn btn-secondary" id="tours-btn" aria-haspopup="dialog" data-i18n="top.tours" data-i18n-attr="title:top.toursTitle"></button>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
     <div class="seg" id="seg-lang" role="group" data-i18n-attr="aria-label:lang.label"><button data-l="uk" title="Українська">UK</button><button data-l="en" title="English">EN</button></div>
   </header>
@@ -94,7 +95,7 @@ const HTML = `
       <button type="button" class="sheet-grip" id="sheet-grip" aria-expanded="false" data-i18n="mob.panel"></button>
       <button type="button" class="sheet-x" id="sheet-x" data-i18n-attr="aria-label:mob.close,title:mob.close">✕</button>
     </div>
-    <div class="help-view" id="help-view" hidden></div>
+    <div class="help-view" id="help-view" hidden><div class="help-bar"><button type="button" class="btn btn-primary" id="help-back" data-i18n="help.toModel"></button></div><div id="help-body"></div></div>
     <aside class="o_prob" id="problems" hidden aria-label="Problems"></aside>
     <aside class="o_prob o_tray" id="tray" hidden aria-label="Tray"></aside>
     <aside class="o_prob o_cmt" id="comments" hidden aria-label="Comments"></aside>
@@ -349,15 +350,24 @@ export function mountApp(root, { model, i18n, host = {} }) {
   let helpTexts = null, helpReady = false;
   const loadHelp = () => helpTexts ||= import("../i18n/help.js").then((m) => { i18n.extend(m.default); helpReady = true; }).catch((e) => { helpTexts = null; throw e; });
   async function drawHelp() {
-    const hv = q("#help-view");
+    const hv = q("#help-body");
     if (!helpReady) {
       hv.innerHTML = `<div class="loading" role="status">${esc(t("help.loading"))}</div>`;
       try { await loadHelp(); } catch (e) { console.error(e); hv.innerHTML = ""; model.notify("bad", "n.fileFail"); showView("plan"); return; }
     }
     if (view !== "help") return;
-    renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); } });
+    renderHelp(q("#help-body"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); }, onTourList: (el) => import("./tour.js").then((m) => m.fillTourList(el, { i18n, start: runTour })).catch((e) => console.error(e)) });
   }
-  const startTour = () => import("./tour.js").then((m) => m.startTour({ root, i18n })).catch((e) => console.error(e));
+  const startTour = (id) => import("./tour.js").then((m) => m.startTour({ root, i18n, model, host, id: typeof id === "string" ? id : "T-basic" })).catch((e) => console.error(e));
+  // туры по типовым задачам (W-24): меню «Тури», список в инструкции, ссылка #tour-<id>; прерванный тур предлагает убрать учебную копию
+  const runTour = (id) => { mob.closeMenu(); showView("plan"); startTour(id); };
+  q("#tours-btn").onclick = (ev) => { ev.stopPropagation(); import("./tour.js").then((m) => m.toursMenu({ i18n, start: runTour, anchor: q("#tours-btn") })).catch((e) => console.error(e)); };
+  const hashTour = () => { const id = /^#tour-([a-z]+)$/.exec(location.hash); if (id && view === "plan") { startTour(`T-${id[1]}`); return true; } return false; };
+  addEventListener("hashchange", hashTour);
+  // выход из инструкции (модель не трогаем: вид, уровень и выделение остаются): кнопка «До моделі», 2D / 3D / «Будівля», «Редагувати», Esc
+  q("#help-back").onclick = () => showView("plan");
+  root.addEventListener("click", (ev) => { if (view === "help" && ev.target.closest("#seg-mode button, #ed-tg")) showView("plan"); }, true);
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && view === "help" && !document.getElementById("tour") && fileList.hidden && !document.querySelector("dialog[open], .o_modal_bg")) { ev.preventDefault(); showView("plan"); } });
   q("#help-btn").onclick = () => { mob.closeMenu(); showView(view === "help" ? "plan" : "help"); };
   q("#pr-btn").onclick = () => { probs.toggle(); paintBars(); };
   q("#tray-btn").onclick = () => tray.toggle();
@@ -388,6 +398,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   const w0 = model.wizard.state;
   if (w0 && (model.pref.read("wizopen") || (!w0.reached && !w0.form.building.done))) wiz.toggle(true);
   let seen = true; try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) { /* без хранилища тур не навязываем */ }
-  if (!seen) setTimeout(() => { if (view === "plan") startTour(); }, 400);
+  const orphan = !!model.pref.read("tourcopy");
+  setTimeout(() => { if (orphan) import("./tour.js").then((m) => m.offerCleanup({ i18n, model })).catch((e) => console.error(e)); else if (!hashTour() && !seen && view === "plan") startTour(); }, 400);
   return { showView, get mode() { return mode; } };
 }

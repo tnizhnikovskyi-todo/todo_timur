@@ -252,14 +252,14 @@ svg .shp { fill: none; stroke: var(--steel); stroke-width: 1; pointer-events: no
 
 /* инструкция */
 .o_help { display: grid; grid-template-columns: 200px minmax(0, 860px); gap: 24px; justify-content: center; padding: 20px 16px 40px; }
-.o_help .toc { position: sticky; top: 16px; align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.o_help .toc { position: sticky; top: 64px; align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .o_help .toc .h { font-weight: 600; color: var(--o-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.04em; margin: 0 0 6px 8px; }
 .o_help .toc a { color: var(--o-text); text-decoration: none; padding: 5px 8px; border-radius: 4px; border-left: 2px solid transparent; }
 .o_help .toc a:hover, .o_help .toc a[aria-current] { background: var(--o-hover); border-left-color: var(--o-brand); }
 .hl-sheet { margin: 0; padding: 28px 36px; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 4px; min-width: 0; }
 .hl-sheet h1 { font-size: 22px; margin: 0 0 8px; font-weight: 600; }
 .hl-sheet h2 { font-size: 17px; font-weight: 600; margin: 0 0 8px; color: var(--o-brand); }
-.hl-sheet section { padding: 18px 0 6px; border-top: 1px solid var(--o-border); margin-top: 14px; scroll-margin-top: 12px; }
+.hl-sheet section { padding: 18px 0 6px; border-top: 1px solid var(--o-border); margin-top: 14px; scroll-margin-top: 64px; }
 .hl-sheet section:first-of-type { border-top: 0; margin-top: 0; }
 .hl-sheet p, .hl-sheet li { max-width: 72ch; }
 .hl-sheet ul { padding-left: 20px; margin: 6px 0; } .hl-sheet li { margin: 5px 0; }
@@ -529,3 +529,20 @@ svg .pa-src { stroke: #f2994a; stroke-width: 2.6; stroke-dasharray: 5 3; }
   .app[data-sheet="full"] .sheet-x { top: 6px; bottom: auto; }
   .tour-card { max-width: calc(100vw - 16px); }
 }
+
+/* инструкция: закреплённая кнопка выхода и нажатая кнопка «Інструкція» (W-24) */
+.help-bar { position: sticky; top: 0; z-index: 5; padding: 8px 16px; background: var(--o-bg); border-bottom: 1px solid var(--o-border); }
+#help-btn[aria-pressed="true"] { background: var(--o-brand); color: #fff; border-color: var(--o-brand); }
+@media (max-width: 768px) { .help-bar { padding: 8px 12px; } .help-bar .btn { width: 100%; min-height: 48px; font-size: 16px; } }
+
+/* туры по типовым задачам (W-24) */
+#tour.act { pointer-events: none; } #tour.act .tour-card { pointer-events: auto; }
+.tour-note { font-size: 12px; color: var(--o-muted); margin: 0 0 8px; } .tour-st { font-size: 12px; font-weight: 600; color: var(--o-brand); margin: 0 0 8px; } .tour-note[hidden], .tour-st[hidden] { display: none; }
+.tour-end .chk { display: flex; gap: 8px; align-items: center; margin: 4px 0; font-size: 13px; } .tour-end .tour-act { margin-top: 10px; }
+.tour-act { flex-wrap: wrap; row-gap: 6px; } .tour-act .btn { white-space: nowrap; }
+.tour-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tour-list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--o-border); border-radius: 6px; background: var(--o-bg); }
+.tour-list .tl-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; } .tour-list .mut { font-size: 12px; } .tour-list .tl-done { font-size: 12px; font-weight: 600; color: var(--ok, #2e7d32); }
+.tours-pop { position: fixed; z-index: 70; width: min(460px, calc(100vw - 16px)); max-height: calc(100vh - 80px); overflow: auto; padding: 8px 10px; background: var(--o-bg); border: 1px solid var(--o-border); border-radius: 8px; box-shadow: var(--shadow); }
+.tours-pop .tp-h { font-weight: 600; margin: 2px 0 4px; }
+@media (max-width: 768px) { .tours-pop { left: 8px !important; right: 8px !important; width: auto; } .tour-list li { flex-wrap: wrap; } .tour-list .btn { min-height: 44px; } }
