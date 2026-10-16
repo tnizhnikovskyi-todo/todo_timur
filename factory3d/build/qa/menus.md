@@ -1,8 +1,8 @@
 # QA: все пункты меню factory3d_* и td_genset (timur-o19demo, БД odoo)
 
-Дата: 2026-10-16 07:20 UTC. Сервер: https://timur-o19demo.todo.ltd (Odoo 19 Enterprise), пользователь admin. Режим: только чтение; продуктовый код и данные не менялись, отчёт не закоммичен.
+Дата: 2026-10-16 08:50 UTC. Сервер: https://timur-o19demo.todo.ltd (Odoo 19 Enterprise), пользователь admin. Повторный обход после 1195be9 (фиксы меню). Режим: только чтение, кроме «Звіт перевірки евакуації» (action_recompute_compliance, пересчёт).
 
-**Меню всего: 168 / OK: 119 / ERROR: 12 / не применимо (родительские): 30 / не выполнялось (мутирующие server-actions): 7**
+**Меню всего: 168 / OK: 132 / ERROR: 0 / не применимо (родительские): 30 / не выполнялось (мутирующие server-actions): 6**
 
 Уникальных действий: 137 (window 123, server 11, client 3). Меню с общим действием получают общий результат.
 
@@ -23,7 +23,7 @@
 | factory3d_access | Відвідування / Звітність / Проходи СКУД | window | srv: get_views(list+pivot+graph+search)+web_search_read(n=2); browser: default,view:pivot,view:graph | OK |  |
 | factory3d_access | Відвідування / Налаштування / Сервери BioStar | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
 | factory3d_access | Завод 3D / Доступ | — | n/a (родительское меню) | N/A |  |
-| factory3d_access | Завод 3D / Доступ / Відвідувачі | window | srv: get_views(list+calendar+form+search)+web_search_read(n=0); browser: default | ERROR | default: console: OwlError: An error occured in the owl lifecycle (see this Error's "cause" property) Error: An error occured in the owl lifecycle (see this Error's "cause" property) at handleError (h |
+| factory3d_access | Завод 3D / Доступ / Відвідувачі | window | srv: get_views(list+calendar+form+search)+web_search_read(n=0); browser: default,view:calendar,form | OK |  |
 | factory3d_access | Завод 3D / Доступ / Двері | window | srv: get_views(kanban+list+form+search)+web_search_read(n=5); browser: default,view:list,form#3 | OK |  |
 | factory3d_access | Завод 3D / Доступ / Журнал подій | window | srv: get_views(list+form+pivot+graph+search)+web_search_read(n=2); browser: default,view:pivot,view:graph,form#2 | OK |  |
 | factory3d_access | Завод 3D / Доступ / Картки | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
@@ -32,7 +32,7 @@
 | factory3d_access | Завод 3D / Доступ / Повторна обробка | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_access | Завод 3D / Доступ / Пристрої | window | srv: get_views(list+form+search)+web_search_read(n=5); browser: default | OK |  |
 | factory3d_access | Завод 3D / Доступ / Сервери BioStar | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
-| factory3d_access | Завод 3D / Налаштування / Налаштування СКУД | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_access | Завод 3D / Налаштування / Налаштування СКУД | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_base | Завод 3D | — | n/a (родительское меню) | N/A |  |
 | factory3d_base | Завод 3D / Завод | — | n/a (родительское меню) | N/A |  |
 | factory3d_base | Завод 3D / Завод / Ворота | window | srv: get_views(list+form+search)+web_search_read(n=16); browser: default | OK |  |
@@ -42,7 +42,7 @@
 | factory3d_base | Завод 3D / Налаштування | — | n/a (родительское меню) | N/A |  |
 | factory3d_base | Завод 3D / Налаштування / Джерела паспортів | window | srv: get_views(list+search)+web_search_read(n=252); browser: default | OK |  |
 | factory3d_base | Завод 3D / Налаштування / Параметри паспортів | window | srv: get_views(list+search)+web_search_read(n=999); browser: default | OK |  |
-| factory3d_base | Завод 3D / Налаштування / Параметри системи | window | srv: get_views(list+form+search)+web_search_read(n=206); browser: default | OK |  |
+| factory3d_base | Завод 3D / Налаштування / Параметри системи | window | srv: get_views(list+form+search)+web_search_read(n=207); browser: default | OK |  |
 | factory3d_base | Завод 3D / Налаштування / Повторити міграцію демо-даних | server | server action найден; не выполнялось | SKIP | мутирует: повторная миграция демо-данных |
 | factory3d_bms | Завод 3D / Будівля | — | n/a (родительское меню) | N/A |  |
 | factory3d_bms | Завод 3D / Будівля / Вентиляція й опалення | — | n/a (родительское меню) | N/A |  |
@@ -55,11 +55,11 @@
 | factory3d_bms | Завод 3D / Будівля / Освітлення / Норми освітленості | window | srv: get_views(list+form+search)+web_search_read(n=14); browser: default | OK |  |
 | factory3d_bms | Завод 3D / Будівля / Освітлення / Щити | window | srv: get_views(list+form+search)+web_search_read(n=3); browser: default | OK |  |
 | factory3d_bms | Завод 3D / Налаштування / Будівля | — | n/a (родительское меню) | N/A |  |
-| factory3d_bms | Завод 3D / Налаштування / Будівля / Налаштування будівлі | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_bms | Завод 3D / Налаштування / Будівля / Налаштування будівлі | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_bms | Завод 3D / Налаштування / Будівля / Повторити установку даних будівлі | server | server action найден; не выполнялось | SKIP | мутирует: повторная установка данных здания |
 | factory3d_bms | Завод 3D / Налаштування / Будівля / Сцени DALI | window | srv: get_views(list+search)+web_search_read(n=6); browser: default | OK |  |
 | factory3d_energy | Завод 3D / Енергетика | — | n/a (родительское меню) | N/A |  |
-| factory3d_energy | Завод 3D / Енергетика / Баланс обліку | window | srv: get_views(list+search)+web_search_read(n=264); browser: default | OK |  |
+| factory3d_energy | Завод 3D / Енергетика / Баланс обліку | window | srv: get_views(list+search)+web_search_read(n=280); browser: default | OK |  |
 | factory3d_energy | Завод 3D / Енергетика / Відключення | window | srv: get_views(list+form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_energy | Завод 3D / Енергетика / Енергія на виробництво | window | srv: get_views(pivot+graph+list+search)+web_search_read(n=45); browser: default,view:graph,view:list | OK |  |
 | factory3d_energy | Завод 3D / Енергетика / Журнал подій | window | srv: get_views(list+search)+web_search_read(n=201); browser: default | OK |  |
@@ -72,13 +72,13 @@
 | factory3d_energy | Завод 3D / Енергетика / Профіль | window | srv: get_views(graph+pivot+list+search)+web_search_read(n=1809); browser: default,view:pivot,view:list | OK |  |
 | factory3d_energy | Завод 3D / Енергетика / Пік і вартість | window | srv: get_views(pivot+list+search)+web_search_read(n=162); browser: default,view:list | OK |  |
 | factory3d_energy | Завод 3D / Енергетика / Схема мережі | window | srv: get_views(hierarchy+list+form+search)+web_search_read(n=123); browser: default,view:list,form#84 +2 вкл. | OK |  |
-| factory3d_energy | Завод 3D / Налаштування / Енергетика | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
-| factory3d_fire_safety | Завод 3D / Налаштування / Налаштування пожежної безпеки | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_energy | Завод 3D / Налаштування / Енергетика | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
+| factory3d_fire_safety | Завод 3D / Налаштування / Налаштування пожежної безпеки | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека | — | n/a (родительское меню) | N/A |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Евакуація | — | n/a (родительское меню) | N/A |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Евакуація / Виходи | window | srv: get_views(list+form+search)+web_search_read(n=12); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Евакуація / Димові зони | window | srv: get_views(list+form+search)+web_search_read(n=8); browser: default | OK |  |
-| factory3d_fire_safety | Завод 3D / Пожежна безпека / Евакуація / Звіт перевірки | server | server action найден; не выполнялось | SKIP | мутирует: compliance_dirty=True, действие вызовет action_recompute_compliance() (write) |
+| factory3d_fire_safety | Завод 3D / Пожежна безпека / Евакуація / Звіт перевірки | server | browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Евакуація / Маршрути | window | srv: get_views(list+form+search)+web_search_read(n=32); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Журнал подій | window | srv: get_views(list+form+graph+search)+web_search_read(n=28); browser: default,view:graph,form#28 | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Зони сигналізації | window | srv: get_views(kanban+list+form+search)+web_search_read(n=35); browser: default,view:list,form#1 +1 вкл. | OK |  |
@@ -87,7 +87,7 @@
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Налаштування / Шаблони навчань | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Налаштування / Шлейфи | window | srv: get_views(list+form+search)+web_search_read(n=4); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Норми | window | srv: get_views(list+form+search)+web_search_read(n=27); browser: default | OK |  |
-| factory3d_fire_safety | Завод 3D / Пожежна безпека / Огляд | window | srv: get_views(kanban+form+search)+web_search_read(n=1); browser: default | ERROR | default: console: OwlError: An error occured in the owl lifecycle (see this Error's "cause" property) Error: An error occured in the owl lifecycle (see this Error's "cause" property) at handleError (h |
+| factory3d_fire_safety | Завод 3D / Пожежна безпека / Огляд | window | srv: get_views(kanban+form+search)+web_search_read(n=1); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Пристрої | window | srv: get_views(list+form+search)+web_search_read(n=353); browser: default | OK |  |
 | factory3d_fire_safety | Завод 3D / Пожежна безпека / Системи | window | srv: get_views(list+form+search)+web_search_read(n=3); browser: default | OK |  |
 | factory3d_fire_safety | Обслуговування / Обслуговування / Заявки пожежної безпеки | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
@@ -96,7 +96,7 @@
 | factory3d_genset | Завод 3D / Генератор / Зв'язка | window | srv: get_views(list+form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_genset | Завод 3D / Генератор / Події → ТО | window | srv: get_views(list+form+search)+web_search_read(n=48); browser: default | OK |  |
 | factory3d_genset | Завод 3D / Генератор / Профілі | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
-| factory3d_genset | Завод 3D / Налаштування / Налаштування генератора | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_genset | Завод 3D / Налаштування / Налаштування генератора | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_iot_sim | Завод 3D / Емулятор | — | n/a (родительское меню) | N/A |  |
 | factory3d_iot_sim | Завод 3D / Емулятор / Запуски | window | srv: get_views(list+form+search)+web_search_read(n=4); browser: default | OK |  |
 | factory3d_iot_sim | Завод 3D / Емулятор / Каталог сигналів | window | srv: get_views(list+form+search)+web_search_read(n=1168); browser: default | OK |  |
@@ -110,7 +110,7 @@
 | factory3d_iot_sim | Завод 3D / Емулятор / Рівень 0 (без сервісу) / Сигнали обладнання | window | srv: get_views(list+form+search)+web_search_read(n=0); browser: default / НЕДОСТУПНО из UI: родитель factory3d_iot_sim.menu_iot_root неактивен | OK |  |
 | factory3d_iot_sim | Завод 3D / Емулятор / Рівень 0 (без сервісу) / Увімкнути імітацію | server | server action найден; не выполнялось / НЕДОСТУПНО из UI: родитель factory3d_iot_sim.menu_iot_root неактивен | SKIP | мутирует: включает cron имитации (write active=True) |
 | factory3d_iot_sim | Завод 3D / Емулятор / Сценарії | window | srv: get_views(kanban+list+form+search)+web_search_read(n=15); browser: default,view:list,form#1 | OK |  |
-| factory3d_iot_sim | Завод 3D / Налаштування / Налаштування емулятора | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_iot_sim | Завод 3D / Налаштування / Налаштування емулятора | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_machine_connect | Завод 3D / Верстати | — | n/a (родительское меню) | N/A |  |
 | factory3d_machine_connect | Завод 3D / Верстати / OEE | window | srv: get_views(list+pivot+graph+form+search)+web_search_read(n=70); browser: default,view:pivot,view:graph,form#65 | OK |  |
 | factory3d_machine_connect | Завод 3D / Верстати / Журнал станів | window | srv: get_views(list+graph+pivot+search)+web_search_read(n=175); browser: default,view:graph,view:pivot | OK |  |
@@ -128,28 +128,28 @@
 | factory3d_machine_connect | Завод 3D / Верстати / Розкрій | — | n/a (родительское меню) | N/A |  |
 | factory3d_machine_connect | Завод 3D / Верстати / Розкрій / Деталі виробів | window | srv: get_views(list+form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_machine_connect | Завод 3D / Верстати / Розкрій / Карти розкрою | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
-| factory3d_machine_connect | Завод 3D / Налаштування / Налаштування верстатів | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
-| factory3d_telemetry | Завод 3D / Налаштування / Налаштування телеметрії | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_machine_connect | Завод 3D / Налаштування / Налаштування верстатів | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
+| factory3d_telemetry | Завод 3D / Налаштування / Налаштування телеметрії | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія | — | n/a (родительское меню) | N/A |  |
-| factory3d_telemetry | Завод 3D / Телеметрія / Годинні агрегати | window | srv: get_views(pivot+graph+list+search)+web_search_read(n=13485); browser: default,view:graph,view:list | OK |  |
+| factory3d_telemetry | Завод 3D / Телеметрія / Годинні агрегати | window | srv: get_views(pivot+graph+list+search)+web_search_read(n=13603); browser: default,view:graph,view:list | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія / Джерела | window | srv: get_views(list+form+kanban+search)+web_search_read(n=137); browser: default,view:kanban,form#104 +3 вкл. | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія / Колектори | window | srv: get_views(list+form+search)+web_search_read(n=5); browser: default | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія / Команди | window | srv: get_views(list+form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія / Огляд | window | srv: get_views(kanban+list+form+search)+web_search_read(n=137); browser: default,view:list,form#104 +3 вкл. | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія / Події HTTP push | window | srv: get_views(list+form+search)+web_search_read(n=15); browser: default | OK |  |
-| factory3d_telemetry | Завод 3D / Телеметрія / Показання | window | srv: get_views(graph+list+search)+web_search_read(n=146544); browser: default,view:list | OK |  |
+| factory3d_telemetry | Завод 3D / Телеметрія / Показання | window | srv: get_views(graph+list+search)+web_search_read(n=146662); browser: default,view:list | OK |  |
 | factory3d_telemetry | Завод 3D / Телеметрія / Сигнали | window | srv: get_views(list+form+graph+pivot+search)+web_search_read(n=1244); browser: default,view:graph,view:pivot,form#232 +4 вкл. | OK |  |
 | factory3d_telemetry | Обслуговування / Телеметрія | window | srv: get_views(list+form+graph+pivot+search)+web_search_read(n=1244); browser: default,view:graph,view:pivot,form#232 +4 вкл. | OK |  |
 | factory3d_viewer | Завод 3D / Демо-дані | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_viewer | Завод 3D / Журнал станів | — | n/a (родительское меню) | N/A |  |
 | factory3d_viewer | Завод 3D / Журнал станів / Знімки | window | srv: get_views(list+form+search)+web_search_read(n=1); browser: default | OK |  |
-| factory3d_viewer | Завод 3D / Журнал станів / Події | window | srv: get_views(list+search)+web_search_read(n=1350); browser: default | OK |  |
-| factory3d_viewer | Завод 3D / Налаштування / Налаштування переглядача | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_viewer | Завод 3D / Журнал станів / Події | window | srv: get_views(list+search)+web_search_read(n=1370); browser: default | OK |  |
+| factory3d_viewer | Завод 3D / Налаштування / Налаштування переглядача | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_viewer | Завод 3D / Перевірка циклу | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | factory3d_viewer | Завод 3D / Переглядач | client | browser: default; примечание: ложное срабатывание детектора «blank» (у клиентского действия нет .o_content); UI отрисован, JS-ошибок нет; 3D-сцена за 25-40 с в headless не догрузилась («Завантаження моделі…») — не проверено | OK |  |
 | factory3d_yard | Завод 3D / Двір | — | n/a (родительское меню) | N/A |  |
 | factory3d_yard | Завод 3D / Двір / Бронювання воріт | window | srv: get_views(gantt+calendar+list+form+search)+web_search_read(n=8); browser: default,view:calendar,view:list,form#1 | OK |  |
-| factory3d_yard | Завод 3D / Двір / Диспетчеризація (стандарт) | server | browser: default,view:list | OK |  |
+| factory3d_yard | Завод 3D / Двір / Диспетчеризація (стандарт) | server | browser: default; примечание: ложное срабатывание детектора «blank» (server action → gantt, проверка до отрисовки); повторно 15 с: gantt отрисован, console/RPC-ошибок и диалогов нет | OK |  |
 | factory3d_yard | Завод 3D / Двір / Диспетчерська | window | srv: get_views(kanban+list+form+pivot+graph+search)+web_search_read(n=9); browser: default,view:list,view:pivot,view:graph,form#8 +4 вкл. | OK |  |
 | factory3d_yard | Завод 3D / Двір / Екран КПП | client | browser: default | OK |  |
 | factory3d_yard | Завод 3D / Двір / Журнали | — | n/a (родительское меню) | N/A |  |
@@ -164,7 +164,7 @@
 | factory3d_yard | Завод 3D / Двір / Налаштування / КПП і шлагбауми | window | srv: get_views(list+form+search)+web_search_read(n=2); browser: default | OK |  |
 | factory3d_yard | Завод 3D / Двір / Налаштування / Повторити міграцію двору | server | server action найден; не выполнялось | SKIP | мутирует: повторная миграция двора |
 | factory3d_yard | Завод 3D / Двір / Рейси | window | srv: get_views(list+form+kanban+pivot+graph+search)+web_search_read(n=9); browser: default,view:kanban,view:pivot,view:graph,form#8 +4 вкл. | OK |  |
-| factory3d_yard | Завод 3D / Налаштування / Налаштування двору | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | ERROR | default: console: Failed to load resource: the server responded with a status of 404 () @ /uk/factory3d_bms/static/description/icon.png |
+| factory3d_yard | Завод 3D / Налаштування / Налаштування двору | window | srv: get_views(form+search)+web_search_read(n=0); browser: default | OK |  |
 | td_genset | Генератори | — | n/a (родительское меню) | N/A |  |
 | td_genset | Генератори / Аналітика | — | n/a (родительское меню) | N/A |  |
 | td_genset | Генератори / Аналітика / Вироблено по днях | window | srv: get_views(graph+pivot+list+search)+web_search_read(n=0); browser: default,view:pivot,view:list | OK |  |
@@ -190,28 +190,3 @@
 | td_genset | Генератори / Показання | window | srv: get_views(list+graph+pivot+form+search)+web_search_read(n=0); browser: default,view:graph,view:pivot,form | OK |  |
 
 ## Ошибки и воспроизведение
-
-
-**E-1. Завод 3D / Доступ / Відвідувачі** (`factory3d_access.menu_f3d_access_visitor`, action 825, `f3d.access.visitor`) — ERROR, P1 (меню не открывается).
-Диалог «От халепа!» (OwlError), `TypeError: Cannot read properties of undefined (reading 'hour')` в `PyDateTime.combine`.
-Причина: действие применяет `search_default_today`, а фильтр `today` в `factory3d_access.view_f3d_access_visitor_search` использует `datetime.time.max` / `datetime.time.min`; JS-вычислитель домена Odoo (py.js) их не поддерживает.
-Воспроизведение: войти admin, открыть `/odoo/action-825` (или меню «Відвідувачі»). Исправление: `datetime.time(23, 59, 59)` и `datetime.time(0, 0, 0)` (как в td_genset). Виды list/calendar после падения не проверялись.
-
-**E-2. Завод 3D / Пожежна безпека / Огляд пожежної сигналізації** (`factory3d_fire_safety.menu_f3d_fire_overview`, action 914, `f3d.fire.panel`) — ERROR, P1 (меню не открывается).
-Диалог «От халепа!» (OwlError), `TypeError: Cannot use 'in' operator to search for 'normal' in prealarm`.
-Причина: в kanban `factory3d_fire_safety.view_f3d_fire_panel_kanban` шаблон `t-attf-class` содержит Python-синтаксис `record.state.raw_value in ('alarm','prealarm') ? … : record.state.raw_value in ('fault','disabled') ? …` внутри JS-выражения; в JS это `x in 'prealarm'` -> TypeError.
-Воспроизведение: открыть `/odoo/action-914` (в данных есть панель 1). Исправление: `['alarm','prealarm'].includes(record.state.raw_value)` и `['fault','disabled'].includes(...)`. Форма панели после падения не проверялась.
-
-**E-3. 10 меню «Налаштування» модулей** — ERROR, P3 (косметика, меню открываются).
-Меню: access (826), bms (906), energy (879), fire_safety (927), genset (968), iot_sim (795), machine_connect (862), telemetry (810), viewer (836), yard (893) (`*.menu_*settings*`/`*config*`, `res.config.settings`).
-Ошибка консоли: `Failed to load resource: 404` для `/uk/factory3d_bms/static/description/icon.png`. Единая причина: у модуля `factory3d_bms` нет `static/description/icon.png` (ссылка из блока настроек/иконки приложения). Прочие страницы настроек тоже загружают этот блок; 404 попал в лог не на всех из-за кеша браузера.
-Воспроизведение: открыть любую страницу «Налаштування» (`/odoo/action-826`), в консоли браузера 404 на icon.png. Связано с T-5 («нет icon.png») из DEFECTS.md.
-
-**Не ошибки меню, но найдено попутно (серверная проверка доменов фильтров):**
-- **F-1.** `f3d.gantry.stack`, фильтр «Нижче мінімуму» (`f_below_min`, поиск-вид действия 855, меню «Завод 3D / Верстати / Портал / Стоси під порталом», `factory3d_machine_connect.menu_f3d_mc_gantry_stack`): домен `[('ws_qty', '<', 'min_qty')]` сравнивает поле со строкой `'min_qty'`; при нажатии фильтра `search_count` падает: `ValueError: invalid literal for int() with base 10: 'min_qty'`. Odoo не умеет сравнивать поле с полем в домене; нужен stored-compute булево поле или `filtered`-метод. Воспроизведение RPC: `f3d.gantry.stack.search_count([('ws_qty','<','min_qty')])`. P2.
-- **N-1.** Меню под неактивным корнем `factory3d_iot_sim.menu_iot_root` («Завод 3D / Емулятор / Рівень 0 (без сервісу)», 5 пунктов: журнал показаний, сигнали обладнання, увімкнути/зупинити/оновити) не видны в UI (active=False); по URL действия открываются. Скорее всего намеренно (уровень 0 выключен, T-1); просто отметка.
-
-- **Оговорка по серверной проверке фильтров:** первый прогон показал только 825 и 855 (+ пропуски вычисления `datetime`/`time` в моём упрощённом eval, это ограничение проверки, не дефекты td_genset/machine_connect); начало вывода (действия с id < 825) было обрезано, повторный прогон не завершился в рамках таймбокса. Полнота проверки фильтров действий 777–822 не подтверждена.
-
-## Итог
-Из 168 меню: 30 родительских (n/a), 7 мутирующих не выполнялись, 131 проверено: 119 OK, 12 ERROR (2 функциональные P1 + 10 косметических 404 иконки). Остальные 118 уникальных действий (включая клиентское «Завод 3D» с примечанием) открываются без ошибок в консоли, RPC и UI; виды pivot/graph/calendar/kanban/list переключаются, формы первых записей и их вкладки открываются без ошибок.

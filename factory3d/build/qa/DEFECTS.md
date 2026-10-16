@@ -40,6 +40,11 @@
 | ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | DONE e64d479 в интеграции db77d0a |
 | ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | DONE 2b829ab в интеграции db77d0a |
 | E-4 | energy | P3 | 9 производных kwh_shift без данных и при живом стенде | DONE bbb0b36 (не раскатан) |
+| MN-1 | access | P2 | меню «Відвідувачі»: фильтр «Сьогодні» с datetime.time.min/max → OwlError | VERIFIED 18c15c2 (повторный обход меню 08:50 UTC) |
+| MN-2 | fire_safety | P2 | «Огляд пожежної сигналізації»: Python `in (...)` в t-attf-class канбана → TypeError | VERIFIED 5d9b0dd |
+| MN-3 | bms | P3 | нет static/description/icon.png → 404 на 10 страницах «Налаштування» | VERIFIED 946bc5f |
+| MN-4 | machine_connect | P2 | фильтр «Нижче мінімуму» стосов портала сравнивал поле с полем → ошибка search | VERIFIED ef478a8 (stored below_min) |
+| MN-5 | viewer | P2 | бандл assets_kiosk не компилировался (Undefined $theme-colors-rgb) | VERIFIED f877917 (киоск на сервере: стили, 3D, 0 ошибок) |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
 
@@ -53,3 +58,4 @@ batch 3a (bbb0b36, Run A 1672/1672, Run B 214/214) также: B-2 мост 8d9c
 B-3 — противоречие SPEC AC-05/AC-06: решает заказчик, код не трогаем.
 batch 3b: ccb525f, Run A 1682/1682, Run B 211/211. Косметика: нет icon.png у genset, energy, yard, fire_safety.
 Регресс-QA (qa/regress_1.md, regress_2.md, 01:00–01:15 UTC): PASS M-1, T-2, T-3, T-4, A-1, B-1, B-4, S-2, S-3, ST-1, S-4, V-1, V-2, V-3, T-5, Y-2, F-1; на сервере не проверены (покрыты юнит-тестами): S-5 (стоп-кран write_enabled), G-1 (метод не вызывается по RPC), S-1 (путь -u с прототипа), B-2, E-4. Менеджер квитировал 18 тестовых пожарных событий, FA-CUT в normal.
+Обход меню 2 (qa/menus.md, после 1195be9): 168 меню — OK 132, ERROR 0, родительские 30, не выполнялись 6 (iot start/stop/tick — меню «Рівень 0» скрыто после миграции telemetry; повторные миграции base/yard и переустановка данных bms). Фильтры всех search-видов (609 проверок) — 0 реальных ошибок. Тест-страж view d593e7c ловит все три класса JS-ошибок.
