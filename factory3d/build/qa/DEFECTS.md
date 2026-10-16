@@ -31,7 +31,7 @@
 | Y-1 | yard | P3 | док: путь LPR из AC-82 /f3d/lpr → 404, реальный /f3d/telemetry/event с route=lpr; поправить SPEC/ТК-02 | DONE d7849b0 (SPEC: /f3d/lpr — вход коллектора, в Odoo /f3d/telemetry/event) |
 | Y-2 | yard | P2 | фильтр «сегодня» КПП сравнивает день по Киеву с context_today браузера: 00:00–03:00 Киева (21–24 UTC) карточки не видны; падает test_dispatch_tour | VERIFIED 7602a37 |
 | F-1 | fire_safety | P3 | при тревоге FA-CUT не создана активность на FACP-1 (AC-17): возможно, пустая группа оповещения — проверить | VERIFIED: admin в group_f3d_user, активности на FACP-1 создаются (ccb525f WARNING при пустой группе) |
-| BM-1 | bms | P3 | 81 сигнал ventilation/* с origin=sim_data, а не catalog (DEC-7); вероятно, созданы миграцией прототипа до установки bms — перепроверить после T-1 | OPEN |
+| BM-1 | bms | P3 | 81 сигнал ventilation/* с origin=sim_data, а не catalog (DEC-7); вероятно, созданы миграцией прототипа до установки bms — перепроверить после T-1 | НЕ ДЕФЕКТ: 81 сигнал создан миграцией уровня 0 (by_module bms=81), origin sim_data по дизайну telemetry для мигрированных данных |
 | G-1 | td_genset | P2 | ТО при просрочке мотогодин создаётся без priority '3' и без «прострочено на N мотогодин» в названии (AC-19), genset_fuel.py:1177 | DONE 2f3c35b (не раскатан) |
 | V-2 | viewer | P3 | GET /f3d/viewer/data?codes=../../etc → 200 вместо 400: CODE_RE допускает «/» и «.» (controllers/viewer.py:18) | VERIFIED 979aea3 |
 | V-3 | viewer | P3 | /f3d/viewer/snapshot/abc → 303 на /uk/… вместо 404 (viewer.py:235) | VERIFIED 979aea3 |
