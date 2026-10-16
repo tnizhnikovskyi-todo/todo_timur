@@ -2190,7 +2190,7 @@ function eqHtml(eq, code) {
   if (eq.last_inspection) {rows.push(["Остання перевірка", eq.last_inspection]);}
   if (eq.next_maintenance) {rows.push(["Наступне ТО", dayHm(eq.next_maintenance)]);}
   if (eq.current_task) {rows.push(["Завдання", `<button class="o_f3d_lnk" data-go="pick:${esc(eq.current_task)}">${esc(eq.current_task)}</button>`]);}
-  if (D.meta.iot && rows.length) {rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);}
+  if (D.meta.iot?.updated && rows.length) {rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);}  // updated = null, поки симулятор не дав жодного сигналу
   const mr = mrOf(eq);
   return `<dl class="o_f3d_kv"><dt>Обладнання</dt><dd>${esc(eq.name)}${eq.serial ? (" <span class=\"o_f3d_mono\">" + (esc(eq.serial)) + "</span>") : ""}</dd>
     ${rows.map(([k, v]) => ("<dt>" + (k) + "</dt><dd>" + (v) + "</dd>")).join("")}</dl>
