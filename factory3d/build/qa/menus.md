@@ -6,6 +6,8 @@
 
 Уникальных действий: 137 (window 123, server 11, client 3). Меню с общим действием получают общий результат.
 
+**Обход 3 (debug=1, после be4d2d5):** 130 действий, OK 127, ERROR 0 (3 ложных «blank»: 828 viewer, 884 и 895 gantt — проверены вручную). Повод: пользователь поймал в debug OwlError CodeEditor mode 'json' (MN-6).
+
 ## Метод
 
 1. Меню: `ir.ui.menu` с xml id из модулей factory3d_* и td_genset (19 модулей, 168 меню), полный путь по parent_id, действие из поля `action`.

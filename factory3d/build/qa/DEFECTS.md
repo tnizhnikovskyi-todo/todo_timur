@@ -45,6 +45,7 @@
 | MN-3 | bms | P3 | нет static/description/icon.png → 404 на 10 страницах «Налаштування» | VERIFIED 946bc5f |
 | MN-4 | machine_connect | P2 | фильтр «Нижче мінімуму» стосов портала сравнивал поле с полем → ошибка search | VERIFIED ef478a8 (stored below_min) |
 | MN-5 | viewer | P2 | бандл assets_kiosk не компилировался (Undefined $theme-colors-rgb) | VERIFIED f877917 (киоск на сервере: стили, 3D, 0 ошибок) |
+| MN-6 | base, iot_sim, telemetry, machine_connect, fire_safety | P2 | виджет ace с options mode 'json' (8 полей): в debug OwlError «Invalid props for component 'CodeEditor': 'mode' is not valid» (Odoo 19 MODES: javascript/xml/qweb/scss/python); найдено пользователем | VERIFIED be4d2d5 (mode 'javascript' + тест-страж test_code_editor_modes; обход меню в debug — 0 ошибок) |
 
 Операции на сервере после исправлений: повторить миграцию telemetry (T-1), остановить зависший f3d.sim.run id 1 (running).
 
@@ -59,3 +60,4 @@ B-3 — противоречие SPEC AC-05/AC-06: решает заказчик
 batch 3b: ccb525f, Run A 1682/1682, Run B 211/211. Косметика: нет icon.png у genset, energy, yard, fire_safety.
 Регресс-QA (qa/regress_1.md, regress_2.md, 01:00–01:15 UTC): PASS M-1, T-2, T-3, T-4, A-1, B-1, B-4, S-2, S-3, ST-1, S-4, V-1, V-2, V-3, T-5, Y-2, F-1; на сервере не проверены (покрыты юнит-тестами): S-5 (стоп-кран write_enabled), G-1 (метод не вызывается по RPC), S-1 (путь -u с прототипа), B-2, E-4. Менеджер квитировал 18 тестовых пожарных событий, FA-CUT в normal.
 Обход меню 2 (qa/menus.md, после 1195be9): 168 меню — OK 132, ERROR 0, родительские 30, не выполнялись 6 (iot start/stop/tick — меню «Рівень 0» скрыто после миграции telemetry; повторные миграции base/yard и переустановка данных bms). Фильтры всех search-видов (609 проверок) — 0 реальных ошибок. Тест-страж view d593e7c ловит все три класса JS-ошибок.
+Обход меню 3 в режиме debug (после be4d2d5, 10:15 UTC): 130 действий — OK 127, 3 «blank» ложные (viewer 828, gantt 884 и 895 — проверены вручную: отрисованы, console/RPC-ошибок нет), 7 мутирующих пропущены. Формы зон, источников и сигналов (с ace-полями) открыты со всеми вкладками — без ошибок. Урок: Owl проверяет props только в debug — обход меню делать в обоих режимах.
