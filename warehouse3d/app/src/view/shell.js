@@ -23,6 +23,7 @@ import { MIN_QUERY } from "../core/stock.js";
 import { createMinimap } from "./minimap.js";
 import { createGoto } from "./goto.js";
 import { createMobile } from "./mobile.js";
+import { createTopFit } from "./topfit.js";
 import { TOUR_KEY } from "../core/tour.js";
 
 const HTML = `
@@ -52,6 +53,8 @@ const HTML = `
     <button class="btn btn-secondary" id="cm-btn" aria-pressed="false" data-i18n-attr="title:top.commentsTitle"><span data-i18n="top.comments"></span> <span class="cnt" id="cm-cnt">0</span></button>
     <button class="btn btn-secondary vo" id="tray-btn" aria-pressed="false" hidden><span data-i18n="tray.button"></span> <span class="cnt" id="tray-cnt">0</span></button>
     <button class="btn btn-secondary" id="pr-btn" aria-pressed="false"><span data-i18n="prob.button"></span> <span class="cnt" id="pr-cnt">0</span></button>
+    <div class="filemenu more" id="more-wrap" hidden><button class="btn btn-secondary" id="more-btn" aria-haspopup="true" aria-expanded="false" data-i18n="top.more" data-i18n-attr="title:top.moreTitle"></button>
+      <div class="o_menu" id="more-list" role="group" hidden data-i18n-attr="aria-label:top.moreTitle"></div></div>
     <button class="btn btn-secondary" id="help-btn" aria-pressed="false" data-i18n="help.button"></button>
     <div class="seg" id="seg-lang" role="group" data-i18n-attr="aria-label:lang.label"><button data-l="uk" title="Українська">UK</button><button data-l="en" title="English">EN</button></div>
   </header>
@@ -147,6 +150,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
   const goMark = (node, kind) => { if (kind === "comment") cm?.showNode(node); else { model.focusTo(node); apply(); } };
   let mini = null, mob = null;
   mob = createMobile({ model, root, onChange: () => mini?.place() });
+  createTopFit({ root }); // кнопки, которым не хватило места на компьютере, уходят в меню «Ще» (W-22, I-09)
   const p2 = createPlan2D({ model, i18n, vp, tip, showTip, afterPick, onMark: goMark, onView: () => mini?.frame() });
   const side = createSidePanel({ model, i18n, root: q("#plan-side"), host });
   // мини-карта (W-20): схема склада и рамка вида; в 3D рамка — площадь пола в кадре
@@ -337,10 +341,22 @@ export function mountApp(root, { model, i18n, host = {} }) {
     view = v;
     q("#plan-view").hidden = v !== "plan"; q("#help-view").hidden = v !== "help";
     q("#help-btn").setAttribute("aria-pressed", String(v === "help"));
-    if (v === "help") { renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); } }); q("#help-view").scrollTop = 0; }
+    if (v === "help") { drawHelp().then(() => { q("#help-view").scrollTop = 0; }); }
     else if (three) three.resize();
   }
   // тур для новичков (W-20): при первом входе и по кнопке в инструкции; модуль грузится лениво
+  // тексты инструкции (i18n/help.js, ~0,4 МБ) грузятся при первом открытии (W-22, I-08): пока идёт загрузка, в области стоит индикатор
+  let helpTexts = null, helpReady = false;
+  const loadHelp = () => helpTexts ||= import("../i18n/help.js").then((m) => { i18n.extend(m.default); helpReady = true; }).catch((e) => { helpTexts = null; throw e; });
+  async function drawHelp() {
+    const hv = q("#help-view");
+    if (!helpReady) {
+      hv.innerHTML = `<div class="loading" role="status">${esc(t("help.loading"))}</div>`;
+      try { await loadHelp(); } catch (e) { console.error(e); hv.innerHTML = ""; model.notify("bad", "n.fileFail"); showView("plan"); return; }
+    }
+    if (view !== "help") return;
+    renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); } });
+  }
   const startTour = () => import("./tour.js").then((m) => m.startTour({ root, i18n })).catch((e) => console.error(e));
   q("#help-btn").onclick = () => { mob.closeMenu(); showView(view === "help" ? "plan" : "help"); };
   q("#pr-btn").onclick = () => { probs.toggle(); paintBars(); };
@@ -358,7 +374,7 @@ export function mountApp(root, { model, i18n, host = {} }) {
     q("#tray").setAttribute("aria-label", t("tray.title")); tray?.render();
     q("#comments").setAttribute("aria-label", t("cmt.title")); cm?.refreshText();
     q("#wizard").setAttribute("aria-label", t("wiz.title")); wiz?.render();
-    if (view === "help") renderHelp(q("#help-view"), { i18n, model, onBack: () => showView("plan"), onTour: () => { showView("plan"); mob.closeMenu(); startTour(); } });
+    if (view === "help") drawHelp();
   });
 
   document.documentElement.lang = i18n.lang();

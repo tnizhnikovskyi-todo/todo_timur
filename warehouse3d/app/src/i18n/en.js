@@ -385,41 +385,11 @@ export default {
   "addr.byTpl": "By template",
   "addr.posx": "posx / posy / posz",
   "addr.placeNote": "The level name, barcode and posx (row) / posy (bay) / posz (level) are computed from the template; writing to Odoo comes with applying changes.",
+  "help.loading": "Loading the help…",
   "help.button": "Help",
   "help.title": "How to work with the 3D warehouse model",
   "help.toc": "Contents",
   "help.back": "Back to the model",
-  "help.start.title": "What this is",
-  "help.start.html": `
-    <p><b>Warehouse Builder</b> is a model of the warehouse built from Odoo storage locations (database snapshot of {date}). Every row, bay, level and floor place in the model is an Odoo location or a new place you added in the model.</p>
-    <p>Everything you change in the model concerns <b>the model only</b>: nothing is created or deleted in Odoo. The Odoo data is a snapshot: it is read when the page opens and by the “Refresh data” button (see “Metrics, search and data”).</p>
-    <p>The top bar has the warehouse name, the <b>warehouse switch</b>, the <b>2D / 3D</b> switch, the <b>“✎ Edit”</b> button, this <b>“Help”</b> and the <b>UK / EN</b> language switch — your choice of language is remembered in the browser.</p>`,
-  "help.view.title": "Viewing the model",
-  "help.view.html": `
-    <ul>
-      <li><b>2D / 3D</b> — the switch in the top bar: a plan view from above or a volumetric model.</li>
-      <li><b>Level</b> — the lists above the model (WH › zone › row › bay › level). Pick a level — the rest is hidden and the camera moves closer. The labels in the model and the “Show this level only” button in the right panel do the same. <b>↑</b> — level up, <b>⟲</b> — fit the level, <b>+ / −</b> — zoom.</li>
-      <li><b>Mouse in 3D</b>: left button — orbit, right button — pan, wheel — zoom. <b>In 2D</b>: drag — pan the plan, wheel — zoom.</li>
-      <li>Hover over a place — a tooltip shows the code, product and fill level.</li>
-      <li>The color of a place shows its fill level; the other metrics (below minimum, empty places, ABC, stock age) are chosen with the “Metric” switch (see “Metrics, search and data”). A click on a place opens its card. In the “Place status” mode the colors are:</li>
-    </ul>`,
-  "help.nav.title": "Minimap, go to code, tour",
-  "help.nav.html": `
-    <ul>
-      <li><b>Minimap</b> — in the corner of the plan (2D and 3D): a scheme of the whole warehouse with a frame for the current view. Click or drag on it to move the view; a click on another zone switches the level to it. The <b>“−”</b> button hides the minimap, <b>“▦”</b> brings it back (remembered). An open panel (problems, comments) is never covered: the minimap moves left or hides.</li>
-      <li><b>Go to place</b> — the field above the plan: type a place code or barcode (case, spaces and separators are ignored: <i>plt01a</i> finds <i>PLT-01A</i>) to see suggestions. Choosing one (or <b>Enter</b>) goes one level above the place and selects it. A barcode scanner types the code and Enter, so the place opens at once. The <b>“/”</b> key or <b>Ctrl+K</b> (⌘+K) puts the cursor in this field. If several places match, Enter only keeps the list: pick one.</li>
-      <li><b>Tour for newcomers</b> — a short step-by-step overview (2D / 3D plan, levels, selection, minimap, go to code, Edit mode, type catalog, checks, change plan, help) with the element highlighted. Shown on first entry; <b>Next, Back, Skip</b> (keys ← → Esc). The “done” mark is kept in this browser only. <button class="btn btn-secondary" data-tour>Show the tour again</button></li>
-    </ul>`,
-  "help.mobile.title": "Using a phone or tablet",
-  "help.mobile.html": `
-    <p>On a narrow screen (up to 768 px — a phone, a tablet in portrait) the constructor works as a <b>viewer and search</b> for warehouse staff.</p>
-    <ul>
-      <li><b>The top bar</b> collapses: title, 2D / 3D and the <b>☰</b> button — the rest (warehouse, language, problems, comments, help) is in the menu.</li>
-      <li><b>“Where is it” search</b> and <b>“Go to place”</b> are at the top, above the plan, with large buttons and fields. A found place opens as a <b>full-screen card</b>; <b>✕</b> returns to the plan.</li>
-      <li><b>The side panel</b> slides up from the bottom with the “Object panel” button; picking a place on the plan opens its card at once.</li>
-      <li><b>Gestures</b>: in 3D one finger rotates, pinch zooms, two fingers pan (pinch and two-finger pan also work in 2D); a tap on a place selects it.</li>
-      <li><b>Editing is off</b>: the “Edit” button only says “Editing is available from a computer”. Building mode, the wizard, files, labels, variants and the change plan are not available on a phone.</li>
-    </ul>`,
   "go.label": "Go to place",
   "go.placeholder": "Go to place: code or barcode…",
   "go.none": "No such place",
@@ -431,98 +401,6 @@ export default {
   "mob.panel": "▲ Object panel",
   "mob.close": "Close card",
   "n.editDesktop": "Editing is available from a computer",
-  "help.select.title": "Selection",
-  "help.select.html": `
-    <ul>
-      <li><b>Click</b> on the model selects and highlights an object without hiding anything. What exactly is selected is set by the switch <b>“Click selects: Place / Bay / Row / Zone”</b>.</li>
-      <li><b>Clicking again</b> on the selected object selects the level above (level → bay → row → zone).</li>
-      <li>The right panel shows the chain of levels (click on it to select that level), what is inside, and the buttons “Show this level only” and “Clear selection”. <kbd>Esc</kbd> clears the selection in edit mode.</li>
-    </ul>`,
-  "help.edit.title": "Editing",
-  "help.edit.html": `
-    <p>The <b>“✎ Edit”</b> button turns edit mode on, <b>“Done”</b> turns it off. Select an object — the right panel shows the actions for it:</p>
-    <table class="hl-t"><thead><tr><th class="first">Selected</th><th>What you can do</th></tr></thead><tbody>
-      <tr><td class="first">Warehouse or zone</td><td>“Add a row” (place type, number of bays and levels), “Add a floor place”, “Add a zone”, “Zone equipment” (aisle width)</td></tr>
-      <tr><td class="first">Row</td><td>change the row type, “Add a bay” (for boards — “Add a stack”), rotate, put back to the automatic position</td></tr>
-      <tr><td class="first">Bay</td><td>“Add a level on top”</td></tr>
-      <tr><td class="first">Level or cell</td><td>“Cells per level” — split a level into cells (see “Warehouses, cells and the project”)</td></tr>
-      <tr><td class="first">Anything</td><td>“⧉ Duplicate”, “Copy”, “Remove” (together with everything inside; places with stock cannot be removed); × in the “Inside” list removes one nested object</td></tr>
-    </tbody></table>
-    <p><b>Place types</b> (the button above the model in edit mode) is the catalog of constructions: code, name, kind (shelf bay, roll rack, pallet rack, floor stack, floor place), width, depth, level height, levels in a new bay. Changing a size rebuilds all places of this type at once; you can add your own type. It is saved with the “Save types” button in the window.</p>
-    <p>New places get codes modeled on their neighbors (<span class="code">FUR-R7-S01-L1</span>) and are shown in blue.</p>`,
-  "help.move.title": "Moving and rotating",
-  "help.move.html": `
-    <ul>
-      <li><b>Drag</b> a row or a floor place with the mouse (in 2D and 3D). A zone can be dragged if you select it first. You can drag what stands inside the visible level: to move a row, open its zone, not the row itself.</li>
-      <li>The zone grows to fit the object. If a row overlaps a neighbor, a column, a wall, the office or goes beyond the building outline, the change is cancelled with a “Place anyway” button (see “Checks and problems”).</li>
-      <li><b>“Automatic position”</b> in the row panel puts the row back to where the layout places it.</li>
-      <li><kbd>R</kbd> or <b>“⟳ Rotate by 90°”</b> rotates a row: bays go in depth instead of along. Once more — rotate back. Other angles (180° and 270°) and exact coordinates are in “Properties” (see “Editing tools”).</li>
-    </ul>`,
-  "help.multi.title": "Several objects at once",
-  "help.multi.html": `
-    <ul>
-      <li><kbd>{mod}</kbd>+<kbd>click</kbd> in the model adds an object to the selection, another <kbd>{mod}</kbd>+<kbd>click</kbd> removes it. All selected objects are highlighted together.</li>
-      <li>Drag <b>any selected object</b> — everything selected moves, keeping the relative layout. A selected level or bay drags its row.</li>
-      <li><kbd>R</kbd> rotates all selected rows. Marquee selection (<kbd>Shift</kbd> + drag), align, distribute and grouping are described in “Editing tools”.</li>
-      <li>The “N objects selected” panel: the list (× removes from the selection), “Duplicate all”, “Copy”, “Rotate rows”, “Remove all”, “Save selection”, “Clear selection”.</li>
-    </ul>`,
-  "help.tools.title": "Editing tools",
-  "help.tools.html": `
-    <ul>
-      <li><b>Properties</b> (panel of a row, zone or floor place): name, <b>X and Y</b> in meters from the parent zone corner, <b>rotation</b> 0 / 90 / 180 / 270°, width, depth and height, and for a row the <b>number of bays and levels</b>. Only changed fields are applied — through “Show” / “Save”, undone with {mod}+Z. Rotation 90° and 270° swaps width and depth; 180° and 270° put the bays in reverse order.</li>
-      <li><b>Mass create</b> (zone panel): type, rows × bays × levels, aisle between rows (m) and orientation (along X or Y). Under the form there is a summary: how many places and what block you get; “Show” draws the rows in the model before saving. Rows are placed below the existing contents of the zone.</li>
-      <li><b>Grid array</b> (floor place panel): N × M copies with the step along X and Y (start to start), new codes are the next free ones.</li>
-      <li><b>Marquee selection</b> in 2D: hold <kbd>Shift</kbd> and drag — objects that fall entirely inside the frame are selected; what exactly (place, bay, row, zone) is decided by the “Click selects” switch. <kbd>Shift</kbd>+<kbd>{mod}</kbd> adds to the selection. Without <kbd>Shift</kbd> the mouse still drags an object or pans.</li>
-      <li><b>Align</b> (the “N objects selected” panel): by left, right, top, bottom edge and by center X / Y; <b>distribute</b> with equal gaps along X or Y (three objects or more, the outer ones stay in place).</li>
-      <li><b>Grouping:</b> “Group” moves the selected objects of one zone into a new zone with the given name (positions are kept); “Ungroup” in the panel of such a zone returns the contents to the parent zone and the zone disappears. Place codes do not change. Everything is undone with {mod}+Z.</li>
-    </ul>`,
-  "help.addr.title": "Addressing",
-  "help.addr.html": `
-    <ul>
-      <li><b>Where.</b> Edit mode, warehouse or zone panel, the “Addressing” block. Like every change — through “Show” / “Save”, undone with {mod}+Z.</li>
-      <li><b>Code template</b> — words separated by spaces; a word is made of text and segments <span class="code">{zone}</span> <span class="code">{row}</span> <span class="code">{bay}</span> <span class="code">{level}</span> <span class="code">{pos}</span> (position is a cell of a level; the Ukrainian <span class="code">{зона}</span> <span class="code">{ряд}</span> <span class="code">{секція}</span> <span class="code">{ярус}</span> <span class="code">{позиція}</span> work too). Words are joined by the <b>separator</b>: “{zone} {row} {bay} {level}” with “-” gives <span class="code">1-01-01-A</span>, and “FUR R{row} S{bay} L{level}” gives <span class="code">FUR-R1-S01-L1</span>. A word with no value at all (a bay in a plate stack, a position in a level without cells) is skipped.</li>
-      <li><b>For every segment:</b> digits or letters (A, B … Z, AA), leading zeros (width) and the start value. <b>Zone</b> also has “Zone code instead of a number”.</li>
-      <li><b>Warehouse and zone settings.</b> The warehouse settings apply everywhere; a zone can set its own — the “Own settings for this zone” box (they apply in the zone and inside it, the nearest zone above wins). Under the form is the <b>preview</b>: the first 10 codes and the last one, how many codes will change, whether there are duplicates.</li>
-      <li><b>Directions.</b> Rows are numbered from the entrance (top, bottom, left or right of the plan). Bays: left to right, right to left, or “odd and even by aisle side” (an odd-numbered row gets odd bays 1, 3, 5…, an even-numbered row gets even bays 2, 4, 6…); “sequential” — every row the same, “snake” — reversed every other row. Levels — bottom to top (A is the lowest) or top to bottom. Positions (cells) — left to right. For rows rotated by 90° and 270°, “left to right” means top to bottom.</li>
-      <li><b>What goes to Odoo.</b> In the place panel: the level <b>name</b> (the last segment), the <b>barcode</b> (the full code) and <b>posx / posy / posz</b> — the row, bay and level numbers as integers (aisle, rack, height). For now this is only computed — writing to Odoo comes with applying changes.</li>
-      <li><b>Renumbering</b> (warehouse or zone panel, “Renumbering”): changes codes by the template — and therefore barcodes and labels, which will have to be printed again (a warning says so). The <b>“Number only new places”</b> box: existing places and places moved by grouping keep their code, new ones continue the numbering after them. The result is a change: show it, save it or undo it with {mod}+Z.</li>
-      <li><b>Uniqueness.</b> Codes and barcodes are unique in the project. If a code is repeated or matches an existing Odoo place or a place of another warehouse, the object panel shows a <b>conflict list</b> (click to go to the place), and <b>such places cannot be saved</b> until the conflicts are resolved. New places created by the app get a free code themselves. Give different zone codes to different warehouses, otherwise numbering will coincide.</li>
-      <li><b>Floor places</b> (gates, carts, floor zones) are numbered by the template of their zone: in order from the entrance, the number goes into <span class="code">{pos}</span>, or, if the template has none, into the first of <span class="code">{row}</span>, <span class="code">{bay}</span>, <span class="code">{level}</span>. Odoo codes stay as they are until renumbered; grouping does not change codes.</li>
-    </ul>`,
-  "help.labels.title": "Labels",
-  "help.labels.html": `
-    <ul>
-      <li><b>Where.</b> The "Labels" button: a PDF for A4 sheets and a ZPL file for Zebra, from the current model (new and renumbered places too).</li>
-      <li><b>What to print.</b> The selection (all places inside), zone, row, level from the bottom, all; "Only new and renumbered", "Only applied in Odoo". Conditions combine.</li>
-      <li><b>On the label.</b> Code128 or QR with the full code (the Odoo barcode), the code in large type, optionally zone, row / bay / level, type. An up arrow marks levels above the scanning-point level ("up and down" adds "down").</li>
-      <li><b>PDF.</b> A4 sheets: 70×36 (3×8), 105×48 (2×6), 100×150 mm (one) or a custom size, margins, gaps; "Skip the first" for a used sheet. Captions are in Ukrainian (font embedded), Latin if you prefer.</li>
-      <li><b>ZPL.</b> 203 or 300 dpi, size in mm; ^BC (Code128), ^BQ (QR). Warnings: small barcode, non-ASCII code (QR is printed). Scan a test label.</li>
-    </ul>`,
-  "help.copy.title": "Copying",
-  "help.copy.html": `
-    <ul>
-      <li><b>“⧉ Duplicate”</b> or <kbd>{mod}</kbd>+<kbd>D</kbd> — a copy of the selection next to it: a level — as a new level on top, a bay — at the end of the row, a row — with the next number (R3 → R7), a floor place — with the next free code (KIT-01 → KIT-13), a zone — “name copy”. A row placed by hand is copied next to it onto a free spot.</li>
-      <li><kbd>{mod}</kbd>+<kbd>C</kbd> — remember the selection, <kbd>{mod}</kbd>+<kbd>V</kbd> — paste a copy. Where it goes: into the selected object if it fits — a level into a bay, a bay into a row of the same construction, a row, a floor place or a zone into a zone; otherwise into the nearest suitable level above; otherwise next to the original. The <b>“Paste … → where”</b> button in the panel shows where the copy will land.</li>
-      <li>The copy has the same structure and types, but its places are new and empty. After copying, the copy itself is selected — you can drag or rotate it right away.</li>
-    </ul>`,
-  "help.save.title": "Saving and undoing",
-  "help.save.html": `
-    <ul>
-      <li>Every change is first only <b>shown</b> in the model in teal — “not saved”. Forms have two buttons: <b>“Show”</b> (see the result; showing the same form again replaces the previous preview) and <b>“Save”</b>.</li>
-      <li>Unsaved changes are collected per object where they were made. The object panel lists them with the buttons <b>“Save &lt;object&gt;”</b> / “Discard”. Above the model there are “Save all”, “Discard all” and ↶.</li>
-      <li><kbd>{mod}</kbd>+<kbd>Z</kbd> or ↶ — undo the last unsaved change, <kbd>{mod}</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> or <kbd>{mod}</kbd>+<kbd>Y</kbd> — redo it. Saved changes cannot be undone this way.</li>
-      <li>After saving, a notification “Saved: … · N changes” appears in the top right corner.</li>
-      <li>Both the saved model and unsaved changes live in the project in this browser (localStorage) and survive a reload; they will not be there in another browser or on another computer. More in “Warehouses, cells and the project”.</li>
-      <li><b>“Reset to Odoo data”</b> removes all model changes (it is an unsaved change itself — you still have to save it, or you can discard it).</li>
-    </ul>`,
-  "help.project.title": "Warehouses, cells and the project",
-  "help.project.html": `
-    <ul>
-      <li>The <b>warehouse switch</b> in the top bar: a project holds several warehouses (the demo has WH from the Odoo snapshot and a synthetic WH2). Each has its own plan, its own saved and unsaved changes and its own place types; unsaved changes are kept when you switch.</li>
-      <li><b>Location depth</b> (edit mode, warehouse or zone panel) is the last level that becomes an Odoo location: <b>“Level”</b> (default) or <b>“Cell”</b>. A zone can have its own value or “as in the warehouse”. It goes through “Show” / “Save” like other changes and is undone with {mod}+Z.</li>
-      <li><b>Cells per level</b> (level panel, 1–12) goes through “Show” / “Save” like other changes. With depth “Cell” and more than one cell the level stops being a place: separate places with codes <span class="code">&lt;level code&gt;-1…N</span> replace it, and in 2D and 3D the level is split into N parts. With depth “Level” the number is remembered but the level stays one place.</li>
-      <li><b>Where the project is stored:</b> in this browser (localStorage, key <span class="code">wh-app-project-&lt;id&gt;</span>) — both warehouses, saved and unsaved changes, location depth. If a project cannot be read, its raw record is kept under the key <span class="code">wh-app-project-&lt;id&gt;.broken-&lt;time&gt;</span> and a new demo project opens with a message — nothing is overwritten. Changes from older versions (keys <span class="code">wh-app-edit</span>, <span class="code">wh-app-pending</span> and the prototype’s <span class="code">wh-model-*</span>) were moved into warehouse WH on first start; the old keys stay as a copy.</li>
-    </ul>`,
   "top.odooRefresh": "Refresh from Odoo",
   "top.odooNew": "Project from Odoo…",
   "top.plan": "Change plan",
@@ -625,46 +503,6 @@ export default {
   "odoo.colName": "Warehouse",
   "odoo.colCompany": "Company",
   "odoo.colPlaces": "Places",
-  "help.odoo.title": "Working from Odoo",
-  "help.odoo.html": `
-    <ul>
-      <li><b>Where to open it.</b> In Odoo: <b>Inventory → Configuration → Конструктор складу</b> (the module menu is in Ukrainian; it needs the "Конструктор: перегляд" group). The app opens from your Odoo database address; no separate sign-in — your Odoo account is used. Outside Odoo (an opened file or a site) the app keeps the project in the browser, as described above.</li>
-      <li><b>Where projects are stored.</b> In the Odoo database, not in the browser: the "Warehouse constructor" module (<span class="code">wh_constructor</span>) keeps projects, their versions and zone locks. There is one project for everyone with access to the company; project warehouses are linked to Odoo warehouses by code.</li>
-      <li><b>Versions.</b> Every "Save" creates a new project version (the last 50 are kept); unsaved ("teal") changes are also stored in the project but create no versions. If someone saved the project while you were editing, your save is rejected with "The project was changed by another user" — reload the page to see the current state. Restoring an old version is done in the module (a versions menu in the app will come later).</li>
-      <li><b>Rights</b> are Odoo groups. "Конструктор: перегляд" (view) — look only (nothing can be saved; the status line says "View only"). "Конструктор: проєктування" (design, includes view) — create and change projects, lock zones. "Конструктор: застосування в Odoo" (apply, includes design) — apply changes to Odoo locations (see the "Change plan and applying in Odoo" section). An administrator assigns the groups on the user form.</li>
-      <li><b>Zone locks.</b> When you select an object in edit mode, the zone it belongs to is locked for you for 5 minutes; while the page stays open the lock is renewed automatically, and it is released when you leave edit mode. If another user is already editing the zone, you get "Zone is being edited by …": changes in it are blocked, other zones stay available. A lock expires by itself if the person closes the page or loses the connection.</li>
-      <li><b>Data from Odoo.</b> In the app opened from Odoo, the first start (no projects yet) shows the "New project from Odoo" window: tick the warehouses of this database (several are fine, including warehouses of different companies you have access to) and press "Create project". The "Project from Odoo…" button in the top bar does the same later (it creates one more project and opens it). "Demo project" keeps the demonstration data. Only the warehouse's internal and virtual locations are read, with their stock, storage categories with capacities, putaway rules and replenishment rules (min/max) — as far as your Odoo user can see them; racks, bays and levels are built from the location names and hierarchy. Places and zones that already exist in Odoo have the "existing" status and keep the Odoo location id.</li>
-      <li><b>"Refresh from Odoo".</b> The top bar button re-reads the data of all warehouses of the project from Odoo (places, stock, rules) and rebuilds the model. Your saved and unsaved model changes are kept — only the Odoo base is refreshed; if something was changed in Odoo since the last load, a window of differences appears (see the "Change plan and applying in Odoo" section). The data is also re-read every time the page opens. The “Refresh data” button above the plan refreshes only stock, fill levels, reservations and moves, without rebuilding the plan. If a warehouse cannot be loaded, a message is shown and the warehouse stays empty until a refresh succeeds.</li>
-    </ul>`,
-  "help.plan.title": "Change plan and applying in Odoo",
-  "help.plan.html": `
-    <ul>
-      <li><b>Change plan.</b> The "Change plan" button in the top bar (in the app opened from Odoo) compares the <b>saved</b> warehouse model with the current Odoo locations and shows what will change: <b>create</b> (new zones, rows, bays and places — with parent locations following the hierarchy), <b>move</b> (grouping and moving — moved places are moved, not created again), <b>rename</b> (after renumbering; zones and groups by name), <b>change attributes</b> (barcode and, in Odoo 18, the posx / posy / posz positions) and <b>archive</b> (removed places). A place is named in Odoo by a short level name (level or position per the addressing template) and its full code is in the barcode; a zone, row and bay are created as internal locations named like the node; empty groups without places do not reach Odoo. Unsaved changes are not in the plan — save first. While the problems panel has errors, applying (and exporting the file) is not allowed: the window shows their number and leads to them.</li>
-      <li><b>Counters and filters.</b> Above the list are the kinds of changes with their counts; a checkbox hides or shows a kind. The marks "has stock" and "barcode is already used" mean the operation cannot be applied.</li>
-      <li><b>Applying in parts.</b> Every operation has a checkbox. The "Zone or row" list selects only the operations inside the chosen zone or row; "Select all" and "Clear all" work on the whole plan. Required parent locations are added to the selection automatically (their number is shown).</li>
-      <li><b>Apply in Odoo.</b> The button runs the selection on the server <b>in one transaction</b> in the order: create (parents before children) → moves → renames → attributes → archive. If anything fails, nothing changes in Odoo. The "Конструктор: застосування в Odoo" right is required. Only <b>empty</b> locations are archived: the server itself checks that there is no stock and no unfinished moves (a place with stock is marked in the plan and is not applied).</li>
-      <li><b>As a file.</b> The "Import file…" button opens the locations export (XLSX or CSV in the Odoo import format, all places or only changed ones), so you can see exactly what is imported. The file ignores the selection in the plan and does not archive or move existing locations. A file is safer, applying through Odoo is faster.</li>
-      <li><b>After applying.</b> Created nodes become "existing" and get the Odoo location id; applied archiving, renames and moves are removed from the saved model changes, and whatever was not applied (when applying in parts) stays and remains in the plan.</li>
-      <li><b>Journal and rollback.</b> The "Journal" tab shows who applied what and when (with the operations). "Roll back" runs the reverse operations: created locations are archived, names, parent locations and attributes are restored, archived ones are restored. Rollback is possible only if the created locations have not been used since (no stock, no unfinished moves) and there is no later apply that touched the same locations: an old apply can be rolled back only in order — roll back the later ones first.</li>
-      <li><b>Differences with Odoo.</b> After "Refresh from Odoo" a window appears if something changed in Odoo since the last load: <b>appeared</b>, <b>gone</b> (archived or deleted), <b>renamed</b>, <b>other parent</b>. For each row choose "Accept from Odoo" (default) or "Keep mine": then the change becomes an unsaved edit of the model and the "Change plan" will offer to restore it in Odoo.</li>
-      <li><b>Test copy.</b> On the first apply in a project a reminder appears: we recommend running the changes on a copy of the database first. You can tick "Do not remind me again for this project".</li>
-    </ul>`,
-  "help.keys.title": "Hotkeys",
-  "help.keys.html": `
-    <p class="mut">They work in edit mode when the cursor is not in an input field; the Ukrainian keyboard layout works too. On Mac use ⌘ instead of Ctrl.</p>
-    <table class="hl-t"><tbody>
-      <tr><td class="first"><kbd>{mod}</kbd>+<kbd>click</kbd></td><td>add to / remove from the selection</td></tr>
-      <tr><td class="first"><kbd>Shift</kbd>+drag (2D)</td><td>marquee select; with <kbd>{mod}</kbd> — add to the selection</td></tr>
-      <tr><td class="first"><kbd>{mod}</kbd>+<kbd>C</kbd></td><td>copy the selection</td></tr>
-      <tr><td class="first"><kbd>{mod}</kbd>+<kbd>V</kbd></td><td>paste the copied objects</td></tr>
-      <tr><td class="first"><kbd>{mod}</kbd>+<kbd>D</kbd></td><td>duplicate the selection next to it</td></tr>
-      <tr><td class="first"><kbd>{mod}</kbd>+<kbd>Z</kbd></td><td>undo the last unsaved change</td></tr>
-      <tr><td class="first"><kbd>{mod}</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> · <kbd>{mod}</kbd>+<kbd>Y</kbd></td><td>redo an undone change</td></tr>
-      <tr><td class="first"><kbd>R</kbd></td><td>rotate the selected rows by 90°</td></tr>
-      <tr><td class="first"><kbd>Esc</kbd></td><td>clear the selection (it also closes the place types window); in “Building” mode — cancel the line, then the tool, then the selection</td></tr>
-      <tr><td class="first"><kbd>Delete</kbd></td><td>in “Building” mode: delete the selection (or the selected outline vertex)</td></tr>
-      <tr><td class="first"><kbd>Alt</kbd></td><td>in “Building” mode: move without snapping while held</td></tr>
-    </tbody></table>`,
 
   // ---- W-05: type catalog, construction parameters, templates and library
   "word.newTpl": "Template",
@@ -707,22 +545,6 @@ export default {
   "types.zone": "Zone", "types.sections": "Sections", "types.libTypes": "Types in the library", "types.libTpls": "Section and row templates",
   "types.libNoTypes": "Your own types will appear here after “To library”.", "types.libNoTpls": "No templates yet: save a row or a section as a template in the edit panel.",
   "types.removeLib": "Remove from library", "types.tplInsert": "Insert",
-  "help.catalog.title": "Type catalog and parameters",
-  "help.catalog.html": `
-    <ul>
-      <li><b>“Place types”</b> (in edit mode) opens the <b>catalog of 50 types</b> in five groups: racks (20), floor (5), special (8), buffer and process zones (12), mobile carriers (5). At the top there is a search by name, code or description and the “Only those found at a furniture factory” checkbox (● usually, ○ rarely, — none).</li>
-      <li>The type card shows a description, a <b>shape preview</b>, the group, the 3D shape and the <b>construction parameters</b>: section width and depth, levels, level height (and the height of each level separately), whether the bottom level stands on the floor, a double-sided row (back to back), gaps, beam thickness, load per level, cells per level, slope and others. “Add to project” takes the type from the catalog; after that its parameters can be edited (the catalog stays unchanged).</li>
-      <li><b>“Add to plan”</b>: choose a zone and a quantity — the type enters the project by itself and the new construction appears in the model as unsaved (turquoise). There are 9 shapes: upright frame, roll rack, stack, zone, enclosure/room, cylinder/bunker, machine cabinet, mobile carrier, gate/dock; all are visible in both 2D and 3D.</li>
-      <li>The “In project” tab is a table of this project’s types (sizes, own types, “+ New type”); “Save types” writes type changes.</li>
-      <li><b>Parameters of a particular row.</b> In the row panel, “Row construction” overrides the type parameters for this row only (and its copies): level heights, bottom level on the floor, double-sided row, gaps, beam, load, section width/depth, cells per level. “As in the type” returns the type values. It is an ordinary change: “Show” / “Save”, undone with <kbd>{mod}</kbd>+<kbd>Z</kbd>.</li>
-    </ul>`,
-  "help.templates.title": "Templates and library",
-  "help.templates.html": `
-    <ul>
-      <li>A selected <b>section or row</b> can be saved as a <b>template</b>: in the edit panel use “Save as template” (enter a name). A template holds the type, the number of levels and cells in every section, the row parameters and the rotation.</li>
-      <li><b>Insert from template</b>: in a zone panel — a row (set how many times in the form), in a row panel — a section. The name and code of every new row, section and place are unique; a template type missing from the project is added to the project. A template can be inserted any number of times, in different zones and projects.</li>
-      <li>The <b>shared library</b> (the “Library” tab in the types window): templates and your own types that you sent with “To library” are shared by all projects. In the browser they live in <code>wh-app-library</code>, in Odoo — in the database, shared by the company (“view” reads, “design” writes). Editing a type in a project does not change the library: these are “project edits” on top of the shared reference.</li>
-    </ul>`,
   "cat.R01": "Selective pallet rack",
   "catd.R01": "Beam rack with direct access to every pallet",
   "cat.R02": "Double-deep rack",
@@ -920,19 +742,6 @@ export default {
   "bld.aisle.links": "Neighbouring aisles",
   "bld.aisle.none": "none",
   "bld.aisle.width": "width {w} m",
-  "help.building.title": "Building plan and aisles",
-  "help.building.html": `
-    <ul>
-      <li><b>What it is.</b> The <b>“Building”</b> button next to 2D / 3D turns on the building plan mode: outline, columns, walls, gates, aisles. This is <b>geometry</b>, not Odoo locations; it is stored in the project with the warehouse (each warehouse has its own plan) and goes through the same “Show / Save” flow with <kbd>{mod}</kbd>+<kbd>Z</kbd> undo. “Building” and “Edit” modes exclude each other.</li>
-      <li><b>Create.</b> If there is no plan yet, <b>“Create building from warehouse size”</b> makes a rectangular outline around the layout plus a margin (2 m by default). At first it is an unsaved (teal) change; save it with <b>“Save the building plan”</b> or “Save all”.</li>
-      <li><b>Outline.</b> A rectangle (X, Y, width, depth as numbers) or a polygon: drag vertices with the mouse (select the outline by clicking its line), the <b>“+ Vertex”</b> tool adds a vertex on an edge, “Add vertex” splits the longest edge, <kbd>Delete</kbd> removes the selected vertex (three at least). The same place has the height to the ceiling and to the sprinklers, the area and the perimeter.</li>
-      <li><b>Objects.</b> <b>Column</b> (click; or <b>“Columns on a grid”</b>: start, count and X / Y step — one change), <b>wall</b> (a segment with thickness, two clicks), <b>gate, dock, door, office, charging area</b> (rectangles: click — default size, drag — your own). A selected object is moved with the mouse; its numbers (coordinates, size, name) are edited in the panel. A gate or dock can be <b>linked to an Odoo location</b> (the “Link to location” field picks among floor places and zones of the warehouse); without a link it is just geometry.</li>
-      <li><b>Aisles.</b> An aisle is a strip with a width, drawn with two clicks (start and end). Aisle ends are graph nodes: when the end of a new aisle lands on a node or on the line of another aisle, they join (an aisle that is crossed splits in two). The aisle panel shows its length, width and <b>neighbouring aisles</b>. Moving an aisle drags its neighbours through the shared node; an end can be dragged on its own (it shows as a circle when selected) or typed in. Aisle width is compared with the minimum for the warehouse equipment (see “Checks and problems”); there are no routes yet.</li>
-      <li><b>Snapping.</b> The grid step <b>0.1 / 0.5 / 1 m</b> is chosen in the panel; points snap to vertices and corners of neighbouring objects, to corners of rows and places of the layout and to aisle ends (and align to their axes). The “Snap” checkbox turns it off, <kbd>Alt</kbd> while moving does it temporarily. The grid step is remembered.</li>
-      <li><b>Rulers and the ruler tool.</b> Along the top and left edges of 2D are rulers in metres (with a cursor mark); the bottom shows the cursor coordinates. The <b>“Ruler”</b> tool: two clicks — the distance (and Δx, Δy) is shown on the plan and in the panel; <b>“Clear measurement”</b> or Esc removes it. The measurement is not stored in the project.</li>
-      <li><b>Places inside the outline.</b> If a row or a floor zone goes beyond the building outline, the panel shows a yellow warning with the list. It is a check error: a new change that takes a place beyond the outline is cancelled (there is “Place anyway”), and current cases are listed in “Problems”.</li>
-      <li><b>In 3D</b> you see the floor outline, walls, columns (instanced), gates, docks, doors, office, charging area and aisles; the upper orange line is the sprinkler level. Editing is done in 2D.</li>
-    </ul>`,
   "top.file": "File",
   "file.menu": "File menu",
   "file.impLoc": "Import locations…",
@@ -1003,24 +812,6 @@ export default {
   "pf.dupWarehouse": "Warehouse id {id} is repeated in the file",
   "n.fileSaved": "File saved: {name}",
   "n.fileFail": "Could not open the files window",
-  "help.file.title": "Files: import and export",
-  "help.file.html": `
-    <p>The <b>"File"</b> menu in the top bar. Files are read and created in the browser itself; nothing is sent to a server.</p>
-    <ul>
-      <li><b>Import locations…</b> — XLSX or CSV (UTF-8 or Windows-1251, comma, semicolon or tab separated). Columns follow the standard Odoo export of <span class="code">stock.location</span>:
-        Full Location Name (<span class="code">complete_name</span>), Location Type (<span class="code">usage</span>), Barcode, Parent Location; optionally Corridor / Shelves / Height (<span class="code">posx / posy / posz</span>) and stock: Product, Quantity, Lot.
-        Headers are recognized automatically in English, Ukrainian and Russian; any column can be assigned by hand in the "Column mapping" block.</li>
-      <li><b>Preview.</b> Before the project is created you see how many places, structure rows (containers) and stock lines were found, which warehouses are in the file (a warehouse is the first segment of the full name) and how many rows were not recognized and why
-        (no name, no parent location, unknown type, repeated code). Locations of non-warehouse types (customers, vendors, production…) are skipped. The place code is the barcode if there is one, otherwise the name (can be changed).
-        If name and parent are separate columns, the full name is built as "parent/name".</li>
-      <li><b>Result</b> — a new project "from a file" (source — the file, load date): each warehouse keeps its snapshot inside the project, and everything then works as with Odoo data. The new project opens instead of the current one; the current one stays in storage.</li>
-      <li><b>Export locations…</b> — the active warehouse in the Odoo <span class="code">stock.location</span> import format: name, location_id (full name of the parent location), usage, barcode (place code), posx / posy / posz (row / bay / level numbers where they exist).
-        Choose <b>all places</b> (with structure rows of type "view") or <b>new and changed only</b> (with the parents that do not exist in Odoo yet); XLSX or CSV. This is the basis for applying changes by file; the full change plan (ids, archiving, write order) is a separate step.</li>
-      <li><b>Export project</b> — a <span class="code">.whproj.json</span> file: the whole project (warehouses, saved and unsaved changes, building, addressing, types). The shared library of types and templates is not included.
-        Warehouse snapshots that the app takes from outside (not the built-in demo data) are put into the file so a warehouse is not empty on another computer.</li>
-      <li><b>Import project…</b> — the file is checked (format, version, warehouses) and converted to the current version if needed. If a project with the same id already exists, choose: <b>replace</b> it or <b>import as a copy</b> (new id, name marked "copy").
-        A file from a newer version of the app is not opened. After the import the page reloads and opens the project.</li>
-    </ul>`,
   // ---------- checks and problems panel (W-07)
   "n.chkBlock": "Change cancelled: {what}",
   "n.chkBlockSub": "Violations: {n}. If this is intended, use “Place anyway”.",
@@ -1078,16 +869,6 @@ export default {
   "op.techMin": "Minimum aisle width ({tech}): {w} m",
   "side.techTitle": "Zone equipment",
   "side.techNote": "Aisle widths in this zone are checked for the chosen equipment; “Same as warehouse” uses the warehouse equipment.",
-  "help.checks.title": "Checks and problems",
-  "help.checks.html": `
-    <ul>
-      <li><b>Overlaps are forbidden.</b> Rows, floor places, columns, walls and the office cannot overlap, and places cannot go beyond the building outline. Touching edges is not an overlap. If a drag, a number in the panel, mass creation, paste, a copy or a rotation causes an overlap, the change is <b>cancelled</b> and the notification (it does not disappear by itself until closed or the next change) and the top of the “Problems” panel have a <b>“Place anyway”</b> button that repeats the action and keeps it. Such an override is marked in the change itself and shows in “Problems” as the warning “placed despite the ban”.</li>
-      <li><b>Aisle width.</b> The “Problems” panel (top) lets you choose the <b>warehouse equipment</b>: hand cart, stacker, reach truck, narrow-aisle truck or forklift; a zone can be set separately in its panel (“Zone equipment”). Every equipment has a <b>minimum aisle width</b> (editable). Building-plan aisles and gaps between rows narrower than the minimum are highlighted in 2D and 3D and listed. Rows closer than 0.3 m count as one block.</li>
-      <li><b>Height and load.</b> The height of a row (top level plus cargo) is compared with the ceiling and sprinkler heights of the building plan (a building plan is required). The weight of goods on a level (or a stack section) is compared with the level load from the type parameters; if goods weights are unknown in the snapshot, the type maximum is assumed, so there is no complaint.</li>
-      <li><b>Places with stock.</b> A place that holds goods cannot be <b>“Removed”</b> (neither alone, nor in a group, nor by shrinking a row): move the goods first, then archive the empty place. Moving a place with stock to another zone (group, ungroup) gives a warning.</li>
-      <li><b>“Problems” panel.</b> The button in the top bar shows the count (red if there are errors). The list shows type, object and text; filter by kind and type; clicking a row selects the object on the model and shows its level. Problems that existed before a change do not block that change.</li>
-      <li><b>Code conflicts.</b> A repeated or already used place code (see “Addressing”) also appears in “Problems” as an error; a click goes to the place. While a conflict exists, those places cannot be saved.</li>
-    </ul>`,
 
   // ---- W-14: ёмкость, категории хранения, функции зон, флаги, стратегия списания, min / max
   "n.viewStock": "A place with stock cannot become a “view” location",
@@ -1231,18 +1012,6 @@ export default {
   "file.exp.lim.journal": "There is no apply journal and no rollback: after the import the changes can only be reverted by hand.",
   "file.exp.lim.order": "Rows go in the order “create → change → archive”. If one file renames a parent location and creates its new child, import in two files or apply the plan through the API.",
   "file.exp.skipped": "Not in the file: categories — {k}, replenishment rules — {o}.",
-  "help.capacity.title": "Capacity, categories and attributes",
-  "help.capacity.html": `
-    <p>All of this is edits of the “Show / Save” layer with Ctrl+Z. What concerns Odoo goes to the “Change plan” and is applied through the module API in this order: <b>categories → locations → replenishment rules</b>. The blocks are in the side panel in “Edit” mode (select a place, row or zone); in view mode the same data is shown without editing, and for a zone or the warehouse the total capacity as well.</p>
-    <ul>
-      <li><b>Place size and weight.</b> Width, depth, height and maximum weight come from the place type and the storage category; on a specific place you can set your own (an empty field means “as in the type”). The effective values are shown, and where the weight comes from (the place, the category or the type). Size and weight of a place are kept in the project: in Odoo the weight lives on the storage category.</li>
-      <li><b>Storage categories.</b> “Storage categories…” opens the list of Odoo categories from the snapshot and creates new ones: name, maximum weight, policy “only if empty / same product / mixed” (<span class="code">allow_new_product</span>), capacities per product and per package type. A category is assigned to a <b>place, row or zone</b>: it applies to every place below, and a lower level can set its own or “no category”. A new category is created in Odoo when the plan is applied — before the locations that refer to it. Only a category that is not created yet can be removed.</li>
-      <li><b>Zone function and attributes.</b> The function (receiving, quality control, quarantine, storage, picking, packing, shipping, defects, returns, production buffer) gives the zone a frame colour and a label on the plan and in 3D; the attributes (temperature range, hazardous goods, valuable, long items) appear in the hover hints. All this is kept only in the project — Odoo has no such fields. A function applies to the nested zones until a lower level sets another one.</li>
-      <li><b>Place flags.</b> Location type (internal / view), “replenishment place” (<span class="code">replenish_location</span>), and in Odoo 18 “scrap” (<span class="code">scrap_location</span>; Odoo 19 has no such flag). An empty choice means “as in Odoo”. A place with stock cannot become a “view”; “replenishment place” cannot be set if the flag already exists above or below (an Odoo rule) — the app warns you.</li>
-      <li><b>Removal strategy.</b> Choose from the strategies of the database (<span class="code">removal_strategy_id</span>: FIFO, LIFO, FEFO…) on a zone, row or place; it applies to the location and everything inside.</li>
-      <li><b>Min / Max.</b> In the place card: the replenishment rule — product, min, max. It can only be set for a place that has stock or an existing rule. In the plan these are “Replenishment rules”: a rule is created or changed (<span class="code">stock.warehouse.orderpoint</span>).</li>
-      <li><b>Capacity summary.</b> In the zone and warehouse panel: places, pallet places, area, volume, occupied / free (from stock), total maximum weight; calculated from the capacities of the places and types.</li>
-    </ul>`,
   "heat.label": "Metric",
   "heat.status": "Place status",
   "heat.fill": "Fill level",
@@ -1306,20 +1075,6 @@ export default {
   "top.dataAsOf": "data as of {time}",
   "n.dataRefreshed": "Data refreshed · places: {n}",
   "n.dataAdded": "Odoo has new places: {added}. The structure is updated by the “Refresh from Odoo” button.",
-  "help.data.title": "Metrics, search and data",
-  "help.data.html": `
-    <ul>
-      <li><b>Metric.</b> The <b>“Metric”</b> switch above the plan changes what the color of a place means, and the legend next to it changes with it and shows how many places fall in each class. <b>“Place status”</b> is the usual coloring (see “Viewing the model”); the other five are heat maps, identical in 2D and 3D. New and unsaved places stay teal and orange under any metric. The choice is remembered.</li>
-      <li><b>Fill level</b> — the share of the place capacity: empty, up to 25 %, 25–50 %, 50–75 %, over 75 %; gray — places without capacity (zones, carts).</li>
-      <li><b>Below minimum</b> — by the place reorder rule (min / max): red — out of stock, yellow — below minimum, green — not below, gray — places without a rule.</li>
-      <li><b>Empty places</b> — places without stock are yellow (room to put things), the rest are gray.</li>
-      <li><b>Turnover ABC</b> — by the number of moves (done moves out of and into the place) over the last 90 days: <b>A</b> — places that together give the first 80 % of moves, <b>B</b> — the next 15 %, <b>C</b> — the last 5 %; gray — no moves.</li>
-      <li><b>Stock age</b> — by the oldest lot of the place (the incoming date of the stock in Odoo): up to 30, 31–90, 91–180, 181–365, over 365 days; gray — the place is empty or has no date.</li>
-      <li><b>Demo.</b> The demo snapshot has neither moves nor incoming dates, so ABC and age show synthetic values, marked “demo” in the legend and in the place card. Odoo supplies real data (moves for 90 days and the incoming date).</li>
-      <li><b>Where is it.</b> The search box above the plan looks for a product name or code, a lot and a package; several words must all match within one stock line. Found places are highlighted on the plan (2D and 3D), a counter sits next to the box, and the list below it shows each place and what lies there. Click a list row (or press <kbd>Enter</kbd> for the first) to show the level that holds the place and select it. <kbd>Esc</kbd> closes the list, pressed again it clears the search.</li>
-      <li><b>Place card.</b> Click a place and the right panel shows: stock (product, quantity, reservation, lot, age), storage category, capacity and fill level, min / max, putaway rules that lead here (direct ones and by storage category), moves for 90 days and the stock age. In the app opened from Odoo there is an <b>“Open in Odoo”</b> button — the form of this location.</li>
-      <li><b>“Refresh data”.</b> The button above the plan refreshes stock, fill levels, reservations and moves <b>without rebuilding the plan</b>, leaving your saved and unsaved model changes alone (the stock snapshot only). New Odoo locations do not appear this way: the structure is updated by “Refresh from Odoo”. The snapshot time is shown next to it. The data is also read every time the page opens. Outside Odoo the button recomputes the metrics from the current snapshot.</li>
-    </ul>`,
   // W-12: code parsing, "Unplaced" tray, auto-layout
   "op.parse": "Code parsing rules: {n}",
   "op.place": "{to}: placed from the tray ({n})",
@@ -1378,32 +1133,6 @@ export default {
   "tray.all": "Select all",
   "tray.parsed": "parsed by a rule",
   "tray.unparsed": "not parsed",
-  "help.parse.title": "Code parsing",
-  "help.parse.html": `
-    <ul>
-      <li><b>The warehouse is already set up.</b> Any Odoo warehouse becomes a model. A place code (for example <code>FUR-R2-S01-L4</code>) is split into row, section and level by the <b>warehouse rules</b>; the default rules are the ones used for this database.</li>
-      <li><b>“Code parsing” window.</b> A button in the edit bar (“Edit” mode → “Code parsing”). At the top: “M of N places parsed”; below: the rule list and unparsed codes with examples.</li>
-      <li><b>Mask.</b> Text with the parts <code>{row}</code>, <code>{bay}</code>, <code>{level}</code>, <code>{prefix}</code> (Ukrainian names work too): <code>R{row}.S{bay}.L{level}</code>. A letter right before a part belongs to the name (R12). <code>{x:a}</code> — letters, <code>{x:A-D}</code> — range, <code>*</code> — any text. The “Regular expression” flag allows complex cases: groups <code>(?&lt;row&gt;…)</code>, <code>(?&lt;bay&gt;…)</code>, <code>(?&lt;level&gt;…)</code>.</li>
-      <li><b>Resulting levels.</b> Row + section + level — row, rack, level. Section + level — the row is the parent zone from the Odoo path. Row + level — a row of stacks. No parts — a plain floor place.</li>
-      <li><b>Order and type.</b> Rules are checked top to bottom; arrows change the order; each rule has a place type and an “Off” flag.</li>
-      <li><b>“Suggest a mask from samples”.</b> Tick unparsed codes of one scheme — a rule with automatically detected parts is added; the “parsed” counter updates at once.</li>
-      <li><b>Saving.</b> “Show” applies the rules to the tree (undo — Ctrl+Z), “Save” writes them to the project together with other changes.</li>
-    </ul>`,
-  "help.tray.title": "“Unplaced” tray",
-  "help.tray.html": `
-    <ul>
-      <li><b>Nothing is lost.</b> Places that did not fit the tree (no parsing rule and no parent zone) go to the tray — the “Unplaced” button in the top bar with a counter.</li>
-      <li><b>How to place.</b> Drag a place from the list onto a zone or a row on the 2D plan, or tick places, pick a zone and press “Place in…”. It is an ordinary change: “Show / Save”, Ctrl+Z returns the place to the tray.</li>
-      <li><b>Parsed but without a zone.</b> A place parsed into row / section / level but lying outside any zone gets its own row and rack in the zone when placed.</li>
-    </ul>`,
-  "help.auto.title": "Auto-layout",
-  "help.auto.html": `
-    <ul>
-      <li><b>After import</b> the warehouse is laid out by the tree: zones horizontally, rows in depth; nothing needs to be changed.</li>
-      <li><b>“Lay out automatically”</b> is in the zone and warehouse panel (“Edit” mode). It removes manual positions of the objects inside.</li>
-      <li><b>With a building plan.</b> Blocks are fitted into the outline shelf by shelf, avoiding columns, walls and offices, without overlaps. If they do not fit, the layout stays as it was — enlarge the outline or make the zones smaller.</li>
-      <li>It is a “Show / Save” change; Ctrl+Z undoes it.</li>
-    </ul>`,
   "side.autoBtn": "Lay out automatically",
   // W-18: layout variants, version history, comments, roles, zone locks
   "common.ok": "OK",
@@ -1411,6 +1140,8 @@ export default {
   "unit.m3": "m³",
   "top.variant": "Variant: {name}",
   "top.variantsTitle": "Warehouse layout variants: create from the current one, switch, compare",
+  "top.more": "More ▾",
+  "top.moreTitle": "More actions",
   "top.history": "History",
   "top.historyTitle": "Project versions: view and restore",
   "top.comments": "Comments",
@@ -1517,64 +1248,11 @@ export default {
   "n.histDenied": "Versions can be restored by users with the \"Constructor: design\" right",
   "n.histFail": "Could not restore the version",
   "n.histRestored": "Restored version #{n}",
-  "help.variants.title": "Layout variants",
-  "help.variants.html": `
-    <ul>
-      <li><b>Why.</b> A warehouse can have several layout variants: "As is" (current), "Project A", "Project B"… Each has its own saved and unsaved model changes; the Odoo base is shared. The <b>"Variant: …"</b> button in the top bar opens the variants window.</li>
-      <li><b>Create.</b> "Create from current" copies the <b>saved</b> changes of the active variant (unsaved ones stay with the active variant) and switches to the new one right away. At most 12 variants per warehouse.</li>
-      <li><b>Switch, rename, delete.</b> Switching does not lose unsaved changes: they stay with their variant. Deleting needs a second click to confirm; the active and the only variant cannot be deleted.</li>
-      <li><b>Compare.</b> Pick two variants — the table shows the number of places, pallet places, floor area (rows and floor places), place volume, capacity (total allowed load of places from the capacity summary, kg) and the number of change plan operations, plus the difference. Figures use the saved changes.</li>
-      <li><b>In Odoo.</b> The change plan and applying work only with the active variant; its name is shown in the plan window. Variants are stored in the project with the warehouse (in Odoo — in the shared project).</li>
-      <li>The "design" role can create, rename and delete variants; anyone can switch.</li>
-    </ul>`,
-  "help.history.title": "Version history and restore",
-  "help.history.html": `
-    <ul>
-      <li><b>History.</b> The "History" button in the top bar lists project versions: number, when, who and comment. In Odoo the server keeps versions (the last 50, the author is the Odoo user); outside Odoo the last 20 are kept in this browser (localStorage).</li>
-      <li><b>Version comment.</b> In the edit bar next to "Save all" there is an optional comment field; it goes into the history with the version.</li>
-      <li><b>View.</b> Shows the drawing and the figures of the warehouse variants in that version next to the current state. Read-only: the project is not changed.</li>
-      <li><b>Restore.</b> Needs confirmation in the window itself. The current state (with unsaved changes) is first saved as a separate version, then the version becomes the project and the page reloads. So a restore can be undone by restoring the previous version. The "design" role can restore.</li>
-    </ul>`,
-  "help.comments.title": "Comments on objects",
-  "help.comments.html": `
-    <ul>
-      <li><b>What it is.</b> A note or a "check on site" task on any model node (warehouse, zone, row, rack, level, place) or building object. It has a text, an author, a date and a status: open or resolved.</li>
-      <li><b>Add.</b> The "Comments" button opens the panel. Select an object on the plan (a building object in Building mode), pick the kind, write the text and press "Add comment".</li>
-      <li><b>Badges on the plan.</b> In 2D and 3D an object with comments has a badge with a number (blue — note, orange — open task, grey — all resolved). Clicking a badge opens that object's comments.</li>
-      <li><b>List.</b> Filters by status, kind, text and "this object only"; clicking an object name goes to it on the plan. "Resolve" and "Reopen" are for the "design" role.</li>
-      <li><b>Where they live.</b> In Odoo — in the database, shared by everyone (the "view" role reads and writes, "design" resolves; only "design" deletes other people's comments); the list refreshes every 15 seconds. Outside Odoo — in the project in this browser and in the project file.</li>
-    </ul>`,
-  "help.roles.title": "Roles and rights",
-  "help.roles.html": `
-    <ul>
-      <li>Rights come from Odoo groups; a badge with your role is shown in the top bar. Outside Odoo the rights are full.</li>
-      <li><b>View.</b> Look at the model, versions, variants and comments, write comments, switch variants. Project changes cannot be saved ("View only").</li>
-      <li><b>Design.</b> Everything from "view", plus changing and saving the model, managing variants, restoring versions, resolving comments, locking zones.</li>
-      <li><b>Apply.</b> Everything from "design" plus "Change plan → Apply" and rolling back an application in Odoo.</li>
-      <li>Buttons not available to your role are disabled, with a hint.</li>
-    </ul>`,
-  "help.locks.title": "Zone locks",
-  "help.locks.html": `
-    <ul>
-      <li><b>Why.</b> So that two people do not edit the same zone at the same time. Locks work only when the project is stored in Odoo.</li>
-      <li><b>How it works.</b> When you select an object in edit mode, its zone is locked for you for 5 minutes; while the page is open and you stay in edit mode, the lock is renewed by itself once a minute; leaving edit mode or closing the page releases it.</li>
-      <li><b>Who is editing.</b> On the plan (2D and 3D) a zone being edited by another user has a red badge with their name, yours a green one. The lock list refreshes every 15 seconds.</li>
-      <li><b>Someone else's zone.</b> Changes in a zone another user is editing are rejected with a message saying who and until what time. Viewing, selecting and commenting on that zone is unrestricted.</li>
-    </ul>`,
   "file.newScratch": "New project: from scratch…",
   "file.docs": "Documents",
   "file.docBom": "Rack specification…",
   "file.docPlan": "Plan (PDF/PNG)…",
   "file.docPlaces": "Places to Excel…",
-  "help.docs.title": "Documents",
-  "help.docs.html": `
-    <ul>
-      <li><b>Where.</b> "File → Documents". Area: the whole warehouse, a zone or the selection.</li>
-      <li><b>Rack specification</b> (XLSX and PDF): frames (height × depth), beams (length, by level), shelves and decking (pcs, m²), arms, posts, bracing, spacers of double-sided rows — from the type, row parameters, number of bays, levels and positions; totals by size. Pallet row: frames = bays + 1, beams = bays × levels × 2; a double-sided row is counted per side.</li>
-      <li><b>Plan</b> (vector PDF, A4 / A3, portrait or landscape; PNG 1600–6400 px): building, columns, aisles, rows with labels, zones, building dimension lines, scale bar, legend (zone functions or the current indicator) and title block (project, warehouse, variant, date, scale).</li>
-      <li><b>Places to Excel:</b> code, barcode, zone, row, bay, level, position, type, dimensions, capacity, max weight, category, stock, status (existing / new / changed), Odoo id.</li>
-      <li><b>PDF font</b> is embedded (DejaVu Sans Mono, used glyphs only): captions in Ukrainian, labels included; Latin transliteration is an option.</li>
-    </ul>`,
   "wiz.btn": "Wizard",
   "wiz.title": "From-scratch wizard",
   "wiz.step": "Step {n} of {m}",
@@ -1690,17 +1368,6 @@ export default {
   "wiz.new.projName": "From scratch · {db}",
   "wiz.pick.title": "New project: from scratch — choose a warehouse",
   "wiz.pick.intro": "The wizard builds inside an existing Odoo warehouse (no new warehouse is created). Choose one — usually an empty one.",
-  "help.wizard.title": "“From scratch” wizard",
-  "help.wizard.html": `
-    <ul>
-      <li><b>Purpose.</b> An empty Odoo warehouse becomes a planned one created in Odoo: the wizard leads step by step and uses the same tools as the rest of the app.</li>
-      <li><b>Entry.</b> “File → New project: from scratch…”. On an Odoo page you choose an existing warehouse of the database (the wizard does not create a warehouse). Outside Odoo an empty draft warehouse with the code you give is created; the result is then exported as a file.</li>
-      <li><b>Steps</b> (panel on the right, “Back” / “Next”, progress bar): <i>Building</i> — size (width × depth, heights) or a polygon outline (x,y vertices), column grid; <i>Zones</i> — named zones with a function, an optional storage category and a rectangle each inside the outline, “Spread evenly” (function and category are ordinary zone-attribute changes); <i>Rows</i> — for every zone a rack type from the catalog, rows × bays × levels, zone equipment (the aisle between rows is at least the equipment minimum); <i>Addressing</i> — code template and numbering directions per zone with a preview (by default the code starts with the warehouse code: a location barcode in Odoo is unique within the company); <i>Checks</i> — the problems panel, you cannot go on while there are errors; <i>Change plan</i> — what will be created in Odoo.</li>
-      <li><b>These are ordinary changes.</b> Every step adds changes to the unsaved list (“Show / Save”), you can see them and undo them with Ctrl+Z; pressing “Apply” of a step again replaces what the wizard made instead of duplicating it. Leaving the “Checks” step saves the project, because the change plan is built from what is saved.</li>
-      <li><b>Leave and come back.</b> The state of the steps (form values, created zones and rows) is kept in the project. Close the panel with ×, come back with the “Wizard” button in the top bar — even after a page reload.</li>
-      <li><b>Result.</b> On the “Change plan” step: “Apply in Odoo…” (the change plan window: one transaction, journal, rollback; on an Odoo page with the apply right) or “Import file…” (XLSX / CSV). “Finish the wizard” removes the “Wizard” button: the project stays an ordinary one edited with all the tools.</li>
-      <li><b>Columns and rows.</b> If the rows do not fit between columns, the checks reject the change; use “Lay out automatically” for the zone or make the block smaller.</li>
-    </ul>`,
   // ---------- putaway rules, "Where will Odoo put it", "Will it fit", company barcodes (W-15)
   "lb.btn": "Labels",
   "lb.btnTitle": "Location labels: PDF (A4) and ZPL (Zebra)",
@@ -1789,15 +1456,5 @@ export default {
   "odoo.log.op.putaway_create": "created putaway rule {name}",
   "odoo.log.op.putaway_update": "changed putaway rule {name}",
   "odoo.log.op.putaway_delete": "deleted putaway rule {name}",
-  "help.putaway.title": "Putaway rules, \"Where will Odoo put it\", \"Will it fit\"",
-  "help.putaway.html": `
-    <p>The "Putaway" button in the top bar opens a window with two tabs. Rule edits are the same "Show / Save" layer with Ctrl+Z; they reach Odoo through the Change plan (kind "Putaway rules") <b>after the locations</b> the rule points to are created.</p>
-    <ul>
-      <li><b>Rules.</b> The warehouse's rules (<span class="code">stock.putaway.rule</span>): condition "product / product category / package type" → "store to" a zone or place; "when product arrives in" is usually the warehouse Stock. The <b>"Search inside"</b> flag (with a storage category) picks a place with that category inside the target, taking capacity and weight into account. New, changed and deleted rules are marked; deleting an Odoo rule in the plan archives it, and a rollback restores it. Priority: a lower number is higher; Odoo picks a rule by package type, product, category.</li>
-      <li><b>Highlight on the model.</b> A selected rule highlights the places that currently hold a matching product (dashed) and the target (solid frame); 3D highlights the same objects. "Clear highlight" is the button above the plan. A zone or warehouse panel has a "Putaway rules leading here" section.</li>
-      <li><b>Where will Odoo put it.</b> Choose a product (and package type), a quantity and, if needed, the receiving location — the place Odoo would choose is highlighted. The Odoo server calculates it (the location's putaway strategy method), so the result matches a real receipt. Needs the "Constructor: view" group. <b>Only the rules applied in Odoo count</b>: unsaved edits and an unapplied plan are not included. Outside Odoo (demo data, a file) a simplified calculation by the model's rules and capacity is used, marked "estimate".</li>
-      <li><b>Will it fit.</b> The product's weight and volume (or the package type's dimensions and weight from Odoo) are compared with the place's dimensions and maximum weight (the "Capacity" block). The warning appears in the "Where will it go" window and in the Problems panel (type "Rule: will not fit") for rules that lead only to places where their product does not fit. Unknown dimensions or weight are not an error: the check is skipped.</li>
-      <li><b>Company barcodes.</b> The Change plan asks the server in advance whether the barcodes of new and renumbered places are used by other locations of the company (other warehouses, archived, non-internal): a conflict shows in the plan (the operation is not applied) and in the Problems panel before applying.</li>
-    </ul>`,
   "odoo.log.putaways": "putaway rules {n}",
 };

@@ -17,6 +17,7 @@ import { createFont, loadFonts, parseTtf, subsetTtf } from "../src/adapters/pdff
 import { MONO } from "../src/adapters/pdffont-data.js";
 import { bomPdf, bomXlsx, planOf, planPdf, placesOf, placesXlsx, zoneList } from "../src/view/docs.js";
 import { HELP_SECTIONS } from "../src/view/help.js";
+import HELP from "../src/i18n/help.js";
 
 const Z = "WH/Тест";
 const withZone = () => { const f = fresh({}, { noStock: true }); f.model.ops.group("WH", { name: "Тест" }); return f; };
@@ -200,6 +201,7 @@ test("тексты окон «Документи»: ключи uk и en совп
   for (const k of PLACE_COLS) used.add(`doc.places.col.${k}`);
   for (const k of ["kinds", "sum", "levels", "racks", "rows"]) used.add(`doc.bom.sheet.${k}`);
   for (const k of used) assert.ok(k in DOCS.uk || k in DICTS.uk, `нет ключа ${k}`);
-  for (const k of ["file.docs", "file.docBom", "file.docPlan", "file.docPlaces", "help.docs.title", "help.docs.html"]) assert.ok(k in DICTS.uk && k in DICTS.en, k);
+  for (const k of ["file.docs", "file.docBom", "file.docPlan", "file.docPlaces"]) assert.ok(k in DICTS.uk && k in DICTS.en, k);
+  for (const k of ["help.docs.title", "help.docs.html"]) assert.ok(k in HELP.uk && k in HELP.en, k);
   assert.ok(HELP_SECTIONS.includes("docs"));
 });
