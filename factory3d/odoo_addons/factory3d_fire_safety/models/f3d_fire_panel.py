@@ -340,7 +340,13 @@ class F3dFirePanel(models.Model):
         self.ensure_one()
         act_xmlid = "factory3d_fire_safety.mail_act_fire_alarm"
         created = self.env["mail.activity"]
-        for user in self._alert_users():
+        users = self._alert_users()
+        if not users:
+            # F-1: порожня група сповіщення (alert_group_xmlid) — тривога без жодної активності; не мовчимо
+            _logger.warning(
+                "Пожежна тривога без сповіщення: у групі %s немає активних користувачів (%s)",
+                self._get_param("alert_group_xmlid", "factory3d_base.group_f3d_user"), summary)
+        for user in users:
             try:
                 with self.env.cr.savepoint():
                     created |= self.sudo().activity_schedule(

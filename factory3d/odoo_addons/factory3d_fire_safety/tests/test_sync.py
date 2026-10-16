@@ -294,6 +294,14 @@ class TestAlarmActivity(SyncCase):
         self.assertEqual(len(self.activities()), 2)  # друга зона при відкритій активності — нових немає
         self.assertEqual(self.panel.alarm_activity_id.activity_type_id, self.env.ref(ACT_XMLID))
 
+    def test_empty_alert_group_warns(self):  # F-1: порожня група оповіщення — активностей немає, але є WARNING
+        self.env['ir.config_parameter'].sudo().set_param(
+            'factory3d.fire_safety.alert_group_xmlid', 'factory3d_fire_safety.group_f3d_fire_nobody')
+        with self.assertLogs('odoo.addons.factory3d_fire_safety.models.f3d_fire_panel', 'WARNING') as logs:
+            self.push_text('fire/groups/FA-CUT/state', 'alarm', self.at(0))
+        self.assertIn('немає активних користувачів', logs.output[0])
+        self.assertFalse(self.activities())
+
     def test_reset_closes(self):
         self.push_text('fire/groups/FA-CUT/state', 'alarm', self.at(0))
         self.push_text('fire/totals/state', 'alarm', self.at(0))
