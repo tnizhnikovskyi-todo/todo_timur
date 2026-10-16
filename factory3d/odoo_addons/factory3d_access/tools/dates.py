@@ -50,6 +50,15 @@ def local_day_start_utc(dt, tz=KYIV):
     return zone.localize(midnight).astimezone(pytz.utc).replace(tzinfo=None)
 
 
+def local_day_bounds_utc(dt, tz=KYIV):
+    """[початок, кінець) локальної доби, що містить `dt`, як naive UTC (у дні переходу на літній/зимовий час доба не 24 год)."""
+    zone = _tz(tz)
+    day = local_date(dt, zone)
+    start = zone.localize(datetime.combine(day, time())).astimezone(pytz.utc).replace(tzinfo=None)
+    end = zone.localize(datetime.combine(day + timedelta(days=1), time())).astimezone(pytz.utc).replace(tzinfo=None)
+    return start, end
+
+
 def schedule_end_utc(day, hour_to, tz=KYIV):
     """Кінець графіка: локальна північ дня `day` + `hour_to` годин -> naive UTC (R-07)."""
     zone = _tz(tz)

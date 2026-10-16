@@ -290,3 +290,30 @@ class TestVisitorPresence(VisitorCase):
         self.assertEqual(old_card.state, 'returned')
         self.assertFalse(old.exists())
         self.assertTrue(recent.exists())
+
+
+@tagged('post_install', '-at_install', 'f3d', 'f3d_access')
+class TestVisitorToday(VisitorCase):
+
+    def test_today_filter_kyiv_day(self):
+        """Фільтр «Сьогодні» — `is_today` за київською добою сервера (без datetime.time.min/max у домені)."""
+        # 12.10.2026 23:30 за Києвом (UTC+3): доба = [11.10 21:00, 12.10 21:00) UTC
+        inside = self._visitor('V-D1', date_from=datetime(2026, 10, 12, 8, 0), date_to=datetime(2026, 10, 12, 12, 0))
+        spanning = self._visitor('V-D2', date_from=datetime(2026, 10, 11, 12, 0), date_to=datetime(2026, 10, 12, 1, 0))
+        yesterday = self._visitor('V-D3', date_from=datetime(2026, 10, 11, 6, 0), date_to=datetime(2026, 10, 11, 20, 59))
+        tomorrow = self._visitor('V-D4', date_from=datetime(2026, 10, 12, 21, 0), date_to=datetime(2026, 10, 13, 5, 0))
+        visitors = inside | spanning | yesterday | tomorrow
+        domain = [('id', 'in', visitors.ids)]
+        with freeze_time(datetime(2026, 10, 12, 20, 30)):
+            today = self.env['f3d.access.visitor'].search(domain + [('is_today', '=', True)])
+            other = self.env['f3d.access.visitor'].search(domain + [('is_today', '!=', True)])
+            self.assertEqual(visitors.mapped('is_today'), [True, True, False, False])
+        self.assertEqual(today, inside | spanning)
+        self.assertEqual(other, yesterday | tomorrow)
+        with freeze_time(datetime(2026, 10, 12, 21, 30)):  # вже 13.10 за Києвом
+            self.assertEqual(self.env['f3d.access.visitor'].search(domain + [('is_today', '=', True)]),
+                             tomorrow)
+        arch = self.env.ref('factory3d_access.view_f3d_access_visitor_search').arch
+        self.assertIn("is_today", arch)
+        self.assertNotIn("time.max", arch)
+        self.assertNotIn("time.min", arch)
