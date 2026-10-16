@@ -115,6 +115,31 @@ class TestControllers(HttpCase, F3dViewerBase):
                 self.assertEqual(res.status_code, 400)
                 self.assertEqual(res.json()["error"]["code"], "bad_request")
 
+    def test_resolve_group(self):
+        """R-16 п. 5: `codes` — дочірні коди об'єкта без власного запису."""
+        stock = self.env.ref("stock.stock_location_stock")
+        bins = self.env["stock.location"].create([
+            {"name": f"ZZ-GB{i}", "location_id": stock.id, "f3d_code": f"ZZ-GB{i}"} for i in (1, 2)])
+        res = self._get("/f3d/viewer/resolve?code=ZZ-RACK-G&codes=ZZ-GB1,ZZ-GB2,ZZ-NONE")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual((data["model"], data["res_id"], data["kind"]), ("stock.location", None, "group"))
+        self.assertEqual(sorted(data["res_ids"]), sorted(bins.ids))
+        res = self._get("/f3d/viewer/resolve?code=ZZ-RACK-G&codes=ZZ-NONE")
+        self.assertEqual(res.json()["reason"], "not_found")
+        # власний запис — як раніше, без res_ids
+        res = self._get("/f3d/viewer/resolve?code=ZZ-WC-1&codes=ZZ-GB1")
+        self.assertEqual(res.json()["res_id"], self.wc.id)
+
+    def test_resolve_group_bad_codes(self):
+        too_many = ",".join(f"C{i}" for i in range(201))
+        for qs in ("code=A&codes=bad%20code", "name=WH/IN/00001&codes=A", "code=A&codes=" + too_many,
+                   "code=A&codes=../x"):
+            with self.subTest(qs=qs[:40]):
+                res = self._get("/f3d/viewer/resolve?" + qs)
+                self.assertEqual(res.status_code, 400)
+                self.assertEqual(res.json()["error"]["code"], "bad_request")
+
     def test_resolve_forbidden(self):
         self.assertEqual(self._get("/f3d/viewer/resolve?code=A", user="f3d_nobody").status_code, 403)
 

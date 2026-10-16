@@ -1,4 +1,4 @@
-"""API-01…04, 07, 10, 11 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
+"""API-01…04, 07, 10, 11, 12 (§7). Спільна логіка винесена в методи `serve_*`, щоб кіоск (API-09) викликав їх
 з `request.env` користувача кіоска."""
 import base64
 import gzip
@@ -11,7 +11,7 @@ from odoo.exceptions import AccessError
 from odoo.http import request
 
 from ..models.viewer_provider_maintenance import GROUP_KIOSK, plan_error
-from ..tools import dates, payload as payload_tools, static_data
+from ..tools import dates, loc_history, payload as payload_tools, static_data
 from ..tools.cycle_check import check
 
 _logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ DATE_RE = re.compile(r"^\d{4}-\d\d-\d\d$")
 SINCE_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$")
 MAX_CODES = 200
 GROUP_USER = "factory3d_base.group_f3d_user"
+GROUP_STOCK = "stock.group_stock_user"
 GROUP_MANAGER = "factory3d_base.group_f3d_manager"
 GROUP_ADMIN = "factory3d_base.group_f3d_admin"
 JSON_CT = "application/json; charset=utf-8"
@@ -51,8 +52,8 @@ def bad_request(message="Невалідний параметр"):
     return error("bad_request", message, 400)
 
 
-def forbidden():
-    return error("forbidden", "Немає доступу до переглядача «Завод 3D»", 403)
+def forbidden(message="Немає доступу до переглядача «Завод 3D»"):
+    return error("forbidden", message, 403)
 
 
 def parse_codes(value, limit=MAX_CODES):
@@ -135,6 +136,24 @@ class F3dViewerController(http.Controller):
         return json_response(data, gzip_ok=True)
 
     @staticmethod
+    def serve_loc(code):
+        """API-12: історія комірки. Код невалідний -> 400, коду немає в базі -> 404, немає прав на склад -> 403."""
+        if not CODE_RE.match(code or ""):
+            return bad_request("Невалідний параметр: code")
+        env = request.env
+        if not (env.user.has_group(GROUP_STOCK) and loc_history.accessible(env)):
+            return forbidden("Немає доступу до залишків і переміщень складу")
+        loc = env["stock.location"].search_f3d(code)
+        if not loc:
+            return error("not_found", "Комірку не знайдено", 404)
+        try:
+            data = loc_history.build(env, loc, code)
+        except Exception:  # noqa: BLE001
+            _logger.exception("історія комірки %s: збирач впав", code)
+            return error("payload_failed", "Не вдалося зібрати історію комірки", 500)
+        return json_response(data, gzip_ok=True)
+
+    @staticmethod
     def serve_manifest():
         body, sha1 = static_data.parts_manifest()
         headers = {"ETag": '"%s"' % sha1, "Content-Type": JSON_CT, "Cache-Control": "private, max-age=3600"}
@@ -175,7 +194,19 @@ class F3dViewerController(http.Controller):
             return bad_request("Потрібен рівно один параметр: code або name")
         if (code or name) and not CODE_RE.match(code or name):
             return bad_request("Невалідний параметр: code/name")
-        return json_response(payload_tools.resolve(request.env, code=code, name=name))
+        try:
+            codes = parse_codes(kw.get("codes"))  # коди дочірніх об'єктів (комірки стелажа), ≤ MAX_CODES
+        except BadRequest as e:
+            return bad_request("Невалідний параметр: %s" % e)
+        if codes and not code:
+            return bad_request("Параметр codes потребує code")
+        return json_response(payload_tools.resolve(request.env, code=code, name=name, codes=sorted(codes or ())))
+
+    @http.route("/f3d/viewer/loc/<path:code>", type="http", auth="user", methods=["GET"])
+    def loc(self, code, **kw):
+        if not self._allowed():
+            return forbidden()
+        return self.serve_loc(code)
 
     @http.route("/f3d/viewer/parts/manifest.json", type="http", auth="user", methods=["GET"])
     def parts_manifest(self, **kw):

@@ -41,6 +41,19 @@ export class F3dViewerAction extends Component {
                         views: [[false, "form"]],
                         target: "current",
                     }),
+                // об'єкт без власного запису (стелаж): список записів його комірок (R-16 п. 5)
+                onOpenRecords: (model, resIds, name) =>
+                    this.action.doAction({
+                        type: "ir.actions.act_window",
+                        name,
+                        res_model: model,
+                        domain: [["id", "in", resIds]],
+                        views: [
+                            [false, "list"],
+                            [false, "form"],
+                        ],
+                        target: "current",
+                    }),
                 onNotify: (msg, type) => this.notification.add(msg, { type }),
                 onSetLite: (on) =>
                     this.action.doAction(

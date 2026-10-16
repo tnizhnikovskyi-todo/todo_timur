@@ -10,7 +10,7 @@
 // panel/overlay/flow/drill/energy не виділялись; чисті хелпери — у format.js, lite.js, data_client.js.
 
 import {
-    esc, nf, pct, plural, pill, barW, bar, cx, KIND, MACHINE_STATUS, BIN_STATE, WO_STATE, MO_STATE, PICK_STATE,
+    esc, nf, pct, plural, pill, barW, bar, cx, KIND, MACHINE_STATUS, BIN_STATE, WO_STATE, MO_STATE, PICK_STATE, docPill,
 } from "./format.js";
 import { detectLite, liteSettings } from "./lite.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
@@ -1269,6 +1269,12 @@ function indexData() {
   idx.mr = new Map(D.maintenance_requests.map((m) => [m.id, m]));
   idx.mrRes = new Map(D.maintenance_requests.filter((m) => m.res_id != null).map((m) => [m.res_id, m]));
   idx.qc = new Map(D.quality_checks.map((q) => [q.name, q]));
+  idx.docs = new Map(); // стани документів з кроків шляху МО (supply|delivery.docs від провайдера chains), R-23
+  for (const mo of D.productions) {
+    for (const k of ["supply", "delivery"]) {
+      for (const [n, d] of Object.entries(mo[k]?.docs || {})) {idx.docs.set(n, d);}
+    }
+  }
   idx.prodLocs = new Map();
   for (const [code, loc] of Object.entries(D.locations)) {
     for (const q of loc.quants) {
@@ -1367,6 +1373,7 @@ function applyPatch(patch) {
   if (patch.full) {
     const wasLive = D === Dlive;
     try { setData(mergeData(staticD, patch.full)); } catch (err) { loadFailed(err); return; }
+    staleLocHist();
     Dlive = D;
     if (!wasLive) {return;}
     if (prodOv.on) {drawProdOverlay();}
@@ -1410,6 +1417,7 @@ function applyPatch(patch) {
   }
   if (patch.meta?.now) { simBase = Date.parse(D.meta.now.replace(" ", "T")); simStart = Date.now(); }
   indexData();
+  if (lists.has("locations") || lists.has("pickings") || lists.has("productions") || lists.has("quality_checks")) {staleLocHist();}
   if ((lists.has("workorders") || lists.has("productions")) && simOverride == null) {
     scheduleWOs();
     for (const mo of D.productions) {mo._st0 = mo.state;}
@@ -1691,6 +1699,34 @@ async function openByName(name) {
     else {notify("У базі немає запису " + name, "info");}
   } catch { notify("У базі немає запису " + name, "info"); }
 }
+// ---- документи (R-23): назва → посилання на форму Odoo (client.resolve({name})) + бейдж стану
+const DOC_RE = /\b(?:[A-Z][A-Z0-9]{0,5}\/){1,3}\d{3,}\b/g;
+const canOpen = !!opts.onOpenRecord && !kiosk;
+// стан за назвою: payload (переміщення, перевірки якості, МО), інакше docs кроків шляху МО; [kind, state] або null
+function docInfo(name) {
+  const p = idx.pick.get(name);
+  if (p) {return ["picking", p.state];}
+  const q = idx.qc.get(name);
+  if (q) {return ["quality", q.state];}
+  const m = idx.mo.get(name);
+  if (m) {return ["production", m.state];}
+  const d = idx.docs.get(name);
+  return d ? [d.kind, d.state] : null;
+}
+// span, а не button: назва може стояти всередині рядка-кнопки (вкладені button HTML не допускає)
+function docA(name, info = docInfo(name)) {
+  const a = canOpen ? ("<span class=\"o_f3d_lnk o_f3d_doc\" role=\"link\" tabindex=\"0\" data-open=\"" + esc(name) + "\">" + esc(name) + "</span>") : esc(name);
+  return info ? (a + " " + docPill(info[0], info[1])) : a;
+}
+// текст, у якому кожна назва документа — посилання з бейджем стану
+const docify = (text) => esc(text).replace(DOC_RE, (n) => docA(n));
+// документ за model+id (історія комірки)
+function recA(doc) {
+  const a = canOpen && doc.model && doc.id
+    ? ("<span class=\"o_f3d_lnk o_f3d_doc\" role=\"link\" tabindex=\"0\" data-rec=\"" + esc(doc.model) + ":" + doc.id + "\">" + esc(doc.name) + "</span>")
+    : esc(doc.name);
+  return doc.state ? (a + " " + docPill(doc.kind, doc.state)) : a;
+}
 const backBtn = () => `<button class="o_f3d_back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика", energy: "Енергія" })[panel.tab] || "Назад")}</button>`;
 // усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
 body().addEventListener("click", (e) => {
@@ -1698,6 +1734,8 @@ body().addEventListener("click", (e) => {
   if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) {prodFocus(null);} openTab(panel.tab || "overview"); return; }
   const op = e.target.closest("[data-open]");
   if (op) { openByName(op.dataset.open); return; }
+  const rc = e.target.closest("[data-rec]");
+  if (rc) { const [m, id] = rc.dataset.rec.split(":"); opts.onOpenRecord?.(m, +id); return; }
   const omr = e.target.closest("[data-open-mr]");
   if (omr) { opts.onOpenRecord?.("maintenance.request", +omr.dataset.openMr); return; }
   const pmr = e.target.closest("[data-plan-mr]");
@@ -1718,6 +1756,10 @@ body().addEventListener("click", (e) => {
   else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
   else if (t === "drill") {startDrill();}
 });
+// посилання на документи — span[role=link]: Enter відкриває так само, як клік
+body().addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.matches?.(".o_f3d_doc")) { e.preventDefault(); e.target.click(); }
+});
 function renderNoData() {
   body().innerHTML = `<div class="o_f3d_kind">Немає даних</div><p>Дані недоступні. Модель працює, але без даних Odoo.</p>`;
 }
@@ -1732,11 +1774,13 @@ function renderOverview() {
   const outs = D.pickings.filter((p) => p.type === "outgoing");
   const ins = D.pickings.filter((p) => p.type === "incoming" && p.scheduled_date.startsWith(today));
   const moProg = D.productions.filter((m) => m.state === "progress").length;
-  const attention = [];
+  const attention = []; // [клас, текст, перехід, (необов'язково) готовий HTML замість тексту]
   for (const w of wcs) {
     if (w.status === "stop") {attention.push(["bad", `${w.name} — зупинено${w.maintenance_request ? (" · " + mrText(w)) : ""}`, `obj:${w.code}`]);}
   }
-  for (const q of D.quality_checks) {if (q.state === "fail") {attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);}}
+  for (const q of D.quality_checks) {
+    if (q.state === "fail") {attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`, docA(q.name) + " — " + esc(P(q.product).name)]);}
+  }
   for (const m of D.productions) {if (m.reservation_state === "waiting") {attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);}}
   for (const [k, c] of Object.entries(D.infra?.cards || {})) {if (c.warn) {attention.push(["warn", c.warn, `obj:${k}`]);}}
   for (const [k, g] of Object.entries(D.fire?.groups || {})) {
@@ -1759,7 +1803,7 @@ function renderOverview() {
       <div class="o_f3d_kpi"><b>${moProg}</b><span>виробничих замовлень у роботі</span></div>
       <div class="o_f3d_kpi"><b>${outs.length} / ${ins.length}</b><span>відвантажень / приймань сьогодні</span></div>
     </div>`;
-  const attnHtml = `<ul class="o_f3d_rows">${attention.map(([c, t, go]) => ("<li><button class=\"o_f3d_row\" data-go=\"" + (esc(go)) + "\">\n      <span class=\"o_f3d_t\" style=\"white-space:normal\"><span class=\"o_f3d_dot\" style=\"display:inline-block;margin-right:6px;background:var(--f3d-" + (c) + ")\"></span>" + (esc(t)) + "</span></button></li>")).join("")}</ul>`;
+  const attnHtml = `<ul class="o_f3d_rows">${attention.map(([c, t, go, h]) => ("<li><button class=\"o_f3d_row\" data-go=\"" + (esc(go)) + "\">\n      <span class=\"o_f3d_t\" style=\"white-space:normal\"><span class=\"o_f3d_dot\" style=\"display:inline-block;margin-right:6px;background:var(--f3d-" + (c) + ")\"></span>" + (h || esc(t)) + "</span></button></li>")).join("")}</ul>`;
   body().innerHTML = `
     ${foldHtml("kpi", "Показники", kpisHtml)}
     ${foldHtml("attn", "Потребує уваги", attnHtml)}
@@ -1868,22 +1912,22 @@ function renderMO(name) {
     <dl class="o_f3d_kv">
       <dt>Виріб</dt><dd><button class="o_f3d_lnk" data-go="prod:${esc(mo.product)}">${esc(mo.product_name)}</button> × ${mo.qty} ${esc(mo.uom)}</dd>
       <dt>Стан</dt><dd>${pill(MO_STATE[mo.state] || ["idle", mo.state])}</dd>
-      <dt>Джерело</dt><dd>${so ? ("" + (esc(so.name)) + " · " + (esc(so.partner))) : parent ? ("<button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(parent.name)) + "\">" + (esc(parent.name)) + "</button> (фасади для корпусу)") : esc(mo.origin)}</dd>
+      <dt>Джерело</dt><dd>${so ? ("" + (esc(so.name)) + " · " + (esc(so.partner))) : parent ? ("<button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(parent.name)) + "\">" + (esc(parent.name)) + "</button> " + docPill("production", parent.state) + " (фасади для корпусу)") : esc(mo.origin)}</dd>
       <dt>Старт</dt><dd>${dayHm(mo.date_start)}</dd>
       <dt>Дедлайн</dt><dd>${dayHm(mo.date_deadline)}</dd>
       <dt>Готовність</dt><dd><span data-t="mo:${esc(mo.name)}">${pct(mo.progress)}</span> ${bar(mo.progress, "", ("mo:" + (esc(mo.name))))}</dd>
       ${mo.energy_kwh != null ? ("<dt>Електроенергія</dt><dd>" + (kwhU(mo.energy_kwh)) + " · ≈ " + (nf.format(mo.energy_cost)) + " грн <span class=\"o_f3d_mono\">(виконані операції)</span></dd>") : ""}
-      ${mo.child_productions ? ("<dt>Фасади</dt><dd>" + (mo.child_productions.map((c) => ("<button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(c)) + "\">" + (esc(c)) + "</button>")).join(", ")) + "</dd>") : ""}
+      ${mo.child_productions ? ("<dt>Фасади</dt><dd>" + (mo.child_productions.map((c) => ("<button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(c)) + "\">" + (esc(c)) + "</button> " + docPill("production", idx.mo.get(c)?.state))).join(", ")) + "</dd>") : ""}
     </dl>
-    ${mo.supply ? ("<div class=\"o_f3d_sub\">Шлях плити до пили · " + (esc(P(mo.supply.product).name)) + "</div>\n    <ol class=\"o_f3d_steps\">" + (mo.supply.steps.map((st) => ("<li><button class=\"o_f3d_lnk\" data-go=\"obj:" + (esc(st.code)) + "\">" + (esc(st.label[0].toUpperCase() + st.label.slice(1))) + "</button>\n      <span class=\"o_f3d_m\">" + (esc(st.note || "")) + (st.doc && !(st.note || "").includes(st.doc) ? (" · " + (esc(st.doc))) : "") + "</span></li>")).join("")) + "\n      <li><b>Портал → " + (esc(D.workcenters[wos[0]?.workcenter]?.name || "")) + "</b> <span class=\"o_f3d_m\">лист на підйомний стіл, далі операції нижче</span></li></ol>\n    " + (mo.supply.note ? ("<div class=\"o_f3d_note " + (cx(mo.supply.warn ? "bad" : "")) + "\">" + (esc(mo.supply.note)) + "</div>") : "")) : ""}
+    ${mo.supply ? ("<div class=\"o_f3d_sub\">Шлях плити до пили · " + (esc(P(mo.supply.product).name)) + "</div>\n    <ol class=\"o_f3d_steps\">" + (mo.supply.steps.map((st) => ("<li><button class=\"o_f3d_lnk\" data-go=\"obj:" + (esc(st.code)) + "\">" + (esc(st.label[0].toUpperCase() + st.label.slice(1))) + "</button>\n      <span class=\"o_f3d_m\">" + docify((st.note || "") + (st.doc && !(st.note || "").includes(st.doc) ? (" · " + st.doc) : "")) + "</span></li>")).join("")) + "\n      <li><b>Портал → " + (esc(D.workcenters[wos[0]?.workcenter]?.name || "")) + "</b> <span class=\"o_f3d_m\">лист на підйомний стіл, далі операції нижче</span></li></ol>\n    " + (mo.supply.note ? ("<div class=\"o_f3d_note " + (cx(mo.supply.warn ? "bad" : "")) + "\">" + docify(mo.supply.note) + "</div>") : "")) : ""}
     <div class="o_f3d_sub">Робочі завдання · у 3D весь цикл: від фури з плитами до фури клієнта</div>
     <table class="o_f3d_tbl"><tr><th>#</th><th>Операція / центр</th><th>Стан</th><th class="o_f3d_n">Хв</th></tr>
       ${wos.map((w) => ("<tr class=\"o_f3d_click\" data-go=\"obj:" + (esc(w.workcenter)) + "\">\n        <td>" + (w.sequence) + "</td><td>" + (esc(w.name)) + "<br><span style=\"color:var(--f3d-muted)\">" + (esc(D.workcenters[w.workcenter]?.name || w.workcenter)) + "</span>\n        " + (w.state === "progress" ? bar(w.progress, w.blocked ? "bad" : "warn", ("wo:" + (w.id))) : "") + "</td>\n        <td>" + (pill(w.blocked ? ["bad", "Зупинка"] : WO_STATE[w.state])) + "</td>\n        <td class=\"o_f3d_n\">" + (w.duration ?? "—") + " / " + (w.duration_expected) + "</td></tr>")).join("")}
     </table>
-    ${mo.delivery ? ("<div class=\"o_f3d_sub\">Шлях до клієнта · " + (esc(mo.delivery.partner)) + (mo.delivery.via ? (" · через корпус " + (esc(mo.delivery.via))) : "") + "</div>\n    <ol class=\"o_f3d_steps\">" + (mo.delivery.steps.map((st) => ("<li><button class=\"o_f3d_lnk\" data-go=\"obj:" + (esc(st.code)) + "\">" + (esc(st.label[0].toUpperCase() + st.label.slice(1))) + "</button>\n      <span class=\"o_f3d_m\">" + (esc(st.note || "")) + (st.doc && !(st.note || "").includes(st.doc) ? (" · " + (esc(st.doc))) : "") + "</span></li>")).join("")) + "</ol>\n    " + (mo.delivery.note ? ("<div class=\"o_f3d_note\">" + (esc(mo.delivery.note)) + "</div>") : "")) : ""}
+    ${mo.delivery ? ("<div class=\"o_f3d_sub\">Шлях до клієнта · " + (esc(mo.delivery.partner)) + (mo.delivery.via ? (" · через корпус " + (esc(mo.delivery.via))) : "") + "</div>\n    <ol class=\"o_f3d_steps\">" + (mo.delivery.steps.map((st) => ("<li><button class=\"o_f3d_lnk\" data-go=\"obj:" + (esc(st.code)) + "\">" + (esc(st.label[0].toUpperCase() + st.label.slice(1))) + "</button>\n      <span class=\"o_f3d_m\">" + docify((st.note || "") + (st.doc && !(st.note || "").includes(st.doc) ? (" · " + st.doc) : "")) + "</span></li>")).join("")) + "</ol>\n    " + (mo.delivery.note ? ("<div class=\"o_f3d_note\">" + docify(mo.delivery.note) + "</div>") : "")) : ""}
     <div class="o_f3d_sub">Матеріали · шлях від в'їзду до верстата (у 3D — тонкі лінії свого кольору)</div>
     <table class="o_f3d_tbl"><tr><th>Компонент</th><th class="o_f3d_n">Потреба</th><th></th></tr>
-      ${mo.components.map((c) => ("<tr class=\"o_f3d_click\" data-go=\"comp:" + (esc(mo.name)) + "|" + (esc(c.product)) + "\">\n        <td>" + (c.kind ? ("<span class=\"o_f3d_swatch\" style=\"display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:#" + (new THREE.Color(MAT_COLOR[c.kind] ?? 0x888888).getHexString()) + "\"></span>") : "") + (esc(P(c.product).name)) + "\n          <br><span style=\"color:var(--f3d-muted)\">" + (c.path ? c.path.slice(1).map((st) => esc(st.label)).join(" → ") + (" → " + (esc(D.workcenters[c.to]?.name || c.to || ""))) : ("ворота " + (c.door))) + (c.receipt ? (" · " + (esc(c.receipt))) : (" · із залишку" + (c.expected ? ("; наступна партія " + (esc(c.expected))) : ""))) + "</span></td><td class=\"o_f3d_n\">" + (qtyU(c.qty, c.product)) + "</td>\n        <td>" + (c.available ? pill(["ok", "є"]) : pill(["bad", "бракує"])) + "</td></tr>")).join("")}
+      ${mo.components.map((c) => ("<tr class=\"o_f3d_click\" data-go=\"comp:" + (esc(mo.name)) + "|" + (esc(c.product)) + "\">\n        <td>" + (c.kind ? ("<span class=\"o_f3d_swatch\" style=\"display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:#" + (new THREE.Color(MAT_COLOR[c.kind] ?? 0x888888).getHexString()) + "\"></span>") : "") + (esc(P(c.product).name)) + "\n          <br><span style=\"color:var(--f3d-muted)\">" + (c.path ? c.path.slice(1).map((st) => esc(st.label)).join(" → ") + (" → " + (esc(D.workcenters[c.to]?.name || c.to || ""))) : ("ворота " + (c.door))) + (c.receipt ? (" · " + docA(c.receipt)) : (" · із залишку" + (c.expected ? ("; наступна партія " + docify(c.expected)) : ""))) + "</span></td><td class=\"o_f3d_n\">" + (qtyU(c.qty, c.product)) + "</td>\n        <td>" + (c.available ? pill(["ok", "є"]) : pill(["bad", "бракує"])) + "</td></tr>")).join("")}
     </table>
     ${mo.reservation_state === "waiting" ? ("<div class=\"o_f3d_note o_f3d_bad\">Компоненти не зарезервовано повністю — замовлення чекає приймання.</div>") : ""}`;
 }
@@ -2036,7 +2080,7 @@ function renderPicking(name) {
     <h3>${esc(p.name)}</h3>${openLink(p.name)}
     <dl class="o_f3d_kv">
       ${p.partner ? ("<dt>Партнер</dt><dd>" + (esc(p.partner)) + "</dd>") : ""}
-      <dt>Документ</dt><dd>${idx.mo.has(p.origin) ? ("<button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(p.origin)) + "\">" + (esc(p.origin)) + "</button>") : esc(p.origin)}</dd>
+      <dt>Документ</dt><dd>${idx.mo.has(p.origin) ? ("<button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(p.origin)) + "\">" + (esc(p.origin)) + "</button> " + docPill("production", idx.mo.get(p.origin).state)) : docify(p.origin)}</dd>
       <dt>Стан</dt><dd>${pill(PICK_STATE[p.state] || ["idle", p.state])}</dd>
       <dt>Заплановано</dt><dd>${dayHm(p.scheduled_date)}</dd>
       ${p.dock ? ("<dt>Ворота</dt><dd><button class=\"o_f3d_lnk\" data-go=\"obj:" + (esc(p.dock)) + "\">" + (esc(items.get(p.dock)?.userData.label || p.dock)) + "</button></dd>") : ""}
@@ -2044,7 +2088,7 @@ function renderPicking(name) {
       ${p.carrier ? ("<dt>Перевізник</dt><dd>" + (esc(p.carrier)) + "</dd>") : ""}
       ${p.progress ? ("<dt>Виконано</dt><dd>" + (pct(p.progress)) + " " + (bar(p.progress, "flow")) + "</dd>") : ""}
     </dl>
-    ${p.note ? ("<div class=\"o_f3d_note\">" + (esc(p.note)) + "</div>") : ""}
+    ${p.note ? ("<div class=\"o_f3d_note\">" + docify(p.note) + "</div>") : ""}
     <div class="o_f3d_sub">Рядки</div>
     <table class="o_f3d_tbl"><tr><th>Товар</th><th class="o_f3d_n">Готово / план</th></tr>
       ${p.lines.map((l) => ("<tr class=\"o_f3d_click\" data-go=\"prod:" + (esc(l.product)) + "\"><td>" + (esc(P(l.product).name)) + "</td>\n        <td class=\"o_f3d_n\">" + (nf.format(l.qty_done ?? 0)) + " / " + (qtyU(l.qty, l.product)) + "</td></tr>")).join("")}</table>`;
@@ -2058,10 +2102,59 @@ function stockLine(code, u) {
   const text = liveLine(loc, { esc, nf, plural, name: (c) => P(c).name, uom: (c) => P(c).uom });
   return "<p class=\"o_f3d_live" + (text === "Порожньо" ? " o_f3d_live-empty" : "") + "\">" + text + "</p>";
 }
+// ---------------------------------------------------------------- «Відкрити в Odoo» для об'єкта сцени (R-16 п. 5)
+// Власного запису в Odoo немає в стелажів і груп — лише в їхніх комірок (stock.location): тоді кнопка відкриває список
+// комірок (client.resolve({code, codes})), а якщо нічого не знайдено — кнопки немає. Рішення без запиту, коли дані
+// його підказують (запис центру, співробітника, комірки…, живі комірки всередині); інакше один дешевий resolve на картку.
+const OPEN_KIDS_MAX = 200; // стільки кодів приймає сервер (CODE_RE, MAX_CODES)
+const openInfo = new Map(); // code -> { kids: [codes], show: true | false | null (невідомо), busy, until }
+const liveBin = (c) => Array.isArray(D.locations?.[c]?.quants);
+// комірки об'єкта: нащадки з кодом; у плоскій сцені — комірки в межах габариту стелажа; запасний варіант — префікс коду
+function openKids(obj) {
+  const code = obj.userData.code;
+  const kids = new Set();
+  obj.traverse((o) => { const c = o !== obj && o.userData?.code; if (c && liveBin(c)) {kids.add(c);} });
+  if (!kids.size && obj.userData.kind === "rack") {
+    const box = new THREE.Box3().setFromObject(obj).expandByScalar(0.25);
+    const tmp = new THREE.Box3(), v = new THREE.Vector3();
+    if (!box.isEmpty()) {
+      for (const [c, o] of items) {
+        if (o !== obj && liveBin(c) && box.containsPoint(tmp.setFromObject(o).getCenter(v))) {kids.add(c);}
+      }
+    }
+  }
+  if (!kids.size) {
+    for (const c of Object.keys(D.locations || {})) {if (c.startsWith(code + "-") && liveBin(c)) {kids.add(c);}}
+  }
+  return kids.size && kids.size <= OPEN_KIDS_MAX ? [...kids] : [];
+}
+function openInfoFor(obj) {
+  const code = obj.userData.code;
+  let info = openInfo.get(code);
+  if (!info) {
+    const own = !!(D.workcenters[code] || D.employees[code] || D.equipment[code] || D.zones[code] || liveBin(code)
+      || idx.truck.has(code) || D.docks?.[code]);
+    const kids = own && obj.userData.kind !== "rack" ? [] : openKids(obj); // сервер віддає перевагу власному запису
+    info = { kids, show: own || kids.length ? true : null, busy: false, until: 0 };
+    openInfo.set(code, info);
+  }
+  return info;
+}
+function probeOpen(code, info) {
+  if (info.busy || Date.now() < info.until || typeof client.resolve !== "function") {return;}
+  info.busy = true;
+  client.resolve({ code }).then((r) => { info.show = !!r?.model; }, () => { info.until = Date.now() + 30000; }).then(() => {
+    info.busy = false;
+    if (info.show === true && !destroyed && panel.type === "object" && panel.code === code) {renderPanel(true);}
+  });
+}
+
 function renderObject(code) {
   const obj = items.get(code);
   if (!obj) {return;}
   const u = obj.userData;
+  const oi = canOpen ? openInfoFor(obj) : null;
+  if (oi && oi.show === null) {probeOpen(code, oi);}
   let chip = "", extra = "";
   const mst = machStatus(u), bst = binState(u);
   if (u.kind === "machine" && MACHINE_STATUS[mst]) {chip = `<span class="o_f3d_chip ${cx(MACHINE_STATUS[mst][0])}">${MACHINE_STATUS[mst][1]}</span>`;}
@@ -2087,7 +2180,7 @@ function renderObject(code) {
     <h3>${esc(u.label || u.code)}</h3>
     <div class="o_f3d_code">${esc(u.code)}</div>
     ${chip}
-    <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${opts.onOpenRecord && !kiosk ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
+    <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${oi?.show ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
     ${stockLine(code, u) || (u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : "")}
     ${extra}`;
   $(".o_f3d_c-focus").onclick = () => focusOn(obj);
@@ -2095,11 +2188,13 @@ function renderObject(code) {
   const open = $(".o_f3d_c-open");
   if (open) {open.onclick = async () => {
     try {
-      const r = await client.resolve({ code });
-      if (r?.model) {opts.onOpenRecord(r.model, r.res_id);}
+      const r = await client.resolve(oi.kids.length ? { code, codes: oi.kids.slice(0, OPEN_KIDS_MAX) } : { code });
+      if (r?.res_ids?.length && opts.onOpenRecords) {opts.onOpenRecords(r.model, r.res_ids, u.label || code);}
+      else if (r?.res_id) {opts.onOpenRecord(r.model, r.res_id);}
       else {notify("У базі немає запису з кодом " + code, "info");}
     } catch { notify("У базі немає запису з кодом " + code, "info"); }
   };}
+  if (D?.locations?.[code]) {loadLocHist(code);}
 }
 // ---------------------------------------------------------------- заявки ТО (SPEC R-22)
 // заявка за res_id (назви однакові: «Планове ТО»), інакше за назвою — статичні дані без res_id
@@ -2164,6 +2259,69 @@ function wcHtml(wc) {
     }).join("")) + "</ul>") : ""}
     ${wc.losses.length ? ("<div class=\"o_f3d_sub\">Втрати часу</div><table class=\"o_f3d_tbl\">" + (wc.losses.map((l) => ("<tr><td>" + (esc(l.reason)) + "</td><td class=\"o_f3d_n\">" + (l.minutes) + " хв</td></tr>")).join("")) + "</table>") : ""}`;
 }
+// ---------------------------------------------------------------- історія комірки (API-12, R-24)
+// Окремий ліниво завантажуваний запит: картка комірки бере /loc/<code> при відкритті й перечитує його, коли жива
+// дельта зачепила комірки, переміщення, МО чи перевірки якості (staleLocHist), поки картка відкрита.
+const locHist = new Map(); // code -> { data, at, err, stale, busy }
+const staleLocHist = () => { for (const h of locHist.values()) {h.stale = true;} };
+const nfq = (q, uom) => nf.format(q) + (uom ? (" " + esc(uom)) : "");
+function histPlace(pl) {
+  if (!pl) {return "";}
+  const label = esc(pl.code || pl.name);
+  return pl.code
+    ? ("<span class=\"o_f3d_lnk\" data-go=\"obj:" + esc(pl.code) + "\" title=\"" + esc(pl.name) + "\">" + label + "</span>")
+    : ("<span title=\"" + esc(pl.name) + "\">" + label + "</span>");
+}
+function histRow(kind, it, uom) {
+  const q = nfq(it.qty, uom);
+  let meta;
+  if (kind === "arrived") {meta = [dayHm(it.date), q, it.from ? ("з " + histPlace(it.from)) : ""];}
+  else if (kind === "reserve") {meta = [q + (it.pending ? (" + " + nfq(it.pending, uom) + " ще не зарезервовано") : ""), it.to ? ("→ " + histPlace(it.to)) : ""];}
+  else if (kind === "out") {meta = [q, it.to ? ("→ " + histPlace(it.to)) : ""];}
+  else {meta = [q, dayHm(it.date), it.from ? ("з " + histPlace(it.from)) : ""];}
+  return "<div class=\"o_f3d_hrow\" data-hk=\"" + kind + "\">" + recA(it.doc) + " <span class=\"o_f3d_m\">" + meta.filter(Boolean).join(" · ") + "</span></div>";
+}
+function histGroup(title, kind, list, uom) {
+  return list?.length
+    ? ("<div class=\"o_f3d_hgrp\"><span class=\"o_f3d_hlbl\">" + title + "</span>" + list.map((it) => histRow(kind, it, uom)).join("") + "</div>")
+    : "";
+}
+function locHistHtml(h) {
+  if (!h.products.length) {return "<div class=\"o_f3d_m\">Рухів по комірці немає.</div>";}
+  const more = h.truncated ? "<div class=\"o_f3d_m\">Показано не всі записи (обмеження вибірки).</div>" : "";
+  return h.products.map((pr) => {
+    const lots = pr.lots.map((l) => ("<div class=\"o_f3d_hlot\"><div class=\"o_f3d_hlh\">"
+      + (l.lot ? ("<span class=\"o_f3d_mono\">партія " + esc(l.lot) + "</span> · ") : "")
+      + "в наявності <b>" + nfq(l.qty, pr.uom) + "</b> · <span class=\"o_f3d_hres" + (l.reserved ? " o_f3d_hres-on" : "") + "\">резерв " + nfq(l.reserved, pr.uom) + "</span></div>"
+      + histGroup("Надійшло", "arrived", l.arrived, pr.uom) + histGroup("Резерв", "reserve", l.reserve, pr.uom) + "</div>")).join("");
+    return "<div class=\"o_f3d_hprod\" data-prod=\"" + esc(pr.product) + "\"><div class=\"o_f3d_hph\">" + esc(pr.name) + "</div>" + lots
+      + histGroup("Іде з комірки", "out", pr.out, pr.uom) + histGroup("Очікується", "incoming", pr.incoming, pr.uom) + "</div>";
+  }).join("") + more;
+}
+function histBody(h) {
+  if (h?.at) {return h.data ? locHistHtml(h.data) : "<div class=\"o_f3d_m\">Комірки немає в Odoo.</div>";}
+  return h?.err ? "<div class=\"o_f3d_m\">Не вдалося завантажити історію комірки.</div>" : "<div class=\"o_f3d_m\">Завантаження…</div>";
+}
+function locHistBlock(code) {
+  if (kiosk || typeof client.locHistory !== "function") {return "";}
+  return "<div class=\"o_f3d_sub\">Рух по комірці · як надійшло і куди йде</div><div class=\"o_f3d_hist\" data-hist=\"" + esc(code) + "\">" + histBody(locHist.get(code)) + "</div>";
+}
+async function loadLocHist(code) {
+  if (kiosk || destroyed || typeof client.locHistory !== "function") {return;}
+  let h = locHist.get(code);
+  if (!h) { h = { data: null, at: 0, err: false, stale: true, busy: false }; locHist.set(code, h); }
+  if (h.at && Date.now() - h.at > 60000) {h.stale = true;} // страховка, якщо шина мовчить
+  if (h.busy || !h.stale) {return;}
+  h.busy = true; h.stale = false;
+  try { h.data = await client.locHistory(code); h.at = Date.now(); h.err = false; } catch { h.err = true; }
+  h.busy = false;
+  if (destroyed) {return;}
+  const el = panel.type === "object" && panel.code === code ? [...root.querySelectorAll(".o_f3d_hist")].find((x) => x.dataset.hist === code) : null;
+  if (!el) {return;}
+  el.innerHTML = histBody(h);
+  if (h.stale) {timers.push(setTimeout(() => loadLocHist(code), 700));} // дельта прийшла, поки йшов запит
+}
+
 function locHtml(code, loc) {
   const op = loc.orderpoint;
   const fillCls = loc.fill == null ? "" : loc.fill <= 0.001 ? "bad" : loc.fill < 0.3 ? "warn" : "";
@@ -2172,14 +2330,15 @@ function locHtml(code, loc) {
     <dl class="o_f3d_kv"><dt>Місце в Odoo</dt><dd class="o_f3d_mono">${esc(loc.complete_name)}</dd>
       ${loc.fill != null ? ("<dt>Заповненість</dt><dd>" + (pct(loc.fill)) + " " + (bar(loc.fill, fillCls)) + "</dd>") : ""}
       ${op ? ("<dt>Правило поповнення</dt><dd>мін " + (op.min) + " · макс " + (op.max) + (op.purchase ? (" · закупівля <b>" + (esc(op.purchase)) + "</b>") : "") + "</dd>") : ""}
-      ${mo ? ("<dt>Для замовлення</dt><dd><button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(mo.name)) + "\">" + (esc(mo.name)) + "</button></dd>") : ""}
-      ${loc.picking ? ("<dt>Документ</dt><dd><button class=\"o_f3d_lnk\" data-go=\"pick:" + (esc(loc.picking)) + "\">" + (esc(loc.picking)) + "</button></dd>") : ""}</dl>
-    ${loc.note ? ("<div class=\"o_f3d_note\">" + (esc(loc.note)) + "</div>") : ""}
+      ${mo ? ("<dt>Для замовлення</dt><dd><button class=\"o_f3d_lnk\" data-go=\"mo:" + (esc(mo.name)) + "\">" + (esc(mo.name)) + "</button> " + docPill("production", mo.state) + "</dd>") : ""}
+      ${loc.picking ? ("<dt>Документ</dt><dd><button class=\"o_f3d_lnk\" data-go=\"pick:" + (esc(loc.picking)) + "\">" + (esc(loc.picking)) + "</button> " + docPill("picking", idx.pick.get(loc.picking)?.state) + "</dd>") : ""}</dl>
+    ${loc.note ? ("<div class=\"o_f3d_note\">" + docify(loc.note) + "</div>") : ""}
     <div class="o_f3d_sub">Залишки · stock.quant</div>
     <table class="o_f3d_tbl"><tr><th>Товар</th><th class="o_f3d_n">Кількість</th></tr>
-      ${loc.quants.map((q) => ("<tr class=\"o_f3d_click\" data-go=\"prod:" + (esc(q.product)) + "\"><td>" + (esc(P(q.product).name)) + "\n        " + (q.lot ? ("<br><span class=\"o_f3d_mono\" style=\"color:var(--f3d-muted)\">партія " + (esc(q.lot)) + "</span>") : "") + "\n        " + (q.package ? ("<br><span class=\"o_f3d_mono\" style=\"color:var(--f3d-muted)\">" + (esc(q.package)) + "</span>") : "") + "\n        " + (q.reserved_for ? ("<br><span style=\"color:var(--f3d-warn)\">резерв " + (esc(q.reserved_for)) + "</span>") : "") + "\n        " + (q.quality ? ("<br><span style=\"color:var(--f3d-bad)\">брак " + (esc(q.quality)) + "</span>") : "") + "</td>\n        <td class=\"o_f3d_n\">" + (qtyU(q.qty, q.product)) + (q.reserved && !q.reserved_for ? ("<br><span style=\"color:var(--f3d-warn)\">резерв " + (nf.format(q.reserved)) + "</span>") : "") + "</td></tr>")).join("")
+      ${loc.quants.map((q) => ("<tr class=\"o_f3d_click\" data-go=\"prod:" + (esc(q.product)) + "\"><td>" + (esc(P(q.product).name)) + "\n        " + (q.lot ? ("<br><span class=\"o_f3d_mono\" style=\"color:var(--f3d-muted)\">партія " + (esc(q.lot)) + "</span>") : "") + "\n        " + (q.package ? ("<br><span class=\"o_f3d_mono\" style=\"color:var(--f3d-muted)\">" + (esc(q.package)) + "</span>") : "") + "\n        " + (q.reserved_for ? ("<br><span style=\"color:var(--f3d-warn)\">резерв " + docA(q.reserved_for) + "</span>") : "") + "\n        " + (q.quality ? ("<br><span style=\"color:var(--f3d-bad)\">" + (docInfo(q.quality) ? "" : "брак ") + docA(q.quality) + "</span>") : "") + "</td>\n        <td class=\"o_f3d_n\">" + (qtyU(q.qty, q.product)) + (q.reserved && !q.reserved_for ? ("<br><span style=\"color:var(--f3d-warn)\">резерв " + (nf.format(q.reserved)) + "</span>") : "") + "</td></tr>")).join("")
         || ("<tr><td colspan=\"2\">Порожньо.</td></tr>")}</table>
-    ${code.startsWith("QC-") ? D.quality_checks.filter((q) => q.location === code).map((q) => ("<div class=\"o_f3d_note " + (cx(q.state === "fail" ? "bad" : "")) + "\"><b>" + (esc(q.name)) + "</b> · " + (esc(q.title)) + " — " + (q.state === "fail" ? "брак" : q.state === "pass" ? "пройдено" : "очікує") + "<br>" + (esc(q.note)) + "</div>")).join("") : ""}`;
+    ${code.startsWith("QC-") ? D.quality_checks.filter((q) => q.location === code).map((q) => ("<div class=\"o_f3d_note " + (cx(q.state === "fail" ? "bad" : "")) + "\"><b>" + docA(q.name) + "</b> · " + (esc(q.title)) + "<br>" + docify(q.note) + "</div>")).join("") : ""}
+    ${locHistBlock(code)}`;
 }
 function accessRows(emp) {
   if (emp.present === undefined && emp.zone === undefined && emp.last_event === undefined) {return "";}

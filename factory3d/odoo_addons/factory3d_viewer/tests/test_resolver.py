@@ -47,6 +47,38 @@ class TestResolver(F3dViewerBase):
         self.assertEqual(resolve(self.env(user=self.user_mrp_only), code="ZZ-WC-1")["model"], "mrp.workcenter")
         self.assertIsNone(resolve(self.env(user=self.user_nobody), code="ZZ-WC-1")["model"])
 
+    def _bins(self):
+        stock = self.env.ref("stock.stock_location_stock")
+        return self.env["stock.location"].create([
+            {"name": f"ZZ-RK-B{i}", "location_id": stock.id, "f3d_code": f"ZZ-RK-B{i}"} for i in (1, 2)
+        ] + [{"name": "ZZ-RK-B3", "location_id": stock.id, "f3d_code": "ZZ-RK-X3", "f3d_alias": "ZZ-RK-B3"}])
+
+    def test_group_of_children(self):
+        """R-16 п. 5: стелаж без власного запису -> список записів комірок (код і аліас), res_id порожній."""
+        bins = self._bins()
+        res = resolve(self.env, code="ZZ-RACK-1", codes=["ZZ-RK-B1", "ZZ-RK-B2", "ZZ-RK-B3", "ZZ-NO-BIN"])
+        self.assertEqual((res["model"], res["res_id"], res["kind"], res["count"]), ("stock.location", None, "group", 3))
+        self.assertEqual(sorted(res["res_ids"]), sorted(bins.ids))
+
+    def test_group_own_record_wins(self):
+        """Власний запис важливіший за дочірні коди."""
+        self._bins()
+        res = resolve(self.env, code="ZZ-WC-1", codes=["ZZ-RK-B1"])
+        self.assertEqual((res["model"], res["res_id"]), ("mrp.workcenter", self.wc.id))
+        self.assertNotIn("res_ids", res)
+
+    def test_group_nothing_resolves(self):
+        self._bins()
+        expected = {"model": None, "res_id": None, "reason": "not_found"}
+        self.assertEqual(resolve(self.env, code="ZZ-RACK-1", codes=["ZZ-NO-1", "ZZ-NO-2"]), expected)
+        self.assertEqual(resolve(self.env, code="ZZ-RACK-1", codes=[]), expected)
+
+    def test_group_cap(self):
+        bins = self._bins()
+        many = ["ZZ-RK-B1"] + [f"ZZ-PAD-{i}" for i in range(500)]
+        res = resolve(self.env, code="ZZ-RACK-1", codes=many)
+        self.assertEqual(res["res_ids"], bins[:1].ids)  # лише перші 200 кодів беруть участь у пошуку
+
 
 @tagged("post_install", "-at_install", "f3d", "f3d_viewer")
 class TestResolverDemo(F3dViewerCase):

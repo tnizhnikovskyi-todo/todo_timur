@@ -19,8 +19,15 @@ export const MACHINE_STATUS = { work: ["ok", "У роботі"], idle: ["warn", 
 export const BIN_STATE = { ok: ["ok", "Запас у нормі"], low: ["warn", "Нижче мінімуму"], out: ["bad", "Порожньо"] };
 export const WO_STATE = { done: ["ok", "Виконано"], progress: ["warn", "У роботі"], ready: ["info", "Готове"],
   waiting: ["bad", "Чекає компонентів"], pending: ["idle", "Заплановано"] };
-export const MO_STATE = { progress: ["warn", "У роботі"], confirmed: ["info", "Підтверджено"], done: ["ok", "Виконано"] };
-export const PICK_STATE = { assigned: ["info", "Готово"], waiting: ["bad", "Очікує"], done: ["ok", "Виконано"], draft: ["idle", "Чернетка"] };
+export const MO_STATE = { progress: ["warn", "У роботі"], confirmed: ["info", "Підтверджено"], done: ["ok", "Виконано"],
+  draft: ["idle", "Чернетка"], cancel: ["idle", "Скасовано"] };
+export const PICK_STATE = { assigned: ["info", "Готово"], waiting: ["bad", "Очікує"], confirmed: ["bad", "Очікує"],
+  done: ["ok", "Виконано"], draft: ["idle", "Чернетка"], cancel: ["idle", "Скасовано"] };
+export const QC_STATE = { none: ["idle", "Очікує"], pass: ["ok", "Пройдено"], fail: ["bad", "Брак"] };
+/** Мітки стану за видом документа (`kind` з payload: picking | scrap | production | quality), R-23. */
+export const DOC_STATES = { picking: PICK_STATE, scrap: PICK_STATE, production: MO_STATE, quality: QC_STATE };
+/** Бейдж стану документа; невідомий стан — сірий з сирим текстом, порожній — нічого. */
+export const docPill = (kind, state) => (state ? pill(DOC_STATES[kind]?.[state] || ["idle", state]) : "");
 export const plural = (n, one, few, many) => {
   const d = n % 10, h = n % 100;
   return d === 1 && h !== 11 ? one : d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many;
