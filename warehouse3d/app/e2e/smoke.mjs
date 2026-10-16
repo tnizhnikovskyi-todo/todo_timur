@@ -37,7 +37,10 @@ const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 // тур для новичков (W-20) показывается при первом входе и перекрывает страницу: во всех контекстах, кроме проверки самого тура, он помечен пройденным
 const rawContext = browser.newContext.bind(browser);
-browser.newContext = async (o) => { const c = await rawContext(o); await c.addInitScript(() => { try { if (!localStorage.getItem("wh-app-tour")) localStorage.setItem("wh-app-tour", "skipped"); } catch (e) { /* без хранилища */ } }); return c; };
+// кнопки верхней панели при нехватке места уходят в меню «Ще» (W-22): click, как пользователь, сначала открывает меню
+const MORE_RE = /^#(lb-btn|pa-btn|hist-btn|var-btn|wiz-btn|tray-btn|cm-btn|odoo-new|odoo-refresh|plan-btn)$/;
+const withMore = (pg) => { const raw = pg.click.bind(pg); pg.click = async (sel, o) => { if (MORE_RE.test(sel) && await pg.locator(`#more-list ${sel}`).count() && !(await pg.locator(sel).isVisible())) await raw("#more-btn"); return raw(sel, o); }; return pg; };
+browser.newContext = async (o) => { const c = await rawContext(o); await c.addInitScript(() => { try { if (!localStorage.getItem("wh-app-tour")) localStorage.setItem("wh-app-tour", "skipped"); } catch (e) { /* без хранилища */ } }); const np = c.newPage.bind(c); c.newPage = async () => withMore(await np()); return c; };
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
 const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
@@ -523,7 +526,7 @@ try {
     await page.check('#parse-dlg [data-off="8"]');
     await page.waitForFunction(() => /У лотку «Не розміщено»: 1/.test(document.querySelector("#parse-tray")?.textContent || ""));
     await page.click("#parse-dlg [data-pshow]");
-    await page.waitForSelector("#tray-btn:not([hidden])");
+    await page.waitForSelector("#tray-btn:not([hidden])", { state: "attached" }); // кнопка может лежать в меню «Ще» (W-22)
     expect((await text("#tray-cnt")) === "1", "счётчик лотка");
     expect(await page.locator('svg rect[data-code="POST-STAGE"]').count() === 0, "место без зоны осталось на плане");
     await page.click("#parse-dlg [data-close]"); await page.waitForSelector("#parse-dlg", { state: "detached" });
@@ -805,7 +808,7 @@ try {
     expect(saved && saved.data.source.kind === "odoo" && saved.data.warehouses.length === 2 && saved.data.warehouses[0].baseRef === "odoo:1", "проект с двумя складами Odoo не сохранён");
     const places = async () => +((await pg.locator("#plan-side").innerText()).match(/(\d+)\s+місц/) || [])[1];
     expect((await places()) === 9, `WH1: ожидалось 9 мест, получено ${await places()}`);
-    expect(await pg.locator("#odoo-refresh").isVisible() && await pg.locator("#odoo-new").isVisible(), "кнопки Odoo в панели");
+    expect(await pg.evaluate(() => !document.querySelector("#odoo-refresh").hidden && !document.querySelector("#odoo-new").hidden), "кнопки Odoo в панели"); // могут лежать в меню «Ще» (W-22)
     await pg.selectOption("#wh-switch", "wh-2");
     await pg.waitForFunction(() => /3\s+місц/.test(document.querySelector("#plan-side").innerText));
     await pg.selectOption("#wh-switch", "wh-1");
@@ -875,7 +878,7 @@ try {
     });
     const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
     await pg.goto(url); await pg.waitForSelector("#plan-side h2");
-    expect(await pg.locator("#plan-btn").isVisible(), "кнопка «План змін» не видна");
+    expect(await pg.evaluate(() => !document.querySelector("#plan-btn").hidden), "кнопка «План змін» не видна"); // может лежать в меню «Ще» (W-22)
     await pg.click("#plan-btn"); await pg.waitForSelector("#plan-dlg [data-key]");
     expect((await pg.locator("#plan-dlg [data-key]").count()) === 6, `в плане должно быть 6 операций (два ряда по ряд+секция+место): ${await pg.locator("#plan-dlg [data-key]").count()}`);
     expect((await pg.locator("#plan-dlg .o_chip").first().innerText()).includes("Створити"), "нет счётчика создания");
@@ -1756,6 +1759,82 @@ try {
     }
     expect(ids.includes("menu") && !ids.includes("edit") && ids.length >= 5, `шаги на телефоне: ${ids}`);
     await pg.tap("#tour-next"); await pg.waitForFunction(() => !document.querySelector("#tour"));
+    await ctx.close();
+  });
+  // W-22 (I-09): верхняя панель на компьютере не шире экрана, лишнее — в меню «Ще»; инструкция и тур — лениво загружаемые тексты
+  for (const width of [1024, 1280, 1366, 1440]) {
+    await step(`W-22 ${width} px: верхняя панель не шире экрана (демо и худший случай — все кнопки Odoo), «Ще» хранит перенесённое, 2D и 3D`, async () => {
+      const { ctx, pg } = await w20({ viewport: { width, height: 800 } });
+      const fits = () => pg.evaluate(() => { const tb = document.querySelector(".topbar"); return tb.scrollWidth <= tb.clientWidth + 1 && document.documentElement.scrollWidth <= document.documentElement.clientWidth && document.body.scrollWidth <= document.body.clientWidth; });
+      expect(await fits(), "прокрутка по горизонтали в демо");
+      expect(await pg.locator("#pr-btn").isVisible() && await pg.locator("#help-btn").isVisible() && await pg.locator("#seg-mode").isVisible() && await pg.locator("#seg-lang").isVisible(), "основные кнопки панели не видны");
+      for (const id of ["#odoo-refresh", "#odoo-new", "#plan-btn", "#tray-btn", "#wiz-btn"]) await pg.evaluate((s) => { document.querySelector(s).hidden = false; }, id);
+      await pg.waitForFunction(() => document.querySelector(".topbar").scrollWidth <= document.querySelector(".topbar").clientWidth + 1);
+      expect(await fits(), "прокрутка по горизонтали со всеми кнопками");
+      expect(await pg.locator("#more-btn").isVisible(), "нет кнопки «Ще»");
+      const inMore = await pg.evaluate(() => [...document.querySelectorAll("#more-list > *")].map((e) => e.id));
+      expect(inMore.length >= 3, `в «Ще» мало кнопок: ${inMore}`);
+      expect(await pg.locator("#more-list").isHidden(), "меню «Ще» открыто само");
+      await pg.click("#more-btn");
+      expect(await pg.locator("#more-list").isVisible() && await pg.locator(`#more-list #${inMore[0]}`).isVisible() && await pg.locator("#more-btn").getAttribute("aria-expanded") === "true", "меню «Ще» не открылось");
+      expect(await pg.evaluate(() => { const r = document.querySelector("#more-list").getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), "меню «Ще» вышло за экран");
+      await pg.keyboard.press("Escape"); expect(await pg.locator("#more-list").isHidden(), "Esc не закрыл меню «Ще»");
+      // перенесённая кнопка работает: комментарии (демо) открываются из меню
+      await pg.click("#cm-btn"); await pg.waitForSelector("aside.o_prob:not([hidden])");
+      expect(await pg.locator("#more-list").isHidden(), "после выбора пункта меню «Ще» осталось открытым");
+      await pg.click("#cm-btn");
+      // английские подписи длиннее: панель всё равно помещается
+      await pg.click('#seg-lang [data-l="en"]');
+      await pg.waitForFunction(() => document.querySelector("#help-btn").textContent === "Help");
+      await pg.waitForTimeout(100);
+      expect(await fits(), "прокрутка по горизонтали после перехода на английский");
+      await pg.click('#seg-mode [data-m="3d"]'); await pg.waitForSelector("#vp canvas");
+      expect(await fits(), "прокрутка по горизонтали в 3D");
+      await pg.click("#help-btn"); await pg.waitForSelector("#help-view .toc a");
+      expect(await fits(), "прокрутка по горизонтали в инструкции");
+      await ctx.close();
+    });
+  }
+  await step("W-22 инструкция и тур: тексты грузятся при первом открытии (с индикатором), затем работают на обоих языках", async () => {
+    const ctx = await rawContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" }); // без отметки «тур пройден»
+    const pg = await ctx.newPage(); pg.setDefaultTimeout(15000);
+    pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    const asked = [];
+    pg.on("request", (r) => { const m = r.url().match(/assets\/(help|tour)-[^/]*\.js/); if (m) asked.push(m[1]); });
+    await ctx.route(/assets\/help-[^/]*\.js/, async (route) => { await new Promise((ok) => setTimeout(ok, 700)); await route.continue(); }); // видно индикатор загрузки
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2", { state: "attached" });
+    await pg.waitForSelector("#tour"); // тур — отдельный чанк, открылся
+    expect(asked.includes("tour") && !asked.includes("help"), `чанки при открытии: ${asked}`);
+    await pg.click("#tour-skip");
+    await pg.click("#help-btn");
+    await pg.waitForSelector("#help-view .loading");
+    expect(/Завантаження/.test(await pg.locator("#help-view .loading").innerText()), "нет индикатора загрузки инструкции");
+    await pg.waitForSelector("#help-view .toc a");
+    expect(asked.includes("help"), "чанк инструкции не запрошен");
+    expect(await pg.locator("#help-view section").count() >= 30 && /Що це/.test(await pg.locator("#h-start").innerText()), "разделы инструкции не показаны");
+    await pg.click('#help-view .toc a[data-toc="file"]');
+    // английский: тексты второго языка пришли тем же чанком
+    await pg.click('#seg-lang [data-l="en"]');
+    await pg.waitForFunction(() => /What this is/.test(document.querySelector("#h-start h2").textContent));
+    expect(!/[А-Яа-яІіЇїЄє]{4}/.test(await pg.locator("#h-start").innerText()), "в английской инструкции украинский текст");
+    // повторное открытие — без нового запроса и без индикатора
+    const n = asked.filter((x) => x === "help").length;
+    await pg.click("#help-btn"); await pg.click("#help-btn");
+    await pg.waitForSelector("#help-view .toc a");
+    expect(asked.filter((x) => x === "help").length === n, "чанк инструкции запрошен повторно");
+    // тур из инструкции
+    await pg.click("[data-tour]"); await pg.waitForSelector("#tour");
+    expect(/Step 1 of/.test(await pg.locator("#tour .tour-n").innerText()), "тур из инструкции не открылся");
+    await pg.keyboard.press("Escape");
+    // сбой загрузки инструкции: возврат к плану и уведомление, страница живая (браузер кэширует неудачный import — дальше помогает перезагрузка)
+    const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const p2 = await ctx2.newPage(); p2.setDefaultTimeout(15000);
+    await ctx2.route(/assets\/help-[^/]*\.js/, (route) => route.abort());
+    await p2.goto(url); await p2.waitForSelector("#plan-side h2", { state: "attached" });
+    await p2.click("#help-btn");
+    await p2.waitForFunction(() => !document.querySelector("#plan-view").hidden && document.querySelector("#help-view").hidden);
+    await p2.waitForFunction(() => (document.querySelector("#o_notifs")?.textContent || "").trim().length > 0); // уведомление о сбое
+        await ctx2.close();
     await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {

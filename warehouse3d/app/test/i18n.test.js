@@ -19,7 +19,8 @@ import { HEAT_KEYS, HEAT_MODES } from "../src/core/metrics.js";
 const SHAPE_KEYS_ALL = Object.values(SHAPE_KEYS).flat();
 import { fresh, node, FUR } from "./helpers.js";
 
-const { uk, en } = DICTS;
+import HELP from "../src/i18n/help.js";
+const uk = { ...DICTS.uk, ...HELP.uk }, en = { ...DICTS.en, ...HELP.en }; // тексты инструкции лежат в отдельном лениво грузимом модуле (W-22)
 const SRC = new URL("../src/", import.meta.url).pathname;
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 
@@ -33,7 +34,7 @@ test("каждый ключ, который код просит у t(), есть
   const prefixes = ["pa", "fit", "wiz", "cap", "cats", "fn", "fnattr", "policy", "scat", "odoo", "app", "bar", "chk", "prob", "tech", "common", "depth", "form", "help", "kind", "legend", "lang", "lvl", "n", "node", "op", "pick", "plan", "side", "status", "tag", "tip", "top", "types", "unit", "what", "word", "type", "props", "prop", "mass", "grid", "align", "group", "bld", "addr", "file", "pf", "parse", "tray", "heat", "vr", "hist", "cmt", "role", "mk", "find", "card", "go", "mm", "mob"];
   const re = new RegExp(`["'\`]((?:${prefixes.join("|")})\\.[A-Za-z0-9_.]+)["'\`]`, "g");
   const used = new Set();
-  for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
+  for (const f of walk(SRC).filter((x) => /\.js$/.test(x) && !/i18n\/(uk|en|help)\.js$/.test(x))) for (const m of fs.readFileSync(f, "utf8").matchAll(re)) used.add(m[1]);
   // семейства динамических ключей
   for (const f of FORM_IDS) used.add(`form.${f}`);
   for (const k of ["stack", "bin", "shelf", "pallet_cell", "kit", "area", "place"]) used.add(`kind.${k}`);
