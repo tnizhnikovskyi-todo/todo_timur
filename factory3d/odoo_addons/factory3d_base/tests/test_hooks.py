@@ -58,6 +58,17 @@ class TestParams(F3DCase):
         self.env['ir.config_parameter'].sudo().set_param('factory3d.base.keep_x_fields', 'True')
         self.assertEqual(hooks.write_report(self.env, dict(migrated)), 'partial')
 
+    def test_rerun_keeps_done_state(self):  # AC-30
+        params = self.env['ir.config_parameter'].sudo()
+        params.set_param('factory3d.base.migration_state', 'done')
+        params.set_param('factory3d.base.migration_report', '{"orig": 1}')
+        report = hooks.run_all(self.env)
+        self.assertTrue(report['batches.migrate'].get('skipped'))
+        self.assertEqual(self._param('factory3d.base.migration_state'), 'done')
+        self.assertEqual(self._param('factory3d.base.migration_report'), '{"orig": 1}')
+        rerun = json.loads(self._param('factory3d.base.migration_rerun_report'))
+        self.assertEqual((rerun['migration_state'], rerun['batches_created']), ('done', 0))
+
     def test_neutralize_sql(self):  # AC-49
         with file_open('factory3d_base/data/neutralize.sql') as f:
             sql = f.read()

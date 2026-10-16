@@ -10,6 +10,7 @@ _logger = logging.getLogger('odoo.addons.factory3d_base.hooks')
 
 PARAM_STATE = 'factory3d.base.migration_state'
 PARAM_REPORT = 'factory3d.base.migration_report'
+PARAM_RERUN = 'factory3d.base.migration_rerun_report'
 
 
 def _step(report, name, func, env, *args):
@@ -20,11 +21,24 @@ def _step(report, name, func, env, *args):
 
 
 def write_report(env, report):
-    """Крок 11: migration_state (skipped/partial/done) і migration_report (JSON з ts)."""
+    """Крок 11: migration_state (skipped/partial/done) і migration_report (JSON з ts).
+
+    Повтор на вже виконаній міграції (стан done/partial, нічого мігрувати) не псує стан і
+    оригінальний звіт установки (AC-30): результат повтору пишеться окремо в PARAM_RERUN.
+    """
     migrate = report.get('batches.migrate') or {}
     drop = report.get('x_fields.drop_demo') or {}
     verify = report.get('batches.verify') or {}
     keep = env['ir.config_parameter'].sudo().get_param('factory3d.base.keep_x_fields') == 'True'
+    params = env['ir.config_parameter'].sudo()
+    previous = params.get_param(PARAM_STATE)
+    if migrate.get('skipped') and previous in ('done', 'partial'):
+        report['migration_state'] = previous
+        report['batches_created'] = 0
+        report['ts'] = fields.Datetime.to_string(fields.Datetime.now())
+        params.set_param(PARAM_RERUN, json.dumps(report, ensure_ascii=False, default=str))
+        _logger.info("Крок 11: повтор міграції, migration_state=%s збережено", previous)
+        return previous
     if migrate.get('skipped'):
         state = 'skipped'
     elif verify.get('mismatches') or drop.get('blocked_views') or keep:
@@ -33,7 +47,6 @@ def write_report(env, report):
         state = 'done'
     report['migration_state'] = state
     report['ts'] = fields.Datetime.to_string(fields.Datetime.now())
-    params = env['ir.config_parameter'].sudo()
     params.set_param(PARAM_STATE, state)
     params.set_param(PARAM_REPORT, json.dumps(report, ensure_ascii=False, default=str))
     _logger.info("Крок 11: migration_state=%s", state)
