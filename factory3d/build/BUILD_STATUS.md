@@ -62,7 +62,8 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - `/home/user/todo_timur` — ветка менеджера `claude/funny-knuth-8tq7jy`;
 - `/home/user/f3d-build` — `claude/factory3d-build`;
 - `/home/user/f3d-stand` — `claude/f3d-fix-stand`, смержена;
-- `/home/user/f3d-menufix` — `claude/f3d-fix-menus`.
+- `/home/user/f3d-menufix` — `claude/f3d-fix-menus`, смержена 1195be9;
+- `/home/user/f3d-maint` — `claude/f3d-viewer-maint` (агент aa6e8831, ТО из viewer; мержит менеджер).
 
 Будильников (send_later) нет.
 
@@ -189,3 +190,4 @@ BUILD_STATUS ведётся в ветке менеджера `claude/funny-knuth
 - 2026-10-16 ~08:55 UTC Меню: claude/f3d-fix-menus смержена 1195be9 (Run A 1687/1687), раскатана в 08:22. Повторный обход: 168 меню, OK 132, ERROR 0 (2 «blank» — ложные, перепроверены), 6 мутирующих не запускались; фильтры 609 проверок — 0 ошибок; киоск рендерится, стили собраны. MN-1…MN-5 VERIFIED.
 - 2026-10-16 ~10:20 UTC MN-6 (от пользователя): ace mode 'json' → OwlError CodeEditor в debug. Исправлено be4d2d5 (8 полей → 'javascript', тест-страж), раскатано 09:21. Обход меню в debug: 0 ошибок. Скрипт обхода: DEBUG=1 → ?debug=1, результаты в browser_results_debug.json.
 - 2026-10-16 ~10:40 UTC Запросы пользователя по viewer (агент ad643915, по очереди, коммиты отдельно): (1) груз на полках по живым остаткам Odoo (сейчас статика site.py build_fg; пустая FG-R1-B01-L4 рисует 2 палеты); (2) карточка ячейки: по каждой строке товара — Надійшло (документы прихода), Резерв, Іде з комірки, Очікується, ленивый эндпоинт /f3d/viewer/loc/<code>; (3) статусы складских документов в «Шлях плити до пили» и везде, где назван документ. Скриншоты: scratchpad/viewer_ui/stock_*.png, bin_history.png, mo_path_status.png → отправить пользователю.
+- 2026-10-16 ~10:50 UTC Запрос (4) viewer: «Планове ТО · Планове ТО» в «Потребує уваги» — ссылка на заявку + стадия/дата/просрочка, либо кнопка «Запланувати ТО» (POST, идемпотентно, не в киоске). Coder aa6e8831 в claude/f3d-viewer-maint, менеджер мержит после зелёных Run A/B.
