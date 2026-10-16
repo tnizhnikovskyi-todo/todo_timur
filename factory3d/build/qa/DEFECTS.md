@@ -8,34 +8,34 @@
 | V-1 | viewer | P1 | `quality.check.lot_id` → в Odoo 19 `lot_ids`: падают провайдеры quality/logistics/stock | VERIFIED (QA viewer: 8 провайдеров live, 0 ошибок) |
 | S-1 | iot_sim | P1 | post_init_hook (реестр, каталог) не вызывается при `-u` с прототипа: нужен post-migrate 19.0.2.0.0 | DONE 376fc5e (не раскатан) |
 | T-1 | telemetry | P1 | миграция прототипа застряла в `partial`: verify FL-5/battery warn≠норма (порог есть в каталоге, нет на уровне 0); повтор → ~350 расхождений; не привязаны 28 заявок, уровень 0 не выключен | VERIFIED: миграция done в 00:58 UTC, mismatches 0, 28 заявок привязаны, уровень 0 выключен |
-| M-1 | machine_connect | P2 | API-01 принимает Bearer любого активного коллектора (AC-67: 401), cutmap.py:31-33 | DONE 12b4311 (не раскатан) |
-| T-2 | telemetry | P2 | `_rate_check` пишет строку коллектора на каждый push (DEC-19 не до конца), f3d_collector.py:230-241 | DONE 8e24f2d (не раскатан) |
-| T-3 | telemetry | P2 | троттлинг `_touch` сбрасывается при смене IP; за Cloudflare IP меняется каждый запрос | DONE 112932f (не раскатан) |
-| T-4 | telemetry | P2 | действие «Телеметрія» показывает сигналы вместо тревог (фильтры в одной OR-группе), f3d_signal_views.xml:183-187 | DONE a41e015 (не раскатан) |
-| M-2 | machine_connect | P2 | смены OEE считают незакрытые записи журнала часа прошлых дней работой до конца смены, f3d_oee_shift.py:190,254,266 | DONE a08e5dc (не раскатан) |
-| B-1 | base | P2 | f3d.zone.f3d_code > 32 символов молча обрезается, нужна ValidationError (AC-01) | DONE 473db2c (не раскатан) |
+| M-1 | machine_connect | P2 | API-01 принимает Bearer любого активного коллектора (AC-67: 401), cutmap.py:31-33 | VERIFIED 12b4311 |
+| T-2 | telemetry | P2 | `_rate_check` пишет строку коллектора на каждый push (DEC-19 не до конца), f3d_collector.py:230-241 | VERIFIED 8e24f2d |
+| T-3 | telemetry | P2 | троттлинг `_touch` сбрасывается при смене IP; за Cloudflare IP меняется каждый запрос | VERIFIED 112932f |
+| T-4 | telemetry | P2 | действие «Телеметрія» показывает сигналы вместо тревог (фильтры в одной OR-группе), f3d_signal_views.xml:183-187 | VERIFIED a41e015 |
+| M-2 | machine_connect | P2 | смены OEE считают незакрытые записи журнала часа прошлых дней работой до конца смены, f3d_oee_shift.py:190,254,266 | VERIFIED a08e5dc (после action_recompute смены 15.10: run_min max 0 вместо 480) |
+| B-1 | base | P2 | f3d.zone.f3d_code > 32 символов молча обрезается, нужна ValidationError (AC-01) | VERIFIED 473db2c |
 | B-2 | base | P2 | Enterprise: оборудование с f3d_code РЦ без workcenter_id не связывается (hooks/zones.py:75-86) | DONE 98224f4 (+мост в 3a) (не раскатан) |
-| S-2 | iot_sim | P2 | params у 8/276 устройств, у 31 ADAM нет раскладки каналов (SPEC §5.2) | DONE 89851b2 (не раскатан) |
-| S-3 | iot_sim | P2 | данные каталога: T1/T2 unit 1/2 вместо 96; сигналы PV-INV на родителе; FL-6 не пассивный | DONE 89851b2 (не раскатан) |
+| S-2 | iot_sim | P2 | params у 8/276 устройств, у 31 ADAM нет раскладки каналов (SPEC §5.2) | VERIFIED 89851b2 |
+| S-3 | iot_sim | P2 | данные каталога: T1/T2 unit 1/2 вместо 96; сигналы PV-INV на родителе; FL-6 не пассивный | VERIFIED 89851b2 |
 | B-3 | base | P3 | f3d_resolve возвращает архивную зону (противоречие SPEC AC-05/AC-06) | OPEN |
-| B-4 | base | P3 | повторная миграция затирает migration_state done→skipped и отчёт (AC-30) | DONE 3b95cec |
-| S-4 | iot_sim | P3 | «Перевірити зв'язок» при пустом url → offline навсегда вместо unconfigured | DONE b584278 |
+| B-4 | base | P3 | повторная миграция затирает migration_state done→skipped и отчёт (AC-30) | VERIFIED 3b95cec |
+| S-4 | iot_sim | P3 | «Перевірити зв'язок» при пустом url → offline навсегда вместо unconfigured | VERIFIED b584278 |
 | S-5 | iot_sim | P3 | params_schema сценариев: device без enum, мастер принимает несуществующее устройство | DONE b584278 |
-| T-5 | telemetry | P3 | last_error стирается при неизвестном state; value+text принимаются вместе; 405 отдаёт HTML; нет icon.png | DONE 86f8ab9 (value+text не отклоняется: плагин mc шлёт оба; для gauge/counter text игнорируется) |
-| A-1 | access | P2 | роль Охрана: в CSV RW на f3d.access.door, по SPEC §13.3 только alarm*; ограничение только в write() (f3d_access_door.py:79); проверить под ролью | DONE 6d10452 (не раскатан) |
+| T-5 | telemetry | P3 | last_error стирается при неизвестном state; value+text принимаются вместе; 405 отдаёт HTML; нет icon.png | VERIFIED 86f8ab9 (value+text не отклоняется: плагин mc шлёт оба; для gauge/counter text игнорируется) |
+| A-1 | access | P2 | роль Охрана: в CSV RW на f3d.access.door, по SPEC §13.3 только alarm*; ограничение только в write() (f3d_access_door.py:79); проверить под ролью | VERIFIED 6d10452 |
 | A-2 | access | P3 | два меню «Сервери BioStar» (id 520, 521) | НЕ ДЕФЕКТ: SPEC access стр. 956 требует оба меню |
 | A-3 | access | P3 | сервер BioStar-эмулятора: read_enabled, state=error, опрос каждую минуту (сервис эмулятора не запущен); migration_state=partial | НЕ ДЕФЕКТ: бэкофф R-16 есть, error из-за незапущенного эмулятора |
 | E-1 | energy | P2 | у 67 счётчиков нет показаний kwh_total, интервалы и распределение = 0; вероятно нет живых данных (сервис эмулятора не запущен) и/или T-1 | VERIFIED — не дефект кода: со стендом у всех 67 счётчиков есть показания |
 | E-2 | energy | P3 | сигнал SAW-1/p_now отстаёт от последнего показания (20:36 против 21:00) | НЕ ДЕФЕКТ energy: артефакт partial-миграции telemetry (T-1/T-1b) |
 | E-3 | energy | P2 | моста factory3d_energy_mrp_workorder нет (FR-08, AC-37–41): на Enterprise не реализовано (ENV) | OPEN |
 | Y-1 | yard | P3 | док: путь LPR из AC-82 /f3d/lpr → 404, реальный /f3d/telemetry/event с route=lpr; поправить SPEC/ТК-02 | DONE d7849b0 (SPEC: /f3d/lpr — вход коллектора, в Odoo /f3d/telemetry/event) |
-| Y-2 | yard | P2 | фильтр «сегодня» КПП сравнивает день по Киеву с context_today браузера: 00:00–03:00 Киева (21–24 UTC) карточки не видны; падает test_dispatch_tour | DONE 7602a37 (не раскатан) |
-| F-1 | fire_safety | P3 | при тревоге FA-CUT не создана активность на FACP-1 (AC-17): возможно, пустая группа оповещения — проверить | НЕ ДЕФЕКТ КОДА: пустая группa group_f3d_user на сервере (добавлен WARNING ccb525f); назначить пользователей |
+| Y-2 | yard | P2 | фильтр «сегодня» КПП сравнивает день по Киеву с context_today браузера: 00:00–03:00 Киева (21–24 UTC) карточки не видны; падает test_dispatch_tour | VERIFIED 7602a37 |
+| F-1 | fire_safety | P3 | при тревоге FA-CUT не создана активность на FACP-1 (AC-17): возможно, пустая группа оповещения — проверить | VERIFIED: admin в group_f3d_user, активности на FACP-1 создаются (ccb525f WARNING при пустой группе) |
 | BM-1 | bms | P3 | 81 сигнал ventilation/* с origin=sim_data, а не catalog (DEC-7); вероятно, созданы миграцией прототипа до установки bms — перепроверить после T-1 | OPEN |
 | G-1 | td_genset | P2 | ТО при просрочке мотогодин создаётся без priority '3' и без «прострочено на N мотогодин» в названии (AC-19), genset_fuel.py:1177 | DONE 2f3c35b (не раскатан) |
-| V-2 | viewer | P3 | GET /f3d/viewer/data?codes=../../etc → 200 вместо 400: CODE_RE допускает «/» и «.» (controllers/viewer.py:18) | DONE 979aea3 |
-| V-3 | viewer | P3 | /f3d/viewer/snapshot/abc → 303 на /uk/… вместо 404 (viewer.py:235) | DONE 979aea3 |
-| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | DONE 6ef4204 (не раскатан) |
+| V-2 | viewer | P3 | GET /f3d/viewer/data?codes=../../etc → 200 вместо 400: CODE_RE допускает «/» и «.» (controllers/viewer.py:18) | VERIFIED 979aea3 |
+| V-3 | viewer | P3 | /f3d/viewer/snapshot/abc → 303 на /uk/… вместо 404 (viewer.py:235) | VERIFIED 979aea3 |
+| ST-1 | collector/machine_connect | P2 | state/alarm-сигналы станков пишутся на каждом опросе (1 Гц): 74 тыс. из 79 тыс. новых строк, ~3,5 млн строк в сутки; нужна запись по изменению | VERIFIED 6ef4204 |
 | ST-2 | iot_sim (сервис) | P2 | эмулятор шлёт LPR без токена → 401 (DEC-15); LPR дошёл только при снятом token_ref | DONE 6f0ccd1 в интеграции db77d0a |
 | ST-3 | iot_sim (сервис) | P3 | OPC UA SourceTimestamp в локальном Киеве без зоны (opcua_server.py:321) → 232 «ts in the future» у коллектора | DONE e64d479 в интеграции db77d0a |
 | ST-4 | iot_sim (сервис) | P3 | принудительные значения сигналов не возвращаются к модели (AIR-RING залип на 4.5) | DONE 2b829ab в интеграции db77d0a |
@@ -52,3 +52,4 @@
 batch 3a (bbb0b36, Run A 1672/1672, Run B 214/214) также: B-2 мост 8d9c49b, viewer is_today d5d685c. Долг: SPEC iot_sim §5.3 п.3 (PV-INV-n), §5.2 P-02 counter vs pdu.
 B-3 — противоречие SPEC AC-05/AC-06: решает заказчик, код не трогаем.
 batch 3b: ccb525f, Run A 1682/1682, Run B 211/211. Косметика: нет icon.png у genset, energy, yard, fire_safety.
+Регресс-QA (qa/regress_1.md, regress_2.md, 01:00–01:15 UTC): PASS M-1, T-2, T-3, T-4, A-1, B-1, B-4, S-2, S-3, ST-1, S-4, V-1, V-2, V-3, T-5, Y-2, F-1; на сервере не проверены (покрыты юнит-тестами): S-5 (стоп-кран write_enabled), G-1 (метод не вызывается по RPC), S-1 (путь -u с прототипа), B-2, E-4. Менеджер квитировал 18 тестовых пожарных событий, FA-CUT в normal.
