@@ -212,6 +212,7 @@ export default {
         Знімки складів, які застосунок бере ззовні (не вбудовані демо-дані), кладуться у файл, щоб склад не був порожнім на іншому комп'ютері.</li>
       <li><b>Імпорт проєкту…</b> — файл перевіряється (формат, версія, склади) і за потреби приводиться до поточної версії. Якщо проєкт з таким id уже є, вибирайте: <b>замінити</b> наявний або <b>імпортувати як копію</b> (новий id, назва з позначкою «копія»).
         Файл із новішою версією застосунку не відкривається. Після імпорту сторінка перезавантажується й відкриває проєкт.</li>
+      <li><b>Збереження у вікні Claude.</b> Якщо застосунок відкрито як артефакт claude.ai, кожне збереження файлу (експорт, документи, етикетки) спершу просить підтвердження: назву й розмір файлу видно, відмовитися можна.</li>
     </ul>`,
   "help.checks.title": "Перевірки і проблеми",
   "help.checks.html": `
@@ -561,6 +562,7 @@ export default {
         Warehouse snapshots that the app takes from outside (not the built-in demo data) are put into the file so a warehouse is not empty on another computer.</li>
       <li><b>Import project…</b> — the file is checked (format, version, warehouses) and converted to the current version if needed. If a project with the same id already exists, choose: <b>replace</b> it or <b>import as a copy</b> (new id, name marked "copy").
         A file from a newer version of the app is not opened. After the import the page reloads and opens the project.</li>
+      <li><b>Saving inside Claude.</b> When the app is opened as a claude.ai artifact, every file save (exports, documents, labels) first asks for confirmation: you see the file name and size and can decline.</li>
     </ul>`,
   "help.checks.title": "Checks and problems",
   "help.checks.html": `
