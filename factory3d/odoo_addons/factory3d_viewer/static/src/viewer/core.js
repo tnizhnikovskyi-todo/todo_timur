@@ -14,6 +14,7 @@ import {
 } from "./format.js";
 import { detectLite, liteSettings } from "./lite.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
+import { createStockLoad, liveLine } from "./stock_load.js";
 
 const THREE_URL = "/factory3d_viewer/static/lib/three/three-bundle.esm.js";
 
@@ -178,6 +179,7 @@ export class F3dViewer {
         this.client = opts.client;
         this.storage = "storage" in opts ? opts.storage : safeStorage();
         this._c = null;
+        this._destroyed = false;
     }
 
     async mount() {
@@ -191,6 +193,9 @@ export class F3dViewer {
         const lite = detectLite({ lite: o.lite, kiosk: !!o.kiosk, params: o.params || {}, storage: this.storage });
         const T = await loadThree(o.threeUrl);
         const manifest = await loadManifest(o, this.client);
+        if (this._destroyed) {
+            return this; // дію закрили під час завантаження маніфесту: ядро не створюємо
+        }
         this._c = createCore(this, el, o, T, manifest, lite, this.storage);
         if (o.testMode || new URLSearchParams(window.location.search).has("debug")) {
             window.odoo = window.odoo || {};
@@ -201,12 +206,13 @@ export class F3dViewer {
     }
 
     async load() {
-        return this._c.load();
+        return this._c?.load(); // після destroy() — тихо нічого (див. core.load: перевірка destroyed після кожного await)
     }
 
     get D() { return this._c?.D; }
     get idx() { return this._c?.idx; }
     get items() { return this._c?.items; }
+    get stockLoad() { return this._c?.stockLoad; }
     get layers() { return this._c?.layers; }
     get renderer() { return this._c?.renderer; }
     get scene() { return this._c?.scene; }
@@ -214,7 +220,7 @@ export class F3dViewer {
     get lite() { return this._c?.lite; }
 
     applyPatch(p) { return this._c.applyPatch(p); }
-    applyParams(p) { return this._c.applyParams(p); }
+    applyParams(p) { return this._c?.applyParams(p); }
     select(o, opts) { return this._c.select(typeof o === "string" ? this._c.items.get(o) ?? null : o, opts); }
     ensureCode(c) { return this._c.ensureCode(c); }
     focusOn(o) { return this._c.focusOn(typeof o === "string" ? this._c.items.get(o) : o); }
@@ -240,6 +246,7 @@ export class F3dViewer {
     partsReady() { return this._c.partsReady(); }
     getState() { return this._c.getState(); }
     destroy() {
+        this._destroyed = true;
         this._c?.destroy();
         this._c = null;
         if (window.odoo?.f3d === this) {
@@ -436,6 +443,8 @@ syncFolds();
 // ---------------------------------------------------------------- модель
 const layers = new Map();
 const items = new Map();    // code -> корінь клікабельного об'єкта
+// вантаж комірок складу за живими залишками Odoo (stock_load.js); D читається ліниво
+const stockLoad = createStockLoad({ THREE, scene, items, getD: () => D, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows });
 const zoneRects = new Map();
 const lamps = [];
 let selected = null;
@@ -489,6 +498,7 @@ function onPart(gltf) {
   });
   scene.add(root);
   buildLabels(fresh);
+  stockLoad.sync(fresh.map((o) => o.userData.code));
   fresh.forEach(paint);
   syncLayerGroups();
 }
@@ -497,7 +507,7 @@ function loadPart(key) {
   if (partState.has(key)) {return partState.get(key);}
   const p = MANIFEST.parts.find((x) => x.key === key);
   const pr = new Promise((res, rej) => {
-    const done = (g) => { onPart(g); res(); };
+    const done = (g) => { if (!destroyed) {onPart(g);} res(); };
     const emb = document.getElementById("part-" + key);
     if (emb) {
       const bin = Uint8Array.from(atob(emb.textContent.trim()), (c) => c.charCodeAt(0));
@@ -522,6 +532,7 @@ async function ensureCode(code) {
   return items.get(code);
 }
 function onModelError(err) {
+  if (destroyed) { modelReady(); return; } // вийшли зі сторінки під час завантаження моделі: DOM уже знесено
   $(".o_f3d_loading").textContent = "Не вдалося завантажити модель";
   console.error(err);
   modelReady();
@@ -530,6 +541,7 @@ buildLayersUI();
 if (LS.lite || kiosk) {$(".o_f3d_opt-shadows").closest("label").hidden = true;}
 let bgReady = Promise.resolve();
 const coreReady = (MANIFEST.parts[0] ? loadPart(MANIFEST.parts[0].key) : Promise.resolve()).then(() => {
+  if (destroyed) { modelReady(); return; }
   if (noWebgl) {banner("3D недоступне на цьому пристрої — показано лише дані");}
   const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
   $(".o_f3d_dims").textContent = `${MANIFEST.dims} · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
@@ -788,6 +800,7 @@ function paint(root) {
       o.material.emissive.copy(color || new THREE.Color(0)); o.material.emissiveIntensity = k;
     }
   });
+  stockLoad.tint(root, color, k);
 }
 function repaintAll() { for (const r of items.values()) {paint(r);} }
 root.querySelectorAll('input[name="cmode"]').forEach((el) => {
@@ -1283,14 +1296,18 @@ function setData(d, first) {
   syncOutdoorZones();
   syncFireDevices();
   syncMachineLabels();
+  stockLoad.sync();
   items.forEach(paint);
   drillSync();
   syncSectionErrors();
 }
 function loadFailed(err) {
+  // після destroy() DOM знесено, а відхилений fetch — наслідок виходу зі сторінки, а не збій: мовчки виходимо
+  if (destroyed) {return;}
   console.error(err);
-  $(".o_f3d_odoo-pill").classList.add(cx("off"));
-  $(".o_f3d_odoo-state").textContent = "немає даних";
+  $(".o_f3d_odoo-pill")?.classList.add(cx("off"));
+  const st = $(".o_f3d_odoo-state");
+  if (st) {st.textContent = "немає даних";}
   notify(err instanceof SchemaError ? err.message : `Не вдалося завантажити дані: ${err.message}`, "danger");
   renderNoData();
 }
@@ -1298,11 +1315,14 @@ async function load() {
   let first;
   try {
     staticD = await client.loadStatic();
+    if (destroyed) {return;}
     const live = await client.loadData();
+    if (destroyed) {return;}
     await modelLoaded;
+    if (destroyed) {return;}
     first = mergeData(staticD, live);
   } catch (err) {
-    loadFailed(err);
+    loadFailed(err); // після destroy — без повідомлення й без звернення до DOM
     return;
   }
   setData(first, true);
@@ -1315,12 +1335,12 @@ async function load() {
 }
 let offBanner = null;
 function syncConnState(s) {
-  if (!D) {return;}
-  const pill_ = $(".o_f3d_odoo-pill");
+  const pill_ = $(".o_f3d_odoo-pill"), state_ = $(".o_f3d_odoo-state");
+  if (!D || destroyed || !pill_ || !state_) {return;}
   const bad = s === "offline" || !!client.degraded;
   pill_.classList.toggle(cx("off"), !!bad);
-  if (bad) {$(".o_f3d_odoo-state").textContent = "немає зв'язку";}
-  else {$(".o_f3d_odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";}
+  if (bad) {state_.textContent = "немає зв'язку";}
+  else {state_.textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";}
   if (s === "offline" && !offBanner) {offBanner = banner("Немає мережі — показано останні отримані дані");}
   if (s !== "offline" && offBanner) { offBanner.remove(); offBanner = null; }
 }
@@ -1396,6 +1416,7 @@ function applyPatch(patch) {
   }
   if (lists.has("zones")) {syncOutdoorZones();}
   if (lists.has("fire")) {syncFireDevices();}
+  if (lists.has("locations")) {stockLoad.sync([...changed]);}
   for (const c of changed) {
     const o = items.get(c);
     if (o) {paint(o);}
@@ -1525,6 +1546,7 @@ async function ensurePlayback() {
   snapChecked = true;
   try {
     const r = await client.snapshots(D.meta.now.slice(0, 10));
+    if (destroyed) {return;}
     snapList = r.snapshots || [];
     if (r.mode === "snapshots" && !userPlan) { playbackMode = "snapshots"; syncSnapTag(); if (simOverride != null) {applySimTime(simOverride);} }
   } catch (err) { console.warn(err); }
@@ -1532,8 +1554,9 @@ async function ensurePlayback() {
 async function loadSnapshotById(id) {
   try {
     const payload = await client.snapshot(id);
+    if (destroyed) {return;}
     applySnapshot(payload);
-  } catch { notify(`Знімок ${id} недоступний`, "warning"); }
+  } catch { if (destroyed) {return;} notify(`Знімок ${id} недоступний`, "warning"); }
 }
 function applySnapshot(payload) {
   if (!staticD) {return;}
@@ -1544,6 +1567,7 @@ function applySnapshot(payload) {
   simStart = Date.now();
   scheduleWOs();
   simOverride = keepSim;
+  stockLoad.sync();
   items.forEach(paint);
   if (prodOv.on) {drawProdOverlay();}
   flow.built = false;
@@ -1551,7 +1575,7 @@ function applySnapshot(payload) {
 }
 let snapShown = null;
 function snapshotTime(min) {
-  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
+  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); stockLoad.sync(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
   const day = (Dlive || D).meta.now.slice(0, 10);
   const t = Date.parse(`${day}T00:00`) + min * 60000;
   let pick_ = null;
@@ -2027,6 +2051,13 @@ function renderPicking(name) {
 }
 
 // ---------------------------------------------------------------- картка 3D-об'єкта з даними Odoo
+// комірка з живими залишками: замість статичного опису («…: 2 палет.») — рядок за Odoo
+function stockLine(code, u) {
+  const loc = D?.locations?.[code];
+  if (!D?.meta?.live || !Array.isArray(loc?.quants) || !stockLoad.isManaged(code)) {return "";}
+  const text = liveLine(loc, { esc, nf, plural, name: (c) => P(c).name, uom: (c) => P(c).uom });
+  return "<p class=\"o_f3d_live" + (text === "Порожньо" ? " o_f3d_live-empty" : "") + "\">" + text + "</p>";
+}
 function renderObject(code) {
   const obj = items.get(code);
   if (!obj) {return;}
@@ -2057,7 +2088,7 @@ function renderObject(code) {
     <div class="o_f3d_code">${esc(u.code)}</div>
     ${chip}
     <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${opts.onOpenRecord && !kiosk ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
-    ${u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : ""}
+    ${stockLine(code, u) || (u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : "")}
     ${extra}`;
   $(".o_f3d_c-focus").onclick = () => focusOn(obj);
   $(".o_f3d_c-close").onclick = () => select(null);
@@ -2999,7 +3030,7 @@ function getState() {
 }
 async function applyParams(p = {}) {
   if (p.layers) {
-    if (p.layers === "prod") {await setProdOverlay(true);}
+    if (p.layers === "prod") {await setProdOverlay(true); if (destroyed) {return;}}
     else {
       const keys = new Set(String(p.layers).split(","));
       layers.forEach((_, k) => setLayer(k, keys.has(k)));
@@ -3007,7 +3038,7 @@ async function applyParams(p = {}) {
   }
   if (p.mode) {setMode(p.mode);}
   if (p.tab) {openTab(p.tab);}
-  if (p.snapshot) {await loadSnapshotById(+p.snapshot);}
+  if (p.snapshot) {await loadSnapshotById(+p.snapshot); if (destroyed) {return;}}
   soLabel = p.so || null;
   if (p.mo) {
     if (idx.mo?.has(p.mo)) {showMO(p.mo);}
@@ -3017,12 +3048,15 @@ async function applyParams(p = {}) {
     else {notify(`Об'єкта ${p.picking} немає в даних`, "warning");}
   } else if (p.code) {
     const o = await ensureCode(p.code);
+    if (destroyed) {return;}
     if (o) { select(o); focusOn(o); } else {notify(`Об'єкта ${p.code} немає в моделі`, "warning");}
   }
   if (soLabel) {renderPanel(true);}
 }
 function destroy() {
   destroyed = true;
+  modelReady(); // відпустити load()/setProdOverlay, що чекають модель: вони побачать destroyed і вийдуть
+  stockLoad.dispose();
   client?.unsubscribe?.();
   timers.forEach((t) => clearInterval(t));
   disposers.forEach((f) => f());
@@ -3037,7 +3071,7 @@ function destroy() {
 }
 
 return {
-  get D() { return D; }, get idx() { return idx; }, items, layers, scene, camera, controls, renderer, labels, lamps, hl,
+  get D() { return D; }, get idx() { return idx; }, items, stockLoad, layers, scene, camera, controls, renderer, labels, lamps, hl,
   get prodOv() { return prodOv; }, get drill() { return drill; }, lite, coreReady, partsReady: () => bgReady,
   load, applyPatch, applyParams, select, ensureCode, focusOn, openTab, showMO, showPicking, showProduct, showLine,
   showChain, showMatPath, startDrill, stopDrill, setMode, setLayer, setProdOverlay, goView, setSimTime: applySimTime,

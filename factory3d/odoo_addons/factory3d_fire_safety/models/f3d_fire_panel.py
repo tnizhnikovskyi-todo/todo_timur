@@ -485,6 +485,11 @@ class F3dFirePanel(models.Model):
         return self._act_window("f3d.fire.zone", "Зони сигналізації", [("panel_id", "=", self.id)],
                                 "kanban,list,form")
 
+    def action_view_warn_zones(self):
+        self.ensure_one()
+        return self._act_window("f3d.fire.zone", "Зони з попередженням", [("panel_id", "=", self.id), ("warn", "=", True)],
+                                "kanban,list,form")
+
     def action_view_devices(self):
         self.ensure_one()
         return self._act_window("f3d.fire.device", "Пристрої", [("panel_id", "=", self.id)])

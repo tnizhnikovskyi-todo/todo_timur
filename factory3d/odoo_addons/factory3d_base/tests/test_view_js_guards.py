@@ -3,6 +3,7 @@
 * канбан `t-*`: Odoo 19 (OWL) компілює їх як JS — `x in ('a','b')` дає TypeError, `True/False/None`, `not`, `not in` не існують;
 * домени/контексти фільтрів обчислює py.js: `datetime.time.min/max` він не знає (OwlError у «Відвідувачі»);
 * домен не вміє порівнювати поле з полем: `('ws_qty', '<', 'min_qty')` порівнює з рядком (ValueError у search_count).
+* `oe_stat_button` лише на <button>: <div> з icon Odoo 19 не оформлює (ні іконки, ні рамки — «Ворота» у зоні);
 * віджет ace/code: CodeEditor Odoo 19 приймає лише режими з CodeEditor.MODES; `'json'` дає OwlError «Invalid props» (у debug).
 Перевіряються усі встановлені factory3d_* і td_genset (у прогоні «Run A» — всі 18 модулів).
 """
@@ -96,3 +97,11 @@ class TestViewJsGuards(TransactionCase):
                 if mode and mode not in _ACE_MODES:
                     problems.append("%s: <field %s widget=%s> mode=%r" % (view.xml_id or view.name, el.get('name'), el.get('widget'), mode))
         self.assertFalse(problems, "Режим CodeEditor поза %s:\n%s" % (sorted(_ACE_MODES), "\n".join(problems)))
+
+    def test_stat_buttons_are_buttons(self):
+        problems = []
+        for view in self._f3d_views():
+            for el in self._arch(view).iter():
+                if isinstance(el.tag, str) and el.tag != 'button' and 'oe_stat_button' in (el.get('class') or '').split():
+                    problems.append("%s: <%s class=%r name=%r>" % (view.xml_id or view.name, el.tag, el.get('class'), el.get('name')))
+        self.assertFalse(problems, "oe_stat_button не на <button> (Odoo 19 не оформлює):\n" + "\n".join(problems))

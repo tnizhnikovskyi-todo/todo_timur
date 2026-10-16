@@ -41,9 +41,10 @@
                         <button name="action_view_events" type="object" class="oe_stat_button" icon="fa-list">
                             <field name="event_count" widget="statinfo" string="Події за 7 діб"/>
                         </button>
-                        <div class="oe_stat_button" invisible="not warn_count">
+                        <button name="action_view_warn_zones" type="object" class="oe_stat_button"
+                                icon="fa-exclamation-triangle" invisible="not warn_count">
                             <field name="warn_count" widget="statinfo" string="Попередження"/>
-                        </div>
+                        </button>
                         <button name="action_view_requests" type="object" class="oe_stat_button" icon="fa-wrench"
                                 string="Заявки ТО"/>
                     </div>

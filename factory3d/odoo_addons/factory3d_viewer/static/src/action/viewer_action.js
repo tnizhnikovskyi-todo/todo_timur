@@ -49,10 +49,17 @@ export class F3dViewerAction extends Component {
                     ),
             });
             await this.viewer.mount(); // маніфест → core.glb → решта у фоні
+            if (this._gone) {
+                return; // користувач вийшов зі сторінки, поки вантажилась модель
+            }
             await this.viewer.load(); // /static → /data → підписка на шину
+            if (this._gone) {
+                return;
+            }
             await this.viewer.applyParams(p); // code | mo | picking | so | tab | mode | layers | snapshot
         });
         onWillUnmount(() => {
+            this._gone = true;
             this.viewer?.destroy(); // відписка від шини, зупинка циклу рендера, dispose GLB
             this.client?.unsubscribe();
         });

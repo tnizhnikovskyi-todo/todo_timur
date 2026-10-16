@@ -26,9 +26,10 @@
                                 icon="fa-wrench">
                             <field name="equipment_count" widget="statinfo" string="Обладнання"/>
                         </button>
-                        <div class="oe_stat_button" icon="fa-truck" name="stat_docks">
+                        <button name="action_view_docks" type="object" class="oe_stat_button"
+                                icon="fa-truck">
                             <field name="dock_count" widget="statinfo" string="Ворота"/>
-                        </div>
+                        </button>
                     </div>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="Назва зони"/></h1>
