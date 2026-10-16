@@ -3,6 +3,7 @@
 ## Репозиторий (эта ветка)
 
 - `warehouse3d/` — конструктор склада (локации и размещение Odoo). План и состояние: `warehouse3d/build/`.
+- **Менеджеру после сжатия контекста — сначала `warehouse3d/build/HANDOFF.md`.**
 - `luxsite/`, `odoo_graph/` — отдельные проекты, к конструктору не относятся.
 - Пример организации больших сборок — ветка `claude/factory3d-build` (`factory3d/build/MANAGER.md`).
 
