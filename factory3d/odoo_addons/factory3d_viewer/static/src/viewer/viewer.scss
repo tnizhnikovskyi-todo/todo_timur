@@ -381,3 +381,7 @@
   .o_f3d_viewer .o_f3d_edge { display: none; } /* на телефоні — кнопка «Види і шари» в шапці й картка знизу */
 }
 @media (prefers-reduced-motion: reduce) { .o_f3d_viewer .o_f3d_edge, .o_f3d_viewer .o_f3d_fold-t::after { transition: none; } }
+
+/* рядок картки комірки за живими залишками Odoo (замість статичного опису) */
+.o_f3d_viewer .o_f3d_card p.o_f3d_live { font-weight: 500; }
+.o_f3d_viewer .o_f3d_card p.o_f3d_live-empty { color: var(--f3d-muted); }

@@ -14,6 +14,7 @@ import {
 } from "./format.js";
 import { detectLite, liteSettings } from "./lite.js";
 import { deepMerge, isObj, mergeData, SchemaError } from "./data_client.js";
+import { createStockLoad, liveLine } from "./stock_load.js";
 
 const THREE_URL = "/factory3d_viewer/static/lib/three/three-bundle.esm.js";
 
@@ -207,6 +208,7 @@ export class F3dViewer {
     get D() { return this._c?.D; }
     get idx() { return this._c?.idx; }
     get items() { return this._c?.items; }
+    get stockLoad() { return this._c?.stockLoad; }
     get layers() { return this._c?.layers; }
     get renderer() { return this._c?.renderer; }
     get scene() { return this._c?.scene; }
@@ -436,6 +438,8 @@ syncFolds();
 // ---------------------------------------------------------------- модель
 const layers = new Map();
 const items = new Map();    // code -> корінь клікабельного об'єкта
+// вантаж комірок складу за живими залишками Odoo (stock_load.js); D читається ліниво
+const stockLoad = createStockLoad({ THREE, scene, items, getD: () => D, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows });
 const zoneRects = new Map();
 const lamps = [];
 let selected = null;
@@ -489,6 +493,7 @@ function onPart(gltf) {
   });
   scene.add(root);
   buildLabels(fresh);
+  stockLoad.sync(fresh.map((o) => o.userData.code));
   fresh.forEach(paint);
   syncLayerGroups();
 }
@@ -788,6 +793,7 @@ function paint(root) {
       o.material.emissive.copy(color || new THREE.Color(0)); o.material.emissiveIntensity = k;
     }
   });
+  stockLoad.tint(root, color, k);
 }
 function repaintAll() { for (const r of items.values()) {paint(r);} }
 root.querySelectorAll('input[name="cmode"]').forEach((el) => {
@@ -1282,6 +1288,7 @@ function setData(d, first) {
   syncOutdoorZones();
   syncFireDevices();
   syncMachineLabels();
+  stockLoad.sync();
   items.forEach(paint);
   drillSync();
   syncSectionErrors();
@@ -1395,6 +1402,7 @@ function applyPatch(patch) {
   }
   if (lists.has("zones")) {syncOutdoorZones();}
   if (lists.has("fire")) {syncFireDevices();}
+  if (lists.has("locations")) {stockLoad.sync([...changed]);}
   for (const c of changed) {
     const o = items.get(c);
     if (o) {paint(o);}
@@ -1543,6 +1551,7 @@ function applySnapshot(payload) {
   simStart = Date.now();
   scheduleWOs();
   simOverride = keepSim;
+  stockLoad.sync();
   items.forEach(paint);
   if (prodOv.on) {drawProdOverlay();}
   flow.built = false;
@@ -1550,7 +1559,7 @@ function applySnapshot(payload) {
 }
 let snapShown = null;
 function snapshotTime(min) {
-  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
+  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); stockLoad.sync(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
   const day = (Dlive || D).meta.now.slice(0, 10);
   const t = Date.parse(`${day}T00:00`) + min * 60000;
   let pick_ = null;
@@ -2019,6 +2028,13 @@ function renderPicking(name) {
 }
 
 // ---------------------------------------------------------------- картка 3D-об'єкта з даними Odoo
+// комірка з живими залишками: замість статичного опису («…: 2 палет.») — рядок за Odoo
+function stockLine(code, u) {
+  const loc = D?.locations?.[code];
+  if (!D?.meta?.live || !Array.isArray(loc?.quants) || !stockLoad.isManaged(code)) {return "";}
+  const text = liveLine(loc, { esc, nf, plural, name: (c) => P(c).name, uom: (c) => P(c).uom });
+  return "<p class=\"o_f3d_live" + (text === "Порожньо" ? " o_f3d_live-empty" : "") + "\">" + text + "</p>";
+}
 function renderObject(code) {
   const obj = items.get(code);
   if (!obj) {return;}
@@ -2049,7 +2065,7 @@ function renderObject(code) {
     <div class="o_f3d_code">${esc(u.code)}</div>
     ${chip}
     <div class="o_f3d_actions o_f3d_actions-top"><button class="o_f3d_btn o_f3d_c-focus">Наблизити</button><button class="o_f3d_btn o_f3d_c-close">Закрити</button>${opts.onOpenRecord && !kiosk ? ("<button class=\"o_f3d_btn o_f3d_c-open\">Відкрити в Odoo</button>") : ""}</div>
-    ${u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : ""}
+    ${stockLine(code, u) || (u.desc ? ("<p>" + (esc(u.desc)) + "</p>") : "")}
     ${extra}`;
   $(".o_f3d_c-focus").onclick = () => focusOn(obj);
   $(".o_f3d_c-close").onclick = () => select(null);
@@ -2972,6 +2988,7 @@ async function applyParams(p = {}) {
 }
 function destroy() {
   destroyed = true;
+  stockLoad.dispose();
   client?.unsubscribe?.();
   timers.forEach((t) => clearInterval(t));
   disposers.forEach((f) => f());
@@ -2986,7 +3003,7 @@ function destroy() {
 }
 
 return {
-  get D() { return D; }, get idx() { return idx; }, items, layers, scene, camera, controls, renderer, labels, lamps, hl,
+  get D() { return D; }, get idx() { return idx; }, items, stockLoad, layers, scene, camera, controls, renderer, labels, lamps, hl,
   get prodOv() { return prodOv; }, get drill() { return drill; }, lite, coreReady, partsReady: () => bgReady,
   load, applyPatch, applyParams, select, ensureCode, focusOn, openTab, showMO, showPicking, showProduct, showLine,
   showChain, showMatPath, startDrill, stopDrill, setMode, setLayer, setProdOverlay, goView, setSimTime: applySimTime,

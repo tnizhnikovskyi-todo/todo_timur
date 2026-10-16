@@ -6,6 +6,7 @@ import { advanceTime, animationFrame, tick } from "@odoo/hoot-mock";
 import { FileClient, SchemaError, deepMerge, mergeData } from "@factory3d_viewer/viewer/data_client";
 import { detectLite } from "@factory3d_viewer/viewer/lite";
 import { F3dViewer } from "@factory3d_viewer/viewer/core";
+import { liveLine, palletCount } from "@factory3d_viewer/viewer/stock_load";
 import { BASE, json, loadFixtures, mountViewer } from "./helpers";
 
 const q = (el, sel) => el.querySelector(sel);
@@ -257,6 +258,128 @@ test("R19a картка 3D-об'єкта: ряд кнопок угорі, пер
     // кнопки лишаються робочими
     q(el, ".o_f3d_c-close").click();
     expect(viewer.getState().selected).toBe(null);
+});
+
+// ------------------------------------------------------------------ вантаж комірок за живими залишками (R-19)
+
+/** Фікстура «живих» даних: meta.live і залишки конкретних комірок (решта — як у демо). */
+const liveStock = (locs) => (fx) => {
+    fx.data.meta.live = true;
+    fx.data.meta.database = "odoo";
+    for (const [code, patch] of Object.entries(locs)) {
+        Object.assign(fx.data.locations[code], patch);
+    }
+};
+const quant = (n, extra = {}) => ({ product: "OF-C800", qty: 10, package: "PACK-T" + n, ...extra });
+const hitOf = (viewer, code) => viewer.items.get(code).children.find((c) => c.userData.f3dStock);
+
+test("R19b офлайн-демо без живих даних: статичний вантаж комірок лишається як є", async () => {
+    const { viewer } = await mountViewer({ model: "core" });
+    const sl = viewer.stockLoad;
+    for (const code of ["FG-R1-B01-L4", "PLT-01A", "FUR-R1-S01-L1"]) {
+        const i = sl.info(code);
+        expect(i.managed).toBe(false);
+        expect(i.hit).toBe(false);
+    }
+    expect(sl.info("FG-R1-B01-L4").staticVisible).toBe(true);
+    expect(sl.stats()).toEqual({ pallet: 0, carton: 0, wrap: 0, box: 0 });
+});
+
+test("R19c палетна комірка: N = min(місткість, палети за пакетами); порожня — без вантажу, але клікабельна", async () => {
+    const { viewer, el } = await mountViewer({
+        model: "core",
+        mutate: liveStock({
+            "FG-R1-B01-L4": { quants: [], fill: 0 },                                  // у GLB 2 палети, в Odoo порожньо
+            "FG-R1-B01-L3": { quants: [quant(1)], fill: 0.5 },                        // 1 квант → 1 палета
+            "FG-R1-B01-L2": { quants: [quant(1), quant(2, { product: "BR-K4" }), quant(3)], fill: 1 }, // 3 пакети > місткості 2
+            "FG-R1-B01-L1": { quants: [quant(7), quant(7, { qty: 4 })], fill: 1 },     // два кванти в одному пакеті → 1 палета
+        }),
+    });
+    const sl = viewer.stockLoad;
+    const empty = sl.info("FG-R1-B01-L4");
+    expect(empty.managed).toBe(true);
+    expect(empty.pallets).toBe(0);
+    expect(empty.staticVisible).toBe(false);
+    expect(empty.hit).toBe(true);
+    expect(sl.info("FG-R1-B01-L3").pallets).toBe(1);
+    expect(sl.info("FG-R1-B01-L2").pallets).toBe(2);
+    expect(sl.info("FG-R1-B01-L1").pallets).toBe(1);
+    expect(sl.info("FG-R1-B01-L3").staticVisible).toBe(false);
+    // спільні InstancedMesh: палет рівно стільки, скільки в комірках ГП
+    let sum = 0;
+    for (const code of Object.keys(viewer.D.locations)) {
+        if (code.startsWith("FG-")) {
+            sum += sl.info(code)?.pallets ?? 0;
+        }
+    }
+    expect(sl.stats().pallet).toBe(sum);
+    expect(sum).toBeGreaterThan(3);
+    // невидимий об'єм: матеріал не малюється, але комірку можна вибрати і картка показує живий рядок
+    const hit = hitOf(viewer, "FG-R1-B01-L4");
+    expect(hit.material.visible).toBe(false);
+    viewer.select("FG-R1-B01-L4");
+    expect(viewer.getState().selected).toBe("FG-R1-B01-L4");
+    expect(txt(el, ".o_f3d_cardbody .o_f3d_live")).toBe("Порожньо");
+    expect(text(el).includes("2 палет.")).toBe(false);
+    viewer.select("FG-R1-B01-L3");
+    expect(txt(el, ".o_f3d_cardbody .o_f3d_live").startsWith("За Odoo: 1 палета · ")).toBe(true);
+});
+
+test("R19d інші комірки: статичний вантаж лише при qty>0, а без нього — узагальнений блок × fill", async () => {
+    const { viewer } = await mountViewer({
+        model: "core",
+        mutate: liveStock({
+            "PLT-01B": { quants: [], fill: 0 },                                       // у сцені стос листів, в Odoo порожньо
+            "PLT-01C": { quants: [{ product: "OF-C800", qty: 30 }], fill: 0.5 },      // стос є і залишок є → видно як є
+            "PLT-01A": { quants: [{ product: "OF-C800", qty: 30 }], fill: 0.5 },      // у сцені лише порожній піддон
+            "EB-U1-S4-L1": { quants: [{ product: "OF-C800", qty: 3 }], fill: null },  // у сцені взагалі немає вантажу
+        }),
+    });
+    const sl = viewer.stockLoad;
+    expect(sl.info("PLT-01B").staticVisible).toBe(false);
+    expect(sl.info("PLT-01B").proc).toBe(false);
+    expect(sl.info("PLT-01C").staticVisible).toBe(true);
+    expect(sl.info("PLT-01C").proc).toBe(false);
+    const g = sl.info("PLT-01A");
+    expect(g.proc).toBe(true);
+    expect(g.generic.hMax).toBe(1);
+    expect(Math.abs(g.generic.h - 0.5)).toBeLessThan(0.001);                          // висота × fill
+    const e = sl.info("EB-U1-S4-L1");
+    expect(e.proc).toBe(true);
+    expect(e.generic.h).toBe(e.generic.hMax);                                         // fill = null → повна висота
+    expect(e.hit).toBe(true);
+    expect(sl.stats().box).toBeGreaterThan(1);
+});
+
+test("R19e дельта і «Зараз»: вантаж перемальовується; режим «Заповненість» тонує об'єм порожньої комірки", async () => {
+    const { viewer } = await mountViewer({
+        model: "core",
+        mutate: liveStock({ "FG-R1-B01-L4": { quants: [quant(1), quant(2)], fill: 1 } }),
+    });
+    const sl = viewer.stockLoad;
+    expect(sl.info("FG-R1-B01-L4").pallets).toBe(2);
+    viewer.applyPatch({ locations: { "FG-R1-B01-L4": { quants: [], fill: 0 } } });
+    expect(sl.info("FG-R1-B01-L4").pallets).toBe(0);
+    expect(sl.info("FG-R1-B01-L4").staticVisible).toBe(false);
+    viewer.setMode("fill");
+    const mat = hitOf(viewer, "FG-R1-B01-L4").material;
+    expect(mat.visible).toBe(true);
+    expect(mat.color.getHexString()).toBe("e74c3c");
+    viewer.setMode("none");
+    expect(hitOf(viewer, "FG-R1-B01-L4").material.visible).toBe(false);
+    viewer.applyPatch({ locations: { "FG-R1-B01-L4": { quants: [quant(5)], fill: 0.5 } } });
+    expect(sl.info("FG-R1-B01-L4").pallets).toBe(1);
+});
+
+test("R19f палети й рядок картки: чисті функції", async () => {
+    expect(palletCount([])).toBe(0);
+    expect(palletCount([{ qty: 5, package: "A" }, { qty: 3, package: "A" }, { qty: 0, package: "B" }])).toBe(1);
+    expect(palletCount([{ qty: 5 }, { qty: 3 }])).toBe(2);              // без пакетів — число рядків
+    const deps = { esc: (v) => v, nf: new Intl.NumberFormat("uk-UA"), plural: (n, a, b, c) => (n === 1 ? a : n < 5 ? b : c), name: (c) => "N-" + c, uom: () => "шт" };
+    expect(liveLine({ kind: "pallet_cell", quants: [] }, deps)).toBe("Порожньо");
+    expect(liveLine({ kind: "pallet_cell", quants: [{ product: "P1", qty: 12, package: "A" }, { product: "P2", qty: 8, package: "B" }] }, deps))
+        .toBe("За Odoo: 2 палети · N-P1 12 шт, N-P2 8 шт");
+    expect(liveLine({ kind: "stack", quants: [{ product: "P1", qty: 40 }] }, deps)).toBe("За Odoo: N-P1 40 шт");
 });
 
 test("R20 живі дані: прогрес імітується лише при meta.live=false", async () => {
