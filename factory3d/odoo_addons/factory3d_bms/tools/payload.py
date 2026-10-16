@@ -115,10 +115,10 @@ def build_lighting(env, ctx, static):
 
 
 def _oldest_request(env, unit):
+    """Найстаріша відкрита заявка на сигналах установки (порожній рекордсет — немає або немає прав)."""
     if not env[REQUEST].has_access("read"):
-        return False
-    reqs = unit.request_ids.sorted(lambda r: (r.create_date or 0, r.id))
-    return reqs[:1].name or False
+        return env[REQUEST].browse()
+    return unit.request_ids.sorted(lambda r: (r.create_date or 0, r.id))[:1]
 
 
 def build_ventilation(env, ctx, static):
@@ -167,11 +167,16 @@ def build_ventilation(env, ctx, static):
                 rec["filter_dp_pa"] = _r(v["filter_dp_pa"], st, "filter_dp_pa")
             if u.note:
                 rec["note"] = u.note
+            # R-27 / viewer R-22: назви заявок не унікальні («Планове ТО»), тож клієнт шукає заявку за id
             request = _oldest_request(env, u)
             if request:
-                rec["maintenance_request"] = request
+                rec["maintenance_request"] = request.name
+                rec["maintenance_request_id"] = request.id
             else:
                 rec.pop("maintenance_request", None)
+                rec.pop("maintenance_request_id", None)
+                if ctx.get("delta"):  # delta зливається поверх даних клієнта: без null стара заявка лишилась би
+                    rec["maintenance_request"] = rec["maintenance_request_id"] = None
             units[u.code] = rec
             order.append(u.code)
         for code, rec in static_units.items():

@@ -435,7 +435,7 @@ class F3dFireZone(models.Model):
 | `warning` | Text | compute store (R-13 п. 4): текст найгіршого пристрою |
 | `dust_max_pct` | Float | compute store: max `dust_pct` пристроїв |
 | `maintenance_request_id` | Many2one `maintenance.request` | `compute="_compute_request"` (не зберігається): перша відкрита заявка (`stage_id.done=False`) з `f3d_fire_zone_id=self` або `f3d_signal_id in (signal_id, dust_signal_id, пристрої.*_signal_id)` |
-| `maintenance_request_name` | Char | compute: `maintenance_request_id.name` → для payload `maintenance_request` (у макеті — `MR/00036`; у базі заявки мають лише `name`; береться `name`, A-15) |
+| `maintenance_request_name` | Char | compute: `maintenance_request_id.name` → для payload `maintenance_request` (поруч `maintenance_request` віддається `maintenance_request_id` = `maintenance_request_id.id`, бо назви заявок не унікальні — viewer R-22) (у макеті — `MR/00036`; у базі заявки мають лише `name`; береться `name`, A-15) |
 | `color` | Integer | compute: `normal`→10 (зелений), `warn`→3, `fault`/`disabled`→2, `alarm`/`prealarm`→1, `test`→4, `unknown`→0 |
 | `event_count` | Integer | compute: події зони за 30 діб |
 | `active` | Boolean | `default=True` |
@@ -1858,7 +1858,7 @@ machine_connect R-01/R-02; `idle` I/O-верстата фіксується за
 - `loops` — `{"1": {"detectors": 64, "mcp": 10, "sounders": 11, "flame": 0, "modules": 0, "state": "ok"}, "2": {68, 10, 13, 3, 4}, "3": {44, 7, 7, 0, 0}, "4": {46, 9, 10, 0, 0}}`; `state` = стан шлейфу (`unknown`→`"ok"`).
 - `groups` — 35 записів за `lsz_instance`: `zone` (`zone_id.f3d_code`; для `FA-BOILER` — `"BOILER"`, як у макеті),
   `zone_name`, `kind`, `kind_name`, `n` (`detector_count`), `spacing`, `area` (int), `loop`, `state`, opt `warning`,
-  opt `maintenance_request` (`name` заявки), opt `dust` (`round(max dust_pct/100, 3)`), `alarm_state` (стан моделі),
+  opt `maintenance_request` (`name` заявки) і `maintenance_request_id` (id тієї ж заявки; viewer R-22 — клієнт шукає заявку за id; у delta, `ctx['delta']`, без заявки обидва ключі `null`), opt `dust` (`round(max dust_pct/100, 3)`), `alarm_state` (стан моделі),
   `compliance`, `stale`. `state`: `alarm/prealarm/fault/disabled` → як є; `test` → `"test"`; інакше `warn` → `"warn"`;
   інакше `"ok"` (зокрема `unknown`, A-21).
 - `totals` — `detectors` (Σ `n`), `mcp`, `sounders`, `flame` (активні пристрої типу), `spark_detectors`, `mcp_max_m`
@@ -2074,7 +2074,7 @@ flame: 3, spark_detectors: 4, state: "Зв'язок із приладом втр
 | AC-53 | CF-02, M-12, M-12a | `_f3d_on_site`/`_f3d_passages` над синтетичними відмітками; без access і без контексту тестового джерела `_f3d_get_source()` → `hr_attendance` (`_f3d_source_key` = `hr_attendance`); моделі `f3d.fire.passage.source.access` цей модуль не створює (`'f3d.fire.passage.source.access' not in env`, якщо access не встановлено) | UT |
 | AC-54 | A-19, M-12 | (тестовий модуль §0.3) модель `f3d.fire.passage.source.zz_test` **без** `_inherit` (пріоритет 5, без `_f3d_on_site` і `_f3d_key`): з контекстом `f3d_test_passage_source=True` `_f3d_get_source()` повертає її, ключ `zz_test`; `_f3d_people_at` будує людей із проходів (останній `in` без `out`); навчання з нею: `passage_source='zz_test'`, виходи `direction='out'` дають `exit_ts`, `in` ігноруються; без контексту (`_f3d_available()` → `False`) → `hr_attendance`; якщо в базі встановлено access — `'f3d.fire.passage.source.access'` знайдено за префіксом із пріоритетом 10 (`skipUnless`) | UT |
 | AC-55 | FR-15, R-20 | `build_fire()` (чиста база): порядок ключів, `rules` 10 ключів (`smoke_spacing_6_12m` 8.8, `mcp_spacing` 30, `smoke_area_6_12m` null), `loops` = R-20, 35 `groups` з ключами A.13, `totals` 222/36/41/26.9/3/4; `json.dumps` без помилок | UT |
-| AC-56 | FR-15, A-21 | `FA-CUT` `unknown` → `state="ok"`, `alarm_state="unknown"`, `stale`; `alarm` → `"alarm"`; запиленість 86,1 → `FA-FAC.state="warn"`, `dust=0.861`; відкрита заявка → `maintenance_request` = її `name` | UT |
+| AC-56 | FR-15, A-21 | `FA-CUT` `unknown` → `state="ok"`, `alarm_state="unknown"`, `stale`; `alarm` → `"alarm"`; запиленість 86,1 → `FA-FAC.state="warn"`, `dust=0.861`; відкрита заявка → `maintenance_request` = її `name`, `maintenance_request_id` = її id; дві однойменні заявки на двох групах → у кожної групи id своєї заявки (`test_request_id_same_name`; з переглядачем id == `res_id` у `maintenance_requests`, `test_group_request_id_resolves_in_requests`) | UT |
 | AC-57 | FR-15, R-21 | `build_evacuation()`: 12 `exits`, 32 `routes` (`Z-CNC.exit="EX-S3"`), `norm_distance=240`, `norm_alt=50`, 8 `drill_steps`, `drill_active=null`, `drill_origin="FA-CNC"`; при `running` навчанні FA-CUT → `drill_active.zone_code="FA-CUT"`, `drill_origin="FA-CUT"` | UT |
 | AC-58 | FR-15, CF-04 | (міст-модуль, viewer встановлено) провайдери 130/140 у реєстрі; `PayloadBuilder` → `meta.sections.fire/evacuation='live'`; зміна стану `FA-CUT` → `f3d.viewer.event` з `model='f3d.fire.zone'`, `codes=['FA-CUT']`; `DeltaBuilder(since=до зміни)` → `patch.fire` присутній | UT |
 | AC-59 | FR-15, FR-19 | `viewer_devices=True` → `fire.devices` 353 ключі, `devices["2.FAC.07"].dust=0.861`; `read_enabled=False` → `totals.state="Обробка вимкнена"` | UT |
