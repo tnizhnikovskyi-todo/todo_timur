@@ -50,8 +50,12 @@ def build_fire(env, ctx=None):
             "loop": zone.loop_id.number, "state": _group_state(zone)}
         if zone.warning:
             item["warning"] = zone.warning
-        if zone.maintenance_request_name:
+        if zone.maintenance_request_id:
+            # viewer R-22: назви заявок не унікальні («Планове ТО»), тож клієнт шукає заявку за id
             item["maintenance_request"] = zone.maintenance_request_name
+            item["maintenance_request_id"] = zone.maintenance_request_id.id
+        elif ctx and ctx.get("delta"):  # delta зливається поверх даних клієнта: без null стара заявка лишилась би
+            item["maintenance_request"] = item["maintenance_request_id"] = None
         if zone.dust_max_pct:
             item["dust"] = round(zone.dust_max_pct / 100.0, 3)
         item.update({"alarm_state": zone.state, "compliance": zone.compliance, "stale": bool(zone.stale)})
