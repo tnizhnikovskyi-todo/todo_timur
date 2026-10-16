@@ -146,7 +146,7 @@
                 <filter name="f_diff" string="Розбіжність" domain="[('state', '=', 'diff')]"/>
                 <filter name="f_pending" string="Перевіряється" domain="[('state', '=', 'pending')]"/>
                 <filter name="f_unknown" string="Немає даних" domain="[('state', '=', 'unknown')]"/>
-                <filter name="f_below_min" string="Нижче мінімуму" domain="[('ws_qty', '&lt;', 'min_qty')]"/>
+                <filter name="f_below_min" string="Нижче мінімуму" domain="[('below_min', '=', True)]"/>
                 <group>
                     <filter name="g_row" string="Ряд" context="{'group_by': 'row'}"/>
                     <filter name="g_state" string="Стан" context="{'group_by': 'state'}"/>

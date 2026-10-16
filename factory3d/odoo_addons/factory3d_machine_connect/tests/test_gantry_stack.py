@@ -171,6 +171,35 @@ class TestGantryStack(F3DMachineCase):
         self.assertEqual(cmd.payload, {"op": "stack", "stack": "PLT-T1", "qty": 38, "product": "BOARD-T", "lot": "L1"})
         self.assertEqual(cmd.text, "stack;PLT-T1;38;BOARD-T;L1")
 
+    def test_below_min_filter(self):
+        """Фільтр «Нижче мінімуму»: `below_min` (не порівняння поля з полем у домені)."""
+        wh = self.env["stock.warehouse"].search([("company_id", "=", self.env.company.id)], limit=1)
+        op = self.env["stock.warehouse.orderpoint"].create(
+            {
+                "product_id": self.board.id,
+                "location_id": self.loc_t1.id,
+                "warehouse_id": wh.id,
+                "product_min_qty": 10,
+                "product_max_qty": 60,
+            }
+        )
+        s = self.stack_t1
+        Stack = self.env["f3d.gantry.stack"]
+        below = [("id", "=", s.id), ("below_min", "=", True)]
+        s.write({"ws_qty": 9})
+        self.assertFalse(s.below_min, "без правила поповнення стос не «нижче мінімуму»")
+        s.orderpoint_id = op
+        self.assertTrue(s.below_min)
+        self.assertEqual(Stack.search(below), s)
+        s.ws_qty = 10
+        self.assertFalse(s.below_min)
+        self.assertFalse(Stack.search(below))
+        op.product_min_qty = 11
+        self.assertTrue(s.below_min)
+        arch = self.env.ref("factory3d_machine_connect.view_f3d_gantry_stack_search").arch
+        self.assertIn("below_min", arch)
+        self.assertNotIn("'min_qty'", arch)
+
     def test_replenish_once_per_hour(self):
         wh = self.env["stock.warehouse"].search([("company_id", "=", self.env.company.id)], limit=1)
         op = self.env["stock.warehouse.orderpoint"].create(
