@@ -230,6 +230,85 @@ test("loc_history: картка комірки — надійшло / резер
     expect(q(r.el, '.o_f3d_tbl .o_f3d_click[data-go="prod:DSP16-ANT"]') !== null).toBe(true);
 });
 
+test("loc_history: «Раніше в комірці» — вибуло (документ, дата, кількість, куди) і як надійшло, під поточними товарами", async () => {
+    const LEFT = {
+        ...LOC,
+        left_days: 30,
+        left: [
+            {
+                product: "DSP16-WHT",
+                name: "ДСП 16 мм Білий 2800×2070",
+                uom: "Аркуш",
+                lot: "DSP16-WHT-2610-101",
+                out: {
+                    doc: doc("WH/OUT/00399", "stock.picking", 3, "picking", "done"),
+                    qty: 12,
+                    to: { code: null, name: "Клієнти" },
+                    date: "2026-10-11 15:20",
+                },
+                arrived: [
+                    {
+                        doc: doc("WH/IN/00120", "stock.picking", 2, "picking", "done"),
+                        date: "2026-10-08 09:00",
+                        qty: 12,
+                        from: { code: null, name: "Постачальники" },
+                    },
+                ],
+            },
+            {
+                product: "FUR-HNG",
+                name: "Завіса",
+                uom: "шт",
+                lot: null,
+                out: { doc: doc("WH/MO/00231", "mrp.production", 231, "production", "confirmed"), qty: 4, to: { code: "PLT-04C", name: "WH/Виробництво/PLT-04C" }, date: "2026-10-10 08:00" },
+                arrived: [],
+            },
+        ],
+    };
+    const r = await mountViewer({ model: "core", routes: { "/loc/RCK-R1-3D": () => json(LEFT) } });
+    r.viewer.select("RCK-R1-3D");
+    await settle();
+    const hist = q(r.el, '.o_f3d_hist[data-hist="RCK-R1-3D"]');
+    const left = q(hist, ".o_f3d_hleft");
+    // блок після поточних товарів, заголовок з вікном
+    expect(left !== null && qa(hist, ".o_f3d_hprod").at(-1).closest(".o_f3d_hleft") === left).toBe(true);
+    expect(qa(hist, ".o_f3d_hprod:not(.o_f3d_hgone)").every((el) => !left.contains(el))).toBe(true);
+    expect(text(q(left, ".o_f3d_hlbl"))).toBe("Раніше в комірці · вибуло за 30 дн.");
+    const rows = qa(left, ".o_f3d_hgone");
+    expect(rows.length).toBe(2);
+    const t0 = text(rows[0]);
+    for (const word of ["ДСП 16 мм Білий 2800×2070", "партія DSP16-WHT-2610-101", "Вибуло", "11.10 15:20", "12 Аркуш", "→ Клієнти",
+        "Надійшло", "з Постачальники", "08.10 09:00"]) {
+        expect(t0.includes(word)).toBe(true);
+    }
+    expect(qa(rows[0], ".o_f3d_hlbl").map(text)).toEqual(["Вибуло", "Надійшло"]);
+    expect(qa(rows[1], ".o_f3d_hlbl").map(text)).toEqual(["Вибуло"]); // без партії і без надходження
+    expect(text(rows[1]).includes("партія")).toBe(false);
+    // посилання на форму й бейдж стану, як у «Надійшло»/«Резерв»
+    const rec = (row, name) => qa(row, "[data-rec]").find((a) => text(a) === name);
+    expect(rec(rows[0], "WH/OUT/00399").dataset.rec).toBe("stock.picking:3");
+    expect(text(rec(rows[0], "WH/OUT/00399").nextElementSibling)).toBe("Виконано");
+    expect(rec(rows[0], "WH/IN/00120").dataset.rec).toBe("stock.picking:2");
+    expect(text(rec(rows[1], "WH/MO/00231").nextElementSibling)).toBe("Підтверджено");
+    expect(q(rows[1], '[data-go="obj:PLT-04C"]') !== null).toBe(true);
+    rec(rows[0], "WH/OUT/00399").click();
+    await settle();
+    expect(r.opened).toEqual([["stock.picking", 3]]);
+    // порожня комірка, з якої щось вибуло, — не «Рухів немає»
+    const only = await mountViewer({ model: "core", routes: { "/loc/RCK-R1-3D": () => json({ ...LEFT, products: [], truncated: true }) } });
+    only.viewer.select("RCK-R1-3D");
+    await settle();
+    const t = text(q(only.el, ".o_f3d_hist"));
+    expect(t.includes("Рухів по комірці немає")).toBe(false);
+    expect(t.includes("Раніше в комірці")).toBe(true);
+    expect(t.includes("Показано не всі записи")).toBe(true);
+    // без `left` блоку немає (старий сервер)
+    const none = await mountViewer({ model: "core", routes: { "/loc/RCK-R1-3D": () => json(LOC) } });
+    none.viewer.select("RCK-R1-3D");
+    await settle();
+    expect(q(none.el, ".o_f3d_hleft")).toBe(null);
+});
+
 test("loc_history: жива дельта оновлює відкриту картку, зайва — ні", async () => {
     let n = 0;
     const r = await mountViewer({
@@ -352,4 +431,78 @@ test("open_group: у кіоску кнопки немає, запитів нем
     await settle();
     expect(q(r.el, ".o_f3d_c-open")).toBe(null);
     expect(r.fetch.calls.some((u) => u.includes("/resolve"))).toBe(false);
+});
+
+test("open_group: BOARD-RACKS (група обладнання, не «rack») без власного запису, але з комірками всередині — список; один запит на картку", async () => {
+    const calls = [];
+    const lists = [];
+    const r = await mountViewer({
+        model: "core",
+        viewerOpts: { onOpenRecords: (model, ids, name) => lists.push([model, ids, name]) },
+        // у даних є код обладнання (підказка «запис є»), а в Odoo запису немає; діти — комірки RCK-* у габариті групи
+        mutate: (fx) => { fx.static.equipment["BOARD-RACKS"] = structuredClone(Object.values(fx.static.equipment)[0]); },
+        routes: {
+            "/resolve": (url) => {
+                calls.push(decodeURIComponent(url));
+                return json(
+                    url.includes("codes=")
+                        ? { model: "stock.location", res_id: null, res_ids: [11, 12, 13], kind: "group", count: 3 }
+                        : { model: null, res_id: null, reason: "not_found" }
+                );
+            },
+        },
+    });
+    expect(r.viewer.items.get("BOARD-RACKS").userData.kind).toBe("equipment");
+    r.viewer.select("BOARD-RACKS");
+    await settle();
+    expect(calls.length).toBe(0); // комірки всередині підказують відповідь без запиту
+    q(r.el, ".o_f3d_c-open").click();
+    await settle();
+    expect(calls.length).toBe(1);
+    expect(calls[0].startsWith("/f3d/viewer/resolve?code=BOARD-RACKS&codes=")).toBe(true);
+    const codes = calls[0].split("codes=")[1].split(",");
+    expect(codes.includes("RCK-R1-1A")).toBe(true);
+    expect(codes.length >= 96 && codes.length <= 200).toBe(true);
+    expect(lists.length).toBe(1);
+    expect(lists[0].slice(0, 2)).toEqual(["stock.location", [11, 12, 13]]);
+    // повторний клік — з кешу: нового запиту немає
+    q(r.el, ".o_f3d_c-open").click();
+    await settle();
+    expect(calls.length).toBe(1);
+    expect(lists.length).toBe(2);
+    expect(r.notes.length).toBe(0);
+});
+
+test("open_group: нічого не знайшлося ні за власним кодом, ні в комірках — кнопка зникає без повідомлення, повторно не питаємо", async () => {
+    const calls = [];
+    const r = await mountViewer({
+        model: "core",
+        routes: {
+            "/resolve": (url) => {
+                calls.push(decodeURIComponent(url));
+                return json({ model: null, res_id: null, reason: "not_found" });
+            },
+        },
+    });
+    // центр із даних (власний запис очікується), але в Odoo його немає, комірок усередині теж
+    r.viewer.select("SAW-2");
+    expect(calls.length).toBe(0);
+    q(r.el, ".o_f3d_c-open").click();
+    await settle();
+    expect(calls.length).toBe(1);
+    expect(q(r.el, ".o_f3d_c-open")).toBe(null);
+    expect(r.notes.some(([m]) => m.includes("немає запису"))).toBe(false);
+    r.viewer.select("SAW-1");
+    r.viewer.select("SAW-2");
+    await settle();
+    expect(q(r.el, ".o_f3d_c-open")).toBe(null);
+    expect(calls.filter((c) => c.includes("code=SAW-2")).length).toBe(1);
+    // об'єкт без підказок: один resolve({code}) на картку, кнопки немає
+    r.viewer.select("OFFICE");
+    await settle();
+    r.viewer.select("OFFICE");
+    await settle();
+    expect(q(r.el, ".o_f3d_c-open")).toBe(null);
+    expect(calls.filter((c) => c.includes("code=OFFICE")).length).toBe(1);
+    expect(r.notes.length).toBe(0);
 });
