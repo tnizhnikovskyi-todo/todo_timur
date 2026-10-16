@@ -45,7 +45,7 @@ odoo_addons/factory3d_viewer/
 │   └── res_config_settings.py       M-06
 ├── controllers/
 │   ├── __init__.py
-│   ├── viewer.py                    API-01…API-07, API-10
+│   ├── viewer.py                    API-01…API-07, API-10, API-11
 │   └── kiosk.py                     API-08, API-09
 ├── wizard/
 │   ├── __init__.py
@@ -991,6 +991,16 @@ API-01…API-07. Rate-limit: ≤ 10 запитів/с на IP — лічильн
 вказати іншого). Відповідь `{"ok": true, "issues": []}` або `{"ok": false, "issues": ["WH/IN/00134: приймання без
 західних воріт", …], "count": 1}`. Той самий код, що M-05.
 
+### API-11 `POST /f3d/viewer/maintenance/plan`
+
+`type="jsonrpc"` (тіло JSON, CSRF-токен не потрібен), `auth="user"`, `group_f3d_user`; кіоск (`group_f3d_kiosk`,
+`ctx.kiosk`) — завжди відмова. Параметри: рівно один із `{"code": "<f3d_code>"}` (regex §7) або `{"equipment_id": <int>}`.
+Відповідь — завжди `result`; JSON-RPC не дає змінити HTTP-статус, тому статус помилки лежить у тілі:
+`{"ok": false, "status": 400|403|404, "error": {"code": "bad_request|forbidden|kiosk|not_found|no_team", "message": "<укр.>"}}`.
+Успіх: `{"ok": true, "created": bool, "request": <запис maintenance_requests[] (A.9)>, "equipment": {"<code>": {"maintenance_request",
+"maintenance_request_id", "maintenance_due": null, "next_maintenance"}}}` — клієнт зливає це як delta-патч.
+Алгоритм — R-22. ORM — з правами користувача запиту, без `sudo`.
+
 ## 8. Клієнтська частина
 
 ### 8.1 OWL-дія `F3dViewerAction` (`static/src/action/viewer_action.js`)
@@ -1535,6 +1545,27 @@ limit=1)`, моделі, яких немає в `env`, пропускаютьс�
 
 Крон о `HH:MM` у вікні → знімок; якщо `snapshot_hours` порожній — завжди. `shift_date` = дата `ts` за Києвом.
 
+### R-22 Заявки ТО в картці: статус, посилання, «Запланувати ТО» (API-11)
+
+- **Запис заявки** (`maintenance_requests[]`, провайдер M-01e) додатково має `res_id` (id запису; `id` = `name`, а назви
+  в демо однакові — «Планове ТО», тож клієнт шукає заявку за `res_id`, а злиття delta — за `res_id`, якщо він є),
+  `equipment_name`, `done` (стадія `done`) і `overdue_days` — лише для відкритої заявки з `schedule_date < ctx.now`:
+  різниця календарних днів за Києвом (`0`, якщо прострочено сьогодні). Рядок обладнання й центру: `maintenance_request_id`.
+- **Пілюля** у картках обладнання, робочого центру, вентустановки й групи пожежної сигналізації:
+  `<тема> · <обладнання> · <стадія> · <ДД.ММ>[, прострочено N дн.]` (дата — `schedule_date`, інакше `request_date`), поруч —
+  кнопка «Відкрити заявку в Odoo» (`onOpenRecord("maintenance.request", res_id)`; у кіоску й без `res_id` її немає).
+- **«Запланувати ТО»**: `equipment[code].maintenance_due` ставиться, якщо відкритих заявок на обладнання немає й наступна
+  планова дата (поле `next_action_date`, якщо воно є в базі, інакше остання закрита повторювана профілактична заявка +
+  `repeat_interval × repeat_unit`, з урахуванням `repeat_until`) минула (`overdue`) або настане за ≤ 7 днів (`soon`). Кнопка є лише
+  при `meta.live`, не в кіоску. Delta скидає `maintenance_request*`, `maintenance_due`, `next_maintenance`, `overdue_days` у `null`,
+  коли їх більше немає.
+- **API-11**: перевірки по порядку — кіоск → `403 kiosk`; немає групи переглядача або права `create` на `maintenance.request`
+  → `403 forbidden`; невалідні параметри → `400`; обладнання з `f3d_code` немає або недоступне → `404`. Далі advisory-lock
+  на обладнання; якщо є відкрита (стадія не `done`, не в архіві) профілактична заявка — повертається вона (`created=false`).
+  Інакше створюється `maintenance.request`: `maintenance_type=preventive`, `name="Планове ТО · <обладнання>"`,
+  `schedule_date` = наступна планова дата о 08:00 за Києвом (інакше поточний час), `maintenance_team_id` й `user_id` — з
+  обладнання (команда — за замовчуванням Odoo, якщо в обладнання її немає; без жодної команди — `400 no_team`).
+
 ## 10. Стани й переходи
 
 | Об'єкт | Стани | Переходи / джерело |
@@ -1996,7 +2027,7 @@ float opt (права §4.4; у файлі req); `delivery` str req (назва 
 `quality_checks[]`: `name` str req; `title` str req; `product` str req; `lot` str opt (2); `state` str req
 (`"none"`, `"pass"`, `"fail"`); `location` str req (код сцени: `"QC-1"`, `"QC-PLT-1"`, `"ASMLINE-1"`); `picking` str opt (4);
 `production` str opt (1); `note` str req.
-`maintenance_requests[]`: `id` str req (`"MR/00031"` = `name` заявки); `name` str req (тема); `equipment` str req
+`maintenance_requests[]`: `id` str req (`"MR/00031"` = `name` заявки); (R-22, живі дані) `res_id` int opt, `equipment_name` str opt, `done` bool opt, `overdue_days` int opt; `name` str req (тема); `equipment` str req
 (код сцени: `"CNC-2"`, `"DUST-1"`, `"FL-2"`, `"RV-05"`, `"FA-FAC"`); `maintenance_type` str req (`"corrective"`,
 `"preventive"`); `stage` str req (`"Новий"`, `"В роботі"`, `"Відремонтовано"`, `"Брак"`); `priority` str req (`"0"`…`"3"`);
 `request_date` str opt (4); `schedule_date` str opt (3); `technician` str opt (1).
@@ -2005,7 +2036,7 @@ float opt (права §4.4; у файлі req); `delivery` str req (назва 
 
 Базові (M-01e): `name` str req; `category` str req; `serial` str opt (7); `manufacturer`, `model` str opt (12);
 `next_maintenance` str opt (11); `current_task` str|null opt (8); `state` str opt (7: `"busy"`, `"charging"`);
-`maintenance_request` str opt (1). Показники (сигнали, C-07, усі opt, тип float якщо не сказано): `battery`
+`maintenance_request` str opt (1); `maintenance_request_id` int opt, `maintenance_due` `"overdue"|"soon"` opt (R-22). Показники (сигнали, C-07, усі opt, тип float якщо не сказано): `battery`
 (0…1, 8), `hours` (9), `cycles_today` (1), `vacuum_kpa` (1, від'ємне), `pressure_bar` (3), `load` (0…1, 1),
 `filter_dp_kpa` (1), `airflow_m3h` (1), `supply_c` (1), `silo_fill` (0…1, 1), `briquettes_today_kg` int (1),
 `busy` int, `total` int (1 — `CHARGING`), `boilers` str (1), `last_inspection` str `"YYYY-MM-DD"` (1),

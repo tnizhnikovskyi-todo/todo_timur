@@ -361,6 +361,30 @@ export class DataClient {
         return r.json();
     }
 
+    /**
+     * API-11 «Запланувати ТО»: `POST /maintenance/plan` (jsonrpc). Повертає `result` сервера — `{ ok, created, request,
+     * equipment }` або `{ ok: false, status, error: { code, message } }`; у кіоску запит не йде.
+     */
+    async planMaintenance({ code }) {
+        if (this.kiosk) {
+            return { ok: false, status: 403, error: { code: "kiosk", message: "Екран цеху не може створювати заявки." } };
+        }
+        const r = await this.fetch(`${this.base}/maintenance/plan`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: { code } }),
+        });
+        const doc = await r.json().catch(() => null);
+        if (doc?.error) {
+            return { ok: false, status: 500, error: { code: "server_error", message: doc.error.data?.message || doc.error.message } };
+        }
+        if (!r.ok || !doc?.result) {
+            return { ok: false, status: r.status, error: { code: "http_error", message: `Помилка запиту (${r.status})` } };
+        }
+        return doc.result;
+    }
+
     async snapshots(date) {
         const r = await this._json("/snapshots", { query: date ? { date } : {} });
         return r.json();
@@ -409,6 +433,10 @@ export class FileClient extends DataClient {
             throw new Error(`${this.url}: ${r.status}`);
         }
         return r.json();
+    }
+
+    async planMaintenance() {
+        return { ok: false, status: 501, error: { code: "static", message: "Статична сторінка не підключена до Odoo." } };
     }
 
     subscribe(cb) {

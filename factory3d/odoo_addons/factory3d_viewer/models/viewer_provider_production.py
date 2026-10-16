@@ -188,7 +188,7 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 for r in env["maintenance.request"].search_fetch([("stage_id.done", "=", False),
                                                             ("equipment_id", "in", eqs.ids)],
                                                            order="request_date, id"):
-                    req_by_eq.setdefault(r.equipment_id.id, r.name)
+                    req_by_eq.setdefault(r.equipment_id.id, r)
 
         passport_ok = payload_tools.access_ok(env, "f3d.equipment.passport")
         prod_min, loss_min = {}, {}
@@ -243,7 +243,8 @@ class F3dViewerProviderProduction(models.AbstractModel):
                 elif waiting:
                     rec["idle_reason"] = "Чекає компонентів для %s" % waiting[2].production_id.name
             if eq and eq.id in req_by_eq:
-                rec["maintenance_request"] = req_by_eq[eq.id]
+                rec["maintenance_request"] = req_by_eq[eq.id].name
+                rec["maintenance_request_id"] = req_by_eq[eq.id].id  # R-22: назви заявок не унікальні
             out.setdefault(code, {}).update(rec)
 
     @api.model
