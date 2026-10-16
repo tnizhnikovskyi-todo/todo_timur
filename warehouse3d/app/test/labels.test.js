@@ -240,7 +240,8 @@ test("ZPL: два места — команды, размеры по dpi, пол
 
 // ---------- PDF
 const latin = (u8) => Buffer.from(u8).toString("latin1");
-async function pdf(n, sheetCfg, cfg = {}, compress = false) {
+// структурные проверки — по тексту в скобках (стандартный Courier), поэтому подписи латиницей
+async function pdf(n, sheetCfg, cfg = { translitPdf: true }, compress = false) {
   const ps = Array.from({ length: n }, (_, i) => place({ code: `T-01-${String(i + 1).padStart(3, "0")}`, lvl: 1 + (i % 4) }));
   return { ps, bytes: await labelsPdf(ps, cfg, sheetCfg, undefined, { compress }) };
 }
@@ -264,13 +265,14 @@ test("PDF: %PDF, число страниц по числу этикеток и �
   const lab = latin((await pdf(2, { w: 70, h: 36, page: "label" })).bytes);
   assert.equal(pagesOf(lab), 2); assert.ok(lab.includes("/MediaBox [0 0 198.425 102.047]"));
   // сжатый поток разворачивается обратно
-  const z = latin((await pdf(3, { preset: "a4-70x36" }, {}, true)).bytes);
+  const z = latin((await pdf(3, { preset: "a4-70x36" }, { translitPdf: true }, true)).bytes);
   assert.ok(z.includes("/FlateDecode"));
   const m = /stream\n/.exec(z), start = m.index + m[0].length, end = z.indexOf("\nendstream", start), body = zlib.inflateSync(Buffer.from(z.slice(start, end), "latin1")).toString("latin1");
   assert.ok(body.includes("(T-01-002)") && body.includes(" re"));
-  // кириллица в подписях — латиницей, ничего вне Latin-1
-  const cy = latin(await labelsPdf([place({ zone: "Фурнітура" })], {}, { preset: "a4-70x36" }, undefined, { compress: false }));
+  // кириллица в подписях: по умолчанию встроенный шрифт (I-07, подробнее test/docs.test.js); «латиницей» — опция translitPdf, стандартный Courier, ничего вне Latin-1
+  const cy = latin(await labelsPdf([place({ zone: "Фурнітура" })], { translitPdf: true }, { preset: "a4-70x36" }, undefined, { compress: false }));
   assert.ok(cy.includes("(Furnitura)"));
+  assert.ok(latin(await labelsPdf([place({ zone: "Фурнітура" })], {}, { preset: "a4-70x36" }, undefined, { compress: false })).includes("/FontFile2"));
 });
 test("PDF: полосы на странице совпадают с Code128 этикетки", async () => {
   const code = "T-01-001", lay = layoutLabel(place({ code, lvl: 1 }), { arrow: "up" }, { w: 70, h: 36 }), it = lay.items.find((x) => x.t === "code128");

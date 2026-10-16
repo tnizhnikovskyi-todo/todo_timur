@@ -64,18 +64,21 @@ const colIndex = (ref) => { let n = 0; for (const c of /^[A-Z]+/i.exec(ref)[0].t
 const textOf = (x) => [...x.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((m) => xun(m[1])).join("");
 
 // rows: [[значение, …]]; число (typeof number) пишется как n, остальное — строка
-export async function writeXlsx(rows, sheet = "Sheet1") {
+export const writeXlsx = (rows, sheet = "Sheet1") => writeXlsxSheets([{ name: sheet, rows }]);
+
+// Несколько листов (W-19: спецификация — итоги, по рядам, балки по ярусам): sheets — [{ name, rows }]; имена листов уникальны и не длиннее 31 знака
+export async function writeXlsxSheets(sheets) {
   const cell = (v, r, c) => v === "" || v == null ? "" : typeof v === "number" && Number.isFinite(v) ? `<c r="${colName(c)}${r + 1}"><v>${v}</v></c>` : `<c r="${colName(c)}${r + 1}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
-  const data = rows.map((row, r) => `<row r="${r + 1}">${row.map((v, c) => cell(v, r, c)).join("")}</row>`).join("");
-  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships", RP = "http://schemas.openxmlformats.org/package/2006/relationships";
+  const names = []; for (const [i, sh] of sheets.entries()) { let nm = String(sh.name || `Sheet${i + 1}`).replace(/[\\/?*[\]:]/g, "_").slice(0, 31) || `Sheet${i + 1}`, k = 2; while (names.includes(nm)) nm = `${nm.slice(0, 28)}_${k++}`; names.push(nm); }
   const files = {
-    "[Content_Types].xml": `${X}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
-    "_rels/.rels": `${X}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
-    "xl/workbook.xml": `${X}<workbook ${NS} xmlns:r="${R}"><sheets><sheet name="${xesc(sheet.slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
-    "xl/_rels/workbook.xml.rels": `${X}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${R}/styles" Target="styles.xml"/></Relationships>`,
+    "[Content_Types].xml": `${X}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    "_rels/.rels": `${X}<Relationships xmlns="${RP}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    "xl/workbook.xml": `${X}<workbook ${NS} xmlns:r="${R}"><sheets>${names.map((nm, i) => `<sheet name="${xesc(nm)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`,
+    "xl/_rels/workbook.xml.rels": `${X}<Relationships xmlns="${RP}">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${R}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${sheets.length + 1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`,
     "xl/styles.xml": `${X}<styleSheet ${NS}><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs></styleSheet>`,
-    "xl/worksheets/sheet1.xml": `${X}<worksheet ${NS}><sheetData>${data}</sheetData></worksheet>`,
   };
+  sheets.forEach((sh, i) => { files[`xl/worksheets/sheet${i + 1}.xml`] = `${X}<worksheet ${NS}><sheetData>${sh.rows.map((row, r) => `<row r="${r + 1}">${row.map((v, c) => cell(v, r, c)).join("")}</row>`).join("")}</sheetData></worksheet>`; });
   return zipWrite(Object.entries(files).map(([k, v]) => [k, te.encode(v)]));
 }
 

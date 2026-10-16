@@ -33,7 +33,8 @@ const HTML = `
       <div class="o_menu" id="file-list" role="menu" hidden data-i18n-attr="aria-label:file.menu">
         <button role="menuitem" id="fm-imp-loc" data-i18n="file.impLoc"></button><button role="menuitem" id="fm-exp-loc" data-i18n="file.expLoc"></button>
         <hr><button role="menuitem" id="fm-exp-proj" data-i18n="file.expProj"></button><button role="menuitem" id="fm-imp-proj" data-i18n="file.impProj"></button>
-        <hr><button role="menuitem" id="fm-new-scratch" data-i18n="file.newScratch"></button></div></div>
+        <hr><button role="menuitem" id="fm-new-scratch" data-i18n="file.newScratch"></button>
+        <hr><div class="mut" role="presentation" style="padding:2px 12px;font-size:11px" data-i18n="file.docs"></div><button role="menuitem" id="fm-doc-bom" data-i18n="file.docBom"></button><button role="menuitem" id="fm-doc-plan" data-i18n="file.docPlan"></button><button role="menuitem" id="fm-doc-places" data-i18n="file.docPlaces"></button></div></div>
     <button class="btn btn-secondary" id="odoo-refresh" data-i18n="top.odooRefresh" hidden></button>
     <button class="btn btn-secondary" id="plan-btn" data-i18n="top.plan" hidden></button>
     <button class="btn btn-secondary" id="odoo-new" data-i18n="top.odooNew" hidden></button>
@@ -310,6 +311,9 @@ export function mountApp(root, { model, i18n, host = {} }) {
   q("#fm-exp-loc").onclick = () => fileDo("openExportLocations");
   q("#fm-exp-proj").onclick = () => fileDo("exportProjectFile");
   q("#fm-imp-proj").onclick = () => fileDo("openImportProject");
+  // документы (W-19): спецификация стеллажей, план PDF / PNG, места в Excel — окна грузятся лениво
+  const docDo = (fn) => { fileMenu(false); import("./docs.js").then((d) => d[fn]({ model, i18n })).catch((e) => { console.error(e); model.notify("bad", "n.fileFail"); }); };
+  q("#fm-doc-bom").onclick = () => docDo("openBom"); q("#fm-doc-plan").onclick = () => docDo("openPlan"); q("#fm-doc-places").onclick = () => docDo("openPlaces");
   q("#fm-new-scratch").onclick = () => { fileMenu(false); openNewScratch({ model, i18n, host }); }; // мастер «З нуля»: новый проект (склад-заготовка или выбор склада Odoo)
 
   // ---------- инструкция

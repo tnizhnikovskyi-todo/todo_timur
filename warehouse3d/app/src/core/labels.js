@@ -81,10 +81,10 @@ export const pageCount = (n, sheet) => (n ? Math.ceil((n + sheet.skip) / sheet.p
 export const ARROWS = ["off", "up", "both"];
 export const SYMS = ["code128", "qr"];
 // Настройки содержимого: sym — штрихкод или QR; zone / row / type — необязательные строки; arrow и scan — стрелка у ярусов выше (up) или выше и ниже (both) яруса точки сканирования;
-// translit — кириллица латиницей в подписях (шрифты PDF и принтера без кириллицы); frame — рамка по краю этикетки; dpi — для ZPL (положение и модуль штрихкода в целых точках)
+// translit — кириллица латиницей в подписях ZPL (у принтера может не быть кириллицы), translitPdf — то же в PDF (шрифт с кириллицей встроен, I-07); frame — рамка по краю этикетки; dpi — для ZPL (положение и модуль штрихкода в целых точках)
 export function normLabel(c = {}) {
   return { sym: SYMS.includes(c.sym) ? c.sym : "code128", zone: c.zone !== false, row: c.row !== false, type: !!c.type, arrow: ARROWS.includes(c.arrow) ? c.arrow : "up", scan: Math.round(num(c.scan, 2, 1, 20)),
-    translit: c.translit !== false, frame: !!c.frame, margin: num(c.margin, 2, 0, 10), dpi: c.dpi ? (+c.dpi === 300 ? 300 : 203) : null };
+    translit: c.translit !== false, translitPdf: !!c.translitPdf, frame: !!c.frame, margin: num(c.margin, 2, 0, 10), dpi: c.dpi ? (+c.dpi === 300 ? 300 : 203) : null };
 }
 // стрелка места: ярус выше точки сканирования — вверх, ниже (только в режиме both) — вниз
 export function arrowOf(place, cfg) {

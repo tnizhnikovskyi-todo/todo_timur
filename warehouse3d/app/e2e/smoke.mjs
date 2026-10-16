@@ -4,7 +4,7 @@ import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -608,12 +608,12 @@ try {
     return pg;
   };
   const download = async (pg, trigger) => { const [dl] = await Promise.all([pg.waitForEvent("download"), trigger()]); const p = path.join(tmpDir, dl.suggestedFilename()); await dl.saveAs(p); return { name: dl.suggestedFilename(), data: fs.readFileSync(p) }; };
-  await step("меню «Файл»: пять пунктов, Esc закрывает", async () => {
+  await step("меню «Файл»: восемь пунктов, Esc закрывает", async () => {
     files.pg = await openFiles();
     const pg = files.pg;
     expect(await pg.locator("#file-list").isHidden(), "меню открыто сразу");
     await pg.click("#file-btn");
-    expect((await pg.locator("#file-list [role=menuitem]").allInnerTexts()).join("|") === "Імпорт локацій…|Експорт локацій…|Експорт проєкту|Імпорт проєкту…|Новий проєкт: з нуля…", "пункты меню");
+    expect((await pg.locator("#file-list [role=menuitem]").allInnerTexts()).join("|") === "Імпорт локацій…|Експорт локацій…|Експорт проєкту|Імпорт проєкту…|Новий проєкт: з нуля…|Специфікація стелажів…|План (PDF/PNG)…|Місця в Excel…", "пункты меню");
     await pg.keyboard.press("Escape");
     expect(await pg.locator("#file-list").isHidden(), "Esc не закрыл меню");
     await pg.click("#file-btn"); await pg.click("body", { position: { x: 5, y: 700 } });
@@ -1502,6 +1502,56 @@ try {
     await pg.keyboard.press("Escape"); await pg.click('#seg-lang [data-l="uk"]');
     await pg.click("#help-btn"); await pg.waitForSelector('#help-view .toc a[data-toc="labels"]');
     expect((await pg.locator("#h-labels").innerText()).includes("ZPL"), "раздел «Етикетки» пуст");
+    fs.rmSync(dir, { recursive: true, force: true }); await ctx.close();
+  });
+  // ---------- W-19: документы (спецификация стеллажей, план PDF / PNG, места в Excel)
+  await step("W-19 документы: меню «Файл → Документи», спецификация XLSX и PDF, план PDF и PNG, места в Excel, инструкция", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const pg = await ctx.newPage(); pg.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wh-docs-"));
+    const download = async (trigger) => { const [dl] = await Promise.all([pg.waitForEvent("download"), trigger()]); const p = path.join(dir, dl.suggestedFilename()); await dl.saveAs(p); return { name: dl.suggestedFilename(), data: fs.readFileSync(p), path: p }; };
+    const text = (f) => spawnSync("pdftotext", ["-layout", f.path, "-"], { encoding: "utf8" }).stdout;
+    const havePt = spawnSync("which", ["pdftotext"]).status === 0;
+    await pg.goto(url); await pg.waitForSelector("#plan-side h2");
+    const openDoc = async (id, dlg) => { await pg.click("#file-btn"); await pg.click(id); await pg.waitForSelector(dlg); };
+    await pg.click("#file-btn");
+    expect((await pg.locator("#file-list").innerText()).includes("Специфікація стелажів"), "в меню «Файл» нет пунктов документов");
+    await pg.keyboard.press("Escape");
+    // спецификация
+    await openDoc("#fm-doc-bom", "#doc-bom [data-pv] table");
+    expect(/Рядів: \d+/.test(await pg.locator("#doc-bom [data-sum]").innerText()), "нет сводки спецификации");
+    const xl = await download(() => pg.click("#doc-bom [data-go=xlsx]"));
+    expect(/^rack-bom-WH-\d{4}-\d\d-\d\d\.xlsx$/.test(xl.name) && xl.data.length > 1000 && xl.data.subarray(0, 2).toString("latin1") === "PK", `XLSX спецификации: ${xl.name}, ${xl.data.length}`);
+    const bp = await download(() => pg.click("#doc-bom [data-go=pdf]"));
+    expect(bp.name.endsWith(".pdf") && bp.data.length > 3000 && bp.data.subarray(0, 5).toString("latin1") === "%PDF-" && bp.data.toString("latin1").includes("/FontFile2"), `PDF спецификации: ${bp.name}, ${bp.data.length}`);
+    if (havePt) expect(text(bp).includes("Специфікація стелажів") && text(bp).includes("Рама"), "кириллица в PDF спецификации не извлекается");
+    await pg.selectOption('#doc-bom [data-f="scope"]', "zone"); await pg.waitForSelector("#doc-bom [data-pv] table");
+    await pg.keyboard.press("Escape");
+    // план
+    await openDoc("#fm-doc-plan", "#doc-plan [data-img]");
+    await pg.waitForFunction(() => /^(data:image\/png|blob:)/.test(document.querySelector("#doc-plan [data-img]")?.src || ""));
+    const pp = await download(() => pg.click("#doc-plan [data-go=pdf]"));
+    expect(/^plan-WH-\d{4}-\d\d-\d\d\.pdf$/.test(pp.name) && pp.data.length > 3000 && pp.data.subarray(0, 5).toString("latin1") === "%PDF-" && pp.data.toString("latin1").includes("/FontFile2"), `PDF плана: ${pp.name}, ${pp.data.length}`);
+    if (havePt) { const t = text(pp); expect(t.includes("Сировина") && t.includes("Легенда") && t.includes("Масштаб") && /\d,\d\d? м/.test(t), "текст плана не извлекается"); }
+    await pg.selectOption('#doc-plan [data-f="paper"]', "A3"); await pg.selectOption('#doc-plan [data-f="orient"]', "portrait"); await pg.selectOption('#doc-plan [data-f="color"]', "fn"); await pg.selectOption('#doc-plan [data-f="res"]', "1600");
+    const a3 = await download(() => pg.click("#doc-plan [data-go=pdf]"));
+    expect(a3.data.toString("latin1").includes("/MediaBox [0 0 841.89 1190.551]"), "A3 книжная");
+    const png = await download(() => pg.click("#doc-plan [data-go=png]"));
+    expect(png.name.endsWith(".png") && png.data.length > 3000 && png.data.subarray(1, 4).toString("latin1") === "PNG" && png.data.readUInt32BE(16) === 1131 && png.data.readUInt32BE(20) === 1600, `PNG: ${png.name}, ${png.data.length}, ${png.data.readUInt32BE(16)}×${png.data.readUInt32BE(20)}`);
+    await pg.keyboard.press("Escape");
+    // места в Excel: весь склад и выделенное
+    await openDoc("#fm-doc-places", "#doc-places");
+    expect(/Місць: 689\b/.test(await pg.locator("#doc-places [data-sum]").innerText()), `число мест: ${await pg.locator("#doc-places [data-sum]").innerText()}`);
+    const pl = await download(() => pg.click("#doc-places [data-go=xlsx]"));
+    expect(/^places-WH-\d{4}-\d\d-\d\d\.xlsx$/.test(pl.name) && pl.data.length > 5000 && pl.data.subarray(0, 2).toString("latin1") === "PK", `XLSX мест: ${pl.name}, ${pl.data.length}`);
+    await pg.keyboard.press("Escape");
+    expect((await pg.locator("#doc-places").count()) === 0, "окно не закрылось");
+    // английский язык и инструкция
+    await pg.click('#seg-lang [data-l="en"]'); await openDoc("#fm-doc-places", "#doc-places");
+    expect((await pg.locator("#doc-places").innerText()).includes("Places: 689"), "английское окно");
+    await pg.keyboard.press("Escape"); await pg.click('#seg-lang [data-l="uk"]');
+    await pg.click("#help-btn"); await pg.waitForSelector('#help-view .toc a[data-toc="docs"]');
+    expect((await pg.locator("#h-docs").innerText()).includes("Специфікація стелажів"), "раздел «Документи» пуст");
     fs.rmSync(dir, { recursive: true, force: true }); await ctx.close();
   });
   await step("390 px: нет горизонтальной прокрутки", async () => {

@@ -467,7 +467,7 @@ export default {
       <li><b>Where.</b> The "Labels" button: a PDF for A4 sheets and a ZPL file for Zebra, from the current model (new and renumbered places too).</li>
       <li><b>What to print.</b> The selection (all places inside), zone, row, level from the bottom, all; "Only new and renumbered", "Only applied in Odoo". Conditions combine.</li>
       <li><b>On the label.</b> Code128 or QR with the full code (the Odoo barcode), the code in large type, optionally zone, row / bay / level, type. An up arrow marks levels above the scanning-point level ("up and down" adds "down").</li>
-      <li><b>PDF.</b> A4 sheets: 70×36 (3×8), 105×48 (2×6), 100×150 mm (one) or a custom size, margins, gaps; "Skip the first" for a used sheet. Captions are Latin.</li>
+      <li><b>PDF.</b> A4 sheets: 70×36 (3×8), 105×48 (2×6), 100×150 mm (one) or a custom size, margins, gaps; "Skip the first" for a used sheet. Captions are in Ukrainian (font embedded), Latin if you prefer.</li>
       <li><b>ZPL.</b> 203 or 300 dpi, size in mm; ^BC (Code128), ^BQ (QR). Warnings: small barcode, non-ASCII code (QR is printed). Scan a test label.</li>
     </ul>`,
   "help.copy.title": "Copying",
@@ -1534,6 +1534,19 @@ export default {
       <li><b>Someone else's zone.</b> Changes in a zone another user is editing are rejected with a message saying who and until what time. Viewing, selecting and commenting on that zone is unrestricted.</li>
     </ul>`,
   "file.newScratch": "New project: from scratch…",
+  "file.docs": "Documents",
+  "file.docBom": "Rack specification…",
+  "file.docPlan": "Plan (PDF/PNG)…",
+  "file.docPlaces": "Places to Excel…",
+  "help.docs.title": "Documents",
+  "help.docs.html": `
+    <ul>
+      <li><b>Where.</b> "File → Documents". Area: the whole warehouse, a zone or the selection.</li>
+      <li><b>Rack specification</b> (XLSX and PDF): frames (height × depth), beams (length, by level), shelves and decking (pcs, m²), arms, posts, bracing, spacers of double-sided rows — from the type, row parameters, number of bays, levels and positions; totals by size. Pallet row: frames = bays + 1, beams = bays × levels × 2; a double-sided row is counted per side.</li>
+      <li><b>Plan</b> (vector PDF, A4 / A3, portrait or landscape; PNG 1600–6400 px): building, columns, aisles, rows with labels, zones, building dimension lines, scale bar, legend (zone functions or the current indicator) and title block (project, warehouse, variant, date, scale).</li>
+      <li><b>Places to Excel:</b> code, barcode, zone, row, bay, level, position, type, dimensions, capacity, max weight, category, stock, status (existing / new / changed), Odoo id.</li>
+      <li><b>PDF font</b> is embedded (DejaVu Sans Mono, used glyphs only): captions in Ukrainian, labels included; Latin transliteration is an option.</li>
+    </ul>`,
   "wiz.btn": "Wizard",
   "wiz.title": "From-scratch wizard",
   "wiz.step": "Step {n} of {m}",
