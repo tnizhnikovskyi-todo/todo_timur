@@ -129,6 +129,15 @@ class TestAuth(ApiCase):
         status, _b, _h = self.get("config")
         self.assertEqual(status, 401)
 
+    def test_wrong_method_json_405(self):  # T-5: 405 у JSON-конверті, а не HTML Odoo
+        for method, path, allow in (("GET", "push", "POST"), ("POST", "config", "GET"), ("POST", "health", "GET")):
+            for token in (None, "default"):
+                status, body, headers = self.api(method, BASE + path, {}, token=token)
+                self.assertEqual(status, 405, path)
+                self.assertEqual(body["error"]["code"], "method_not_allowed")
+                self.assertEqual(headers["Allow"], allow)
+                self.assertIn("application/json", headers["Content-Type"])
+
     def test_inactive_forbidden(self):
         self.col.active = False
         status, body, _h = self.get("config")
@@ -267,6 +276,14 @@ class TestPush(ApiCase):
             ],
         )
         self.assertEqual([r["i"] for r in res["rejected"]], list(range(12)))
+
+    def test_gauge_ignores_text(self):  # T-5: value+text для числового сигналу — text не потрапляє в last_text
+        item = self.reading(self.sig_press, 6.8, text="x")
+        _s, res, _h = self.post("push", {"collector": "COL-T", "readings": [item]})
+        self.assertEqual((res["accepted"], res["rejected"]), (1, []))
+        self.reload()
+        self.assertEqual(self.sig_press.last_value, 6.8)
+        self.assertFalse(self.sig_press.last_text)
 
     def test_push_repeat(self):
         packet = self.packet()

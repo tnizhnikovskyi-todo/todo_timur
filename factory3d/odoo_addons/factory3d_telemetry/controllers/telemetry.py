@@ -100,14 +100,24 @@ class F3dTelemetryController(http.Controller):
             "server_time": _iso(fields.Datetime.now()),
         }
 
-    def _guard(self, fn):
+    def _method_denied(self, method):
+        """Невірний HTTP-метод → 405 у JSON-конверті (SPEC §7: усі помилки — JSON), а не HTML Odoo."""
+        actual = request.httprequest.method
+        if actual == method or (method == "GET" and actual == "HEAD"):
+            return None
+        return _error(405, "method_not_allowed", "Дозволено лише %s" % method, NO_STORE + [("Allow", method)])
+
+    def _guard(self, fn, method):
+        denied = self._method_denied(method)
+        if denied:
+            return denied
         try:
             return fn()
         except _Abort as e:
             return e.response
 
     # --- API-01 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/config", type="http", auth="public", methods=["GET"], csrf=False)
+    @http.route("/f3d/telemetry/config", type="http", auth="public", csrf=False)
     def config(self, **kw):
         def run():
             collector, _env = self._authenticate()
@@ -120,10 +130,10 @@ class F3dTelemetryController(http.Controller):
                 return request.make_response(b"", headers=headers, status=304)
             return _json(body, 200, headers)
 
-        return self._guard(run)
+        return self._guard(run, "GET")
 
     # --- API-02 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/push", type="http", auth="public", methods=["POST"], csrf=False)
+    @http.route("/f3d/telemetry/push", type="http", auth="public", csrf=False)
     def push(self, **kw):
         def run():
             collector, env = self._authenticate()
@@ -152,10 +162,10 @@ class F3dTelemetryController(http.Controller):
                 }
             )
 
-        return self._guard(run)
+        return self._guard(run, "POST")
 
     # --- API-03 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/status", type="http", auth="public", methods=["POST"], csrf=False)
+    @http.route("/f3d/telemetry/status", type="http", auth="public", csrf=False)
     def status(self, **kw):
         def run():
             collector, env = self._authenticate()
@@ -190,11 +200,14 @@ class F3dTelemetryController(http.Controller):
                     rejected.append(item.get("code"))
             return _json({"ok": True, "rejected": rejected, **self._flags(collector, env)})
 
-        return self._guard(run)
+        return self._guard(run, "POST")
 
     # --- API-04 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/health", type="http", auth="public", methods=["GET"], csrf=False)
+    @http.route("/f3d/telemetry/health", type="http", auth="public", csrf=False)
     def health(self, **kw):
+        denied = self._method_denied("GET")
+        if denied:
+            return denied
         env = request.env
         data = {"ok": True, "module": MODULE, "server_time": _iso(fields.Datetime.now())}
         try:
@@ -222,7 +235,7 @@ class F3dTelemetryController(http.Controller):
         return _json(data)
 
     # --- API-05 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/event", type="http", auth="public", methods=["POST"], csrf=False)
+    @http.route("/f3d/telemetry/event", type="http", auth="public", csrf=False)
     def event(self, **kw):
         def run():
             collector, env = self._authenticate()
@@ -244,7 +257,7 @@ class F3dTelemetryController(http.Controller):
             res = env["f3d.push.event"]._f3d_receive(clean, collector)
             return _json(res)
 
-        return self._guard(run)
+        return self._guard(run, "POST")
 
     @staticmethod
     def _event_item(ev):
@@ -273,7 +286,7 @@ class F3dTelemetryController(http.Controller):
         }
 
     # --- API-06 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/commands", type="http", auth="public", methods=["GET"], csrf=False)
+    @http.route("/f3d/telemetry/commands", type="http", auth="public", csrf=False)
     def commands(self, **kw):
         def run():
             collector, env = self._authenticate()
@@ -313,10 +326,10 @@ class F3dTelemetryController(http.Controller):
             cmds.with_context(mail_notrack=True).write({"state": "sent", "sent_at": now})
             return _json({"write_enabled": True, "server_time": _iso(now), "commands": out})
 
-        return self._guard(run)
+        return self._guard(run, "GET")
 
     # --- API-07 ---------------------------------------------------------------------------------------
-    @http.route("/f3d/telemetry/commands/result", type="http", auth="public", methods=["POST"], csrf=False)
+    @http.route("/f3d/telemetry/commands/result", type="http", auth="public", csrf=False)
     def commands_result(self, **kw):
         def run():
             collector, env = self._authenticate()
@@ -351,7 +364,7 @@ class F3dTelemetryController(http.Controller):
                     accepted += 1
             return _json({"accepted": accepted, "rejected": rejected})
 
-        return self._guard(run)
+        return self._guard(run, "POST")
 
     @staticmethod
     def _apply_result(cmd, item):

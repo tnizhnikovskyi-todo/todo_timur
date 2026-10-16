@@ -352,6 +352,8 @@ class Ingester:
             elif st["kind"] == "event" and it["text"] is None and it["value"] is None:
                 self.rejected.append({"i": it["i"], "code": it["code"], "reason": "missing_value"})
             else:
+                if st["kind"] in ("gauge", "counter"):
+                    it["text"] = None  # числовий сигнал: зайвий `text` ігнорується (T-5), а не пишеться в last_text
                 it["st"] = st
                 items.append(it)
         self._process(items)

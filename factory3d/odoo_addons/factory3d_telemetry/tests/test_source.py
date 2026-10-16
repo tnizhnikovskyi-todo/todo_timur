@@ -185,6 +185,14 @@ class TestApplyStatus(SourceCase):
         self.assertEqual(src.error_count, 60)
         self.assertEqual(src.stats, {"polls": 120, "errors": 60})
 
+    def test_unknown_state_keeps_last_error(self):  # T-5
+        self.src_bac._apply_status(self._item("boom"))
+        self.assertEqual(self.src_bac.last_error, "boom")
+        self.src_bac._apply_status({"code": "BAC-T-105", "state": "bogus"})
+        self.assertEqual(self.src_bac.last_error, "boom")
+        self.src_bac._apply_status({"code": "BAC-T-105", "state": "online"})
+        self.assertFalse(self.src_bac.last_error)
+
     def test_truncated_512(self):
         self.src_bac._apply_status(self._item("x" * 600))
         self.assertEqual(len(self.src_bac.last_error), 512)

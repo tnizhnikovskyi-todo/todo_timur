@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Фікс T-5: `_apply_status` не стирає `last_error` при невідомому `state`; для gauge/counter зайвий `text` у показанні
+  ігнорується (колектор шле `value`+`text` для змаплених станів, тому відхиляти не можна); неправильний HTTP-метод → 405 у
+  JSON-конверті (`method_not_allowed`, заголовок `Allow`); додано `static/description/icon.png`.
 - Фікс T-1b: статуси `stale`/`offline`/`unknown` (немає свіжих даних після зупинки стенда) залежать від часу, а не від значення —
   крок 8 пише їх у `status_notes`, а не в `mismatches`; кроки 6 і 9 виконуються.
 - Фікс T-1 (міграція рівня 0 застрявала в `partial`): крок 8 (`hooks.verify`) звіряє знімок, який зробив крок 2, а не живий

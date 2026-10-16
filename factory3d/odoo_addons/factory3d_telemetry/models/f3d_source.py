@@ -210,7 +210,10 @@ class F3dSource(models.Model):
             if not reason:
                 vals["last_ok"] = ts
         error = item.get("error")
-        vals["last_error"] = MASK_RE.sub(r"\1***", str(error))[:512] if error else False
+        if error:
+            vals["last_error"] = MASK_RE.sub(r"\1***", str(error))[:512]
+        elif state in ("online", "offline", "error") or "error" in item:
+            vals["last_error"] = False  # невідомий/відсутній state без error не стирає попередню помилку (T-5)
         stats = item.get("stats")
         if isinstance(stats, dict):
             vals["stats"] = stats
