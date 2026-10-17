@@ -242,6 +242,8 @@ def _plan_equipment(site, env, lines, issues):
         passport = p.variant_id.passport_id
         zone = Zone.zone_at(p.x_m, p.y_m, site.company_id)
         rec, skip = _match(code, by_f3d, by_serial, site, issues, "обладнання")
+        if not skip and rec is None and p.dynamic:
+            continue  # люди й транспорт без наявного обладнання: запис обладнання не створюємо
         if not skip:
             if rec is None:
                 vals = {

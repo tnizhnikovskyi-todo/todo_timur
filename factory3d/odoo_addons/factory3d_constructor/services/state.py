@@ -81,6 +81,7 @@ def placement_dict(placement):
         'x': placement.x_m,
         'y': placement.y_m,
         'rotation': placement.rotation,
+        'dynamic': placement.dynamic,
         'code': placement.code,
         'name': placement.name,
         'equipment': {'id': equipment.id, 'name': equipment.name} if equipment else None,

@@ -28,7 +28,7 @@ SLOT_TEMPLATES = {
             'max_load_kg': (0.0, None, 1000.0, float),
             'index_digits': (1, 4, 2, int),
         },
-        'choices': {'code_style': (('default', 'bay_letter'), 'default')},
+        'choices': {'code_style': (('default', 'bay_letter', 'exact'), 'default')},
     },
     'cantilever': {
         'label': "Консольний стелаж",
@@ -42,6 +42,7 @@ SLOT_TEMPLATES = {
             'max_load_kg': (0.0, None, 500.0, float),
             'index_digits': (1, 4, 2, int),
         },
+        'choices': {'code_style': (('default', 'exact'), 'default')},
     },
     'shelf': {
         'label': "Полицевий стелаж / комірки фурнітури",
@@ -54,7 +55,7 @@ SLOT_TEMPLATES = {
             'cell_h': (0.05, 2.0, 0.4, float),
             'index_digits': (1, 4, 2, int),
         },
-        'choices': {'loc_kind': (('bin', 'shelf'), 'bin')},
+        'choices': {'loc_kind': (('bin', 'shelf'), 'bin'), 'code_style': (('default', 'exact'), 'default')},
     },
     'floor_stack': {
         'label': "Підлогове штабелювання",
@@ -83,7 +84,8 @@ SLOT_TEMPLATES = {
     },
 }
 
-# code_style='exact' (floor_stack): одна комірка з кодом = префікс місця на весь габарит `cols×cell_l` × `rows×cell_w`
+# code_style='exact': якщо шаблон дає рівно одну комірку, її код = code_prefix; для floor_stack такі місця (стос,
+# комплект, зона видачі) можуть бути завбільшки з усю зону — межі розмірів ширші
 EXACT_RANGES = {
     'cell_l': (0.1, 200.0, 1.2, float),
     'cell_w': (0.1, 200.0, 0.8, float),
@@ -311,23 +313,6 @@ def _raw_cells(template, p, prefix):
                         'kind': p['loc_kind'],
                     }
                 )
-    elif template == 'floor_stack' and p['code_style'] == 'exact':
-        cells.append(
-            {
-                'code': prefix,
-                'level': 1,
-                'index': 1,
-                'lx': 0.0,
-                'ly': 0.0,
-                'dz': 0.0,
-                'l': p['cols'] * p['cell_l'],
-                'w': p['rows'] * p['cell_w'],
-                'h': p['max_height'],
-                'capacity': 0.0,
-                'max_load_kg': 0.0,
-                'kind': 'stack',
-            }
-        )
     elif template == 'floor_stack':
         length = p['cols'] * p['cell_l']
         width = p['rows'] * p['cell_w']
@@ -350,6 +335,8 @@ def _raw_cells(template, p, prefix):
                         'kind': 'stack',
                     }
                 )
+    if p.get('code_style') == 'exact' and len(cells) == 1:  # одиничне місце зберігання: код комірки = code_prefix
+        cells[0]['code'] = prefix
     return cells
 
 

@@ -38,6 +38,11 @@ class F3dPlacement(models.Model):
     x_m = fields.Float(string="X, м", digits=(10, 3))
     y_m = fields.Float(string="Y, м", digits=(10, 3))
     rotation = fields.Float(string="Поворот, °", digits=(6, 2), default=0.0)
+    dynamic = fields.Boolean(
+        string="Динамічний",
+        default=False,
+        help="Люди й транспорт рухаються: не беруть участі в перевірках collide, aisles, service і fire",
+    )
     note = fields.Text(string="Примітка")
     equipment_id = fields.Many2one(
         'maintenance.equipment', string="Обладнання Odoo", readonly=True, copy=False, ondelete='set null'

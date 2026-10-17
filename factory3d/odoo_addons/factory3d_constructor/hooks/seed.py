@@ -255,6 +255,7 @@ def load_seed(env, data):
                 'x_m': item['x'],
                 'y_m': item['y'],
                 'rotation': item.get('rotation', 0.0),
+                'dynamic': bool(item.get('dynamic')),
             }
         )
         placed += 1

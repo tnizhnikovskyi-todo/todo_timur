@@ -671,6 +671,7 @@ for (kind, length, width, height), rows in sorted(users.items()):
                 'rotation': row['yaw'],
                 'code': row['code'],
                 'name': row.get('label') or row['code'],
+                **({'dynamic': True} if row['kind'] in sc.DYNAMIC_KINDS else {}),
             }
         )
 

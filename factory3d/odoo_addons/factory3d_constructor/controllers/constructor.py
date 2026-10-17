@@ -78,6 +78,7 @@ SAVE_FIELDS = {
         'x_m',
         'y_m',
         'rotation',
+        'dynamic',
         'note',
         'active',
     },

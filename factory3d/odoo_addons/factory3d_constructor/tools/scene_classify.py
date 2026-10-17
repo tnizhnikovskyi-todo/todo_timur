@@ -127,7 +127,7 @@ def _demote_overlaps(out):
     """Об'єкти одного шару, що перетинаються (вкладені групи: РП «RM6-1» навколо щитів, зона QC навколо стосу тощо), не можуть бути
     твердими разом: більший за площею стає контуром-зоною (не твердий об'єкт). Верстати каталогу не чіпаємо."""
     while True:
-        rows = out['place'] + out['exact']
+        rows = [r for r in out['place'] + out['exact'] if r['kind'] not in DYNAMIC_KINDS]
         hit = None
         for i, a in enumerate(rows):
             for b in rows[i + 1 :]:

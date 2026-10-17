@@ -302,8 +302,8 @@ def build_cells_golden():
                     "code_style (лише pallet_rack): 'default' → {p}-B{bb}-L{l}; "
                     "'bay_letter' → {p}-{bay}{A+level-1} (приклад AB-R1-1A).",
                     "loc_kind (лише shelf): 'bin' (умовчання) або 'shelf' — вид локації `kind` комірки.",
-                    "code_style (floor_stack): 'default' → {p}-{row}{A+col-1}; 'exact' → комірка з кодом {p} на весь "
-                    "габарит cols×cell_l × rows×cell_w (cell_l/cell_w до 200 м, max_height до 30 м).",
+                    "code_style 'exact' (усі шаблони з комірками): якщо шаблон дає рівно одну комірку, її код = {p}; "
+                    "для floor_stack 1×1 cell_l/cell_w до 200 м, max_height до 30 м.",
                 ],
             },
             'cases': cases,

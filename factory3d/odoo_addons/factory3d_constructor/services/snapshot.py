@@ -97,6 +97,7 @@ def build_snapshot(site):
                 'x_m': p.x_m,
                 'y_m': p.y_m,
                 'rotation': p.rotation,
+                'dynamic': p.dynamic,
                 'active': p.active,
             }
             for p in placements
@@ -328,6 +329,7 @@ def apply_snapshot(site, snap):
             'x_m': item['x_m'],
             'y_m': item['y_m'],
             'rotation': item['rotation'],
+            'dynamic': item.get('dynamic', False),
             'active': item.get('active', True),
         }
         placement = placements.get(item['uid'])

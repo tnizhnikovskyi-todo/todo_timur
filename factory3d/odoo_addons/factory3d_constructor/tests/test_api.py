@@ -2,6 +2,7 @@ import json
 
 from odoo.tests import tagged
 
+from ..hooks import seed as seed_hook
 from .common import F3DConstructorHttpCase, PASSWORD
 
 
@@ -415,7 +416,7 @@ class TestApi(F3DConstructorHttpCase):
         started = time.time()
         res = self.rpc('/f3d/constructor/load', site_id=seed_site.id)
         self.assertLess(time.time() - started, 1.5)
-        self.assertEqual(len(res['slots']), 58)
+        self.assertEqual(len(res['slots']), len(seed_hook.read_seed()['slots']))
         self.assertLess(len(json.dumps(res)), 2 * 1024 * 1024)
         started = time.time()
         self.assertTrue(self.rpc('/f3d/constructor/validate', site_id=seed_site.id)['ok'])
