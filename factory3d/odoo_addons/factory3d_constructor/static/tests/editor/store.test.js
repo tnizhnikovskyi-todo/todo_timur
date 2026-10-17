@@ -238,7 +238,7 @@ test("publishPreview: зберігає чергу, викликає API-06 і в
     const { rpc, store } = newStore(
         {
             [SAVE]: ok(),
-            "/f3d/constructor/publish/preview": { ok: true, action: { type: "ir.actions.act_window", res_model: "f3d.publish.wizard" }, summary: { create: 3 } },
+            "/f3d/constructor/publish/preview": { ok: true, action: { type: "ir.actions.act_window", res_model: "f3d.publish.wizard", view_mode: "form" }, summary: { create: 3 } },
         },
         { action: { doAction: async (a, o) => actions.push([a, o]) } }
     );
@@ -248,5 +248,6 @@ test("publishPreview: зберігає чергу, викликає API-06 і в
     expect(res.summary.create).toBe(3);
     expect(rpc.calls.map((c) => c.route)).toEqual([SAVE, "/f3d/constructor/publish/preview"]); // спершу збереження
     expect(actions[0][0].res_model).toBe("f3d.publish.wizard");
+    expect(actions[0][0].views).toEqual([[false, "form"]]); // doAction вимагає views
     expect(typeof actions[0][1].onClose).toBe("function");
 });

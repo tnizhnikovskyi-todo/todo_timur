@@ -807,7 +807,14 @@ export class OdooStore {
         if (!res.ok) {
             throw new StoreError(res.code, res.message);
         }
-        await this.action.doAction(res.action, { onClose });
+        // doAction вимагає `views`; API-06 віддає лише view_mode
+        const act = { ...res.action };
+        if (act.type === "ir.actions.act_window" && !act.views) {
+            act.views = String(act.view_mode || "form")
+                .split(",")
+                .map((m) => [false, m.trim()]);
+        }
+        await this.action.doAction(act, { onClose });
         return res;
     }
 
