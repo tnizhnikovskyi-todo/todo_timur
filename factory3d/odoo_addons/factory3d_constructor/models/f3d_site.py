@@ -1,6 +1,6 @@
 import re
 
-from odoo import api, fields, models
+from odoo import Command, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..services.checks import CHECK_DEFAULTS
@@ -16,32 +16,43 @@ class F3dSite(models.Model):
 
     name = fields.Char(string="Назва", required=True)
     code = fields.Char(
-        string="Код", size=16, required=True, index=True,
-        help="Префікс площадки для сторонніх кодів: латиниця великими літерами й цифри")
+        string="Код",
+        size=16,
+        required=True,
+        index=True,
+        help="Префікс площадки для сторонніх кодів: латиниця великими літерами й цифри",
+    )
     sequence = fields.Integer(default=10)
     company_id = fields.Many2one(
-        'res.company', string="Компанія", required=True, index=True, default=lambda self: self.env.company)
+        'res.company', string="Компанія", required=True, index=True, default=lambda self: self.env.company
+    )
     building_length_m = fields.Float(string="Довжина будівлі, м", digits=(10, 3), required=True, default=60.0)
     building_width_m = fields.Float(string="Ширина будівлі, м", digits=(10, 3), required=True, default=30.0)
     building_height_m = fields.Float(string="Висота будівлі, м", digits=(10, 3), required=True, default=8.0)
     column_step_x_m = fields.Float(string="Крок колон по X, м", digits=(10, 3), default=6.0)
     column_step_y_m = fields.Float(string="Крок колон по Y, м", digits=(10, 3), default=6.0)
     default_parent_location_id = fields.Many2one(
-        'stock.location', string="Батьківська локація за замовчуванням", check_company=True,
+        'stock.location',
+        string="Батьківська локація за замовчуванням",
+        check_company=True,
         domain=[('usage', 'in', ('internal', 'view'))],
-        help="Куди публікуються комірки, у яких не задано батьківську локацію місця")
+        help="Куди публікуються комірки, у яких не задано батьківську локацію місця",
+    )
     layer_ids = fields.One2many('f3d.layer', 'site_id', string="Шари")
     check_config_ids = fields.One2many('f3d.check.config', 'site_id', string="Перевірки")
     version_ids = fields.One2many('f3d.layout.version', 'site_id', string="Версії")
     active_version_id = fields.Many2one(
-        'f3d.layout.version', string="Діюча версія", readonly=True, copy=False, ondelete='set null')
+        'f3d.layout.version', string="Діюча версія", readonly=True, copy=False, ondelete='set null'
+    )
     draft_base_version_id = fields.Many2one(
-        'f3d.layout.version', string="База чернетки", readonly=True, copy=False, ondelete='set null')
+        'f3d.layout.version', string="База чернетки", readonly=True, copy=False, ondelete='set null'
+    )
     draft_rev = fields.Integer(string="Лічильник правок", default=0, readonly=True, copy=False)
     draft_changes = fields.Integer(string="Змінено від діючої версії", default=0, readonly=True, copy=False)
     published_rev = fields.Integer(string="Лічильник на момент публікації", readonly=True, copy=False)
     has_changes = fields.Boolean(
-        string="Є непубліковані зміни", compute='_compute_has_changes', search='_search_has_changes')
+        string="Є непубліковані зміни", compute='_compute_has_changes', search='_search_has_changes'
+    )
     seed_key = fields.Char(string="Ключ seed", size=32, copy=False, readonly=True)
     slot_count = fields.Integer(string="Місць", compute='_compute_counts')
     placement_count = fields.Integer(string="Розміщень", compute='_compute_counts')
@@ -49,10 +60,8 @@ class F3dSite(models.Model):
     version_count = fields.Integer(string="Версій", compute='_compute_counts')
     active = fields.Boolean(default=True)
 
-    _f3d_site_code_uniq = models.Constraint(
-        'UNIQUE(company_id, code)', "Код площадки має бути унікальним у компанії.")
-    _f3d_site_seed_uniq = models.Constraint(
-        'UNIQUE(seed_key)', "Seed-площадка вже існує.")
+    _f3d_site_code_uniq = models.Constraint('UNIQUE(company_id, code)', "Код площадки має бути унікальним у компанії.")
+    _f3d_site_seed_uniq = models.Constraint('UNIQUE(seed_key)', "Seed-площадка вже існує.")
 
     @api.depends('draft_rev', 'published_rev')
     def _compute_has_changes(self):
@@ -63,14 +72,17 @@ class F3dSite(models.Model):
         if operator not in ('=', '!='):
             raise UserError("Непідтримуваний оператор пошуку.")
         want = bool(value) == (operator == '=')
-        self.env.cr.execute(
-            "SELECT id FROM f3d_site WHERE (draft_rev IS DISTINCT FROM published_rev) = %s", (want,))
+        self.env.cr.execute("SELECT id FROM f3d_site WHERE (draft_rev IS DISTINCT FROM published_rev) = %s", (want,))
         return [('id', 'in', [row[0] for row in self.env.cr.fetchall()])]
 
     def _compute_counts(self):
         def counts(model):
-            return dict(self.env[model].with_context(active_test=False)._read_group(
-                [('site_id', 'in', self.ids)], ['site_id'], ['__count']))
+            return dict(
+                self.env[model]
+                .with_context(active_test=False)
+                ._read_group([('site_id', 'in', self.ids)], ['site_id'], ['__count'])
+            )
+
         slots, placements = counts('f3d.slot'), counts('f3d.placement')
         layers, versions = counts('f3d.layer'), counts('f3d.layout.version')
         for site in self:
@@ -104,19 +116,67 @@ class F3dSite(models.Model):
 
     def _f3d_init_checks(self):
         """R-04: 7 рядків f3d.check.config (ідемпотентно)."""
-        Config = self.env['f3d.check.config'].sudo()
+        Config = self.env['f3d.check.config'].sudo().with_context(f3d_no_touch=True)
         for site in self:
             have = set(Config.with_context(active_test=False).search([('site_id', '=', site.id)]).mapped('check_key'))
-            vals = [{
-                'site_id': site.id, 'check_key': key, 'sequence': (idx + 1) * 10,
-                'enabled': enabled, 'mode': mode, 'params': dict(params),
-            } for idx, (key, enabled, mode, params) in enumerate(CHECK_DEFAULTS) if key not in have]
+            vals = [
+                {
+                    'site_id': site.id,
+                    'check_key': key,
+                    'sequence': (idx + 1) * 10,
+                    'enabled': enabled,
+                    'mode': mode,
+                    'params': dict(params),
+                }
+                for idx, (key, enabled, mode, params) in enumerate(CHECK_DEFAULTS)
+                if key not in have
+            ]
             if vals:
                 Config.create(vals)
 
     def _f3d_init_blank(self):
-        """R-23: 5 базових шарів порожньої площадки (реалізація — у наступному коміті)."""
-        return True
+        """R-23: 5 базових шарів порожньої площадки (ідемпотентно: лише якщо шарів ще немає)."""
+        Layer = self.env['f3d.layer'].sudo().with_context(f3d_no_touch=True)
+        Term = self.env['f3d.term']
+        group = self.env.ref
+        spec = [
+            ("Будівля", 'building', 10, 0.0, None, ['zone'], '#9aa5b1'),
+            (
+                "Склади",
+                'storage',
+                20,
+                0.0,
+                'storekeeper',
+                ['pallet_rack', 'cantilever', 'shelf', 'floor_stack'],
+                '#e8a33d',
+            ),
+            ("Виробництво", 'production', 30, 0.0, 'technologist', ['machine_spot', 'zone'], '#5b7c99'),
+            ("Інженерні мережі", 'engineering', 40, 6.0, 'engineer', ['zone'], '#c0392b'),
+            ("Двір", 'yard', 50, 0.0, None, ['zone'], '#6aa84f'),
+        ]
+        for site in self:
+            if Layer.with_context(active_test=False).search_count([('site_id', '=', site.id)]):
+                continue
+            for name, kind, sequence, elevation, role, slot_types, color in spec:
+                terms = Term.search([('term_type', '=', 'slot_type'), ('key', 'in', slot_types)])
+                Layer.create(
+                    {
+                        'site_id': site.id,
+                        'name': name,
+                        'kind': kind,
+                        'sequence': sequence,
+                        'elevation_m': elevation,
+                        'grid_step_m': 0.5,
+                        'aisle_width_m': 3.0,
+                        'color': color,
+                        'allowed_slot_type_ids': [Command.set(terms.ids)],
+                        'edit_group_ids': [
+                            Command.set([group('factory3d_constructor.group_f3d_constructor_%s' % role).id])
+                        ]
+                        if role
+                        else [],
+                    }
+                )
 
     def _f3d_touch(self, n=1):
         """R-21: лічильник чернетки без зміни write_date площадки."""
@@ -125,7 +185,8 @@ class F3dSite(models.Model):
             return
         self.env.cr.execute(
             "UPDATE f3d_site SET draft_rev = draft_rev + 1, draft_changes = draft_changes + %s WHERE id IN %s",
-            (n, tuple(ids)))
+            (n, tuple(ids)),
+        )
         self.invalidate_recordset(['draft_rev', 'draft_changes', 'has_changes'])
 
     def _f3d_check_rights_manager(self):
@@ -135,8 +196,12 @@ class F3dSite(models.Model):
     # --- дії -----------------------------------------------------------------------------------------
     def action_open_constructor(self):
         self.ensure_one()
-        return {'type': 'ir.actions.client', 'tag': 'f3d_constructor', 'name': "Конструктор",
-                'params': {'site_id': self.id}}
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'f3d_constructor',
+            'name': "Конструктор",
+            'params': {'site_id': self.id},
+        }
 
     def action_publish_wizard(self):
         """Створює майстер публікації (M-08); план будується в `wizard.f3d_publish_wizard`."""
@@ -161,6 +226,10 @@ class F3dSite(models.Model):
     def _f3d_action_list(self, model, name):
         self.ensure_one()
         return {
-            'type': 'ir.actions.act_window', 'name': name, 'res_model': model, 'view_mode': 'list,form',
-            'domain': [('site_id', '=', self.id)], 'context': {'default_site_id': self.id},
+            'type': 'ir.actions.act_window',
+            'name': name,
+            'res_model': model,
+            'view_mode': 'list,form',
+            'domain': [('site_id', '=', self.id)],
+            'context': {'default_site_id': self.id},
         }
