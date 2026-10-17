@@ -19,26 +19,28 @@ SLOT_TEMPLATES = {
         'params': {
             'bays': (1, 200, 6, int), 'levels': (1, 12, 4, int), 'bay_width': (0.3, 6.0, 2.7, float),
             'depth': (0.2, 3.0, 1.1, float), 'level_height': (0.1, 3.0, 1.5, float),
-            'positions_per_bay': (1, 8, 3, int), 'max_load_kg': (0.0, None, 1000.0, float)},
+            'positions_per_bay': (1, 8, 3, int), 'max_load_kg': (0.0, None, 1000.0, float),
+            'index_digits': (1, 4, 2, int)},
+        'choices': {'code_style': (('default', 'bay_letter'), 'default')},
     },
     'cantilever': {
         'label': "Консольний стелаж", 'cells': True,
         'params': {
             'arms': (1, 100, 4, int), 'levels': (1, 12, 3, int), 'arm_length': (0.3, 2.0, 1.0, float),
             'length': (0.5, 60.0, 6.0, float), 'level_height': (0.1, 3.0, 1.2, float),
-            'max_load_kg': (0.0, None, 500.0, float)},
+            'max_load_kg': (0.0, None, 500.0, float), 'index_digits': (1, 4, 2, int)},
     },
     'shelf': {
         'label': "Полицевий стелаж / комірки фурнітури", 'cells': True,
         'params': {
-            'sections': (1, 100, 4, int), 'shelves': (1, 20, 5, int), 'cell_w': (0.1, 3.0, 0.9, float),
-            'cell_d': (0.1, 2.0, 0.4, float), 'cell_h': (0.05, 2.0, 0.4, float)},
+            'sections': (1, 100, 4, int), 'shelves': (1, 20, 5, int), 'cell_w': (0.1, 8.0, 0.9, float),
+            'cell_d': (0.1, 2.0, 0.4, float), 'cell_h': (0.05, 2.0, 0.4, float), 'index_digits': (1, 4, 2, int)},
     },
     'floor_stack': {
         'label': "Підлогове штабелювання", 'cells': True,
         'params': {
             'rows': (1, 50, 2, int), 'cols': (1, 26, 4, int), 'cell_l': (0.3, 6.0, 1.2, float),
-            'cell_w': (0.3, 4.0, 0.8, float), 'max_height': (0.1, 6.0, 1.5, float)},
+            'cell_w': (0.3, 4.0, 0.8, float), 'max_height': (0.1, 6.0, 1.5, float), 'index_digits': (1, 4, 2, int)},
     },
     'machine_spot': {
         'label': "Місце під верстат", 'cells': False,
@@ -58,7 +60,7 @@ PARAM_LABELS = {
     'arms': "Секцій", 'arm_length': "Виліт консолі, м", 'length': "Довжина, м", 'sections': "Секцій",
     'shelves': "Полиць", 'cell_w': "Ширина комірки, м", 'cell_d': "Глибина комірки, м", 'cell_h': "Висота комірки, м",
     'rows': "Рядів", 'cols': "Колонок", 'cell_l': "Довжина комірки, м", 'max_height': "Макс. висота штабеля, м",
-    'width': "Ширина, м",
+    'width': "Ширина, м", 'index_digits': "Розрядів у номері", 'code_style': "Стиль кодів",
 }
 
 OVERRIDE_KEYS = ('disabled', 'max_load_kg', 'capacity', 'name')
@@ -100,6 +102,11 @@ def normalize_params(template, params):
         if value < lo or (hi is not None and value > hi):
             raise CellsError("Параметр «%s»: допустимо від %s%s." % (
                 label, lo, (" до %s" % hi) if hi is not None else ""))
+        out[key] = value
+    for key, (allowed, default) in (spec.get('choices') or {}).items():
+        value = params.get(key, default)
+        if value not in allowed:
+            raise CellsError("Параметр «%s»: допустимо %s." % (PARAM_LABELS.get(key, key), ", ".join(allowed)))
         out[key] = value
     if spec.get('service'):
         service = params.get('service') or {}
@@ -163,8 +170,9 @@ def slot_obb(template, params, x, y, rot):
     return make_obb(x, y, length / 2.0, width / 2.0, rot)
 
 
-def _width(count):
-    return max(2, len(str(count)))
+def _width(count, digits=2):
+    """Ширина індексу: `max(index_digits, цифр(N))`; за замовчуванням 2 (`B01`)."""
+    return max(digits, len(str(count)))
 
 
 def count_cells(template, prefix, params, overrides=None):
@@ -177,18 +185,20 @@ def _raw_cells(template, p, prefix):
     cells = []
     if template == 'pallet_rack':
         length = p['bays'] * p['bay_width']
-        width_n = _width(p['bays'])
+        width_n = _width(p['bays'], p['index_digits'])
         for bay in range(1, p['bays'] + 1):
             for lvl in range(1, p['levels'] + 1):
+                code = ("%s-%0*d%s" % (prefix, width_n, bay, chr(ord('A') + lvl - 1)) if p['code_style'] == 'bay_letter'
+                        else "%s-B%0*d-L%d" % (prefix, width_n, bay, lvl))
                 cells.append({
-                    'code': "%s-B%0*d-L%d" % (prefix, width_n, bay, lvl), 'level': lvl, 'index': bay,
+                    'code': code, 'level': lvl, 'index': bay,
                     'lx': -length / 2.0 + (bay - 0.5) * p['bay_width'], 'ly': 0.0,
                     'dz': (lvl - 1) * p['level_height'], 'l': p['bay_width'], 'w': p['depth'], 'h': p['level_height'],
                     'capacity': float(p['positions_per_bay']), 'max_load_kg': p['max_load_kg'], 'kind': 'pallet_cell'})
     elif template == 'cantilever':
         length = p['length']
         arm_l = length / p['arms']
-        width_n = _width(p['arms'])
+        width_n = _width(p['arms'], p['index_digits'])
         for arm in range(1, p['arms'] + 1):
             for lvl in range(1, p['levels'] + 1):
                 cells.append({
@@ -198,7 +208,7 @@ def _raw_cells(template, p, prefix):
                     'capacity': 0.0, 'max_load_kg': p['max_load_kg'], 'kind': 'shelf'})
     elif template == 'shelf':
         length = p['sections'] * p['cell_w']
-        width_n = _width(p['sections'])
+        width_n = _width(p['sections'], p['index_digits'])
         for sec in range(1, p['sections'] + 1):
             for lvl in range(1, p['shelves'] + 1):
                 cells.append({
@@ -209,7 +219,7 @@ def _raw_cells(template, p, prefix):
     elif template == 'floor_stack':
         length = p['cols'] * p['cell_l']
         width = p['rows'] * p['cell_w']
-        width_n = _width(p['rows'])
+        width_n = _width(p['rows'], p['index_digits'])
         for row in range(1, p['rows'] + 1):
             for col in range(1, p['cols'] + 1):
                 cells.append({
