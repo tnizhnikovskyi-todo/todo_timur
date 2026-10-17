@@ -4,9 +4,14 @@
 
 import json
 import logging
+import re
 
 from odoo import Command
 from odoo.tools import file_open
+
+from ..services import cells as cells_mod, snapshot
+from ..services.schemas import SCENE_ROLE_PREFIX
+from . import link
 
 _logger = logging.getLogger(__name__)
 
@@ -69,6 +74,10 @@ def normalize_seed(data):
         variant['rotations'] = _rotation_mode(variant.get('rotations', variant.get('rotation_mode', 'q')))
         variant['front_side'] = (variant.get('front_side') or 's').lower()
         variant['utilities'] = _utilities(variant.get('utilities'))
+        # зведені варіанти сцени (паспорт scene_*) не створюють maintenance.equipment, решта — створюють
+        variant.setdefault(
+            'create_equipment', not str(variant.get('passport_role') or '').startswith(SCENE_ROLE_PREFIX)
+        )
         variant.setdefault('layer_kinds', variant.get('allowed_layer_kinds') or [])
         variant.setdefault('slot_types', variant.get('allowed_slot_types') or [])
         variants.append(variant)
@@ -145,10 +154,121 @@ def ensure_variants(env, data):
                     'panel': item.get('panel') or False,
                     'weight_kg': item.get('weight_kg') or 0.0,
                     'create_workcenter': bool(item.get('create_workcenter')),
+                    'create_equipment': bool(item['create_equipment']),
                 }
             )
         resolved[item['key']] = variant
     return resolved, skipped
+
+
+# --- узгодження сіда з наявними записами Odoo (R-24) -------------------------------------------------------------
+
+
+def _short_model(passport):
+    """Коротка назва моделі паспорта (як у назвах варіантів верстатів сіда)."""
+    return re.split(r'[,(]| з | — ', passport.model or passport.role or '')[0].strip()[:42] or passport.role
+
+
+def existing_equipment(env, codes):
+    """{код: maintenance.equipment} для кодів розміщень: збіг за f3d_code, потім за f3d_alias, потім за serial_no
+    (лише записи без f3d_code) — так само, як це робить план публікації."""
+    Equipment = env['maintenance.equipment'].with_context(active_test=False)
+    codes = list(codes)
+    if not codes:
+        return {}
+    found = Equipment.search(
+        ['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('serial_no', 'in', codes)]
+    )
+    out = {}
+    for key in ('f3d_code', 'f3d_alias'):
+        for rec in found:
+            if rec[key] in codes:
+                out.setdefault(rec[key], rec)
+    for rec in found.filtered(lambda r: not r.f3d_code):
+        if rec.serial_no in codes:
+            out.setdefault(rec.serial_no, rec)
+    return out
+
+
+def passport_variant(env, base, passport, cache):
+    """Варіант паспорта `passport` з геометрією `base` (зведеного варіанта сцени): знайти або створити.
+
+    Об'єкт, що вже має обладнання Odoo зі справжнім паспортом, не повинен лишатися на зведеному паспорті
+    «Об'єкти сцени»: інакше публікація понизила б паспорт обладнання до зведеного."""
+    name = "%s (%d×%d×%d)" % (_short_model(passport), base.length_mm, base.width_mm, base.height_mm)
+    key = (passport.id, name)
+    if key not in cache:
+        Variant = env['f3d.equipment.variant'].with_context(active_test=False)
+        variant = Variant.search([('passport_id', '=', passport.id), ('name', '=', name)], limit=1)
+        if not variant:
+            variant = Variant.create(
+                {
+                    'passport_id': passport.id,
+                    'name': name,
+                    'length_mm': base.length_mm,
+                    'width_mm': base.width_mm,
+                    'height_mm': base.height_mm,
+                    'service_front_mm': base.service_front_mm,
+                    'service_back_mm': base.service_back_mm,
+                    'service_left_mm': base.service_left_mm,
+                    'service_right_mm': base.service_right_mm,
+                    'front_side': base.front_side,
+                    'anchor': base.anchor,
+                    'rotation_mode': base.rotation_mode,
+                    'allowed_layer_kind_ids': [Command.set(base.allowed_layer_kind_ids.ids)],
+                    'allowed_slot_type_ids': [Command.set(base.allowed_slot_type_ids.ids)],
+                    'utilities': base.utilities or [],
+                    'power_kw': base.power_kw,
+                    'panel': base.panel or False,
+                    'weight_kg': base.weight_kg,
+                    'create_workcenter': base.create_workcenter,
+                }
+            )
+        cache[key] = variant
+    return cache[key]
+
+
+def placement_variants(env, data, variants):
+    """{uid розміщення: варіант}: варіант сіда, а для розміщення з наявним обладнанням, що має паспорт, — варіант
+    ЦЬОГО паспорта (геометрія зведеного варіанта зберігається: габарити, повороти, види шарів)."""
+    equipment = existing_equipment(env, [item['code'] for item in data['placements']])
+    cache, out = {}, {}
+    for item in data['placements']:
+        variant = variants.get(item['variant'])
+        if not variant:
+            continue
+        passport = (equipment.get(item['code']) or env['maintenance.equipment']).f3d_passport_id
+        if passport and passport != variant.passport_id:
+            variant = passport_variant(env, variant, passport, cache)
+        out[item['uid']] = variant
+    return out
+
+
+def adapt_slots(env, data):
+    """Місця на одну комірку (code_style='exact'): вид локації береться з наявної локації Odoo того самого коду
+    (f3d_code, потім f3d_alias, потім barcode), тож незмінена розкладка не пропонує оновлення локацій."""
+    exact = [
+        item
+        for item in data['slots']
+        if item['template'] == 'floor_stack' and (item.get('params') or {}).get('code_style') == 'exact'
+    ]
+    codes = [item['code_prefix'] for item in exact]
+    if not codes:
+        return 0
+    Loc = env['stock.location'].with_context(active_test=False)
+    found = Loc.search(['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('barcode', 'in', codes)])
+    by_code = {}
+    for key in ('f3d_code', 'f3d_alias', 'barcode'):
+        for rec in found:
+            if rec[key]:
+                by_code.setdefault(rec[key], rec)
+    changed = 0
+    for item in exact:
+        kind = by_code.get(item['code_prefix'], env['stock.location']).f3d_loc_kind
+        if kind in cells_mod.LOC_KINDS and item['params'].get('loc_kind') != kind:
+            item['params'] = dict(item['params'], loc_kind=kind)
+            changed += 1
+    return changed
 
 
 def load_seed(env, data):
@@ -165,6 +285,8 @@ def load_seed(env, data):
     variants, skipped = ensure_variants(env, data)
     if site:
         return site, {}, skipped, variants
+    adapt_slots(env, data)
+    by_placement = placement_variants(env, data, variants)
     Layer, Slot, Placement = env['f3d.layer'], env['f3d.slot'], env['f3d.placement']
     terms = {(t.term_type, t.key): t.id for t in env['f3d.term'].search([])}
     building = data['site']['building']
@@ -241,7 +363,7 @@ def load_seed(env, data):
         cells += slot.cell_count
     placed, skipped_placements = 0, []
     for item in data['placements']:
-        variant = variants.get(item['variant'])
+        variant = by_placement.get(item['uid'])
         if not variant:
             skipped_placements.append(item['code'])
             continue
@@ -270,3 +392,74 @@ def load_seed(env, data):
     if skipped_placements:
         _logger.warning("Seed: пропущено розміщення без паспорта: %s", ", ".join(skipped_placements))
     return site, created, skipped, variants
+
+
+def seed_state_problem(site):
+    """None, якщо площадка ще в стані сіда (чернетка не змінена відносно версії-імпорту v1), інакше — причина."""
+    versions = site.version_ids
+    if len(versions) != 1 or not versions.is_seed:
+        return "є версії, окрім імпорту з макета"
+    if site.active_version_id != versions or site.draft_base_version_id != versions:
+        return "діюча версія не є імпортом з макета"
+    if site.has_changes or site.draft_changes:
+        return "чернетка змінена відносно версії-імпорту"
+    return None
+
+
+def resync_site(env, data=None):
+    """Виправляє посіяну площадку на місці (міграція 19.0.1.0.1), ідемпотентно.
+
+    Лише поки площадка в стані сіда (`seed_state_problem`). Переписує видимість шарів за замовчуванням (`visible` сіда),
+    варіанти (прапорець create_equipment, варіант справжнього паспорта для розміщень з наявним обладнанням), параметри й
+    перевизначення місць (вид локації, відключена комірка без локації Odoo), перебудовує знімок v1 (baseline
+    зберігається). Записи Odoo (обладнання, локації, паспорти) не видаляє й не змінює, крім службових полів зв'язку;
+    чернетка (`draft_rev`) не зсувається.
+    Повертає звіт `{'status': 'fixed'|'skipped'|'no_site', ...}`."""
+    data = normalize_seed(data or read_seed())
+    env = env(su=True, context=dict(env.context, f3d_no_touch=True, tracking_disable=True))
+    site = seed_exists(env, data)
+    if not site:
+        return {'status': 'no_site'}
+    problem = seed_state_problem(site)
+    if problem:
+        return {'status': 'skipped', 'reason': problem}
+    variants, skipped = ensure_variants(env, data)
+    report = {'status': 'fixed', 'flags': 0, 'slots': 0, 'placements': 0, 'layers': 0, 'skipped_variants': skipped}
+    layers = {x.uid: x for x in env['f3d.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])}
+    for item in data['layers']:  # старий сід ігнорував `visible`: усі 31 шар вмикались одразу й закривали верстати
+        layer = layers.get(item['uid'])
+        if layer and layer.visible != bool(item.get('visible', True)):
+            layer.write({'visible': bool(item.get('visible', True))})
+            report['layers'] += 1
+    for item in data['variants']:
+        variant = variants.get(item['key'])
+        if variant and variant.create_equipment != item['create_equipment']:
+            variant.write({'create_equipment': item['create_equipment']})
+            report['flags'] += 1
+    adapt_slots(env, data)
+    slots = {s.uid: s for s in env['f3d.slot'].with_context(active_test=False).search([('site_id', '=', site.id)])}
+    for item in data['slots']:
+        slot = slots.get(item['uid'])
+        if not slot:
+            continue
+        vals = {}
+        params = cells_mod.normalize_params(item['template'], item.get('params') or {})
+        if (slot.params or {}) != params:
+            vals['params'] = params
+        overrides = cells_mod.normalize_overrides(item.get('overrides') or {})
+        if (slot.overrides or {}) != overrides:
+            vals['overrides'] = overrides
+        if vals:
+            slot.write(vals)
+            report['slots'] += 1
+    placements = {
+        p.uid: p for p in env['f3d.placement'].with_context(active_test=False).search([('site_id', '=', site.id)])
+    }
+    for uid, variant in placement_variants(env, data, variants).items():
+        placement = placements.get(uid)
+        if placement and placement.variant_id != variant:
+            placement.write({'variant_id': variant.id})
+            report['placements'] += 1
+    link.link_existing(env, site)
+    snapshot.rebuild_version(site, site.version_ids)
+    return report

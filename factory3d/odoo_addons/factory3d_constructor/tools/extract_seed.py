@@ -9,6 +9,7 @@
 Результат детермінований: `uid` — читабельні ключі, а не випадкові UUID (ідемпотентність seed).
 """
 
+import csv
 import importlib.util
 import json
 import math
@@ -20,6 +21,7 @@ MODULE = Path(__file__).resolve().parents[1]
 FACTORY3D = MODULE.parents[1]
 OUT = MODULE / 'data' / 'seed_site.json'
 STATIC = FACTORY3D / 'odoo_addons' / 'factory3d_viewer' / 'static' / 'data' / 'model_static.json'
+LOCATIONS_CSV = FACTORY3D / 'odoo_addons' / 'factory3d_base' / 'data' / 'scene_locations.csv'
 
 sys.path.insert(0, str(FACTORY3D))
 from plant import layout as LY  # noqa: E402  (plant/layout.py: FOOTPRINT, DUCT_POINTS, …)
@@ -481,11 +483,18 @@ for i, x in enumerate([30.5, 33.7]):  # EB-Un: коди EB-U1-S1-L1 (1 розр�
         },
         EB_PARENT,
     )
-# окремі місця на одну комірку (стоси плит, приймання, комплекти, зони видачі): код комірки = код об'єкта моделі
+# каталог локацій factory3d_base (scene_locations.csv): код → вид локації Odoo (f3d_loc_kind)
+with LOCATIONS_CSV.open(encoding='utf-8', newline='') as handle:
+    LOC_KIND = {row['code']: row['kind'] for row in csv.DictReader(handle)}
+# окремі місця на одну комірку (стоси плит, приймання, комплекти, зони видачі): код комірки = код об'єкта моделі.
+# Вид локації — з каталогу base (area/kit/stack…), тож локація Odoo того самого коду не отримує «оновлення виду».
+# Об'єкт моделі без локації в каталозі (майданчик відходів WASTE — контейнери, не склад) лишається місцем сцени, але
+# його комірка вимкнена: публікація не створює для нього локацію Odoo (її можна ввімкнути в редакторі).
 for row in CL['exact']:
     ly = LAYER[row['layer']]
     if 'floor_stack' not in ly['slot_types']:
         ly['slot_types'].append('floor_stack')
+    kind = LOC_KIND.get(row['code'])
     slots.append(
         {
             'uid': 'seed-sl-' + row['code'].lower(),
@@ -502,8 +511,9 @@ for row in CL['exact']:
                 'cell_w': r2(max(row['W'], 0.1)),
                 'max_height': r2(max(row['H'], 0.05)),
                 'code_style': 'exact',
+                **({'loc_kind': kind} if kind and kind != 'stack' else {}),
             },
-            'overrides': {},
+            'overrides': {} if kind else {row['code']: {'disabled': True}},
             'parent': None,
             'note': row.get('label') or row['code'],
         }
@@ -658,6 +668,7 @@ for (kind, length, width, height), rows in sorted(users.items()):
         'anchor': 'center',
         'front_side': 's',
         'create_workcenter': False,
+        'create_equipment': False,  # зведений варіант сцени: публікація не створює для нього maintenance.equipment
     }
     for row in rows:
         placements.append(
