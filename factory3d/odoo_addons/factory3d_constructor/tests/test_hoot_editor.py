@@ -16,9 +16,10 @@ def _hoot_hash(text):
 class TestEditorHoot(HttpCase):
     """HOOT-тести W2 (static/tests/editor/*.test.js, бандл web.assets_unit_tests) у headless Chrome.
 
-    Дзеркала R-01…R-10 за золотими фікстурами W1 (AC-12, 14, 22, 31), OdooStore на мок-RPC (AC-48, 61, 66), ролі в UI (AC-49),
-    DXF (AC-17, 18), сцена редактора з нульовим рендерером (AC-10, 63, 64, 65).
-    Пакет відбирається за назвою `@factory3d_constructor/editor`; suite `@factory3d_constructor/model` (W3) не запускається.
+    Дзеркала R-01…R-10 за золотими фікстурами W1 (AC-12, 14, 22, 31), OdooStore на мок-RPC (AC-48, 61, 66),
+    ролі в UI (AC-49), DXF (AC-17, 18), сцена редактора з нульовим рендерером (AC-10, 63, 64, 65).
+    Пакет відбирається за назвою `@factory3d_constructor/editor`; suite `@factory3d_constructor/model` (W3)
+    не запускається.
     """
 
     def test_hoot_suite(self):

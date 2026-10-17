@@ -1,7 +1,7 @@
 /** @odoo-module */
 // Редактор у зборі (нульовий рендерер, мок RPC): AC-10 (шари, сітка, видимість), AC-49 (роль → блокування), AC-63 (перетягування
 // у прохід), AC-64 (поворот), AC-65 (лінійка, Delete без нативних діалогів), групи шарів, dynamic у перевірках, code_style 'exact'.
-import { after, animationFrame, describe, expect, getFixture, queryAll, queryOne, test } from "@odoo/hoot";
+import { advanceTime, after, animationFrame, describe, expect, getFixture, queryAll, queryOne, test } from "@odoo/hoot";
 import { generateCells } from "@factory3d_constructor/editor/cells";
 import { runChecks } from "@factory3d_constructor/editor/checks";
 import { E, S, V } from "@factory3d_constructor/editor/state";
@@ -283,4 +283,30 @@ test("code_style 'exact': одна комірка з кодом = code_prefix; �
         const one = generateCells(tpl, "UNL-1", 0, 0, 0, { code_style: "exact", sections: 1, shelves: 1, arms: 1, levels: 1, bays: 1, positions_per_bay: 1 }, {}, 0);
         expect(one[0].code).toBe(one.length === 1 ? "UNL-1" : one[0].code);
     }
+});
+
+test("AC-49/R-11 сервер відхилив автозбережену правку: повідомлення і перечитування стану з API-03", async () => {
+    let saves = 0;
+    const { rpc } = await openEditor(makeLoad(), {
+        [SAVE]: () => {
+            saves++;
+            return saves === 1
+                ? { ok: false, code: "rights", message: "Шар «Виробництво» редагує технолог.", op_index: 0 }
+                : { ok: true, rev: 5, draft_changes: 0, has_changes: false, id_map: {}, etags: {} };
+        },
+    });
+    E.selectObj({ kind: "placement", id: "plm1" });
+    await animationFrame();
+    const inp = queryOne('#rightBody input[data-f="x"]');
+    inp.value = "24";
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(S.placements[0].x).toBe(24);
+    await advanceTime(2200); // debounce 150 мс + autosave_ms 1500
+    await animationFrame();
+    await animationFrame();
+    expect(saves).toBe(1);
+    expect(rpc.of("/f3d/constructor/load")).toHaveLength(2); // перечитано
+    expect(S.placements[0].x).toBe(20); // як на сервері
+    expect(toastText().includes("редагує технолог")).toBe(true);
 });

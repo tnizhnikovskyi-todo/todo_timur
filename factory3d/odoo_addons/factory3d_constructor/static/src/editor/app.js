@@ -383,6 +383,13 @@ function wireStore(store) {
     };
     store.onConflict = () => E.askConflict();
     store.onReject = (r) => toast(r.message || "Сервер відхилив зміну.", "err");
+    // автозбереження: відхилену правку не лишаємо на екрані — стан перечитується з сервера (спершу відправляється решта черги)
+    store.onReload = () => {
+        if (ctx && S.site) {
+            syncNow();
+            ctx.store.flush().then(() => ctx && reload());
+        }
+    };
 }
 
 /* --- життєвий цикл --- */

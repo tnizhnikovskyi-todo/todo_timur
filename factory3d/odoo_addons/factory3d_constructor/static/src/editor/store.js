@@ -372,6 +372,7 @@ export class OdooStore {
      * @param {Function} [o.onSaved]    ({rev, draft_changes, has_changes, updates: [{model, uid, rid, etag}]})
      * @param {Function} [o.onConflict] ({model, uid, current, message}) → 'mine' | 'theirs' (або проміс)
      * @param {Function} [o.onReject]   ({code, message, model, uid, kind})
+     * @param {Function} [o.onReload]   () — автозбереження: сервер відхилив/змінив запис, стан слід перечитати (API-03)
      */
     constructor(o) {
         this.rpc = o.rpc;
@@ -383,6 +384,7 @@ export class OdooStore {
         this.onSaved = o.onSaved || noop;
         this.onConflict = o.onConflict || (() => "theirs");
         this.onReject = o.onReject || noop;
+        this.onReload = o.onReload || noop;
         this.siteId = null;
         this.status = "saved";
         this.groupIds = {};
@@ -591,9 +593,12 @@ export class OdooStore {
         if (this._timer) {
             return;
         }
-        this._timer = setTimeout(() => {
+        this._timer = setTimeout(async () => {
             this._timer = null;
-            this.flush();
+            const r = await this.flush();
+            if (r && r.reload && r.ok !== false) {
+                this.onReload();
+            }
         }, delay);
     }
 
