@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-10: паспорт обладнання -->
+    <record id="view_f3d_passport_form_inherit" model="ir.ui.view">
+        <field name="name">f3d.equipment.passport.form.constructor</field>
+        <field name="model">f3d.equipment.passport</field>
+        <field name="inherit_id" ref="factory3d_base.view_f3d_equipment_passport_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_variants" type="object" class="oe_stat_button" icon="fa-clone">
+                    <field name="variant_count" widget="statinfo" string="Варіанти"/>
+                </button>
+            </xpath>
+            <xpath expr="//field[@name='role']" position="after">
+                <field name="f3d_category"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page name="variants" string="Варіанти">
+                    <field name="variant_ids">
+                        <list>
+                            <field name="name"/>
+                            <field name="length_mm"/>
+                            <field name="width_mm"/>
+                            <field name="height_mm"/>
+                            <field name="model_status"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- V-11: stock.location -->
+    <record id="view_stock_location_form_constructor" model="ir.ui.view">
+        <field name="name">stock.location.form.constructor</field>
+        <field name="model">stock.location</field>
+        <field name="inherit_id" ref="factory3d_base.view_stock_location_form_f3d"/>
+        <field name="arch" type="xml">
+            <field name="f3d_code" position="after">
+                <field name="f3d_site_id" readonly="1" invisible="not f3d_site_id"/>
+                <field name="f3d_slot_uid" readonly="1" invisible="not f3d_slot_uid"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- V-12: maintenance.equipment -->
+    <record id="view_maintenance_equipment_form_constructor" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.constructor</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="factory3d_base.view_maintenance_equipment_form_f3d"/>
+        <field name="arch" type="xml">
+            <field name="f3d_zone_id" position="after">
+                <field name="f3d_site_id" readonly="1" invisible="not f3d_site_id"/>
+                <field name="f3d_placement_uid" readonly="1" invisible="not f3d_placement_uid"/>
+            </field>
+        </field>
+    </record>
+</odoo>

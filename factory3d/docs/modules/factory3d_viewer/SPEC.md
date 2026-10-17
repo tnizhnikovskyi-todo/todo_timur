@@ -1663,6 +1663,22 @@ QC-посилання (`QC/…`) у рядку кванта («брак QC/00412
    (документ, дата, кількість, → куди) і «Надійшло»; стиль і посилання (`data-rec`) ті самі, що в «Надійшло»/«Резерв».
 Кожен `doc` з `model`/`id` на клієнті — посилання на форму (`data-rec="model:id"` → `onOpenRecord`) і бейдж стану (R-23).
 
+### R-25 Точка розширення ядра і розкладка конструктора (ключ `layout`)
+
+Ядро (`core.js`) експортує `registerViewerExtension(ext)` (повертає функцію зняття) і викликає кожне зареєстроване
+`ext.applyLayout(api, layout, fresh)`, де `layout` = `D.layout` або `null`, `fresh` = вузли щойно завантаженої частини моделі
+або `null`, `api` = {`THREE`, `GLTFLoader`, `scene`, `items`, `labels`, `stockLoad`, `opts`, `kiosk`, `client`, `D`, `selected`,
+`buildLabels`, `dropLabels`, `relabel`, `refreshSelection`, `codeRoot`, `isShown`, `paint`, `select`, `notify`, `envMapIntensity`,
+`shadows`}. Виклик відбувається: (1) у `setData` — після злиття даних і завантаження першої частини; (2) у `onPart`, коли частина
+приїхала після даних (`D.layout` непорожній); (3) на кожній дельті `layout` (повна заміна ключа, не злиття; `null` — скинути);
+(4) на повній дельті, знімку й поверненні «Зараз» — завжди **до** `stockLoad.sync`, щоб вантаж за залишками ліг у вже
+переставлені комірки. Розширення, що кидає помилку, логується й не ламає ядро та інші розширення. Без розширень і без
+`D.layout` поведінка ядра не змінюється. Вузол, прибраний розширенням з `items`, не вибирається, а його вантаж `stockLoad.sync`
+знімає; вигляд `viewPose` для відсутнього коду повертає загальний план. Комірки з `userData.f3dAlong = "x"` розкладають палети
+вздовж X; `userData.f3dRev` (лічильник перестановок вузла) змушує `stockLoad` розібрати комірку заново. Розширення моста
+`factory3d_constructor_viewer` (R-01…R-06 його SPEC) застосовує `layout`; ключ `layout` у `/data` — **не** статичний
+`static.layout` (макет будівлі, `D.static.layout`).
+
 ## 10. Стани й переходи
 
 | Об'єкт | Стани | Переходи / джерело |
@@ -1929,7 +1945,7 @@ Q-01…Q-08 — у ARCHITECTURE §5 (ті самі номери). Додатко
 модулів, перелічені в A.15. Правила версії 1.x — адитивні: (1) додаткові ключі всередині базових розділів (у записах
 `workcenters`, `productions`, `locations`, `equipment`, `employees`, `zones`, у `infra.cards.*`, `infra.totals`,
 `fire`, `evacuation`, `lighting`, `ventilation`) дозволені й не змінюють тип і зміст базових ключів; (2) нові ключі
-верхнього рівня (`yard`, `access`) стоять **лише після** 26 базових, у порядку `_f3d_sequence` провайдера (R-01 п. 6);
+верхнього рівня (`yard`, `access`, `layout`) стоять **лише після** 26 базових, у порядку `_f3d_sequence` провайдера (R-01 п. 6);
 (3) базові ключі не прибираються й не перейменовуються; (4) клієнт ігнорує ключі, яких не знає. Мажорна версія `2.x` —
 лише з новим клієнтом (FR-37).
 
@@ -2240,6 +2256,7 @@ num|null req; `sources` list[str] req; `units` list[dict тієї ж форми]
 | міст `factory3d_genset`, `genset` (155), CG-02 | `infra.genset`, `infra.totals`, `infra.cards` | `infra.genset[<код>]` (вузол генератора: показники, `updated`, `state_label`, `mode_label`, `breaker_label`, `alarm_label`); totals: `genset_kw`, `genset_state`, `genset_fuel_pct`, `genset_autonomy_h`, `island`, `grid_ok`; `rows` картки `GENSET` |
 | `factory3d_yard`, `yard` (160), CY-06 | **новий верхній ключ `yard`**; `infra.cards` | `yard` = yard Додаток C (`updated`, `gates`, `scale`, `trucks`, `queue`, `kpp`, `stats`); `rows` карток `GATE-W`, `GATE-E`, `TRUCK-SCALE` |
 | `factory3d_access`, `access` (170), CA-05 | **новий верхній ключ `access`**; `employees[code]`, `zones[code]`, `infra.cards` | `access` = access R-12; employees: `present`, `zone`, `zone_since`, `last_event` {`ts`, `door`, `direction`, `type`}; zones: `people_now`; `rows` карток `TURNSTILES`, `ACCESS` |
+| `factory3d_constructor_viewer`, `layout` (180), bridge R-01 | **новий верхній ключ `layout`** | `layout` = `{site, version, base_version, moved, added, hidden, replaced, frames}` (bridge SPEC R-01); відсутній, якщо немає опублікованої версії, відмінної від бази, або немає права читання; у дельті — повна заміна (`null` — скинути) |
 
 ## Додаток B. `static/data/model_static.json`
 

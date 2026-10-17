@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="factory3d_constructor.ModelUpload">
+        <div class="o_f3d_model_upload">
+            <div class="o_f3d_mu_row">
+                <button type="button" class="btn btn-primary o_f3d_mu_pick" t-on-click="pickFiles" t-att-disabled="state.busy">
+                    <i class="fa fa-upload me-1"/>Завантажити модель…
+                </button>
+                <input type="file" class="d-none o_f3d_mu_file" t-ref="file" multiple="multiple" t-att-accept="accept"
+                       t-on-change="onFilesChosen"/>
+                <span class="o_f3d_mu_hint text-muted">GLB, glTF, OBJ+MTL, FBX, STL, 3MF, DAE · STEP, IGES, IFC (перетворення на сервері)</span>
+            </div>
+
+            <div class="o_f3d_mu_row o_f3d_mu_opts">
+                <span class="o_f3d_mu_label">Одиниці файла</span>
+                <div class="btn-group btn-group-sm o_f3d_mu_units" role="group" aria-label="Одиниці">
+                    <t t-foreach="unitList" t-as="u" t-key="u.key">
+                        <button type="button" class="btn btn-outline-secondary o_f3d_mu_unit"
+                                t-att-class="{'active': unitActive(u.key)}" t-att-data-unit="u.key"
+                                t-on-click="() => this.setUnits(u.key)" t-att-disabled="state.busy">
+                            <t t-esc="u.label"/>
+                        </button>
+                    </t>
+                </div>
+                <label class="o_f3d_mu_axis form-check form-check-inline mb-0 ms-3">
+                    <input type="checkbox" class="form-check-input o_f3d_mu_axis_chk" t-att-checked="axisZ"
+                           t-on-change="toggleAxis" t-att-disabled="state.busy"/>
+                    <span class="form-check-label">Вісь Z вгору</span>
+                </label>
+                <span t-if="state.hasFiles and (state.unitsAuto or state.axisAuto)" class="text-muted small ms-2">визначено автоматично</span>
+            </div>
+
+            <div t-if="state.busy" class="o_f3d_mu_busy text-muted">
+                <i class="fa fa-spinner fa-spin me-1"/>Опрацювання…
+                <span t-if="state.progress > 0" t-esc="Math.round(state.progress * 100) + '%'"/>
+            </div>
+            <div t-if="state.error" class="alert alert-danger py-2 o_f3d_mu_error" role="alert" t-esc="state.error"/>
+
+            <div t-if="status !== 'none' or staged" class="o_f3d_mu_result">
+                <div class="o_f3d_mu_head">
+                    <b t-if="staged">Готово до завантаження на сервер</b>
+                    <b t-else="">Поточна модель</b>
+                    <span class="badge o_f3d_mu_status"
+                          t-att-class="{'text-bg-success': status === 'ok', 'text-bg-warning': status === 'pending_conversion', 'text-bg-danger': status === 'error'}"
+                          t-esc="statusLabel"/>
+                </div>
+                <dl class="o_f3d_mu_kv">
+                    <t t-if="meta.file_name"><dt>Файл</dt><dd t-esc="meta.file_name"/></t>
+                    <t t-if="meta.format"><dt>Формат</dt><dd class="text-uppercase" t-esc="meta.format"/></t>
+                    <t t-if="fileSizeText"><dt>Розмір</dt><dd class="o_f3d_mu_bytes" t-esc="fileSizeText"/></t>
+                    <t t-if="meta.triangles"><dt>Трикутників</dt><dd class="o_f3d_mu_tri" t-esc="meta.triangles"/></t>
+                    <t t-if="hasSize"><dt>Габарит (Д×Ш×В)</dt><dd class="o_f3d_mu_size" t-esc="sizeText"/></t>
+                </dl>
+                <div t-if="message" class="text-muted small o_f3d_mu_msg" t-esc="message"/>
+                <div t-foreach="visibleWarnings" t-as="w" t-key="w_index" class="alert alert-warning py-1 my-1 small o_f3d_mu_warn" t-esc="w"/>
+
+                <div t-if="overLimit and !state.keepAsIs" class="alert alert-warning o_f3d_mu_over" role="alert">
+                    <div><t t-esc="overLimitText"/> Спростити?</div>
+                    <div class="mt-1">
+                        <button type="button" class="btn btn-sm btn-warning o_f3d_mu_simplify me-1" t-on-click="simplify" t-att-disabled="state.busy">Спростити</button>
+                        <button type="button" class="btn btn-sm btn-secondary o_f3d_mu_keep" t-on-click="keepAsIs">Залишити як є</button>
+                    </div>
+                </div>
+
+                <div class="o_f3d_mu_actions">
+                    <button t-if="staged" type="button" class="btn btn-primary o_f3d_mu_upload" t-on-click="upload" t-att-disabled="!canUpload">
+                        <i class="fa fa-cloud-upload me-1"/>Зберегти модель
+                    </button>
+                    <button t-if="staged" type="button" class="btn btn-secondary o_f3d_mu_discard" t-on-click="discardStaged" t-att-disabled="state.busy">Скасувати</button>
+                    <button t-if="hasSize" type="button" class="btn btn-secondary o_f3d_mu_fill" t-on-click="fillDims" t-att-disabled="state.busy">Підставити габарити з моделі</button>
+                    <button t-if="pending and !staged" type="button" class="btn btn-secondary o_f3d_mu_retry" t-on-click="retryConvert" t-att-disabled="state.busy">Повторити перетворення</button>
+                    <button t-if="hasModel and !staged" type="button" class="btn btn-outline-danger o_f3d_mu_clear" t-on-click="clearModel" t-att-disabled="state.busy">Видалити модель</button>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

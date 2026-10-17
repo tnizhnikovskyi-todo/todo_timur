@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-07 -->
+    <record id="view_f3d_layout_version_list" model="ir.ui.view">
+        <field name="name">f3d.layout.version.list</field>
+        <field name="model">f3d.layout.version</field>
+        <field name="arch" type="xml">
+            <list string="Версії планування" create="0">
+                <field name="site_id"/>
+                <field name="n"/>
+                <field name="published_at"/>
+                <field name="published_by_id"/>
+                <field name="note"/>
+                <field name="state" decoration-success="state == 'active'" widget="badge"/>
+                <field name="slot_count"/>
+                <field name="cell_count"/>
+                <field name="placement_count"/>
+                <field name="created_count"/>
+                <field name="updated_count"/>
+                <field name="archived_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_layout_version_form" model="ir.ui.view">
+        <field name="name">f3d.layout.version.form</field>
+        <field name="model">f3d.layout.version</field>
+        <field name="arch" type="xml">
+            <form string="Версія планування" create="0" delete="0">
+                <header>
+                    <button name="action_restore_draft" type="object" string="Повернути чернетку до цієї версії"
+                            groups="factory3d_constructor.group_f3d_constructor_manager"
+                            invisible="is_draft_base"
+                            confirm="Чернетку площадки буде замінено знімком цієї версії. Записи Odoo не змінюються. Продовжити?"/>
+                    <button name="action_download_snapshot" type="object" string="Завантажити знімок"
+                            invisible="not snapshot_id"/>
+                    <field name="is_draft_base" invisible="1"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,superseded"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="site_id" readonly="1"/>
+                            <field name="n" readonly="1"/>
+                            <field name="published_at" readonly="1"/>
+                            <field name="published_by_id" readonly="1"/>
+                            <field name="is_seed" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="layer_count"/>
+                            <field name="slot_count"/>
+                            <field name="cell_count"/>
+                            <field name="placement_count"/>
+                            <field name="created_count"/>
+                            <field name="updated_count"/>
+                            <field name="archived_count"/>
+                            <field name="snapshot_sha1"/>
+                            <field name="snapshot_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="note" groups="factory3d_constructor.group_f3d_constructor_manager"/>
+                    </group>
+                    <notebook>
+                        <page name="report" string="Звіт">
+                            <field name="report"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

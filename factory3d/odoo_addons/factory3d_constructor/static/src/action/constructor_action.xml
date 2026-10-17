@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="factory3d_constructor.ConstructorAction">
+        <div class="o_f3d_constructor h-100" t-ref="root"/>
+    </t>
+</templates>

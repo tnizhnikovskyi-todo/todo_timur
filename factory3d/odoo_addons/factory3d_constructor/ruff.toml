@@ -1,0 +1,12 @@
+# Конфіг репозиторію (як factory3d_base/ruff.toml); маніфест — голий dict за конвенцією Odoo.
+line-length = 120
+
+[format]
+quote-style = "preserve"
+
+[lint]
+select = ["E", "F", "W", "B"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"__manifest__.py" = ["B018"]
