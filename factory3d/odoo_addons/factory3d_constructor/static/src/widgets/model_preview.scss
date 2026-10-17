@@ -1,0 +1,71 @@
+.o_f3d_model_preview {
+    position: relative;
+    width: 100%;
+    border: 1px solid var(--border-color, #d8dadd);
+    border-radius: 6px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #f4f6f8 0%, #dfe5ec 100%);
+
+    .o_f3d_mp_stage {
+        position: relative;
+        height: 320px;
+        touch-action: none;
+        cursor: grab;
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    .o_f3d_mp_label {
+        font: 600 11px/1 system-ui, sans-serif;
+        color: #1f2d3d;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid #aab4c0;
+        border-radius: 3px;
+        padding: 2px 5px;
+        white-space: nowrap;
+    }
+
+    .o_f3d_mp_nogl,
+    .o_f3d_mp_loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 320px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #596673;
+        pointer-events: none;
+    }
+
+    .o_f3d_mp_bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 8px;
+        border-top: 1px solid var(--border-color, #d8dadd);
+        background: rgba(255, 255, 255, 0.75);
+        font-size: 0.85rem;
+    }
+
+    .o_f3d_mp_caption {
+        color: #4a5560;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 767.98px) {
+        .o_f3d_mp_stage,
+        .o_f3d_mp_nogl,
+        .o_f3d_mp_loading {
+            height: 240px;
+        }
+    }
+}

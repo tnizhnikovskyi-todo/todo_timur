@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="factory3d_constructor.ModelPreview">
+        <div class="o_f3d_model_preview" t-att-data-mode="state.mode">
+            <div class="o_f3d_mp_stage" t-ref="stage" aria-label="3D-превью моделі варіанта"/>
+            <div t-if="state.noGl" class="o_f3d_mp_nogl">3D недоступне в цьому браузері</div>
+            <div t-elif="state.loading" class="o_f3d_mp_loading">Завантаження моделі…</div>
+            <div class="o_f3d_mp_bar">
+                <span class="o_f3d_mp_caption" t-esc="state.caption"/>
+                <button type="button" class="btn btn-sm btn-secondary o_f3d_mp_spin"
+                        t-att-class="{'active': state.spin}" t-att-aria-pressed="state.spin"
+                        t-on-click="toggleSpin" t-att-disabled="state.noGl">
+                    <i class="fa fa-refresh me-1"/>Автообертання
+                </button>
+            </div>
+        </div>
+    </t>
+</templates>
