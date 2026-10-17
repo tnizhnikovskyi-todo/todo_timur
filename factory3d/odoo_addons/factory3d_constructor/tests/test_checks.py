@@ -1,10 +1,15 @@
 import json
 import os
 
+from psycopg2 import IntegrityError
+
+from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase, tagged
+from odoo.tools import mute_logger
 
 from ..services import checks, geometry as geo
 from . import golden_scenes
+from .common import F3DConstructorCase
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_constructor")
@@ -124,3 +129,28 @@ class TestChecks(TransactionCase):
             path = os.path.join(golden_scenes.FIXTURES_DIR, name)
             with open(path, encoding='utf-8') as handle:
                 self.assertEqual(handle.read(), text, "%s застарілий: запустіть тест із F3D_UPDATE_GOLDEN=1" % name)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_constructor")
+class TestCheckConfigs(F3DConstructorCase):
+    """AC-32: налаштування перевірок площадки (R-04) і їх схема (R-22)."""
+
+    def test_ac32_default_configs_and_uniqueness(self):
+        site = self.env['f3d.site'].create({'name': "Нова", 'code': 'NEW'})
+        configs = {c.check_key: c for c in site.check_config_ids}
+        self.assertEqual(set(configs), set(checks.CHECK_KEYS))
+        self.assertEqual(
+            {k for k, c in configs.items() if c.mode == 'block'}, {'fits', 'collide', 'aisles_free', 'fire'}
+        )
+        self.assertEqual(configs['utility_reach'].params, {'max_m': 15.0})
+        self.assertEqual(site.check_config_ids.sorted('sequence').mapped('check_key'), checks.CHECK_KEYS)
+        with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.cr.savepoint():
+            self.env['f3d.check.config'].create({'site_id': site.id, 'check_key': 'fits', 'mode': 'warn'})
+
+    def test_params_validation(self):
+        config = self.site.check_config_ids.filtered(lambda c: c.check_key == 'utility_reach')
+        config.params = {'max_m': 20}
+        self.assertEqual(config.params['max_m'], 20.0)
+        for bad in ({'max_m': 0}, {'max_m': 'x'}, {'tolerance_mm': -1}):
+            with self.subTest(bad=bad), self.assertRaises(ValidationError):
+                config.params = bad
