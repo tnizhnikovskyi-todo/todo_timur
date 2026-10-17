@@ -28,7 +28,7 @@ SLOT_TEMPLATES = {
             'max_load_kg': (0.0, None, 1000.0, float),
             'index_digits': (1, 4, 2, int),
         },
-        'choices': {'code_style': (('default', 'bay_letter'), 'default')},
+        'choices': {'code_style': (('default', 'bay_letter', 'exact'), 'default')},
     },
     'cantilever': {
         'label': "Консольний стелаж",
@@ -42,6 +42,7 @@ SLOT_TEMPLATES = {
             'max_load_kg': (0.0, None, 500.0, float),
             'index_digits': (1, 4, 2, int),
         },
+        'choices': {'code_style': (('default', 'exact'), 'default')},
     },
     'shelf': {
         'label': "Полицевий стелаж / комірки фурнітури",
@@ -54,7 +55,7 @@ SLOT_TEMPLATES = {
             'cell_h': (0.05, 2.0, 0.4, float),
             'index_digits': (1, 4, 2, int),
         },
-        'choices': {'loc_kind': (('bin', 'shelf'), 'bin')},
+        'choices': {'loc_kind': (('bin', 'shelf'), 'bin'), 'code_style': (('default', 'exact'), 'default')},
     },
     'floor_stack': {
         'label': "Підлогове штабелювання",
@@ -67,6 +68,7 @@ SLOT_TEMPLATES = {
             'max_height': (0.1, 6.0, 1.5, float),
             'index_digits': (1, 4, 2, int),
         },
+        'choices': {'code_style': (('default', 'exact'), 'default')},
     },
     'machine_spot': {
         'label': "Місце під верстат",
@@ -80,6 +82,14 @@ SLOT_TEMPLATES = {
         'params': {},
         'polygon': True,
     },
+}
+
+# code_style='exact': якщо шаблон дає рівно одну комірку, її код = code_prefix; для floor_stack такі місця (стос,
+# комплект, зона видачі) можуть бути завбільшки з усю зону — межі розмірів ширші
+EXACT_RANGES = {
+    'cell_l': (0.1, 200.0, 1.2, float),
+    'cell_w': (0.1, 200.0, 0.8, float),
+    'max_height': (0.05, 30.0, 1.5, float),
 }
 
 PARAM_LABELS = {
@@ -137,7 +147,10 @@ def normalize_params(template, params):
     if not isinstance(params, dict):
         raise CellsError("Параметри шаблону мають бути об'єктом.")
     out = {}
-    for key, (lo, hi, default, kind) in spec['params'].items():
+    ranges = spec['params']
+    if template == 'floor_stack' and params.get('code_style') == 'exact':
+        ranges = dict(ranges, **EXACT_RANGES)  # одна комірка на весь габарит (стос, комплект, зона видачі): межі ширші
+    for key, (lo, hi, default, kind) in ranges.items():
         label = PARAM_LABELS.get(key, key)
         value = params.get(key, default)
         try:
@@ -322,6 +335,8 @@ def _raw_cells(template, p, prefix):
                         'kind': 'stack',
                     }
                 )
+    if p.get('code_style') == 'exact' and len(cells) == 1:  # одиничне місце зберігання: код комірки = code_prefix
+        cells[0]['code'] = prefix
     return cells
 
 
