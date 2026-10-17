@@ -8,9 +8,11 @@
 Формат (bridge SPEC R-01):
 `{site, version, base_version, moved, added, hidden, replaced, frames}`.
 """
+import json
 import logging
 
 from odoo.exceptions import UserError
+from odoo.tools import file_open
 
 from odoo.addons.factory3d_constructor.services import cells as cells_svc
 from odoo.addons.factory3d_constructor.services import geometry, snapshot
@@ -21,6 +23,7 @@ MODELS = ("f3d.site", "f3d.layout.version", "f3d.slot", "f3d.placement", "f3d.eq
 CELL_TEMPLATES = ("pallet_rack", "cantilever", "shelf", "floor_stack")
 MODEL_URL = "/f3d/constructor/model/%d/glb"
 EPS = 1e-6
+INVENTORY_PATH = "factory3d_constructor/data/scene_inventory.json"
 
 
 def _r(value):
@@ -31,6 +34,21 @@ def _norm_deg(value):
     """Різниця кутів у (−180, 180]."""
     value = (float(value) + 180.0) % 360.0 - 180.0
     return 180.0 if value == -180.0 else value
+
+
+def load_inventory():
+    """Опис запечених у GLB об'єктів `{код: {x, y, z, L, W, H, yaw}}` (координати заводу, м, °) або {} — файла ще немає.
+
+    Файл `scene_inventory.json` кладе конструктор (повніший seed); поза ним база — знімок версії-імпорту.
+    Допускається обгортка `{"objects": {…}}`."""
+    try:
+        with file_open(INVENTORY_PATH, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+    if isinstance(data, dict) and isinstance(data.get("objects"), dict):
+        data = data["objects"]
+    return data if isinstance(data, dict) else {}
 
 
 def pick_versions(env):
@@ -168,8 +186,19 @@ def _frame_hint(slot, elev):
     }
 
 
-def diff(snap_base, snap_active, variants):
-    """Чиста функція: різниця двох знімків → {moved, added, hidden, replaced, frames} (без ORM, крім `variants`)."""
+def _base_pose(code, pb, inventory):
+    """Положення розміщення в базі: з опису сцени (запечене в GLB), інакше зі знімка версії-імпорту."""
+    inv = inventory.get(code) or {}
+    if "x" in inv and "y" in inv:
+        return float(inv["x"]), float(inv["y"]), float(inv.get("yaw", pb.get("rotation") or 0.0))
+    return pb["x_m"], pb["y_m"], pb.get("rotation") or 0.0
+
+
+def diff(snap_base, snap_active, variants, inventory=None):
+    """Чиста функція: різниця двох знімків → {moved, added, hidden, replaced, frames} (без ORM, крім `variants`).
+
+    `inventory` — опис сцени `{код: {x, y, yaw, …}}`: коли код у ньому є, база розміщення — з нього."""
+    inventory = inventory or {}
     pl_b, sl_b, el_b = _live(snap_base)
     pl_a, sl_a, el_a = _live(snap_active)
     layer_of_b = {p["code"]: p["layer_uid"] for p in snap_base.get("placements", [])}
@@ -191,11 +220,12 @@ def diff(snap_base, snap_active, variants):
             replaced.append(code)
             added.append(_placement_entry(pa, va, elev_a, obb_a))
             continue
-        obb_b = geometry.placement_obb(vb["geom"], pb["x_m"], pb["y_m"], pb.get("rotation") or 0.0)
+        bx, by, brot = _base_pose(code, pb, inventory)
+        obb_b = geometry.placement_obb(vb["geom"], bx, by, brot)
         shift = {
             "dx": obb_a["cx"] - obb_b["cx"],
             "dy": obb_a["cy"] - obb_b["cy"],
-            "drot": _norm_deg((pa.get("rotation") or 0.0) - (pb.get("rotation") or 0.0)),
+            "drot": _norm_deg((pa.get("rotation") or 0.0) - brot),
             "delev": elev_a - el_b.get(layer_of_b.get(code), 0.0),
         }
         if any(abs(v) > EPS for v in shift.values()):
@@ -283,7 +313,7 @@ def build_layout(env):
     snap_base, snap_active = _load(base), _load(active)
     if snap_base is None or snap_active is None:
         return None
-    result = diff(snap_base, snap_active, _variants(env, (snap_base, snap_active)))
+    result = diff(snap_base, snap_active, _variants(env, (snap_base, snap_active)), load_inventory())
     return {
         "site": {"id": site.id, "code": site.code, "name": site.name},
         "version": {"id": active.id, "n": active.n, "published_at": str(active.published_at or "")},

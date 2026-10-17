@@ -278,3 +278,21 @@ class TestKioskModel(HttpCase, LayoutBase):
         other = self.env["f3d.equipment.variant"].search([("model_glb_id", "=", False)], limit=1)
         res = self.url_open("%s/layout/model/%d" % (self.base_url, other.id), allow_redirects=False)
         self.assertEqual(res.status_code, 404)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_constructor_viewer")
+class TestLayoutInventory(LayoutBase):
+    """База розміщення — з опису сцени `scene_inventory.json` (код → {x, y, z, L, W, H, yaw}), коли він є."""
+
+    def test_inventory_pose_is_baseline(self):
+        cnc2 = self.placement("CNC-2")
+        self.publish()  # діюча версія відрізняється від бази лише номером: зсувів немає
+        self.assertEqual(self.layout()["moved"], {})
+        inventory = {"CNC-2": {"x": cnc2.x_m - 3.0, "y": cnc2.y_m, "z": 0.0, "L": 4.0, "W": 2.0, "H": 2.0, "yaw": 0}}
+        with patch.object(layout_tools, "load_inventory", return_value=inventory):
+            lay = self.layout()
+        self.assertEqual(lay["moved"], {"CNC-2": {"dx": 3.0, "dy": 0.0, "drot": 0.0, "delev": 0.0}})
+
+    def test_inventory_missing_file_is_empty(self):
+        with patch.object(layout_tools, "file_open", side_effect=FileNotFoundError):
+            self.assertEqual(layout_tools.load_inventory(), {})
