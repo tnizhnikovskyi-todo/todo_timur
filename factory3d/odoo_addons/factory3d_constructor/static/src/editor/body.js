@@ -26,7 +26,7 @@ export const BODY_HTML = `<svg width="0" height="0" style="position:absolute" ar
   <header class="top">
     <div class="brand">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" aria-hidden="true"><path d="M3 21V3h18"/><path d="M7 21V9h6v12M13 15h8v6"/><path d="M3 21h18" stroke-dasharray="2 2"/></svg>
-      <span>Конструктор <b>завода</b></span>
+      <span>Конструктор</span>
     </div>
     <div class="grp" id="siteGrp"><label for="siteSel">Площадка</label><select id="siteSel" aria-label="Площадка"></select><button class="fbtn sm" id="btnNewSite" type="button">+<span class="lg"> Нова площадка</span></button></div>
     <div class="grp"><label for="roleSel">Роль</label><select id="roleSel" aria-label="Роль"></select></div>

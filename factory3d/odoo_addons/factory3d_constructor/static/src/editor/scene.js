@@ -87,7 +87,13 @@ function nullRenderer() {
         domElement: document.createElement("canvas"),
         setSize() {},
         setPixelRatio() {},
-        render() {},
+        // як справжній рендерер: оновлює світові матриці (від них залежать промені вибору й перетягування)
+        render(scene, camera) {
+            scene.updateMatrixWorld();
+            if (camera.parent === null) {
+                camera.updateMatrixWorld();
+            }
+        },
         dispose() {},
         forceContextLoss() {},
     };
