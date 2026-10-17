@@ -1,0 +1,156 @@
+{
+ "woodworking_machine": {
+  "lux": 500,
+  "ugr": 19,
+  "ra": 80,
+  "ref": "EN 12464-1:2021, табл. 33, реф. 33.6 (ред. 2011 — 5.25.6)",
+  "note": "Роботи на деревообробних верстатах (точіння, фрезерування, стругання, пиляння, свердління); Uo ≥ 0,60; уникати стробоскопічного ефекту. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Light_of_industrial_activities_and_crafts/Tab_12464_Holz_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "woodworking_bench": {
+  "lux": 300,
+  "ugr": 25,
+  "ra": 80,
+  "ref": "EN 12464-1:2021, табл. 33, реф. 33.4 (ред. 2011 — 5.25.4)",
+  "note": "Робота за столярним верстаком, склеювання, складання; Uo ≥ 0,60. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Light_of_industrial_activities_and_crafts/Tab_12464_Holz_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "spraying": {
+  "lux": 750,
+  "ugr": 22,
+  "ra": 80,
+  "ref": "EN 12464-1:2021, табл. 33, реф. 33.5 (ред. 2011 — 5.25.5)",
+  "note": "Полірування, фарбування, художнє столярство — застосовано до фарбувальних камер фасадів МДФ; Uo ≥ 0,70. Світильники в камері — у вибухозахищеному виконанні. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Light_of_industrial_activities_and_crafts/Tab_12464_Holz_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "sanding": {
+  "lux": 750,
+  "ugr": 22,
+  "ra": 80,
+  "ref": "EN 12464-1:2021, табл. 33, реф. 33.5 (ред. 2011 — 5.25.5)",
+  "note": "Окремого рядка «шліфування» немає: фінішне шліфування/полірування фасадів віднесено до 33.5 (750 лк); машинне калібрувальне шліфування можна віднести до 33.6 (500 лк, UGR 19). Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Light_of_industrial_activities_and_crafts/Tab_12464_Holz_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "quality_control": {
+  "lux": 1000,
+  "ugr": 19,
+  "ra": 90,
+  "ref": "EN 12464-1:2021, табл. 33, реф. 33.9 (ред. 2011 — 5.25.9)",
+  "note": "Контроль якості, огляд деревини та покриття; Uo ≥ 0,70; Tcp 4000–6500 K. Для добору шпону — 33.7 (750 лк, Ra 90). Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Light_of_industrial_activities_and_crafts/Tab_12464_Holz_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-industrial-activities-and-crafts/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "storage_racks": {
+  "lux": 150,
+  "ugr": 22,
+  "ra": 60,
+  "ref": "EN 12464-1:2021, табл. 13, реф. 13.2 (ред. 2011 — 5.5.2)",
+  "note": "Проходи між стелажами з персоналом, освітленість на рівні підлоги, Uo ≥ 0,40, переважно вузькокутові світильники. Без персоналу — 20 лк (13.1); фронт стелажа — 200 лк вертикально (13.4). Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Regal-Lager_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "storage_floor": {
+  "lux": 100,
+  "ugr": 25,
+  "ra": 60,
+  "ref": "EN 12464-1:2021, табл. 12, реф. 12.1 (ред. 2011 — 5.4.1)",
+  "note": "Склади й комори; Uo ≥ 0,40; 200 лк при постійній присутності персоналу, 300 лк для дрібних важко розпізнаваних предметів. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Lager_EN.pdf.png",
+   "https://dialux4.support-en.dial.de/support/solutions/articles/9000080302",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "packing_dispatch": {
+  "lux": 300,
+  "ugr": 25,
+  "ra": 60,
+  "ref": "EN 12464-1:2021, табл. 12, реф. 12.2 (ред. 2011 — 5.4.2)",
+  "note": "Зони відвантаження, пакування, обробки вантажів; Uo ≥ 0,60. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Lager_EN.pdf.png",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "loading_ramps": {
+  "lux": 150,
+  "ugr": 25,
+  "ra": 40,
+  "ref": "EN 12464-1:2021, табл. 9, реф. 9.4 (ред. 2011 — 5.1.4)",
+  "note": "Вантажні рампи та док-станції; Uo ≥ 0,40; чітко освітлювати край рампи й вантажний простір, не засліплювати. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Verkehr_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "switchgear_room": {
+  "lux": 200,
+  "ugr": 25,
+  "ra": 60,
+  "ref": "EN 12464-1:2021, табл. 11, реф. 11.1 (ред. 2011 — 5.3.1)",
+  "note": "Технічні приміщення, електрощитові (РУ, трансформаторна); Uo ≥ 0,40. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Kontroll_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "compressor_room": {
+  "lux": 200,
+  "ugr": 25,
+  "ra": 60,
+  "ref": "EN 12464-1:2021, табл. 11, реф. 11.1 (ред. 2011 — 5.3.1)",
+  "note": "Окремого рядка для компресорних немає — прийнято «технічні приміщення» (plant rooms); аналогічно 200 лк для допоміжних приміщень (насосні) у табл. для електростанцій. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Kontroll_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "battery_charging": {
+  "lux": 200,
+  "ugr": 25,
+  "ra": 60,
+  "ref": "EN 12464-1:2021, табл. 11, реф. 11.1 (ред. 2011 — 5.3.1) — за аналогією",
+  "note": "Окремого рядка для зарядних акумуляторних немає — прийнято «технічні приміщення». Світильники та електрообладнання — у вибухозахищеному виконанні через виділення водню. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Kontroll_EN.pdf.png",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ },
+ "corridors_traffic": {
+  "lux": 150,
+  "ugr": 28,
+  "ra": 40,
+  "ref": "EN 12464-1:2021, табл. 9, реф. 9.1 (ред. 2011 — 5.1.1)",
+  "note": "Зони руху й коридори: 100 лк, а за наявності транспорту (навантажувачі) — 150 лк; освітленість на підлозі, Uo ≥ 0,40; стіни ≥ 75 лк, стеля ≥ 50 лк. Номер реф. ред. 2021 виведено з відповідності таблиць (ред. 2011 табл. 5.N → ред. 2021 табл. N+8; підтверджено для табл. 9, 12, 33, 34); значення Ēm у ред. 2021 — графа «required», графу «modified» не відтворено.",
+  "sources": [
+   "https://www.trilux.com/fileadmin/Content/DE/Images/Service/Beleuchtungspraxis/EN/Specific_lighting_requirements/PHOTOMETRIC_REQUIREMENTS_ACCORDING_TO_EN_12464-1/Tab_12464_Verkehr_EN.pdf.png",
+   "https://www.trilux.com/en/lighting-practice/indoor-lighting/specific-lighting-requirements/lighting-of-traffic-zones-and-general-areas-in-buildings/photometric-requirements-according-to-en-12464-1/",
+   "https://ibe-biv.be/wp-content/uploads/2023/11/IBE-BIV-NBN-EN-12464-1-2021-Guide-pratique-de-leclairage-des-lieux-de-travail-interieurs-adjust.pdf"
+  ]
+ }
+}

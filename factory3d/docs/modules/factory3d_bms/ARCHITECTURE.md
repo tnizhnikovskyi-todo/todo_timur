@@ -1,0 +1,445 @@
+# factory3d_bms — технічне рішення
+
+Версія 0.2 · 14.10.2026 (0.1 — 14.10.2026) · автор: агент-архітектор модуля (хвиля 2) · статус: **чернетка на погодження**.
+Зміни: 14.10.2026 — правки за CONSISTENCY.md: X-71 (CH-05: `fade_s` 0…90), X-16 (§2.3: `origin='module'` — базове значення
+telemetry, без `selection_add`), X-19 (§2.6: група оператора у власному привілеї `privilege_f3d_bms`), X-06 (A-02, Q-10:
+COV допустимий, у v1 — опитування), X-32 (налаштування під `menu_f3d_config`, sequence 80); закрито Q-09 (X-34, X-40, X-58)
+і Q-10 (X-06).
+Каркас: `docs/ARCHITECTURE.md` (далі «каркас»: §3 `factory3d_bms ← factory3d_telemetry`, §5 конвенції й стоп-крани,
+§6.4 телеметрія, §6.5 плагіни зі зміною менеджера «`bacnet_ip` належить `factory3d_telemetry`, плагін bms — лише
+`helvarnet`», §6.6 P-08, §6.7 розділи `lighting` (110) і `ventilation` (120), §6.8 заявки ТО, D-08, §9 питання 4).
+Специфікація: `docs/modules/factory3d_bms/SPEC.md`. Спирається на контракти `factory3d_base` CB-01, CB-03, CB-04,
+CB-07…CB-10, CB-12; `factory3d_telemetry` CT-01…CT-05, CT-07, CT-09, CT-10, CT-12, Додаток A (схеми `address`/
+`params` `bacnet_ip` і `helvarnet`), Додаток B (81 сигнал вентиляції прив'язує bms), R-23 (BACnet), R-26 (локальні
+джерела); `factory3d_viewer` M-01 (провайдери за префіксом імені), M-03 (шина), Додаток A.13 (`lighting`,
+`ventilation`); `factory3d_energy` CE-02 (`infra/ats/*`), CE-03, CE-06, A-19 (лічильники u51–u59 щитів і вентиляції
+— energy); `factory3d_fire_safety` A-20 (опитування замість COV), сигнали `fire/totals/system_state`; «документацію
+вендора» `factory3d_iot_sim` SPEC §8.10 (P-08), §9.1 R-22…R-24, §9.3 S-04, S-13, S-15, Додаток A (сигнали 104–105,
+120–188, 362–363, 445–602). Рішення автора — **A-xx** (§7), відкриті питання — **Q-xx** (§5.1).
+Зміни: 14.10.2026 — закрито відповідями замовника (CONSISTENCY, «Відповіді на питання до замовника»): Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-07, Q-08, Q-11, Q-12, Q-13, Q-14.
+Зміни: 14.10.2026 — аудит 2: X-95 (CH-02: `ventilation` доповнюється через `deep_merge`; `units[AHU-1].room_pressure_pa`; `equipment["BOILER"]` пише telemetry).
+
+## Загальна інформація
+
+| Етап ToDo | Що здається | Люд./год (оцінка автора; `docs/оцінки` в репозиторії ще немає) |
+|---|---|---|
+| ТР | цей документ + SPEC.md | 24 |
+| Архітектура | погодження A-xx/Q-xx з менеджером і авторами telemetry, energy, fire_safety, iot_sim, viewer | 10 |
+| Розробка | Odoo-модуль `odoo_addons/factory3d_bms` (моделі 10, представлення 22, OWL-огляд, генератор даних, правила, провайдери) — 92; плагін колектора `helvarnet` (`services/collector_plugins/f3d_collector_bms`) — 26 | 118 |
+| Тестування | юніт-тести формул на числах макета, правил відхилень, провайдерів; pytest плагіна проти фейкового роутера Helvar; ТК на емуляторі; безпека; продуктивність; DEPLOY_TEST | 52 |
+| Інструкція | §4 цього документа + README модуля й плагіна + CHANGELOG | 8 |
+| **Разом** | | **212** |
+
+Факти про тестовий сервер timur-o19demo, база `odoo` (перевірено 14.10.2026, лише читання): Odoo 19.0+e;
+установлено `factory3d_iot_sim` 19.0.1.0.0 (рівень 0), `factory3d_*` інших модулів ще немає. `maintenance.equipment` —
+208 (14.10 після груп FA-SOC, FA-OFFICE — 210), з них освітлення 36 (`LT-*` 32, `LP-1…3`, `EMERGENCY`), вентиляція 29 (`RV-01…25`, `AHU-1`, `EF-ELEC`, `EF-CMP`,
+`EF-CHG`), котельня `BOILER`; категорії неоднорідні: 33 «Освітлення», `LT-HW`/`LT-EDGE`/`LT-FG` — «Склад і транспорт»,
+`RV-05` — «Вентиляція» з назвою «Припливно-витяжна установка RV-05», решта RV/AHU/EF — «Вентиляція й опалення»,
+`BOILER` — «Енергетика»; усі 67 — команда «Служба головного механіка». `x_f3d_signal`: `ventilation/*` — 81
+(29 `airflow_m3h`, 26 `supply_c`, 26 `filter_dp_pa`), `lighting/*` — 0, котельня — `equipment/BOILER/supply_c` 78,03 °C
+і `silo_fill` 47,6 %. `RV-05/filter_dp_pa` = 320,8 Па, «тривога», заявка id 6 «Заміна фільтрів: перепад тиску 285 Па
+при нормі до 250» (стадія New Request, `preventive`). Календар компанії — «Зміна 1 (07:00–15:30)» (Europe/Kyiv,
+пн–пт 07:00–11:30 і 12:00–15:30), 131 запис `resource.calendar.leaves`. Стадії ТО: New Request, In Progress,
+Repaired (done), Scrap (done).
+
+## 1. Опис процесу і функціональні вимоги
+
+### 1.1 Контекст: що є в макеті
+
+| Джерело | Що саме | Як використовується |
+|---|---|---|
+| `plant/lighting.py` | `UF, MF = 0.7, 0.8`; `NORMS` (11 видів робіт, лк) + `NORM_NAMES`; `LIGHT_ZONES` — 32 групи `(зона, вид робіт, тип світильника, щит, рівень зараз, ряди над проходами)`; `PANELS` (`LP-1` x=40,0, `LP-2` x=90,6, `LP-3` x=135,0 на північній стіні); `DEFAULT_FIX` (24 000 лм/160 Вт, 19 000/130 — доки немає паспорта); `layout()`: `n_req = max(1, ceil(E·A/(Φ·UF·MF)))`, розстановка сіткою/над проходами з обходом перешкод, `e_calc = n·Φ·UF·MF/A`, `e_now = e_calc·level`, `p_inst = n·W/1000`, `p_now = n·W·level/1000`, `control` «DALI: зміна, 100 %» (рівень 1) або «DALI: присутність і денне світло»; `panels_load()` — суми по щитах | норми, групи, щити, формули R-01…R-04 SPEC; кількість світильників `n` — дані з макета (розстановка — у 3D, не в Odoo, A-05) |
+| `plant/lux_norms.json` | 13 видів робіт: `lux`, `ugr`, `ra`, `ref` (EN 12464-1:2021), `note`, `sources`; перекриває `NORMS` (`storage_racks` 200 → **150**, `battery_charging` 150 → **200**) | `f3d.bms.light.norm` (13 записів), ефективні норми = json (R-01) |
+| `plant/ventilation.py` | `ROOFVENTS` (25: код, x, y, зона), `AHU_POS=(66,0; 56,5)`, `FABRIC_DUCTS`, `WALL_FANS` (EF-ELEC 2 шт., EF-CMP 1 шт. на північній стіні, точки `(x, z)`), `CHG_EXHAUST=(119,0; 70,5)`, `OUTDOOR_C=9,0`, `INDOOR_SET_C=18,0`; `ventilation_data()`: частка витрати `k`, режим «Рекуперація»/«Приплив і витяжка»/«Рециркуляція» (RV-21/22, k=0,45), `heat = heat_nom·k·(18−t_out)/(18+15)·(0,3 | 0,8)`, `heating_valve = min(1, heat/heat_nom)`, `p_now = p_nom·k³ + 0,1`, RV-05 `filter_dp_pa=285`; AHU-1 (17 000 м³/год, 21 °C, 68 кВт), вентилятори; `totals` (котли 2 × 495, `boilers_on` за правилом 0,85·495, КГУ 497 кВт тепла вдень); `heat_balance()`: огородження 189, інфільтрація 109, дахові установки 247, приплив фасадів 208 → **753 кВт** при −15 °C, `capacity` 990, КГУ 856, `reserve` 1,45 | установки, тепловий баланс, формули R-10…R-16 SPEC |
+| `plant/infra.py`, `plant/site.py:886–919`, `plant/site2.py` | котельня (2 котли Kalvis K-500M, силос стружки, брикетувальний прес) — довідка; `CRITICAL` (LP-1…3, EF-ELEC, EF-CHG, BOILER…); КГУ: тепло 497 кВт при 50 %, «надлишок — у сухий охолоджувач» | котельня як обладнання `BOILER`; КГУ — через сигнали energy |
+| `plant/equipment_specs.json` | паспорти `highbay` / `highbay_rack` (20 500 лм, 126 Вт, DALI-2, мін. диммування 10 %), `lighting_control` (Helvar Imagine 950: 4 лінії DALI, 64 світильники/лінію), `emergency`, `roofvent` (8 000 м³/год, 116,8 кВт, 8,6 кВт, рекуперація 78 %, фільтри ePM1 55 %/ePM10 65 %), `make_up_ahu` (VTS VENTUS VVS180, витрата/потужність не опубліковані), `fabric_duct`, `wall_fan` (7 060 м³/год, 0,42 кВт), `ex_fan` (644 м³/год, 0,178 кВт, потрібно 158,4 м³/год), `biomass_boiler` (495 кВт), `chp` (856 / 676 / 497 кВт тепла при 100 / 75 / 50 %) | номінали через `f3d_get_num(key)` (CB-08) з умовчаннями макета, якщо `None` |
+| `dist/odoo_demo.json` | `lighting` {32 `groups`, 3 `panels`, `uf` 0,7, `mf` 0,8, `norms_ref`}; `ventilation` {29 `units`, `totals` (173 400 м³/год, 322 кВт, 93,2 кВт, `boilers_on` 0, `design_heat_kw` 753, `chp_heat_now` 497…), `heat_balance`}; RV-05 `maintenance_request` MR/00035; `energy.consumers` LP-1…3, RV-ALL, AHU-1, EF-* | еталон провайдерів (AC з точними числами) |
+| `viewer/index.html` | режим «Освітленість відносно норми» (`luxCls`: `e_calc ≥ e_norm` ok, ≥ 0,85 warn, інакше bad, рядки 807–809, 2152), `lightingHtml()` (норма, розрахунок, «Зараз: рівень → ≈ e_now лк», світильники, потужність, керування, щит, формула з UF/MF і `norms_ref`, 2186–2203), `ventHtml()` (зона, режим, витрата/номінал, приплив, у зоні, клапан, фільтр > 250 «замінити», вентилятори, заявка; `HEAT-NET`: нагрів зараз, КГУ, котли, «Зима −15 °C» таблиця `heat_balance` і споживачі тепла, 2206–2240), `lightVentSummary()` (2167–2185), увага «забитий фільтр вентиляції» (1456–1457), картка BOILER «Тепло зараз», «Зима (−15 °C)» (1889–1897) | структура розділів payload незмінна (viewer A.13), додаткові ключі — CH-02 |
+| README «Освітлення», «Вентиляція й опалення» | таблиця 32 зон (норма, к-сть, розрахунок), 25 RoofVent (≈ 2 обміни/год), теплова мережа, оцінка −15 °C ≈ 753 кВт, «запас двох котлів ≈ 30 %, разом із КГУ ≈ 145 %», зарядна EN IEC 62485-3 | інструкції §4, тексти форм |
+| `factory3d_iot_sim` SPEC §8.10, Додаток A | BACnet dev 101…125 (RV), 130 (AHU-1), 131–133 (EF), 140 (BOILER); об'єкти AI:1…8, AO:1…2, AV:1…2, BI:1…5, BV:1, MSV:1…3; режими 1 VE … 8 Off; реле фільтрів 250/350 Па; HelvarNet `@1.1…@1.3`, групи G:1…32 (G:40 — EMERGENCY), лінії DALI, сценарії `filter_clogged`, `boiler_refill`, `lighting_scene`; каталог: 81 сигнал макета + 176 нових для bms | адреси сигналів, ТК |
+
+### 1.2 Ролі й сценарії використання
+
+| Роль (групи) | Що робить | Де в меню |
+|---|---|---|
+| Енергетик, головний механік (`group_f3d_bms_operator` = «Будівля: оператор»; механік також `maintenance.group_equipment_manager`) | дивиться огляд будівлі (план зон зі станом освітлення й установок), тепловий баланс, журнал відхилень; закриває заявки ТО; при `write_enabled` — викликає сцену/рівень групи освітлення, змінює режим і уставки установок | Завод 3D → Будівля → Огляд / Освітлення / Вентиляція й опалення / Відхилення; Обслуговування → Заявки |
+| Інженер АСУ (`group_f3d_manager`) | налаштовує норми, групи, щити, установки, параметри теплового балансу, прив'язку сигналів і джерел, параметри правил | Завод 3D → Будівля → …, Завод 3D → Налаштування → Будівля |
+| Адміністратор (`group_f3d_admin`) | стоп-крани `read_enabled`/`write_enabled`, повторна установка даних | Налаштування → Завод 3D → Будівля |
+| Будь-хто з `group_f3d_user`, кіоск | бачить картки освітлення й вентиляції в 3D, план і баланс у режимі читання | 3D-переглядач, Завод 3D → Будівля |
+| Колектор (технічний клієнт) | плагін `helvarnet` опитує роутери Helvar, плагін `bacnet_ip` (telemetry) — установки й котельню | `services/collector` |
+| Модулі (код) | energy читає `ventilation.totals.heat_kw` і методи CH-03; fire_safety — тексти `ventilation/units/*/mode` | контракти CH-01…CH-06 |
+
+### 1.3 Функціональні вимоги
+
+| ID | Вимога (перевірювана) |
+|---|---|
+| FR-01 | Довідник норм освітленості `f3d.bms.light.norm` — 13 видів робіт із `lux_norms.json` (лк, UGR, Ra, посилання EN 12464-1:2021 і ДБН В.2.5-28:2018, примітка, джерела); правка — лише `group_f3d_manager`. |
+| FR-02 | Щити освітлення `f3d.bms.light.panel` LP-1…3: обладнання, джерело HelvarNet, кластер/роутер Imagine 950, положення на плані, групи, сумарні `n`, `p_inst`, `p_now` (лічильник energy, якщо є, інакше сума груп). |
+| FR-03 | Групи освітлення `f3d.bms.light.group` (32): зона `f3d.zone`, вид робіт → норма, паспорт і тип світильника, кількість світильників, щит, DALI-група (G 1…32) і адреси пристроїв на Imagine 950, рівень за проєктом, режим керування (зміна / присутність), прапори перевірок. |
+| FR-04 | Розрахунок методом коефіцієнта використання: `n_required = max(1, ⌈E_н·A/(Φ·UF·MF)⌉)`, `e_calc = n·Φ·UF·MF/A`; для 32 груп даних макета значення збігаються з `dist/odoo_demo.json` (`e_calc`, `area`, `p_inst`). |
+| FR-05 | Живі дані групи з HelvarNet: рівень, % (C:152), остання сцена (C:109), потужність, кВт (C:161), кількість і адреси несправних світильників (C:110); `e_now = e_calc·рівень`; стан «немає даних» при застарілих сигналах. |
+| FR-06 | Відхилення освітлення → заявка ТО за §6.8: група вимкнена в робочий час ≥ `light_check_delay_min`; освітленість нижче норми (лише групи режиму «зміна»); аварія світильника (несправних > 0). |
+| FR-07 | Установки `f3d.bms.hvac.unit` (29): RV-01…25, AHU-1, EF-ELEC, EF-CMP, EF-CHG — зона, координати, паспорт, джерело BACnet (device), номінальна витрата/тепло/потужність, режим за проєктом, обов'язковість роботи в робочий час. |
+| FR-08 | Живі дані установок з BACnet/IP: режим (MSV:1), стан (BI:1/2/5, для EF-CHG BI:7), витрата, приплив, температура в зоні, клапан нагрівача, тепло, потужність вентиляторів, перепади на фільтрах припливу й витяжки, уставки день/ніч; для AHU-1 — тиск у дільниці й блокування з витяжкою камер. |
+| FR-09 | Відхилення вентиляції → заявка ТО: фільтр припливу > 250 Па (приклад RV-05 285 Па), витяжки > 350 Па, аварія/захист від замерзання, витяжка зарядної не працює під час заряджання, електрощитова > 35 °C, установка не працює в робочий час, холодно в зоні (< 16 °C у робочий час, < 10 °C поза ним). |
+| FR-10 | Тепловий баланс цеху `f3d.bms.heat.balance`: розрахунок при −15 °C з параметрами макета (огородження 189, інфільтрація 109, дахові установки 247, приплив фасадів 208 = 753 кВт; котли 990 кВт, КГУ 856 кВт, резерв 1,45) і живий баланс (потреба Σ тепла установок, тепло КГУ, котли в роботі за розрахунком і фактом, навантаження котла, дефіцит); дефіцит тепла > 20 кВт ≥ 30 хв → заявка на котельню. |
+| FR-11 | Котельня: стан (MSV:1), подача/зворотка, бункер, теплова потужність; аварія котельні → заявка (CT-05). |
+| FR-12 | Журнал відхилень `f3d.bms.deviation`: епізод тривоги будь-якого сигналу модуля — початок, кінець, тривалість, показник, поріг, заявка. |
+| FR-13 | Тексти заявок відхилень, які створює telemetry зі стан-сигналів перевірок, модуль доповнює показником і порогом («Освітлення LT-CUT (Розкрій): ≈ 305 лк при нормі 500 лк (рівень 60 %)»). |
+| FR-14 | Огляд будівлі (клієнтська дія OWL): план 150 × 72 м із зонами, забарвленими станом груп освітлення, установками на плані, KPI, відхиленнями й тепловим балансом; клік — форма; «Показати в 3D». |
+| FR-15 | Представлення: групи (список, форма, kanban за щитами), щити, норми, установки (список, форма, kanban за станом), тепловий баланс (форма), сцени, журнал відхилень (список, графік, зведена), налаштування; кнопки «Показати в 3D» на групах, щитах, установках. |
+| FR-16 | Меню «Завод 3D → Будівля» (`sequence=80` під `factory3d_base.menu_f3d_root`): Огляд, Освітлення (Групи, Щити, Норми), Вентиляція й опалення (Установки, Тепловий баланс), Відхилення; «Будівля» в «Налаштування». |
+| FR-17 | Права: «Будівля: оператор» (енергетик, головний механік) — керування; `group_f3d_manager` — налаштування; `group_f3d_user` — читання; `group_f3d_admin` — стоп-крани. |
+| FR-18 | Керування лише при `factory3d.bms.write_enabled` (і всіх запобіжниках telemetry): сцена (C:11) або рівень (C:13) групи; режим (MSV:1) і уставки (AV:1/AV:2) RV/AHU — через `f3d.command` (M-06 telemetry); за замовчуванням — тільки читання. |
+| FR-19 | Стоп-крани `factory3d.bms.read_enabled` (умовчання з `factory3d.base.environment`, CB-10) і `factory3d.bms.write_enabled` (`False`); `neutralize.sql` вимикає крон, читання й запис джерел модуля. |
+| FR-20 | Провайдери переглядача `f3d.viewer.provider.lighting` (110) і `f3d.viewer.provider.ventilation` (120) — повні розділи за viewer A.13 з живими значеннями; без живих даних — значення макета. |
+| FR-21 | `post_init_hook`: 13 норм, 3 щити, 32 групи, 29 установок, 1 тепловий баланс (4 рядки), 6 сцен, 33 джерела, 549 сигналів (81 макета оновлено, 468 створено) з прив'язкою обладнання; ідемпотентно; `uninstall_hook` не видаляє заявки й показання. |
+| FR-22 | Крон `cron_f3d_bms_check` (1 хв): правила відхилень, стан-сигнали перевірок через CT-10, журнал, доповнення заявок, шина переглядача. |
+| FR-23 | Плагін колектора `helvarnet` (CT-02): TCP 50000, ASCII HelvarNet v2 (фолбек v1), запити 152/161/109/110/164/191, приймання push-повідомлень, запис 11/13 із підтвердженням, пул з'єднань на `host:port`, обмеження частоти, health, метрики. |
+| FR-24 | Установки й котельня читаються плагіном `bacnet_ip` telemetry: джерело на пристрій BACnet (`params.device`), адреси за Додатком A.1 telemetry, режим `poll` (A-02). |
+| FR-25 | Перевірки «не працює/вимкнено в робочий час» придушуються під час пожежної тривоги чи тесту (`fire/totals/system_state ∈ {alarm, test}`) і за відсутності мережі (`infra/ats/src1_ok = 0`) — стан «зупинено пожежною сигналізацією» / «немає мережі», без заявок. |
+| FR-26 | Контракти з energy (споживання освітлення й вентиляції, тепло КГУ), fire_safety (тексти режимів), viewer (розділи, шина) — CH-01…CH-06; енергетичні лічильники щитів і вентиляції (u51–u59) не дублюються. |
+
+### 1.4 Межі: що не входить
+
+- Розстановка світильників (координати 320 точок, обхід перешкод) — лишається в макеті/3D; Odoo зберігає кількість
+  `n` групи й перевіряє її розрахунком (A-05).
+- Аварійне освітлення `EMERGENCY` (Zemper, автономні, AutoTest) і тести DALI-аварійних (C:19…24, 170…176) — Q-06.
+- Датчики присутності/освітленості Helvar 322 (C:150/151) як окремі сигнали; перевірка норми для груп «присутність»
+  з урахуванням присутності — Q-07.
+- Керування витяжними вентиляторами EF-*, клапаном нагрівача AO:1, швидкістю AO:2, увімкненням BV:1 — не в v1 (лише
+  режим і уставки RV/AHU).
+- Тепло КГУ, лічильники щитів освітлення й вентиляції (`energy/consumers/LP-*`, `RV-ALL`, `AHU-1`, `EF-*`), розподіл
+  енергії на МО (пули «за часом») — `factory3d_energy`; модуль лише читає їхні сигнали (CH-03).
+- Пожежна логіка (зупинка вентиляції від приладу, димовидалення) — апаратно й у `factory3d_fire_safety`.
+- Проєктний теплотехнічний розрахунок за ДБН — модуль відтворює оцінку макета з параметрами (Q-11).
+- Заявки на втрату зв'язку з роутером/установкою — немає (telemetry Q-11); видно на огляді й у переглядачі (Q-13).
+
+## 2. Технічна реалізація
+
+### 2.1 Місце в системі
+
+`depends`: `factory3d_telemetry` (через нього `factory3d_base`, `maintenance`, `mail`, `hr` → `resource`), `web`.
+`factory3d_viewer`, `factory3d_energy`, `factory3d_fire_safety`, `factory3d_iot_sim` — **не** в `depends`: провайдери —
+`AbstractModel` з іменами `f3d.viewer.provider.lighting`/`.ventilation` **без** `_inherit` (viewer збирає провайдерів
+за префіксом імені, як energy A-04); шина — `if 'f3d.viewer.event' in env`; сигнали energy/fire_safety читаються за
+кодом `f3d.signal`, якщо існують.
+
+Контракти, які **задає** модуль (посилатися як `factory3d_bms CH-xx`):
+
+| ID | Контракт | Споживачі |
+|---|---|---|
+| CH-01 | Коди й тексти сигналів (SPEC Додаток B, 549): `ventilation/units/<U>/mode` — `last_text` ∈ {`VE`, `VEL`, `AQ`, `REC`, `EA`, `SA`, `ST`, `Off`} (сирі коди MSV:1); `…/state` ∈ {`running`, `stopped`, `fault`, `frost`} (EF-CHG: `running`, `stopped`, `stopped_charging`); `lighting/groups/<G>/level` — % 0…100; `…/p_now` — кВт; `…/faults` — шт.; стан-сигнали перевірок `…/check` (тексти SPEC R-19); `module='bms'` | fire_safety (крок навчання «вентиляція зупинена»), energy, viewer |
+| CH-02 | Розділи payload `lighting` і `ventilation` строго за viewer A.13 плюс ключі: `lighting.groups[*]`: `dali_group`, `faults`, `faulty`, `scene`, `deviation`, `deviation_text`, `stale`, `level_source` (`live`/`design`); `lighting.panels[*]`: `state`, `p_source` (`meter`/`dali`/`design`); `ventilation.units[*]`: `mode_code`, `filter_extract_dp_pa`, `setpoint_day_c`, `setpoint_night_c`, `deviation`, `deviation_text`, `stale`, `room_pressure_pa` (лише `AHU-1`, з живого поля моделі, 1 знак); `ventilation.totals`: `heat_need_kw`, `boilers_on_calc`, `deficit_kw`, `chp_source` (`signal`/`calc`/`design`); `ventilation.boiler` {`state`, `supply_c`, `return_c`, `silo_fill`, `heat_kw`}. Розділ `ventilation` bms доповнює через спільний `deep_merge` (`from odoo.addons.factory3d_viewer.tools.payload import deep_merge`), а не перезаписує, щоб значення, записані раніше telemetry R-12 (95) за шляхами сигналів, не губились (X-95); `equipment["BOILER"]` (`heat_kw`, `return_c`, `state`) пише telemetry CT-07/R-12, не bms | viewer, кіоск, energy (`ventilation.totals.heat_kw` у картці CHP) |
+| CH-03 | Методи для energy: `env['f3d.bms.light.group']._f3d_bms_light_power()` → `{code: {"zone", "panel", "p_now_kw", "p_inst_kw", "level_pct"}}`; `env['f3d.bms.light.group']._f3d_bms_kwh(date_from, date_to)` → `{code: кВт·год}` з `f3d.reading.hour` сигналів `…/p_now`; `env['f3d.bms.hvac.unit']._f3d_bms_heat_now()` → `{code: кВт}` | energy (розподіл освітлення/вентиляції за зонами — за потреби) |
+| CH-04 | Моделі `f3d.bms.light.norm`, `f3d.bms.light.panel`, `f3d.bms.light.group`, `f3d.bms.light.scene`, `f3d.bms.hvac.unit`, `f3d.bms.heat.balance`, `f3d.bms.heat.balance.line`, `f3d.bms.deviation` з іменами полів SPEC §2 — лише читання для інших модулів | viewer, energy, звіти |
+| CH-05 | Розширення схеми `address` типу `helvarnet` (telemetry CT-03, Додаток A.1 — обов'язкові `group`/`device`, `query`, `map` не змінено): `query` ∈ {`level`, `power`, `scene`, `faults`, `faulty`, `router`}, `devices` (список адрес/діапазонів), `sample` (1…16), `mask` (ціле), `fade_s` (0…90 — у межах команд HelvarNet, як SPEC §8.2.2; X-71), `block` (1…8); `params` + `cluster`, `router`, `version`, `rate_per_s`, `push`, `membership_ttl_s` | telemetry (валідація), колектор |
+| CH-06 | Події шини `f3d.viewer.event._notify('f3d.bms', [коди груп/установок/BOILER], 'state')` при зміні відхилення | viewer |
+
+Що **бере** модуль: base CB-01 (`search_f3d`, `action_f3d_show`), CB-03 (`f3d.zone`: `polygon`, `area_m2`,
+`zone_at`, xml-id `factory3d_base.zone_<slug>`), CB-04, CB-07/CB-08 (`f3d_get_num('lumen'|'watt'|'airflow_m3h'|
+'heat_kw'|'power_kw'|'heat_kw_50'|'heat_kw_75')`, паспорти `factory3d_base.passport_<role>`), CB-09 (sequence 80),
+CB-10 (групи, `factory3d.base.environment`); telemetry CT-01 (`f3d.source`, `f3d.signal`, `f3d.reading.hour`,
+`f3d.command`), CT-02/CT-03 (інтерфейс плагіна, схеми адрес), CT-05 (заявки з порогів), CT-07 (провайдер
+`telemetry` 95 пише значення сигналів до мене), CT-09 (`module='bms'` для `ventilation/*`, `lighting/*`), CT-10
+(`_f3d_ingest`), CT-12 (локальний тип джерела), `collector_main`, джерело `BAC-140-BOILER` і сигнали
+`equipment/BOILER/supply_c`, `/silo_fill` (Додаток C.1/C.2 telemetry); energy CE-02 (`infra/ats/src1_ok`), CE-03,
+`infra/chp/heat_kw`, `infra/totals/chp_kw`, `energy/consumers/LP-*/p_now` (A-19); fire_safety
+`fire/totals/system_state`, CF-06 (`f3d.fire.drill._f3d_is_active_at`); viewer M-01, M-03, A.13.
+
+### 2.2 Архітектурна схема
+
+```
+ мережа цеху / f3d_sim                                 services/collector (один процес, telemetry)
+┌────────────────────────────┐  UDP 47808 (RPM poll)  ┌──────────────────────────────────────────────────────────────┐
+│ BACnet: RV-01…25 dev101–125│◄───────────────────────│ plugins/bacnet_ip (telemetry, R-23)                          │
+│ AHU-1 130, EF-* 131–133    │                        │ f3d_collector_bms/helvarnet.py  ◄── entry point helvarnet    │
+│ BOILER 140 (telemetry)     │  TCP 50000 ASCII       │   пул TCP host:port · черга запитів · rate · push-читач      │
+│ Helvar Imagine 950 ×3      │◄──────────────────────►│   C:152/161/109/110/164/191 · запис C:11/C:13 + перевірка     │
+│ (@1.1 LP-1, @1.2, @1.3)    │  push >V:2,C:13,G..#   │ core: scheduler · buffer · odoo_client (API-01/02/03/06/07)  │
+└────────────────────────────┘                        └──────────────┬────────────────────────▲──────────────────────┘
+                                         push показань / статус джерел │                        │ config (ETag), команди
+                                                                       ▼                        │
+┌──────────────────────────────── Odoo 19: factory3d_telemetry + factory3d_bms ─────────────────┴──────────────────────┐
+│ f3d.source: HN-LP-1…3 (helvarnet) · BAC-101-RV-01 … BAC-133-EF-CHG (bacnet_ip) · BMS-DERIVED (f3d_bms, локальне)     │
+│ f3d.signal 549 (module=bms) ──► пороги CT-05 ──► maintenance.request (фільтри, аварії, світильники)                   │
+│        │ _f3d_ingest (перевизначення, R-20): умови «з якого часу» груп/установок                                       │
+│        ▼                                                                                                              │
+│ f3d.bms.light.group/panel/norm ─ R-01…R-05 (норми, e_calc, e_now)      f3d.bms.hvac.unit ─ R-10…R-13                  │
+│ f3d.bms.heat.balance(+line) ─ R-14…R-17 (−15 °C, живий баланс, дефіцит)                                              │
+│ cron_f3d_bms_check (1 хв) ─ R-18…R-24: правила → check-сигнали (CT-10) → заявки CT-05 → доповнення назв (R-22)        │
+│                          → f3d.bms.deviation (журнал) → _notify('f3d.bms', …)                                         │
+│ f3d.command ◄── майстри керування (оператор, write_enabled, R-25)                                                     │
+│ f3d.viewer.provider.lighting (110) / .ventilation (120) ─► payload `lighting`, `ventilation` (R-26, R-27)             │
+│ OWL «Огляд будівлі» ◄── f3d.bms.overview.get_overview_data() (R-28)                                                   │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  energy (optional): infra/chp/heat_kw, infra/totals/chp_kw, infra/ats/src1_ok, energy/consumers/LP-*/p_now — читання
+  fire_safety (optional): fire/totals/system_state, f3d.fire.drill — читання; читає наші ventilation/units/*/mode
+```
+
+### 2.3 Нові й розширені об'єкти
+
+| Об'єкт | Призначення | Пише | Читає |
+|---|---|---|---|
+| `f3d.bms.light.norm` (M-01) | норма освітленості за видом робіт (лк, UGR, Ra, посилання) | data, менеджер | групи, звіти, провайдер (`norms_ref`) |
+| `f3d.bms.light.panel` (M-02) | щит освітлення LP-1…3 (роутер Imagine 950) | data/хук, менеджер | групи, огляд, провайдер |
+| `f3d.bms.light.group` (M-03) | група освітлення LT-*: проєктні дані, розрахунок, посилання на сигнали, живі значення, умови відхилень | data/хук, менеджер (налаштування), крон (умови) | огляд, провайдер, energy |
+| `f3d.bms.light.scene` (M-04) | сцени DALI 1…16 (назва, рівень) | data, менеджер | майстер керування |
+| `f3d.bms.hvac.unit` (M-05) | установка RV/AHU/EF: проєкт, сигнали, живі значення, умови | data/хук, менеджер, крон | огляд, провайдер, energy |
+| `f3d.bms.heat.balance` (M-06) + `.line` (M-07) | тепловий баланс: параметри й розрахунок −15 °C, живий баланс, сигнали котельні/КГУ | data/хук, менеджер (параметри), крон | огляд, провайдер |
+| `f3d.bms.deviation` (M-08) | журнал відхилень (епізоди тривог сигналів модуля) | крон | оператор, огляд |
+| `f3d.bms.light.command.wizard`, `f3d.bms.hvac.command.wizard` (M-09, Transient) | керування (сцена/рівень; режим/уставки) | оператор | — |
+| `f3d.bms.overview` (M-10, AbstractModel) | дані для OWL-огляду | — | клієнт |
+| `f3d.viewer.provider.lighting` / `.ventilation` (M-11, AbstractModel без `_inherit`) | розділи payload | — | переглядач |
+| `f3d.source` (+ тип `f3d_bms`, M-12) | локальний тип для обчислених сигналів (CT-12) | хук | telemetry |
+| `f3d.signal` (перевизначення `_f3d_ingest`, constraint запису, M-13; власні сигнали — `origin='module'` базового selection telemetry, X-16) | реакція на зміни сигналів модуля | telemetry/колектор | — |
+| `maintenance.request` (+ `f3d_bms_rule`, `f3d_bms_deviation_id`, M-14) | правило модуля, що породило заявку; зв'язок із журналом | крон | механік, огляд |
+| `f3d.zone` (+ `f3d_light_group_ids`, `f3d_hvac_unit_ids`, M-15) | групи й установки зони (вкладка «Будівля») | — | форма зони |
+| `maintenance.equipment` (+ `f3d_bms_object`, M-16) | кнопка «Будівля» з картки обладнання до групи/установки | — | механік |
+| `res.config.settings` (+ поля, M-17) | стоп-крани, параметри правил | адміністратор/менеджер | модуль |
+
+### 2.4 Інтеграції
+
+| P-xx / канал | Пристрої (коди) | Протокол, адреса на стенді | Напрямок | Частота | При недоступності |
+|---|---|---|---|---|---|
+| P-08 HelvarNet | LP-1…3 (роутери `@1.1`, `@1.2`, `@1.3`), групи LT-* G:1…32 | TCP `iot-sim:50000`, ASCII `>V:2,C:<n>,…#`, один TCP-сеанс на `host:port` (три джерела `HN-LP-1…3` ділять його); документ Helvar «HelvarNet Overview» (Designer 4.2.18 Help, розділ HelvarNet, https://aca.im/driver_docs/Helvar/HelvarNet-Overview.pdf, переглянуто 14.10.2026) | читання (опитування + push C:13/C:11 від роутера); запис C:11/C:13 лише з `write_enabled` | рівень 60 с (+ push), потужність 60 с, сцена 60 с, несправності 300 с, членство груп (C:164) раз на 3 600 с | бекоф 1→60 с (telemetry R-19); 3 помилки → `error`; сигнали `stale` через 3·`period_s`; стан-сигнали перевірок «немає даних»; заявок немає (Q-13) |
+| P-08 BACnet/IP | RV-01…25 (dev 101…125), AHU-1 (130), EF-ELEC/EF-CMP/EF-CHG (131…133) | UDP `iot-sim:47808`, роутер → мережа 2; плагін `bacnet_ip` telemetry; ReadPropertyMultiple, `mode="poll"` (A-02); об'єкти — iot_sim §8.10.2 (ПРИПУЩЕННЯ за мануалом Hoval RoofVent 4 214 745-en-06, Q-02) | читання; запис MSV:1, AV:1, AV:2 лише з `write_enabled` | 30 с (вимірювання, стани), 300 с (уставки) | як вище; `reliability` ≠ `no-fault-detected` → `q='bad'`; пристрій не відповідає → `error`, `stale` |
+| P-08 BACnet котельня | BOILER (dev 140) | джерело `BAC-140-BOILER` **telemetry** (Додаток C.1); bms додає сигнали `return_c` (AI:2), `state` (MSV:1), `heat_kw` (AI:5) на це джерело | читання | 30 с | як вище |
+| energy (optional) | CHP, ATS-1, LP-1…3 | сигнали `infra/chp/heat_kw`, `infra/totals/chp_kw`, `infra/ats/src1_ok`, `energy/consumers/LP-*/p_now` (читання `last_value`) | читання в Odoo | на кожному прогоні крона / побудові payload | немає сигналу → формула з паспорта КГУ (R-15) / сума груп (R-05) / придушення вимкнене |
+| fire_safety (optional) | FACP-1 | `fire/totals/system_state` (`last_text`), `f3d.fire.drill._f3d_is_active_at(now)` (CF-06) | читання | крон | немає → придушення лише за мережею |
+| Odoo → переглядач | — | провайдери 110/120; шина `f3d_viewer` (`f3d.bms`, `f3d.signal`) | — | за подією | без viewer — нічого |
+
+### 2.5 Потік даних від пристрою до екрана
+
+Приклад 1 — фільтр RV-05 (сценарій `filter_clogged`): 1) емулятор піднімає `RV-05_FreshAirFilterDp` (dev 105 AI:4)
+до 285 Па за 2 хв; 2) колектор кожні 30 с читає RPM dev 105 (усі 16 об'єктів сигналів RV-05 одним запитом) і шле
+`ventilation/units/RV-05/filter_dp_pa = 285.0` у `POST /f3d/telemetry/push`; 3) telemetry R-04: `alarm_high=250`,
+`hysteresis=5` → `alarm` → R-05: заявка «Заміна фільтрів: перепад тиску 285 Па при нормі до 250» на `RV-05`, команда
+«Служба головного механіка», `f3d_origin='threshold'`; 4) перевизначення `_f3d_ingest` bms бачить код і нічого не
+пише (поріг — справа telemetry); 5) крон bms (≤ 60 с) відкриває епізод журналу `f3d.bms.deviation` (`rule=filter_supply`,
+`value=285`, `threshold=250`, `request_id`), ставить `maintenance.request.f3d_bms_rule='filter_supply'`, шле
+`_notify('f3d.bms', ['RV-05'], 'state')`; 6) провайдер 120 віддає `ventilation.units["RV-05"].filter_dp_pa=285.0`,
+`deviation="filter_supply"`, `maintenance_request="MR/…"`; картка RV-05 у 3D: «Фільтр 285 Па · замінити».
+
+Приклад 2 — група вимкнена в зміну: 1) у робочий час (календар «Зміна 1», вівторок 10:00) сценарій
+`lighting_scene group=LT-CUT level=0`; 2) роутер @1.2 шле push `>V:2,C:13,G:12,L:0,F:…#` → плагін емітує
+`lighting/groups/LT-CUT/level = 0`; опитування C:152 підтверджує; 3) перевизначення `_f3d_ingest` ставить
+`LT-CUT.cond_off_since = ts`; 4) через `light_check_delay_min` (10 хв) крон пише стан-сигнал
+`lighting/groups/LT-CUT/check = "вимкнено в робочий час"` (CT-10, джерело `BMS-DERIVED`) → telemetry R-04/R-05
+створює заявку; 5) крон замінює назву на «Освітлення LT-CUT (Розкрій): вимкнено в робочий час — рівень 0 % при нормі
+500 лк», `f3d_value=0`, `f3d_threshold=500`, журнал і шина; 6) переглядач: група сіра, `deviation_text`.
+
+Приклад 3 — тепловий баланс: крон і провайдер читають `heat_kw` 26 установок (Σ = потреба 322 кВт за макетом),
+тепло КГУ `infra/chp/heat_kw` (497) або розрахунок із `infra/totals/chp_kw`, стан котельні MSV:1 (`standby` → 0 котлів),
+теплову потужність котельні AI:5; `boilers_on_calc` = 0, `deficit = max(0, 322 − 497 − 0) = 0` → «норма». Аварія
+котельні при потребі 600 кВт і КГУ 497 → дефіцит 103 кВт ≥ 30 хв → заявка «Котельня: дефіцит тепла 103 кВт
+(потреба 600 кВт, джерела 497 кВт)».
+
+### 2.6 Безпека
+
+- **Групи** (CB-10 + модульна): `group_f3d_user` — читання всіх моделей модуля; `factory3d_bms.group_f3d_bms_operator`
+  («Будівля: оператор», у власному привілеї `privilege_f3d_bms` категорії `factory3d_base.module_category_factory3d` —
+  X-19; implied `group_f3d_user`; `group_f3d_manager` має його implied) — майстри керування й
+  підтвердження відхилень; `group_f3d_manager` — запис норм, груп, щитів, установок, параметрів балансу, сцен;
+  `group_f3d_admin` — стоп-крани, повторна установка даних.
+- **Стоп-крани**: `factory3d.bms.read_enabled` (умовчання `environment == 'test'`, CB-10) — `False` вимикає читання
+  всіх 32 джерел модуля (`f3d.source.read_enabled=False`, telemetry переводить їх у `disabled`, сигнали `stale`), крон
+  перевірок нічого не пише; `factory3d.bms.write_enabled` (`False`) — майстри керування недоступні, прапори
+  `write_enabled` на джерелах і 142 керованих сигналах — `False`. Запис у пристрій відбувається лише коли **всі п'ять**
+  запобіжників увімкнені: `factory3d.bms.write_enabled`, `factory3d.telemetry.write_enabled`,
+  `f3d.source.write_enabled`, `f3d.signal.write_enabled`, `F3D_WRITE_ENABLED=1` колектора.
+- **Керування від імені оператора** (A-09): майстер перевіряє групу оператора й прапори, створює `f3d.command`
+  `with_user(SUPERUSER_ID)` з `requested_by` = користувач, `origin='bms'`; аудит — чаттер команди й групи/установки.
+- **Що заборонено**: команди на котельню (`BAC-140-BOILER`), вентилятори EF-*, AO:1/AO:2/BV:1, аварійне освітлення
+  G:40 — у плагіні й моделях немає шляху запису (сигнали без `write_enabled`, constraint M-13); у HelvarNet плагін
+  надсилає лише C:11, C:13 і запити 1xx — інші команди (конфігураційні, тести аварійного освітлення 19…24) відхиляються
+  кодом (`NotSupported`).
+- **Ін'єкції**: адреси HelvarNet — лише цілі/регекс `^@\d{1,3}\.\d{1,3}\.\d{1,4}\.\d{1,3}$` до формування рядка;
+  символи `>`, `#`, `,`, `:`, `$`, `=` у значеннях неможливі (усі параметри — числа); тексти назв груп з роутера (C:105)
+  не використовуються в логіці; SQL — лише параметризований.
+- **Секрети**: HelvarNet автентифікації не має — доступ обмежує allow-list колектора (`F3D_ALLOW_HOSTS`) і VLAN; у
+  `params` секретів немає.
+- **Неналежне використання**: крон працює від `base.user_root`, але пише лише стан-сигнали модуля, журнал і назви
+  заявок, створених із сигналів модуля.
+
+### 2.7 Продуктивність і обсяги
+
+| Клас сигналів | Кількість | `period_s` / `store_period_s` | Показань у Odoo/добу | Збережених/добу |
+|---|---|---|---|---|
+| BACnet вимірювання RV/AHU/EF/котельня | 217 | 30 / 600 | 624 960 | 31 248 |
+| BACnet стани й режими (зберігаються при зміні) | 57 | 30 / 3 600 | 164 160 | ≈ 1 500 |
+| BACnet уставки (300 / 3 600), зовнішня температура (60 / 900) | 53 | 300 / 3 600; 60 / 900 | 16 416 | 1 344 |
+| HelvarNet рівень, потужність (60 / 900), сцена (60 / 3 600) (+ push) | 96 | 60 / 900; 60 / 3 600 | 138 240 | 6 912 |
+| HelvarNet несправності, адреси (300 / 3 600), стан щитів (60 / 3 600) | 67 | 300 / 3 600; 60 / 3 600 | 22 752 | 1 608 |
+| Стан-сигнали перевірок (локальні) | 59 | 60 (зміна або кожні 10 хв) / 3 600 | 8 496 | 1 416 |
+| **Разом** | **549** (BACnet 327 сигналів ≈ 380 об'єктів, HelvarNet 163, локальні 59) | | ≈ 0,98 М (≈ 11/с) | **≈ 44 000** (≈ 5 МБ/добу; 30 днів ≈ 1,3 М рядків ≈ 160 МБ) |
+
+BACnet: 29 джерел-пристроїв, на пристрій одна група `period_s=30` (≤ 50 пар об'єкт/властивість на RPM, з `status-
+flags` — 2 RPM для RV) → ≈ 2 RPM/с на мережу; група 300 с — ще 1 RPM. HelvarNet: на роутер ≤ 32 групи × 3 запити/хв
+(рівень за вибіркою ≤ 3 пристрої, потужність, сцена) ≈ 2,5 запиту/с + опитування несправностей 320 пристроїв за
+300 с (≈ 1 запит/с), обмеження `rate_per_s=20`. Odoo: крон перевірок — 61 об'єкт, ≤ 2 с за прогін; провайдери —
+≤ 300 мс (один `search_read` 549 сигналів); OWL-огляд — ≤ 500 мс. Індекси — telemetry; модуль додає індекси
+`f3d_bms_deviation (state, started)`, `(signal_id, state)`.
+
+### 2.8 Міграція з демо-бази і деінсталяція
+
+Передумова — встановлені `factory3d_base` (коди обладнання, зони, паспорти) і `factory3d_telemetry` (міграція 196
+`x_f3d_signal` → `f3d.signal`, 81 `ventilation/*` з `module='bms'`, без джерела). `post_init_hook` (SPEC §5.3):
+
+1. Параметри: `read_enabled = (environment == 'test')`; `write_enabled = False`.
+2. Джерело `BMS-DERIVED` (тип `f3d_bms`, локальне, `module='bms'`).
+3. Прив'язка обладнання за кодами (CB-01 `search_f3d`): 32 групи → `LT-*`, 3 щити → `LP-*`, 29 установок,
+   котельня → `BOILER`; джерела HelvarNet/BACnet (data) отримують `equipment_id`. Очікувано на копії демо 65 + 33;
+   на чистій базі — 0 (WARNING, записи зберігаються без обладнання).
+4. Сигнали з `data/bms_signals.csv` (549): 81 наявний `ventilation/*` — оновлюються лише поля прив'язки (джерело,
+   адреса, періоди, `decimals`, `viewer_visible`, пороги з непорожніх колонок — ті самі, що в telemetry R-15),
+   `last_*`/`status`/`origin`/`maintenance_request_id` не чіпаються; 468 нових — створюються (`origin='catalog'` для 176
+   рядків каталогу iot_sim, `'module'` для 292 власних). Очікувано: `created: 468`, `updated: 81`; на чистій базі
+   `created: 549`.
+5. Посилання моделей на сигнали за кодом (група — 6, установка — до 15, баланс — 9).
+6. Прапори запису за `write_enabled` (усе `False`).
+7. Звіт `factory3d.bms.install_report` (JSON лічильників, `ts`, `state ∈ {done, partial}`).
+
+Демо-заявка id 6 (RV-05) уже прив'язана telemetry до сигналу (`f3d_signal_id`); хук ставить їй
+`f3d_bms_rule='filter_supply'` і відкриває епізод журналу з `started = create_date`. Полів `x_*` модуль не має й не
+мігрує. Повторний запуск (`f3d_bms_reinstall_data`, адміністратор) нічого не дублює.
+
+`uninstall_hook`: параметри `factory3d.bms.*` → `unlink`; власні сигнали модуля (`module='bms'`, `origin ∈
+{catalog, module}`) → `active=False`, `source_id=False`; 81 сигнал макета → `source_id=False`, `address={}` (повертаються
+до стану після міграції telemetry); джерела модуля видаляються з даними модуля (тип `f3d_bms` — `ondelete='cascade'`);
+`maintenance.request`, `f3d.reading` лишаються; моделі модуля видаляються стандартно.
+
+## 3. Налаштування системи
+
+| Об'єкт | Параметр | Значення для тестового сервера | Коментар |
+|---|---|---|---|
+| `ir.config_parameter` | `factory3d.bms.read_enabled` | `True` (тест) / `False` (прод одразу після встановлення) | стоп-кран читання джерел модуля |
+| `ir.config_parameter` | `factory3d.bms.write_enabled` | `False` | керування освітленням і вентиляцією |
+| `ir.config_parameter` | `factory3d.bms.calendar_id` | порожньо → календар компанії «Зміна 1 (07:00–15:30)» | робочий час для перевірок |
+| `ir.config_parameter` | `factory3d.bms.light_check_delay_min` | `10` | скільки триває «вимкнено/нижче норми» до відхилення |
+| `ir.config_parameter` | `factory3d.bms.light_norm_tolerance_pct` | `5` | допуск DALI-рівня для «нижче норми» |
+| `ir.config_parameter` | `factory3d.bms.hvac_check_delay_min` | `10` | «установка не працює в робочий час» |
+| `ir.config_parameter` | `factory3d.bms.cold_delay_min` | `30` | «холодно в зоні» |
+| `ir.config_parameter` | `factory3d.bms.indoor_min_work_c` / `indoor_min_off_c` | `16.0` / `10.0` | пороги «холодно» (уставка 18 − 2; захист від замерзання) |
+| `ir.config_parameter` | `factory3d.bms.heat_deficit_kw` / `heat_deficit_delay_min` | `20` / `30` | дефіцит тепла |
+| `ir.config_parameter` | `factory3d.bms.check_heartbeat_min` | `10` | повторний запис стан-сигналу без зміни |
+| `ir.config_parameter` | `factory3d.bms.install_report` | `{}` → звіт хука | |
+| `f3d.source` | `HN-LP-1`, `HN-LP-2`, `HN-LP-3` | `helvarnet`, `{"host": "iot-sim", "port": 50000, "protocol": "tcp", "cluster": 1, "router": 1…3, "version": 2, "rate_per_s": 20, "push": true}`, колектор `COL-MAIN` | data, SPEC Додаток C |
+| `f3d.source` | `BAC-101-RV-01` … `BAC-125-RV-25`, `BAC-130-AHU-1`, `BAC-131-EF-ELEC`, `BAC-132-EF-CMP`, `BAC-133-EF-CHG` | `bacnet_ip`, `{"host": "iot-sim", "port": 47808, "device": <n>, "network": 2, "timeout_s": 5, "rpm": true, "rpm_max": 50}` | data |
+| `f3d.source` | `BMS-DERIVED` | тип `f3d_bms`, без колектора | хук |
+| `ir.cron` | `cron_f3d_bms_check` | 1 хв, активний | правила R-18…R-24 |
+| `res.groups` | «Будівля: оператор» | енергетик, головний механік (призначає адміністратор) | Q-08 |
+| колектор | `requirements-extra.txt` | `f3d-collector-bms==0.1.0` (пакет `services/collector_plugins/f3d_collector_bms`) | entry point `helvarnet` |
+| колектор | `F3D_ALLOW_HOSTS` | `iot-sim,mosquitto` (стенд) / IP роутерів Helvar і контролерів RoofVent (прод) | |
+| `maintenance.team` | «Служба головного механіка» | існує (id 2) | команда заявок з обладнання |
+
+## 4. Інструкція
+
+**4.1 Подивитися стан будівлі** (енергетик, механік, будь-хто з `group_f3d_user`). Завод 3D → Будівля → Огляд:
+план цеху; зони зелені (освітленість не нижче норми), жовті (нижче норми), сірі (вимкнено), заштриховані (немає даних);
+кружечки — установки (зелений — працює, сірий — очікування, червоний — відхилення). Клік — картка групи чи установки;
+«Показати в 3D» — об'єкт у переглядачі. Вкладка «Тепловий баланс» — потреба, КГУ, котли, резерв і зимова оцінка.
+
+**4.2 Розібратися з відхиленням** (механік). Завод 3D → Будівля → Відхилення (фільтр «Відкриті»): правило, показник,
+поріг, заявка. Відкрити заявку (Обслуговування → Заявки), виконати роботу (заміна фільтрів RV-05, світильника за
+адресою `@1.2.1.5`), перевести у «Repaired». Відхилення закривається, коли показник повертається в норму; якщо заявку
+закрито, а тривога триває, нова заявка з'явиться не раніше ніж через годину (telemetry R-06).
+
+**4.3 Перевірити норму освітленості зони** (інженер АСУ). Завод 3D → Будівля → Освітлення → Групи → група: вкладка
+«Розрахунок» — площа зони, норма (EN 12464-1 / ДБН В.2.5-28), світловий потік і кількість світильників, `n` потрібно
+й встановлено, розрахункова освітленість; «Зараз» — рівень DALI і ≈ освітленість. Зміна норми — Норми → вид робіт
+(лише менеджер, із підставою в «Примітці»); групи перераховуються автоматично.
+
+**4.4 Увімкнути керування освітленням і вентиляцією** (адміністратор, лише за погодженням). Налаштування → Завод 3D →
+Будівля: «Дозволити керування» (ставить прапори запису на 29 джерелах і 142 сигналах, A-21); Телеметрія: «Дозволяти команди на
+пристрої»; у `.env` колектора `F3D_WRITE_ENABLED=1`. Перевірка: група LT-MAINT → «Керування» → сцена 3 (50 %) → у
+Телеметрія → Команди статус «Виконано», рівень групи 50 % протягом 60 с. Вимкнути — у зворотному порядку.
+
+**4.5 Підключити будівлю на проді поетапно** (інженер АСУ). Після установки `read_enabled=False`. 1) Джерела
+`BAC-108-RV-08`, `BAC-109-RV-09`, `HN-LP-2`: адреса реального контролера/роутера, «Читати» — увімкнути; 2) звірити
+показники Z-CUT з пультом установки й Helvar Designer (ТК-12); 3) увімкнути решту джерел; 4) параметр
+`factory3d.bms.read_enabled=True`.
+
+**4.6 Зимова оцінка теплового балансу** (енергетик). Будівля → Вентиляція й опалення → Тепловий баланс: змінити
+параметри (U огороджень, інфільтрація, частка зовнішнього повітря, рекуперація) → «Перерахувати»; рядки й резерв
+оновлюються; значення макета — кнопка «Повернути значення макета».
+
+## 5. Ризики й відкриті питання
+
+### 5.1 Відкриті питання (ті самі номери — у SPEC §15)
+
+| ID | Питання | Кому | Рекомендована відповідь | Що робимо тим часом |
+|---|---|---|---|---|
+| Q-01 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** напряму BACnet і HelvarNet; при появі BMS — лише `params` джерел. Чи є на заводі система управління будівлею (BMS/SCADA), чи читаємо установки й освітлення напряму (каркас §9 п. 4)? | замовник, проєктант ОВК | напряму: контролери RoofVent (TopTronic C) по BACnet/IP і роутери Helvar по HelvarNet; якщо BMS буде — читати через її BACnet-сервер (змінюються лише `params` джерел і `address` сигналів) | напряму (емулятор P-08) |
+| Q-02 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** BACnet-ПРИПУЩЕННЯ до переліку точок Hoval; при Modbus — ті самі коди. Hoval RoofVent / TopTronic C: BACnet/IP напряму чи через шлюз Hoval (Modbus TCP)? Перелік точок даних? Публічно знайдено лише Modbus-шлюз для TopTronic E (https://www.hoval.com/en/modbus, переглянуто 14.10.2026); BACnet для TopTronic C не підтверджено (iot_sim Q-04) | Hoval / замовник | запросити список точок TopTronic C; якщо лише Modbus — джерела типу `modbus_tcp` з тими самими кодами сигналів | BACnet за iot_sim §8.10.2 (ПРИПУЩЕННЯ); адреси лише в даних |
+| Q-03 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** більша з норм EN 12464-1 і ДБН В.2.5-28 (зі Зміною № 1). Норми освітленості: макет бере EN 12464-1:2021; чинний ДБН В.2.5-28:2018 «Природне і штучне освітлення» зі Зміною № 1 (чинна з 01.01.2026, https://e-construction.gov.ua/laws_detail/3879665444646291006, переглянуто 14.10.2026) нормує за розрядом зорових робіт. Чи збігаються значення для 13 видів робіт? | проєктант освітлення, інженер з ОП | звірити й записати в норми `ref_dbn` номер таблиці/розряд; брати більше з двох значень | значення `lux_norms.json`; `ref_dbn` = «ДБН В.2.5-28:2018 (зі Зміною № 1) — звірити розряд (Q-03)» |
+| Q-04 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** `V:2`, C:161/C:164; фолбек `V:1`. HelvarNet: номери команд підтверджено документом Helvar (Designer 4.2.18 Help); чи підтримує Imagine 950 у версії прошивки заводу `V:2`, C:161 (потужність групи) і C:164 (склад групи), і чи відповідає роутер на `A:1` для C:11/C:13? Біти стану пристрою в емуляторі (iot_sim §8.10.4: bit6 NSEmergencyResting) не збігаються з документом (0x100 NSEM_Resting, 0x400 InEmergency) | Helvar / монтажник, автор iot_sim | `V:2`; C:161 і C:164 є в документі; маска несправностей 0x0800000E | плагін пробує `V:2`, при коді 18 — `V:1`; C:164 з фолбеком на `devices` в адресі; підтвердження запису — ack або push або перевірка C:152/C:109 |
+| Q-05 | **Закрито 14.10 (відповідь № 14, CONSISTENCY):** календар «Зміна 1 (07:00–15:30)». Робочий час для перевірок: календар компанії «Зміна 1 (07:00–15:30)» з обідом; чи потрібні окремі графіки для складів (06:00–07:00 підготовка, 15:30–17:00) і друга зміна? | головний механік, енергетик | календар компанії + затримка 10 хв; окремий календар на групу — поле `calendar_id` (є в моделі) | календар компанії для всіх |
+| Q-06 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** поза v1; далі — щомісячний план ТО. Аварійне освітлення (Zemper Spazio, автономне, AutoTest, 1 год) — потрібен журнал перевірок (C:19…24, 170…176 лише для DALI-аварійних)? | інженер ПБ | журнал перевірок аварійного освітлення — окремий план ТО `maintenance` (щомісяця) | не входить у v1 |
+| Q-07 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** v2. Групи з керуванням «присутність і денне світло» (10): норма діє при присутності; чи підключати датчики Helvar 322 (C:151) для перевірки норми лише при присутності? | енергетик | v2: прив'язка датчиків до груп | для цих груп перевіряється лише «вимкнено в робочий час» (A-07) |
+| Q-08 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** оператори — енергетик і головний механік; керування — наказом головного інженера. Хто в замовника «енергетик» і «головний механік» (користувачі групи «Будівля: оператор»); хто погоджує ввімкнення керування на проді? | замовник | оператори — 2 особи; керування — наказом головного інженера | група порожня; керування вимкнено |
+| Q-09 | **Узгодити з iot_sim**: (а) каталог Додатка A не містить 292 сигналів bms (BACnet AI:5…8, AV:1/2, AI:9, BI:6, AI:6, BOILER AI:5; HelvarNet `faults`, `faulty`, `scene`; 59 обчислених) — емулятор об'єкти віддає, але каталог і R-24 їх не знають; (б) `lighting/panels/LP-*/state` у каталозі — C:110 одного пристрою `@1.x.1.1`; (в) формула R-23 «`heat = 60·k·…`» суперечить прикладу (6,9 кВт = 116,8·k·…) і макету; (г) параметр `filter_clogged` `value` vs `dp_pa` (telemetry Q-14); (д) біти C:110 (Q-04); (е) `EF-CHG` під час заряджання — iot_sim «warn», bms — тривога (A-20) | автор iot_sim | додати рядки в Додаток A (SPEC bms Додаток B — джерело), стан щита = агрегат роутера (A-17), виправити R-23 на `heat_nom = 116,8` | **закрито X-34, X-40, X-58** (рекомендації прийнято; параметр сценарію — лише `value`) |
+| Q-10 | **Узгодити з telemetry**: R-07 дає хибний `stale` для `mode=cov` у спокої (fire_safety Q-17); чи змінить telemetry вікно `stale_after` для COV? | автор telemetry | так: для `cov` — від інтервалу контрольного читання | **закрито X-06** (telemetry R-07); у v1 сигнали bms лишаються `mode="poll"` (A-02) |
+| Q-11 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** `internal_gains_kw = 0`. Внутрішні теплонадходження (верстати, освітлення — сотні кВт у зміну) у тепловому балансі: макет їх не враховує («це запас») | енергетик, проєктант ОВК | лишити 0 у зимовій оцінці; живу оцінку додати після energy (Σ споживання цеху × 0,8) | параметр `internal_gains_kw = 0` |
+| Q-12 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** пороги §3 погоджено. Пороги: фільтр витяжки 350 Па (заводське реле), «холодно» 16/10 °C, електрощитова 35 °C, дефіцит 20 кВт / 30 хв, допуск норми 5 % — погодити | головний механік, енергетик | як запропоновано | значення §3 |
+| Q-13 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** лише огляд і дашборд, без `mail.activity` (як telemetry Q-11, відповідь № 8). Втрата зв'язку з роутером Helvar чи установкою — лише стан і огляд (telemetry Q-11) чи активність/заявка енергетику? | енергетик | активність `mail.activity` енергетику після 15 хв без даних | лише огляд, переглядач (`stale`) і стан-сигнал «немає даних» |
+| Q-14 | **Закрито 14.10 (відповідь № 13, CONSISTENCY):** після відбою — звичайна перевірка з затримкою 10 хв. Придушення перевірок під час пожежної тривоги/навчання й відсутності мережі (за сигналами fire_safety/energy) — погодити логіку; чи потрібна заявка, якщо після відбою установка не запустилася? | інженер ПБ, енергетик | так: після відбою звичайна перевірка з затримкою 10 хв | R-21 |
+
+### 5.2 Ризики
+
+| Ризик | Вплив | Пом'якшення |
+|---|---|---|
+| На заводі інша карта BACnet (TopTronic C) або Modbus-шлюз | значення сміттєві/немає даних | адреси лише в `address` (дані), коди сигналів незмінні; поетапне ввімкнення (4.5), ТК-12 звірки |
+| Роутер Helvar не підтримує `V:2`/C:161/C:164 | немає потужності групи, складу груп | фолбеки (Q-04): `V:1`, `devices` в адресі, потужність = `n·W·рівень` (R-05) |
+| Хибні заявки «вимкнено/холодно» при простої, святі, пожежі, блекауті | лавина заявок | календар із вихідними (`compute_leaves`), затримка, придушення R-21, одна відкрита заявка на сигнал (CT-05), cooldown 1 год |
+| 549 сигналів збільшують `f3d.reading` | об'єм бази | `store_period_s` 600…3 600, зберігання станів лише при зміні (§2.7: ≈ 5 МБ/добу) |
+| Telemetry змінює R-04/R-05 (напр. мін. тривалість для станів) | інша поведінка відхилень | затримки рахує сам модуль (умови «з якого часу»); стан-сигнал пишеться лише після витримки |
+| Опитування замість COV — затримка ≤ 30 с + push 5 с | пізніше відображення | для вентиляції й освітлення прийнятно; HelvarNet push для рівня — миттєво |
+| Запис у прилади з Odoo | небезпечні дії | п'ять запобіжників, оператор, журнал команд, керування не для котельні/EF |
+
+## 6. План сборки агентами
+
+Межі файлів жорсткі; спільні файли (`__manifest__.py`, `__init__.py`, `models/__init__.py`,
+`security/ir.model.access.csv`, `security/security.xml`, `views/menus.xml`, `tests/common.py`) належать W0 і
+правляться через нього.
+
+| Воркер | Файли | Здає | Залежить від |
+|---|---|---|---|
+| W0 каркас | маніфест, `__init__.py`, `models/__init__.py`, `security/*`, `data/ir_config_parameter.xml`, `data/ir_cron.xml`, `data/neutralize.sql`, `views/menus.xml`, `tests/__init__.py`, `tests/common.py`, `README.md`, `CHANGELOG.md`; `services/collector_plugins/f3d_collector_bms/pyproject.toml`, `f3d_collector_bms/__init__.py` | модуль встановлюється порожнім; меню «Будівля»; групи; параметри; пакет плагіна імпортується | SPEC §0, §1, §3 (меню), §4, §5.1 |
+| W1 освітлення | `models/f3d_bms_light_norm.py`, `f3d_bms_light_panel.py`, `f3d_bms_light_group.py`, `f3d_bms_light_scene.py`, `tools/lighting.py`, `views/f3d_bms_light_*_views.xml`, `tests/test_lighting_calc.py`, `tests/test_lighting_live.py` | M-01…M-04; R-01…R-06; AC-01…AC-12 | W0 |
+| W2 вентиляція й тепло | `models/f3d_bms_hvac_unit.py`, `f3d_bms_heat_balance.py`, `tools/hvac.py`, `tools/heat.py`, `views/f3d_bms_hvac_unit_views.xml`, `views/f3d_bms_heat_balance_views.xml`, `tests/test_heat_balance.py`, `tests/test_hvac_live.py` | M-05…M-07; R-10…R-17; AC-13…AC-24 | W0 |
+| W3 дані й хуки | `tools/gen_data.py`, `data/*.xml`, `data/bms_signals.csv`, `hooks.py`, `models/f3d_source.py`, `models/f3d_signal.py` (частина: constraint запису), `tests/test_data_sync.py` (pytest), `tests/test_hooks.py` | §5; R-29, R-30; AC-48…AC-56 | W1, W2 |
+| W4 правила й керування | `tools/rules.py`, `tools/schedule.py`, `models/f3d_bms_deviation.py`, `models/f3d_bms_check.py` (крон), `models/f3d_signal.py` (частина: `_f3d_ingest`), `models/maintenance_request.py`, `models/f3d_zone.py`, `models/maintenance_equipment.py`, `models/res_config_settings.py`, `wizard/*`, `views/f3d_bms_deviation_views.xml`, `views/res_config_settings_views.xml`, `views/maintenance_*_views.xml`, `tests/test_rules_lighting.py`, `test_rules_hvac.py`, `test_requests.py`, `test_commands.py`, `test_security.py` | M-08, M-09, M-13…M-17; R-18…R-25; AC-25…AC-41, AC-57…AC-63 | W3 |
+| W5 переглядач і огляд | `models/viewer_provider.py`, `models/f3d_bms_overview.py`, `tools/payload.py`, `static/src/overview/*`, `views/f3d_bms_overview_views.xml`, `tests/test_viewer_provider.py`, `tests/test_overview.py`, `static/tests/overview.test.js` | M-10, M-11; R-26…R-28; AC-42…AC-47 | W4 |
+| W6 плагін `helvarnet` | `services/collector_plugins/f3d_collector_bms/**` (`helvarnet.py`, `protocol.py`, `schemas/*.json`, `tests/fake_helvar_router.py`, `tests/test_protocol.py`, `tests/test_plugin_helvarnet.py`) | §8; R-31…R-37; AC-64…AC-78 | W0 (паралельно з W1…W5) |
+| W7 стенд і ТК | `tests/stand/*`, `docs/modules/factory3d_bms/DEPLOY_TEST.md`, `TEST_REPORT.md` | ТК-01…ТК-12, ТБ, ТП, DEPLOY_TEST | W5, W6 |
+
+Порядок злиття: W0 → (W1 ‖ W2 ‖ W6) → W3 → W4 → W5 → W7. Кожен воркер здає зелені тести своїх файлів
+(`odoo-bin --test-tags /factory3d_bms:<Class>`, `pytest services/collector_plugins/f3d_collector_bms`) і не чіпає
+чужих тестів; після W5 — повний прогін `--test-tags /factory3d_bms` на чистій базі й копії демо.
+
+## 7. Рішення автора (A-xx)
+
+| ID | Рішення | Обґрунтування | Що змінює відносно каркаса |
+|---|---|---|---|
+| A-01 | Відхилення, яких не виразити порогом одного сигналу (вимкнено/нижче норми в робочий час, не працює, холодно, дефіцит тепла), модуль записує як стан-сигнали `…/check` на локальному джерелі `BMS-DERIVED` (тип `f3d_bms`, CT-12) через CT-10; заявки створює telemetry (CT-05), модуль лише доповнює назву показником і порогом (R-22) | одне місце створення/дедуплікації/закриття заявок (§6.8, CT-05); тривалість і робочий час рахує модуль | реалізує §6.8 без власного механізму заявок |
+| A-02 | Усі BACnet-сигнали модуля читаються опитуванням (`mode="poll"`, RPM, 30/300 с), без `SubscribeCOV` | опитування не створює підписок на контролерах і вкладається в RPM 30 с; після X-06 (telemetry R-07: `stale_after` для COV — від інтервалу контрольного читання) COV допустимий — перехід зміною `mode` в адресах, без коду | уточнює «COV/опитування» P-08 |
+| A-03 | Джерело = пристрій: 29 джерел BACnet (за `device`), 3 джерела HelvarNet (за роутером, один TCP-сеанс на `host:port` у пулі плагіна) | стан «офлайн» на рівні установки/щита (telemetry A-14); три роутери емулятора за одним IP | — |
+| A-04 | 292 власні коди сигналів понад каталог iot_sim (SPEC Додаток B); адреси HelvarNet — власна розширена схема (CH-05) | каталог iot_sim не має уставок, тепла, потужності, витяжного фільтра, складу несправностей; R-24 не розбирає HelvarNet | доповнює iot_sim Додаток A (Q-09) |
+| A-05 | Кількість світильників групи `n` — дані макета (розстановка з обходом перешкод — у 3D); Odoo рахує `n_required` і `e_calc` і показує, чи виконано норму | розстановку без геометрії перешкод не відтворити; результат (кількість) і перевірка норми — відтворюються | уточнює «усе з макета» (алгоритм розстановки — ні, результат і формула — так) |
+| A-06 | Провайдери `f3d.viewer.provider.lighting` (110) і `.ventilation` (120) — `AbstractModel` без `_inherit`; база кожного об'єкта — статика `ctx['static']`, поверх — проєктні дані ORM і живі значення сигналів; розділ віддається цілком | рішення менеджера 14.10 (energy A-04); переглядач без живих даних показує макет | — |
+| A-07 | Перевірка «нижче норми» — лише для 22 груп режиму «зміна» (`check_norm=True`); для 10 груп «присутність і денне світло» — лише «вимкнено в робочий час» | у макеті ці групи свідомо приглушені (рівень 0,5…0,8 → `e_now` нижче норми без людей, напр. LT-SHEETS 92 лк при 100) | — |
+| A-08 | Робочий час — `resource.calendar` (параметр `factory3d.bms.calendar_id` або календар компанії) з вихідними (`compute_leaves=True`); умова рахується лише всередині поточного робочого інтервалу (обід — не робочий) | стандартний механізм Odoo, вже налаштований («Зміна 1») | — |
+| A-09 | Майстри керування створюють `f3d.command` від суперкористувача після перевірки групи оператора й `factory3d.bms.write_enabled`; `requested_by` — оператор | telemetry R-18 вимагає `group_f3d_manager`, а оператор не повинен мати прав налаштування джерел | — |
+| A-10 | Тепловий баланс — модель із параметрами (U, інфільтрація, частка зовнішнього повітря, рекуперація, t), що відтворює `heat_balance()` макета (753 кВт), плюс живий баланс; тепло КГУ — сигнал energy `infra/chp/heat_kw`, інакше інтерполяція за паспортом (497/676/856 кВт при 50/75/100 %) з `infra/totals/chp_kw`, інакше 497 (як макет) | параметри мають змінюватися без коду; КГУ — зона energy | — |
+| A-11 | Придушення перевірок «не працює/вимкнено» під час пожежної тривоги/тесту і без мережі — за сигналами fire_safety/energy, без залежності від модулів | прилад зупиняє вентиляцію апаратно (iot_sim R-25), блекаут вимикає C2 (R-22) | — |
+| A-12 | Плагін — окремий pip-пакет `services/collector_plugins/f3d_collector_bms` (entry point `helvarnet`) | telemetry §8.3.2 (плагіни інших модулів — окремі пакети); як yard | — |
+| A-13 | Тексти `mode` — сирі коди MSV (`VE`…`Off`), українські назви — у провайдері й формах; сигнали `mode`, `state`, `check`, `faulty` — `viewer_visible=False` | fire_safety порівнює `last_text ∈ {ST, Off}`; переглядач очікує `mode` українською і `state` `on`/`off` | — |
+| A-14 | Журнал відхилень — власна модель (епізоди тривог усіх сигналів модуля, включно з порогами telemetry) | огляд і звіт «що й скільки тривало» без розбору `f3d.reading`; зв'язок із заявкою | — |
+| A-15 | Категорії обладнання в демо (LT-HW «Склад і транспорт», RV-05 «Вентиляція») модуль не змінює; фільтри — за моделями модуля | обладнання — зона base; категорії — дані замовника | — |
+| A-16 | Енергетичні лічильники щитів/вентиляції не дублюються: `p_now` щита — сигнал energy `energy/consumers/LP-*/p_now`, якщо є; інакше Σ груп (C:161); інакше проєктне | energy A-19 (u51–u59) | — |
+| A-17 | `lighting/panels/LP-*/state` — агрегат роутера в плагіні (`ok` / `fault` — є несправні пристрої), а не C:110 одного пристрою | C:110 `@1.x.1.1` описує один світильник (iot_sim Q-09 б) | змінює адресу каталогу iot_sim |
+| A-18 | Без живого значення (сигналу немає, `unknown` або `stale`) провайдер і огляд показують проєктне/статичне значення з позначкою `stale`/`level_source='design'`; для тепла, клапана, потужності — формули макета (R-13) | переглядач і демо працюють до колектора; формули макета перенесено | — |
+| A-19 | Рівень групи — медіана C:152 до 3 пристроїв групи (перший, середній, останній, без відсутніх); значення ≥ 0x80000000 → 0 (вимкнено) | HelvarNet не має запиту рівня групи; документ: бит 31 — «вимкнено нижче рівня ввімкнення» | — |
+| A-20 | `EF-CHG` зупинений під час заряджання (BI:1=0 ∧ BI:7=1) — тривога й заявка, а не попередження | водень у зарядній: EN IEC 62485-3 вимагає вентиляцію під час заряджання (паспорт `ex_fan`) | відрізняється від iot_sim «warn» (Q-09 е) |
+| A-21 | `factory3d.bms.write_enabled=True` автоматично ставить `write_enabled` на 29 джерелах (`HN-LP-1…3`, `BAC-101…125`, `BAC-130-AHU-1`; не EF, не котельня) і 142 керованих сигналах (рівень і сцена 32 груп, режим і дві уставки 26 RV/AHU); `False` — знімає | одна дія адміністратора замість 171 перемикача; решта запобіжників telemetry незалежні | — |

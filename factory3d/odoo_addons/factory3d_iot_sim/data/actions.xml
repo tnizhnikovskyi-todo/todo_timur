@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Один крок імітації: кожен увімкнений сигнал змінюється так, як змінювався б справжній датчик.
+       Поведінка (x_mode):
+         noise    — коливання навколо номіналу (тиск, температура, витрата повітря);
+         machine  — потужність верстата: номінал, поки на робочому центрі завдання в роботі,
+                    простій — x_rate, зупинка (blocked) — 0;
+         drain    — заряд АКБ: розряджається на x_rate за хвилину, на межі x_limit їде заряджатися;
+         hours    — мотогодини: +1/60 щохвилини, поки джерело працює (не на зарядці, потужність > 0);
+         energy   — лічильник кВт·год: + потужність джерела / 60;
+         counter  — лічильник циклів: + x_rate за хвилину, поки джерело працює;
+         drift    — повільно росте (забивається фільтр, пилиться сповіщувач); заявку ТО закрили — скидається;
+         level    — рівень у бункері: зменшується, на межі x_limit — привезли, знову номінал;
+         solar    — виробіток СЕС за висотою сонця (Київ).
+       За порогом (x_alarm = below/above, x_threshold) — стан «тривога» і заявка ТО на обладнання. -->
+  <record id="action_iot_tick" model="ir.actions.server">
+    <field name="name">Імітація IoT: оновити сигнали</field>
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="state">code</field>
+    <field name="code"><![CDATA[
+now = datetime.datetime.now()
+h = (now.hour + now.minute / 60.0 + 3) % 24
+sun = 1 - ((h - 13.0) / 6.0) ** 2
+if sun < 0:
+    sun = 0.0
+Signal = env['x_f3d_signal']
+logs = []
+for s in Signal.search([('x_active', '=', True)], order='x_sequence, id'):
+    seed = (s.x_seed * 1103515245 + 12345) % 2147483648
+    r = seed / 1073741824.0 - 1.0
+    v = s.x_value
+    m = s.x_mode
+    src = s.x_source_id
+    vals = {'x_seed': seed}
+    req = s.x_request_id
+    if m == 'noise':
+        v = v + 0.3 * (s.x_nominal - v) + s.x_noise * r
+    elif m == 'machine':
+        st = s.x_workcenter_id.working_state
+        if st == 'blocked':
+            v = 0.0
+        elif st == 'done':
+            v = s.x_nominal * (1 + s.x_noise * r)
+        else:
+            v = s.x_rate * (1 + 0.05 * r)
+    elif m == 'drain':
+        if s.x_charging:
+            v = v + s.x_rate * 4
+            if v >= 95:
+                v = 95.0
+                vals['x_charging'] = False
+        else:
+            v = v - s.x_rate * (1 + 0.3 * r)
+            if v <= s.x_limit:
+                vals['x_charging'] = True
+    elif m == 'hours':
+        if not src or (not src.x_charging and (src.x_mode != 'machine' or src.x_value > 0)):
+            v = v + 1 / 60.0
+    elif m == 'energy':
+        v = v + (src.x_value if src else 0) / 60.0
+    elif m == 'counter':
+        if not src or src.x_value > 0:
+            v = v + s.x_rate * (1 + 0.3 * r)
+    elif m == 'drift':
+        if req and req.stage_id.done:
+            v = s.x_nominal
+            vals['x_request_id'] = False
+            req = False
+        else:
+            v = v + s.x_rate * (1 + 0.5 * r)
+    elif m == 'level':
+        v = v - s.x_rate * (1 + 0.3 * r)
+        if v <= s.x_limit:
+            v = s.x_nominal
+    elif m == 'solar':
+        v = s.x_nominal * sun * (0.92 + 0.08 * r)
+    v = round(v, 3)
+    alarm = (s.x_alarm == 'below' and v < s.x_threshold) or (s.x_alarm == 'above' and v > s.x_threshold)
+    if alarm:
+        vals['x_state'] = 'тривога'
+        if s.x_equipment_id and (not req or req.stage_id.done):
+            new = env['maintenance.request'].create({
+                'name': 'Сигнал: %s — %s %s' % (s.x_name, round(v, 1), s.x_unit or ''),
+                'equipment_id': s.x_equipment_id.id,
+                'maintenance_type': 'corrective',
+                'description': 'Автоматично з імітації IoT: поріг %s %s (%s).' % (
+                    s.x_threshold, s.x_unit or '', 'нижче' if s.x_alarm == 'below' else 'вище'),
+            })
+            vals['x_request_id'] = new.id
+    else:
+        vals['x_state'] = 'норма'
+    vals['x_value'] = v
+    vals['x_updated'] = now
+    s.write(vals)
+    if now.minute % 10 == 0:
+        logs.append({'x_name': s.x_name, 'x_signal_id': s.id, 'x_equipment_id': s.x_equipment_id.id,
+                     'x_value': v, 'x_unit': s.x_unit, 'x_time': now})
+if logs:
+    env['x_f3d_reading'].create(logs)
+if now.minute == 0:
+    env['x_f3d_reading'].search([('x_time', '<', now - datetime.timedelta(days=2))]).unlink()
+]]></field>
+  </record>
+
+  <record id="cron_iot_sim" model="ir.cron">
+    <field name="name">Імітація IoT: щохвилини</field>
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="state">code</field>
+    <field name="code">env.ref('factory3d_iot_sim.action_iot_tick').run()</field>
+    <field name="interval_number">1</field>
+    <field name="interval_type">minutes</field>
+    <field name="active" eval="True"/>
+  </record>
+
+  <record id="action_iot_start" model="ir.actions.server">
+    <field name="name">Увімкнути імітацію</field>
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="state">code</field>
+    <field name="code">env.ref('factory3d_iot_sim.cron_iot_sim').write({'active': True})
+action = {'type': 'ir.actions.client', 'tag': 'reload'}</field>
+  </record>
+  <record id="action_iot_stop" model="ir.actions.server">
+    <field name="name">Зупинити імітацію</field>
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="state">code</field>
+    <field name="code">env.ref('factory3d_iot_sim.cron_iot_sim').write({'active': False})
+action = {'type': 'ir.actions.client', 'tag': 'reload'}</field>
+  </record>
+  <record id="action_iot_tick_now" model="ir.actions.server">
+    <field name="name">Оновити зараз</field>
+    <field name="model_id" ref="model_x_f3d_signal"/>
+    <field name="state">code</field>
+    <field name="code">env.ref('factory3d_iot_sim.action_iot_tick').run()
+action = {'type': 'ir.actions.client', 'tag': 'reload'}</field>
+  </record>
+</odoo>

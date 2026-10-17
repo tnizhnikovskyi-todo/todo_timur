@@ -1,0 +1,2697 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body>
+<title>Меблеве підприємство 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Розкладка: 3D на весь екран, ліворуч плаваюча панель видів і шарів, праворуч картка об'єкта.
+   Тон — технічна документація цеху: холодні сірі, жовта розмітка підлоги як єдиний акцент. */
+:root {
+  --scene: #e4e9ec;
+  --bg: #eef1f3;
+  --panel: rgba(250, 251, 252, 0.92);
+  --panel-solid: #fafbfc;
+  --fg: #1d2833;
+  --muted: #5d6b78;
+  --line: #cfd7de;
+  --accent: #c99500;
+  --accent-fg: #1d2833;
+  --accent-soft: rgba(242, 194, 48, 0.22);
+  --ok: #1e9e57;
+  --warn: #d98a00;
+  --bad: #d63a2b;
+  --idle: #7f8c99;
+  --flow: #18a6c9;
+  --shadow: 0 6px 24px rgba(20, 35, 50, 0.12);
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --scene: #1a2027; --bg: #12171c; --panel: rgba(27, 33, 40, 0.92); --panel-solid: #1b2128;
+    --fg: #e3e9ee; --muted: #93a1ae; --line: #33404c; --accent: #f2c230; --accent-fg: #12171c;
+    --accent-soft: rgba(242, 194, 48, 0.16); --ok: #3cc479; --warn: #f0a52a; --bad: #f0604f;
+    --idle: #8d9aa6; --flow: #39c0e0; --shadow: 0 6px 24px rgba(0, 0, 0, 0.4); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --scene: #1a2027; --bg: #12171c; --panel: rgba(27, 33, 40, 0.92); --panel-solid: #1b2128;
+  --fg: #e3e9ee; --muted: #93a1ae; --line: #33404c; --accent: #f2c230; --accent-fg: #12171c;
+  --accent-soft: rgba(242, 194, 48, 0.16); --ok: #3cc479; --warn: #f0a52a; --bad: #f0604f;
+  --idle: #8d9aa6; --flow: #39c0e0; --shadow: 0 6px 24px rgba(0, 0, 0, 0.4); color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); overflow: hidden; }
+#app { position: relative; height: 100%; }
+#stage { position: absolute; inset: 0; background: var(--scene); }
+#stage canvas { display: block; outline: none; }
+#labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.panel, header.bar { z-index: 2; }
+
+.panel {
+  position: absolute; z-index: 2; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: var(--shadow); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+header.bar {
+  position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: center;
+  gap: 12px; flex-wrap: wrap; pointer-events: none;
+}
+header.bar > * { pointer-events: auto; }
+.brand { padding: 8px 14px; display: flex; align-items: baseline; gap: 12px; position: static; }
+.brand h1 { margin: 0; font: 600 18px/1.2 var(--f-display); letter-spacing: 0.01em; text-wrap: balance; }
+.brand .dims { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+#toggle-side { display: none; }
+
+button { font: inherit; color: inherit; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel-solid); border-radius: 7px; padding: 6px 10px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible, .view:focus-visible, .layer input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#side {
+  top: 68px; left: 12px; width: 236px; max-height: calc(100% - 132px); overflow: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.sec h2 {
+  margin: 0 0 6px; font: 600 11px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--muted);
+}
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.view {
+  border: 1px solid transparent; background: transparent; text-align: left; padding: 5px 7px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; line-height: 1.25;
+}
+.view:hover { background: var(--accent-soft); }
+.view[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.view kbd { font: 10px var(--f-mono); color: var(--muted); margin-right: 4px; }
+.layers { display: flex; flex-direction: column; gap: 2px; }
+.shift { position: static; display: flex; align-items: center; gap: 8px; padding: 5px 8px; }
+.shift input[type=range] { width: 170px; accent-color: var(--accent); }
+.shift .btn { font-size: 12px; padding: 4px 9px; }
+.shift .mono { min-width: 44px; }
+@media (max-width: 760px) { .shift input[type=range] { width: 110px; } #shift-now { display: none; } }
+.lgroup + .lgroup { border-top: 1px solid var(--line); padding-top: 2px; }
+.lg-head { display: flex; align-items: center; gap: 4px; }
+.lg-head { min-height: 30px; padding-left: 2px; }
+.lg-head .lg-all { accent-color: var(--accent); margin: 0 6px 0 0; width: 15px; height: 15px; cursor: pointer; }
+.lg-name { flex: 1; text-align: left; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
+  font: 600 13px var(--f-body); color: var(--fg); }
+.lg-name:hover { color: var(--accent); }
+.lg-bulk { display: flex; gap: 6px; margin: 2px 0 4px; }
+.lg-bulk .btn { font-size: 11px; padding: 2px 8px; }
+.lg-n { font: 11px var(--f-mono); color: var(--muted); }
+.lg-tog { border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: var(--muted); }
+.lg-tog::before { content: ""; display: inline-block; width: 7px; height: 7px; border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 0.15s; }
+.lg-tog[aria-expanded="true"]::before { transform: translateY(1px) rotate(-135deg); }
+.lg-tog:hover { background: var(--accent-soft); color: var(--fg); }
+.lg-items { display: flex; flex-direction: column; gap: 1px; padding: 0 0 4px 22px; }
+.lg-items[hidden] { display: none; }
+.layer { display: flex; align-items: center; gap: 8px; padding: 3px 2px; cursor: pointer; font-size: 13px; }
+.layer input { accent-color: var(--accent); margin: 0; width: 15px; height: 15px; }
+.row-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.row-btns .btn { font-size: 12px; padding: 4px 8px; }
+
+#card { top: 68px; right: 12px; width: 320px; max-height: calc(100% - 132px); overflow: auto; padding: 14px 16px; }
+#card .kind { font: 600 11px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+#card h3 { margin: 6px 0 2px; font: 600 20px/1.2 var(--f-display); text-wrap: balance; }
+#card .code { font: 12px var(--f-mono); color: var(--muted); }
+#card p { margin: 10px 0 0; max-width: 60ch; }
+#card .actions { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 3px 9px 3px 7px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid currentColor;
+}
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); }
+.chip.idle { color: var(--idle); }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.summary div { border-top: 2px solid var(--line); padding-top: 6px; }
+.summary b { display: block; font: 600 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.summary span { font-size: 11px; color: var(--muted); line-height: 1.25; display: block; }
+.attn { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.attn button {
+  width: 100%; display: flex; gap: 8px; align-items: center; text-align: left; background: transparent;
+  border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; cursor: pointer; font-size: 13px;
+}
+.attn button:hover { border-color: var(--accent); }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.legend { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.swatch { width: 14px; height: 10px; border-radius: 2px; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+
+#help {
+  bottom: 12px; left: 12px; padding: 6px 10px; font-size: 12px; color: var(--muted);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+#help b { color: var(--fg); font-weight: 500; }
+
+.lbl {
+  font: 500 12px/1.2 var(--f-display); color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+  padding: 2px 7px; border-radius: 5px; white-space: nowrap; letter-spacing: 0.01em;
+}
+.lbl.zone { text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; background: transparent; border: 0; padding: 0;
+  text-shadow: 0 0 3px var(--scene), 0 0 6px var(--scene); color: var(--fg); }
+.lbl .st { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+
+#loading {
+  position: absolute; inset: 0; display: grid; place-items: center; font: 500 14px var(--f-display);
+  color: var(--muted); letter-spacing: 0.04em; pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  #toggle-side { display: inline-block; }
+  .brand .dims { display: none; }
+  #side { display: none; width: auto; right: 12px; max-height: 55%; }
+  #side.open { display: flex; }
+  #card { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 42%; }
+  #help { display: none; }
+  .views { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .btn, .view { transition: none; } }
+
+/* ---------- Odoo: індикатор, вкладки, списки, таблиці, мітки в 3D ---------- */
+#card { width: 360px; padding: 0; display: flex; flex-direction: column; }
+#card > .body { padding: 12px 16px 16px; overflow: auto; min-height: 0; }
+.odoo-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; font-size: 12px; position: static;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.odoo-pill .live { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 var(--ok); }
+.odoo-pill.on .live { animation: live 2s infinite; }
+.odoo-pill.off .live { background: var(--bad); }
+.odoo-pill b { font-weight: 600; }
+.odoo-pill .muted { color: var(--muted); font-family: var(--f-mono); }
+@keyframes live { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .odoo-pill.on .live { animation: none; } }
+.tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 8px; flex: none; }
+.tab {
+  flex: 1; border: 0; background: transparent; padding: 10px 2px 8px; font: 600 11.5px var(--f-display);
+  letter-spacing: 0.01em; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.back { border: 0; background: transparent; color: var(--muted); padding: 0; cursor: pointer; font-size: 12px; margin-bottom: 8px; }
+.back:hover { color: var(--fg); }
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 2px 0 12px; }
+.kpi { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.kpi b { display: block; font: 600 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.kpi span { font-size: 11px; color: var(--muted); }
+.sub { margin: 14px 0 6px; font: 600 11px/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.row {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; text-align: left;
+  background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; cursor: pointer; font-size: 13px;
+}
+.row:hover, .row.active { border-color: var(--accent); }
+.row .t { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .m { grid-column: 1 / -1; color: var(--muted); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .pw { grid-column: 1 / -1; }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+.pbar { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
+.pbar > i { display: block; height: 100%; background: var(--ok); border-radius: 3px; }
+.pbar.warn > i { background: var(--warn); } .pbar.bad > i { background: var(--bad); } .pbar.flow > i { background: var(--flow); }
+.pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); } .pill.idle { color: var(--idle); }
+.pill.info { color: var(--flow); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin-top: 10px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.tbl th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 4px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 5px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); vertical-align: top; }
+.tbl td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl tr.click { cursor: pointer; } .tbl tr.click:hover td { background: var(--accent-soft); }
+.lnk { border: 0; background: transparent; padding: 0; color: var(--fg); text-decoration: underline; text-decoration-color: var(--accent);
+  text-underline-offset: 2px; cursor: pointer; font: inherit; }
+.note { margin-top: 10px; padding: 8px 10px; border-radius: 7px; background: var(--accent-soft); font-size: 12px; }
+.note.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.search { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--panel-solid); color: var(--fg);
+  border-radius: 7px; padding: 7px 10px; font: inherit; }
+.search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0; }
+.chipf { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; }
+.chipf[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.mk {
+  font: 600 11px/1 var(--f-display); padding: 4px 7px; border-radius: 6px; color: #fff; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); transform: translateY(-8px); position: relative;
+}
+.mk::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: inherit; }
+.mk.done { background: #1e9e57; border-color: #1e9e57; } .mk.prog { background: #d98a00; border-color: #d98a00; }
+.mk.pend { background: #6b7886; border-color: #6b7886; } .mk.hl { background: #0f7f9e; border-color: #0f7f9e; }
+.mk.bad { background: #d63a2b; border-color: #d63a2b; }
+.mo-tag { font: 600 10px/1 var(--f-mono, monospace); padding: 2px 4px; border-radius: 4px; color: #fff; white-space: nowrap;
+  transform: translate(10px, -10px); pointer-events: auto; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.mo-tag.bad { outline: 2px solid #d63a2b; }
+.layer.prod-ov { font-weight: 600; margin-bottom: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.layer.prod-ov small { display: block; font-weight: 400; color: var(--muted); }
+.prod-legend { font-size: 11.5px; color: var(--muted); margin: -2px 0 8px; line-height: 1.6; }
+.prod-legend span { white-space: nowrap; margin-right: 6px; }
+.prod-legend i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+.radio { display: flex; flex-direction: column; gap: 2px; }
+ol.steps { margin: 4px 0 6px; padding-left: 20px; font-size: 13px; }
+ol.steps li { margin: 3px 0; }
+ol.steps .m { display: block; color: var(--muted); font-size: 12px; }
+.pp-head { font: 600 15px/1.3 var(--f-display); margin-top: 2px; }
+.chart { display: block; width: 100%; height: auto; margin-top: 4px; }
+.chart .typ { fill: none; stroke: var(--muted); stroke-width: 0.6; }
+.chart .day { fill: var(--accent); } .chart .now { fill: var(--warn); }
+.chart text { fill: var(--muted); font: 7px var(--f-mono); }
+.chart-key { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.chart-key i { display: inline-block; width: 10px; height: 8px; margin-right: 4px; vertical-align: -1px; }
+.src { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.src a { color: var(--fg); text-decoration-color: var(--accent); }
+@media (max-width: 760px) { #card { width: auto; } .odoo-pill .muted { display: none; } #side { top: 112px; } }
+
+/* ---------- Потік зміни: стрічка часу над сценою, поки грає таймер ---------- */
+#flow { top: 68px; left: 284px; right: 384px; padding: 8px 12px 8px; display: flex; flex-direction: column; gap: 4px; }
+#flow[hidden] { display: none; }
+.fl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fl-head b { font: 600 14px/1.2 var(--f-display); letter-spacing: 0.01em; }
+.fl-head .mono { color: var(--muted); }
+.fl-head #flow-time { color: var(--fg); font-weight: 500; }
+.fl-key { margin-left: auto; display: flex; gap: 10px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.fl-key i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
+.fl-key .tri { width: 0; height: 0; border: 5px solid transparent; border-top: 8px solid #2f80c0; border-bottom: 0; }
+.fl-key .tri.up { border-top: 0; border-bottom: 8px solid var(--ok); }
+.fl-key .dot2 { border-radius: 50%; background: var(--idle); }
+#flow-svg { display: block; width: 100%; }
+#flow-svg text { fill: var(--muted); font: 11px var(--f-body); }
+#flow-svg text.ax { font: 10px var(--f-mono); }
+#flow-svg text.ln { fill: var(--fg); }
+#flow-svg .lane { fill: color-mix(in srgb, var(--line) 28%, transparent); }
+#flow-svg .grid { stroke: color-mix(in srgb, var(--line) 80%, transparent); stroke-width: 1; }
+#flow-svg [data-go] { cursor: pointer; }
+#flow-svg .wo { transition: opacity 0.2s; }
+#flow-svg .wo.act { stroke: var(--fg); stroke-width: 1; }
+#flow-svg .wo.bad { stroke: var(--bad); stroke-width: 1.5; }
+#flow-svg .wo:hover { stroke: var(--accent); stroke-width: 1.5; }
+#flow-svg .past { fill: color-mix(in srgb, var(--fg) 5%, transparent); }
+#flow-svg .now { stroke: var(--accent); stroke-width: 2; }
+#flow-svg .nowlbl { fill: var(--accent-fg); font: 600 10px var(--f-mono); }
+#flow-svg .nowbg { fill: var(--accent); }
+.fl-feed { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; font-size: 12px; min-height: 34px; }
+.fl-feed li { display: flex; gap: 6px; min-width: 0; align-items: baseline; color: var(--muted); }
+.fl-feed li.new { color: var(--fg); }
+.fl-feed .mono { flex: none; }
+.fl-feed .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-feed .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; align-self: center; }
+@media (max-width: 1180px) {
+  #flow { left: 12px; right: 12px; }
+  body.flow-on #side, body.flow-on #card { top: calc(var(--flow-bottom, 68px) + 8px); max-height: calc(100% - var(--flow-bottom, 68px) - 72px); }
+}
+@media (max-width: 760px) {
+  #flow { padding: 6px 8px; }
+  .fl-key { display: none; }
+  .fl-feed { grid-template-columns: 1fr; min-height: 0; }
+  .fl-feed li:nth-child(n+3) { display: none; }
+  body.flow-on #card { top: auto; max-height: 34%; }
+}
+</style>
+
+<div id="app">
+  <div id="stage" aria-label="3D-модель підприємства"></div>
+  <div id="labels"></div>
+  <div id="loading">Завантаження моделі…</div>
+
+  <header class="bar">
+    <div class="panel brand"><h1>Меблеве підприємство</h1><span class="dims" id="dims"></span></div>
+    <button class="panel odoo-pill" id="odoo-pill" title="Джерело даних">
+      <span class="live"></span><b>Odoo</b><span id="odoo-state">підключення…</span><span class="muted" id="odoo-time"></span>
+    </button>
+    <div class="panel shift" id="shift" role="group" aria-label="Програвання зміни">
+      <button class="btn" id="shift-play" aria-label="Програти зміну">▶</button>
+      <input type="range" id="shift-t" min="420" max="930" step="5" value="630" aria-label="Час зміни">
+      <span class="mono" id="shift-l">зараз</span>
+      <button class="btn" id="shift-now">Зараз</button>
+    </div>
+    <button class="btn" id="toggle-side" aria-expanded="false" aria-controls="side">Види і шари</button>
+  </header>
+
+  <section class="panel" id="flow" hidden aria-label="Потік зміни">
+    <div class="fl-head"><b>Потік зміни</b><span class="mono" id="flow-time"></span><span class="mono" id="flow-sum"></span>
+      <span class="fl-key"><span><i class="tri"></i>фура з матеріалами</span><span><i class="dot2"></i>склад → цех</span>
+        <span><i class="tri up"></i>фура клієнта</span><span>смуга — операція, колір — замовлення</span></span></div>
+    <svg id="flow-svg" role="img" aria-label="Операції замовлень і переміщення матеріалів за часом зміни"></svg>
+    <ul class="fl-feed" id="flow-feed" aria-live="off"></ul>
+  </section>
+
+  <nav class="panel" id="side" aria-label="Види і шари">
+    <div class="sec">
+      <h2>Види</h2>
+      <div class="views" id="views"></div>
+    </div>
+    <div class="sec">
+      <h2>Розфарбування</h2>
+      <div class="radio">
+        <label class="layer"><input type="radio" name="cmode" id="cm-none" value="none" checked><span>Звичайні кольори</span></label>
+        <label class="layer"><input type="radio" name="cmode" id="cm-fill" value="fill"><span>Заповненість складу</span></label>
+        <label class="layer"><input type="radio" name="cmode" id="cm-oee" value="oee"><span>OEE верстатів</span></label>
+        <label class="layer"><input type="radio" name="cmode" id="cm-power" value="power"><span>Споживання електроенергії</span></label>
+        <label class="layer"><input type="radio" name="cmode" id="cm-lux" value="lux"><span>Освітленість відносно норми</span></label>
+      </div>
+    </div>
+    <div class="sec">
+      <h2>Шари</h2>
+      <label class="layer prod-ov"><input type="checkbox" id="opt-prod"><span>Замовлення в роботі<small>весь цикл кожного замовлення: від фури з плитами через верстати до фури клієнта, і де воно зараз · вид згори без інженерії</small></span></label>
+      <div id="prod-legend" class="prod-legend" hidden>Матеріали:
+        <span><i style="background:#2f80c0"></i>плита, ХДФ</span><span><i style="background:#8e44ad"></i>фурнітура</span>
+        <span><i style="background:#e67e22"></i>крайка</span><span><i style="background:#16a085"></i>ЛФМ, плівка</span>
+        <span><i style="background:#7f8c8d"></i>пакування</span> · товща лінія — більше замовлень</div>
+      <div class="layers" id="layers"></div>
+      <div class="row-btns" style="margin-top:8px">
+        <button class="btn" id="all-on">Усі</button>
+        <button class="btn" id="all-off">Лише виробництво</button>
+        <button class="btn" id="eng-only">Інженерія</button>
+      </div>
+    </div>
+    <div class="sec">
+      <h2>Показ</h2>
+      <div class="layers">
+        <label class="layer"><input type="checkbox" id="opt-labels" checked><span>Підписи</span></label>
+        <label class="layer"><input type="checkbox" id="opt-motion" checked><span>Анімація маршруту замовлення</span></label>
+        <label class="layer"><input type="checkbox" id="opt-shadows" checked><span>Тіні</span></label>
+      </div>
+    </div>
+  </nav>
+
+  <aside class="panel" id="card" aria-live="polite">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-overview" data-tab="overview" aria-selected="true">Огляд</button>
+      <button class="tab" role="tab" id="tab-production" data-tab="production" aria-selected="false">Виробництво</button>
+      <button class="tab" role="tab" id="tab-stock" data-tab="stock" aria-selected="false">Склад</button>
+      <button class="tab" role="tab" id="tab-logistics" data-tab="logistics" aria-selected="false">Логістика</button>
+      <button class="tab" role="tab" id="tab-energy" data-tab="energy" aria-selected="false">Енергія</button>
+    </div>
+    <div class="body" id="cardbody"></div>
+  </aside>
+
+  <div class="panel" id="help">
+    <span><b>ЛКМ</b> обертати</span><span><b>ПКМ</b> зсув</span><span><b>Коліщатко</b> масштаб</span>
+    <span><b>Клік</b> вибрати</span><span><b>Подвійний клік</b> наблизити</span><span><b>1–9, 0</b> види · <b>Esc</b> скинути</span>
+  </div>
+</div>
+
+<!-- ODOO_DATA -->
+<script type="application/json" id="parts-manifest">{"dims": "150 × 72 м · h 9 м", "layers": [{"key": "building", "label": "Будівля", "group": "Будівля", "order": 0}, {"key": "roof", "label": "Покрівля, ферми", "group": "Будівля", "order": 1}, {"key": "roofdeck", "label": "Дах і сонячні панелі", "group": "Будівля", "order": 2}, {"key": "zones", "label": "Розмітка зон", "group": "Будівля", "order": 3}, {"key": "receiving", "label": "Приймання", "group": "Склади й логістика", "order": 4}, {"key": "sheets", "label": "Склад плит", "group": "Склади й логістика", "order": 5}, {"key": "hardware", "label": "Склад фурнітури", "group": "Склади й логістика", "order": 6}, {"key": "edge", "label": "Склад крайки", "group": "Склади й логістика", "order": 7}, {"key": "buffer", "label": "Буфер комплектів", "group": "Склади й логістика", "order": 8}, {"key": "fg", "label": "Склад готової продукції", "group": "Склади й логістика", "order": 9}, {"key": "shipping", "label": "Відвантаження", "group": "Склади й логістика", "order": 10}, {"key": "line", "label": "Виробничі лінії", "group": "Виробництво", "order": 11}, {"key": "facade", "label": "Дільниця фасадів МДФ", "group": "Виробництво", "order": 12}, {"key": "dust", "label": "Аспірація", "group": "Інженерні мережі", "order": 13}, {"key": "utilities", "label": "Стиснене повітря, котельня, зарядна", "group": "Інженерні мережі", "order": 14}, {"key": "energy", "label": "Електропостачання", "group": "Інженерні мережі", "order": 15}, {"key": "lighting", "label": "Освітлення", "group": "Інженерні мережі", "order": 16}, {"key": "ventilation", "label": "Вентиляція й опалення", "group": "Інженерні мережі", "order": 17}, {"key": "backup", "label": "Резервне живлення й СЕС", "group": "Інженерні мережі", "order": 18}, {"key": "water", "label": "Вода й стоки", "group": "Інженерні мережі", "order": 19}, {"key": "fire", "label": "Пожежна сигналізація", "group": "Пожежна безпека", "order": 20}, {"key": "sprinklers", "label": "Спринклери", "group": "Пожежна безпека", "order": 21}, {"key": "evacuation", "label": "Евакуація", "group": "Пожежна безпека", "order": 22}, {"key": "smoke", "label": "Димовидалення", "group": "Пожежна безпека", "order": 23}, {"key": "lightning", "label": "Блискавкозахист", "group": "Пожежна безпека", "order": 24}, {"key": "odoo_it", "label": "Робочі місця Odoo", "group": "ІТ і Odoo", "order": 25}, {"key": "network", "label": "Wi-Fi і серверна", "group": "ІТ і Odoo", "order": 26}, {"key": "territory", "label": "Територія, прохідна, ваги", "group": "Територія й охорона", "order": 27}, {"key": "security", "label": "Відеоспостереження й доступ", "group": "Територія й охорона", "order": 28}, {"key": "transport", "label": "Транспорт", "group": "Люди й транспорт", "order": 29}, {"key": "people", "label": "Персонал", "group": "Люди й транспорт", "order": 30}], "parts": [{"key": "core", "title": "Будівля, склади, виробництво, люди", "file": "parts/core.glb", "layers": ["building", "roof", "roofdeck", "zones", "receiving", "sheets", "hardware", "edge", "buffer", "fg", "shipping", "line", "facade", "transport", "people"], "codes": ["ASM-1", "ASM-2", "ASM-3", "ASM-4", "ASM-5", "ASM-6", "ASMLINE-1", "AUTOSPRAY-1", "BOARD-RACKS", "BORE-1", "BOX-1", "CNC-1", "CNC-2", "CNC-3", "CNC-4", "CONVEYORS", "DOCK-E1", "DOCK-E2", "DOCK-E3", "DOCK-E4", "DOCK-E5", "DOCK-E6", "DOCK-E7", "DOCK-W1", "DOCK-W2", "DOCK-W3", "DOCK-W4", "DOCK-W5", "DOCK-W6", "DOCK-W7", "DOWEL-1", "DRY-1", "EB-U1", "EB-U1-S1-L1", "EB-U1-S1-L2", "EB-U1-S1-L3", "EB-U1-S2-L1", "EB-U1-S2-L2", "EB-U1-S2-L3", "EB-U1-S3-L1", "EB-U1-S3-L2", "EB-U1-S3-L3", "EB-U1-S4-L1", "EB-U1-S4-L2", "EB-U1-S4-L3", "EB-U2", "EB-U2-S1-L1", "EB-U2-S1-L2", "EB-U2-S1-L3", "EB-U2-S2-L1", "EB-U2-S2-L2", "EB-U2-S2-L3", "EB-U2-S3-L1", "EB-U2-S3-L2", "EB-U2-S3-L3", "EB-U2-S4-L1", "EB-U2-S4-L2", "EB-U2-S4-L3", "EDGE-1", "EDGE-2", "EDGE-3", "FG-R1-B01-L1", "FG-R1-B01-L2", "FG-R1-B01-L3", "FG-R1-B01-L4", "FG-R1-B02-L1", "FG-R1-B02-L2", "FG-R1-B02-L3", "FG-R1-B02-L4", "FG-R1-B03-L1", "FG-R1-B03-L2", "FG-R1-B03-L3", "FG-R1-B03-L4", "FG-R1-B04-L1", "FG-R1-B04-L2", "FG-R1-B04-L3", "FG-R1-B04-L4", "FG-R1-B05-L1", "FG-R1-B05-L2", "FG-R1-B05-L3", "FG-R1-B05-L4", "FG-R1-B06-L1", "FG-R1-B06-L2", "FG-R1-B06-L3", "FG-R1-B06-L4", "FG-R1-B07-L1", "FG-R1-B07-L2", "FG-R1-B07-L3", "FG-R1-B07-L4", "FG-R1-B08-L1", "FG-R1-B08-L2", "FG-R1-B08-L3", "FG-R1-B08-L4", "FG-R1-B09-L1", "FG-R1-B09-L2", "FG-R1-B09-L3", "FG-R1-B09-L4", "FG-R1-B10-L1", "FG-R1-B10-L2", "FG-R1-B10-L3", "FG-R1-B10-L4", "FG-R1-B11-L1", "FG-R1-B11-L2", "FG-R1-B11-L3", "FG-R1-B11-L4", "FG-R1-B12-L1", "FG-R1-B12-L2", "FG-R1-B12-L3", "FG-R1-B12-L4", "FG-R1-B13-L1", "FG-R1-B13-L2", "FG-R1-B13-L3", "FG-R1-B13-L4", "FG-R1-B14-L1", "FG-R1-B14-L2", "FG-R1-B14-L3", "FG-R1-B14-L4", "FG-R1-B15-L1", "FG-R1-B15-L2", "FG-R1-B15-L3", "FG-R1-B15-L4", "FG-R1-B16-L1", "FG-R1-B16-L2", "FG-R1-B16-L3", "FG-R1-B16-L4", "FG-R1-B17-L1", "FG-R1-B17-L2", "FG-R1-B17-L3", "FG-R1-B17-L4", "FG-R1-B18-L1", "FG-R1-B18-L2", "FG-R1-B18-L3", "FG-R1-B18-L4", "FG-R2-B01-L1", "FG-R2-B01-L2", "FG-R2-B01-L3", "FG-R2-B01-L4", "FG-R2-B02-L1", "FG-R2-B02-L2", "FG-R2-B02-L3", "FG-R2-B02-L4", "FG-R2-B03-L1", "FG-R2-B03-L2", "FG-R2-B03-L3", "FG-R2-B03-L4", "FG-R2-B04-L1", "FG-R2-B04-L2", "FG-R2-B04-L3", "FG-R2-B04-L4", "FG-R2-B05-L1", "FG-R2-B05-L2", "FG-R2-B05-L3", "FG-R2-B05-L4", "FG-R2-B06-L1", "FG-R2-B06-L2", "FG-R2-B06-L3", "FG-R2-B06-L4", "FG-R2-B07-L1", "FG-R2-B07-L2", "FG-R2-B07-L3", "FG-R2-B07-L4", "FG-R2-B08-L1", "FG-R2-B08-L2", "FG-R2-B08-L3", "FG-R2-B08-L4", "FG-R2-B09-L1", "FG-R2-B09-L2", "FG-R2-B09-L3", "FG-R2-B09-L4", "FG-R2-B10-L1", "FG-R2-B10-L2", "FG-R2-B10-L3", "FG-R2-B10-L4", "FG-R2-B11-L1", "FG-R2-B11-L2", "FG-R2-B11-L3", "FG-R2-B11-L4", "FG-R2-B12-L1", "FG-R2-B12-L2", "FG-R2-B12-L3", "FG-R2-B12-L4", "FG-R2-B13-L1", "FG-R2-B13-L2", "FG-R2-B13-L3", "FG-R2-B13-L4", "FG-R2-B14-L1", "FG-R2-B14-L2", "FG-R2-B14-L3", "FG-R2-B14-L4", "FG-R2-B15-L1", "FG-R2-B15-L2", "FG-R2-B15-L3", "FG-R2-B15-L4", "FG-R2-B16-L1", "FG-R2-B16-L2", "FG-R2-B16-L3", "FG-R2-B16-L4", "FG-R2-B17-L1", "FG-R2-B17-L2", "FG-R2-B17-L3", "FG-R2-B17-L4", "FG-R2-B18-L1", "FG-R2-B18-L2", "FG-R2-B18-L3", "FG-R2-B18-L4", "FG-R3-B01-L1", "FG-R3-B01-L2", "FG-R3-B01-L3", "FG-R3-B01-L4", "FG-R3-B02-L1", "FG-R3-B02-L2", "FG-R3-B02-L3", "FG-R3-B02-L4", "FG-R3-B03-L1", "FG-R3-B03-L2", "FG-R3-B03-L3", "FG-R3-B03-L4", "FG-R3-B04-L1", "FG-R3-B04-L2", "FG-R3-B04-L3", "FG-R3-B04-L4", "FG-R3-B05-L1", "FG-R3-B05-L2", "FG-R3-B05-L3", "FG-R3-B05-L4", "FG-R3-B06-L1", "FG-R3-B06-L2", "FG-R3-B06-L3", "FG-R3-B06-L4", "FG-R3-B07-L1", "FG-R3-B07-L2", "FG-R3-B07-L3", "FG-R3-B07-L4", "FG-R3-B08-L1", "FG-R3-B08-L2", "FG-R3-B08-L3", "FG-R3-B08-L4", "FG-R3-B09-L1", "FG-R3-B09-L2", "FG-R3-B09-L3", "FG-R3-B09-L4", "FG-R3-B10-L1", "FG-R3-B10-L2", "FG-R3-B10-L3", "FG-R3-B10-L4", "FG-R3-B11-L1", "FG-R3-B11-L2", "FG-R3-B11-L3", "FG-R3-B11-L4", "FG-R3-B12-L1", "FG-R3-B12-L2", "FG-R3-B12-L3", "FG-R3-B12-L4", "FG-R3-B13-L1", "FG-R3-B13-L2", "FG-R3-B13-L3", "FG-R3-B13-L4", "FG-R3-B14-L1", "FG-R3-B14-L2", "FG-R3-B14-L3", "FG-R3-B14-L4", "FG-R3-B15-L1", "FG-R3-B15-L2", "FG-R3-B15-L3", "FG-R3-B15-L4", "FG-R3-B16-L1", "FG-R3-B16-L2", "FG-R3-B16-L3", "FG-R3-B16-L4", "FG-R3-B17-L1", "FG-R3-B17-L2", "FG-R3-B17-L3", "FG-R3-B17-L4", "FG-R3-B18-L1", "FG-R3-B18-L2", "FG-R3-B18-L3", "FG-R3-B18-L4", "FG-R4-B01-L1", "FG-R4-B01-L2", "FG-R4-B01-L3", "FG-R4-B01-L4", "FG-R4-B02-L1", "FG-R4-B02-L2", "FG-R4-B02-L3", "FG-R4-B02-L4", "FG-R4-B03-L1", "FG-R4-B03-L2", "FG-R4-B03-L3", "FG-R4-B03-L4", "FG-R4-B04-L1", "FG-R4-B04-L2", "FG-R4-B04-L3", "FG-R4-B04-L4", "FG-R4-B05-L1", "FG-R4-B05-L2", "FG-R4-B05-L3", "FG-R4-B05-L4", "FG-R4-B06-L1", "FG-R4-B06-L2", "FG-R4-B06-L3", "FG-R4-B06-L4", "FG-R4-B07-L1", "FG-R4-B07-L2", "FG-R4-B07-L3", "FG-R4-B07-L4", "FG-R4-B08-L1", "FG-R4-B08-L2", "FG-R4-B08-L3", "FG-R4-B08-L4", "FG-R4-B09-L1", "FG-R4-B09-L2", "FG-R4-B09-L3", "FG-R4-B09-L4", "FG-R4-B10-L1", "FG-R4-B10-L2", "FG-R4-B10-L3", "FG-R4-B10-L4", "FG-R4-B11-L1", "FG-R4-B11-L2", "FG-R4-B11-L3", "FG-R4-B11-L4", "FG-R4-B12-L1", "FG-R4-B12-L2", "FG-R4-B12-L3", "FG-R4-B12-L4", "FG-R4-B13-L1", "FG-R4-B13-L2", "FG-R4-B13-L3", "FG-R4-B13-L4", "FG-R4-B14-L1", "FG-R4-B14-L2", "FG-R4-B14-L3", "FG-R4-B14-L4", "FG-R4-B15-L1", "FG-R4-B15-L2", "FG-R4-B15-L3", "FG-R4-B15-L4", "FG-R4-B16-L1", "FG-R4-B16-L2", "FG-R4-B16-L3", "FG-R4-B16-L4", "FG-R4-B17-L1", "FG-R4-B17-L2", "FG-R4-B17-L3", "FG-R4-B17-L4", "FG-R4-B18-L1", "FG-R4-B18-L2", "FG-R4-B18-L3", "FG-R4-B18-L4", "FG-R5-B01-L1", "FG-R5-B01-L2", "FG-R5-B01-L3", "FG-R5-B01-L4", "FG-R5-B02-L1", "FG-R5-B02-L2", "FG-R5-B02-L3", "FG-R5-B02-L4", "FG-R5-B03-L1", "FG-R5-B03-L2", "FG-R5-B03-L3", "FG-R5-B03-L4", "FG-R5-B04-L1", "FG-R5-B04-L2", "FG-R5-B04-L3", "FG-R5-B04-L4", "FG-R5-B05-L1", "FG-R5-B05-L2", "FG-R5-B05-L3", "FG-R5-B05-L4", "FG-R5-B06-L1", "FG-R5-B06-L2", "FG-R5-B06-L3", "FG-R5-B06-L4", "FG-R5-B07-L1", "FG-R5-B07-L2", "FG-R5-B07-L3", "FG-R5-B07-L4", "FG-R5-B08-L1", "FG-R5-B08-L2", "FG-R5-B08-L3", "FG-R5-B08-L4", "FG-R5-B09-L1", "FG-R5-B09-L2", "FG-R5-B09-L3", "FG-R5-B09-L4", "FG-R5-B10-L1", "FG-R5-B10-L2", "FG-R5-B10-L3", "FG-R5-B10-L4", "FG-R5-B11-L1", "FG-R5-B11-L2", "FG-R5-B11-L3", "FG-R5-B11-L4", "FG-R5-B12-L1", "FG-R5-B12-L2", "FG-R5-B12-L3", "FG-R5-B12-L4", "FG-R5-B13-L1", "FG-R5-B13-L2", "FG-R5-B13-L3", "FG-R5-B13-L4", "FG-R5-B14-L1", "FG-R5-B14-L2", "FG-R5-B14-L3", "FG-R5-B14-L4", "FG-R5-B15-L1", "FG-R5-B15-L2", "FG-R5-B15-L3", "FG-R5-B15-L4", "FG-R5-B16-L1", "FG-R5-B16-L2", "FG-R5-B16-L3", "FG-R5-B16-L4", "FG-R5-B17-L1", "FG-R5-B17-L2", "FG-R5-B17-L3", "FG-R5-B17-L4", "FG-R5-B18-L1", "FG-R5-B18-L2", "FG-R5-B18-L3", "FG-R5-B18-L4", "FG-RACK-R1", "FG-RACK-R2", "FG-RACK-R3", "FG-RACK-R4", "FG-RACK-R5", "FL-1", "FL-2", "FL-3", "FL-4", "FL-5", "FL-6", "FL-C1", "FL-C2", "FRONTS-1", "FRONTS-2", "FRONTS-3", "FRONTS-4", "FRONTS-5", "FRONTS-6", "FRONTS-7", "FRONTS-8", "FUR-R1-S01-L1", "FUR-R1-S01-L2", "FUR-R1-S01-L3", "FUR-R1-S01-L4", "FUR-R1-S02-L1", "FUR-R1-S02-L2", "FUR-R1-S02-L3", "FUR-R1-S02-L4", "FUR-R1-S03-L1", "FUR-R1-S03-L2", "FUR-R1-S03-L3", "FUR-R1-S03-L4", "FUR-R1-S04-L1", "FUR-R1-S04-L2", "FUR-R1-S04-L3", "FUR-R1-S04-L4", "FUR-R1-S05-L1", "FUR-R1-S05-L2", "FUR-R1-S05-L3", "FUR-R1-S05-L4", "FUR-R1-S06-L1", "FUR-R1-S06-L2", "FUR-R1-S06-L3", "FUR-R1-S06-L4", "FUR-R2-S01-L1", "FUR-R2-S01-L2", "FUR-R2-S01-L3", "FUR-R2-S01-L4", "FUR-R2-S02-L1", "FUR-R2-S02-L2", "FUR-R2-S02-L3", "FUR-R2-S02-L4", "FUR-R2-S03-L1", "FUR-R2-S03-L2", "FUR-R2-S03-L3", "FUR-R2-S03-L4", "FUR-R2-S04-L1", "FUR-R2-S04-L2", "FUR-R2-S04-L3", "FUR-R2-S04-L4", "FUR-R2-S05-L1", "FUR-R2-S05-L2", "FUR-R2-S05-L3", "FUR-R2-S05-L4", "FUR-R2-S06-L1", "FUR-R2-S06-L2", "FUR-R2-S06-L3", "FUR-R2-S06-L4", "FUR-R3-S01-L1", "FUR-R3-S01-L2", "FUR-R3-S01-L3", "FUR-R3-S01-L4", "FUR-R3-S02-L1", "FUR-R3-S02-L2", "FUR-R3-S02-L3", "FUR-R3-S02-L4", "FUR-R3-S03-L1", "FUR-R3-S03-L2", "FUR-R3-S03-L3", "FUR-R3-S03-L4", "FUR-R3-S04-L1", "FUR-R3-S04-L2", "FUR-R3-S04-L3", "FUR-R3-S04-L4", "FUR-R3-S05-L1", "FUR-R3-S05-L2", "FUR-R3-S05-L3", "FUR-R3-S05-L4", "FUR-R3-S06-L1", "FUR-R3-S06-L2", "FUR-R3-S06-L3", "FUR-R3-S06-L4", "FUR-R4-S01-L1", "FUR-R4-S01-L2", "FUR-R4-S01-L3", "FUR-R4-S01-L4", "FUR-R4-S02-L1", "FUR-R4-S02-L2", "FUR-R4-S02-L3", "FUR-R4-S02-L4", "FUR-R4-S03-L1", "FUR-R4-S03-L2", "FUR-R4-S03-L3", "FUR-R4-S03-L4", "FUR-R4-S04-L1", "FUR-R4-S04-L2", "FUR-R4-S04-L3", "FUR-R4-S04-L4", "FUR-R4-S05-L1", "FUR-R4-S05-L2", "FUR-R4-S05-L3", "FUR-R4-S05-L4", "FUR-R4-S06-L1", "FUR-R4-S06-L2", "FUR-R4-S06-L3", "FUR-R4-S06-L4", "FUR-R5-S01-L1", "FUR-R5-S01-L2", "FUR-R5-S01-L3", "FUR-R5-S01-L4", "FUR-R5-S02-L1", "FUR-R5-S02-L2", "FUR-R5-S02-L3", "FUR-R5-S02-L4", "FUR-R5-S03-L1", "FUR-R5-S03-L2", "FUR-R5-S03-L3", "FUR-R5-S03-L4", "FUR-R5-S04-L1", "FUR-R5-S04-L2", "FUR-R5-S04-L3", "FUR-R5-S04-L4", "FUR-R5-S05-L1", "FUR-R5-S05-L2", "FUR-R5-S05-L3", "FUR-R5-S05-L4", "FUR-R5-S06-L1", "FUR-R5-S06-L2", "FUR-R5-S06-L3", "FUR-R5-S06-L4", "FUR-R6-S01-L1", "FUR-R6-S01-L2", "FUR-R6-S01-L3", "FUR-R6-S01-L4", "FUR-R6-S02-L1", "FUR-R6-S02-L2", "FUR-R6-S02-L3", "FUR-R6-S02-L4", "FUR-R6-S03-L1", "FUR-R6-S03-L2", "FUR-R6-S03-L3", "FUR-R6-S03-L4", "FUR-R6-S04-L1", "FUR-R6-S04-L2", "FUR-R6-S04-L3", "FUR-R6-S04-L4", "FUR-R6-S05-L1", "FUR-R6-S05-L2", "FUR-R6-S05-L3", "FUR-R6-S05-L4", "FUR-R6-S06-L1", "FUR-R6-S06-L2", "FUR-R6-S06-L3", "FUR-R6-S06-L4", "GANTRY-1", "GLUE-1", "HINGE-1", "KIT-01", "KIT-02", "KIT-03", "KIT-04", "KIT-05", "KIT-06", "KIT-07", "KIT-08", "KIT-09", "KIT-10", "KIT-11", "KIT-12", "MAINT-1", "NEST-1", "OFFICE", "OP-ASM-1", "OP-ASM-2", "OP-ASM-3", "OP-ASM-4", "OP-ASM-6", "OP-ASMLINE-1", "OP-AUTOSPRAY-1", "OP-BORE-1", "OP-BOX-1", "OP-CNC-1", "OP-CNC-2", "OP-CNC-3", "OP-CNC-4", "OP-DOWEL-1", "OP-EDGE-1", "OP-EDGE-2", "OP-GLUE-1", "OP-HINGE-1", "OP-NEST-1", "OP-PACK-1", "OP-PACK-2", "OP-PACKLINE-1", "OP-PRESS-1", "OP-SAND-1", "OP-SAW-1", "OP-SAW-2", "OP-SLIDE-1", "OP-SPRAY-1", "OP-W1", "OP-W2", "OP-W3", "OP-W4", "OP-W5", "OP-W6", "OP-W7", "OUT-STAGE", "PACK-1", "PACK-2", "PACK-STORE", "PACKLINE-1", "PAINT-STORE", "PAL-1", "PAL-2", "PAL-3", "PLT-01A", "PLT-01B", "PLT-01C", "PLT-02A", "PLT-02B", "PLT-02C", "PLT-03A", "PLT-03B", "PLT-03C", "PLT-04A", "PLT-04B", "PLT-04C", "PLT-05A", "PLT-05B", "PLT-05C", "PLT-06A", "PLT-06B", "PLT-06C", "PLT-07A", "PLT-07B", "PLT-07C", "PLT-08A", "PLT-08B", "PLT-08C", "PLT-09A", "PLT-09B", "PLT-09C", "POST-STAGE", "PRESS-1", "PV-ROOF", "QC-1", "QC-PLT-1", "QC-PLT-2", "QC-PLT-3", "RACK-R1", "RACK-R2", "RACK-R3", "RACK-R4", "RACK-R5", "RACK-R6", "RCK-R1-1A", "RCK-R1-1B", "RCK-R1-1C", "RCK-R1-1D", "RCK-R1-2A", "RCK-R1-2B", "RCK-R1-2C", "RCK-R1-2D", "RCK-R1-3A", "RCK-R1-3B", "RCK-R1-3C", "RCK-R1-3D", "RCK-R2-1A", "RCK-R2-1B", "RCK-R2-1C", "RCK-R2-1D", "RCK-R2-2A", "RCK-R2-2B", "RCK-R2-2C", "RCK-R2-2D", "RCK-R2-3A", "RCK-R2-3B", "RCK-R2-3C", "RCK-R2-3D", "RCK-R3-1A", "RCK-R3-1B", "RCK-R3-1C", "RCK-R3-1D", "RCK-R3-2A", "RCK-R3-2B", "RCK-R3-2C", "RCK-R3-2D", "RCK-R3-3A", "RCK-R3-3B", "RCK-R3-3C", "RCK-R3-3D", "RCK-R4-1A", "RCK-R4-1B", "RCK-R4-1C", "RCK-R4-1D", "RCK-R4-2A", "RCK-R4-2B", "RCK-R4-2C", "RCK-R4-2D", "RCK-R4-3A", "RCK-R4-3B", "RCK-R4-3C", "RCK-R4-3D", "RCK-R5-1A", "RCK-R5-1B", "RCK-R5-1C", "RCK-R5-1D", "RCK-R5-2A", "RCK-R5-2B", "RCK-R5-2C", "RCK-R5-2D", "RCK-R5-3A", "RCK-R5-3B", "RCK-R5-3C", "RCK-R5-3D", "RCK-R6-1A", "RCK-R6-1B", "RCK-R6-1C", "RCK-R6-1D", "RCK-R6-2A", "RCK-R6-2B", "RCK-R6-2C", "RCK-R6-2D", "RCK-R6-3A", "RCK-R6-3B", "RCK-R6-3C", "RCK-R6-3D", "RCK-R7-1A", "RCK-R7-1B", "RCK-R7-1C", "RCK-R7-1D", "RCK-R7-2A", "RCK-R7-2B", "RCK-R7-2C", "RCK-R7-2D", "RCK-R7-3A", "RCK-R7-3B", "RCK-R7-3C", "RCK-R7-3D", "RCK-R8-1A", "RCK-R8-1B", "RCK-R8-1C", "RCK-R8-1D", "RCK-R8-2A", "RCK-R8-2B", "RCK-R8-2C", "RCK-R8-2D", "RCK-R8-3A", "RCK-R8-3B", "RCK-R8-3C", "RCK-R8-3D", "ROOF-DECK", "SAND-1", "SAW-1", "SAW-2", "SAW-3", "SLIDE-1", "SOCIAL", "SORT-1", "SPRAY-1", "TRUCK-IN-1", "TRUCK-IN-2", "TRUCK-IN-3", "TRUCK-OUT-1", "TRUCK-OUT-2", "TRUCK-OUT-3", "TUGGER-1", "UNLOAD-1", "UNLOAD-2", "UNLOAD-3", "UNLOAD-4", "UNLOAD-5", "UNLOAD-6", "UNLOAD-7", "UV-1", "VSAW-1", "Z-ASM", "Z-CHG", "Z-CMP", "Z-CNC", "Z-CUT", "Z-EB", "Z-EDGE", "Z-ELEC", "Z-FAC", "Z-FG", "Z-HW", "Z-MAINT", "Z-OFFICE", "Z-OUT-1", "Z-OUT-2", "Z-OUT-3", "Z-OUT-4", "Z-OUT-5", "Z-OUT-6", "Z-OUT-7", "Z-PACK", "Z-PKS", "Z-POST", "Z-PRE", "Z-RCV-1", "Z-RCV-2", "Z-RCV-3", "Z-RCV-4", "Z-RCV-5", "Z-RCV-6", "Z-RCV-7", "Z-SHEETS", "Z-SOC", "Z-SORT"], "bytes": 9824456}, {"key": "engineering", "title": "Інженерні мережі", "file": "parts/engineering.glb", "layers": ["dust", "utilities", "energy", "lighting", "ventilation", "backup", "water"], "codes": ["AHU-1", "AIR-RING", "ATS-1", "BESS", "BOILER", "BW-1", "BW-2", "BW-3", "BW-4", "CABLES", "CHARGING", "CHP", "CHP-GAS", "CHP-HEAT", "COMPRESSOR", "DUST-1", "EF-CHG", "EF-CMP", "EF-ELEC", "EMERGENCY", "EMS-1", "GENSET", "HEAT-NET", "LP-1", "LP-2", "LP-3", "LT-ASM", "LT-CHG", "LT-CMP", "LT-CNC", "LT-CUT", "LT-EB", "LT-EDGE", "LT-ELEC", "LT-FAC", "LT-FG", "LT-HW", "LT-MAINT", "LT-OUT-1", "LT-OUT-2", "LT-OUT-3", "LT-OUT-4", "LT-OUT-5", "LT-OUT-6", "LT-OUT-7", "LT-PACK", "LT-PKS", "LT-POST", "LT-PRE", "LT-RCV-1", "LT-RCV-2", "LT-RCV-3", "LT-RCV-4", "LT-RCV-5", "LT-RCV-6", "LT-RCV-7", "LT-SHEETS", "LT-SORT", "PFC-1", "PFC-2", "PV-INV", "Q1", "Q2", "QF-1", "QF-2", "QF-3", "QF-4", "QF-C1", "QF-C2", "QS", "RM6-1", "RV-01", "RV-02", "RV-03", "RV-04", "RV-05", "RV-06", "RV-07", "RV-08", "RV-09", "RV-10", "RV-11", "RV-12", "RV-13", "RV-14", "RV-15", "RV-16", "RV-17", "RV-18", "RV-19", "RV-20", "RV-21", "RV-22", "RV-23", "RV-24", "RV-25", "SWB-1", "T1", "T2", "WATER"], "bytes": 2191676}, {"key": "fire", "title": "Пожежна безпека", "file": "parts/fire.glb", "layers": ["fire", "sprinklers", "evacuation", "smoke", "lightning"], "codes": ["EVAC-ASM", "EVAC-CHG", "EVAC-CMP", "EVAC-CNC", "EVAC-CUT", "EVAC-EB", "EVAC-EDGE", "EVAC-ELEC", "EVAC-FAC", "EVAC-FG", "EVAC-HW", "EVAC-MAINT", "EVAC-OUT-1", "EVAC-OUT-2", "EVAC-OUT-3", "EVAC-OUT-4", "EVAC-OUT-5", "EVAC-OUT-6", "EVAC-OUT-7", "EVAC-PACK", "EVAC-PKS", "EVAC-POST", "EVAC-PRE", "EVAC-RCV-1", "EVAC-RCV-2", "EVAC-RCV-3", "EVAC-RCV-4", "EVAC-RCV-5", "EVAC-RCV-6", "EVAC-RCV-7", "EVAC-SHEETS", "EVAC-SORT", "EXITS", "FA-ASM", "FA-BOILER", "FA-CHG", "FA-CMP", "FA-CNC", "FA-CUT", "FA-EB", "FA-EDGE", "FA-ELEC", "FA-FAC", "FA-FG", "FA-FLAME", "FA-HW", "FA-MAINT", "FA-MCP", "FA-OFFICE", "FA-OUT-1", "FA-OUT-2", "FA-OUT-3", "FA-OUT-4", "FA-OUT-5", "FA-OUT-6", "FA-OUT-7", "FA-PACK", "FA-PKS", "FA-POST", "FA-PRE", "FA-RCV-1", "FA-RCV-2", "FA-RCV-3", "FA-RCV-4", "FA-RCV-5", "FA-RCV-6", "FA-RCV-7", "FA-SHEETS", "FA-SND", "FA-SOC", "FA-SORT", "FACP-1", "LPS", "SMOKE-CTRL", "SMOKE-CURTAINS", "SMOKE-VENTS", "SPARK-1", "SPRINKLERS"], "bytes": 1409480}, {"key": "it", "title": "ІТ і Odoo", "file": "parts/it.glb", "layers": ["odoo_it", "network"], "codes": ["IOT-OUT", "IOT-PACK", "IOT-RCV", "ODOO-SCANNERS", "ODOO-TABLETS", "PRN-OUT", "PRN-PACK1", "PRN-PACK2", "PRN-RCV", "SCALE-OUT1", "SCALE-OUT2", "SCALE-RCV", "SERVER", "TAB-ASM-1", "TAB-ASM-2", "TAB-ASM-3", "TAB-ASM-4", "TAB-ASM-5", "TAB-ASM-6", "TAB-ASMLINE-1", "TAB-AUTOSPRAY-1", "TAB-BORE-1", "TAB-BOX-1", "TAB-CNC-1", "TAB-CNC-2", "TAB-CNC-3", "TAB-CNC-4", "TAB-DOWEL-1", "TAB-EDGE-1", "TAB-EDGE-2", "TAB-EDGE-3", "TAB-GLUE-1", "TAB-HINGE-1", "TAB-NEST-1", "TAB-PACK-1", "TAB-PACK-2", "TAB-PACKLINE-1", "TAB-PRESS-1", "TAB-SAND-1", "TAB-SAW-1", "TAB-SAW-2", "TAB-SAW-3", "TAB-SLIDE-1", "TAB-SPRAY-1", "TAB-UV-1", "TAB-VSAW-1", "WIFI"], "bytes": 105192}, {"key": "site", "title": "Територія й охорона", "file": "parts/site.glb", "layers": ["territory", "security"], "codes": ["ACCESS", "CCTV", "FENCE", "GATE-E", "GATE-W", "KPP", "TERRITORY", "TRUCK-SCALE", "TURNSTILES", "WASTE"], "bytes": 170172}]}</script>
+<!-- MODEL_DATA -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const ODOO_URL = "odoo_demo.json";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s) => document.querySelector(s);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const nf = new Intl.NumberFormat("uk-UA");
+const pct = (x) => `${Math.round((x ?? 0) * 100)}%`;
+
+// Blender (X уздовж, Y поперек, Z угору) → three.js (Y угору)
+const b2t = ([x, y, z]) => new THREE.Vector3(x, z, -y);
+
+const KIND = {
+  zone: "Зона", machine: "Верстат · робочий центр", stock: "Місце зберігання", bin: "Комірка стелажа", rack: "Стелаж",
+  kit: "Візок комплектації", dock: "Ворота", vehicle: "Транспорт", flow: "Маршрут", building: "Приміщення",
+  equipment: "Обладнання", person: "Працівник", power: "Електропостачання", lighting: "Освітлення",
+  hvac: "Вентиляція й опалення", fire: "Пожежна сигналізація", safety: "Безпека будівлі", it: "ІТ і Odoo",
+  security: "Охорона й доступ",
+};
+const MACHINE_STATUS = { work: ["ok", "У роботі"], idle: ["warn", "Простій"], stop: ["bad", "Зупинено"] };
+const BIN_STATE = { ok: ["ok", "Запас у нормі"], low: ["warn", "Нижче мінімуму"], out: ["bad", "Порожньо"] };
+const WO_STATE = { done: ["ok", "Виконано"], progress: ["warn", "У роботі"], ready: ["info", "Готове"],
+  waiting: ["bad", "Чекає компонентів"], pending: ["idle", "Заплановано"] };
+const MO_STATE = { progress: ["warn", "У роботі"], confirmed: ["info", "Підтверджено"], done: ["ok", "Виконано"] };
+const PICK_STATE = { assigned: ["info", "Готово"], waiting: ["bad", "Очікує"], done: ["ok", "Виконано"], draft: ["idle", "Чернетка"] };
+const plural = (n, one, few, many) => {
+  const d = n % 10, h = n % 100;
+  return d === 1 && h !== 11 ? one : d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many;
+};
+const pill = ([c, t]) => `<span class="pill ${c}">${esc(t)}</span>`;
+const barW = (v) => `${Math.max(2, Math.min(100, v * 100))}%`;
+// key ("mo:…" / "wo:…") — щоб «живі» дані оновлювали смугу на місці, не перемальовуючи панель
+const bar = (v, cls = "", key = "") => `<div class="pbar ${cls}"${key ? ` data-p="${key}"` : ""}><i style="width:${barW(v)}"></i></div>`;
+
+// ---------------------------------------------------------------- сцена
+const stage = $("#stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer({ element: $("#labels") });
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 1200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 2;
+controls.maxDistance = 440;
+controls.screenSpacePanning = false;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6f767d, 0.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.45);
+sun.position.set(45, 120, 30);
+sun.target.position.set(75, 0, -40);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 80, bottom: -80, near: 1, far: 320 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+
+function applyTheme() { scene.background = new THREE.Color(css("--scene")); }
+applyTheme();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = stage;
+  renderer.setSize(w, h);
+  labelRenderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+
+// ---------------------------------------------------------------- модель
+const layers = new Map();
+const items = new Map();    // code -> корінь клікабельного об'єкта
+const zoneRects = new Map();
+const lamps = [];
+let selected = null;
+let hovered = null;
+const selBox = new THREE.Box3Helper(new THREE.Box3(), 0xf2c230);
+selBox.visible = false;
+scene.add(selBox);
+
+function codeRoot(obj) {
+  for (let o = obj; o; o = o.parent) if (o.userData && o.userData.code) return o;
+  return null;
+}
+function isShown(obj) {
+  for (let o = obj; o; o = o.parent) if (!o.visible) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------- модель частинами
+// Перша частина (будівля, склади, виробництво, люди) — одразу, решта — у фоні по черзі або коли вмикають шар.
+const MANIFEST = JSON.parse(document.getElementById("parts-manifest").textContent);
+const partOfLayer = new Map(), partOfCode = new Map(), partState = new Map();
+for (const p of MANIFEST.parts) {
+  p.layers.forEach((k) => partOfLayer.set(k, p.key));
+  p.codes.forEach((c) => partOfCode.set(c, p.key));
+}
+// покриття даху ховає цех — вмикається окремо або видом «Дах і СЕС»
+for (const l of MANIFEST.layers) layers.set(l.key, { node: null, label: l.label, group: l.group, order: l.order, want: l.key !== "roofdeck" });
+let modelReady;
+const modelLoaded = new Promise((res) => { modelReady = res; });
+function onPart(gltf) {
+  const root = gltf.scene;
+  const fresh = [];
+  root.traverse((o) => {
+    const u = o.userData || {};
+    if (u.layer && o.name.startsWith("LAYER_")) {
+      const l = layers.get(u.layer);
+      if (l) { l.node = o; o.visible = l.want; }
+    }
+    if (u.code && !items.has(u.code)) { items.set(u.code, o); fresh.push(o); }
+    if (u.rect) zoneRects.set(u.code, u.rect);
+    if (o.isMesh) {
+      // свій матеріал на кожен об'єкт, щоб підсвічування не перефарбовувало сусідів
+      o.material = o.material.clone();
+      o.material.envMapIntensity = 0.45;
+      const r = codeRoot(o);
+      const kind = r?.userData.kind;
+      o.castShadow = !o.material.transparent && kind !== "zone" && kind !== "bin" && !o.name.startsWith("Майданчик");
+      o.receiveShadow = !o.material.transparent;
+      if (u.role === "status") lamps.push(o);
+    }
+  });
+  scene.add(root);
+  buildLabels(fresh);
+  fresh.forEach(paint);
+  syncLayerGroups();
+}
+function loadPart(key) {
+  if (!key) return Promise.resolve();
+  if (partState.has(key)) return partState.get(key);
+  const p = MANIFEST.parts.find((x) => x.key === key);
+  const pr = new Promise((res, rej) => {
+    const done = (g) => { onPart(g); res(); };
+    const emb = document.getElementById("part-" + key);
+    if (emb) {
+      const bin = Uint8Array.from(atob(emb.textContent.trim()), (c) => c.charCodeAt(0));
+      new GLTFLoader().parse(bin.buffer, "", done, rej);
+    } else if (p.file.endsWith(".txt")) { // частина як base64-текст (хостинг без .glb)
+      fetch(p.file).then((r) => { if (!r.ok) throw new Error(`${p.file}: ${r.status}`); return r.text(); }).then((t) => {
+        const bin = Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
+        new GLTFLoader().parse(bin.buffer, "", done, rej);
+      }).catch(rej);
+    } else new GLTFLoader().load(p.file, done, undefined, rej);
+  });
+  partState.set(key, pr);
+  pr.catch((err) => { console.error(err); partState.delete(key); });
+  syncLayerGroups();
+  return pr;
+}
+// об'єкт може бути в частині, яка ще не завантажилась
+async function ensureCode(code) {
+  if (!items.has(code) && partOfCode.has(code)) await loadPart(partOfCode.get(code));
+  return items.get(code);
+}
+function onModelError(err) {
+  $("#loading").textContent = "Не вдалося завантажити модель. Відкрийте сторінку через веб-сервер, а не як файл.";
+  console.error(err);
+}
+buildLayersUI();
+loadPart(MANIFEST.parts[0].key).then(() => {
+  const machines = [...items.values()].filter((o) => o.userData.kind === "machine");
+  $("#dims").textContent = `${MANIFEST.dims} · ${machines.length} ${plural(machines.length, "верстат", "верстати", "верстатів")}`;
+  goView(VIEWS[0], false);
+  $("#loading").hidden = true;
+  modelReady();
+  (async () => { for (const p of MANIFEST.parts.slice(1)) await loadPart(p.key).catch(() => {}); })();
+}).catch(onModelError);
+
+// ---------------------------------------------------------------- види
+const VIEWS = [
+  { name: "Загальний вигляд", target: [75, 34, 0], pos: [16, -104, 122] },
+  { name: "Приймання", target: [9, 36, 0], pos: [46, 6, 38] },
+  { name: "Склад плит", zone: "Z-SHEETS", dir: [0.35, -1, 0.85] },
+  { name: "Лінії A–D", target: [62, 18, 0], pos: [50, -22, 36] },
+  { name: "Крайка і робот", code: "EDGE-1", dir: [0.4, -1, 0.6] },
+  { name: "Сортування і збирання", target: [96, 15, 0], pos: [84, -10, 22] },
+  { name: "Фасади МДФ", target: [66, 58, 0], pos: [60, 32, 26] },
+  { name: "Пакування", target: [116, 16, 0], pos: [104, -6, 20] },
+  { name: "Склад ГП і відвантаження", target: [136, 36, 0], pos: [104, 6, 42] },
+  { name: "План згори", target: [75, 36, 0], pos: [75, 35.9, 215] },
+  { name: "Електрощитова", target: [129, 67, 1.2], pos: [116, 50, 13] },
+  { name: "Дах і СЕС", target: [75, 36, 9], pos: [-18, -58, 92], roof: true },
+  { name: "Когенерація", target: [114, 77, 2], pos: [92, 104, 26] },
+];
+function viewPose(v) {
+  if (v.pos) return { pos: b2t(v.pos), target: b2t(v.target) };
+  let c, size;
+  if (v.zone) {
+    const [x0, y0, x1, y1] = zoneRects.get(v.zone);
+    c = [(x0 + x1) / 2, (y0 + y1) / 2, 0.5];
+    size = Math.max(x1 - x0, y1 - y0) * 1.1;
+  } else {
+    const box = new THREE.Box3().setFromObject(items.get(v.code));
+    const ct = box.getCenter(new THREE.Vector3());
+    c = [ct.x, -ct.z, 1.0];
+    size = box.getSize(new THREE.Vector3()).length() * 0.9;
+  }
+  const d = new THREE.Vector3(...v.dir).normalize().multiplyScalar(size + 4);
+  return { pos: b2t([c[0] + d.x, c[1] + d.y, c[2] + d.z]), target: b2t(c) };
+}
+let tween = null;
+function flyTo(pos, target, animate = true) {
+  if (!animate || reduceMotion) {
+    camera.position.copy(pos); controls.target.copy(target); controls.update(); tween = null; return;
+  }
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), dur: 1000 };
+}
+function goView(v, animate = true) {
+  if (layers.get("roofdeck") && layers.get("roofdeck").want !== !!v.roof) setLayer("roofdeck", !!v.roof);
+  const { pos, target } = viewPose(v);
+  flyTo(pos, target, animate);
+  document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.name === v.name)));
+}
+VIEWS.forEach((v, i) => {
+  const b = document.createElement("button");
+  b.className = "view"; b.dataset.name = v.name; b.setAttribute("aria-pressed", "false");
+  b.innerHTML = `${i < 10 ? `<kbd>${(i + 1) % 10}</kbd>` : ""}${v.name}`;
+  b.onclick = () => { goView(v); closeSideOnPhone(); };
+  $("#views").appendChild(b);
+});
+function fitBox(box, animate = true) {
+  if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3());
+  const r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 2);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  if (dir.y < 0.45) { dir.y = 0.45; dir.normalize(); }
+  // вписати у вільну смугу між лівою й правою панелями, а не в усе вікно
+  const W0 = renderer.domElement.clientWidth || innerWidth, H0 = renderer.domElement.clientHeight || innerHeight;
+  const vis = (el) => el && getComputedStyle(el).display !== "none" && el.getBoundingClientRect().width > 0 ? el.getBoundingClientRect() : null;
+  const L = vis($("#side")), R = vis($("#card"));
+  const x0 = L && L.right < W0 * 0.45 ? L.right : 0, x1 = R && R.left > W0 * 0.55 ? R.left : W0;
+  const k = Math.min(2.2, W0 / Math.max(200, x1 - x0));
+  const dist = r * 2.1 * Math.sqrt(k) + 4; // смуга вужча за вікно — відсуваємось, але без зайвого запасу
+  const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize().negate();
+  const perPx = (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / H0;
+  const t = c.clone().add(right.multiplyScalar(-((x0 + x1) / 2 - W0 / 2) * perPx));
+  flyTo(t.clone().add(dir.multiplyScalar(dist)), t, animate);
+  document.querySelectorAll(".view").forEach((b) => b.setAttribute("aria-pressed", "false"));
+}
+const focusOn = (obj) => fitBox(new THREE.Box3().setFromObject(obj));
+
+// ---------------------------------------------------------------- шари
+const CORE = new Set(["building", "zones", "line", "facade", "buffer", "dust", "people"]);
+function setLayer(key, on) {
+  const l = layers.get(key);
+  if (!l) return;
+  l.want = on;
+  if (l.node) l.node.visible = on;
+  else if (on) loadPart(partOfLayer.get(key));
+  const cb = document.getElementById("layer-" + key);
+  if (cb) cb.checked = on;
+  syncLayerGroups();
+  if (selected && !isShown(selected)) select(null);
+}
+// шари згруповано: заголовок групи вмикає/вимикає всі її шари, стрілка розгортає список
+function buildLayersUI() {
+  const groups = new Map();
+  for (const [key, l] of [...layers].sort((a, b) => a[1].order - b[1].order)) {
+    const g = l.group || "Інше";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push([key, l]);
+  }
+  let gi = 0;
+  for (const [g, list] of groups) {
+    const box = document.createElement("div");
+    box.className = "lgroup";
+    const id = `lg-${gi++}`;
+    box.innerHTML = `<div class="lg-head">
+        <input type="checkbox" class="lg-all" aria-label="Усі шари групи «${esc(g)}»" title="Увімкнути / вимкнути всю групу">
+        <button class="lg-name" aria-expanded="false" aria-controls="${id}">${esc(g)}</button>
+        <span class="lg-n"></span>
+        <button class="lg-tog" aria-expanded="false" aria-controls="${id}" aria-label="Показати шари групи «${esc(g)}»"></button>
+      </div><div class="lg-items" id="${id}" hidden>
+        <div class="lg-bulk"><button class="btn" data-bulk="1">Усі</button><button class="btn" data-bulk="0">Жодного</button></div>
+      </div>`;
+    for (const [key, { label, want }] of list) {
+      const row = document.createElement("label");
+      row.className = "layer";
+      row.innerHTML = `<input type="checkbox" id="layer-${key}"${want ? " checked" : ""}><span>${esc(label)}</span>`;
+      row.querySelector("input").onchange = (e) => setLayer(key, e.target.checked);
+      box.querySelector(".lg-items").appendChild(row);
+    }
+    const setAll = (on) => list.forEach(([k]) => setLayer(k, on));
+    box.querySelector(".lg-all").onchange = (e) => setAll(e.target.checked);
+    box.querySelectorAll("[data-bulk]").forEach((b) => { b.onclick = () => setAll(b.dataset.bulk === "1"); });
+    const toggle = () => {
+      const open = box.querySelector(".lg-tog").getAttribute("aria-expanded") !== "true";
+      box.querySelectorAll(".lg-tog, .lg-name").forEach((b) => b.setAttribute("aria-expanded", String(open)));
+      box.querySelector(".lg-items").hidden = !open;
+    };
+    box.querySelector(".lg-tog").onclick = toggle;
+    box.querySelector(".lg-name").onclick = toggle;
+    $("#layers").appendChild(box);
+  }
+  syncLayerGroups();
+}
+// перехід до об'єкта з вимкненого шару — шар вмикаємо
+function showLayerOf(o) {
+  for (let n = o; n; n = n.parent) if (n.userData?.layer && n.name.startsWith("LAYER_")) setLayer(n.userData.layer, true);
+}
+function syncLayerGroups() {
+  document.querySelectorAll(".lgroup").forEach((box) => {
+    const cbs = [...box.querySelectorAll(".lg-items input")];
+    const on = cbs.filter((c) => c.checked).length;
+    const all = box.querySelector(".lg-all");
+    all.checked = on === cbs.length;
+    all.indeterminate = on > 0 && on < cbs.length;
+    const waiting = cbs.some((c) => !layers.get(c.id.slice(6))?.node);
+    box.querySelector(".lg-n").textContent = waiting ? "завантаж…" : `${on}/${cbs.length}`;
+  });
+}
+$("#all-on").onclick = () => layers.forEach((_, k) => setLayer(k, k !== "roofdeck"));
+$("#all-off").onclick = () => layers.forEach((_, k) => setLayer(k, CORE.has(k)));
+// будівля, верстати й усі інженерні мережі — без складів, транспорту й людей
+$("#eng-only").onclick = () => layers.forEach((l, k) => setLayer(k, ["building", "zones", "line", "facade"].includes(k) || l.group === "Інженерні мережі"));
+
+// ---------------------------------------------------------------- підписи
+const labels = [];
+function addLabel(obj, html, cls, yOffset) {
+  const el = document.createElement("div");
+  el.className = "lbl " + cls;
+  el.innerHTML = html;
+  const box = new THREE.Box3().setFromObject(obj);
+  const c = box.getCenter(new THREE.Vector3());
+  const lbl = new CSS2DObject(el);
+  lbl.position.set(c.x, (cls === "zone" ? 0.05 : box.max.y) + yOffset, c.z);
+  scene.add(lbl);
+  labels.push({ lbl, obj, cls });
+}
+function buildLabels(objs = [...items.values()]) {
+  for (const obj of objs) {
+    const u = obj.userData;
+    if (u.kind === "zone") addLabel(obj, u.label, "zone", 0);
+    if (u.kind === "machine") {
+      const [cls] = MACHINE_STATUS[u.status] || ["idle"];
+      addLabel(obj, `<span class="st" style="background:var(--${cls})"></span>${u.label}`, "mach", 0.6);
+    }
+  }
+}
+const tmpV = new THREE.Vector3();
+function syncLabels() {
+  const on = $("#opt-labels").checked;
+  const dist = camera.position.distanceTo(controls.target);
+  const busy = hl.markers.length > 0;
+  for (const { lbl, obj, cls } of labels) {
+    const near = cls === "zone" ? dist > 18 : camera.position.distanceTo(lbl.getWorldPosition(tmpV)) < 70;
+    lbl.visible = on && near && !busy && isShown(obj);
+  }
+}
+$("#opt-labels").onchange = syncLabels;
+$("#opt-shadows").onchange = (e) => { sun.castShadow = e.target.checked; };
+
+// ---------------------------------------------------------------- точка, що біжить маршрутом вибраного замовлення
+const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+pulse.add(new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14),
+  new THREE.MeshBasicMaterial({ color: 0xf2c230, transparent: true, opacity: 0.45, depthWrite: false })));
+pulse.traverse((o) => { o.userData.isPulse = true; });
+pulse.visible = false;
+scene.add(pulse);
+let pulseT = 0;
+$("#opt-motion").checked = !reduceMotion;
+
+// ---------------------------------------------------------------- підсвічування (вибір, наведення, Odoo, режим кольору)
+const hl = { roots: new Set(), markers: [], path: null, curve: null, branches: [], parts: [] };
+let colorMode = "none";
+const C_OK = new THREE.Color("#27ae60"), C_WARN = new THREE.Color("#f39c12"), C_BAD = new THREE.Color("#e74c3c");
+const C_SEL = new THREE.Color("#f2c230"), C_HOV = new THREE.Color("#7fb3d5"), C_HL = new THREE.Color("#18a6c9");
+function modeColor(root) {
+  if (!D || colorMode === "none") return null;
+  const u = root.userData;
+  if (colorMode === "fill") {
+    const loc = D.locations[u.code];
+    if (!loc || loc.fill == null) return null;
+    return loc.fill <= 0.001 ? C_BAD : loc.fill < 0.3 ? C_WARN : C_OK;
+  }
+  if (colorMode === "oee" && u.kind === "machine") {
+    const wc = D.workcenters[u.code];
+    if (!wc) return null;
+    return wc.oee >= 0.75 ? C_OK : wc.oee >= 0.5 ? C_WARN : C_BAD;
+  }
+  if (colorMode === "lux" && D.lighting) {
+    const g = D.lighting.groups[u.code] || (u.kind === "zone" ? lightGroupOfZone(u.code)?.[1] : null);
+    if (g) return g.e_calc >= g.e_norm ? C_OK : g.e_calc >= 0.85 * g.e_norm ? C_WARN : C_BAD;
+  }
+  if (colorMode === "power" && D.energy) {
+    const e = D.energy, c = e.consumers[u.code];
+    if (c) return c.p_now >= 30 ? C_BAD : c.p_now >= 10 ? C_WARN : C_OK;
+    const l = e.lines[u.code] || e.transformers[u.code];
+    if (l) return l.load >= 0.8 ? C_BAD : l.load >= 0.6 ? C_WARN : C_OK;
+  }
+  return null;
+}
+function paint(root) {
+  if (!root) return;
+  let color = null, k = 0;
+  if (root === selected) { color = C_SEL; k = 0.22; }
+  else if (hl.roots.has(root)) { color = C_HL; k = 0.4; }
+  else if (root === hovered && root.userData.kind !== "zone") { color = C_HOV; k = 0.18; }
+  else { const mc = modeColor(root); if (mc) { color = mc; k = 0.45; } }
+  root.traverse((o) => {
+    if (o.isMesh && o.userData.role !== "status" && o.material.emissive) {
+      o.material.emissive.copy(color || new THREE.Color(0)); o.material.emissiveIntensity = k;
+    }
+  });
+}
+function repaintAll() { for (const r of items.values()) paint(r); }
+document.querySelectorAll('input[name="cmode"]').forEach((el) => {
+  el.onchange = () => { colorMode = el.value; repaintAll(); renderPanel(); };
+});
+
+function clearHighlight() {
+  const old = [...hl.roots];
+  hl.roots.clear();
+  old.forEach(paint);
+  for (const m of hl.markers) scene.remove(m);
+  hl.markers = [];
+  if (hl.path) { scene.remove(hl.path); hl.path.geometry.dispose(); hl.path = null; }
+  for (const b of hl.branches) { scene.remove(b); if (b.geometry !== PART_GEO) b.geometry?.dispose(); }
+  hl.branches = []; hl.parts = [];
+  hl.curve = null;
+}
+function topOf(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const c = box.getCenter(new THREE.Vector3());
+  return new THREE.Vector3(c.x, box.max.y, c.z);
+}
+// entries: [{ code, html, cls }]; path: з'єднати точки в заданому порядку
+// гілки матеріалів: [{ codes: [...], color, label }] — тонка лінія від в'їзду до верстата, що споживає
+const MAT_COLOR = { "плита": 0x2f80c0, "фурнітура": 0x8e44ad, "крайка": 0xe67e22, "ЛФМ": 0x16a085,
+  "плівка ПВХ": 0x16a085, "пакування": 0x7f8c8d };
+// точки, що біжать гілкою матеріалу: кількість — від числа замовлень, швидкість ~ 5 м/с у масштабі плану
+const PART_GEO = new THREE.SphereGeometry(0.32, 10, 8);
+function branchParticles(curve, color, n, sink, tag, size = 1) {
+  const len = curve.getLength();
+  const out = [];
+  for (let j = 0; j < n; j++) {
+    const p = new THREE.Mesh(PART_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+    p.userData = { isPulse: true, curve, len, u: j / n, v: 4.5 + (j % 3) * 0.6, mos: tag };
+    p.scale.setScalar(size);
+    p.position.copy(curve.getPointAt(p.userData.u));
+    scene.add(p); sink.push(p); out.push(p);
+  }
+  return out;
+}
+function moveParticles(list, dt) {
+  for (const p of list) {
+    const d = p.userData;
+    d.u = (d.u + (dt * d.v) / Math.max(d.len, 1)) % 1;
+    p.position.copy(d.curve.getPointAt(d.u));
+  }
+}
+function drawBranch(br) {
+  const pts = [];
+  br.codes.forEach((code, j) => {
+    const obj = items.get(code);
+    if (!obj) return;
+    const p = topOf(obj).add(new THREE.Vector3(0, j === br.codes.length - 1 ? 1.2 : 0.8, 0));
+    if (j < br.codes.length - 1) p.y = Math.min(p.y, 2.6);
+    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+  });
+  if (pts.length < 2) return;
+  const c = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+  const m = new THREE.Mesh(new THREE.TubeGeometry(c, pts.length * 16, 0.09, 6, false),
+    new THREE.MeshBasicMaterial({ color: br.color ?? 0x888888, transparent: true, opacity: 0.85 }));
+  m.userData.isPulse = true;
+  scene.add(m); hl.branches.push(m);
+  branchParticles(c, br.color ?? 0x888888, 3, hl.branches, null, prodOv.on ? 2.0 : 1.3).forEach((p) => hl.parts.push(p));
+  if (br.label && br.at) {
+    const obj = items.get(br.at);
+    if (obj) {
+      const el = document.createElement("div");
+      el.className = "mk pend";
+      el.style.background = el.style.borderColor = "#" + new THREE.Color(br.color).getHexString();
+      el.innerHTML = br.label;
+      const mk = new CSS2DObject(el);
+      mk.position.copy(topOf(obj)).add(new THREE.Vector3(0, 0.9, 0));
+      scene.add(mk); hl.markers.push(mk);
+    }
+  }
+}
+function highlight(entries, { path = false, fit = true, branches = [] } = {}) {
+  clearHighlight();
+  const box = new THREE.Box3();
+  const pts = [];
+  for (const e of entries) {
+    const obj = items.get(e.code);
+    if (!obj) continue;
+    hl.roots.add(obj); paint(obj);
+    box.expandByObject(obj);
+    const p = topOf(obj);
+    if (e.html != null) {
+      const el = document.createElement("div");
+      el.className = "mk " + (e.cls || "hl");
+      el.innerHTML = e.html;
+      const m = new CSS2DObject(el);
+      m.position.copy(p).add(new THREE.Vector3(0, 0.6, 0));
+      scene.add(m); hl.markers.push(m);
+    }
+    if (path && (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.5)) pts.push(p.clone().add(new THREE.Vector3(0, 1.2, 0)));
+  }
+  if (path && pts.length > 1) {
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    hl.curve = curve; pulseT = 0;
+    hl.path = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 24, 0.14, 8, false),
+      new THREE.MeshBasicMaterial({ color: 0xf2c230, transparent: true, opacity: 0.9 }));
+    hl.path.userData.isPulse = true;
+    scene.add(hl.path);
+  }
+  for (const br of branches) {
+    drawBranch(br);
+    for (const c of br.codes) { const o = items.get(c); if (o) box.expandByObject(o); }
+  }
+  if (fit) fitBox(box);
+}
+
+// ---------------------------------------------------------------- шар «Замовлення в роботі»
+// маршрут кожного замовлення в роботі (верстати в порядку операцій) і точка там, де воно зараз:
+// на верстаті поточної операції або посередині переходу між завершеною й наступною
+const prodOv = { on: false, objs: [], dots: [], color: new Map(), byMo: new Map(), focus: null, saved: null };
+// вибране замовлення — яскраво, решта маршрутів притухає
+function prodFocus(name) {
+  prodOv.focus = name;
+  for (const m of prodOv.mats || []) {
+    m.userData.op0 ??= m.material.opacity;
+    m.material.opacity = m.userData.op0 * (!name || m.userData.mos.has(name) ? 1 : 0.1);
+  }
+  prodOv.byMo.forEach((objs, mo) => {
+    const k = !name || mo === name ? 1 : 0.15;
+    for (const o of objs) {
+      if (o.isCSS2DObject) o.element.style.opacity = k;
+      else o.traverse((x) => { if (x.material) { x.material.transparent = true; x.material.opacity = (x.userData.op0 ??= x.material.opacity) * k; } });
+    }
+  });
+}
+const PROD_HIDE_GROUPS = new Set(["Інженерні мережі", "Пожежна безпека", "ІТ і Odoo", "Територія й охорона"]);
+const PROD_HIDE_LAYERS = new Set(["roof", "roofdeck"]);
+function moColor(i) { return new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.78, 0.5); }
+function clearProdOverlay() {
+  for (const o of prodOv.objs) { scene.remove(o); if (o.geometry !== PART_GEO) o.geometry?.dispose(); }
+  prodOv.objs = []; prodOv.dots = []; prodOv.mats = []; prodOv.parts = []; prodOv.color.clear(); prodOv.byMo.clear();
+}
+// місце замовлення на всьому циклі: індекс точки маршруту (дробовий — у дорозі між точками)
+function cyclePosition(wos, at, firstOut, lastIn) {
+  const k = wos.findIndex((w) => w.state === "progress");
+  if (k >= 0) return { u: at[k], w: wos[k], phase: wos[k].name };
+  const done = wos.map((w) => w.state === "done").lastIndexOf(true);
+  if (done < 0) return { u: Math.max(0, lastIn), w: wos[0], phase: "плита під порталом, чекає першої операції" };
+  if (done === wos.length - 1) return { u: firstOut, w: null, phase: "запаковано — на шляху до клієнта" };
+  return { u: at[done] + (at[done + 1] - at[done]) * 0.5, w: wos[done + 1], phase: `до ${wos[done + 1].name}` };
+}
+function drawProdOverlay() {
+  clearProdOverlay();
+  if (!prodOv.on || !D) return;
+  const sim = simOverride != null; // програвання зміни: показуємо всі замовлення дня, рух — за часом операцій
+  prodOv.sim = sim;
+  prodOv.tracks = []; prodOv.batches = [];
+  const mos = D.productions.filter((m) => (sim ? m.state !== "cancel" : m.state === "progress"));
+  const mats = new Map(); // однаковий шлях матеріалу в кількох замовлень — одна лінія, товща
+  for (const mo of mos) {
+    for (const c of mo.components) {
+      if (!c.path || !c.to || c.product === mo.supply?.product) continue;
+      const codes = [...c.path.map((st) => st.code), c.to];
+      const key = c.kind + "|" + codes.join();
+      const e = mats.get(key) || { kind: c.kind, codes, mos: new Set() };
+      e.mos.add(mo.name);
+      mats.set(key, e);
+    }
+  }
+  const matObjs = [];
+  for (const e of mats.values()) {
+    const pts = [];
+    e.codes.forEach((code, j) => {
+      const obj = items.get(code);
+      if (!obj) return;
+      const p = topOf(obj).add(new THREE.Vector3(0, j === e.codes.length - 1 ? 1.2 : 0.6, 0));
+      if (j < e.codes.length - 1) p.y = Math.min(p.y, 2.2);
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+    });
+    if (pts.length < 2) continue;
+    const r = 0.07 + 0.025 * Math.min(e.mos.size, 6);
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    const m = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 16, r, 5, false),
+      new THREE.MeshBasicMaterial({ color: MAT_COLOR[e.kind] ?? 0x888888, transparent: true, opacity: 0.7 }));
+    m.userData.isPulse = true;
+    m.userData.mos = e.mos;
+    scene.add(m); prodOv.objs.push(m); matObjs.push(m);
+    if (sim) continue; // у програванні матеріал їде партіями у свій час — див. buildBatches
+    const parts = branchParticles(curve, MAT_COLOR[e.kind] ?? 0x888888, 1 + Math.min(e.mos.size, 4), prodOv.objs, e.mos, 2.4);
+    matObjs.push(...parts); prodOv.parts.push(...parts);
+  }
+  prodOv.mats = matObjs;
+  mos.forEach((mo, i) => {
+    const wos = mo.workorders.map((id) => D.workorders[id]);
+    const off = new THREE.Vector3(((i % 6) - 2.5) * 0.35, 0, (Math.floor(i / 6) - 2.5) * 0.35); // розвести збіжні маршрути
+    // увесь цикл однією лінією: фура з плитами → приймання → стелаж → портал → верстати → склад ГП → фура клієнта
+    const pts = [], stage = [], codes = [];
+    const push = (code, kind) => {
+      const obj = items.get(code);
+      if (!obj) return pts.length - 1;
+      const p = topOf(obj).add(new THREE.Vector3(0, kind === "op" ? 1.5 : 1.0, 0)).add(off);
+      if (kind !== "op") p.y = Math.min(p.y, 3.0); // стелажі високі — лінія лишається низько
+      if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.8) { pts.push(p); stage.push(kind); codes.push(code); }
+      return pts.length - 1;
+    };
+    for (const st of mo.supply?.steps || []) push(st.code, "in");
+    const lastIn = pts.length - 1;
+    const at = wos.map((w) => push(w.workcenter, "op"));
+    const nOps = pts.length;
+    for (const st of mo.delivery?.steps || []) push(st.code, "out");
+    const firstOut = pts.length > nOps ? nOps : nOps - 1;
+    if (pts.length < 2) return;
+    const col = moColor(idx.moI.get(mo.name) ?? i);
+    prodOv.color.set(mo.name, "#" + col.getHexString());
+    const mine = [];
+    prodOv.byMo.set(mo.name, mine);
+    const add = (o) => { o.traverse((x) => { x.userData.isPulse = true; }); scene.add(o); prodOv.objs.push(o); mine.push(o); };
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    add(new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length * 20, 0.2, 6, false),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75 })));
+    const pointMat = new THREE.MeshBasicMaterial({ color: col.clone().lerp(new THREE.Color(0xffffff), 0.45) });
+    pts.forEach((p, j) => { // точки складів і приймання/відвантаження
+      if (stage[j] === "op" || j === 0 || j === pts.length - 1) return;
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), pointMat);
+      m.position.copy(p);
+      add(m);
+    });
+    const start = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), new THREE.MeshBasicMaterial({ color: col }));
+    start.position.copy(pts[0]);
+    const end = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 12), new THREE.MeshBasicMaterial({ color: col }));
+    end.position.copy(pts[pts.length - 1]);
+    add(start); add(end);
+    const fg = codes.findIndex((c, j) => j >= firstOut && /^FG-/.test(c));
+    const track = { mo, wos, at, lastIn, firstOut, fg: fg > 0 ? fg : firstOut, n: pts.length, curve,
+      out: mo.delivery?.picking ? dayMin(idx.pick.get(mo.delivery.picking)?.scheduled_date) : null };
+    const pos = cyclePosition(wos, at, firstOut, lastIn);
+    const p = curve.getPoint(Math.min(1, Math.max(0, pos.u / (pts.length - 1))));
+    const blocked = !!pos.w?.blocked && pos.w.state === "progress";
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 12), new THREE.MeshBasicMaterial({ color: col }));
+    const ring = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 12),
+      new THREE.MeshBasicMaterial({ color: blocked ? 0xd63a2b : 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
+    dot.add(ring);
+    dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
+    add(dot); prodOv.dots.push(ring);
+    const el = document.createElement("div");
+    el.className = "mo-tag" + (blocked ? " bad" : "");
+    el.style.background = "#" + col.getHexString();
+    el.textContent = mo.name.split("/").pop();
+    el.title = `${mo.name} · ${mo.product_name} × ${mo.qty} — ${pos.phase}${blocked ? " · зупинка" : ""}`
+      + (mo.delivery ? ` → ${mo.delivery.partner}` : "");
+    el.addEventListener("click", (e) => { e.stopPropagation(); showMO(mo.name); });
+    const tag = new CSS2DObject(el);
+    tag.position.copy(dot.position);
+    add(tag);
+    Object.assign(track, { dot, ring, tag, el, col: "#" + col.getHexString() });
+    prodOv.tracks.push(track);
+  });
+  if (sim) { buildBatches(mos); prodSimMove(simMinutes() ?? simOverride); }
+  if (prodOv.focus) prodFocus(prodOv.focus);
+}
+
+// ---------------------------------------------------------------- рух за часом зміни (поки грає таймер)
+const dayStart = () => Date.parse(D.meta.now.slice(0, 10) + "T00:00");
+const dayMin = (s) => (s ? (Date.parse(s.replace(" ", "T")) - dayStart()) / 60000 : null);
+const woMin = (w, k) => (w[k] - dayStart()) / 60000;
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+// де замовлення о хвилині t: на верстаті під час операції, у дорозі між операціями, після пакування — склад ГП,
+// за 30 хв до відвантаження — до воріт і фури клієнта
+function trackAt(tr, t) {
+  const { wos, at } = tr;
+  const lerp = (a, b, k) => a + (b - a) * clamp01(k);
+  const s0 = woMin(wos[0], "_s");
+  if (t < s0) return { u: lerp(tr.lastIn, at[0], (t - (s0 - 20)) / 20), ph: t < s0 - 20 ? "матеріал під порталом, чекає розкрою" : `до операції «${wos[0].name}»` };
+  for (let k = 0; k < wos.length; k++) {
+    const s = woMin(wos[k], "_s"), f = woMin(wos[k], "_f");
+    if (t < s) {
+      const pf = woMin(wos[k - 1], "_f");
+      return { u: lerp(at[k - 1], at[k], (t - pf) / Math.max(1, Math.min(20, s - pf))), ph: `у дорозі до «${wos[k].name}»` };
+    }
+    if (t < f) return { u: at[k], ph: `${wos[k].name} · ${D.workcenters[wos[k].workcenter]?.name || wos[k].workcenter}`, w: wos[k] };
+  }
+  const fl = woMin(wos[wos.length - 1], "_f");
+  if (tr.out != null && t >= tr.out - 30) return { u: lerp(tr.fg, tr.n - 1, (t - (tr.out - 30)) / 30), ph: "відвантаження клієнту" };
+  if (tr.firstOut >= tr.n - 1 && tr.fg >= tr.n - 1) return { u: at[at.length - 1], ph: "готово" };
+  return { u: lerp(at[at.length - 1], tr.fg, (t - fl) / 20), ph: "склад готової продукції" };
+}
+// партії матеріалів: фура → склад у час приймання; склад → верстат за 25 хв до операції, що їх споживає
+const IN_CODE = /^(GATE|TRUCK|DOCK|UNLOAD|QC|SCALE|PRN)/;
+function codesCurve(codes) {
+  const pts = [];
+  codes.forEach((code, j) => {
+    const obj = items.get(code);
+    if (!obj) return;
+    const p = topOf(obj).add(new THREE.Vector3(0, j === codes.length - 1 ? 1.4 : 0.9, 0));
+    if (j < codes.length - 1) p.y = Math.min(p.y, 2.6);
+    if (!pts.length || pts[pts.length - 1].distanceTo(p) > 0.6) pts.push(p);
+  });
+  return pts.length > 1 ? new THREE.CatmullRomCurve3(pts, false, "centripetal") : null;
+}
+const BATCH_GEO = new THREE.BoxGeometry(1.1, 0.7, 1.1);
+const batchMat = new Map();
+function addBatch(codes, kind, w0, w1, mos, label) {
+  const curve = codesCurve(codes);
+  if (!curve || w1 <= w0) return;
+  if (!batchMat.has(kind)) batchMat.set(kind, new THREE.MeshBasicMaterial({ color: MAT_COLOR[kind] ?? 0x888888 }));
+  const m = new THREE.Mesh(BATCH_GEO, batchMat.get(kind));
+  m.userData = { isPulse: true, curve, w0, w1, mos, label };
+  m.visible = false;
+  scene.add(m); prodOv.objs.push(m); prodOv.batches.push(m);
+}
+function buildBatches(mos) {
+  const inSeen = new Set();
+  for (const mo of mos) {
+    const wos = mo.workorders.map((id) => D.workorders[id]);
+    for (const c of mo.components) {
+      if (!c.path?.length || !c.to) continue;
+      const codes = c.path.map((st) => st.code);
+      let s = codes.findIndex((x) => !IN_CODE.test(x));
+      if (s < 0) s = codes.length - 1;
+      const rc = c.receipt && idx.pick.get(c.receipt);
+      if (rc && !inSeen.has(rc.name) && s > 0) { // приймання: фура → склад, раз на документ
+        inSeen.add(rc.name);
+        const m0 = dayMin(rc.scheduled_date);
+        if (m0 != null) addBatch(codes.slice(0, s + 1), c.kind, m0, m0 + 35, null, rc.name);
+      }
+      if (c.product === mo.supply?.product) continue; // плиту везе сама мітка замовлення
+      const w = wos.find((x) => x.workcenter === c.to) || wos[0];
+      const ws = woMin(w, "_s");
+      addBatch([...codes.slice(s), c.to], c.kind, ws - 25, ws, new Set([mo.name]), mo.name);
+    }
+  }
+}
+function prodSimMove(t) {
+  if (!prodOv.sim || t == null) return;
+  for (const tr of prodOv.tracks) {
+    const pos = trackAt(tr, t);
+    const p = tr.curve.getPoint(clamp01(pos.u / Math.max(1, tr.n - 1)));
+    tr.dot.position.copy(p).add(new THREE.Vector3(0, 0.4, 0));
+    tr.tag.position.copy(tr.dot.position);
+    const bad = !!pos.w?.blocked && t >= (simBase - dayStart()) / 60000;
+    if (tr.bad !== bad) { tr.bad = bad; tr.ring.material.color.set(bad ? 0xd63a2b : 0xffffff); tr.el.classList.toggle("bad", bad); }
+    if (tr.ph !== pos.ph) {
+      tr.ph = pos.ph;
+      tr.el.title = `${tr.mo.name} · ${tr.mo.product_name} × ${tr.mo.qty} — ${pos.ph}` + (tr.mo.delivery ? ` → ${tr.mo.delivery.partner}` : "");
+    }
+  }
+  const f = prodOv.focus;
+  for (const b of prodOv.batches) {
+    const d = b.userData;
+    const on = t >= d.w0 && t <= d.w1 && (!f || !d.mos || d.mos.has(f));
+    b.visible = on;
+    if (on) b.position.copy(d.curve.getPointAt(clamp01((t - d.w0) / (d.w1 - d.w0))));
+  }
+}
+// у шарі замовлень довгі назви зон приймання й відвантаження перекривають фури — лишаємо «Ворота N»
+function shortDoorLabels(on) {
+  for (const { lbl, obj, cls } of labels) {
+    const m = cls === "zone" && /^Z-(RCV|OUT)-(\d+)$/.exec(obj.userData.code || "");
+    if (!m) continue;
+    const el = lbl.element;
+    el.dataset.full ??= el.innerHTML;
+    el.innerHTML = on ? `Ворота ${m[2]}` : el.dataset.full;
+  }
+}
+async function setProdOverlay(on) {
+  if (prodOv.on === on) return;
+  prodOv.on = on;
+  $("#opt-prod").checked = on;
+  shortDoorLabels(on);
+  $("#prod-legend").hidden = !on;
+  if (on) {
+    stopDrill();
+    prodOv.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
+    layers.forEach((l, k) => { if (PROD_HIDE_GROUPS.has(l.group) || PROD_HIDE_LAYERS.has(k)) setLayer(k, false); });
+    select(null); clearHighlight();
+    // увесь майданчик від КПП приймання до вагової й КПП відвантаження — між лівою й правою панелями
+    goView({ name: "План згори", target: [89, 31, 0], pos: [89, 30.9, 330] });
+    await modelLoaded;
+    drawProdOverlay();
+    openTab("production");
+  } else {
+    clearProdOverlay(); prodOv.focus = null;
+    if (prodOv.saved) prodOv.saved.forEach((want, k) => setLayer(k, want));
+    prodOv.saved = null;
+    renderPanel();
+  }
+}
+$("#opt-prod").onchange = (e) => setProdOverlay(e.target.checked);
+
+// ---------------------------------------------------------------- вибір мишею
+const ray = new THREE.Raycaster();
+const ptr = new THREE.Vector2();
+function pick(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  for (const hit of ray.intersectObjects(scene.children, true)) {
+    if (!hit.object.isMesh || !isShown(hit.object) || hit.object.userData.isPulse) continue;
+    const root = codeRoot(hit.object);
+    if (root) return root;
+  }
+  return null;
+}
+function select(obj, { keepHighlight = false } = {}) {
+  const prev = selected;
+  selected = obj;
+  paint(prev);
+  if (!keepHighlight) clearHighlight();
+  if (obj) {
+    paint(obj);
+    selBox.box.setFromObject(obj).expandByScalar(0.08);
+    selBox.visible = true;
+    openView({ type: "object", code: obj.userData.code }, false);
+  } else {
+    selBox.visible = false;
+    if (panel.type === "object") openTab(panel.tab || "overview");
+  }
+}
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  select(pick(e));
+});
+renderer.domElement.addEventListener("dblclick", (e) => {
+  const o = pick(e);
+  if (o) { select(o); focusOn(o); }
+});
+let hoverAt = 0;
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (e.buttons || e.pointerType === "touch") return;
+  const now = performance.now();
+  if (now - hoverAt < 80) return;
+  hoverAt = now;
+  const o = pick(e);
+  if (o === hovered) return;
+  const prev = hovered;
+  hovered = o;
+  paint(prev); paint(o);
+  renderer.domElement.style.cursor = o ? "pointer" : "";
+});
+addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea")) return;
+  if (e.key === "Escape") { stopDrill(); select(null); clearHighlight(); openTab(panel.tab || "overview"); }
+  if (/^[0-9]$/.test(e.key)) {
+    const v = VIEWS[(parseInt(e.key, 10) + 9) % 10];
+    if (v) goView(v);
+  }
+});
+
+// ================================================================ ДАНІ ODOO
+let D = null;
+const idx = {};
+let simStart = 0, simBase = 0;
+async function loadOdoo() {
+  const el = document.getElementById("odoo-data");
+  if (el) return JSON.parse(el.textContent);
+  const r = await fetch(ODOO_URL);
+  if (!r.ok) throw new Error(`${ODOO_URL}: ${r.status}`);
+  return r.json();
+}
+function indexData() {
+  idx.mo = new Map(D.productions.map((m) => [m.name, m]));
+  idx.pick = new Map(D.pickings.map((p) => [p.name, p]));
+  idx.so = new Map(D.sale_orders.map((s) => [s.name, s]));
+  idx.po = new Map(D.purchase_orders.map((p) => [p.name, p]));
+  idx.mr = new Map(D.maintenance_requests.map((m) => [m.id, m]));
+  idx.qc = new Map(D.quality_checks.map((q) => [q.name, q]));
+  idx.prodLocs = new Map();
+  for (const [code, loc] of Object.entries(D.locations)) {
+    for (const q of loc.quants) {
+      if (!idx.prodLocs.has(q.product)) idx.prodLocs.set(q.product, []);
+      idx.prodLocs.get(q.product).push({ code, qty: q.qty, reserved: q.reserved || 0 });
+    }
+  }
+  idx.moI = new Map(D.productions.map((m, i) => [m.name, i]));
+  idx.truck = new Map(D.pickings.filter((p) => p.truck).map((p) => [p.truck, p.name]));
+}
+Promise.all([loadOdoo(), modelLoaded]).then(([data]) => {
+  D = data;
+  indexData();
+  simBase = Date.parse(D.meta.now.replace(" ", "T"));
+  scheduleWOs();
+  simStart = Date.now();
+  $("#odoo-pill").classList.add("on");
+  $("#odoo-state").textContent = D.meta.live ? `${D.meta.source.split(" · ").pop()} · ${D.meta.database}` : "демо-дані";
+  if (D.meta.live) $("#odoo-pill").title = `Знімок бази на ${D.meta.pulled_at}`;
+  tickClock();
+  setInterval(tick, 3000);
+  setInterval(tickClock, 1000);
+  openTab("overview");
+}).catch((err) => {
+  console.error(err);
+  $("#odoo-pill").classList.add("off");
+  $("#odoo-state").textContent = "немає даних";
+  renderNoData();
+});
+
+const P = (code) => D.products[code] || { name: code, uom: "" };
+const qtyU = (q, code) => `${nf.format(q)} ${esc(P(code).uom)}`;
+const simNow = () => new Date(simBase + (Date.now() - simStart));
+const hm = (s) => (s ? s.slice(11, 16) : "");
+const dayHm = (s) => {
+  if (!s) return "";
+  const today = D.meta.now.slice(0, 10);
+  return s.slice(0, 10) === today ? `сьогодні ${s.slice(11, 16)}` : `${s.slice(8, 10)}.${s.slice(5, 7)} ${s.slice(11, 16)}`;
+};
+function tickClock() {
+  if (!D) return;
+  const t = simNow();
+  $("#odoo-time").textContent = simOverride != null ? `демо-час ${hhmm(simOverride)}`
+    : `синхр. ${t.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+}
+// «живі» дані: завдання в роботі просуваються, поки сторінка відкрита
+function tick() {
+  if (!D || document.hidden) return;
+  if (simOverride != null) { energyTick(); updateLive(); if (panel.type === "drill") renderDrill(); return; }
+  if (panel.type === "drill") renderDrill();
+  for (const wo of Object.values(D.workorders)) {
+    if (wo.state !== "progress" || wo.blocked) continue;
+    wo.progress = Math.min(0.98, wo.progress + 0.002 + ((wo.id.charCodeAt(6) % 5) * 0.001));
+  }
+  for (const mo of D.productions) {
+    const w = mo.workorders.map((id) => D.workorders[id]);
+    mo.progress = (w.filter((x) => x.state === "done").length + w.filter((x) => x.state === "progress")
+      .reduce((s, x) => s + x.progress, 0)) / w.length;
+  }
+  energyTick();
+  updateLive();
+  if (colorMode === "power") repaintAll();
+}
+function updateLive() {
+  const val = (key) => {
+    const [t, ...rest] = key.split(":");
+    const id = rest.join(":");
+    return t === "mo" ? idx.mo.get(id)?.progress : D.workorders[id]?.progress;
+  };
+  document.querySelectorAll("[data-p]").forEach((el) => {
+    const v = val(el.dataset.p);
+    if (v != null) el.firstElementChild.style.width = barW(v);
+  });
+  document.querySelectorAll("[data-t]").forEach((el) => {
+    const v = val(el.dataset.t);
+    if (v != null) el.textContent = pct(v);
+  });
+  document.querySelectorAll("[data-e]").forEach((el) => {
+    const v = eVal(el.dataset.e);
+    if (v != null) el.textContent = eFmt[el.dataset.ef](v);
+  });
+  document.querySelectorAll("[data-eb]").forEach((el) => {
+    const v = eVal(el.dataset.eb);
+    if (v != null) { el.firstElementChild.style.width = barW(v); el.className = `pbar ${loadCls(v)}`; }
+  });
+}
+
+// ---------------------------------------------------------------- панель
+let panel = { type: "tab", tab: "overview" };
+const body = () => $("#cardbody");
+function setTabs(tab) {
+  document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+}
+document.querySelectorAll(".tab").forEach((b) => {
+  b.onclick = () => { stopDrill(); select(null); clearHighlight(); openTab(b.dataset.tab); };
+});
+function openTab(tab) { panel = { type: "tab", tab }; setTabs(tab); renderPanel(); }
+function openView(v, scroll = true) {
+  panel = { ...v, tab: panel.tab || "overview" };
+  renderPanel();
+  if (scroll) body().scrollTop = 0;
+}
+function renderPanel(soft = false) {
+  if (!D) return;
+  const top = body().scrollTop;
+  const b = body();
+  if (panel.type === "tab") {
+    ({ overview: renderOverview, production: renderProduction, stock: renderStock, logistics: renderLogistics,
+      energy: renderEnergy })[panel.tab]();
+  } else if (panel.type === "object") renderObject(panel.code);
+  else if (panel.type === "mo") renderMO(panel.name);
+  else if (panel.type === "product") renderProduct(panel.code);
+  else if (panel.type === "picking") renderPicking(panel.name);
+  else if (panel.type === "line") renderLine(panel.code);
+  else if (panel.type === "drill") renderDrill();
+  if (soft) b.scrollTop = top;
+}
+const backBtn = () => `<button class="back" data-back="1">← ${esc(({ overview: "Огляд", production: "Виробництво", stock: "Склад", logistics: "Логістика", energy: "Енергія" })[panel.tab] || "Назад")}</button>`;
+// усі посилання в панелі: data-go="mo:…|pick:…|prod:…|obj:…|po:…"
+body().addEventListener("click", (e) => {
+  const back = e.target.closest("[data-back]");
+  if (back) { stopDrill(); select(null); clearHighlight(); if (prodOv.on) prodFocus(null); openTab(panel.tab || "overview"); return; }
+  const a = e.target.closest("[data-go]");
+  if (!a) return;
+  const [t, ...rest] = a.dataset.go.split(":");
+  const v = rest.join(":");
+  if (t === "mo") showMO(v);
+  else if (t === "pick") showPicking(v);
+  else if (t === "prod") showProduct(v);
+  else if (t === "obj") ensureCode(v).then((o) => { if (o) { if (!isShown(o)) showLayerOf(o); select(o, { keepHighlight: true }); focusOn(o); } });
+  else if (t === "comp") showComponent(v);
+  else if (t === "chain") showChain(v);
+  else if (t === "matp") showMatPath(+v);
+  else if (t === "locs") highlightLocs(v.split(","));
+  else if (t === "line") showLine(v);
+  else if (t === "etab") { select(null); clearHighlight(); openTab("energy"); }
+  else if (t === "drill") startDrill();
+});
+function renderNoData() {
+  body().innerHTML = `<div class="kind">Немає даних</div><p>Не вдалося прочитати ${ODOO_URL}. Модель працює, але без даних Odoo.</p>`;
+}
+
+// ---------------------------------------------------------------- вкладка «Огляд»
+function renderOverview() {
+  setTabs("overview");
+  const wcs = Object.values(D.workcenters);
+  const working = wcs.filter((w) => w.status === "work").length;
+  const oee = wcs.reduce((s, w) => s + w.oee, 0) / wcs.length;
+  const today = D.meta.now.slice(0, 10);
+  const outs = D.pickings.filter((p) => p.type === "outgoing");
+  const ins = D.pickings.filter((p) => p.type === "incoming" && p.scheduled_date.startsWith(today));
+  const moProg = D.productions.filter((m) => m.state === "progress").length;
+  const attention = [];
+  for (const w of wcs) {
+    if (w.status === "stop") attention.push(["bad", `${w.name} — зупинено${w.maintenance_request ? ` · ${w.maintenance_request}` : ""}`, `obj:${w.code}`]);
+  }
+  for (const q of D.quality_checks) if (q.state === "fail") attention.push(["bad", `${q.name}: брак — ${P(q.product).name}`, `obj:${q.location}`]);
+  for (const m of D.productions) if (m.reservation_state === "waiting") attention.push(["bad", `${m.name}: бракує компонентів`, `mo:${m.name}`]);
+  for (const [k, c] of Object.entries(D.infra?.cards || {})) if (c.warn) attention.push(["warn", c.warn, `obj:${k}`]);
+  for (const [k, g] of Object.entries(D.fire?.groups || {})) {
+    if (g.state !== "ok") attention.push(["warn", `Пожежна сигналізація: ${g.warning?.split(":")[0] || g.zone_name} · ${g.maintenance_request || ""}`, `obj:${k}`]);
+  }
+  for (const [k, u] of Object.entries(D.ventilation?.units || {})) {
+    if (u.filter_dp_pa > 250) attention.push(["warn", `${k}: забитий фільтр вентиляції (${u.filter_dp_pa} Па) · ${u.maintenance_request || ""}`, `obj:${k}`]);
+  }
+  for (const w of wcs) if (w.status === "idle") attention.push(["warn", `${w.name} — ${w.idle_reason || "простій"}`, `obj:${w.code}`]);
+  for (const p of outs) if (p.state === "waiting") attention.push(["warn", `${p.name} (${p.partner}) — ${p.note}`, `pick:${p.name}`]);
+  const lowBins = Object.entries(D.locations).filter(([, l]) => l.state && l.state !== "ok");
+  if (lowBins.length) attention.push(["warn", `${lowBins.length} комірок фурнітури нижче мінімуму — закупівлі ${D.purchase_orders.filter((p) => p.locations.length).map((p) => p.name).join(", ")}`, `locs:${lowBins.map(([c]) => c).join(",")}`]);
+  body().innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><b>${working}/${wcs.length}</b><span>верстатів у роботі</span></div>
+      <div class="kpi"><b>${pct(oee)}</b><span>середній OEE за зміну</span></div>
+      <div class="kpi"><b>${moProg}</b><span>виробничих замовлень у роботі</span></div>
+      <div class="kpi"><b>${outs.length} / ${ins.length}</b><span>відвантажень / приймань сьогодні</span></div>
+    </div>
+    <div class="sub">Потребує уваги</div>
+    <ul class="rows">${attention.map(([c, t, go]) => `<li><button class="row" data-go="${esc(go)}">
+      <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${c})"></span>${esc(t)}</span></button></li>`).join("")}</ul>
+    ${fireSummary()}
+    ${fleetHtml()}
+    ${legendHtml()}
+    <div class="hint">Дані: ${esc(D.meta.source)}, база «${esc(D.meta.database)}». ${esc(D.meta.note)}</div>`;
+}
+// парк обладнання: одна модель — один рядок, кількість одиниць і перехід до першої
+function fleetHtml() {
+  if (!D.passports) return "";
+  const groups = new Map();
+  for (const [code, pp] of Object.entries(D.passports)) {
+    const key = `${pp.manufacturer} ${pp.model}`;
+    if (!groups.has(key)) groups.set(key, { pp, codes: [] });
+    groups.get(key).codes.push(code);
+  }
+  return `<div class="sub">Парк обладнання · ${groups.size} моделей</div><ul class="rows">${[...groups.values()].map(({ pp, codes }) => {
+    const first = items.get(codes[0]);
+    return `<li><button class="row" data-go="obj:${esc(codes[0])}"><span class="t">${esc(pp.manufacturer)} ${esc(pp.model)}</span>
+      <span class="mono">${codes.length > 1 ? `× ${codes.length}` : ""}</span>
+      <span class="m">${esc(first?.userData.label || codes[0])}${codes.length > 1 ? ` та ще ${codes.length - 1}` : ""}</span></button></li>`;
+  }).join("")}</ul>`;
+}
+function legendHtml() {
+  if (colorMode === "fill") return `<div class="sub">Заповненість складу</div><div class="legend">
+    <span class="swatch" style="background:var(--ok)"></span><span>30 % і більше</span>
+    <span class="swatch" style="background:var(--warn)"></span><span>менше 30 %</span>
+    <span class="swatch" style="background:var(--bad)"></span><span>порожньо</span></div>`;
+  if (colorMode === "oee") return `<div class="sub">OEE верстатів</div><div class="legend">
+    <span class="swatch" style="background:var(--ok)"></span><span>75 % і більше</span>
+    <span class="swatch" style="background:var(--warn)"></span><span>50–75 %</span>
+    <span class="swatch" style="background:var(--bad)"></span><span>менше 50 %</span></div>`;
+  if (colorMode === "lux") return `<div class="sub">Освітленість відносно норми</div><div class="legend">
+    <span class="swatch" style="background:var(--ok)"></span><span>розрахунок не нижче норми</span>
+    <span class="swatch" style="background:var(--warn)"></span><span>85–100 % норми</span>
+    <span class="swatch" style="background:var(--bad)"></span><span>менше 85 %</span></div>`;
+  if (colorMode === "power") return `<div class="sub">Споживання електроенергії</div><div class="legend">
+    <span class="swatch" style="background:var(--bad)"></span><span>споживач від 30 кВт · лінія понад 80 %</span>
+    <span class="swatch" style="background:var(--warn)"></span><span>10–30 кВт · 60–80 %</span>
+    <span class="swatch" style="background:var(--ok)"></span><span>до 10 кВт · до 60 %</span></div>`;
+  return `<div class="sub">Легенда</div><div class="legend">
+    <span class="swatch" style="background:var(--ok)"></span><span>Маячок верстата: у роботі</span>
+    <span class="swatch" style="background:var(--warn)"></span><span>Простій · лоток нижче мінімуму</span>
+    <span class="swatch" style="background:var(--bad)"></span><span>Зупинено · комірка порожня</span>
+    <span class="swatch" style="background:#f2c230"></span><span>Маршрут виробничого замовлення — оберіть його у вкладці «Виробництво»</span></div>`;
+}
+
+// ---------------------------------------------------------------- вкладка «Виробництво»
+function moCurrent(mo) {
+  const w = mo.workorders.map((id) => D.workorders[id]);
+  return w.find((x) => x.state === "progress") || w.find((x) => x.state === "waiting") || w.find((x) => x.state === "ready");
+}
+function renderProduction() {
+  setTabs("production");
+  const order = { progress: 0, confirmed: 1, done: 2 };
+  const mos = [...D.productions].sort((a, b) => (order[a.state] - order[b.state]) || a.name.localeCompare(b.name));
+  body().innerHTML = `<div class="sub" style="margin-top:2px">Виробничі замовлення · ${mos.length}</div>
+    <ul class="rows">${mos.map((m) => {
+      const cur = moCurrent(m);
+      const wc = cur ? D.workcenters[cur.workcenter] : null;
+      const blocked = cur?.blocked;
+      return `<li><button class="row" data-go="mo:${esc(m.name)}">
+        <span class="t">${prodOv.color.has(m.name) ? `<span class="swatch" style="background:${prodOv.color.get(m.name)};display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px"></span>` : ""}${esc(m.name)} · ${esc(m.product_name)} × ${m.qty}</span>${pill(blocked ? ["bad", "Зупинка"] : MO_STATE[m.state] || ["idle", m.state])}
+        <span class="m">${cur ? `${esc(cur.name)} — ${esc(wc?.name || cur.workcenter)}` : "—"} · ${esc(m.origin)}</span>
+        <span class="pw">${bar(m.progress, blocked ? "bad" : "", `mo:${esc(m.name)}`)}</span></button></li>`;
+    }).join("")}</ul>`;
+}
+function showMO(name) {
+  const mo = idx.mo.get(name);
+  if (!mo) return;
+  select(null);
+  openView({ type: "mo", name });
+  if (prodOv.on) prodFocus(name);
+  const wos = mo.workorders.map((id) => D.workorders[id]);
+  // маршрут від фури: шлях плити (приймання → контроль → стелаж → під порталом), далі операції
+  const sup = (mo.supply?.steps || []).map((st) => ({ code: st.code, html: esc(st.label), cls: "hl" }));
+  const ops = wos.map((w) => ({
+    code: w.workcenter,
+    html: `${w.sequence}${w.state === "progress" ? ` · ${pct(w.progress)}` : ""}`,
+    cls: w.blocked ? "bad" : w.state === "done" ? "done" : w.state === "progress" ? "prog" : "pend",
+  }));
+  const dl = (mo.delivery?.steps || []).map((st) => ({ code: st.code, html: esc(st.label), cls: "done" }));
+  // кожен інший матеріал — тонкою гілкою свого кольору до верстата, що його споживає
+  const seen = new Set();
+  const branches = mo.components.filter((c) => c.path && c.to && c.product !== mo.supply?.product).map((c) => {
+    const codes = [...c.path.map((st) => st.code), c.to];
+    const store = c.path.find((st) => /^(FUR-|EB-|PAINT|PACK-STORE|RCK-|PLT-)/.test(st.code));
+    return { codes, color: MAT_COLOR[c.kind], label: esc(c.kind), at: store?.code, key: c.kind + codes.join() };
+  }).filter((b) => { // кілька позицій фурнітури з одного стелажа — одна лінія й одна мітка на вид
+    if (seen.has(b.key)) return false;
+    if ([...seen].some((k) => k.startsWith(b.label))) b.label = null;
+    seen.add(b.key);
+    return true;
+  });
+  const need = [...sup, ...dl, ...branches.flatMap((b) => b.codes.map((code) => ({ code })))];
+  Promise.all(need.map((e) => ensureCode(e.code))).then(() => {
+    if (panel.type === "mo" && panel.name === name) highlight([...sup, ...ops, ...dl], { path: true, branches });
+  });
+  highlight(ops, { path: true, fit: false });
+}
+function renderMO(name) {
+  const mo = idx.mo.get(name);
+  const wos = mo.workorders.map((id) => D.workorders[id]);
+  const so = idx.so.get(mo.origin);
+  const parent = idx.mo.get(mo.origin);
+  body().innerHTML = `${backBtn()}
+    <div class="kind">Виробниче замовлення · mrp.production</div>
+    <h3>${esc(mo.name)}</h3>
+    <div class="code">${esc(mo.product)} · маршрут ${esc(mo.route)}</div>
+    <dl class="kv">
+      <dt>Виріб</dt><dd><button class="lnk" data-go="prod:${esc(mo.product)}">${esc(mo.product_name)}</button> × ${mo.qty} ${esc(mo.uom)}</dd>
+      <dt>Стан</dt><dd>${pill(MO_STATE[mo.state] || ["idle", mo.state])}</dd>
+      <dt>Джерело</dt><dd>${so ? `${esc(so.name)} · ${esc(so.partner)}` : parent ? `<button class="lnk" data-go="mo:${esc(parent.name)}">${esc(parent.name)}</button> (фасади для корпусу)` : esc(mo.origin)}</dd>
+      <dt>Старт</dt><dd>${dayHm(mo.date_start)}</dd>
+      <dt>Дедлайн</dt><dd>${dayHm(mo.date_deadline)}</dd>
+      <dt>Готовність</dt><dd><span data-t="mo:${esc(mo.name)}">${pct(mo.progress)}</span> ${bar(mo.progress, "", `mo:${esc(mo.name)}`)}</dd>
+      ${mo.energy_kwh != null ? `<dt>Електроенергія</dt><dd>${kwhU(mo.energy_kwh)} · ≈ ${nf.format(mo.energy_cost)} грн <span class="mono">(виконані операції)</span></dd>` : ""}
+      ${mo.child_productions ? `<dt>Фасади</dt><dd>${mo.child_productions.map((c) => `<button class="lnk" data-go="mo:${esc(c)}">${esc(c)}</button>`).join(", ")}</dd>` : ""}
+    </dl>
+    ${mo.supply ? `<div class="sub">Шлях плити до пили · ${esc(P(mo.supply.product).name)}</div>
+    <ol class="steps">${mo.supply.steps.map((st) => `<li><button class="lnk" data-go="obj:${esc(st.code)}">${esc(st.label[0].toUpperCase() + st.label.slice(1))}</button>
+      <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}
+      <li><b>Портал → ${esc(D.workcenters[wos[0]?.workcenter]?.name || "")}</b> <span class="m">лист на підйомний стіл, далі операції нижче</span></li></ol>
+    ${mo.supply.note ? `<div class="note ${mo.supply.warn ? "bad" : ""}">${esc(mo.supply.note)}</div>` : ""}` : ""}
+    <div class="sub">Робочі завдання · у 3D весь цикл: від фури з плитами до фури клієнта</div>
+    <table class="tbl"><tr><th>#</th><th>Операція / центр</th><th>Стан</th><th class="n">Хв</th></tr>
+      ${wos.map((w) => `<tr class="click" data-go="obj:${esc(w.workcenter)}">
+        <td>${w.sequence}</td><td>${esc(w.name)}<br><span style="color:var(--muted)">${esc(D.workcenters[w.workcenter]?.name || w.workcenter)}</span>
+        ${w.state === "progress" ? bar(w.progress, w.blocked ? "bad" : "warn", `wo:${w.id}`) : ""}</td>
+        <td>${pill(w.blocked ? ["bad", "Зупинка"] : WO_STATE[w.state])}</td>
+        <td class="n">${w.duration ?? "—"} / ${w.duration_expected}</td></tr>`).join("")}
+    </table>
+    ${mo.delivery ? `<div class="sub">Шлях до клієнта · ${esc(mo.delivery.partner)}${mo.delivery.via ? ` · через корпус ${esc(mo.delivery.via)}` : ""}</div>
+    <ol class="steps">${mo.delivery.steps.map((st) => `<li><button class="lnk" data-go="obj:${esc(st.code)}">${esc(st.label[0].toUpperCase() + st.label.slice(1))}</button>
+      <span class="m">${esc(st.note || "")}${st.doc && !(st.note || "").includes(st.doc) ? ` · ${esc(st.doc)}` : ""}</span></li>`).join("")}</ol>
+    ${mo.delivery.note ? `<div class="note">${esc(mo.delivery.note)}</div>` : ""}` : ""}
+    <div class="sub">Матеріали · шлях від в'їзду до верстата (у 3D — тонкі лінії свого кольору)</div>
+    <table class="tbl"><tr><th>Компонент</th><th class="n">Потреба</th><th></th></tr>
+      ${mo.components.map((c) => `<tr class="click" data-go="comp:${esc(mo.name)}|${esc(c.product)}">
+        <td>${c.kind ? `<span class="swatch" style="display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:#${new THREE.Color(MAT_COLOR[c.kind] ?? 0x888888).getHexString()}"></span>` : ""}${esc(P(c.product).name)}
+          <br><span style="color:var(--muted)">${c.path ? c.path.slice(1).map((st) => esc(st.label)).join(" → ") + ` → ${esc(D.workcenters[c.to]?.name || c.to || "")}` : `ворота ${c.door}`}${c.receipt ? ` · ${esc(c.receipt)}` : ` · із залишку${c.expected ? `; наступна партія ${esc(c.expected)}` : ""}`}</span></td><td class="n">${qtyU(c.qty, c.product)}</td>
+        <td>${c.available ? pill(["ok", "є"]) : pill(["bad", "бракує"])}</td></tr>`).join("")}
+    </table>
+    ${mo.reservation_state === "waiting" ? `<div class="note bad">Компоненти не зарезервовано повністю — замовлення чекає приймання.</div>` : ""}`;
+}
+function showComponent(v) {
+  const [mo, product] = v.split("|");
+  const locs = (idx.prodLocs.get(product) || []).filter((l) => l.qty > 0);
+  highlight(locs.map((l) => ({ code: l.code, html: qtyU(l.qty - l.reserved, product), cls: "hl" })));
+}
+
+// ---------------------------------------------------------------- вкладка «Склад»
+let stockFilter = { q: "", cat: "" };
+function renderStock() {
+  setTabs("stock");
+  const cats = [...new Set(Object.values(D.products).map((p) => p.categ))];
+  const rows = Object.values(D.products).filter((p) => (!stockFilter.cat || p.categ === stockFilter.cat)
+    && (!stockFilter.q || `${p.name} ${p.default_code}`.toLowerCase().includes(stockFilter.q.toLowerCase())))
+    .map((p) => {
+      const locs = idx.prodLocs.get(p.default_code) || [];
+      const qty = locs.reduce((s, l) => s + l.qty, 0), res = locs.reduce((s, l) => s + l.reserved, 0);
+      const low = locs.some((l) => D.locations[l.code].state && D.locations[l.code].state !== "ok");
+      return { p, qty, res, n: locs.filter((l) => l.qty > 0).length, low };
+    });
+  body().innerHTML = `
+    <input class="search" id="stock-q" type="search" placeholder="Пошук товару: назва або артикул" value="${esc(stockFilter.q)}">
+    <div class="chips">${["", ...cats].map((c) => `<button class="chipf" data-cat="${esc(c)}" aria-pressed="${stockFilter.cat === c}">${esc(c || "Усі")}</button>`).join("")}</div>
+    <ul class="rows">${rows.map((r) => `<li><button class="row" data-go="prod:${esc(r.p.default_code)}">
+      <span class="t">${esc(r.p.name)}</span>${r.low ? pill(["warn", "мінімум"]) : `<span class="mono">${esc(r.p.default_code)}</span>`}
+      <span class="m">${qtyU(r.qty, r.p.default_code)} у ${r.n} ${plural(r.n, "місці", "місцях", "місцях")}${r.res ? ` · резерв ${nf.format(r.res)}` : ""}</span></button></li>`).join("")
+      || `<li class="hint">Нічого не знайдено.</li>`}</ul>`;
+  const q = $("#stock-q");
+  q.oninput = () => { stockFilter.q = q.value; renderStock(); const n = $("#stock-q"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+  body().querySelectorAll(".chipf").forEach((b) => { b.onclick = () => { stockFilter.cat = b.dataset.cat; renderStock(); }; });
+}
+function showProduct(code) {
+  select(null);
+  openView({ type: "product", code });
+  const locs = (idx.prodLocs.get(code) || []).filter((l) => l.qty > 0);
+  highlight(locs.map((l) => ({ code: l.code, html: qtyU(l.qty, code), cls: l.reserved ? "prog" : "hl" })));
+}
+function renderProduct(code) {
+  const p = P(code);
+  const locs = (idx.prodLocs.get(code) || []).filter((l) => l.qty > 0).sort((a, b) => b.qty - a.qty);
+  const total = locs.reduce((s, l) => s + l.qty, 0), res = locs.reduce((s, l) => s + l.reserved, 0);
+  const mos = D.productions.filter((m) => m.product === code || m.components.some((c) => c.product === code));
+  const pos = D.purchase_orders.filter((po) => po.lines.some((l) => l.product === code));
+  body().innerHTML = `${backBtn()}
+    <div class="kind">Товар · product.product</div>
+    <h3>${esc(p.name)}</h3><div class="code">${esc(code)} · ${esc(p.categ)}</div>
+    <dl class="kv"><dt>На складі</dt><dd>${qtyU(total, code)}</dd><dt>Резерв</dt><dd>${qtyU(res, code)}</dd>
+      <dt>Доступно</dt><dd><b>${qtyU(total - res, code)}</b></dd>${p.seller ? `<dt>Постачальник</dt><dd>${esc(p.seller)}</dd>` : ""}</dl>
+    <div class="sub">Де лежить · підсвічено в 3D</div>
+    <table class="tbl"><tr><th>Місце</th><th class="n">Кількість</th></tr>
+      ${locs.map((l) => `<tr class="click" data-go="obj:${esc(l.code)}"><td>${esc(D.locations[l.code].complete_name)}</td>
+        <td class="n">${qtyU(l.qty, code)}${l.reserved ? `<br><span style="color:var(--warn)">резерв ${nf.format(l.reserved)}</span>` : ""}</td></tr>`).join("")
+        || `<tr><td colspan="2">Немає на складі.</td></tr>`}</table>
+    ${pos.length ? `<div class="sub">Закупівлі</div><ul class="rows">${pos.map((po) => `<li><div class="row" style="cursor:default">
+      <span class="t">${esc(po.name)} · ${esc(po.partner)}</span>${pill(["info", "Підтверджено"])}<span class="m">очікується ${dayHm(po.date_planned)}</span></div></li>`).join("")}</ul>` : ""}
+    ${mos.length ? `<div class="sub">Виробничі замовлення</div><ul class="rows">${mos.slice(0, 8).map((m) => `<li><button class="row" data-go="mo:${esc(m.name)}">
+      <span class="t">${esc(m.name)} · ${esc(m.product_name)}</span>${pill(MO_STATE[m.state])}</button></li>`).join("")}</ul>` : ""}`;
+}
+function highlightLocs(codes) { highlight(codes.map((c) => ({ code: c, html: "", cls: "prog" }))); }
+
+// ---------------------------------------------------------------- вкладка «Логістика»
+const PICK_KIND = { incoming: "Приймання", outgoing: "Відвантаження", pick_components: "Комплектація компонентів",
+  store_finished: "Розміщення готової продукції", replenish: "Поповнення під портал", putaway: "Розміщення плит у стелажі" };
+function pickRow(p) {
+  return `<li><button class="row" data-go="pick:${esc(p.name)}">
+    <span class="t">${esc(p.name)}${p.partner ? ` · ${esc(p.partner)}` : ""}</span>${pill(PICK_STATE[p.state] || ["idle", p.state])}
+    <span class="m">${p.dock ? `${esc(items.get(p.dock)?.userData.label || p.dock)} · ` : ""}${dayHm(p.scheduled_date)}${p.truck ? " · машина біля воріт" : ""}</span>
+    ${p.progress ? `<span class="pw">${bar(p.progress, "flow")}</span>` : ""}</button></li>`;
+}
+function renderLogistics() {
+  setTabs("logistics");
+  const by = (t) => D.pickings.filter((p) => p.type === t);
+  const SC = D.sheet_chain;
+  body().innerHTML = `${SC ? `<div class="sub" style="margin-top:2px">Ланцюжок плит · від фури до пили</div>
+    <ul class="rows">${SC.steps.map((st) => `<li><button class="row" data-go="chain:${st.n}"><span class="t">${st.n}. ${esc(st.title)}</span>
+      <span class="mono">${esc(st.stock)}</span><span class="m">${esc(st.desc)}</span></button></li>`).join("")}</ul>
+    <div class="row-btns" style="margin:6px 0 4px"><button class="btn" data-go="chain:all">Показати весь шлях у 3D</button></div>` : ""}
+    ${D.ship_chain ? `<div class="sub">Ланцюжок відвантаження · від пакування до фури</div>
+    <ul class="rows">${D.ship_chain.steps.map((st) => `<li><button class="row" data-go="chain:s${st.n}"><span class="t">${st.n}. ${esc(st.title)}</span>
+      <span class="mono">${esc(st.stock)}</span><span class="m">${esc(st.desc)}</span></button></li>`).join("")}</ul>` : ""}
+    ${(D.material_paths || []).length ? `<div class="sub">Шляхи матеріалів · від в'їзду до верстата</div>
+    <ul class="rows">${D.material_paths.map((m, i) => `<li><button class="row" data-go="matp:${i}"><span class="t">${esc(m.kind[0].toUpperCase() + m.kind.slice(1))}</span>
+      <span class="mono">${m.steps.length} кроків</span><span class="m">${m.steps.slice(1).map((st) => esc(st.label)).join(" → ")}</span></button></li>`).join("")}</ul>` : ""}
+    ${D.full_cycle_mo ? `<div class="row-btns" style="margin:6px 0 4px"><button class="btn" data-go="mo:${esc(D.full_cycle_mo)}">Весь цикл у 3D: фура → виробництво → фура (${esc(D.full_cycle_mo)})</button></div>` : ""}
+    <div class="sub">Приймання · західні ворота</div><ul class="rows">${by("incoming").map(pickRow).join("")}</ul>
+    <div class="sub">Розміщення плит у стелажі · після контролю</div><ul class="rows">${by("putaway").map(pickRow).join("")}</ul>
+    <div class="sub">Відвантаження · східні ворота</div><ul class="rows">${by("outgoing").map(pickRow).join("")}</ul>
+    <div class="sub">Поповнення під портал · стелажі → ряди під порталом</div><ul class="rows">${by("replenish").map(pickRow).join("")}</ul>
+    <div class="sub">Розміщення готової продукції</div><ul class="rows">${by("store_finished").map(pickRow).join("")}</ul>
+    <div class="sub">Комплектація компонентів</div><ul class="rows">${by("pick_components").map(pickRow).join("")}</ul>`;
+}
+function showPicking(name) {
+  const p = idx.pick.get(name);
+  if (!p) return;
+  select(null);
+  openView({ type: "picking", name });
+  const e = [];
+  if (p.type === "outgoing") { // маршрут відвантаження: комірки ГП → зона перед воротами → ворота → машина
+    const k = p.dock.slice(-1);
+    const cells = [...new Set(p.source_locations || [])];
+    const route = [...cells.map((c, i) => ({ code: c, html: i ? null : "відібрати", cls: "hl" })),
+      { code: `Z-OUT-${k}`, html: "комплектування", cls: "prog" }, { code: p.dock, html: `ворота ${k}`, cls: "prog" }];
+    if (p.truck) route.push({ code: p.truck, html: "фура клієнта", cls: "done" });
+    Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route, { path: true }));
+    return;
+  }
+  if (p.type === "incoming") { // маршрут приймання: фура → вивантаження → контроль → місце зберігання
+    const k = +p.dock.slice(-1);
+    const route = [{ code: p.truck || p.dock, html: p.truck ? "фура" : `ворота ${k}`, cls: "prog" },
+      { code: `UNLOAD-${k}`, html: "вивантаження", cls: "prog" }];
+    if (k <= 3) route.push({ code: `QC-PLT-${k}`, html: "контроль", cls: "prog" });
+    if (k === 4) route.push({ code: "QC-1", html: "контроль", cls: "prog" });
+    const prods = new Set(p.lines.map((l) => l.product));
+    let dest = idx.po.get(p.origin)?.locations || [];
+    if (!dest.length) dest = Object.entries(D.locations).filter(([c, l]) => !/^(UNLOAD|QC)/.test(c)
+      && l.quants.some((q) => prods.has(q.product))).map(([c]) => c);
+    dest.slice(0, 3).forEach((c, i) => route.push({ code: c, html: i ? null : "на зберігання", cls: "done" }));
+    Promise.all(route.map((x) => ensureCode(x.code))).then(() => highlight(route.filter((x) => items.has(x.code)), { path: true }));
+    return;
+  }
+  if (p.dock) e.push({ code: p.dock, html: "Навантаження", cls: "prog" });
+  if (p.truck) e.push({ code: p.truck, html: null });
+  for (const c of p.source_locations || []) e.push({ code: c, html: p.type === "outgoing" ? "відібрати" : "звідси", cls: "hl" });
+  if (p.type === "outgoing") e.push({ code: "OUT-STAGE", html: null });
+  if (p.type === "store_finished") e.push({ code: "POST-STAGE", html: "з пакування", cls: "hl" });
+  if (p.type === "pick_components" && p.location_dest) e.push({ code: p.location_dest, html: "у візок", cls: "prog" });
+  if (p.type === "replenish" || p.type === "putaway") {
+    if (p.vehicle) e.push({ code: p.vehicle, html: "навантажувач", cls: "prog" });
+    e.push({ code: p.location_dest, html: p.type === "putaway" ? "у стелаж" : "під портал", cls: "done" });
+  }
+  highlight(e);
+}
+// ланцюжок плит: крок — підсвітити його об'єкти; all — шлях від фури до пили з номерами кроків
+async function showMatPath(i) {
+  const m = D.material_paths?.[i];
+  if (!m) return;
+  select(null);
+  for (const st of m.steps) await ensureCode(st.code);
+  highlight(m.steps.map((st, j) => ({ code: st.code, html: esc(st.label), cls: j === m.steps.length - 1 ? "done" : "hl" })), { path: true });
+}
+async function showChain(v) {
+  const SC = D.sheet_chain;
+  if (!SC) return;
+  select(null);
+  if (v === "all") {
+    for (const p of SC.path) await ensureCode(p.code);
+    highlight(SC.path.map((p) => ({ code: p.code, html: esc(p.label), cls: "prog" })), { path: true });
+    return;
+  }
+  const ship = v.startsWith("s");
+  const st = (ship ? D.ship_chain : SC).steps.find((x) => String(x.n) === (ship ? v.slice(1) : v));
+  if (!st) return;
+  for (const c of st.codes) await ensureCode(c);
+  highlight(st.codes.map((c, i) => ({ code: c, html: i ? null : `${st.n} · ${esc(st.title)}`, cls: "hl" })));
+}
+function renderPicking(name) {
+  const p = idx.pick.get(name);
+  body().innerHTML = `${backBtn()}
+    <div class="kind">${esc(PICK_KIND[p.type] || p.picking_type)} · stock.picking</div>
+    <h3>${esc(p.name)}</h3>
+    <dl class="kv">
+      ${p.partner ? `<dt>Партнер</dt><dd>${esc(p.partner)}</dd>` : ""}
+      <dt>Документ</dt><dd>${idx.mo.has(p.origin) ? `<button class="lnk" data-go="mo:${esc(p.origin)}">${esc(p.origin)}</button>` : esc(p.origin)}</dd>
+      <dt>Стан</dt><dd>${pill(PICK_STATE[p.state] || ["idle", p.state])}</dd>
+      <dt>Заплановано</dt><dd>${dayHm(p.scheduled_date)}</dd>
+      ${p.dock ? `<dt>Ворота</dt><dd><button class="lnk" data-go="obj:${esc(p.dock)}">${esc(items.get(p.dock)?.userData.label || p.dock)}</button></dd>` : ""}
+      ${p.location_dest ? `<dt>Куди</dt><dd>${esc(D.locations[p.location_dest]?.complete_name || p.location_dest)}</dd>` : ""}
+      ${p.carrier ? `<dt>Перевізник</dt><dd>${esc(p.carrier)}</dd>` : ""}
+      ${p.progress ? `<dt>Виконано</dt><dd>${pct(p.progress)} ${bar(p.progress, "flow")}</dd>` : ""}
+    </dl>
+    ${p.note ? `<div class="note">${esc(p.note)}</div>` : ""}
+    <div class="sub">Рядки</div>
+    <table class="tbl"><tr><th>Товар</th><th class="n">Готово / план</th></tr>
+      ${p.lines.map((l) => `<tr class="click" data-go="prod:${esc(l.product)}"><td>${esc(P(l.product).name)}</td>
+        <td class="n">${nf.format(l.qty_done ?? 0)} / ${qtyU(l.qty, l.product)}</td></tr>`).join("")}</table>`;
+}
+
+// ---------------------------------------------------------------- картка 3D-об'єкта з даними Odoo
+function renderObject(code) {
+  const obj = items.get(code);
+  if (!obj) return;
+  const u = obj.userData;
+  let chip = "", extra = "";
+  if (u.kind === "machine" && MACHINE_STATUS[u.status]) chip = `<span class="chip ${MACHINE_STATUS[u.status][0]}">${MACHINE_STATUS[u.status][1]}</span>`;
+  if (u.kind === "bin" && BIN_STATE[u.state]) chip = `<span class="chip ${BIN_STATE[u.state][0]}">${BIN_STATE[u.state][1]}</span>`;
+  if (u.model && !D?.passports?.[code]) extra += `<div class="pp-head" style="margin-top:8px">${esc(u.maker)} ${esc(u.model)}</div>`;
+  if (D) {
+    const wc = D.workcenters[code], loc = D.locations[code], emp = D.employees[code], eq = D.equipment[code];
+    if (wc) extra += wcHtml(wc);
+    if (loc) extra += locHtml(code, loc);
+    if (emp) extra += empHtml(emp);
+    if (eq) extra += eqHtml(eq);
+    if (u.kind === "dock" && D.docks[code]) extra += `<div class="sub">Документ на воротах</div><ul class="rows">${pickRow(idx.pick.get(D.docks[code]))}</ul>`;
+    if (u.kind === "vehicle" && idx.truck.has(code)) extra += `<div class="sub">Документ</div><ul class="rows">${pickRow(idx.pick.get(idx.truck.get(code)))}</ul>`;
+    if (u.kind === "zone" && D.zones[code]) extra += zoneHtml(D.zones[code]);
+    if (u.kind === "zone" && lightGroupOfZone(code)) extra += `<div class="sub">Освітлення</div>${lightingHtml(lightGroupOfZone(code)[0])}`;
+    extra += lightingHtml(code) + ventHtml(code) + fireHtml(code) + infraHtml(code);
+    if (D.energy) extra += energyHtml(code);
+    if (D.passports?.[code]) extra += passportHtml(D.passports[code]);
+  }
+  body().innerHTML = `${backBtn()}
+    <div class="kind">${esc(KIND[u.kind] || "Об'єкт")}</div>
+    <h3>${esc(u.label || u.code)}</h3>
+    <div class="code">${esc(u.code)}</div>
+    ${chip}
+    ${u.desc ? `<p>${esc(u.desc)}</p>` : ""}
+    ${extra}
+    <div class="actions"><button class="btn" id="c-focus">Наблизити</button><button class="btn" id="c-close">Закрити</button></div>`;
+  $("#c-focus").onclick = () => focusOn(obj);
+  $("#c-close").onclick = () => select(null);
+}
+function wcHtml(wc) {
+  const cur = wc.current_workorder ? D.workorders[wc.current_workorder] : null;
+  const mo = cur ? idx.mo.get(cur.production) : null;
+  const mr = wc.maintenance_request ? idx.mr.get(wc.maintenance_request) : null;
+  const emp = D.employees[`OP-${wc.code}`];
+  const oeeCls = wc.oee >= 0.75 ? "" : wc.oee >= 0.5 ? "warn" : "bad";
+  return `
+    <dl class="kv"><dt>Робочий центр</dt><dd>${esc(wc.name)} <span class="mono">(${esc(wc.working_state)})</span></dd>
+      <dt>OEE за зміну</dt><dd>${pct(wc.oee)} ${bar(wc.oee, oeeCls)}</dd>
+      <dt>Продуктивно</dt><dd>${wc.productive_minutes} хв</dd>
+      ${emp ? `<dt>${esc(emp.job)}</dt><dd><button class="lnk" data-go="obj:OP-${esc(wc.code)}">${esc(emp.name)}</button></dd>` : ""}</dl>
+    ${wc.idle_reason ? `<div class="note">${esc(wc.idle_reason)}</div>` : ""}
+    ${mr ? `<div class="note bad"><b>${esc(mr.id)}</b> · ${esc(mr.name)}<br>Заявка о ${hm(mr.request_date)}, етап «${esc(mr.stage)}», виконавець ${esc(mr.technician)}.</div>` : ""}
+    ${cur ? `<div class="sub">Поточне завдання</div><ul class="rows"><li><button class="row" data-go="mo:${esc(mo.name)}">
+      <span class="t">${esc(cur.name)} · ${esc(mo.name)}</span>${pill(cur.blocked ? ["bad", "Зупинка"] : WO_STATE[cur.state])}
+      <span class="m">${esc(mo.product_name)} × ${mo.qty} · до ${hm(cur.date_planned_finished)}</span>
+      <span class="pw">${bar(cur.progress, cur.blocked ? "bad" : "warn", `wo:${cur.id}`)}</span></button></li></ul>` : ""}
+    ${wc.queue.length ? `<div class="sub">Черга · ${wc.queue.length}</div><ul class="rows">${wc.queue.map((id) => {
+      const w = D.workorders[id], m = idx.mo.get(w.production);
+      return `<li><button class="row" data-go="mo:${esc(m.name)}"><span class="t">${esc(m.name)} · ${esc(m.product_name)}</span>${pill(WO_STATE[w.state])}
+        <span class="m">${esc(w.name)} · ${w.duration_expected} хв</span></button></li>`;
+    }).join("")}</ul>` : ""}
+    ${wc.losses.length ? `<div class="sub">Втрати часу</div><table class="tbl">${wc.losses.map((l) => `<tr><td>${esc(l.reason)}</td><td class="n">${l.minutes} хв</td></tr>`).join("")}</table>` : ""}`;
+}
+function locHtml(code, loc) {
+  const op = loc.orderpoint;
+  const fillCls = loc.fill == null ? "" : loc.fill <= 0.001 ? "bad" : loc.fill < 0.3 ? "warn" : "";
+  const mo = loc.production ? idx.mo.get(loc.production) : null;
+  return `
+    <dl class="kv"><dt>Місце в Odoo</dt><dd class="mono">${esc(loc.complete_name)}</dd>
+      ${loc.fill != null ? `<dt>Заповненість</dt><dd>${pct(loc.fill)} ${bar(loc.fill, fillCls)}</dd>` : ""}
+      ${op ? `<dt>Правило поповнення</dt><dd>мін ${op.min} · макс ${op.max}${op.purchase ? ` · закупівля <b>${esc(op.purchase)}</b>` : ""}</dd>` : ""}
+      ${mo ? `<dt>Для замовлення</dt><dd><button class="lnk" data-go="mo:${esc(mo.name)}">${esc(mo.name)}</button></dd>` : ""}
+      ${loc.picking ? `<dt>Документ</dt><dd><button class="lnk" data-go="pick:${esc(loc.picking)}">${esc(loc.picking)}</button></dd>` : ""}</dl>
+    ${loc.note ? `<div class="note">${esc(loc.note)}</div>` : ""}
+    <div class="sub">Залишки · stock.quant</div>
+    <table class="tbl"><tr><th>Товар</th><th class="n">Кількість</th></tr>
+      ${loc.quants.map((q) => `<tr class="click" data-go="prod:${esc(q.product)}"><td>${esc(P(q.product).name)}
+        ${q.lot ? `<br><span class="mono" style="color:var(--muted)">партія ${esc(q.lot)}</span>` : ""}
+        ${q.package ? `<br><span class="mono" style="color:var(--muted)">${esc(q.package)}</span>` : ""}
+        ${q.reserved_for ? `<br><span style="color:var(--warn)">резерв ${esc(q.reserved_for)}</span>` : ""}
+        ${q.quality ? `<br><span style="color:var(--bad)">брак ${esc(q.quality)}</span>` : ""}</td>
+        <td class="n">${qtyU(q.qty, q.product)}${q.reserved && !q.reserved_for ? `<br><span style="color:var(--warn)">резерв ${nf.format(q.reserved)}</span>` : ""}</td></tr>`).join("")
+        || `<tr><td colspan="2">Порожньо.</td></tr>`}</table>
+    ${code.startsWith("QC-") ? D.quality_checks.filter((q) => q.location === code).map((q) => `<div class="note ${q.state === "fail" ? "bad" : ""}"><b>${esc(q.name)}</b> · ${esc(q.title)} — ${q.state === "fail" ? "брак" : q.state === "pass" ? "пройдено" : "очікує"}<br>${esc(q.note)}</div>`).join("") : ""}`;
+}
+function empHtml(emp) {
+  const wo = emp.current_workorder ? D.workorders[emp.current_workorder] : null;
+  return `<dl class="kv"><dt>Співробітник</dt><dd>${esc(emp.name)}</dd><dt>Посада</dt><dd>${esc(emp.job)}</dd>
+    <dt>Підрозділ</dt><dd>${esc(emp.department)}</dd><dt>Зміна</dt><dd>${esc(emp.shift)}</dd>
+    ${wo ? `<dt>Завдання</dt><dd><button class="lnk" data-go="mo:${esc(wo.production)}">${esc(wo.name)} · ${esc(wo.production)}</button></dd>` : ""}</dl>`;
+}
+function eqHtml(eq) {
+  const rows = [];
+  if (eq.battery != null) rows.push(["Заряд АКБ", `${pct(eq.battery)} ${bar(eq.battery, eq.battery < 0.3 ? "bad" : eq.battery < 0.5 ? "warn" : "")}`]);
+  if (eq.hours != null) rows.push(["Мотогодини", nf.format(eq.hours)]);
+  if (eq.pressure_bar != null) rows.push(["Тиск", `${eq.pressure_bar} бар`]);
+  if (eq.load != null) rows.push(["Навантаження", pct(eq.load)]);
+  if (eq.filter_dp_kpa != null) rows.push(["Перепад на фільтрі", `${eq.filter_dp_kpa} кПа`]);
+  if (eq.airflow_m3h != null) rows.push(["Витрата повітря", `${nf.format(eq.airflow_m3h)} м³/год`]);
+  if (eq.cycles_today != null) rows.push(["Циклів за зміну", nf.format(eq.cycles_today)]);
+  if (eq.vacuum_kpa != null) rows.push(["Вакуум", `${eq.vacuum_kpa} кПа`]);
+  if (eq.boilers) rows.push(["Котли", esc(eq.boilers)]);
+  if (D.ventilation && eq.boilers) {
+    const V = D.ventilation.totals;
+    rows.push(["Тепло зараз", V.chp_heat_now
+      ? `${nf.format(V.heat_kw)} кВт — <button class="lnk" data-go="obj:CHP">від КГУ</button>${V.boilers_on ? `, К1 ${pct(V.boiler_load)}` : ", котли в резерві"}`
+      : `${nf.format(V.heat_kw)} кВт · К1 ${pct(V.boiler_load)} ${bar(V.boiler_load, V.boiler_load > 0.85 ? "warn" : "")}`],
+      ["Зима (−15 °C)", `<button class="lnk" data-go="obj:HEAT-NET">≈ ${nf.format(V.design_heat_kw)} кВт</button> з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів${V.chp_heat_rated ? ` + ${nf.format(V.chp_heat_rated)} кВт КГУ` : ""}`]);
+  }
+  if (eq.supply_c != null) rows.push(["Подача", `${eq.supply_c} °C`]);
+  if (eq.silo_fill != null) rows.push(["Силос стружки", pct(eq.silo_fill)]);
+  if (eq.briquettes_today_kg != null) rows.push(["Брикети за зміну", `${nf.format(eq.briquettes_today_kg)} кг`]);
+  if (eq.busy != null) rows.push(["Зайнято постів", `${eq.busy} з ${eq.total}`]);
+  if (eq.last_inspection) rows.push(["Остання перевірка", eq.last_inspection]);
+  if (eq.next_maintenance) rows.push(["Наступне ТО", dayHm(eq.next_maintenance)]);
+  if (eq.current_task) rows.push(["Завдання", `<button class="lnk" data-go="pick:${esc(eq.current_task)}">${esc(eq.current_task)}</button>`]);
+  if (D.meta.iot && rows.length) rows.push(["Дані", `імітація IoT · ${esc(D.meta.iot.updated.slice(11))}`]);
+  const mr = eq.maintenance_request ? idx.mr.get(eq.maintenance_request) : null;
+  return `<dl class="kv"><dt>Обладнання</dt><dd>${esc(eq.name)}${eq.serial ? ` <span class="mono">${esc(eq.serial)}</span>` : ""}</dd>
+    ${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+    ${mr ? `<div class="note bad"><b>${esc(mr.id)}</b> · ${esc(mr.name)}</div>` : ""}`;
+}
+// паспорт реального обладнання: виробник, модель, опубліковані параметри, джерела
+function passportHtml(pp) {
+  const unit = (u, main) => `
+    <div class="sub">${main ? "Паспорт обладнання" : "У складі"}</div>
+    <div class="pp-head"><b>${esc(u.manufacturer)}</b> ${esc(u.model)}</div>
+    ${u.reason && main ? `<div class="hint" style="border:0;padding:0;margin-top:4px">${esc(u.reason)}</div>` : ""}
+    <table class="tbl">${Object.entries(u.specs || {}).filter(([, v]) => v != null && v !== "")
+      .map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n" style="white-space:normal">${esc(v)}</td></tr>`).join("")}</table>
+    ${(u.sources || []).length ? `<div class="src">Джерела: ${u.sources.map((h, i) =>
+      `<a href="${esc(h)}" target="_blank" rel="noopener">${i + 1}</a>`).join(" · ")}</div>` : ""}
+    ${u.connected_note ? `<div class="src"><b>Потужність підключення:</b> ${u.connected_kw != null ? kwU(u.connected_kw) : "не опублікована"}. ${esc(u.connected_note)}
+      ${(u.connected_sources || []).map((h, i) => `<a href="${esc(h)}" target="_blank" rel="noopener">[${i + 1}]</a>`).join(" ")}</div>` : ""}`;
+  return unit(pp, true) + (pp.units || []).map((u) => unit(u, false)).join("");
+}
+function zoneHtml(z) {
+  const locs = z.locations.map((c) => D.locations[c]);
+  const withFill = locs.filter((l) => l.fill != null);
+  const avg = withFill.length ? withFill.reduce((s, l) => s + l.fill, 0) / withFill.length : null;
+  const empty = withFill.filter((l) => l.fill <= 0.001).length;
+  return `<dl class="kv">${z.odoo_location ? `<dt>Місце в Odoo</dt><dd class="mono">${esc(z.odoo_location)}</dd>` : ""}
+      ${z.locations.length ? `<dt>Місць зберігання</dt><dd>${z.locations.length}${empty ? ` · порожніх ${empty}` : ""}</dd>` : ""}
+      ${avg != null ? `<dt>Заповненість</dt><dd>${pct(avg)} ${bar(avg)}</dd>` : ""}</dl>
+    ${z.workcenters.length ? `<div class="sub">Робочі центри</div><ul class="rows">${z.workcenters.map((c) => {
+      const w = D.workcenters[c];
+      return `<li><button class="row" data-go="obj:${esc(c)}"><span class="t">${esc(w.name)}</span>${pill(MACHINE_STATUS[w.status])}
+        <span class="m">OEE ${pct(w.oee)}</span></button></li>`;
+    }).join("")}</ul>` : ""}
+    ${(z.pickings || []).length ? `<div class="sub">Документи</div><ul class="rows">${z.pickings.map((n) => pickRow(idx.pick.get(n))).join("")}</ul>` : ""}`;
+}
+$("#odoo-pill").onclick = () => { select(null); clearHighlight(); openTab("overview"); };
+
+// ---------------------------------------------------------------- електропостачання
+const nf2 = new Intl.NumberFormat("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nf1 = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 1 });
+const kwU = (v) => `${nf1.format(v)} кВт`;
+const kwhU = (v) => `${nf1.format(v)} кВт·год`;
+const eFmt = {
+  kw: kwU, kw0: (v) => `${nf.format(Math.round(v))} кВт`, a: (v) => `${nf.format(Math.round(v))} А`,
+  kva: (v) => `${nf.format(Math.round(v))} кВА`, pct,
+};
+const loadCls = (v) => (v >= 0.8 ? "bad" : v >= 0.6 ? "warn" : "");
+// ключ «живого» значення: c:<споживач>:<поле> | l:<лінія>:<поле> | t:<трансформатор>:<поле> | tot:<поле>
+function eVal(key) {
+  const e = D?.energy;
+  if (!e) return null;
+  const [t, code, f] = key.split(":");
+  if (t === "tot") return e.totals[code];
+  const o = t === "c" ? e.consumers[code] : t === "l" ? e.lines[code] : t === "t" ? e.transformers[code] : null;
+  return o?.[f];
+}
+const kpiE = (key, f) => `<b data-e="${esc(key)}" data-ef="${f}">${eFmt[f](eVal(key))}</b>`;
+const ev = (key, f) => `<span data-e="${esc(key)}" data-ef="${f}">${eFmt[f](eVal(key))}</span>`;
+const ebar = (key) => `<div class="pbar ${loadCls(eVal(key))}" data-eb="${esc(key)}"><i style="width:${barW(eVal(key))}"></i></div>`;
+const cosU = (v) => nf2.format(v);
+const tanPhi = (c) => Math.tan(Math.acos(c));
+
+// споживання «дихає», поки сторінка відкрита: лічильники оновлюються, суми перераховуються
+function energyTick() {
+  const e = D.energy;
+  if (!e) return;
+  for (const c of Object.values(e.consumers)) {
+    if (c.status !== "work") continue;
+    c.base ??= c.p_now;
+    c.p_now = Math.round(c.base * (0.94 + Math.random() * 0.12) * 10) / 10;
+    c.i_now = Math.round((c.p_now * 1000) / (Math.sqrt(3) * 400 * c.cos_phi));
+  }
+  for (const ln of Object.values(e.lines)) {
+    const cs = ln.consumers.map((k) => e.consumers[k]);
+    const p = cs.reduce((s, c) => s + c.p_now, 0), q = cs.reduce((s, c) => s + c.p_now * tanPhi(c.cos_phi), 0);
+    ln.p_now = Math.round(p * 10) / 10;
+    ln.i_now = Math.round((Math.hypot(p, q) * 1000) / (Math.sqrt(3) * 400));
+    ln.load = ln.i_now / ln.rating_a;
+  }
+  for (const t of Object.values(e.transformers)) {
+    const p = Object.values(e.lines).filter((l) => e.cells[l.cell].section === t.section).reduce((s, l) => s + l.p_now, 0);
+    t.p_kw = Math.round(p * 10) / 10;
+    t.s_kva = Math.round(p / t.cos_phi);
+    t.load = t.s_kva / t.rating_kva;
+    t.i_a = Math.round((t.s_kva * 1000) / (Math.sqrt(3) * 400));
+    Object.assign(e.cells[t.incomer], { i_now: t.i_a, p_now: t.p_kw });
+  }
+  for (const c of Object.values(e.cells)) if (c.line) Object.assign(c, { i_now: e.lines[c.line].i_now, p_now: e.lines[c.line].p_now });
+  const ts = Object.values(e.transformers);
+  e.totals.p_now = ts.reduce((s, t) => s + t.p_kw, 0);
+  e.totals.s_now = ts.reduce((s, t) => s + t.s_kva, 0);
+}
+
+// стовпчики кВт·год по годинах: сьогодні (заливка) поверх типового робочого дня (контур)
+function chartHtml(today, typical) {
+  const max = Math.max(...typical, ...today.filter((v) => v != null)) * 1.08;
+  const H = 70, w = 10, nowH = today.findLastIndex((v) => v != null);
+  const y = (v) => H - (v / max) * H;
+  const bars = typical.map((t, h) => {
+    const v = today[h];
+    return `<rect class="typ" x="${h * w + 1.5}" y="${y(t)}" width="${w - 3}" height="${H - y(t)}"><title>${String(h).padStart(2, "0")}:00 · типовий день ${nf.format(t)} кВт·год</title></rect>`
+      + (v != null ? `<rect class="${h === nowH ? "now" : "day"}" x="${h * w + 2.5}" y="${y(v)}" width="${w - 5}" height="${H - y(v)}"><title>${String(h).padStart(2, "0")}:00 · сьогодні ${nf.format(v)} кВт·год${h === nowH ? " (година триває)" : ""}</title></rect>` : "");
+  }).join("");
+  const ticks = [0, 6, 12, 18, 24].map((h) => `<text x="${Math.min(h * w, 232)}" y="${H + 9}">${String(h).padStart(2, "0")}</text>`).join("");
+  return `<svg class="chart" viewBox="0 0 240 ${H + 11}" role="img" aria-label="Споживання по годинах">${bars}${ticks}</svg>
+    <div class="chart-key"><span><i style="background:var(--accent)"></i>сьогодні</span><span><i style="border:1px solid var(--muted)"></i>типовий робочий день</span></div>`;
+}
+
+function lineRow(code) {
+  const l = D.energy.lines[code];
+  return `<li><button class="row" data-go="line:${esc(code)}"><span class="t">${esc(l.name)}</span>
+    <span class="mono">${ev(`l:${code}:load`, "pct")}</span>
+    <span class="m">${l.kind === "busway" ? "шинопровід" : "кабелі"} ${nf.format(l.rating_a)} А · ${ev(`l:${code}:i_now`, "a")} · ${ev(`l:${code}:p_now`, "kw")}</span>
+    <span class="pw">${ebar(`l:${code}:load`)}</span></button></li>`;
+}
+function trafoRow(code) {
+  const t = D.energy.transformers[code];
+  return `<li><button class="row" data-go="obj:${esc(code)}"><span class="t">${esc(t.name)} · ${nf.format(t.rating_kva)} кВА</span>
+    <span class="mono">${ev(`t:${code}:load`, "pct")}</span>
+    <span class="m">секція ${t.section} · ${ev(`t:${code}:s_kva`, "kva")} · ${ev(`t:${code}:i_a`, "a")}</span>
+    <span class="pw">${ebar(`t:${code}:load`)}</span></button></li>`;
+}
+
+function renderEnergy() {
+  setTabs("energy");
+  const e = D.energy;
+  if (!e) { body().innerHTML = `<p>Немає даних енергообліку.</p>`; return; }
+  const T = e.totals;
+  const top = Object.entries(e.consumers).sort((a, b) => b[1].p_now - a[1].p_now).slice(0, 8);
+  body().innerHTML = `
+    <div class="kpis">
+      <div class="kpi">${kpiE("tot:p_now", "kw0")}<span>зараз · встановлено ${nf.format(T.p_inst)} кВт</span></div>
+      <div class="kpi">${kpiE("tot:s_now", "kva")}<span>із ${nf.format(T.capacity_kva)} кВА двох трансформаторів</span></div>
+      <div class="kpi"><b>${nf.format(T.kwh_today)}</b><span>кВт·год від 00:00 · ≈ ${nf.format(T.cost_today)} грн</span></div>
+      <div class="kpi"><b>${cosU(T.cos_after)}</b><span>cos φ з компенсацією (без неї ${cosU(T.cos_before)})</span></div>
+    </div>
+    <div class="sub">Трансформатори</div>
+    <ul class="rows">${Object.keys(e.transformers).map(trafoRow).join("")}</ul>
+    <div class="sub">Профіль доби · кВт·год по годинах</div>
+    ${chartHtml(e.profile, e.typical)}
+    <div class="hint" style="border:0;padding:0;margin-top:4px">Пік за добу ${nf.format(T.peak_kw)} кВт о ${esc(T.peak_time)} (15-хвилинний).</div>
+    <div class="sub">Лінії від ГРЩ · натисніть, щоб побачити трасу і споживачів</div>
+    <ul class="rows">${Object.keys(e.lines).map(lineRow).join("")}</ul>
+    ${backupSummary()}
+    ${lightVentSummary()}
+    <div class="sub">Найбільші споживачі зараз</div>
+    <ul class="rows">${top.map(([code, c]) => `<li><button class="row" data-go="${items.has(code) ? `obj:${esc(code)}` : `line:${esc(c.line)}`}">
+      <span class="t">${esc(c.name)}</span><span class="mono">${ev(`c:${code}:p_now`, "kw")}</span>
+      <span class="m">${esc(e.lines[c.line].name)} · встановлено ${kwU(c.p_inst)}</span></button></li>`).join("")}</ul>
+    <div class="sub">Журнал подій</div>
+    <ul class="rows">${e.events.map((ev_) => `<li><button class="row" data-go="obj:${esc(ev_.code)}">
+      <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${ev_.level === "info" ? "flow" : ev_.level})"></span>${esc(ev_.text)}</span>
+      <span class="m">${dayHm(ev_.time)}</span></button></li>`).join("")}</ul>
+    ${colorMode === "power" ? legendHtml() : `<div class="note">Увімкніть «Розфарбування → Споживання електроенергії», щоб побачити навантаження на 3D-моделі.</div>`}
+    <div class="hint">${esc(e.meta.source)}. ${esc(e.meta.note)} Тариф умовний: ${nf2.format(e.meta.tariff_uah)} грн/кВт·год.</div>`;
+}
+
+function showLine(code) {
+  const ln = D.energy?.lines[code];
+  if (!ln) return;
+  select(null);
+  openView({ type: "line", code });
+  const objCode = ln.kind === "busway" ? code : "CABLES";
+  highlight([{ code: objCode, html: `${esc(ln.name.split(" · ")[0])} · ${pct(ln.load)}`, cls: "hl" },
+    ...ln.consumers.filter((c) => items.has(c)).map((c) => ({ code: c, html: kwU(D.energy.consumers[c].p_now), cls: "prog" }))]);
+}
+function lineBody(code) {
+  const e = D.energy, l = e.lines[code], cell = e.cells[l.cell];
+  const cs = l.consumers.map((c) => [c, e.consumers[c]]).sort((a, b) => b[1].p_now - a[1].p_now);
+  return `<dl class="kv">
+      <dt>Автомат у ГРЩ</dt><dd><button class="lnk" data-go="obj:${esc(l.cell)}">${esc(l.cell)}</button> · секція ${cell.section}</dd>
+      <dt>Номінал</dt><dd>${nf.format(l.rating_a)} А</dd>
+      <dt>Струм</dt><dd>${ev(`l:${code}:i_now`, "a")} · ${ev(`l:${code}:load`, "pct")} ${ebar(`l:${code}:load`)}</dd>
+      <dt>Потужність</dt><dd>${ev(`l:${code}:p_now`, "kw")} з ${kwU(l.p_inst)} встановлених</dd>
+      <dt>cos φ</dt><dd>${cosU(l.cos_phi)}</dd></dl>
+    <div class="sub">Споживачі · ${cs.length}</div>
+    <table class="tbl"><tr><th>Споживач</th><th class="n">Зараз</th><th class="n">Встан.</th></tr>
+      ${cs.map(([c, v]) => `<tr${items.has(c) ? ` class="click" data-go="obj:${esc(c)}"` : ""}><td>${esc(v.name)}${v.status !== "work" ? ` ${pill(MACHINE_STATUS[v.status])}` : ""}</td>
+        <td class="n">${ev(`c:${c}:p_now`, "kw")}</td><td class="n">${kwU(v.p_inst)}${v.source === "estimate" ? "*" : ""}</td></tr>`).join("")}</table>
+    ${cs.some(([, v]) => v.source === "estimate") ? `<div class="src">* оцінка за аналогами: виробник не публікує встановлену потужність.</div>` : ""}`;
+}
+function renderLine(code) {
+  const l = D.energy.lines[code];
+  body().innerHTML = `${backBtn()}
+    <div class="kind">Лінія живлення · ${l.kind === "busway" ? "шинопровід" : "кабельні фідери"}</div>
+    <h3>${esc(l.name)}</h3><div class="code">${esc(code)}</div>
+    ${lineBody(code)}
+    ${D.passports?.[code] ? passportHtml(D.passports[code]) : ""}`;
+}
+
+function energyHtml(code) {
+  const e = D.energy;
+  let h = "";
+  const c = e.consumers[code];
+  if (c) {
+    const tariff = e.meta.tariff_uah;
+    h += `<div class="sub">Електроживлення</div><dl class="kv">
+      <dt>Лінія</dt><dd><button class="lnk" data-go="line:${esc(c.line)}">${esc(e.lines[c.line].name)}</button></dd>
+      <dt>Автомат</dt><dd><button class="lnk" data-go="obj:${esc(c.feeder)}">${esc(c.feeder)}</button> у ГРЩ</dd>
+      <dt>Зараз</dt><dd>${ev(`c:${code}:p_now`, "kw")} · ${ev(`c:${code}:i_now`, "a")}</dd>
+      <dt>Встановлена</dt><dd>${kwU(c.p_inst)} <span class="mono">${c.source === "passport" ? "паспорт" : c.source === "mixed" ? "паспорт + оцінка" : "оцінка"}</span></dd>
+      <dt>cos φ</dt><dd>${cosU(c.cos_phi)}</dd>
+      ${c.kwh_shift != null ? `<dt>За зміну</dt><dd>${kwhU(c.kwh_shift)} · ≈ ${nf.format(Math.round(c.kwh_shift * tariff))} грн</dd>` : ""}</dl>
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}`;
+  }
+  if (e.lines[code]) h += lineBody(code);
+  if (code === "CABLES") h += `<div class="sub">Лінії</div><ul class="rows">${lineRow("C1")}${lineRow("C2")}</ul>`;
+  const t = e.transformers[code];
+  if (t) {
+    h += `<dl class="kv"><dt>Номінал</dt><dd>${nf.format(t.rating_kva)} кВА, 10/0,4 кВ</dd>
+      <dt>Навантаження</dt><dd>${ev(`t:${code}:load`, "pct")} ${ebar(`t:${code}:load`)}</dd>
+      <dt>Повна</dt><dd>${ev(`t:${code}:s_kva`, "kva")} · ${ev(`t:${code}:i_a`, "a")}</dd>
+      <dt>Обмотки</dt><dd>${t.temp_c} °C</dd>
+      <dt>cos φ</dt><dd>${cosU(t.cos_phi)}</dd>
+      <dt>Живить</dt><dd>секцію ${t.section} через <button class="lnk" data-go="obj:${esc(t.incomer)}">${esc(t.incomer)}</button></dd></dl>
+      <div class="note">Резерв: якщо один трансформатор вимкнуть, секційний вимикач замкнеться і другий понесе все навантаження заводу (${ev("tot:s_now", "kva")} з ${nf.format(t.rating_kva)} кВА).</div>`;
+  }
+  const cell = e.cells[code];
+  if (cell) {
+    const rows = [["Секція шин", cell.section ?? "між секціями"]];
+    if (cell.line) rows.push(["Лінія", `<button class="lnk" data-go="line:${esc(cell.line)}">${esc(e.lines[cell.line].name)}</button>`],
+      ["Струм", `${ev(`l:${cell.line}:i_now`, "a")} з ${nf.format(cell.rating_a)} А ${ebar(`l:${cell.line}:load`)}`]);
+    if (cell.type === "incomer") rows.push(["Від", `<button class="lnk" data-go="obj:${esc(cell.feeds)}">трансформатора ${esc(cell.feeds)}</button>`],
+      ["Струм", `${ev(`t:${cell.feeds}:i_a`, "a")} з ${nf.format(cell.rating_a)} А`], ["Потужність", ev(`t:${cell.feeds}:p_kw`, "kw")]);
+    if (cell.type === "coupler") rows.push(["Стан", "розімкнений (АВР у готовності)"], ["Номінал", `${nf.format(cell.rating_a)} А`]);
+    if (cell.type === "pfc") rows.push(["Ступені", esc(cell.steps)], ["Видає", `${cell.q_now} квар з ${cell.rating_kvar}`],
+      ["cos φ секції", `${cosU(cell.cos_before)} → ${cosU(cell.cos_after)}`]);
+    h += `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>${cell.note ? `<div class="note">${esc(cell.note)}</div>` : ""}`;
+  }
+  if (code === "SWB-1" || code === "EMS-1") {
+    h += `<div class="kpis" style="margin-top:10px">
+        <div class="kpi">${kpiE("tot:p_now", "kw0")}<span>споживання зараз</span></div>
+        <div class="kpi"><b>${cosU(e.totals.cos_after)}</b><span>cos φ на вводах</span></div></div>
+      <ul class="rows">${Object.keys(e.transformers).map(trafoRow).join("")}</ul>
+      <div class="sub">Шафи ГРЩ</div>
+      <table class="tbl"><tr><th>Шафа</th><th class="n">Струм</th></tr>
+        ${Object.entries(e.cells).map(([k, v]) => `<tr class="click" data-go="obj:${esc(k)}"><td><b>${esc(k)}</b> · ${esc(v.name)}</td>
+          <td class="n">${v.line ? ev(`l:${v.line}:i_now`, "a") : v.type === "incomer" ? ev(`t:${v.feeds}:i_a`, "a") : v.type === "pfc" ? `${v.q_now} квар` : "—"}</td></tr>`).join("")}</table>
+      <div class="row-btns" style="margin-top:8px"><button class="btn" data-go="etab:1">Енергія — детально</button></div>`;
+  }
+  if (code === "RM6-1") {
+    h += `<dl class="kv"><dt>Ввід</dt><dd>10 кВ, кабель від мережі</dd>
+      <dt>Струм 10 кВ</dt><dd>≈ ${nf1.format(e.totals.s_now / (Math.sqrt(3) * 10))} А</dd>
+      <dt>Відходять</dt><dd><button class="lnk" data-go="obj:T1">Т1</button>, <button class="lnk" data-go="obj:T2">Т2</button></dd></dl>`;
+  }
+  return h;
+}
+
+// ---------------------------------------------------------------- освітлення й вентиляція
+const luxCls = (g) => (g.e_calc >= g.e_norm ? "ok" : g.e_calc >= 0.85 * g.e_norm ? "warn" : "bad");
+const lightGroupOfZone = (zone) => Object.entries(D.lighting?.groups || {}).find(([, g]) => g.zone === zone);
+function lightRow(code) {
+  const g = D.lighting.groups[code];
+  return `<li><button class="row" data-go="obj:${esc(code)}"><span class="t">${esc(g.zone_name)}</span>
+    ${pill([luxCls(g), `${nf.format(g.e_calc)} / ${nf.format(g.e_norm)} лк`])}
+    <span class="m">${g.n} світильн. · зараз ${pct(g.level)} · ${kwU(g.p_now)}</span></button></li>`;
+}
+function ventRow(code) {
+  const u = D.ventilation.units[code];
+  const warn = u.filter_dp_pa > 250;
+  return `<li><button class="row" data-go="obj:${esc(code)}"><span class="t">${esc(code)} · ${esc(u.mode)}</span>
+    ${warn ? pill(["warn", "фільтр"]) : u.state === "on" ? pill(["ok", "працює"]) : pill(["idle", "чекає"])}
+    <span class="m">${nf.format(u.airflow_m3h)} м³/год${u.supply_c != null ? ` · приплив ${nf1.format(u.supply_c)} °C` : ""}${u.heat_kw ? ` · нагрів ${nf1.format(u.heat_kw)} кВт` : ""}</span></button></li>`;
+}
+function lightVentSummary() {
+  if (!D.lighting || !D.ventilation) return "";
+  const gs = Object.values(D.lighting.groups), V = D.ventilation.totals;
+  const ok = gs.filter((g) => g.e_calc >= g.e_norm).length;
+  const p = (k) => D.energy?.consumers[k];
+  return `<div class="sub">Освітлення · ${gs.reduce((s, g) => s + g.n, 0)} світильників</div>
+    <div class="hint" style="border:0;padding:0;margin-top:0">Норму виконано в ${ok} з ${gs.length} зон; зараз ${kwU(gs.reduce((s, g) => s + g.p_now, 0))}.</div>
+    <ul class="rows">${Object.keys(D.lighting.panels).map((k) => {
+      const pl = D.lighting.panels[k];
+      return `<li><button class="row" data-go="obj:${esc(k)}"><span class="t">${esc(pl.name.split(" · ")[0])}</span>
+        <span class="mono">${p(k) ? ev(`c:${k}:p_now`, "kw") : kwU(pl.p_now)}</span><span class="m">${esc(pl.name.split(" · ")[1] || "")} · ${pl.n} світильн.</span></button></li>`;
+    }).join("")}</ul>
+    <div class="sub">Вентиляція й опалення</div>
+    <div class="hint" style="border:0;padding:0;margin-top:0">Надворі ${nf1.format(V.outdoor_c)} °C, уставка ${nf1.format(V.indoor_set_c)} °C.
+      Подають ${nf.format(V.airflow_m3h)} м³/год, нагрів ${nf.format(V.heat_kw)} кВт: ${V.boilers_on ? `працює ${V.boilers_on} котел із ${V.boilers} (${pct(V.boiler_load)})` : "тепло дає когенераційна установка, обидва котли в резерві"}.
+      Узимку при −15 °C ≈ ${nf.format(V.design_heat_kw)} кВт з ${nf.format(V.boilers * V.boiler_kw)} кВт двох котлів${V.chp_heat_rated ? ` і ${nf.format(V.chp_heat_rated)} кВт КГУ` : ""}.</div>
+    <ul class="rows">${["AHU-1", "HEAT-NET", ...Object.keys(D.ventilation.units).filter((k) => D.ventilation.units[k].filter_dp_pa > 250)]
+      .map((k) => (k === "HEAT-NET" ? `<li><button class="row" data-go="obj:HEAT-NET"><span class="t">Теплова мережа</span><span class="mono">${nf.format(V.heat_kw)} кВт</span><span class="m">від котельні до ${Object.values(D.ventilation.units).filter((u) => u.heat_kw).length} установок</span></button></li>` : ventRow(k))).join("")}</ul>`;
+}
+function lightingHtml(code) {
+  const L = D.lighting;
+  if (!L) return "";
+  const g = L.groups[code];
+  if (g) {
+    const pp = D.passports?.[code];
+    return `<dl class="kv">
+        <dt>Зона</dt><dd><button class="lnk" data-go="obj:${esc(g.zone)}">${esc(g.zone_name)}</button> · ${nf.format(g.area)} м²</dd>
+        <dt>Норма</dt><dd>${nf.format(g.e_norm)} лк — ${esc(g.task_name)}</dd>
+        <dt>Розрахунок</dt><dd>${pill([luxCls(g), `${nf.format(g.e_calc)} лк`])}</dd>
+        <dt>Зараз</dt><dd>${pct(g.level)} → ≈ ${nf.format(g.e_now)} лк</dd>
+        <dt>Світильники</dt><dd>${g.n} × ${nf.format(g.lumen)} лм, ${g.watt} Вт${pp ? ` · ${esc(pp.manufacturer)}` : ""}</dd>
+        <dt>Потужність</dt><dd>${kwU(g.p_now)} з ${kwU(g.p_inst)}</dd>
+        <dt>Керування</dt><dd>${esc(g.control)}</dd>
+        <dt>Щит</dt><dd><button class="lnk" data-go="obj:${esc(g.panel)}">${esc(L.panels[g.panel].name.split(" · ")[0])}</button></dd></dl>
+      <div class="src">E = N · Φ · UF · MF / A, UF ${nf2.format(L.uf)}, MF ${nf2.format(L.mf)}${L.norms_ref?.[g.task] ? ` · норма: ${esc(L.norms_ref[g.task])}` : ""}.</div>`;
+  }
+  const pl = L.panels[code];
+  if (pl) return `<div class="sub">Групи</div><ul class="rows">${pl.groups.map(lightRow).join("")}</ul>`;
+  return "";
+}
+function ventHtml(code) {
+  const V = D.ventilation;
+  if (!V) return "";
+  if (code === "HEAT-NET") {
+    const us = Object.entries(V.units).filter(([, u]) => u.heat_kw).sort((a, b) => b[1].heat_kw - a[1].heat_kw);
+    const hb = V.heat_balance;
+    return `<dl class="kv"><dt>Нагрів зараз</dt><dd>${nf.format(V.totals.heat_kw)} кВт</dd>
+        ${V.totals.chp_heat_now ? `<dt>Когенерація</dt><dd><button class="lnk" data-go="obj:CHP">${nf.format(V.totals.chp_heat_kw)} кВт</button> з ${nf.format(V.totals.chp_heat_now)} кВт зараз</dd>` : ""}
+        <dt>Котли</dt><dd><button class="lnk" data-go="obj:BOILER">${V.totals.boilers_on ? `працює ${V.totals.boilers_on} з ${V.totals.boilers}` : "обидва в резерві"}</button>${V.totals.boilers_on ? ` · К1 ${pct(V.totals.boiler_load)}` : ""}</dd>
+        <dt>Надворі</dt><dd>${nf1.format(V.totals.outdoor_c)} °C</dd></dl>
+      ${hb ? `<div class="sub">Зима, ${nf.format(hb.t_out)} °C · оцінка навантаження</div>
+      <table class="tbl">${hb.items.map((it) => `<tr><td>${esc(it.name)}</td><td class="n">${nf.format(it.kw)} кВт</td></tr>`).join("")}
+        <tr><td><b>Разом</b></td><td class="n"><b>${nf.format(hb.total)} кВт</b></td></tr>
+        <tr><td>Два котли${hb.chp_kw ? " + КГУ" : ""}</td><td class="n">${nf.format(hb.capacity + (hb.chp_kw || 0))} кВт · запас ${pct(hb.reserve)}</td></tr></table>
+      <div class="src">${esc(hb.note)}</div>` : ""}
+      <div class="sub">Споживачі тепла</div>
+      <table class="tbl"><tr><th>Установка</th><th class="n">Клапан</th><th class="n">кВт</th></tr>
+        ${us.map(([k, u]) => `<tr class="click" data-go="obj:${esc(k)}"><td>${esc(k)} · ${esc(D.zones[u.zone]?.name || u.zone)}</td>
+          <td class="n">${pct(u.heating_valve)}</td><td class="n">${nf1.format(u.heat_kw)}</td></tr>`).join("")}</table>`;
+  }
+  const u = V.units[code];
+  if (!u) return "";
+  const rows = [["Зона", `<button class="lnk" data-go="obj:${esc(u.zone)}">${esc(D.zones[u.zone]?.name || u.zone)}</button>`], ["Режим", esc(u.mode)],
+    ["Витрата", `${nf.format(u.airflow_m3h)} з ${nf.format(u.airflow_nom)} м³/год ${bar(u.airflow_nom ? u.airflow_m3h / u.airflow_nom : 0, "flow")}`]];
+  if (u.supply_c != null) rows.push(["Приплив", `${nf1.format(u.supply_c)} °C`]);
+  if (u.indoor_c != null) rows.push(["У зоні", `${nf1.format(u.indoor_c)} °C`]);
+  if (u.heating_valve != null) rows.push(["Клапан нагріву", `${pct(u.heating_valve)} · ${nf1.format(u.heat_kw)} кВт тепла`]);
+  if (u.filter_dp_pa != null) rows.push(["Фільтр", `${u.filter_dp_pa} Па ${u.filter_dp_pa > 250 ? pill(["warn", "замінити"]) : ""}`]);
+  rows.push(["Вентилятори", `${kwU(u.p_now)} з ${kwU(u.p_inst)}`]);
+  const mr = u.maintenance_request ? idx.mr.get(u.maintenance_request) : null;
+  return `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+    ${u.note ? `<div class="note">${esc(u.note)}</div>` : ""}
+    ${mr ? `<div class="note bad"><b>${esc(mr.id)}</b> · ${esc(mr.name)}</div>` : ""}`;
+}
+
+// ---------------------------------------------------------------- пожежна сигналізація
+function fireSummary() {
+  const F = D.fire;
+  if (!F) return "";
+  const T = F.totals;
+  const warn = Object.entries(F.groups).filter(([, g]) => g.state !== "ok");
+  return `<div class="sub">Пожежна безпека</div>
+    <ul class="rows"><li><button class="row" data-go="obj:FACP-1"><span class="t">Пожежна сигналізація</span>
+      ${pill(warn.length ? ["warn", T.state] : ["ok", "Норма"])}
+      <span class="m">${T.detectors} сповіщувачів · ${T.mcp} ручних · ${T.sounders} оповіщувачів · ${T.flame} полум'я · ${T.spark_detectors} датчиків іскор</span></button></li></ul>
+    ${D.evacuation ? `<div class="row-btns" style="margin-top:6px"><button class="btn" data-go="drill:1">Сценарій пожежної тривоги</button></div>` : ""}`;
+}
+function fireHtml(code) {
+  const F = D.fire;
+  if (!F) return "";
+  const g = F.groups[code];
+  if (g) {
+    const mr = g.maintenance_request ? idx.mr.get(g.maintenance_request) : null;
+    return `<dl class="kv"><dt>Зона</dt><dd><button class="lnk" data-go="obj:${esc(g.zone)}">${esc(g.zone_name)}</button> · ${nf.format(g.area)} м²</dd>
+        <dt>Тип</dt><dd>${esc(g.kind_name)}</dd>
+        <dt>Кількість</dt><dd>${g.n} · крок ≤ ${nf1.format(g.spacing)} м</dd>
+        <dt>Шлейф</dt><dd>${g.loop ?? "—"} приладу <button class="lnk" data-go="obj:FACP-1">FACP-1</button></dd>
+        <dt>Стан</dt><dd>${pill(g.state === "ok" ? ["ok", "Норма"] : ["warn", "Попередження"])}</dd></dl>
+      ${g.warning ? `<div class="note">${esc(g.warning)}</div>` : ""}
+      ${mr ? `<div class="note bad"><b>${esc(mr.id)}</b> · ${esc(mr.name)}</div>` : ""}`;
+  }
+  const T = F.totals;
+  if (code === "FACP-1") {
+    const L = Object.entries(F.loops);
+    return `<dl class="kv"><dt>Стан</dt><dd>${esc(T.state)}</dd><dt>Спринклери</dt><dd>${esc(T.sprinkler)}</dd></dl>
+      ${D.evacuation ? `<div class="row-btns" style="margin-top:8px"><button class="btn" data-go="drill:1">Сценарій пожежної тривоги</button></div>` : ""}
+      <div class="sub">Шлейфи</div>
+      <table class="tbl"><tr><th>#</th><th class="n">Сповіщ.</th><th class="n">Ручні</th><th class="n">Оповіщ.</th><th class="n">Модулі</th></tr>
+        ${L.map(([n, l]) => `<tr><td>${n}</td><td class="n">${l.detectors + l.flame}</td><td class="n">${l.mcp}</td><td class="n">${l.sounders}</td><td class="n">${l.modules}</td></tr>`).join("")}</table>
+      <div class="sub">Групи сповіщувачів</div>
+      <ul class="rows">${Object.entries(F.groups).filter(([, g]) => g.n).map(([k, g]) => `<li><button class="row" data-go="obj:${esc(k)}">
+        <span class="t">${esc(g.zone_name)}</span>${g.state === "ok" ? `<span class="mono">${g.n}</span>` : pill(["warn", "увага"])}
+        <span class="m">${esc(g.kind_name)} · шлейф ${g.loop}</span></button></li>`).join("")}</ul>
+      <div class="sub">Журнал приладу</div>
+      <ul class="rows">${F.events.map((e) => `<li><button class="row" data-go="obj:${esc(e.code)}">
+        <span class="t" style="white-space:normal"><span class="dot" style="display:inline-block;margin-right:6px;background:var(--${e.level === "info" ? "flow" : e.level})"></span>${esc(e.text)}</span>
+        <span class="m">${dayHm(e.time)}</span></button></li>`).join("")}</ul>
+      <div class="src">Розстановка за ДБН В.2.5-56:2014 зі Зміною № 2: точкові димові під покрівлею до 12 м — крок ≤ ${nf1.format(F.rules.smoke_spacing_6_12m)} м,
+        до стіни ≤ ${nf1.format(F.rules.smoke_wall_6_12m)} м (табл. 7.2); теплові — лише в котельні (стеля 4,5 м), крок ≤ ${nf1.format(F.rules.heat_spacing)} м (табл. 7.1).
+        Ручні — не далі ${nf.format(F.rules.mcp_spacing)} м від будь-якої точки (зараз найбільше ${nf1.format(T.mcp_max_m)} м по прямій).
+        Оповіщувачі — не менше ${F.rules.sounder_level} дБА або на 5 дБА вище фону (у цеху 80–85 дБА), кількість уточнює акустичний розрахунок.</div>`;
+  }
+  const n = { "FA-MCP": T.mcp, "FA-SND": T.sounders, "FA-FLAME": T.flame, "SPARK-1": T.spark_detectors }[code];
+  if (n == null) return "";
+  const ev = F.events.filter((e) => e.code === code);
+  return `<dl class="kv"><dt>Кількість</dt><dd>${n}${code === "SPARK-1" ? " датчиків + гасіння перед виходом до фільтра" : ""}</dd>
+      <dt>Прилад</dt><dd><button class="lnk" data-go="obj:FACP-1">FACP-1</button></dd></dl>
+    ${ev.length ? `<div class="sub">Події</div><ul class="rows">${ev.map((e) => `<li><div class="row" style="cursor:default"><span class="t" style="white-space:normal">${esc(e.text)}</span><span class="m">${dayHm(e.time)}</span></div></li>`).join("")}</ul>` : ""}`;
+}
+
+// ---------------------------------------------------------------- програвання зміни (07:00–15:30)
+let simOverride = null; // хвилини від 00:00 або null — «зараз»
+let shiftTimer = null;
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+function scheduleWOs() {
+  const ms = (s) => Date.parse(s.replace(" ", "T"));
+  for (const mo of D.productions) {
+    let t = null;
+    for (const id of mo.workorders) {
+      const w = D.workorders[id];
+      w._p0 = w.progress; w._st0 = w.state;
+      const exp = w.duration_expected * 60000;
+      if (w.date_start) { w._s = ms(w.date_start); w._f = w.date_finished ? ms(w.date_finished) : w._s + exp; }
+      else { w._s = Math.max(t ?? simBase, simBase); w._f = w._s + exp; }
+      t = w.date_planned_finished ? ms(w.date_planned_finished) : w._f;
+    }
+  }
+  for (const c of Object.values(D.energy?.consumers || {})) c._p0 = c.p_now;
+}
+function applySimTime(min) {
+  simOverride = min;
+  const t = min == null ? null : Date.parse(D.meta.now.slice(0, 10) + "T00:00") + min * 60000;
+  for (const w of Object.values(D.workorders)) {
+    if (t == null || (w.blocked && t >= simBase)) { w.progress = w._p0; w.state = w._st0; continue; }
+    const p = Math.max(0, Math.min(1, (t - w._s) / Math.max(1, w._f - w._s)));
+    w.progress = p;
+    w.state = p >= 1 ? "done" : p > 0 ? (w.blocked ? "progress" : "progress") : w._st0 === "pending" ? "pending" : "ready";
+  }
+  for (const mo of D.productions) {
+    const w = mo.workorders.map((id) => D.workorders[id]);
+    mo.progress = (w.filter((x) => x.state === "done").length + w.filter((x) => x.state === "progress").reduce((s, x) => s + x.progress, 0)) / w.length;
+    mo._st0 ??= mo.state;
+    mo.state = t == null ? mo._st0 : mo.progress >= 1 ? "done" : mo.progress > 0 ? "progress" : "confirmed";
+  }
+  if (D.energy) {
+    const h = min == null ? 10 : Math.min(23, Math.floor(min / 60));
+    const k = D.energy.typical[h] / D.energy.typical[10];
+    for (const c of Object.values(D.energy.consumers)) if (c._p0 != null) { c.base = c._p0 * k; c.p_now = c.base; }
+    energyTick();
+  }
+  $("#shift-l").textContent = min == null ? "зараз" : hhmm(min);
+  $("#shift-t").value = min ?? 630;
+  tickClock();
+  renderPanel(true);
+  updateLive();
+  // у програванні шар будується раз, далі мітки рухаються щокадру; перебудова — лише при зміні режиму
+  if (prodOv.on && (prodOv.sim !== (min != null) || min == null)) drawProdOverlay();
+  flowUpdate(min);
+}
+$("#shift-t").oninput = (e) => applySimTime(+e.target.value);
+$("#shift-now").onclick = () => { stopShift(); applySimTime(null); };
+const SHIFT_STEP_MS = reduceMotion ? 600 : 250;
+let simCont = null; // крок таймера і коли він стався — для плавного руху між кроками
+function simMinutes() {
+  if (simOverride == null) return null;
+  if (!shiftTimer || !simCont) return simOverride;
+  return Math.min(FLOW_T1, simCont.m + ((performance.now() - simCont.at) / SHIFT_STEP_MS) * 5);
+}
+
+// ---------------------------------------------------------------- потік зміни: стрічка часу над сценою
+const FLOW_T0 = 420, FLOW_T1 = 930; // 07:00–15:30, як повзунок
+const FLOW_LANES = [
+  { key: "in", name: "Приймання" },
+  { key: "move", name: "Склад → цех", short: "Склад" },
+  { key: "cut", name: "Розкрій", re: /^(SAW|SLIDE|VSAW|NEST)-/ },
+  { key: "edge", name: "Крайка", re: /^EDGE-/ },
+  { key: "drill", name: "Присадка", re: /^(CNC|BORE|DOWEL)-/ },
+  { key: "front", name: "Фасади", re: /^(SAND|GLUE|PRESS|SPRAY|AUTOSPRAY|DRY|UV|HINGE)-/ },
+  { key: "asm", name: "Збирання", re: /^(SORT|ASM|ASMLINE)-/ },
+  { key: "pack", name: "Пакування", re: /^(PACK|PACKLINE|BOX)-/ },
+  { key: "out", name: "Відвантаження", short: "Відвант." },
+];
+const PICK_LANE = { incoming: "in", putaway: "move", replenish: "move", pick_components: "move", store_finished: "out", outgoing: "out" };
+const flow = { built: false, bars: [], evs: [], feed: [], W: 0 };
+const moShort = (n) => "MO/" + n.split("/").pop();
+const moCol = (n) => "#" + moColor(idx.moI.get(n) ?? 0).getHexString();
+const wcName = (c) => D.workcenters[c]?.name || c;
+function linesBrief(p) {
+  const l = p.lines || [];
+  const s = l.slice(0, 2).map((x) => `${P(x.product).name.split(" ").slice(0, 3).join(" ")} ${nf.format(x.qty)} ${P(x.product).uom}`).join(", ");
+  return l.length > 2 ? `${s} і ще ${l.length - 2}` : s;
+}
+function flowBuild() {
+  flow.bars = []; flow.evs = []; flow.feed = [];
+  for (const mo of D.productions) {
+    const wos = mo.workorders.map((id) => D.workorders[id]);
+    wos.forEach((w, k) => {
+      if (w._s == null) return;
+      const s = woMin(w, "_s"), f = woMin(w, "_f");
+      const lane = FLOW_LANES.find((l) => l.re?.test(w.workcenter))?.key || "asm";
+      if (f > FLOW_T0 && s < FLOW_T1) flow.bars.push({ s, f, lane, w, mo: mo.name });
+      const nx = wos[k + 1];
+      flow.feed.push({ m: s, mo: mo.name, text: `${moShort(mo.name)} · ${w.name} на «${wcName(w.workcenter)}»` });
+      flow.feed.push({ m: f, mo: mo.name, text: `${moShort(mo.name)} · ${w.name} готово → ${nx ? `«${wcName(nx.workcenter)}»` : mo.delivery ? "склад ГП" : "до основного замовлення"}` });
+    });
+  }
+  for (const p of D.pickings) {
+    const m = dayMin(p.scheduled_date), lane = PICK_LANE[p.type];
+    if (m == null || !lane || m < 0 || m > 24 * 60) continue;
+    if (m >= FLOW_T0 && m <= FLOW_T1) flow.evs.push({ m, lane, p });
+    const dock = p.dock ? items.get(p.dock)?.userData.label || p.dock : "";
+    const text = {
+      incoming: () => `Фура ${p.partner}: ${linesBrief(p)}${dock ? ` → ${dock}` : ""}`,
+      putaway: () => `${linesBrief(p)}: контроль → ${p.location_dest}`,
+      replenish: () => `${linesBrief(p)}: стелаж → портал ${p.location_dest}`,
+      pick_components: () => `Комплект для ${moShort(p.origin)} → ${p.location_dest}`,
+      store_finished: () => `${moShort(p.origin)}: ${linesBrief(p)} → склад ГП`,
+      outgoing: () => `Відвантаження ${p.partner}: ${linesBrief(p)}${dock ? ` · ${dock}` : ""}`,
+    }[p.type]();
+    flow.feed.push({ m, text, pick: p.name, mo: idx.mo.has(p.origin) ? p.origin : null });
+  }
+  flow.feed.sort((a, b) => a.m - b.m);
+  flow.built = true;
+}
+// смуги паралельних операцій в одному етапі — у підрядки, щоб не перекривались
+function packRows(bars) {
+  const ends = [];
+  for (const b of bars.sort((a, c) => a.s - c.s)) {
+    let r = ends.findIndex((e) => e <= b.s);
+    if (r < 0) { r = ends.length; ends.push(0); }
+    ends[r] = b.f; b.row = r % 3;
+  }
+  return Math.max(1, Math.min(3, ends.length));
+}
+function flowPlace() {
+  $("#flow").style.top = Math.round($("header.bar").getBoundingClientRect().bottom + 8) + "px";
+  document.body.style.setProperty("--flow-bottom", Math.round($("#flow").getBoundingClientRect().bottom) + "px");
+}
+function flowRender() {
+  const svg = $("#flow-svg");
+  flowPlace();
+  const W = Math.max(320, Math.round(svg.getBoundingClientRect().width || 600));
+  flow.W = W;
+  const narrow = W < 560, LX = narrow ? 74 : 104, RX = W - 6, top = 4, RH = 4;
+  const X = (m) => LX + ((Math.max(FLOW_T0, Math.min(FLOW_T1, m)) - FLOW_T0) / (FLOW_T1 - FLOW_T0)) * (RX - LX);
+  flow.X = X;
+  let y = top, out = "";
+  const grid = [];
+  for (let h = 7; h <= 15; h += W < 560 ? 2 : 1) grid.push(h * 60);
+  const laneY = {};
+  for (const L of FLOW_LANES) {
+    const bars = flow.bars.filter((b) => b.lane === L.key);
+    const rows = packRows(bars);
+    const h = Math.max(13, rows * RH + 4);
+    laneY[L.key] = { y, h };
+    out += `<rect class="lane" x="${LX}" y="${y}" width="${RX - LX}" height="${h - 2}" rx="2"/>`;
+    out += `<text class="ln" x="${LX - 6}" y="${y + h / 2 + 3}" text-anchor="end">${esc(narrow ? L.short || L.name : L.name)}</text>`;
+    for (const b of bars) {
+      const x0 = X(b.s), x1 = Math.max(X(b.f), x0 + 1.5);
+      out += `<rect class="wo" data-go="mo:${esc(b.mo)}" data-i="${flow.bars.indexOf(b)}" x="${x0.toFixed(1)}" y="${(y + 2 + b.row * RH).toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${RH - 0.8}" rx="1" fill="${moCol(b.mo)}"><title>${esc(b.mo)} · ${esc(b.w.name)} · ${esc(wcName(b.w.workcenter))} · ${hhmm(Math.round(b.s))}–${hhmm(Math.round(b.f))}</title></rect>`;
+    }
+    y += h;
+  }
+  const H = y + 14;
+  for (const g of grid) out = `<line class="grid" x1="${X(g)}" x2="${X(g)}" y1="${top}" y2="${y}"/><text class="ax" x="${X(g)}" y="${y + 11}" text-anchor="middle">${hhmm(g)}</text>` + out;
+  out = `<rect class="past" id="fl-past" x="${LX}" y="${top}" width="0" height="${y - top}"/>` + out;
+  for (const e of flow.evs) {
+    const L = laneY[e.lane], x = X(e.m), cy = L.y + L.h / 2 - 1;
+    const tip = `<title>${hhmm(Math.round(e.m))} · ${esc(e.p.name)} · ${esc(e.p.picking_type)}${e.p.partner ? " · " + esc(e.p.partner) : ""}</title>`;
+    const shape = e.p.type === "incoming" ? `<path d="M${x - 5},${cy - 4} L${x + 5},${cy - 4} L${x},${cy + 4} Z" fill="#2f80c0"/>`
+      : e.p.type === "outgoing" ? `<path d="M${x - 5},${cy + 4} L${x + 5},${cy + 4} L${x},${cy - 4} Z" fill="var(--ok)"/>`
+      : `<circle cx="${x}" cy="${cy}" r="3.2" fill="${e.p.type === "store_finished" ? "var(--ok)" : "var(--idle)"}"/>`;
+    out += `<g class="ev" data-go="pick:${esc(e.p.name)}" data-e="${flow.evs.indexOf(e)}">${shape}${tip}</g>`;
+  }
+  out += `<g id="fl-now"><line class="now" x1="0" x2="0" y1="${top}" y2="${y}"/></g>`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("height", H);
+  svg.innerHTML = out;
+  flow.top = top; flow.bottom = y;
+  flowPlace();
+}
+function flowViewOffset() {
+  const c = renderer.domElement, W = c.clientWidth, H = c.clientHeight;
+  if ($("#flow").hidden || !W) { camera.clearViewOffset(); return; }
+  const dy = Math.round(($("#flow").getBoundingClientRect().bottom - c.getBoundingClientRect().top) / 2 - 24);
+  camera.setViewOffset(W, H, 0, -Math.max(0, dy), W, H);
+}
+function flowCursor(t) {
+  if (!flow.X || $("#flow").hidden) return;
+  const x = flow.X(t).toFixed(1);
+  const g = document.getElementById("fl-now");
+  if (g) g.firstElementChild.setAttribute("x1", x), g.firstElementChild.setAttribute("x2", x);
+  const past = document.getElementById("fl-past");
+  if (past) past.setAttribute("width", Math.max(0, flow.X(t) - flow.X(FLOW_T0)).toFixed(1));
+}
+function flowUpdate(min) {
+  const on = min != null && !!D;
+  const el = $("#flow");
+  if (el.hidden === on) {
+    el.hidden = !on;
+    document.body.classList.toggle("flow-on", on);
+    if (on) { if (!flow.built) flowBuild(); flowRender(); }
+    flowViewOffset();
+  }
+  if (!on) return;
+  const t = min;
+  let act = 0;
+  $("#flow-svg").querySelectorAll(".wo").forEach((r) => {
+    const b = flow.bars[+r.dataset.i];
+    const a = b.s <= t && t < b.f;
+    act += a;
+    r.style.opacity = b.f <= t ? 0.85 : a ? 1 : 0.28;
+    r.classList.toggle("act", a);
+    r.classList.toggle("bad", a && !!b.w.blocked && t >= (simBase - dayStart()) / 60000);
+  });
+  $("#flow-svg").querySelectorAll(".ev").forEach((g) => { g.style.opacity = flow.evs[+g.dataset.e].m <= t ? 1 : 0.3; });
+  const trucks = flow.evs.filter((e) => e.p.type === "incoming" && e.m <= t).length;
+  const ships = flow.evs.filter((e) => e.p.type === "outgoing" && e.m <= t).length;
+  $("#flow-time").textContent = hhmm(t);
+  $("#flow-sum").textContent = `${act} операцій зараз · фур прийнято ${trucks} · відвантажень ${ships}`;
+  const last = flow.feed.filter((e) => e.m <= t).slice(-4).reverse();
+  $("#flow-feed").innerHTML = last.map((e) => `<li class="${t - e.m <= 15 ? "new" : ""}"><span class="mono">${hhmm(Math.max(0, Math.round(e.m)))}</span>
+    <span class="sw" style="background:${e.mo ? moCol(e.mo) : e.pick && idx.pick.get(e.pick)?.type === "incoming" ? "#2f80c0" : "var(--idle)"}"></span>
+    <button class="lnk t" data-go="${e.pick ? `pick:${esc(e.pick)}` : `mo:${esc(e.mo)}`}">${esc(e.text)}</button></li>`).join("");
+  flowCursor(simMinutes() ?? t);
+}
+// клік по смузі, події чи рядку стрічки — та сама картка, що й у правій панелі
+$("#flow").addEventListener("click", (e) => {
+  const a = e.target.closest("[data-go]");
+  if (!a) return;
+  const [k, ...rest] = a.dataset.go.split(":");
+  const v = rest.join(":");
+  if (k === "mo") showMO(v); else if (k === "pick") showPicking(v);
+});
+addEventListener("resize", () => { if (!$("#flow").hidden && flow.built) { flowRender(); flowUpdate(simOverride); } flowViewOffset(); });
+
+function stopShift() { clearInterval(shiftTimer); shiftTimer = null; $("#shift-play").textContent = "▶"; $("#shift-play").setAttribute("aria-label", "Програти зміну"); }
+$("#shift-play").onclick = () => {
+  if (shiftTimer) return stopShift();
+  let m = simOverride ?? 420;
+  if (m >= 930) m = 420;
+  $("#shift-play").textContent = "❚❚"; $("#shift-play").setAttribute("aria-label", "Пауза");
+  if (!D) return;
+  applySimTime(m);
+  simCont = { m, at: performance.now() };
+  if (!prodOv.on) setProdOverlay(true); // потік видно згори: план цеху з маршрутами замовлень
+  shiftTimer = setInterval(() => {
+    m += 5; applySimTime(m); simCont = { m, at: performance.now() };
+    if (m >= 930) stopShift();
+  }, SHIFT_STEP_MS);
+};
+
+// ---------------------------------------------------------------- сценарій пожежної тривоги
+const drill = { on: false, objs: [], curves: [], dots: [], marks: [], t0: 0, blink: [], saved: null };
+// на час сценарію ховаємо все, що над головою, щоб було видно маршрути на підлозі
+const DRILL_LAYERS = new Set(["building", "zones", "receiving", "sheets", "hardware", "edge", "buffer", "fg", "shipping",
+  "line", "facade", "fire", "evacuation", "people", "transport", "territory"]);
+function drillMarker(x, y, z, html, cls) {
+  const el = document.createElement("div");
+  el.className = "mk " + cls;
+  el.innerHTML = html;
+  const m = new CSS2DObject(el);
+  m.position.copy(b2t([x, y, z]));
+  scene.add(m); drill.marks.push(m);
+}
+function stopDrill() {
+  if (!drill.on) return;
+  for (const o of [...drill.objs, ...drill.dots, ...drill.marks]) scene.remove(o);
+  drill.objs = []; drill.dots = []; drill.curves = []; drill.marks = [];
+  const b = drill.blink; drill.blink = [];
+  drill.on = false;
+  b.forEach(paint);
+  if (drill.saved) { drill.saved.forEach((v, k) => setLayer(k, v)); drill.saved = null; }
+}
+async function startDrill() {
+  const E = D.evacuation;
+  if (!E) return;
+  await Promise.all(["fire", "site"].map((k) => loadPart(k).catch(() => {})));
+  await setProdOverlay(false);
+  stopDrill(); select(null); clearHighlight();
+  drill.on = true; drill.t0 = performance.now();
+  drill.saved = new Map([...layers].map(([k, l]) => [k, l.want]));
+  layers.forEach((_, k) => setLayer(k, DRILL_LAYERS.has(k)));
+  const green = new THREE.MeshBasicMaterial({ color: 0x1fbf6a, transparent: true, opacity: 0.85 });
+  for (const r of Object.values(E.routes)) {
+    const pts = r.path.map(([x, y]) => b2t([x, y, 0.5]));
+    const path = new THREE.CurvePath();
+    for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(path, Math.max(8, pts.length * 12), 0.35, 8, false), green);
+    tube.userData.isPulse = true;
+    scene.add(tube); drill.objs.push(tube); drill.curves.push(path);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.7, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    dot.userData.isPulse = true; scene.add(dot); drill.dots.push(dot);
+  }
+  for (const e of E.exits) drillMarker(e.x, e.y, 2.8, `Вихід ${esc(e.code.slice(3))}`, "done");
+  const src = items.get(E.drill_origin);
+  if (src) { const p = topOf(src); const m = new CSS2DObject(Object.assign(document.createElement("div"), { className: "mk bad", innerHTML: `Пожежа · ${esc(E.drill_detector)}` })); m.position.copy(p).add(new THREE.Vector3(0, 0.8, 0)); scene.add(m); drill.marks.push(m); }
+  drill.blink = ["FA-SND", "SMOKE-VENTS", E.drill_origin, "EXITS"].map((c) => items.get(c)).filter(Boolean);
+  panel = { type: "drill", tab: panel.tab || "overview" };
+  renderPanel();
+  goView(VIEWS[0]);
+}
+function renderDrill() {
+  const E = D.evacuation, F = D.fire;
+  const steps = E.drill_steps || [];
+  const sec = Math.floor((performance.now() - drill.t0) / 1000);
+  const routes = Object.entries(E.routes).sort((a, b) => b[1].length - a[1].length);
+  body().innerHTML = `${backBtn()}
+    <div class="kind">Сценарій · навчальна пожежна тривога</div>
+    <h3>Пожежа в зоні «${esc(E.drill_zone)}»</h3>
+    <ul class="rows">${steps.map((s) => `<li><div class="row" style="cursor:default"><span class="t" style="white-space:normal">${esc(s.text)}</span>
+      ${pill(sec >= s.t ? ["ok", "виконано"] : ["idle", `+${s.t} с`])}<span class="m">${esc(s.who)}</span></div></li>`).join("")}</ul>
+    <div class="sub">Евакуація · найдовший шлях ${nf1.format(E.max_distance)} м${E.norm_distance ? ` (норма ≤ ${nf.format(E.norm_distance)} м${E.norm_alt ? `, з полімерними панелями ≤ ${E.norm_alt} м` : ""})` : ""}</div>
+    <table class="tbl"><tr><th>Зона</th><th>Вихід</th><th class="n">м</th></tr>
+      ${routes.map(([, r]) => `<tr><td>${esc(r.name)}</td><td class="mono">${esc(r.exit)}</td><td class="n">${nf1.format(r.length)}</td></tr>`).join("")}</table>
+    ${E.norm_ref ? `<div class="src">${esc(E.norm_ref)}${E.norm_alt_ref ? `. ${esc(E.norm_alt_ref)}` : ""}</div>` : ""}
+    <div class="actions"><button class="btn" id="drill-stop">Завершити сценарій</button></div>`;
+  $("#drill-stop").onclick = () => { stopDrill(); openTab(panel.tab || "overview"); };
+}
+
+// ---------------------------------------------------------------- інфраструктура: генерична картка з даних
+function infraHtml(code) {
+  const I = D.infra;
+  if (!I) return "";
+  if (code.startsWith("TAB-")) {
+    const wc = code.slice(4), w = D.workcenters[wc];
+    return w ? `<dl class="kv"><dt>Робочий центр</dt><dd><button class="lnk" data-go="obj:${esc(wc)}">${esc(w.name)}</button></dd>
+      <dt>Поточне завдання</dt><dd>${w.current_workorder ? esc(D.workorders[w.current_workorder].name) + " · " + esc(D.workorders[w.current_workorder].production) : "—"}</dd></dl>` : "";
+  }
+  const c = I.cards[code];
+  if (!c) return "";
+  return `<dl class="kv">${c.rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${c.warn ? `<div class="note bad">${esc(c.warn)}</div>` : ""}
+    ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
+    ${c.items ? `<div class="sub">${code === "SMOKE-VENTS" ? "Зони" : "Критичні споживачі"}</div><ul class="rows">${c.items.map((t) => `<li><div class="row" style="cursor:default"><span class="t">${esc(t)}</span></div></li>`).join("")}</ul>` : ""}`;
+}
+function backupSummary() {
+  const I = D.infra;
+  if (!I) return "";
+  const T = I.totals;
+  const row = (code, t, m, v) => `<li><button class="row" data-go="obj:${esc(code)}"><span class="t">${esc(t)}</span><span class="mono">${esc(v)}</span><span class="m">${esc(m)}</span></button></li>`;
+  return `<div class="sub">Власна генерація й резерв</div>
+    <ul class="rows">
+      ${row("PV-ROOF", "Сонячна станція", `${nf.format(T.pv_kwp)} кВт пік · сьогодні ${nf.format(T.pv_today)} кВт·год`, `${nf.format(T.pv_now)} кВт`)}
+      ${T.chp_rated ? row("CHP", "Когенерація", `${nf.format(T.chp_rated)} кВт · зараз ${pct(T.chp_load)}, тепло ${nf.format(T.chp_heat)} кВт`, `${nf.format(T.chp_kw)} кВт`) : ""}
+      ${row("BESS", "Накопичувач", `${nf.format(T.bess_kwh)} кВт·год · ${T.bess_kw ? `заряджається ${nf.format(T.bess_kw)} кВт` : "зрізання піків"}`, pct(T.bess_soc))}
+      ${row("GENSET", "Дизель-генератор", `критичні зараз ${nf.format(T.critical_kw)} кВт`, `${T.genset_kva} кВА`)}
+      ${row("ATS-1", "АВР", "мережа ↔ генератор", "мережа")}
+    </ul>
+    <div class="hint" style="border:0;padding:0;margin-top:4px">${T.grid_kw > 0
+      ? `З мережі зараз ≈ ${nf.format(T.grid_kw)} кВт: решту дають сонячна станція${T.chp_kw ? " і когенерація" : ""}.`
+      : `Цех споживає ${nf.format(T.load_kw)} кВт — усе власне: СЕС ${nf.format(T.pv_now)} + КГУ ${nf.format(T.chp_kw)} кВт. Надлишок: ${nf.format(T.bess_kw)} кВт — у накопичувач${T.export_kw ? `, ${nf.format(T.export_kw)} кВт — у мережу` : ""}.`}</div>`;
+}
+
+// ---------------------------------------------------------------- телефон
+function closeSideOnPhone() {
+  if (matchMedia("(max-width: 760px)").matches) { $("#side").classList.remove("open"); $("#toggle-side").setAttribute("aria-expanded", "false"); }
+}
+$("#toggle-side").onclick = () => {
+  const open = $("#side").classList.toggle("open");
+  $("#toggle-side").setAttribute("aria-expanded", String(open));
+};
+
+// ---------------------------------------------------------------- цикл
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const now = performance.now();
+  if (tween) {
+    const k = Math.min((now - tween.start) / tween.dur, 1), e = ease(k);
+    camera.position.lerpVectors(tween.p0, tween.p1, e);
+    controls.target.lerpVectors(tween.t0, tween.t1, e);
+    if (k === 1) tween = null;
+  }
+  controls.update();
+  const blink = 0.5 + 0.5 * Math.sin(now / 220);
+  for (const l of lamps) {
+    const st = codeRoot(l)?.userData.status;
+    l.material.emissive.set(l.material.color);
+    l.material.emissiveIntensity = st === "stop" ? (reduceMotion ? 0.8 : 0.2 + blink) : st === "work" ? 0.7 : 0.3;
+  }
+  pulse.visible = !!(hl.curve && $("#opt-motion").checked);
+  if (pulse.visible) {
+    pulseT = (pulseT + dt * 0.12) % 1;
+    pulse.position.copy(hl.curve.getPointAt(pulseT));
+  }
+  if (!reduceMotion && $("#opt-motion").checked) { // матеріали біжать гілками
+    if (prodOv.parts?.length) moveParticles(prodOv.parts, dt);
+    if (hl.parts.length) moveParticles(hl.parts, dt);
+  }
+  if (prodOv.dots.length && !reduceMotion) {
+    const s = 1 + 0.25 * Math.sin(now / 260);
+    for (const r of prodOv.dots) r.scale.setScalar(s);
+  }
+  if (drill.on) {
+    const on = Math.sin(now / 180) > 0;
+    for (const r of drill.blink) r.traverse((o) => { if (o.isMesh && o.material.emissive) { o.material.emissive.set(on ? 0xff2a1a : 0x000000); o.material.emissiveIntensity = on ? 0.9 : 0; } });
+    drill.dots.forEach((d, i) => d.position.copy(drill.curves[i].getPointAt(((now / 1000) * 0.08 + i * 0.13) % 1)));
+  }
+  const sm = simMinutes(); // програвання зміни: курсор стрічки й мітки в 3D рухаються плавно між кроками таймера
+  if (sm != null) { flowCursor(sm); if (prodOv.on && prodOv.sim) prodSimMove(sm); }
+  syncLabels();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+});
+</script>
+
+</body></html>

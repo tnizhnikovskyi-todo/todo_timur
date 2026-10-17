@@ -1,0 +1,2911 @@
+[
+ {
+  "role": "beam_saw",
+  "manufacturer": "HOMAG",
+  "model": "SAWTEQ S-310 з підйомним столом (S-310/43/22)",
+  "reason": "Однопильний розкрійний центр із притискною балкою, вбудованим заднім підйомним столом 2200 мм, програмним упором і повітряними столами; HOMAG пропонує його для автоматичної подачі зі складу STORETEQ. Довжина різу 4300 мм і стіл 2200 мм вміщують плиту 2800×2070.",
+  "specs": {
+   "Довжина різу": "4300 мм (ряд 3200 / 3800 / 4300 / 5600)",
+   "Ширина підйомного столу": "2200 мм",
+   "Виліт пилки": "80 мм (опція 95 мм)",
+   "Потужність головної пилки": "11 кВт (опція 18 / 24 кВт)",
+   "Потужність підрізної пилки": "1,5 кВт (опція 2,2 кВт)",
+   "Швидкість каретки пилки": "до 150 м/хв (опція 170)",
+   "Швидкість програмного упора": "до 90 м/хв",
+   "Робоча висота": "920 мм",
+   "Висота стосу на підйомному столі": "до 560 мм без приямка",
+   "Макс. маса стосу": "4 т",
+   "Повітряні столи": "4 × 2160 мм",
+   "Аспірація": "3350 м³/год, 26 м/с",
+   "Стиснене повітря": "6 бар, ≈200 Нл/хв",
+   "Габарити (ширина × глибина)": "6514 × 9957 мм"
+  },
+  "dimensions_mm": {
+   "L": 9957,
+   "W": 6514,
+   "H": null
+  },
+  "power_kw": 11,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-310-with-lifting-table",
+   "https://www.homag.com/fileadmin/product/paneldividing/brochures/sawteq-s-300/panel-dividing-saw-sawteq-s-300-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: HOMAG у брошурі SAWTEQ S-300/S-310 та на сторінці продукту наводить лише двигун основної пилки 11 кВт (опц. 18/24 кВт) і підрізної 1,5 кВт (опц. 2,2 кВт); загальна встановлена потужність не вказана, дилерських оголошень з нею не знайдено.",
+  "connected_sources": [
+   "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-310-with-lifting-table",
+   "https://wtp.hoechsmann.com/es/lexikon/pdf/hom_sawteqs_-300_-310_2023_de.pdf"
+  ]
+ },
+ {
+  "role": "beam_saw_book",
+  "manufacturer": "HOMAG",
+  "model": "SAWTEQ S-510 з підйомним столом (S-510/43/22)",
+  "reason": "Важкий розкрійний центр для пакетного розкрою: виліт пилки 150 мм (опція 170 мм) задає висоту пакета; такий самий задній підйомний стіл 2200 мм і програмний упор.",
+  "specs": {
+   "Довжина різу": "4300 мм (ряд 3200–6500)",
+   "Виліт пилки (висота пакета)": "150 мм (опція 170 мм)",
+   "Ширина підйомного столу": "2200 мм",
+   "Потужність головної пилки": "30 кВт (опція 47 кВт)",
+   "Потужність підрізної пилки": "2,2 кВт",
+   "Швидкість каретки пилки": "до 130 м/хв (опція 150)",
+   "Швидкість програмного упора": "90 м/хв",
+   "Робоча висота": "1020 мм",
+   "Висота стосу на підйомному столі": "до 660 мм без приямка",
+   "Макс. маса стосу": "4 т",
+   "Аспірація": "6000 м³/год, 26 м/с",
+   "Стиснене повітря": "6 бар, 240 Нл/хв",
+   "Габарити (ширина × глибина)": "7358 × 10078 мм"
+  },
+  "dimensions_mm": {
+   "L": 10078,
+   "W": 7358,
+   "H": null
+  },
+  "power_kw": 30,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-510-with-lifting-table",
+   "https://www.homag.com/fileadmin/product/paneldividing/brochures/sawteq-s-500/panel-dividing-saw-sawteq-s-500-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: для SAWTEQ S-510 опубліковано лише двигун основної пилки 30 кВт (опц. 47 кВт) і підрізної 2,2 кВт; загальна встановлена потужність не вказана.",
+  "connected_sources": [
+   "https://www.homag.com/en/product-detail/machines/panel-dividing-cutting/panel-dividing-saws/panel-dividing-saw-sawteq-s-510-with-lifting-table"
+  ]
+ },
+ {
+  "role": "sliding_table_saw",
+  "manufacturer": "Altendorf",
+  "model": "F 45",
+  "reason": "Промислова форматно-розкрійна пила для штучних деталей, підрізування й перерізів.",
+  "specs": {
+   "Макс. висота пропилу": "204 мм",
+   "Виліт пилки": "154 мм (пилка Ø450)",
+   "Макс. діаметр пилки": "450 мм",
+   "Потужність двигуна": "5,5 кВт, 3000 / 4000 / 5000 об/хв",
+   "Нахил пилки": "0–46°, моторизований",
+   "Довжина каретки": "3000 мм (1890–3420 мм)",
+   "Макс. довжина різу": "5000 мм",
+   "Ширина різу біля паралельного упора": "1000 мм (до 1600 мм)",
+   "Робоча висота": "910 / 880 / 850 мм",
+   "Маса": "від 1170 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 5.5,
+  "sources": [
+   "https://www.altendorf.com/en/machines/altendorf-f-45/"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: Altendorf для F 45 вказує лише двигун 5,5 кВт (3000/4000/5000 об/хв); загальна потужність підключення не наведена.",
+  "connected_sources": [
+   "https://www.altendorf.com/en/machines/altendorf-f-45/"
+  ]
+ },
+ {
+  "role": "vertical_panel_saw",
+  "manufacturer": "Striebig",
+  "model": "EVOLUTION 4224",
+  "reason": "Вертикальна панельна пила для повноформатних плит: довжина різу 3300 мм, висота 2240 мм.",
+  "specs": {
+   "Довжина різу": "3300 мм",
+   "Висота різу (вертикальний)": "2240 мм",
+   "Висота різу (горизонтальний)": "2100 мм",
+   "Глибина пропилу": "80 мм (опція 103 мм)",
+   "Двигун пилки": "5,5 кВт (споживана 7,3 кВт)",
+   "Пилка": "Ø300 / 30 мм, 4800 об/хв",
+   "Аспірація": "Ø140 мм, 20 м/с, ≈1400 Па",
+   "Габарити Д×Г×В": "4645 × 1741 × 3018 мм"
+  },
+  "dimensions_mm": {
+   "L": 4645,
+   "W": 1741,
+   "H": 3018
+  },
+  "power_kw": 5.5,
+  "sources": [
+   "https://www.striebig.com/en/vertical-saws/evolution",
+   "https://www.striebig.com/07_downloads/produktinformationen/datenblaetter/en/datasheet-striebig-evolution-en.pdf"
+  ],
+  "connected_kw": 7.3,
+  "connected_note": "Споживана потужність (Wattage) 7,3 кВт при двигуні пилки 5,5 кВт; Striebig зазначає, що всі техдані на сторінці EVOLUTION наведено для типу 6224 — окремого значення для 4224 (той самий пиляльний агрегат, менша довжина різу) не опубліковано.",
+  "connected_sources": [
+   "https://www.striebig.com/en/vertical-saws/evolution"
+  ]
+ },
+ {
+  "role": "nesting_cnc",
+  "manufacturer": "HOMAG",
+  "model": "CENTATEQ N-510 /32/22, автоматизація Concept 2H+",
+  "reason": "Нестинг-центр із підйомним столом автоматичного завантаження, маркуванням на вході, стрічкою вивантаження й ручним маркуванням; стіл 3180×2160 вміщує плиту 2800×2070.",
+  "specs": {
+   "Робоча зона X × Y": "3180 × 2160 мм",
+   "Макс. товщина заготовки": "260 мм",
+   "Товщина плит для автозавантаження": "6–60 мм",
+   "Фрезерний шпиндель": "10 або 13,2 кВт (опція 15 / 18,5 кВт)",
+   "Магазин інструменту": "8, 14 або до 32 позицій",
+   "Свердлильний блок": "12 / 21 / 31 шпиндель, до 7500 об/хв",
+   "Вакуумний стіл": "MATRIX, мін. зона 630 × 315 мм",
+   "Маркування": "автоматичне на вході + ручне",
+   "Габарити Д×Г×В": "13250 × 6350 × 2850 мм"
+  },
+  "dimensions_mm": {
+   "L": 13250,
+   "W": 6350,
+   "H": 2850
+  },
+  "power_kw": 10,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/cnc-machining-centers/cnc-gantry-processing-center-centateq-n-510",
+   "https://www.homag.com/fileadmin/product/cnc/brochures/centateq-n-510/cnc-processing-center-nesting-centateq-n-510-en.pdf"
+  ],
+  "connected_kw": 39,
+  "connected_note": "Загальна потужність підключення 39 кВт — дилерське оголошення Höchsmann, CENTATEQ N-510 BHN 510/5722/F/R (2024 р., 5-осьовий шпиндель 12 кВт, стіл MATRIX 5700 × 2160 мм, 4 вакуумні насоси 1380 м³/год). Конфігурація відрізняється від /32/22; офіційно HOMAG загальну потужність не публікує.",
+  "connected_sources": [
+   "https://www.hoechsmann.com/en/article/86732/homag_centateq_n-510_bhn_510_5722_f_r"
+  ]
+ },
+ {
+  "role": "board_storage",
+  "manufacturer": "HOMAG",
+  "model": "STORETEQ P-500, вакуумна траверса ST71 X",
+  "reason": "Горизонтальний склад плит із порталом і вакуумною траверсою, подає плити на підйомні столи пил SAWTEQ.",
+  "specs": {
+   "Ширина прольоту": "5000 мм базово, до 16000 мм",
+   "Довжина шляху": "10000 мм базово, до 100000 мм",
+   "Швидкість моста": "60 м/хв, до 130 м/хв",
+   "Швидкість каретки": "80 м/хв, до 120 м/хв",
+   "Швидкість підйому": "30 м/хв, до 65 м/хв",
+   "Довжина заготовки": "1200–4300 мм, макс. 5600 мм",
+   "Ширина заготовки": "400–2500 мм",
+   "Товщина заготовки": "ДСП 6–60, МДФ 3–60 мм",
+   "Маса заготовки": "до 250 кг, макс. 350 кг",
+   "Висота стосу": "2100 мм (опція 2500 мм)",
+   "У цьому плануванні": "проліт 15,9 м, хід 43,7 м; три ряди стосів + підйомні столи пил і нестингу"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/storage-systems/storage-system-storeteq-p-300-p-500",
+   "https://www.homag.com/fileadmin/product/automation/brochures/storeteq-p-300-500/storage-systems-storeteq-p-300-500-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: HOMAG для STORETEQ P-500 не наводить електричних даних ні в брошурі, ні на сторінці продукту.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/automation/brochures/storeteq-p-300-500/storage-systems-storeteq-p-300-500-en.pdf",
+   "https://homag.com/en/product-detail/machines/storage-systems/storage-system-storeteq-p-300-p-500"
+  ]
+ },
+ {
+  "role": "edgebander_laser",
+  "manufacturer": "HOMAG",
+  "model": "EDGETEQ S-500 (airTec, серія 2480–2484)",
+  "reason": "Промисловий односторонній крайкооблицювальний верстат HOMAG: агрегат нульового шва airTec (автозміна EVA/PUR), у виконанні profiLine — laserTec; фугування, торцювання, фрезерування звисів, радіусне циклювання, полірування. Сумісний із системами повернення LOOPTEQ.",
+  "specs": {
+   "Швидкість подачі": "16–20 м/хв (опції 25, 30, 35 м/хв)",
+   "Товщина кромки (рулон)": "0,3–3 мм",
+   "Товщина кромки (смуги/масив)": "0,4–12 (20) мм",
+   "Товщина заготовки": "12–60 мм (опції 8–60 / 8–100 / 12–100 мм)",
+   "Мін. ширина заготовки (8–22 мм)": "60 мм",
+   "Мін. довжина заготовки": "240 мм (з опцією 120 мм)",
+   "Нульовий шов": "airTec; laserTec у S-500 profiLine; EVA і PUR з автозміною",
+   "Інструмент фугувального агрегата": "Ø125 мм (опція 150 мм)",
+   "Продуктивність плавлення EVA": "6–12 або 18–35 кг/год",
+   "Довжина машини": "8365 / 9365 / 10365 мм залежно від моделі (2480–2484: 9365 мм)"
+  },
+  "dimensions_mm": {
+   "L": 9365,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-500-s-500-profiline/Edge-banding-machines-edgeteq-s-500-s-500-profiline-en.pdf",
+   "https://wtp.hoechsmann.com/en/lexikon/36866/homag_edgeteq_s-500"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі EDGETEQ S-500 / S-500 profiLine та дилерських оголошеннях загальна потужність підключення для варіанту airTec не знайдена.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-500-s-500-profiline/Edge-banding-machines-edgeteq-s-500-s-500-profiline-en.pdf"
+  ]
+ },
+ {
+  "role": "edgebander",
+  "manufacturer": "HOMAG",
+  "model": "EDGETEQ S-380 Model 1660 HF",
+  "reason": "Прохідний крайкооблицювальний верстат середнього класу для клею EVA або PUR, кромка 0,3–3 мм: фугування, нанесення клею, торцювання двома моторами, чорнове й чистове фрезерування, багатофункціональне профільне фрезерування, циклі радіуса й клейового шва, полірування.",
+  "specs": {
+   "Швидкість подачі": "8–18 м/хв (опція 20 м/хв)",
+   "Товщина кромки (рулон)": "0,3–3 мм",
+   "Товщина кромки (смуги/масив)": "0,4–15 мм",
+   "Товщина заготовки": "8–60 мм",
+   "Мін. ширина заготовки (8–22 мм)": "70 мм",
+   "Клей": "EVA та PUR (плавильний блок PUR 6 кг/год)",
+   "Загальна довжина машини": "6273 мм"
+  },
+  "dimensions_mm": {
+   "L": 6273,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-380-s-380-profiline/Edge-banding-machines-edgeteq-s-380-s-380-profiline-en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: для EDGETEQ S-380 1660 офіційного значення немає; у вживаних оголошеннях інших конфігурацій S-380 фігурують різні значення, які не вдалося перевірити для моделі 1660.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/edge/brochures/edgeteq-s-380-s-380-profiline/Edge-banding-machines-edgeteq-s-380-s-380-profiline-en.pdf",
+   "https://www.hoechsmann.com/en/article/15713/homag_edgeteq_s-380_optimat_kdf_660_e"
+  ]
+ },
+ {
+  "role": "robot_return",
+  "manufacturer": "KUKA",
+  "model": "KR 120 R2700-2 (KR QUANTEC)",
+  "reason": "Підлоговий 6-осьовий робот класу 120 кг із вильотом 2,7 м: повертає облицьовані деталі з виходу верстата на вхід із вакуумним захопленням.",
+  "specs": {
+   "Номінальне навантаження": "120 кг",
+   "Максимальне навантаження": "167 кг (при центрі мас 0 мм)",
+   "Максимальний виліт": "2701 мм",
+   "Повторюваність (ISO 9283)": "±0,05 мм",
+   "Кількість осей": "6",
+   "Площа основи": "754 × 754 мм",
+   "Маса робота": "≈1069 кг",
+   "Діапазон осі A1": "±185°",
+   "Ступінь захисту / контролер": "IP65/IP67; KR C5"
+  },
+  "dimensions_mm": {
+   "L": 754,
+   "W": 754,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.kuka.com/en-de/products/robotics-systems/industrial-robots/kr-quantec",
+   "https://k2tool.ru/downloads/733-broshjura-promyshlennogo-robota-kuka-kr-quantec-kr-120-r2700-2"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у даташиті KUKA KR C5 вказано лише живлення AC 380–480 В, 3 фази, 50–60 Гц; потужність підключення робота KR 120 R2700-2 з KR C5 у відкритих джерелах не знайдена.",
+  "connected_sources": [
+   "https://www.leobotics.fr/wp-content/uploads/2021/05/datasheet-fiche-technique-controlleur-robot-industriel-kuka-kr-c5.pdf"
+  ]
+ },
+ {
+  "role": "ptp_cnc",
+  "manufacturer": "HOMAG",
+  "model": "CENTATEQ P-110 /31",
+  "reason": "Стандартний портальний обробний центр HOMAG із консолями й вакуумними присосками, свердлильною головою V12/H6, пильним агрегатом, фрезерним шпинделем 10 кВт і 8-місним магазином інструменту.",
+  "specs": {
+   "Робоче поле X (одиночна / маятникова)": "3100 / 1000 мм",
+   "Робоче поле Y (Ø25 мм)": "1550 мм",
+   "Висота заготовки Z": "240 мм",
+   "Фрезерний шпиндель": "10 кВт (опція 13,2 кВт), повітряне охолодження",
+   "Свердлильна голова": "18 шпинделів (V12, H4 по X, H2 по Y), 1500–7500 об/хв; пила Ø100/125 мм",
+   "Магазин інструменту": "8 місць (до 34)",
+   "Стіл": "консольний, вакуумні присоски",
+   "Габарити L×W×H": "6868 × 3470 × 2407 мм"
+  },
+  "dimensions_mm": {
+   "L": 6868,
+   "W": 3470,
+   "H": 2407
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-processing-centers-centateq-p-110-en.pdf",
+   "https://www.homag.com/en/product-detail/machines/cnc-machining-centers/cnc-processing-center-centateq-p-110"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: для CENTATEQ P-110 опубліковано лише фрезерний шпиндель 10 кВт (опц. 13,2 кВт); у дилерському оголошенні Höchsmann (P-110 /31, 2019 р.) загальна потужність також не вказана.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-processing-centers-centateq-p-110-en.pdf",
+   "https://www.hoechsmann.com/en/article/89702/homag_centateq_p-110_v_bmg_110_31_k"
+  ]
+ },
+ {
+  "role": "throughfeed_drilling",
+  "manufacturer": "HOMAG",
+  "model": "DRILLTEQ H-600 (конфігурація 0037)",
+  "reason": "Прохідний ЧПК-центр свердління для серійних деталей: два ЧПК-захоплювачі, дві свердлильні голови з фрезерними моторами працюють одночасно.",
+  "specs": {
+   "Розмір заготовки": "2500 × 1300 мм (робочий 2500 × 1000 мм)",
+   "Товщина заготовки": "до 80 мм",
+   "Швидкість осей X/Y/Z": "138 / 80 / 50 м/хв",
+   "Свердлильні шпинделі": "2 × 36 вертикальних, 2 × 4 H по X, 2 × 2 H по Y; 2 фрезерні мотори по 6 кВт",
+   "Стиснене повітря": "7 бар",
+   "Аспірація": "2 × Ø280 мм, мін. 2 × 4450 м³/год",
+   "Встановлена потужність": "19,5 кВт",
+   "Маса": "≈5500 кг",
+   "Габарити L×W×H": "7350 × 3850 × 2120 мм"
+  },
+  "dimensions_mm": {
+   "L": 7350,
+   "W": 3850,
+   "H": 2120
+  },
+  "power_kw": 19.5,
+  "sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/drillteq-h-600/centres-d-usinage-drillteq-h-600-fr.pdf",
+   "https://www.homag.com/en/product-detail/machines/cnc-drilling-and-routing-machining-centers/cnc-processing-center-drillteq-h-600"
+  ],
+  "connected_kw": 19.5,
+  "connected_note": "Потужність підключення (puissance connectée) 19,5 кВт — базова DRILLTEQ H-600 і варіант з функцією встановлення шкантів; з функцією обробки 6-ї сторони — 23,5 кВт (брошура HOMAG, французькою).",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/drillteq-h-600/centres-d-usinage-drillteq-h-600-fr.pdf"
+  ]
+ },
+ {
+  "role": "dowel_inserting",
+  "manufacturer": "HOMAG",
+  "model": "DRILLTEQ D-510 (2500 мм)",
+  "reason": "ЧПК-верстат горизонтального й вертикального свердління зі вставкою шкантів на клей і фрезеруванням крайки; бокові стінки шаф до 2,5 м.",
+  "specs": {
+   "Довжина заготовки": "20–2500 мм",
+   "Ширина заготовки": "20–800 мм",
+   "Товщина заготовки": "10–80 мм",
+   "Свердлильні агрегати": "H і V, до 5 шпинделів, крок 32 мм",
+   "Фрезерний шпиндель": "3,6 кВт",
+   "Вставка шкантів": "до 2 агрегатів, 15 розмірів, з клеєм",
+   "Встановлена потужність": "≈11 кВт",
+   "Маса": "≈2000 кг",
+   "Габарити L×W×H": "4530 × 1500 × 1880 мм"
+  },
+  "dimensions_mm": {
+   "L": 4530,
+   "W": 1500,
+   "H": 1880
+  },
+  "power_kw": 11,
+  "sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-drilling-dowel-inserting-machine-DRILLTEQ-D-510-en.pdf",
+   "https://www.homag.com/en/product-detail/machines/cnc-drilling-and-dowel-inserting-machines/cnc-drilling-and-dowel-inserting-machine-drillteq-d-510"
+  ],
+  "connected_kw": 11,
+  "connected_note": "Загальна потужність підключення ≈11 кВт (у брошурі: «Total connected voltage … approx. 11 kW») для обох виконань DRILLTEQ D-510 — довжина деталі 1250 і 2500 мм.",
+  "connected_sources": [
+   "https://www.homag.com/fileadmin/product/cnc/brochures/cnc-drilling-dowel-inserting-machine-DRILLTEQ-D-510-en.pdf"
+  ]
+ },
+ {
+  "role": "hinge_insertion",
+  "manufacturer": "Blum",
+  "model": "MINIPRESS P (M53.2000EU)",
+  "reason": "Електропневматичний настільний верстат Blum для свердління й запресовування завіс, монтажних планок та іншої фурнітури Blum у фасади й корпусні деталі.",
+  "specs": {
+   "Потужність двигуна": "1,1 кВт",
+   "Тиск повітря": "5–7 бар",
+   "Витрата повітря": "1,5 л/цикл",
+   "Базова лінійка": "600 мм (±300 мм)",
+   "Макс. товщина деталі (свердління)": "45 мм",
+   "Хід Y / Z": "0–70 / 45 мм",
+   "Аспірація": "Ø100 мм",
+   "Маса": "47 кг",
+   "Габарити В×Ш×Г": "710 × 610 × 760 мм"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 1.1,
+  "sources": [
+   "https://xcart.wurthlac.com/skin/common_files/files/specs/BM53.2004US-Blum_Minipress-P-Product_Details.pdf",
+   "https://publications.blum.com/2024/catalogue/en/631/"
+  ],
+  "connected_kw": 1.1,
+  "connected_note": "Потужність двигуна 1,1 кВт — єдиний електропривод MINIPRESS P за даними Blum; окремої «загальної потужності підключення» не наведено.",
+  "connected_sources": [
+   "https://xcart.wurthlac.com/skin/common_files/files/specs/BM53.2004US-Blum_Minipress-P-Product_Details.pdf"
+  ]
+ },
+ {
+  "role": "sorting_cell",
+  "manufacturer": "HOMAG",
+  "model": "SORTBOT R-300",
+  "reason": "Роботизована комірка: буферизує, розв'язує потоки й сортує деталі після присадки з прямим доступом до кожної деталі.",
+  "specs": {
+   "Стелажі": "до 16 по колу, до 3 рівнів",
+   "Комірки на рівень": "16 (товщина 16–19 мм) / 14 (19–25 мм)",
+   "Довжина заготовки": "240–2800 мм",
+   "Ширина заготовки": "240–1000 мм",
+   "Товщина заготовки": "16–25 мм",
+   "Висота подачі / видачі": "950–1000 / від 1280 мм",
+   "Референс (Starke)": "500 комірок, висота приміщення < 4 м"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/automation/robot-solutions-for-the-furniture-industry/robot-sorting-cell-sortbot-r-300",
+   "https://wtp.hoechsmann.com/en/lexikon/pdf/hom_sortbot_r-300_2023_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі SORTBOT R-300 та на сторінці HOMAG електричні дані відсутні.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/en/lexikon/pdf/hom_sortbot_r-300_2023_en.pdf"
+  ]
+ },
+ {
+  "role": "wide_belt_sander",
+  "manufacturer": "SCM (DMC)",
+  "model": "dmc sd 60 135, 2 агрегати",
+  "reason": "Промисловий калібрувально-шліфувальний верстат із робочою шириною 1350 мм для фасадів МДФ.",
+  "specs": {
+   "Робоча ширина": "1350 мм",
+   "Товщина заготовки": "4–170 мм",
+   "Шліфувальна стрічка": "1370 × 2150 мм",
+   "Головний двигун": "11 кВт (версія з 2 агрегатами)",
+   "Швидкість подачі": "4,5 / 9 м/хв",
+   "Шліфувальні агрегати": "2 (ряд 1–3)",
+   "Аспірація": "2 × Ø195 мм",
+   "Габарити X×Y×Z": "1920 × 1900 × 2030 мм"
+  },
+  "dimensions_mm": {
+   "L": 1920,
+   "W": 1900,
+   "H": 2030
+  },
+  "power_kw": 11,
+  "sources": [
+   "https://wtp.hoechsmann.com/es/lexikon/pdf/scm_dmc_sd_2017_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у каталозі SCM dmc sd наведено лише головний двигун 11 кВт (версія з 2 агрегатами); загальна встановлена потужність не вказана.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/es/lexikon/pdf/scm_dmc_sd_2017_en.pdf"
+  ]
+ },
+ {
+  "role": "membrane_press",
+  "manufacturer": "Orma",
+  "model": "AIR SYSTEM ECO 30/14",
+  "reason": "Прес для 3D-облицювання фасадів плівкою ПВХ: режим «повітря без мембрани» або «повітря + мембрана», завантаження з одного боку; другий лоток (човниковий режим) — на замовлення.",
+  "specs": {
+   "Розмір плит": "2840 × 1340 мм",
+   "Макс. панель з 3D-облицюванням ПВХ": "2740 × 1240 мм",
+   "Висота робочої камери": "60 мм (опція 180 мм)",
+   "Циліндри": "6 × Ø140 мм, хід 250 мм",
+   "Зусилля пресування": "270 т",
+   "Робочий тиск": "5 кг/см²",
+   "Потужність нагріву": "21 кВт",
+   "Загальна потужність": "28 кВт",
+   "Маса": "8800 кг",
+   "Лотки": "1 стандарт, 2 на замовлення (у цій моделі — 2)",
+   "Габарити": "6775 × 2350 × 2250 мм (без шафи керування)"
+  },
+  "dimensions_mm": {
+   "L": 6775,
+   "W": 2350,
+   "H": 2250
+  },
+  "power_kw": 28,
+  "sources": [
+   "https://wtp.hoechsmann.com/cz/lexikon/pdf/orm_airsystem_cvm_vacuum_2021_en_ru_fr_it_es.pdf"
+  ],
+  "connected_kw": 28,
+  "connected_note": "Загальне споживання (Total Consumption) 28 кВт, з них нагрів 21 кВт — AIR SYSTEM ECO 30/14 (для 25/14 — 25 кВт), каталог Orma 2021.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/cz/lexikon/pdf/orm_airsystem_cvm_vacuum_2021_en_ru_fr_it_es.pdf"
+  ]
+ },
+ {
+  "role": "glue_spray_booth",
+  "manufacturer": "Ardesia",
+  "model": "AMBER 3 (суха фільтрація) + поворотний візок Criart CBC/9",
+  "reason": "Камера з сухими фільтрами шириною 3 м для розпилення клею на фасади перед мембранним пресом; поворотний візок — окремий.",
+  "specs": {
+   "Робоча ширина": "3000 мм",
+   "Загальна ширина × висота": "3450 × 3250 мм",
+   "Фільтрація": "інерційні картонні фільтри + Paint Stop",
+   "Продуктивність витяжки": "11000 м³/год",
+   "Швидкість всмоктування": "0,3 м/с",
+   "Вентилятор": "2,2 кВт",
+   "Освітлення": "2 × 58 Вт",
+   "Маса": "495 кг",
+   "Поворотний візок": "500 × 1000 мм, до 60 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 2.2,
+  "sources": [
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/dry-painting-booth/dry-painting-booth-mod-amber-3-mm-3000x3250-as-per-e-c-rules/",
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/racks-carriages-etc/different-carriages/zinc-plated-adjustable-rotating-trolley-art-cbc9/"
+  ],
+  "connected_kw": 2.2,
+  "connected_note": "Потужність витяжного агрегату 2,2 кВт — єдиний електроспоживач, указаний дилером для камери Ardesia AMBER 3 (суха фільтрація, 3000 × 3250 мм); загальна потужність окремо не наведена.",
+  "connected_sources": [
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/dry-painting-booth/dry-painting-booth-mod-amber-3-mm-3000x3250-as-per-e-c-rules/"
+  ]
+ },
+ {
+  "role": "manual_spray_booth",
+  "manufacturer": "Ardesia",
+  "model": "DOUBLE 4 (подвійна водяна завіса)",
+  "reason": "Камера ручного фарбування з подвійною водяною завісою шириною 4 м для сольвентних і водних покриттів кухонних фасадів.",
+  "specs": {
+   "Робоча ширина": "4000 мм",
+   "Загальна ширина × висота": "4450 × 3300 мм",
+   "Фільтрація": "подвійна водяна завіса + небулайзери + Paint Stop",
+   "Продуктивність витяжки": "15000 м³/год",
+   "Швидкість всмоктування": "0,3 м/с",
+   "Вентилятор": "4 кВт",
+   "Насос": "1,1 кВт",
+   "Освітлення": "2 × 58 Вт",
+   "Маса": "910 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 5.1,
+  "sources": [
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/water-curtain-painting-booths/water-painting-booth-mod-double-4-as-per-e-c-rules-mm-4000x3300/"
+  ],
+  "connected_kw": 5.1,
+  "connected_note": "Сума опублікованих потужностей: витяжний вентилятор 4 кВт + насос водяної завіси 1,1 кВт (Ardesia DOUBLE 4, 4000 × 3300 мм); загальну потужність дилер окремо не вказує.",
+  "connected_sources": [
+   "https://www.makxilia.biz/en/product/woodworking-machinery/painting-booths/water-curtain-painting-booths/water-painting-booth-mod-double-4-as-per-e-c-rules-mm-4000x3300/"
+  ]
+ },
+ {
+  "role": "automatic_spraying",
+  "manufacturer": "Cefla Finishing",
+  "model": "EASY 2000 DUO D",
+  "reason": "Автомат фарбування пласких панелей і фасадів із двома руками-реверсами, стрічковим конвеєром, очищенням стрічки й сухою фільтрацією. Виробник не публікує параметри — цифри з оголошення дилера (машина 2008 р.).",
+  "specs": {
+   "Робоча ширина": "1300 мм",
+   "Швидкість подачі": "2–8 м/хв",
+   "Пістолети": "4 (Kremlin AVX, Airmix), 2 контури фарби",
+   "Фільтрація": "суха",
+   "Витяжка": "12000 м³/год",
+   "Потужність підключення": "18 кВт",
+   "Конвеєр": "стрічка з валковим очищенням і рекуперацією лаку",
+   "Габарити": "6152 × 3700 × 2895 мм",
+   "Джерело цифр": "оголошення б/в машини 2008 р."
+  },
+  "dimensions_mm": {
+   "L": 6152,
+   "W": 3700,
+   "H": 2895
+  },
+  "power_kw": 18,
+  "sources": [
+   "https://www.machineseeker.com/cefla-easy+duo/i-22608062",
+   "https://www.ceflafinishing.com/en/products/easy-spraying-machines"
+  ],
+  "connected_kw": 18,
+  "connected_note": "«Total connection power 18 kW» — вживаний Cefla EASY DUO 2008 р. (оголошення Machineseeker; точне виконання 2000 DUO D у лістингу не уточнено).",
+  "connected_sources": [
+   "https://www.machineseeker.com/cefla-easy+duo/i-22608062"
+  ]
+ },
+ {
+  "role": "drying",
+  "manufacturer": "Cefla Finishing",
+  "model": "вертикальна двозонна сушка до лінії EASY 2000 (наступник — Omnidry)",
+  "reason": "Вертикальна сушка з зонами випаровування й сушіння теплим повітрям для пофарбованих панелей. Цифри з оголошення дилера (машина 2005 р.), точний код моделі не вказано.",
+  "specs": {
+   "Тип": "вертикальна двозонна платформна, тепле повітря",
+   "Довжина платформи": "3500 мм",
+   "Вентилятори зони випаровування": "2 × 8000 м³/год",
+   "Вентилятор зони сушіння": "8000 м³/год",
+   "Теплова потужність": "130000 ккал/год (≈151 кВт)",
+   "Електрична потужність": "17 кВт",
+   "Стиснене повітря": "92 Нл/хв",
+   "Габарити": "5192 × 4120 × 4524 мм",
+   "Джерело цифр": "оголошення б/в машини 2005 р."
+  },
+  "dimensions_mm": {
+   "L": 5192,
+   "W": 4120,
+   "H": 4524
+  },
+  "power_kw": 17,
+  "sources": [
+   "https://www.machineseeker.com/cefla-easy+2000/i-22555187",
+   "https://www.ceflafinishing.com/en/products/omnidry-vertical-oven"
+  ],
+  "connected_kw": 17,
+  "connected_note": "Загальна встановлена електрична потужність 17 кВт (теплова — 130 000 ккал/год) — двозонна вертикальна сушка в складі вживаної лінії Cefla EASY 2000, 2005 р. (оголошення Machineseeker); значення лише для сушки.",
+  "connected_sources": [
+   "https://www.machineseeker.com/cefla-easy+2000/i-22555187"
+  ]
+ },
+ {
+  "role": "uv_line",
+  "manufacturer": "Cefla Finishing (Sorbini)",
+  "model": "Smartcoater MF-EVO + УФ-сушка UV-R/3",
+  "reason": "Вальцьовий лаконаносний верстат для УФ-ґрунтів і лаків на пласких фасадах МДФ із тунелем УФ-отвердіння. Цифри з оголошень дилерів.",
+  "specs": {
+   "Робоча ширина": "1300 мм",
+   "Товщина заготовки": "3–80 мм",
+   "Швидкість подачі": "5–20 м/хв",
+   "Дозуючий вал": "Ø173 мм, хромований",
+   "Наносний вал": "≈Ø250 мм",
+   "Двигуни валів": "3 × 0,75 кВт",
+   "Потужність верстата": "2,9 кВт",
+   "Довжина верстата": "≈900 мм"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 2.9,
+  "sources": [
+   "https://www.werktuigen.com/cefla+%28by+sorbini%29-smartcoater+mf-evo/wt-596-1289",
+   "https://www.ceflafinishing.com/en/products/smartcoater-pro"
+  ],
+  "connected_kw": 2.9,
+  "connected_note": "Загальна встановлена потужність 2,9 кВт — вальцьовий лакувальний верстат Cefla (Sorbini) Smartcoater MF-EVO (оголошення Werktuigen; рік не вказано); без УФ-сушки.",
+  "connected_sources": [
+   "https://www.werktuigen.com/cefla+%28by+sorbini%29-smartcoater+mf-evo/wt-596-1289"
+  ]
+ },
+ {
+  "role": "uv_oven",
+  "manufacturer": "Cefla Finishing",
+  "model": "UV-R / 3",
+  "reason": "Тунель УФ-отвердіння до лінії Smartcoater. Цифри з оголошення дилера (машина 2018 р.).",
+  "specs": {
+   "Робоча ширина": "1300 мм",
+   "Лампи": "3 верхні, до 120 Вт/см",
+   "Швидкість подачі": "≈1,25–21,25 м/хв",
+   "Висота заготовки": "≈3–70 мм",
+   "Витяжка": "3600 м³/год",
+   "Встановлена потужність": "56 кВт",
+   "Габарити": "≈3500 × 2700 × 1600 мм"
+  },
+  "dimensions_mm": {
+   "L": 3500,
+   "W": 2700,
+   "H": 1600
+  },
+  "power_kw": 56,
+  "sources": [
+   "https://www.used-machines.com/cefla-uv-r+%2F+3/gm-209-18902",
+   "https://www.ceflafinishing.com/en/products/uv-r-uv-oven"
+  ],
+  "connected_kw": 56,
+  "connected_note": "Номінальна потужність 56 кВт / 104 А — УФ-сушка Cefla UV-R/3 (3 лампи), 2018 р. (оголошення Used-machines).",
+  "connected_sources": [
+   "https://www.used-machines.com/cefla-uv-r+%2F+3/gm-209-18902"
+  ]
+ },
+ {
+  "role": "paint_pump",
+  "manufacturer": "Wagner",
+  "model": "Cobra 40-10",
+  "reason": "Пневматичний мембранний насос високого тиску для airless і Airmix; рекомендований для лаків по дереву, УФ-матеріалів і частої зміни кольору.",
+  "specs": {
+   "Співвідношення тисків": "40:1",
+   "Макс. тиск": "250 бар",
+   "Об'єм за подвійний хід": "10 см³",
+   "Частота": "до 200 подв. ходів/хв",
+   "Продуктивність": "до 2,0 л/хв",
+   "Вихід": "3/8\" NPS",
+   "Маса": "19 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://spraydirect.co.uk/acatalog/Cobra-Brochure.pdf"
+  ]
+ },
+ {
+  "role": "case_clamp_auto",
+  "manufacturer": "HOMAG",
+  "model": "CABTEQ T-200",
+  "reason": "Автоматичний прохідний електричний корпусний прес із транспортним інтерфейсом для вбудовування в лінію збирання корпусів (Ligmatech).",
+  "specs": {
+   "Довжина корпусу": "250–2500 мм (опція 3100 мм)",
+   "Глибина корпусу": "120–800 мм (опція 1000 мм)",
+   "Висота корпусу": "220–1320 мм",
+   "Зусилля вертикальне": "до 30 кН",
+   "Зусилля горизонтальне": "до 15 кН",
+   "Швидкість подачі транспортерів": "12–40 м/хв",
+   "Робоча висота": "500 мм",
+   "Тиск повітря": "6 бар",
+   "Керування": "powerTouch",
+   "Маса": "5,0–6,0 т"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/case-clamps/electric-throughfeed-case-clamp-cabteq-t-200",
+   "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі CABTEQ S-200/S-250/T-200/T-250 (2023) електричні дані не наведені.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
+  ]
+ },
+ {
+  "role": "case_clamp_manual",
+  "manufacturer": "HOMAG",
+  "model": "CABTEQ S-250",
+  "reason": "Стаціонарний напівавтоматичний електричний корпусний прес (наступник Ligmatech ZHM): корпус кладуть у прес і запускають кнопкою.",
+  "specs": {
+   "Довжина корпусу": "150–2500 мм (опція 3000 мм)",
+   "Глибина корпусу": "250–700 мм (опція 900 мм)",
+   "Висота корпусу": "150–1400 мм",
+   "Зусилля вертикальне / горизонтальне": "до 12–18 кН",
+   "Швидкість позиціювання": "50 / 25 мм/с",
+   "Робоча висота": "300 мм",
+   "Тиск повітря": "6 бар",
+   "Керування": "контакторне",
+   "Маса": "≈2200 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.homag.com/en/product-detail/machines/case-clamps/stationary-case-clamp-cabteq-s-250",
+   "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: у брошурі CABTEQ S-200/S-250/T-200/T-250 (2023) електричні дані не наведені.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/fr/lexikon/pdf/hom_cabteqs_-200_-250_cabeteqt_-200_-250_2023_en.pdf"
+  ]
+ },
+ {
+  "role": "box_machine",
+  "manufacturer": "Panotec",
+  "model": "Nextmode 2.5 (поточний наступник — Nextpro 2.5)",
+  "reason": "Машина «коробка на замовлення» з фанфолд-гофрокартону, робоча ширина 2,5 м; виробник позиціонує її для меблевої галузі.",
+  "specs": {
+   "Робоча ширина фанфолду": "2500 мм",
+   "Мін. довжина обробки": "480 мм",
+   "Товщина картону": "2–7 мм",
+   "Швидкість подачі картону": "48 м/хв",
+   "Магазини картону": "1–6, до 2 фанфолдів у кожному",
+   "Продуктивність (Nextpro)": ">10 коробок/хв; >1500 коробок/день поштучно",
+   "Живлення": "400 В / 50 Гц, 10 кВт",
+   "Стиснене повітря": "6–7 бар, до 100 Нл/хв",
+   "Маса": "≈2500 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 10,
+  "sources": [
+   "https://wtp.hoechsmann.com/en/lexikon/pdf/pnt_nextmode_25_en.pdf",
+   "https://panotec.com/en/products/nextpro/"
+  ],
+  "connected_kw": 10,
+  "connected_note": "«POWER: 10 kW» — потужність живлення Panotec Nextmode 2.5 за брошурою виробника.",
+  "connected_sources": [
+   "https://wtp.hoechsmann.com/en/lexikon/pdf/pnt_nextmode_25_en.pdf"
+  ]
+ },
+ {
+  "role": "stretch_wrapper",
+  "manufacturer": "Robopac",
+  "model": "Rotoplat 508 PDS",
+  "reason": "Напівавтоматичний палетообмотувач із поворотним столом і кареткою попереднього розтягу PDS.",
+  "specs": {
+   "Діаметр столу": "1650 або 1800 мм",
+   "Швидкість столу": "5–12 об/хв",
+   "Макс. маса вантажу": "2000 / 2500 кг",
+   "Макс. палета": "1000 × 1200 / 1200 × 1200 мм",
+   "Макс. висота вантажу": "2200–3100 мм",
+   "Швидкість каретки": "1,5–5,5 м/хв",
+   "Рулон плівки": "500 × 300 мм, до 20 кг; 17–35 мкм",
+   "Встановлена потужність": "1,9 кВт, 230 В"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 1.9,
+  "sources": [
+   "https://pack-trade.com/en/nproduct/palletayzer_robopac_rotoplat_508_pds_hqyvw"
+  ],
+  "connected_kw": 1.9,
+  "connected_note": "Встановлена потужність 1,9 кВт, живлення 230 В 1 ф — Robopac Rotoplat 508 PDS (дилерська сторінка).",
+  "connected_sources": [
+   "https://pack-trade.com/en/nproduct/palletayzer_robopac_rotoplat_508_pds_hqyvw"
+  ]
+ },
+ {
+  "role": "shrink_line",
+  "manufacturer": "Smipack",
+  "model": "FP8000CS (L-зварювач) + T652 (тунель)",
+  "reason": "Автоматичний L-зварювач із рамкою 840×710 мм і двокамерний термотунель тієї ж серії; деревообробка серед заявлених галузей.",
+  "specs": {
+   "L-зварювач — рамка": "840 × 710 мм",
+   "L-зварювач — висота пакета": "до 250 мм",
+   "L-зварювач — продуктивність": "до 2700 пакетів/год",
+   "L-зварювач — конвеєри": "10–30 м/хв",
+   "L-зварювач — плівка": "до 850 мм, Ø350 мм",
+   "L-зварювач — габарити": "2765 × 2225 × 1605–1765 мм; 820 кг; 3,95 кВт",
+   "Тунель T652": "двокамерний, пакет до 300 мм, 2–14,5 м/хв",
+   "Тунель — габарити": "1910 × 1045 × 1565 мм; 380 кг; 15,8 кВт",
+   "Разом": "19,75 кВт"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 19.75,
+  "sources": [
+   "https://www.smipack.it/products/4/1029/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en",
+   "https://www.smipack.it/products/4/1043/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en"
+  ],
+  "connected_kw": 19.75,
+  "connected_note": "Сума встановлених потужностей за даними Smipack: L-зварювач FP8000CS — 3950 Вт + термотунель T652 — 15 800 Вт.",
+  "connected_sources": [
+   "https://www.smipack.it/products/4/1029/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en",
+   "https://www.smipack.it/products/4/1043/semi-automatic-and-automatic-l-sealers-with-shrink-tunnel?lang=en"
+  ]
+ },
+ {
+  "role": "strapping",
+  "manufacturer": "Mosca",
+  "model": "SoniXs MS-6",
+  "reason": "Автоматична арочна стрепінг-машина з ультразвуковим зварюванням, захищеним від пилу й тирси.",
+  "specs": {
+   "Продуктивність": "до 52 обв'язок/хв (арка 550 × 500 мм)",
+   "Розміри арки": "від 450 × 400 до 1650 × 1800 мм (13 варіантів)",
+   "Стрічка PP": "5–15 мм, 0,40–0,90 мм",
+   "Стрічка PET": "9,5–15 мм",
+   "Висота столу": "310–560 мм",
+   "Зварювання": "ультразвукове SoniXs",
+   "Потужність": "0,2 кВт, 100–240 В",
+   "Маса": "205–300 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 0.2,
+  "sources": [
+   "https://www.mosca.com/en/Produkte/Umreifungsmaschinen/Umreifungsmaschinen/productdetail/sonixs-ms-6-728",
+   "https://www.mosca.com/en/product/datasheet/sonixs-ms-6-728/660"
+  ],
+  "connected_kw": 0.2,
+  "connected_note": "Споживана потужність 0,2 кВт, 100–240 В 50/60 Гц — Mosca SoniXs MS-6 (даташит виробника).",
+  "connected_sources": [
+   "https://www.mosca.com/en/product/datasheet/sonixs-ms-6-728/660"
+  ]
+ },
+ {
+  "role": "compressor",
+  "manufacturer": "Atlas Copco",
+  "model": "GA 37 VSD+ FF (×2) + ресивер LV911 900 л",
+  "reason": "Маслозаповнений гвинтовий компресор 37 кВт з частотним приводом і вбудованим рефрижераторним осушувачем; вертикальний ресивер 900 л.",
+  "specs": {
+   "Продуктивність FAD при 7 бар": "14,8–115,0 л/с (0,89–6,9 м³/хв)",
+   "Макс. тиск": "13 бар",
+   "Двигун": "37 кВт (IPM), VSD",
+   "Шум": "67 дБ(A)",
+   "Осушувач": "вбудований рефрижераторний, точка роси +3 °C",
+   "Маса": "500 кг (FF)",
+   "Габарити": "780 × 1273 × 1590 мм",
+   "Ресивер": "LV911, 900 л, 11 бар, вертикальний",
+   "У цьому плануванні": "2 компресори (робочий + резерв)"
+  },
+  "dimensions_mm": {
+   "L": 780,
+   "W": 1273,
+   "H": 1590
+  },
+  "power_kw": 37,
+  "sources": [
+   "https://storage.mtender.gov.md/get/6de37aeb-d954-4d2f-99c9-97a33c8dc183-1649407528882",
+   "https://shopct.atlascopco.com/en-GB/products/8101018078/lv911-ce-vessel-900l-11b"
+  ],
+  "connected_kw": 37,
+  "connected_note": "Встановлена потужність двигуна 37 кВт (один агрегат GA 37 VSD+, 4–12,5 бар) — каталог Atlas Copco GA 15-37 VSD+; повна вхідна потужність агрегату з вентилятором і перетворювачем окремо не опублікована.",
+  "connected_sources": [
+   "https://storage.mtender.gov.md/get/6de37aeb-d954-4d2f-99c9-97a33c8dc183-1649407528882"
+  ]
+ },
+ {
+  "role": "dust_extraction",
+  "manufacturer": "NESTRO Lufttechnik",
+  "model": "Kompakt-JET-Filter NKJ (32 000 м³/год)",
+  "reason": "Серійний компактний рукавний JET-фільтр для деревообробки з вентилятором, імпульсним очищенням і вивантаженням на брикетувальний прес; зовнішнє встановлення.",
+  "specs": {
+   "Витрата повітря": "13000–32000 м³/год (4 класи)",
+   "Площа фільтрування": "81–210 м²",
+   "Макс. розрідження": "3800 Па",
+   "Регенерація": "імпульс стисненого повітря (JET)",
+   "Вентилятор": "синхронно-реактивний двигун IE5 + частотний перетворювач",
+   "Площа основи": "1,92 × 4,32 м",
+   "Висота": "3680–5180 мм",
+   "Вивантаження": "бочки, брикетування, шлюзовий живильник, Big-Bag",
+   "Примітка": "для всіх верстатів заводу знадобиться 2 такі фільтри або проєктна система; у моделі показано один"
+  },
+  "dimensions_mm": {
+   "L": 4320,
+   "W": 1920,
+   "H": 5180
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.nestro.com/de/loesungen/filtersysteme/kompakt_jet_filters/"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: NESTRO для Kompakt-JET-Filter NKJ (13 000–32 000 м³/год) вказує лише привід IE5 (синхронно-реактивний двигун + перетворювач частоти); потужність двигуна вентилятора у відкритому доступі не знайдена (даташит — лише через issuu).",
+  "connected_sources": [
+   "https://www.nestro.com/de/loesungen/filtersysteme/kompakt_jet_filters/"
+  ]
+ },
+ {
+  "role": "biomass_boiler",
+  "manufacturer": "Kalvis",
+  "model": "K-500M (серія M, шнекова подача)",
+  "reason": "Промисловий котел на тирсі, трісці й брикетах зі шнековою подачею палива; виробник поширений в Україні.",
+  "specs": {
+   "Теплова потужність": "495 кВт",
+   "ККД": "82 % (паливо 35 % вологості)",
+   "Паливо": "тирса, тріска ≤50 мм, деревні відходи, брикети",
+   "Вологість палива": "до 45 %",
+   "Витрата палива": "194 кг/год",
+   "Маса": "3100 кг",
+   "Габарити В×Ш×Д": "2730 × 1460 × 2460 мм (без системи подачі)"
+  },
+  "dimensions_mm": {
+   "L": 2460,
+   "W": 1460,
+   "H": 2730
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.kalvis.lt/en/produktas/m-series-boilers-with-volcanic-fuel-supply/"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: Kalvis для K-500M наводить лише номінальну теплову потужність; електроспоживання (вентилятори, шнеки) не опубліковане.",
+  "connected_sources": [
+   "https://www.kalvis.lt/en/produktas/m-series-boilers-with-volcanic-fuel-supply/"
+  ]
+ },
+ {
+  "role": "briquetting_press",
+  "manufacturer": "Schuko",
+  "model": "Compacto CT 2500 75/160",
+  "reason": "Гідравлічний брикетувальний прес для тирси й стружки; ставиться під бункер фільтра.",
+  "specs": {
+   "Продуктивність": "150–200 кг/год",
+   "Діаметр брикета": "75 мм",
+   "Двигун": "15 кВт",
+   "Діаметр шнека": "160 мм",
+   "Вхідне приєднання": "Ø210 мм",
+   "Маса": "≈786 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 15,
+  "sources": [
+   "https://www.schuko.de/en/products-systems/briquetting-presses",
+   "https://www.schuko.de/fileadmin/content/PDFs/WG_12/Brikettierpressen/briquetting-presses-Compacto-GB.pdf"
+  ],
+  "connected_kw": null,
+  "connected_note": "не опубліковано: Schuko для Compacto CT 2500 75/160 вказує лише потужність гідравлічного двигуна 15 кВт; загальна потужність підключення (з подавальним шнеком) не наведена.",
+  "connected_sources": [
+   "https://www.schuko.de/fileadmin/content/PDFs/WG_12/Brikettierpressen/briquetting-presses-Compacto-GB.pdf"
+  ]
+ },
+ {
+  "role": "forklift",
+  "manufacturer": "Jungheinrich",
+  "model": "EFG 216",
+  "reason": "Електричний навантажувач 1,6 т; для складу ГП — щогла з підйомом до 6 м (у ряду варіантів 2900–7000 мм).",
+  "specs": {
+   "Вантажопідйомність": "1600 кг (центр ваги 500 мм)",
+   "Висота підйому": "3300 мм стандарт, варіанти 2900–7000 мм",
+   "Акумулятор": "48 В / 500 А·год",
+   "Швидкість": "15 км/год",
+   "Двигуни": "тяга 2 × 5,5 кВт, підйом 12 кВт",
+   "Радіус повороту": "1555 мм",
+   "Робочий прохід": "3227 мм (палета 1000×1200 поперек)",
+   "Довжина з вилами × ширина": "3144 × 1085 мм",
+   "Маса з АКБ": "2832 кг"
+  },
+  "dimensions_mm": {
+   "L": 3144,
+   "W": 1085,
+   "H": 2210
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.jungheinrich.co.uk/products/new-forklifts/forklifts/jungheinrich-electric-forklifts/efg-214-220-2499396",
+   "https://media-live2.prod.scw.jungheinrichcloud.com/resource/blob/2584562/7208cbf746b0706c81339af57c697f71/efg-2-2026-specsheet-en-2026-10-pdf-data.pdf"
+  ]
+ },
+ {
+  "role": "tugger",
+  "manufacturer": "Jungheinrich",
+  "model": "EZS 350",
+  "reason": "Електротягач із платформою для оператора; буксирує до 5 т візків комплектів і пакматеріалів.",
+  "specs": {
+   "Буксирувана маса": "5000 кг",
+   "Тягове зусилля": "1000 / 3700 Н",
+   "Швидкість з вантажем / без": "8 / 12,5 км/год",
+   "Акумулятор": "24 В / 465 А·год",
+   "Двигун": "2,8 кВт",
+   "Радіус повороту": "1210 мм",
+   "Довжина × ширина": "1390 × 810 мм",
+   "Маса з АКБ": "996 кг"
+  },
+  "dimensions_mm": {
+   "L": 1390,
+   "W": 810,
+   "H": 1320
+  },
+  "power_kw": 2.8,
+  "sources": [
+   "https://www.jungheinrich.co.uk/products/new-forklifts/tow-tractors/ezs-350-108324",
+   "https://media-live2.prod.scw.jungheinrichcloud.com/resource/blob/2498314/0709eaf0434ec15d22518e83e2a5e74d/ezs-3-2026-specsheet-en-2026-07-pdf-data.pdf"
+  ]
+ },
+ {
+  "role": "transformer",
+  "manufacturer": "Schneider Electric",
+  "model": "Trihal 1000 кВА 10/0,4 кВ, Dyn11, у кожусі IP31 (2 шт.)",
+  "reason": "Сухий трансформатор з литою ізоляцією класів C2/E2/F1 допускає встановлення всередині цеху поруч із ГРЩ; два по 1000 кВА покривають розрахунковий максимум ≈650–700 кВА з резервом N-1.",
+  "specs": {
+   "Номінальна потужність": "1000 кВА (природне повітряне охолодження AN; +40 % з примусовим AF)",
+   "Напруга": "ВН 10 кВ (клас ізоляції 12 кВ) / НН 400 В (до 433 В)",
+   "Схема і група з'єднань": "Dyn (трикутник / зірка з виведеною нейтраллю), напр. Dyn11",
+   "Напруга короткого замикання Uk": "6 %",
+   "Втрати навантаження": "8800 Вт при 75 °C; 10 000 Вт при 120 °C",
+   "Рівень шуму": "LWA 73 дБ(A); LPA 59 дБ(A) на 1 м",
+   "Клас нагрівостійкості ізоляції": "F (литий компаунд класу F)",
+   "Класи стійкості (IEC 60076-11 / HD 464)": "C2, E2, F1",
+   "Маса": "2390 кг у кожусі IP31 (2125 кг без кожуха IP00)",
+   "Габарити без кожуха (IP00)": "1525 × 945 × 1675 мм (Д × Ш × В)",
+   "Втрати / струм холостого ходу": "2000 Вт / 1,2 %",
+   "Примітка": "Габарити — кожух IP31 для класу ізоляції 7,2/12 кВ за даташитом Trihal Standard losses (NRJED311119EN); дані орієнтовні, остаточні — за кресленням після замовлення. power_kw не застосовується (потужність у кВА)."
+  },
+  "dimensions_mm": {
+   "L": 2000,
+   "W": 1170,
+   "H": 2400
+  },
+  "power_kw": null,
+  "sources": [
+   "https://zenex.home.pl/pub/katalogi/schneider/3_aparatura_sn/3_1_transformatory/3_1_1_transformator_zywiczny_resilglas/pdf/katalogi_i_ulotki/trihal_standard_losses_nrjed311119en.pdf",
+   "http://www.trinetgrup.ro/cat_schneider/pdf/Trihal.pdf",
+   "https://www.se.com/be/en/faqs/FA269764/"
+  ]
+ },
+ {
+  "role": "substation",
+  "manufacturer": "Schneider Electric",
+  "model": "RM6 NE-QIQI 24 кВ (моноблок РУ 10 кВ: 2 лінійні вимикачі навантаження I + 2 трансформаторні запобіжники-вимикачі Q)",
+  "reason": "Компактний елегазовий моноблок для вбудованої підстанції: два кабельні вводи 10 кВ (кільце) і два приєднання на трансформатори 2×1000 кВА із захистом запобіжниками Fusarc CF.",
+  "specs": {
+   "Номінальна напруга": "12 / 17,5 / 24 кВ (для мережі 10 кВ)",
+   "Номінальний струм збірних шин": "630 А (або 400 А)",
+   "Функція I (лінійний вимикач навантаження)": "630 А; Ik 20 кА 1 або 3 с (виконання 24 кВ / 630 А)",
+   "Функція Q (вимикач навантаження із запобіжниками)": "захист трансформатора, струм залежить від вибору запобіжника",
+   "Стійкість бака до внутрішньої дуги": "20 кА 1 с; опція IAC A-FL для кабельного відсіку",
+   "Ізоляційне середовище": "SF6, герметичний бак 0,2 бар, «запаяний на весь термін служби»",
+   "Ступінь захисту": "бак IP67; відсік НН і привід IP3X; кабельний відсік IP2XC; IK07",
+   "Маса": "390 кг (NE-QIQI)",
+   "Габарити (Д × Г × В)": "1619 × 710 × 1142 мм",
+   "Примітка щодо наступника": "SF6-вільна альтернатива того ж виробника — RM AirSeT",
+   "Примітка": "За уточненням координатора замість КТП — внутрішнє РУ 10 кВ. Дані з каталогу RM6 24 kV (AMTED398032EN, 2014); глибина 710 мм з кресленням, висота 1142 мм."
+  },
+  "dimensions_mm": {
+   "L": 1619,
+   "W": 710,
+   "H": 1142
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.more-energy.com.mx/wp-content/uploads/2017/09/AMTED398032EN_web.pdf",
+   "https://www.se.com/eg/en/product/RM63NIQI24D2SMEGY/rm6-3-functions-iqi-non-extensible-24-kv-cubicle/"
+  ]
+ },
+ {
+  "role": "main_switchboard",
+  "manufacturer": "Schneider Electric",
+  "model": "PrismaSeT P (Prisma Plus System P), шафи IP31/IP55 до 4000 А",
+  "reason": "Типово випробувана система ГРЩ до 4000 А з Icw 100 кА/1 с — із запасом для двох вводів по 1600 А, секційного вимикача та відхідних ліній; поширена в Україні.",
+  "specs": {
+   "Номінальний струм": "до 4000 А",
+   "Струм короткочасної стійкості Icw": "100 кА (дійсне) / 1 с",
+   "Ударний струм Ipk": "220 кА",
+   "Форми розділення": "форма 2, 3 (3b) або 4 за IEC 61439-2",
+   "Ступінь захисту": "IP30 / IP31 (з дверима й ущільненням) / IP55",
+   "Ударостійкість": "IK07 (рамка), IK08 (двері IP30), IK10 (двері IP55)",
+   "Ширина шаф": "300, 400, 650, 800 мм",
+   "Глибина шаф": "400 або 600 мм",
+   "Висота шаф": "2000 мм",
+   "Стандарти": "IEC 61439-1/-2",
+   "Напруга Ue / Ui (шини)": "690 В / 1000 В",
+   "Примітка": "dimensions_mm — одна шафа шириною 800 мм, глибиною 600 мм. Чинний каталог PrismaSeT P 4000 A (430E25000, v5.0, 2026) недоступний для автоматичного завантаження; параметри — з каталогу Prisma Plus P 2012 та дилерської сторінки."
+  },
+  "dimensions_mm": {
+   "L": 800,
+   "W": 600,
+   "H": 2000
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.linkpano.com.tr/en/prismaset-p.html",
+   "http://www.ncei-sa.com/wp-content/uploads/2017/10/11-PRISMA-P.pdf",
+   "https://www.se.com/uk/en/product-range/22928838-prismaset-p/",
+   "https://www.se.com/il/en/download/document/430E25000/"
+  ]
+ },
+ {
+  "role": "acb",
+  "manufacturer": "Schneider Electric",
+  "model": "MasterPact MTZ2 16 H1, 3P, висувний (LV848273) + MicroLogic 5.0 X",
+  "reason": "Повітряний вимикач 1600 А для вводу від трансформатора 1000 кВА (Iн НН ≈1445 А) і секційного вимикача; Icu 66 кА із запасом перекриває струм КЗ на шинах 0,4 кВ.",
+  "specs": {
+   "Номінальний струм In": "1600 А при 40 °C (номінали датчика 800–1600 А)",
+   "Гранична відключаюча здатність Icu": "66 кА при 220/415 В і 440 В",
+   "Робоча відключаюча здатність Ics": "66 кА (100 % Icu)",
+   "Номінальна напруга Ue / Ui / Uimp": "690 В / 1000 В / 12 кВ",
+   "Розцеплювач": "MicroLogic 2.0 X / 5.0 X (LSI, рекомендовано) / 6.0 X / 7.0 X",
+   "Категорія селективності": "B",
+   "Розсіювана потужність": "390 Вт",
+   "Габарити з кошиком (Ш × В × Г)": "441 × 439 × 403 мм",
+   "Маса": "90 кг",
+   "Струм короткочасної стійкості Icw / включаюча Icm": "66 кА 1 с (36 кА 3 с) / 145 кА",
+   "Примітка": "Розцеплювач MicroLogic X замовляється окремо (MicroLogic 5.0 X — LV847283 для фіксованого / LV847284 для висувного виконання за каталогом). L = ширина, W = глибина, H = висота."
+  },
+  "dimensions_mm": {
+   "L": 441,
+   "W": 403,
+   "H": 439
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/LV848273/",
+   "https://www.se.com/ua/uk/product/download-pdf/LV848273",
+   "https://www.electrocentr.com.ua/files/documentation/Masterpact_MTZ_catalog_numbers_2020_en"
+  ]
+ },
+ {
+  "role": "busbar_main",
+  "manufacturer": "Schneider Electric",
+  "model": "Canalis KTA 1600 А (алюміній), напр. KTA1600ED4403",
+  "reason": "Шинопровід 1600 А для зв'язку трансформатор 1000 кВА → ввід ГРЩ і головної магістралі; IP55, стійкість 65 кА.",
+  "specs": {
+   "Номінальний струм Ie": "1600 А при 35 °C (97 % при 40 °C)",
+   "Матеріал провідників": "алюміній",
+   "Полярність": "3L + N + PE",
+   "Напруга Ue / Ui": "1000 В / 1000 В",
+   "Струм короткочасної стійкості Icw": "65 кА (стандартне виконання)",
+   "Ударний струм Ipk": "143 кА",
+   "Ступінь захисту": "IP55, IK08",
+   "Переріз корпусу": "140 × 164 мм (Ш × В)",
+   "Погонна маса": "22 кг/м",
+   "Крок відгалужень": "880 мм (3 відгалуження на 4 м)",
+   "Сумісні відгалужувачі": "Canalis KS і KT, з ComPacT NSX — до 400 А (KSB400DC4)",
+   "Примітка": "Дані — для розподільної секції 4 м з відгалуженнями; для ділянки трансформатор → ГРЩ застосовують транспортні секції того ж ряду KTA 1600 без відгалужень (окремий даташит не завантажувався). Максимальний відгалужувач KT понад 400 А не перевірявся."
+  },
+  "dimensions_mm": {
+   "L": 4000,
+   "W": 140,
+   "H": 164
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/KTA1600ED4403",
+   "https://electrika.com/catalogues/schneider-electric/schneider-electric--miscellaneous/schneider-electric-miscellaneous/kgkhkvkt/kta1600ed4403/part/352251",
+   "https://www.electrika.com/catalogues/Schneider-Electric-Busbar-Trunking/Part-Number-Reference/KSB250DC4/Tap-off-unit-250A-Compact-NS/miscellaneous/ksb400dc4/part/125036"
+  ]
+ },
+ {
+  "role": "busbar_dist",
+  "manufacturer": "Schneider Electric",
+  "model": "Canalis KSA 630 А, розподільна секція 3 м з 6 відгалуженнями (KSA630ED4306)",
+  "reason": "Шинопровід із штепсельними відгалуженнями вздовж лінії верстатів: живлення кожного верстата через відгалужувач з автоматом без окремих кабелів від ГРЩ.",
+  "specs": {
+   "Номінальний струм Ie": "630 А при 35 °C (ряд KSA 500…1000 А)",
+   "Матеріал провідників": "алюміній",
+   "Полярність": "3L + N + PE (4 полюси)",
+   "Напруга Ue / Ui / Uimp": "230…690 В / 690 В / 8 кВ",
+   "Струм короткочасної стійкості Icw": "32,1 кА",
+   "Ударний струм Ipk": "67,5 кА",
+   "Кількість відгалужень": "6 на секцію 3 м",
+   "Крок відгалужень": "1000 мм",
+   "Ступінь захисту": "IP55, IK08",
+   "Переріз корпусу": "113 × 146 мм (Ш × В)",
+   "Маса секції": "36,4 кг",
+   "Стандарти": "IEC 61439-1, IEC 61439-6"
+  },
+  "dimensions_mm": {
+   "L": 3000,
+   "W": 113,
+   "H": 146
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/KSA630ED4306"
+  ]
+ },
+ {
+  "role": "tapoff",
+  "manufacturer": "Schneider Electric",
+  "model": "Canalis KSB160DC4 — відгалужувач 160 А під ComPacT NSX100/160 (ряд KSB…DC4 до 400 А)",
+  "reason": "Штепсельна коробка відгалуження з автоматом NSX для живлення окремого верстата від шинопроводу KS/KT; для більших споживачів — KSB250DC4 / KSB400DC4.",
+  "specs": {
+   "Номінальний струм": "160 А при 35 °C (ряд: 160 / 250 / 400 А — KSB160DC4 / KSB250DC4 / KSB400DC4)",
+   "Апарат захисту": "ComPacT NSX100 або NSX160 (замовляється окремо)",
+   "Сумісність": "шинопроводи Canalis KS і KT",
+   "Полярність": "3L + N + PE",
+   "Напруга Ue / Uimp": "400–500 В (залежно від апарата) / 6,8 кВ",
+   "Керування": "подовжена поворотна рукоятка",
+   "Підключення кабелю": "кабельні наконечники, до 70 мм²",
+   "Ступінь захисту": "IP55, IK08",
+   "Габарити (Ш × В × Г)": "450 × 310 × 246 мм",
+   "Маса": "9,5 кг"
+  },
+  "dimensions_mm": {
+   "L": 450,
+   "W": 246,
+   "H": 310
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/KSB160DC4",
+   "https://www.electrika.com/catalogues/Schneider-Electric-Busbar-Trunking/Part-Number-Reference/KSB250DC4/Tap-off-unit-250A-Compact-NS/miscellaneous/ksb400dc4/part/125036",
+   "https://www.voltimum.co.uk/product-details/Goi5Mtbs/schneider-electric/tap-off-unit-160a-compact-ns"
+  ]
+ },
+ {
+  "role": "power_meter",
+  "manufacturer": "Schneider Electric",
+  "model": "PowerLogic PM5560 (METSEPM5560)",
+  "reason": "Лічильник класу 0,2S з Ethernet Modbus TCP для обліку споживання кожного фідера/лінії та передачі даних у SCADA/EMS цеху.",
+  "specs": {
+   "Клас точності": "0,2S (активна енергія, IEC 62053-22); реактивна ±1 %",
+   "Вимірювані величини": "струм, напруга, частота, P, Q, S, cos φ, енергія, багатотарифний облік",
+   "Якість електроенергії": "гармоніки до 63-ї",
+   "Зв'язок": "Modbus TCP/IP (2 порти Ethernet), BACnet IP, DNP3, Modbus RTU RS-485",
+   "Вимірювальні входи": "1 А / 5 А (через ТС); 20–400 В Ф-N, 20–828 В Ф-Ф",
+   "Входи / виходи": "4 цифрові входи, 2 цифрові виходи",
+   "Пам'ять / веб-сервер": "1,1 МБ журналів, вбудований веб-сервер, e-mail сповіщення",
+   "Живлення": "90–528 В AC або 100–300 В DC; до 16 ВА",
+   "Ступінь захисту": "IP54 спереду, IP30 ззаду",
+   "Габарити": "96 × 96 × 72 мм (монтаж у двері шафи)",
+   "Маса": "0,45 кг"
+  },
+  "dimensions_mm": {
+   "L": 96,
+   "W": 72,
+   "H": 96
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/METSEPM5560"
+  ]
+ },
+ {
+  "role": "pfc",
+  "manufacturer": "Schneider Electric",
+  "model": "PowerLogic VarSet 350 квар, з антирезонансними дроселями 3,8 (190 Гц), верхній ввід, з автоматом (VLVAF5P03517AK) — по одній на секцію шин",
+  "reason": "Автоматична КРМ з розстроєними дроселями для мережі з частотними перетворювачами верстатів; 2 × 350 квар на дві секції шин 0,4 кВ.",
+  "specs": {
+   "Номінальна реактивна потужність": "350 квар при 400/415 В, 50 Гц",
+   "Ступені": "50 + 3 × 100 квар (крок 50 квар)",
+   "Контролер": "PowerLogic PFC VPL6 (VarPlus Logic)",
+   "Антирезонансні дроселі": "так, коефіцієнт 3,8 (частота настроювання 190 Гц)",
+   "Допустимий рівень гармонік": "Gh/Sn 25–50 %, THDu 4–7 %",
+   "Захист вводу": "автоматичний вимикач, Icu 50 кА",
+   "Захист ступенів": "запобіжники (КЗ), контроль гармонік контролером",
+   "Ступінь захисту": "IP31, IK10, установка в приміщенні",
+   "Температура роботи": "−5…+45 °C",
+   "Маса": "до 450 кг",
+   "Габарити (Ш × Г × В)": "800 × 600 × 2200 мм",
+   "Примітка": "Потужність КРМ (2 × 350 квар) обрана під трансформатори 2 × 1000 кВА; потребує перевірки за розрахунком cos φ проєкту. power_kw не застосовується (квар)."
+  },
+  "dimensions_mm": {
+   "L": 800,
+   "W": 600,
+   "H": 2200
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/ua/uk/product/download-pdf/VLVAF5P03517AK",
+   "https://www.voltimum.co.uk/products/schneider-electric/energy-management-controller/varset-capacitor-bank-auto-350kvar-dr38-top-entry-400v-50hz-cb-vlvaf5p03517ak"
+  ]
+ },
+ {
+  "role": "highbay",
+  "manufacturer": "Signify (Philips)",
+  "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD WB (код 911401629908)",
+  "reason": "Промисловий LED-дзвін IP65/IK08 зі світловим потоком 20 500 лм і драйвером DALI-2 — підходить для монтажу на 8–9 м у запиленому деревообробному цеху та для групового керування з датчиками.",
+  "specs": {
+   "Світловий потік": "20 500 лм",
+   "Потужність": "126 Вт",
+   "Світловіддача": "163 лм/Вт",
+   "Колірна температура": "4000 K (840)",
+   "Індекс кольоропередачі": "Ra > 80",
+   "Ступінь захисту": "IP65, IK08",
+   "Керування": "DALI-2 (PSD), мінімальний рівень диммування 10 %",
+   "Оптика": "широка (WB), 85° × 85°, UGR 25",
+   "Габарити": "Ø330 мм, висота 99 мм",
+   "Маса": "3,54 кг",
+   "Збереження потоку": "L85 при 50 000 год; L75 при 100 000 год"
+  },
+  "dimensions_mm": {
+   "L": 330,
+   "W": 330,
+   "H": 99
+  },
+  "power_kw": 0.126,
+  "lumen": 20500,
+  "watt": 126,
+  "airflow_m3h": null,
+  "heat_kw": null,
+  "sources": [
+   "https://www.signify.com/en-gb/prof/indoor-luminaires/high-bay-and-low-bay/high-bay/philips-coreline-highbay-gen5/911401629908_EU/product"
+  ]
+ },
+ {
+  "role": "highbay_rack",
+  "manufacturer": "Signify (Philips)",
+  "model": "CoreLine Highbay Gen5 BY121P G5 LED200S/840 PSD NB (код 911401629808)",
+  "reason": "Те саме сімейство з вузькою оптикою 55° — концентрує світло в проходах між 7,4-метровими стелажами; DALI-2 дозволяє приглушувати світло в проходах за відсутності людей.",
+  "specs": {
+   "Світловий потік": "20 500 лм",
+   "Потужність": "126 Вт",
+   "Світловіддача": "163 лм/Вт",
+   "Колірна температура": "4000 K",
+   "Індекс кольоропередачі": "Ra > 80",
+   "Ступінь захисту": "IP65, IK08",
+   "Керування": "DALI-2, мінімальний рівень диммування 10 %",
+   "Оптика": "вузька (NB), кут 55°, UGR 22",
+   "Габарити": "Ø330 мм, висота 99 мм",
+   "Маса": "3,54 кг",
+   "Примітка": "Окремої «коридорної» (асиметрично витягнутої) оптики в сімействі Gen5 у переглянутих джерелах не знайдено — використано NB 55°. Для менших проходів є пакет LED105S: 10 500 лм / 69 Вт (WB, DALI-2)."
+  },
+  "dimensions_mm": {
+   "L": 330,
+   "W": 330,
+   "H": 99
+  },
+  "power_kw": 0.126,
+  "lumen": 20500,
+  "watt": 126,
+  "airflow_m3h": null,
+  "heat_kw": null,
+  "sources": [
+   "https://www.signify.com/en-gb/prof/indoor-luminaires/high-bay-and-low-bay/high-bay/philips-coreline-highbay-gen5/911401629808_EU/product",
+   "https://www.signify.com/en-gb/prof/indoor-luminaires/high-bay-and-low-bay/high-bay/philips-coreline-highbay-gen5/911401629708_EU/product"
+  ]
+ },
+ {
+  "role": "emergency",
+  "manufacturer": "Zemper",
+  "model": "Spazio High Bay LUE4700LX (біла RAL9003)",
+  "reason": "Автономний аварійний світильник саме для високих стель (high bay) з потоком 680 лм в аварійному режимі, IP65/IK10 та автотестом — для евакуаційного освітлення відкритих зон цеху й складу.",
+  "specs": {
+   "Світловий потік в аварійному режимі": "680 лм (LUE4700LX), 600 лм (чорна версія LUE4700LXN)",
+   "Автономність": "1 год",
+   "Акумулятор": "LiFePO₄ 6,4 В, 1,5 А·год; час заряду 24 год",
+   "Режим": "непостійної дії (NM)",
+   "Тестування": "AutoTest",
+   "Ступінь захисту": "IP65 (з аксесуаром), IK10",
+   "Колірна температура": "4000 K",
+   "Живлення": "230 В",
+   "Робоча температура": "0…+40 °C",
+   "Корпус": "полікарбонат, накладний монтаж на стелю/стіну",
+   "Потужність, габарити, маса": "на сторінці виробника не опубліковано (null)",
+   "Примітка": "Автономність лише 1 год — перевірити вимогу до тривалості для об'єкта. Альтернатива з центральним живленням: Teknoware Solid Zone Highbay TWT3756WK — 2500 лм, 30 Вт, IP65, 371×181×57 мм, 1,10 кг, монтаж 3–30 м (автономність задає центральна батарея)."
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "lumen": 680,
+  "watt": null,
+  "airflow_m3h": null,
+  "heat_kw": null,
+  "sources": [
+   "https://zemper.com/en/producto/spazio-high-bay/",
+   "https://www.teknoware.com/emergency-lighting/product/twt3756wk/"
+  ]
+ },
+ {
+  "role": "lighting_control",
+  "manufacturer": "Helvar",
+  "model": "Imagine 950 DALI-2 Router (4 лінії DALI) + високоповісний мультисенсор 322",
+  "reason": "Роутер на DIN-рейку керує чотирма лініями DALI-2 (до 512 пристроїв) і об'єднується з іншими роутерами по Ethernet; сенсор 322 (IP65) розрахований на монтаж до 17 м і дає присутність та підтримку рівня освітленості (bright-out) для груп світильників.",
+  "specs": {
+   "Лінії DALI": "4 (DALI-2 multi-master application controller)",
+   "Кількість пристроїв": "512 (128 на лінію: 64 світильники/сервіси + 63 датчики/контроли DALI-2)",
+   "Струм живлення шини DALI": "4 × 240 мА (гарантовано), 4 × 250 мА (макс.)",
+   "Мережа": "2 × RJ45 Ethernet 10/100/1000 Мбіт/с, об'єднання роутерів по TCP/IP",
+   "Живлення": "220–240 В AC",
+   "Споживана потужність": "35 Вт (усі лінії навантажені)",
+   "Габарити / маса": "177 × 99,5 × 58 мм (10 модулів DIN), 460 г",
+   "Ступінь захисту / робоча температура": "IP20; 0…+40 °C",
+   "Аварійне освітлення": "підтримка тестування DALI-аварійних світильників",
+   "Сенсор 322": "IP65; макс. висота монтажу 17 м; зона виявлення 346 м² на 15 м і 87 м² на 7 м; споживання від шини DALI 10 мА; функція bright-out лише в системі з роутером"
+  },
+  "dimensions_mm": {
+   "L": 177,
+   "W": 100,
+   "H": 58
+  },
+  "power_kw": 0.035,
+  "lumen": null,
+  "watt": null,
+  "airflow_m3h": null,
+  "heat_kw": null,
+  "sources": [
+   "https://helvar.com/product/950-dali-2-multi-master-application-controller/",
+   "https://lenalighting.com/images/IoT%20komonenty/Karty%20katalogowe/W03021%20Router%20DALI-2%204%20magistrale%20HEL%20IMAGINE%20950%20IoT%20Karta%20katalogowa%20EN.pdf",
+   "https://helvar.com/product/322-high-bay-multisensor/",
+   "https://lenalighting.com/images/IoT%20komonenty/Karty%20katalogowe/624247%20Czujnik%20PIR%20HB%20HEL%20DALI%20322%20IoT%20Karta%20Katalogowa%20EN.pdf"
+  ]
+ },
+ {
+  "role": "roofvent",
+  "manufacturer": "Hoval",
+  "model": "RoofVent RH-9C (типорозмір 9, водяний нагрівач тип C)",
+  "reason": "Децентралізована дахова припливно-витяжна установка з пластинчастим рекуператором і водяним нагрівачем для залів до 25 м висоти — живиться від котельні (водяний теплоносій) і розподіляє повітря через Air-Injector на висоту 9 м.",
+  "specs": {
+   "Номінальна витрата повітря": "8000 м³/год (мін. 5000 м³/год)",
+   "Площа обслуговування однією установкою": "797 м²",
+   "Ефективність рекуперації (пластинчастий теплообмінник)": "78 % суха / 90 % волога",
+   "Теплова потужність нагрівача (тип C)": "116,8 кВт; на покриття тепловтрат 102,4 кВт; t припливу 56,0 °C; витрата води 5017 л/год; Δp води 15 кПа",
+   "Умови для теплової потужності": "теплоносій 80/60 °C, зовнішнє повітря −15 °C, приміщення 18 °C, витяжне 20 °C / 20 %",
+   "Нагрівач тип B (альтернатива)": "71,2 кВт; Hmax 12,0 м; t припливу 39,1 °C",
+   "Висота монтажу": "мін. 5 м; макс. ≈ 9…25 м залежно від умов (для RH-9C Hmax = 9,2 м за наведених умов); крок між установками 13–28 м",
+   "Електроживлення": "3 × 400 В, 50 Гц; приєднана потужність 8,6 кВт; макс. струм 14,4 А",
+   "Габарити дахового блока": "довжина 2380 мм по верху (1950 мм по основі), ширина 1750 мм, висота 2080 мм",
+   "Габарити підпокрівельної частини": "з'єднувальний модуль 1240 × 1240 мм; загальна висота під покрівлею 1850 мм (модуль V0) … 2850 мм (V3); Air-Injector Ø1100 мм",
+   "Маса": "загальна 1104 кг: даховий блок 900 кг, підпокрівельна частина 204 кг (+ модуль V0 94 кг)",
+   "Фільтрація / шум": "ePM1 55 % (свіже повітря), ePM10 65 % (витяжне); рівень звукової потужності корпусу 72 дБ(A)"
+  },
+  "dimensions_mm": {
+   "L": 2380,
+   "W": 1750,
+   "H": 2080
+  },
+  "power_kw": 8.6,
+  "lumen": null,
+  "watt": null,
+  "airflow_m3h": 8000,
+  "heat_kw": 116.8,
+  "sources": [
+   "https://d24wsxjsjg3bg4.cloudfront.net/PRODUCTS/VENTILATION/RoofVent/RoofVent-RC/BA_RoofVent_4214745_v06_en_2024-01-29-124839_rsiq.pdf",
+   "https://hoval.com.ua/wp-content/uploads/2023/06/BA_RoofVent_4214745_v05_en.pdf",
+   "https://www.hoval.co.uk/en_GB/Climate-technology/Indoor-Climate-Systems/Ventilation/RoofVent/RoofVent-RH/p/B_roofvent-rh"
+  ]
+ },
+ {
+  "role": "make_up_ahu",
+  "manufacturer": "VTS Group",
+  "model": "VENTUS VVS180 (припливно-витяжний секційний агрегат)",
+  "reason": "Секційний агрегат типорозміру 180 закриває потрібний діапазон 15 000–25 000 м³/год для компенсаційного припливу фарбувальних камер і витяжки дільниці фасадів; комплектується водяним нагрівачем від котельні та рекуператором.",
+  "specs": {
+   "Рекомендований діапазон витрати": "мін. 8640 м³/год; макс. 18 540 м³/год (з охолоджувачем), 23 400 м³/год (з нагрівачем), 30 600 м³/год (фільтр), 32 400 м³/год (вентилятор)",
+   "Номінальна витрата": "у брошурі не наведено (null) — визначається підбором у програмі виробника",
+   "Висота корпусу (один ярус)": "1387 мм (внутрішня 1197 мм)",
+   "Ширина корпусу": "2105 мм (внутрішня 2005 мм)",
+   "Висота у двоярусному виконанні з роторним рекуператором": "2684 мм",
+   "Висота опорної рами": "90 мм",
+   "Довжина": "залежить від набору секцій (null)",
+   "Корпус": "сендвіч-панелі 50 мм",
+   "Електрична потужність / теплова потужність": "залежать від конфігурації, у брошурі не наведено (null)",
+   "Примітка": "Для витяжки з фарбувальних камер (пари розчинників) потрібні вибухозахищені вентилятори та рекуператор без переносу домішок (пластинчастий або гліколевий контур) — ATEX-виконання уточнити у виробника. Джерело — брошура VTS для ринку Індії; актуальність для України перевірити у представника."
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": 2105,
+   "H": 1387
+  },
+  "power_kw": null,
+  "lumen": null,
+  "watt": null,
+  "airflow_m3h": null,
+  "heat_kw": null,
+  "sources": [
+   "https://vtsgroup.com/files/document-files/3893/IN_Brochure_VENTUS%20VVS,SVS.pdf"
+  ]
+ },
+ {
+  "role": "fabric_duct",
+  "manufacturer": "Prihoda",
+  "model": "Текстильний повітророзподільник Prihoda Premium NMI (неповітропроникна тканина), круглий переріз",
+  "reason": "Текстильний повітровід з мікроперфорацією дає рівномірну подачу з малою швидкістю — без протягів над свіжофарбованими фасадами в зоні фарбування й сушіння; тканина з карбоновою ниткою відводить статичний заряд, клас реакції на вогонь B-s1,d0.",
+  "specs": {
+   "Матеріал": "100 % поліестер (PES) з вплетеною вуглецевою ниткою (антистатик)",
+   "Клас реакції на вогонь": "B-s1,d0 за EN 13501-1 (протокол класифікації PK-22-213, NMR/NMI/PMI)",
+   "Поверхнева маса тканини NMI": "200–320 г/м²",
+   "Товщина тканини NMI": "0,31–0,45 мм",
+   "Діаметри": "100–2000 мм (стандартний ряд 100…2000)",
+   "Рекомендована швидкість на вході": "1400–1800 фут/хв ≈ 7,1–9,1 м/с для круглих повітроводів",
+   "Витрата на діаметр (розрахунок за швидкістю 7,1–9,1 м/с)": "Ø630 — ≈ 8 000–10 300 м³/год; Ø800 — ≈ 12 900–16 500 м³/год; Ø1000 — ≈ 20 100–25 900 м³/год",
+   "Типи випуску": "мікроперфорація 0,2–0,4 мм, перфорація від 4 мм, малі сопла 20/30/40 мм, великі сопла",
+   "Обслуговування": "машинне прання до 40 °C",
+   "Примітка": "Витрати на діаметр — власний розрахунок за опублікованою виробником швидкістю, табличних значень виробник не публікує (є онлайн-калькулятор). Придатність для зони з парами розчинників (ATEX) підтвердити у виробника."
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": 1000,
+   "H": 1000
+  },
+  "power_kw": null,
+  "lumen": null,
+  "watt": null,
+  "airflow_m3h": null,
+  "heat_kw": null,
+  "sources": [
+   "https://www.prihoda.com/wp-content/uploads/2022/02/TD-EN.pdf",
+   "https://www.eboss.co.nz/assets/literature/287/31528/fabric-ducting-technical-data-usa-prihoda.pdf",
+   "https://www.prihoda.com/wp-content/uploads/2023/02/NMRNMIPMI-B-s1-d0-ENG.pdf",
+   "https://prihoda.com/en/material"
+  ]
+ },
+ {
+  "role": "wall_fan",
+  "manufacturer": "VENTS (Вентс, Україна)",
+  "model": "OV 4E 500 (осьовий настінний вентилятор, код 1009611)",
+  "reason": "Український осьовий вентилятор на квадратній настінній плиті з витратою 7060 м³/год — відповідає витяжці тепла ≈ 24 кВт від двох сухих трансформаторів 1000 кВА; трифазна версія ОВ 4Д 500 продається в Україні.",
+  "specs": {
+   "Максимальна витрата": "7060 м³/год",
+   "Споживана потужність": "420 Вт",
+   "Живлення / струм": "230 В, 50 Гц; 1,95 А",
+   "Частота обертання": "1300 об/хв",
+   "Рівень шуму": "58 дБ(A) на 3 м",
+   "Робоча температура повітря": "−30…+60 °C",
+   "Ступінь захисту": "двигун IP44, вентилятор у зборі IP24",
+   "Габарити монтажної плити": "655 × 655 мм; мін. отвір у стіні Ø520 мм; глибина не опублікована",
+   "Маса": "14,2 кг",
+   "Ресурс двигуна": "40 000 год",
+   "Розрахунок для електрощитової": "24 кВт / (1,2 кг/м³ × 1,005 кДж/(кг·K) × ΔT): при ΔT = 10 K ≈ 7 160 м³/год, при ΔT = 8 K ≈ 8 960 м³/год — тобто 1–2 вентилятори (рекомендовано 2 для резерву)",
+   "Примітка": "Для кімнати заряджання тягових акумуляторів (виділення водню) потрібне вибухозахищене виконання — OV 4E 500 не має маркування Ex; підібрати Ex-вентилятор окремо."
+  },
+  "dimensions_mm": {
+   "L": 655,
+   "W": 655,
+   "H": null
+  },
+  "power_kw": 0.42,
+  "lumen": null,
+  "watt": 420,
+  "airflow_m3h": 7060,
+  "heat_kw": null,
+  "sources": [
+   "https://www.emas.cz/var/files/255516-elveve0571928.pdf",
+   "https://www.onninen.fi/en/vents-axial-fan-ov-4e-500/p/ASM981",
+   "https://epicentrk.ua/ua/shop/ventyliator-osovyi-vents-ov-4d-500.html"
+  ]
+ },
+ {
+  "role": "ex_fan",
+  "manufacturer": "Systemair",
+  "model": "EX 140A-4 (арт. SA135277), 3~ 400 В, вибухозахищений канальний відцентровий вентилятор",
+  "reason": "Systemair позиціонує серію EX саме для приміщень зарядки акумуляторів, а вентилятор сертифікований для зони 1 з групою IIB+H2, тобто для газів IIB і окремо для водню (газ групи IIC), тоді як вентилятор лише з IIB для водню не підходить. Чистий IIC на вентилятор у зборі цього розміру виробники не публікують (Casals, Rosenberg, S&P, Elektrodesign мають IIB+H2 на вентилятор і IIC лише на двигун), а максимальна витрата 644 м³/год дає запас приблизно ×4 до потрібних 158 м³/год.",
+  "specs": {
+   "Маркування ATEX": "II 2G Ex db eb h IIB+H2 T4 Gb, сертифікат Presafe 16 ATEX 8598 X",
+   "Група газів": "IIB+H2: гази IIA та IIB, а також водень (H2, газ групи IIC). Це не повний IIC: ацетилен і CS2 не покриваються, для зарядної кімнати вони не потрібні",
+   "Зона / категорія / температурний клас": "зони 1 і 2, категорія 2G, EPL Gb; T4 (поверхня ≤135 °C). Водень має клас T1, тож T4 підходить із запасом",
+   "Потрібна витрата за EN IEC 62485-3:2014": "Q = 0,055 м³/А·год · n · Igas = 0,055 · 24 · 40 А = 52,8 м³/год на одну батарею, разом 3 × 52,8 = 158,4 м³/год. Igas = 0,4 · 100 А, бо струм кінця заряду невідомий; припущено зарядний пристрій 48 В / 100 А. Константа 0,055 уже містить коефіцієнт безпеки, додатковий запас посібник ZVEI не вимагає. Для зарядного пристрою 48 В / 120 А: 3 × 63,4 = 190,1 м³/год. Перевірка за старою EN 50272-3 (Q = 0,05·n·Igas·Crt·10⁻³, Igas = 60 мА/А·год для IUI): 3 × 36 = 108 м³/год",
+   "Максимальна витрата повітря": "644 м³/год (380–415 В Y, 50 Гц); мінімальна витрата 100 м³/год; робочу точку для мережі (зонт, повітропровід Ø160 мм ≈ 6–7 м, дахова насадка) треба підібрати в конфігураторі Systemair",
+   "Споживана потужність / струм": "178 Вт / 0,73 А (380–415 В Y); 171 Вт / 1,2 А (230 В Δ)",
+   "Напруга живлення": "3~ 380–415 В (Y) або 230 В (Δ), 10–50 Гц",
+   "Частота обертання": "820–1490 об/хв, регулювання 5-ступеневим трансформатором (95/145/190/240/400 В) або перетворювачем частоти FCiC2 (встановлюється поза зоною Ex)",
+   "Габарити": "301 × 227 × 285 мм (розміри A × C × D за кресленням виробника); фланець виходу 130 × 120 мм, приєднання до Ø160 мм через з'єднувальний комплект",
+   "Маса": "6,3 кг",
+   "Захист двигуна / корпус": "PTC-термістор обов'язково підключити до пристрою за EN 50495 (виробник рекомендує U-EK230E); корпус із силуміну; на вході й виході потрібен захист IP20; температура навколишнього середовища від −20 до +50 °C"
+  },
+  "dimensions_mm": {
+   "L": 301,
+   "W": 227,
+   "H": 285
+  },
+  "power_kw": 0.178,
+  "airflow_m3h": 644,
+  "required_m3h": 158.4,
+  "sources": [
+   "https://www.zvei.org/fileadmin/user_upload/Verband/Fachverbaende/Batterien/Merkblaetter/Industriebatterien/14e-Leaflet-Ventilation_of_battery_charging_rooms_for_lead_traction_batteries_01.pdf",
+   "https://www.agroarbo.nl/bijlage-voorbeeldberekening-van-de-benodigde-hoeveelheid-ventilatie",
+   "https://certifico.com/component/attachments/download/260",
+   "https://www.systemair.com/en/products/fans/centrifugal-fans/ex",
+   "https://en.ventilatory.net/media/catalog/product/data/manual-ex-en.pdf",
+   "https://en.ventilatory.net/ex-140a-4.html",
+   "https://www.casals.com/en/fanware/60/fans/18663-cth3-a-400-t6-0-37kw-atex",
+   "https://www.elektrodesign.cz/en/eshop/tcv-254-400-v-pe-ptc-ip55-anti-corrosive-fan"
+  ]
+ },
+ {
+  "role": "facp",
+  "manufacturer": "Siemens (Smart Infrastructure)",
+  "model": "Cerberus PRO FC726-ZA (модульний, корпус Large)",
+  "reason": "Модульна адресна ППКП сімейства Cerberus PRO, яку виробник позиціонує для промислових об'єктів і виробничих цехів; 1512 адрес і розширення до 28 кілець дають запас ≥10 % ємності, що вимагає п. 7.2.20 ДБН В.2.5-56. Siemens представляє Cerberus PRO на українському сайті siemens.com/uk-ua.",
+  "specs": {
+   "Кількість адрес C-NET": "макс. 1512",
+   "Вбудовані шлейфи": "4 кільця / 8 променів (з розширенням лінії — 8 / 16)",
+   "Розширення": "до 28 кілець / 56 променів (додаткові лінійні карти FCL2008-A1)",
+   "Адрес на кільце": "макс. 252 (лінійна карта FCL2001-A1 / FCL2008-A1)",
+   "Мережа": "до 64 станцій (C-WEB/LAN, SAFEDLINK), 1 порт Ethernet RJ45",
+   "Живлення": "AC 115/230 В; блок живлення 250 Вт",
+   "Акумулятори": "2×12 В, макс. 45 А·год; резервний режим до 72 год",
+   "Журнал подій": "до 13000 подій",
+   "Ступінь захисту / температура": "IP30; −8…+42 °C",
+   "Відповідність": "EN 54-2:1997+A1:2006, EN 54-4:1997+A1+A2 (декларація характеристик); VdS G210084, LPCB 126bn/08, FM 3051081",
+   "Габарити (Ш×В×Г)": "443×802×288 мм з кришкою (430×796×265 мм без кришки)"
+  },
+  "dimensions_mm": {
+   "L": 443,
+   "W": 288,
+   "H": 802
+  },
+  "power_kw": 0.25,
+  "sources": [
+   "https://sid.siemens.com/v/u/A6V10303108",
+   "https://sid.siemens.com/api/khub/documents/2UMAXSvhoOSNPptNXNKSqw/content",
+   "https://sid.siemens.com/v/u/A6V10409753",
+   "https://sid.siemens.com/api/khub/documents/3Wo1Avp9Eth0faU0a0D6eg/content",
+   "https://www.siemens.com/uk-ua/products/cerberus/pro-modular/"
+  ]
+ },
+ {
+  "role": "multi_detector",
+  "manufacturer": "Siemens (Smart Infrastructure)",
+  "model": "Cerberus PRO OOH740 (мультисенсорний оптико-тепловий, ASAtechnology)",
+  "reason": "Два оптичні (пряме/зворотне розсіювання) і два теплові сенсори з алгоритмами ASA; виробник прямо заявляє стійкість до пилу, волокон та інших оманливих явищ, тому підходить для деревообробних ліній.",
+  "specs": {
+   "Принцип виявлення": "розсіяне світло (2 оптичні сенсори) + 2 теплові сенсори; програмно — мультисенсорний, димовий або тепловий",
+   "Обробка сигналу": "ASAtechnology, вибір параметрних наборів під застосування",
+   "Стійкість до впливів": "пил, волокна, комахи, волога, ЕМ-завади, корозійні пари, вібрація, штучні аерозолі",
+   "Напруга живлення": "DC 12…33 В (модульована, C-NET)",
+   "Струм спокою": "~170…250 мкА",
+   "Робоча температура": "−25…+55 °C",
+   "Ступінь захисту": "IP40; IP44 з ущільненням бази RS720/BA721",
+   "Стандарти": "EN 54-5, EN 54-7, EN 54-17, EN 54-29",
+   "Сертифікати": "VdS G211070, LPCB 126bv/04, FM 3051081",
+   "Ізолятор КЗ": "вбудований роз'єднувач лінії",
+   "Маса": "0,100 кг",
+   "Габарити з базою DB72x": "Ø117 × 49 мм (без бази Ø106 × 43 мм)"
+  },
+  "dimensions_mm": {
+   "L": 117,
+   "W": 117,
+   "H": 49
+  },
+  "power_kw": null,
+  "sources": [
+   "https://sid.siemens.com/v/u/A6V10334425",
+   "https://sid.siemens.com/api/khub/documents/2A~v3Qt5vo3qT7TIfUa4yQ/content"
+  ]
+ },
+ {
+  "role": "smoke_detector",
+  "manufacturer": "Siemens (Smart Infrastructure)",
+  "model": "Cerberus PRO OP720 (точковий оптичний димовий)",
+  "reason": "Простий адресний оптичний димовий сповіщувач тієї ж лінійки C-NET для складів готової продукції та стелажних зон, де немає технологічного пилу.",
+  "specs": {
+   "Принцип виявлення": "розсіяне світло, 1 оптичний сенсор (пряме розсіювання)",
+   "Параметрні набори": "2: 'Standard' / 'Sensitive'",
+   "Напруга живлення": "DC 12…33 В (C-NET)",
+   "Струм спокою": "~220 мкА",
+   "Робоча температура": "−10…+55 °C",
+   "Ступінь захисту": "IP40; IP42 з ущільненням RS720",
+   "Стандарти": "EN 54-7, EN 54-17",
+   "Сертифікати": "VdS G209068, LPCB 531e/01, FM 3038424",
+   "Маса": "0,138 кг",
+   "Габарити з базою": "Ø117 × 56 мм (без бази Ø105 × 45 мм)"
+  },
+  "dimensions_mm": {
+   "L": 117,
+   "W": 117,
+   "H": 56
+  },
+  "power_kw": null,
+  "sources": [
+   "https://sid.siemens.com/v/u/A6V10248349",
+   "https://sid.siemens.com/api/khub/documents/XmTWCg1H75h3AzNErl1OCA/content"
+  ]
+ },
+ {
+  "role": "heat_detector",
+  "manufacturer": "Siemens (Smart Infrastructure)",
+  "model": "Cerberus PRO HI720 (тепловий максимально-диференційний)",
+  "reason": "Адресний тепловий сповіщувач для котельні, компресорної та приміщення зарядки, де можливі пил, волога й коливання температури; клас A2S/A2R за EN 54-5, тому застосовний у приміщеннях заввишки до 6 м (вище 6 м ДБН дозволяє лише клас A1).",
+  "specs": {
+   "Принцип виявлення": "1 тепловий сенсор, статичний + диференційний",
+   "Класи EN 54-5 (параметрні набори)": "набір 1 — A2S; набір 2 — A2R",
+   "Застосування за даташитом": "приміщення з коливанням температури, значним пилом/брудом або високою вологістю",
+   "Напруга живлення": "DC 12…33 В (C-NET)",
+   "Струм спокою": "~200 мкА",
+   "Робоча температура": "−10…+55 °C",
+   "Ступінь захисту": "IP40; IP42 з ущільненням RS720",
+   "Стандарти": "EN 54-5, EN 54-17",
+   "Сертифікати": "VdS G209065, LPCB 531f/01, FM 3037921",
+   "Маса": "0,130 кг",
+   "Габарити з базою": "Ø117 × 59 мм (без бази Ø105 × 49 мм)"
+  },
+  "dimensions_mm": {
+   "L": 117,
+   "W": 117,
+   "H": 59
+  },
+  "power_kw": null,
+  "sources": [
+   "https://sid.siemens.com/v/u/A6V10248349",
+   "https://sid.siemens.com/api/khub/documents/XmTWCg1H75h3AzNErl1OCA/content"
+  ]
+ },
+ {
+  "role": "flame_detector",
+  "manufacturer": "Spectrex (Emerson)",
+  "model": "SharpEye 40/40C-I (Multi-Spectrum QuadSense, IR3)",
+  "reason": "Вибухозахищений ІЧ-сповіщувач полум'я (технологія IR3, 4 ІЧ-сенсори) з маркуванням Ex db eb IIC T4 Gb для зон 1/2 біля фарбувальних камер; за даташитом виявляє полум'я розчинників до 54 м, олійної фарби до 45 м. Підключається до C-NET через адресний вхідний модуль (релейні виходи).",
+  "specs": {
+   "Дальність (n-гептан 0,1 м², макс. чутливість)": "65 м",
+   "Дальність (розчинники / олійна фарба)": "54 м / 45 м",
+   "Час реакції": "типово << 5 с",
+   "Поле зору": "100° по горизонталі, 95° по вертикалі",
+   "Спектральний діапазон": "4 ІЧ-смуги в межах 2–5 мкм",
+   "Маркування Ex (ATEX/IECEx)": "II 2 G D, Ex db eb IIC T4 Gb, Ex tb IIIC T110 °C Db",
+   "Продуктивність / надійність": "EN 54-10 (VdS), FM 3260; SIL3-сумісний (IEC 61508)",
+   "Живлення": "24 В DC ном. (18–32 В); 1,4 Вт норма, до 7,5 Вт (підігрів + тривога)",
+   "Виходи": "реле тривоги/несправності/допоміжне (2 А, 30 В DC), 0–20 мА ступінчастий з HART, RS-485 Modbus",
+   "Робоча температура": "−40…+75 °C",
+   "Ступінь захисту": "IP66, IP68",
+   "Габарити / маса": "100,6 × 117 × 155 мм; 1,3 кг (алюміній)"
+  },
+  "dimensions_mm": {
+   "L": 155,
+   "W": 117,
+   "H": 101
+  },
+  "power_kw": 0.0075,
+  "sources": [
+   "https://www.gdscorp.com/site/wp-content/uploads/2025/08/DSH-Sharpeye-40-40C-I.pdf",
+   "https://fire-protection.com.au/wp-content/uploads/2021/11/40-40C-I-Multispectrum.pdf"
+  ]
+ },
+ {
+  "role": "mcp",
+  "manufacturer": "Siemens (Smart Infrastructure)",
+  "model": "Cerberus PRO FDM225-RP (з пластиковою вставкою, що відновлюється)",
+  "reason": "Адресний ручний пожежний сповіщувач C-NET для приміщень, тип A (пряма дія) за EN 54-11; вставка, що відновлюється, зручна для частих перевірок на виробництві.",
+  "specs": {
+   "Тип за EN 54-11": "пряма дія, тип 'A'",
+   "Комунікація": "FDnet/C-NET, індивідуальна адреса (сумісність FS720)",
+   "Напруга живлення": "DC 12…33 В",
+   "Струм спокою": "180 мкА",
+   "Робоча температура": "−25…+70 °C",
+   "Ступінь захисту": "IP44 (FDM225); IP66 — модель FDM226 для вологих/зовнішніх місць",
+   "Колір": "~RAL 3000 (вогняно-червоний)",
+   "Сертифікати": "VdS G207092, LPCB 126ap/01",
+   "Маса": "0,100 кг",
+   "Габарити": "87×87×53 мм з монтажною коробкою FDMH295 (накладний монтаж); 87×87×35,5 мм — вбудований"
+  },
+  "dimensions_mm": {
+   "L": 87,
+   "W": 53,
+   "H": 87
+  },
+  "power_kw": null,
+  "sources": [
+   "https://sid.siemens.com/v/u/A6V10062093",
+   "https://sid.siemens.com/api/khub/documents/DjXXG_JhVsW_i5K_qc4NAg/content"
+  ]
+ },
+ {
+  "role": "sounder_beacon",
+  "manufacturer": "Siemens (Smart Infrastructure)",
+  "model": "Cerberus PRO FDS226-RW (сирена-маяк настінна, червоний корпус, біле світло)",
+  "reason": "Адресна настінна сирена-маяк, що живиться від шлейфа C-NET і має сертифікацію за EN 54-3 та EN 54-23; рівень до 99 дБА достатній для цехів з фоновим шумом близько 80 дБА.",
+  "specs": {
+   "Стандарти": "EN 54-3 тип B, EN 54-17, EN 54-23 тип B",
+   "Рівень звуку": "75…99 дБА (3 рівні гучності)",
+   "Тони": "16 тонів; 2 рівні тривоги (Warning / Evacuation)",
+   "Категорія EN 54-23 (біле світло)": "High W-3.2-10; Medium W-2.4-7.5; Low O-2-6.2",
+   "Напруга живлення": "DC 16…33 В (C-NET)",
+   "Струм": "спокій 400 мкА; маяк High + тон 25 мА (440 мВт)",
+   "Ступінь захисту": "IP33C з базою FDB226; IP65 з глибокою базою FDB227 (без LPCB)",
+   "Робоча температура": "−25…+70 °C",
+   "Сертифікати": "VdS G219003; LPCB 531p-(cl-1), 531v-(cl-1)",
+   "Маса": "0,172 кг",
+   "Габарити": "Ø116 × 51 мм (база FDB226); Ø116 × 79 мм (глибока база FDB227)"
+  },
+  "dimensions_mm": {
+   "L": 116,
+   "W": 51,
+   "H": 116
+  },
+  "power_kw": 0.00044,
+  "sources": [
+   "https://sid.siemens.com/v/u/A6V11504317",
+   "https://sid.siemens.com/api/khub/documents/C1UlBh2RM~Xj7Ia8szZDZA/content"
+  ]
+ },
+ {
+  "role": "spark_detection",
+  "manufacturer": "Fagus-GreCon Greten GmbH & Co. KG",
+  "model": "GreCon BS 7: пульт Mission Control + іскрові сповіщувачі FM 1/8 + гасильний модуль HUNTER IEM",
+  "reason": "Класична система виявлення й гасіння іскор у пневмотранспорті та аспірації деревообробки: гасить джерела займання до фільтрів і силосів без зупинки виробництва. Детектори FM 1/8 сертифіковані VdS як компоненти системи BS7.",
+  "specs": {
+   "Іскровий сповіщувач": "FM 1/8, ІЧ 780–1100 нм, кут огляду 120°, для темних зон (без денного та штучного світла)",
+   "Швидкість потоку матеріалу": "2–50 м/с (інші за запитом)",
+   "Відстань детектор → форсунка": "≈4–6 м за потоком, залежно від швидкості транспортування",
+   "Тривалість гасіння": "клапан закривається через задану регульовану витримку, зазвичай 5 с",
+   "Спрацювання клапана": "у межах мілісекунд (кутовий клапан HUNTER IEM; точне значення не опубліковано)",
+   "Гасильна речовина": "тонкорозпилена вода під високим тиском, перекриває весь переріз повітропроводу",
+   "Кількість детекторів на зону": "не опубліковано (визначається проектом за діаметром повітропроводу)",
+   "Мережа BS 7 NET": "до 25 пультів, 1000 зон (брошура R.06, 2015)",
+   "Пульт Mission Control": "340×440×290 мм (В×Ш×Г), до 500 Вт, акумулятор 18 А·год/12 В, резерв ≥4 год, IP55, ~30 кг",
+   "Детектор FM 1/8 (корпус)": "84×84×31 мм, алюміній, IP65, −40…+70 °C",
+   "Сертифікація": "VdS G221065 (FM 1/8, FM 1/8 Ex за VdS 2518), система BS7 — VdS S610035; FM approved",
+   "Вибухозахист": "версії Dust Ex (ATEX/IECEx); компоненти для зон 20, 21, 22"
+  },
+  "dimensions_mm": {
+   "L": 440,
+   "W": 290,
+   "H": 340
+  },
+  "power_kw": 0.5,
+  "sources": [
+   "https://www.fagus-grecon.com/fileadmin/user_upload/downloads/fire-prevention/Data_Sheeds/flyer_benefit_SCOUT_FM_1_8_en.pdf",
+   "https://www.fagus-grecon.com/fileadmin/user_upload/downloads/fire-prevention/Data_Sheeds/flyer_benefit_MISSIONCONTROL_en.pdf",
+   "https://www.fagus-grecon.com/fileadmin/user_upload/downloads/fire-prevention/Data_Sheeds/flyer_benefits_IEM_family_en.pdf",
+   "https://www.grecon.com.tw/upload/Image/catalogue/02/02_en_grecon_bs_7_en_web.pdf",
+   "https://www.volta.it/wp-content/uploads/2017/07/grecon_bs_7_r06_en.pdf",
+   "https://vds.de/en/certificates/certificate/F828E0D3"
+  ]
+ },
+ {
+  "role": "genset",
+  "manufacturer": "KOHLER-SDMO",
+  "model": "D700 (шумозахисне виконання M230)",
+  "reason": "Дизельна електростанція 634 кВА PRP / 697 кВА ESP покриває критичні навантаження (пожежна сигналізація, освітлення, аспірація, компресори, ІТ, котельня, частина виробництва) при поточному попиті ≈630 кВт з урахуванням вибіркового живлення; повного бака 610 л вистачає ≈5,9 год при 75 % PRP (610/103,8), тому для довгих блекаутів потрібен додатковий зовнішній бак. Керування — контролер SmartGen HGM6120N з модулем зв'язку CMM366B-4G замість штатної панелі APM403: той самий контролер, що на генераторі офісу ToDo, тож у Odoo генератор веде готовий модуль td_genset (показання, пульт, розклад, паливо, ТО за мотогодинами). HGM6120N вміє AMF — стежить за мережею й сам пускає генератор, коли мережа зникла. Виконання N не має CAN, тож дані ECU двигуна Doosan (J1939) недоступні: температура, тиск оливи й рівень палива — з резистивних датчиків; варіант HGM6120CAN додає J1939.",
+  "specs": {
+   "Потужність PRP (основна), 400/230 В": "634 кВА / 507 кВт",
+   "Потужність ESP (резервна), 400/230 В": "697 кВА / 558 кВт",
+   "Двигун": "Doosan DP180LB, V10, 18,27 л, турбонаддув, 1500 об/хв, електронний регулятор",
+   "Генератор (альтернатор)": "KH02953T, безщітковий, ізоляція клас H, IP23, ККД 95 % при 100 %",
+   "Витрата палива при 75 % PRP": "103,8 л/год",
+   "Витрата палива при 100 % PRP / 100 % ESP": "136,4 / 149,5 л/год",
+   "Паливний бак (шумозахисне виконання)": "610 л",
+   "Рівень звукового тиску": "78 дБ(А) @7 м; 88 дБ(А) @1 м; LwA 108 дБ",
+   "Кожух": "M230, суха маса 5381 кг",
+   "Контролер": "SmartGen HGM6120N (AMF, замість штатної APM403)",
+   "Контролер: живлення": "DC 8–35 В, < 3 Вт (у режимі очікування ≤ 2 Вт)",
+   "Контролер: вимірювання": "мережа й генератор 3P4W AC 15–360 В (ф-N), 50/60 Гц; струм через ТС …/5 А",
+   "Контролер: виходи": "пуск і паливо 16 А DC 28 В; 4 допоміжні реле (7–16 А)",
+   "Контролер: датчики": "ОЖ, тиск оливи, рівень палива — резистивні; магнітний датчик обертів до 10 кГц",
+   "Контролер: корпус": "209 × 166 × 45 мм, виріз 186 × 141 мм, IP65 з ущільненням, −25…+70 °C, 0,56 кг",
+   "Зв'язок": "SmartGen CMM366B-4G (USB від контролера, 4G) → ретранслятор → Odoo, модуль td_genset",
+   "Клас характеристик": "G2 (ISO 8528)",
+   "Відкрите виконання (довідково)": "3470×1630×2162 мм, 3700 кг"
+  },
+  "dimensions_mm": {
+   "L": 5031,
+   "W": 1690,
+   "H": 2672
+  },
+  "power_kw": 507,
+  "kva": 634,
+  "kva_standby": 697,
+  "fuel_lph_75": 103.8,
+  "tank_l": 610,
+  "sources": [
+   "https://assets.serverroomenvironments.co.uk/assets/files/65/82/01/sdmo-d700-generator-datasheet.pdf?1553415603",
+   "https://pdf.directindustry.com/pdf/sdmo/d700/8339-777587.html",
+   "https://www.smartgen.cn/yun/data/download/HGM6110N_6120N_6110NC_6120NC_6110CAN_6120CAN_en.pdf",
+   "http://blog.smartgen.cn/smartgen-smartgen-cloud-plus-ios-version-is-launched/",
+   "http://blog.smartgen.cn/smartgen-hgm9560hgm9510-methane-power-control-in-jiangsu-farm/"
+  ],
+  "controller": "SmartGen HGM6120N"
+ },
+ {
+  "role": "ats",
+  "manufacturer": "Socomec",
+  "model": "ATyS p 1600 A 4P (арт. 95734160), Advanced Integrated Logic",
+  "reason": "Моторизований перемикач резерву 1600 А (4 полюси, 2 комутаційні блоки) з вбудованим контролером, клавіатурою і РК-дисплеєм для схеми «мережа–ДГУ»: номінал 1600 А перекриває струм трансформатора 1000 кВА (≈1443 А при 400 В) і ДГУ 634 кВА (≈915 А).",
+  "specs": {
+   "Номінальний струм Iu / AC-21 при 400 В": "1600 А",
+   "Номінальний струм AC-23 при 400 В": "1250 А (750 кВт)",
+   "Кількість полюсів": "4",
+   "Струм короткочасної стійкості Icw": "50 кА",
+   "Умовний струм КЗ Iq": "100 кА",
+   "Номінальна напруга ізоляції Ui / робоча Ue": "1000 В",
+   "Напруга живлення керування Us": "400–690 В AC, 50 Гц",
+   "Привід": "вбудований моторний привід, 3 допоміжні контакти NO",
+   "Ступінь захисту (фронт)": "IP20",
+   "Комунікації (опції)": "модулі RS485 Modbus, Ethernet Modbus TCP, виносний дисплей D10/D20",
+   "Маса": "40 кг",
+   "Габарити (В×Ш×Г) за даними дилера": "306,5 × 504 × 391,5 мм"
+  },
+  "dimensions_mm": {
+   "L": 504,
+   "W": 392,
+   "H": 307
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.nhp.com.au/product/95734160",
+   "https://www.nhp.com.au/public/assets/pim/Original/10030/95734160-AU-ATyS-Transfer-Switch-Advanced-Logic-4P-Datasheet.pdf"
+  ]
+ },
+ {
+  "role": "bess",
+  "manufacturer": "Huawei",
+  "model": "LUNA2000-200KWH-2H1 (Smart String ESS) з PCS LUNA2000-100KTL-M1",
+  "reason": "Вуличний шафовий накопичувач LFP 193,5 кВт·год / 100 кВт; два шафи дають ≈387 кВт·год / 200 кВт для зрізання пікових навантажень і безперервного живлення ІТ та критичних споживачів на час запуску ДГУ чи коротких відключень.",
+  "specs": {
+   "Хімія комірок": "LiFePO4 (LFP)",
+   "Номінальна ємність": "193,5 кВт·год (12 батарейних модулів 12S1P по 16,13 кВт·год)",
+   "Макс. потужність заряду / розряду": "≤100 кВт / ≤100 кВт (≤0,5C)",
+   "PCS (інвертор накопичувача)": "LUNA2000-100KTL-M1, 100 кВт @40 °C, 380/400/440 В, макс. ККД 98,4 %",
+   "Контролер батарейного кластера": "макс. ККД ≥98,5 %, номінальна напруга 691,2 В",
+   "Охолодження": "промисловий кондиціонер",
+   "Пожежогасіння": "підтримується",
+   "Ступінь захисту": "IP55, вуличне встановлення",
+   "Робоча температура": "-30…+55 °C",
+   "Маса": "≤2950 кг з батареями (≤1070 кг без батарей)",
+   "Габарити (Ш×В×Г)": "1810×2135×1200 мм; з контролером і PCS 2570×2135×1200 мм",
+   "Зв'язок / сертифікати": "Ethernet/SFP, Modbus TCP; UL 9540A, UN 38.3, IEC/EN 62477-1"
+  },
+  "dimensions_mm": {
+   "L": 2570,
+   "W": 1200,
+   "H": 2135
+  },
+  "power_kw": 100,
+  "kwh": 193.5,
+  "sources": [
+   "https://solar.huawei.com/en/products/LUNA2000-97-129-161-200kwh/specs",
+   "https://solar.huawei.com/admin/asset/v1/pro/view/53079bdabe2845f4988aa6a9565c4031.pdf"
+  ]
+ },
+ {
+  "role": "pv_module",
+  "manufacturer": "LONGi",
+  "model": "Hi-MO 6 Explorer LR5-72HTH-580M",
+  "reason": "Монокристалічний модуль 580 Вт з ККД 22,5 % і масою 27,2 кг (≈10,5 кг/м²) — прийнятне навантаження для сталевих ферм покрівлі. Площа модуля 2,278×1,134 = 2,58 м², тобто ≈4,45 м² чистої площі модулів на 1 кВтп (500 кВтп ≈ 862 модулі ≈ 2230 м²); з урахуванням проходів, відступів від 25 припливно-витяжних установок і димових люків та міжрядних відстаней на плоскій покрівлі фактична потреба орієнтовно 6–8 м²/кВтп (оцінка, не дані виробника).",
+  "specs": {
+   "Номінальна потужність Pmax (STC)": "580 Вт (допуск 0…+3 %)",
+   "ККД модуля": "22,5 %",
+   "Напруга / струм у точці Pmax": "44,06 В / 13,17 А",
+   "Напруга холостого ходу Voc / струм КЗ Isc": "52,21 В / 14,20 А",
+   "Кількість комірок": "144 (6×24), half-cell",
+   "Температурний коефіцієнт Pmax": "-0,290 %/°C",
+   "Макс. напруга системи": "1500 В DC (IEC/UL)",
+   "Механічне навантаження (фронт/тил)": "5400 Па / 2400 Па",
+   "Скло / рама": "одинарне загартоване 3,2 мм / анодований алюміній",
+   "Маса": "27,2 кг",
+   "Гарантія": "15 років на матеріали, 25 років лінійна потужність (деградація <1,5 % 1-й рік, 0,40 %/рік далі)"
+  },
+  "dimensions_mm": {
+   "L": 2278,
+   "W": 1134,
+   "H": 30
+  },
+  "power_kw": 0.58,
+  "wp": 580,
+  "sources": [
+   "https://liriksolar.com/image/uploads/LONGI%20Solar%20Hi-MO%206%20Explorer%20LR5-72HTH-585M%20Datasheet.pdf",
+   "https://liriksolar.com/en/soniachni-paneli/soniachna-panel-na-580vt-longi-solar-hi-mo-6-explorer-lr5-72hth-580m"
+  ]
+ },
+ {
+  "role": "pv_inverter",
+  "manufacturer": "Huawei",
+  "model": "SUN2000-115KTL-M2",
+  "reason": "Мережевий стрінговий інвертор 115 кВт з 10 MPPT дозволяє гнучко розкладати стрінги між зонами покрівлі, затіненими вентустановками; для 450–550 кВтп потрібно 4 шт. (співвідношення DC/AC ≈1,0–1,2), інтегрується з LUNA2000 через FusionSolar.",
+  "specs": {
+   "Номінальна активна потужність AC": "115 кВт (макс. 125 кВА / 125 кВт при cosφ=1)",
+   "Номінальна напруга / струм AC": "400 В 3W+(N)+PE / 166,0 А (макс. 182,3 А)",
+   "Макс. ККД / Європейський ККД": "98,6 % / 98,4 % @400 В",
+   "Кількість MPPT / входів": "10 / 20 (2 на MPPT)",
+   "Діапазон MPPT / макс. вхідна напруга": "200–1000 В / 1100 В",
+   "Макс. струм на MPPT / на вхід": "30 А / 20 А",
+   "Захист": "SPD тип II DC і AC, RCMU, інтелектуальне відключення на рівні стрінга, I-V діагностика",
+   "Комунікації": "RS485, USB, MBUS, Smart Dongle 4G/WLAN (опція)",
+   "Ступінь захисту / охолодження": "IP66 / інтелектуальне повітряне",
+   "Робоча температура": "-25…+60 °C",
+   "Маса": "≤93 кг (з монтажною пластиною)",
+   "Мережеві стандарти": "EN 50549-1/-2, VDE-AR-N4105, IEC 62109-1/-2, IEC 62116"
+  },
+  "dimensions_mm": {
+   "L": 1035,
+   "W": 365,
+   "H": 700
+  },
+  "power_kw": 115,
+  "kw_ac": 115,
+  "sources": [
+   "https://solar.huawei.com/admin/asset/v1/pro/view/1f16e0b94fdb4ed083de46d02f911df9.pdf",
+   "https://solar.huawei.com/download?p=%2F-%2Fmedia%2FSolarV4%2Fsolar-version2%2Fcommon%2Fprofessionals%2Fall-products%2Fci%2Fsmart-pv-controller%2Fsun2000-115ktl-m2%2Fsun2000-115ktl-m2-datasheet-20230506.pdf"
+  ]
+ },
+ {
+  "role": "iot_box",
+  "manufacturer": "Odoo S.A.",
+  "model": "Odoo IoT Box (на базі Raspberry Pi 4)",
+  "reason": "Офіційний IoT-шлюз Odoo: підключає до Odoo ваги, принтери етикеток ZPL, USB-камери та педалі для MRP Shop Floor і Quality (контрольні точки з фото/вимірюванням), а також ваги для Inventory/Barcode. На відміну від «Windows virtual IoT», підтримує MRP-пристрої (камери, вимірювальні інструменти).",
+  "specs": {
+   "Апаратна база": "Raspberry Pi 4 (за FAQ Odoo)",
+   "Відеовиходи": "2 × HDMI (додаткові екрани)",
+   "Мережа": "Ethernet або Wi-Fi (точка доступу «IoTBox-…», налаштування через http://10.11.12.1)",
+   "Підтримувані пристрої": "принтери чеків/етикеток (рекомендовані Zebra ZD411/ZD420 з ZPL), ваги (Mettler Toledo Ariva-S, протокол Toledo 8217), екрани, вимірювальні інструменти, USB-камери (Logitech), USB-педалі, USB-клавіатури",
+   "Розширення USB": "допускається USB-хаб",
+   "Альтернатива": "Windows virtual IoT — без підтримки MRP-пристроїв (камер і вимірювальних інструментів)",
+   "Індикація": "червоний LED — немає інтернету; блимає зелений — очікує БД; зелений — підключено",
+   "Ціна бокса": "≈173,69–181,72 USD (залежно від регіону, eCommerce Odoo)",
+   "Підписка": "30 USD/міс за бокс",
+   "Гарантія": "1 рік"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.odoo.com/documentation/19.0/applications/general/iot.html",
+   "https://www.odoo.com/documentation/19.0/applications/general/iot/iot_box.html",
+   "https://www.odoo.com/app/iot-faq",
+   "https://www.odoo.com/page/iot-hardware"
+  ]
+ },
+ {
+  "role": "shopfloor_tablet",
+  "manufacturer": "Samsung",
+  "model": "Galaxy Tab Active5 Pro 5G (SM-X356B)",
+  "reason": "Захищений 10,1\" планшет для операторів біля верстатів у застосунку Odoo MRP Shop Floor (робочі центри, інструкції, контроль якості Quality); IP68, робота в рукавичках і гаряча заміна батареї підходять для запиленого цеху.",
+  "specs": {
+   "Екран": "10,1\" TFT 1920×1200 (WUXGA), до 600 ніт, до 120 Гц",
+   "Процесор": "4 нм Snapdragon, 8 ядер (2,5/2,4/1,8 ГГц)",
+   "Пам'ять": "6 ГБ / 128 ГБ (опція 8 ГБ / 256 ГБ), microSD до 2 ТБ",
+   "Акумулятор": "10 100 мА·год (2 × 5 050 мА·год, гаряча заміна)",
+   "Режим без батареї": "так, живлення 9 В / 2,3 А (PD 2.0+)",
+   "Захист": "IP68, MIL-STD-810H",
+   "Стійкість до падінь": "до 1,5 м з комплектним чохлом",
+   "Сенсорний екран": "робота в рукавичках товщиною до 2 мм і мокрими руками",
+   "Стилус": "S Pen (підтримується)",
+   "Кріплення/док": "POGO-конектор для док-станції та клавіатури (продаються окремо)",
+   "Вага": "683 г",
+   "Оновлення безпеки": "до 31.05.2033"
+  },
+  "dimensions_mm": {
+   "L": 243,
+   "W": 170,
+   "H": 10
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.samsung.com/levant/tablets/others/galaxy-tab-active5-pro-green-128gb-sm-x356bzgamda/",
+   "https://m.gsmarena.com/samsung_galaxy_tab_active5_pro-13790.php"
+  ]
+ },
+ {
+  "role": "handheld_scanner",
+  "manufacturer": "Zebra Technologies",
+  "model": "TC22 (Wi-Fi 6E, SE4710 / SE55)",
+  "reason": "Android-ТЗД з вбудованим 2D-сканером для складських операцій у застосунку Odoo Barcode (приймання, переміщення, інвентаризація, комплектація) та Inventory; IP68 і тест на падіння 1,5 м для складу з навантажувачами.",
+  "specs": {
+   "Екран": "6,0\" FHD+ 1080×2160, 450 ніт, Gorilla Glass",
+   "Сканер": "SE4710 1D/2D (стандартна дальність) або SE55 1D/2D Advanced Range з IntelliFocus",
+   "Процесор": "Qualcomm 5430, 6 ядер, 2,1 ГГц",
+   "Пам'ять": "6 ГБ / 64 ГБ або 8 ГБ / 128 ГБ, microSD до 2 ТБ",
+   "Акумулятор": "знімний Li-Ion 3 800 мА·год (14,63 Вт·год); розширений 5 200 мА·год",
+   "Wi-Fi": "802.11ax Wi-Fi 6E, 2×2 MU-MIMO",
+   "Захист": "IP68 та IP65",
+   "Падіння": "багаторазово 1,5 м на бетон (з чохлом), 1,3 м на плитку, MIL-STD-810H",
+   "Перекидання (tumble)": "500 × 0,5 м; 500 × 1,0 м з чохлом",
+   "Робоча температура": "−10…+50 °C",
+   "Вага": "236 г (батарея 3 800 мА·год)",
+   "ОС": "Android"
+  },
+  "dimensions_mm": {
+   "L": 165,
+   "W": 76,
+   "H": 12
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.zebra.com/content/dam/zebra_dam/en/spec-sheets/tc22-tc27-spec-sheet-en-us.pdf",
+   "https://www.levata.com/zebra-tc22-handheld-terminals"
+  ]
+ },
+ {
+  "role": "label_printer",
+  "manufacturer": "Zebra Technologies",
+  "model": "ZT411 (4\", 203/300/600 dpi)",
+  "reason": "Промисловий термотрансферний принтер для етикеток деталей, партій і палет; друкує ZPL, який Odoo (Inventory/Barcode, MRP) формує напряму або через IoT Box.",
+  "specs": {
+   "Метод друку": "термотрансферний / прямий термодрук",
+   "Роздільність": "203 dpi (8 точок/мм); опц. 300 dpi; опц. 600 dpi",
+   "Макс. ширина друку": "104 мм",
+   "Макс. швидкість": "356 мм/с (14 ips)",
+   "Ширина носія": "25,4–114 мм (відрив/ніж), 25,4–108 мм (відклеювання/намотування)",
+   "Макс. рулон": "203 мм (зовн. діаметр) на втулці 76 мм",
+   "Мови": "ZPL, ZPL II (опц. ZBI 2.0)",
+   "Інтерфейси": "USB 2.0, RS-232, Ethernet 10/100, Bluetooth 4.1, 2 × USB Host; опц. Wi-Fi 802.11ax + BT 5.3",
+   "Дисплей": "4,3\" кольоровий сенсорний",
+   "Живлення": "100–240 В AC, 50–60 Гц",
+   "Вага": "16,33 кг"
+  },
+  "dimensions_mm": {
+   "L": 495,
+   "W": 269,
+   "H": 324
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.zebra.com/content/dam/zebra_dam/en/spec-sheets/zt400-series-spec-sheet-en-us.pdf"
+  ]
+ },
+ {
+  "role": "scale",
+  "manufacturer": "METTLER TOLEDO",
+  "model": "PFA584 (платформа 1250×1250 мм, 1 500 кг) з ваговим терміналом RS-232/USB",
+  "reason": "Підлогова платформа для зважування палет із меблями перед відвантаженням (Odoo Inventory/Barcode, вага пакування). Mettler Toledo — єдиний виробник ваг, прямо названий у документації Odoo IoT (протокол Toledo 8217).",
+  "specs": {
+   "НПВ": "1 500 кг",
+   "Ціна повірочної поділки e": "0,5 кг (клас III, 1×3 000e)",
+   "НмПВ": "10 кг",
+   "Розмір платформи": "1250 × 1250 мм",
+   "Висота платформи": "78 мм (підвіс rocker pin / full frame)",
+   "Матеріал": "сталь із порошковим покриттям (PFA589 — нержавійка AISI304)",
+   "Тензодатчики": "SLB415, IP67 (або 0745A, IP68/IP69K)",
+   "Інтерфейс платформи": "аналоговий, SICSpro або Cable-Free",
+   "Кабель": "поліуретан 5 / 10 / 20 м",
+   "Робоча температура": "−20…+65 °C",
+   "Підключення до Odoo IoT": "через термінал із RS-232/USB; Odoo IoT автоматично розпізнає протокол Toledo 8217 (та Adam), інший протокол терміналу (напр. MT-SICS) потребує перевірки або власного драйвера"
+  },
+  "dimensions_mm": {
+   "L": 1250,
+   "W": 1250,
+   "H": 78
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.mt.com/dam/ind/IND_PDF/2023/Brochures/30556168_A_MAR_BR_PFA584_589_EN.pdf",
+   "https://www.odoo.com/documentation/19.0/applications/general/iot/devices/scale.html",
+   "https://www.odoo.com/page/iot-hardware"
+  ]
+ },
+ {
+  "role": "wifi_ap",
+  "manufacturer": "Cisco",
+  "model": "Catalyst CW9166D1 (Wi-Fi 6E, спрямована антена)",
+  "reason": "Точка доступу з вбудованою спрямованою антеною, яку Cisco призначає для високих стель (склади); забезпечує покриття цеху 150 × 72 м для ТЗД Odoo Barcode і планшетів Shop Floor.",
+  "specs": {
+   "Стандарт": "802.11ax (Wi-Fi 6 / 6E)",
+   "Радіомодулі": "3 × 4×4 (2,4 / 5 / 6 ГГц) + XOR 5/6 ГГц",
+   "Швидкість PHY": "до 7,78 Гбіт/с (PHY, за даними Cisco)",
+   "Антена": "внутрішня спрямована: 6 dBi (70×70°) на 2,4/5 ГГц; 8 dBi (60×60°) на 6 ГГц і XOR",
+   "Призначення": "високі стелі — склади, зали",
+   "Порт": "1 × RJ-45 mGig 100M/1G/2.5G/5G",
+   "Живлення": "802.3bt (UPOE) 30,5 Вт; 802.3at 25,5 Вт (без USB); DC 54 В",
+   "Робоча температура": "−20…+50 °C",
+   "Вага": "1,59 кг",
+   "Кріплення": "кронштейн AIR-AP-Bracket-2, шарнірний кронштейн CW-MNT-ART2-00",
+   "IP": "не вказано"
+  },
+  "dimensions_mm": {
+   "L": 241,
+   "W": 241,
+   "H": 58
+  },
+  "power_kw": 0.0305,
+  "sources": [
+   "https://www.cisco.com/c/en/us/products/collateral/wireless/catalyst-9166-series-access-points/catalyst-9166-series-access-points-ds.html"
+  ]
+ },
+ {
+  "role": "network_switch",
+  "manufacturer": "Cisco",
+  "model": "Catalyst 9200L C9200L-48P-4X",
+  "reason": "Комутатор доступу з PoE+ для серверної шафи: живить точки доступу Wi-Fi, IP-камери, зчитувачі та IoT Box, об'єднує мережу Odoo на заводі.",
+  "specs": {
+   "Порти доступу": "48 × 1G з повним PoE+",
+   "Аплінки": "4 × 1/10G (фіксовані)",
+   "Бюджет PoE": "740 Вт (1 БЖ PWR-C5-1KWAC) / 1 440 Вт (2 БЖ)",
+   "Комутаційна здатність": "176 Гбіт/с (256 Гбіт/с зі стеком)",
+   "Блок живлення": "PWR-C5-1KWAC, 1 000 Вт, 100–240 В AC",
+   "Форм-фактор": "1U, 19\"",
+   "Вага": "4,80 кг",
+   "Сертифікація": "ENERGY STAR"
+  },
+  "dimensions_mm": {
+   "L": 445,
+   "W": 288,
+   "H": 44
+  },
+  "power_kw": 1.0,
+  "sources": [
+   "https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-9200-series-switches/nb-06-cat9200-ser-data-sheet-cte-en.html"
+  ]
+ },
+ {
+  "role": "server_rack",
+  "manufacturer": "APC (Schneider Electric)",
+  "model": "NetShelter SX Gen 2 AR3100B2 (42U, 600 × 1070 мм) + Smart-UPS SRT 10 кВА SRT10KRMXLI",
+  "reason": "Шафа 42U для комутатора, NVR, IoT/серверного обладнання; AR3100B2 — актуальна заміна AR3100. ДБЖ 10 кВА online забезпечує безперебійну роботу мережі Odoo і відеоспостереження під час відключень.",
+  "specs": {
+   "Висота": "42U",
+   "Габарити (В×Ш×Г)": "1991 × 600 × 1070 мм",
+   "Вага шафи": "122,14 кг",
+   "Статичне навантаження": "1 814 кг (4 000 lb)",
+   "Динамічне навантаження": "1 020 кг (2 250 lb)",
+   "Глибина монтажу": "190,5–914,9 мм",
+   "Двері": "передні та задні вентильовані (перфоровані)",
+   "Комплект": "бокові панелі, ролики, регульовані ніжки, ключі, кріплення",
+   "ДБЖ": "APC Smart-UPS SRT 10 000 ВА / 10 000 Вт, online (подвійне перетворення), 6U",
+   "ДБЖ — автономія": "11,27 хв при 50 % / 3,45 хв при 100 % навантаження",
+   "ДБЖ — виходи / вага": "6 × C13, 4 × C19; 111,82 кг"
+  },
+  "dimensions_mm": {
+   "L": 1070,
+   "W": 600,
+   "H": 1991
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.se.com/us/en/product/AR3100B2/",
+   "https://www.se.com/us/en/product/AR3100/netshelter-sx-server-rack-enclosure-42u-black-1991h-x-600w-x-1070d-mm-with-sides/",
+   "https://www.avendor.com/products/apc-netshelter-sx-gen-2-42u-server-rack-enclosure-600mm-x-1070mm-w-sides-black",
+   "https://happyware.com/uk-en/apc-srt10krmxli"
+  ]
+ },
+ {
+  "role": "turnstile",
+  "manufacturer": "Gunnebo Entrance Control",
+  "model": "SlimStile EV (трипод, одинарний)",
+  "reason": "Тумбовий трипод на прохідній для персоналу з місцем під зчитувач; події проходу дають дані для обліку часу (Odoo Attendances через імпорт/інтеграцію СКД). Європейський виробник, не російський/китайський.",
+  "specs": {
+   "Тип": "трипод, електромеханічний, з ручним проворотом",
+   "Пропускна здатність": "до 40 прох./хв (безконтактний зчитувач); 30 — swipe; 20 — insertion",
+   "Живлення": "230 В AC 50 Гц, 50 ВА (5 ВА в режимі N/O)",
+   "Захист": "IP32 (вуличне виконання AISI 316 — IP44, під навісом)",
+   "Робоча температура": "−5…+50 °C (−10 °C з підігрівом)",
+   "Ресурс": "MCBF 10 млн циклів (12 млн у режимі N/O)",
+   "Корпус": "нержавіюча сталь AISI 304",
+   "Планки": "Ø38 мм, довжина 480 мм, AISI 304",
+   "Інтерфейс": "контролер LL2001Lite, входи відкриття по напрямках, виходи лічильника, RS-485",
+   "Аварійний режим": "fail-safe / fail-lock, вхід пожежної тривоги, опція «падаюча планка»",
+   "Інтегровані зчитувачі": "опція кріплення зчитувача (зчитувач — окремо)",
+   "Вага": "≈50 кг"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": 820,
+   "H": 950
+  },
+  "power_kw": 0.05,
+  "sources": [
+   "https://media-01.imu.nl/storage/europesecurity.nl/2317/wp/2018/02/Datasheet-SlimStile.EV_1.5_EN_ES.pdf",
+   "https://www.gunneboentrancecontrol.com/products/turnstiles/tripod-turnstiles/slimstile-ev",
+   "https://www.bimobject.com/en-au/gunnebo/product/slimstile-ev-tripod-turnstile"
+  ]
+ },
+ {
+  "role": "access_reader",
+  "manufacturer": "Suprema",
+  "model": "BioEntry W3 (BEW3-APB)",
+  "reason": "Вуличний термінал доступу з розпізнаванням обличчя та RFID для турнікета й обліку робочого часу; події експортуються з BioStar 2 в Odoo Attendances (нативної інтеграції в Odoo немає — імпорт або конектор).",
+  "specs": {
+   "Ідентифікація": "обличчя (AI, NPU), картки, мобільний доступ (NFC Android, BLE Android/iOS)",
+   "Формати карток": "125 кГц EM, HID Prox; 13,56 МГц MIFARE, MIFARE Plus, DESFire EV1/EV2/EV3, FeliCa, iCLASS SE/SR/Seos",
+   "Дальність зчитування": "50 мм (MIFARE/DESFire/EM/iCLASS), 30 мм (FeliCa/HID Prox)",
+   "Ємність": "30 000 облич, 100 000 карток; 1 000 000 текстових подій",
+   "Швидкість розпізнавання": "до 0,2 с",
+   "Камери": "ІЧ 2 Мп + видима 2 Мп",
+   "Захист корпусу": "IP67, IK08",
+   "Живлення": "DC 12 В 1,0 А або DC 24 В 0,6 А; PoE IEEE 802.3af",
+   "Мережа": "Ethernet 10/100",
+   "Вага": "291 г"
+  },
+  "dimensions_mm": {
+   "L": 34,
+   "W": 50,
+   "H": 160
+  },
+  "power_kw": null,
+  "sources": [
+   "https://supremainc.com/uploadfiles/Marketing_Materials/[SUPREMA-AHL-BEW3-EN-REV04].pdf"
+  ]
+ },
+ {
+  "role": "cctv_camera",
+  "manufacturer": "Axis Communications",
+  "model": "AXIS P1488-LE",
+  "reason": "Вулична 4K-камера з ІЧ-підсвіткою та вбудованою AI-аналітикою людей і транспорту для периметра, воріт і складу; актуальна заміна знятої P1468-LE. Шведський виробник (не Hikvision/Dahua).",
+  "specs": {
+   "Роздільність": "3840 × 2160 (8 Мп), до 50/60 к/с",
+   "Сенсор": "CMOS 1/1,2\"",
+   "Об'єктив": "5,9–13,8 мм, 2,35× оптичний зум; ГКП 114–46°",
+   "ІЧ-підсвітка": "OptimizedIR 850 нм, дальність 50 м і більше",
+   "Мін. освітленість": "колір 0,06 лк; 0 лк з ІЧ",
+   "Захист": "IP66/IP67, NEMA 4X, IK10",
+   "Робоча температура": "−40…+60 °C",
+   "Живлення": "PoE IEEE 802.3af/at Type 1 Class 3, макс. 12,95 Вт; або 10–28 В DC",
+   "Аналітика": "AXIS Object Analytics (люди, транспорт), Image Health Analytics, Live Privacy Shield",
+   "Кодеки": "H.264, H.265, AV1, Zipstream",
+   "Локальний запис": "microSD/SDHC/SDXC, NAS",
+   "Вага": "1,4 кг (з козирком)"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 0.013,
+  "sources": [
+   "https://www.axis.com/products/axis-p1488-le/support",
+   "https://www.axis.com/dam/public/14/fc/5d/datasheet-axis-p1488–le-bullet-camera-en-US-555441.pdf",
+   "https://www.axis.com/products/axis-p1468-le/support"
+  ]
+ },
+ {
+  "role": "nvr",
+  "manufacturer": "Axis Communications",
+  "model": "AXIS S3016 Recorder 32 TB",
+  "reason": "Відеореєстратор 1U з вбудованим PoE-комутатором на 16 камер для серверної шафи, сумісний з AXIS Camera Station Edge/Pro.",
+  "specs": {
+   "Канали": "16",
+   "PoE": "16 × RJ45 1 Гбіт/с, IEEE 802.3at Class 4, бюджет 305 Вт",
+   "Сховище": "4 × HDD: 32 ТБ (4 × 8 ТБ), 24 ТБ корисно в RAID 5; варіанти 8 / 16 ТБ",
+   "RAID": "0, 1, 5, 6, 10 (заводський — 5)",
+   "Швидкість запису": "до 256 Мбіт/с",
+   "Кодеки": "H.264, H.265",
+   "ПЗ": "AXIS Camera Station Edge, AXIS Camera Station Pro, VMS партнерів",
+   "Живлення": "макс. 650 Вт (305 Вт на PoE); власне споживання 44 Вт типово / 49 Вт макс. (32 ТБ)",
+   "Форм-фактор": "1U, стійка EIA-310, рейки в комплекті",
+   "Робоча температура": "0…+45 °C",
+   "Вага": "10,68 кг (32 ТБ)"
+  },
+  "dimensions_mm": {
+   "L": 484,
+   "W": 402,
+   "H": 44
+  },
+  "power_kw": 0.65,
+  "sources": [
+   "https://www.axis.com/products/axis-s3016/support",
+   "https://www.axis.com/dam/public/2a/0e/bb/datasheet-axis-s3016-recorder-en-US-555493.pdf"
+  ]
+ },
+ {
+  "role": "truck_scale",
+  "manufacturer": "Ваги Аксіс Україна (Львів)",
+  "model": "АКСІС 60-18-К-Е",
+  "reason": "Автомобільні ваги 18 × 3 м на 60 т українського виробництва (внесені в Держреєстр ЗВТ) для контролю вхідної сировини та відвантаження; вагу можна передавати в Odoo Inventory через RS-232 термінала.",
+  "specs": {
+   "НПВ": "60 000 кг",
+   "НмПВ": "400 кг",
+   "Дискретність": "20 кг (на сторінці вказано «20 г» — очевидна описка)",
+   "Платформа": "18 × 3 м, ширина кожної колії 1 100 мм",
+   "Тензодатчики": "8 шт. (Keli / Zemic USA)",
+   "Термінал": "AXIS ME-01/A/18/RS/12V, LED 18 мм, IP67",
+   "Інтерфейси": "RS-232 (стандарт); RS-485, Ethernet, Wi-Fi — під замовлення",
+   "Клас точності": "середній",
+   "Робоча температура": "−30…+45 °C",
+   "Живлення": "220 В, 50 Гц, 8 Вт",
+   "Виконання": "безфундаментне (з 4 пандусами) або фундаментне",
+   "Ціна": "483 000 грн (безфундаментне виконання)"
+  },
+  "dimensions_mm": {
+   "L": 18000,
+   "W": 3000,
+   "H": null
+  },
+  "power_kw": 0.008,
+  "sources": [
+   "https://vagi-axis.ua/uk/product/vesy-avtomobilnye-60t-bezfundamentnye-18m-aksis-60-18-k-b-e/",
+   "https://vagi-axis.ua/uk/category/avtomobilnye-vesy/"
+  ]
+ },
+ {
+  "role": "barrier",
+  "manufacturer": "CAME",
+  "model": "GARD LS6 (803BB-0490, GLS60AGS)",
+  "reason": "Автоматичний шлагбаум для в'їзних воріт вантажного транспорту з проїздом до 6,5 м; 24 В з енкодером і хмарним керуванням CAME Connect.",
+  "specs": {
+   "Ширина проїзду": "до 6,5 м",
+   "Час відкриття (90°)": "4–6 с (регулюється)",
+   "Живлення": "220–230 В AC",
+   "Двигун": "24 В DC з енкодером",
+   "Потужність": "190 Вт",
+   "Інтенсивність": "160 циклів/год; MCBF 1,5 млн циклів",
+   "Захист": "IP54",
+   "Робоча температура": "−20…+55 °C (−40 °C з опцією 803XA-0630)",
+   "Корпус": "оцинкована сталь, RAL 7024",
+   "Керування": "плата з дисплеєм, підключення до CAME Connect"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": 0.19,
+  "sources": [
+   "https://www.came.com/global/en/products/automatic-barriers-gard-ls6/",
+   "https://www.came.com/global/en/products/barriers-and-turnstiles/barriers"
+  ]
+ },
+ {
+  "role": "smoke_vent",
+  "manufacturer": "LAMILUX Heinrich Strunz GmbH",
+  "model": "Smoke Lift Glass Skylight F100 (F100G-S1-S, 1200×1200 мм, привод 24 В)",
+  "reason": "Зенітний ліхтар-димовий люк природного димовидалення за EN 12101-2 зі СКЛЯНИМ заповненням: ДБН В.2.2-27:2025 п. 6.3.4 забороняє полімерні (полікарбонат/PETG) зенітні ліхтарі в приміщеннях категорії В, тому полімерні куполи F100 не підходять. Наявність офіційного дистриб'ютора в Україні не підтверджено — уточнити.",
+  "specs": {
+   "Стандарт": "EN 12101-2 (NSHEV), CE",
+   "Аеродинамічна площа Aa": "1,02 м² (для 1200×1200 мм)",
+   "Розмір (проріз)": "1200 × 1200 мм",
+   "Час відкриття": "< 60 с у положення димовидалення",
+   "Кут відкриття": "≈165°",
+   "Привод": "24 В DC, соло-мотор 7,5 А",
+   "Надійність": "Re 1000",
+   "Снігове навантаження": "SL 1000 – SL 2000",
+   "Вітрове навантаження": "WL 1500",
+   "Низька температура": "T(-15)",
+   "Теплостійкість": "B300",
+   "Скління / U": "двокамерне скло (загартоване зовні, триплекс всередині), Uw 1,10 Вт/м²К; IP54; рама ПВХ, утеплений склопластиковий стакан 300 мм"
+  },
+  "dimensions_mm": {
+   "L": 1200,
+   "W": 1200,
+   "H": null
+  },
+  "power_kw": 0.18,
+  "sources": [
+   "https://source.thenbs.com/en/gb/product/smoke-lift-glass-skylight-f100-aov-smoke-vent-shev/tt15yEZjbnSX6rkeiFGXn2/c4kLDGE4JYBeNdWFty4rvD",
+   "https://www.dh-partner.com/uk/en/products/third-party-products/nshevs/productDetail/100345/NSHEV-DOME-VENT",
+   "https://e-construction.gov.ua/laws_detail/3880732350711072496?doc_type=2"
+  ]
+ },
+ {
+  "role": "smoke_control",
+  "manufacturer": "D+H Mechatronic AG",
+  "model": "CPS-M1-080-1010-B (модульна панель керування СДТВ 24 В, 80 А)",
+  "reason": "Модульна панель керування природним димовидаленням за EN 12101-10 з резервом 72 год; 80 А на виході вистачає на ~10 приводів по 7,5 А, тобто 1 панель на 1–2 димові зони (всього ~4–5 панелей на корпус). Для невеликих груп є компактна RZN 4408-K (8 А, 72 год).",
+  "specs": {
+   "Стандарти": "EN 12101-10 (DIN EN 12101-10), ISO 21927-9, VdS 2581/2593/2344, DIN 18232-9",
+   "Вихід": "24 В DC, сумарний струм приводів 80 А",
+   "Групи приводів (моторні лінії)": "10",
+   "Лінії ручних кнопок / сповіщувачів (RM/RT)": "10",
+   "Тригер-модулі": "5 (до 60 пожежних сповіщувачів на модуль)",
+   "Резервне живлення": "акумулятори на 72 год (замовляються окремо)",
+   "Вхід від АПС": "вхід/модуль тригера для сигналу від адресної ППКП (тип інтерфейсу узгодити)",
+   "Компактна альтернатива RZN 4408-K": "230 В / 240 ВА; 24 В DC 8 А; 72 год; 1 лінія / 2 групи; маса 2,9 кг; арт. 30.117.30"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.dh-partner.com/Website/D-H-UK/D-H%20UK%20Downloads/Tender%20Texts/Txt/SHEV%20controllers.txt",
+   "https://www.dh-partner.com/int/en/products/controllers/productDetail/61299/RZN-4408-K"
+  ]
+ },
+ {
+  "role": "exit_door",
+  "manufacturer": "Hörmann KG",
+  "model": "STU (сталеві багатофункціональні двері для зовнішніх стін) + штанга «антипаніка» Hörmann push bar EN 1125",
+  "reason": "Для евакуаційних виходів у поздовжніх зовнішніх стінах потрібні зовнішні двері за EN 14351-1 (вітер, злива, теплозахист); протипожежні STS 30 Hörmann прямо позначає як не призначені для зовнішніх стін, тож EI-двері варто ставити лише на внутрішніх протипожежних перешкодах (напр., межа фарбувальної дільниці).",
+  "specs": {
+   "Призначення": "зовнішні стіни, маркування за DIN EN 14351-1",
+   "Товщина полотна": "62 мм, сталь 1,0 мм, мінвата",
+   "Світловий прохід (1-стулкові)": "ширина 500–1465 мм, висота 640–3120 мм",
+   "Світловий прохід (2-стулкові)": "ширина 1000–2940 мм; робоча стулка 500–1455 мм",
+   "Теплопередача UD": "1,8 Вт/(м²·К) 1-стулкові; 1,7 Вт/(м²·К) 2-стулкові",
+   "Вітрове навантаження": "клас C2–C3 (1-стулк.), B1–C1 (2-стулк.)",
+   "Водонепроникність": "клас 3A–6A (1-стулк.) з порогом з ущільненням",
+   "Фурнітура антипаніки": "Hörmann push bar / touch bar, випробувано за EN 1125",
+   "Вогнестійкість": "не нормована (зовнішні двері); для внутрішніх перешкод — STS 30 T30/EI2 30, 62 мм, прохід 585–1300 × 1730–2800 мм",
+   "Мінімум за ДБН": "ширина у просвіті ≥0,8 м, висота ≥2,0 м (ДБН В.1.1-7:2016 п. 7.2.7)"
+  },
+  "dimensions_mm": {
+   "L": 62,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.hoermann.com/fileadmin/_country/kataloge/pdf/86463-Stahl-und-Edelstahltueren-STS-STU-EN.pdf"
+  ]
+ },
+ {
+  "role": "panic_bar",
+  "manufacturer": "dormakaba",
+  "model": "PHA 2000 (горизонтальна штанга «антипаніка», модульна, 1–3-точкове замикання)",
+  "reason": "Пристрій аварійного виходу за EN 1125 для евакуаційних дверей з одночасним перебуванням великої кількості людей (~150 працюючих у зміні); допущений і для протипожежних/димозахисних дверей, сумісний з електрозамком для СКД.",
+  "specs": {
+   "Стандарт": "EN 1125, маркування CE (Annex ZA)",
+   "Ширина дверей": "до 1000 мм або до 1300 мм (залежно від тяги/штанги)",
+   "Висота дверей": "до 2270 мм (в межах EN 1125) або до 3400 мм",
+   "Маса полотна": "до 200 кг",
+   "Виконання": "неправостороннє (non-handed)",
+   "Замикання": "1-, 2- або 3-точкове (горизонтальні та вертикальні замки)",
+   "Протипожежні двері": "так (позначені вироби; потрібне сумісне свідоцтво дверного блока)",
+   "Опції": "електрозамок (відмикання), мікровимикач контролю штанги, зовнішня ручка PHT",
+   "Товщина полотна": "до 60 мм (60–105 мм — подовжений шпиндель)",
+   "Примітка EN 1125": "ефективна довжина штанги ≥60 % ширини дверей"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://dormakaba-res.cloudinary.com/image/upload/v1753787326/dormakaba-prod/120000000451-tp-pha2000-phb3000-exitpad-en.pdf",
+   "https://www.dormakaba.com/gb-en/solutions/products/door-hardware/panic-hardware/pha-2000-267064"
+  ]
+ },
+ {
+  "role": "lightning_air",
+  "manufacturer": "DEHN SE",
+  "model": "Система зовнішнього блискавкозахисту: стрижень 103 231 + дріт RD 8 AlMgSi 840 008 + роз'єм FIX 453 100",
+  "reason": "Сітка + стрижні на покрівлі для захисту люків димовидалення, вентиляторів та ФЕС; клас LPS II (через вибухонебезпечну зону фарбувальної дільниці) або III — остаточно за розрахунком ризику ДСТУ IEC 62305-2.",
+  "specs": {
+   "Стрижень 103 231": "AlMgSi 16/10 мм, L = 2500 мм, різьба M16, конічна верхня частина 1000 мм, 1,02 кг, під бетонну основу 17 кг",
+   "Провідник 840 008": "RD 8 AlMgSi, Ø8 мм, 50 мм², EN 62561-2, I к.з. 6,4 кА (1 с), ≤0,036 Ом·мм²/м",
+   "Обмеження AlMgSi": "не прокладати безпосередньо по/в/під штукатуркою, бетоном, не в ґрунті",
+   "Роз'єм вимірювальний 453 100": "FTS 8.10 FL30.40 IS StTZn, Rd 8–10 / Fl 30–40 мм, EN 62561-1",
+   "Комірка сітки": "LPS II — 10×10 м; LPS III — 15×15 м",
+   "Радіус фіктивної сфери": "LPS II — 30 м; LPS III — 45 м",
+   "Крок струмовідводів": "LPS II — 10 м; LPS III — 15 м (периметр ≈444 м → ≈45 / ≈30 шт.)",
+   "Рекомендований клас": "LPS II (див. evac_rules.lightning_class)"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": 2500
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.voltus.com/en/dehn-103231-air-termination-rod-with-taper-thread-m16-16-10mm-almgsi-2-5-m.html",
+   "https://www.dehn-international.com/store/p/en-DE/F2355/round-wires",
+   "https://www.dehn-international.com/store/p/en-DE/F4652/fix-test-joint",
+   "https://resources.ipd.com.au/Flipbook/35_DS702_E_2014_Lightning_Protection_Guide/files/basic-html/page64.html",
+   "https://resources.ipd.com.au/Flipbook/35_DS702_E_2014_Lightning_Protection_Guide/files/basic-html/page96.html"
+  ]
+ },
+ {
+  "role": "earthing",
+  "manufacturer": "DEHN SE",
+  "model": "Фундаментний заземлювач St/tZn Ø10 мм (800 310) + кільцевий заземлювач V4A Ø10 мм (860 010)",
+  "reason": "Фундаментний заземлювач (DIN 18014 / IEC 62305-3) у фундаментах каркаса + корозійностійкий кільцевий V4A по периметру в ґрунті при гідроізоляції/ізоляції фундаментів; спільний для блискавкозахисту, ГЗШ і ФЕС.",
+  "specs": {
+   "Фундаментний заземлювач": "кругла сталь St/tZn Ø10 мм (78 мм², 5,5 кА/1 с, цинк ≥50 мкм) або смуга 30×3,5 мм",
+   "Захисний шар бетону": "не менше 5 см",
+   "Конфігурація": "замкнене кільце + перемички, комірка ≤20×20 м",
+   "З'єднання з арматурою": "через кожні 2 м (затискачі)",
+   "Виводи (закладні)": "кожні 15 м для LPS III (для LPS II — під кожен струмовідвід, 10 м)",
+   "Кільцевий заземлювач у ґрунті": "нержавійка V4A (1.4571/1.4404) Ø10 мм, 78 мм², 860 010, ~617 г/м, I к.з. 2,9 кА",
+   "Вимога до матеріалу в ґрунті": "лише V4A з Mo >2 % (EN 62561-2, IEC/EN 62305-3)",
+   "Тип заземлювача": "тип B за IEC 62305-3 (фундаментний/кільцевий)"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.dehn-international.com/sites/default/files/media/files/Foundation-Earth-Electrodes-DS251-E.pdf",
+   "https://www.dehn-international.com/store/p/en-DE/F2355/round-wires",
+   "https://sahkonumerot.fi/5804186/doc/brochure/"
+  ]
+ },
+ {
+  "role": "eyewash",
+  "manufacturer": "Haws Corporation",
+  "model": "8300-8309 (комбінований аварійний душ + фонтан для очей/обличчя AXION MSR)",
+  "reason": "Стаціонарна станція біля зарядної акумуляторів навантажувачів і фарбувальної дільниці (кислота/луг, ЛФМ); українські НПАОП вимагають лише нейтралізувальні розчини (ПБЕЕС п. 6.6.5), тому станція — добровільний захід за ANSI Z358.1.",
+  "specs": {
+   "Витрата душу": "20 gpm ≈ 75,7 л/хв",
+   "Витрата фонтана для очей/обличчя": "3,7 gpm ≈ 14,0 л/хв",
+   "Стандарт": "ANSI/ISEA Z358.1 (сертифікація CSA)",
+   "Тиск у мережі": "30–90 psi (2–6 атм) при протіканні",
+   "Підведення / злив": "1-1/4\" IPS (внутр. різьба) / 1-1/4\" IPS",
+   "Клапани": "латунні хромовані, кульові «stay-open», сталевий кульовий затвор",
+   "Труби": "оцинкована сталь Sch.40 (CRP — з епоксидним покриттям)",
+   "Чаша": "нержавійка Ø11\" (280 мм)",
+   "Висота душової лійки": "≥2083 мм (82\") від підлоги",
+   "Фланець": "Ø229 мм (9\"), 3 анкери 3/8\""
+  },
+  "dimensions_mm": {
+   "L": 702,
+   "W": 635,
+   "H": 2278
+  },
+  "power_kw": null,
+  "sources": [
+   "https://res.cloudinary.com/dzhpkjoqj/Haws/8300-8300CRP.pdf",
+   "https://safetyservicesinc.com/haws-8300-8309-axion-msr-emergency-shower-and-eye-face-wash/"
+  ]
+ },
+ {
+  "role": "water_meter",
+  "manufacturer": "Apator Powogaz S.A.",
+  "model": "MWN50-G NK (турбінний Вольтмана DN50, IP65, імпульсний вихід NK)",
+  "reason": "Лічильник холодної води на вводі DN50 з імпульсним виходом для диспетчеризації; для DN80 — та ж серія MWN. Для M-Bus — комунікаційна накладка Apator (тип і сумісність уточнити).",
+  "specs": {
+   "DN": "50 мм, різьбове приєднання G",
+   "Q3 (номінальна)": "40 м³/год",
+   "Q4 (перевантаження)": "50 м³/год",
+   "Q2 / Q1": "0,64 / 0,4 м³/год",
+   "Динамічний діапазон R": "100 (Q3/Q1)",
+   "Поріг чутливості": "0,15 м³/год",
+   "Макс. тиск": "MAP16 (16 бар)",
+   "Температурний клас": "T30, T50",
+   "Імпульсний вихід NK (геркон)": "100 дм³/імп (стандарт), 10 дм³/імп — під замовлення",
+   "Накладка AT-MBUS-NE-01": "для MWN DN40–125: 2 виходи OC, 0,1–25 м³/імп, кабель 1,5 м, IP65, батарея до 10 років",
+   "Відповідність": "MID 2014/32/EU, EN 14154, EN ISO 4064, OIML R49"
+  },
+  "dimensions_mm": {
+   "L": 200,
+   "W": null,
+   "H": 222
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.apator.com/sites/default/files/documents/mnw50-g-gh-catalogue.pdf",
+   "https://api.apator.com/uploads/oferta/woda-i-cieplo/systemy/przewodowy/apt-mbus-ne/at-mbus-ne-karta-katalogowa.pdf"
+  ]
+ },
+ {
+  "role": "wastewater",
+  "manufacturer": "Hydro Italia S.r.l.",
+  "model": "HYDROFLOTY (флотаційна установка видалення шламу з води фарбувальних кабін; типорозміри 4M–36M)",
+  "reason": "Безперервна коагуляція + флотація шламу з рециркуляційної води водяної завіси, що продовжує термін служби води до ~12 міс і зменшує об'єм стоків; продуктивність і потужність виробник не публікує — підбирати за запитом під об'єм ванн кабін.",
+  "specs": {
+   "Принцип": "коагулянт + поліелектроліт, аерація, флотація, скімер шламу",
+   "Типорозміри": "HYDROFLOTY 4M, 6M, 9M, 12M, 24M, 36M",
+   "Продуктивність": "не опубліковано (за запитом)",
+   "Скорочення об'єму води в кабінах": "до 70 % (дані виробника)",
+   "Заміна води в кабінах": "не частіше ніж раз на 12 міс (дані дистриб'ютора)",
+   "Тип ЛФМ": "водо- і сольвентні фарби (хімію змінюють при переході)",
+   "Альтернатива": "EFA-Miniflot (EFA Chemie, DE) — напірна флотація з дозуванням коагулянту, флокулянту, зневоднювальним контейнером; продуктивність не опубліковано"
+  },
+  "dimensions_mm": {
+   "L": null,
+   "W": null,
+   "H": null
+  },
+  "power_kw": null,
+  "sources": [
+   "https://www.hydroitalia.com/en/systems/spray-booths-water-sludge-removal/",
+   "https://www.aquariusconsult.biz/hydrofloty-for-paint-sludge.php",
+   "https://www.efa-chemie.de/pdf/efa_minflot_prospekt.pdf"
+  ]
+ },
+ {
+  "role": "fire_hydrant_cabinet",
+  "manufacturer": "Технопарк-Пожтехніка (м. Харків, Україна)",
+  "model": "Шафа пожежна ПКК 1200×600×230 навісна (під пожежний кран-комплект + 2 вогнегасники)",
+  "reason": "Українська шафа ДСТУ 4401-2 під кран-комплект DN50/65 і два вогнегасники; згідно з ДБН В.2.5-64 п. 8.13 у шафі також має бути котушка DN25 за ДСТУ EN 671-1 — перевірити, що вміщується, інакше брати шафу більшої ширини.",
+  "specs": {
+   "Габарити (Ш×В×Г)": "600 × 1200 × 230 мм",
+   "Стандарт": "ДСТУ 4401-2:2005",
+   "Клапан": "51 мм або 66 мм кутовий (не входить у комплект)",
+   "Касета для рукава": "Ø51/66 мм (не входить у комплект), поворот ≥90°",
+   "Вогнегасники": "2 шт., висотою до 600 мм, загальна маса ≤30 кг",
+   "Двері": "кут відкриття ≥170°, оглядове вікно, замок, пломбування",
+   "Колір": "RAL 3020 (стандарт), порошкова поліефірна фарба",
+   "Умови експлуатації": "+5…+45 °C, вологість ≤95 %, термін служби до 10 років",
+   "Нормативна витрата (корпус ІІІа/І–ІІ, кат. В, 50–100 тис. м³)": "2 струмені × 5 л/с (ДБН В.2.5-64 табл. 4)",
+   "Рекомендований кран-комплект": "DN65, насадка 19 мм, рукав 20 м: 5,2 л/с при компактному струмені 12 м, тиск 0,199 МПа (табл. 5)",
+   "Висота встановлення": "1,35 м ±0,03 м до осі патрубка (п. 8.12)"
+  },
+  "dimensions_mm": {
+   "L": 230,
+   "W": 600,
+   "H": 1200
+  },
+  "power_kw": null,
+  "sources": [
+   "http://www.vognebor.com.ua/shafa-pozhezhniy/shafa-pozhezhna-pkk-600x1200x230-navisna",
+   "https://e-construction.gov.ua/laws_detail/3874234926928758701?doc_type=2"
+  ]
+ },
+ {
+  "role": "chp",
+  "manufacturer": "TEDOM a.s. (Чехія), двигун MWM TCG 3016 V16 (Caterpillar Energy Solutions)",
+  "model": "Quanto D800 NG (природний газ, 400 В / 50 Гц; виконання Indoor Canopy / Outdoor Container)",
+  "reason": "Єдиний кандидат класу 800 кВте, для якого знайдено повний публічний даташит на 50 Гц / 400 В: витрата газу, тиск газу, температура вихлопу, шум, габарити, маса, опція острівного режиму. Теплова потужність 856 кВт при воді 70/90 °C покриває розрахункове теплове навантаження ≈750 кВт, а зворотна вода мережі 80/60 °C (60 °C) вписується в допустимий діапазон 40–70 °C.",
+  "specs": {
+   "Двигун": "MWM TCG 3016 V16, 16 циліндрів (V), 35 дм³, 1500 об/хв, макс. потужність двигуна 824 кВт",
+   "Генератор": "Marelli MJB 450 MB4, 230/400 В, 50 Гц, cos φ 0,8/1,0, номінальний струм 1443 А (cos φ 0,8)",
+   "Електрична потужність": "800 кВт (у режимі аварійного живлення/острова, опція PE/I: 991 кВА при cos φ 0,8, без перевантаження)",
+   "Теплова потужність (вода 70/90 °C, вихлоп охолоджено до 120 °C)": "856 кВт при 100 %, 676 кВт при 75 %, 497 кВт при 50 %; з опцією економайзера EKO — 952 кВт",
+   "ККД електричний / тепловий / загальний (100 %)": "42,5 % / 45,5 % / 88,0 %",
+   "Витрата газу 100 / 75 / 50 %": "199 / 154 / 109 м³/год (15 °C, 101,325 кПа; Hu 34 МДж/м³), підведена потужність палива 1882 кВт",
+   "Тиск газу на вході": "8–15 кПа, метанове число ≥ 80, макс. температура газу 35 °C",
+   "Вихлопні гази": "температура за двигуном 425/550 °C (ном./макс.; у таблиці теплообміну 424 °C), після теплообмінника 120/150 °C; 3533 Нм³/год; тепло вихлопу 418 кВт",
+   "Викиди (5 % O₂)": "NOx 250 мг/Нм³, CO 300 мг/Нм³; NOx < 100 мг/Нм³ — опція",
+   "Шум (1 м)": "кожух 80 дБ(А); вхід/вихід вентиляції 80 дБ(А) (опція 65); вихлоп 80 дБ(А) (опція 60)",
+   "Габарити та маса": "модуль двигун-генератор 7200×2500×3300 мм, 13 430 кг; модуль вихлопних газів 4900×1000×2600 мм, 2970 кг; глушник вихлопу Ø850×4300 мм, 850 кг. Габарити контейнерного виконання (Outdoor Container) у відкритих джерелах не знайдено",
+   "Робота з мережею / острів / black start": "паралельна робота з мережею — стандартно (синхронізація з мережею), острівний/аварійний режим — опція PE/I; можливість чорного старту (black start) не опублікована (null); мінімальне тривале навантаження 50 % від номінальної потужності"
+  },
+  "dimensions_mm": {
+   "L": 7200,
+   "W": 2500,
+   "H": 3300
+  },
+  "power_kw": 800,
+  "heat_kw": 856,
+  "gas_m3h": 199,
+  "eta_el": 0.425,
+  "eta_th": 0.455,
+  "note": "1) Розміри dimensions_mm — це модуль двигун-генератор у виконанні Indoor Canopy за даташитом Rev02. Для зовнішнього контейнерного виконання (TEDOM пропонує 3 виконання: відкрита рама, Indoor Canopy, Outdoor Container) габарити й масу треба запитати у виробника; майданчик за північною стіною біля дизель-генератора 634 кВА резервувати з запасом, плюс модуль вихлопу 4900×1000 мм, глушник і сухі охолоджувачі (аварійне скидання тепла влітку). 2) Газ: потрібен тиск 8–15 кПа на вході, тобто більший за межу низького тиску (до 5 кПа), тому знадобиться підключення середнього тиску з ГРП/ШРП. Витрата ≈199 м³/год (~1882 кВт палива) — під це потрібні нові ТУ від оператора ГРМ і комерційний вузол обліку. 3) Електрика: номінальний струм 1443 А, рекомендований захист 1600 А, кабель 4×NYY(3×240+120) при довжині <50 м; внесок у струм КЗ < 15 кА. Підключення на шини 0,4 кВ однієї з ТП 2×1000 кВА; потрібне блокування з резервним ДГУ. Для паралельної роботи з мережею установку оформлюють як генеруючу установку споживача за Кодексом систем розподілу: ТУ від ОСР (обленерго), релейний захист, облік. Для продажу надлишку в мережу — статус активного споживача, договори з ОСР, постачальником або трейдером. Електрична потужність 800 кВт більша за пікове споживання ≈655 кВт, тому без експорту установка працюватиме з частковим навантаженням (мінімум 50 %, тобто 400 кВт) або з віддачею надлишку в мережу. Чи потрібна ліцензія НКРЕКП і які конкретно вимоги до приєднання — уточнити в ОСР і НКРЕКП на дату проєкту. 4) Тепло: номінальний графік КГУ 70/90 °C, допустима зворотна вода 40–70 °C, тож мережа 80/60 °C сумісна. 856 кВт тепла перевищують розрахункові ≈750 кВт, тому біомасні котли 2×495 кВт лишаються як пікові/резервні; влітку надлишок тепла скидати через сухі охолоджувачі або обмежувати навантаження. 5) Викиди: NOx 250 мг/Нм³ (опція < 100). Потрібен дозвіл на викиди забруднювальних речовин в атмосферне повітря від стаціонарного джерела; нормативи перевірити за чинними наказами Мінприроди (Мінекології). 6) Ресурс і години роботи: капремонт двигуна MWM TCG 3016 на природному газі — не пізніше 80 000 мотогодин (дані MWM). Економічно доцільна базова робота — кілька тисяч годин на рік; приклад TEDOM Quanto 800 у Шидловці (Польща): понад 5 500 год від введення наприкінці 2022 р. до жовтня 2023 р. 7) Дані даташиту наведено для стандартних умов TEDOM; допуск витрати газу +5 %. Наявність у TEDOM представництва в Україні (сайт ua.tedom.com) і поточну комплектацію/ціну контейнерного виконання підтвердити запитом.",
+  "sources": [
+   "https://www.shentongroup.co.uk/app/uploads/2020/04/Quanto-800-NG-IC-Rev02-Datasheet.pdf",
+   "https://www.tedom.com/wp-content/uploads/2023/12/TEDOM-CHP-Units-50-Hz.pdf",
+   "https://www.tedom.com/en/cogeneration-chp/natural-gas/",
+   "https://www.mwm.net/en/gas-engines-gensets/gas-engine-tcg-3016/",
+   "https://www.tedom.com/en/case-studies/modernization-of-a-municipal-boiler-house-in-szydlowiec-poland/",
+   "https://www.kinsley-group.com/wp-content/uploads/2019/12/TEDOM-Quanto-D800-SE-CHP-System-Datasheet-3016V16.pdf"
+  ],
+  "heat_kw_75": 676,
+  "heat_kw_50": 497,
+  "gas_m3h_75": 154,
+  "gas_m3h_50": 109,
+  "min_load": 0.5,
+  "current_a": 1443,
+  "exhaust_module_mm": {
+   "L": 4900,
+   "W": 1000,
+   "H": 2600
+  },
+  "silencer_mm": {
+   "D": 850,
+   "L": 4300
+  }
+ },
+ {
+  "role": "board_rack",
+  "manufacturer": "SSI Schäfer",
+  "model": "PR 600 (фронтальний палетний стелаж), конфігурація під стоси ДСП/МДФ: подвійна рама 2×850 мм + розпірки D 300 F (глибина 2000 мм), балки INP 120 TRV1-330-12-I (просвіт 3300 мм), стійки P 95 (90 мм)",
+  "reason": "SSI Schäfer публікує в каталозі повні таблиці навантажень балок і рам PR 600 (за DIN EN 15512:2020), тож конфігурацію можна обґрунтувати без запиту. Просвіт 2900 мм у каталозі є, але для стосу 2800 мм дає лише 50 мм зазору до стійки, а для класу 400 (навантажувачі з фронтальним захопленням) потрібно ≥75 мм з кожного боку (2800+2×75 = 2950 мм), тому обрано наступний стандартний просвіт 3300 мм (по 250 мм зазору). Балка INP 120 довжиною 3300 мм має 4400 кг на пару, що з запасом покриває повний стос 3,0–3,4 т. Стандартні глибини рам PR 600 — 850 / 1100 / 1250 мм, тому під стос глибиною 2070 мм (бруски вздовж 2070) рама конфігурується як дві рами 850 мм, з'єднані розпірками 300 мм: загальна глибина 2000 мм, звис стосу ≈35 мм спереду і ззаду, бруски спираються на 4 балки.",
+  "specs": {
+   "Система": "PR 600, болтова рама, поздовжні балки на гачках (push-fit), перфорація 50×50 мм",
+   "Балка (обрана)": "TRV1-330-12-I, профіль INP 120, довжина (просвіт секції) 3300 мм — 4400 кг на пару (рівномірно розподілене навантаження)",
+   "Альтернативи балок 3300 мм": "INP 100 — 2700 кг/пару; CE 140/40 — 3000 кг/пару; INP 80 — 1400 кг/пару",
+   "Балки 2900 мм (для порівняння)": "INP 100 — 3300 кг/пару; INP 120 — 4500 кг/пару; але зазор до стійки лише 50 мм",
+   "Макс. навантаження балки PR 600": "до 4500 кг на пару",
+   "Стандартні глибини рам": "850 / 1100 / 1250 мм; під стос 2070 мм — 2×850 мм + розпірки D 300 F = 2000 мм (конфігурація)",
+   "Профілі стійок (ширина)": "P 73 — 75 мм; P 93 / P 95 — 90 мм; також 100 і 120 мм",
+   "Навантаження на раму P 95 (крок рівнів 1250 мм)": "11 800 кг (секція 2700) / 11 150 кг (секція 3600)",
+   "Навантаження на раму P 95 (крок рівнів 1000 мм)": "13 400 кг (секція 2700) / 12 100 кг (секція 3600)",
+   "Макс. навантаження рами PR 600": "до 30 000 кг",
+   "Висоти рам P 95 (каталог)": "2500 … 12 100 мм; рекомендовано 4700 мм для 3 рівнів балок",
+   "Покриття": "рами оцинковані; балки RAL 5010 (синій)"
+  },
+  "dimensions_mm": {
+   "L": 3390,
+   "W": 2000,
+   "H": 4700
+  },
+  "power_kw": null,
+  "beam_clear_mm": 3300,
+  "frame_depth_mm": 2000,
+  "level_capacity_kg": 4400,
+  "upright_mm": 90,
+  "design_stack_max_kg": 3400,
+  "bay_pitch_mm": 3390,
+  "beam_height_mm": 120,
+  "beam_levels_mm_full_stack": [
+   1250,
+   2500,
+   3750
+  ],
+  "beam_levels_mm_075_stack": [
+   1000,
+   2000,
+   3000,
+   4000
+  ],
+  "sources": [
+   "https://www.ssi-schaefer.com/resource/blob/1237198/95480ac95cf399ed954157e412ea42c6/pallet-racking-systems-dam-download-en-15750--data.pdf",
+   "https://www.cisco-eagle.com/storage/rack/Palletrack/Tolerances%20&%20Pallet%20Dimensions.pdf",
+   "https://www.mecalux.com/warehouse-manual/warehouse-design/pallet-racking-clearances"
+  ],
+  "note": "Габарит dimensions_mm — одна секція: L = просвіт 3300 + стійка 90 = крок 3390 мм уздовж проходу; W = глибина подвійної рами 2000 мм; H = висота рами 4700 мм. Стос 2800×2070 кладеться довгою стороною вздовж проходу (вздовж балок), вила заходять по глибині 2070 між брусками; бруски лежать поперек усіх 4 балок. Розподіл навантаження на 4 балки нерівномірний: внутрішня пара бере ≈65–70 % ваги стосу (≈2,25 т при 3,4 т), зовнішня ≈1,15 т — тому всі 4 балки INP 120 (4400 кг/пару); INP 100 3300 (2700 кг/пару) допустима лише як зовнішня пара. Рівень розраховано на ОДИН стос ≤3,4 т (design_stack_max_kg), каталожна несучість 2 пар — 8800 кг, але більше одного стосу на рівень не вміщується. Зазори (EN 15620, клас 400, як у каталозі Interlake Mecalux): горизонтально вантаж–стійка X3 ≥75 мм на будь-якій висоті, між вантажами X4 ≥75 мм до 3 м / 100 мм до 6 м; вертикально над вантажем до низу балки Y3 ≥75 мм до 3 м, 100 мм до 6 м, 125 мм до 9 м; крок рівнів = висота вантажу + Y3 + висота балки, округлення до 50 мм. Для повного стосу 1,0 м: 1000+100+120 = 1220 → крок 1250 мм, рівні балок 1250/2500/3750 + підлога = 4 стоси на секцію (верх вантажу ≈4750 мм). Для стосу 0,75 м / 2,5 т: крок 1000 мм, балки 1000/2000/3000/4000 + підлога = 5 стосів на секцію. Правила SSI для PR 600: різниця висот комірок ≤200 мм, макс. висота комірки 2500 мм, ≥2 рівні балок у секції, ряд ≥3 секцій, торцеві рами на ≥500 мм вищі за верхній рівень, захист торців і кутів стійок (відбійники ≥400 мм), таблички навантаження на кожному ряду. Вертикальні габарити: вантажопідйомник X50 зі стандартною щоглою h3=4400 мм дістає верхній рівень 3750–4000 мм; вища забудова 9 м можлива лише з триплекс-щоглою і зі зниженою вантажопідйомністю, тому рекомендовано не більше 3 рівнів балок (повні стоси) або 4 (стоси 0,75 м). Підлога: SSI вимагає бетон не нижче C20/25 за EN 1992, товщина ≥200 мм. Оцінка навантаження: внутрішня стійка подвійної рами ≈3,5 т (≈35 кН) на п'яту при 3 рівнях по 3,4 т; середнє навантаження на площу ряду ≈20 кН/м² (4 стоси × 3,4 т на 3,39×2,0 м); плиту перевірити на ці точкові навантаження та на вісь навантажувача ≈11,5 т. Компонування в зоні 13,4 × 44 м (для фронтального навантажувача): ряд 2,0 м + прохід 5,8 м + ряд 2,0 м = 9,8 м, решта 3,6 м — під конвеєр/проїзд; по 44 м вміщується 12 секцій на ряд (12×3390+90 = 40 770 мм) → 96 повних стосів або 120 стосів по 0,75 м. Подвійна рама 2×850 мм та стос глибиною 2070 мм — нетипова (конфігурована) позиція: потрібне підтвердження розрахунком SSI Schäfer; альтернатива — спецрама глибиною 1800–2000 мм, яку SSI пропонує «на запит» (Other frame profiles on request). Стандартні в каталозі лише балки 1900–3900 мм і рами 850/1100/1250 мм під європалети. Норми: EN 15512 (розрахунок), EN 15620 (допуски/зазори), EN 15635 (експлуатація, щорічна інспекція); в Україні застосовуються відповідні ДСТУ EN — перевірити чинну редакцію."
+ },
+ {
+  "role": "board_forklift",
+  "manufacturer": "Linde Material Handling",
+  "model": "X50/600 (серія 1254), електричний фронтальний навантажувач 4,99 т, Li-ion 90 В, стандартна щогла h3 = 4400 мм, вила 2000 мм з позиціонером",
+  "reason": "Для потоку «розвантаження фури біля західної стіни → буферні стелажі → живильний конвеєр складу STORETEQ P-500» потрібна одна машина, яка (1) розвантажує тентовані фури збоку, заводячи вила по глибині 2070 мм; (2) ставить стос у стелаж; (3) кладе стос на ланцюговий конвеєр. Найбільш поширене рішення на меблевих фабриках — 4,5–5 т фронтальний навантажувач з подовженими вилами. Linde публікує повну технічну карту VDI 2198 та діаграму залишкової вантажопідйомності для X50/600: при c = 1035 мм розрахунково ≈3,6 т (метод моментів, перевірений на таблиці Linde), що покриває повний стос 3,0–3,4 т. Електропривід — бо робота в цеху поруч зі складом і верстатами. Бічний або багатонапрямний навантажувач (Combilift C-Series, Hubtex) дав би вужчий прохід (≈2,6–2,9 м), але Combilift публікує номінал лише при c = 600 мм. Для стосу глибиною 2070 мм (c ≈ 1035 мм) вантаж виходить за платформу, і діаграм немає. Площа 13,4 × 44 м з запасом вміщує буфер і при проході 5,8 м.",
+  "specs": {
+   "Номінальна вантажопідйомність": "4990 кг при c = 600 мм (до висоти підйому 5800 мм — 5000 кг за діаграмою)",
+   "Залишкова вантажопідйомність (діаграма Linde, H ≤ 5800 мм)": "c 400–600: 5000 кг; 700: 4590 кг; 800: 4250 кг; 900: 3950 кг",
+   "Розрахунково при c = 1035 / 1100 мм": "≈3615 / ≈3470 кг (без урахування подовжених вил); практично ≈3,4–3,5 т з вилами 2000 мм",
+   "Відстань від осі до спинки вил x": "535,2 мм",
+   "Колісна база y": "2120 мм",
+   "Габарит: ширина b1 / довжина до спинки вил l2": "1448 мм / 3173 мм (з вилами 1200 мм — 4373 мм)",
+   "Радіус повороту Wa / мін. відстань до центру повороту b13": "2836 мм / 842 мм",
+   "Робоча ширина проходу (каталог)": "4571 мм (палета 1000×1200 поперек), 4771 мм (800×1200 уздовж), з a = 200 мм",
+   "Щогла стандартна h3 = 4400 мм": "h1 (опущена) 3230 мм, h4 (піднята) 5425 мм, вільний підйом 150 мм",
+   "Висота над захисним дахом h6": "2495 мм",
+   "Двигуни": "хід 2 × 15 кВт (S2 60 хв), підйом 28 кВт (S3 15 %), SRM+",
+   "Батарея / маса": "Li-ion 90 В, 1440 А·год (126,8 кВт·год); власна маса ≈8,0 т; навантаження на передню вісь з вантажем 11 489 кг"
+  },
+  "dimensions_mm": {
+   "L": 5173,
+   "W": 1448,
+   "H": 3230
+  },
+  "power_kw": 30,
+  "capacity_kg": 4990,
+  "load_centre_mm": 600,
+  "capacity_at_1035mm_kg": 3600,
+  "aisle_mm": 5700,
+  "lift_mm": 4400,
+  "truck_w_mm": 1448,
+  "truck_l_mm": 5173,
+  "drive": "електро",
+  "sources": [
+   "https://www.linde-mh.co.uk/en_uk/Products/E-Trucks/X35-X50/",
+   "https://www.linde-mh.co.uk/media/Datasheets/EN_ds_x35_x50_1254_en_a_0323_view.pdf",
+   "https://pdf.directindustry.com/pdf/combilift/c-series-c3500-c5000/17581-277511.html"
+  ],
+  "note": "truck_l_mm = l2 3173 + вила 2000 мм = 5173 мм (з каталожними вилами 1200 мм — 4373 мм); H = 3230 мм — опущена стандартна щогла h3 4400 (захисний дах 2495 мм). power_kw = 30 — тягові двигуни 2×15 кВт; гідравліка ще 28 кВт (S3 15 %), зарядка Li-ion від мережі 400 В. Вантажопідйомність при іншому центрі ваги (метод моментів відносно передньої осі, x = 535,2 мм): Q(c) = 5000 × (535,2+600)/(535,2+c). Перевірка формули на таблиці Linde: c = 900 → 3955 кг (у таблиці 3950). Для c = 1035 мм → 3615 кг, для c = 1100 мм → 3471 кг. Подовжені вила 2000 мм (маса й винос) і позиціонер зменшують це ще на кілька відсотків, тож для проєкту стос ≤3,3–3,4 т; точне значення — на табличці залишкової вантажопідйомності від Linde для замовленої комплектації. Робоча ширина проходу для ЦЬОГО вантажу (VDI 2198, вантаж ширший за 2·b13): Ast = Wa + √((x + l6)² + (b12/2 − b13)²) + a = 2836 + √((535 + 2070)² + (1400 − 842)²) + 200 = 2836 + 2664 + 200 ≈ 5700 мм, де l6 = 2070 мм (глибина стосу по вилах), b12 = 2800 мм (ширина стосу поперек машини), a = 200 мм. Формулу перевірено на каталозі: для палети 1000×1200 поперек Wa + x + l6 + a = 2836 + 535 + 1000 + 200 = 4571 мм — збігається з даними Linde. Рекомендований прохід між стелажами 5800–6000 мм. Транспортний проїзд зі стосом 2800 мм поперек: ≥3800 мм в одному напрямку (2800 + 2×500). Біля західної стіни для бокового розвантаження фури потрібна смуга ≥6,0 м від борту причепа. Під'їзд до конвеєра — перпендикулярно напрямку руху конвеєра, вила йдуть поперек ланцюгів між брусками стосу. Висота брусків має бути ≥100 мм, щоб вила (товщина 60 мм) виходили над ланцюгами. Обмеження висоти: стандартна щогла 4400 мм — верхній рівень балки ≤4000 мм. Вищі рівні — триплекс-щогла 5365–6315 мм з падінням вантажопідйомності (на 6300 мм лише 4080 кг при c = 600 → ≈2,95 т при c = 1035), тобто повні стоси вище 4 м не ставити. Підлога: навантаження передньої осі з вантажем ≈11,5 т (шини SE 315/70-15). Альтернатива, якщо треба вужчий прохід: Combilift C5000 / C-Series (5000 кг при c = 600 мм, ширина ≈2190 мм, довжина ≈2500 мм, прохід ≈2,6–2,9 м з урахуванням звису стосу 2070 мм) — лише після отримання від Combilift діаграми вантажопідйомності для c ≈ 1035 мм; у відкритих джерелах її немає."
+ }
+]
