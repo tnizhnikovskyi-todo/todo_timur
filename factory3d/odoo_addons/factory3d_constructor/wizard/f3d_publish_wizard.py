@@ -94,16 +94,21 @@ class F3dPublishWizard(models.TransientModel):
             )
         return True
 
-    def _f3d_action(self):
+    def _f3d_action(self, from_editor=False):
+        """Діалог майстра; `from_editor` — відкрито з клієнтської дії: після публікації лишаємось у редакторі."""
         self.ensure_one()
-        return {
+        action = {
             'type': 'ir.actions.act_window',
             'name': "Публікація розкладки",
             'res_model': self._name,
             'res_id': self.id,
             'view_mode': 'form',
+            'views': [(False, 'form')],
             'target': 'new',
         }
+        if from_editor:
+            action['context'] = {'f3d_from_editor': True}
+        return action
 
     def action_confirm(self):
         """R-12: перевірка «чернетка не змінилась», перерахунок плану, застосування, версія."""
@@ -125,6 +130,16 @@ class F3dPublishWizard(models.TransientModel):
         }
         result = publish.apply_plan(site, plan, keys, self.note or '', excluded)
         self.write({'state': 'done', 'version_id': result['version'].id})
+        if self.env.context.get('f3d_from_editor'):
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'type': 'success',
+                    'message': "Опубліковано: %s" % result['version'].display_name,
+                    'next': {'type': 'ir.actions.act_window_close'},
+                },
+            }
         return {
             'type': 'ir.actions.act_window',
             'name': "Версія планування",

@@ -418,7 +418,7 @@ class F3dConstructorController(http.Controller):
             return fail('no_changes', "Немає змін для публікації")
         wizard = env['f3d.publish.wizard'].create({'site_id': site.id})
         wizard._f3d_rebuild(plan)
-        return {'ok': True, 'action': wizard._f3d_action(), 'summary': publish.summary(plan)}
+        return {'ok': True, 'action': wizard._f3d_action(from_editor=True), 'summary': publish.summary(plan)}
 
     # --- API-07 -------------------------------------------------------------------------------------
     @http.route('/f3d/constructor/publish', type='jsonrpc', auth='user', methods=['POST'])

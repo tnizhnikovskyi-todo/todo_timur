@@ -303,3 +303,16 @@ class TestPublish(F3DConstructorCase):
         wizard.action_confirm()
         codes = self.env['stock.location'].search([('f3d_site_id', '=', self.site.id)]).mapped('f3d_code')
         self.assertEqual(sorted(codes), ['UT-R1-B01-L1'])
+
+    def test_publish_from_editor_stays_in_editor(self):
+        """Майстер з редактора: дія з `views` і прапорцем; після підтвердження — сповіщення й закриття діалогу."""
+        self.rack('ED-R1', bays=1, levels=1)
+        wizard = self.wizard()
+        action = wizard._f3d_action(from_editor=True)
+        self.assertEqual(action['views'], [(False, 'form')])
+        self.assertTrue(action['context']['f3d_from_editor'])
+        res = wizard.with_context(f3d_from_editor=True).action_confirm()
+        self.assertEqual(res['tag'], 'display_notification')
+        self.assertEqual(res['params']['next'], {'type': 'ir.actions.act_window_close'})
+        self.assertEqual(wizard.state, 'done')
+        self.assertTrue(wizard.version_id)

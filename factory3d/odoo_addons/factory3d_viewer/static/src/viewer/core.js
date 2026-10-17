@@ -18,6 +18,16 @@ import { createStockLoad, liveLine } from "./stock_load.js";
 
 const THREE_URL = "/factory3d_viewer/static/lib/three/three-bundle.esm.js";
 
+// Точка розширення ядра (SPEC R-25): модуль-міст реєструє обробник, який ядро викликає з `applyLayout(D.layout)`
+// після завантаження моделі, на кожній повній дельті й зміні розкладки — ДО `stockLoad.sync`, щоб вантаж за залишками
+// ліг у вже зсунуті комірки. Без зареєстрованих розширень і без `D.layout` ядро працює як раніше.
+const EXTENSIONS = new Set();
+/** `ext = { applyLayout(api, layout, fresh) }`; `layout` — `D.layout` або null; повертає функцію зняття. */
+export function registerViewerExtension(ext) {
+    EXTENSIONS.add(ext);
+    return () => EXTENSIONS.delete(ext);
+}
+
 const FIRE_STATE = {
     ok: ["ok", "Норма"],
     alarm: ["bad", "Тривога"],
@@ -497,6 +507,7 @@ function onPart(gltf) {
     }
   });
   scene.add(root);
+  if (D?.layout) {applyLayout(fresh);} // частина, що приїхала після даних: зсув/ховання до підписів і вантажу
   buildLabels(fresh);
   stockLoad.sync(fresh.map((o) => o.userData.code));
   fresh.forEach(paint);
@@ -580,7 +591,9 @@ function viewPose(v) {
     c = [(x0 + x1) / 2, (y0 + y1) / 2, 0.5];
     size = Math.max(x1 - x0, y1 - y0) * 1.1;
   } else {
-    const box = new THREE.Box3().setFromObject(items.get(v.code));
+    const it = items.get(v.code);
+    if (!it) {return { pos: b2t([75, -30, 60]), target: b2t([75, 36, 0]) };} // об'єкт прибрано розкладкою (R-25)
+    const box = new THREE.Box3().setFromObject(it);
     const ct = box.getCenter(new THREE.Vector3());
     c = [ct.x, -ct.z, 1.0];
     size = box.getSize(new THREE.Vector3()).length() * 0.9;
@@ -743,6 +756,36 @@ function syncLabels() {
   for (const { lbl, obj, cls } of labels) {
     const near = cls === "zone" ? dist > 18 : LS.lite ? obj === selected : camera.position.distanceTo(lbl.getWorldPosition(tmpV)) < 70;
     lbl.visible = on && near && !busy && isShown(obj);
+  }
+}
+// ---------------------------------------------------------------- точка розширення (R-25)
+function dropLabels(objs) {
+  const set = new Set(objs);
+  for (let i = labels.length - 1; i >= 0; i--) {
+    if (set.has(labels[i].obj)) { scene.remove(labels[i].lbl); labels.splice(i, 1); }
+  }
+}
+// підписи, що вже були в об'єктів, ставимо заново за новим положенням (нові об'єкти — через buildLabels самого розширення)
+function relabel(objs) {
+  const had = new Set(labels.map((l) => l.obj));
+  const todo = objs.filter((o) => had.has(o));
+  dropLabels(todo);
+  buildLabels(todo.filter((o) => o.parent && o.visible));
+}
+function refreshSelection() {
+  if (!selected) {return;}
+  if (!isShown(selected) || items.get(selected.userData.code) !== selected) { select(null); return; }
+  selBox.box.setFromObject(selected).expandByScalar(0.08);
+}
+const extApi = {
+  THREE, GLTFLoader, scene, items, labels, stockLoad, opts, kiosk, client, notify, buildLabels, dropLabels, relabel,
+  refreshSelection, codeRoot, isShown, paint, select, envMapIntensity: LS.envMapIntensity, shadows: LS.shadows,
+  get D() { return D; }, get selected() { return selected; },
+};
+function applyLayout(fresh) {
+  for (const ext of EXTENSIONS) {
+    if (typeof ext.applyLayout !== "function") {continue;}
+    try { ext.applyLayout(extApi, D?.layout ?? null, fresh || null); } catch (err) { console.error(err); }
   }
 }
 $(".o_f3d_opt-labels").onchange = syncLabels;
@@ -1289,6 +1332,7 @@ function indexData() {
 function setData(d, first) {
   D = d;
   indexData();
+  applyLayout(); // R-25: розкладка конструктора — до syncMachineLabels і stockLoad.sync
   simBase = Date.parse(D.meta.now.replace(" ", "T"));
   scheduleWOs();
   simStart = Date.now();
@@ -1386,6 +1430,7 @@ function applyPatch(patch) {
   const lists = new Set();
   for (const [k, v] of Object.entries(patch)) {
     if (k === "removed" || k === "signals" || k === "full") {continue;}
+    if (k === "layout") { D.layout = v; lists.add(k); continue; } // розкладка замінюється цілком, не зливається (R-25)
     if (k in LIST_KEYS && Array.isArray(v)) {
       mergeList(D[k] ??= [], v, LIST_KEYS[k]);
       if (v.length) {lists.add(k);}
@@ -1424,7 +1469,8 @@ function applyPatch(patch) {
   }
   if (lists.has("zones")) {syncOutdoorZones();}
   if (lists.has("fire")) {syncFireDevices();}
-  if (lists.has("locations")) {stockLoad.sync([...changed]);}
+  if (lists.has("layout")) { applyLayout(); stockLoad.sync(); items.forEach(paint); } // R-25: до вантажу за залишками
+  else if (lists.has("locations")) {stockLoad.sync([...changed]);}
   for (const c of changed) {
     const o = items.get(c);
     if (o) {paint(o);}
@@ -1575,6 +1621,7 @@ function applySnapshot(payload) {
   simStart = Date.now();
   scheduleWOs();
   simOverride = keepSim;
+  applyLayout();
   stockLoad.sync();
   items.forEach(paint);
   if (prodOv.on) {drawProdOverlay();}
@@ -1583,7 +1630,7 @@ function applySnapshot(payload) {
 }
 let snapShown = null;
 function snapshotTime(min) {
-  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); stockLoad.sync(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
+  if (min == null) { snapShown = null; if (Dlive && D !== Dlive) { D = Dlive; indexData(); scheduleWOs(); applyLayout(); stockLoad.sync(); items.forEach(paint); if (prodOv.on) {drawProdOverlay();} flow.built = false; renderPanel(true); } return false; }
   const day = (Dlive || D).meta.now.slice(0, 10);
   const t = Date.parse(`${day}T00:00`) + min * 60000;
   let pick_ = null;
