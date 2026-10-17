@@ -100,7 +100,8 @@ class TestLayoutPayload(LayoutBase):
         self.assertEqual({c["code"] for c in rack["cells"]} & {"FG-R5-B01-L5", "FG-R5-B18-L5"},
                          {"FG-R5-B01-L5", "FG-R5-B18-L5"})
         cell = next(c for c in rack["cells"] if c["code"] == "FG-R5-B01-L3")
-        self.assertEqual((cell["lz"], cell["h"], cell["w"], cell["d"], cell["kind"]), (3.8, 1.9, 2.7, 1.1, "pallet_cell"))
+        self.assertEqual(
+            (cell["lz"], cell["h"], cell["w"], cell["d"], cell["kind"]), (3.8, 1.9, 2.7, 1.1, "pallet_cell"))
         self.assertEqual(lay["replaced"], ["FG-R5"])
         self.assertEqual(lay["frames"]["FG-R5"]["x"], 134.2)
         self.assertEqual(lay["frames"]["FG-R5"]["y"], 27.3)
