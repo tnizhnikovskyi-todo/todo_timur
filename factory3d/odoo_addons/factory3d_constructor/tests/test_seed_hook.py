@@ -102,16 +102,16 @@ class TestSeedHook(F3DConstructorCase):
         self.assertNotIn('SAW-1', report['unlinked']['equipment'])
         self.assertGreaterEqual(report['linked']['locations'], 1)
         if demo:
-            # демо-база має локації всіх комірок макета (крім майданчика відходів) і обладнання верстатів;
-            # об'єкти сцени (будівлі, планшети, люди, вантажівки) окремого обладнання в демо не мають
+            # демо-база має локації всіх комірок макета (майданчик відходів WASTE — контейнери, не склад: комірку
+            # вимкнено) і обладнання верстатів; об'єкти сцени (будівлі, планшети, люди) окремого обладнання не мають
             scene = set(
                 self.env['f3d.placement']
                 .search([('site_id', '=', site.id), ('variant_id.passport_id.role', '=like', 'scene_%')])
                 .mapped('code')
             )
-            self.assertEqual(report['unlinked']['locations'], ['WASTE'])
+            self.assertEqual(report['unlinked']['locations'], [])
             self.assertLessEqual(set(report['unlinked']['equipment']), scene)
-            self.assertEqual(report['linked']['locations'] + 1, report['created']['cells'])
+            self.assertEqual(report['linked']['locations'], report['created']['cells'])
         else:
             self.assertIn('FG-R1-B01-L1', report['unlinked']['locations'])
             self.assertIn('SAW-2', report['unlinked']['equipment'])

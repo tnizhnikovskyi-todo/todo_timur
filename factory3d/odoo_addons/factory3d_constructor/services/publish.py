@@ -15,6 +15,7 @@ from odoo import fields
 from odoo.exceptions import UserError
 
 from . import snapshot, state as state_mod
+from .schemas import SCENE_ROLE_PREFIX
 
 _logger = logging.getLogger(__name__)
 
@@ -88,9 +89,17 @@ def _line(kind, res_model, code, name, vals=None, record=None, source_uid='', ch
 # --- локації ---------------------------------------------------------------------------------------------
 
 
-def _match(code, by_f3d, by_alt, site, issues, label):
-    """Збіг запису за f3d_code, потім за запасним ключем (barcode/serial_no); повертає (record|None, skip: bool)."""
-    rec = by_f3d.get(code)
+def is_scene_passport(passport):
+    """Зведений паспорт «Об'єкти сцени · …» (не каталожний): наявному обладнанню його не записуємо."""
+    return bool(passport) and (passport.role or '').startswith(SCENE_ROLE_PREFIX)
+
+
+def _match(code, by_f3d, by_alt, site, issues, label, by_alias=None):
+    """Збіг запису за f3d_code, потім за другим кодом сцени (f3d_alias), потім за запасним ключем (barcode/serial_no);
+    повертає (record|None, skip: bool).
+
+    Збіг за f3d_alias — не конфлікт: 3D малює один запис двома об'єктами (ворота DOCK-W1 і майданчик UNLOAD-1)."""
+    rec = by_f3d.get(code) or (by_alias or {}).get(code)
     if rec is None:
         candidates = by_alt.get(code, [])
         if len(candidates) > 1:
@@ -170,14 +179,22 @@ def _plan_locations(site, env, lines, issues):
                 continue
             desired[cell['code']] = {'cell': cell, 'slot': slot, 'parent': parent}
     codes = list(desired)
-    existing = Loc.search(['|', ('f3d_code', 'in', codes), ('barcode', 'in', codes)]) if codes else Loc
+    existing = (
+        Loc.search(['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('barcode', 'in', codes)])
+        if codes
+        else Loc
+    )
     by_f3d = {r.f3d_code: r for r in existing if r.f3d_code}
+    by_alias = {r.f3d_alias: r for r in existing if r.f3d_alias}
     by_barcode = _group_by(existing, 'barcode')
+    kept = set(codes)  # коди сцени, що лишаються за площадкою (в т.ч. f3d_code/f3d_alias знайдених записів)
     for code, item in desired.items():
         cell, slot, parent = item['cell'], item['slot'], item['parent']
-        rec, skip = _match(code, by_f3d, by_barcode, site, issues, "локація")
+        rec, skip = _match(code, by_f3d, by_barcode, site, issues, "локація", by_alias)
         if skip:
             continue
+        if rec is not None:
+            kept.update(c for c in (rec.f3d_code, rec.f3d_alias) if c)
         if rec is None:
             vals = {
                 'name': cell['name'],
@@ -215,7 +232,7 @@ def _plan_locations(site, env, lines, issues):
             )
         else:
             unchanged += 1
-    return set(codes), unchanged
+    return kept, unchanged
 
 
 # --- обладнання й робочі центри --------------------------------------------------------------------------
@@ -226,8 +243,13 @@ def _plan_equipment(site, env, lines, issues):
     Workcenter = env[WORKCENTER].with_context(active_test=False)
     placements = env['f3d.placement'].search([('site_id', '=', site.id), ('layer_id.active', '=', True)])
     codes = placements.mapped('code')
-    eq_existing = Equipment.search(['|', ('f3d_code', 'in', codes), ('serial_no', 'in', codes)]) if codes else Equipment
+    eq_existing = (
+        Equipment.search(['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('serial_no', 'in', codes)])
+        if codes
+        else Equipment
+    )
     by_f3d = {r.f3d_code: r for r in eq_existing if r.f3d_code}
+    by_alias = {r.f3d_alias: r for r in eq_existing if r.f3d_alias}
     by_serial = _group_by(eq_existing.filtered(lambda r: not r.f3d_code), 'serial_no')
     wc_codes = placements.filtered(lambda p: p.variant_id.create_workcenter).mapped('code')
     wc_existing = (
@@ -237,36 +259,43 @@ def _plan_equipment(site, env, lines, issues):
     wc_by_code = _group_by(wc_existing.filtered(lambda r: not r.f3d_code), 'code')
     Zone = env['f3d.zone']
     unchanged = 0
+    kept = set(codes)
     for p in placements:
         code = p.code
         passport = p.variant_id.passport_id
         zone = Zone.zone_at(p.x_m, p.y_m, site.company_id)
-        rec, skip = _match(code, by_f3d, by_serial, site, issues, "обладнання")
+        rec, skip = _match(code, by_f3d, by_serial, site, issues, "обладнання", by_alias)
         if not skip and rec is None and p.dynamic:
             continue  # люди й транспорт без наявного обладнання: запис обладнання не створюємо
+        if rec is not None:
+            kept.update(c for c in (rec.f3d_code, rec.f3d_alias) if c)  # не пропонувати архівацію (збіг за alias)
         if not skip:
             if rec is None:
-                vals = {
-                    'name': p.name,
-                    'f3d_code': code,
-                    'f3d_passport_id': passport.id,
-                    'f3d_site_id': site.id,
-                    'f3d_placement_uid': p.uid,
-                    'company_id': site.company_id.id,
-                }
-                if zone:
-                    vals['f3d_zone_id'] = zone.id
-                lines.append(
-                    _line('create', EQUIPMENT, code, p.name, vals, None, p.uid, "паспорт %s" % passport.display_name)
-                )
+                if p.variant_id.create_equipment:  # зведені варіанти сцени (прапорець вимкнено) обладнання не створюють
+                    vals = {
+                        'name': p.name,
+                        'f3d_code': code,
+                        'f3d_passport_id': passport.id,
+                        'f3d_site_id': site.id,
+                        'f3d_placement_uid': p.uid,
+                        'company_id': site.company_id.id,
+                    }
+                    if zone:
+                        vals['f3d_zone_id'] = zone.id
+                    lines.append(
+                        _line(
+                            'create', EQUIPMENT, code, p.name, vals, None, p.uid, "паспорт %s" % passport.display_name
+                        )
+                    )
             else:
                 vals = {}
                 if not rec.f3d_code:
                     vals['f3d_code'] = code
-                if rec.f3d_passport_id != passport:
+                # зведений паспорт «Об'єкти сцени» ніколи не записується в наявне обладнання (ні замість справжнього
+                # паспорта, ні замість порожнього); зона наявного обладнання публікацією не змінюється: вона
+                # задається каталогом base (scene_zone_links), а не геометрією розміщення
+                if rec.f3d_passport_id != passport and not is_scene_passport(passport):
                     vals['f3d_passport_id'] = passport.id
-                if zone and not rec.f3d_zone_id:
-                    vals['f3d_zone_id'] = zone.id
                 if rec.f3d_site_id != site:
                     vals['f3d_site_id'] = site.id
                 if rec.f3d_placement_uid != p.uid:
@@ -302,7 +331,7 @@ def _plan_equipment(site, env, lines, issues):
                     )
                 else:
                     unchanged += 1
-    return set(codes), set(wc_codes), unchanged
+    return kept, set(wc_codes), unchanged
 
 
 # --- пропозиції архівації (R-13) ----------------------------------------------------------------------------
