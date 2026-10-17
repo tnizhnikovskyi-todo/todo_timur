@@ -13,7 +13,7 @@ import { UNIT_LABELS, sizeToVariantDims } from "../model/normalize";
 import { loadThree } from "../model/three";
 import { uploadModel } from "../model/upload";
 import { PREVIEW_CONFIG, createPreview } from "./preview_core";
-import { getStaged, setStaged } from "./staging";
+import { getStaged, setStaged, stagingBus } from "./staging";
 
 const UNITS = ["mm", "cm", "m", "in"];
 
@@ -51,12 +51,20 @@ export class F3dModelUpload extends Component {
             hasFiles: false,
             staged: false,
             warnings: [],
+            rev: 0,
         });
         this.accept = ACCEPT;
         this.unitList = UNITS.map((u) => ({ key: u, label: UNIT_LABELS[u] }));
         this.files = [];
         this.loaded = null;
+        this.onStaged = (e) => {
+            if (e.detail === this.props.record) {
+                this.state.rev++; // staged лежить поза useState: перемальовуємо вручну
+            }
+        };
+        stagingBus.addEventListener("change", this.onStaged);
         onWillUnmount(() => {
+            stagingBus.removeEventListener("change", this.onStaged);
             setStaged(this.props.record, null);
             this.loaded = null;
         });
@@ -71,6 +79,7 @@ export class F3dModelUpload extends Component {
     }
 
     get staged() {
+        void this.state.rev;
         return getStaged(this.props.record);
     }
 
