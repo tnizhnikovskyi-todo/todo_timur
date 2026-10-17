@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-01 -->
+    <record id="view_f3d_site_form" model="ir.ui.view">
+        <field name="name">f3d.site.form</field>
+        <field name="model">f3d.site</field>
+        <field name="arch" type="xml">
+            <form string="Площадка">
+                <header>
+                    <button name="action_open_constructor" type="object" string="Відкрити в конструкторі"
+                            class="btn-primary"/>
+                    <button name="action_publish_wizard" type="object" string="Опублікувати…"
+                            groups="factory3d_constructor.group_f3d_constructor_manager"
+                            invisible="not has_changes"/>
+                </header>
+                <sheet>
+                    <field name="has_changes" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_layers" type="object" class="oe_stat_button" icon="fa-clone">
+                            <field name="layer_count" widget="statinfo" string="Шари"/>
+                        </button>
+                        <button name="action_open_slots" type="object" class="oe_stat_button" icon="fa-th">
+                            <field name="slot_count" widget="statinfo" string="Місця"/>
+                        </button>
+                        <button name="action_open_placements" type="object" class="oe_stat_button" icon="fa-cogs">
+                            <field name="placement_count" widget="statinfo" string="Розміщення"/>
+                        </button>
+                        <button name="action_open_versions" type="object" class="oe_stat_button" icon="fa-history">
+                            <field name="version_count" widget="statinfo" string="Версії"/>
+                        </button>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not has_changes">
+                        Чернетка · змінено <field name="draft_changes" readonly="1" class="oe_inline"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва площадки"/></h1>
+                    </div>
+                    <group>
+                        <group string="Основне">
+                            <field name="code"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="default_parent_location_id"/>
+                            <field name="active_version_id" readonly="1"/>
+                            <field name="seed_key" readonly="1" invisible="not seed_key"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Будівля">
+                            <field name="building_length_m"/>
+                            <field name="building_width_m"/>
+                            <field name="building_height_m"/>
+                            <field name="column_step_x_m"/>
+                            <field name="column_step_y_m"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="layers" string="Шари">
+                            <field name="layer_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="kind"/>
+                                    <field name="elevation_m"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="checks" string="Перевірки">
+                            <field name="check_config_ids">
+                                <list editable="bottom" create="0" delete="0">
+                                    <field name="sequence" column_invisible="1"/>
+                                    <field name="check_key" readonly="1"/>
+                                    <field name="enabled"/>
+                                    <field name="mode"/>
+                                    <field name="params"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="versions" string="Версії">
+                            <field name="version_ids" readonly="1">
+                                <list>
+                                    <field name="n"/>
+                                    <field name="published_at"/>
+                                    <field name="published_by_id"/>
+                                    <field name="note"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_site_list" model="ir.ui.view">
+        <field name="name">f3d.site.list</field>
+        <field name="model">f3d.site</field>
+        <field name="arch" type="xml">
+            <list string="Площадки">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active_version_id"/>
+                <field name="draft_changes"/>
+                <field name="has_changes" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_site_search" model="ir.ui.view">
+        <field name="name">f3d.site.search</field>
+        <field name="model">f3d.site</field>
+        <field name="arch" type="xml">
+            <search string="Площадки">
+                <field name="name"/>
+                <field name="code"/>
+                <filter name="has_changes" string="Є непубліковані зміни" domain="[('has_changes', '=', True)]"/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-03 -->
+    <record id="view_f3d_slot_form" model="ir.ui.view">
+        <field name="name">f3d.slot.form</field>
+        <field name="model">f3d.slot</field>
+        <field name="arch" type="xml">
+            <form string="Місце (шаблон)">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="code_prefix" placeholder="AB-R1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Основне">
+                            <field name="layer_id"/>
+                            <field name="site_id"/>
+                            <field name="template"/>
+                            <field name="parent_location_id"/>
+                            <field name="cell_count"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Положення">
+                            <field name="x_m"/>
+                            <field name="y_m"/>
+                            <field name="rotation"/>
+                            <field name="footprint_l_m"/>
+                            <field name="footprint_w_m"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="params" string="Параметри">
+                            <group>
+                                <field name="params"/>
+                                <field name="overrides"/>
+                            </group>
+                        </page>
+                        <page name="cells" string="Комірки">
+                            <field name="cells_html" widget="html" readonly="1"/>
+                        </page>
+                        <page name="note" string="Примітка">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_slot_list" model="ir.ui.view">
+        <field name="name">f3d.slot.list</field>
+        <field name="model">f3d.slot</field>
+        <field name="arch" type="xml">
+            <list string="Місця">
+                <field name="code_prefix"/>
+                <field name="layer_id"/>
+                <field name="template"/>
+                <field name="x_m"/>
+                <field name="y_m"/>
+                <field name="rotation"/>
+                <field name="cell_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_slot_search" model="ir.ui.view">
+        <field name="name">f3d.slot.search</field>
+        <field name="model">f3d.slot</field>
+        <field name="arch" type="xml">
+            <search string="Місця">
+                <field name="code_prefix"/>
+                <field name="layer_id"/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_layer" string="Шар" context="{'group_by': 'layer_id'}"/>
+                    <filter name="group_template" string="Шаблон" context="{'group_by': 'template'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-09 -->
+    <record id="view_f3d_term_list" model="ir.ui.view">
+        <field name="name">f3d.term.list</field>
+        <field name="model">f3d.term</field>
+        <field name="arch" type="xml">
+            <list string="Довідники конструктора" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="term_type"/>
+                <field name="key"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+</odoo>

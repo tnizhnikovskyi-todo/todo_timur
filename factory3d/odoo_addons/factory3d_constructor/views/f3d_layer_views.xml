@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-02 -->
+    <record id="view_f3d_layer_form" model="ir.ui.view">
+        <field name="name">f3d.layer.form</field>
+        <field name="model">f3d.layer</field>
+        <field name="arch" type="xml">
+            <form string="Шар розкладки">
+                <sheet>
+                    <field name="is_manager" invisible="1"/>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва шару" readonly="not is_manager"/></h1>
+                    </div>
+                    <group>
+                        <group string="Основне">
+                            <field name="site_id" readonly="not is_manager"/>
+                            <field name="kind" readonly="not is_manager"/>
+                            <field name="sequence" readonly="not is_manager"/>
+                            <field name="elevation_m" readonly="not is_manager"/>
+                            <field name="grid_step_m" readonly="not is_manager"/>
+                            <field name="aisle_width_m" readonly="not is_manager"/>
+                            <field name="max_floor_load_kn_m2" readonly="not is_manager"/>
+                        </group>
+                        <group string="Вигляд">
+                            <field name="color" widget="color" readonly="not is_manager"/>
+                            <field name="opacity" readonly="not is_manager"/>
+                            <field name="style" readonly="not is_manager"/>
+                            <field name="visible" readonly="not is_manager"/>
+                            <field name="active" readonly="not is_manager"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Права">
+                            <field name="edit_group_ids" widget="many2many_tags" readonly="not is_manager"
+                                   domain="[('privilege_id', '=', %(privilege_f3d_constructor)d)]"/>
+                        </group>
+                        <group string="Типи місць">
+                            <field name="allowed_slot_type_ids" widget="many2many_tags" readonly="not is_manager"
+                                   options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="bounds" string="Контур">
+                            <field name="bounds" readonly="not is_manager"/>
+                        </page>
+                        <page name="aisles" string="Проходи">
+                            <field name="aisles"/>
+                        </page>
+                        <page name="fire_paths" string="Пожежні проходи">
+                            <field name="fire_paths"/>
+                        </page>
+                        <page name="utilities" string="Мережі">
+                            <field name="utilities"/>
+                        </page>
+                        <page name="underlay" string="Підкладка">
+                            <group>
+                                <field name="underlay_attachment_id"/>
+                                <field name="underlay_format"/>
+                                <field name="underlay_status"/>
+                                <field name="underlay_params"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_layer_list" model="ir.ui.view">
+        <field name="name">f3d.layer.list</field>
+        <field name="model">f3d.layer</field>
+        <field name="arch" type="xml">
+            <list string="Шари">
+                <field name="site_id"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="elevation_m"/>
+                <field name="grid_step_m"/>
+                <field name="slot_count"/>
+                <field name="placement_count"/>
+                <field name="visible" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_layer_search" model="ir.ui.view">
+        <field name="name">f3d.layer.search</field>
+        <field name="model">f3d.layer</field>
+        <field name="arch" type="xml">
+            <search string="Шари">
+                <field name="name"/>
+                <field name="site_id"/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_site" string="Площадка" context="{'group_by': 'site_id'}"/>
+                    <filter name="group_kind" string="Вид" context="{'group_by': 'kind'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>
