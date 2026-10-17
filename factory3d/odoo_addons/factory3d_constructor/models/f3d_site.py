@@ -1,6 +1,6 @@
 import re
 
-from odoo import api, fields, models
+from odoo import Command, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..services.checks import CHECK_DEFAULTS
@@ -104,7 +104,7 @@ class F3dSite(models.Model):
 
     def _f3d_init_checks(self):
         """R-04: 7 рядків f3d.check.config (ідемпотентно)."""
-        Config = self.env['f3d.check.config'].sudo()
+        Config = self.env['f3d.check.config'].sudo().with_context(f3d_no_touch=True)
         for site in self:
             have = set(Config.with_context(active_test=False).search([('site_id', '=', site.id)]).mapped('check_key'))
             vals = [{
@@ -115,8 +115,29 @@ class F3dSite(models.Model):
                 Config.create(vals)
 
     def _f3d_init_blank(self):
-        """R-23: 5 базових шарів порожньої площадки (реалізація — у наступному коміті)."""
-        return True
+        """R-23: 5 базових шарів порожньої площадки (ідемпотентно: лише якщо шарів ще немає)."""
+        Layer = self.env['f3d.layer'].sudo().with_context(f3d_no_touch=True)
+        Term = self.env['f3d.term']
+        group = self.env.ref
+        spec = [
+            ("Будівля", 'building', 10, 0.0, None, ['zone'], '#9aa5b1'),
+            ("Склади", 'storage', 20, 0.0, 'storekeeper', ['pallet_rack', 'cantilever', 'shelf', 'floor_stack'], '#e8a33d'),
+            ("Виробництво", 'production', 30, 0.0, 'technologist', ['machine_spot', 'zone'], '#5b7c99'),
+            ("Інженерні мережі", 'engineering', 40, 6.0, 'engineer', ['zone'], '#c0392b'),
+            ("Двір", 'yard', 50, 0.0, None, ['zone'], '#6aa84f'),
+        ]
+        for site in self:
+            if Layer.with_context(active_test=False).search_count([('site_id', '=', site.id)]):
+                continue
+            for name, kind, sequence, elevation, role, slot_types, color in spec:
+                terms = Term.search([('term_type', '=', 'slot_type'), ('key', 'in', slot_types)])
+                Layer.create({
+                    'site_id': site.id, 'name': name, 'kind': kind, 'sequence': sequence, 'elevation_m': elevation,
+                    'grid_step_m': 0.5, 'aisle_width_m': 3.0, 'color': color,
+                    'allowed_slot_type_ids': [Command.set(terms.ids)],
+                    'edit_group_ids': [Command.set([group('factory3d_constructor.group_f3d_constructor_%s' % role).id])]
+                    if role else [],
+                })
 
     def _f3d_touch(self, n=1):
         """R-21: лічильник чернетки без зміни write_date площадки."""

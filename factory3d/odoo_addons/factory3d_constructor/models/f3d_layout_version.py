@@ -1,5 +1,5 @@
 from odoo import api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 
 class F3dLayoutVersion(models.Model):
@@ -44,11 +44,20 @@ class F3dLayoutVersion(models.Model):
         for ver in self:
             ver.display_name = "v%d · %s" % (ver.n, ver.site_id.name or '')
 
+    def write(self, vals):
+        """Історію не переписуємо: користувач (менеджер) міняє лише `note`; решту пишуть публікація й хук (sudo)."""
+        if not self.env.su and set(vals) - {'note'}:
+            raise AccessError("Версію планування змінювати не можна: лише нотатку.")
+        return super().write(vals)
+
     def action_restore_draft(self):
-        """R-14: повернути чернетку до версії (менеджер). Реалізація — у наступному коміті."""
+        """R-14: повернути чернетку до версії (менеджер)."""
         self.ensure_one()
         self.site_id._f3d_check_rights_manager()
-        return True
+        from ..services import snapshot
+        snapshot.restore_draft(self)
+        return {'type': 'ir.actions.act_window', 'res_model': 'f3d.site', 'res_id': self.site_id.id,
+                'view_mode': 'form', 'target': 'current'}
 
     def action_download_snapshot(self):
         self.ensure_one()

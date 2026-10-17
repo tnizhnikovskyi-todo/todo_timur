@@ -1,13 +1,18 @@
+import re
 from uuid import uuid4
 
 from odoo import api, fields, models
+from odoo.exceptions import AccessError, UserError, ValidationError
+
+from ..services import schemas
 
 LAYER_KIND_SELECTION = [
     ('building', "Будівля"), ('storage', "Склади"), ('production', "Виробництво"),
     ('engineering', "Інженерні мережі"), ('yard', "Двір"), ('custom', "Свій шар"),
 ]
-LAYER_CONTENT_FIELDS = ('aisles', 'fire_paths', 'utilities', 'underlay_attachment_id', 'underlay_params')
-UNDERLAY_DEFAULT = {'unit': 'mm', 'dx': 0, 'dy': 0, 'rot_deg': 0, 'opacity': 0.5, 'scale': 1}
+# R-11: вміст шару, який можуть писати ролі зі списку edit_group_ids; решту полів — лише менеджер
+LAYER_CONTENT_FIELDS = frozenset({'aisles', 'fire_paths', 'utilities', 'underlay_attachment_id', 'underlay_params'})
+COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 
 
 def _new_uid():
@@ -17,6 +22,7 @@ def _new_uid():
 class F3dLayer(models.Model):
     _name = 'f3d.layer'
     _description = "Шар розкладки"
+    _inherit = ['f3d.draft.mixin']
     _order = 'site_id, sequence, elevation_m, id'
     _rec_name = 'name'
 
@@ -54,7 +60,8 @@ class F3dLayer(models.Model):
     underlay_status = fields.Selection(
         [('none', "Немає"), ('ready', "Готово"), ('pending_conversion', "Очікує перетворення")],
         string="Статус підкладки", compute='_compute_underlay', store=True, default='none')
-    underlay_params = fields.Json(string="Параметри підкладки", default=lambda self: dict(UNDERLAY_DEFAULT))
+    underlay_params = fields.Json(
+        string="Параметри підкладки", default=lambda self: dict(schemas.UNDERLAY_DEFAULT))
     slot_count = fields.Integer(string="Місць", compute='_compute_counts')
     placement_count = fields.Integer(string="Розміщень", compute='_compute_counts')
     is_manager = fields.Boolean(compute='_compute_is_manager')
@@ -63,6 +70,7 @@ class F3dLayer(models.Model):
     _f3d_layer_uid_uniq = models.Constraint(
         'UNIQUE(site_id, uid)', "UID шару має бути унікальним на площадці.")
 
+    # --- compute ---------------------------------------------------------------------------------------
     @api.depends('underlay_attachment_id', 'underlay_attachment_id.name')
     def _compute_underlay(self):
         for layer in self:
@@ -84,6 +92,76 @@ class F3dLayer(models.Model):
             layer.placement_count = placements.get(layer, 0)
 
     def _compute_is_manager(self):
-        is_manager = self.env.user.has_group('factory3d_constructor.group_f3d_constructor_manager')
+        is_manager = self._f3d_is_manager()
         for layer in self:
             layer.is_manager = is_manager
+
+    # --- constraints -----------------------------------------------------------------------------------
+    @api.constrains('grid_step_m', 'aisle_width_m', 'opacity', 'color', 'max_floor_load_kn_m2')
+    def _check_values(self):
+        for layer in self:
+            if layer.grid_step_m <= 0:
+                raise ValidationError("Крок сітки має бути додатним.")
+            if layer.aisle_width_m < 0:
+                raise ValidationError("Ширина проходу не може бути від'ємною.")
+            if layer.max_floor_load_kn_m2 < 0:
+                raise ValidationError("Навантаження на підлогу не може бути від'ємним.")
+            if not 0 <= layer.opacity <= 1:
+                raise ValidationError("Прозорість має бути від 0 до 1.")
+            if not COLOR_RE.match(layer.color or ''):
+                raise ValidationError("Колір має бути у форматі #RRGGBB.")
+
+    @api.constrains('bounds', 'aisles', 'fire_paths', 'utilities', 'underlay_params')
+    def _check_json(self):
+        for layer in self:
+            try:
+                schemas.normalize_bounds(layer.bounds)
+                schemas.normalize_aisles(layer.aisles)
+                schemas.normalize_fire_paths(layer.fire_paths)
+                schemas.normalize_layer_utilities(layer.utilities)
+                schemas.normalize_underlay_params(layer.underlay_params)
+            except schemas.SchemaError as exc:
+                raise ValidationError(str(exc)) from None
+
+    @api.constrains('edit_group_ids')
+    def _check_edit_groups(self):
+        privilege = self.env.ref('factory3d_constructor.privilege_f3d_constructor')
+        for layer in self:
+            if any(group.privilege_id != privilege for group in layer.edit_group_ids):
+                raise ValidationError("Лише ролі конструктора.")
+
+    # --- R-22 / R-11 -----------------------------------------------------------------------------------
+    def _f3d_normalize_vals(self, vals):
+        if 'bounds' in vals:
+            vals['bounds'] = schemas.normalize_bounds(vals['bounds']) or None
+        if 'aisles' in vals:
+            vals['aisles'] = schemas.normalize_aisles(vals['aisles'])
+        if 'fire_paths' in vals:
+            vals['fire_paths'] = schemas.normalize_fire_paths(vals['fire_paths'])
+        if 'utilities' in vals:
+            vals['utilities'] = schemas.normalize_layer_utilities(vals['utilities'])
+        if 'underlay_params' in vals:
+            vals['underlay_params'] = schemas.normalize_underlay_params(vals['underlay_params'])
+        return vals
+
+    @api.model
+    def _f3d_check_create(self, vals_list):
+        self._f3d_assert_manager("Створювати шари")
+
+    def _f3d_check_write(self, vals):
+        if self.env.su or self._f3d_is_manager():
+            return
+        foreign = set(vals) - LAYER_CONTENT_FIELDS
+        if foreign:
+            raise AccessError("Змінювати налаштування шару (%s) може лише менеджер конструктора." % ", ".join(
+                self._fields[name].string or name for name in sorted(foreign) if name in self._fields))
+        self._f3d_assert_layers(self)
+
+    def _f3d_check_unlink(self):
+        self._f3d_assert_manager("Видаляти шари")
+        for layer in self:
+            slots = self.env['f3d.slot'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
+            placements = self.env['f3d.placement'].with_context(active_test=False).search_count(
+                [('layer_id', '=', layer.id)])
+            if slots or placements:
+                raise UserError("Шар не порожній: архівуйте його або перенесіть об'єкти.")
