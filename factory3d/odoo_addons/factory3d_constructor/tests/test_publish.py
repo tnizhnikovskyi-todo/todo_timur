@@ -236,7 +236,7 @@ class TestPublish(F3DConstructorCase):
         with self.assertRaises(publish.PublishError) as ctx:
             publish.apply_plan(self.site.with_user(self.u_manager), publish.build_plan(self.site), (), '')
         self.assertEqual(ctx.exception.code, 'blocked')
-        self.assertEqual(self.count('f3d.layout.version'), 0)
+        self.assertFalse(self.site.version_ids)
         collide.mode = 'warn'
         wizard = self.publish()
         self.assertTrue(any(i['check'] == 'collide' for i in wizard.version_id.report['warnings']))

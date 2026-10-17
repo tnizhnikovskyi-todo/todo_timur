@@ -94,17 +94,17 @@ class F3dModelController(http.Controller):
     @http.route('/f3d/constructor/model/<int:variant_id>/<string:kind>', type='http', auth='user', methods=['GET'])
     def download(self, variant_id, kind, **kw):
         if kind not in ('glb', 'original'):
-            return request.not_found()
+            raise request.not_found()
         variant = request.env['f3d.equipment.variant'].browse(variant_id).exists()
         if not variant:
-            return request.not_found()
+            raise request.not_found()
         try:
             variant.check_access('read')
         except AccessError:
             return request.make_response("Forbidden", status=403)
         attachment = (variant.model_glb_id if kind == 'glb' else variant.model_original_id).sudo()
         if not attachment:
-            return request.not_found()
+            raise request.not_found()
         etag = '"%s"' % (attachment.checksum or attachment.id)
         if request.httprequest.headers.get('If-None-Match') == etag:
             return request.make_response("", status=304, headers=[('ETag', etag)])
