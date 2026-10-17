@@ -32,7 +32,7 @@ class F3dSlot(models.Model):
     template = fields.Selection(SLOT_TEMPLATE_SELECTION, string="Шаблон", required=True)
     code_prefix = fields.Char(
         string="Префікс коду", size=22, required=True,
-        help="Префікс кодів комірок: FG-R1 → FG-R1-B01-L1; не більше 22 символів")
+        help="Префікс кодів комірок: AB-R1 → AB-R1-B01-L1; не більше 22 символів")
     x_m = fields.Float(string="X, м", digits=(10, 3))
     y_m = fields.Float(string="Y, м", digits=(10, 3))
     rotation = fields.Integer(string="Поворот, °", default=0)

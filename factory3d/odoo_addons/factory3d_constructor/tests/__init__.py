@@ -5,6 +5,8 @@ from . import test_variant
 from . import test_rights
 from . import test_publish
 from . import test_versions
+from . import test_seed_hook
+from . import test_api
 from . import test_checks
 from . import test_hoot_editor
 from . import test_hoot_model
