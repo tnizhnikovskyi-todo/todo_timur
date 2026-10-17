@@ -6,7 +6,7 @@
       'site': {'building': {'length', 'width', 'height'}},
       'layers': [{id, name, kind, elevation, max_floor_load, bounds, slot_types, aisles, fire_paths, utilities}],
       'slots': [{id, layer_id, template, code_prefix, x, y, rotation, params, overrides}],
-      'placements': [{id, layer_id, variant_id, slot_id, cell_code, code, name, x, y, rotation}],
+      'placements': [{id, layer_id, variant_id, slot_id, cell_code, code, name, x, y, rotation, dynamic}],
       'variants': [{id, length, width, height, service: {front, back, left, right}, rotations, layer_kinds,
                     slot_types, utilities, weight_kg, floor_load, anchor, front_side}],
     }
@@ -70,6 +70,7 @@ class _Scene:
         self.variants = {v['id']: v for v in state.get('variants') or []}
         self.slots = {s['id']: s for s in state.get('slots') or []}
         self.placements = [p for p in state.get('placements') or [] if p['variant_id'] in self.variants]
+        self.dynamic = {p['id'] for p in self.placements if p.get('dynamic')}
         self._slot_obb = {}
         self._slot_cells = {}
         self._body = {}
@@ -132,6 +133,8 @@ class _Scene:
         """F = розміщення ∪ місця (крім zone): [{kind, id, code, layer_id, obb, slot_id}]."""
         out = []
         for placement in self.placements:
+            if placement['id'] in self.dynamic:
+                continue  # люди й транспорт: не беруть участі в collide/aisles/service/fire (лише fits)
             out.append(
                 {
                     'kind': 'placement',
@@ -292,7 +295,7 @@ def check_service_free(scene, config, eps):
     issues = []
     groups = _by_layer(scene.objects())
     for p in scene.placements:
-        service = scene.service(p)
+        service = None if p['id'] in scene.dynamic else scene.service(p)
         if service is None:
             continue
         box = geo.obb_aabb(service)

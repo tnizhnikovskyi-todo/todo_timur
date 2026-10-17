@@ -26,6 +26,7 @@
                             <field name="x_m"/>
                             <field name="y_m"/>
                             <field name="rotation"/>
+                            <field name="dynamic"/>
                         </group>
                     </group>
                     <group string="Публікація">

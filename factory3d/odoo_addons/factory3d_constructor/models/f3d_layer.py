@@ -35,6 +35,9 @@ class F3dLayer(models.Model):
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     name = fields.Char(string="Назва", required=True)
     kind = fields.Selection(LAYER_KIND_SELECTION, string="Вид", required=True, default='custom')
+    group_name = fields.Char(
+        string="Група", help="Група шарів у списку (наприклад, «Інженерні мережі»); порожньо — без групи"
+    )
     sequence = fields.Integer(default=10)
     elevation_m = fields.Float(string="Відмітка, м", digits=(8, 3), default=0.0)
     grid_step_m = fields.Float(string="Крок сітки, м", digits=(6, 3), default=0.5)

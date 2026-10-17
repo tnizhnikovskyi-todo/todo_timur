@@ -11,6 +11,7 @@
 
 import importlib.util
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -37,6 +38,11 @@ def _load_cells():
 
 
 cells_mod = _load_cells()
+geo_mod = sys.modules['f3d_seed_services.geometry']  # завантажено разом з cells (from .geometry import …)
+checks_mod = importlib.import_module('f3d_seed_services.checks')
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scene_classify as sc  # noqa: E402
+
 D = json.loads(STATIC.read_text(encoding='utf-8'))
 P = D['passports']
 L = D['layout']
@@ -304,8 +310,14 @@ variants['board_rack.' + slug(short(P['BOARD-RACKS']['model']))]['name'] = "PR 6
 variants['board_rack.' + slug(short(P['BOARD-RACKS']['model']))]['rotations'] = 'q'
 forklift_key = next(k for k in variants if k.startswith('forklift.'))
 
-# --- шари ---------------------------------------------------------------------------------------------------
+# --- шари: усі 31 шар переглядача (CD-28) -------------------------------------------------------------------
 W, DEPTH, H = L['dims']['W'], L['dims']['D'], L['dims']['H']
+ALL_KINDS = ['building', 'storage', 'production', 'engineering', 'yard', 'custom']
+INV = json.loads((MODULE / 'data' / 'scene_inventory.json').read_text(encoding='utf-8'))
+OBJ = INV['objects']
+CL = sc.classify(OBJ, {m[0] for m in machines}, set(L['zones']))
+ELEV = sc.layer_elevations(INV['layers'], CL)
+COLOR = sc.layer_colors(INV['layers'])
 
 
 def layer(uid, name, kind, elevation, grid_step, aisle_width, slot_types, roles, color, opacity, max_load, **extra):
@@ -330,47 +342,39 @@ def layer(uid, name, kind, elevation, grid_step, aisle_width, slot_types, roles,
     return data
 
 
-ly_building = layer('seed-ly-building', "Будівля", 'building', 0.0, 1.0, 3.0, ['zone'], [], '#6f8396', 0.35, 0.0)
-ly_storage = layer(
-    'seed-ly-storage',
-    "Склади",
-    'storage',
-    0.0,
-    0.1,
-    3.3,
-    ['pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'zone'],
-    ['storekeeper'],
-    '#3f9b6a',
-    0.55,
-    30.0,
-)
-ly_prod = layer(
-    'seed-ly-prod',
-    "Виробництво",
-    'production',
-    0.0,
-    0.5,
-    3.6,
-    ['machine_spot', 'zone'],
-    ['technologist'],
-    '#2f78b5',
-    0.55,
-    40.0,
-)
-ly_eng = layer(
-    'seed-ly-eng', "Інженерні мережі", 'engineering', 6.0, 1.0, 1.0, ['zone'], ['engineer'], '#d08a1e', 0.4, 5.0
-)
-ly_yard = layer(
-    'seed-ly-yard', "Двір", 'yard', 0.0, 1.0, 5.0, ['floor_stack', 'machine_spot', 'zone'], [], '#8a8f6a', 0.45, 80.0
-)
-ly_mezz = layer('seed-ly-mezz', "Антресоль офісу", 'custom', 3.6, 0.3, 1.2, ['zone'], [], '#9a6bb3', 0.45, 5.0)
-layers = [ly_building, ly_storage, ly_prod, ly_eng, ly_yard, ly_mezz]
+layers, LAYER = [], {}
+for inv_layer in INV['layers']:
+    gd = sc.GROUP_DEF[inv_layer['group']]
+    LAYER[inv_layer['key']] = layer(
+        'seed-ly-' + inv_layer['key'],
+        inv_layer['label'],
+        gd['kind'],
+        ELEV[inv_layer['key']],
+        gd['grid'],
+        gd['aisle'],
+        list(gd['slots']),
+        list(gd['roles']),
+        COLOR[inv_layer['key']],
+        gd['opacity'],
+        gd['load'],
+        group=inv_layer['group'],
+        visible=sc.layer_visible(inv_layer),
+    )
+    layers.append(LAYER[inv_layer['key']])
 
 slots = []
 
 
 def r2(value):
     return round(value, 3)
+
+
+def world_box(row):
+    """Світовий AABB об'єкта інвентаря (L вздовж власної осі X до повороту на yaw): (x0, y0, x1, y1)."""
+    a = math.radians(row['yaw'])
+    hx = (abs(math.cos(a)) * row['L'] + abs(math.sin(a)) * row['W']) / 2.0
+    hy = (abs(math.sin(a)) * row['L'] + abs(math.cos(a)) * row['W']) / 2.0
+    return row['x'] - hx, row['y'] - hy, row['x'] + hx, row['y'] + hy
 
 
 def zone(ly, code, name, x0, y0, x1, y1):
@@ -383,7 +387,7 @@ def zone(ly, code, name, x0, y0, x1, y1):
             'x': 0.0,
             'y': 0.0,
             'rotation': 0,
-            'params': {'polygon': [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]},
+            'params': {'polygon': [[r2(x0), r2(y0)], [r2(x1), r2(y0)], [r2(x1), r2(y1)], [r2(x0), r2(y1)]]},
             'overrides': {},
             'parent': None,
             'note': name,
@@ -391,17 +395,18 @@ def zone(ly, code, name, x0, y0, x1, y1):
     )
 
 
-for code, z in L['zones'].items():
+for code, z in L['zones'].items():  # розмітка зон: шар «Розмітка зон»
     x0, y0, x1, y1 = z['rect']
-    zone(ly_building, code, z['name'], x0, y0, x1, y1)
-zone(ly_mezz, 'MZ-OFFICE', "Антресоль офісу", 93.0, 58.4, 109.0, 71.0)
+    zone(LAYER['zones'], code, z['name'], x0, y0, x1, y1)
+for row in CL['contour']:  # контури мереж, розмітка на підлозі, док-ворота, дах, огорожа: не тверді об'єкти
+    zone(LAYER[row['layer']], row['code'], row.get('label') or row['code'], *world_box(row))
 
 
-def rack(code, template, x, y, rotation, params, parent):
+def rack(layer_key, code, template, x, y, rotation, params, parent):
     slots.append(
         {
             'uid': 'seed-sl-' + code.lower(),
-            'layer': ly_storage['uid'],
+            'layer': LAYER[layer_key]['uid'],
             'template': template,
             'code_prefix': code,
             'x': r2(x),
@@ -417,6 +422,7 @@ def rack(code, template, x, y, rotation, params, parent):
 FG_PARENT, FUR_PARENT, EB_PARENT = "WH/Готова продукція", "WH/Сировина/Фурнітура", "WH/Сировина/Крайка"
 for i, x in enumerate(LY.FG_ROWS):
     rack(
+        'fg',
         'FG-R%d' % (i + 1),
         'pallet_rack',
         x,
@@ -436,6 +442,7 @@ for i, x in enumerate(LY.FG_ROWS):
 for i, y in enumerate([1.8, 9.6, 11.9, 19.7, 22.0, 29.8, 32.1, 39.9]):
     # RCK-Rn: стоси плит 3 × 4 (коди RCK-R1-1A…3D, вид «стос»); габарит 10,17 × 2,0 м
     rack(
+        'sheets',
         'RCK-R%d' % (i + 1),
         'floor_stack',
         20.085,
@@ -446,6 +453,7 @@ for i, y in enumerate([1.8, 9.6, 11.9, 19.7, 22.0, 29.8, 32.1, 39.9]):
     )
 for k in range(6):
     rack(
+        'hardware',
         'FUR-R%d' % (k + 1),
         'shelf',
         21.5,
@@ -456,6 +464,7 @@ for k in range(6):
     )
 for i, x in enumerate([30.5, 33.7]):  # EB-Un: коди EB-U1-S1-L1 (1 розряд)
     rack(
+        'edge',
         'EB-U%d' % (i + 1),
         'shelf',
         x,
@@ -472,47 +481,65 @@ for i, x in enumerate([30.5, 33.7]):  # EB-Un: коди EB-U1-S1-L1 (1 розр�
         },
         EB_PARENT,
     )
+# окремі місця на одну комірку (стоси плит, приймання, комплекти, зони видачі): код комірки = код об'єкта моделі
+for row in CL['exact']:
+    ly = LAYER[row['layer']]
+    if 'floor_stack' not in ly['slot_types']:
+        ly['slot_types'].append('floor_stack')
+    slots.append(
+        {
+            'uid': 'seed-sl-' + row['code'].lower(),
+            'layer': ly['uid'],
+            'template': 'floor_stack',
+            'code_prefix': row['code'],
+            'x': r2(row['x']),
+            'y': r2(row['y']),
+            'rotation': row['yaw'],
+            'params': {
+                'rows': 1,
+                'cols': 1,
+                'cell_l': r2(max(row['L'], 0.1)),
+                'cell_w': r2(max(row['W'], 0.1)),
+                'max_height': r2(max(row['H'], 0.05)),
+                'code_style': 'exact',
+            },
+            'overrides': {},
+            'parent': None,
+            'note': row.get('label') or row['code'],
+        }
+    )
 service = {'front': 1.0, 'back': 0.3, 'left': 0.3, 'right': 0.3}
-slots.append(
-    {
-        'uid': 'seed-sl-ms-1',
-        'layer': ly_prod['uid'],
-        'template': 'machine_spot',
-        'code_prefix': 'MS-1',
-        'x': 73.0,
-        'y': 41.0,
-        'rotation': 0,
-        'params': {'length': 6.6, 'width': 4.4, 'service': service},
-        'overrides': {},
-        'parent': None,
-    }
-)
-slots.append(
-    {
-        'uid': 'seed-sl-ms-2',
-        'layer': ly_prod['uid'],
-        'template': 'machine_spot',
-        'code_prefix': 'MS-2',
-        'x': 61.0,
-        'y': 41.0,
-        'rotation': 0,
-        'params': {'length': 12.6, 'width': 3.8, 'service': service},
-        'overrides': {},
-        'parent': None,
-    }
-)
+for uid, code, x, length, width in (
+    ('seed-sl-ms-1', 'MS-1', 73.0, 6.6, 4.4),
+    ('seed-sl-ms-2', 'MS-2', 61.0, 12.6, 3.8),
+):
+    slots.append(
+        {
+            'uid': uid,
+            'layer': LAYER['line']['uid'],
+            'template': 'machine_spot',
+            'code_prefix': code,
+            'x': x,
+            'y': 41.0,
+            'rotation': 0,
+            'params': {'length': length, 'width': width, 'service': service},
+            'overrides': {},
+            'parent': None,
+        }
+    )
 
-ly_storage['aisles'] = [
+# проходи між рядами стелажів: вужчі за відстань між стосами (PLT 2,15 м) — без хибних перекриттів
+LAYER['sheets']['aisles'] = [
     {'id': 'ai_r%d' % i, 'name': "Прохід %d" % (i + 1), 'x0': 13.4, 'y0': a[0], 'x1': 41.4, 'y1': a[1]}
-    for i, a in enumerate([(2.8, 8.6), (12.9, 18.7), (23.0, 28.8), (33.1, 38.9)])
+    for i, a in enumerate([(2.9, 8.5), (13.0, 18.6), (23.1, 28.7), (33.2, 38.8)])
 ]
-ly_storage['aisles'] += [
+LAYER['fg']['aisles'] = [
     {'id': 'ai_fg1', 'name': "Прохід ГП 1", 'x0': 123.75, 'y0': 3.0, 'x1': 127.05, 'y1': 51.6},
     {'id': 'ai_fg2', 'name': "Прохід ГП 2", 'x0': 129.25, 'y0': 3.0, 'x1': 132.55, 'y1': 51.6},
 ]
-ly_prod['aisles'] = [{'id': 'ai_main', 'name': "Головний проїзд", 'x0': 42.0, 'y0': 44.2, 'x1': 92.0, 'y1': 47.8}]
+LAYER['line']['aisles'] = [{'id': 'ai_main', 'name': "Головний проїзд", 'x0': 42.0, 'y0': 44.2, 'x1': 92.0, 'y1': 47.8}]
 
-# виходи (евакуація): прямокутник 2.0 × 2.5 м біля стіни
+# виходи (евакуація): прямокутник 2.0 × 2.5 м біля стіни; живуть на шарі «Будівля»
 for ex in D['evacuation']['exits']:
     x, y, side = ex['x'], ex['y'], ex['side']
     if side in ('S', 'N'):
@@ -521,7 +548,7 @@ for ex in D['evacuation']['exits']:
     else:
         y0, y1 = y - 1.0, y + 1.0
         x0, x1 = (0.0, 2.5) if side == 'W' else (W - 2.5, W)
-    ly_building['fire_paths'].append(
+    LAYER['building']['fire_paths'].append(
         {
             'id': 'fp_' + ex['code'].lower(),
             'kind': 'exit',
@@ -533,13 +560,13 @@ for ex in D['evacuation']['exits']:
         }
     )
 
-# інженерні точки: щити/магістралі
-utils, counter = [], [0]
+# інженерні точки: щити/магістралі — на шарах електропостачання, стисненого повітря й аспірації
+utils, counter = {'electric': [], 'air': [], 'dust': []}, [0]
 
 
 def put(kind, x, y):
     counter[0] += 1
-    utils.append(
+    utils[kind].append(
         {
             'id': 'u%d' % counter[0],
             'kind': kind,
@@ -563,42 +590,121 @@ for y in (26.5, 34.5, 42.5, 50.5, 58.5, 66.5):
     put('dust', 55.6, y)
 for y in (26.5, 34.5):
     put('dust', 75, y)
-ly_eng['utilities'] = utils
+LAYER['energy']['utilities'], LAYER['utilities']['utilities'], LAYER['dust']['utilities'] = (
+    utils['electric'],
+    utils['air'],
+    utils['dust'],
+)
 
-# --- розміщення ---------------------------------------------------------------------------------------------
+# --- розміщення: верстати каталогу + решта об'єктів моделі зі зведеними варіантами «Об'єкти сцени» --------------------
 placements = []
-for code, name, key, x, y, rot in machines:
+for (
+    code,
+    name,
+    key,
+    _x,
+    _y,
+    _rot,
+) in machines:  # поза — з інвентаря (x,y — центр AABB, rotation = yaw), як база «Переглядача»
+    o = OBJ[code]
     placements.append(
         {
             'uid': 'seed-pl-' + code.lower(),
-            'layer': ly_prod['uid'],
+            'layer': LAYER[o['layer']]['uid'],
             'variant': key,
             'slot': None,
-            'x': x,
-            'y': y,
-            'rotation': rot,
+            'x': o['x'],
+            'y': o['y'],
+            'rotation': o.get('yaw') or 0,
             'code': code,
             'name': name,
         }
     )
-for code, name, y in (
-    ('FL-1', "Навантажувач ГП 1", 62.6),
-    ('FL-4', "Навантажувач ГП 2", 65.0),
-    ('FL-5', "Навантажувач пакування", 67.4),
-):
-    placements.append(
-        {
-            'uid': 'seed-pl-' + code.lower(),
-            'layer': ly_prod['uid'],
-            'variant': forklift_key,
-            'slot': None,
-            'x': 118.5,
-            'y': y,
-            'rotation': 0,
-            'code': code,
-            'name': name,
-        }
+users = {}
+for row in CL['place']:
+    dims = tuple(
+        max(100, int(round(row[k] * 1000))) for k in ('L', 'W', 'H')
+    )  # мм; < 50 нормалізатор прочитає як метри
+    users.setdefault((row['kind'],) + dims, []).append(row)
+used_names = {}
+for (kind, length, width, height), rows in sorted(users.items()):
+    title, category = sc.SCENE_KINDS[kind]
+    name = (
+        rows[0].get('label') or rows[0]['code']
+        if len(rows) == 1
+        else "%s: %.2f×%.2f×%.2f м (%d шт.)" % (title, length / 1000, width / 1000, height / 1000, len(rows))
     )
+    if name in used_names.setdefault(kind, set()):
+        name = "%s [%s]" % (name, rows[0]['code'])
+    used_names[kind].add(name)
+    key = 'scene.%s.%dx%dx%d' % (kind, length, width, height)
+    variants[key] = {
+        'key': key,
+        'passport_role': 'scene_' + kind,
+        'passport': {'model': "Об’єкти сцени · " + title, 'manufacturer': "—", 'category': category},
+        'name': name,
+        'category': category,
+        'length': length,
+        'width': width,
+        'height': height,
+        'service': {'front': 0, 'back': 0, 'left': 0, 'right': 0},
+        'rotations': 'any',
+        'layer_kinds': list(ALL_KINDS),
+        'slot_types': [],
+        'utilities': [],
+        'power_kw': 0,
+        'panel': '',
+        'weight_kg': 0,
+        'anchor': 'center',
+        'front_side': 's',
+        'create_workcenter': False,
+    }
+    for row in rows:
+        placements.append(
+            {
+                'uid': 'seed-pl-' + row['code'].lower(),
+                'layer': LAYER[row['layer']]['uid'],
+                'variant': key,
+                'slot': None,
+                'x': r2(row['x']),
+                'y': r2(row['y']),
+                'rotation': row['yaw'],
+                'code': row['code'],
+                'name': row.get('label') or row['code'],
+                **({'dynamic': True} if row['kind'] in sc.DYNAMIC_KINDS else {}),
+            }
+        )
+
+
+# --- контури шарів: об'єкти поза будівлею (док-ворота, ТП, склад відходів) → контур = будівля ∪ об'єкти ---------
+def _bounds():
+    by_layer = {}
+    var_geo = {v['key']: dict(v, id=v['key']) for v in variants.values()}
+    for p in placements:
+        obb = geo_mod.placement_obb(var_geo[p['variant']], p['x'], p['y'], p['rotation'])
+        by_layer.setdefault(p['layer'], []).extend(geo_mod.obb_corners(obb))
+    for s in slots:
+        if s['template'] == 'zone':
+            continue
+        obb = cells_mod.slot_obb(s['template'], s['params'], s['x'], s['y'], s['rotation'])
+        by_layer.setdefault(s['layer'], []).extend(geo_mod.obb_corners(obb))
+    for ly in layers:
+        pts = by_layer.get(ly['uid'])
+        if not pts:
+            continue
+        x0, y0 = min(p[0] for p in pts), min(p[1] for p in pts)
+        x1, y1 = max(p[0] for p in pts), max(p[1] for p in pts)
+        if x0 < -1e-3 or y0 < -1e-3 or x1 > W + 1e-3 or y1 > DEPTH + 1e-3:
+            x0, y0, x1, y1 = (
+                math.floor(min(x0, 0) * 2) / 2,
+                math.floor(min(y0, 0) * 2) / 2,
+                math.ceil(max(x1, W) * 2) / 2,
+                math.ceil(max(y1, DEPTH) * 2) / 2,
+            )
+            ly['bounds'] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+
+
+_bounds()
 
 cell_total = sum(cells_mod.count_cells(s['template'], s['code_prefix'], s['params'], s['overrides']) for s in slots)
 seed = {
@@ -642,7 +748,36 @@ def dump(data):
     return "{\n" + ",\n".join(parts) + "\n}\n"
 
 
+def seed_issues(data):
+    """Перевірки R-03…R-10 (services/checks.py) на стані сіда, як у API-03; налаштування — умовчання R-04."""
+    ly_id = {ly['uid']: ly['uid'] for ly in data['layers']}
+    state = {
+        'site': {'building': data['site']['building']},
+        'layers': [dict(ly, id=ly['uid']) for ly in data['layers']],
+        'slots': [dict(s, id=s['uid'], layer_id=s['layer']) for s in data['slots']],
+        'placements': [
+            dict(p, id=p['uid'], layer_id=p['layer'], variant_id=p['variant'], slot_id=p.get('slot'), cell_code=None)
+            for p in data['placements']
+        ],
+        'variants': [dict(v, id=v['key'], floor_load=None) for v in data['variants']],
+    }
+    assert all(p['layer_id'] in ly_id for p in state['placements'])
+    configs = [
+        {'check': k, 'enabled': en, 'mode': mode, 'params': prm} for k, en, mode, prm in checks_mod.CHECK_DEFAULTS
+    ]
+    return checks_mod.run_checks(state, configs, checks_mod.DEFAULT_EPS_M)
+
+
 if __name__ == '__main__':
+    if '--check' in sys.argv:
+        found = seed_issues(seed)
+        by = {}
+        for issue in found:
+            by.setdefault((issue['check'], issue['severity']), []).append(issue['message'])
+        print({k: len(v) for k, v in by.items()}, 'усього', len(found))
+        for key, msgs in by.items():
+            print(key, *msgs[:6], sep='\n   ')
+        sys.exit(0)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(dump(seed), encoding='utf-8')
     print(OUT, seed['meta']['counts'])

@@ -47,6 +47,7 @@ def build_snapshot(site):
                 'uid': layer.uid,
                 'name': layer.name,
                 'kind': layer.kind,
+                'group': layer.group_name or None,
                 'sequence': layer.sequence,
                 'elevation_m': layer.elevation_m,
                 'grid_step_m': layer.grid_step_m,
@@ -96,6 +97,7 @@ def build_snapshot(site):
                 'x_m': p.x_m,
                 'y_m': p.y_m,
                 'rotation': p.rotation,
+                'dynamic': p.dynamic,
                 'active': p.active,
             }
             for p in placements
@@ -120,13 +122,15 @@ def dump_snapshot(snap):
     return raw, hashlib.sha1(raw).hexdigest()  # noqa: S324 - контрольна сума знімка, не криптографія
 
 
-def create_version(site, note='', report=None, is_seed=False, counts=None):
+def create_version(site, note='', report=None, is_seed=False, counts=None, baseline=None):
     """Нова версія: знімок, n = max+1, попередня `superseded`, сайт: active/base/published_rev/draft_changes."""
     env = site.env
     Version = env['f3d.layout.version'].sudo()
     previous = Version.search([('site_id', '=', site.id)], order='n desc', limit=1)
     n = (previous.n if previous else 0) + 1
     snap = build_snapshot(site)
+    if baseline:
+        snap['baseline'] = baseline  # лише в знімку версії-імпорту: позиції, запечені в GLB (див. hooks.baseline_poses)
     raw, sha1 = dump_snapshot(snap)
     version = Version.create(
         {
@@ -262,6 +266,7 @@ def apply_snapshot(site, snap):
         vals = {
             'name': item['name'],
             'kind': item['kind'],
+            'group_name': item.get('group') or False,
             'sequence': item['sequence'],
             'elevation_m': item['elevation_m'],
             'grid_step_m': item['grid_step_m'],
@@ -324,6 +329,7 @@ def apply_snapshot(site, snap):
             'x_m': item['x_m'],
             'y_m': item['y_m'],
             'rotation': item['rotation'],
+            'dynamic': item.get('dynamic', False),
             'active': item.get('active', True),
         }
         placement = placements.get(item['uid'])
