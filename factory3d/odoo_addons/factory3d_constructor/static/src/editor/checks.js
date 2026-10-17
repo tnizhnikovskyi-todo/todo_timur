@@ -99,6 +99,9 @@ class Scene {
     objects() {
         const out = [];
         for (const p of this.placements) {
+            if (p.dynamic) {
+                continue; // динамічні об'єкти (люди, транспорт) не беруть участі в collide/aisles/service/fire
+            }
             out.push({ kind: "placement", id: p.id, code: p.code, layer_id: p.layer_id, obb: this.body(p), slot_id: p.slot_id });
         }
         for (const s of this.slots.values()) {
@@ -241,7 +244,7 @@ function checkServiceFree(scene, config, eps) {
     const issues = [];
     const groups = byLayer(scene.objects());
     for (const p of scene.placements) {
-        const service = scene.service(p);
+        const service = p.dynamic ? null : scene.service(p);
         if (!service) {
             continue;
         }

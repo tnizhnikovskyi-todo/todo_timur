@@ -54,7 +54,7 @@ export const TPL = {
             num("pallet_rack", "positions_per_bay", "Місць у прольоті", null, 1),
             num("pallet_rack", "max_load_kg", "Макс. навантаження на ярус", "кг", 50),
             num("pallet_rack", "index_digits", "Розрядів у номері", null, 1),
-            { k: "code_style", l: "Стиль кодів", type: "select", options: [["default", "B01-L1"], ["bay_letter", "1A (проліт+ярус)"]], def: "default" },
+            { k: "code_style", l: "Стиль кодів", type: "select", options: [["default", "B01-L1"], ["bay_letter", "1A (проліт+ярус)"], ["exact", "Один код = префікс"]], def: "default" },
         ],
     },
     cantilever: {
@@ -96,6 +96,7 @@ export const TPL = {
             num("floor_stack", "cell_w", "Ширина місця", "м", 0.05),
             num("floor_stack", "max_height", "Макс. висота стосу", "м", 0.1),
             num("floor_stack", "index_digits", "Розрядів у номері", null, 1),
+            { k: "code_style", l: "Стиль кодів", type: "select", options: [["default", "PREFIX-01A"], ["exact", "Один код = префікс"]], def: "default" },
         ],
     },
     machine_spot: {

@@ -6,7 +6,6 @@ import { clone, rnd } from "./util";
 
 const MODEL_ORDER = { "f3d.check.config": 0, "f3d.layer": 1, "f3d.slot": 2, "f3d.placement": 3 };
 const REF_MODELS = { layer_id: "f3d.layer", slot_id: "f3d.slot" };
-const ENTITY_MODELS = ["f3d.layer", "f3d.slot", "f3d.placement"];
 const BATCH = 400; // ліміт сервера — 500 операцій на запит
 
 /** 32-символьний hex-uid нової сутності (як `uuid4().hex` на сервері); працює й без secure context. */
@@ -114,6 +113,7 @@ export function layerFromApi(l) {
         max_floor_load: l.max_floor_load,
         bounds: l.bounds || null,
         slot_types: [...(l.slot_types || [])],
+        group: l.group || "",
         edit_groups: clone(groups),
         edit_roles: ["manager", ...groups.map((g) => g.role).filter((r) => r && r !== "manager")],
         color: l.color,
@@ -184,6 +184,7 @@ export function placementFromApi(p, layerUid, slotUid) {
         code: p.code,
         name: p.name,
         equipment: p.equipment || null,
+        dynamic: !!p.dynamic,
     };
 }
 

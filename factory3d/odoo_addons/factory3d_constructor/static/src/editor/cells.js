@@ -25,7 +25,7 @@ export const SLOT_TEMPLATES = {
             max_load_kg: [0, null, 1000, F],
             index_digits: [1, 4, 2, I],
         },
-        choices: { code_style: [["default", "bay_letter"], "default"] },
+        choices: { code_style: [["default", "bay_letter", "exact"], "default"] },
     },
     cantilever: {
         label: "Консольний стелаж",
@@ -39,6 +39,7 @@ export const SLOT_TEMPLATES = {
             max_load_kg: [0, null, 500, F],
             index_digits: [1, 4, 2, I],
         },
+        choices: { code_style: [["default", "exact"], "default"] },
     },
     shelf: {
         label: "Полицевий стелаж / комірки",
@@ -51,7 +52,7 @@ export const SLOT_TEMPLATES = {
             cell_h: [0.05, 2, 0.4, F],
             index_digits: [1, 4, 2, I],
         },
-        choices: { loc_kind: [["bin", "shelf"], "bin"] },
+        choices: { loc_kind: [["bin", "shelf"], "bin"], code_style: [["default", "exact"], "default"] },
     },
     floor_stack: {
         label: "Напільне штабелювання",
@@ -64,6 +65,7 @@ export const SLOT_TEMPLATES = {
             max_height: [0.1, 6, 1.5, F],
             index_digits: [1, 4, 2, I],
         },
+        choices: { code_style: [["default", "exact"], "default"] },
     },
     machine_spot: {
         label: "Місце під верстат",
@@ -143,6 +145,15 @@ const letter = (n) => String.fromCharCode(64 + n);
 
 /** Комірки в локальній системі без поворотів (і без перевизначень): [{code, level, index, lx, ly, dz, l, w, h, capacity, max_load_kg, kind}]. */
 export function rawCells(template, p, prefix) {
+    const cells = rawCellsStyled(template, p, prefix);
+    // code_style='exact': одиничне місце зберігання (PLT, UNLOAD, QC) — одна комірка з кодом = code_prefix
+    if (p.code_style === "exact" && cells.length === 1) {
+        cells[0].code = prefix;
+    }
+    return cells;
+}
+
+function rawCellsStyled(template, p, prefix) {
     const cells = [];
     if (template === "pallet_rack") {
         const length = p.bays * p.bay_width;

@@ -403,6 +403,9 @@ export async function mountEditor(rootEl, { store, services, siteId, testMode })
     V.theme = rootEl.dataset.theme;
     V.testMode = !!testMode;
     wireStore(store);
+    if (window.odoo?.debug) {
+        window.__f3dEditor = { S, V, E, THREE, store }; // лише для налагодження (?debug=…)
+    }
     try {
         await loadThree();
     } catch (e) {

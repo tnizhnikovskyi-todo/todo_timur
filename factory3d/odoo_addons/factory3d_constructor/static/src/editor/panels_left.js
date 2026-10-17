@@ -136,57 +136,93 @@ export function renderLayerList() {
         return;
     }
     const lys = [...S.layers].sort((a, b) => a.sequence - b.sequence);
-    box.replaceChildren(
-        ...K(
+    // групи шарів (поле `group`): заголовок із згортанням; порядок груп — за першою появою в послідовності
+    const groups = [];
+    for (const ly of lys) {
+        const name = ly.group || "";
+        let g = groups.find((x) => x.name === name);
+        if (!g) {
+            g = { name, layers: [] };
+            groups.push(g);
+        }
+        g.layers.push(ly);
+    }
+    const collapsed = (S.ui.collapsed = S.ui.collapsed || new Set());
+    const row = (ly) => {
+        const n = S.slots.filter((s) => s.layer_id === ly.id).length + S.placements.filter((p) => p.layer_id === ly.id).length;
+        const vis = isLayerVisible(ly);
+        return h(
+            "div",
+            {
+                class: "layer" + (ly.id === S.ui.layer ? " active" : "") + (vis ? "" : " hidden"),
+                role: "button",
+                tabindex: 0,
+                "data-layer": ly.id,
+                onclick: () => setActiveLayer(ly.id),
+                onkeydown: (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setActiveLayer(ly.id);
+                    }
+                },
+            },
             h(
-                "div",
-                { class: "layers" },
-                lys.map((ly) => {
-                    const n = S.slots.filter((s) => s.layer_id === ly.id).length + S.placements.filter((p) => p.layer_id === ly.id).length;
-                    const vis = isLayerVisible(ly);
-                    return h(
-                        "div",
-                        {
-                            class: "layer" + (ly.id === S.ui.layer ? " active" : "") + (vis ? "" : " hidden"),
-                            role: "button",
-                            tabindex: 0,
-                            "data-layer": ly.id,
-                            onclick: () => setActiveLayer(ly.id),
-                            onkeydown: (e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    setActiveLayer(ly.id);
-                                }
-                            },
+                "button",
+                {
+                    class: "eye",
+                    type: "button",
+                    "aria-label": vis ? "Сховати шар" : "Показати шар",
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        if (vis) {
+                            V.hidden.add(ly.id);
+                        } else {
+                            V.hidden.delete(ly.id);
+                        }
+                        E.syncScene();
+                        renderLayerList();
+                    },
+                },
+                ic(vis ? "eye" : "eyeoff")
+            ),
+            h("span", { class: "sw", style: { background: ly.color } }),
+            h("span", { class: "nm", title: ly.name }, ly.name),
+            canEditLayer(ly) ? null : h("span", { class: "ic", title: lockHint(ly) }, ic("lock")),
+            h("span", { class: "meta" }, (ly.elevation >= 0 ? "+" : "") + fmt(ly.elevation, 1) + " м · " + n)
+        );
+    };
+    const items = [];
+    for (const g of groups) {
+        const closed = !!g.name && collapsed.has(g.name) && !g.layers.some((l) => l.id === S.ui.layer);
+        if (g.name) {
+            items.push(
+                h(
+                    "div",
+                    {
+                        class: "lgroup" + (closed ? " closed" : ""),
+                        role: "button",
+                        tabindex: 0,
+                        "data-group": g.name,
+                        onclick: () => {
+                            if (collapsed.has(g.name)) {
+                                collapsed.delete(g.name);
+                            } else {
+                                collapsed.add(g.name);
+                            }
+                            renderLayerList();
                         },
-                        h(
-                            "button",
-                            {
-                                class: "eye",
-                                type: "button",
-                                "aria-label": vis ? "Сховати шар" : "Показати шар",
-                                onclick: (e) => {
-                                    e.stopPropagation();
-                                    if (vis) {
-                                        V.hidden.add(ly.id);
-                                    } else {
-                                        V.hidden.delete(ly.id);
-                                    }
-                                    E.syncScene();
-                                    renderLayerList();
-                                },
-                            },
-                            ic(vis ? "eye" : "eyeoff")
-                        ),
-                        h("span", { class: "sw", style: { background: ly.color } }),
-                        h("span", { class: "nm", title: ly.name }, ly.name),
-                        canEditLayer(ly) ? null : h("span", { class: "ic", title: lockHint(ly) }, ic("lock")),
-                        h("span", { class: "meta" }, (ly.elevation >= 0 ? "+" : "") + fmt(ly.elevation, 1) + " м · " + n)
-                    );
-                })
-            )
-        )
-    );
+                    },
+                    ic(closed ? "down" : "up"),
+                    h("span", { class: "nm" }, g.name),
+                    h("span", { class: "meta" }, String(g.layers.length))
+                )
+            );
+        }
+        if (!closed) {
+            items.push(...g.layers.map(row));
+        }
+    }
+    box.replaceChildren(...K(h("div", { class: "layers" }, items)));
 }
 function addLayer() {
     const ly = { ...newLayerDefaults(), id: newUid(), rid: null, etag: null, sequence: Math.max(0, ...S.layers.map((l) => l.sequence)) + 10 };

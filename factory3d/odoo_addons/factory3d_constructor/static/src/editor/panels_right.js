@@ -198,6 +198,7 @@ function renderPlacementProps(root, pl) {
                 { class: "sec" },
                 h("h3", null, "Обладнання"),
                 lockNote(ly),
+                pl.dynamic ? h("div", { class: "note", id: "dynamicNote" }, "Динамічний об’єкт (люди, транспорт): не враховується в перевірках перетинів, проходів, обслуговування й пожежних шляхів.") : null,
                 h(
                     "div",
                     { class: "fcol" },
