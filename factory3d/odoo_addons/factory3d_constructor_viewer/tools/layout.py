@@ -42,7 +42,7 @@ def load_inventory():
     Файл `scene_inventory.json` кладе конструктор (повніший seed); поза ним база — знімок версії-імпорту.
     Допускається обгортка `{"objects": {…}}`."""
     try:
-        with file_open(INVENTORY_PATH, "r", encoding="utf-8") as fh:
+        with file_open(INVENTORY_PATH, "rb") as fh:
             data = json.load(fh)
     except (FileNotFoundError, OSError, ValueError):
         return {}

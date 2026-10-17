@@ -261,13 +261,13 @@ class TestKioskModel(HttpCase, LayoutBase):
         self.addCleanup(kiosk_ctrl.reset_rate_limit)
         params = self.env["ir.config_parameter"].sudo()
         params.set_param("factory3d.viewer.kiosk_enabled", "True")
-        self.base_url = "/f3d/kiosk/" + params.get_param("factory3d.viewer.kiosk_token")
+        self.kiosk_url = "/f3d/kiosk/" + params.get_param("factory3d.viewer.kiosk_token")
         self.generic._f3d_set_model(glb=("m.glb", make_glb()), status="ok")
         self.env.flush_all()
         self.env.cr.commit = lambda: None  # HttpCase: дані тесту видно серверу через спільний курсор
 
     def test_serves_glb_by_token(self):
-        res = self.url_open("%s/layout/model/%d" % (self.base_url, self.generic.id), allow_redirects=False)
+        res = self.url_open("%s/layout/model/%d" % (self.kiosk_url, self.generic.id), allow_redirects=False)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.headers["Content-Type"], "model/gltf-binary")
         self.assertTrue(res.content.startswith(b"glTF"))
@@ -276,7 +276,7 @@ class TestKioskModel(HttpCase, LayoutBase):
         res = self.url_open("/f3d/kiosk/%s/layout/model/%d" % ("0" * 32, self.generic.id), allow_redirects=False)
         self.assertEqual(res.status_code, 404)
         other = self.env["f3d.equipment.variant"].search([("model_glb_id", "=", False)], limit=1)
-        res = self.url_open("%s/layout/model/%d" % (self.base_url, other.id), allow_redirects=False)
+        res = self.url_open("%s/layout/model/%d" % (self.kiosk_url, other.id), allow_redirects=False)
         self.assertEqual(res.status_code, 404)
 
 
