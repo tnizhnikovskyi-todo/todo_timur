@@ -19,6 +19,7 @@
                                     <field name="passport_id"/>
                                     <field name="category"/>
                                     <field name="create_workcenter"/>
+                                    <field name="create_equipment"/>
                                     <field name="active" invisible="1"/>
                                 </group>
                                 <group string="Маса">

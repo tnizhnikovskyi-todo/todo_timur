@@ -7,6 +7,7 @@ from odoo import api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
 from ..services import convert, glb_meta as glb_mod, schemas
+from ..services.schemas import SCENE_ROLE_PREFIX
 from .f3d_equipment_passport import F3D_CATEGORY_SELECTION
 
 _logger = logging.getLogger(__name__)
@@ -122,6 +123,13 @@ class F3dEquipmentVariant(models.Model):
         readonly=False,
     )
     create_workcenter = fields.Boolean(string="Створювати робочий центр", default=False)
+    create_equipment = fields.Boolean(
+        string="Створювати обладнання",
+        default=True,
+        help="Публікація створює maintenance.equipment для розміщень цього варіанта, якщо запису ще немає. "
+        "Для зведених варіантів сцени («Об'єкти сцени · …») вимкнено: будівлі, планшети, світильники тощо — "
+        "частина 3D-моделі, а не облік обладнання; увімкніть свідомо, якщо потрібен запис.",
+    )
     model_original_id = fields.Many2one('ir.attachment', string="Оригінал моделі", ondelete='set null', copy=False)
     model_glb_id = fields.Many2one('ir.attachment', string="GLB для перегляду", ondelete='set null', copy=False)
     model_meta = fields.Json(string="Метадані моделі", default=dict, copy=False)
@@ -195,6 +203,8 @@ class F3dEquipmentVariant(models.Model):
                         vals['allowed_layer_kind_ids'] = [fields.Command.set(terms.ids)]
                 if 'create_workcenter' not in vals and passport.f3d_category == 'machine':
                     vals['create_workcenter'] = True
+                if 'create_equipment' not in vals and (passport.role or '').startswith(SCENE_ROLE_PREFIX):
+                    vals['create_equipment'] = False
             if 'utilities' in vals:
                 vals['utilities'] = self._f3d_normalize_utilities(vals['utilities'])
             prepared.append(vals)

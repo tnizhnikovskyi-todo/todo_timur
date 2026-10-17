@@ -11,6 +11,8 @@ MAX_JSON_DEPTH = 8
 AISLE_KINDS = ('path', 'exit')
 LAYER_UTILITY_KINDS = ('electric', 'air', 'dust', 'panel')
 VARIANT_UTILITY_KINDS = ('electric', 'air', 'dust')
+# паспорти «Об'єкти сцени · …» (role scene_<вид>): зведені, не каталожні; їх не записують у maintenance.equipment
+SCENE_ROLE_PREFIX = 'scene_'
 UNDERLAY_DEFAULT = {'unit': 'mm', 'dx': 0.0, 'dy': 0.0, 'rot_deg': 0.0, 'opacity': 0.5, 'scale': 1.0}
 
 
