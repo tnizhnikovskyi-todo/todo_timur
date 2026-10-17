@@ -99,6 +99,18 @@ def ensure_variants(env, data):
     resolved, skipped = {}, []
     for item in data['variants']:
         passport = Passport.search([('role', '=', item['passport_role'])], limit=1)
+        spec = item.get('passport')
+        if (
+            not passport and spec
+        ):  # автопаспорт «Об'єкти сцени» на вид об'єкта 3D-моделі (немає паспорта в каталозі base)
+            passport = Passport.create(
+                {
+                    'role': item['passport_role'],
+                    'manufacturer': spec.get('manufacturer') or "—",
+                    'model': spec['model'],
+                    'f3d_category': spec.get('category') or 'other',
+                }
+            )
         if not passport:
             if item['passport_role'] not in skipped:
                 skipped.append(item['passport_role'])
@@ -184,6 +196,7 @@ def load_seed(env, data):
                 'site_id': site.id,
                 'name': item['name'],
                 'kind': item['kind'],
+                'group_name': item.get('group') or False,
                 'sequence': index * 10,
                 'elevation_m': item.get('elevation', 0.0),
                 'grid_step_m': item.get('grid_step', 0.5),

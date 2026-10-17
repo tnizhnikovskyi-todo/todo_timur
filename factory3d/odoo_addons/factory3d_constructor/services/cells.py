@@ -67,6 +67,7 @@ SLOT_TEMPLATES = {
             'max_height': (0.1, 6.0, 1.5, float),
             'index_digits': (1, 4, 2, int),
         },
+        'choices': {'code_style': (('default', 'exact'), 'default')},
     },
     'machine_spot': {
         'label': "Місце під верстат",
@@ -80,6 +81,13 @@ SLOT_TEMPLATES = {
         'params': {},
         'polygon': True,
     },
+}
+
+# code_style='exact' (floor_stack): одна комірка з кодом = префікс місця на весь габарит `cols×cell_l` × `rows×cell_w`
+EXACT_RANGES = {
+    'cell_l': (0.1, 200.0, 1.2, float),
+    'cell_w': (0.1, 200.0, 0.8, float),
+    'max_height': (0.05, 30.0, 1.5, float),
 }
 
 PARAM_LABELS = {
@@ -137,7 +145,10 @@ def normalize_params(template, params):
     if not isinstance(params, dict):
         raise CellsError("Параметри шаблону мають бути об'єктом.")
     out = {}
-    for key, (lo, hi, default, kind) in spec['params'].items():
+    ranges = spec['params']
+    if template == 'floor_stack' and params.get('code_style') == 'exact':
+        ranges = dict(ranges, **EXACT_RANGES)  # одна комірка на весь габарит (стос, комплект, зона видачі): межі ширші
+    for key, (lo, hi, default, kind) in ranges.items():
         label = PARAM_LABELS.get(key, key)
         value = params.get(key, default)
         try:
@@ -300,6 +311,23 @@ def _raw_cells(template, p, prefix):
                         'kind': p['loc_kind'],
                     }
                 )
+    elif template == 'floor_stack' and p['code_style'] == 'exact':
+        cells.append(
+            {
+                'code': prefix,
+                'level': 1,
+                'index': 1,
+                'lx': 0.0,
+                'ly': 0.0,
+                'dz': 0.0,
+                'l': p['cols'] * p['cell_l'],
+                'w': p['rows'] * p['cell_w'],
+                'h': p['max_height'],
+                'capacity': 0.0,
+                'max_load_kg': 0.0,
+                'kind': 'stack',
+            }
+        )
     elif template == 'floor_stack':
         length = p['cols'] * p['cell_l']
         width = p['rows'] * p['cell_w']

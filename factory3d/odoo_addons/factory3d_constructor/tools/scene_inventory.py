@@ -152,8 +152,15 @@ def walk(js, binc, part):
         rec = None
         if 'code' in ex:
             rec = {
-                'idx': idx, 'name': name, 'ex': ex, 'layer': layer, 'part': part, 'parent': coded_parent,
-                'has_rot': 'rotation' in node or 'matrix' in node, 'pts': [], 'm': m,
+                'idx': idx,
+                'name': name,
+                'ex': ex,
+                'layer': layer,
+                'part': part,
+                'parent': coded_parent,
+                'has_rot': 'rotation' in node or 'matrix' in node,
+                'pts': [],
+                'm': m,
             }
             coded.append(rec)
         own = []
@@ -211,8 +218,12 @@ def build_object(rec, layer_meta):
         'layer': rec['layer'],
         'group': lm.get('group'),
         'part': rec['part'],
-        'x': round(cx, 3), 'y': round(cy, 3), 'z': round(z0, 3),
-        'L': round(x1 - x0, 3), 'W': round(y1 - y0, 3), 'H': round(z1 - z0, 3),
+        'x': round(cx, 3),
+        'y': round(cy, 3),
+        'z': round(z0, 3),
+        'L': round(x1 - x0, 3),
+        'W': round(y1 - y0, 3),
+        'H': round(z1 - z0, 3),
         'yaw': yaw or 0,
     }
     if rec['parent']:
@@ -257,9 +268,9 @@ def build():
         'source': 'factory3d_viewer/static/model/parts/*.glb',
         'dims': manifest.get('dims'),
         'coords': 'plant: x вздовж, y впоперек, z вгору (м); x,y — ЦЕНТР світового AABB об\'єкта (не якір/початок вузла), '
-                  'z — низ; L,W,H — розміри (L вздовж власної осі X до повороту, W — вздовж Y, H — висота); '
-                  'yaw — поворот навколо вертикалі, град. проти годинникової у плані (0, якщо вузол не повернутий). '
-                  'Сід розміщень/місць використовує ту саму конвенцію: x,y розміщення = x,y тут, rotation = yaw, якір center.',
+        'z — низ; L,W,H — розміри (L вздовж власної осі X до повороту, W — вздовж Y, H — висота); '
+        'yaw — поворот навколо вертикалі, град. проти годинникової у плані (0, якщо вузол не повернутий). '
+        'Сід розміщень/місць використовує ту саму конвенцію: x,y розміщення = x,y тут, rotation = yaw, якір center.',
         'layers': layers,
         'objects': objects,
     }
@@ -275,9 +286,14 @@ def dump(data):
     lines.append(',\n'.join(json.dumps(l, ensure_ascii=False, separators=(',', ':')) for l in data['layers']))
     lines.append('],')
     lines.append('"objects":{')  # {код: {kind, label, layer, group, part, x, y, z, L, W, H, yaw, …}}
-    lines.append(',\n'.join(
-        json.dumps(o['code'], ensure_ascii=False) + ':' + json.dumps({k: v for k, v in o.items() if k != 'code'}, ensure_ascii=False, separators=(',', ':'))
-        for o in data['objects']))
+    lines.append(
+        ',\n'.join(
+            json.dumps(o['code'], ensure_ascii=False)
+            + ':'
+            + json.dumps({k: v for k, v in o.items() if k != 'code'}, ensure_ascii=False, separators=(',', ':'))
+            for o in data['objects']
+        )
+    )
     lines.append('}')
     lines.append('}')
     return '\n'.join(lines) + '\n'
@@ -289,8 +305,10 @@ def summary(data, skipped):
     print(f"layers={len(data['layers'])} objects={len(data['objects'])} empty={len(skipped)}")
     for l in data['layers']:
         kinds = collections.Counter(o['kind'] for o in data['objects'] if o['layer'] == l['key'])
-        print(f"  {l['order']:>2} {l['key']:<12} {l['group']:<22} n={by_layer[l['key']]:<4} "
-              f"z[{l['zmin']}..{l['zmax']}] {dict(kinds)}")
+        print(
+            f"  {l['order']:>2} {l['key']:<12} {l['group']:<22} n={by_layer[l['key']]:<4} "
+            f"z[{l['zmin']}..{l['zmax']}] {dict(kinds)}"
+        )
     print('kinds:', dict(by_kind))
     nolayer = [o['code'] for o in data['objects'] if not o['layer']]
     if nolayer:

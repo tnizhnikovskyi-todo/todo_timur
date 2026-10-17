@@ -33,6 +33,7 @@ SAVE_FIELDS = {
         'uid',
         'name',
         'kind',
+        'group_name',
         'sequence',
         'elevation_m',
         'grid_step_m',

@@ -3,11 +3,14 @@
 import json
 import logging
 
+from odoo.tools import file_open
+
 from ..services import snapshot
 from . import link, seed
 
 _logger = logging.getLogger('odoo.addons.factory3d_constructor.hooks')
 
+INVENTORY_FILE = 'factory3d_constructor/data/scene_inventory.json'
 PARAM_PREFIX = 'factory3d.constructor.'
 PARAM_PUBLISH = PARAM_PREFIX + 'publish_enabled'
 PARAM_REPORT = PARAM_PREFIX + 'seed_report'
@@ -56,16 +59,43 @@ def step_seed(env, data):
     return seed.load_seed(env, data)
 
 
+def baseline_poses():
+    """Положення всіх кодованих об'єктів 3D-моделі, запечених у GLB переглядача (`data/scene_inventory.json`).
+
+    `{'source', 'convention', 'poses': {код: {x, y, z, L, W, H, yaw}}}`; x,y — центр світового AABB (як `x_m, y_m`
+    розміщень сіда), z — низ, L/W/H — габарит (м), yaw — поворот (°). Етап 2 («Переглядач» показує опубліковане)
+    рахує зсуви від них."""
+    try:
+        with file_open(INVENTORY_FILE, 'rb') as handle:
+            inventory = json.loads(handle.read().decode('utf-8'))
+    except (FileNotFoundError, OSError, ValueError):
+        return None
+    poses = {
+        code: {key: obj.get(key, 0) for key in ('x', 'y', 'z', 'L', 'W', 'H', 'yaw')}
+        for code, obj in (inventory.get('objects') or {}).items()
+    }
+    return {'source': INVENTORY_FILE, 'convention': inventory.get('coords'), 'poses': poses}
+
+
 def step_baseline(env, site, created):
-    """Крок 5: версія v1 «Імпорт із макета» (лише якщо в площадки ще немає версій)."""
+    """Крок 5: версія v1 «Імпорт із макета» (лише якщо в площадки ще немає версій); у знімку — `baseline.poses`."""
     if site.version_ids:
         return None
     user = env.ref('base.user_root')
+    baseline = baseline_poses()
     version = snapshot.create_version(
         site.sudo().with_user(user),
         note="Імпорт із макета",
-        report={'created': [], 'updated': [], 'archived': [], 'warnings': [], 'seed': created},
+        report={
+            'created': [],
+            'updated': [],
+            'archived': [],
+            'warnings': [],
+            'seed': created,
+            'baseline_poses': len((baseline or {}).get('poses') or {}),
+        },
         is_seed=True,
+        baseline=baseline,
     )
     return version
 

@@ -30,6 +30,7 @@ def layer_dict(layer, env_xmlids=None):
         'uid': layer.uid,
         'name': layer.name,
         'kind': layer.kind,
+        'group': layer.group_name or None,
         'sequence': layer.sequence,
         'elevation': layer.elevation_m,
         'grid_step': layer.grid_step_m,

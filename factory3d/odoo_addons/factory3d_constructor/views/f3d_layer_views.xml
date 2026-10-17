@@ -15,6 +15,7 @@
                         <group string="Основне">
                             <field name="site_id" readonly="not is_manager"/>
                             <field name="kind" readonly="not is_manager"/>
+                            <field name="group_name" readonly="not is_manager"/>
                             <field name="sequence" readonly="not is_manager"/>
                             <field name="elevation_m" readonly="not is_manager"/>
                             <field name="grid_step_m" readonly="not is_manager"/>
