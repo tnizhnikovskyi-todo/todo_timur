@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-05 -->
+    <record id="view_f3d_placement_form" model="ir.ui.view">
+        <field name="name">f3d.placement.form</field>
+        <field name="model">f3d.placement</field>
+        <field name="arch" type="xml">
+            <form string="Розміщення обладнання">
+                <header>
+                    <button name="action_show_in_3d" type="object" string="Показати в 3D" invisible="not equipment_id"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="code" placeholder="SAW-1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Основне">
+                            <field name="name"/>
+                            <field name="layer_id"/>
+                            <field name="variant_id"/>
+                            <field name="slot_id"/>
+                            <field name="cell_code"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Положення">
+                            <field name="x_m"/>
+                            <field name="y_m"/>
+                            <field name="rotation"/>
+                        </group>
+                    </group>
+                    <group string="Публікація">
+                        <field name="equipment_id" readonly="1"/>
+                        <field name="workcenter_id" readonly="1"/>
+                        <field name="published_at" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_placement_list" model="ir.ui.view">
+        <field name="name">f3d.placement.list</field>
+        <field name="model">f3d.placement</field>
+        <field name="arch" type="xml">
+            <list string="Розміщення">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="layer_id"/>
+                <field name="variant_id"/>
+                <field name="x_m"/>
+                <field name="y_m"/>
+                <field name="rotation"/>
+                <field name="equipment_id"/>
+            </list>
+        </field>
+    </record>
+</odoo>

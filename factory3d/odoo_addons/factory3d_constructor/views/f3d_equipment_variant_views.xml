@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-04: ЗАГЛУШКА скелета (W1). Повну форму з віджетами f3d_model_upload / f3d_model_preview пише W3. -->
+    <record id="view_f3d_equipment_variant_form" model="ir.ui.view">
+        <field name="name">f3d.equipment.variant.form</field>
+        <field name="model">f3d.equipment.variant</field>
+        <field name="arch" type="xml">
+            <form string="Варіант обладнання">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Назва варіанта"/></h1>
+                    </div>
+                    <group>
+                        <group string="Габарити й обслуговування">
+                            <field name="passport_id"/>
+                            <field name="category"/>
+                            <field name="length_mm"/>
+                            <field name="width_mm"/>
+                            <field name="height_mm"/>
+                            <field name="service_front_mm"/>
+                            <field name="service_back_mm"/>
+                            <field name="service_left_mm"/>
+                            <field name="service_right_mm"/>
+                        </group>
+                        <group string="Орієнтація і підключення">
+                            <field name="front_side"/>
+                            <field name="anchor"/>
+                            <field name="rotation_mode"/>
+                            <field name="allowed_layer_kind_ids" widget="many2many_tags"/>
+                            <field name="allowed_slot_type_ids" widget="many2many_tags"/>
+                            <field name="utilities"/>
+                            <field name="power_kw"/>
+                            <field name="panel"/>
+                            <field name="weight_kg"/>
+                            <field name="floor_load_kn_m2"/>
+                            <field name="create_workcenter"/>
+                            <field name="model_status"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_f3d_equipment_variant_list" model="ir.ui.view">
+        <field name="name">f3d.equipment.variant.list</field>
+        <field name="model">f3d.equipment.variant</field>
+        <field name="arch" type="xml">
+            <list string="Варіанти обладнання">
+                <field name="name"/>
+                <field name="passport_id"/>
+                <field name="category"/>
+                <field name="length_mm"/>
+                <field name="width_mm"/>
+                <field name="height_mm"/>
+                <field name="power_kw"/>
+                <field name="model_status"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_f3d_equipment_variant_kanban" model="ir.ui.view">
+        <field name="name">f3d.equipment.variant.kanban</field>
+        <field name="model">f3d.equipment.variant</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <templates>
+                    <t t-name="card">
+                        <field name="name" class="fw-bold"/>
+                        <field name="passport_id"/>
+                        <div><field name="length_mm"/> × <field name="width_mm"/> × <field name="height_mm"/> мм</div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_f3d_equipment_variant_search" model="ir.ui.view">
+        <field name="name">f3d.equipment.variant.search</field>
+        <field name="model">f3d.equipment.variant</field>
+        <field name="arch" type="xml">
+            <search string="Варіанти обладнання">
+                <field name="name"/>
+                <field name="passport_id"/>
+                <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_category" string="Категорія" context="{'group_by': 'category'}"/>
+                    <filter name="group_passport" string="Паспорт" context="{'group_by': 'passport_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

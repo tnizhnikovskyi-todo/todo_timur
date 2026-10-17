@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- §5.1: 4 типові паспорти й варіанти «Стандарт». Габарити — ПРИПУЩЕННЯ (Q-11), не з макета. -->
+    <record id="passport_generic_machine" model="f3d.equipment.passport">
+        <field name="role">generic_machine</field>
+        <field name="manufacturer">Типовий</field>
+        <field name="model">Верстат (умовний)</field>
+        <field name="f3d_category">machine</field>
+        <field name="dim_l_mm">3000</field>
+        <field name="dim_w_mm">1500</field>
+        <field name="dim_h_mm">1800</field>
+        <field name="power_kw">15</field>
+    </record>
+    <record id="passport_generic_rack" model="f3d.equipment.passport">
+        <field name="role">generic_rack</field>
+        <field name="manufacturer">Типовий</field>
+        <field name="model">Стелаж (умовний)</field>
+        <field name="f3d_category">rack</field>
+        <field name="dim_l_mm">2700</field>
+        <field name="dim_w_mm">1100</field>
+        <field name="dim_h_mm">6000</field>
+    </record>
+    <record id="passport_generic_forklift" model="f3d.equipment.passport">
+        <field name="role">generic_forklift</field>
+        <field name="manufacturer">Типовий</field>
+        <field name="model">Навантажувач (умовний)</field>
+        <field name="f3d_category">forklift</field>
+        <field name="dim_l_mm">2600</field>
+        <field name="dim_w_mm">1200</field>
+        <field name="dim_h_mm">2200</field>
+    </record>
+    <record id="passport_generic_panel" model="f3d.equipment.passport">
+        <field name="role">generic_panel</field>
+        <field name="manufacturer">Типовий</field>
+        <field name="model">Шафа/щит (умовний)</field>
+        <field name="f3d_category">panel</field>
+        <field name="dim_l_mm">800</field>
+        <field name="dim_w_mm">400</field>
+        <field name="dim_h_mm">2000</field>
+    </record>
+
+    <record id="variant_generic_machine" model="f3d.equipment.variant">
+        <field name="passport_id" ref="passport_generic_machine"/>
+        <field name="name">Стандарт</field>
+        <field name="length_mm">3000</field>
+        <field name="width_mm">1500</field>
+        <field name="height_mm">1800</field>
+        <field name="service_front_mm">1000</field>
+        <field name="service_back_mm">500</field>
+        <field name="service_left_mm">500</field>
+        <field name="service_right_mm">500</field>
+        <field name="power_kw">15</field>
+        <field name="weight_kg">3000</field>
+        <field name="create_workcenter" eval="True"/>
+        <field name="utilities" eval="[{'kind': 'electric', 'x_mm': -1400, 'y_mm': 0, 'z_mm': 500}]"/>
+    </record>
+    <record id="variant_generic_rack" model="f3d.equipment.variant">
+        <field name="passport_id" ref="passport_generic_rack"/>
+        <field name="name">Стандарт</field>
+        <field name="length_mm">2700</field>
+        <field name="width_mm">1100</field>
+        <field name="height_mm">6000</field>
+        <field name="service_front_mm">0</field>
+        <field name="service_back_mm">0</field>
+        <field name="service_left_mm">0</field>
+        <field name="service_right_mm">0</field>
+    </record>
+    <record id="variant_generic_forklift" model="f3d.equipment.variant">
+        <field name="passport_id" ref="passport_generic_forklift"/>
+        <field name="name">Стандарт</field>
+        <field name="length_mm">2600</field>
+        <field name="width_mm">1200</field>
+        <field name="height_mm">2200</field>
+        <field name="service_front_mm">1500</field>
+        <field name="service_back_mm">0</field>
+        <field name="service_left_mm">0</field>
+        <field name="service_right_mm">0</field>
+        <field name="weight_kg">4500</field>
+    </record>
+    <record id="variant_generic_panel" model="f3d.equipment.variant">
+        <field name="passport_id" ref="passport_generic_panel"/>
+        <field name="name">Стандарт</field>
+        <field name="length_mm">800</field>
+        <field name="width_mm">400</field>
+        <field name="height_mm">2000</field>
+        <field name="service_front_mm">1000</field>
+        <field name="service_back_mm">0</field>
+        <field name="service_left_mm">0</field>
+        <field name="service_right_mm">0</field>
+    </record>
+</odoo>
