@@ -182,6 +182,28 @@ def create_version(site, note='', report=None, is_seed=False, counts=None, basel
     return version
 
 
+def rebuild_version(site, version):
+    """Перебудовує знімок версії за поточною чернеткою (чернетка не змінена від цієї версії): n, час, звіт і лічильники
+    версії/площадки лишаються, оновлюються знімок, його SHA-1 й кількості; `baseline` (позиції GLB) зберігається."""
+    version = version.sudo()
+    old = load_snapshot(version)
+    snap = build_snapshot(site)
+    if old.get('baseline'):
+        snap['baseline'] = old['baseline']
+    raw, sha1 = dump_snapshot(snap)
+    version.snapshot_id.sudo().write({'raw': raw})
+    version.write(
+        {
+            'snapshot_sha1': sha1,
+            'layer_count': snap['counts']['layers'],
+            'slot_count': snap['counts']['slots'],
+            'cell_count': snap['counts']['cells'],
+            'placement_count': snap['counts']['placements'],
+        }
+    )
+    return version
+
+
 def load_snapshot(version):
     raw = version.snapshot_id.raw if version.snapshot_id else None
     if not raw:
