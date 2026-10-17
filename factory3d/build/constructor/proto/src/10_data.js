@@ -231,8 +231,10 @@ function sceneCatalog(rows) { // rows: [code, layer, kind, x, y, z, L, W, H, yaw
   return Object.values(pps);
 }
 
-function buildSample() {
-  const S0 = SEED, sid = 'sample', SC = S0.scene;
+// версія прикладу: 2 — усі 31 шар і 1078 об'єктів 3D-моделі; старіший збережений приклад не перезаписуємо
+const SEED_REV = 2;
+function buildSample(sidArg) {
+  const S0 = SEED, sid = sidArg || 'sample', SC = S0.scene;
   const layers = S0.layers.map((r, i) => {
     const gd = GROUP_DEF[r[2]];
     return mkLayer(sid, { id: 'ly_' + r[0], key: r[0], name: r[1], group: r[2], kind: gd.kind, elevation: r[3], grid_step: gd.grid, aisle_width: gd.aisle, slot_types: gd.slots.slice(),
@@ -283,7 +285,7 @@ function buildSample() {
   for (const y of [26.5, 34.5, 42.5, 50.5, 58.5, 66.5]) put('dust', 55.6, y);
   for (const y of [26.5, 34.5]) put('dust', 75, y);
   LY.energy.utilities = u.electric; LY.utilities.utilities = u.air; LY.dust.utilities = u.dust;
-  const site = { id: sid, name: S0.name, sample: true, building: { length: S0.W, width: S0.D, height: S0.H }, column_grid: { step_x: 12, step_y: 12 }, active_version: 1 };
+  const site = { id: sid, name: S0.name, sample: true, seed_rev: SEED_REV, building: { length: S0.W, width: S0.D, height: S0.H }, column_grid: { step_x: 12, step_y: 12 }, active_version: 1 };
   const st = { site, layers, slots, placements, catalog, settings: defaultSettings(), versions: [] };
   autoBounds(st);
   const snap = makeSnapshot(st);
