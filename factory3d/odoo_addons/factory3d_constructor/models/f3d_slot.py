@@ -95,6 +95,8 @@ class F3dSlot(models.Model):
 
     # --- R-22 / R-11 -----------------------------------------------------------------------------------
     def _f3d_normalize_vals(self, vals):
+        if isinstance(vals.get('code_prefix'), str) and len(vals['code_prefix']) > cells_mod.PREFIX_MAX_LEN:
+            raise ValidationError("Префікс довший за %d символів." % cells_mod.PREFIX_MAX_LEN)
         if 'rotation' in vals and isinstance(vals['rotation'], (int, float)) and not isinstance(vals['rotation'], bool):
             vals['rotation'] = int(round(vals['rotation'])) % 360
         template = vals.get('template') or (self[:1].template if self else None)

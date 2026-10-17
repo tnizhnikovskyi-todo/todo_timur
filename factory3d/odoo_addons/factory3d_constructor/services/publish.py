@@ -272,8 +272,8 @@ def _plan_archive(site, env, lines, loc_codes, eq_codes, wc_codes):
 
 def build_plan(site):
     """R-12: `{lines, issues, unchanged, draft_rev}`; в Odoo нічого не змінює."""
-    env = site.env.sudo()
     site = site.sudo()
+    env = site.env
     issues = [dict(i) for i in state_mod.run_site_checks(site)]
     lines, unchanged = [], 0
     loc_codes, loc_unchanged = _plan_locations(site, env, lines, issues)
@@ -345,9 +345,9 @@ def apply_plan(site, plan, archive_keys=(), note=''):
 
 
 def _apply(site, plan, keys, note):
-    base = site.env.sudo().with_company(site.company_id).with_context(
+    site = site.sudo().with_company(site.company_id).with_context(
         f3d_no_touch=True, tracking_disable=True, mail_notrack=True, mail_create_nolog=True)
-    site = site.with_env(base)
+    base = site.env
     created, updated, archived = [], [], []
     records = {}   # (res_model, code) → record для зв'язування розміщень
 

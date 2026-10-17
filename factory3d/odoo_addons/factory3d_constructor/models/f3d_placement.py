@@ -57,6 +57,9 @@ class F3dPlacement(models.Model):
 
     # --- R-22 / R-11 -----------------------------------------------------------------------------------
     def _f3d_normalize_vals(self, vals):
+        for key, limit in (('code', 32), ('cell_code', 32)):  # Char(size) мовчки обрізає — перевіряємо до запису
+            if isinstance(vals.get(key), str) and len(vals[key]) > limit:
+                raise ValidationError("Поле «%s» довше за %d символів." % (self._fields[key].string, limit))
         if 'rotation' in vals and isinstance(vals['rotation'], (int, float)) and not isinstance(vals['rotation'], bool):
             vals['rotation'] = float(vals['rotation']) % 360.0
         if 'cell_code' in vals and not vals['cell_code']:

@@ -136,7 +136,8 @@ def _resolve_variant(env, item):
 
 def apply_snapshot(site, snap):
     """Відновити чернетку за знімком (за uid): оновити/створити, зайве видалити; Odoo-записи не чіпати."""
-    env = site.env.sudo().with_context(f3d_no_touch=True, active_test=False)
+    site = site.sudo().with_context(f3d_no_touch=True, active_test=False)
+    env = site.env
     Layer, Slot, Placement = env['f3d.layer'], env['f3d.slot'], env['f3d.placement']
     # 1) варіанти розміщень мають існувати — інакше нічого не змінюємо
     variants, missing = {}, []
