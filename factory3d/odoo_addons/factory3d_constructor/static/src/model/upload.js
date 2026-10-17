@@ -3,6 +3,8 @@
 import { ModelImportError } from "./normalize";
 
 export const UPLOAD_URL = "/f3d/constructor/model/upload";
+/** Для тестів: `XHR` підміняє XMLHttpRequest. */
+export const UPLOAD_CONFIG = { XHR: null };
 
 function csrfToken() {
     return globalThis.odoo?.csrf_token || "";
@@ -24,7 +26,7 @@ export function uploadModel(variantId, { original, glb, meta }, opts = {}) {
     }
     fd.append("meta", JSON.stringify(meta || {}));
     return new Promise((resolve, reject) => {
-        const xhr = new (opts.XHR || XMLHttpRequest)();
+        const xhr = new (opts.XHR || UPLOAD_CONFIG.XHR || XMLHttpRequest)();
         xhr.open("POST", opts.url || UPLOAD_URL);
         xhr.responseType = "text";
         if (xhr.upload && opts.onProgress) {

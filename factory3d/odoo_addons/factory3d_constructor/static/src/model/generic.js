@@ -182,7 +182,11 @@ function recipeRobot(l, w, h) {
 }
 
 function recipeOther(l, w, h) {
-    return [bx(-l / 2, l / 2, 0, h, -w / 2, w / 2, GENERIC_COLORS.other)];
+    const c = GENERIC_COLORS.other;
+    return [
+        bx(-l / 2, l / 2, 0, 0.96 * h, -w / 2, w / 2, c), // паралелепіпед
+        bx(-l / 2, l / 2, 0.96 * h, h, -w / 2, w / 2, shade(c, -0.25)), // кришка (друга частина, габарит той самий)
+    ];
 }
 
 const RECIPES = {

@@ -1,43 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- V-04: ЗАГЛУШКА скелета (W1). Повну форму з віджетами f3d_model_upload / f3d_model_preview пише W3. -->
+    <!-- V-04: варіант обладнання (W3). Форма: поля ліворуч, праворуч віджети f3d_model_preview / f3d_model_upload (DEC-07).
+         Діалог із конструктора відкривається act_window target='new' (форма та сама). -->
     <record id="view_f3d_equipment_variant_form" model="ir.ui.view">
         <field name="name">f3d.equipment.variant.form</field>
         <field name="model">f3d.equipment.variant</field>
         <field name="arch" type="xml">
             <form string="Варіант обладнання">
+                <header>
+                    <button name="action_retry_convert" type="object" string="Повторити перетворення"
+                            invisible="model_status != 'pending_conversion'"
+                            groups="factory3d_constructor.group_f3d_constructor_technologist"/>
+                </header>
                 <sheet>
                     <div class="oe_title">
+                        <label for="name"/>
                         <h1><field name="name" placeholder="Назва варіанта"/></h1>
                     </div>
-                    <group>
-                        <group string="Габарити й обслуговування">
-                            <field name="passport_id"/>
-                            <field name="category"/>
-                            <field name="length_mm"/>
-                            <field name="width_mm"/>
-                            <field name="height_mm"/>
-                            <field name="service_front_mm"/>
-                            <field name="service_back_mm"/>
-                            <field name="service_left_mm"/>
-                            <field name="service_right_mm"/>
-                        </group>
-                        <group string="Орієнтація і підключення">
-                            <field name="front_side"/>
-                            <field name="anchor"/>
-                            <field name="rotation_mode"/>
-                            <field name="allowed_layer_kind_ids" widget="many2many_tags"/>
-                            <field name="allowed_slot_type_ids" widget="many2many_tags"/>
-                            <field name="utilities"/>
-                            <field name="power_kw"/>
-                            <field name="panel"/>
-                            <field name="weight_kg"/>
-                            <field name="floor_load_kn_m2"/>
-                            <field name="create_workcenter"/>
-                            <field name="model_status"/>
-                            <field name="active" invisible="1"/>
-                        </group>
-                    </group>
+                    <div class="row o_f3d_variant_cols">
+                        <div class="col-12 col-xl-7">
+                            <group>
+                                <group string="Тип">
+                                    <field name="passport_id"/>
+                                    <field name="category"/>
+                                    <field name="create_workcenter"/>
+                                    <field name="active" invisible="1"/>
+                                </group>
+                                <group string="Маса">
+                                    <field name="weight_kg"/>
+                                    <field name="floor_load_kn_m2"/>
+                                </group>
+                            </group>
+                            <group>
+                                <group string="Габарити й обслуговування">
+                                    <field name="length_mm"/>
+                                    <field name="width_mm"/>
+                                    <field name="height_mm"/>
+                                    <field name="service_front_mm"/>
+                                    <field name="service_back_mm"/>
+                                    <field name="service_left_mm"/>
+                                    <field name="service_right_mm"/>
+                                </group>
+                                <group string="Орієнтація">
+                                    <field name="front_side"/>
+                                    <field name="anchor"/>
+                                    <field name="rotation_mode"/>
+                                </group>
+                            </group>
+                            <group>
+                                <group string="Де можна ставити">
+                                    <field name="allowed_layer_kind_ids" widget="many2many_tags"/>
+                                    <field name="allowed_slot_type_ids" widget="many2many_tags"/>
+                                </group>
+                                <group string="Підключення">
+                                    <field name="utilities" widget="json"/>
+                                    <field name="power_kw"/>
+                                    <field name="panel"/>
+                                </group>
+                            </group>
+                            <group>
+                                <field name="note" placeholder="Примітка"/>
+                            </group>
+                        </div>
+                        <div class="col-12 col-xl-5 o_f3d_variant_model">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0">3D-модель</h5>
+                                <field name="model_status" widget="badge" readonly="1"
+                                       decoration-success="model_status == 'ok'"
+                                       decoration-warning="model_status == 'pending_conversion'"
+                                       decoration-danger="model_status == 'error'"
+                                       decoration-muted="model_status == 'none'"/>
+                            </div>
+                            <div class="alert alert-warning" role="alert" invisible="not model_warning">
+                                <field name="model_warning" readonly="1" nolabel="1"/>
+                            </div>
+                            <field name="model_glb_id" widget="f3d_model_preview" nolabel="1"/>
+                            <widget name="f3d_model_upload"
+                                    groups="factory3d_constructor.group_f3d_constructor_technologist"/>
+                            <field name="model_meta" invisible="1"/>
+                            <field name="model_original_id" invisible="1"/>
+                            <field name="image" invisible="1"/>
+                        </div>
+                    </div>
                 </sheet>
             </form>
         </field>
@@ -47,15 +91,20 @@
         <field name="name">f3d.equipment.variant.list</field>
         <field name="model">f3d.equipment.variant</field>
         <field name="arch" type="xml">
-            <list string="Варіанти обладнання">
+            <list string="Варіанти обладнання"
+                  decoration-danger="model_status == 'error'"
+                  decoration-warning="model_status == 'pending_conversion'">
                 <field name="name"/>
                 <field name="passport_id"/>
                 <field name="category"/>
-                <field name="length_mm"/>
-                <field name="width_mm"/>
-                <field name="height_mm"/>
-                <field name="power_kw"/>
-                <field name="model_status"/>
+                <field name="length_mm" optional="show"/>
+                <field name="width_mm" optional="show"/>
+                <field name="height_mm" optional="show"/>
+                <field name="power_kw" optional="show"/>
+                <field name="model_status" widget="badge"
+                       decoration-success="model_status == 'ok'"
+                       decoration-warning="model_status == 'pending_conversion'"
+                       decoration-danger="model_status == 'error'"/>
             </list>
         </field>
     </record>
@@ -64,12 +113,27 @@
         <field name="name">f3d.equipment.variant.kanban</field>
         <field name="model">f3d.equipment.variant</field>
         <field name="arch" type="xml">
-            <kanban>
+            <kanban records_draggable="0">
+                <field name="image"/>
+                <field name="model_status"/>
                 <templates>
                     <t t-name="card">
-                        <field name="name" class="fw-bold"/>
-                        <field name="passport_id"/>
-                        <div><field name="length_mm"/> × <field name="width_mm"/> × <field name="height_mm"/> мм</div>
+                        <div class="d-flex">
+                            <div class="me-3 flex-shrink-0" t-if="record.image.raw_value">
+                                <field name="image" widget="image" options="{'img_class': 'rounded', 'size': [64, 64]}"/>
+                            </div>
+                            <div class="flex-grow-1">
+                                <field name="name" class="fw-bold"/>
+                                <div class="text-muted"><field name="passport_id"/></div>
+                                <div><field name="length_mm"/> × <field name="width_mm"/> × <field name="height_mm"/> мм</div>
+                                <div class="mt-1">
+                                    <field name="model_status" widget="badge"
+                                           decoration-success="model_status == 'ok'"
+                                           decoration-warning="model_status == 'pending_conversion'"
+                                           decoration-danger="model_status == 'error'"/>
+                                </div>
+                            </div>
+                        </div>
                     </t>
                 </templates>
             </kanban>
@@ -83,10 +147,13 @@
             <search string="Варіанти обладнання">
                 <field name="name"/>
                 <field name="passport_id"/>
+                <filter name="no_model" string="Без 3D-моделі" domain="[('model_status', '=', 'none')]"/>
+                <filter name="pending_model" string="Очікують перетворення" domain="[('model_status', '=', 'pending_conversion')]"/>
                 <filter name="inactive" string="Архівні" domain="[('active', '=', False)]"/>
                 <group>
                     <filter name="group_category" string="Категорія" context="{'group_by': 'category'}"/>
                     <filter name="group_passport" string="Паспорт" context="{'group_by': 'passport_id'}"/>
+                    <filter name="group_model_status" string="Статус моделі" context="{'group_by': 'model_status'}"/>
                 </group>
             </search>
         </field>
