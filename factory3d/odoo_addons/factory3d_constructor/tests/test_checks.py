@@ -1,10 +1,15 @@
 import json
 import os
 
+from psycopg2 import IntegrityError
+
+from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase, tagged
+from odoo.tools import mute_logger
 
 from ..services import checks, geometry as geo
 from . import golden_scenes
+from .common import F3DConstructorCase
 
 
 @tagged("post_install", "-at_install", "f3d", "f3d_constructor")
@@ -21,14 +26,19 @@ class TestChecks(TransactionCase):
     # --- AC-22: SAT (R-03) ---
     def test_sat_examples(self):
         obb = geo.make_obb
-        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, .5), obb(1.5, 0, 1, .5)), 0.5, places=3)
-        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, .5), obb(2, 0, 1, .5)), 0.0, places=6)
+        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, 0.5), obb(1.5, 0, 1, 0.5)), 0.5, places=3)
+        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, 0.5), obb(2, 0, 1, 0.5)), 0.0, places=6)
         self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, 1), obb(2.2, 0, 1, 1, 45)), 0.214, places=3)
-        self.assertLess(geo.sat_penetration(obb(0, 0, 1, .5), obb(3, 0, 1, .5)), 0)
+        self.assertLess(geo.sat_penetration(obb(0, 0, 1, 0.5), obb(3, 0, 1, 0.5)), 0)
 
     def test_geometry_r02_example(self):
-        variant = {'length': 4000, 'width': 1200, 'front_side': 's', 'anchor': 'front',
-                   'service': {'front': 1000, 'back': 0, 'left': 0, 'right': 0}}
+        variant = {
+            'length': 4000,
+            'width': 1200,
+            'front_side': 's',
+            'anchor': 'front',
+            'service': {'front': 1000, 'back': 0, 'left': 0, 'right': 0},
+        }
         body = geo.placement_obb(variant, 10, 5, 0)
         self.assertAlmostEqual(body['cy'], 5.6)
         service = geo.service_obb(variant, 10, 5, 0)
@@ -104,10 +114,14 @@ class TestChecks(TransactionCase):
 
     # --- AC-31: золоті фікстури ---
     def test_golden_parity(self):
-        """Файли `static/tests/fixtures/*_golden.json` збігаються з тим, що дають services/* (F3D_UPDATE_GOLDEN=1 — оновити)."""
+        """Файли `static/tests/fixtures/*_golden.json` збігаються з тим, що дають services/*.
+
+        `F3D_UPDATE_GOLDEN=1` — оновити файли."""
         if os.environ.get('F3D_UPDATE_GOLDEN') == '1':
             golden_scenes.write_all()
-        scenes = json.loads(open(os.path.join(golden_scenes.FIXTURES_DIR, 'checks_golden.json'), encoding='utf-8').read())
+        scenes = json.loads(
+            open(os.path.join(golden_scenes.FIXTURES_DIR, 'checks_golden.json'), encoding='utf-8').read()
+        )
         self.assertGreaterEqual(len(scenes['scenes']), 12)
         covered = {i['check'] for sc in scenes['scenes'] for i in sc['expected']}
         self.assertEqual(covered, set(checks.CHECK_KEYS))
@@ -115,3 +129,28 @@ class TestChecks(TransactionCase):
             path = os.path.join(golden_scenes.FIXTURES_DIR, name)
             with open(path, encoding='utf-8') as handle:
                 self.assertEqual(handle.read(), text, "%s застарілий: запустіть тест із F3D_UPDATE_GOLDEN=1" % name)
+
+
+@tagged("post_install", "-at_install", "f3d", "f3d_constructor")
+class TestCheckConfigs(F3DConstructorCase):
+    """AC-32: налаштування перевірок площадки (R-04) і їх схема (R-22)."""
+
+    def test_ac32_default_configs_and_uniqueness(self):
+        site = self.env['f3d.site'].create({'name': "Нова", 'code': 'NEW'})
+        configs = {c.check_key: c for c in site.check_config_ids}
+        self.assertEqual(set(configs), set(checks.CHECK_KEYS))
+        self.assertEqual(
+            {k for k, c in configs.items() if c.mode == 'block'}, {'fits', 'collide', 'aisles_free', 'fire'}
+        )
+        self.assertEqual(configs['utility_reach'].params, {'max_m': 15.0})
+        self.assertEqual(site.check_config_ids.sorted('sequence').mapped('check_key'), checks.CHECK_KEYS)
+        with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.cr.savepoint():
+            self.env['f3d.check.config'].create({'site_id': site.id, 'check_key': 'fits', 'mode': 'warn'})
+
+    def test_params_validation(self):
+        config = self.site.check_config_ids.filtered(lambda c: c.check_key == 'utility_reach')
+        config.params = {'max_m': 20}
+        self.assertEqual(config.params['max_m'], 20.0)
+        for bad in ({'max_m': 0}, {'max_m': 'x'}, {'tolerance_mm': -1}):
+            with self.subTest(bad=bad), self.assertRaises(ValidationError):
+                config.params = bad

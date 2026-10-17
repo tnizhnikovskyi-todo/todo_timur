@@ -15,6 +15,7 @@
 Результат — список `issue = {check, severity, layer_id, codes, message}` лише для увімкнених перевірок.
 Коди пар у `collide` відсортовані за алфавітом (пара не має напрямку).
 """
+
 import math
 
 from . import cells as cells_mod
@@ -78,8 +79,12 @@ class _Scene:
         key = slot['id']
         if key not in self._slot_obb:
             self._slot_obb[key] = cells_mod.slot_obb(
-                slot['template'], slot.get('params') or {}, slot.get('x') or 0.0, slot.get('y') or 0.0,
-                slot.get('rotation') or 0.0)
+                slot['template'],
+                slot.get('params') or {},
+                slot.get('x') or 0.0,
+                slot.get('y') or 0.0,
+                slot.get('rotation') or 0.0,
+            )
         return self._slot_obb[key]
 
     def slot_cells(self, slot):
@@ -87,38 +92,68 @@ class _Scene:
         if key not in self._slot_cells:
             elevation = (self.layers.get(slot['layer_id']) or {}).get('elevation') or 0.0
             self._slot_cells[key] = {
-                cell['code']: cell for cell in cells_mod.generate_cells(
-                    slot['template'], slot.get('code_prefix') or '', slot.get('x') or 0.0, slot.get('y') or 0.0,
-                    slot.get('rotation') or 0.0, slot.get('params') or {}, slot.get('overrides') or {}, elevation)}
+                cell['code']: cell
+                for cell in cells_mod.generate_cells(
+                    slot['template'],
+                    slot.get('code_prefix') or '',
+                    slot.get('x') or 0.0,
+                    slot.get('y') or 0.0,
+                    slot.get('rotation') or 0.0,
+                    slot.get('params') or {},
+                    slot.get('overrides') or {},
+                    elevation,
+                )
+            }
         return self._slot_cells[key]
 
     def body(self, placement):
         key = placement['id']
         if key not in self._body:
             self._body[key] = geo.placement_obb(
-                self.variants[placement['variant_id']], placement.get('x') or 0.0, placement.get('y') or 0.0,
-                placement.get('rotation') or 0.0)
+                self.variants[placement['variant_id']],
+                placement.get('x') or 0.0,
+                placement.get('y') or 0.0,
+                placement.get('rotation') or 0.0,
+            )
         return self._body[key]
 
     def service(self, placement):
         key = placement['id']
         if key not in self._service:
             self._service[key] = geo.service_obb(
-                self.variants[placement['variant_id']], placement.get('x') or 0.0, placement.get('y') or 0.0,
-                placement.get('rotation') or 0.0)
+                self.variants[placement['variant_id']],
+                placement.get('x') or 0.0,
+                placement.get('y') or 0.0,
+                placement.get('rotation') or 0.0,
+            )
         return self._service[key]
 
     def objects(self):
         """F = розміщення ∪ місця (крім zone): [{kind, id, code, layer_id, obb, slot_id}]."""
         out = []
         for placement in self.placements:
-            out.append({'kind': 'placement', 'id': placement['id'], 'code': placement['code'],
-                        'layer_id': placement['layer_id'], 'obb': self.body(placement),
-                        'slot_id': placement.get('slot_id')})
+            out.append(
+                {
+                    'kind': 'placement',
+                    'id': placement['id'],
+                    'code': placement['code'],
+                    'layer_id': placement['layer_id'],
+                    'obb': self.body(placement),
+                    'slot_id': placement.get('slot_id'),
+                }
+            )
         for slot in self.slots.values():
             if slot['template'] != 'zone':
-                out.append({'kind': 'slot', 'id': slot['id'], 'code': slot['code_prefix'],
-                            'layer_id': slot['layer_id'], 'obb': self.slot_obb(slot), 'slot_id': None})
+                out.append(
+                    {
+                        'kind': 'slot',
+                        'id': slot['id'],
+                        'code': slot['code_prefix'],
+                        'layer_id': slot['layer_id'],
+                        'obb': self.slot_obb(slot),
+                        'slot_id': None,
+                    }
+                )
         return out
 
     def container_polygon(self, layer):
@@ -139,6 +174,7 @@ def _eps(config, eps):
 
 # --- окремі перевірки -----------------------------------------------------------------------------------
 
+
 def check_fits(scene, config, eps):
     sev = config['mode']
     issues = []
@@ -148,24 +184,45 @@ def check_fits(scene, config, eps):
         code, lid = p['code'], p['layer_id']
         kinds = variant.get('layer_kinds') or []
         if kinds and layer.get('kind') not in kinds:
-            issues.append(_issue('fits', sev, lid, [code], "%s: варіант не допускається на шарі «%s»" % (
-                code, layer.get('name') or '')))
+            issues.append(
+                _issue(
+                    'fits',
+                    sev,
+                    lid,
+                    [code],
+                    "%s: варіант не допускається на шарі «%s»" % (code, layer.get('name') or ''),
+                )
+            )
         slot = scene.slots.get(p.get('slot_id')) if p.get('slot_id') else None
         types = variant.get('slot_types') or []
         if slot is not None and types and slot['template'] not in types:
-            issues.append(_issue('fits', sev, lid, [code], "%s: варіант не допускається в місці типу %s" % (
-                code, slot['template'])))
+            issues.append(
+                _issue(
+                    'fits', sev, lid, [code], "%s: варіант не допускається в місці типу %s" % (code, slot['template'])
+                )
+            )
         rotation = p.get('rotation') or 0.0
         if not _rotation_ok(variant.get('rotations'), rotation):
-            issues.append(_issue('fits', sev, lid, [code], "%s: поворот %s° недозволений" % (code, _fmt_angle(rotation))))
+            issues.append(
+                _issue('fits', sev, lid, [code], "%s: поворот %s° недозволений" % (code, _fmt_angle(rotation)))
+            )
         cell_code = p.get('cell_code')
         if cell_code and slot is not None:
             cell = scene.slot_cells(slot).get(cell_code)
             if cell is None:
-                issues.append(_issue('fits', sev, lid, [code], "%s: комірки %s немає в місці %s" % (
-                    code, cell_code, slot['code_prefix'])))
+                issues.append(
+                    _issue(
+                        'fits',
+                        sev,
+                        lid,
+                        [code],
+                        "%s: комірки %s немає в місці %s" % (code, cell_code, slot['code_prefix']),
+                    )
+                )
                 continue
-            container = geo.obb_corners(geo.make_obb(cell['x'], cell['y'], cell['l'] / 2.0, cell['w'] / 2.0, cell['rot']))
+            container = geo.obb_corners(
+                geo.make_obb(cell['x'], cell['y'], cell['l'] / 2.0, cell['w'] / 2.0, cell['rot'])
+            )
             what = "комірки"
         elif slot is not None:
             container, what = geo.obb_corners(scene.slot_obb(slot)), "місця"
@@ -178,8 +235,15 @@ def check_fits(scene, config, eps):
             continue
         container, what = scene.container_polygon(scene.layers.get(slot['layer_id']) or {})
         if not geo.obb_inside_polygon(scene.slot_obb(slot), container, eps):
-            issues.append(_issue('fits', sev, slot['layer_id'], [slot['code_prefix']], "%s: виходить за межі %s" % (
-                slot['code_prefix'], what)))
+            issues.append(
+                _issue(
+                    'fits',
+                    sev,
+                    slot['layer_id'],
+                    [slot['code_prefix']],
+                    "%s: виходить за межі %s" % (slot['code_prefix'], what),
+                )
+            )
     return issues
 
 
@@ -211,8 +275,15 @@ def check_collide(scene, config, eps):
                 depth = geo.sat_penetration(a['obb'], b['obb'])
                 if depth > eps:
                     codes = sorted([a['code'], b['code']])
-                    issues.append(_issue('collide', sev, layer_id, codes, "%s перетинається з %s на %.2f м" % (
-                        codes[0], codes[1], depth)))
+                    issues.append(
+                        _issue(
+                            'collide',
+                            sev,
+                            layer_id,
+                            codes,
+                            "%s перетинається з %s на %.2f м" % (codes[0], codes[1], depth),
+                        )
+                    )
     return issues
 
 
@@ -233,8 +304,15 @@ def check_service_free(scene, config, eps):
             if not geo.aabb_overlap(box, geo.obb_aabb(other['obb']), eps):
                 continue
             if geo.sat_penetration(service, other['obb']) > eps:
-                issues.append(_issue('service_free', sev, p['layer_id'], [p['code'], other['code']],
-                                     "Зона обслуговування %s зачіпає %s" % (p['code'], other['code'])))
+                issues.append(
+                    _issue(
+                        'service_free',
+                        sev,
+                        p['layer_id'],
+                        [p['code'], other['code']],
+                        "Зона обслуговування %s зачіпає %s" % (p['code'], other['code']),
+                    )
+                )
     return issues
 
 
@@ -276,16 +354,31 @@ def check_load(scene, config, eps):
         limit = layer.get('max_floor_load') or 0.0
         load = variant.get('floor_load') or 0.0
         if limit > 0 and load > limit:
-            issues.append(_issue('load', sev, p['layer_id'], [p['code']],
-                                 "%s: навантаження %.1f кН/м² перевищує %.1f" % (p['code'], load, limit)))
+            issues.append(
+                _issue(
+                    'load',
+                    sev,
+                    p['layer_id'],
+                    [p['code']],
+                    "%s: навантаження %.1f кН/м² перевищує %.1f" % (p['code'], load, limit),
+                )
+            )
         cell_code = p.get('cell_code')
         slot = scene.slots.get(p.get('slot_id')) if p.get('slot_id') else None
         if cell_code and slot is not None:
             cell = scene.slot_cells(slot).get(cell_code)
             weight = variant.get('weight_kg') or 0.0
             if cell is not None and cell['max_load_kg'] > 0 and weight > cell['max_load_kg']:
-                issues.append(_issue('load', sev, p['layer_id'], [p['code']], "%s: маса %g кг перевищує %g кг комірки %s" % (
-                    p['code'], weight, cell['max_load_kg'], cell_code)))
+                issues.append(
+                    _issue(
+                        'load',
+                        sev,
+                        p['layer_id'],
+                        [p['code']],
+                        "%s: маса %g кг перевищує %g кг комірки %s"
+                        % (p['code'], weight, cell['max_load_kg'], cell_code),
+                    )
+                )
     return issues
 
 
@@ -305,13 +398,27 @@ def check_utility_reach(scene, config, eps):
         for kind, ux, uy in geo.utility_points(variant, p.get('x') or 0.0, p.get('y') or 0.0, p.get('rotation') or 0.0):
             candidates = points.get(kind) or []
             if not candidates:
-                issues.append(_issue('utility_reach', sev, p['layer_id'], [p['code']],
-                                     "%s: на площадці немає точки «%s»" % (p['code'], kind)))
+                issues.append(
+                    _issue(
+                        'utility_reach',
+                        sev,
+                        p['layer_id'],
+                        [p['code']],
+                        "%s: на площадці немає точки «%s»" % (p['code'], kind),
+                    )
+                )
                 continue
             dist = min(math.hypot(ux - cx, uy - cy) for cx, cy in candidates)
             if dist > max_m:
-                issues.append(_issue('utility_reach', sev, p['layer_id'], [p['code']],
-                                     "%s: до найближчої точки «%s» %.1f м (ліміт %g м)" % (p['code'], kind, dist, max_m)))
+                issues.append(
+                    _issue(
+                        'utility_reach',
+                        sev,
+                        p['layer_id'],
+                        [p['code']],
+                        "%s: до найближчої точки «%s» %.1f м (ліміт %g м)" % (p['code'], kind, dist, max_m),
+                    )
+                )
     return issues
 
 
@@ -339,5 +446,7 @@ def run_checks(state, configs, eps=DEFAULT_EPS_M):
 
 
 def summarize(issues):
-    return {'block': sum(1 for i in issues if i['severity'] == 'block'),
-            'warn': sum(1 for i in issues if i['severity'] == 'warn')}
+    return {
+        'block': sum(1 for i in issues if i['severity'] == 'block'),
+        'warn': sum(1 for i in issues if i['severity'] == 'warn'),
+    }

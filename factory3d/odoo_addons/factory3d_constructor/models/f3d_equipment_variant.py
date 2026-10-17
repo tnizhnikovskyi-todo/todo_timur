@@ -12,15 +12,23 @@ from .f3d_equipment_passport import F3D_CATEGORY_SELECTION
 _logger = logging.getLogger(__name__)
 
 MODEL_STATUS_SELECTION = [
-    ('none', "Немає"), ('ok', "Готово"), ('pending_conversion', "Очікує перетворення"), ('error', "Помилка"),
+    ('none', "Немає"),
+    ('ok', "Готово"),
+    ('pending_conversion', "Очікує перетворення"),
+    ('error', "Помилка"),
 ]
 # R-18: дозволені розширення оригіналу
 MODEL_FORMATS = ('glb', 'gltf', 'obj', 'mtl', 'fbx', 'stl', '3mf', 'dae', 'step', 'stp', 'iges', 'igs', 'ifc')
 SERVER_CONVERT_FORMATS = ('step', 'stp', 'iges', 'igs', 'ifc')
 # R-23: види шарів за замовчуванням за категорією паспорта
 LAYER_KINDS_BY_CATEGORY = {
-    'machine': ['production'], 'rack': ['storage'], 'forklift': ['storage', 'production', 'yard'],
-    'conveyor': ['production'], 'panel': ['production', 'engineering'], 'robot': ['production'], 'other': [],
+    'machine': ['production'],
+    'rack': ['storage'],
+    'forklift': ['storage', 'production', 'yard'],
+    'conveyor': ['production'],
+    'panel': ['production', 'engineering'],
+    'robot': ['production'],
+    'other': [],
 }
 MODEL_FIELDS = ('model_status', 'model_original_id', 'model_glb_id', 'model_meta')
 META_UNITS = ('mm', 'cm', 'm', 'in')
@@ -46,11 +54,13 @@ class F3dEquipmentVariant(models.Model):
     _order = 'passport_id, sequence, id'
 
     passport_id = fields.Many2one(
-        'f3d.equipment.passport', string="Тип (паспорт)", required=True, ondelete='cascade', index=True)
+        'f3d.equipment.passport', string="Тип (паспорт)", required=True, ondelete='cascade', index=True
+    )
     name = fields.Char(string="Назва варіанта", required=True)
     sequence = fields.Integer(default=10)
     category = fields.Selection(
-        F3D_CATEGORY_SELECTION, string="Категорія", related='passport_id.f3d_category', store=True, readonly=True)
+        F3D_CATEGORY_SELECTION, string="Категорія", related='passport_id.f3d_category', store=True, readonly=True
+    )
     length_mm = fields.Integer(string="Довжина, мм")
     width_mm = fields.Integer(string="Ширина, мм")
     height_mm = fields.Integer(string="Висота, мм")
@@ -60,35 +70,64 @@ class F3dEquipmentVariant(models.Model):
     service_right_mm = fields.Integer(string="Сервіс праворуч, мм", default=0)
     front_side = fields.Selection(
         [('s', "Південь (−Y)"), ('n', "Північ (+Y)"), ('e', "Схід (+X)"), ('w', "Захід (−X)")],
-        string="Сторона фронту", default='s', required=True, help="Сторона фронту при повороті 0°")
+        string="Сторона фронту",
+        default='s',
+        required=True,
+        help="Сторона фронту при повороті 0°",
+    )
     anchor = fields.Selection(
         [('center', "Центр"), ('front', "Центр фронту"), ('back', "Центр тилу"), ('corner', "Лівий передній кут")],
-        string="Прив'язка", default='center', required=True,
-        help="Точка, якою виріб прив'язаний до (x, y) розміщення")
+        string="Прив'язка",
+        default='center',
+        required=True,
+        help="Точка, якою виріб прив'язаний до (x, y) розміщення",
+    )
     rotation_mode = fields.Selection(
         [('q', "0/90/180/270°"), ('h', "0/180°"), ('z', "Лише 0°"), ('any', "Будь-який кут")],
-        string="Повороти", default='q', required=True)
+        string="Повороти",
+        default='q',
+        required=True,
+    )
     allowed_layer_kind_ids = fields.Many2many(
-        'f3d.term', 'f3d_variant_layer_kind_rel', 'variant_id', 'term_id', string="Дозволені види шарів",
-        domain=[('term_type', '=', 'layer_kind')], help="Порожньо — будь-який шар")
+        'f3d.term',
+        'f3d_variant_layer_kind_rel',
+        'variant_id',
+        'term_id',
+        string="Дозволені види шарів",
+        domain=[('term_type', '=', 'layer_kind')],
+        help="Порожньо — будь-який шар",
+    )
     allowed_slot_type_ids = fields.Many2many(
-        'f3d.term', 'f3d_variant_slot_type_rel', 'variant_id', 'term_id', string="Дозволені типи місць",
-        domain=[('term_type', '=', 'slot_type')], help="Порожньо — без обмежень")
+        'f3d.term',
+        'f3d_variant_slot_type_rel',
+        'variant_id',
+        'term_id',
+        string="Дозволені типи місць",
+        domain=[('term_type', '=', 'slot_type')],
+        help="Порожньо — без обмежень",
+    )
     utilities = fields.Json(
-        string="Точки підключення", default=list,
-        help="[{kind: electric|air|dust, x_mm, y_mm, z_mm}], початок — центр габариту")
+        string="Точки підключення",
+        default=list,
+        help="[{kind: electric|air|dust, x_mm, y_mm, z_mm}], початок — центр габариту",
+    )
     power_kw = fields.Float(string="Потужність, кВт", digits=(8, 2))
     panel = fields.Char(string="Щит", size=64)
     weight_kg = fields.Float(string="Маса, кг", digits=(10, 1))
     floor_load_kn_m2 = fields.Float(
-        string="Навантаження на підлогу, кН/м²", digits=(8, 2), compute='_compute_floor_load', store=True,
-        readonly=False)
+        string="Навантаження на підлогу, кН/м²",
+        digits=(8, 2),
+        compute='_compute_floor_load',
+        store=True,
+        readonly=False,
+    )
     create_workcenter = fields.Boolean(string="Створювати робочий центр", default=False)
     model_original_id = fields.Many2one('ir.attachment', string="Оригінал моделі", ondelete='set null', copy=False)
     model_glb_id = fields.Many2one('ir.attachment', string="GLB для перегляду", ondelete='set null', copy=False)
     model_meta = fields.Json(string="Метадані моделі", default=dict, copy=False)
     model_status = fields.Selection(
-        MODEL_STATUS_SELECTION, string="Статус моделі", default='none', readonly=True, index=True, copy=False)
+        MODEL_STATUS_SELECTION, string="Статус моделі", default='none', readonly=True, index=True, copy=False
+    )
     model_warning = fields.Char(string="Попередження моделі", compute='_compute_model_warning')
     image = fields.Image(string="Мініатюра", max_width=512, max_height=512)
     placement_count = fields.Integer(string="Розміщень", compute='_compute_placement_count')
@@ -116,13 +155,18 @@ class F3dEquipmentVariant(models.Model):
             parts = []
             triangles = meta.get('triangles') or 0
             if triangles > max_tri or 'triangles_over_limit' in (meta.get('warnings') or []):
-                parts.append("%d тис. трикутників при ліміті %d тис." % (round(triangles / 1000), round(max_tri / 1000)))
+                parts.append(
+                    "%d тис. трикутників при ліміті %d тис." % (round(triangles / 1000), round(max_tri / 1000))
+                )
             parts += [w for w in (meta.get('warnings') or []) if w != 'triangles_over_limit']
             rec.model_warning = "; ".join(parts) or False
 
     def _compute_placement_count(self):
-        data = dict(self.env['f3d.placement'].with_context(active_test=False)._read_group(
-            [('variant_id', 'in', self.ids)], ['variant_id'], ['__count']))
+        data = dict(
+            self.env['f3d.placement']
+            .with_context(active_test=False)
+            ._read_group([('variant_id', 'in', self.ids)], ['variant_id'], ['__count'])
+        )
         for rec in self:
             rec.placement_count = data.get(rec, 0)
 
@@ -136,8 +180,12 @@ class F3dEquipmentVariant(models.Model):
             vals = dict(vals)
             passport = Passport.browse(vals['passport_id']) if vals.get('passport_id') else Passport
             if passport:
-                for field, source in (('length_mm', 'dim_l_mm'), ('width_mm', 'dim_w_mm'), ('height_mm', 'dim_h_mm'),
-                                      ('power_kw', 'power_kw')):
+                for field, source in (
+                    ('length_mm', 'dim_l_mm'),
+                    ('width_mm', 'dim_w_mm'),
+                    ('height_mm', 'dim_h_mm'),
+                    ('power_kw', 'power_kw'),
+                ):
                     if not vals.get(field):
                         vals[field] = passport[source]
                 if 'allowed_layer_kind_ids' not in vals:
@@ -182,8 +230,15 @@ class F3dEquipmentVariant(models.Model):
             if min(rec.length_mm, rec.width_mm, rec.height_mm) <= 0:
                 raise ValidationError("Розміри варіанта мають бути додатними.")
 
-    @api.constrains('service_front_mm', 'service_back_mm', 'service_left_mm', 'service_right_mm', 'power_kw',
-                    'weight_kg', 'floor_load_kn_m2')
+    @api.constrains(
+        'service_front_mm',
+        'service_back_mm',
+        'service_left_mm',
+        'service_right_mm',
+        'power_kw',
+        'weight_kg',
+        'floor_load_kn_m2',
+    )
     def _check_non_negative(self):
         for rec in self:
             if min(rec.service_front_mm, rec.service_back_mm, rec.service_left_mm, rec.service_right_mm) < 0:
@@ -217,15 +272,27 @@ class F3dEquipmentVariant(models.Model):
         """Геометричний опис варіанта у форматі API-03 `catalog[].variants[]` (мм), без полів моделі й etag."""
         self.ensure_one()
         return {
-            'id': self.id, 'name': self.name,
-            'length': self.length_mm, 'width': self.width_mm, 'height': self.height_mm,
-            'service': {'front': self.service_front_mm, 'back': self.service_back_mm,
-                        'left': self.service_left_mm, 'right': self.service_right_mm},
-            'rotations': self.rotation_mode, 'front_side': self.front_side, 'anchor': self.anchor,
+            'id': self.id,
+            'name': self.name,
+            'length': self.length_mm,
+            'width': self.width_mm,
+            'height': self.height_mm,
+            'service': {
+                'front': self.service_front_mm,
+                'back': self.service_back_mm,
+                'left': self.service_left_mm,
+                'right': self.service_right_mm,
+            },
+            'rotations': self.rotation_mode,
+            'front_side': self.front_side,
+            'anchor': self.anchor,
             'layer_kinds': self.allowed_layer_kind_ids.mapped('key'),
             'slot_types': self.allowed_slot_type_ids.mapped('key'),
-            'utilities': self.utilities or [], 'power_kw': self.power_kw, 'panel': self.panel or '',
-            'weight_kg': self.weight_kg, 'floor_load': self._f3d_effective_floor_load(),
+            'utilities': self.utilities or [],
+            'power_kw': self.power_kw,
+            'panel': self.panel or '',
+            'weight_kg': self.weight_kg,
+            'floor_load': self._f3d_effective_floor_load(),
             'create_workcenter': self.create_workcenter,
         }
 
@@ -244,16 +311,26 @@ class F3dEquipmentVariant(models.Model):
 
     def _f3d_new_attachment(self, file_name, raw, mimetype=None):
         file_name = os.path.basename(file_name or 'model')[:200] or 'model'
-        return self.env['ir.attachment'].sudo().create({
-            'name': file_name, 'raw': raw, 'res_model': ATTACHMENT_RES_MODEL, 'res_id': self.id,
-            'mimetype': mimetype or mimetypes.guess_type(file_name)[0] or 'application/octet-stream',
-        })
+        return (
+            self.env['ir.attachment']
+            .sudo()
+            .create(
+                {
+                    'name': file_name,
+                    'raw': raw,
+                    'res_model': ATTACHMENT_RES_MODEL,
+                    'res_id': self.id,
+                    'mimetype': mimetype or mimetypes.guess_type(file_name)[0] or 'application/octet-stream',
+                }
+            )
+        )
 
     def _f3d_set_model(self, original=None, glb=None, meta=None, status='ok', message=''):
         """Єдина точка запису полів моделі (R-18).
 
-        `original`, `glb` — `(ім'я файла, bytes)` або None («без змін»). `meta` — довідкові дані клієнта: серверні значення
-        (`triangles`, `bbox_m`, `size_mm`, розміри файлів) перезаписують клієнтські (R-19). Повертає `{model_status, model_meta}`.
+        `original`, `glb` — `(ім'я файла, bytes)` або None («без змін»). `meta` — довідкові дані клієнта: серверні
+        значення (`triangles`, `bbox_m`, `size_mm`, розміри файлів) перезаписують клієнтські (R-19).
+        Повертає `{model_status, model_meta}`.
         Помилки — `F3dModelError(code, message)`: too_large, unsupported_format, bad_glb; нічого не зберігається.
         """
         self.ensure_one()
@@ -268,8 +345,9 @@ class F3dEquipmentVariant(models.Model):
             if ext not in MODEL_FORMATS:
                 raise F3dModelError(
                     'unsupported_format',
-                    "Формат .%s не підтримується: експортуйте модель у GLB, OBJ, STL, FBX, 3MF, DAE, STEP, IGES або IFC." % (
-                        ext or '?'))
+                    "Формат .%s не підтримується: експортуйте модель у GLB, OBJ, STL, FBX, 3MF, DAE, "
+                    "STEP, IGES або IFC." % (ext or '?'),
+                )
             if len(orig_raw) > limit:
                 raise too_large
         info = {}
@@ -294,8 +372,11 @@ class F3dEquipmentVariant(models.Model):
             new_meta['units'] = meta['units']
         if meta.get('up_axis') in META_AXES:
             new_meta['up_axis'] = meta['up_axis']
-        warnings = [str(w)[:200] for w in (meta.get('warnings') or [])[:10] if isinstance(w, str)] if isinstance(
-            meta.get('warnings'), list) else list(new_meta.get('warnings') or [])
+        warnings = (
+            [str(w)[:200] for w in (meta.get('warnings') or [])[:10] if isinstance(w, str)]
+            if isinstance(meta.get('warnings'), list)
+            else list(new_meta.get('warnings') or [])
+        )
         if original:
             new_meta['format'] = model_extension(orig_name)
             new_meta['file_name'] = os.path.basename(orig_name)[:200]
@@ -337,8 +418,12 @@ class F3dEquipmentVariant(models.Model):
         _max_mb, _max_tri, enabled = self._f3d_params()
 
         def pending(message):
-            self.with_context(f3d_model_write=True).write({
-                'model_status': 'pending_conversion', 'model_meta': dict(meta, status='pending_conversion', message=message)})
+            self.with_context(f3d_model_write=True).write(
+                {
+                    'model_status': 'pending_conversion',
+                    'model_meta': dict(meta, status='pending_conversion', message=message),
+                }
+            )
             return {'ok': False, 'status': 'pending_conversion', 'message': message}
 
         if not enabled:
@@ -361,25 +446,32 @@ class F3dEquipmentVariant(models.Model):
                     glb_raw = handle.read()
             base = os.path.splitext(meta.get('file_name') or 'model')[0]
             result = self._f3d_set_model(
-                glb=("%s.glb" % base, glb_raw), meta=dict(meta, converted_by='server'), status='ok',
-                message="Перетворено на сервері")
+                glb=("%s.glb" % base, glb_raw),
+                meta=dict(meta, converted_by='server'),
+                status='ok',
+                message="Перетворено на сервері",
+            )
             return {'ok': True, 'status': result['model_status'], 'message': "Перетворено на сервері"}
         except Exception as exc:  # noqa: BLE001 - помилка конвертера → статус «Помилка», не виняток
             _logger.warning("Перетворення моделі варіанта %s не вдалося: %s", self.id, exc)
             text = "Не вдалося перетворити модель: %s" % (str(exc)[:300] or exc.__class__.__name__)
-            self.with_context(f3d_model_write=True).write({
-                'model_status': 'error', 'model_meta': dict(meta, status='error', message=text)})
+            self.with_context(f3d_model_write=True).write(
+                {'model_status': 'error', 'model_meta': dict(meta, status='error', message=text)}
+            )
             return {'ok': False, 'status': 'error', 'message': text}
 
     # --- дії -------------------------------------------------------------------------------------------
     def action_clear_model(self):
         """Скидає вкладення й метадані; право — технолог/менеджер (ACL запису варіанта)."""
         for rec in self:
-            if not self.env.su and not self.env.user.has_group('factory3d_constructor.group_f3d_constructor_technologist'):
+            if not self.env.su and not self.env.user.has_group(
+                'factory3d_constructor.group_f3d_constructor_technologist'
+            ):
                 raise AccessError("Видаляти модель може технолог або менеджер конструктора.")
             old = rec.model_original_id | rec.model_glb_id
-            rec.with_context(f3d_model_write=True).write({
-                'model_original_id': False, 'model_glb_id': False, 'model_meta': {}, 'model_status': 'none'})
+            rec.with_context(f3d_model_write=True).write(
+                {'model_original_id': False, 'model_glb_id': False, 'model_meta': {}, 'model_status': 'none'}
+            )
             old.sudo().unlink()
         return True
 
@@ -387,7 +479,12 @@ class F3dEquipmentVariant(models.Model):
         self.ensure_one()
         result = self._f3d_convert_model()
         return {
-            'type': 'ir.actions.client', 'tag': 'display_notification',
-            'params': {'title': "Перетворення моделі", 'message': result['message'],
-                       'type': 'success' if result['ok'] else 'warning', 'sticky': not result['ok']},
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': "Перетворення моделі",
+                'message': result['message'],
+                'type': 'success' if result['ok'] else 'warning',
+                'sticky': not result['ok'],
+            },
         }

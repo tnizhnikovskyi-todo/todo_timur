@@ -22,29 +22,38 @@ class F3dPlacement(models.Model):
     site_id = fields.Many2one('f3d.site', related='layer_id.site_id', store=True, index=True)
     company_id = fields.Many2one('res.company', related='site_id.company_id', store=True, index=True)
     variant_id = fields.Many2one(
-        'f3d.equipment.variant', string="Варіант", required=True, ondelete='restrict', index=True)
+        'f3d.equipment.variant', string="Варіант", required=True, ondelete='restrict', index=True
+    )
     slot_id = fields.Many2one(
-        'f3d.slot', string="Місце", ondelete='set null', help="Місце під верстат або стелаж, в який поставлено")
+        'f3d.slot', string="Місце", ondelete='set null', help="Місце під верстат або стелаж, в який поставлено"
+    )
     cell_code = fields.Char(string="Комірка", size=32, help="Комірка стелажа місця (для перевірок fits і load)")
     code = fields.Char(
-        string="Код", size=32, required=True,
-        help="Майбутній f3d_code обладнання: великі латинські літери, цифри, дефіси між групами")
+        string="Код",
+        size=32,
+        required=True,
+        help="Майбутній f3d_code обладнання: великі латинські літери, цифри, дефіси між групами",
+    )
     name = fields.Char(string="Назва", required=True, help="Майбутня назва maintenance.equipment")
     x_m = fields.Float(string="X, м", digits=(10, 3))
     y_m = fields.Float(string="Y, м", digits=(10, 3))
     rotation = fields.Float(string="Поворот, °", digits=(6, 2), default=0.0)
     note = fields.Text(string="Примітка")
     equipment_id = fields.Many2one(
-        'maintenance.equipment', string="Обладнання Odoo", readonly=True, copy=False, ondelete='set null')
+        'maintenance.equipment', string="Обладнання Odoo", readonly=True, copy=False, ondelete='set null'
+    )
     workcenter_id = fields.Many2one(
-        'mrp.workcenter', string="Робочий центр", readonly=True, copy=False, ondelete='set null')
+        'mrp.workcenter', string="Робочий центр", readonly=True, copy=False, ondelete='set null'
+    )
     published_at = fields.Datetime(string="Опубліковано", readonly=True, copy=False)
     active = fields.Boolean(default=True)
 
     _f3d_placement_uid_uniq = models.Constraint(
-        'UNIQUE(site_id, uid)', "UID розміщення має бути унікальним на площадці.")
+        'UNIQUE(site_id, uid)', "UID розміщення має бути унікальним на площадці."
+    )
     _f3d_placement_code_uniq = models.Constraint(
-        'UNIQUE(site_id, code)', "Код розміщення має бути унікальним на площадці.")
+        'UNIQUE(site_id, code)', "Код розміщення має бути унікальним на площадці."
+    )
 
     # --- геометрія (R-02) -------------------------------------------------------------------------------
     def _f3d_obb(self):
@@ -86,7 +95,9 @@ class F3dPlacement(models.Model):
         for rec in self:
             if not CODE_RE.match(rec.code or '') or len(rec.code) > 32:
                 raise ValidationError(
-                    "Код розміщення «%s»: великі латинські літери, цифри й дефіси між групами (до 32 символів)." % rec.code)
+                    "Код розміщення «%s»: великі латинські літери, цифри й дефіси між групами (до 32 символів)."
+                    % rec.code
+                )
 
     @api.constrains('variant_id')
     def _check_variant(self):

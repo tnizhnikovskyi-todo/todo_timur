@@ -1,3 +1,5 @@
+from psycopg2 import IntegrityError
+
 from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase, tagged
 from odoo.tools import mute_logger
@@ -10,11 +12,20 @@ from .common import F3DConstructorCase
 class TestSlotCells(TransactionCase):
     """AC-11…AC-16 (сервісна частина): R-01."""
 
-    RACK = {'bays': 18, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5,
-            'positions_per_bay': 3, 'max_load_kg': 1000}
+    RACK = {
+        'bays': 18,
+        'levels': 4,
+        'bay_width': 2.7,
+        'depth': 1.1,
+        'level_height': 1.5,
+        'positions_per_bay': 3,
+        'max_load_kg': 1000,
+    }
 
     def _rack(self, rot=0, overrides=None, elevation=0.0, **params):
-        return cells.generate_cells('pallet_rack', 'FG-R1', 60.0, 5.0, rot, dict(self.RACK, **params), overrides, elevation)
+        return cells.generate_cells(
+            'pallet_rack', 'FG-R1', 60.0, 5.0, rot, dict(self.RACK, **params), overrides, elevation
+        )
 
     def test_ac11_pallet_rack(self):
         out = self._rack()
@@ -36,8 +47,9 @@ class TestSlotCells(TransactionCase):
         self.assertAlmostEqual(first['y'], -17.95)
 
     def test_ac12_templates(self):
-        self.assertEqual(set(cells.SLOT_TEMPLATES), {
-            'pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'machine_spot', 'zone'})
+        self.assertEqual(
+            set(cells.SLOT_TEMPLATES), {'pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'machine_spot', 'zone'}
+        )
 
     def test_ac13_overrides(self):
         out = self._rack(overrides={'FG-R1-B02-L1': {'disabled': True}, 'FG-R1-B03-L1': {'max_load_kg': 1500}})
@@ -91,18 +103,18 @@ class TestSlotCellsOrm(F3DConstructorCase):
     def test_ac13_overrides_and_validation(self):
         slot = self.make_slot(bays=18, levels=4)
         self.assertEqual(slot.cell_count, 72)
-        slot.write({'overrides': {'FG-R1-B02-L1': {'disabled': True}, 'FG-R1-B03-L1': {'max_load_kg': 1500}}})
+        slot.write({'overrides': {'TQ-R1-B02-L1': {'disabled': True}, 'TQ-R1-B03-L1': {'max_load_kg': 1500}}})
         self.assertEqual(slot.cell_count, 71)
         cells = {c['code']: c for c in slot._f3d_cells()}
-        self.assertNotIn('FG-R1-B02-L1', cells)
-        self.assertEqual(cells['FG-R1-B03-L1']['max_load_kg'], 1500)
+        self.assertNotIn('TQ-R1-B02-L1', cells)
+        self.assertEqual(cells['TQ-R1-B03-L1']['max_load_kg'], 1500)
         with self.assertRaises(ValidationError) as ctx:
-            slot.write({'overrides': {'FG-R1-B99-L1': {'disabled': True}}})
-        self.assertIn("Комірки FG-R1-B99-L1 немає в шаблоні.", str(ctx.exception))
+            slot.write({'overrides': {'TQ-R1-B99-L1': {'disabled': True}}})
+        self.assertIn("Комірки TQ-R1-B99-L1 немає в шаблоні.", str(ctx.exception))
         # зміна параметрів без overrides: недійсні ключі мовчки відкидаються
         slot.write({'params': dict(slot.params, bays=2)})
         self.assertEqual(slot.cell_count, 7)  # 2 прольоти × 4 яруси − B02-L1 (вимкнена)
-        self.assertEqual(list(slot.overrides), ['FG-R1-B02-L1'])  # B03 більше не існує → відкинуто
+        self.assertEqual(list(slot.overrides), ['TQ-R1-B02-L1'])  # B03 більше не існує → відкинуто
 
     def test_ac14_levels(self):
         slot = self.make_slot(bays=18, levels=4)
@@ -135,5 +147,5 @@ class TestSlotCellsOrm(F3DConstructorCase):
 
     def test_prefix_unique_per_site(self):
         self.make_slot(prefix='AA')
-        with self.assertRaises(Exception), mute_logger('odoo.sql_db'), self.cr.savepoint():
+        with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.cr.savepoint():
             self.make_slot(kind='yard', prefix='AA', template='zone', polygon=[[0, 0], [1, 0], [1, 1]])

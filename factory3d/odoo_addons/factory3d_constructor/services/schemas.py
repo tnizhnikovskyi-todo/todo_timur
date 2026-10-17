@@ -1,4 +1,7 @@
-"""R-22: схеми JSON-полів. Невідомі ключі відкидаються (не помилка), типи й діапазони — SchemaError з номером елемента."""
+"""R-22: схеми JSON-полів.
+
+Невідомі ключі відкидаються (не помилка), типи й діапазони — SchemaError з номером елемента."""
+
 import json
 import math
 
@@ -27,6 +30,7 @@ def _number(value, message):
 
 def check_json_limits(value):
     """Вкладеність ≤ 8 рівнів і розмір ≤ 256 КБ (§13.3)."""
+
     def depth(node, level=1):
         if level > MAX_JSON_DEPTH:
             raise SchemaError("JSON: вкладеність більша за %d рівнів." % MAX_JSON_DEPTH)
@@ -36,6 +40,7 @@ def check_json_limits(value):
         elif isinstance(node, (list, tuple)):
             for item in node:
                 depth(item, level + 1)
+
     depth(value)
     if len(json.dumps(value, ensure_ascii=False).encode('utf-8')) > MAX_JSON_BYTES:
         raise SchemaError("JSON: розмір більший за 256 КБ.")
@@ -101,14 +106,23 @@ def normalize_layer_utilities(value):
         name = item.get('name', '')
         if not isinstance(name, str) or len(name) > 64:
             raise SchemaError("Мережа %d: назва — рядок до 64 символів." % index)
-        out.append({'id': rid, 'kind': item['kind'], 'name': name, 'x': _number(item.get('x'), bad),
-                    'y': _number(item.get('y'), bad), 'z': _number(item.get('z', 0), bad)})
+        out.append(
+            {
+                'id': rid,
+                'kind': item['kind'],
+                'name': name,
+                'x': _number(item.get('x'), bad),
+                'y': _number(item.get('y'), bad),
+                'z': _number(item.get('z', 0), bad),
+            }
+        )
     return out
 
 
 def _segments_cross(p1, p2, p3, p4):
     def orient(a, b, c):
         return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
     d1, d2 = orient(p3, p4, p1), orient(p3, p4, p2)
     d3, d4 = orient(p1, p2, p3), orient(p1, p2, p4)
     return d1 * d2 < 0 and d3 * d4 < 0
@@ -125,8 +139,12 @@ def normalize_bounds(value):
     for point in value:
         if not isinstance(point, (list, tuple)) or len(point) != 2:
             raise SchemaError("Контур шару: точка має бути парою [x, y].")
-        points.append([_number(point[0], "Контур шару: координати мають бути числами."),
-                       _number(point[1], "Контур шару: координати мають бути числами.")])
+        points.append(
+            [
+                _number(point[0], "Контур шару: координати мають бути числами."),
+                _number(point[1], "Контур шару: координати мають бути числами."),
+            ]
+        )
     n = len(points)
     for i in range(n):
         for j in range(i + 1, n):
@@ -170,8 +188,14 @@ def normalize_variant_utilities(value):
             raise SchemaError(bad)
         if item.get('kind') not in VARIANT_UTILITY_KINDS:
             raise SchemaError("Підключення %d: вид має бути одним із %s." % (index, ", ".join(VARIANT_UTILITY_KINDS)))
-        out.append({'kind': item['kind'], 'x_mm': _number(item.get('x_mm'), bad), 'y_mm': _number(item.get('y_mm'), bad),
-                    'z_mm': _number(item.get('z_mm', 0), bad)})
+        out.append(
+            {
+                'kind': item['kind'],
+                'x_mm': _number(item.get('x_mm'), bad),
+                'y_mm': _number(item.get('y_mm'), bad),
+                'z_mm': _number(item.get('z_mm', 0), bad),
+            }
+        )
     return out
 
 

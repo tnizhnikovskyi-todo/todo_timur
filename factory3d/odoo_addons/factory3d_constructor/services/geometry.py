@@ -3,8 +3,10 @@
 Одиниці — метри, кути — градуси проти годинникової стрілки при погляді зверху (DEC-15).
 OBB — словник `{'cx', 'cy', 'a', 'b', 'rot'}`: центр, піврозміри вздовж локальних X і Y, кут повороту (°).
 Варіант обладнання — словник у міліметрах (формат API-03 `catalog[].variants[]`):
-`{length, width, height, service: {front, back, left, right}, front_side, anchor, utilities: [{kind, x_mm, y_mm, z_mm}]}`.
+`{length, width, height, service: {front, back, left, right}, front_side, anchor,
+utilities: [{kind, x_mm, y_mm, z_mm}]}`.
 """
+
 import math
 
 # Одиничні вектори фронту (R-02)
@@ -56,8 +58,9 @@ def rect_obb(x0, y0, x1, y1):
 
 
 def aabb_overlap(box_a, box_b, eps=0.0):
-    return not (box_a[2] < box_b[0] - eps or box_b[2] < box_a[0] - eps
-                or box_a[3] < box_b[1] - eps or box_b[3] < box_a[1] - eps)
+    return not (
+        box_a[2] < box_b[0] - eps or box_b[2] < box_a[0] - eps or box_a[3] < box_b[1] - eps or box_b[3] < box_a[1] - eps
+    )
 
 
 def sat_penetration(obb_a, obb_b):
@@ -146,6 +149,7 @@ def rect_polygon(length, width):
 
 # --- R-02: габарит, зона обслуговування, точки підключення ---------------------------------------------
 
+
 def _front_frame(variant):
     """(f, r, h_f, h_l, a, b): фронт, «праворуч», півдовжини вздовж фронту й вздовж −r, піврозміри."""
     a = variant['length'] / 2000.0
@@ -211,7 +215,8 @@ def service_obb(variant, x, y, rotation):
     lx, ly = (ext['+x'] - ext['-x']) / 2.0, (ext['+y'] - ext['-y']) / 2.0
     wx, wy = rotate(lx, ly, rotation)
     return make_obb(
-        body['cx'] + wx, body['cy'] + wy, a + (ext['+x'] + ext['-x']) / 2.0, b + (ext['+y'] + ext['-y']) / 2.0, rotation)
+        body['cx'] + wx, body['cy'] + wy, a + (ext['+x'] + ext['-x']) / 2.0, b + (ext['+y'] + ext['-y']) / 2.0, rotation
+    )
 
 
 def utility_points(variant, x, y, rotation):

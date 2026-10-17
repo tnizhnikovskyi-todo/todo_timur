@@ -1,10 +1,11 @@
 """R-19: метадані GLB без сторонніх бібліотек: кількість трикутників і габарит (bbox) за JSON-чанком glTF 2.0."""
+
 import json
 import math
 import struct
 
-GLB_MAGIC = 0x46546C67      # 'glTF'
-CHUNK_JSON = 0x4E4F534A     # 'JSON'
+GLB_MAGIC = 0x46546C67  # 'glTF'
+CHUNK_JSON = 0x4E4F534A  # 'JSON'
 MAX_NODE_DEPTH = 64
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 
@@ -42,17 +43,33 @@ def _trs_matrix(node):
     r20 = 2 * (qx * qz - qy * qw)
     r21 = 2 * (qy * qz + qx * qw)
     r22 = 1 - 2 * (qx * qx + qy * qy)
-    return (r00 * sx, r10 * sx, r20 * sx, 0.0,
-            r01 * sy, r11 * sy, r21 * sy, 0.0,
-            r02 * sz, r12 * sz, r22 * sz, 0.0,
-            tx, ty, tz, 1.0)
+    return (
+        r00 * sx,
+        r10 * sx,
+        r20 * sx,
+        0.0,
+        r01 * sy,
+        r11 * sy,
+        r21 * sy,
+        0.0,
+        r02 * sz,
+        r12 * sz,
+        r22 * sz,
+        0.0,
+        tx,
+        ty,
+        tz,
+        1.0,
+    )
 
 
 def _transform(matrix, point):
     x, y, z = point
-    return (matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
-            matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
-            matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14])
+    return (
+        matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
+        matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
+        matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14],
+    )
 
 
 def parse_gltf_json(data):
@@ -70,7 +87,7 @@ def parse_gltf_json(data):
     if chunk_type != CHUNK_JSON or 20 + chunk_len > len(data):
         raise GlbError("GLB пошкоджено: немає JSON-чанка.")
     try:
-        return json.loads(bytes(data[20:20 + chunk_len]).decode('utf-8'))
+        return json.loads(bytes(data[20 : 20 + chunk_len]).decode('utf-8'))
     except (UnicodeDecodeError, ValueError) as exc:
         raise GlbError("GLB пошкоджено: некоректний JSON (%s)." % exc) from None
 

@@ -1,9 +1,12 @@
-"""R-12, R-13: план публікації (diff → підтвердження → створення/оновлення stock.location, maintenance.equipment, mrp.workcenter).
+"""R-12, R-13: план публікації (diff → підтвердження → створення/оновлення stock.location,
+maintenance.equipment, mrp.workcenter).
 
-Збіг із наявними записами — за `f3d_code`, потім `barcode` (комірки) / `serial_no` (обладнання): дублікатів не створюємо, нічого не видаляємо.
+Збіг із наявними записами — за `f3d_code`, потім `barcode` (комірки) / `serial_no` (обладнання):
+дублікатів не створюємо, нічого не видаляємо.
 Зайве — лише пропозиція архівації (`selected=False`), тільки для записів із `f3d_site_id` площадки.
 Читання плану — під `sudo()`; публікація — під `sudo()` лише після перевірки групи менеджера й стоп-крана (§4.4).
 """
+
 import logging
 
 from psycopg2 import errors as pg_errors
@@ -20,7 +23,9 @@ LOCATION, EQUIPMENT, WORKCENTER = 'stock.location', 'maintenance.equipment', 'mr
 
 
 class PublishError(UserError):
-    """Очікувана відмова публікації; `code` — код API-07 (disabled, blocked, no_changes, conflict_codes, conflict, rollback, rights)."""
+    """Очікувана відмова публікації.
+
+    `code` — код API-07 (disabled, blocked, no_changes, conflict_codes, conflict, rollback, rights)."""
 
     def __init__(self, code, message, issues=None):
         super().__init__(message)
@@ -33,7 +38,13 @@ def publish_enabled(env):
 
 
 def _issue(check, severity, message, codes=(), layer_id=False):
-    return {'check': check, 'severity': severity, 'layer_id': layer_id or False, 'codes': list(codes), 'message': message}
+    return {
+        'check': check,
+        'severity': severity,
+        'layer_id': layer_id or False,
+        'codes': list(codes),
+        'message': message,
+    }
 
 
 def _fmt(value):
@@ -59,13 +70,23 @@ def _diff_text(record, vals):
 
 def _line(kind, res_model, code, name, vals=None, record=None, source_uid='', changes='', extra=None):
     return {
-        'kind': kind, 'res_model': res_model, 'code': code, 'name': name or code, 'res_id': record.id if record else 0,
-        'source_uid': source_uid, 'changes': changes, 'vals': vals or {}, 'selected': kind != 'archive',
-        'blocked': False, 'blocked_reason': '', 'extra': extra or {},
+        'kind': kind,
+        'res_model': res_model,
+        'code': code,
+        'name': name or code,
+        'res_id': record.id if record else 0,
+        'source_uid': source_uid,
+        'changes': changes,
+        'vals': vals or {},
+        'selected': kind != 'archive',
+        'blocked': False,
+        'blocked_reason': '',
+        'extra': extra or {},
     }
 
 
 # --- локації ---------------------------------------------------------------------------------------------
+
 
 def _match(code, by_f3d, by_alt, site, issues, label):
     """Збіг запису за f3d_code, потім за запасним ключем (barcode/serial_no); повертає (record|None, skip: bool)."""
@@ -78,18 +99,30 @@ def _match(code, by_f3d, by_alt, site, issues, label):
         if candidates:
             rec = candidates[0]
             if rec.f3d_code and rec.f3d_code != code:
-                issues.append(_issue('conflict', 'block', "Код %s: %s «%s» має інший код сцени %s" % (
-                    code, label, rec.display_name, rec.f3d_code), [code]))
+                issues.append(
+                    _issue(
+                        'conflict',
+                        'block',
+                        "Код %s: %s «%s» має інший код сцени %s" % (code, label, rec.display_name, rec.f3d_code),
+                        [code],
+                    )
+                )
                 return None, True
     if rec is not None:
         if rec.f3d_site_id and rec.f3d_site_id != site:
-            issues.append(_issue('conflict', 'block', "Код %s зайнятий записом площадки %s" % (code, rec.f3d_site_id.name), [code]))
+            issues.append(
+                _issue(
+                    'conflict', 'block', "Код %s зайнятий записом площадки %s" % (code, rec.f3d_site_id.name), [code]
+                )
+            )
             return None, True
         if rec.company_id and rec.company_id != site.company_id:
             issues.append(_issue('conflict', 'block', "Код %s зайнятий записом іншої компанії" % code, [code]))
             return None, True
         if not rec.active:
-            issues.append(_issue('conflict', 'warn', "Запис %s архівований; не відновлюється автоматично" % code, [code]))
+            issues.append(
+                _issue('conflict', 'warn', "Запис %s архівований; не відновлюється автоматично" % code, [code])
+            )
             return None, True
     return rec, False
 
@@ -113,13 +146,27 @@ def _plan_locations(site, env, lines, issues):
             continue
         parent = slot.parent_location_id or site.default_parent_location_id
         if not parent:
-            issues.append(_issue('data', 'block', "Для місця %s не задано батьківську локацію" % slot.code_prefix,
-                                 [slot.code_prefix], slot.layer_id.id))
+            issues.append(
+                _issue(
+                    'data',
+                    'block',
+                    "Для місця %s не задано батьківську локацію" % slot.code_prefix,
+                    [slot.code_prefix],
+                    slot.layer_id.id,
+                )
+            )
             continue
         for cell in cells:
             if cell['code'] in desired:
-                issues.append(_issue('conflict', 'block', "Код %s дублюється в місцях %s і %s" % (
-                    cell['code'], desired[cell['code']]['slot'].code_prefix, slot.code_prefix), [cell['code']]))
+                issues.append(
+                    _issue(
+                        'conflict',
+                        'block',
+                        "Код %s дублюється в місцях %s і %s"
+                        % (cell['code'], desired[cell['code']]['slot'].code_prefix, slot.code_prefix),
+                        [cell['code']],
+                    )
+                )
                 continue
             desired[cell['code']] = {'cell': cell, 'slot': slot, 'parent': parent}
     codes = list(desired)
@@ -133,9 +180,16 @@ def _plan_locations(site, env, lines, issues):
             continue
         if rec is None:
             vals = {
-                'name': cell['name'], 'barcode': code, 'f3d_code': code, 'usage': 'internal', 'location_id': parent.id,
-                'f3d_loc_kind': cell['kind'], 'f3d_capacity': cell['capacity'] or 0.0, 'f3d_site_id': site.id,
-                'f3d_slot_uid': slot.uid, 'company_id': site.company_id.id,
+                'name': cell['name'],
+                'barcode': code,
+                'f3d_code': code,
+                'usage': 'internal',
+                'location_id': parent.id,
+                'f3d_loc_kind': cell['kind'],
+                'f3d_capacity': cell['capacity'] or 0.0,
+                'f3d_site_id': site.id,
+                'f3d_slot_uid': slot.uid,
+                'company_id': site.company_id.id,
             }
             card = "вид %s" % cell['kind'] + (", місткість %s" % _fmt(cell['capacity']) if cell['capacity'] else "")
             lines.append(_line('create', LOCATION, code, cell['name'], vals, None, slot.uid, card))
@@ -156,14 +210,16 @@ def _plan_locations(site, env, lines, issues):
         if rec.f3d_slot_uid != slot.uid:
             vals['f3d_slot_uid'] = slot.uid
         if vals:
-            lines.append(_line('update', LOCATION, code, rec.complete_name or code, vals, rec, slot.uid,
-                               _diff_text(rec, vals)))
+            lines.append(
+                _line('update', LOCATION, code, rec.complete_name or code, vals, rec, slot.uid, _diff_text(rec, vals))
+            )
         else:
             unchanged += 1
     return set(codes), unchanged
 
 
 # --- обладнання й робочі центри --------------------------------------------------------------------------
+
 
 def _plan_equipment(site, env, lines, issues):
     Equipment = env[EQUIPMENT].with_context(active_test=False)
@@ -174,7 +230,9 @@ def _plan_equipment(site, env, lines, issues):
     by_f3d = {r.f3d_code: r for r in eq_existing if r.f3d_code}
     by_serial = _group_by(eq_existing.filtered(lambda r: not r.f3d_code), 'serial_no')
     wc_codes = placements.filtered(lambda p: p.variant_id.create_workcenter).mapped('code')
-    wc_existing = Workcenter.search(['|', ('f3d_code', 'in', wc_codes), ('code', 'in', wc_codes)]) if wc_codes else Workcenter
+    wc_existing = (
+        Workcenter.search(['|', ('f3d_code', 'in', wc_codes), ('code', 'in', wc_codes)]) if wc_codes else Workcenter
+    )
     wc_by_f3d = {r.f3d_code: r for r in wc_existing if r.f3d_code}
     wc_by_code = _group_by(wc_existing.filtered(lambda r: not r.f3d_code), 'code')
     Zone = env['f3d.zone']
@@ -186,12 +244,19 @@ def _plan_equipment(site, env, lines, issues):
         rec, skip = _match(code, by_f3d, by_serial, site, issues, "обладнання")
         if not skip:
             if rec is None:
-                vals = {'name': p.name, 'f3d_code': code, 'f3d_passport_id': passport.id, 'f3d_site_id': site.id,
-                        'f3d_placement_uid': p.uid, 'company_id': site.company_id.id}
+                vals = {
+                    'name': p.name,
+                    'f3d_code': code,
+                    'f3d_passport_id': passport.id,
+                    'f3d_site_id': site.id,
+                    'f3d_placement_uid': p.uid,
+                    'company_id': site.company_id.id,
+                }
                 if zone:
                     vals['f3d_zone_id'] = zone.id
-                lines.append(_line('create', EQUIPMENT, code, p.name, vals, None, p.uid,
-                                   "паспорт %s" % passport.display_name))
+                lines.append(
+                    _line('create', EQUIPMENT, code, p.name, vals, None, p.uid, "паспорт %s" % passport.display_name)
+                )
             else:
                 vals = {}
                 if not rec.f3d_code:
@@ -205,7 +270,9 @@ def _plan_equipment(site, env, lines, issues):
                 if rec.f3d_placement_uid != p.uid:
                     vals['f3d_placement_uid'] = p.uid
                 if vals:
-                    lines.append(_line('update', EQUIPMENT, code, rec.display_name, vals, rec, p.uid, _diff_text(rec, vals)))
+                    lines.append(
+                        _line('update', EQUIPMENT, code, rec.display_name, vals, rec, p.uid, _diff_text(rec, vals))
+                    )
                 else:
                     unchanged += 1
         if p.variant_id.create_workcenter:
@@ -213,8 +280,13 @@ def _plan_equipment(site, env, lines, issues):
             if wskip:
                 continue
             if wrec is None:
-                vals = {'name': p.name, 'code': code, 'f3d_code': code, 'f3d_site_id': site.id,
-                        'company_id': site.company_id.id}
+                vals = {
+                    'name': p.name,
+                    'code': code,
+                    'f3d_code': code,
+                    'f3d_site_id': site.id,
+                    'company_id': site.company_id.id,
+                }
                 lines.append(_line('create', WORKCENTER, code, p.name, vals, None, p.uid, "робочий центр"))
             else:
                 vals = {}
@@ -223,13 +295,16 @@ def _plan_equipment(site, env, lines, issues):
                 if wrec.f3d_site_id != site:
                     vals['f3d_site_id'] = site.id
                 if vals:
-                    lines.append(_line('update', WORKCENTER, code, wrec.display_name, vals, wrec, p.uid, _diff_text(wrec, vals)))
+                    lines.append(
+                        _line('update', WORKCENTER, code, wrec.display_name, vals, wrec, p.uid, _diff_text(wrec, vals))
+                    )
                 else:
                     unchanged += 1
     return set(codes), set(wc_codes), unchanged
 
 
 # --- пропозиції архівації (R-13) ----------------------------------------------------------------------------
+
 
 def _plan_archive(site, env, lines, loc_codes, eq_codes, wc_codes):
     def candidates(model, desired):
@@ -240,18 +315,22 @@ def _plan_archive(site, env, lines, loc_codes, eq_codes, wc_codes):
     stock = {}
     if locations:
         for loc, qty in env['stock.quant']._read_group(
-                [('location_id', 'in', locations.ids), ('quantity', '>', 0)], ['location_id'], ['quantity:sum']):
+            [('location_id', 'in', locations.ids), ('quantity', '>', 0)], ['location_id'], ['quantity:sum']
+        ):
             stock[loc.id] = qty
     equipment = candidates(EQUIPMENT, eq_codes)
     busy_eq = set()
     if equipment and 'maintenance.request' in env:
-        requests = env['maintenance.request'].search([
-            ('equipment_id', 'in', equipment.ids), ('stage_id.done', '=', False), ('archive', '=', False)])
+        requests = env['maintenance.request'].search(
+            [('equipment_id', 'in', equipment.ids), ('stage_id.done', '=', False), ('archive', '=', False)]
+        )
         busy_eq = set(requests.mapped('equipment_id').ids)
     workcenters = candidates(WORKCENTER, wc_codes)
     busy_wc = set()
     if workcenters and 'mrp.workorder' in env:
-        orders = env['mrp.workorder'].search([('workcenter_id', 'in', workcenters.ids), ('state', 'not in', ('done', 'cancel'))])
+        orders = env['mrp.workorder'].search(
+            [('workcenter_id', 'in', workcenters.ids), ('state', 'not in', ('done', 'cancel'))]
+        )
         busy_wc = set(orders.mapped('workcenter_id').ids)
     for rec in locations:
         line = _line('archive', LOCATION, rec.f3d_code, rec.complete_name, None, rec, '', "буде архівовано")
@@ -287,15 +366,20 @@ def summary(plan, archive_keys=()):
     keys = set(archive_keys)
     count = lambda kind: sum(1 for line in plan['lines'] if line['kind'] == kind)  # noqa: E731
     return {
-        'create': count('create'), 'update': count('update'), 'archive': len([
-            line for line in plan['lines'] if line['kind'] == 'archive' and (line['res_model'], line['code']) in keys]),
-        'archive_offer': count('archive'), 'unchanged': plan['unchanged'],
+        'create': count('create'),
+        'update': count('update'),
+        'archive': len(
+            [line for line in plan['lines'] if line['kind'] == 'archive' and (line['res_model'], line['code']) in keys]
+        ),
+        'archive_offer': count('archive'),
+        'unchanged': plan['unchanged'],
         'warn': sum(1 for i in plan['issues'] if i['severity'] == 'warn'),
         'block': sum(1 for i in plan['issues'] if i['severity'] == 'block'),
     }
 
 
 # --- застосування ------------------------------------------------------------------------------------------
+
 
 def _lock_site(env, site):
     try:
@@ -316,19 +400,32 @@ def _check_preconditions(site, plan):
     blocks = [i for i in plan['issues'] if i['severity'] == 'block']
     if blocks:
         code = 'conflict_codes' if any(i['check'] == 'conflict' for i in blocks) else 'blocked'
-        raise PublishError(code, "Публікацію заборонено: є зауваження зі статусом «Заборона» (%d)." % len(blocks), blocks)
+        raise PublishError(
+            code, "Публікацію заборонено: є зауваження зі статусом «Заборона» (%d)." % len(blocks), blocks
+        )
     changed = [line for line in plan['lines'] if line['kind'] in ('create', 'update')]
     if not changed and not site.has_changes:
         raise PublishError('no_changes', "Немає змін для публікації")
 
 
-def apply_plan(site, plan, archive_keys=(), note=''):
+def apply_plan(site, plan, archive_keys=(), note='', excluded=()):
     """R-12 п. 6: застосувати план у транзакції; повертає `{'version', 'created', 'updated', 'archived', 'warnings'}`.
 
     `archive_keys` — множина `(res_model, code)` або голих кодів позначених пропозицій архівації (blocked ігноруються).
+    `excluded` — множина `(res_model, code)` знятих у майстрі рядків create/update (вони пропускаються).
     Будь-який неочікуваний виняток відкочує все (`PublishError('rollback')`).
     """
     _check_preconditions(site, plan)
+    skip = set(excluded)
+    if skip:
+        plan = dict(
+            plan,
+            lines=[
+                line
+                for line in plan['lines']
+                if line['kind'] == 'archive' or (line['res_model'], line['code']) not in skip
+            ],
+        )
     env = site.env
     keys = {k if isinstance(k, tuple) else (None, k) for k in archive_keys}
     try:
@@ -341,15 +438,20 @@ def apply_plan(site, plan, archive_keys=(), note=''):
     except Exception as exc:  # noqa: BLE001 - відкат усієї публікації
         env.invalidate_all()
         _logger.exception("Публікація площадки %s відкотилась", site.id)
-        raise PublishError('rollback', "Публікацію скасовано через помилку: %s" % (str(exc)[:300] or exc.__class__.__name__)) from exc
+        raise PublishError(
+            'rollback', "Публікацію скасовано через помилку: %s" % (str(exc)[:300] or exc.__class__.__name__)
+        ) from exc
 
 
 def _apply(site, plan, keys, note):
-    site = site.sudo().with_company(site.company_id).with_context(
-        f3d_no_touch=True, tracking_disable=True, mail_notrack=True, mail_create_nolog=True)
+    site = (
+        site.sudo()
+        .with_company(site.company_id)
+        .with_context(f3d_no_touch=True, tracking_disable=True, mail_notrack=True, mail_create_nolog=True)
+    )
     base = site.env
     created, updated, archived = [], [], []
-    records = {}   # (res_model, code) → record для зв'язування розміщень
+    records = {}  # (res_model, code) → record для зв'язування розміщень
 
     def remember(model, code, rec):
         records[(model, code)] = rec
@@ -358,7 +460,7 @@ def _apply(site, plan, keys, note):
         Model = base[model]
         creates = [line for line in plan['lines'] if line['kind'] == 'create' and line['res_model'] == model]
         if creates:
-            for line, rec in zip(creates, Model.create([line['vals'] for line in creates])):
+            for line, rec in zip(creates, Model.create([line['vals'] for line in creates]), strict=True):
                 remember(model, line['code'], rec)
                 created.append({'model': model, 'code': line['code'], 'id': rec.id})
         for line in plan['lines']:

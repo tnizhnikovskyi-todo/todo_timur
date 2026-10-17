@@ -34,6 +34,7 @@ class TestVersions(F3DConstructorCase):
         self.assertEqual(len(snap['layers']), 5)
         self.assertEqual(snap['placements'][0]['variant_ref'], {'passport_role': 'test_machine', 'name': "Стандарт"})
         import hashlib
+
         self.assertEqual(v1.snapshot_sha1, hashlib.sha1(v1.snapshot_id.raw).hexdigest())
         self.assertEqual(v1.snapshot_id.mimetype, 'application/json')
         self.assertEqual(self.site.active_version_id, v1)
@@ -81,12 +82,16 @@ class TestVersions(F3DConstructorCase):
         self.assertEqual(ctx.exception.code, 'no_changes')
         self.assertIn("Немає змін для публікації", str(ctx.exception))
         self.assertEqual(self.env['f3d.layout.version'].search_count([]), count)
-        wizard = self.env['f3d.publish.wizard'].with_user(self.u_manager).browse(
-            self.site.with_user(self.u_manager).action_publish_wizard()['res_id'])
+        wizard = (
+            self.env['f3d.publish.wizard']
+            .with_user(self.u_manager)
+            .browse(self.site.with_user(self.u_manager).action_publish_wizard()['res_id'])
+        )
         self.assertFalse(wizard.can_publish)
 
     def test_version_write_restrictions(self):
         from odoo.exceptions import AccessError
+
         self.make_slot(prefix='V-R1', bays=2, levels=1)
         version = self.publish()
         version.with_user(self.u_manager).write({'note': "оновлена нотатка"})
