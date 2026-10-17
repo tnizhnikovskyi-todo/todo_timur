@@ -67,7 +67,7 @@ class F3DConstructorMixin:
         })
 
     # --- помічники ---------------------------------------------------------------------------------
-    def make_slot(self, kind='storage', prefix='FG-R1', template='pallet_rack', x=30.0, y=10.0, rotation=0, **params):
+    def make_slot(self, kind='storage', prefix='TQ-R1', template='pallet_rack', x=30.0, y=10.0, rotation=0, **params):
         defaults = {'bays': 4, 'levels': 2, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5,
                     'positions_per_bay': 3, 'max_load_kg': 1000} if template == 'pallet_rack' else {}
         defaults.update(params)

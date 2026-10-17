@@ -35,6 +35,7 @@ SLOT_TEMPLATES = {
         'params': {
             'sections': (1, 100, 4, int), 'shelves': (1, 20, 5, int), 'cell_w': (0.1, 8.0, 0.9, float),
             'cell_d': (0.1, 2.0, 0.4, float), 'cell_h': (0.05, 2.0, 0.4, float), 'index_digits': (1, 4, 2, int)},
+        'choices': {'loc_kind': (('bin', 'shelf'), 'bin')},
     },
     'floor_stack': {
         'label': "Підлогове штабелювання", 'cells': True,
@@ -60,7 +61,7 @@ PARAM_LABELS = {
     'arms': "Секцій", 'arm_length': "Виліт консолі, м", 'length': "Довжина, м", 'sections': "Секцій",
     'shelves': "Полиць", 'cell_w': "Ширина комірки, м", 'cell_d': "Глибина комірки, м", 'cell_h': "Висота комірки, м",
     'rows': "Рядів", 'cols': "Колонок", 'cell_l': "Довжина комірки, м", 'max_height': "Макс. висота штабеля, м",
-    'width': "Ширина, м", 'index_digits': "Розрядів у номері", 'code_style': "Стиль кодів",
+    'width': "Ширина, м", 'index_digits': "Розрядів у номері", 'code_style': "Стиль кодів", 'loc_kind': "Вид локацій",
 }
 
 OVERRIDE_KEYS = ('disabled', 'max_load_kg', 'capacity', 'name')
@@ -215,7 +216,7 @@ def _raw_cells(template, p, prefix):
                     'code': "%s-S%0*d-L%d" % (prefix, width_n, sec, lvl), 'level': lvl, 'index': sec,
                     'lx': -length / 2.0 + (sec - 0.5) * p['cell_w'], 'ly': 0.0,
                     'dz': (lvl - 1) * p['cell_h'], 'l': p['cell_w'], 'w': p['cell_d'], 'h': p['cell_h'],
-                    'capacity': 0.0, 'max_load_kg': 0.0, 'kind': 'bin'})
+                    'capacity': 0.0, 'max_load_kg': 0.0, 'kind': p['loc_kind']})
     elif template == 'floor_stack':
         length = p['cols'] * p['cell_l']
         width = p['rows'] * p['cell_w']

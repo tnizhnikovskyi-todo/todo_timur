@@ -36,13 +36,13 @@ class TestPublish(F3DConstructorCase):
     def count(self, model):
         return self.env[model].with_context(active_test=False).search_count([])
 
-    def rack(self, prefix='FG-R1', bays=18, levels=4, **kw):
+    def rack(self, prefix='TQ-R1', bays=18, levels=4, **kw):
         return self.make_slot(prefix=prefix, x=30.0, y=10.0, bays=bays, levels=levels, **kw)
 
     # --- AC-50 -------------------------------------------------------------------------------------
     def test_ac50_preview_changes_nothing(self):
         self.rack(bays=4, levels=2)
-        self.make_placement(code='SAW-1')
+        self.make_placement(code='TQM-1')
         before = (self.count('stock.location'), self.count('maintenance.equipment'), self.count('mrp.workcenter'))
         wizard = self.wizard()
         self.assertEqual(wizard.n_create, 8 + 1 + 1)  # 8 комірок + обладнання + робочий центр
@@ -53,7 +53,7 @@ class TestPublish(F3DConstructorCase):
 
     def test_ac50_plan_create_update_archive(self):
         slot_a = self.rack('AA-R1', bays=2, levels=1)
-        placement = self.make_placement(code='SAW-1')
+        placement = self.make_placement(code='TQM-1')
         self.publish()
         passport2 = self.env['f3d.equipment.passport'].create({'role': 'other_machine', 'manufacturer': "Т", 'model': "Інший"})
         variant2 = self.env['f3d.equipment.variant'].create({
@@ -66,7 +66,7 @@ class TestPublish(F3DConstructorCase):
         for line in wizard.line_ids:
             kinds.setdefault((line.kind, line.res_model), []).append(line.code)
         self.assertEqual(len(kinds[('create', 'stock.location')]), 3)
-        self.assertEqual(kinds[('update', 'maintenance.equipment')], ['SAW-1'])
+        self.assertEqual(kinds[('update', 'maintenance.equipment')], ['TQM-1'])
         self.assertEqual(sorted(kinds[('archive', 'stock.location')]), ['AA-R1-B01-L1', 'AA-R1-B02-L1'])
         self.assertTrue(all(not line.selected for line in wizard.line_ids if line.kind == 'archive'))
 
@@ -76,8 +76,8 @@ class TestPublish(F3DConstructorCase):
         before = self.count('stock.location')
         wizard = self.publish()
         self.assertEqual(self.count('stock.location'), before + 72)
-        loc = self.env['stock.location'].search([('f3d_code', '=', 'FG-R1-B01-L1')])
-        self.assertEqual((loc.barcode, loc.usage, loc.f3d_loc_kind, loc.f3d_capacity), ('FG-R1-B01-L1', 'internal', 'pallet_cell', 3))
+        loc = self.env['stock.location'].search([('f3d_code', '=', 'TQ-R1-B01-L1')])
+        self.assertEqual((loc.barcode, loc.usage, loc.f3d_loc_kind, loc.f3d_capacity), ('TQ-R1-B01-L1', 'internal', 'pallet_cell', 3))
         slot = self.env['f3d.slot'].search([('site_id', '=', self.site.id)])
         self.assertEqual((loc.location_id, loc.f3d_site_id, loc.f3d_slot_uid), (self.wh_fg, self.site, slot.uid))
         self.assertEqual(wizard.state, 'done')
@@ -87,11 +87,11 @@ class TestPublish(F3DConstructorCase):
     def test_ac52_matches_existing_by_barcode_no_duplicates(self):
         self.rack().parent_location_id = self.wh_stock
         existing = self.env['stock.location'].create({
-            'name': 'FG-R1-B01-L4', 'barcode': 'FG-R1-B01-L4', 'usage': 'internal', 'location_id': self.wh_stock.id})
+            'name': 'TQ-R1-B01-L4', 'barcode': 'TQ-R1-B01-L4', 'usage': 'internal', 'location_id': self.wh_stock.id})
         before = self.count('stock.location')
         self.publish()
         self.assertEqual(self.count('stock.location'), before + 71)
-        self.assertEqual((existing.f3d_code, existing.f3d_site_id, existing.name), ('FG-R1-B01-L4', self.site, 'FG-R1-B01-L4'))
+        self.assertEqual((existing.f3d_code, existing.f3d_site_id, existing.name), ('TQ-R1-B01-L4', self.site, 'TQ-R1-B01-L4'))
         self.assertEqual(existing.location_id, self.wh_stock)  # батьківська локація існуючого запису не змінюється
         plan = publish.build_plan(self.site)
         with self.assertRaises(publish.PublishError) as ctx:
@@ -101,24 +101,24 @@ class TestPublish(F3DConstructorCase):
 
     # --- AC-53 -------------------------------------------------------------------------------------
     def test_ac53_equipment_and_workcenter(self):
-        placement = self.make_placement(code='SAW-9', x=20.0, y=10.0)
-        existing_wc = self.env['mrp.workcenter'].create({'name': "Існуючий ЦП", 'code': 'SAW-9'})
+        placement = self.make_placement(code='TQM-9', x=20.0, y=10.0)
+        existing_wc = self.env['mrp.workcenter'].create({'name': "Існуючий ЦП", 'code': 'TQM-9'})
         self.publish()
-        eq = self.env['maintenance.equipment'].search([('f3d_code', '=', 'SAW-9')])
+        eq = self.env['maintenance.equipment'].search([('f3d_code', '=', 'TQM-9')])
         self.assertEqual(len(eq), 1)
         self.assertEqual((eq.f3d_passport_id, eq.f3d_site_id, eq.f3d_placement_uid), (self.passport, self.site, placement.uid))
         zone = self.env['f3d.zone'].zone_at(20.0, 10.0, self.company)
         self.assertEqual(eq.f3d_zone_id, zone)
         self.assertEqual(placement.equipment_id, eq)
         self.assertEqual(placement.workcenter_id, existing_wc)  # збіг за code — не дублюється
-        self.assertEqual(existing_wc.f3d_code, 'SAW-9')
+        self.assertEqual(existing_wc.f3d_code, 'TQM-9')
         self.assertTrue(placement.published_at)
-        self.assertEqual(self.env['mrp.workcenter'].search_count([('code', '=', 'SAW-9')]), 1)
+        self.assertEqual(self.env['mrp.workcenter'].search_count([('code', '=', 'TQM-9')]), 1)
 
     def test_ac53_existing_equipment_only_updated(self):
-        existing = self.env['maintenance.equipment'].create({'name': "Старий", 'f3d_code': 'SAW-8'})
+        existing = self.env['maintenance.equipment'].create({'name': "Старий", 'f3d_code': 'TQM-8'})
         before = self.count('maintenance.equipment')
-        self.make_placement(code='SAW-8')
+        self.make_placement(code='TQM-8')
         self.publish()
         self.assertEqual(self.count('maintenance.equipment'), before)
         self.assertEqual((existing.f3d_site_id, existing.f3d_passport_id, existing.name), (self.site, self.passport, "Старий"))

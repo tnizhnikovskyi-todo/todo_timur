@@ -59,26 +59,35 @@ class TestSeedHook(F3DConstructorCase):
                 self.assertEqual(passport.f3d_category, category, role)
 
     def test_ac03_link_existing_records(self):
+        """Наявні запис (barcode/f3d_code) зв'язуються, а не дублюються; незнайдені коди — у seed_report.unlinked."""
         self._drop_seed_site()
-        loc = self.env['stock.location'].create({
+        Loc, Equipment = self.env['stock.location'], self.env['maintenance.equipment']
+        loc = Loc.search([('f3d_code', '=', 'FG-R1-B01-L4')]) or Loc.create({
             'name': 'FG-R1-B01-L4', 'barcode': 'FG-R1-B01-L4', 'usage': 'internal', 'location_id': self.wh_stock.id})
-        eq = self.env['maintenance.equipment'].create({'name': "Розкрій 1", 'f3d_code': 'SAW-1'})
-        locations, equipment = self.env['stock.location'].search_count([]), self.env['maintenance.equipment'].search_count([])
+        eq = Equipment.search([('f3d_code', '=', 'SAW-1')]) or Equipment.create({'name': "Розкрій 1", 'f3d_code': 'SAW-1'})
+        demo = bool(Loc.search_count([('f3d_code', '=', 'FG-R1-B01-L1')]))  # копія демо-бази: усі коди макета вже є
+        name, parent = loc.name, loc.location_id
+        locations, equipment = Loc.search_count([]), Equipment.search_count([])
+        workcenters = self.env['mrp.workcenter'].search_count([])
         report = hooks.run_seed_hook(self.env)
         site = self.env['f3d.site'].search([('seed_key', '=', 'main_demo')])
         self.assertEqual((loc.f3d_site_id, eq.f3d_site_id), (site, site))
         placement = self.env['f3d.placement'].search([('site_id', '=', site.id), ('code', '=', 'SAW-1')])
         self.assertEqual(placement.equipment_id, eq)
         self.assertEqual(eq.f3d_placement_uid, placement.uid)
-        self.assertEqual((self.env['stock.location'].search_count([]), self.env['maintenance.equipment'].search_count([])),
-                         (locations, equipment))  # нічого не створено
-        self.assertEqual(report['linked']['locations'], 1)
+        self.assertEqual((Loc.search_count([]), Equipment.search_count([]), self.env['mrp.workcenter'].search_count([])),
+                         (locations, equipment, workcenters))  # нічого не створено
         self.assertNotIn('FG-R1-B01-L4', report['unlinked']['locations'])
-        self.assertIn('FG-R1-B01-L1', report['unlinked']['locations'])
-        self.assertIn('SAW-2', report['unlinked']['equipment'])
         self.assertNotIn('SAW-1', report['unlinked']['equipment'])
-        # зв'язок не змінює ім'я, батьківську локацію й інші поля запису
-        self.assertEqual((loc.name, loc.location_id), ('FG-R1-B01-L4', self.wh_stock))
+        self.assertGreaterEqual(report['linked']['locations'], 1)
+        if demo:
+            self.assertEqual(report['unlinked'], {'locations': [], 'equipment': []})
+            self.assertEqual(report['linked']['locations'], report['created']['cells'])
+        else:
+            self.assertIn('FG-R1-B01-L1', report['unlinked']['locations'])
+            self.assertIn('SAW-2', report['unlinked']['equipment'])
+        # зв'язок не змінює ім'я й батьківську локацію запису
+        self.assertEqual((loc.name, loc.location_id), (name, parent))
 
     def test_ac05_no_hardcoded_codes_or_urls(self):
         """AC-05: у вихідниках модуля (крім seed, тестів і dev-скриптів tools/) немає меблевих кодів і зовнішніх URL."""

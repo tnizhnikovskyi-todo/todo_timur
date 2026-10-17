@@ -91,18 +91,18 @@ class TestSlotCellsOrm(F3DConstructorCase):
     def test_ac13_overrides_and_validation(self):
         slot = self.make_slot(bays=18, levels=4)
         self.assertEqual(slot.cell_count, 72)
-        slot.write({'overrides': {'FG-R1-B02-L1': {'disabled': True}, 'FG-R1-B03-L1': {'max_load_kg': 1500}}})
+        slot.write({'overrides': {'TQ-R1-B02-L1': {'disabled': True}, 'TQ-R1-B03-L1': {'max_load_kg': 1500}}})
         self.assertEqual(slot.cell_count, 71)
         cells = {c['code']: c for c in slot._f3d_cells()}
-        self.assertNotIn('FG-R1-B02-L1', cells)
-        self.assertEqual(cells['FG-R1-B03-L1']['max_load_kg'], 1500)
+        self.assertNotIn('TQ-R1-B02-L1', cells)
+        self.assertEqual(cells['TQ-R1-B03-L1']['max_load_kg'], 1500)
         with self.assertRaises(ValidationError) as ctx:
-            slot.write({'overrides': {'FG-R1-B99-L1': {'disabled': True}}})
-        self.assertIn("Комірки FG-R1-B99-L1 немає в шаблоні.", str(ctx.exception))
+            slot.write({'overrides': {'TQ-R1-B99-L1': {'disabled': True}}})
+        self.assertIn("Комірки TQ-R1-B99-L1 немає в шаблоні.", str(ctx.exception))
         # зміна параметрів без overrides: недійсні ключі мовчки відкидаються
         slot.write({'params': dict(slot.params, bays=2)})
         self.assertEqual(slot.cell_count, 7)  # 2 прольоти × 4 яруси − B02-L1 (вимкнена)
-        self.assertEqual(list(slot.overrides), ['FG-R1-B02-L1'])  # B03 більше не існує → відкинуто
+        self.assertEqual(list(slot.overrides), ['TQ-R1-B02-L1'])  # B03 більше не існує → відкинуто
 
     def test_ac14_levels(self):
         slot = self.make_slot(bays=18, levels=4)

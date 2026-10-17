@@ -202,16 +202,18 @@ for i, x in enumerate(LY.FG_ROWS):
     rack('FG-R%d' % (i + 1), 'pallet_rack', x, 27.3, 90, {
         'bays': 18, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.9, 'positions_per_bay': 2,
         'max_load_kg': 2000}, FG_PARENT)
-for i, y in enumerate([1.8, 9.6, 11.9, 19.7, 22.0, 29.8, 32.1, 39.9]):   # RCK-Rn: 3 прольоти × 4 яруси, коди RCK-R1-1A…3D
-    rack('RCK-R%d' % (i + 1), 'pallet_rack', 20.085, y, 0, {
-        'bays': 3, 'levels': 4, 'bay_width': 3.39, 'depth': 2.0, 'level_height': 1.25, 'positions_per_bay': 1,
-        'max_load_kg': 3000, 'index_digits': 1, 'code_style': 'bay_letter'}, "WH/Сировина/Плити/Стелажі/R%d" % (i + 1))
+for i, y in enumerate([1.8, 9.6, 11.9, 19.7, 22.0, 29.8, 32.1, 39.9]):
+    # RCK-Rn: стоси плит 3 × 4 (коди RCK-R1-1A…3D, вид «стос»); габарит 10,17 × 2,0 м
+    rack('RCK-R%d' % (i + 1), 'floor_stack', 20.085, y, 0, {
+        'rows': 3, 'cols': 4, 'cell_l': 2.5425, 'cell_w': 0.6667, 'max_height': 1.25, 'index_digits': 1},
+        "WH/Сировина/Плити/Стелажі/R%d" % (i + 1))
 for k in range(6):
     rack('FUR-R%d' % (k + 1), 'shelf', 21.5, 48 + 4.2 * k, 0, {
         'sections': 6, 'shelves': 4, 'cell_w': 2.0, 'cell_d': 0.6, 'cell_h': 0.6}, FUR_PARENT)
 for i, x in enumerate([30.5, 33.7]):                                       # EB-Un: коди EB-U1-S1-L1 (1 розряд)
     rack('EB-U%d' % (i + 1), 'shelf', x, 59, 90, {
-        'sections': 4, 'shelves': 3, 'cell_w': 5.75, 'cell_d': 0.9, 'cell_h': 0.8, 'index_digits': 1}, EB_PARENT)
+        'sections': 4, 'shelves': 3, 'cell_w': 5.75, 'cell_d': 0.9, 'cell_h': 0.8, 'index_digits': 1,
+        'loc_kind': 'shelf'}, EB_PARENT)
 service = {'front': 1.0, 'back': 0.3, 'left': 0.3, 'right': 0.3}
 slots.append({'uid': 'seed-sl-ms-1', 'layer': ly_prod['uid'], 'template': 'machine_spot', 'code_prefix': 'MS-1', 'x': 73.0,
               'y': 41.0, 'rotation': 0, 'params': {'length': 6.6, 'width': 4.4, 'service': service}, 'overrides': {},
