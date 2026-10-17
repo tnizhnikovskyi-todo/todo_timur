@@ -691,14 +691,17 @@ function colorCells(view, selCode) {
 
 /* ===== декор шарів: сітка, завіса відмітки, проходи, пожежні зони, точки мереж ===== */
 function gridStepDisplay(step, span) {
+    // крок відображення: крок шару, а для дуже густої сітки — грубіший (не більше ~160 ліній на сторону)
     let d = step;
-    for (const k of [1, 2, 5, 10, 20]) {
-        if (d >= k) {
-            continue;
-        }
-        d = k;
-        if (span / d <= 160) {
-            break;
+    if (span / d > 160) {
+        for (const k of [1, 2, 5, 10, 20]) {
+            if (k <= d) {
+                continue;
+            }
+            d = k;
+            if (span / d <= 160) {
+                break;
+            }
         }
     }
     while (span / d > 160) {
