@@ -120,7 +120,10 @@ class F3dPublishWizard(models.TransientModel):
             for line in self.line_ids
             if line.kind == 'archive' and line.selected and not line.blocked
         }
-        result = publish.apply_plan(site, plan, keys, self.note or '')
+        excluded = {
+            (line.res_model, line.code) for line in self.line_ids if line.kind != 'archive' and not line.selected
+        }
+        result = publish.apply_plan(site, plan, keys, self.note or '', excluded)
         self.write({'state': 'done', 'version_id': result['version'].id})
         return {
             'type': 'ir.actions.act_window',

@@ -1,3 +1,5 @@
+import json
+
 from odoo.tests import tagged
 
 from .common import F3DConstructorHttpCase, PASSWORD
@@ -401,3 +403,20 @@ class TestApi(F3DConstructorHttpCase):
         self.assertEqual((underlay['format'], underlay['status']), ('dxf', 'ready'))
         self.assertEqual(underlay['url'], '/web/content/%d' % att.id)
         self.assertEqual(underlay['params']['unit'], 'mm')
+
+    def test_perf_load_and_validate_seed(self):
+        """§13.4: API-03 для seed ≤ 1,5 с; API-05 ≤ 1 с."""
+        import time
+
+        seed_site = self.env['f3d.site'].search([('seed_key', '=', 'main_demo')])
+        if not seed_site:
+            self.skipTest("seed-площадки немає")
+        self.login(self.u_manager)
+        started = time.time()
+        res = self.rpc('/f3d/constructor/load', site_id=seed_site.id)
+        self.assertLess(time.time() - started, 1.5)
+        self.assertEqual(len(res['slots']), 58)
+        self.assertLess(len(json.dumps(res)), 2 * 1024 * 1024)
+        started = time.time()
+        self.assertTrue(self.rpc('/f3d/constructor/validate', site_id=seed_site.id)['ok'])
+        self.assertLess(time.time() - started, 1.0)

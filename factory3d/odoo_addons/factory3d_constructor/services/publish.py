@@ -408,13 +408,24 @@ def _check_preconditions(site, plan):
         raise PublishError('no_changes', "Немає змін для публікації")
 
 
-def apply_plan(site, plan, archive_keys=(), note=''):
+def apply_plan(site, plan, archive_keys=(), note='', excluded=()):
     """R-12 п. 6: застосувати план у транзакції; повертає `{'version', 'created', 'updated', 'archived', 'warnings'}`.
 
     `archive_keys` — множина `(res_model, code)` або голих кодів позначених пропозицій архівації (blocked ігноруються).
+    `excluded` — множина `(res_model, code)` знятих у майстрі рядків create/update (вони пропускаються).
     Будь-який неочікуваний виняток відкочує все (`PublishError('rollback')`).
     """
     _check_preconditions(site, plan)
+    skip = set(excluded)
+    if skip:
+        plan = dict(
+            plan,
+            lines=[
+                line
+                for line in plan['lines']
+                if line['kind'] == 'archive' or (line['res_model'], line['code']) not in skip
+            ],
+        )
     env = site.env
     keys = {k if isinstance(k, tuple) else (None, k) for k in archive_keys}
     try:

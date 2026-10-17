@@ -294,3 +294,12 @@ class TestPublish(F3DConstructorCase):
         wizard.action_confirm()
         self.assertLess(time.time() - started, 20)
         self.assertEqual(self.env['stock.location'].search_count([('f3d_site_id', '=', self.site.id)]), 360)
+
+    def test_unticked_create_line_is_skipped(self):
+        self.rack('UT-R1', bays=2, levels=1)
+        wizard = self.wizard()
+        skipped = wizard.line_ids.filtered(lambda r: r.code == 'UT-R1-B02-L1')
+        skipped.selected = False
+        wizard.action_confirm()
+        codes = self.env['stock.location'].search([('f3d_site_id', '=', self.site.id)]).mapped('f3d_code')
+        self.assertEqual(sorted(codes), ['UT-R1-B01-L1'])
