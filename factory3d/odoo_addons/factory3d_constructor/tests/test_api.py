@@ -233,3 +233,15 @@ class TestApi(F3DConstructorHttpCase):
         self.assertEqual(self.env['f3d.slot'].search_count([('site_id', '=', self.site.id)]), 1)
         self.login(self.u_tech)
         self.assertEqual(self.rpc('/f3d/constructor/version/restore', version_id=version.id)['code'], 'rights')
+
+    def test_ac17_underlay_in_load(self):
+        layer = self.layers['storage']
+        att = self.env['ir.attachment'].create({
+            'name': 'plan.dxf', 'raw': b'0\nEOF\n', 'res_model': 'f3d.layer', 'res_id': layer.id})
+        layer.underlay_attachment_id = att
+        self.login(self.u_manager)
+        loaded = self.rpc('/f3d/constructor/load', site_id=self.site.id)
+        underlay = next(layer_ for layer_ in loaded['layers'] if layer_['id'] == layer.id)['underlay']
+        self.assertEqual((underlay['format'], underlay['status']), ('dxf', 'ready'))
+        self.assertEqual(underlay['url'], '/web/content/%d' % att.id)
+        self.assertEqual(underlay['params']['unit'], 'mm')

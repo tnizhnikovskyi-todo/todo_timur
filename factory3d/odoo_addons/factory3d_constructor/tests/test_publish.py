@@ -242,3 +242,16 @@ class TestPublish(F3DConstructorCase):
         self.assertTrue(any(i['check'] == 'collide' for i in wizard.version_id.report['warnings']))
         collide.enabled = False
         self.assertFalse([i for i in publish.build_plan(self.site)['issues'] if i['check'] == 'collide'])
+
+    # --- продуктивність (§13.4) -----------------------------------------------------------------------
+    def test_perf_publish_360_cells(self):
+        import time
+        for i in range(1, 6):
+            self.make_slot(prefix='PF-R%d' % i, x=30.0, y=2.0 + 2.2 * i, bays=18, levels=4)
+        started = time.time()
+        wizard = self.wizard()
+        self.assertEqual(wizard.n_create, 360)
+        self.assertEqual(wizard.n_block, 0)
+        wizard.action_confirm()
+        self.assertLess(time.time() - started, 20)
+        self.assertEqual(self.env['stock.location'].search_count([('f3d_site_id', '=', self.site.id)]), 360)
