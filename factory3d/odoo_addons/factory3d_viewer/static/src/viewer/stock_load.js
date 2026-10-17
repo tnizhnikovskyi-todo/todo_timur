@@ -291,15 +291,21 @@ export function createStockLoad(env) {
     const f = (rec.frame ??= cellFrame(rec));
     const p = { pallet: [], carton: [], wrap: [], box: [] };
     const step = Math.min(FG.step, FG.bay / cap), seed = seedOf(rec.code);
+    // комірки, додані розкладкою конструктора, можуть стояти пролітом уздовж X (userData.f3dAlong = "x"): палети в ряд по X
+    const alongX = rec.root.userData.f3dAlong === "x";
+    const qy = alongX ? Q.clone().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2) : Q;
+    const at = (x, y, z, sx, sy, sz) => new THREE.Matrix4().compose(V.set(x, y, z), qy, S.set(sx, sy, sz));
     for (let i = 0; i < n; i++) {
-      const z = f.z + (i - (cap - 1) / 2) * step;
+      const o = (i - (cap - 1) / 2) * step;
+      const px = alongX ? f.x + o : f.x, z = alongX ? f.z : f.z + o;
       const layers = 2 + ((seed >> 3) + i) % 2;
-      p.pallet.push(mat4(f.x, f.y + FG.palY, z, 1, 1, 1));
-      for (let k = 0; k < layers; k++) { p.carton.push(mat4(f.x, f.y + FG.cartonY + k * FG.layerH, z, 1, 1, 1)); }
-      p.wrap.push(mat4(f.x, f.y + FG.cartonY - 0.01, z, 0.98, layers * FG.layerH + 0.02, 1.18));
+      p.pallet.push(at(px, f.y + FG.palY, z, 1, 1, 1));
+      for (let k = 0; k < layers; k++) { p.carton.push(at(px, f.y + FG.cartonY + k * FG.layerH, z, 1, 1, 1)); }
+      p.wrap.push(at(px, f.y + FG.cartonY - 0.01, z, 0.98, layers * FG.layerH + 0.02, 1.18));
     }
     setPlacements(rec, p);
-    ensureHit(rec, f.x, f.y + FG.hMax / 2, f.z, FG.depth, FG.hMax, FG.bay);
+    if (alongX) { ensureHit(rec, f.x, f.y + FG.hMax / 2, f.z, FG.bay, FG.hMax, FG.depth); }
+    else { ensureHit(rec, f.x, f.y + FG.hMax / 2, f.z, FG.depth, FG.hMax, FG.bay); }
     rec.tintOK = true;
   }
 
@@ -380,13 +386,16 @@ export function createStockLoad(env) {
     const todo = [];
     for (const code of codes || Object.keys(D.locations || {})) {
       const root = items.get(code);
-      if (!root) { continue; }
-      const loc = D.locations?.[code];
       let rec = recs.get(code);
-      if (rec && rec.root !== root) { restore(rec); rec = null; }
+      // вузол прибрано з items (прихований розкладкою конструктора): вантаж зняти
+      if (!root) { if (rec) { restore(rec); recs.delete(code); } continue; }
+      const loc = D.locations?.[code];
+      // вузол переставлено розкладкою (userData.f3dRev змінився): положення й габарити розбираємо заново
+      if (rec && (rec.root !== root || rec.rev !== (root.userData.f3dRev || 0))) { restore(rec); rec = null; }
       if (!rec) {
         if (!loc || !RULES[loc.kind]) { continue; }
         rec = analyze(code, root);
+        rec.rev = root.userData.f3dRev || 0;
         recs.set(code, rec);
       }
       todo.push([rec, loc]);

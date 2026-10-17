@@ -1,0 +1,22 @@
+"""Шина переглядача: публікація/видалення версії планування → подія `f3d.layout.version` (клієнти беруть дельту `layout`)."""
+from odoo import api, models
+
+
+class F3dLayoutVersion(models.Model):
+    _inherit = "f3d.layout.version"
+
+    def _f3d_notify_viewer(self):
+        if "f3d.viewer.event" not in self.env:
+            return
+        codes = {v.site_id.code or str(v.site_id.id) for v in self.sudo()}
+        self.env["f3d.viewer.event"]._notify("f3d.layout.version", codes, "state")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._f3d_notify_viewer()
+        return records
+
+    def unlink(self):
+        self._f3d_notify_viewer()
+        return super().unlink()
