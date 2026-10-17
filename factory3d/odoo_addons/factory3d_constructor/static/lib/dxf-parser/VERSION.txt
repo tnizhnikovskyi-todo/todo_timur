@@ -1,0 +1,4 @@
+dxf-parser 1.1.2 (npm: dxf-parser@1.1.2, MIT, https://github.com/gdsestimating/dxf-parser).
+Файл dist/dxf-parser.js з пакета без змін, перейменований у dxf-parser.min.js (UMD, глобал DxfParser).
+Підключається лише ліниво: loadJS("/factory3d_constructor/static/lib/dxf-parser/dxf-parser.min.js") при першому відкритті підкладки DXF.
+Оновлення: npm pack dxf-parser@<версія>, замінити файл і оновити цей рядок.
