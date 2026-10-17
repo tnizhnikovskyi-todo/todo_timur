@@ -87,7 +87,7 @@ export function makeLoad(over = {}) {
                 uid: "slrack",
                 layer_id: 2,
                 template: "pallet_rack",
-                code_prefix: "FG-R1",
+                code_prefix: "PR-1",
                 x: 10,
                 y: 5,
                 rotation: 0,

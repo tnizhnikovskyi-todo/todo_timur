@@ -46,7 +46,7 @@ test("AC-14 18×4 → 72 комірки, levels=5 → 90, правка пара�
     const s = {
         id: "t1",
         template: "pallet_rack",
-        code_prefix: "FG-R1",
+        code_prefix: "PR-1",
         x: 60,
         y: 5,
         rotation: 0,
@@ -56,12 +56,12 @@ test("AC-14 18×4 → 72 комірки, levels=5 → 90, правка пара�
     expect(cellCount(s)).toBe(72);
     s.params.levels = 5;
     expect(cellCount(s)).toBe(90);
-    expect(cellsOf(s)[0].code).toBe("FG-R1-B01-L1");
-    s.overrides["FG-R1-B01-L1"] = { disabled: true };
+    expect(cellsOf(s)[0].code).toBe("PR-1-B01-L1");
+    s.overrides["PR-1-B01-L1"] = { disabled: true };
     expect(cellCount(s)).toBe(89);
     expect(cellsOf(s).length).toBe(90); // вимкнена комірка лишається в списку з позначкою
-    const c = generateCells("pallet_rack", "FG-R1", 60, 5, 0, s.params, {}, 0);
-    expect(c.find((x) => x.code === "FG-R1-B18-L1").x).toBe(82.95);
+    const c = generateCells("pallet_rack", "PR-1", 60, 5, 0, s.params, {}, 0);
+    expect(c.find((x) => x.code === "PR-1-B18-L1").x).toBe(82.95);
 });
 
 test("AC-22 SAT: приклади R-03 та еталон геометрії", async () => {

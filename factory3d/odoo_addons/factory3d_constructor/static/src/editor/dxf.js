@@ -1,7 +1,6 @@
 /** @odoo-module */
-// Підкладка DXF (CD-09, R-22): розбір DXF у відрізки (dxf-parser 1.1.2, ліниво через loadJS), панель підкладки, прив'язка масштабу.
+// Підкладка DXF (CD-09, R-22): розбір DXF у відрізки (dxf-parser 1.1.2, ліниво, окремим script), панель підкладки, прив'язка масштабу.
 // Файл зберігається вкладенням шару (`underlay_attachment_id`), параметри — `underlay_params` {unit, dx, dy, rot_deg, scale, opacity}.
-import { loadJS } from "@web/core/assets";
 import { fld, numInput } from "./fields";
 import { canEditLayer, lockHint } from "./roles";
 import { E, S, V, layerOf } from "./state";
@@ -12,12 +11,25 @@ export const DXF_MAX_BYTES = 5 * 1024 * 1024;
 export const DXF_MAX_SEGMENTS = 200000;
 export const DWG_MESSAGE = "Конвертуйте в DXF; DWG буде на сервері.";
 
-/** Підвантажує dxf-parser (глобал `DxfParser`) один раз. */
-export async function loadDxfParser() {
-    if (!window.DxfParser) {
-        await loadJS(DXF_PARSER_URL);
+let parserPromise = null;
+/** Підвантажує dxf-parser (глобал `DxfParser`) один раз; без залежностей від Odoo (CD-29: ядро редактора окреме від адаптера). */
+export function loadDxfParser() {
+    if (window.DxfParser) {
+        return Promise.resolve(window.DxfParser);
     }
-    return window.DxfParser;
+    if (!parserPromise) {
+        parserPromise = new Promise((resolve, reject) => {
+            const el = document.createElement("script");
+            el.src = DXF_PARSER_URL;
+            el.onload = () => resolve(window.DxfParser);
+            el.onerror = () => {
+                parserPromise = null;
+                reject(new Error("Не вдалося завантажити розбирач DXF."));
+            };
+            document.head.append(el);
+        });
+    }
+    return parserPromise;
 }
 
 /**

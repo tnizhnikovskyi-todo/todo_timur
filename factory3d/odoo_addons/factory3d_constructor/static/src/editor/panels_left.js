@@ -458,7 +458,7 @@ function renderSlotsTab(root) {
             { class: "fcol" },
             fld("Шаблон", selectEl(Object.entries(TPL).map(([k, t]) => [k, t.name]), T.template, (v) => { T.template = v; T.params = defaultParams(v); T.prefix = TPL[v].prefix; renderLeft(); }, false, "Шаблон")),
             h("div", { class: "small muted" }, spec.info),
-            fld("Префікс коду", textInput({ value: T.prefix, label: "Префікс", f: "tpl-prefix", set: (v) => { T.prefix = v; } }), "напр. FG-R1; до 22 символів"),
+            fld("Префікс коду", textInput({ value: T.prefix, label: "Префікс", f: "tpl-prefix", set: (v) => { T.prefix = v; } }), "напр. PR-1; до 22 символів"),
             paramFields(T.template, T.params, { dis: false, onChange: () => { /* лише форма */ } }),
             !allowed ? h("div", { class: "note err" }, `Шар «${ly.name}» не допускає цей шаблон. Змініть «Допустимі типи місць» у параметрах шару.`) : null,
             h("button", { class: "fbtn primary", type: "button", id: "btnPlaceSlot", disabled: dis || !allowed, onclick: () => E.startPlacing({ kind: "slot", template: T.template, prefix: (T.prefix || spec.prefix).slice(0, 22), params: clone(T.params) }) }, "Поставити на сцену")
