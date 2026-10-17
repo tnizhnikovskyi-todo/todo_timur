@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="0">
+    <!-- §5.1: 12 записів довідника (6 видів шарів, 6 типів місць); ключі збігаються зі значеннями Selection -->
+    <record id="term_layer_kind_building" model="f3d.term">
+        <field name="term_type">layer_kind</field>
+        <field name="key">building</field>
+        <field name="name">Будівля</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="term_layer_kind_storage" model="f3d.term">
+        <field name="term_type">layer_kind</field>
+        <field name="key">storage</field>
+        <field name="name">Склади</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="term_layer_kind_production" model="f3d.term">
+        <field name="term_type">layer_kind</field>
+        <field name="key">production</field>
+        <field name="name">Виробництво</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="term_layer_kind_engineering" model="f3d.term">
+        <field name="term_type">layer_kind</field>
+        <field name="key">engineering</field>
+        <field name="name">Інженерні мережі</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="term_layer_kind_yard" model="f3d.term">
+        <field name="term_type">layer_kind</field>
+        <field name="key">yard</field>
+        <field name="name">Двір</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="term_layer_kind_custom" model="f3d.term">
+        <field name="term_type">layer_kind</field>
+        <field name="key">custom</field>
+        <field name="name">Свій шар</field>
+        <field name="sequence">60</field>
+    </record>
+    <record id="term_slot_type_pallet_rack" model="f3d.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">pallet_rack</field>
+        <field name="name">Паллетний стелаж</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="term_slot_type_cantilever" model="f3d.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">cantilever</field>
+        <field name="name">Консольний стелаж</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="term_slot_type_shelf" model="f3d.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">shelf</field>
+        <field name="name">Полицевий стелаж / комірки фурнітури</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="term_slot_type_floor_stack" model="f3d.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">floor_stack</field>
+        <field name="name">Підлогове штабелювання</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="term_slot_type_machine_spot" model="f3d.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">machine_spot</field>
+        <field name="name">Місце під верстат</field>
+        <field name="sequence">50</field>
+    </record>
+    <record id="term_slot_type_zone" model="f3d.term">
+        <field name="term_type">slot_type</field>
+        <field name="key">zone</field>
+        <field name="name">Зона-контур</field>
+        <field name="sequence">60</field>
+    </record>
+</odoo>

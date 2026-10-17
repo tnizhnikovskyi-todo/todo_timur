@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- V-13, DEC-01, DEC-19: меню під «Завод 3D» (sequence 12 і 14 — запит до каркаса) -->
+    <menuitem id="menu_f3d_constructor" name="Конструктор" parent="factory3d_base.menu_f3d_root" sequence="12"
+              action="action_f3d_constructor" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_constructor_plan" name="Планування" parent="factory3d_base.menu_f3d_root" sequence="14"
+              groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_site" name="Площадки" parent="menu_f3d_constructor_plan" sequence="10"
+              action="action_f3d_site" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_layer" name="Шари" parent="menu_f3d_constructor_plan" sequence="20"
+              action="action_f3d_layer" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_variant" name="Каталог варіантів" parent="menu_f3d_constructor_plan" sequence="30"
+              action="action_f3d_equipment_variant" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_version" name="Версії планування" parent="menu_f3d_constructor_plan" sequence="40"
+              action="action_f3d_layout_version" groups="factory3d_base.group_f3d_user"/>
+    <menuitem id="menu_f3d_constructor_terms" name="Довідники конструктора"
+              parent="factory3d_base.menu_f3d_config" sequence="14"
+              action="action_f3d_term" groups="group_f3d_constructor_manager"/>
+</odoo>
