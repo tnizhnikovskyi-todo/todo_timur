@@ -98,10 +98,24 @@ async function bootData() {
   if (app && app.sites && app.sites.length) {
     S.app.sites = app.sites; S.app.active = app.sites.some((s) => s.id === app.active) ? app.active : app.sites[0].id;
     const st = await loadSiteFromStore(S.app.active);
-    if (st) { S.persisted = true; applyLoaded(st); return; }
+    if (st) { S.persisted = true; applyLoaded(st); await addFullSample(); return; }
   }
   const st = buildSample(); st.snaps = { 1: st.base };
   S.app.sites = [{ id: 'sample', name: st.site.name }]; S.app.active = 'sample'; S.persisted = false; applyLoaded(st);
+}
+/* Збережений приклад старшої версії (неповний набір шарів і об'єктів) лишається з правками користувача;
+   повний приклад додається окремою площадкою й стає активним. */
+async function addFullSample() {
+  const FULL = 'sample_full';
+  if (!S.app.sites.some((s) => s.id === 'sample') || S.app.sites.some((s) => s.id === FULL)) return;
+  const old = await store.get('sites', 'sample');
+  if (!old || (old.seed_rev || 0) >= SEED_REV) return;
+  const st = buildSample(FULL); st.snaps = { 1: st.base };
+  st.site.name = 'Меблеве підприємство (повний приклад)';
+  S.app.sites.push({ id: FULL, name: st.site.name }); S.app.active = FULL;
+  applyLoaded(st); markAllDirty(); S.persisted = true;
+  await flushNow();
+  toast('Додано повний приклад: усі шари й об’єкти моделі. Попередній приклад з вашими правками — у списку площадок.');
 }
 async function afterSiteLoad() {
   renderAll(); syncScene(true); setView('iso');
