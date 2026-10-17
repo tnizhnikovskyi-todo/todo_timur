@@ -95,7 +95,12 @@ export class F3dModelPreview extends Component {
             this.state.loading = true;
             try {
                 const three = await loadThree();
-                const gltf = await new three.GLTFLoader().loadAsync(MODEL_URL(this.props.record.resId, this.glbId));
+                const resp = await fetch(MODEL_URL(this.props.record.resId, this.glbId), { credentials: "same-origin" });
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                const buf = await resp.arrayBuffer();
+                const gltf = await new Promise((res, rej) => new three.GLTFLoader().parse(buf, "", res, rej));
                 if (seq !== this.seq) {
                     return;
                 }
