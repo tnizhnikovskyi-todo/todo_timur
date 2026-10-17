@@ -8,7 +8,7 @@ import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { buildGenericModel, GENERIC_LABELS } from "../model/generic";
 import { loadThree } from "../model/three";
 import { createPreview } from "./preview_core";
-import { getStaged, stagingBus } from "./staging";
+import { getStaged, sameRecord, stagingBus } from "./staging";
 
 export const MODEL_URL = (variantId, att) => `/f3d/constructor/model/${variantId}/glb?att=${att || 0}`;
 
@@ -23,7 +23,7 @@ export class F3dModelPreview extends Component {
         this.seq = 0;
         this.ro = null;
         this.onStaged = (e) => {
-            if (e.detail === this.props.record) {
+            if (sameRecord(e.detail, this.props.record)) {
                 this.refresh();
             }
         };
@@ -95,7 +95,12 @@ export class F3dModelPreview extends Component {
             this.state.loading = true;
             try {
                 const three = await loadThree();
-                const gltf = await new three.GLTFLoader().loadAsync(MODEL_URL(this.props.record.resId, this.glbId));
+                const resp = await fetch(MODEL_URL(this.props.record.resId, this.glbId), { credentials: "same-origin" });
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
+                }
+                const buf = await resp.arrayBuffer();
+                const gltf = await new Promise((res, rej) => new three.GLTFLoader().parse(buf, "", res, rej));
                 if (seq !== this.seq) {
                     return;
                 }

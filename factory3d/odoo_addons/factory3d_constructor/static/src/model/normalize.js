@@ -87,6 +87,29 @@ export function normalizeMaterials(root, T = getThree()) {
 }
 
 /**
+ * Нормалі меша відсутні або нульові (STL із «facet normal 0 0 0», OBJ без vn) → перераховуємо:
+ * інакше модель чорна. Геометрія без індексу (STL) отримує пласкі нормалі граней.
+ */
+export function ensureNormals(root) {
+    const seen = new Set();
+    root.traverse((o) => {
+        const g = o.isMesh && o.geometry;
+        if (!g?.attributes?.position || seen.has(g)) {
+            return;
+        }
+        seen.add(g);
+        const n = g.attributes.normal;
+        let bad = !n;
+        for (let i = 0; !bad && i < n.count; i++) {
+            bad = Math.abs(n.getX(i)) + Math.abs(n.getY(i)) + Math.abs(n.getZ(i)) < 1e-6;
+        }
+        if (bad) {
+            g.computeVertexNormals();
+        }
+    });
+}
+
+/**
  * @param {THREE.Object3D} obj завантажений об'єкт (у одиницях файла)
  * @param {{ext: string, units?: string, upAxis?: string}} o
  * @returns {{object: THREE.Group, units, upAxis, bboxM: number[], sizeMm: {x,y,z}, triangles: number, warnings: string[]}}

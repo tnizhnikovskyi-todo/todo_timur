@@ -1,5 +1,7 @@
 /** @odoo-module */
 // Спільні хелпери HOOT-тестів моделі (файл без тестів).
+import { delay } from "@odoo/hoot-dom";
+import { animationFrame } from "@odoo/hoot-mock";
 import { loadLoaders, loadThree } from "@factory3d_constructor/model/three";
 import { exportGlb } from "@factory3d_constructor/model/import";
 import { boxTris } from "./fixtures";
@@ -15,13 +17,8 @@ export const blobBytes = (blob) =>
 
 export const file = (name, data, type = "") => new File([data], name, { type });
 
-/** Справжній macrotask (Hoot підміняє таймери, а FileReader/fetch-тіла завершуються лише реальними подіями). */
-export const realTick = () =>
-    new Promise((res) => {
-        const c = new MessageChannel();
-        c.port1.onmessage = () => res();
-        c.port2.postMessage(0);
-    });
+/** Справжній macrotask: `delay` із hoot-dom тримає посилання на нативний setTimeout (Hoot підміняє глобальні таймери). */
+export const realTick = () => delay(1);
 
 /** Чекає виконання умови (реальні macrotask-и), до `max` ітерацій. */
 export async function until(fn, max = 400) {
@@ -31,6 +28,7 @@ export async function until(fn, max = 400) {
             return v;
         }
         await realTick();
+        await animationFrame(); // перемальовування Owl іде через (підмінений Hoot) requestAnimationFrame
     }
     throw new Error("until(): умову не виконано");
 }

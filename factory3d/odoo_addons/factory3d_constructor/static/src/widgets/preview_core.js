@@ -191,12 +191,13 @@ export function createPreview(el, { three }) {
                 scene.add(o2);
                 c.labels.push(o2);
             };
-            add(mm(size.x), ctr.x, box.min.y, box.max.z + 0.08 * Math.max(size.x, size.z, 0.2));
-            add(mm(size.z), box.max.x + 0.08 * Math.max(size.x, size.z, 0.2), box.min.y, ctr.z);
-            add(mm(size.y), box.max.x, ctr.y, box.max.z);
+            const off = 0.1 * Math.max(size.x, size.z, 0.3);
+            add(mm(size.x), ctr.x, box.min.y, box.max.z + off); // довжина — по фронтальному ребру
+            add(mm(size.z), box.min.x - off, box.min.y, ctr.z); // ширина — по лівому ребру
+            add(mm(size.y), box.max.x + off * 0.5, ctr.y, box.max.z + off * 0.5); // висота — біля переднього правого ребра
         }
         const r = Math.max(size.x, size.y, size.z, 0.05);
-        const dist = (r * 1.4) / Math.tan((camera.fov * Math.PI) / 360);
+        const dist = (r * 1.05) / Math.tan((camera.fov * Math.PI) / 360);
         controls.target.copy(ctr);
         const dir = new T.Vector3(0.9, 0.55, 1.15).normalize();
         camera.position.copy(ctr).addScaledVector(dir, dist);

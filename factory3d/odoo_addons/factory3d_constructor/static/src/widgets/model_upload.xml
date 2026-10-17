@@ -16,14 +16,14 @@
                 <div class="btn-group btn-group-sm o_f3d_mu_units" role="group" aria-label="Одиниці">
                     <t t-foreach="unitList" t-as="u" t-key="u.key">
                         <button type="button" class="btn btn-outline-secondary o_f3d_mu_unit"
-                                t-att-class="{'active': state.units === u.key}" t-att-data-unit="u.key"
+                                t-att-class="{'active': unitActive(u.key)}" t-att-data-unit="u.key"
                                 t-on-click="() => this.setUnits(u.key)" t-att-disabled="state.busy">
                             <t t-esc="u.label"/>
                         </button>
                     </t>
                 </div>
                 <label class="o_f3d_mu_axis form-check form-check-inline mb-0 ms-3">
-                    <input type="checkbox" class="form-check-input o_f3d_mu_axis_chk" t-att-checked="state.upAxis === 'z'"
+                    <input type="checkbox" class="form-check-input o_f3d_mu_axis_chk" t-att-checked="axisZ"
                            t-on-change="toggleAxis" t-att-disabled="state.busy"/>
                     <span class="form-check-label">Вісь Z вгору</span>
                 </label>
@@ -47,12 +47,12 @@
                 <dl class="o_f3d_mu_kv">
                     <t t-if="meta.file_name"><dt>Файл</dt><dd t-esc="meta.file_name"/></t>
                     <t t-if="meta.format"><dt>Формат</dt><dd class="text-uppercase" t-esc="meta.format"/></t>
-                    <t t-if="sizeMb"><dt>Розмір</dt><dd><t t-esc="sizeMb"/> МБ</dd></t>
+                    <t t-if="fileSizeText"><dt>Розмір</dt><dd class="o_f3d_mu_bytes" t-esc="fileSizeText"/></t>
                     <t t-if="meta.triangles"><dt>Трикутників</dt><dd class="o_f3d_mu_tri" t-esc="meta.triangles"/></t>
                     <t t-if="hasSize"><dt>Габарит (Д×Ш×В)</dt><dd class="o_f3d_mu_size" t-esc="sizeText"/></t>
                 </dl>
                 <div t-if="message" class="text-muted small o_f3d_mu_msg" t-esc="message"/>
-                <div t-foreach="state.warnings" t-as="w" t-key="w_index" class="alert alert-warning py-1 my-1 small o_f3d_mu_warn" t-esc="w"/>
+                <div t-foreach="visibleWarnings" t-as="w" t-key="w_index" class="alert alert-warning py-1 my-1 small o_f3d_mu_warn" t-esc="w"/>
 
                 <div t-if="overLimit and !state.keepAsIs" class="alert alert-warning o_f3d_mu_over" role="alert">
                     <div><t t-esc="overLimitText"/> Спростити?</div>

@@ -13,7 +13,7 @@ import { UNIT_LABELS, sizeToVariantDims } from "../model/normalize";
 import { loadThree } from "../model/three";
 import { uploadModel } from "../model/upload";
 import { PREVIEW_CONFIG, createPreview } from "./preview_core";
-import { getStaged, setStaged, stagingBus } from "./staging";
+import { getStaged, sameRecord, setStaged, stagingBus } from "./staging";
 
 const UNITS = ["mm", "cm", "m", "in"];
 
@@ -58,7 +58,7 @@ export class F3dModelUpload extends Component {
         this.files = [];
         this.loaded = null;
         this.onStaged = (e) => {
-            if (e.detail === this.props.record) {
+            if (sameRecord(e.detail, this.props.record)) {
                 this.state.rev++; // staged лежить поза useState: перемальовуємо вручну
             }
         };
@@ -106,8 +106,13 @@ export class F3dModelUpload extends Component {
         return s ? `${s.x} × ${s.z} × ${s.y} мм` : "";
     }
 
-    get sizeMb() {
-        return this.meta.size_bytes ? (this.meta.size_bytes / MB).toFixed(2) : "";
+    /** «3.2 КБ» / «1.25 МБ». */
+    get fileSizeText() {
+        const b = this.meta.size_bytes;
+        if (!b) {
+            return "";
+        }
+        return b < MB ? `${(b / 1024).toFixed(1)} КБ` : `${(b / MB).toFixed(2)} МБ`;
     }
 
     get overLimit() {
@@ -149,6 +154,9 @@ export class F3dModelUpload extends Component {
         ev.target.value = ""; // той самий файл можна вибрати повторно
         this.loaded = null;
         this.state.keepAsIs = false;
+        if (this.state.hasFiles) {
+            this.resetAuto(); // новий файл після попереднього — знову автовизначення одиниць і осі
+        }
         this.state.hasFiles = this.files.length > 0;
         if (this.files.length) {
             await this.convert();
@@ -195,6 +203,25 @@ export class F3dModelUpload extends Component {
         } finally {
             this.state.busy = false;
         }
+    }
+
+    resetAuto() {
+        this.state.unitsAuto = true;
+        this.state.axisAuto = true;
+    }
+
+    unitActive(u) {
+        return (this.state.hasFiles || !this.state.unitsAuto) && this.state.units === u;
+    }
+
+    get axisZ() {
+        return (this.state.hasFiles || !this.state.axisAuto) && this.state.upAxis === "z";
+    }
+
+    /** Попередження без дубля «N тис. трикутників при ліміті M тис.», коли показано пропозицію «Спростити». */
+    get visibleWarnings() {
+        const dup = this.overLimit && !this.state.keepAsIs ? trianglesMessage(this.meta.triangles, this.limits.maxTriangles) : null;
+        return this.state.warnings.filter((w) => w !== dup);
     }
 
     async setUnits(u) {
@@ -250,6 +277,7 @@ export class F3dModelUpload extends Component {
             this.files = [];
             this.loaded = null;
             this.state.hasFiles = false;
+            this.resetAuto();
             await rec.load();
             this.notification.add(
                 res.status === "pending_conversion"
@@ -333,6 +361,7 @@ export class F3dModelUpload extends Component {
         this.files = [];
         this.loaded = null;
         this.state.hasFiles = false;
+        this.resetAuto();
         this.state.error = "";
         setStaged(this.props.record, null);
     }

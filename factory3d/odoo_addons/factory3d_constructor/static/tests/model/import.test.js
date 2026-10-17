@@ -184,3 +184,42 @@ test("AC-35 STL 60 000 трикутників: попередження «60 т�
     expect(s.warnings.some((w) => w.startsWith("Модель спрощено"))).toBe(true);
     expect(s.meta.glb_size_bytes > 0).toBe(true);
 });
+
+test("STL із нульовими нормалями «facet normal 0 0 0» → нормалі перераховано (модель не чорна)", async () => {
+    const r = await importModelFiles([file("cab.stl", stlAscii(boxTris(800, 400, 2000)))]);
+    let checked = 0;
+    r.object.traverse((o) => {
+        if (o.isMesh) {
+            const n = o.geometry.attributes.normal;
+            for (let i = 0; i < n.count; i++) {
+                expect(Math.abs(n.getX(i)) + Math.abs(n.getY(i)) + Math.abs(n.getZ(i)) > 0.5).toBe(true);
+                checked++;
+            }
+        }
+    });
+    expect(checked).toBe(36);
+});
+
+test("OBJ+MTL з текстурою: map_Kd береться з обраних файлів, зображення вшивається в GLB", async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 4;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ff0000";
+    ctx.fillRect(0, 0, 4, 4);
+    const png = await new Promise((res) => canvas.toBlob(res, "image/png"));
+    const obj =
+        "mtllib t.mtl\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvt 0 1\nusemtl M\nf 1/1 2/2 3/3\nf 1/1 3/3 4/4\n";
+    const mtl = "newmtl M\nKd 1 1 1\nmap_Kd tex.png\n";
+    const withTex = await importModelFiles([file("quad.obj", obj), file("t.mtl", mtl), file("tex.png", png)]);
+    let map = null;
+    withTex.object.traverse((o) => {
+        if (o.isMesh && o.material.map) {
+            map = o.material.map;
+        }
+    });
+    expect(map !== null).toBe(true);
+    expect(!!map.image).toBe(true);
+    expect(withTex.meta.triangles).toBe(2);
+    const noTex = await importModelFiles([file("quad.obj", obj), file("t.mtl", "newmtl M\nKd 1 1 1\n")]);
+    expect(withTex.glb.size > noTex.glb.size).toBe(true); // зображення всередині GLB
+});
