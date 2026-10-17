@@ -296,3 +296,11 @@ class TestLayoutInventory(LayoutBase):
     def test_inventory_missing_file_is_empty(self):
         with patch.object(layout_tools, "file_open", side_effect=FileNotFoundError):
             self.assertEqual(layout_tools.load_inventory(), {})
+
+    def test_inventory_agrees_with_seed(self):
+        """Коли опис сцени вже є в модулі: версія без змін планування не дає ні зсувів, ні прибраного, ні доданого."""
+        if not layout_tools.load_inventory():
+            self.skipTest("data/scene_inventory.json ще немає (гілка опису сцени не злита)")
+        self.publish()
+        lay = self.layout()
+        self.assertEqual((lay["moved"], lay["hidden"], lay["added"], lay["replaced"]), ({}, [], [], []))

@@ -4,18 +4,18 @@
 // Локальна система місця: X уздовж довжини L, Y впоперек (three: z = −ly), z0 комірки — висота від відмітки шару.
 // УВАГА (rjsmin): без вкладених шаблонних літералів.
 
-import { CATEGORY_COLOR } from "./generic_models";
-
 const POST = 0.08;
 const BEAM = 0.1;
 const CELL_COLOR = 0x6fa8dc;
+const UPRIGHT_COLOR = 0x2f5f8a; // як у запечених стелажів моделі: сині стійки, помаранчеві траверси
+const BEAM_COLOR = 0xe8732a;
 
-/** Бруски каркаса [cx, cy, cz, sx, sy, sz] у локальних координатах three (y — вгору). */
+/** Бруски каркаса [cx, cy, cz, sx, sy, sz, тип] у локальних координатах three (y — вгору); тип 0 — стійка, 1 — траверса/полиця. */
 export function frameBoxes(e) {
     const p = e.params || {};
     const { L, W, H } = e.dims;
     const boxes = [];
-    const post = (x, z, h) => boxes.push([x, h / 2, z, POST, h, POST]);
+    const post = (x, z, h) => boxes.push([x, h / 2, z, POST, h, POST, 0]);
     if (e.template === "pallet_rack") {
         const top = p.levels * p.level_height;
         for (let b = 0; b <= p.bays; b++) {
@@ -25,7 +25,7 @@ export function frameBoxes(e) {
         }
         for (let l = 0; l <= p.levels; l++) {
             for (const z of [-W / 2, W / 2]) {
-                boxes.push([0, l * p.level_height + BEAM / 2, z, L, BEAM, 0.06]);
+                boxes.push([0, l * p.level_height + BEAM / 2, z, L, BEAM, 0.06, 1]);
             }
         }
     } else if (e.template === "shelf") {
@@ -36,7 +36,7 @@ export function frameBoxes(e) {
             post(x, W / 2, top + 0.05);
         }
         for (let l = 0; l <= p.shelves; l++) {
-            boxes.push([0, l * p.cell_h + 0.015, 0, L, 0.03, W]);
+            boxes.push([0, l * p.cell_h + 0.015, 0, L, 0.03, W, 1]);
         }
     } else if (e.template === "cantilever") {
         const top = p.levels * p.level_height;
@@ -45,7 +45,7 @@ export function frameBoxes(e) {
             const x = -L / 2 + (a * L) / p.arms;
             post(x, z0, top + 0.1);
             for (let l = 0; l < p.levels; l++) {
-                boxes.push([x, l * p.level_height + 0.05, z0 + p.arm_length / 2, 0.06, 0.06, p.arm_length]);
+                boxes.push([x, l * p.level_height + 0.05, z0 + p.arm_length / 2, 0.06, 0.06, p.arm_length, 1]);
             }
         }
     }
@@ -89,11 +89,20 @@ export function buildSlotObject(THREE, e, { shadows = false, envMapIntensity = 0
     const hint = KIND_HINT[e.template] || "Стелаж";
     const boxes = frameBoxes(e);
     if (boxes.length) {
-        const mat = new THREE.MeshStandardMaterial({ color: CATEGORY_COLOR.rack, roughness: 0.6, metalness: 0.2 });
-        mat.envMapIntensity = envMapIntensity;
-        const frame = new THREE.Mesh(mergeBoxes(THREE, boxes), mat);
-        frame.castShadow = shadows;
+        // один вузол з кодом місця: стійки й траверси — два меші (різні кольори), як у запечених стелажах
+        const frame = new THREE.Group();
         frame.userData = { code: e.code, kind: "rack", label: hint + " " + e.code, desc: "Додано в конструкторі: " + e.cells.length + " комірок." };
+        for (const [type, color] of [[0, UPRIGHT_COLOR], [1, BEAM_COLOR]]) {
+            const part = boxes.filter((b) => b[6] === type);
+            if (!part.length) {
+                continue;
+            }
+            const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.35 });
+            mat.envMapIntensity = envMapIntensity;
+            const mesh = new THREE.Mesh(mergeBoxes(THREE, part), mat);
+            mesh.castShadow = shadows;
+            frame.add(mesh);
+        }
         group.add(frame);
         roots.push({ code: e.code, obj: frame });
     }
