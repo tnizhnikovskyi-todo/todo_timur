@@ -341,6 +341,7 @@ test("R-16 над лімітом: пропозиція «Спростити» / 
     await until(() => document.querySelector(".o_f3d_mu_over"));
     expect(queryOne(".o_f3d_mu_over").textContent.includes("1.5 тис. трикутників (ліміт 1 тис.)") || queryOne(".o_f3d_mu_over").textContent.includes("тис. трикутників (ліміт 1 тис.)")).toBe(true);
     expect(Number(queryOne(".o_f3d_mu_tri").textContent) > 1000).toBe(true);
+    expect(queryAllTexts(".o_f3d_mu_warn").length).toBe(0); // попередження не дублює пропозицію
     queryOne(".o_f3d_mu_simplify").click();
     await until(() => !document.querySelector(".o_f3d_mu_over"));
     expect(Number(queryOne(".o_f3d_mu_tri").textContent) <= 1000).toBe(true);

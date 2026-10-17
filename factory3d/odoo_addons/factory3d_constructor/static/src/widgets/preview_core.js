@@ -197,7 +197,7 @@ export function createPreview(el, { three }) {
             add(mm(size.y), box.max.x + off * 0.5, ctr.y, box.max.z + off * 0.5); // висота — біля переднього правого ребра
         }
         const r = Math.max(size.x, size.y, size.z, 0.05);
-        const dist = (r * 0.85) / Math.tan((camera.fov * Math.PI) / 360);
+        const dist = (r * 1.05) / Math.tan((camera.fov * Math.PI) / 360);
         controls.target.copy(ctr);
         const dir = new T.Vector3(0.9, 0.55, 1.15).normalize();
         camera.position.copy(ctr).addScaledVector(dir, dist);

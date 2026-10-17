@@ -154,6 +154,9 @@ export class F3dModelUpload extends Component {
         ev.target.value = ""; // той самий файл можна вибрати повторно
         this.loaded = null;
         this.state.keepAsIs = false;
+        if (this.state.hasFiles) {
+            this.resetAuto(); // новий файл після попереднього — знову автовизначення одиниць і осі
+        }
         this.state.hasFiles = this.files.length > 0;
         if (this.files.length) {
             await this.convert();
@@ -200,6 +203,25 @@ export class F3dModelUpload extends Component {
         } finally {
             this.state.busy = false;
         }
+    }
+
+    resetAuto() {
+        this.state.unitsAuto = true;
+        this.state.axisAuto = true;
+    }
+
+    unitActive(u) {
+        return (this.state.hasFiles || !this.state.unitsAuto) && this.state.units === u;
+    }
+
+    get axisZ() {
+        return (this.state.hasFiles || !this.state.axisAuto) && this.state.upAxis === "z";
+    }
+
+    /** Попередження без дубля «N тис. трикутників при ліміті M тис.», коли показано пропозицію «Спростити». */
+    get visibleWarnings() {
+        const dup = this.overLimit && !this.state.keepAsIs ? trianglesMessage(this.meta.triangles, this.limits.maxTriangles) : null;
+        return this.state.warnings.filter((w) => w !== dup);
     }
 
     async setUnits(u) {
@@ -255,6 +277,7 @@ export class F3dModelUpload extends Component {
             this.files = [];
             this.loaded = null;
             this.state.hasFiles = false;
+            this.resetAuto();
             await rec.load();
             this.notification.add(
                 res.status === "pending_conversion"
@@ -338,6 +361,7 @@ export class F3dModelUpload extends Component {
         this.files = [];
         this.loaded = null;
         this.state.hasFiles = false;
+        this.resetAuto();
         this.state.error = "";
         setStaged(this.props.record, null);
     }
