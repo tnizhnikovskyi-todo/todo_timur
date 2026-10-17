@@ -3,6 +3,7 @@
 // «Переглянути як роль» (лише UI): сервер усе одно застосовує свої права.
 import { ROLES, roleName } from "./data";
 import { S } from "./state";
+import { toast } from "./util";
 
 /** Ефективна роль перегляду (для менеджера в режимі «Переглянути як»), інакше null. */
 export const viewAs = () => (S.rights.is_manager && S.app.viewAs && S.app.viewAs !== "manager" ? S.app.viewAs : null);
@@ -41,6 +42,8 @@ export function lockHint(ly) {
     const rs = layerRoleNames(ly);
     return `Шар «${ly.name}» редагує ${rs.length ? rs.join(", ") + " і Менеджер" : "Менеджер"}`;
 }
+
+export const toastLock = (ly) => toast(lockHint(ly), "warn");
 
 /** Ролі поточного користувача (для підпису в шапці). */
 export const myRoleNames = () => {

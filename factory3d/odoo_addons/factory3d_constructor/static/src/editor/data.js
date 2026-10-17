@@ -28,6 +28,8 @@ export const CATEGORIES = {
     other: "Інше",
 };
 export const UTIL_KINDS = { electric: "Електрика", air: "Стиснене повітря", dust: "Аспірація" };
+/** Види точок мереж шару (R-22): до видів варіантів додається щит (panel — для перевірки досяжності вважається електрикою). */
+export const LAYER_UTIL_KINDS = { ...UTIL_KINDS, panel: "Щит" };
 export const FRONT_SIDES = { s: "Низ креслення (−Y)", e: "Праворуч (+X)", n: "Верх креслення (+Y)", w: "Ліворуч (−X)" };
 export const FRONT_ANGLE = { s: 0, e: 90, n: 180, w: 270 };
 
@@ -80,6 +82,7 @@ export const TPL = {
             num("shelf", "cell_d", "Глибина комірки", "м", 0.05),
             num("shelf", "cell_h", "Висота комірки", "м", 0.05),
             num("shelf", "index_digits", "Розрядів у номері", null, 1),
+            { k: "loc_kind", l: "Вид локацій", type: "select", options: [["bin", "Комірка (bin)"], ["shelf", "Полиця (shelf)"]], def: "bin" },
         ],
     },
     floor_stack: {

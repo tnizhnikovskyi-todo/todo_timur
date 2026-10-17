@@ -51,6 +51,7 @@ export const SLOT_TEMPLATES = {
             cell_h: [0.05, 2, 0.4, F],
             index_digits: [1, 4, 2, I],
         },
+        choices: { loc_kind: [["bin", "shelf"], "bin"] },
     },
     floor_stack: {
         label: "Напільне штабелювання",
@@ -206,7 +207,7 @@ export function rawCells(template, p, prefix) {
                     h: p.cell_h,
                     capacity: 0,
                     max_load_kg: 0,
-                    kind: "bin",
+                    kind: p.loc_kind,
                 });
             }
         }
