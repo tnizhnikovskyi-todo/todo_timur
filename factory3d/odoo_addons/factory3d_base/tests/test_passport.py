@@ -16,7 +16,10 @@ class TestPassportData(F3DCase):
         return self.env.ref('factory3d_base.passport_' + role)
 
     def test_93_passports(self):
-        self.assertEqual(self.env['f3d.equipment.passport'].search_count([]), 93)
+        # лише паспорти цього модуля: інші модулі (напр. factory3d_constructor) додають свої типові
+        count = self.env['ir.model.data'].search_count(
+            [('module', '=', 'factory3d_base'), ('model', '=', 'f3d.equipment.passport')])
+        self.assertEqual(count, 93)
 
     def test_beam_saw_fields(self):
         p = self.passport('beam_saw')
