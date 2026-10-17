@@ -47,22 +47,33 @@ test("R25b D.layout з /data доходить до розширення цілк
     expect(calls.some((c) => c.type === "ext" && c.layout?.version.n === 2)).toBe(true);
 });
 
-test("R25c після завантаження частини моделі: розширення бачить нові вузли (fresh) і йде ДО кожного stockLoad.sync", async () => {
+test("R25c модель і дані: розширення викликається з D.layout, коли вузли вже в items; і це ДО stockLoad.sync", async () => {
+    const calls = spyExtension();
+    const { viewer } = await mountViewer({ model: "core", skipLoad: true, mutate: (fx) => { fx.data.layout = LAYOUT; } });
+    spySync(viewer, calls);
+    const seen = [];
+    calls.push = function (c) {
+        if (c.type === "ext") {
+            seen.push({ layout: c.layout, has: c.api.items.has("CNC-2") });
+        }
+        return Array.prototype.push.call(this, c);
+    };
+    await viewer.load();
+    expect(seen.some((s) => s.layout?.version.n === 2 && s.has)).toBe(true);
+    const types = calls.map((c) => c.type);
+    expect(types.indexOf("ext")).toBeLessThan(types.indexOf("sync"));
+});
+
+test("R25c1 частина моделі, що приїхала після даних: розширення бачить нові вузли (fresh) до stockLoad.sync", async () => {
     const calls = spyExtension();
     const { viewer } = await mountViewer({ model: "core", skipLoad: true, mutate: (fx) => { fx.data.layout = LAYOUT; } });
     spySync(viewer, calls);
     await viewer.load();
-    const withFresh = calls.filter((c) => c.type === "ext" && c.fresh?.length);
-    expect(withFresh.length).toBeGreaterThan(0);
-    const codes = new Set(withFresh.flatMap((c) => c.fresh.map((o) => o.userData.code)));
-    expect(codes.has("CNC-2")).toBe(true);
-    expect(codes.has("UNLOAD-3")).toBe(true);
-    expect(withFresh.every((c) => c.layout?.version.n === 2)).toBe(true);
-    // перед кожним sync було хоч одне розширення, і після останньої «свіжої» порції розширення стоїть перед sync
-    const types = calls.map((c) => c.type);
-    expect(types.indexOf("ext")).toBeLessThan(types.indexOf("sync"));
-    const lastFresh = calls.lastIndexOf(withFresh.at(-1));
-    expect(types.indexOf("sync", lastFresh)).toBeGreaterThan(lastFresh);
+    await viewer.loadPart("engineering");
+    const at = calls.findIndex((c) => c.type === "ext" && c.fresh?.some((o) => o.userData.code === "AHU-1"));
+    expect(at).toBeGreaterThan(-1);
+    expect(calls[at].layout?.version.n).toBe(2);
+    expect(calls.slice(at + 1).some((c) => c.type === "sync")).toBe(true);
 });
 
 test("R25d дельта: layout замінюється цілком, розширення викликається до stockLoad.sync", async () => {
@@ -86,10 +97,10 @@ test("R25d дельта: layout замінюється цілком, розши�
 
 test("R25e повна дельта: розширення викликається з новою розкладкою до stockLoad.sync", async () => {
     const calls = spyExtension();
-    const { viewer } = await mountViewer({ model: "none" });
+    const { viewer, fx } = await mountViewer({ model: "none" });
     spySync(viewer, calls);
     calls.length = 0;
-    viewer.applyPatch({ full: { layout: LAYOUT } });
+    viewer.applyPatch({ full: { ...fx.data, layout: LAYOUT } });
     const types = calls.map((c) => c.type);
     expect(types.includes("ext")).toBe(true);
     expect(calls.find((c) => c.type === "ext").layout?.version.n).toBe(2);

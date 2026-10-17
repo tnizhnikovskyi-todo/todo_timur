@@ -32,9 +32,10 @@ function bbox(T, obj) {
 }
 const centre = (T, obj) => bbox(T, obj).getCenter(new T.Vector3());
 const near = (a, b, eps = 1e-3) => Math.abs(a - b) < eps;
-/** Те саме, що `pick(ev)` ядра: перший видимий меш на промені → найближчий предок з кодом. */
-function pickAt(T, viewer, point) {
-    const ray = new T.Raycaster(new T.Vector3(point.x, point.y + 50, point.z), new T.Vector3(0, -1, 0));
+/** Коди на промені, що йде вниз з `origin`: той самий відбір, що в `pick(ev)` ядра (видимий меш → найближчий предок з кодом). */
+function pickCodes(T, viewer, origin) {
+    const ray = new T.Raycaster(origin, new T.Vector3(0, -1, 0));
+    const codes = [];
     for (const hit of ray.intersectObjects(viewer.scene.children, true)) {
         let shown = true;
         for (let o = hit.object; o; o = o.parent) {
@@ -45,12 +46,14 @@ function pickAt(T, viewer, point) {
         }
         for (let o = hit.object; o; o = o.parent) {
             if (o.userData?.code) {
-                return o.userData.code;
+                codes.push(o.userData.code);
+                break;
             }
         }
     }
-    return null;
+    return codes;
 }
+const pickAt = (T, viewer, origin) => pickCodes(T, viewer, origin)[0] ?? null;
 /** Усі екземпляри вантажу (InstancedMesh) у світових координатах. */
 function cargoPoints(T, viewer) {
     const pts = [];
@@ -122,7 +125,8 @@ test("hidden/replaced: visible = false, поза items, не вибираєть�
     const { viewer } = await mountViewer({ model: "core" });
     const unload = viewer.items.get("UNLOAD-3");
     const c = centre(T, unload);
-    expect(pickAt(T, viewer, c)).not.toBe(null);
+    const above = new T.Vector3(c.x, c.y + 3, c.z);
+    expect(pickCodes(T, viewer, above).includes("UNLOAD-3")).toBe(true);
     const rack = viewer.items.get("FG-RACK-R5");
     const rp = rack.getWorldPosition(new T.Vector3());
     viewer.applyPatch({
@@ -137,7 +141,7 @@ test("hidden/replaced: visible = false, поза items, не вибираєть�
     expect(viewer.items.has("FG-R5-B01-L1")).toBe(false);
     expect(rack.visible).toBe(false);
     expect(viewer.items.has("FG-RACK-R5")).toBe(false);
-    expect(pickAt(T, viewer, c)).not.toBe("UNLOAD-3");
+    expect(pickCodes(T, viewer, above).includes("UNLOAD-3")).toBe(false);
     viewer.select("UNLOAD-3");
     expect(viewer.getState().selected).toBe(null);
     // решта стелажів на місці
@@ -149,7 +153,7 @@ test("hidden/replaced: visible = false, поза items, не вибираєть�
     expect(viewer.items.get("UNLOAD-3")).toBe(unload);
     expect(rack.visible).toBe(true);
     expect(viewer.items.get("FG-RACK-R5")).toBe(rack);
-    expect(pickAt(T, viewer, c)).not.toBe(null);
+    expect(pickCodes(T, viewer, above).includes("UNLOAD-3")).toBe(true);
 });
 
 test("hidden: вантаж за залишками прихованої комірки знімається", async () => {
@@ -169,11 +173,11 @@ test("hidden: вантаж за залишками прихованої комі
 
 const NEW_MACHINE = {
     code: "NEWM-1", kind: "placement", name: "Новий верстат", category: "machine", front: "s",
-    dims: { L: 4, W: 2, H: 2 }, x: 20, y: 10, rot: 90, elev: 0, model_url: null, template: null, params: {}, cells: [],
+    dims: { L: 4, W: 2, H: 2 }, x: -30, y: 36, rot: 90, elev: 0, model_url: null, template: null, params: {}, cells: [],
 };
 const NEW_SLOT = {
     code: "NR-1", kind: "slot", name: "Новий стелаж", category: "rack", template: "pallet_rack",
-    dims: { L: 5.4, W: 1.2, H: 4.5 }, x: 60, y: 20, rot: 0, elev: 0, model_url: null,
+    dims: { L: 5.4, W: 1.2, H: 4.5 }, x: -30, y: 10, rot: 0, elev: 0, model_url: null,
     params: { bays: 2, levels: 3, level_height: 1.5, bay_width: 2.7 },
     cells: [1, 2].flatMap((b) => [1, 2, 3].map((l) => ({
         code: `NR-1-B0${b}-L${l}`, lx: -2.7 + (b - 0.5) * 2.7, ly: 0, lz: (l - 1) * 1.5 + 0.1, w: 2.7, d: 1.2, h: 1.4, kind: "pallet_cell",
@@ -189,9 +193,9 @@ test("added: верстат реєструється в items, вибираєт�
     expect(obj.userData.kind).toBe("machine");
     expect(obj.userData.label).toBe("Новий верстат");
     expect(obj.parent).toBe(viewer.scene);
-    expect(near(obj.position.x, 20) && near(obj.position.z, -10)).toBe(true);
+    expect(near(obj.position.x, -30) && near(obj.position.z, -36)).toBe(true);
     // клік по невидимому об'єму: те саме рішення, що в ядрі
-    expect(pickAt(T, viewer, new T.Vector3(20, 1, -10))).toBe("NEWM-1");
+    expect(pickAt(T, viewer, new T.Vector3(-30, 2.5, -36))).toBe("NEWM-1");
     viewer.select("NEWM-1");
     expect(viewer.getState().selected).toBe("NEWM-1");
     expect(q(el, ".o_f3d_code").textContent).toBe("NEWM-1");
@@ -227,6 +231,11 @@ test("added: «Відкрити в Odoo» нового об'єкта йде че
     });
     r.viewer.applyPatch({ layout: layout({ added: [NEW_MACHINE] }) });
     r.viewer.select("NEWM-1");
+    // власного запису у payload немає: ядро питає resolve за кодом і лише потім показує кнопку
+    for (let i = 0; i < 100 && !q(r.el, ".o_f3d_c-open"); i++) {
+        await tick();
+    }
+    expect(calls.some((u) => u.includes("code=NEWM-1"))).toBe(true);
     q(r.el, ".o_f3d_c-open").click();
     await tick();
     await tick();
@@ -247,10 +256,10 @@ test("added: нове місце — каркас і комірки з кода�
     // комірка B01-L2: центр світових координат = місце + (lx, lz, −ly)
     const cell = viewer.items.get("NR-1-B01-L2");
     const w = cell.getWorldPosition(new T.Vector3());
-    expect(near(w.x, 60 - 1.35)).toBe(true);
-    expect(near(w.y, 1.5 + 0.1) && near(w.z, -20)).toBe(true);
+    expect(near(w.x, -30 - 1.35)).toBe(true);
+    expect(near(w.y, 1.5 + 0.1) && near(w.z, -10)).toBe(true);
     // кліком вибирається комірка (а не каркас)
-    const top = new T.Vector3(w.x, w.y + 0.5, w.z);
+    const top = new T.Vector3(w.x, w.y + 1.4, w.z); // між верхом L2 (+1,3) і низом L3 (+1,6)
     expect(pickAt(T, viewer, top)).toBe("NR-1-B01-L2");
     viewer.select("NR-1-B01-L2");
     expect(viewer.getState().selected).toBe("NR-1-B01-L2");
@@ -317,8 +326,9 @@ test("модель варіанта: GLB недоступний — лишаєт
     // хелпер fetchPart віддає тіло 404 як буфер: розбір GLB падає → розкладка лишає умовну модель
     const { viewer } = await mountViewer({ model: "core" });
     viewer.applyPatch({ layout: layout({ added: [{ ...NEW_MACHINE, model_url: "/f3d/constructor/model/9/glb", variant_id: 9 }] }) });
-    await tick();
-    await tick();
+    for (let i = 0; i < 300 && !warns.length; i++) {
+        await tick();
+    }
     const obj = viewer.items.get("NEWM-1");
     expect(!!obj).toBe(true);
     expect(bbox(T, obj).isEmpty()).toBe(false);
