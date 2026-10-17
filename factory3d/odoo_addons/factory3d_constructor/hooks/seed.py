@@ -75,7 +75,9 @@ def normalize_seed(data):
         variant['front_side'] = (variant.get('front_side') or 's').lower()
         variant['utilities'] = _utilities(variant.get('utilities'))
         # зведені варіанти сцени (паспорт scene_*) не створюють maintenance.equipment, решта — створюють
-        variant.setdefault('create_equipment', not str(variant.get('passport_role') or '').startswith(SCENE_ROLE_PREFIX))
+        variant.setdefault(
+            'create_equipment', not str(variant.get('passport_role') or '').startswith(SCENE_ROLE_PREFIX)
+        )
         variant.setdefault('layer_kinds', variant.get('allowed_layer_kinds') or [])
         variant.setdefault('slot_types', variant.get('allowed_slot_types') or [])
         variants.append(variant)
@@ -174,7 +176,9 @@ def existing_equipment(env, codes):
     codes = list(codes)
     if not codes:
         return {}
-    found = Equipment.search(['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('serial_no', 'in', codes)])
+    found = Equipment.search(
+        ['|', '|', ('f3d_code', 'in', codes), ('f3d_alias', 'in', codes), ('serial_no', 'in', codes)]
+    )
     out = {}
     for key in ('f3d_code', 'f3d_alias'):
         for rec in found:

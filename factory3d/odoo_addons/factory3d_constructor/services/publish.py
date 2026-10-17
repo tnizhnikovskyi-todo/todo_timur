@@ -283,7 +283,9 @@ def _plan_equipment(site, env, lines, issues):
                     if zone:
                         vals['f3d_zone_id'] = zone.id
                     lines.append(
-                        _line('create', EQUIPMENT, code, p.name, vals, None, p.uid, "паспорт %s" % passport.display_name)
+                        _line(
+                            'create', EQUIPMENT, code, p.name, vals, None, p.uid, "паспорт %s" % passport.display_name
+                        )
                     )
             else:
                 vals = {}
