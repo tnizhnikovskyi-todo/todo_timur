@@ -191,6 +191,24 @@ class TestSeedMigration(SeedPublishCase):
         self.assertEqual(version.snapshot_sha1, sha)
         self.assertPlanEmpty(publish.build_plan(site))
 
+    def test_layer_visibility_is_restored(self):
+        """Старий сід ігнорував `visible`: усі шари видимі; міграція вимикає дах, інженерні мережі, територію."""
+        site = self.seed_site
+        env = self.env(context=dict(self.env.context, f3d_no_touch=True, tracking_disable=True))
+        data = seed.normalize_seed(seed.read_seed())
+        want = {item['uid']: bool(item.get('visible', True)) for item in data['layers']}
+        layers = env['f3d.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])
+        layers.write({'visible': True})
+        snapshot.rebuild_version(site, site.version_ids)
+        report = seed.resync_site(self.env)
+        self.assertEqual(report['status'], 'fixed')
+        self.assertEqual(report['layers'], sum(1 for visible in want.values() if not visible))
+        self.assertEqual({layer.uid: layer.visible for layer in layers}, want)
+        self.assertEqual(
+            snapshot.count_differences(snapshot.build_snapshot(site), snapshot.load_snapshot(site.version_ids)), 0
+        )
+        self.assertEqual(seed.resync_site(self.env)['layers'], 0)
+
     def test_changed_draft_is_not_touched(self):
         site = self.seed_site
         self.assertTrue(site)

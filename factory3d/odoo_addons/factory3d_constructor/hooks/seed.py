@@ -327,6 +327,7 @@ def load_seed(env, data):
                 'bounds': item.get('bounds') or None,
                 'color': item.get('color', '#8d99ae'),
                 'opacity': item.get('opacity', 1.0),
+                'visible': bool(item.get('visible', True)),
                 'allowed_slot_type_ids': [
                     Command.set(
                         [terms[('slot_type', k)] for k in item.get('slot_types') or [] if ('slot_type', k) in terms]
@@ -408,10 +409,11 @@ def seed_state_problem(site):
 def resync_site(env, data=None):
     """Виправляє посіяну площадку на місці (міграція 19.0.1.0.1), ідемпотентно.
 
-    Лише поки площадка в стані сіда (`seed_state_problem`). Переписує варіанти (прапорець create_equipment, варіант
-    справжнього паспорта для розміщень з наявним обладнанням), параметри й перевизначення місць (вид локації, відключена
-    комірка без локації Odoo), перебудовує знімок v1 (baseline зберігається). Записи Odoo (обладнання, локації,
-    паспорти) не видаляє й не змінює, крім службових полів зв'язку; чернетка (`draft_rev`) не зсувається.
+    Лише поки площадка в стані сіда (`seed_state_problem`). Переписує видимість шарів за замовчуванням (`visible` сіда),
+    варіанти (прапорець create_equipment, варіант справжнього паспорта для розміщень з наявним обладнанням), параметри й
+    перевизначення місць (вид локації, відключена комірка без локації Odoo), перебудовує знімок v1 (baseline
+    зберігається). Записи Odoo (обладнання, локації, паспорти) не видаляє й не змінює, крім службових полів зв'язку;
+    чернетка (`draft_rev`) не зсувається.
     Повертає звіт `{'status': 'fixed'|'skipped'|'no_site', ...}`."""
     data = normalize_seed(data or read_seed())
     env = env(su=True, context=dict(env.context, f3d_no_touch=True, tracking_disable=True))
@@ -422,7 +424,13 @@ def resync_site(env, data=None):
     if problem:
         return {'status': 'skipped', 'reason': problem}
     variants, skipped = ensure_variants(env, data)
-    report = {'status': 'fixed', 'flags': 0, 'slots': 0, 'placements': 0, 'skipped_variants': skipped}
+    report = {'status': 'fixed', 'flags': 0, 'slots': 0, 'placements': 0, 'layers': 0, 'skipped_variants': skipped}
+    layers = {x.uid: x for x in env['f3d.layer'].with_context(active_test=False).search([('site_id', '=', site.id)])}
+    for item in data['layers']:  # старий сід ігнорував `visible`: усі 31 шар вмикались одразу й закривали верстати
+        layer = layers.get(item['uid'])
+        if layer and layer.visible != bool(item.get('visible', True)):
+            layer.write({'visible': bool(item.get('visible', True))})
+            report['layers'] += 1
     for item in data['variants']:
         variant = variants.get(item['key'])
         if variant and variant.create_equipment != item['create_equipment']:

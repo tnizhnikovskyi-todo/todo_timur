@@ -34,6 +34,16 @@ class TestSceneSeed(F3DConstructorCase):
         )
         self.assertEqual(len({layer.group_name for layer in layers}), 8)
 
+    def test_layer_visibility_follows_seed(self):
+        """Дах, інженерні мережі й територія вимкнені за замовчуванням: їхні зони на весь цех закривають верстати."""
+        with file_open('factory3d_constructor/data/seed_site.json', 'rb') as handle:
+            seed = json.loads(handle.read().decode('utf-8'))
+        want = {item['name']: bool(item.get('visible', True)) for item in seed['layers']}
+        got = {layer.name: layer.visible for layer in self.site.layer_ids}
+        self.assertEqual(got, want)
+        self.assertTrue(got['Виробничі лінії'])
+        self.assertFalse(got['Пожежна сигналізація'])
+
     def test_every_inventory_code_is_in_the_seed(self):
         slots = self.env['f3d.slot'].search([('site_id', '=', self.site.id)])
         covered = set(self.env['f3d.placement'].search([('site_id', '=', self.site.id)]).mapped('code'))
