@@ -17,7 +17,8 @@ class TestModelHoot(HttpCase):
     """HOOT-тести W3 (static/tests/model/*.test.js, бандл web.assets_unit_tests) у headless Chrome.
 
     Конвеєр моделі R-15…R-17 і віджети f3d_model_preview / f3d_model_upload: AC-34(JS), 35(JS), 37…42.
-    Пакет відбирається за назвою `@factory3d_constructor/model`; suite `@factory3d_constructor/editor` (W2) не запускається.
+    Пакет відбирається за назвою `@factory3d_constructor/model`; suite `@factory3d_constructor/editor` (W2)
+    не запускається.
     """
 
     def test_hoot_suite(self):

@@ -13,7 +13,7 @@ import { UNIT_LABELS, sizeToVariantDims } from "../model/normalize";
 import { loadThree } from "../model/three";
 import { uploadModel } from "../model/upload";
 import { PREVIEW_CONFIG, createPreview } from "./preview_core";
-import { getStaged, setStaged, stagingBus } from "./staging";
+import { getStaged, sameRecord, setStaged, stagingBus } from "./staging";
 
 const UNITS = ["mm", "cm", "m", "in"];
 
@@ -58,7 +58,7 @@ export class F3dModelUpload extends Component {
         this.files = [];
         this.loaded = null;
         this.onStaged = (e) => {
-            if (e.detail === this.props.record) {
+            if (sameRecord(e.detail, this.props.record)) {
                 this.state.rev++; // staged лежить поза useState: перемальовуємо вручну
             }
         };
@@ -106,8 +106,13 @@ export class F3dModelUpload extends Component {
         return s ? `${s.x} × ${s.z} × ${s.y} мм` : "";
     }
 
-    get sizeMb() {
-        return this.meta.size_bytes ? (this.meta.size_bytes / MB).toFixed(2) : "";
+    /** «3.2 КБ» / «1.25 МБ». */
+    get fileSizeText() {
+        const b = this.meta.size_bytes;
+        if (!b) {
+            return "";
+        }
+        return b < MB ? `${(b / 1024).toFixed(1)} КБ` : `${(b / MB).toFixed(2)} МБ`;
     }
 
     get overLimit() {

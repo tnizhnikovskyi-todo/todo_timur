@@ -47,7 +47,7 @@
                 <dl class="o_f3d_mu_kv">
                     <t t-if="meta.file_name"><dt>Файл</dt><dd t-esc="meta.file_name"/></t>
                     <t t-if="meta.format"><dt>Формат</dt><dd class="text-uppercase" t-esc="meta.format"/></t>
-                    <t t-if="sizeMb"><dt>Розмір</dt><dd><t t-esc="sizeMb"/> МБ</dd></t>
+                    <t t-if="fileSizeText"><dt>Розмір</dt><dd class="o_f3d_mu_bytes" t-esc="fileSizeText"/></t>
                     <t t-if="meta.triangles"><dt>Трикутників</dt><dd class="o_f3d_mu_tri" t-esc="meta.triangles"/></t>
                     <t t-if="hasSize"><dt>Габарит (Д×Ш×В)</dt><dd class="o_f3d_mu_size" t-esc="sizeText"/></t>
                 </dl>

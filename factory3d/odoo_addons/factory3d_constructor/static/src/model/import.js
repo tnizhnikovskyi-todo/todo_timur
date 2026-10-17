@@ -4,7 +4,7 @@ import { loadLoaders, loadThree, getThree } from "./three";
 import {
     DEFAULT_LIMITS, MIME_GLB, baseName, extOf, pickMainFile, tooLargeMessage, trianglesMessage,
 } from "./formats";
-import { ModelImportError, normalizeMaterials, normalizeObject } from "./normalize";
+import { ModelImportError, ensureNormals, normalizeMaterials, normalizeObject } from "./normalize";
 import { simplifyToTriangles } from "./simplify";
 
 export const MB = 1048576;
@@ -172,6 +172,7 @@ export async function importModelFiles(files, opts = {}) {
     const T = opts.T || (await loadThree()).THREE;
     const loaded = opts.loaded || (await loadModelObject(files, { T }));
     normalizeMaterials(loaded.object, T);
+    ensureNormals(loaded.object);
     let n = normalizeObject(loaded.object, { ext, units, upAxis }, T);
     let object = n.object;
     const warnings = [...n.warnings];
