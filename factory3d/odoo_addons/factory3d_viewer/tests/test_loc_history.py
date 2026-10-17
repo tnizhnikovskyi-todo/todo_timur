@@ -1,9 +1,10 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from odoo import Command, fields
+from odoo import Command
 from odoo.tests import HttpCase, tagged
 
+from odoo.addons.factory3d_viewer.tools import dates
 from odoo.addons.factory3d_viewer.tools import docs as docs_tools
 from odoo.addons.factory3d_viewer.tools import loc_history
 
@@ -205,7 +206,7 @@ class TestLocHistory(HttpCase, F3dViewerBase):
             self._receive(2, lot)
             ships.append(self._ship(2))
         old = ships[0].move_line_ids
-        old.date = fields.Datetime.now() - timedelta(days=loc_history.LEFT_DAYS + 5)
+        old.date = dates.now(self.env) - timedelta(days=loc_history.LEFT_DAYS + 5)  # вікно рахується від demo_clock
         data = self._get("/f3d/viewer/loc/ZZ-H-CELL").json()
         self.assertEqual([r["lot"] for r in data["left"]], ["ZZ-LOT-W4", "ZZ-LOT-W3", "ZZ-LOT-W2"])
         self.assertFalse(data["truncated"])
