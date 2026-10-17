@@ -29,6 +29,7 @@
 | 9 | `factory3d_access` | 4 | [v0.2, 506 р.](modules/factory3d_access/ARCHITECTURE.md) | [v0.2, 2 070 р.](modules/factory3d_access/SPEC.md) |
 | 10 | `factory3d_bms` | 5 | [v0.2, 444 р.](modules/factory3d_bms/ARCHITECTURE.md) | [v0.2, 1 812 р.](modules/factory3d_bms/SPEC.md) |
 | 11 | `factory3d_fire_safety` | 5 | [v0.3, 551 р.](modules/factory3d_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/factory3d_fire_safety/SPEC.md) |
+| 12 | `factory3d_constructor` | 6 | [v0.1, 295 р.](modules/factory3d_constructor/ARCHITECTURE.md) | [v0.1, 999 р.](modules/factory3d_constructor/SPEC.md) |
 
 ## Як читати
 
