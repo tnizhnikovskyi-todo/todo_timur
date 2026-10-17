@@ -114,7 +114,7 @@ test("R25f розширення, що кидає помилку, не ламає
     const orig = console.error;
     console.error = (...a) => errors.push(a);
     after(() => { console.error = orig; });
-    registerViewerExtension({ applyLayout() { throw new Error("boom"); } });
+    after(registerViewerExtension({ applyLayout() { throw new Error("boom"); } }));
     const calls = spyExtension();
     const { viewer } = await mountViewer({ model: "none" });
     expect(calls.some((c) => c.type === "ext")).toBe(true);
