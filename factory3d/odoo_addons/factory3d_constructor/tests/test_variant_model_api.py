@@ -28,12 +28,15 @@ class TestVariantModelApi(F3DConstructorHttpCase):
     def test_ac33_upload_glb_server_values_win(self):
         glb = make_glb(triangles=24, size=(1.0, 0.5, 2.0), pad_to=200 * 1024)
         before = self.attachments()
-        resp = self.upload(original=('box.obj', b'o box\nv 0 0 0\n'), glb=('box.glb', glb),
-                           meta={'triangles': 999, 'bbox_m': [9, 9, 9], 'units': 'mm', 'up_axis': 'z', 'warnings': []})
+        resp = self.upload(
+            original=('box.obj', b'o box\nv 0 0 0\n'),
+            glb=('box.glb', glb),
+            meta={'triangles': 999, 'bbox_m': [9, 9, 9], 'units': 'mm', 'up_axis': 'z', 'warnings': []},
+        )
         self.assertEqual(resp.status_code, 200, resp.text)
         data = resp.json()
         self.assertEqual(data['status'], 'ok')
-        self.assertEqual(data['meta']['triangles'], 24)          # значення клієнта (999) перезаписано
+        self.assertEqual(data['meta']['triangles'], 24)  # значення клієнта (999) перезаписано
         self.assertEqual(data['meta']['bbox_m'], [1.0, 0.5, 2.0])
         self.assertEqual(data['meta']['size_mm'], {'x': 1000, 'y': 500, 'z': 2000})
         self.assertEqual((data['meta']['units'], data['meta']['up_axis'], data['meta']['format']), ('mm', 'z', 'obj'))
@@ -45,7 +48,9 @@ class TestVariantModelApi(F3DConstructorHttpCase):
         self.assertEqual(got.content, glb)
         self.assertEqual(got.headers['Content-Type'], 'model/gltf-binary')
         self.assertIn('private', got.headers['Cache-Control'])
-        self.assertEqual(self.url_open(data['glb_url'], headers={'If-None-Match': got.headers['ETag']}).status_code, 304)
+        self.assertEqual(
+            self.url_open(data['glb_url'], headers={'If-None-Match': got.headers['ETag']}).status_code, 304
+        )
         orig = self.url_open(data['original_url'])
         self.assertEqual(orig.headers['Content-Type'], 'application/octet-stream')
         # заміна: старі вкладення видаляються
@@ -159,4 +164,7 @@ class TestVariantModelApi(F3DConstructorHttpCase):
         self.variant.invalidate_recordset()
         self.assertEqual(self.variant.model_original_id.name, 'passwd.glb')
         self.variant.with_user(self.u_tech).action_clear_model()
-        self.assertEqual((self.variant.model_status, bool(self.variant.model_meta), bool(self.variant.model_glb_id)), ('none', False, False))
+        self.assertEqual(
+            (self.variant.model_status, bool(self.variant.model_meta), bool(self.variant.model_glb_id)),
+            ('none', False, False),
+        )

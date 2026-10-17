@@ -1,7 +1,9 @@
 """API-01…API-08 (JSON-RPC, auth user). Ответ — `{ok: true, …}` або `{ok: false, code, message, …}` (HTTP 200).
 
-Права — від імені користувача (без sudo), крім API-07 (публікація: sudo лише всередині `services.publish` після перевірок).
+Права — від імені користувача (без sudo), крім API-07 (публікація: sudo лише всередині `services.publish`
+після перевірок).
 """
+
 import logging
 import re
 
@@ -27,14 +29,57 @@ ROLE_GROUPS = {
 }
 # Дозволені поля для API-04 (все інше — validation); посилання на нові записи — "@<tmp>"
 SAVE_FIELDS = {
-    'f3d.layer': {'uid', 'name', 'kind', 'sequence', 'elevation_m', 'grid_step_m', 'aisle_width_m',
-                  'max_floor_load_kn_m2', 'bounds', 'color', 'opacity', 'style', 'visible', 'aisles', 'fire_paths',
-                  'utilities', 'underlay_params', 'underlay_attachment_id', 'active', 'allowed_slot_types',
-                  'edit_group_ids'},
-    'f3d.slot': {'uid', 'layer_id', 'template', 'code_prefix', 'x_m', 'y_m', 'rotation', 'params', 'overrides',
-                 'parent_location_id', 'note', 'active'},
-    'f3d.placement': {'uid', 'layer_id', 'variant_id', 'slot_id', 'cell_code', 'code', 'name', 'x_m', 'y_m',
-                      'rotation', 'note', 'active'},
+    'f3d.layer': {
+        'uid',
+        'name',
+        'kind',
+        'sequence',
+        'elevation_m',
+        'grid_step_m',
+        'aisle_width_m',
+        'max_floor_load_kn_m2',
+        'bounds',
+        'color',
+        'opacity',
+        'style',
+        'visible',
+        'aisles',
+        'fire_paths',
+        'utilities',
+        'underlay_params',
+        'underlay_attachment_id',
+        'active',
+        'allowed_slot_types',
+        'edit_group_ids',
+    },
+    'f3d.slot': {
+        'uid',
+        'layer_id',
+        'template',
+        'code_prefix',
+        'x_m',
+        'y_m',
+        'rotation',
+        'params',
+        'overrides',
+        'parent_location_id',
+        'note',
+        'active',
+    },
+    'f3d.placement': {
+        'uid',
+        'layer_id',
+        'variant_id',
+        'slot_id',
+        'cell_code',
+        'code',
+        'name',
+        'x_m',
+        'y_m',
+        'rotation',
+        'note',
+        'active',
+    },
     'f3d.check.config': {'check_key', 'enabled', 'mode', 'params'},
 }
 REF_FIELDS = {'layer_id', 'slot_id', 'variant_id'}
@@ -53,10 +98,14 @@ def params(env):
             return cast(get('factory3d.constructor.' + key, default))
         except (TypeError, ValueError):
             return cast(default)
+
     return {
-        'autosave_ms': num('autosave_ms', 1500, int), 'max_model_mb': num('max_model_mb', 20),
-        'max_triangles': num('max_triangles', 50000, int), 'eps_mm': num('eps_mm', 1),
-        'reach_default_m': num('reach_default_m', 15), 'publish_enabled': get('factory3d.constructor.publish_enabled') == 'True',
+        'autosave_ms': num('autosave_ms', 1500, int),
+        'max_model_mb': num('max_model_mb', 20),
+        'max_triangles': num('max_triangles', 50000, int),
+        'eps_mm': num('eps_mm', 1),
+        'reach_default_m': num('reach_default_m', 15),
+        'publish_enabled': get('factory3d.constructor.publish_enabled') == 'True',
     }
 
 
@@ -82,7 +131,6 @@ def error_from_exception(exc):
 
 
 class F3dConstructorController(http.Controller):
-
     # --- API-01 -------------------------------------------------------------------------------------
     @http.route('/f3d/constructor/sites', type='jsonrpc', auth='user', methods=['POST'])
     def sites(self, **kw):
@@ -92,11 +140,19 @@ class F3dConstructorController(http.Controller):
         for site in env['f3d.site'].search([]):
             version = site.active_version_id
             can_edit = manager or any(env['f3d.layer']._f3d_can_edit_layer(layer) for layer in site.layer_ids)
-            result.append({
-                'id': site.id, 'name': site.name, 'code': site.code, 'company_id': site.company_id.id,
-                'seed': bool(site.seed_key), 'active_version': {'id': version.id, 'n': version.n} if version else None,
-                'draft_changes': site.draft_changes, 'has_changes': site.has_changes, 'can_edit': bool(can_edit),
-            })
+            result.append(
+                {
+                    'id': site.id,
+                    'name': site.name,
+                    'code': site.code,
+                    'company_id': site.company_id.id,
+                    'seed': bool(site.seed_key),
+                    'active_version': {'id': version.id, 'n': version.n} if version else None,
+                    'draft_changes': site.draft_changes,
+                    'has_changes': site.has_changes,
+                    'can_edit': bool(can_edit),
+                }
+            )
         return {'ok': True, 'sites': result}
 
     # --- API-02 -------------------------------------------------------------------------------------
@@ -114,12 +170,18 @@ class F3dConstructorController(http.Controller):
         vals = {'name': name, 'code': code}
         if building:
             try:
-                vals.update(building_length_m=float(building['l']), building_width_m=float(building['w']),
-                            building_height_m=float(building['h']))
+                vals.update(
+                    building_length_m=float(building['l']),
+                    building_width_m=float(building['w']),
+                    building_height_m=float(building['h']),
+                )
             except (KeyError, TypeError, ValueError):
                 return fail('validation', "Габарити будівлі: числа l, w, h.")
-        if env['f3d.site'].with_context(active_test=False).search_count(
-                [('code', '=', code), ('company_id', '=', env.company.id)]):
+        if (
+            env['f3d.site']
+            .with_context(active_test=False)
+            .search_count([('code', '=', code), ('company_id', '=', env.company.id)])
+        ):
             return fail('validation', "Код площадки має бути унікальним у компанії.")
         try:
             with env.cr.savepoint():
@@ -145,10 +207,18 @@ class F3dConstructorController(http.Controller):
         catalog = {}
         for variant in variants:
             passport = variant.passport_id
-            entry = catalog.setdefault(passport.id, {
-                'passport_id': passport.id, 'name': passport.name, 'role': passport.role,
-                'manufacturer': passport.manufacturer, 'model': passport.model, 'category': passport.f3d_category,
-                'variants': []})
+            entry = catalog.setdefault(
+                passport.id,
+                {
+                    'passport_id': passport.id,
+                    'name': passport.name,
+                    'role': passport.role,
+                    'manufacturer': passport.manufacturer,
+                    'model': passport.model,
+                    'category': passport.f3d_category,
+                    'variants': [],
+                },
+            )
             entry['variants'].append(st.variant_dict(variant))
         user_groups = env.user.all_group_ids
         roles = [role for role, xmlid in ROLE_GROUPS.items() if env.ref(xmlid) in user_groups]
@@ -159,14 +229,21 @@ class F3dConstructorController(http.Controller):
         parent = site.default_parent_location_id
         data = {
             'site': {
-                'id': site.id, 'name': site.name, 'code': site.code,
-                'building': {'length': site.building_length_m, 'width': site.building_width_m,
-                             'height': site.building_height_m},
+                'id': site.id,
+                'name': site.name,
+                'code': site.code,
+                'building': {
+                    'length': site.building_length_m,
+                    'width': site.building_width_m,
+                    'height': site.building_height_m,
+                },
                 'column_grid': {'step_x': site.column_step_x_m, 'step_y': site.column_step_y_m},
                 'default_parent_location': {'id': parent.id, 'name': parent.complete_name} if parent else None,
                 'active_version': {'id': version.id, 'n': version.n} if version else None,
                 'draft_base_version': {'id': base.id, 'n': base.n} if base else None,
-                'draft_rev': site.draft_rev, 'draft_changes': site.draft_changes, 'has_changes': site.has_changes,
+                'draft_rev': site.draft_rev,
+                'draft_changes': site.draft_changes,
+                'has_changes': site.has_changes,
                 'settings': params(env),
             },
             'layers': [st.layer_dict(layer, xmlids) for layer in layers],
@@ -174,13 +251,26 @@ class F3dConstructorController(http.Controller):
             'placements': [st.placement_dict(p) for p in placements],
             'catalog': list(catalog.values()),
             'checks': st.check_configs(site),
-            'versions': [{
-                'id': v.id, 'n': v.n, 'published_at': str(v.published_at), 'by': v.published_by_id.name or '',
-                'note': v.note or '', 'state': v.state,
-                'counts': {'layers': v.layer_count, 'slots': v.slot_count, 'cells': v.cell_count,
-                           'placements': v.placement_count}} for v in versions],
+            'versions': [
+                {
+                    'id': v.id,
+                    'n': v.n,
+                    'published_at': str(v.published_at),
+                    'by': v.published_by_id.name or '',
+                    'note': v.note or '',
+                    'state': v.state,
+                    'counts': {
+                        'layers': v.layer_count,
+                        'slots': v.slot_count,
+                        'cells': v.cell_count,
+                        'placements': v.placement_count,
+                    },
+                }
+                for v in versions
+            ],
             'rights': {
-                'is_manager': manager, 'roles': roles,
+                'is_manager': manager,
+                'roles': roles,
                 'editable_layer_ids': [layer.id for layer in layers if Layer._f3d_can_edit_layer(layer)],
                 'can_publish': manager and params(env)['publish_enabled'],
                 'can_edit_catalog': env.user.has_group(ROLE_GROUPS['technologist']),
@@ -205,7 +295,8 @@ class F3dConstructorController(http.Controller):
         id_map, touched, index = {}, {}, -1
         try:
             with env.cr.savepoint():
-                for index, op in enumerate(ops):
+                for position, op in enumerate(ops):
+                    index = position
                     self._save_op(site, op, id_map, touched)
                 env.flush_all()
         except _OpError as exc:
@@ -222,8 +313,14 @@ class F3dConstructorController(http.Controller):
         for (model, rid), rec in touched.items():
             if rec.exists():
                 etags['%s:%d' % (model, rid)] = rec._f3d_etag()
-        return {'ok': True, 'rev': site.draft_rev, 'draft_changes': site.draft_changes, 'has_changes': site.has_changes,
-                'id_map': id_map, 'etags': etags}
+        return {
+            'ok': True,
+            'rev': site.draft_rev,
+            'draft_changes': site.draft_changes,
+            'has_changes': site.has_changes,
+            'id_map': id_map,
+            'etags': etags,
+        }
 
     def _resolve(self, vals, id_map):
         out = {}
@@ -342,8 +439,11 @@ class F3dConstructorController(http.Controller):
             return fail('rights', str(exc))
         version = result['version']
         return {
-            'ok': True, 'version': {'id': version.id, 'n': version.n},
-            'created': result['created'], 'updated': result['updated'], 'archived': result['archived'],
+            'ok': True,
+            'version': {'id': version.id, 'n': version.n},
+            'created': result['created'],
+            'updated': result['updated'],
+            'archived': result['archived'],
             'counts': {k: len(result[k]) for k in ('created', 'updated', 'archived')},
             'warnings': result['warnings'],
         }
@@ -375,4 +475,3 @@ class _OpError(Exception):
     def __init__(self, code, message, **extra):
         super().__init__(message)
         self.code, self.message, self.extra = code, message, extra
-

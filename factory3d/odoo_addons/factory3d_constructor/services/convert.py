@@ -3,13 +3,15 @@
 `CONVERTERS = {ext: (probe(), run(in_path, out_path, timeout))}` розширюється без змін ядра (тест підміняє словник).
 Жодна бібліотека не обов'язкова: без них модель лишається `pending_conversion`.
 """
+
 import shutil
 import subprocess
 
 CONVERT_TIMEOUT_S = 60
 UNAVAILABLE_MESSAGE = (
     "Перетворення STEP/IFC на сервері недоступне: бібліотеку не встановлено (cascadio / IfcConvert). "
-    "Оригінал збережено; експортуйте модель у GLB або OBJ.")
+    "Оригінал збережено; експортуйте модель у GLB або OBJ."
+)
 SERVER_FORMATS = ('step', 'stp', 'iges', 'igs', 'ifc')
 
 
@@ -23,6 +25,7 @@ def _probe_cascadio():
 
 def _run_cascadio(in_path, out_path, timeout):
     import cascadio
+
     cascadio.step_to_glb(in_path, out_path)  # ПРИПУЩЕННЯ щодо API cascadio (R-20)
 
 

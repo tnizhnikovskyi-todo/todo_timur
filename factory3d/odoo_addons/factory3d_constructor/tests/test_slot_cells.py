@@ -1,3 +1,5 @@
+from psycopg2 import IntegrityError
+
 from odoo.exceptions import ValidationError
 from odoo.tests import TransactionCase, tagged
 from odoo.tools import mute_logger
@@ -10,11 +12,20 @@ from .common import F3DConstructorCase
 class TestSlotCells(TransactionCase):
     """AC-11…AC-16 (сервісна частина): R-01."""
 
-    RACK = {'bays': 18, 'levels': 4, 'bay_width': 2.7, 'depth': 1.1, 'level_height': 1.5,
-            'positions_per_bay': 3, 'max_load_kg': 1000}
+    RACK = {
+        'bays': 18,
+        'levels': 4,
+        'bay_width': 2.7,
+        'depth': 1.1,
+        'level_height': 1.5,
+        'positions_per_bay': 3,
+        'max_load_kg': 1000,
+    }
 
     def _rack(self, rot=0, overrides=None, elevation=0.0, **params):
-        return cells.generate_cells('pallet_rack', 'FG-R1', 60.0, 5.0, rot, dict(self.RACK, **params), overrides, elevation)
+        return cells.generate_cells(
+            'pallet_rack', 'FG-R1', 60.0, 5.0, rot, dict(self.RACK, **params), overrides, elevation
+        )
 
     def test_ac11_pallet_rack(self):
         out = self._rack()
@@ -36,8 +47,9 @@ class TestSlotCells(TransactionCase):
         self.assertAlmostEqual(first['y'], -17.95)
 
     def test_ac12_templates(self):
-        self.assertEqual(set(cells.SLOT_TEMPLATES), {
-            'pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'machine_spot', 'zone'})
+        self.assertEqual(
+            set(cells.SLOT_TEMPLATES), {'pallet_rack', 'cantilever', 'shelf', 'floor_stack', 'machine_spot', 'zone'}
+        )
 
     def test_ac13_overrides(self):
         out = self._rack(overrides={'FG-R1-B02-L1': {'disabled': True}, 'FG-R1-B03-L1': {'max_load_kg': 1500}})
@@ -135,5 +147,5 @@ class TestSlotCellsOrm(F3DConstructorCase):
 
     def test_prefix_unique_per_site(self):
         self.make_slot(prefix='AA')
-        with self.assertRaises(Exception), mute_logger('odoo.sql_db'), self.cr.savepoint():
+        with self.assertRaises(IntegrityError), mute_logger('odoo.sql_db'), self.cr.savepoint():
             self.make_slot(kind='yard', prefix='AA', template='zone', polygon=[[0, 0], [1, 0], [1, 1]])

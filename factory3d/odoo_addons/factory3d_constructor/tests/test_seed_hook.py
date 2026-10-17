@@ -18,9 +18,21 @@ class TestSeedHook(F3DConstructorCase):
         site.sudo().unlink()
 
     def _models_count(self):
-        return {m: self.env[m].with_context(active_test=False).search_count([]) for m in (
-            'f3d.site', 'f3d.layer', 'f3d.slot', 'f3d.placement', 'f3d.equipment.variant', 'f3d.layout.version',
-            'f3d.check.config', 'stock.location', 'maintenance.equipment', 'mrp.workcenter')}
+        return {
+            m: self.env[m].with_context(active_test=False).search_count([])
+            for m in (
+                'f3d.site',
+                'f3d.layer',
+                'f3d.slot',
+                'f3d.placement',
+                'f3d.equipment.variant',
+                'f3d.layout.version',
+                'f3d.check.config',
+                'stock.location',
+                'maintenance.equipment',
+                'mrp.workcenter',
+            )
+        }
 
     def test_ac02_seed_created_and_idempotent(self):
         self._drop_seed_site()
@@ -28,8 +40,10 @@ class TestSeedHook(F3DConstructorCase):
         report1 = hooks.run_seed_hook(self.env)
         site = self.env['f3d.site'].search([('seed_key', '=', 'main_demo')])
         self.assertEqual(len(site), 1)
-        self.assertEqual((site.name, site.building_length_m, site.building_width_m, site.building_height_m),
-                         ("Меблеве підприємство", 150, 72, 9))
+        self.assertEqual(
+            (site.name, site.building_length_m, site.building_width_m, site.building_height_m),
+            ("Меблеве підприємство", 150, 72, 9),
+        )
         counts = data['meta']['counts']
         slots = self.env['f3d.slot'].search([('site_id', '=', site.id)])
         self.assertEqual(len(site.layer_ids), counts['layers'])
@@ -47,8 +61,10 @@ class TestSeedHook(F3DConstructorCase):
         report2 = hooks.run_seed_hook(self.env)
         self.assertEqual(before, self._models_count())
         self.assertEqual(report1, report2)
-        self.assertEqual(self.env['ir.config_parameter'].sudo().get_param('factory3d.constructor.seed_report'),
-                         json.dumps(report2, ensure_ascii=False, sort_keys=True))
+        self.assertEqual(
+            self.env['ir.config_parameter'].sudo().get_param('factory3d.constructor.seed_report'),
+            json.dumps(report2, ensure_ascii=False, sort_keys=True),
+        )
 
     def test_ac19_categories_after_hook(self):
         hooks.step_categories(self.env)
@@ -62,9 +78,12 @@ class TestSeedHook(F3DConstructorCase):
         """Наявні запис (barcode/f3d_code) зв'язуються, а не дублюються; незнайдені коди — у seed_report.unlinked."""
         self._drop_seed_site()
         Loc, Equipment = self.env['stock.location'], self.env['maintenance.equipment']
-        loc = Loc.search([('f3d_code', '=', 'FG-R1-B01-L4')]) or Loc.create({
-            'name': 'FG-R1-B01-L4', 'barcode': 'FG-R1-B01-L4', 'usage': 'internal', 'location_id': self.wh_stock.id})
-        eq = Equipment.search([('f3d_code', '=', 'SAW-1')]) or Equipment.create({'name': "Розкрій 1", 'f3d_code': 'SAW-1'})
+        loc = Loc.search([('f3d_code', '=', 'FG-R1-B01-L4')]) or Loc.create(
+            {'name': 'FG-R1-B01-L4', 'barcode': 'FG-R1-B01-L4', 'usage': 'internal', 'location_id': self.wh_stock.id}
+        )
+        eq = Equipment.search([('f3d_code', '=', 'SAW-1')]) or Equipment.create(
+            {'name': "Розкрій 1", 'f3d_code': 'SAW-1'}
+        )
         demo = bool(Loc.search_count([('f3d_code', '=', 'FG-R1-B01-L1')]))  # копія демо-бази: усі коди макета вже є
         name, parent = loc.name, loc.location_id
         locations, equipment = Loc.search_count([]), Equipment.search_count([])
@@ -75,8 +94,10 @@ class TestSeedHook(F3DConstructorCase):
         placement = self.env['f3d.placement'].search([('site_id', '=', site.id), ('code', '=', 'SAW-1')])
         self.assertEqual(placement.equipment_id, eq)
         self.assertEqual(eq.f3d_placement_uid, placement.uid)
-        self.assertEqual((Loc.search_count([]), Equipment.search_count([]), self.env['mrp.workcenter'].search_count([])),
-                         (locations, equipment, workcenters))  # нічого не створено
+        self.assertEqual(
+            (Loc.search_count([]), Equipment.search_count([]), self.env['mrp.workcenter'].search_count([])),
+            (locations, equipment, workcenters),
+        )  # нічого не створено
         self.assertNotIn('FG-R1-B01-L4', report['unlinked']['locations'])
         self.assertNotIn('SAW-1', report['unlinked']['equipment'])
         self.assertGreaterEqual(report['linked']['locations'], 1)

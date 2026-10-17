@@ -21,14 +21,19 @@ class TestChecks(TransactionCase):
     # --- AC-22: SAT (R-03) ---
     def test_sat_examples(self):
         obb = geo.make_obb
-        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, .5), obb(1.5, 0, 1, .5)), 0.5, places=3)
-        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, .5), obb(2, 0, 1, .5)), 0.0, places=6)
+        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, 0.5), obb(1.5, 0, 1, 0.5)), 0.5, places=3)
+        self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, 0.5), obb(2, 0, 1, 0.5)), 0.0, places=6)
         self.assertAlmostEqual(geo.sat_penetration(obb(0, 0, 1, 1), obb(2.2, 0, 1, 1, 45)), 0.214, places=3)
-        self.assertLess(geo.sat_penetration(obb(0, 0, 1, .5), obb(3, 0, 1, .5)), 0)
+        self.assertLess(geo.sat_penetration(obb(0, 0, 1, 0.5), obb(3, 0, 1, 0.5)), 0)
 
     def test_geometry_r02_example(self):
-        variant = {'length': 4000, 'width': 1200, 'front_side': 's', 'anchor': 'front',
-                   'service': {'front': 1000, 'back': 0, 'left': 0, 'right': 0}}
+        variant = {
+            'length': 4000,
+            'width': 1200,
+            'front_side': 's',
+            'anchor': 'front',
+            'service': {'front': 1000, 'back': 0, 'left': 0, 'right': 0},
+        }
         body = geo.placement_obb(variant, 10, 5, 0)
         self.assertAlmostEqual(body['cy'], 5.6)
         service = geo.service_obb(variant, 10, 5, 0)
@@ -104,10 +109,14 @@ class TestChecks(TransactionCase):
 
     # --- AC-31: золоті фікстури ---
     def test_golden_parity(self):
-        """Файли `static/tests/fixtures/*_golden.json` збігаються з тим, що дають services/* (F3D_UPDATE_GOLDEN=1 — оновити)."""
+        """Файли `static/tests/fixtures/*_golden.json` збігаються з тим, що дають services/*.
+
+        `F3D_UPDATE_GOLDEN=1` — оновити файли."""
         if os.environ.get('F3D_UPDATE_GOLDEN') == '1':
             golden_scenes.write_all()
-        scenes = json.loads(open(os.path.join(golden_scenes.FIXTURES_DIR, 'checks_golden.json'), encoding='utf-8').read())
+        scenes = json.loads(
+            open(os.path.join(golden_scenes.FIXTURES_DIR, 'checks_golden.json'), encoding='utf-8').read()
+        )
         self.assertGreaterEqual(len(scenes['scenes']), 12)
         covered = {i['check'] for sc in scenes['scenes'] for i in sc['expected']}
         self.assertEqual(covered, set(checks.CHECK_KEYS))

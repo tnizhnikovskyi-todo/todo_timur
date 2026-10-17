@@ -8,7 +8,10 @@ ETAG_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
 
 class F3dDraftMixin(models.AbstractModel):
-    """Спільна поведінка сутностей чернетки (layer, slot, placement, check.config): лічильник R-21, права R-11, JSON R-22."""
+    """Спільна поведінка сутностей чернетки (layer, slot, placement, check.config).
+
+    Лічильник R-21, права R-11, нормалізація JSON R-22."""
+
     _name = 'f3d.draft.mixin'
     _description = "Чернетка площадки: лічильник правок і права"
 
@@ -31,7 +34,9 @@ class F3dDraftMixin(models.AbstractModel):
         for layer in layers:
             if not self._f3d_can_edit_layer(layer):
                 groups = layer.sudo().edit_group_ids
-                raise AccessError("Шар «%s» редагує: %s." % (layer.name, ", ".join(groups.mapped('name')) or "менеджер"))
+                raise AccessError(
+                    "Шар «%s» редагує: %s." % (layer.name, ", ".join(groups.mapped('name')) or "менеджер")
+                )
 
     @api.model
     def _f3d_assert_manager(self, what="Цю дію"):

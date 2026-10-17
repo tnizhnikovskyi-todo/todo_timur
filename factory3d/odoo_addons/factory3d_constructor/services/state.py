@@ -3,6 +3,7 @@
 Працює з записами ORM (на відміну від чистих geometry/cells/checks): читає від імені поточного середовища.
 Метри — для шарів/місць/розміщень, міліметри — для варіантів.
 """
+
 from . import checks as checks_mod
 
 
@@ -16,7 +17,8 @@ def layer_dict(layer, env_xmlids=None):
         underlay = {
             'url': '/web/content/%d' % layer.underlay_attachment_id.id,
             'name': layer.underlay_attachment_id.name,
-            'format': layer.underlay_format, 'status': layer.underlay_status,
+            'format': layer.underlay_format,
+            'status': layer.underlay_status,
             'params': layer.underlay_params or {},
         }
     groups = []
@@ -24,22 +26,44 @@ def layer_dict(layer, env_xmlids=None):
         xmlid = (env_xmlids or {}).get(group.id) or ''
         groups.append({'id': group.id, 'name': group.name, 'role': xmlid.rsplit('_', 1)[-1] if xmlid else ''})
     return {
-        'id': layer.id, 'uid': layer.uid, 'name': layer.name, 'kind': layer.kind, 'sequence': layer.sequence,
-        'elevation': layer.elevation_m, 'grid_step': layer.grid_step_m, 'aisle_width': layer.aisle_width_m,
-        'max_floor_load': layer.max_floor_load_kn_m2, 'bounds': layer.bounds or None,
-        'slot_types': layer.allowed_slot_type_ids.mapped('key'), 'edit_groups': groups,
-        'color': layer.color, 'opacity': layer.opacity, 'style': layer.style, 'visible': layer.visible,
-        'aisles': layer.aisles or [], 'fire_paths': layer.fire_paths or [], 'utilities': layer.utilities or [],
-        'underlay': underlay, 'etag': etag_of(layer),
+        'id': layer.id,
+        'uid': layer.uid,
+        'name': layer.name,
+        'kind': layer.kind,
+        'sequence': layer.sequence,
+        'elevation': layer.elevation_m,
+        'grid_step': layer.grid_step_m,
+        'aisle_width': layer.aisle_width_m,
+        'max_floor_load': layer.max_floor_load_kn_m2,
+        'bounds': layer.bounds or None,
+        'slot_types': layer.allowed_slot_type_ids.mapped('key'),
+        'edit_groups': groups,
+        'color': layer.color,
+        'opacity': layer.opacity,
+        'style': layer.style,
+        'visible': layer.visible,
+        'aisles': layer.aisles or [],
+        'fire_paths': layer.fire_paths or [],
+        'utilities': layer.utilities or [],
+        'underlay': underlay,
+        'etag': etag_of(layer),
     }
 
 
 def slot_dict(slot):
     return {
-        'id': slot.id, 'uid': slot.uid, 'layer_id': slot.layer_id.id, 'template': slot.template,
-        'code_prefix': slot.code_prefix, 'x': slot.x_m, 'y': slot.y_m, 'rotation': slot.rotation,
-        'params': slot.params or {}, 'overrides': slot.overrides or {},
-        'parent_location_id': slot.parent_location_id.id or None, 'cell_count': slot.cell_count,
+        'id': slot.id,
+        'uid': slot.uid,
+        'layer_id': slot.layer_id.id,
+        'template': slot.template,
+        'code_prefix': slot.code_prefix,
+        'x': slot.x_m,
+        'y': slot.y_m,
+        'rotation': slot.rotation,
+        'params': slot.params or {},
+        'overrides': slot.overrides or {},
+        'parent_location_id': slot.parent_location_id.id or None,
+        'cell_count': slot.cell_count,
         'etag': etag_of(slot),
     }
 
@@ -47,10 +71,17 @@ def slot_dict(slot):
 def placement_dict(placement):
     equipment = placement.equipment_id
     return {
-        'id': placement.id, 'uid': placement.uid, 'layer_id': placement.layer_id.id,
-        'variant_id': placement.variant_id.id, 'slot_id': placement.slot_id.id or None,
-        'cell_code': placement.cell_code or None, 'x': placement.x_m, 'y': placement.y_m,
-        'rotation': placement.rotation, 'code': placement.code, 'name': placement.name,
+        'id': placement.id,
+        'uid': placement.uid,
+        'layer_id': placement.layer_id.id,
+        'variant_id': placement.variant_id.id,
+        'slot_id': placement.slot_id.id or None,
+        'cell_code': placement.cell_code or None,
+        'x': placement.x_m,
+        'y': placement.y_m,
+        'rotation': placement.rotation,
+        'code': placement.code,
+        'name': placement.name,
         'equipment': {'id': equipment.id, 'name': equipment.name} if equipment else None,
         'etag': etag_of(placement),
     }
@@ -62,7 +93,9 @@ def variant_dict(variant):
     if variant.model_status != 'none':
         meta = variant.model_meta or {}
         model = {
-            'status': variant.model_status, 'meta': meta, 'warning': variant.model_warning or None,
+            'status': variant.model_status,
+            'meta': meta,
+            'warning': variant.model_warning or None,
             'glb_url': ('/f3d/constructor/model/%d/glb' % variant.id) if variant.model_glb_id else None,
         }
     data.update({'model': model, 'etag': etag_of(variant)})
@@ -80,8 +113,13 @@ def checks_state(site):
         data = layer_dict(layer)
         layer_data.append(data)
     return {
-        'site': {'building': {'length': site.building_length_m, 'width': site.building_width_m,
-                              'height': site.building_height_m}},
+        'site': {
+            'building': {
+                'length': site.building_length_m,
+                'width': site.building_width_m,
+                'height': site.building_height_m,
+            }
+        },
         'layers': layer_data,
         'slots': [slot_dict(s) for s in slots],
         'placements': [placement_dict(p) for p in placements],
@@ -90,8 +128,10 @@ def checks_state(site):
 
 
 def check_configs(site):
-    return [{'check': c.check_key, 'enabled': c.enabled, 'mode': c.mode, 'params': c.params or {}}
-            for c in site.check_config_ids.sorted('sequence')]
+    return [
+        {'check': c.check_key, 'enabled': c.enabled, 'mode': c.mode, 'params': c.params or {}}
+        for c in site.check_config_ids.sorted('sequence')
+    ]
 
 
 def eps_m(env):

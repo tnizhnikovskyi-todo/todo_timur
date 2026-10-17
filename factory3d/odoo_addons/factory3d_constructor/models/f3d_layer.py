@@ -7,8 +7,12 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from ..services import schemas
 
 LAYER_KIND_SELECTION = [
-    ('building', "Будівля"), ('storage', "Склади"), ('production', "Виробництво"),
-    ('engineering', "Інженерні мережі"), ('yard', "Двір"), ('custom', "Свій шар"),
+    ('building', "Будівля"),
+    ('storage', "Склади"),
+    ('production', "Виробництво"),
+    ('engineering', "Інженерні мережі"),
+    ('yard', "Двір"),
+    ('custom', "Свій шар"),
 ]
 # R-11: вміст шару, який можуть писати ролі зі списку edit_group_ids; решту полів — лише менеджер
 LAYER_CONTENT_FIELDS = frozenset({'aisles', 'fire_paths', 'utilities', 'underlay_attachment_id', 'underlay_params'})
@@ -36,39 +40,56 @@ class F3dLayer(models.Model):
     grid_step_m = fields.Float(string="Крок сітки, м", digits=(6, 3), default=0.5)
     aisle_width_m = fields.Float(string="Ширина проходу, м", digits=(6, 3), default=3.0)
     max_floor_load_kn_m2 = fields.Float(
-        string="Макс. навантаження на підлогу, кН/м²", digits=(8, 2), default=0.0,
-        help="0 — перевірка «Навантаження» для шару вимкнена")
+        string="Макс. навантаження на підлогу, кН/м²",
+        digits=(8, 2),
+        default=0.0,
+        help="0 — перевірка «Навантаження» для шару вимкнена",
+    )
     bounds = fields.Json(string="Контур", help="[[x, y], …] у метрах, ≥3 точки; порожньо — габарит будівлі")
     allowed_slot_type_ids = fields.Many2many(
-        'f3d.term', 'f3d_layer_slot_type_rel', 'layer_id', 'term_id', string="Дозволені типи місць",
-        domain=[('term_type', '=', 'slot_type')], help="Порожньо — усі типи")
+        'f3d.term',
+        'f3d_layer_slot_type_rel',
+        'layer_id',
+        'term_id',
+        string="Дозволені типи місць",
+        domain=[('term_type', '=', 'slot_type')],
+        help="Порожньо — усі типи",
+    )
     edit_group_ids = fields.Many2many(
-        'res.groups', 'f3d_layer_edit_group_rel', 'layer_id', 'group_id', string="Хто редагує",
-        help="Групи, що пишуть місця й розміщення шару; порожньо — лише менеджер")
+        'res.groups',
+        'f3d_layer_edit_group_rel',
+        'layer_id',
+        'group_id',
+        string="Хто редагує",
+        help="Групи, що пишуть місця й розміщення шару; порожньо — лише менеджер",
+    )
     color = fields.Char(string="Колір", size=7, default='#8d99ae')
     opacity = fields.Float(string="Прозорість", digits=(3, 2), default=1.0)
     style = fields.Selection(
-        [('solid', "Суцільний"), ('wire', "Каркас"), ('dashed', "Пунктир")], string="Стиль", default='solid')
+        [('solid', "Суцільний"), ('wire', "Каркас"), ('dashed', "Пунктир")], string="Стиль", default='solid'
+    )
     visible = fields.Boolean(string="Видимий за замовчуванням", default=True)
     aisles = fields.Json(string="Проходи", default=list)
     fire_paths = fields.Json(string="Пожежні проходи й виходи", default=list)
     utilities = fields.Json(string="Мережі", default=list)
-    underlay_attachment_id = fields.Many2one(
-        'ir.attachment', string="Підкладка", ondelete='set null', copy=False)
+    underlay_attachment_id = fields.Many2one('ir.attachment', string="Підкладка", ondelete='set null', copy=False)
     underlay_format = fields.Selection(
-        [('dxf', "DXF"), ('dwg', "DWG")], string="Формат підкладки", compute='_compute_underlay', store=True)
+        [('dxf', "DXF"), ('dwg', "DWG")], string="Формат підкладки", compute='_compute_underlay', store=True
+    )
     underlay_status = fields.Selection(
         [('none', "Немає"), ('ready', "Готово"), ('pending_conversion', "Очікує перетворення")],
-        string="Статус підкладки", compute='_compute_underlay', store=True, default='none')
-    underlay_params = fields.Json(
-        string="Параметри підкладки", default=lambda self: dict(schemas.UNDERLAY_DEFAULT))
+        string="Статус підкладки",
+        compute='_compute_underlay',
+        store=True,
+        default='none',
+    )
+    underlay_params = fields.Json(string="Параметри підкладки", default=lambda self: dict(schemas.UNDERLAY_DEFAULT))
     slot_count = fields.Integer(string="Місць", compute='_compute_counts')
     placement_count = fields.Integer(string="Розміщень", compute='_compute_counts')
     is_manager = fields.Boolean(compute='_compute_is_manager')
     active = fields.Boolean(default=True)
 
-    _f3d_layer_uid_uniq = models.Constraint(
-        'UNIQUE(site_id, uid)', "UID шару має бути унікальним на площадці.")
+    _f3d_layer_uid_uniq = models.Constraint('UNIQUE(site_id, uid)', "UID шару має бути унікальним на площадці.")
 
     # --- compute ---------------------------------------------------------------------------------------
     @api.depends('underlay_attachment_id', 'underlay_attachment_id.name')
@@ -84,8 +105,12 @@ class F3dLayer(models.Model):
 
     def _compute_counts(self):
         def counts(model):
-            return dict(self.env[model].with_context(active_test=False)._read_group(
-                [('layer_id', 'in', self.ids)], ['layer_id'], ['__count']))
+            return dict(
+                self.env[model]
+                .with_context(active_test=False)
+                ._read_group([('layer_id', 'in', self.ids)], ['layer_id'], ['__count'])
+            )
+
         slots, placements = counts('f3d.slot'), counts('f3d.placement')
         for layer in self:
             layer.slot_count = slots.get(layer, 0)
@@ -153,15 +178,18 @@ class F3dLayer(models.Model):
             return
         foreign = set(vals) - LAYER_CONTENT_FIELDS
         if foreign:
-            raise AccessError("Змінювати налаштування шару (%s) може лише менеджер конструктора." % ", ".join(
-                self._fields[name].string or name for name in sorted(foreign) if name in self._fields))
+            raise AccessError(
+                "Змінювати налаштування шару (%s) може лише менеджер конструктора."
+                % ", ".join(self._fields[name].string or name for name in sorted(foreign) if name in self._fields)
+            )
         self._f3d_assert_layers(self)
 
     def _f3d_check_unlink(self):
         self._f3d_assert_manager("Видаляти шари")
         for layer in self:
             slots = self.env['f3d.slot'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
-            placements = self.env['f3d.placement'].with_context(active_test=False).search_count(
-                [('layer_id', '=', layer.id)])
+            placements = (
+                self.env['f3d.placement'].with_context(active_test=False).search_count([('layer_id', '=', layer.id)])
+            )
             if slots or placements:
                 raise UserError("Шар не порожній: архівуйте його або перенесіть об'єкти.")

@@ -1,4 +1,5 @@
 """Хуки установки/видалення factory3d_constructor (SPEC §5.2, §5.3, R-24)."""
+
 import json
 import logging
 
@@ -14,10 +15,11 @@ PARAM_REPORT = PARAM_PREFIX + 'seed_report'
 # §5.2: роль паспорта → категорія (решта → other)
 CATEGORY_BY_ROLE = {}
 for _category, _roles in {
-    'machine': "beam_saw beam_saw_book sliding_table_saw vertical_panel_saw edgebander edgebander_laser nesting_cnc ptp_cnc "
-               "throughfeed_drilling dowel_inserting hinge_insertion wide_belt_sander membrane_press glue_spray_booth "
-               "manual_spray_booth automatic_spraying uv_line uv_oven drying box_machine case_clamp_auto case_clamp_manual "
-               "shrink_line strapping stretch_wrapper briquetting_press compressor dust_extraction",
+    'machine': "beam_saw beam_saw_book sliding_table_saw vertical_panel_saw edgebander edgebander_laser nesting_cnc "
+    "ptp_cnc "
+    "throughfeed_drilling dowel_inserting hinge_insertion wide_belt_sander membrane_press glue_spray_booth "
+    "manual_spray_booth automatic_spraying uv_line uv_oven drying box_machine case_clamp_auto case_clamp_manual "
+    "shrink_line strapping stretch_wrapper briquetting_press compressor dust_extraction",
     'rack': "board_rack board_storage highbay_rack server_rack",
     'forklift': "forklift board_forklift tugger",
     'panel': "main_switchboard busbar_main busbar_dist substation acb tapoff pfc ats lighting_control",
@@ -60,8 +62,11 @@ def step_baseline(env, site, created):
         return None
     user = env.ref('base.user_root')
     version = snapshot.create_version(
-        site.sudo().with_user(user), note="Імпорт із макета", report={'created': [], 'updated': [], 'archived': [],
-                                                                       'warnings': [], 'seed': created}, is_seed=True)
+        site.sudo().with_user(user),
+        note="Імпорт із макета",
+        report={'created': [], 'updated': [], 'archived': [], 'warnings': [], 'seed': created},
+        is_seed=True,
+    )
     return version
 
 
@@ -77,11 +82,15 @@ def run_seed_hook(env, data=None):
     report = {
         'site_id': site.id,
         'created': {
-            'layers': env['f3d.layer'].search_count([('site_id', '=', site.id)]), 'slots': len(slots),
+            'layers': env['f3d.layer'].search_count([('site_id', '=', site.id)]),
+            'slots': len(slots),
             'cells': sum(slots.mapped('cell_count')),
-            'placements': env['f3d.placement'].search_count([('site_id', '=', site.id)]), 'variants': len(resolved),
+            'placements': env['f3d.placement'].search_count([('site_id', '=', site.id)]),
+            'variants': len(resolved),
         },
-        'linked': linked['linked'], 'unlinked': linked['unlinked'], 'skipped_variants': skipped,
+        'linked': linked['linked'],
+        'unlinked': linked['unlinked'],
+        'skipped_variants': skipped,
     }
     env['ir.config_parameter'].sudo().set_param(PARAM_REPORT, json.dumps(report, ensure_ascii=False, sort_keys=True))
     return report

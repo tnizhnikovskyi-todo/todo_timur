@@ -1,4 +1,5 @@
-"""Крок «link» хука (R-24): зв'язування площадки з наявними stock.location / maintenance.equipment / mrp.workcenter за кодом.
+"""Крок «link» хука (R-24): зв'язування площадки з наявними stock.location / maintenance.equipment /
+mrp.workcenter за кодом.
 
 Нічого не створюється й не змінюється, крім службових полів: f3d_site_id, f3d_slot_uid, f3d_placement_uid,
 placement.equipment_id / workcenter_id.

@@ -4,8 +4,12 @@ from odoo.exceptions import ValidationError
 from ..services import schemas
 
 CHECK_KEY_SELECTION = [
-    ('fits', "Вміщується"), ('collide', "Перетини"), ('service_free', "Зона обслуговування вільна"),
-    ('aisles_free', "Проходи вільні"), ('load', "Навантаження"), ('utility_reach', "Досяжність підключення"),
+    ('fits', "Вміщується"),
+    ('collide', "Перетини"),
+    ('service_free', "Зона обслуговування вільна"),
+    ('aisles_free', "Проходи вільні"),
+    ('load', "Навантаження"),
+    ('utility_reach', "Досяжність підключення"),
     ('fire', "Пожежні проходи й виходи"),
 ]
 CHECK_MODE_SELECTION = [('warn', "Попередження"), ('block', "Заборона")]
@@ -25,8 +29,7 @@ class F3dCheckConfig(models.Model):
     mode = fields.Selection(CHECK_MODE_SELECTION, string="Режим", required=True, default='warn')
     params = fields.Json(string="Параметри", default=dict)
 
-    _f3d_check_uniq = models.Constraint(
-        'UNIQUE(site_id, check_key)', "Перевірка вже налаштована для площадки.")
+    _f3d_check_uniq = models.Constraint('UNIQUE(site_id, check_key)', "Перевірка вже налаштована для площадки.")
 
     def _f3d_normalize_vals(self, vals):
         if 'params' in vals:

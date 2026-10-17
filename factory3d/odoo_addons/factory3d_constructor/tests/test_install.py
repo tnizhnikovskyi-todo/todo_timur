@@ -21,6 +21,7 @@ class TestInstall(TransactionCase):
 
     def test_uninstall_hook_keeps_business_records(self):
         from .. import hooks
+
         locations = self.env['stock.location'].search_count([])
         hooks.uninstall_hook(self.env)
         self.assertFalse(self.env['ir.config_parameter'].sudo().search([('key', '=like', 'factory3d.constructor.%')]))

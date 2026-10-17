@@ -10,8 +10,14 @@ class TestRights(F3DConstructorCase):
 
     def _slot_vals(self, kind, prefix, template='pallet_rack'):
         params = {'bays': 2, 'levels': 1} if template == 'pallet_rack' else {'length': 3.0, 'width': 1.5}
-        return {'layer_id': self.layers[kind].id, 'template': template, 'code_prefix': prefix, 'x_m': 20.0, 'y_m': 10.0,
-                'params': params}
+        return {
+            'layer_id': self.layers[kind].id,
+            'template': template,
+            'code_prefix': prefix,
+            'x_m': 20.0,
+            'y_m': 10.0,
+            'params': params,
+        }
 
     def test_ac43_storekeeper_vs_technologist_layers(self):
         Slot = self.env['f3d.slot'].with_user(self.u_store)
@@ -26,20 +32,34 @@ class TestRights(F3DConstructorCase):
 
     def test_ac44_technologist_and_engineer(self):
         Placement = self.env['f3d.placement'].with_user(self.u_tech)
-        placement = Placement.create({
-            'layer_id': self.layers['production'].id, 'variant_id': self.variant.id, 'code': 'T-1', 'name': "Станок", 'x_m': 10.0, 'y_m': 10.0})
+        placement = Placement.create(
+            {
+                'layer_id': self.layers['production'].id,
+                'variant_id': self.variant.id,
+                'code': 'T-1',
+                'name': "Станок",
+                'x_m': 10.0,
+                'y_m': 10.0,
+            }
+        )
         placement.write({'x_m': 11.0})
         self.variant.with_user(self.u_tech).write({'note': "оновлено технологом"})
         layer = self.layers['engineering'].with_user(self.u_eng)
-        layer.write({'utilities': [{'id': 'p1', 'kind': 'panel', 'name': "ГРЩ", 'x': 1, 'y': 1}],
-                     'aisles': [{'id': 'a1', 'name': "П", 'x0': 0, 'y0': 0, 'x1': 5, 'y1': 2}]})
+        layer.write(
+            {
+                'utilities': [{'id': 'p1', 'kind': 'panel', 'name': "ГРЩ", 'x': 1, 'y': 1}],
+                'aisles': [{'id': 'a1', 'name': "П", 'x0': 0, 'y0': 0, 'x1': 5, 'y1': 2}],
+            }
+        )
         self.assertEqual(len(layer.utilities), 1)
         with self.assertRaises(AccessError):
             layer.write({'elevation_m': 7.0})
         with self.assertRaises(AccessError):
             layer.write({'edit_group_ids': [(5, 0, 0)]})
         with self.assertRaises(AccessError):
-            self.env['f3d.layer'].with_user(self.u_eng).create({'site_id': self.site.id, 'name': "Новий", 'kind': 'custom'})
+            self.env['f3d.layer'].with_user(self.u_eng).create(
+                {'site_id': self.site.id, 'name': "Новий", 'kind': 'custom'}
+            )
 
     def test_ac45_layer_without_groups_is_manager_only(self):
         vals = self._slot_vals('building', 'BL-1', 'zone')
@@ -76,6 +96,7 @@ class TestRights(F3DConstructorCase):
 
     def test_injection_in_codes(self):
         from odoo.exceptions import ValidationError
+
         for bad in ("'; DROP TABLE x;--", "ab cd", "ЖК-1", "../x", "a-b", "-A", "A-", "A" * 33):
             with self.subTest(code=bad), self.assertRaises(ValidationError):
                 self.make_placement(code=bad)
