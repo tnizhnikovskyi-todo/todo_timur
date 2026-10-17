@@ -51,7 +51,7 @@ export const BODY_HTML = `<svg width="0" height="0" style="position:absolute" ar
       <div id="vp"></div>
       <div class="vtools" id="vtools"></div>
       <div class="vnotice" id="vnotice"></div>
-      <div class="legend" id="legend"><div><kbd>R</kbd> поворот · <kbd>Del</kbd> видалити · <kbd>Esc</kbd> скасувати · <kbd>Alt</kbd> без прив’язки · <kbd>←↑↓→</kbd> крок сітки · <kbd>M</kbd> лінійка · ПКМ — панорама · колесо — масштаб</div>
+      <div class="legend" id="legend"><div><kbd>R</kbd> поворот · <kbd>Del</kbd> видалити · <kbd>Esc</kbd> скасувати · <kbd>Alt</kbd> без прив’язки · <kbd>←↑↓→</kbd> крок сітки · <kbd>M</kbd> лінійка · ПКМ — панорама (у «Плані» й ЛКМ на порожньому) · колесо — масштаб</div>
         <div class="lgd"><span><i class="sq e"></i>електрика</span><span><i class="ci a"></i>повітря</span><span><i class="tr d"></i>аспірація</span><span><i class="bx ai"></i>прохід</span><span><i class="bx fp"></i>пожежна зона</span><span><i class="ds w"></i>попередження</span><span><i class="ds b"></i>заборона</span></div></div>
       <div class="stamp" id="stamp"></div>
       <div class="rlabel" id="rlabel" hidden></div>
