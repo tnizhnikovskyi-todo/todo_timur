@@ -273,5 +273,204 @@
 | N-08 | Подсказки и легенда | Подсказки при наведении, статусы «нове · лише в моделі», «не збережено», «з Odoo»; горячие клавиши | В1 | ~ |
 | N-09 | Демо-данные | 689 локаций (PLT-01A…), 57 товаров, закупки, производство, QC; знімок «Odoo» вшит | — | ✓ (свой seed) |
 
-Итого: 19 функций, 117 строк F-xx, 9 строк N-xx (подсчёт — в отчёте).
+Итого: 19 функций, 123 строки F-xx и 9 строк N-xx = 132 функции.
+
+
+## 2. Пересечения и единая концепция
+
+### 2.1 Сводка (кто побеждает и почему)
+
+| ID | Тема | У них | У нас | Единая концепция | Побеждает |
+|---|---|---|---|---|---|
+| O-01 | Типы мест ↔ шаблоны | 50 типов с параметрами и 9 формами, дерево склад›зона›ряд›стеллаж›ярус | 6 генераторов + `params`; слот = ряд, ячейки на лету | Генератор → тип (`f3d.slot.type`) → слот; +генератор `floor_spot`; зона = слот `zone` с атрибутами | Наш каркас, их данные: генераторы проверены R-01 и золотыми фикстурами, каталог — только данные |
+| O-02 | Адресация ↔ `code_style`/`index_digits` | Язык шаблона кода, сегменты, направления, перенумерация | Два параметра генератора, фиксированные направления | Json `addr` (склад → зона → слот), пресет `legacy` = текущие коды | Их выразительность, наш идентификатор `code_prefix` и лимит 32 символа |
+| O-03 | План изменений ↔ мастер публикации/API-07 | create/move/rename/attrs/archive, части, журнал, откат, расхождения | create/update/archive, подтверждение CD-20, `draft_rev`, версия | Один мастер: виды строк расширены, добавлены журнал `f3d.publish.op` и откат | Наш каркас (CD-20, блокировка строки, версия), их функции |
+| O-04 | Варианты ↔ `f3d.layout.version` | Параллельные варианты, сравнение, до 12 | Линейная история публикаций, черновик один | Вариант = снимок-ветка черновика (`f3d.layout.variant`), версия = история публикаций и контрольных точек | Гибрид: наша версия, их вариант поверх R-14 |
+| O-05 | Контур здания ↔ слои | Контур, колонны, стены, ворота, док, двери, офис, проходы-граф | Габарит+шаг колонн на площадке, `bounds`/`aisles`/`fire_paths` слоя | Слой `building`: контур в `bounds`, объекты в `items`, проходы — оси-прямоугольники | Наши слои (CD-04), их набор объектов |
+| O-06 | Каталог 50 ↔ 6 шаблонов | 50 типов, 5 групп, флаг «меблевая фабрика» | 6 шаблонов (CD-08) | 50 записей `f3d.slot.type` на 7 генераторах (таблица 2.3) | Гибрид |
+| O-07 | Роли | Перегляд / проєктування / застосування | 4 роли + `edit_group_ids` слоя (CD-02) | view = `group_f3d_user`; design = технолог/комірник/інженер на своём слое; apply = менеджер | Наши (тоньше) |
+| O-08 | Проверки | 13 видов | 7 видов, режим warn/block (CD-14) | Объединение (таблица 2.4); «Поставити все одно» не переносим | Наши режимы, их виды |
+| O-09 | Хранение | Один JSON-проект (rev), версии, localStorage вне Odoo | Нормализованные модели, `etag`, `ir.rule`, мультикомпания | Адаптер (CD-29): Odoo — модели; артефакт — `db` | Наше |
+| O-10 | Блокировки ↔ `etag` | Аренда зоны на 5 минут | Оптимистичный `etag` (R-21), права слоя | `etag` остаётся, поверх — аренда зоны-слота, проверка на сервере в `save` | Гибрид |
+| O-11 | Правка | «Показати/Зберегти», бирюзовые несохранённые, отмена | Живая правка, автосохранение черновика | Живая правка + клиентский undo-стек обратных операций; «новое/змінене» = разница с активной версией | Наше (CD-03) |
+| O-12 | Зона | Группа с функцией, техникой, категорией, адресацией | Слот `zone` (контур) и `f3d.zone` в base | Слот `zone` получает атрибуты; `f3d.zone` не трогаем (Q-03 остаётся) | Наше |
+| O-13 | Склад / проект | Проект → склады, привязка к `stock.warehouse` по коду | Площадка (CD-22) | Площадка = склад + `warehouse_id`; контейнер «проєкт» отпадает | Наше |
+| O-14 | Направление импорта | Odoo → модель (разбор кодов) | Модель → Odoo (публикация) + seed | Оба: ядро разбирает ленту локаций (API-16) в слоты; публикация остаётся | Гибрид |
+| O-15 | Язык | UK/EN словарь в коде | UK в коде и `.po` | `.po` uk/en (Odoo i18n); в артефакте словарь ядра | Гибрид |
+| O-16 | Этикетки | PDF/ZPL, Code128/QR | `stock.report_location_barcode` — один формат | Ядро строит спецификацию и ZPL, PDF рендерит адаптер | Их функция, наш рендер |
+| O-17 | 2D | Отдельный 2D-вид | Ортокамера «план» | Один рендерер, 2D = ортокамера + линейки + мини-карта | Наше |
+
+### 2.2 O-01 Типы мест и шаблоны слотов
+
+- Слои: **генератор** (код в Python и JS, R-01) → **тип** (данные: генератор, параметры по умолчанию, форма 3D, группа, «меблевая» важность 0–2, вид локации `f3d_loc_kind`) → **слот** (тип + свои `params` + позиция + `code_prefix`).
+- Их «ряд» = наш слот; «стеллаж/секция» = пролёт (`bays`/`sections`); «ярус» = `levels`; «зона» = слот `zone` + функция, техника, категория хранения, `addr`, родительская локация Odoo.
+- Новые параметры генераторов из их типов: `deep` (глубина в палетах), `bottom_on_floor`, `double_sided`, `gap_x`/`gap_y`, `beam_th`, `level_heights[]`, `slope`, `cells_per_level` (1–12), `shape`. Старые слоты без них считаются по прежним формулам (фикстуры R-01 не меняются).
+- Разное число ярусов по пролётам (их «Додати ярус нагорі» на секции) = `overrides.disabled` лишних ячеек; отдельной сущности «стеллаж» нет.
+- Мезонин (R12) = слой с отметкой (CD-04) + `shelf`. Автоматические карусели/VLM (R14–R16) — типы-заглушки без параметров автоматики.
+- `layer.allowed_slot_type_ids` остаётся списком генераторов (`f3d.term`); тип наследует ограничение через свой генератор.
+- Терминология: пресет (их «шаблон») — сохранённая настройка; библиотека = пресеты + свои типы, общая на компанию.
+
+### 2.3 O-06 Каталог 50 на семи генераторах
+
+| Генератор | Типы | Число |
+|---|---|---|
+| `pallet_rack` | R01 фронтальный, R02 double-deep (`deep=2`), R03 VNA, R04 drive-in, R05 гравитационный, R07 push-back, R08 мобильный, R09 shuttle | 8 |
+| `shelf` | R06 flow, R11 поличный, R12 мезонин, R13 комірковий/біни, R14 вертикальная карусель, R15 VLM, R16 горизонтальная карусель, R17 сотовый, R18 A-frame, R20 вешала | 10 |
+| `cantilever` | R10 консольный, R19 для рулонов | 2 |
+| `floor_stack` | FL1 штабель, FL3 блочное, FL4 разметка палетомест, FL5 штабель в стоечных поддонах | 4 |
+| `floor_spot` (новый: прямоугольник = одна локация, `shape` из типа) | FL2 зона на полу; SP1–SP8 (клетка, холод, заморозка, ЛФМ, газ, бункер, ёмкость, инструментальная); BF01, BF02, BF04–BF12 (буферные зоны); MB1–MB5 (тележка, роллконтейнер, кассета, gitterbox, этажерка) | 25 |
+| объект здания (`layer.items`) | BF03 ворота/док (связь с локацией вида «dock» из base) | 1 |
+
+Каталог засевается данными `noupdate=0` (все 50, `relevance` 0/1/2 из «меблевая фабрика»). `machine_spot` и `zone` остаются; `machine_spot` в их каталоге нет.
+
+### 2.4 O-08 Проверки: что чему соответствует
+
+| У них | У нас | Решение |
+|---|---|---|
+| Перетин (ряды, места, колоны, стены, офис) | `collide` | Есть; объекты здания добавляются в набор |
+| Поза контуром | `fits` (в месте) | Новая `inside`: слот и размещение внутри `bounds` слоя/контура здания |
+| Вузький проїзд / прохід (техника) | `aisles_free` (пересечение) | Новая `aisle_width`: минимум по технике (`aisle_tech` площадки/зоны, значения в `params`) |
+| Висота до стелі / спринклерів | — | Новая `height` (`building_height_m`, `sprinkler_height_m`) |
+| Вага товару на ярус | `load` (вес/площадь, вес ячейки) | Новая `cell_load`: вес остатков из `stock.quant` и `product.template.weight` против `max_load_kg`/категории (при наличии адаптера `stock`) |
+| Місце із залишком | R-13 (архив) | Остаётся в плане (`blocked`); перенос места с остатком — предупреждение плана |
+| Конфлікт кодів, штрихкод зайнятий | `conflict` в R-12 | Новая `code_conflict` в живых проверках (по запросу API-17) и в плане |
+| Правило: не вміститься | — | Новая `putaway_fit` (F04-06) |
+| «Поставлено попри заборону» | CD-14 (block = запрет) | Не переносим; менеджер может переключить проверку в `warn` |
+
+### 2.5 O-02 Адресация
+
+- `addr` (Json, R-22): `{tpl, sep, seg:{zone,row,bay,level,pos:{kind:num|alpha, width, start}}, row_from, row_mode, bay_dir, level_dir, zone_code}`. Наследование: площадка → слот-зона → слот (ближайший выигрывает, как «Власні налаштування зони»).
+- Сегмент `{prefix}` = `code_prefix` слота (идентификатор слота, ключ публикации, UNIQUE на площадке остаётся). Пресет `legacy` = `{prefix} B{bay} L{level}` с `index_digits` и `bay_letter` (→ `seg.bay.kind=alpha`): коды seed и золотые фикстуры не меняются.
+- Код ячейки ≤ 32 символов (CB-01) остаётся пределом; предпросмотр и конфликты (повторы, штрихкоды компании) — в диалоге, живая проверка `code_conflict`.
+- Имя локации: `loc_tree = flat` (имя = полный код, как сейчас), `row` или `section` (у ряда/секции своя виртуальная локация, имя — короткий сегмент, полный код в `barcode`). Для существующих площадок по умолчанию `flat` (Q1).
+- Целые `f3d_row`/`f3d_bay`/`f3d_level`/`f3d_pos` на `stock.location` заменяют `posx/posy/posz` их Odoo 18 (в 19 их нет).
+- Перенумерация существующих локаций = строки плана `rename` + новые штрихкоды; только менеджер, отдельное предупреждение, фильтр «лише нові» по умолчанию (Q2).
+- Реализация: `services/addr.py` + зеркало в ядре, фикстуры расширяются; код и ячейки не хранятся.
+
+### 2.6 O-03 План изменений и публикация
+
+- Каркас наш: `build_plan` (R-12), мастер M-08…M-10, API-06/07, `draft_rev`, `FOR UPDATE NOWAIT`, версия + снимок, архив только отмеченного и без остатков (R-13).
+- Добавляем: виды строк `create`/`move`/`rename`/`attrs`/`archive` (текущий `update` делится по смыслу изменения), `res_model` + `stock.warehouse.orderpoint`, `stock.putaway.rule`; зависимости строк (`depends_code`, родители добавляются сами); область применения (`scope_uid` — слот/зона); порядок применения: создание (родители раньше) → перенос → переименование → атрибуты → архив → пополнение → размещение. Категории хранения в план не входят: создаются отдельным подтверждаемым вызовом API-12 до публикации.
+- Блокировки строк: остатки (`stock.quant`), незавершённые перемещения (`stock.move`), штрихкод занят в компании (включая архивные и другие склады).
+- Журнал и откат: `f3d.publish.op` хранит `before`/`after` каждой операции; откат — обратные операции, разрешён, пока созданное не использовано и нет более поздней публикации по тем же кодам (по порядку). Откат касается только записей Odoo; черновик не меняется, следующий план снова предложит изменения.
+- «Файл для імпорту»: ядро собирает таблицу строк плана, формат XLSX/CSV отдаёт адаптер (API-19); перенос и архив в файл не попадают (как у них).
+- Расхождения с Odoo (F02-09, волна 2): ядро сравнивает ленту локаций (API-16) с `odoo_baseline_id` (вложение на площадке, пишется при публикации и «Оновити з Odoo»); «з'явилося» → разбор кодов и лоток, «зникло» → `overrides.disabled` или повторная публикация. Перенос и переименование в Odoo показываем информативно, по умолчанию «Залишити моє» (публикация вернёт).
+- Напоминание о копии БД — флаг площадки `publish_copy_ack`.
+
+### 2.7 O-04 Варианты и версии
+
+- Черновик остаётся «живыми» записями; вариант — снимок (`snapshot_id`, формат R-14) неактивной ветки. «Як є» = активный. Переключение: снимок текущей ветки → `apply_snapshot` выбранной (механизм R-14 уже есть). Лимит 12 (параметр).
+- Версия (`f3d.layout.version`) получает `kind`: `publish` (как сейчас) и `checkpoint` (контрольная точка без публикации: их «Зберегти», историю последних 50 храним); перед «Відновити» создаётся автокопия как вариант.
+- Сравнение вариантов считает ядро по двум снимкам (места, палетоместа, площадь, объём, ёмкость, число операций плана относительно активной версии); без нового сервера.
+- «Навчальна копія» тура = вариант с `is_training`, удаляется по «Скасувати» (F19-04).
+- Применяется в Odoo всегда активная ветка; публикация пишет `variant_id` в версию.
+
+### 2.8 O-05 Здание и слои
+
+- Слой `kind=building`: контур в `bounds` (многоугольник ≥ 3 точек, уже есть), объекты в Json `items`: `{id, kind: column|wall|gate|dock|door|office|charger, name, x, y, w, d, rot, th, location_uid}`; колонны сеткой — генерация ядром (`column_step_x/y` площадки остаются шагом по умолчанию).
+- Ворота и док связываются с локацией (`location_uid`; в Odoo — `stock.location` с `f3d_kind='dock'` из base) — это снимает ограничение CD-08 «ворота/док не в первой очереди» ровно в объёме объекта здания, не шаблона места.
+- Проходы остаются осевыми прямоугольниками (схема `aisles`, ширина = меньшая сторона); граф узлов — только производное в интерфейсе (шаг 2 клика → прямоугольник). Диагональные проходы не поддерживаем (Q10).
+- Высоты: `building_height_m` (есть) + `sprinkler_height_m`. Проверки `inside`, `aisle_width`, `height` (2.4). 3D: колонны инстансингом, стены/ворота/двери/офис/зарядка — боксами; оранжевая линия спринклеров.
+- Авторозкладка (F17) и мастер (F16) — алгоритмы ядра, пишут обычные операции `queue`.
+
+## 3. Odoo-маппинг
+
+### 3.1 Стандартные модели Odoo 19 (поля проверены по `/home/user/odoo19/addons`)
+
+| Модель | Поля и методы | Файл:строка | Для чего |
+|---|---|---|---|
+| `stock.location` | `usage` (view/internal/inventory…), `replenish_location`, `removal_strategy_id` (→ `product.removal`), `putaway_rule_ids`, `barcode`, `warehouse_id`, `storage_category_id`, `is_empty` | `stock/models/stock_location.py` L32–L91 | F01, F03 |
+| `stock.location` | `_get_putaway_strategy(product, quantity, package, packaging, additional_qty)`; `_check_can_be_used` (политика категории, `max_weight`); `_get_weight` | L297, L418, L476 | F04 «Куди покладе», «Чи поміститься» |
+| `stock.location` | **Нет** `posx/posy/posz` и флага «брак»: scrap = `usage='inventory'` (`_create_scrap_location`) | `res_company.py` L91; `stock_location.py` L196 | Ветки Odoo 18 не переносим |
+| `stock.storage.category` (+`.capacity`) | `name`, `max_weight`, `allow_new_product` (empty/same/mixed), `capacity_ids`, `product_capacity_ids`, `package_capacity_ids`, `location_ids`; ёмкость: `product_id`, `package_type_id`, `quantity` | `stock_storage_category.py` | F03 |
+| `stock.putaway.rule` | `product_id`, `category_id`, `location_in_id`, `location_out_id`, `sequence`, `package_type_ids`, `storage_category_id`, `sublocation` (no/last_used/closest_location), `active` | `product_strategy.py` | F04 |
+| `stock.warehouse.orderpoint` | `product_id`, `location_id`, `warehouse_id`, `product_min_qty`, `product_max_qty`, `trigger`, `route_id` | `stock_orderpoint.py` L23… | F03 min/max, F07 |
+| `stock.warehouse` | `code` (≤5), `lot_stock_id`, `view_location_id` | `stock_warehouse.py` L42–L50 | `site.warehouse_id`, F16 |
+| `stock.quant`, `stock.move.line` | `quantity`, `reserved_quantity`, `lot_id`, `package_id`, `in_date`; перемещения: `location_id`, `location_dest_id`, `quantity`, `date`, `state` | `stock_quant.py`, `stock_move_line.py` | F06, F07 |
+| `stock.package.type`, `product.template` | `height`, `width`, `packaging_length`, `max_weight`; `volume`, `weight` | `stock_package_type.py`; `product_template.py` L108–L111 | «Чи поміститься» |
+| Зависимости Python | `openpyxl`, `XlsxWriter`, `xlrd`, `qrcode`, `reportlab`, `PyPDF2` | `odoo19/requirements.txt` | XLSX/PDF/QR на сервере |
+
+`stock.report_location_barcode` (один формат) для этикеток не подходит: см. O-16. Туры — `web_tour` (Community).
+
+### 3.2 Матрица: функция → Odoo → наше → новое
+
+| Ф. | Стандарт Odoo | Расширяем (наше) | Новое |
+|---|---|---|---|
+| F01 | `stock.location` `name`/`barcode`/`location_id` | `f3d.site`, `f3d.slot`, `services/cells.py`, `f3d_code` (base) | `site.addr`, `slot.addr`, `loc_tree`, `depth_mode`; `stock.location.f3d_row/bay/level/pos`; `services/addr.py` |
+| F02 | `stock.location` create/write/`active`; проверка пустоты `stock.quant`, `stock.move` | мастер публикации, R-12/R-13, API-06/07, `version.report` | `f3d.publish.op`; виды строк `move/rename/attrs`; API-18 |
+| F03 | `stock.storage.category`, `stock.location.storage_category_id/removal_strategy_id/replenish_location/usage`, `orderpoint` | `slot.overrides`, `f3d_capacity`, `f3d.term` | `slot.storage_category_id/removal_strategy_id/function_id/attr_ids/temp_*`; `f3d.replenish.rule`; API-12 |
+| F04 | `stock.putaway.rule`, `_get_putaway_strategy`, `_check_can_be_used`, `stock.package.type` | `f3d.check.config` | `f3d.putaway.rule`; проверка `putaway_fit`; API-15 |
+| F05 | — | — | ядро: спецификация этикетки, Code128/QR, ZPL; PDF — API-19 (`reportlab`, `qrcode`) |
+| F06 | `stock.quant`, `stock.lot`, `product.product` (`default_code`, `name`) | `f3d_code`, `action_f3d_show` | API-13, API-14 |
+| F07 | `stock.quant` (`quantity`, `in_date`), `orderpoint`, `stock.move.line` | `f3d_capacity` | API-13 (метрики по кодам); классы и цвета — ядро |
+| F08 | — | `f3d.term` (ключи генераторов) | `f3d.slot.type` + данные 50; API-11 |
+| F09 | — | `OdooStore.queue` (ops, `etag`) | `f3d.slot.preset`; API-11; undo — ядро |
+| F10 | `stock.location` (`complete_name`, `usage`, `parent_path`) | seed-хук `link.py` | API-16; `site.parse_rules`; разбор и лоток — ядро |
+| F11 | формат импорта `stock.location`; `openpyxl`/`xlrd`/`xlsxwriter` | снимок версии (скачивание) | API-19 `table_xlsx`, API-20 `/parse/table`; CSV — ядро |
+| F12 | — | `f3d.layout.version`, `apply_snapshot` (R-14) | `f3d.layout.variant`; API-21 |
+| F13 | — (`mail.activity` не берём: объекты черновика не имеют записей Odoo) | — | `f3d.comment`; API-22 |
+| F14 | — | `etag` R-21, права R-11 | `f3d.zone.lock`; API-23 |
+| F15 | `openpyxl`/`xlsxwriter`, `reportlab` | — | ядро считает таблицы и SVG плана; API-19 `spec_pdf`/`plan_pdf`/`table_xlsx` |
+| F16 | `stock.warehouse` (выбор склада; склад не создаём) | пустая площадка R-23, `f3d_blank` | `site.warehouse_id`, `site.wizard_state` |
+| F17 | — | — | ядро (алгоритм), в БД ничего |
+| F18 | `stock.location` вида «dock» (base) | `layer.bounds/aisles/fire_paths`, `site.building_*`, `column_step_*` | `layer.items`, `site.sprinkler_height_m`, `aisle_tech`; проверки `inside/aisle_width/height` |
+| F19 | `web_tour`, `.po` | — | `static/src/tours/*`, `i18n/uk.po`+`en.po`, страница инструкции (QWeb) |
+| N-03 | — | `f3d.layout.version` | поле `kind`, API-24 |
+
+### 3.3 Расширения существующих моделей (новые поля)
+
+| Модель | Поля | Зачем |
+|---|---|---|
+| `f3d.site` | `warehouse_id`, `addr`, `loc_tree`, `depth_mode`, `sprinkler_height_m`, `aisle_tech`, `parse_rules`, `active_variant_id`, `wizard_state`, `odoo_baseline_id`, `publish_copy_ack` | склад Odoo; адресация; иерархия и глубина локаций; здание; техника; правила разбора; ветка; мастер; база для расхождений; напоминание |
+| `f3d.layer` | `items` | объекты здания (+ `width` в схеме `aisles`) |
+| `f3d.slot` | `type_id`, `storage_category_id`, `removal_strategy_id`, `function_id`, `attr_ids`, `temp_min_c`, `temp_max_c`, `tech`, `addr`, `depth_mode` | тип; категория и стратегия (наследуются вниз); функция/атрибуты зоны; техника зоны; свои адресация и глубина |
+| `stock.location` | `f3d_row`, `f3d_bay`, `f3d_level`, `f3d_pos` | замена `posx/posy/posz`, сортировка, поиск |
+| `f3d.layout.version` | `kind`, `variant_id`, `rolled_back_at`, `rolled_back_by_id`, `op_ids`, `metrics` | контрольные точки, ветка, откат, цифры для сравнения |
+| `f3d.publish.wizard.line` | `depends_code`, `scope_uid`, `before` | зависимости, область, прежние значения (+ значения `kind`: move/rename/attrs; `res_model`: orderpoint, putaway rule) |
+| `f3d.term` | `color`, `value` | новые `term_type`: `zone_function`, `zone_attr` (цвет функции, значения) |
+| `f3d.check.config` | — | новые `check_key`: `inside`, `aisle_width`, `height`, `cell_load`, `putaway_fit`, `code_conflict`; `params` шире |
+| JSON-схемы (R-22), снимок | — | `slot.params/overrides`, `layer.items`, `addr`, `parse_rules`; снимок `schema: 2` (читает и 1) |
+
+### 3.4 Новые модели
+
+| Модель | Поля | Ф. |
+|---|---|---|
+| `f3d.slot.type` | `code`, `ref`, `name`, `description`, `group`, `template`, `shape`, `params`, `relevance`, `loc_kind`, `is_custom`, `company_id`, `sequence`, `active` | F08 |
+| `f3d.slot.preset` | `name`, `type_id`, `kind`, `data`, `company_id`, `active` | F09 |
+| `f3d.putaway.rule` | `site_id`, `uid`, `product_id`, `category_id`, `package_type_ids`, `in_location_id`, `out_code`, `out_location_id`, `sublocation`, `storage_category_id`, `sequence`, `odoo_rule_id`, `deleted`, `company_id`, `active` | F04 |
+| `f3d.replenish.rule` | `site_id`, `uid`, `product_id`, `cell_code`, `location_id`, `min_qty`, `max_qty`, `odoo_orderpoint_id`, `deleted`, `company_id`, `active` | F03 |
+| `f3d.publish.op` | `version_id`, `seq`, `op`, `res_model`, `res_id`, `code`, `before`, `after`, `rolled_back` | F02 |
+| `f3d.layout.variant` | `site_id`, `name`, `sequence`, `snapshot_id`, `base_version_id`, `is_training`, `metrics`, `company_id`, `active` | F12 |
+| `f3d.comment` | `site_id`, `target_kind`, `target_uid`, `target_label`, `kind`, `state`, `text`, `author_id`, `resolved_by_id`, `resolved_at`, `company_id`, `active` | F13 |
+| `f3d.zone.lock` | `site_id`, `zone_uid`, `user_id`, `expires_at`, `company_id` | F14 |
+
+Моделей-мастеров для этикеток, документов и импорта нет: разбор и раскладку делает ядро, файлы рендерит API-19/20.
+`putaway.rule` и `replenish.rule` — черновики на модели `f3d_draft_mixin` (uid, `etag`, счётчик R-21); в Odoo попадают только публикацией.
+
+### 3.5 Контракт адаптера и API (префикс `/f3d/constructor`, правила как у API-01…10)
+
+| Метод адаптера | Odoo | Артефакт | Capability |
+|---|---|---|---|
+| `load` / `save` / `check` / `upload` | API-03 / 04 / 05 / 09 (+ `load` отдаёт `types`, `presets`, `rules`, `addr`, `items`) | `db`, локальные проверки, IndexedDB | — |
+| `publish` | API-06/07: план, подтверждение, `scope` | имитация (как в прототипе) | `publish` |
+| `library` | API-11 `/library`: типы и пресеты list/save/delete | `db` | `library` |
+| `categories` | API-12 `/storage_categories`, `/removal_strategies`: категории list/save (прямой вызов с подтверждением CD-20) | демо-список | `storage` |
+| `stock` | API-13 `/stock/state`: по кодам `qty`, резерв, заполнение, `in_date`, движения N дней, min/max; ответ ≤ 2 МБ пачками | синтетика с пометкой «демо» | `stock` |
+| `find` | API-14 `/stock/find`: код, товар, lot, упаковка | по демо-данным | `stock` |
+| `putaway` | API-15 `/putaway/where`, `/putaway/fit` | оценка в ядре («оцінка») | `putaway` |
+| `locations` | API-16 `/odoo/locations`: нейтральная лента локаций склада и остатков | файл-пример | `odoo_import` |
+| `codes` | API-17 `/codes/check`: занятость штрихкодов по компании | локально | — |
+| `planLog` / `rollback` | API-18 `/publish/log`, `/publish/rollback` | имитация | `rollback` |
+| `render` | API-19 `/render/labels_pdf`, `table_xlsx`, `plan_pdf`, `spec_pdf`: JSON → файл | «на сервері»; ZPL, CSV, PNG локально | `render` |
+| `parseTable` | API-20 `/parse/table`: XLSX/CSV → строки | SheetJS (CDN) | `files` |
+| `variants` / `comments` / `locks` | API-21 / 22 / 23 | `db` (замки не эмулируются) | `variants`, `comments`, `locks` |
+| `versions` | API-24 `/version/view`, `/version/checkpoint` (+ API-08) | `db` | — |
+
+Права: чтение — `group_f3d_user`; правка слотов/правил/пресетов/комментариев — проектировщики в пределах слоя (R-11); публикация, откат, варианты, категории хранения, права библиотеки на удаление — менеджер; чужой комментарий решает проектировщик. Новые ACL и `ir.rule` по `company_id` — по образцу §4 SPEC.
+
+### 3.6 Миграция и объёмы
+
+- Версии модуля: 19.0.2.0.0 (волна 1), 19.0.3.0.0 (волна 2); `post_migration`: `type_id` по умолчанию из `template`, `addr` = `legacy`, `loc_tree='flat'`, `warehouse_id` из `default_parent_location_id.warehouse_id`.
+- Склад 5–50 тыс. ячеек: ячейки не хранятся; `stock/state` агрегирует `read_group` по `location_id` и режет ответ; в прототипе целевой масштаб остаётся ~600–2000 ячеек (InstancedMesh), цель для реального склада — проверка в волне 1.
+- Параметры (`params.xml`): `lock_ttl_s=300`, `lock_heartbeat_s=60`, `variants_max=12`, `versions_keep=50`, `stock_days=90`, `labels_max=5000`.
 
