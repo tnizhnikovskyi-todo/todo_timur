@@ -7,11 +7,6 @@
         <field name="model">f3d.equipment.variant</field>
         <field name="arch" type="xml">
             <form string="Варіант обладнання">
-                <header>
-                    <button name="action_retry_convert" type="object" string="Повторити перетворення"
-                            invisible="model_status != 'pending_conversion'"
-                            groups="factory3d_constructor.group_f3d_constructor_technologist"/>
-                </header>
                 <sheet>
                     <div class="oe_title">
                         <label for="name"/>

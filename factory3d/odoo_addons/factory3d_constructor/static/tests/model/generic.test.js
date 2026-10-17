@@ -35,9 +35,8 @@ test("AC-41 габарит тримається й на інших пропор�
     for (const cat of CATEGORIES) {
         for (const d of [{ l: 0.8, w: 0.4, h: 2 }, { l: 12, w: 1, h: 0.9 }, { l: 2.7, w: 1.1, h: 4.5 }]) {
             const [x, y, z] = await sizeOf(buildGenericModel(cat, d));
-            expect(Math.abs(x - d.l) / d.l <= 0.01).toBe(true);
-            expect(Math.abs(y - d.h) / d.h <= 0.01).toBe(true);
-            expect(Math.abs(z - d.w) / d.w <= 0.01).toBe(true);
+            const ok = Math.abs(x - d.l) / d.l <= 0.01 && Math.abs(y - d.h) / d.h <= 0.01 && Math.abs(z - d.w) / d.w <= 0.01;
+            expect(ok ? "ok" : `${cat} ${JSON.stringify(d)} → ${x} ${y} ${z}`).toBe("ok");
         }
     }
 });

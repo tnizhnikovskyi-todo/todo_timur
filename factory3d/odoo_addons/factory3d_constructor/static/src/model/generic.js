@@ -132,7 +132,7 @@ function recipeConveyor(l, w, h) {
     for (const s of [-1, 1]) {
         parts.push(cyl("z", s * (l / 2 - bt), h - bt, 0, w - 2 * rail, bt, shade(c, 0.25))); // барабани
     }
-    const lt = clamp(0.05 * l + 0.01, 0.005, 0.07);
+    const lt = Math.min(clamp(0.05 * l + 0.01, 0.005, 0.07), rail); // ноги не виступають за борти
     const nl = Math.max(2, Math.ceil(l / 1.5) + 1);
     for (let i = 0; i < nl; i++) {
         const x = -l / 2 + lt / 2 + (i * (l - lt)) / (nl - 1);

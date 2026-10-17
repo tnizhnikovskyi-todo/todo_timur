@@ -4,6 +4,15 @@ import { loadLoaders, loadThree } from "@factory3d_constructor/model/three";
 import { exportGlb } from "@factory3d_constructor/model/import";
 import { boxTris } from "./fixtures";
 
+/** Читає Blob нативним FileReader (Hoot підміняє `Blob` на MockBlob, чий `arrayBuffer()` не віддає реальні байти). */
+export const blobBytes = (blob) =>
+    new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = () => rej(r.error);
+        r.readAsArrayBuffer(blob);
+    });
+
 export const file = (name, data, type = "") => new File([data], name, { type });
 
 /** Справжній macrotask (Hoot підміняє таймери, а FileReader/fetch-тіла завершуються лише реальними подіями). */

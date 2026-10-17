@@ -315,6 +315,20 @@ export class F3dModelUpload extends Component {
         });
     }
 
+    /** Повторити серверне перетворення STEP/IGES/IFC (R-20) — метод `action_retry_convert` варіанта. */
+    async retryConvert() {
+        this.state.busy = true;
+        this.state.error = "";
+        try {
+            await this.orm.call("f3d.equipment.variant", "action_retry_convert", [[this.props.record.resId]]);
+            await this.props.record.load();
+        } catch (e) {
+            this.state.error = e?.data?.message || e.message || String(e);
+        } finally {
+            this.state.busy = false;
+        }
+    }
+
     discardStaged() {
         this.files = [];
         this.loaded = null;

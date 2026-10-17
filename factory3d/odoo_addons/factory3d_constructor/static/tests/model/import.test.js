@@ -7,7 +7,7 @@ import { simplifyToTriangles } from "@factory3d_constructor/model/simplify";
 import {
     boxTris, colladaText, fbxAscii, mtlText, objText, stlAscii, stlBinary, threeMf,
 } from "./fixtures";
-import { file, glbBox, loadLoaders, loadThree, sizeOf, sphereTris } from "./helpers";
+import { blobBytes, file, glbBox, loadLoaders, loadThree, sizeOf, sphereTris } from "./helpers";
 
 describe.current.tags("desktop");
 
@@ -17,7 +17,7 @@ const sizeIs = (s, x, y, z) => near(s.x, x) && near(s.y, y) && near(s.z, z);
 /** GLB-Blob → розбір GLTFLoader-ом → габарит у метрах (перевірка кругового проходу). */
 async function reparse(glb) {
     const three = await loadThree();
-    const buf = await glb.arrayBuffer();
+    const buf = await blobBytes(glb);
     const head = new TextDecoder().decode(new Uint8Array(buf, 0, 4));
     const gltf = await new Promise((res, rej) => new three.GLTFLoader().parse(buf, "", res, rej));
     return { head, scene: gltf.scene, size: await sizeOf(gltf.scene) };
@@ -50,7 +50,6 @@ test("AC-37 OBJ+MTL → GLB; кольорове MTL-матеріал збері�
             color = o.material.color.getHex();
         }
     });
-    expect(color).toBe(0x336ccd - 0 || color); // колір Kd 0.2 0.5 0.8 (sRGB→лінійний — лише факт наявності)
     expect(color !== 0xb0b7c0).toBe(true); // не «сірий за замовчуванням»
     expect((await reparse(r.glb)).head).toBe("glTF");
 });

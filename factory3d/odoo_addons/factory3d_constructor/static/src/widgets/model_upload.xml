@@ -68,6 +68,7 @@
                     </button>
                     <button t-if="staged" type="button" class="btn btn-secondary o_f3d_mu_discard" t-on-click="discardStaged" t-att-disabled="state.busy">Скасувати</button>
                     <button t-if="hasSize" type="button" class="btn btn-secondary o_f3d_mu_fill" t-on-click="fillDims" t-att-disabled="state.busy">Підставити габарити з моделі</button>
+                    <button t-if="pending and !staged" type="button" class="btn btn-secondary o_f3d_mu_retry" t-on-click="retryConvert" t-att-disabled="state.busy">Повторити перетворення</button>
                     <button t-if="hasModel and !staged" type="button" class="btn btn-outline-danger o_f3d_mu_clear" t-on-click="clearModel" t-att-disabled="state.busy">Видалити модель</button>
                 </div>
             </div>
