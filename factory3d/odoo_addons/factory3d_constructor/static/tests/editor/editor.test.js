@@ -310,3 +310,124 @@ test("AC-49/R-11 сервер відхилив автозбережену пра
     expect(S.placements[0].x).toBe(20); // як на сервері
     expect(toastText().includes("редагує технолог")).toBe(true);
 });
+
+/* ===== вибір під курсором (пріоритет шарів) і вид «План» ===== */
+
+/** Місце «напільне штабелювання» один код: габарит l × w, висота стосу h (hit-бокс = h). */
+const stackSlot = (id, uid, layer, x, y, l, w, h = 2.4) => ({
+    id,
+    uid,
+    layer_id: layer,
+    template: "floor_stack",
+    code_prefix: uid.toUpperCase(),
+    x,
+    y,
+    rotation: 0,
+    params: { rows: 1, cols: 1, cell_l: l, cell_w: w, max_height: h, code_style: "exact" },
+    overrides: {},
+    parent_location_id: null,
+    cell_count: 1,
+    etag: `2026-10-17 10:00:00.0000${id}`,
+});
+const extraLayer = (load, id, uid, name, kind, over = {}) => {
+    load.layers.push({ ...load.layers[2], id, uid, name, kind, slot_types: ["floor_stack", "zone"], edit_groups: [], aisles: [], max_floor_load: 0, ...over });
+};
+/** Клік (down + up без руху) у точці світу; повертає вибраний об'єкт як «kind:id». */
+async function clickAt(x, y, z = 0) {
+    const pt = screenOf(x, y, z);
+    ptr("pointerdown", pt);
+    ptr("pointerup", pt);
+    await animationFrame();
+    return S.sel ? `${S.sel.kind}:${S.sel.id}` : null;
+}
+
+test("вибір: верстат активного шару перемагає штабель іншого шару, що його накриває й стоїть ближче до камери", async () => {
+    const load = makeLoad();
+    load.slots.push(stackSlot(23, "bigstack", 2, 20, 8, 12, 8)); // шар «Склади», 12 × 8 м, висота 2,4 м проти 1,8 м верстата
+    await openEditor(load);
+    expect(S.ui.layer).toBe("lyp");
+    expect(await clickAt(20, 8, machineZ)).toBe("placement:plm1");
+    expect(S.ui.layer).toBe("lyp");
+});
+
+test("вибір: інженерні мережі й будівля не перехоплюють клік, поки їхній шар не активний", async () => {
+    const load = makeLoad();
+    extraLayer(load, 4, "lye", "Інженерні мережі", "engineering", { elevation: 7.5 });
+    load.slots.push(stackSlot(24, "duct", 4, 20, 8, 40, 30)); // траса на весь цех на відмітці 7,5 м
+    await openEditor(load);
+    expect(await clickAt(20, 8, machineZ)).toBe("placement:plm1");
+    expect(S.ui.layer).toBe("lyp");
+    // шар мереж активний — його об'єкт вибирається (над верстатом, на відмітці 7,5 м)
+    S.ui.layer = "lye";
+    E.syncScene();
+    await animationFrame();
+    expect(await clickAt(20, 8, 7.5 + 1.2)).toBe("slot:duct");
+});
+
+test("вибір: серед рівних перемагає менший габарит; приховані шари не вибираються", async () => {
+    const load = makeLoad();
+    // обидва штабелі — на шарі «Склади»; великий вищий, тож перший по променю
+    load.slots.push(stackSlot(23, "big", 2, 40, 15, 12, 8, 4), stackSlot(24, "small", 2, 40, 15, 3, 2, 2.4));
+    extraLayer(load, 5, "lyh", "Прихований", "storage", { visible: false });
+    load.slots.push(stackSlot(25, "ghostbig", 5, 40, 24, 8, 4));
+    await openEditor(load);
+    expect(V.views.has("s:ghostbig")).toBe(false);
+    expect(await clickAt(40, 15, 1.2)).toBe("slot:small");
+    S.sel = null;
+    expect(await clickAt(40, 24, 1.2)).toBe(null);
+});
+
+test("вибір: шар, який можна редагувати, перемагає менший об'єкт шару лише для читання", async () => {
+    const load = makeLoad({ rights: { is_manager: false, roles: ["storekeeper"], editable_layer_ids: [2], can_publish: false, can_edit_catalog: false } });
+    extraLayer(load, 5, "lyt", "Транспорт", "custom");
+    load.slots.push(stackSlot(23, "mine", 2, 40, 15, 12, 8, 1), stackSlot(24, "readonly", 5, 40, 15, 3, 2, 4));
+    await openEditor(load);
+    expect(S.ui.layer).toBe("lyp"); // активний шар технолога, не редагований цим користувачем
+    expect(await clickAt(40, 15, 1.2)).toBe("slot:mine");
+});
+
+test("вид «План»: обертання вимкнене, ліва кнопка панорамує, вид лишається вирівняним по осях; 3D обертається", async () => {
+    await openEditor();
+    E.setView("plan");
+    await animationFrame();
+    expect(V.controls.enableRotate).toBe(false);
+    const q0 = V.camera.quaternion.clone();
+    const p0 = V.camera.position.clone();
+    const from = screenOf(45, 15, 0); // порожнє місце цеху
+    for (let i = 0; i < 3; i++) {
+        ptr("pointerdown", from);
+        ptr("pointermove", { clientX: from.clientX + 40 * (i + 1), clientY: from.clientY + 25 });
+        ptr("pointermove", { clientX: from.clientX + 90 * (i + 1), clientY: from.clientY + 50 });
+        ptr("pointerup", { clientX: from.clientX + 90 * (i + 1), clientY: from.clientY + 50 });
+        await animationFrame();
+    }
+    expect(V.camera.quaternion.angleTo(q0) < 1e-6).toBe(true);
+    expect(V.camera.position.distanceTo(p0) > 1).toBe(true); // панорамування працює
+    expect(near(V.camera.position.y, p0.y, 1e-6)).toBe(true); // висота камери не змінилась
+    E.setView("iso");
+    await animationFrame();
+    expect(V.controls.enableRotate).toBe(true);
+    const q1 = V.camera.quaternion.clone();
+    const f3 = screenOf(45, 15, 0);
+    ptr("pointerdown", f3);
+    ptr("pointermove", { clientX: f3.clientX + 60, clientY: f3.clientY + 10 });
+    ptr("pointerup", { clientX: f3.clientX + 60, clientY: f3.clientY + 10 });
+    await animationFrame();
+    expect(V.camera.quaternion.angleTo(q1) > 0.01).toBe(true);
+});
+
+test("збереження: відкриття редактора нічого не шле в /save; перетягування одного станка пише лише його запис", async () => {
+    const { rpc } = await openEditor();
+    await advanceTime(5000);
+    await animationFrame();
+    expect(rpc.of(SAVE)).toHaveLength(0);
+    await drag([20, 8, 0], [22, 8, 0]);
+    await advanceTime(2200);
+    await animationFrame();
+    const saves = rpc.of(SAVE);
+    expect(saves).toHaveLength(1);
+    const ops = saves[0].params.ops;
+    expect(ops).toHaveLength(1);
+    expect([ops[0].model, ops[0].op, ops[0].id]).toEqual(["f3d.placement", "write", 31]);
+    expect(ops[0].vals).toEqual({ x_m: 22 });
+});

@@ -205,6 +205,7 @@ def load_seed(env, data):
                 'bounds': item.get('bounds') or None,
                 'color': item.get('color', '#8d99ae'),
                 'opacity': item.get('opacity', 1.0),
+                'visible': bool(item.get('visible', True)),
                 'allowed_slot_type_ids': [
                     Command.set(
                         [terms[('slot_type', k)] for k in item.get('slot_types') or [] if ('slot_type', k) in terms]

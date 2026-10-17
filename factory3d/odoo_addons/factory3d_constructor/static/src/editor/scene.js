@@ -277,6 +277,11 @@ export function setView(kind) {
         }
         d *= 1.05;
     }
+    // План: вид згори вирівняний по осях, тож обертання вимкнене; ліва кнопка (і один палець) панорамує, колесо масштабує
+    const plan = kind === "plan";
+    V.controls.enableRotate = !plan;
+    V.controls.mouseButtons.LEFT = plan ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+    V.controls.touches.ONE = plan ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE;
     V.controls.target.copy(tgt);
     V.controls.update();
     requestRender();
@@ -565,6 +570,8 @@ function cellColor(c, s, ly, sel) {
     }
     return col;
 }
+/** Частка площі будівлі, з якої зона вважається «на весь цех». */
+const ZONE_HUGE = 0.1;
 export function buildSlotView(s, opts) {
     opts = opts || {};
     const ly = layerOf(s.layer_id);
@@ -587,15 +594,20 @@ export function buildSlotView(s, opts) {
     };
     if (s.template === "zone") {
         const col = new THREE.Color(s.params.color || ly.color);
+        // зона на весь цех (пожежні, інженерні, дахові шари) не має заливати верстати: чужі шари — лише контур, активний — ледь помітна заливка
+        const B = S.site.building;
+        const huge = d.L * d.W > ZONE_HUGE * B.length * B.width;
         const fm = new THREE.MeshBasicMaterial({
             color: col,
             transparent: true,
-            opacity: ghost ? 0.1 : clamp(ly.opacity * 0.55, 0.1, 0.5),
+            opacity: ghost ? (huge ? 0 : 0.06) : huge ? 0.06 : clamp(ly.opacity * 0.55, 0.1, 0.5),
             depthWrite: false,
             side: THREE.DoubleSide,
         });
         root.userData.mats = [fm];
-        root.add(planeMesh(d.L, d.W, 0, 0.012, 0, fm));
+        if (fm.opacity > 0) {
+            root.add(planeMesh(d.L, d.W, 0, 0.012, 0, fm));
+        }
         const ol = new THREE.LineLoop(
             lineGeo([-d.L / 2, 0.016, d.W / 2, d.L / 2, 0.016, d.W / 2, d.L / 2, 0.016, -d.W / 2, -d.L / 2, 0.016, -d.W / 2]),
             new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(0.55), transparent: true, opacity: ghost ? 0.25 : 0.9 })
@@ -774,7 +786,7 @@ function buildDecor(ly) {
         return lineGeo(poly.flatMap(([x, y]) => [x, yv, -y]));
     };
     if (el > 0.01) {
-        const vm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: active ? 0.1 : 0.05, depthWrite: false, side: THREE.DoubleSide });
+        const vm = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: active ? 0.06 : 0.015, depthWrite: false, side: THREE.DoubleSide });
         own.push(vm);
         g.add(planeMesh(bp.x1 - bp.x0, bp.y1 - bp.y0, (bp.x0 + bp.x1) / 2, el, -(bp.y0 + bp.y1) / 2, vm));
         const lm = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: active ? 0.9 : 0.45 });
@@ -1179,21 +1191,43 @@ export function floorPoint(e, elev) {
     }
     return { x: out.x, y: -out.z, z: elev || 0 };
 }
-function pickAt(e) {
+/** Шари-накладки: будівля й інженерні мережі. Їхні об'єкти — оболонки, повітряні об'єми й траси, що перекривають цех. */
+const OVERLAY_KINDS = ["building", "engineering"];
+/**
+ * Кандидати вибору під курсором, уже відфільтровані й відсортовані за пріоритетом:
+ * 1) шар кандидата видимий; зони й об'єкти шарів-накладок (будівля, інженерні мережі) вибираються лише на активному шарі;
+ * 2) активний шар → шар, який можна редагувати → решта;
+ * 3) менший габарит (верстат перемагає зону чи штабель, що його містить) → розміщення перед місцем → ближче до камери.
+ */
+function pickCandidates(e) {
     V.raycaster.setFromCamera(ndc(e), V.camera);
     const hits = V.raycaster.intersectObjects(V.pick, false);
+    const seen = new Set();
+    const out = [];
     for (const h0 of hits) {
         const ref = h0.object.userData.ref;
         const view = h0.object.userData.view;
-        if (!ref || !view) {
+        if (!ref || !view || seen.has(view.key)) {
             continue;
         }
-        if (view.tpl === "zone" && view.layerId !== S.ui.layer) {
-            continue; // зони вибираються лише на активному шарі
+        seen.add(view.key);
+        const ly = layerOf(view.layerId);
+        if (!ly || !isLayerVisible(ly)) {
+            continue; // приховані шари не вибираються
         }
-        return { ref, view, hit: h0 };
+        const active = view.layerId === S.ui.layer;
+        if (!active && (view.tpl === "zone" || OVERLAY_KINDS.includes(ly.kind))) {
+            continue; // зони й накладки вибираються лише на активному шарі
+        }
+        const tier = active ? 0 : canEditLayer(ly) ? 1 : 2;
+        out.push({ ref, view, hit: h0, tier, area: view.g.L * view.g.W, kind: view.kind === "placement" ? 0 : 1 });
     }
-    return null;
+    out.sort((a, b) => a.tier - b.tier || a.area - b.area || a.kind - b.kind || a.hit.distance - b.hit.distance);
+    return out;
+}
+function pickAt(e) {
+    const best = pickCandidates(e)[0];
+    return best ? { ref: best.ref, view: best.view, hit: best.hit } : null;
 }
 const rafLive = (() => {
     let f = 0;
