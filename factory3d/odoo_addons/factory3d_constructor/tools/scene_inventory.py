@@ -2,7 +2,7 @@
 """Інвентар 3D-моделі переглядача: усі шари та всі кодовані вузли (extras.code) з реальними габаритами й позиціями.
 
 Джерело: `factory3d_viewer/static/model/parts/{core,engineering,fire,it,site}.glb` + `manifest.json`.
-Результат: `data/scene_inventory.json` (компактний) і підсумок (кількість за шарами/видами) у stdout.
+Результат: `data/scene_inventory.json` (компактний; `objects` — словник `{код: {x, y, z, L, W, H, yaw, kind, layer, …}}`) і підсумок (кількість за шарами/видами) у stdout.
 
 Алгоритм: розбираємо GLB (JSON- і BIN-чанки), обходимо ієрархію вузлів із TRS/matrix, для кожного вузла з
 `extras.code` рахуємо світовий AABB усіх мешів його піддерева. Координати glTF — «three» (x, z, -y), тож
@@ -205,17 +205,16 @@ def build_object(rec, layer_meta):
     ex = rec['ex']
     lm = layer_meta.get(rec['layer'], {})
     obj = {
-        'code': ex['code'],
+        'code': ex['code'],  # лише для обробки; у файлі — ключ словника
         'kind': ex.get('kind'),
         'label': ex.get('label') or rec['name'] or ex['code'],
         'layer': rec['layer'],
         'group': lm.get('group'),
         'part': rec['part'],
         'x': round(cx, 3), 'y': round(cy, 3), 'z': round(z0, 3),
-        'l': round(x1 - x0, 3), 'w': round(y1 - y0, 3), 'h': round(z1 - z0, 3),
+        'L': round(x1 - x0, 3), 'W': round(y1 - y0, 3), 'H': round(z1 - z0, 3),
+        'yaw': yaw or 0,
     }
-    if yaw:
-        obj['yaw'] = yaw
     if rec['parent']:
         obj['parent'] = rec['parent']
     if rec['name'] and rec['name'] != ex['code']:
@@ -248,7 +247,7 @@ def build():
     objects.sort(key=lambda o: (all_layers.get(o['layer'], {}).get('order', 99), o['code']))
     # висоти шарів: [мін. z, макс. z верху] за його об'єктами — підказка для elevation
     for key, meta in all_layers.items():
-        zs = [(o['z'], o['z'] + o['h']) for o in objects if o['layer'] == key]
+        zs = [(o['z'], o['z'] + o['H']) for o in objects if o['layer'] == key]
         meta['zmin'] = round(min(z[0] for z in zs), 3) if zs else 0
         meta['zmax'] = round(max(z[1] for z in zs), 3) if zs else 0
         meta['n'] = len(zs)
@@ -257,7 +256,10 @@ def build():
         'version': 1,
         'source': 'factory3d_viewer/static/model/parts/*.glb',
         'dims': manifest.get('dims'),
-        'coords': 'plant: x вздовж, y впоперек, z вгору; x,y — центр AABB, z — низ; l,w,h — розміри; yaw — град.',
+        'coords': 'plant: x вздовж, y впоперек, z вгору (м); x,y — ЦЕНТР світового AABB об\'єкта (не якір/початок вузла), '
+                  'z — низ; L,W,H — розміри (L вздовж власної осі X до повороту, W — вздовж Y, H — висота); '
+                  'yaw — поворот навколо вертикалі, град. проти годинникової у плані (0, якщо вузол не повернутий). '
+                  'Сід розміщень/місць використовує ту саму конвенцію: x,y розміщення = x,y тут, rotation = yaw, якір center.',
         'layers': layers,
         'objects': objects,
     }
@@ -272,9 +274,11 @@ def dump(data):
     lines.append('"layers":[')
     lines.append(',\n'.join(json.dumps(l, ensure_ascii=False, separators=(',', ':')) for l in data['layers']))
     lines.append('],')
-    lines.append('"objects":[')
-    lines.append(',\n'.join(json.dumps(o, ensure_ascii=False, separators=(',', ':')) for o in data['objects']))
-    lines.append(']')
+    lines.append('"objects":{')  # {код: {kind, label, layer, group, part, x, y, z, L, W, H, yaw, …}}
+    lines.append(',\n'.join(
+        json.dumps(o['code'], ensure_ascii=False) + ':' + json.dumps({k: v for k, v in o.items() if k != 'code'}, ensure_ascii=False, separators=(',', ':'))
+        for o in data['objects']))
+    lines.append('}')
     lines.append('}')
     return '\n'.join(lines) + '\n'
 
