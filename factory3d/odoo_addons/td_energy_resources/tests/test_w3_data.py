@@ -224,7 +224,8 @@ class TestW3Data(TestW3Common):
         self.assertEqual(by["infra/gas/flow_m3h"].derive_rule, "rate_h")
         self.assertEqual(by["infra/water/boiler_flow_m3h"].derived_from_id, by["infra/water/boiler_m3_total"])
         self.assertFalse(Signal.search_count([("code", "=", "air/setpoint_bar")]))  # власник сигналу — W2
-        self.assertFalse(Signal.search_count([("code", "=", "energy_control/air/setpoint_bar")]))
+        if "td.energy.control" not in self.env:  # з W2 сигнал створює td_energy_control, не W3
+            self.assertFalse(Signal.search_count([("code", "=", "energy_control/air/setpoint_bar")]))
         sources = (
             self.env["td.source"]
             .with_context(active_test=False)

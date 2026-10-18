@@ -33,6 +33,11 @@ class TestW3Common(TestW1Common):
     def signal(self, code, kind="gauge", unit="м³/год", period_s=60, **kw):
         vals = {"code": code, "name": code, "kind": kind, "unit": unit, "period_s": period_s, "module": "energy"}
         vals.update(kw)
+        # Сигнал може вже існувати (напр. `energy_control/air/setpoint_bar` створює W2 td_energy_control).
+        existing = self.Signal.with_context(active_test=False).search([("code", "=", code)], limit=1)
+        if existing:
+            existing.write({k: v for k, v in vals.items() if k not in ("code", "name", "module")})
+            return existing
         return self.Signal.create(vals)
 
     def feed(self, signal, points, quality="good"):
