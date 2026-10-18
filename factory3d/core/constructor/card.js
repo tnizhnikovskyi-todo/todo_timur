@@ -2,13 +2,13 @@
 // категорія, ємність і заповнення, min/max, правила розміщення, рух за 90 днів, «Відкрити в Odoo». На ПК — блок правої панелі, на телефоні
 // (≤ 768 px) — картка на весь екран; розмітку мобільного режиму й підказку при наведенні (F06-05) дає s3_chrome.js.
 import "./s3_chrome.js";
-import { cellsOf } from "./cells.js";
+import { SLOT_TEMPLATES, cellsOf } from "./cells.js";
 import { can, registries } from "./registry.js";
 import { E, S, layerOf } from "./state.js";
 import { loadDetail, stockOf } from "./stock_state.js";
 import { libraryState } from "./library.js";
 import { typeOf } from "./types_data.js";
-import { $, fmt, h } from "./util.js";
+import { $, K, fmt, h } from "./util.js";
 
 const pct = (v) => (v == null ? "—" : Math.round(v * 100) + " %");
 const day = (iso) => (iso ? String(iso).slice(0, 10) : "—");
@@ -23,7 +23,8 @@ export function cardNode(slot, cell) {
         const type = typeOf(slot.type_id, libraryState());
         const fill = e ? e.fill : null;
         root.replaceChildren(
-            h("div", { class: "frow wrap" }, h("h3", { style: { margin: 0, flex: "1" } }, cell.code), h("span", { class: "tag" }, type ? type.name : slot.template), ly ? h("span", { class: "tag" }, ly.name) : null),
+            ...K(
+            h("div", { class: "frow wrap" }, h("h3", { style: { margin: 0, flex: "1" } }, cell.code), h("span", { class: "tag" }, type ? type.name : (SLOT_TEMPLATES[slot.template] || {}).label || slot.template), ly ? h("span", { class: "tag" }, ly.name) : null),
             h(
                 "div",
                 { class: "kv" },
@@ -53,6 +54,7 @@ export function cardNode(slot, cell) {
                 { class: "frow wrap", style: { marginTop: "6px" } },
                 d && d.location_id && registries.dialogs.has("record") ? h("button", { class: "fbtn sm", type: "button", id: "btnOpenOdoo", onclick: () => E.openRecord("stock.location", d.location_id) }, "Відкрити в Odoo") : null,
                 h("button", { class: "fbtn sm", type: "button", id: "btnCardLabel", onclick: () => E.runDialog("labels", { spec: { scope: "row", rowId: slot.id } }) }, "Етикетка…")
+            )
             )
         );
     };

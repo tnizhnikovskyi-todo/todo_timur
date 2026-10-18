@@ -306,8 +306,265 @@ async function t_align(page, errors) {
   ok('align: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
 }
 
+
+async function t_labels(page, errors) {
+  await prepare(page);
+  await page.evaluate(() => { __f3d.E.setMulti([{ kind: 'slot', id: 'ra' }, { kind: 'slot', id: 'rb' }]); });
+  await page.evaluate(() => __f3d.E.runDialog('labels'));
+  await page.waitForSelector('#labelsBody');
+  const n0 = await page.textContent('#labelsInfo');
+  ok('етикетки: виділене (2 ряди × 9 комірок) → 18 етикеток на 1 аркуші', n0.includes('Етикеток: 18') && n0.includes('аркушів: 1'), n0);
+  ok('етикетки: перегляд аркуша SVG із штрихкодами', await page.evaluate(() => document.querySelectorAll('#labelsPreview svg path').length >= 18));
+  // розкладки: 70×36 → 24 на аркуші; 105×48 → 12; 100×150 → 1
+  // розкладки (24 і 12 на аркуші, 100×150) перевіряє тест ядра; тут — перемикання в діалозі
+  await page.selectOption('#labelsBody select[aria-label="Розкладка"]', '105x48');
+  const n1 = await page.textContent('#labelsInfo');
+  ok('розкладка 105×48: 18 етикеток → 2 аркуші (12 на аркуші)', n1.includes('аркушів: 2'), n1);
+  await page.selectOption('#labelsBody select[aria-label="Розкладка"]', '70x36');
+  await page.fill('#labelsBody [data-s3="skip"]', '10');
+  await page.waitForTimeout(80);
+  ok('«Пропустити перші 10»: 18 етикеток займають 2 аркуші (24 на аркуші)', (await page.textContent('#labelsInfo')).includes('аркушів: 2'));
+  await page.fill('#labelsBody [data-s3="skip"]', '0');
+  // фільтри: усі нові (прототип: rid=null) → без змін; «застосовані в Odoo» → 0
+  await page.check('#labelsBody [data-s3="onlyApplied"]');
+  await page.waitForTimeout(80);
+  ok('фільтр «Лише застосовані в Odoo»: нові місця не друкуються', (await page.textContent('#labelsInfo')).includes('Етикеток: 0'));
+  await page.uncheck('#labelsBody [data-s3="onlyApplied"]');
+  await page.check('#labelsBody [data-s3="onlyNew"]');
+  await page.waitForTimeout(80);
+  ok('фільтр «Лише нові та перенумеровані»: нові місця друкуються', (await page.textContent('#labelsInfo')).includes('Етикеток: 18'));
+  await page.uncheck('#labelsBody [data-s3="onlyNew"]');
+  // ярус знизу
+  await page.selectOption('#labelsBody select[aria-label="Що друкувати"]', 'tier');
+  await page.fill('#labelsBody [data-s3="tier"]', '2');
+  await page.waitForTimeout(80);
+  ok('«Ярус знизу» №2: по 3 комірки в кожному з двох рядів → 6', (await page.textContent('#labelsInfo')).includes('Етикеток: 6'));
+  await page.selectOption('#labelsBody select[aria-label="Що друкувати"]', 'selected');
+  // стрілка вгору для ярусів вище точки сканування
+  await page.selectOption('#labelsBody select[aria-label="Стрілка"]', 'up');
+  await page.fill('#labelsBody [data-s3="scanLevel"]', '2');
+  await page.waitForTimeout(80);
+  // ZPL: завантаження файла й вміст
+  await page.selectOption('#labelsBody select[aria-label="Штрихкод"]', 'code128');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnLabelsZpl')]);
+  const zplPath = path.join(DL, 'l.zpl');
+  await dl.saveAs(zplPath);
+  const zpl = fs.readFileSync(zplPath, 'utf8');
+  ok('ZPL: 18 форматів ^XA…^XZ з ^BC і кодом комірки', (zpl.match(/\^XA/g) || []).length === 18 && zpl.includes('^BCN') && /\^FDRA-B01-L1\^FS/.test(zpl), zpl.slice(0, 160));
+  ok('ZPL: стрілка (^GB/^GD) лише для ярусів вище точки сканування', (zpl.match(/\^GD/g) || []).length === 6, String((zpl.match(/\^GD/g) || []).length));
+  // PNG
+  const [dl2] = await Promise.all([page.waitForEvent('download'), page.click('#btnLabelsPng')]);
+  const pngPath = path.join(DL, 'l.png');
+  await dl2.saveAs(pngPath);
+  const png = fs.readFileSync(pngPath);
+  ok('PNG: аркуш етикеток (підпис PNG, ненульовий розмір)', png.slice(1, 4).toString() === 'PNG' && png.length > 5000, String(png.length));
+  // PDF у прототипі: «на сервері» (кнопка неактивна з підказкою)
+  const pdf = await page.evaluate(() => ({ dis: document.getElementById('btnLabelsPdf').disabled, title: document.getElementById('btnLabelsPdf').title }));
+  ok('PDF: у прототипі кнопка неактивна, підказка «формує сервер»', pdf.dis && pdf.title.includes('сервер'), JSON.stringify(pdf));
+  // QR: попередження про дрібний QR/не-ASCII
+  await page.selectOption('#labelsBody select[aria-label="Штрихкод"]', 'qr');
+  await page.waitForTimeout(80);
+  const qrz = await page.evaluate(() => document.querySelectorAll('#labelsPreview svg path').length);
+  ok('QR: перегляд малює QR-коди', qrz >= 18);
+  await page.keyboard.press('Escape');
+  ok('labels: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
+}
+
+async function t_heat(page, errors) {
+  await prepare(page);
+  const sel = await page.evaluate(() => [...document.querySelectorAll('#s3Metric option')].map((o) => o.value));
+  ok('«Показник»: звичайний + 5 показників', sel.join() === ',fill,below_min,empty,abc,age', sel.join());
+  const out = {};
+  for (const m of ['fill', 'below_min', 'empty', 'abc', 'age']) {
+    await page.selectOption('#s3Metric', m);
+    await page.waitForTimeout(150);
+    out[m] = await page.evaluate(() => ({ rows: [...document.querySelectorAll('#s3Heat .s3-heat-row')].map((r) => [r.dataset.class, +r.querySelector('.num').textContent]), demo: !!document.querySelector('#s3Heat .s3-demo'), total: __f3d.S.slots.reduce((n, s) => n + __f3d.cellsOf(s).filter((c) => !c.disabled).length, 0) }));
+  }
+  const sum = (m) => out[m].rows.reduce((n, r) => n + r[1], 0);
+  ok('легенда: кількість місць у класах дорівнює числу комірок (усі 5 показників)', ['fill', 'below_min', 'empty', 'abc', 'age'].every((m) => sum(m) === out[m].total), JSON.stringify(Object.fromEntries(Object.keys(out).map((m) => [m, sum(m) + '/' + out[m].total]))));
+  const cls = (m) => out[m].rows.map((r) => r[0]).filter((k) => k !== 'new').join();
+  ok('заповненість: 6 класів (порожньо, до 25, 25–50, 50–75, >75, без ємності)', cls('fill') === 'empty,q1,q2,q3,q4,nocap');
+  ok('нижче мінімуму: класи «запасу немає / нижче / не нижче / без правила»', cls('below_min') === 'none,below,ok,norule');
+  ok('ABC: A+B+C рух; «Без руху»', cls('abc') === 'A,B,C,0' && out.abc.rows[0][1] > 0);
+  ok('вік запасу: п’ять вікових класів і «Порожньо»', cls('age') === 'a30,a90,a180,a365,a999,none');
+  ok('нові комірки (без даних Odoo) рахуються окремим рядком легенди', out.fill.rows.some((r) => r[0] === 'new' && r[1] === 28));
+  ok('демо-значення мають позначку «демо» (F07-08)', out.abc.demo && out.age.demo);
+  // ABC: частки руху A ≈ 80 %, B ≈ 15 %
+  const abc = await page.evaluate(() => { const st = __f3d.S.stock; const tot = [...st.byCode.values()].reduce((s, v) => s + v.moves, 0); const by = { A: 0, B: 0, C: 0 }; for (const [c, v] of st.byCode) { const k = st.abc.get(c); if (by[k] != null) by[k] += v.moves; } return { A: by.A / tot, B: by.B / tot, C: by.C / tot }; });
+  ok('ABC: A ≈ 80 %, B ≈ 15 %, C ≈ 5 % руху', abc.A >= 0.8 && abc.A < 0.9 && abc.B > 0.08 && abc.C < 0.1, JSON.stringify(abc));
+  // нове (не опубліковане) місце лишає колір шару
+  const keep = await page.evaluate(() => { const { S, E } = __f3d; const c = __f3d.cellsOf(S.sIdx.get('ra'))[0]; const m = __f3d.core.registries.metrics.get('fill'); return { stock: S.stock.byCode.has(c.code), color: m.color(c) }; });
+  ok('нове (не опубліковане) місце не отримує кольору показника', keep.stock === false && keep.color === null, JSON.stringify(keep));
+  // вибір запам'ятовується; «Оновити дані» змінює час знімка
+  await page.selectOption('#s3Metric', 'fill');
+  const stored = await page.evaluate(() => window.localStorage.getItem('f3d_constructor_metric'));
+  ok('вибір показника запам’ятовується (localStorage)', stored === 'fill', String(stored));
+  const at0 = await page.evaluate(() => __f3d.S.stock.at);
+  await page.waitForTimeout(1100);
+  await page.click('#s3Refresh');
+  await page.waitForTimeout(250);
+  ok('«Оновити дані» перечитує залишки без перебудови плану (час знімка змінився)', await page.evaluate((a) => __f3d.S.stock.at !== a && __f3d.S.stock.rev > 1, at0));
+  await page.reload();
+  await open(page);
+  ok('після перезавантаження показник відновлено', await page.evaluate(() => __f3d.S.ui.metric === 'fill' && !!__f3d.S.stock));
+  ok('heat: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
+}
+
+async function t_search(page, errors) {
+  await page.evaluate(() => { __f3d.E.setView('plan'); });
+  const code = await page.evaluate(() => { const s = __f3d.S.slots.find((x) => x.template === 'pallet_rack' && x.layer_id !== 'zz'); return { code: __f3d.cellsOf(s)[0].code, id: s.id, layer: s.layer_id }; });
+  // нормалізація: без регістру й розділювачів
+  const norm = code.code.toLowerCase().replace(/[^a-z0-9]/g, '');
+  await page.keyboard.press('/');
+  await page.waitForSelector('#s3Goto');
+  ok('«/» відкриває пошук і ставить курсор у поле', await page.evaluate(() => document.activeElement && document.activeElement.id === 's3Goto'));
+  await page.fill('#s3Goto', norm);
+  await page.waitForSelector('#s3GotoList [data-code]');
+  ok('підказки: код без розділювачів і регістру знаходить ' + code.code, await page.evaluate((c) => [...document.querySelectorAll('#s3GotoList [data-code]')].some((b) => b.dataset.code === c), code.code));
+  await page.press('#s3Goto', 'Enter');
+  await page.waitForTimeout(250);
+  const g = await page.evaluate(() => ({ sel: __f3d.S.sel && __f3d.S.sel.id, cell: __f3d.S.selCell, layer: __f3d.S.ui.layer, tgt: __f3d.E.camTarget() }));
+  ok('Enter переходить до комірки: виділено місце й комірку, шар активний', g.sel === code.id && g.cell === code.code && g.layer === code.layer, JSON.stringify(g));
+  const near = await page.evaluate((id) => { const s = __f3d.S.sIdx.get(id); const t = __f3d.E.camTarget(); return Math.hypot(t.x - s.x, t.y - s.y) < 25; }, code.id);
+  ok('камера наїхала на місце', near);
+  ok('картка місця в правій панелі з кодом комірки', (await page.textContent('#cardBlock')).includes(code.code));
+  // кілька збігів — список
+  await page.fill('#s3Goto', 'B01');
+  await page.waitForTimeout(100);
+  ok('кілька збігів — список підказок (до 8) із приміткою «ще»', await page.evaluate(() => document.querySelectorAll('#s3GotoList [data-code]').length === 8 && /ще \d+/.test(document.getElementById('s3GotoList').textContent)));
+  await page.keyboard.press('Control+k');
+  await page.waitForTimeout(120);
+  ok('Ctrl+K відкриває пошук', await page.evaluate(() => document.activeElement && document.activeElement.id === 's3Goto'));
+  // «Де лежить»: вміст за товаром
+  await page.fill('#s3Find', 'дсп білий');
+  await page.press('#s3Find', 'Enter');
+  await page.waitForSelector('#s3FindList [data-code]');
+  const f = await page.evaluate(() => ({ info: document.getElementById('s3FindInfo').textContent, n: document.querySelectorAll('#s3FindList [data-code]').length, hl: __f3d.S.hl && __f3d.S.hl.codes.size }));
+  ok('«Де лежить»: лічильник, список «місце + що лежить» і підсвітка', /Знайдено місць: \d+/.test(f.info) && f.n > 0 && f.hl === +f.info.match(/\d+/)[0], JSON.stringify(f));
+  ok('підсвітка: кольорові комірки результатів у сцені', await page.evaluate(() => { const v = [...__f3d.V.views.values()].find((x) => x.cells && x.cellList.some((c) => __f3d.S.hl.codes.has(c.code))); return !!v; }));
+  const one = await page.evaluate(() => { const hit = document.querySelector('#s3FindList [data-code]'); return hit.dataset.code; });
+  await page.click('#s3FindList [data-code]');
+  await page.waitForTimeout(200);
+  ok('клік по результату переходить до комірки', await page.evaluate((c) => __f3d.S.selCell === c, one));
+  await page.fill('#s3Find', 'zzzzzz');
+  await page.press('#s3Find', 'Enter');
+  await page.waitForTimeout(250);
+  ok('порожній результат: 0 місць', (await page.textContent('#s3FindInfo')).includes('Знайдено місць: 0'));
+  ok('search: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
+}
+
+async function t_card(page, errors) {
+  await prepare(page);
+  await page.evaluate(() => { __f3d.S.slots.find((s) => s.id === 'ra').rid = 1; });
+  await page.evaluate(() => __f3d.E.setView('plan'));
+  await page.waitForTimeout(250);
+  const p = await page.evaluate(() => { const { S, V, core } = __f3d; const s = S.sIdx.get('ra'); const cell = __f3d.cellsOf(s)[0]; const r = V.canvas.getBoundingClientRect(); const w = { x: s.x + cell.lx, y: s.y + cell.ly }; const v = new core.THREE.Vector3(w.x, 0.5, -w.y).project(V.camera); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; });
+  // підказка при наведенні (F06-05)
+  await page.mouse.move(p.x - 20, p.y - 20);
+  await page.mouse.move(p.x, p.y, { steps: 3 });
+  await page.waitForTimeout(250);
+  const tip = await page.evaluate(() => { const t = document.getElementById('s3Tip'); return { vis: !t.hidden, text: t.textContent }; });
+  ok('підказка при наведенні: код комірки', tip.vis && tip.text.includes('RA-B0'), JSON.stringify(tip));
+  await page.mouse.click(p.x, p.y);
+  await page.waitForSelector('#cardBlock #s3Card');
+  const card = await page.textContent('#cardBlock');
+  const c0 = await page.evaluate(() => __f3d.S.selCell);
+  ok('картка: код вибраної комірки, ємність і категорія', /^RA-B0\d-L\d$/.test(c0) && card.includes(c0) && card.includes('Місць') && card.includes('Категорія'), card.slice(0, 100));
+  await page.evaluate(() => __f3d.E.setMetric('fill'));
+  await page.evaluate((c) => __f3d.S.stock.byCode.set(c, { qty: 12, reserved: 2, fill: 0.5, age_days: 40, moves: 4, min: 5, max: 30, detail: { rows: [{ product: 'Плита ДСП', qty: 12, reserved: 2, lot: 'L-1', age_days: 40 }], moves: [{ date: '2026-09-01', product: 'Плита ДСП', qty: 3, from: 'WH/Stock', to: c }], rules: ['Плити → склад плит'], location_id: 77 } }), c0);
+  await page.evaluate(() => __f3d.E.renderRight());
+  const card2 = await page.textContent('#cardBlock');
+  ok('картка: залишки (товар, к-сть, резерв, партія, вік), min/max, правила, рух', ['Плита ДСП', '12 / 2', '5 / 30', 'L-1', '40 дн.', 'Плити → склад плит', '2026-09-01'].every((t) => card2.includes(t)), card2.slice(0, 300));
+  ok('картка: заповненість 50 %', card2.includes('Заповненість: 50 %'));
+  ok('картка: «Відкрити в Odoo» є, коли сервер віддав location_id і хост вміє відкривати записи', await page.evaluate(() => !!document.getElementById('btnOpenOdoo') === __f3d.core.registries.dialogs.has('record')));
+  ok('card: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
+}
+
+async function t_mobile(page, errors) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, app: document.getElementById('app').scrollWidth, inner: window.innerWidth, mode: __f3d.S.app.mode, mobile: __f3d.E.isMobile() }));
+  ok('мобільний режим: ≤ 768 px, без горизонтальної прокрутки (390 px)', w.mobile && w.doc <= 390 && w.app <= 390, JSON.stringify(w));
+  ok('мобільний режим: правка вимкнена (режим «Перегляд»)', w.mode === 'view');
+  const ui = await page.evaluate(() => { const vis = (id) => { const e = document.getElementById(id); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }; return { burger: vis('s3Burger'), search: vis('s3mSearch'), objbtn: vis('s3ObjBtn'), left: vis('left'), right: vis('right'), mtabs: vis('mtabs'), modeSeg: vis('modeSeg'), publish: vis('btnPublish') }; });
+  ok('мобільний режим: ☰, пошук зверху, «Панель об’єкта»; панелі згорнуті, правка й публікація сховані', ui.burger && ui.search && ui.objbtn && !ui.left && !ui.right && !ui.mtabs && !ui.modeSeg && !ui.publish, JSON.stringify(ui));
+  await page.click('#s3Burger');
+  await page.waitForTimeout(150);
+  const open = await page.evaluate(() => { const r = document.getElementById('left').getBoundingClientRect(); return { w: Math.round(r.width), vis: r.width > 0, doc: document.documentElement.scrollWidth }; });
+  ok('☰ відкриває ліву панель (≤ 88 % ширини) без прокрутки', open.vis && open.w <= 345 && open.doc <= 390, JSON.stringify(open));
+  await page.click('#s3Burger');
+  // пошук зверху: код → картка на весь екран
+  const code = await page.evaluate(() => __f3d.cellsOf(__f3d.S.slots.find((s) => s.template === 'pallet_rack'))[0].code);
+  await page.fill('#s3mSearch', code.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  await page.press('#s3mSearch', 'Enter');
+  await page.waitForSelector('#s3CardOv:not([hidden])');
+  const cov = await page.evaluate((c) => { const r = document.getElementById('s3CardOv').getBoundingClientRect(); return { w: r.width, h: r.height, text: document.getElementById('s3CardBody').textContent.includes(c) }; }, code);
+  ok('пошук зверху: Enter → картка комірки на весь екран', cov.w >= 389 && cov.h >= 840 && cov.text, JSON.stringify(cov));
+  await page.click('#s3CardClose');
+  // редагування вимкнене: перетягування не рухає об'єкт
+  const sid = await page.evaluate(() => __f3d.S.sel.id);
+  const before = await page.evaluate((id) => [__f3d.S.sIdx.get(id).x, __f3d.S.sIdx.get(id).y], sid);
+  const pt = await page.evaluate((id) => { const { S, V, core } = __f3d; const s = S.sIdx.get(id); const r = V.canvas.getBoundingClientRect(); const v = new core.THREE.Vector3(s.x, 0.5, -s.y).project(V.camera); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; }, sid);
+  await page.mouse.move(pt.x, pt.y);
+  await page.mouse.down();
+  await page.mouse.move(pt.x + 25, pt.y + 25, { steps: 3 });
+  await page.mouse.up();
+  const after = await page.evaluate((id) => [__f3d.S.sIdx.get(id).x, __f3d.S.sIdx.get(id).y], sid);
+  ok('мобільний режим: перетягування не змінює положення', before[0] === after[0] && before[1] === after[1]);
+  // «Панель об'єкта» висувається
+  await page.click('#s3ObjBtn');
+  await page.waitForTimeout(150);
+  const right = await page.evaluate(() => { const r = document.getElementById('right').getBoundingClientRect(); return { vis: r.width > 0, w: Math.round(r.width), doc: document.documentElement.scrollWidth }; });
+  ok('«Панель об’єкта» висувається справа без прокрутки', right.vis && right.w <= 345 && right.doc <= 390, JSON.stringify(right));
+  await page.click('#s3ObjBtn');
+  await page.screenshot({ path: path.join(DL, 'mobile.png') });
+  // повернення на ПК відновлює режим редагування
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(400);
+  ok('повернення на ПК відновлює «Редагування» й панелі', await page.evaluate(() => __f3d.S.app.mode === 'edit' && !__f3d.E.isMobile() && document.getElementById('left').getBoundingClientRect().width > 100));
+  ok('mobile: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
+}
+
+async function t_save(page, errors) {
+  await prepare(page);
+  // N-05: бірюзові «не збережено» до запису, «Зберегти все» знімає
+  await page.evaluate(() => { __f3d.adapter.autosaveMs = 60000; const s = __f3d.S.sIdx.get('ra'); s.x += 1; __f3d.E.commit({}); });
+  await page.waitForTimeout(250);
+  const u = await page.evaluate(() => ({ unsaved: __f3d.S.unsaved.has('s:ra'), saveAll: !document.getElementById('menu-saveAll').disabled }));
+  ok('N-05: змінений об’єкт позначено «не збережено», «Зберегти все» активна', u.unsaved && u.saveAll, JSON.stringify(u));
+  await page.evaluate(() => __f3d.selectObj({ kind: 'slot', id: 'ra' }));
+  ok('N-08: статус об’єкта «не збережено» у правій панелі', (await page.textContent('#statusBlock')).includes('не збережено'));
+  await page.evaluate(() => document.getElementById('menu-saveAll').click());
+  await page.waitForTimeout(500);
+  ok('«Зберегти все» записує чергу: позначок немає', await page.evaluate(() => __f3d.S.unsaved.size === 0));
+  ok('N-08: статус після збереження — «нове · лише в моделі»', (await page.evaluate(() => { __f3d.E.renderRight(); return document.getElementById('statusBlock').textContent; })).includes('нове · лише в моделі'));
+  // «Скинути до даних Odoo»: повертає чернетку до активної версії
+  const reset = await page.evaluate(() => { const m = __f3d.core.registries.menu.get('resetToOdoo'); return { has: !!__f3d.S.site.active_version, dis: m.disabled() }; });
+  ok('«Скинути до даних Odoo» доступне при опублікованій версії', reset.has && !reset.dis, JSON.stringify(reset));
+  await page.evaluate(() => { __f3d.core.registries.menu.get('resetToOdoo').run(); });
+  await page.waitForSelector('#dlgYes');
+  await page.click('#dlgYes');
+  await page.waitForTimeout(700);
+  ok('після скидання: площадка перезавантажена з версії, історія очищена', await page.evaluate(() => __f3d.S.hist.stack.length === 1 && __f3d.S.slots.length > 100));
+  // N-02: рівні доступу
+  await page.evaluate(() => { __f3d.S.rights = { ...__f3d.S.rights, is_manager: false, roles: [], can_publish: false }; __f3d.E.renderAll(); });
+  const acc = await page.evaluate(() => ({ a: __f3d.E.access(), tag: document.getElementById('s3Access').textContent, pub: document.getElementById('btnPublish').disabled, pubTitle: document.getElementById('btnPublish').title }));
+  ok('N-02: користувач лише «Перегляд» — мітка рівня, публікація неактивна з підказкою', acc.a.level === 'view' && acc.tag === 'Перегляд' && acc.pub && acc.pubTitle.length > 5, JSON.stringify(acc));
+  await page.evaluate(() => { __f3d.S.rights = { ...__f3d.S.rights, roles: ['technologist'] }; __f3d.E.renderAll(); });
+  ok('N-02: роль-проєктувальник → «Проєктування»', await page.evaluate(() => __f3d.E.access().level === 'design' && document.getElementById('s3Access').textContent === 'Проєктування'));
+  await page.evaluate(() => { __f3d.S.rights = { ...__f3d.S.rights, is_manager: true, roles: ['manager'], can_publish: true }; __f3d.E.renderAll(); });
+  ok('N-02: менеджер → «Застосування»', await page.evaluate(() => __f3d.E.access().level === 'apply' && document.getElementById('s3Access').textContent === 'Застосування'));
+  // N-08: довідка гарячих клавіш
+  await page.evaluate(() => __f3d.E.runDialog('hotkeys'));
+  await page.waitForSelector('#hotkeysTable');
+  const hk = await page.textContent('#hotkeysTable');
+  ok('N-08: «Гарячі клавіші» перелічують Ctrl+Z, Ctrl+D, Ctrl+K, «/»', ['Ctrl+Z', 'Ctrl+D', 'Ctrl+K', 'Ctrl+C'].every((k) => hk.includes(k)), hk.slice(0, 200));
+  await page.keyboard.press('Escape');
+  ok('save: консоль без помилок', errors.length === 0, errors.slice(0, 3).join(' | '));
+}
+
 (async () => {
-  const suites = { undo: t_undo, multi: t_multi, tools: t_tools, align: t_align };
+  const suites = { undo: t_undo, multi: t_multi, tools: t_tools, align: t_align, labels: t_labels, heat: t_heat, search: t_search, card: t_card, mobile: t_mobile, save: t_save };
   const only = process.argv[2];
   for (const [name, fn] of Object.entries(suites)) {
     if (only && only !== name) continue;
