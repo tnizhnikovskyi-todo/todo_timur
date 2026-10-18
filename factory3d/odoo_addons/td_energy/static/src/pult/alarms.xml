@@ -1,3 +1,41 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-04 AlarmList. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.AlarmList">
+        <section class="o_td_en_card o_td_en_alarms_card" aria-labelledby="o_td_en_al_h" style="flex: 1 1 360px; display: flex; flex-direction: column">
+            <div class="o_td_en_card_head" t-if="props.showHeader">
+                <h2 id="o_td_en_al_h">Тривоги й події · активних <span class="o_td_en_active_count" t-esc="props.alarms.active_count"/></h2>
+                <button type="button" class="o_td_en_btn o_td_en_btn--inline" t-on-click="openJournal">Журнал подій →</button>
+            </div>
+            <div t-if="!items.length" class="o_td_en_empty">Активних подій немає.</div>
+            <ul class="o_td_en_alarms">
+                <li t-foreach="items" t-as="item" t-key="item.id"
+                    t-attf-class="o_td_en_alarm {{item.state === 'acked' ? 'is-acked' : ''}}" t-att-data-event-id="item.id">
+                    <span t-attf-class="o_td_en_dot o_td_en_dot--{{level(item)}}" aria-hidden="true"/>
+                    <div class="o_td_en_alarm_body">
+                        <div class="o_td_en_alarm_meta">
+                            <span t-attf-class="o_td_en_alarm_level o_td_en_alarm_level--{{level(item)}}" t-esc="levelLabels[level(item)]"/>
+                            <span t-esc="item.time"/>
+                        </div>
+                        <div class="o_td_en_alarm_title" t-esc="item.title"/>
+                        <div class="o_td_en_alarm_detail" t-esc="item.detail"/>
+                        <div t-if="item.diag and state.diag[item.id]" class="o_td_en_alarm_diag" t-esc="item.diag"/>
+                        <div class="o_td_en_alarm_actions">
+                            <button t-foreach="item.actions || []" t-as="act" t-key="act.code" type="button"
+                                    class="o_td_en_btn o_td_en_btn--sm o_td_en_act" t-att-data-action-code="act.code"
+                                    t-on-click="() => this.onAction(item, act)" t-esc="actionLabel(item, act)"/>
+                            <button t-if="canAck(item)" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_btn--quiet o_td_en_ack"
+                                    style="text-decoration: underline" t-att-disabled="state.busy"
+                                    t-on-click="() => this.ack(item)">Підтвердити</button>
+                            <button t-if="canTake(item)" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_take"
+                                    t-att-disabled="state.busy" t-on-click="() => this.take(item)">Взяти в роботу</button>
+                            <button t-if="canResolve(item)" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_resolve"
+                                    t-att-disabled="state.busy" t-on-click="() => this.resolve(item)">Закрити</button>
+                            <span t-if="ackText(item)" class="o_td_en_alarm_status o_td_en_ack_text" t-esc="ackText(item)"/>
+                            <span t-if="workText(item)" class="o_td_en_alarm_status o_td_en_alarm_status--work o_td_en_work_text" t-esc="workText(item)"/>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </section>
+    </t>
+</templates>

@@ -1,15 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SPEC §3 V-21. Пункти з діями додають воркери разом із видами (sequence — з таблиці SPEC §3):
-     W1: menu_td_energy_scheme (20), menu_td_energy_meter (30), menu_td_energy_pool (20, під config);
-     W2: menu_td_energy_profile (40), menu_td_energy_balance (60), menu_td_energy_event (80), menu_td_energy_tariff (10, під config);
-     W3: menu_td_energy_alloc (50);
-     W4: menu_td_energy_outage (70); W5: menu_td_energy_overview (10), menu_td_energy_recompute (30, під config),
-     menu_td_energy_settings (50, під td_factory3d.menu_td_config, group_td_admin). -->
+<!-- SPEC §3 V-21; W1_SPEC V-33 (розд. 3.3): меню після W1. Пункти з діями додають воркери разом із видами:
+     W2: menu_td_energy_profile (40), menu_td_energy_balance (60), menu_td_energy_tariff (10, під config);
+     W3: menu_td_energy_alloc (50); W4: menu_td_energy_outage (70); W5: menu_td_energy_overview (15),
+     menu_td_energy_recompute (30, під config), menu_td_energy_settings (50, під td_factory3d.menu_td_config).
+     «Генерація й резерв» створює td_energy (A-25); міст td_genset_factory3d додає дочірні пункти (за xml-id). -->
 <odoo>
     <menuitem id="menu_td_energy" name="Енергетика" parent="td_factory3d.menu_td_root" sequence="50"
               groups="td_energy.group_td_energy_user"/>
     <menuitem id="menu_td_energy_config" name="Налаштування" parent="menu_td_energy" sequence="90"
               groups="td_energy.group_td_energy_cost"/>
+
+    <!-- W1 (B): Пульт, чергування, вузли мережі, генерація й резерв, планові відключення -->
+    <menuitem id="menu_td_energy_pult" name="Пульт" parent="menu_td_energy" sequence="5"
+              action="action_td_energy_pult" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_mobile" name="Чергування (телефон)" parent="menu_td_energy" sequence="6"
+              action="action_td_energy_mobile" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_nodes" name="Вузли мережі" parent="menu_td_energy" sequence="25"
+              action="action_td_energy_node_list" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_generation" name="Генерація й резерв" parent="menu_td_energy" sequence="35"
+              groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_generation_overview" name="Огляд" parent="menu_td_energy_generation" sequence="10"
+              action="action_td_energy_generation" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_outage_plan" name="Планові відключення" parent="menu_td_energy" sequence="72"
+              action="action_td_energy_outage_plan" groups="td_energy.group_td_energy_user"/>
+    <menuitem id="menu_td_energy_advice" name="Рекомендації" parent="menu_td_energy_config" sequence="40"
+              action="action_td_energy_advice" groups="td_energy.group_td_energy_manager"/>
+
     <menuitem id="menu_td_energy_scheme" name="Схема мережі" parent="menu_td_energy" sequence="20"
               action="action_td_energy_node_tree" groups="td_energy.group_td_energy_user"/>
     <menuitem id="menu_td_energy_meter" name="Лічильники" parent="menu_td_energy" sequence="30"
@@ -20,7 +36,7 @@
               action="action_td_energy_balance" groups="td_energy.group_td_energy_user"/>
     <menuitem id="menu_td_energy_outage" name="Відключення" parent="menu_td_energy" sequence="70"
               action="action_td_energy_outage" groups="td_energy.group_td_energy_user"/>
-    <menuitem id="menu_td_energy_event" name="Журнал подій" parent="menu_td_energy" sequence="80"
+    <menuitem id="menu_td_energy_event" name="Події" parent="menu_td_energy" sequence="80"
               action="action_td_energy_event" groups="td_energy.group_td_energy_user"/>
     <menuitem id="menu_td_energy_alloc" name="Енергія на виробництво" parent="menu_td_energy" sequence="50"
               action="action_td_energy_alloc_pivot" groups="td_energy.group_td_energy_user"/>
@@ -28,8 +44,8 @@
               action="action_td_energy_tariff" groups="td_energy.group_td_energy_cost"/>
     <menuitem id="menu_td_energy_pool" name="Пули спільних споживачів" parent="menu_td_energy_config" sequence="20"
               action="action_td_energy_pool" groups="td_energy.group_td_energy_manager"/>
-    <!-- W5 -->
-    <menuitem id="menu_td_energy_overview" name="Огляд" parent="menu_td_energy" sequence="10"
+    <!-- W5: «Огляд» перейменовано на «Завантаження вузлів» (seq 15; було 10) -->
+    <menuitem id="menu_td_energy_overview" name="Завантаження вузлів" parent="menu_td_energy" sequence="15"
               action="action_td_energy_overview" groups="td_energy.group_td_energy_user"/>
     <menuitem id="menu_td_energy_peak" name="Пік і вартість" parent="menu_td_energy" sequence="45"
               action="action_td_energy_peak" groups="td_energy.group_td_energy_cost"/>

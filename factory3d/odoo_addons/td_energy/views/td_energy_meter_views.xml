@@ -19,6 +19,8 @@
                        decoration-danger="data_state == 'stale'"
                        decoration-muted="data_state == 'no_data'"/>
                 <field name="data_state_since"/>
+                <field name="next_verification" optional="show"
+                       decoration-warning="next_verification and next_verification &lt; current_date"/>
                 <field name="last_interval_start" optional="hide"/>
                 <field name="source_id" optional="hide"/>
             </list>
@@ -64,6 +66,13 @@
                             <field name="counter_offset_export"/>
                             <field name="data_state_since"/>
                             <field name="last_interval_start"/>
+                        </group>
+                    </group>
+                    <group string="Повірка">
+                        <group>
+                            <field name="last_verification"/>
+                            <field name="verification_months"/>
+                            <field name="next_verification"/>
                         </group>
                     </group>
                     <field name="note" placeholder="Примітка"/>

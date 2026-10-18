@@ -1,3 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W1-B: W1_SPEC розд. 3.1 (V-22…V-31). Каркас: порожній файл, наповнює W1-B. -->
-<odoo/>
+<!-- W1_SPEC V-31: заявка ТО з картки вузла (M-28, target=new). Контекст: default_node_id, default_description. -->
+<odoo>
+    <record id="view_td_energy_ticket_wizard_form" model="ir.ui.view">
+        <field name="name">td.energy.ticket.wizard.form</field>
+        <field name="model">td.energy.ticket.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Нова заявка ТО">
+                <group>
+                    <group>
+                        <field name="node_id" options="{'no_create': True}"/>
+                        <field name="equipment_id"/>
+                        <field name="maintenance_type"/>
+                    </group>
+                    <group>
+                        <field name="team_id" options="{'no_create': True}"/>
+                        <field name="priority"/>
+                    </group>
+                </group>
+                <group>
+                    <field name="description" placeholder="Що зробити"/>
+                </group>
+                <footer>
+                    <button name="action_create" type="object" string="Створити заявку" class="btn-primary" data-hotkey="q"/>
+                    <button string="Скасувати" class="btn-secondary" special="cancel" data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_ticket_wizard" model="ir.actions.act_window">
+        <field name="name">Нова заявка ТО</field>
+        <field name="res_model">td.energy.ticket.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

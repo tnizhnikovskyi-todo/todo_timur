@@ -50,6 +50,7 @@
         <field name="arch" type="xml">
             <form>
                 <header>
+                    <button name="action_open_card" type="object" string="Картка вузла" class="btn-primary"/>
                     <button name="action_f3d_show" type="object" string="Показати в 3D"
                             invisible="not equipment_id"/>
                 </header>
@@ -66,6 +67,10 @@
                     <div class="oe_title">
                         <h1><field name="name" placeholder="Назва"/></h1>
                         <h2><field name="code" placeholder="Код"/></h2>
+                        <field name="sld_state" widget="badge" readonly="1"
+                               decoration-success="sld_state == 'ok'" decoration-warning="sld_state == 'warn'"
+                               decoration-danger="sld_state == 'alarm'" decoration-info="sld_state == 'gen'"
+                               decoration-muted="sld_state == 'off'"/>
                     </div>
                     <group>
                         <group string="Схема">
@@ -104,6 +109,15 @@
                             <field name="is_critical"/>
                             <field name="group"/>
                         </group>
+                        <group string="Захист" invisible="kind not in ('cell', 'line')">
+                            <field name="protection_trip_unit"/>
+                            <field name="protection_ir_ratio"/>
+                            <field name="trip_count_year" readonly="1"/>
+                        </group>
+                        <group string="PFC" invisible="cell_type != 'pfc'">
+                            <field name="pfc_step_kvar"/>
+                            <field name="pfc_steps_total"/>
+                        </group>
                         <group string="Зараз">
                             <field name="p_now" readonly="1"/>
                             <field name="kwh_today" readonly="1"/>
@@ -136,6 +150,22 @@
                                     <field name="p_now"/>
                                 </list>
                             </field>
+                        </page>
+                        <page string="Схема Пульту" name="sld">
+                            <group>
+                                <group>
+                                    <field name="sld_show"/>
+                                    <field name="sld_shape" invisible="not sld_show"/>
+                                    <field name="sld_label" invisible="not sld_show"/>
+                                    <field name="sld_anchor_id" invisible="not sld_show"/>
+                                </group>
+                                <group invisible="not sld_show">
+                                    <field name="sld_x"/>
+                                    <field name="sld_y"/>
+                                    <field name="sld_w"/>
+                                    <field name="sld_h"/>
+                                </group>
+                            </group>
                         </page>
                         <page string="Примітка" name="note">
                             <field name="note"/>
@@ -213,6 +243,39 @@
                 </group>
             </search>
         </field>
+    </record>
+
+    <record id="view_td_energy_node_list_w1" model="ir.ui.view">
+        <field name="name">td.energy.node.list.w1</field>
+        <field name="model">td.energy.node</field>
+        <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+            <list>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="parent_id"/>
+                <field name="p_now"/>
+                <field name="sld_state" widget="badge" decoration-success="sld_state == 'ok'"
+                       decoration-warning="sld_state == 'warn'" decoration-danger="sld_state == 'alarm'"
+                       decoration-info="sld_state == 'gen'" decoration-muted="sld_state == 'off'"/>
+                <field name="live_status" widget="badge"
+                       decoration-success="live_status == 'ok'"
+                       decoration-warning="live_status in ('gap', 'reset')"
+                       decoration-danger="live_status == 'stale'"
+                       decoration-muted="live_status in ('no_data', 'none')"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- V-27: «Вузли мережі» — список вузлів схеми з відкриттям картки (кнопка у формі) -->
+    <record id="action_td_energy_node_list" model="ir.actions.act_window">
+        <field name="name">Вузли мережі</field>
+        <field name="res_model">td.energy.node</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_td_energy_node_list_w1"/>
+        <field name="domain">[('kind', 'in', ('line', 'cell', 'transformer', 'section', 'switchboard', 'input', 'substation'))]</field>
+        <field name="context">{'search_default_group_kind': 1}</field>
     </record>
 
     <!-- hierarchy_res_id (корінь GRID-10KV) не задається: вузли створює хук, id невідомий на момент встановлення -->

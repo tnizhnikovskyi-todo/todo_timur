@@ -1,3 +1,47 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- UI-08 Generation. Каркас W1: порожні шаблони, наповнює W1-B. -->
-<templates xml:space="preserve"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="td_energy.Generation">
+        <div class="o_td_en o_td_en_generation o_action overflow-auto">
+            <header class="o_td_en_head">
+                <div class="o_td_en_head_title">
+                    <div class="o_td_en_crumbs">Енергетика / Генерація й резерв</div>
+                    <h1 class="o_td_en_h1">Генерація й резерв</h1>
+                    <div class="o_td_en_sub">СЕС, когенерація, накопичувач, АВР і резервний генератор</div>
+                </div>
+            </header>
+            <main class="o_td_en_main">
+                <t t-if="state.data">
+                    <div t-if="!cards.length" class="o_td_en_card o_td_en_empty">Немає джерел генерації.</div>
+                    <div class="o_td_en_gen_grid">
+                        <section t-foreach="cards" t-as="card" t-key="card.code"
+                                 t-attf-class="o_td_en_card o_td_en_gen_card o_td_en_gen_card--{{card.state}}"
+                                 t-att-data-card-code="card.code" t-att-aria-label="card.title">
+                            <div class="o_td_en_card_head">
+                                <h2 t-esc="card.title"/>
+                                <span t-attf-class="o_td_en_pill o_td_en_pill--{{chip(card)}} o_td_en_gen_state" t-esc="stateText[card.state] || card.state"/>
+                            </div>
+                            <dl class="o_td_en_gen_kpis">
+                                <div t-foreach="card.kpis || []" t-as="kpi" t-key="kpi_index" class="o_td_en_gen_kpi">
+                                    <dt t-esc="kpi.label"/>
+                                    <dd><span t-esc="kpi.value"/><span t-if="kpi.unit" class="o_td_en_unit"> <t t-esc="kpi.unit"/></span></dd>
+                                </div>
+                            </dl>
+                            <ul t-if="(card.facts || []).length" class="o_td_en_gen_facts">
+                                <li t-foreach="card.facts" t-as="fact" t-key="fact_index" t-esc="fact"/>
+                            </ul>
+                            <div t-if="card.node_code" class="o_td_en_gen_links">
+                                <button type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_gen_card_link"
+                                        t-on-click="() => this.actions.openCard(card.node_code)">Картка вузла</button>
+                                <button t-if="card.can_3d" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_gen_show3d"
+                                        t-on-click="() => this.actions.show3d(card.node_code)">Показати в 3D</button>
+                            </div>
+                        </section>
+                    </div>
+                </t>
+                <div t-elif="state.failed" class="o_td_en_error o_td_en_card" role="alert">
+                    Не вдалося завантажити дані генерації: <t t-esc="state.failed"/>
+                </div>
+            </main>
+        </div>
+    </t>
+</templates>
