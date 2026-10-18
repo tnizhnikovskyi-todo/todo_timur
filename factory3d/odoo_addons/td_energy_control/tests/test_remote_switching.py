@@ -2,6 +2,7 @@
 
 from odoo.exceptions import UserError
 from odoo.tests import tagged
+from odoo.tools import convert_file
 
 from ..tools import kinds
 from .common import TAGS, TestControlCommon
@@ -43,3 +44,10 @@ class TestRemoteSwitching(TestControlCommon):
         self.assertNotEqual(config_builder.etag(cfg), e0)
         self.assertEqual(self.ctl(self.u_chief).prepare("qs_close")["kind"], "qs_close")
         self.assertEqual(self.ctl(self.u_chief).get_control()["meta"]["remote_switching_enabled"], True)
+
+    def test_demo_data_enables_remote(self):  # AC-310: demo-дані вмикають параметр
+        icp = self.env["ir.config_parameter"].sudo()
+        key = "td.energy_control.remote_switching_enabled"
+        icp.set_param(key, "False")
+        convert_file(self.env, "td_energy_control", "demo/ir_config_parameter_demo.xml", {}, mode="init", kind="demo")
+        self.assertEqual(icp.get_param(key), "True")

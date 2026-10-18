@@ -191,8 +191,9 @@ class TdEnergyControl(models.AbstractModel):
 
     @api.model
     def _td_part_commands(self, role, remote_on, write_on):
-        tiles = self.env["td.energy.command.kind"].sudo().search([("tile", "=", True)])
-        return [k._td_tile(role != "viewer", remote_on, write_on) for k in tiles]
+        Kind = self.env["td.energy.command.kind"].sudo()
+        base = Kind._td_base_values()
+        return [k._td_tile(role != "viewer", remote_on, write_on, base) for k in Kind.search([("tile", "=", True)])]
 
     @api.model
     def _td_part_pending(self, role):

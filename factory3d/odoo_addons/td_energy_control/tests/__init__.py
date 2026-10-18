@@ -21,3 +21,4 @@ from . import test_contracts  # noqa: F401
 from . import test_remote_switching  # noqa: F401
 from . import test_ui  # noqa: F401
 from . import test_hoot  # noqa: F401
+from . import test_perf  # noqa: F401

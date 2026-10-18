@@ -232,6 +232,7 @@ td_telemetry ◀── td_energy ◀── td_energy_control ──▶ td_bms
 | `ir.config_parameter` | `td.telemetry.write_enabled` | `True` (стенд), `False` (прод) | предохранитель 1 |
 | | `td.energy_control.write_enabled` | `True` (стенд) | предохранитель 2; `_td_enable_stand` |
 | | `td.energy_control.automation_enabled` | `True` (стенд) | предохранитель 6 |
+| | `td.energy_control.remote_switching_enabled` | `True` (стенд и demo-данные), `False` (прод) | D-46, Q-27: дистанционное перемикання QS, пуск КГУ, разряд BESS, тест ДГУ; `_td_enable_stand` |
 | | `confirm_ttl_s` / `second_ttl_s` / `command_ttl_s` | 60 / 600 / 120 | SPEC 5.1 |
 | | `exec_timeout_s` / `step_timeout_s` / `verify_timeout_s` / `apply_timeout_s` | 60 / 8 / 30 / 60 | |
 | | `engine_tick_s` / `config_poll_s` / `stale_hold_s` | 2 / 10 / 30 | |

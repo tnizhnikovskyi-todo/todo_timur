@@ -65,13 +65,17 @@ class TdEnergyCommandKind(models.Model):
     def _compute_available(self):
         env = self.env
         bms = None
+        intent_kinds = self.filtered(lambda r: r.executor == "intent")
+        src = env["td.source"].sudo().search([("code", "=", "ENERGY-CTL")], limit=1) if intent_kinds else None
+        sig = (
+            env["td.signal"].sudo().search([("code", "=", "energy_control/intent")], limit=1) if intent_kinds else None
+        )
+        genset_ok = genset_link.availability(env) if self.filtered(lambda r: r.executor == "genset") else None
         for rec in self:
             ok, reason = True, ""
             if rec.executor == "genset":
-                ok, reason = genset_link.availability(env)
+                ok, reason = genset_ok
             elif rec.executor == "intent":
-                src = env["td.source"].sudo().search([("code", "=", "ENERGY-CTL")], limit=1)
-                sig = env["td.signal"].sudo().search([("code", "=", "energy_control/intent")], limit=1)
                 if not (src and src.active and sig and sig.active):
                     ok, reason = False, "джерело ENERGY-CTL не налаштовано"
                 elif rec.resource in ("light", "vent"):
@@ -168,30 +172,34 @@ class TdEnergyCommandKind(models.Model):
         return {"scenario": code, "params": clean}
 
     # --- діалог ----------------------------------------------------------------------------------------------
-    def _td_text_values(self, params):
-        """Значення для шаблонів тексту: параметри + заводські числа + факти."""
+    @api.model
+    def _td_base_values(self, plant=None):
+        """Спільні числа шаблонів (КГУ, тиск повітря, хвилини тесту ДГУ) — один раз на відповідь."""
         env = self.env
-        pl = config_builder.plant(env)
+        plant = plant or config_builder.plant(env)
         chp = env["td.energy.scenario"].sudo().search([("code", "=", "chp")], limit=1)
         chp_p = chp._td_params() if chp else {}
         air = env["td.signal"].sudo().search([("code", "=", kinds.SIGNALS["air_sp"])], limit=1)
+        minutes = None
+        mod, gen = genset_link.generator(env)
+        if mod and gen:
+            minutes = env["td.genset.config"].sudo().get().test_minutes
+        return {
+            "chp_kw": plant["chp_kw"] / 2,
+            "ramp_min": chp_p.get("ramp_min", 6),
+            "min_run_h": chp_p.get("min_run_h", 2),
+            "current_bar": air.last_value if air and air.last_ts else None,
+            "test_minutes": minutes if minutes is not None else 10,
+        }
+
+    def _td_text_values(self, params, base=None):
+        """Значення для шаблонів тексту: параметри + заводські числа + факти."""
         vals = dict(params or {})
-        vals.update(
-            chp_kw=pl["chp_kw"] / 2,
-            ramp_min=chp_p.get("ramp_min", 6),
-            min_run_h=chp_p.get("min_run_h", 2),
-            current_bar=air.last_value if air and air.last_ts else None,
-        )
+        vals.update(base if base is not None else self._td_base_values())
         if "scenario" in vals:
             vals["scenario"] = kinds.SCENARIO_TITLES.get(vals["scenario"], vals["scenario"])
         if "enabled" in vals:
             vals["on_off"] = "увімкнено" if vals["enabled"] else "вимкнено"
-        if self.code == "genset_test":
-            minutes = None
-            mod, gen = genset_link.generator(env)
-            if mod and gen:
-                minutes = env["td.genset.config"].sudo().get().test_minutes
-            vals["test_minutes"] = minutes if minutes is not None else 10
         return vals
 
     def render(self, params=None):
@@ -221,10 +229,10 @@ class TdEnergyCommandKind(models.Model):
             extra["genset"] = genset_link.facts(env)
         return interlocks.evaluate(self.checks or [], rows, ctx, extra)
 
-    def _td_tile(self, user_can, remote_on, write_on):
+    def _td_tile(self, user_can, remote_on, write_on, base=None):
         """Плитка для `get_control().commands[]` з прапорами `enabled`/`disabled_reason`."""
         self.ensure_one()
-        values = self._td_text_values({s["name"]: s.get("default") for s in (self.params_schema or [])})
+        values = self._td_text_values({s["name"]: s.get("default") for s in (self.params_schema or [])}, base)
         reason = None
         if not user_can:
             reason = "Немає прав: потрібна роль «Енергетик»"
