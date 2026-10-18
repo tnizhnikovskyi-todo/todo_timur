@@ -50,6 +50,7 @@ test("вкладка «Стан»: мережа, плитки, активні т
     mockMobile();
     await mountMobile();
     expect(queryText(".o_td_en_m_grid_kw")).toBe("358");
+    expect(queryText(".o_td_en_m_grid_head")).toMatch("договірна 800 кВт");
     expect(queryAll(".o_td_en_m_tile").length).toBe(4);
     expect(queryText(".o_td_en_m_active_count")).toBe("1");
     expect(queryAll(".o_td_en_m_alarm").length).toBe(2);

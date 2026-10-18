@@ -5,6 +5,7 @@
 import { Component, useState } from "@odoo/owl";
 import { useEnergyActions } from "../common/actions";
 import { LEVEL_LABELS, alarmLevel } from "../common/format";
+import { openTicketWizard } from "../node_card/dialogs";
 
 export class AlarmList extends Component {
     static template = "td_energy.AlarmList";
@@ -72,12 +73,14 @@ export class AlarmList extends Component {
         return act.label;
     }
 
-    /** Дії з `actions[]` події: діагностика, заявка ТО; невідомий код відкриває форму події. */
+    /** Дії з `actions[]` події: діагностика, заявка ТО, «Створити заявку» (майстер); невідомий код — форма події. */
     async onAction(item, act) {
         if (act.code === "diag") {
             this.state.diag[item.id] = !this.state.diag[item.id];
         } else if (act.code === "request" && item.request_id) {
             await this.actions.openRecord("maintenance.request", item.request_id);
+        } else if (act.code === "ticket") {
+            await openTicketWizard(this.actions, item.node_code, item.title);
         } else {
             await this.actions.openRecord("td.energy.event", item.id);
         }

@@ -82,8 +82,8 @@ export class SldCanvas extends Component {
         const byCode = this.nodesByCode;
         const result = [];
         for (const edge of this.props.sld.edges || []) {
-            const child = byCode[edge.from];
-            const parent = byCode[edge.to];
+            const parent = byCode[edge.from];
+            const child = byCode[edge.to];
             if (!child || !parent) {
                 continue;
             }

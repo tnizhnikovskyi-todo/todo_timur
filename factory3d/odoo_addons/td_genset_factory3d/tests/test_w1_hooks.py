@@ -1,7 +1,7 @@
 """W1-C: хуки `td.energy.dashboard` (M-10, R-15), AC-78…AC-81, uninstall_hook (B.5), ТБ-11 (W1_SPEC B.12–B.13).
 
 Хуки бази (`_td_genset_summary` …) пише W1-A; поки їх немає в `td_energy` (каркас), у тестах вони підставляються
-заглушками з поведінкою бази (`patch`). Виклики `get_generation()`/`get_pult()` виконуються, коли вони вже є в базі.
+заглушками з поведінкою бази (`patch`). Виклики `get_generation()`/`get_pult()` виконуються завжди (база W1-A злита).
 """
 
 import re
@@ -72,9 +72,7 @@ class TestW1Hooks(BaseHooksMixin, GensetCase):
         )
 
     def _cards(self):
-        if hasattr(BaseDashboard, "get_generation"):
-            return self.Dash.with_user(self.user_admin).get_generation()["cards"]
-        return self.Dash._td_generation_cards()
+        return self.Dash.with_user(self.user_admin).get_generation()["cards"]
 
     def _genset_card(self):
         cards = [c for c in self._cards() if c["code"] == "GENSET"]
@@ -84,8 +82,7 @@ class TestW1Hooks(BaseHooksMixin, GensetCase):
     def test_generation_card_reserve(self):  # AC-78
         cards = self._cards()
         self.assertEqual(cards[-1]["code"], "GENSET")
-        if hasattr(BaseDashboard, "get_generation"):
-            self.assertEqual([c["code"] for c in cards], ["PV-INV", "CHP", "BESS", "ATS-1", "GENSET"])
+        self.assertEqual([c["code"] for c in cards], ["PV-INV", "CHP", "BESS", "ATS-1", "GENSET"])
         card = cards[-1]
         self.assertEqual(
             (card["title"], card["kind"], card["state"], card["node_code"], card["can_3d"]),
@@ -123,12 +120,11 @@ class TestW1Hooks(BaseHooksMixin, GensetCase):
         self.assertEqual(genset[:2], facts)
         self.assertEqual(genset[-1], "Мотогодини 1213")
         self.assertEqual(self.Dash._td_node_facts_extra(SimpleNamespace(code="BW-2")), [])
-        if hasattr(BaseDashboard, "get_pult"):
-            pult = self.Dash.with_user(self.user_admin).get_pult(parts=["kpis", "sld"])
-            genset_kpi = pult["kpis"]["generation"]["genset"]
-            self.assertEqual(genset_kpi, {"state": "reserve", "label": "резерв", "fuel_pct": 78})
-            ats = next(n for n in pult["sld"]["nodes"] if n["code"] == "ATS-1")
-            self.assertTrue(any(f.startswith("ДГУ в резерві · паливо 78 %") for f in ats["facts"]))
+        pult = self.Dash.with_user(self.user_admin).get_pult(parts=["kpis", "sld"])
+        genset_kpi = pult["kpis"]["generation"]["genset"]
+        self.assertEqual(genset_kpi, {"state": "reserve", "label": "резерв", "fuel_pct": 78})
+        ats = next(n for n in pult["sld"]["nodes"] if n["code"] == "ATS-1")
+        self.assertTrue(any(f.startswith("ДГУ в резерві · паливо 78 %") for f in ats["facts"]))
 
     def test_summary_states(self):  # M-10: коди 0…10
         for code, online, state, label in (
@@ -176,11 +172,9 @@ class TestW1Hooks(BaseHooksMixin, GensetCase):
         self.assertIsNone(self.Dash._td_genset_summary())
         codes = [c["code"] for c in self._cards()]
         self.assertNotIn("GENSET", codes)
-        if hasattr(BaseDashboard, "get_generation"):
-            self.assertEqual(len(codes), 4)
-        if hasattr(BaseDashboard, "get_pult"):
-            pult = self.Dash.with_user(self.user_admin).get_pult(parts=["kpis"])
-            self.assertIsNone(pult["kpis"]["generation"]["genset"])
+        self.assertEqual(len(codes), 4)
+        pult = self.Dash.with_user(self.user_admin).get_pult(parts=["kpis"])
+        self.assertIsNone(pult["kpis"]["generation"]["genset"])
 
     def test_td_energy_has_no_td_genset_references(self):  # AC-81: grep модуля td_energy
         root = Path(get_module_path("td_energy"))

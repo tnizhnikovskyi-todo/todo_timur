@@ -500,88 +500,88 @@ export const CONTRACTS = {
             ],
             "edges": [
                 {
+                    "from": "GRID-10KV",
+                    "to": "RM6-1",
+                    "state": "ok"
+                },
+                {
                     "from": "RM6-1",
-                    "to": "GRID-10KV",
-                    "state": "ok"
-                },
-                {
-                    "from": "T1",
-                    "to": "RM6-1",
-                    "state": "ok"
-                },
-                {
-                    "from": "T2",
-                    "to": "RM6-1",
-                    "state": "ok"
-                },
-                {
-                    "from": "SEC-1",
                     "to": "T1",
                     "state": "ok"
                 },
                 {
-                    "from": "SEC-2",
+                    "from": "RM6-1",
                     "to": "T2",
                     "state": "ok"
                 },
                 {
-                    "from": "PV-INV",
-                    "to": "T2",
+                    "from": "T1",
+                    "to": "SEC-1",
+                    "state": "ok"
+                },
+                {
+                    "from": "T2",
+                    "to": "SEC-2",
+                    "state": "ok"
+                },
+                {
+                    "from": "SEC-2",
+                    "to": "PV-INV",
                     "state": "gen"
                 },
                 {
-                    "from": "CHP",
-                    "to": "T2",
+                    "from": "SEC-2",
+                    "to": "CHP",
                     "state": "off"
                 },
                 {
-                    "from": "PFC-1",
-                    "to": "SEC-1",
+                    "from": "SEC-1",
+                    "to": "PFC-1",
                     "state": "ok"
                 },
                 {
-                    "from": "BW-3",
-                    "to": "SEC-1",
+                    "from": "SEC-1",
+                    "to": "BW-3",
                     "state": "ok"
                 },
                 {
-                    "from": "BW-2",
-                    "to": "SEC-1",
+                    "from": "SEC-1",
+                    "to": "BW-2",
                     "state": "ok"
                 },
                 {
-                    "from": "C1",
-                    "to": "SEC-1",
+                    "from": "SEC-1",
+                    "to": "C1",
                     "state": "ok"
                 },
                 {
-                    "from": "BW-1",
-                    "to": "SEC-2",
+                    "from": "SEC-2",
+                    "to": "BW-1",
                     "state": "ok"
                 },
                 {
-                    "from": "BW-4",
-                    "to": "SEC-2",
+                    "from": "SEC-2",
+                    "to": "BW-4",
                     "state": "ok"
                 },
                 {
-                    "from": "C2",
-                    "to": "SEC-2",
-                    "state": "alarm"
-                },
-                {
-                    "from": "PFC-2",
-                    "to": "SEC-2",
-                    "state": "warn"
-                },
-                {
-                    "from": "BESS",
-                    "to": "SEC-2",
+                    "from": "SEC-2",
+                    "to": "C2",
                     "state": "ok"
                 },
                 {
-                    "from": "ATS-1",
-                    "to": "SEC-2",
+                    "from": "SEC-2",
+                    "to": "PFC-2",
+                    "state": "ok"
+                },
+                {
+                    "from": "SEC-2",
+                    "to": "BESS",
+                    "state": "ok"
+                },
+                {
+                    "from": "SEC-2",
+                    "to": "ATS-1",
                     "state": "off"
                 }
             ]
@@ -1528,6 +1528,7 @@ export const CONTRACTS = {
             }
         },
         "state": {
+            "contract_kw": 800,
             "grid_kw": 358,
             "pct": 45,
             "pv_kw": 309,
