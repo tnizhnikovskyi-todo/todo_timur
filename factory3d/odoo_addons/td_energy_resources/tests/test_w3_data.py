@@ -21,6 +21,14 @@ NEW_SIGNALS = (
 
 @tagged(*TAGS)
 class TestW3Data(TestW3Common):
+    def test_rebind_action(self):  # V-11
+        meters = self.env["td.energy.meter"].search_count([])
+        res = self.Resource.with_user(self.u_eng).action_td_energy_resources_rebind()
+        self.assertEqual(res["tag"], "display_notification")
+        self.assertEqual(self.env["td.energy.meter"].search_count([]), meters)  # ідемпотентно
+        with self.assertRaises(UserError):
+            self.Resource.with_user(self.u_view).action_td_energy_resources_rebind()
+
     def test_resources_seed(self):  # AC-01
         res = self.Resource.search([])
         self.assertEqual(set(res.mapped("code")), {"el", "gas", "heat", "air", "water"})

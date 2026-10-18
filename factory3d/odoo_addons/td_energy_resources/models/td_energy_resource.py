@@ -48,7 +48,7 @@ class TdEnergyResource(models.Model):
     )
     limit_kind = fields.Selection(
         [("none", "Без ліміту"), ("fixed", "Фіксований"), ("tariff_contract", "Договірна потужність")],
-        string="Ліміт швидкості",
+        string="Вид ліміту",
         required=True,
         default="none",
     )
@@ -180,3 +180,22 @@ class TdEnergyResource(models.Model):
             if not self.env["td.energy.price"]._td_base_price(res, today):
                 missing += 1
         return missing
+
+    @api.model
+    def action_td_energy_resources_rebind(self):
+        """V-11 «Оновити прив'язку ресурсів»: повторює хук установки (ідемпотентно, ручні правки не змінюються)."""
+        if not self.env.user.has_group("td_energy.group_td_energy_manager"):
+            raise UserError(_("Оновити прив'язку ресурсів може лише енергетик."))
+        from ..hooks import _run
+
+        _run(self.env)
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Прив'язку оновлено"),
+                "message": _("Точки, лічильники й сигнали ресурсів перевірено."),
+                "type": "success",
+                "sticky": False,
+            },
+        }
