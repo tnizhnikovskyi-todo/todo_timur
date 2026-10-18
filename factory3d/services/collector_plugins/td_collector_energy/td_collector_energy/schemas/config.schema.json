@@ -1,5 +1,72 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "title": "API-24 config (C-39); еталон — odoo_addons/td_energy_control/contracts/api24_config.json",
- "type": "object"
+ "type": "object",
+ "required": ["schema", "config_version"],
+ "properties": {
+  "schema": {"const": 1},
+  "config_version": {"type": "integer", "minimum": 0},
+  "etag": {"type": "string"},
+  "server_time": {"type": "string"},
+  "tz": {"type": "string"},
+  "flags": {"type": "object", "additionalProperties": {"type": "boolean"}},
+  "engine": {"type": "object", "additionalProperties": {"type": "number"}},
+  "plant": {"type": "object", "additionalProperties": {"type": "number"}},
+  "scenarios": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "properties": {"enabled": {"type": "boolean"}, "params": {"type": "object"}}
+   }
+  },
+  "shed": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["node"],
+    "properties": {
+     "id": {"type": "integer"}, "seq": {"type": "integer"}, "node": {"type": "string"},
+     "action": {"enum": ["off", "reduce", "pause", "defer"]},
+     "param": {"type": ["number", "null"]}, "kw": {"type": ["number", "null"]}, "critical": {"type": "boolean"},
+     "signal": {"type": ["string", "null"]}, "condition": {"enum": ["none", "air_pressure_min", "no_active_cycle"]},
+     "condition_value": {"type": ["number", "null"]}
+    }
+   }
+  },
+  "never_shed": {"type": "array", "items": {"type": "string"}},
+  "slots": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["resource", "from", "to"],
+    "properties": {
+     "id": {"type": "integer"}, "resource": {"type": "string"}, "date": {"type": ["string", "null"]},
+     "weekdays": {"type": ["string", "null"]}, "from": {"type": "number"}, "to": {"type": "number"},
+     "mode": {"type": ["string", "null"]}, "setpoint_kw": {"type": ["number", "null"]}
+    }
+   }
+  },
+  "tariff": {
+   "type": "object",
+   "properties": {
+    "zones": {
+     "type": "array",
+     "items": {"type": "object", "required": ["from", "to", "price"],
+               "properties": {"from": {"type": "number"}, "to": {"type": "number"}, "price": {"type": "number"}}}
+    },
+    "currency": {"type": "string"}
+   }
+  },
+  "bms": {"type": "object"},
+  "signals": {"type": "object", "additionalProperties": {"type": "string"}},
+  "inputs": {"type": "object", "additionalProperties": {"type": "string"}},
+  "interlocks": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "properties": {"hard": {"type": "boolean"}, "fail_closed": {"type": "boolean"}, "params": {"type": "object"}}
+   }
+  },
+  "limits": {"type": "object", "additionalProperties": {"type": "number"}}
+ }
 }
