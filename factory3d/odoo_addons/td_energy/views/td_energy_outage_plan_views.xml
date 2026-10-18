@@ -1,3 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- W1-B: W1_SPEC розд. 3.1 (V-22…V-31). Каркас: порожній файл, наповнює W1-B. -->
-<odoo/>
+<!-- W1_SPEC V-29: планові відключення (M-25). «Відхилити» — віджет з діалогом причини (td_energy_reject_button). -->
+<odoo>
+    <record id="view_td_energy_outage_plan_list" model="ir.ui.view">
+        <field name="name">td.energy.outage.plan.list</field>
+        <field name="model">td.energy.outage.plan</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="node_id"/>
+                <field name="start"/>
+                <field name="end"/>
+                <field name="state" widget="badge" decoration-muted="state in ('draft', 'done', 'cancelled')"
+                       decoration-warning="state == 'pending'" decoration-success="state == 'approved'"
+                       decoration-danger="state == 'rejected'"/>
+                <field name="affected_count"/>
+                <field name="production_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_outage_plan_form" model="ir.ui.view">
+        <field name="name">td.energy.outage.plan.form</field>
+        <field name="model">td.energy.outage.plan</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_submit" type="object" string="Надіслати на узгодження" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_approve" type="object" string="Узгодити" class="btn-primary"
+                            invisible="state != 'pending'" groups="mrp.group_mrp_manager"/>
+                    <widget name="td_energy_reject_button" invisible="state != 'pending'" groups="mrp.group_mrp_manager"/>
+                    <button name="action_cancel" type="object" string="Скасувати"
+                            invisible="state not in ('draft', 'pending', 'approved')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending,approved,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1" placeholder="Планове відключення"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="node_id" readonly="state != 'draft'"/>
+                            <field name="reason" readonly="state != 'draft'"/>
+                            <field name="reason_text" invisible="reason != 'other'" readonly="state != 'draft'"/>
+                            <field name="start" readonly="state != 'draft'"/>
+                            <field name="end" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="requested_by"/>
+                            <field name="approver_id" invisible="not approver_id"/>
+                            <field name="approved_at" invisible="not approved_at"/>
+                            <field name="reject_reason" invisible="not reject_reason"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <field name="note" placeholder="Примітка"/>
+                    <notebook>
+                        <page string="Зачеплені відгалуження" name="affected">
+                            <field name="affected_node_ids" readonly="1">
+                                <list>
+                                    <field name="code"/>
+                                    <field name="name"/>
+                                    <field name="kind"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Замовлення на виробництво" name="orders">
+                            <field name="production_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="product_id"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_td_energy_outage_plan_search" model="ir.ui.view">
+        <field name="name">td.energy.outage.plan.search</field>
+        <field name="model">td.energy.outage.plan</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="node_id"/>
+                <filter name="mine" string="Мої" domain="[('requested_by', '=', uid)]"/>
+                <filter name="pending" string="На узгодженні" domain="[('state', '=', 'pending')]"/>
+                <filter name="upcoming" string="Майбутні"
+                        domain="[('end', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <group>
+                    <filter name="group_state" string="Стан" context="{'group_by': 'state'}"/>
+                    <filter name="group_node" string="Вузол" context="{'group_by': 'node_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_td_energy_outage_plan" model="ir.actions.act_window">
+        <field name="name">Планові відключення</field>
+        <field name="res_model">td.energy.outage.plan</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

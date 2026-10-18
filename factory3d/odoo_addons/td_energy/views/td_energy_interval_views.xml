@@ -43,6 +43,7 @@
                 <field name="cost" sum="Разом" groups="td_energy.group_td_energy_cost"/>
                 <field name="quality" widget="badge" decoration-success="quality == 'measured'"
                        decoration-warning="quality in ('interpolated', 'reset')" decoration-danger="quality == 'missing'"/>
+                <field name="is_backfill" string="Синтетичні" optional="hide"/>
             </list>
         </field>
     </record>
@@ -59,6 +60,7 @@
                 <filter name="week" string="7 днів" domain="[('is_last_7d', '=', True)]"/>
                 <separator/>
                 <filter name="not_measured" string="Не виміряно" domain="[('quality', '!=', 'measured')]"/>
+                <filter name="backfill" string="Синтетичні" domain="[('is_backfill', '=', True)]"/>
                 <separator/>
                 <filter name="role_incomer" string="Вводи" domain="[('role', '=', 'incomer')]"/>
                 <filter name="role_feeder" string="Фідери" domain="[('role', '=', 'feeder')]"/>

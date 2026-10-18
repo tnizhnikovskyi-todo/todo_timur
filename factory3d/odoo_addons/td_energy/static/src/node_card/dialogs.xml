@@ -30,4 +30,21 @@
             </t>
         </Dialog>
     </t>
+
+    <t t-name="td_energy.RejectDialog">
+        <Dialog title="'Відхилити відключення'" size="'md'" contentClass="'o_td_en_dialog'">
+            <label class="o_td_en_dialog_wide">Причина відхилення
+                <textarea class="form-control o_td_en_reject_reason" rows="3" t-model="state.reason"/>
+            </label>
+            <div t-if="state.error" class="o_td_en_dialog_error mt-2" role="alert" t-esc="state.error"/>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-primary o_td_en_reject_confirm" t-att-disabled="state.busy" t-on-click="confirm">Відхилити</button>
+                <button type="button" class="btn btn-secondary" t-on-click="() => props.close()">Скасувати</button>
+            </t>
+        </Dialog>
+    </t>
+
+    <t t-name="td_energy.RejectButton">
+        <button type="button" class="btn btn-secondary o_td_en_reject_btn" t-on-click="onClick">Відхилити</button>
+    </t>
 </templates>

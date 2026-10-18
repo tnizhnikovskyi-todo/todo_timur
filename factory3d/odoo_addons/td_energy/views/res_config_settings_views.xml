@@ -52,6 +52,61 @@
                             </div>
                         </setting>
                     </block>
+                    <block title="cos φ" name="td_energy_cos_phi">
+                        <setting string="Пороги cos φ"
+                                 help="Пороги застосовуються до сигналів energy/totals/cos_phi і energy/sections/S1|S2/cos_phi">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_cos_phi_target"/>
+                                    <field name="td_energy_cos_phi_target"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_cos_phi_warn"/>
+                                    <field name="td_energy_cos_phi_warn"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_cos_phi_alarm"/>
+                                    <field name="td_energy_cos_phi_alarm"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Пульт" name="td_energy_pult">
+                        <setting string="Оновлення й пороги схеми">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_pult_refresh_s"/>
+                                    <field name="td_energy_pult_refresh_s"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_alarm_list_limit"/>
+                                    <field name="td_energy_alarm_list_limit"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_load_warn_pct"/>
+                                    <field name="td_energy_load_warn_pct"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_load_alarm_pct"/>
+                                    <field name="td_energy_load_alarm_pct"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Прогноз" name="td_energy_forecast">
+                        <setting string="Типовий день для прогнозу">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_forecast_weeks"/>
+                                    <field name="td_energy_forecast_weeks"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_forecast_min_days"/>
+                                    <field name="td_energy_forecast_min_days"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Накопичувач і генерація" name="td_energy_bess">
+                        <setting string="Резерв накопичувача (лише показ) і потужність СЕС">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_bess_reserve_pct"/>
+                                    <field name="td_energy_bess_reserve_pct"/></div>
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_pv_kwp"/>
+                                    <field name="td_energy_pv_kwp"/></div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="Повірка" name="td_energy_verify">
+                        <setting string="Нагадування про повірку лічильників">
+                            <div class="content-group">
+                                <div class="row mt8"><label class="col-lg-5" for="td_energy_verify_warn_days"/>
+                                    <field name="td_energy_verify_warn_days"/></div>
+                            </div>
+                        </setting>
+                    </block>
                     <block title="АВР і накопичувач" name="td_energy_ats">
                         <setting string="Пуск генератора й зрізання піків">
                             <div class="content-group">

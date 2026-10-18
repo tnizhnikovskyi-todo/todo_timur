@@ -4,6 +4,9 @@
 import { Component, onWillUnmount, useEffect, useState } from "@odoo/owl";
 import { browser } from "@web/core/browser/browser";
 import { Dialog } from "@web/core/dialog/dialog";
+import { registry } from "@web/core/registry";
+import { useService } from "@web/core/utils/hooks";
+import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
 import { useEnergyActions } from "../common/actions";
 import { errorMessage, kyivToUtc, kyivTomorrow } from "../common/format";
 
@@ -189,3 +192,57 @@ export class OutageDialog extends Component {
         }
     }
 }
+
+/** Діалог причини відхилення планового відключення (V-29: `action_reject(reason)` вимагає причину). */
+export class RejectDialog extends Component {
+    static template = "td_energy.RejectDialog";
+    static components = { Dialog };
+    static props = {
+        onConfirm: { type: Function },
+        close: { type: Function },
+    };
+
+    setup() {
+        this.state = useState({ reason: "", error: "", busy: false });
+    }
+
+    async confirm() {
+        const reason = this.state.reason.trim();
+        if (!reason) {
+            this.state.error = "Вкажіть причину відхилення.";
+            return;
+        }
+        this.state.busy = true;
+        try {
+            await this.props.onConfirm(reason);
+            this.props.close();
+        } catch (error) {
+            this.state.error = errorMessage(error);
+        } finally {
+            this.state.busy = false;
+        }
+    }
+}
+
+/** Віджет форми `td_energy_reject_button`: кнопка «Відхилити» з діалогом причини → `action_reject`. */
+export class RejectButton extends Component {
+    static template = "td_energy.RejectButton";
+    static props = { ...standardWidgetProps };
+
+    setup() {
+        this.orm = useService("orm");
+        this.dialog = useService("dialog");
+    }
+
+    onClick() {
+        const record = this.props.record;
+        this.dialog.add(RejectDialog, {
+            onConfirm: async (reason) => {
+                await this.orm.call("td.energy.outage.plan", "action_reject", [[record.resId]], { reason });
+                await record.load();
+            },
+        });
+    }
+}
+
+registry.category("view_widgets").add("td_energy_reject_button", { component: RejectButton });
