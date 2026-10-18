@@ -1,3 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Драйвери plate_m2, hdd (SPEC 5.3) (A). Каркас: наповнює воркер A. -->
-<odoo noupdate="1"/>
+<!-- Драйвери нормалізації plate_m2 і hdd (W4_SPEC 5.3) -->
+<odoo noupdate="1">
+    <record id="driver_plate_m2" model="td.energy.driver">
+        <field name="code">plate_m2</field>
+        <field name="name">Площа плит</field>
+        <field name="source_kind">mrp_area</field>
+        <field name="uom">м²</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="driver_hdd" model="td.energy.driver">
+        <field name="code">hdd</field>
+        <field name="name">Градусо-доби опалення</field>
+        <field name="source_kind">weather_hdd</field>
+        <field name="uom">°C·доба</field>
+        <field name="base_temp_c">18</field>
+        <field name="temp_signal_code">ventilation/totals/outdoor_c</field>
+        <field name="sequence">20</field>
+    </record>
+</odoo>
