@@ -38,6 +38,8 @@
 | 11 | `td_fire_safety` | 5 | [v0.3, 551 р.](modules/td_fire_safety/ARCHITECTURE.md) | [v0.3, 2 598 р.](modules/td_fire_safety/SPEC.md) |
 | 12 | `td_constructor` | 6 | [v0.1, 295 р.](modules/td_constructor/ARCHITECTURE.md) | [v0.1, 999 р.](modules/td_constructor/SPEC.md) |
 | 13 | `td_constructor_viewer3d` (міст «Конструктор» → «Переглядач») | 6 | [v0.1, 66 р.](modules/td_constructor_viewer3d/ARCHITECTURE.md) | [v0.1, 110 р.](modules/td_constructor_viewer3d/SPEC.md) |
+| 14 | `td_energy_analytics` (W4, енергетика) | 3 | [v0.1, 353 р.](modules/td_energy_analytics/ARCHITECTURE.md) | [v0.1, 956 р.](modules/td_energy_analytics/SPEC.md) |
+| 15 | `td_energy_mobile` (W4, енергетика) | 3 | [v0.1, 353 р. (спільне з № 14)](modules/td_energy_mobile/ARCHITECTURE.md) | [v0.1, 476 р.](modules/td_energy_mobile/SPEC.md) |
 
 ## Як читати
 
