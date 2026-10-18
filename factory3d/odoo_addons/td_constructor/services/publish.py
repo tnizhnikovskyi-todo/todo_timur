@@ -24,7 +24,7 @@ from psycopg2 import errors as pg_errors
 from odoo import Command, fields
 from odoo.exceptions import UserError
 
-from . import geometry as geo, snapshot, state as state_mod
+from . import addr as addr_mod, cells as cells_mod, geometry as geo, snapshot, state as state_mod
 from .registry import CHECKS, PLAN_BUILDERS
 from .schemas import SCENE_ROLE_PREFIX
 
@@ -270,29 +270,77 @@ def _group_by(records, field):
     return out
 
 
-def cell_parts(cell):
-    """Номери сегментів адреси комірки для `td_row/td_bay/td_level/td_pos` (0 — не задано).
+def cell_addr(slot):
+    """Повна адресація місця (S1), що дала коди його комірок, або None (legacy-коди чи `code_style = exact`)."""
+    ctx = slot._f3d_addr_context()
+    if ctx and ctx.get('addr') and (slot.params or {}).get('code_style') != 'exact':
+        return ctx
+    return None
 
-    Ядро адресації (S1) може віддавати `cell['parts'] = {row, bay, level, pos}`; без нього — секція = індекс, ярус."""
-    parts = cell.get('parts') or {}
+
+def cell_segments(cell, ctx, prefix=''):
+    """Логічні номери сегментів комірки `{row, bay, level, pos}` (відсутні — немає ключа).
+
+    `cell['parts']`, якщо ядро його віддає. З адресацією S1 — зворотним розбором коду лише за тими словами шаблону, які
+    справді потрапили в код цієї комірки (зона й ряд — із контексту, ярус — лише в шаблонів з ярусами, позиція — у
+    глибини «комірка»): так три числа в коді не плутаються з секцією/ярусом/позицією. Місце на підлозі — номер із
+    контексту (`addr.spot_vals`). Без адресації (legacy) — секція = індекс комірки, ярус."""
+    if cell.get('parts'):
+        return {k: v for k, v in cell['parts'].items() if v}
+    if not ctx:
+        return {'bay': cell.get('index') or 0, 'level': cell.get('level') or 0}
+    addr = ctx['addr']
+    if cell['template'] == 'floor_spot':
+        vals = addr_mod.spot_vals(ctx, prefix)
+        return {k: vals[k] for k in ('row', 'bay', 'level', 'pos') if vals.get(k)}
+    expected = {'prefix', 'bay'}
+    expected |= {key for key in ('zone', 'row') if ctx.get(key) is not None}
+    if cell['template'] in cells_mod.LEVEL_KEYS:
+        expected.add('level')
+        if ctx.get('depth_mode') == 'cell':
+            expected.add('pos')
+    words = addr_mod.parse_tpl(addr['tpl'])
+    keep = [
+        raw
+        for raw, word in zip(addr['tpl'].split(), words, strict=True)
+        if all(name in expected for kind, name in word if kind == 'seg')
+    ]
+    found = addr_mod.parse_code(dict(addr, tpl=' '.join(keep)), cell['code'], prefix) if keep else None
+    return {k: v for k, v in (found or {}).items() if k in ('row', 'bay', 'level', 'pos') and v}
+
+
+def cell_parts(cell, ctx=None, prefix=''):
+    """Номери сегментів адреси комірки для `td_row/td_bay/td_level/td_pos` (0 — не задано)."""
+    seg = cell_segments(cell, ctx, prefix)
     return {
-        'td_row': int(parts.get('row') or 0),
-        'td_bay': int(parts.get('bay') or cell.get('index') or 0),
-        'td_level': int(parts.get('level') or cell.get('level') or 0),
-        'td_pos': int(parts.get('pos') or 0),
+        'td_row': int(seg.get('row') or 0),
+        'td_bay': int(seg.get('bay') or 0),
+        'td_level': int(seg.get('level') or 0),
+        'td_pos': int(seg.get('pos') or 0),
     }
 
 
-def _row_parent_code(site, slot):
-    """Код віртуальної локації «ряд» (loc_tree = row; CD-31 Q1: секції локаціями не робимо); порожньо — плоско."""
-    return slot.code_prefix if site.loc_tree in ('row', 'section') else ''
+def row_code(site, slot, ctx):
+    """Код віртуальної локації «ряд» (loc_tree = row; CD-31 Q1: секції локаціями не робимо); порожньо — плоско.
+
+    Це слова шаблону адресації S1, що не залежать від секції/ярусу/позиції (`addr.render_code` з номером ряду місця і
+    зоною з `address_context`) — той самий префікс, що видно в кодах комірок у попередньому перегляді адресації; без
+    адресації (legacy) — `code_prefix` місця. Для місць без рядів (зони, місце на підлозі) — порожньо."""
+    if site.loc_tree not in ('row', 'section') or slot.template not in addr_mod.ROW_TEMPLATES:
+        return ''
+    if ctx:
+        vals = {'prefix': slot.code_prefix, 'zone': ctx.get('zone'), 'row': ctx.get('row')}
+        vals.update(dict.fromkeys(('bay', 'level', 'pos')))
+        return addr_mod.render_code(ctx['addr'], vals) or slot.code_prefix
+    return slot.code_prefix
 
 
-def _short_name(code, prefix):
-    """Ім'я комірки в дереві «ряд»: код без префікса ряду (повний код лишається штрихкодом)."""
-    if code.startswith(prefix) and len(code) > len(prefix) + 1:
-        return code[len(prefix) :].lstrip('-_ .')
-    return code
+def loc_name(cell, ctx, tree, prefix):
+    """Ім'я локації комірки: без власної назви — за правилом F01-05 (`addr.location_vals`: останній сегмент для дерева
+    ряд/секція, повний код — у штрихкоді); інакше повний код (плоско, legacy)."""
+    if cell['name'] != cell['code'] or tree == 'flat' or not ctx:
+        return cell['name']
+    return addr_mod.location_vals(cell['code'], cell_segments(cell, ctx, prefix), ctx['addr'], tree)['name']
 
 
 def _restorable_ids(site, model=LOCATION):
@@ -318,6 +366,8 @@ def _desired_cells(site, slots, zones, issues):
         cells = slot._f3d_cells()
         if not cells:
             continue
+        ctx = cell_addr(slot)
+        rcode = row_code(site, slot, ctx)
         parent = slot.parent_location_id or site.default_parent_location_id
         if not parent:
             issues.append(
@@ -349,6 +399,10 @@ def _desired_cells(site, slots, zones, issues):
                 'parent': parent,
                 'zone': chain[0] if chain else None,
                 'chain': chain,
+                'ctx': ctx,
+                'row_code': rcode if rcode and rcode != cell['code'] else '',
+                'tree': site.loc_tree if rcode and rcode != cell['code'] else 'flat',
+                'parts': cell_parts(cell, ctx, slot.code_prefix),
             }
     return desired
 
@@ -359,7 +413,7 @@ def _plan_locations(site, env, lines, issues):
     desired = _desired_cells(site, slots, _zones(site), issues)
     unchanged = 0
     codes = list(desired)
-    prefixes = {_row_parent_code(site, item['slot']) for item in desired.values()} - {''}
+    prefixes = {item['row_code'] for item in desired.values()} - {''}
     existing = (
         Loc.search(
             [
@@ -380,7 +434,7 @@ def _plan_locations(site, env, lines, issues):
     kept = set(codes) | prefixes  # коди сцени, що лишаються за площадкою (в т.ч. td_code/td_alias знайдених записів)
     rows = {}  # префікс → рядок створення віртуальної локації «ряд»
     for prefix in sorted(prefixes):
-        item = next(it for it in desired.values() if _row_parent_code(site, it['slot']) == prefix)
+        item = next(it for it in desired.values() if it['row_code'] == prefix)
         if prefix not in by_f3d:
             vals = {
                 'name': prefix,
@@ -397,13 +451,15 @@ def _plan_locations(site, env, lines, issues):
             rows[prefix]['extra']['virtual'] = True
             lines.append(rows[prefix])
     by_slot = {}
-    if any(it['cell'].get('parts') for it in desired.values()):
+    if any(
+        it['ctx'] for it in desired.values()
+    ):  # з адресацією S1 перейменування знаходить локацію за номерами сегментів
         for rec in Loc.search([('td_site_id', '=', site.id), ('td_slot_uid', '!=', False)]):
             by_slot.setdefault(rec.td_slot_uid, []).append(rec)
     taken = set()
     mode = _code_mode(site)
     for code, item in desired.items():
-        cell, slot, parent, zone, chain = item['cell'], item['slot'], item['parent'], item['zone'], item['chain']
+        slot, zone = item['slot'], item['zone']
         rec, skip = _match(code, by_f3d, by_barcode, site, issues, "локація", by_alias, restorable)
         if skip:
             continue
@@ -412,29 +468,25 @@ def _plan_locations(site, env, lines, issues):
             kept.update(c for c in (rec.td_code, rec.td_alias) if c)
             taken.add(rec.id)
         else:
-            old = _renumbered(cell, slot, by_slot, desired, taken)
+            old = _renumbered(item, by_slot, desired, taken)
             if old is not None:
                 taken.add(old.id)
                 kept.add(old.td_code)
-                _plan_rename(lines, issues, old, code, cell, slot, zone_uid, mode)
+                _plan_rename(lines, issues, old, code, item, zone_uid, mode)
                 continue
-            lines.append(_plan_create(site, code, cell, slot, parent, chain, zone_uid, rows, by_f3d))
+            lines.append(_plan_create(site, code, item, zone_uid, rows, by_f3d))
             continue
-        parent_rec = (
-            by_f3d.get(_row_parent_code(site, slot)) if _row_parent_code(site, slot) else slot.parent_location_id
-        )
-        if not _plan_existing(lines, issues, rec, code, cell, slot, chain, zone_uid, site, mode, parent_rec):
+        parent_rec = by_f3d.get(item['row_code']) if item['row_code'] else slot.parent_location_id
+        if not _plan_existing(lines, issues, rec, code, item, zone_uid, site, mode, parent_rec):
             unchanged += 1
     return kept, unchanged
 
 
-def _plan_create(site, code, cell, slot, parent, chain, zone_uid, rows, by_f3d):
-    row_code = _row_parent_code(site, slot)
-    name = cell['name']
-    if row_code and name == code:
-        name = _short_name(code, row_code)
+def _plan_create(site, code, item, zone_uid, rows, by_f3d):
+    cell, slot, parent, chain, parts = item['cell'], item['slot'], item['parent'], item['chain'], item['parts']
+    row = item['row_code']
     vals = {
-        'name': name,
+        'name': loc_name(cell, item['ctx'], item['tree'], slot.code_prefix),
         'barcode': code,
         'td_code': code,
         'usage': 'internal',
@@ -444,14 +496,15 @@ def _plan_create(site, code, cell, slot, parent, chain, zone_uid, rows, by_f3d):
         'td_site_id': site.id,
         'td_slot_uid': slot.uid,
         'company_id': site.company_id.id,
-        **cell_parts(cell),
+        **parts,
     }
-    extra = {'zone_uid': zone_uid, 'parts': cell_parts(cell)}
+    vals.update(flag_vals(cell))
+    extra = {'zone_uid': zone_uid, 'parts': parts}
     depends = ''
-    if row_code in rows:  # батьківський ряд створюється в цьому ж плані: id підставить застосування
-        depends, extra['parent_code'] = row_code, row_code
-    elif row_code and row_code in by_f3d:
-        vals['location_id'] = by_f3d[row_code].id
+    if row in rows:  # батьківський ряд створюється в цьому ж плані: id підставить застосування
+        depends, extra['parent_code'] = row, row
+    elif row and row in by_f3d:
+        vals['location_id'] = by_f3d[row].id
     category = inherited('storage_category_id', slot, chain)
     strategy = inherited('removal_strategy_id', slot, chain)
     if category:
@@ -461,15 +514,19 @@ def _plan_create(site, code, cell, slot, parent, chain, zone_uid, rows, by_f3d):
     card = "вид %s" % cell['kind'] + (", місткість %s" % _fmt(cell['capacity']) if cell['capacity'] else "")
     if category:
         card += ", категорія %s" % category.name
-    return _line('create', LOCATION, code, cell['name'], vals, None, slot.uid, card, extra, depends)
+    line = _line('create', LOCATION, code, cell['name'], vals, None, slot.uid, card, extra, depends)
+    problem = flag_problem(slot.env, vals, None, parent)
+    if problem:
+        _block(line, *problem)
+    return line
 
 
-def _renumbered(cell, slot, by_slot, desired, taken):
+def _renumbered(item, by_slot, desired, taken):
     """Наявна локація того ж місця з тими самими номерами сегментів, але іншим кодом (зміна адресації)."""
-    if not cell.get('parts'):
+    if not item['ctx']:
         return None
-    mine = cell_parts(cell)
-    for rec in by_slot.get(slot.uid, []):
+    mine = item['parts']
+    for rec in by_slot.get(item['slot'].uid, []):
         if rec.id in taken or not rec.active or not rec.td_code or rec.td_code in desired:
             continue
         if all(rec[f] == mine[f] for f in PART_FIELDS) and any(rec[f] for f in PART_FIELDS):
@@ -477,8 +534,9 @@ def _renumbered(cell, slot, by_slot, desired, taken):
     return None
 
 
-def _plan_rename(lines, issues, rec, code, cell, slot, zone_uid, mode='warn'):
-    vals = {'name': cell['name'], 'barcode': code, 'td_code': code}
+def _plan_rename(lines, issues, rec, code, item, zone_uid, mode='warn'):
+    cell, slot = item['cell'], item['slot']
+    vals = {'name': loc_name(cell, item['ctx'], item['tree'], slot.code_prefix), 'barcode': code, 'td_code': code}
     line = _line('rename', LOCATION, code, rec.complete_name or code, vals, rec, slot.uid, _diff_text(rec, vals))
     line['extra'].update({'zone_uid': zone_uid, 'old_code': rec.td_code})
     busy = (
@@ -494,7 +552,8 @@ def _plan_rename(lines, issues, rec, code, cell, slot, zone_uid, mode='warn'):
     lines.append(line)
 
 
-def _plan_existing(lines, issues, rec, code, cell, slot, chain, zone_uid, site, mode='warn', parent_rec=None):
+def _plan_existing(lines, issues, rec, code, item, zone_uid, site, mode='warn', parent_rec=None):
+    cell, slot, chain, parts = item['cell'], item['slot'], item['chain'], item['parts']
     """Рядки для наявної локації: перенесення, перейменування, атрибути. Повертає, чи є зміни."""
     mine = []
     # F02-11: штрихкод зайнятий не внутрішньою локацією або іншого складу — застосувати не можна
@@ -545,12 +604,17 @@ def _plan_existing(lines, issues, rec, code, cell, slot, chain, zone_uid, site, 
         vals['storage_category_id'] = category.id
     if strategy and rec.removal_strategy_id != strategy:
         vals['removal_strategy_id'] = strategy.id
-    parts = cell_parts(cell)
     if any(rec[f] for f in PART_FIELDS):  # номери адреси наявних локацій оновлюємо, лише коли вони вже ведуться
         vals.update({f: parts[f] for f in PART_FIELDS if rec[f] != parts[f]})
+    flags = flag_vals(cell, rec)
+    vals.update(flags)
     if vals:
         text = _diff_text(rec, vals)
-        add('attrs', vals, ("відновити з архіву (після відкату); " + text) if 'active' in vals else text)
+        line = add('attrs', vals, ("відновити з архіву (після відкату); " + text) if 'active' in vals else text)
+        problem = flag_problem(rec.env, flags, rec) if flags else None
+        if problem:
+            _block(line, *problem)
+            issues.append(_issue('conflict', 'warn', "%s: %s" % (code, problem[0]), [code]))
     if foreign and mine:
         for line in mine:
             _block(line, foreign, 'barcode_busy')
@@ -558,6 +622,60 @@ def _plan_existing(lines, issues, rec, code, cell, slot, chain, zone_uid, site, 
             issues.append(_issue('code_conflict', mode, foreign, [code]))
     lines.extend(mine)
     return bool(mine)
+
+
+def _replenish_nested(env, loc):
+    """Odoo забороняє вкладені місця поповнення: є інша `replenish_location` серед батьків або нащадків `loc`."""
+    return bool(
+        env[LOCATION].search_count(
+            [
+                ('id', '!=', loc.id),
+                ('replenish_location', '=', True),
+                '|',
+                ('location_id', 'child_of', loc.id),
+                ('location_id', 'parent_of', loc.id),
+            ]
+        )
+    )
+
+
+def flag_vals(cell, rec=None):
+    """Прапорці локації з перевизначень комірки (F03-05): `usage` (internal/view) і `replenish_location`; для наявної
+    локації — лише відмінні. Порожньо, коли комірка їх не задає."""
+    vals = {}
+    usage = cell.get('usage')
+    if usage and usage != (rec.usage if rec is not None else 'internal'):
+        vals['usage'] = usage
+    if 'replenish_location' in cell:
+        want = bool(cell['replenish_location'])
+        if (rec is None and want) or (rec is not None and rec.replenish_location != want):
+            vals['replenish_location'] = want
+    return vals
+
+
+def flag_problem(env, vals, rec=None, parent=None):
+    """Чому прапорці не можна застосувати: `(причина, мітка)` або None. Місце із залишком не стане view; місце
+    поповнення — лише внутрішня локація без вкладених місць поповнення."""
+    usage = vals.get('usage') or (rec.usage if rec is not None else 'internal')
+    if rec is not None and vals.get('usage') == 'view' and _stock_qty(rec):
+        return "Є залишки: місце з товаром не стане типом view", 'stock'
+    if vals.get('replenish_location'):
+        if usage != 'internal':
+            return "Місце поповнення має бути внутрішньою локацією", 'replenish_usage'
+        nested = (
+            _replenish_nested(env, rec)
+            if rec is not None
+            else bool(
+                parent is not None
+                and env[LOCATION].search_count([('replenish_location', '=', True), ('id', 'parent_of', parent.id)])
+            )
+        )
+        if nested:
+            return (
+                "Вкладені місця поповнення заборонені (батько чи нащадок уже місце поповнення)",
+                'replenish_nested',
+            )
+    return None
 
 
 def _stock_qty(location):
@@ -574,12 +692,9 @@ def _stock_qty(location):
 
 
 def _code_mode(site):
-    """Серйозність зауважень про зайнятий штрихкод: з налаштування `code_conflict`; без нього — попередження;
-    None — вимкнено."""
-    config = site.check_config_ids.filtered(lambda c: c.check_key == 'code_conflict')[:1]
-    if not config:
-        return 'warn'
-    return config.mode if config.enabled else None
+    """Серйозність зауважень плану про зайнятий штрихкод: без налаштування `code_conflict` — попередження; з
+    налаштуванням (увімкнене чи ні) зауваження дає перевірка `code_conflict` через `scene.extra`, тож тут — None."""
+    return None if site.check_config_ids.filtered(lambda c: c.check_key == 'code_conflict') else 'warn'
 
 
 def code_states(env, site, codes):

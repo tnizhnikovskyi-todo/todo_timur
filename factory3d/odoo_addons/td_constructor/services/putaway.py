@@ -9,7 +9,7 @@
 * розділ знімка `putaway_rules` (R-14).
 """
 
-from . import capacity, publish as pub, state as state_mod
+from . import capacity, publish as pub
 from .registry import CHECKS, PLAN_BUILDERS, SNAPSHOT_SECTIONS, SnapshotSection
 
 FIT_EPS = 1e-6
@@ -137,16 +137,6 @@ def fit_rules(site):
     for rule, code, _slot, reason in _fit_findings(scene):
         out.setdefault(rule['uid'], []).append({'code': code, 'reason': reason})
     return out
-
-
-def _plan_fit(site, env, issues):
-    config = capacity.check_config(site, 'putaway_fit')
-    if not config:
-        return
-    scene = capacity.plan_check_scene(
-        site, {'putaway': rule_fit_inputs(site), 'limits': capacity.site_cell_limits(site)}
-    )
-    capacity.add_new_issues(issues, check_putaway_fit(scene, config, state_mod.eps_m(env)))
 
 
 # --- план правил розміщення (F04-01…03) ----------------------------------------------------------------------------
@@ -299,9 +289,8 @@ def apply_putaway(site, lines, records, ops):
 
 
 def _plan(site, env, lines, issues):
-    unchanged = plan_putaway(site, env, lines, issues)
-    _plan_fit(site, env, issues)
-    return unchanged
+    # putaway_fit входить у зауваження плану через `run_site_checks` (`scene.extra`), тут лише правила розміщення
+    return plan_putaway(site, env, lines, issues)
 
 
 PLAN_BUILDERS.register('putaway', _plan, sequence=70)

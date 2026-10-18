@@ -521,7 +521,9 @@ class F3dConstructorController(http.Controller):
 
     # --- API-07 -------------------------------------------------------------------------------------
     @http.route('/f3d/constructor/publish', type='jsonrpc', auth='user', methods=['POST'])
-    def publish(self, site_id=None, note=None, archive_codes=None, confirm=None, **kw):
+    def publish(self, site_id=None, note=None, archive_codes=None, confirm=None, scope=None, excluded=None, **kw):
+        """`scope` — uid місць/зон (застосувати лише їхні рядки, F02-03); `excluded` — рядки, що пропускаються:
+        `[модель, код]` або `[модель, код, вид]` (вид: create/move/rename/attrs/update)."""
         env = request.env
         site = find_site(env, site_id)
         if not site:
@@ -530,9 +532,26 @@ class F3dConstructorController(http.Controller):
             return fail('validation', "Підтвердіть публікацію: confirm = true.")
         if not is_manager(env):
             return fail('rights', "Публікувати розкладку може лише менеджер конструктора.")
+        if scope is not None and not (isinstance(scope, list) and all(isinstance(u, str) for u in scope)):
+            return fail('validation', "scope має бути списком uid місць або зон.")
+        if excluded is not None and not (
+            isinstance(excluded, list)
+            and all(
+                isinstance(e, list | tuple) and 2 <= len(e) <= 3 and all(isinstance(x, str) for x in e)
+                for e in excluded
+            )
+        ):
+            return fail('validation', "excluded має бути списком [модель, код] або [модель, код, вид].")
         try:
             plan = publish.build_plan(site)
-            result = publish.apply_plan(site, plan, set(archive_codes or []), note if isinstance(note, str) else '')
+            result = publish.apply_plan(
+                site,
+                plan,
+                set(archive_codes or []),
+                note if isinstance(note, str) else '',
+                {tuple(e) for e in excluded or []},
+                set(scope) if scope is not None else None,
+            )
         except publish.PublishError as exc:
             return fail(exc.code, str(exc), issues=exc.issues)
         except AccessError as exc:
@@ -545,6 +564,8 @@ class F3dConstructorController(http.Controller):
             'updated': result['updated'],
             'archived': result['archived'],
             'counts': {k: len(result[k]) for k in ('created', 'updated', 'archived')},
+            'ops': result['ops'],
+            'skipped': result['skipped'],
             'warnings': result['warnings'],
         }
 

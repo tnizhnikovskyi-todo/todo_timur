@@ -199,14 +199,11 @@ class TestS2Putaway(S2Mixin, F3DConstructorCase):
         with self.assertRaises(publish.PublishError) as ctx:
             self.apply()
         self.assertEqual(ctx.exception.code, 'blocked')
-        # живий API-05 даних БД не має
-        self.assertEqual(
-            checks.run_checks(
-                state_mod.checks_state(self.site),
-                [{'check': 'putaway_fit', 'enabled': True, 'mode': 'warn', 'params': {}}],
-            ),
-            [],
+        # живий API-05 бачить ті самі зауваження: дані БД приходять із `scene.extra` (`state.checks_state`)
+        live = checks.run_checks(
+            state_mod.checks_state(self.site), [{'check': 'putaway_fit', 'enabled': True, 'mode': 'warn', 'params': {}}]
         )
+        self.assertEqual(len([i for i in live if i['check'] == 'putaway_fit']), 3)
         self.assertIn('putaway_fit', CHECKS)
 
     def test_item_units_follow_odoo_configuration(self):
@@ -230,6 +227,10 @@ class TestS2Putaway(S2Mixin, F3DConstructorCase):
         self.assertEqual([(i['codes'], i['severity']) for i in issues], [(['PW-R1-B01-L1'], 'block')])
         self.assertEqual(publish.check_code_conflict(capacity.plan_check_scene(self.site, {}), config, 0.001), [])
         self.assertIn('code_conflict', CHECKS)
+        # живий API-05 (run_site_checks) бачить зайнятий код без плану
+        self.enable_check('code_conflict', 'warn')
+        live = [i for i in state_mod.run_site_checks(self.site) if i['check'] == 'code_conflict']
+        self.assertEqual([(i['codes'], i['severity']) for i in live], [(['PW-R1-B01-L1'], 'warn')])
         # у плані зауваження про зайнятий штрихкод слідує налаштуванню: блокує, коли режим block
         self.enable_check('code_conflict', 'block')
         plan = self.plan()

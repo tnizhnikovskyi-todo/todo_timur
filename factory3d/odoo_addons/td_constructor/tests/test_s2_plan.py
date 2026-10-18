@@ -190,7 +190,9 @@ class TestS2Plan(F3DConstructorCase):
         cells = [ln for ln in creates if not ln['extra'].get('virtual')]
         self.assertEqual((parent['code'], parent['vals']['usage']), ('SA-R', 'view'))
         self.assertTrue(all(ln['depends_code'] == 'SA-R' for ln in cells))
-        self.assertEqual({ln['vals']['name'] for ln in cells}, {'B01-L1', 'B02-L1'})
+        self.assertEqual(
+            {ln['vals']['name'] for ln in cells}, {'SA-R-B01-L1', 'SA-R-B02-L1'}
+        )  # legacy: ім'я = повний код
         # знімаємо рядок батька: застосування додає його саме
         chosen, skipped = publish.select_lines(plan, excluded={(publish.LOCATION, 'SA-R', 'create')}, scope={a.uid})
         self.assertIn('SA-R', [ln['code'] for ln in chosen])
@@ -200,26 +202,107 @@ class TestS2Plan(F3DConstructorCase):
         self.assertEqual(row.location_id, self.wh_fg)
         self.assertEqual(self.plan()['lines'], [])
 
-    def test_renumber_becomes_rename_when_parts_are_known(self):
-        from unittest.mock import patch
+    def test_row_tree_follows_the_addressing_of_the_site(self):
+        """Код ряду — слова адресації S1 без секції/ярусу: той самий префікс, що в кодах комірок (перегляд)."""
+        from ..services import addr as addr_mod
 
-        slot = self.rack(bays=1, levels=1)
+        self.site.write({'loc_tree': 'row', 'addr': addr_mod.preset_addr('zone_row_bay_level')})
+        slot = self.rack('SA-AD', bays=2, levels=2)
+        plan = self.plan()
+        creates = self.lines(plan, 'create')
+        parent = next(ln for ln in creates if ln['extra'].get('virtual'))
+        cells = [ln for ln in creates if not ln['extra'].get('virtual')]
+        ctx = slot._f3d_addr_context()
+        expected = addr_mod.render_code(
+            ctx['addr'], {'prefix': slot.code_prefix, 'zone': ctx['zone'], 'row': ctx['row']}
+        )
+        self.assertEqual(parent['code'], expected)
+        self.assertNotEqual(parent['code'], 'SA-AD')  # адресація, а не префікс місця
+        preview = addr_mod.preview([c['code'] for c in cells], limit=10)
+        sep = ctx['addr']['sep']
+        self.assertTrue(all(code.startswith(parent['code'] + sep) for code in preview['first']))
+        self.assertTrue(all(ln['depends_code'] == parent['code'] for ln in cells))
+        # ім'я комірки — останній сегмент (F01-05), штрихкод — повний код, номери адреси розібрані з коду
+        sample = next(ln for ln in cells if ln['vals']['td_bay'] == 2 and ln['vals']['td_level'] == 2)
+        self.assertEqual(sample['vals']['name'], sample['code'].rsplit(sep, 1)[-1])
+        self.assertEqual((sample['vals']['barcode'], sample['vals']['td_row']), (sample['code'], ctx['row']))
+        self.apply(plan)
+        row = self.loc(parent['code'])
+        self.assertEqual(self.loc(sample['code']).location_id, row)
+        self.assertEqual(self.plan()['lines'], [])
+
+    def test_renumber_becomes_rename_when_the_addressing_changes(self):
+        """Зміна адресації (S1) міняє коди, а не номери ряду/секції/ярусу: локації перейменовуються, не створюються."""
+        from ..services import addr as addr_mod
+
+        first = addr_mod.normalize_addr({'tpl': '{row} {bay} {level}', 'sep': '-'})
+        self.site.write({'addr': first})
+        slot = self.rack(bays=2, levels=1)
+        plan = self.plan()
+        old_codes = sorted(ln['code'] for ln in self.lines(plan, 'create'))
+        self.assertEqual(self.lines(plan, 'create')[0]['vals']['td_row'], 1)
+        self.apply(plan)
+        wider = {'tpl': '{row} {bay} {level}', 'sep': '-', 'seg': {'row': {'width': 3}}}  # 01-01-1 → 001-01-1
+        self.site.write({'addr': addr_mod.normalize_addr(wider)})
+        plan = self.plan()
+        rename = self.lines(plan, 'rename')
+        self.assertEqual(len(rename), 2)
+        self.assertEqual(sorted(ln['extra']['old_code'] for ln in rename), old_codes)
+        self.assertEqual({ln['code'] for ln in rename}, {'0' + c for c in old_codes})
+        self.assertFalse(self.lines(plan, 'create') or self.lines(plan, 'archive'))
+        ids = {self.loc(c).id for c in old_codes}
+        self.apply(plan)
+        self.assertEqual({self.loc('0' + c).id for c in old_codes}, ids)  # ті самі записи Odoo
+        self.assertEqual(self.plan()['lines'], [])
+        self.assertTrue(slot.exists())
+
+    # --- F03-05: прапорці місця (usage, replenish_location) --------------------------------------------
+    def isolated_rack(self, **kw):
+        """Стелаж у дереві без місця поповнення (типовий WH/Stock уже є таким, а вкладених Odoo не дозволяє)."""
+        root = self.env['stock.location'].create({'name': 'Корінь без поповнення', 'usage': 'view'})
+        slot = self.rack(**kw)
+        slot.parent_location_id = root
+        return slot, root
+
+    def test_flags_from_cell_overrides_are_published(self):
+        slot, _root = self.isolated_rack(bays=2, levels=1)
+        slot.overrides = {'SA-R1-B01-L1': {'usage': 'view'}, 'SA-R1-B02-L1': {'replenish_location': True}}
+        plan = self.plan()
+        by = {ln['code']: ln['vals'] for ln in self.lines(plan, 'create')}
+        self.assertEqual(by['SA-R1-B01-L1']['usage'], 'view')
+        self.assertTrue(by['SA-R1-B02-L1']['replenish_location'])
+        self.apply(plan)
+        self.assertEqual(self.loc('SA-R1-B01-L1').usage, 'view')
+        self.assertTrue(self.loc('SA-R1-B02-L1').replenish_location)
+        self.assertEqual(self.plan()['lines'], [])  # ідемпотентно
+        slot.overrides = {
+            'SA-R1-B02-L1': {'replenish_location': False}
+        }  # знімаємо прапорець; usage без ключа — як в Odoo
+        attrs = self.lines(self.plan(), 'attrs')
+        self.assertEqual([(ln['code'], ln['vals']) for ln in attrs], [('SA-R1-B02-L1', {'replenish_location': False})])
+
+    def test_flag_rules_stock_view_and_nested_replenish(self):
+        from odoo.exceptions import ValidationError
+
+        slot, root = self.isolated_rack(bays=2, levels=1)
         self.apply()
-        old = self.loc('SA-R1-B01-L1')
-        cells = slot._f3d_cells()
-        renumbered = [
-            dict(c, code='SA-R1-X1', name='SA-R1-X1', parts={'row': 0, 'bay': 1, 'level': 1, 'pos': 0}) for c in cells
-        ]
-        TdSlot = type(slot)
-        with patch.object(TdSlot, '_f3d_cells', lambda self: renumbered if self.id == slot.id else []):
-            plan = self.plan()
-            rename = self.lines(plan, 'rename')
-            self.assertEqual([ln['code'] for ln in rename], ['SA-R1-X1'])
-            self.assertEqual(rename[0]['vals'], {'name': 'SA-R1-X1', 'barcode': 'SA-R1-X1', 'td_code': 'SA-R1-X1'})
-            self.assertFalse(self.lines(plan, 'create') or self.lines(plan, 'archive'))
-            self.apply(plan)
-        old.invalidate_recordset()
-        self.assertEqual((old.td_code, old.barcode), ('SA-R1-X1', 'SA-R1-X1'))
+        loc = self.loc('SA-R1-B01-L1')
+        product = self.env['product.product'].create({'name': "Тестовий", 'is_storable': True})
+        self.env['stock.quant']._update_available_quantity(product, loc, 2.0)
+        slot.overrides = {'SA-R1-B01-L1': {'usage': 'view'}}
+        line = self.lines(self.plan(), 'attrs')[0]
+        self.assertTrue(line['blocked'])  # місце із залишком не стане view
+        self.assertIn('stock', line['extra']['flags'])
+        # вкладене місце поповнення заборонене: батько вже replenish
+        root.replenish_location = True
+        slot.overrides = {'SA-R1-B02-L1': {'replenish_location': True}}
+        line = self.lines(self.plan(), 'attrs')[0]
+        self.assertTrue(line['blocked'])
+        self.assertIn('replenish_nested', line['extra']['flags'])
+        root.replenish_location = False
+        # неприпустиме значення відхиляється схемою overrides
+        with self.assertRaises(ValidationError):
+            slot.overrides = {'SA-R1-B01-L1': {'usage': 'customer'}}
 
     # --- журнал і відкат ------------------------------------------------------------------------------
     def test_journal_records_ops_with_before_after(self):
@@ -464,6 +547,26 @@ class TestS2PlanApi(F3DConstructorHttpCase):
             '/f3d/constructor/publish/rollback', site_id=self.site.id, version_id=pub['version']['id'], confirm=True
         )
         self.assertEqual(again['code'], 'rollback_blocked')
+
+    def test_publish_api_scope_and_excluded(self):
+        a = self.make_slot(prefix='SA-SC', bays=2, levels=1)
+        self.make_slot(prefix='SA-SD', bays=2, levels=1, x=30.0, y=15.0)
+        self.authenticate(self.u_manager.login, PASSWORD)
+        bad = self.rpc('/f3d/constructor/publish', site_id=self.site.id, confirm=True, scope='x')
+        self.assertEqual(bad['code'], 'validation')
+        bad = self.rpc('/f3d/constructor/publish', site_id=self.site.id, confirm=True, excluded=[['a']])
+        self.assertEqual(bad['code'], 'validation')
+        res = self.rpc(
+            '/f3d/constructor/publish',
+            site_id=self.site.id,
+            confirm=True,
+            scope=[a.uid],
+            excluded=[['stock.location', 'SA-SC-B02-L1', 'create']],
+        )
+        self.assertTrue(res['ok'], res)
+        self.assertEqual([c['code'] for c in res['created']], ['SA-SC-B01-L1'])
+        self.assertEqual((res['ops'], res['skipped']), (1, []))
+        self.assertFalse(self.env['stock.location'].search([('td_code', '=', 'SA-SD-B01-L1')]))
 
     def test_rollback_rights(self):
         self.make_slot(prefix='SA-RT', bays=1, levels=1)

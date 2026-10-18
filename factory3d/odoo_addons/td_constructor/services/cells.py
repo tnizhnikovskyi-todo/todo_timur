@@ -172,7 +172,9 @@ PARAM_LABELS = {
     'shape': "Форма 3D",
 }
 
-OVERRIDE_KEYS = ('disabled', 'max_load_kg', 'capacity', 'name')
+# F03-05: `usage` (internal | view) і `replenish_location` — прапорці локації, що їх записує публікація
+OVERRIDE_KEYS = ('disabled', 'max_load_kg', 'capacity', 'name', 'usage', 'replenish_location')
+LOCATION_USAGES = ('internal', 'view')
 SERVICE_SIDES = ('front', 'back', 'left', 'right')
 # ключ параметра «кількість ярусів» і «базова висота ярусу» генераторів із ярусами
 LEVEL_KEYS = {
@@ -602,9 +604,12 @@ def normalize_overrides(overrides):
             if key not in item:
                 continue
             value = item[key]
-            if key == 'disabled':
+            if key in ('disabled', 'replenish_location'):
                 if not isinstance(value, bool):
-                    raise CellsError("Комірка %s: «disabled» має бути true/false." % code)
+                    raise CellsError("Комірка %s: «%s» має бути true/false." % (code, key))
+            elif key == 'usage':
+                if value not in LOCATION_USAGES:
+                    raise CellsError("Комірка %s: «usage» має бути одним із: %s." % (code, ", ".join(LOCATION_USAGES)))
             elif key == 'name':
                 if not isinstance(value, str) or len(value) > 64:
                     raise CellsError("Комірка %s: назва — рядок до 64 символів." % code)
@@ -623,7 +628,8 @@ def normalize_overrides(overrides):
 def generate_cells(template, prefix, x, y, rot, params, overrides=None, elevation=0.0, ctx=None):
     """R-01: список комірок `{code, name, template, level, index, x, y, z0, l, w, h, rot, capacity, max_load_kg, kind}`.
 
-    `overrides[code]`: `disabled` — комірка не повертається; `max_load_kg`, `capacity`, `name` замінюють значення.
+    `overrides[code]`: `disabled` — комірка не повертається; `max_load_kg`, `capacity`, `name` замінюють значення;
+    `usage`, `replenish_location` (F03-05) потрапляють у комірку лише коли задані.
     `ctx` — контекст адресації місця (`addr.address_context`): без нього коди legacy (`ПРЕФІКС-B01-L1`)."""
     spec = SLOT_TEMPLATES.get(template)
     if spec is None:
@@ -645,23 +651,23 @@ def generate_cells(template, prefix, x, y, rot, params, overrides=None, elevatio
         if ov.get('disabled'):
             continue
         wx, wy = rotate(raw['lx'], raw['ly'], rot)
-        out.append(
-            {
-                'code': code,
-                'name': ov.get('name') or code,
-                'template': template,
-                'level': raw['level'],
-                'index': raw['index'],
-                'x': x + wx,
-                'y': y + wy,
-                'z0': elevation + raw['dz'],
-                'l': raw['l'],
-                'w': raw['w'],
-                'h': raw['h'],
-                'rot': float(rot),
-                'capacity': ov.get('capacity', raw['capacity']),
-                'max_load_kg': ov.get('max_load_kg', raw['max_load_kg']),
-                'kind': raw['kind'],
-            }
-        )
+        cell = {
+            'code': code,
+            'name': ov.get('name') or code,
+            'template': template,
+            'level': raw['level'],
+            'index': raw['index'],
+            'x': x + wx,
+            'y': y + wy,
+            'z0': elevation + raw['dz'],
+            'l': raw['l'],
+            'w': raw['w'],
+            'h': raw['h'],
+            'rot': float(rot),
+            'capacity': ov.get('capacity', raw['capacity']),
+            'max_load_kg': ov.get('max_load_kg', raw['max_load_kg']),
+            'kind': raw['kind'],
+        }
+        cell.update({key: ov[key] for key in ('usage', 'replenish_location') if key in ov})
+        out.append(cell)
     return out

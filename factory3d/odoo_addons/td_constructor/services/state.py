@@ -228,7 +228,10 @@ def checks_state(site):
     for layer in layers:
         data = layer_dict(layer)
         layer_data.append(data)
+    from . import capacity  # лише тут: capacity імпортує state
+
     return {
+        'extra': lambda scene: capacity.check_extra(site, scene),
         'site': {
             'building': {
                 'length': site.building_length_m,
