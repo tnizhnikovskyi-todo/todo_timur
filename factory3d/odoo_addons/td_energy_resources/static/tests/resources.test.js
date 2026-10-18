@@ -236,8 +236,10 @@ test("список: смуга шириною share·100 %, значення з 
     const rows = queryAll(".o_td_res_item");
     expect(rows.length).toBe(3);
     expect(queryAllTexts(".o_td_res_item_value")[0]).toMatch(/^2,4\s*м³\/хв$/);
-    const bar = queryOne(".o_td_res_item .o_td_en_top_bar > div");
-    expect(bar.style.width).toBe("100%");
+    const bars = queryAll(".o_td_res_item .o_td_en_top_bar > div");
+    expect(bars.length).toBe(3);
+    expect(bars[0].style.width).toBe("100%");
+    expect(bars[1].style.width).toBe(`${Math.round(API.air.resource.list.items[1].share * 1000) / 10}%`);
     expect(queryText(".o_td_res_unaccounted")).toMatch(/Невраховано:\s*4,1\s*м³\/хв · 41,8 %/);
 });
 
