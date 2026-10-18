@@ -5,6 +5,7 @@ import { assertAdapter } from "./adapter.js";
 import { BODY_HTML } from "./body.js";
 import { ROLES } from "./data.js";
 import "./dialogs.js";
+import "./draft.js";
 import "./dxf.js";
 import { host, setHost } from "./host.js";
 import "./panels_left.js";
@@ -39,6 +40,8 @@ const syncNow = () => {
     if (!ctx || !S.site) {
         return;
     }
+    E.undoRecord?.(); // S3: крок історії для скасування (знімок після зміни)
+    E.refreshUnsaved?.();
     ctx.adapter.save(S);
 };
 const scheduleSave = debounce(syncNow, 150);
@@ -75,7 +78,10 @@ const saveSiteProps = debounce(async () => {
 }, 700);
 
 /** Зміна стану: дискретні дії (додавання, видалення, перемикання). */
-function commit() {
+function commit(o) {
+    if (o && o.label) {
+        E.undoLabel?.(o.label);
+    }
     reindex();
     S.issues = runLive();
     E.syncScene();
@@ -101,6 +107,8 @@ function applyLoaded(st, keep) {
     ctx.adapter.autosaveMs = st.site.settings?.autosave_ms ?? 1500;
     reindex();
     S.sel = keep?.sel && (keep.sel.kind === "slot" ? S.sIdx : S.pIdx).has(keep.sel.id) ? keep.sel : null;
+    S.multi = [];
+    S.hl = null;
     S.selCell = null;
     S.edit = null;
     if (!keep) {
@@ -111,6 +119,12 @@ function applyLoaded(st, keep) {
     S.ui.dxfScale = null;
     V.models.clear();
     S.issues = runLive();
+    if (keep) {
+        E.undoRebase?.(); // перезавантаження з сервера: історія лишається (адресація, відхилення), поточний крок — свіжий знімок
+    } else {
+        E.undoReset?.();
+    }
+    E.markSaved?.();
 }
 
 async function afterSiteLoad(keep) {
@@ -178,6 +192,7 @@ async function restoreVersion(versionId, n) {
     try {
         const res = await ctx.adapter.restoreVersion(versionId);
         await openSite(res.site_id || S.site.id, { sel: null, layer: S.ui.layer });
+        E.undoReset?.();
         toast(`Чернетку повернуто до версії ${n}.`);
     } catch (e) {
         toast(e.message || "Не вдалося повернути чернетку.", "err");
@@ -186,7 +201,13 @@ async function restoreVersion(versionId, n) {
 
 async function publish() {
     try {
-        await ctx.adapter.publish({ onClose: () => reload(), state: S });
+        await ctx.adapter.publish({
+            onClose: () => {
+                E.undoReset?.(); // застосоване в Odoo не скасовується
+                return reload();
+            },
+            state: S,
+        });
     } catch (e) {
         toast(e.message || "Не вдалося підготувати публікацію.", "err");
     }
@@ -423,6 +444,9 @@ function wireAdapter(store) {
             return;
         }
         S.saveState = status;
+        if (status === "saved") {
+            E.markSaved?.();
+        }
         E.renderSaveState();
     };
     store.onSaved = (r) => {
@@ -447,6 +471,7 @@ function wireAdapter(store) {
     // автозбереження: відхилену правку не лишаємо на екрані — стан перечитується з сервера (спершу відправляється решта черги)
     store.onReload = () => {
         if (ctx && S.site) {
+            E.undoReset?.();
             syncNow();
             ctx.adapter.flush().then(() => ctx && reload());
         }

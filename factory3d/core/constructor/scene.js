@@ -6,8 +6,8 @@ import { cellsOf, normalizeParams } from "./cells.js";
 import { FRONT_ANGLE, TPL } from "./data.js";
 import { polygonContains } from "./geometry.js";
 import { newBlocks, pGeom, runLive, sGeom, slotDims } from "./live.js";
-import { canEditLayer, toastLock } from "./roles.js";
-import { E, S, V, elevOf, isLayerVisible, layerOf, objKey, passportOf, recOfRef, snapStep, snapV, variantOf } from "./state.js";
+import { canEditLayer, lockHint, toastLock } from "./roles.js";
+import { E, S, V, elevOf, isLayerVisible, layerOf, objKey, passportOf, recOfRef, selKeys, snapStep, snapV, variantOf } from "./state.js";
 import { THREE } from "./three.js";
 import { $, clamp, clone, fmt, h, rad, rnd, toast } from "./util.js";
 
@@ -27,6 +27,8 @@ function readColors() {
         warn: g("--warn"),
         block: g("--block"),
         ink: g("--ink"),
+        unsaved: "#12a5a0", // бірюзовий «не збережено» (N-05)
+        hl: "#f2c200", // підсвітка результатів пошуку (F06-02)
     };
 }
 
@@ -42,7 +44,7 @@ function initMats() {
     M.edgeGhost = th(new THREE.LineBasicMaterial({ color: C.stroke, transparent: true, opacity: 0.22 }), "stroke");
     const dash = (k, o, ds, gs) =>
         th(new THREE.LineDashedMaterial({ color: C[k], dashSize: ds || 0.4, gapSize: gs || 0.22, transparent: true, opacity: o || 0.95 }), k);
-    M.dash = { normal: dash("stroke", 0.85), sel: dash("accent"), warn: dash("warn"), block: dash("block") };
+    M.dash = { normal: dash("stroke", 0.85), sel: dash("accent"), warn: dash("warn"), block: dash("block"), unsaved: dash("unsaved") };
     M.dashGhost = dash("stroke", 0.28);
     M.svc = dash("accent", 0.7, 0.18, 0.16);
     M.sel = th(new THREE.LineBasicMaterial({ color: C.accent }), "accent");
@@ -582,6 +584,9 @@ function cellColor(c, s, ly, sel) {
     if (sel) {
         return new THREE.Color(V.col.accent);
     }
+    if (S.hl && S.hl.codes.has(c.code)) {
+        return new THREE.Color(V.col.hl); // результат пошуку «де лежить»
+    }
     // Реєстр metrics: обраний показник (S.ui.metric) може дати колір комірки (теплові карти); немає значення — звичайний колір
     const metric = S.ui.metric ? registries.metrics.get(S.ui.metric, null) : null;
     const mc = metric && metric.color ? metric.color(c, s, ly) : null;
@@ -1047,18 +1052,30 @@ export function syncScene(force) {
     syncUnderlays();
     updateVisual();
 }
-/* стан підсвічування: вибір + проблеми */
+/** Підпис кольорового стану комірок: показник, підсвітка пошуку, залишки — зміна перефарбовує всі місця (F06, F07). */
+const colorSig = () => `${S.ui.metric || ""}|${S.hl ? S.hl.rev || S.hl.codes.size : 0}|${S.stock ? S.stock.rev || 0 : 0}`;
+/** Перефарбовує комірки всіх місць (після зміни показника, залишків чи підсвітки). */
+export function recolorCells() {
+    V.colorSig = null;
+    updateVisual();
+}
+/* стан підсвічування: вибір (в т.ч. мультивиділення) + проблеми + «не збережено» */
 export function updateVisual() {
     if (!V.ok) {
         return;
     }
+    const keys = selKeys();
     const selKey = S.sel ? objKey(S.sel.kind, S.sel.id) : null;
+    const sig = colorSig();
+    const recolor = V.colorSig !== sig;
+    V.colorSig = sig;
     for (const [key, v] of V.views) {
         const st = S.issues.byKey.get(key);
         const lvl = st ? st.level : "normal";
-        const isSel = key === selKey;
+        const isSel = keys.has(key);
+        const unsaved = S.unsaved.has(key);
         if (v.foot) {
-            v.foot.material = v.ghost ? V.mat.dashGhost : V.mat.dash[lvl] || V.mat.dash.normal;
+            v.foot.material = v.ghost ? V.mat.dashGhost : lvl === "normal" && unsaved ? V.mat.dash.unsaved : V.mat.dash[lvl] || V.mat.dash.normal;
         }
         if (v.fill) {
             v.fill.visible = !v.ghost && (lvl !== "normal" || isSel);
@@ -1068,8 +1085,8 @@ export function updateVisual() {
             v.sel.visible = isSel;
         }
         if (v.cells) {
-            const want = isSel ? S.selCell || "" : "";
-            if ((v.selCode || "") !== want) {
+            const want = key === selKey ? S.selCell || "" : "";
+            if (recolor || (v.selCode || "") !== want) {
                 colorCells(v, want || null);
             }
         }
@@ -1277,6 +1294,7 @@ function initPointer() {
         pointermove: onMove,
         pointerup: onUp,
         pointercancel: onUp,
+        pointerleave: () => E.hideTip?.(),
         contextmenu: (e) => e.preventDefault(),
         dragover: (e) => {
             if ([...e.dataTransfer.types].includes("text/f3d-variant")) {
@@ -1332,12 +1350,26 @@ function onDown(e) {
     }
     const hit = pickAt(e);
     V.bg = null;
+    const additive = e.ctrlKey || e.metaKey;
+    if (e.shiftKey && V.camMode === "plan" && e.pointerType !== "touch") {
+        startBox(e, hit, additive); // рамка виділення в 2D (F09-03): Shift — нове виділення, Shift+Ctrl — додати
+        return;
+    }
     if (!hit) {
         V.bg = { x: e.clientX, y: e.clientY };
         return;
     }
-    E.selectObj(hit.ref);
-    if (hit.view.cells) {
+    if (additive) {
+        E.toggleMulti(hit.ref); // Ctrl+клік: додати в мультивиділення чи прибрати (F09-02)
+        return;
+    }
+    const inMulti = S.multi.length > 1 && S.multi.some((r) => r.kind === hit.ref.kind && r.id === hit.ref.id);
+    if (inMulti) {
+        S.sel = { kind: hit.ref.kind, id: hit.ref.id }; // основним стає натиснутий; решта лишається виділеною
+    } else {
+        E.selectObj(hit.ref);
+    }
+    if (hit.view.cells && !inMulti) {
         // клік по комірці стелажа вибирає її в списку
         const ci = V.raycaster.intersectObject(hit.view.cells, false)[0];
         if (ci && ci.instanceId != null && hit.view.cellList[ci.instanceId]) {
@@ -1348,6 +1380,7 @@ function onDown(e) {
             if (tr) {
                 tr.scrollIntoView({ block: "nearest" });
             }
+            E.cellPicked?.(hit.ref.id, S.selCell, e);
         }
     }
     const rec = recOfRef(hit.ref);
@@ -1369,13 +1402,25 @@ function onDown(e) {
     if (!pt) {
         return;
     }
+    let group = null;
+    if (inMulti) {
+        group = [];
+        for (const r of S.multi) {
+            const rr = recOfRef(r);
+            if (!rr || !canEditLayer(layerOf(rr.layer_id)) || rr.locked) {
+                toast(rr && !canEditLayer(layerOf(rr.layer_id)) ? lockHint(layerOf(rr.layer_id)) : "Складний контур зони редагується у формі Odoo.", "warn");
+                return;
+            }
+            group.push({ ref: r, rec: rr, key: objKey(r.kind, r.id), start: { x: rr.x, y: rr.y } });
+        }
+    }
     V.controls.enabled = false;
     try {
         V.canvas.setPointerCapture(e.pointerId);
     } catch {
         /* ок */
     }
-    V.drag = { ref: hit.ref, rec, key: objKey(hit.ref.kind, hit.ref.id), start: { x: rec.x, y: rec.y }, pt0: pt, moved: false, sx: e.clientX, sy: e.clientY, before: S.issues, elev: lyr.elevation };
+    V.drag = { ref: hit.ref, rec, key: objKey(hit.ref.kind, hit.ref.id), start: { x: rec.x, y: rec.y }, pt0: pt, moved: false, sx: e.clientX, sy: e.clientY, before: S.issues, elev: lyr.elevation, group };
 }
 function onMove(e) {
     const ly = layerOf(S.ui.layer);
@@ -1387,6 +1432,10 @@ function onMove(e) {
     }
     if (V.placing) {
         movePlacing(e);
+        return;
+    }
+    if (V.box) {
+        moveBox(e);
         return;
     }
     if (!V.drag && !V.hoverRaf) {
@@ -1414,23 +1463,50 @@ function onMove(e) {
     if (view) {
         poseView(view, d.rec);
     }
+    if (d.group) {
+        // мультивиділення: усі зсуваються на ту саму дельту, що й натиснутий (взаємне положення зберігається)
+        const ddx = d.rec.x - d.start.x;
+        const ddy = d.rec.y - d.start.y;
+        for (const it of d.group) {
+            if (it.rec === d.rec) {
+                continue;
+            }
+            it.rec.x = rnd(it.start.x + ddx, 4);
+            it.rec.y = rnd(it.start.y + ddy, 4);
+            const v2 = V.views.get(it.key);
+            if (v2) {
+                poseView(v2, it.rec);
+            }
+        }
+    }
     rafLive();
 }
 function hoverAt(e) {
-    if (!V.canvas || V.drag || V.placing || V.ruler.on || V.pickMode) {
+    if (!V.canvas || V.drag || V.box || V.placing || V.ruler.on || V.pickMode) {
         return;
     }
     const hit = pickAt(e);
+    let cell = null;
+    if (hit && hit.view.cells) {
+        const ci = V.raycaster.intersectObject(hit.view.cells, false)[0];
+        cell = ci && ci.instanceId != null ? hit.view.cellList[ci.instanceId] || null : null;
+    }
     const key = hit ? objKey(hit.ref.kind, hit.ref.id) : null;
-    if (key === V.hoverKey) {
+    const hk = key ? key + "|" + (cell ? cell.code : "") : null;
+    if (hk === V.hoverKey) {
         return;
     }
-    V.hoverKey = key;
+    V.hoverKey = hk;
     const rec = hit && recOfRef(hit.ref);
     V.canvas.style.cursor = hit ? (canEditLayer(layerOf(rec.layer_id)) ? "move" : "pointer") : "";
     const el = $("#hoverName");
     if (el) {
         el.textContent = rec ? (rec.code || rec.code_prefix) + (rec.name ? " · " + rec.name : rec.params && rec.params.title ? " · " + rec.params.title : "") : "—";
+    }
+    if (rec) {
+        E.showTip?.({ x: e.clientX, y: e.clientY, rec, kind: hit.ref.kind, cell });
+    } else {
+        E.hideTip?.();
     }
 }
 function onUp(e) {
@@ -1446,6 +1522,10 @@ function onUp(e) {
             movePlacing(e);
             placeClick(e.shiftKey);
         }
+        return;
+    }
+    if (V.box) {
+        finishBox(e);
         return;
     }
     const d = V.drag;
@@ -1470,38 +1550,117 @@ function liveCheck() {
     E.syncPropsValues();
     E.renderChecksBlock();
 }
-/** Завершення перетягування: нова заборона → об'єкт повертається; інакше позиція (прив'язка до місця) і запис у чергу. */
+/** Завершення перетягування: нова заборона → об'єкт (чи вся група) повертається; інакше позиція (прив'язка до місця) і запис у чергу. */
 function finishMove(d) {
+    const items = d.group || [d];
     const after = runLive();
-    const nb = newBlocks(d.before, after, d.key);
+    const nb = items.flatMap((it) => newBlocks(d.before, after, it.key));
     if (nb.length) {
-        d.rec.x = d.start.x;
-        d.rec.y = d.start.y;
-        const view = V.views.get(d.key);
-        if (view) {
-            poseView(view, d.rec);
+        for (const it of items) {
+            it.rec.x = it.start.x;
+            it.rec.y = it.start.y;
+            const view = V.views.get(it.key);
+            if (view) {
+                poseView(view, it.rec);
+            }
         }
         S.issues = runLive();
         updateVisual();
         E.syncPropsValues();
         E.renderChecksBlock();
-        toast("Заблоковано: " + nb[0].msg + ". Об’єкт повернуто на місце.", "err");
+        toast("Заблоковано: " + nb[0].msg + (items.length > 1 ? ". Групу повернуто на місце." : ". Об’єкт повернуто на місце."), "err");
         return;
     }
-    if (d.ref.kind === "placement") {
-        assignSlot(d.rec);
+    for (const it of items) {
+        if (it.ref.kind === "placement") {
+            assignSlot(it.rec);
+        }
     }
-    const st0 = d.start;
-    if (st0.x !== d.rec.x || st0.y !== d.rec.y) {
+    if (items.some((it) => it.start.x !== it.rec.x || it.start.y !== it.rec.y)) {
         E.commit({});
     } else {
         S.issues = after;
         updateVisual();
     }
-    const first = S.issues.byKey.get(d.key);
-    if (first && first.level !== "block") {
+    const first = items.map((it) => S.issues.byKey.get(it.key)).find((st) => st && st.level !== "block");
+    if (first) {
         toast(first.items[0].msg, "warn");
     }
+}
+
+/* ===== рамка виділення (F09-03): Shift+протягнути в 2D ===== */
+function startBox(e, hit, add) {
+    V.box = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, add, moved: false, hit };
+    V.controls.enabled = false;
+    try {
+        V.canvas.setPointerCapture(e.pointerId);
+    } catch {
+        /* ок */
+    }
+}
+function moveBox(e) {
+    const b = V.box;
+    b.x1 = e.clientX;
+    b.y1 = e.clientY;
+    if (!b.moved && Math.hypot(b.x1 - b.x0, b.y1 - b.y0) < 5) {
+        return;
+    }
+    b.moved = true;
+    if (!b.el) {
+        b.el = h("div", { class: "s3-box", style: { position: "absolute", pointerEvents: "none", border: "1px dashed var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)", zIndex: "3" } });
+        $("#vp").append(b.el);
+    }
+    const r = $("#vp").getBoundingClientRect();
+    Object.assign(b.el.style, { left: Math.min(b.x0, b.x1) - r.left + "px", top: Math.min(b.y0, b.y1) - r.top + "px", width: Math.abs(b.x1 - b.x0) + "px", height: Math.abs(b.y1 - b.y0) + "px" });
+}
+/** Об'єкти активного шару, що цілком у прямокутнику (екранні координати client). */
+export function refsInRect(rect) {
+    const cv = V.canvas.getBoundingClientRect();
+    const out = [];
+    const q = new THREE.Vector3();
+    for (const v of V.views.values()) {
+        if (v.layerId !== S.ui.layer || !v.g || !v.g.poly) {
+            continue;
+        }
+        const ly = layerOf(v.layerId);
+        if (!ly || !isLayerVisible(ly) || OVERLAY_KINDS.includes(ly.kind) || v.tpl === "building") {
+            continue;
+        }
+        const el = ly.elevation || 0;
+        const inside = v.g.poly.every(([px, py]) => {
+            q.set(px, el, -py).project(V.camera);
+            const cx = cv.left + ((q.x + 1) / 2) * cv.width;
+            const cy = cv.top + ((1 - q.y) / 2) * cv.height;
+            return cx >= rect.x0 && cx <= rect.x1 && cy >= rect.y0 && cy <= rect.y1;
+        });
+        if (inside) {
+            out.push({ kind: v.kind, id: v.id });
+        }
+    }
+    return out;
+}
+function finishBox(e) {
+    const b = V.box;
+    V.box = null;
+    V.controls.enabled = true;
+    if (b.el) {
+        b.el.remove();
+    }
+    if (!b.moved) {
+        // Shift+клік без протягування: як звичайний клік
+        if (b.hit) {
+            if (b.add) {
+                E.toggleMulti(b.hit.ref);
+            } else {
+                E.selectObj(b.hit.ref);
+            }
+        } else if (!b.add) {
+            E.selectObj(null);
+        }
+        return;
+    }
+    const rect = { x0: Math.min(b.x0, b.x1), y0: Math.min(b.y0, b.y1), x1: Math.max(b.x0, b.x1), y1: Math.max(b.y0, b.y1) };
+    E.boxSelect(refsInRect(rect), b.add);
 }
 /** Місце під верстат, у яке потрапив центр розміщення. */
 export function assignSlot(pl) {
@@ -1649,6 +1808,7 @@ Object.assign(E, {
     camTarget,
     syncScene,
     updateVisual,
+    recolorCells,
     rulerClear,
     rulerPoint,
     syncUnderlays,

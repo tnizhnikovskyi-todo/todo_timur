@@ -16,6 +16,7 @@ const initialS = () => ({
     versions: [],
     rights: { is_manager: false, roles: [], editable_layer_ids: [], can_publish: false, can_edit_catalog: false },
     sel: null,
+    multi: [], // мультивиділення (S3, F09-02): [{kind, id}] з ≥ 2 об'єктів; S.sel — основний (останній) серед них
     selCell: null,
     edit: null,
     issues: { list: [], byKey: new Map() },
@@ -26,6 +27,10 @@ const initialS = () => ({
     pIdx: new Map(),
     changed: 0,
     saveState: "saved", // saved | saving | error
+    hist: { stack: [], idx: -1, cur: "", label: null, busy: false }, // скасування/повтор (S3, undo.js)
+    unsaved: new Set(), // ключі об'єктів, змінених після останнього збереження (N-05, «не збережено»)
+    stock: null, // залишки по кодах для карти й картки (S3, stock_state.js): {at, demo, days, byCode: Map}
+    hl: null, // підсвічені комірки пошуку (S3): {kind, codes: Set}
 });
 export const S = initialS();
 
@@ -94,6 +99,20 @@ export function reindex() {
     for (const p of S.placements) {
         S.pIdx.set(p.id, p);
     }
+    // мультивиділення: видалені об'єкти випадають; менше двох — звичайний вибір
+    if (S.multi.length) {
+        S.multi = S.multi.filter((r) => (r.kind === "placement" ? S.pIdx : S.sIdx).has(r.id));
+        if (S.multi.length < 2) {
+            if (S.multi.length === 1 && !S.sel) {
+                S.sel = { ...S.multi[0] };
+            }
+            S.multi = [];
+        } else if (!S.sel) {
+            S.sel = { ...S.multi[S.multi.length - 1] };
+        } else if (!S.multi.some((r) => r.kind === S.sel.kind && r.id === S.sel.id)) {
+            S.multi = []; // вибрано щось інше (новий об'єкт): мультивиділення скасовано
+        }
+    }
 }
 export const layerOf = (id) => S.lIdx.get(id);
 export const variantOf = (id) => (S.vIdx.get(id) || {}).v;
@@ -104,3 +123,7 @@ export const recOfRef = (ref) => (ref.kind === "placement" ? S.pIdx.get(ref.id) 
 export const snapStep = (rec) => (layerOf(rec.layer_id) || { grid_step: 0.5 }).grid_step || 0.5;
 export const snapV = (v, st) => rnd(Math.round(v / st) * st, 4);
 export const isLayerVisible = (ly) => !V.hidden.has(ly.id);
+/** Виділені посилання: мультивиділення (≥ 2), інакше основний вибір. */
+export const selRefs = () => (S.multi.length > 1 ? S.multi : S.sel ? [S.sel] : []);
+/** Ключі виділених об'єктів («s:id» / «p:id»). */
+export const selKeys = () => new Set(selRefs().map((r) => objKey(r.kind, r.id)));
