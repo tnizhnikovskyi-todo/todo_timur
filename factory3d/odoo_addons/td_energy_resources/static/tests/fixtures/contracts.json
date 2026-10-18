@@ -11,6 +11,7 @@
       "Ключі вартості (`cost_uah`, `save_uah_month`, `plan_sum`, `all_sum`, `cost`, `price`, `capabilities.cost`) ВІДСУТНІ без групи td_energy.group_td_energy_cost; підписи без «₴».",
       "`API-01` — по одній відповіді `get_resources(code)` на ресурс: `meta` і `tabs` однакові для всіх вкладок, `resource` — різний; ядро без моста не виводить KPI `indoor`, `recovery` і не підміняє `list` вкладки «Тепло».",
       "`kpis[].tone ∈ {good, bad, neutral}`; `quality ∈ {measured, estimated}`; `meta.data_state ∈ {ok, partial, stale}`; `list.basis ∈ {rate, qty_day}`.",
+      "Сигнал уставки тиску повітря — `energy_control/air/setpoint_bar` (W2); не `air/setpoint_bar`.",
       "`actions[]` — контракт W1 C-32 (`kind ∈ {link, ticket, control}`); `enabled = (kind != 'control') or td.energy.advice._td_control_available()`; якщо немає жодної `enabled`-дії — в кінець додається `fallback_action`."
     ]
   },
@@ -1430,14 +1431,14 @@
           "request_id": null,
           "actions": [
             {
-              "code": "control",
-              "label": "Змінити графік",
-              "kind": "control",
+              "code": "heat_settings",
+              "label": "Відкрити налаштування опалення BMS",
+              "kind": "link",
               "class": null,
               "params": {
-                "intent": "heat_schedule_shift"
+                "xmlid": "td_bms.action_td_bms_heat_balance_open"
               },
-              "enabled": false
+              "enabled": true
             },
             {
               "code": "open",
@@ -1608,21 +1609,24 @@
   "C-02": {
     "description": "Контракт дій для W2 `td_energy_control`: формат actions[] = W1 C-32; W3 не задає сценарії й команди.",
     "action": {
-      "code": "heat_schedule",
-      "label": "Змінити графік",
+      "code": "air_setpoint",
+      "label": "Знизити уставку тиску",
       "kind": "control",
       "class": null,
       "params": {
-        "intent": "heat_schedule_shift"
+        "intent": "air_pressure_setpoint"
       },
       "enabled": false
     },
     "rule_control_intents": [
       "vent_night_mode",
-      "heat_schedule_shift",
       "air_pressure_setpoint",
       "pv_self_consumption"
     ],
-    "reserved_signal": "air/setpoint_bar (власник W2; W3 лише читає)"
+    "params_intent": "дії control несуть params.intent; W2 зіставляє наміри через ADVICE_INTENT_ALIASES (W2 R-55 п. 6)",
+    "unsupported_intents": {
+      "heat_schedule_shift": "W2 не підтримує: правило preheat_early показує дію kind=link «Відкрити налаштування опалення BMS» (xmlid td_bms.action_td_bms_heat_balance_open), а не команду; control_intent правила порожній"
+    },
+    "setpoint_signal": "energy_control/air/setpoint_bar (власник W2; W3 лише читає); запасний параметр td.energy_resources.air_setpoint_bar — коли сигналу немає"
   }
 }
