@@ -1,5 +1,17 @@
 # Changelog
 
+## 19.0.1.1.0 — W1 «Енергетика»: Пульт, картка вузла, тривоги, планові відключення (W1-A, бекенд)
+- `td.energy.event`: `title/detail/state` (R-24), життєвий цикл `active → acked → resolved` (`action_ack|take|release|resolve`,
+  `_td_auto_resolve`: лічильник, поріг, PFC, баланс, trip), події `pfc` (ступінь не вмикається, cos φ секції) і `trip`.
+- `td.energy.node`: геометрія схеми `sld_*` (+ `data/sld_layout.csv`, 21 вузол), `sld_state` (R-26), захист, ступені PFC (35 × 10, D-09),
+  `action_open_card`; `td.energy.meter`: повірка (`next_verification`, `_cron_verification`); `td.energy.interval`: `is_backfill`,
+  `_td_backfill` (R-36: 90 діб ≈ 66 с, 578 880 рядків).
+- Нові моделі: `td.energy.outage.plan` (R-31), `td.energy.advice` (слот, реєстр `_td_advice_rule_*`), `td.energy.ticket.wizard`,
+  `td.energy.dashboard` (API-05…07, 12, 13; хуки для моста), `tools/bus.py` (канал `td_energy`, без даних, throttle 5 с).
+- Сигнали: +15 (QS, PFC, секційні cos φ/P/Q) і джерело `MB-U73-SWB-CTRL`; пороги cos φ 0,92/0,90 (E-10); група «головний енергетик».
+- Міграція `19.0.1.1.0`: сигнали, пороги, схема, R-24 для наявних подій (ідемпотентна). 3 нові крони; `neutralize.sql` без змін по суті.
+- Існуючі `_f3d_*`-методи не перейменовано (RENAME.md §6); SPEC-імена `_td_log`, `action_td_show` — аліаси.
+
 ## Unreleased
 - E-4: `kwh_shift` (R-11) для лічильника, що звітує менше за зміну (новий вузол, свіжа установка, стенд): раніше без показання
   на `shift_start` `delta` повертав `missing` і сигнал лишався порожнім до наступної зміни. Тепер — енергія від першого показання

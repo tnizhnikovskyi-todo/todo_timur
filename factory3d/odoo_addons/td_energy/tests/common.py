@@ -118,8 +118,39 @@ class TestW1Common(F3DEnergyCase):
             }
         )  # fmt: skip
 
+    def typical(self, meter_code, days=3, kwh=25.0, slots=range(96)):
+        """Однакові інтервали `meter_code` у `days` попередніх суботах (NOW — субота): типовий день для R-28."""
+        meter = self.Meter.search([("code", "=", meter_code)])
+        rows = []
+        for k in range(1, days + 1):
+            day0 = datetime(2026, 10, 16, 21, 0) - timedelta(days=7 * k)  # 00:00 Київ суботи
+            for s in slots:
+                ts = day0 + timedelta(minutes=15 * s)
+                local = to_local(ts)
+                rows.append(
+                    {
+                        "meter_id": meter.id,
+                        "ts_start": ts,
+                        "ts_end": ts + timedelta(minutes=15),
+                        "day": local.date(),
+                        "hour_local": local.hour,
+                        "e_start": 0.0,
+                        "e_end": kwh,
+                        "kwh": kwh,
+                        "kwh_export": 0.0,
+                        "kw_avg": kwh * 4,
+                        "price": 8.4,
+                        "cost": 0.0,
+                        "quality": "measured",
+                        "built_at": self.now,
+                    }  # fmt: skip
+                )
+        self.env["td.energy.interval"].create(rows)
+
     def fixture_grid(self):
-        """Макет 14:20 (R-26/R-27): вводи, лінії, трансформатори, генерація, АВР."""
+        """Макет 14:20 (R-26/R-27): вводи, лінії, трансформатори, генерація, АВР; усі лічильники на зв'язку."""
+        self.env.cr.execute("UPDATE td_energy_meter SET data_state = 'ok'")
+        self.env["td.energy.meter"].invalidate_model(["data_state"])
         for code, value, text in (
             ("energy/totals/p_now", 667.0, None), ("energy/totals/cos_phi", 0.93, None),
             ("infra/totals/grid_kw", 358.0, None), ("infra/totals/export_kw", 0.0, None),

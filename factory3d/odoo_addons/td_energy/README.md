@@ -41,6 +41,16 @@
 5. Відключення мережі: Енергетика → Відключення (час переключення АВР, скинуте навантаження, FAIL START).
 Докладно — `docs/modules/td_energy/ARCHITECTURE.md` §4.
 
+## Пульт енергетика (W1)
+
+Меню «Енергетика → Пульт» (клієнтська дія `td_energy.pult`, W1-B) читає ORM-RPC `td.energy.dashboard`: `get_pult(period, parts)`,
+`get_alarms`, `get_node_card(code)`, `get_mobile(tab)`, `get_generation()`. Форма відповідей заморожена в
+`static/tests/fixtures/contracts.json`. Оновлення екрана — повідомлення `td_energy/update` (канал `td_energy`, без даних) + резервне
+опитування `td.energy.pult_refresh_s`. Тривоги: `td.energy.event` з життєвим циклом; планові відключення — `td.energy.outage.plan`.
+
+**Історія для демо** (адміністратор): `echo 'env["td.energy.interval"]._td_backfill(days=90)' | odoo-bin shell -d <db> --no-http`
+(≈ 1–2 хв, повтор безпечний; `purge=True` видаляє лише синтетичні дані).
+
 ## Стоп-крани і neutralize
 - `read_enabled = False` — джерела енергетики не опитуються, крони нічого не роблять.
 - `costing_enabled = False` — енергія не потрапляє в `extra_cost`.

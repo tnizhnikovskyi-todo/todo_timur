@@ -18,6 +18,7 @@ STATUS_LEVEL = {"warn": "warn", "alarm": "bad"}
 OPEN_STATES = ("active", "acked")
 PFC_FAULT_RE = re.compile(r"^energy/cells/PFC-(\d)/fault_step$")
 SECTION_COS_RE = re.compile(r"^energy/sections/S(\d)/cos_phi$")
+TRIP_SIGNAL_RE = re.compile(r"^energy/(lines|cells)/([^/]+)/state$")
 TITLE_MAX = 128
 TITLE_SPLIT_AT = 100
 
@@ -190,6 +191,7 @@ class F3dEnergyEvent(models.Model):
         Signal = self.env["td.signal"].sudo()
         self._f3d_ats_hook(before)  # W4: R-14
         signals = Signal.search([("code", "in", list(before))])
+        signals.invalidate_recordset(["status", "last_text", "last_value", "last_ts"])  # прийом пише SQL-ом
         for sig in signals.sorted("code"):
             old_status, old_text, _old_value = before[sig.code]
             if sig.code.startswith("workcenters/"):
@@ -336,8 +338,15 @@ class F3dEnergyEvent(models.Model):
     @api.model
     def _td_trip_event(self, sig):
         """R-30 п. 9: стан автомата → `tripped`: подія `trip` `warn` «Спрацював захист {QF}» (ND-14)."""
+        Node = self.env["td.energy.node"].sudo()
         code = sig.equipment_code or False
-        node = self.env["td.energy.node"].sudo().search([("code", "=", code)], limit=1) if code else None
+        if not code:  # обладнання не прив'язане: шафа з коду сигналу (`energy/lines|cells/<…>/state`)
+            match = TRIP_SIGNAL_RE.match(sig.code)
+            if match and match.group(1) == "cells":
+                code = match.group(2)
+            elif match:
+                code = Node.search([("code", "=", match.group(2))], limit=1).parent_id.code or False
+        node = Node.search([("code", "=", code)], limit=1) if code else None
         title = "Спрацював захист %s" % (code or sig.name)
         return self._f3d_log(
             "warn", "trip", code, title, ts=sig.last_ts, node=node or None, signal=sig, dedup_min=1, title=title

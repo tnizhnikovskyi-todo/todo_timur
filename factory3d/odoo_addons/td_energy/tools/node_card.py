@@ -3,7 +3,6 @@
 import math
 from datetime import timedelta
 
-from odoo import _
 from odoo.exceptions import UserError
 
 from . import dates, forecast, live, sld
@@ -36,7 +35,7 @@ class NodeCard:
         self.sudo = env(su=True)
         row = snap.by_code.get(code)
         if not row:
-            raise UserError(_("Невідомий вузол: %s.", code))
+            raise UserError(env._("Невідомий вузол: %s.", code))
         self.row, self.code = row, code
         self.now = snap.now
         self.today = dates.local_day(self.now)
@@ -484,9 +483,9 @@ class NodeCard:
     # --- збирання ----------------------------------------------------------------------------------------
     def build(self):
         out = {"node": self.header()}
-        if self.kind in ("line", "cell", "transformer", "consumer", "tapoff"):
+        if self.kind in ("line", "transformer", "consumer", "tapoff") or self.full:
             out["kpis"] = self.kpis()
-        if self.kind in ("line", "cell", "transformer") and (self.kind != "cell" or self.full):
+        if self.kind == "transformer" or self.full:
             out["chart"] = self.chart()
         if self.full:
             out["taps"] = self.taps()

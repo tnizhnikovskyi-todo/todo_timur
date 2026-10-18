@@ -7,7 +7,7 @@ import logging
 from datetime import timedelta
 from functools import cached_property
 
-from odoo import _, fields
+from odoo import fields
 from odoo.exceptions import UserError
 
 from . import dates, forecast, sld
@@ -52,7 +52,7 @@ def _round1(arr):
 class Pult:
     def __init__(self, env, period="now", hooks=None):
         if period not in PERIODS:
-            raise UserError(_("Невідомий період: %s.", period))
+            raise UserError(env._("Невідомий період: %s.", period))
         self.env, self.period, self.hooks = env, period, hooks
         self.sudo = env(su=True)
         self.now = dates.now_utc(env)
@@ -483,10 +483,8 @@ class Pult:
         return rows[:limit]
 
     # --- збирання --------------------------------------------------------------------------------------
-    def build(self, parts=None):
-        wanted = [p for p in PARTS if parts is None or p in parts]
-        out = {"meta": self.meta()}
-        handlers = {
+    def _handlers(self):
+        return {
             "kpis": lambda: {"kpis": self.kpis()},
             "sld": lambda: {"sld": self.sld_part()},
             "profile": self.profile_part,
@@ -494,17 +492,33 @@ class Pult:
             "side": self.side_part,
             "advice": lambda: {"advice": self.advice_part()},
         }
-        keys = {"kpis": ("kpis",), "sld": ("sld",), "profile": ("profile", "foot"), "alarms": ("alarms",),
-                "side": ("top", "mo", "maint"), "advice": ("advice",)}  # fmt: skip
+
+    def build(self, parts=None):
+        """Усі частини під одним savepoint (2 запити замість 12); збій — повтор по частинах (R-11, розд. 11)."""
+        wanted = [p for p in PARTS if parts is None or p in parts]
+        try:
+            with self.env.cr.savepoint():
+                handlers = self._handlers()
+                out = {"meta": self.meta()}
+                for part in wanted:
+                    out.update(handlers[part]())
+                return out
+        except Exception:
+            _logger.exception("td_energy: Пульт — повтор по частинах")
+        retry = Pult(self.env, self.period, hooks=self.hooks)
+        handlers = retry._handlers()
+        out = {"meta": retry.meta()}
         for part in wanted:
             try:
                 with self.env.cr.savepoint():
                     out.update(handlers[part]())
-            except Exception as exc:  # R-11: частина не ламає решту
+            except Exception as exc:  # частина не ламає решту
                 _logger.exception("td_energy: частина Пульту %s", part)
-                msg = {"error": str(exc) or exc.__class__.__name__}
-                out.update({k: dict(msg) for k in keys[part][:1]})
+                out[ERROR_KEYS[part]] = {"error": str(exc) or exc.__class__.__name__}
         return out
+
+
+ERROR_KEYS = {"kpis": "kpis", "sld": "sld", "profile": "profile", "alarms": "alarms", "side": "top", "advice": "advice"}
 
 
 def _r2(x):
@@ -585,10 +599,12 @@ def alarms(env, snap, now, limit=None, scope="all"):
         domain = [("assigned_user_id", "=", env.uid), ("state", "in", OPEN_STATES)]
     events = Event.search(domain, order="ts desc, id desc", limit=300)
 
+    severity = {"bad": 0, "warn": 1, "info": 2}
+
     def rank(rec):
-        if rec.state == "active":
-            return 0 if rec.level == "bad" else 1
-        return 2 if rec.state == "acked" else 3
+        """Єдиний порядок: активні, підтверджені (аварія раніше за увагу), решта; усередині — час спадно."""
+        group = {"active": 0, "acked": 1}.get(rec.state, 2)
+        return group, severity.get(rec.level, 3) if group < 2 else 0
 
     ordered = sorted(events, key=rank)  # стабільне: усередині групи — за ts спадно
     active_count = Event.search_count([("state", "=", "active")])
@@ -629,6 +645,7 @@ def mobile(pult, tab=None):
                 text += ", паливо %s %%" % summary["fuel_pct"]
             text += " · АВР: %s" % ats
         out["state"] = {
+            "contract_kw": meta["contract_kw"],
             "grid_kw": k["grid"]["kw"],
             "pct": k["grid"]["pct"],
             "pv_kw": k["generation"]["pv_kw"],

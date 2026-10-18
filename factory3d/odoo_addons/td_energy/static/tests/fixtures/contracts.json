@@ -12,7 +12,10 @@
       "Частина `parts` get_pult: kpis→`kpis`; sld→`sld`; profile→`profile`+`foot`; alarms→`alarms`; side→`top`+`mo`+`maint`; advice→`advice`; `meta` — завжди.",
       "Помилка частини: ключ частини = {\"error\": \"текст\"} (решта частин цілі).",
       "`kpis.generation.genset` — null без моста; `advice.actions[].enabled=false` — клієнт кнопку не малює (kind=control без W2).",
-      "Рядки часу в API — `HH:MM` (Київ); `meta.now` — ISO UTC naive."
+      "Рядки часу в API — `HH:MM` (Київ); `meta.now` — ISO UTC naive.",
+      "Ребра схеми: `from` — батько, `to` — вузол; стан ребра лише ok|gen|off (warn/alarm вузла на ребро не переходять).",
+      "Імена методів Python: існуючі методи лишились `_f3d_*`/`action_f3d_*` (RENAME.md §6): `td.energy.event._f3d_log` (аліас `_td_log`), `td.energy.node.action_f3d_show` (аліас `action_td_show`); нові методи W1 — `_td_*`.",
+      "Клієнт викликає `td.energy.node.action_open_card`, `action_td_show` (3D), `td.energy.event.action_ack|take|release|resolve`, `td.energy.outage.plan.preview|create|action_submit|action_approve|action_reject(reason)|action_cancel`, `td.energy.advice.action_snooze|action_dismiss`, `td.energy.ticket.wizard.create+action_create`; «Призначити на себе» для заявки ТО PFC — `maintenance.request.write({user_id: uid})` (елемент тривоги: `request_id`, `request_assignable`)."
     ]
   },
   "C-30": {
@@ -523,88 +526,88 @@
           ],
           "edges": [
             {
+              "from": "GRID-10KV",
+              "to": "RM6-1",
+              "state": "ok"
+            },
+            {
               "from": "RM6-1",
-              "to": "GRID-10KV",
-              "state": "ok"
-            },
-            {
-              "from": "T1",
-              "to": "RM6-1",
-              "state": "ok"
-            },
-            {
-              "from": "T2",
-              "to": "RM6-1",
-              "state": "ok"
-            },
-            {
-              "from": "SEC-1",
               "to": "T1",
               "state": "ok"
             },
             {
-              "from": "SEC-2",
+              "from": "RM6-1",
               "to": "T2",
               "state": "ok"
             },
             {
-              "from": "PV-INV",
-              "to": "T2",
+              "from": "T1",
+              "to": "SEC-1",
+              "state": "ok"
+            },
+            {
+              "from": "T2",
+              "to": "SEC-2",
+              "state": "ok"
+            },
+            {
+              "from": "SEC-2",
+              "to": "PV-INV",
               "state": "gen"
             },
             {
-              "from": "CHP",
-              "to": "T2",
+              "from": "SEC-2",
+              "to": "CHP",
               "state": "off"
             },
             {
-              "from": "PFC-1",
-              "to": "SEC-1",
+              "from": "SEC-1",
+              "to": "PFC-1",
               "state": "ok"
             },
             {
-              "from": "BW-3",
-              "to": "SEC-1",
+              "from": "SEC-1",
+              "to": "BW-3",
               "state": "ok"
             },
             {
-              "from": "BW-2",
-              "to": "SEC-1",
+              "from": "SEC-1",
+              "to": "BW-2",
               "state": "ok"
             },
             {
-              "from": "C1",
-              "to": "SEC-1",
+              "from": "SEC-1",
+              "to": "C1",
               "state": "ok"
             },
             {
-              "from": "BW-1",
-              "to": "SEC-2",
+              "from": "SEC-2",
+              "to": "BW-1",
               "state": "ok"
             },
             {
-              "from": "BW-4",
-              "to": "SEC-2",
+              "from": "SEC-2",
+              "to": "BW-4",
               "state": "ok"
             },
             {
-              "from": "C2",
-              "to": "SEC-2",
-              "state": "alarm"
-            },
-            {
-              "from": "PFC-2",
-              "to": "SEC-2",
-              "state": "warn"
-            },
-            {
-              "from": "BESS",
-              "to": "SEC-2",
+              "from": "SEC-2",
+              "to": "C2",
               "state": "ok"
             },
             {
-              "from": "ATS-1",
-              "to": "SEC-2",
+              "from": "SEC-2",
+              "to": "PFC-2",
+              "state": "ok"
+            },
+            {
+              "from": "SEC-2",
+              "to": "BESS",
+              "state": "ok"
+            },
+            {
+              "from": "SEC-2",
+              "to": "ATS-1",
               "state": "off"
             }
           ]
@@ -989,6 +992,7 @@
           }
         },
         "state": {
+          "contract_kw": 800,
           "grid_kw": 358,
           "pct": 45,
           "pv_kw": 309,

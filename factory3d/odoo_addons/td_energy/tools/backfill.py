@@ -10,7 +10,7 @@ import math
 import time
 from datetime import datetime, timedelta
 
-from odoo import _, fields
+from odoo import fields
 from odoo.exceptions import UserError
 
 from . import dates
@@ -324,7 +324,7 @@ def run(env, days=90, until=None, seed=20261018, purge=False, with_balance=True,
     started = time.monotonic()
     days = int(days)
     if not 1 <= days <= 400:
-        raise UserError(_("Кількість діб має бути від 1 до 400."))
+        raise UserError(env._("Кількість діб має бути від 1 до 400."))
     since, until = _range(env, days, until)
     stats = {"meters": 0, "slots": 0, "rows": 0, "skipped": 0, "events": 0, "balance": 0,
              "since": fields.Datetime.to_string(since), "until": fields.Datetime.to_string(until), "seconds": 0.0,

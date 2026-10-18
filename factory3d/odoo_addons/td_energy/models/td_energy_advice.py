@@ -60,6 +60,7 @@ class TdEnergyAdvice(models.Model):
             raise AccessError(_("Керувати рекомендаціями може лише енергетик."))
 
     @api.model
+    @tools.ormcache()
     def _td_control_available(self):
         """C-32: `true`, коли встановлено `td_energy_control` (W2) — кнопки `kind='control'` дозволені."""
         return bool(

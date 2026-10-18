@@ -10,7 +10,7 @@ from .test_counter import EnergyMixin
 
 MENUS = {  # xml-id: (sequence, parent xml-id, група)
     "menu_td_energy": (50, "td_factory3d.menu_td_root", "group_td_energy_user"),
-    "menu_td_energy_overview": (10, "menu_td_energy", "group_td_energy_user"),
+    "menu_td_energy_overview": (15, "menu_td_energy", "group_td_energy_user"),  # W1 (SPEC 3.3): було 10
     "menu_td_energy_scheme": (20, "menu_td_energy", "group_td_energy_user"),
     "menu_td_energy_meter": (30, "menu_td_energy", "group_td_energy_user"),
     "menu_td_energy_alloc": (50, "menu_td_energy", "group_td_energy_user"),
@@ -39,8 +39,11 @@ class TestSecurity(EnergyMixin, F3DEnergyCase):
         return name if "." in name else "td_energy." + name
 
     def test_menus(self):  # AC-75
+        w1_menus = self.env.ref("td_energy.menu_td_energy_pult", raise_if_not_found=False)  # меню W1-B
         for xmlid, (seq, parent, group) in MENUS.items():
             menu = self.ref(xmlid)
+            if xmlid == "menu_td_energy_overview" and not w1_menus:
+                seq = 10  # до злиття W1-B меню лишається зі старою послідовністю
             self.assertEqual(menu.sequence, seq, xmlid)
             self.assertEqual(menu.parent_id, self.ref(parent), xmlid)
             self.assertEqual(menu.group_ids, self.ref(self.group(group)), xmlid)

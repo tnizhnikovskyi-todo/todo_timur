@@ -66,3 +66,14 @@ F3D_ODOO_URL=http://127.0.0.1:18081 F3D_ODOO_DB=f3d_energy_stand2 python -m pyte
 `F3D_STAND_DEMO=1` (копія демо), `F3D_STAND_LONG=1` (ТК-10, 90 хв), `F3D_STAND_TD_GENSET=1`, `F3D_STAND_VIEWER=1`;
 тривалість: `F3D_STAND_WAIT_MIN` (ТК-02, 20), `F3D_STAND_BLACKOUT_S` (ТК-05, 600), `F3D_STAND_WO_MIN` (ТК-03, 30).
 Без `F3D_ODOO_URL` усі стендові тести пропускаються (skip).
+
+
+## W1 «Енергетика» (19.0.1.1.0): міграція, історія, ТК-13…ТК-18
+
+1. Копія демо-БД → `odoo-bin -u td_energy -d <db>`: перевірити 21 вузол зі `sld_show`, +15 сигналів `module='energy'` (297 → 312),
+   джерело `MB-U73-SWB-CTRL` (135 → 136 у `td_source`), групу `group_td_energy_chief`, 14 нових `td.energy.*` параметрів; повторне `-u`
+   нічого не змінює; `uninstall` не видаляє `td.energy.event`, `.outage.plan`, `.advice`; `neutralize.sql` вимикає 3 нових крони.
+2. Емулятор і збирач працюють ≥ 5 хв → `echo 'env["td.energy.interval"]._td_backfill(days=90)' | odoo-bin shell -d <db> --no-http`
+   (≤ 120 с, ≤ 600 000 рядків).
+3. `python -m pytest -m stand -q -s test_w1_tk.py` (змінні: `F3D_STAND_ENERGY_A/B` — логіни енергетиків, `F3D_STAND_MRP` — керівника
+   виробництва, `F3D_STAND_USER_PASSWORD`, `F3D_STAND_METER_DEVICE` — код пристрою лічильника C2 в емуляторі).
