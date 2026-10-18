@@ -1978,6 +1978,13 @@ devices:
   protocols:
   - P-07
   unit_id: 69
+- code: SWB-CTRL
+  name: Контролер ГРЩ 0,4 кВ (QS, конденсаторні установки PFC-1/PFC-2; карта регістрів — ПРИПУЩЕННЯ A-24)
+  role: switchboard_ctrl
+  protocols:
+  - P-07
+  unit_id: 73
+  driver: swb
 - code: PV-ROOF
   name: Hi-MO 6 Explorer LR5-72HTH-580M
   role: pv_module

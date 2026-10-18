@@ -34,7 +34,7 @@ class Integrator(Model):
 
 
 def test_world_builds_devices_and_signals(world):
-    assert len(world.signals) == 1168 and len(world.devices) >= 184
+    assert len(world.signals) == 1177 and len(world.devices) >= 184
     pv = world.devices["PV-INV"]
     assert "PV-INV-3/p_kw" in pv.signals and "p_kw" not in pv.signals  # колізія листів
     s = world.signals["energy/consumers/SAW-1/p_now"]
