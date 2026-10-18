@@ -171,3 +171,13 @@ async def test_config_etag_in_report_response_wakes_config_loop():  # SPEC 7.4
     h.plugin._config_wake.clear()
     h.plugin._on_report(h.cfg.etag, 17)
     assert not h.plugin._config_wake.is_set()
+
+
+def test_entry_point_declared_in_pyproject():  # SPEC 8.1.1
+    import tomllib
+    from pathlib import Path
+
+    data = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text("utf-8"))
+    assert data["project"]["entry-points"]["factory3d_collector.plugins"] == {
+        "energy_ctl": "td_collector_energy:EnergyCtlPlugin"}
+    assert data["project"]["name"] == "td-collector-energy" and data["project"]["dependencies"] == []
