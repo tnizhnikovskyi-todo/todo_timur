@@ -16,7 +16,7 @@ MIN_PARAMS = {
     "truck_arrival": {"booking": "BATCH/IN/00001"}, "fire_drill": {}, "spark": {},
     "access_event": {}, "battery_low": {"device": "FL-2"}, "compressor_fault": {},
     "pv_cloudy": {}, "boiler_refill": {}, "genset_test": {}, "lighting_scene": {"level": 50},
-    "pfc_step_fault": {},
+    "pfc_step_fault": {}, "peak_load": {}, "export_demo": {}, "ctl_local": {}, "chp_no_gas": {},
 }
 
 
@@ -35,8 +35,8 @@ def states(world, run):
             if e.run_id == run.id]
 
 
-def test_registry_of_16(runner):
-    assert len(SCENARIOS) == 16 and set(MIN_PARAMS) == set(runner.scenarios)
+def test_registry_of_20(runner):
+    assert len(SCENARIOS) == 20 and set(MIN_PARAMS) == set(runner.scenarios)
     lst = runner.list()
     assert [x["name"] for x in lst][:3] == ["shift", "machine_fault", "blackout"]
     by = {x["name"]: x for x in lst}

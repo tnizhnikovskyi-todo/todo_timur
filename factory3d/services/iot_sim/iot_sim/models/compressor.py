@@ -6,6 +6,9 @@
 ``compressor_fault`` (``kind``): ``pressure_drop`` — номінал 5,5 і ``state = 3``; ``overtemp`` —
 ``temp_c = 115``, ``state = 3``; ``comm`` — Modbus unit 70 недоступний (``fault("comm")``).
 ``temp_c = 70 + 0,2·load + 0,3·r``.
+
+W2 (SPEC §8.2): номінальний тиск = ``air_setpoint_bar − 0,19`` (прапор, за замовчуванням 7,00 → 6,81 — поведінка W0
+збережена); ``min_consumer_bar`` = 6,20 (константа регістра 241).
 """
 from __future__ import annotations
 
@@ -13,11 +16,14 @@ from typing import Any
 
 from iot_sim.models import register_model
 from iot_sim.models.base import Model, noise_step
+from iot_sim.models.meter import ctl
 
 P_NOM = 6.81
 P_MIN_OVERLOAD = 6.2
 P_FAULT = 5.5
 OVERLOAD_PCT = 95.0
+AIR_OFFSET_BAR = 0.19  # номінальний тиск = уставка − 0,19
+MIN_CONSUMER_BAR = 6.20
 LOAD_NOISE = 3.0
 
 
@@ -61,6 +67,7 @@ class Compressor(Model):
     def tick(self, dt_s: float) -> None:
         kind = self._fault_kind()
         self._sync_comm(kind)
+        p_nom = float(ctl(self.world, "air_setpoint_bar")) - AIR_OFFSET_BAR
         prod, pmax = production(self.world)
         target = clamp(25.0 + 60.0 * prod / pmax, 20.0, 100.0) if pmax > 0 else 25.0
         load = clamp(noise_step(float(self.val("load")), target, LOAD_NOISE, self.r("load"),
@@ -69,11 +76,11 @@ class Compressor(Model):
         if kind == "pressure_drop":
             self.nominal = P_FAULT
         elif self.nominal == P_FAULT:  # сценарій знято: тиск повертається до норми
-            self.nominal = P_NOM
+            self.nominal = p_nom
         elif load > OVERLOAD_PCT:
-            self.nominal = max(P_MIN_OVERLOAD, self.nominal - step)
+            self.nominal = max(min(P_MIN_OVERLOAD, p_nom), self.nominal - step)
         else:
-            self.nominal = min(P_NOM, self.nominal + step)
+            self.nominal = min(p_nom, self.nominal + step)
         self.set("load", load)
         self.set("pressure_bar", noise_step(float(self.val("pressure_bar")), self.nominal, 0.05,
                                             self.r("pressure_bar"), self.dt_min))
