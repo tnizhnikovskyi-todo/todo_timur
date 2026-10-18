@@ -23,7 +23,30 @@ class F3dPublishWizard(models.TransientModel):
         'td.publish.wizard.line', 'wizard_id', string="Пропозиції архівації", domain=[('kind', '=', 'archive')]
     )
     issue_ids = fields.One2many('td.publish.wizard.issue', 'wizard_id', string="Зауваження перевірок")
+    scope_slot_ids = fields.Many2many('td.slot', string="Зони й ряди плану", compute='_compute_scope_slots')
+    scope_slot_id = fields.Many2one(
+        'td.slot',
+        string="Зона або ряд",
+        domain="[('id', 'in', scope_slot_ids)]",
+        help="Застосувати лише рядки обраної зони чи ряду; потрібні батьки додаються самі (F02-03)",
+    )
+    create_line_ids = fields.One2many(
+        'td.publish.wizard.line', 'wizard_id', string="Створення", domain=[('kind', '=', 'create')]
+    )
+    move_line_ids = fields.One2many(
+        'td.publish.wizard.line', 'wizard_id', string="Перенесення", domain=[('kind', '=', 'move')]
+    )
+    rename_line_ids = fields.One2many(
+        'td.publish.wizard.line', 'wizard_id', string="Перейменування", domain=[('kind', '=', 'rename')]
+    )
+    attrs_line_ids = fields.One2many(
+        'td.publish.wizard.line', 'wizard_id', string="Атрибути", domain=[('kind', 'in', ('attrs', 'update'))]
+    )
     n_create = fields.Integer(string="Буде створено", compute='_compute_counts')
+    n_move = fields.Integer(string="Буде перенесено", compute='_compute_counts')
+    n_rename = fields.Integer(string="Буде перейменовано", compute='_compute_counts')
+    n_attrs = fields.Integer(string="Зміни атрибутів", compute='_compute_counts')
+    n_blocked = fields.Integer(string="Застосувати не можна", compute='_compute_counts')
     n_update = fields.Integer(string="Буде оновлено", compute='_compute_counts')
     n_archive = fields.Integer(string="Буде архівовано", compute='_compute_counts')
     n_archive_offer = fields.Integer(string="Пропонуємо архівувати", compute='_compute_counts')
@@ -33,13 +56,19 @@ class F3dPublishWizard(models.TransientModel):
     can_publish = fields.Boolean(compute='_compute_counts')
     version_id = fields.Many2one('td.layout.version', string="Версія", readonly=True)
 
-    @api.depends('line_ids.kind', 'line_ids.selected', 'issue_ids.severity', 'site_id.has_changes', 'state')
+    @api.depends(
+        'line_ids.kind', 'line_ids.selected', 'line_ids.blocked', 'issue_ids.severity', 'site_id.has_changes', 'state'
+    )
     def _compute_counts(self):
         enabled = self.env['ir.config_parameter'].sudo().get_param('td.constructor.publish_enabled') == 'True'
         for wiz in self:
             lines, issues = wiz.line_ids, wiz.issue_ids
             wiz.n_create = len(lines.filtered(lambda r: r.kind == 'create'))
-            wiz.n_update = len(lines.filtered(lambda r: r.kind == 'update'))
+            wiz.n_move = len(lines.filtered(lambda r: r.kind == 'move'))
+            wiz.n_rename = len(lines.filtered(lambda r: r.kind == 'rename'))
+            wiz.n_attrs = len(lines.filtered(lambda r: r.kind == 'attrs'))
+            wiz.n_blocked = len(lines.filtered('blocked'))
+            wiz.n_update = len(lines.filtered(lambda r: r.kind in ('update', 'move', 'rename', 'attrs')))
             wiz.n_archive_offer = len(lines.filtered(lambda r: r.kind == 'archive'))
             wiz.n_archive = len(lines.filtered(lambda r: r.kind == 'archive' and r.selected))
             wiz.n_warn = len(issues.filtered(lambda r: r.severity == 'warn'))
@@ -51,12 +80,23 @@ class F3dPublishWizard(models.TransientModel):
                 and bool(wiz.site_id.has_changes or wiz.n_create or wiz.n_update)
             )
 
+    @api.depends('line_ids.scope_uid', 'line_ids.zone_uid')
+    def _compute_scope_slots(self):
+        """Місця-ряди й зони, до яких належать рядки плану (вибір області застосування, F02-03)."""
+        Slot = self.env['td.slot'].sudo()
+        for wiz in self:
+            uids = set(wiz.line_ids.mapped('scope_uid')) | set(wiz.line_ids.mapped('zone_uid'))
+            wiz.scope_slot_ids = Slot.search(
+                [('site_id', '=', wiz.site_id.id), ('uid', 'in', list(uids - {False, ''}))]
+            )
+
     def _f3d_rebuild(self, plan=None):
         """Побудувати план публікації (R-12) і заповнити рядки та зауваження; в Odoo нічого не змінює."""
         for wiz in self:
             plan = plan or publish.build_plan(wiz.site_id)
             wiz.line_ids.unlink()
             wiz.issue_ids.unlink()
+            wiz.scope_slot_id = False
             wiz.write(
                 {
                     'draft_rev': plan['draft_rev'],
@@ -70,6 +110,11 @@ class F3dPublishWizard(models.TransientModel):
                                 'name': line['name'],
                                 'res_id': line['res_id'],
                                 'source_uid': line['source_uid'],
+                                'depends_code': line['depends_code'],
+                                'scope_uid': line['scope_uid'],
+                                'zone_uid': line['extra'].get('zone_uid') or False,
+                                'flags': ", ".join(line['extra'].get('flags') or []),
+                                'before': line['before'] or False,
                                 'changes': line['changes'],
                                 'selected': line['selected'],
                                 'blocked': line['blocked'],
@@ -126,7 +171,9 @@ class F3dPublishWizard(models.TransientModel):
             if line.kind == 'archive' and line.selected and not line.blocked
         }
         excluded = {
-            (line.res_model, line.code) for line in self.line_ids if line.kind != 'archive' and not line.selected
+            (line.res_model, line.code, line.kind)
+            for line in self.line_ids
+            if line.kind != 'archive' and not line.selected
         }
         result = publish.apply_plan(site, plan, keys, self.note or '', excluded)
         self.write({'state': 'done', 'version_id': result['version'].id})
@@ -146,6 +193,52 @@ class F3dPublishWizard(models.TransientModel):
             'res_model': 'td.layout.version',
             'res_id': result['version'].id,
             'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def _f3d_reopen(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'res_id': self.id,
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'target': 'new',
+            'context': dict(self.env.context),
+        }
+
+    def action_select_all(self):
+        """«Вибрати все»: усі незаблоковані рядки створення/змін позначено (пропозиції архівації не чіпаємо)."""
+        self.ensure_one()
+        self.line_ids.filtered(lambda r: r.kind != 'archive').write({'selected': True})
+        return self._f3d_reopen()
+
+    def action_select_none(self):
+        """«Зняти все»: жодного рядка створення/змін не позначено."""
+        self.ensure_one()
+        self.line_ids.filtered(lambda r: r.kind != 'archive').write({'selected': False})
+        return self._f3d_reopen()
+
+    def action_select_scope(self):
+        """«Лише обране»: позначено рядки зони чи ряду (`scope_id`); потрібні батьки додасть застосування."""
+        self.ensure_one()
+        if not self.scope_slot_id:
+            raise UserError("Оберіть зону або ряд.")
+        uid = self.scope_slot_id.uid
+        for line in self.line_ids.filtered(lambda r: r.kind != 'archive'):
+            line.selected = uid in (line.scope_uid, line.zone_uid)
+        return self._f3d_reopen()
+
+    def action_open_log(self):
+        """Журнал публікацій площадки (версії з операціями; відкат — на формі версії)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': "Журнал публікацій",
+            'res_model': 'td.layout.version',
+            'view_mode': 'list,form',
+            'views': [(False, 'list'), (False, 'form')],
+            'domain': [('site_id', '=', self.site_id.id), ('kind', '=', 'publish')],
             'target': 'current',
         }
 

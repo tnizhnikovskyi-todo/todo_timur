@@ -26,3 +26,5 @@ class TdPublishWizardLine(models.TransientModel):
     depends_code = fields.Char(string="Залежить від коду", help="Код рядка, який має бути застосований раніше")
     scope_uid = fields.Char(string="UID області", size=32, help="UID місця або зони, до якої належить рядок")
     before = fields.Json(string="Було", help="Прежні значення полів запису в Odoo")
+    zone_uid = fields.Char(string="UID зони", size=32, help="Зона, що містить комірку (F02-03: застосування частинами)")
+    flags = fields.Char(string="Мітки", help="«stock» — є залишок, «barcode_busy» — штрихкод уже зайнятий та ін.")
