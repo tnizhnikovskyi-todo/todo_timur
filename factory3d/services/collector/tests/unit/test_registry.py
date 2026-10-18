@@ -139,9 +139,12 @@ def test_load_plugins(monkeypatch):
 
 
 def test_load_real_plugins_exactly_four():
-    """AC-76: у базовому образі рівно 4 плагіни (entry points pyproject.toml)."""
+    """AC-76: базові плагіни ядра — рівно 4 (entry points pyproject.toml); `energy_ctl` (W2) — штатний п'ятий, коли
+    встановлений, як і зовнішні `helvarnet`/`sics`."""
     plugins = load_plugins()
-    assert sorted(plugins) == ["bacnet_ip", "http_push", "modbus_tcp", "mqtt"]
+    base = {"bacnet_ip", "http_push", "modbus_tcp", "mqtt"}
+    assert base <= set(plugins) <= base | {"energy_ctl", "helvarnet", "sics"}
+    assert {n for n in plugins if n in base} == base
     for typ, cls in plugins.items():
         assert cls.type == typ and cls.address_schema and cls.params_schema
         assert issubclass(cls, SourcePlugin) and not getattr(cls, "__abstractmethods__", None)

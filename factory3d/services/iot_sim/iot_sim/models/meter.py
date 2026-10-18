@@ -9,6 +9,12 @@
 тому не залежать від колізій коротких ключів ``Device.signals``.
 
 ASSUMPTION: ``kwh_total`` у сигналі — кВт·год (float); протокольний шар множить на 1000 (Вт·год, INT64).
+
+W2 (R-59, SPEC §8.2): вікно керування контролера ГРЩ. Прапори світу (``ctl(world, name)``, значення за замовчуванням —
+``CTL_DEFAULTS``; ``POST /sim/v1/reset`` очищає всі прапори → стандартні значення): ``shed_limit`` ({вузол: % ліміту},
+``shed_factor``), ``extra_load_kw`` (+/− до навантаження), ``export_target_kw`` (``export_demo``), ``qs_closed``.
+Споживач віддає ``consumer_p · shed_factor``; при ``qs_closed`` потужності вводів Q1 і Q2 вирівнюються; сторожовий
+таймер ``shed_valid_s`` (веде вводу Q1) повертає ліміти й ``pv_limit_pct`` до 100 %.
 """
 from __future__ import annotations
 
@@ -61,8 +67,77 @@ def island(world: Any) -> bool:
     return b is not None and b.get("phase", "outage") != "restoring"
 
 
+# --- прапори вікна керування контролера ГРЩ (SPEC §8.2, R-59) ------------------------------
+CTL_DEFAULTS: dict[str, Any] = {
+    "ctl_remote": 1, "qs_closed": False, "qs_cmd": 0, "qs_ack": 0,
+    "pfc_mode": 1, "pfc_cos_target": None,
+    "bess_mode": 0, "bess_setpoint_kw": 0.0, "bess_until_soc": 0.0, "bess_valid_s": 0.0, "bess_valid_left": 0.0,
+    "bess_ack": 0, "bess_reserve_pct": 30.0, "bess_auto_idle": False,
+    "chp_run": False, "chp_cmd": 0, "chp_ack": 0, "chp_permit": 1, "chp_start_s": 60.0, "gas_bar": 2.10,
+    "air_setpoint_bar": 7.00, "pv_limit_pct": 100.0,
+    "shed_valid_s": 0.0, "shed_valid_left": 0.0, "extra_load_kw": 0.0, "export_target_kw": None,
+}
+SHED_NODES = ("CHARGING", "RV-ALL", "DRY-1", "COMPRESSOR", "LP-1")
+BESS_TEMP_MAX_C = 40.0
+
+
+def ctl(world: Any, name: str) -> Any:
+    """Прапор керування (``world.flags``) або значення за замовчуванням ``CTL_DEFAULTS``."""
+    return world.flags.get(name, CTL_DEFAULTS[name])
+
+
+def remote(world: Any) -> bool:
+    """Контролер у дистанційному режимі (``ctl_remote``, за замовчуванням 1)."""
+    return bool(int(ctl(world, "ctl_remote")))
+
+
+def qs_closed(world: Any) -> bool:
+    """QS замкнений: команда контролера (``qs_closed``) або параметр сценарію W1 ``swb.qs_closed``."""
+    cfg = world.flags.get("swb")
+    return bool(ctl(world, "qs_closed")) or bool(isinstance(cfg, dict) and cfg.get("qs_closed"))
+
+
+def shed_factor(world: Any, code: str) -> float:
+    """``limit_pct / 100`` для вузла (за замовчуванням 1): ліміт навантаження контролера (R-51)."""
+    limits = world.flags.get("shed_limit")
+    if isinstance(limits, dict) and code in limits:
+        return max(0.0, min(100.0, float(limits[code]))) / 100.0
+    return 1.0
+
+
+def shed_active(world: Any) -> bool:
+    limits = world.flags.get("shed_limit")
+    shed = isinstance(limits, dict) and any(float(v) < 100.0 for v in limits.values())
+    return shed or float(ctl(world, "pv_limit_pct")) < 100.0
+
+
+def bess_temp_c(world: Any) -> float:
+    """Температура шафи BESS: ``25 + 0,05·|P|`` (R-59)."""
+    return 25.0 + 0.05 * abs(float(get(world, "infra/totals/bess_kw", 0.0) or 0.0))
+
+
 def consumer_p(world: Any, code: str) -> float:
-    return float(get(world, f"energy/consumers/{code}/p_now", 0.0) or 0.0)
+    return float(get(world, f"energy/consumers/{code}/p_now", 0.0) or 0.0) * shed_factor(world, code)
+
+
+def base_load(world: Any) -> float:
+    return sum(consumer_p(world, c) for c in ALL_CONSUMERS)
+
+
+def gen_kw(world: Any) -> float:
+    return float(get(world, "infra/totals/pv_now")) + float(get(world, "infra/totals/chp_kw"))
+
+
+def extra_load(world: Any, base: float | None = None) -> float:
+    """Додаток до навантаження: ``extra_load_kw`` (≥ −load) і підгонка ``export_demo`` (експорт = ``export_target_kw``)."""
+    if island(world):
+        return 0.0
+    base = base_load(world) if base is None else base
+    extra = float(ctl(world, "extra_load_kw") or 0.0)
+    target = ctl(world, "export_target_kw")
+    if target is not None and gen_kw(world) > float(target):
+        extra = (gen_kw(world) - float(target)) - base
+    return max(extra, -base)
 
 
 def p_crit(world: Any) -> float:
@@ -74,13 +149,16 @@ def total_load(world: Any) -> float:
     """R-13: ``load = Σ p_now`` усіх споживачів; в острові — лише критичних."""
     if island(world):
         return p_crit(world)
-    return sum(consumer_p(world, c) for c in ALL_CONSUMERS)
+    base = base_load(world)
+    return base + extra_load(world, base)
 
 
 def section_p(world: Any, section: int) -> float:
+    """Навантаження секції; додаток ``extra_load`` ділиться порівну між секціями (сума вводів = імпорт)."""
     if island(world):
         return 0.0
-    return sum(consumer_p(world, c) for line in SECTIONS[section] for c in LINE_CONSUMERS[line])
+    own = sum(consumer_p(world, c) for line in SECTIONS[section] for c in LINE_CONSUMERS[line])
+    return own + extra_load(world) / 2.0
 
 
 def update_rv_all(world: Any) -> None:
@@ -187,15 +265,33 @@ class Meter(Model):
         self.set("kwh_total", round(self.own_wh / 1000.0, 6))
         self.set("state", 2 if failed else 1)
 
-    def _tick_cell(self) -> None:
+    def _cell_p(self) -> float:
+        """Потужність вводу; при замкненому QS обидва вводи ділять навантаження порівну: ``(P1 + P2) / 2``."""
         w = self.world
+        p1 = section_p(w, 1)
+        p2 = 0.0 if island(w) else section_p(w, 2) - gen_kw(w) + float(get(w, "infra/totals/bess_kw"))
+        if qs_closed(w) and not island(w):
+            return (p1 + p2) / 2.0
+        return p1 if self.device.code == "Q1" else p2
+
+    def _watchdog(self, dt_s: float) -> None:
+        """Сторожовий таймер ``shed_valid_s`` (веде лише ввід Q1): за 0 усі ліміти й ``pv_limit_pct`` → 100 %."""
+        w = self.world
+        if not shed_active(w):
+            return
+        left = float(ctl(w, "shed_valid_left")) - dt_s
+        if left > 0:
+            w.set_flag("shed_valid_left", left)
+            return
+        w.clear_flag("shed_limit")
+        w.set_flag("pv_limit_pct", 100.0)
+        w.set_flag("shed_valid_left", 0.0)
+        w.events.emit("info", "Контролер ГРЩ: сторожовий таймер скидання — ліміти повернуто до 100 %")
+
+    def _tick_cell(self) -> None:
         if self.device.code == "Q1":
-            p = section_p(w, 1)
-        elif island(w):
-            p = 0.0
-        else:
-            gen = float(get(w, "infra/totals/pv_now")) + float(get(w, "infra/totals/chp_kw"))
-            p = section_p(w, 2) - gen + float(get(w, "infra/totals/bess_kw"))
+            self._watchdog(self.dt_s)
+        p = self._cell_p()
         failed = self.device.fault is not None
         if failed:
             p = 0.0

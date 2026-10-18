@@ -1,2 +1,3 @@
 f3d-collector-yard @ file:///opt/plugins/f3d_collector_yard
 f3d-collector-bms @ file:///opt/plugins/f3d_collector_bms
+td-collector-energy @ file:///opt/plugins/td_collector_energy

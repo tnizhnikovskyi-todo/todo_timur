@@ -16,6 +16,7 @@ from collector.core.allowlist import Allowlist
 from collector.core.buffer import Buffer
 from collector.core.commands import CommandLoop
 from collector.core.config import Settings, resolve_secret
+from collector.core.live import LiveCache
 from collector.core.metrics import Metrics, MetricsServer
 from collector.core.odoo_client import OdooClient, Pusher, StatusReporter
 from collector.core.registry import Registry
@@ -49,9 +50,10 @@ class Collector:
             skew_warn_s=settings.clock_skew_warn_s,
             ca=settings.odoo_ca,
         )
-        self.emitter = Emitter(self.buffer, self._signals, self.metrics)
+        self.live = LiveCache(self.clock)
+        self.emitter = Emitter(self.buffer, self._signals, self.metrics, live=self.live)
         self.registry = Registry(self.client, settings, self._make_ctx, self.clock, self.metrics)
-        self.scheduler = Scheduler(self.buffer, self.registry, self.metrics, self.clock, rand)
+        self.scheduler = Scheduler(self.buffer, self.registry, self.metrics, self.clock, rand, live=self.live)
         self.pusher = Pusher(
             self.client,
             self.buffer,
@@ -73,7 +75,7 @@ class Collector:
             on_flags=self.registry.set_flags,
         )
         self.commands = CommandLoop(
-            self.client, self.registry, self.buffer, settings, clock=self.clock, metrics=self.metrics
+            self.client, self.registry, self.buffer, settings, clock=self.clock, metrics=self.metrics, live=self.live
         )
         self.metrics_server = MetricsServer(self.metrics, settings.metrics_port)
         self.registry.listeners.append(self._on_config)
@@ -93,6 +95,12 @@ class Collector:
             emit_event=self.emitter.emit_event,
             metrics=self.metrics,
             log=logging.getLogger(f"collector.plugin.{source.type}.{source.code}"),
+            live=self.live,
+            write_signal=self.commands.write_direct,
+            read_signal=self.commands.read_now,
+            odoo=self.client,
+            clock=self.clock,
+            state_dir=self.settings.state_file.parent,
         )
 
     async def _on_config(self) -> None:

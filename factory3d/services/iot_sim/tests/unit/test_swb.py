@@ -43,7 +43,7 @@ def expected_steps(p_kw: float, cos: float, target: float = 0.95) -> int:
 def test_catalog_device_and_signals(registry):
     dev = registry.devices["SWB-CTRL"]
     assert (dev.driver, dev.unit_id, dev.protocol) == ("swb", 73, "P-07")
-    assert sorted(dev.signals) == sorted(SIGNALS)
+    assert sorted(c for c in dev.signals if c.startswith("energy/cells/")) == sorted(SIGNALS)  # + вікно керування W2
     for code in SIGNALS:
         spec = registry.by_code[code]
         assert spec.emulated and spec.modbus[:2] == (73, 3) and spec.dtype == "U16", code

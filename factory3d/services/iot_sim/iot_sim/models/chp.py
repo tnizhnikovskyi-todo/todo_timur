@@ -8,6 +8,11 @@
 ``chp_island=false`` — ``state`` 2 → 4 (cooling down, 60 с) → 0, ``P_el = heat = 0``; після повернення
 мережі 1 (starting, 60 с) → 2; ``chp_island=true`` — лишається в роботі:
 ``P_el = min(800·load ± 4·r, max(0, P_crit − pv_now))``.
+
+W2 (SPEC §8.2, R-59): ``chp/cmd`` контролера ГРЩ (прапор ``chp_cmd``, самоочищається в наступному тіку): ``1`` пуск →
+``chp_run = True``, якщо ``chp_permit == 1`` і ``gas_bar ≥ 1,5`` (інакше ``chp_ack = 2``), ``2`` зупинка → ``chp_run =
+False``; при ``ctl_remote = 0`` команди ігноруються з ``ack = 2``. Тривалість запуску — прапор ``chp_start_s`` (60),
+тиск газу — ``gas_bar`` (2,10); HR 40007 лишається джерелом тих самих прапорів.
 """
 from __future__ import annotations
 
@@ -15,12 +20,13 @@ from typing import Any
 
 from iot_sim.models import register_model
 from iot_sim.models.base import Model
-from iot_sim.models.meter import blackout, get, island, p_crit
+from iot_sim.models.meter import blackout, ctl, get, island, p_crit, remote
 from iot_sim.models.pv import sun_factor
 
 P_NOM_KW = 800.0
 RUN, STARTING, COOLING, STOPPED, FAULT = 2, 1, 4, 0, 3
 TRANSITION_S = 60.0
+GAS_MIN_BAR = 1.5
 
 
 @register_model("chp")
@@ -49,7 +55,7 @@ class Chp(Model):
                 self.hold_s = TRANSITION_S
                 return COOLING
         elif not island(self.world) and state == STOPPED:
-            self.hold_s = TRANSITION_S
+            self.hold_s = float(ctl(self.world, "chp_start_s"))
             return STARTING
         if state in (COOLING, STARTING):
             self.hold_s -= dt_s
@@ -57,8 +63,27 @@ class Chp(Model):
                 return STOPPED if state == COOLING else RUN
         return state
 
+    def _command(self) -> None:
+        """Команда ``chp/cmd`` (1 пуск, 2 зупинка): результат у ``chp_ack``; регістр самоочищається."""
+        w = self.world
+        cmd = int(ctl(w, "chp_cmd"))
+        if not cmd:
+            return
+        w.set_flag("chp_cmd", 0)
+        if not remote(w):
+            w.set_flag("chp_ack", 2)
+        elif cmd == 1:
+            ok = int(ctl(w, "chp_permit")) == 1 and float(ctl(w, "gas_bar")) >= GAS_MIN_BAR
+            w.set_flag("chp_ack", 1 if ok else 2)
+            if ok:
+                w.set_flag("chp_run", True)
+        else:
+            w.set_flag("chp_run", False)
+            w.set_flag("chp_ack", 1)
+
     def tick(self, dt_s: float) -> None:
         w = self.world
+        self._command()
         state = int(self.val("state", RUN))
         if self.first:  # старт сервісу: штатно резерв, без «охолодження» з початкового номіналу каталогу
             self.first = False

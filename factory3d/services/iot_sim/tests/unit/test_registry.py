@@ -15,9 +15,9 @@ def _row(**kw):
     return base
 
 
-def test_catalog_load_1177(registry):
-    assert len(registry.signals) == 1177
-    assert len(registry.served()) == 1026  # без protocol=none (X-35); 1017 + 9 регістрів SWB-CTRL (W1)
+def test_catalog_load_1205(registry):
+    assert len(registry.signals) == 1205
+    assert len(registry.served()) == 1054  # без protocol=none (X-35); 1017 + 9 регістрів SWB-CTRL (W1) + 28 вікна керування (W2)
     assert sum(1 for s in registry.signals if not s.emulated) == 151
     # ASSUMPTION: devices.yaml W0 — 184 пристрої (повні 276 генерує tools/gen_devices.py пізніше)
     assert len(registry.devices) >= 276

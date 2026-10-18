@@ -1,5 +1,19 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "title": "API-26 intent (C-39); еталон — odoo_addons/td_energy_control/contracts/api26_intent.json",
- "type": "object"
+ "type": "object",
+ "required": ["v", "action_id", "idem", "kind", "params", "expires_at"],
+ "properties": {
+  "v": {"const": 1},
+  "action_id": {"type": "integer", "minimum": 0},
+  "idem": {"type": "string", "minLength": 1, "maxLength": 64},
+  "kind": {"type": "string"},
+  "cls": {"enum": ["A", "B"]},
+  "params": {"type": "object"},
+  "requested_by": {"type": "string"},
+  "requested_at": {"type": "string"},
+  "expires_at": {"type": "string"},
+  "tz": {"type": "string"},
+  "limits": {"type": "object", "additionalProperties": {"type": "number"}}
+ }
 }
