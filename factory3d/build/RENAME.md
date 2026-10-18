@@ -124,9 +124,24 @@ display-імена (маніфести, `<app string>` у налаштуванн
 - Підтвердження після встановлення: повний прогін Run A (усі модулі в одній базі, td_genset разом із бриджем); подвійних
   визначень полів немає.
 
-## 5. Перевірка
+## 5. Перевірка (на фінальному коді)
 
-Див. звіт у кінці цього файлу (розділ «Підсумок перевірки»).
+- **Run A** — усі модулі, крім трьох мостів Enterprise (`td_factory3d_mrp_maintenance`, `td_machine_connect_mrp_workorder`,
+  `td_yard_gantt`): `F3D_TEST_INSTALL=<20 модулів> run_tests.sh td_runa` → **1875 тестів, 0 failed, 0 error**
+  (базова лінія на старих іменах: 1860; різниця — +21 тест `td_constructor`, доданих merge-ом fix1 після зняття базової лінії;
+  решта модулів збігається поштучно).
+- **Run B** — демо-набір: шаблон `td_demo_tpl` перебудовано `make_demo_tpl.sh` на нових іменах (демо-завантажувач + `td_factory3d` +
+  `td_iot_sim`), далі `F3D_TEMPLATE_DB=td_demo_tpl F3D_TEST_INSTALL=td_factory3d,td_viewer3d,test_td_viewer3d,td_constructor,
+  td_constructor_viewer3d run_tests.sh td_runb /td_viewer3d,/test_td_viewer3d,/td_constructor,/td_constructor_viewer3d`
+  → **394 тести, 0 failed** (базова лінія 394).
+- **ruff** — нових зауважень немає: сумарно 1253 проти 1254 до перейменування (усі застарілі: E501/B905 тощо; по модулях
+  кількості збігаються, `td_bms` на одне менше). У `services/iot_sim` (власний конфіг) 33 = 33.
+- Після встановлення в базі: 0 моделей `f3d.*`, 0 полів `f3d_*`, 0 параметрів `factory3d.*`, 214 параметрів `td.*`.
+- **Залишки (grep):** `factory3d_<…>` як посилання на модуль — 0; лишилося 28 входжень `factory3d_collector.*` (група entry points
+  колектора, розділ 3). `f3d.<…>` як рядок моделі — 0; лишилося 25 входжень ключів localStorage/JS (`f3d.ui`, `f3d.lite`,
+  `f3d.layers`, `f3d.static`, `f3d.tab`, `f3d.kiosk.reloaded.`) і тестової назви `f3d.level0.test.`.
+  Усього змінено 1334 файли відносно `7626727` (1073 — перейменування файлів).
+
 
 ## 6. Рішення, які варто узгодити
 
