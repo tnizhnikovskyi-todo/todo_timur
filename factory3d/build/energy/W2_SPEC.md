@@ -23,11 +23,11 @@
 | UI | UI-11 | UI-12…UI-28 | клиентские компоненты |
 | API | API-15 | API-16…API-28 | ORM-RPC (16…23, 27, 28), HTTP (24, 25), интент коллектора (26) |
 | R | R-38 | R-39…R-67 | алгоритмы и правила (R-39…R-66 — `td_energy_control`, слой 3D, сборщик, эмулятор; R-67 — мост ДГУ) |
-| AC | AC-158 | AC-159…AC-308 | `td_energy_control`, плагин, ядро сборщика, эмулятор, мост 3D, стенд (разд. 12; ADP-12 — AC-275…AC-277, `td_viewer3d` R-26 — AC-278…AC-281) |
+| AC | AC-158 | AC-159…AC-310 | `td_energy_control`, плагин, ядро сборщика, эмулятор, мост 3D, стенд (разд. 12; ADP-12 — AC-275…AC-277, `td_viewer3d` R-26 — AC-278…AC-281) |
 | ТК / ТБ / ТП | ТК-18 / ТБ-10 / ТП-09 | ТК-19…ТК-28 / ТБ-11…ТБ-15 / ТП-10…ТП-12 | стенд, безопасность, производительность (разд. 13) |
 | A (решения автора) | A-37 | A-38…A-62 (+A-63 мост ДГУ) | разд. 15 |
 | Q | Q-25 | Q-26…Q-33 | ARCH §5, разд. 15 |
-| D (отклонения от макета) | D-18 | D-19…D-44 | ниже |
+| D (отклонения от макета) | D-18 | D-19…D-46 | ниже |
 | C (контракты) | C-37 | C-38…C-47 | ARCH §2.1 |
 | `td_genset_factory3d` | FR-21, M-11, ADP-11, R-16, AC-83, A-23 | FR-69, ADP-12, R-67, AC-275…AC-277, A-63 | мост ДГУ (разд. 8.3, R-67) |
 | `td_viewer3d` | FR-44, R-25, AC-67, X-92 | FR-70, R-26 (VX-01…VX-05), AC-278…AC-281, X-93 | разд. 8.4 |
@@ -66,6 +66,8 @@
 | D-42 | Control: строка журнала «Заявка ТО · PFC-2 … · автоматика · створено» | Журнал объединяет `td.energy.action` и события `td.energy.event` (`kind in ('pfc','control')`) со ссылкой на заявку ТО; результат «створено» — если есть `maintenance_request_id` | R-56 п.2 |
 | D-43 | Control: ничего о втором подтверждении | Баннер «Очікує другого підтвердження: {дія} — {хто готував}» и кнопка «Підтвердити (2/2)» для другого «Енергетика»; уведомление через `mail.activity`/шину | E-06 |
 | D-44 | Control: меню «Налаштування» вверху | В W2 — подраздел «Керування» в меню «Енергетика» (seq 8) и «Журнал команд» (seq 9, стандартный list); настройки — блок в `res.config.settings` | Меню W1 §3.3 |
+| D-45 | Решение менеджера (отменяет R-66/AC-232/A-51 в исходной редакции) | **Архивных таблиц нет.** Деинсталляция `td_energy_control` удаляет его данные как у любого модуля Odoo: `td.energy.action` (журнал), сценарии, приоритеты, слоты, блокировки, виды команд, сигналы/источники `energy_control`, кроны, параметры. `_restore_archive` и таблицы `td_energy_*_archive` не создаются; `uninstall_hook` только сбрасывает флаги и публикует сборщику пустую конфигурацию | Проще и предсказуемее; журнал команд — бизнес-журнал модуля, а не данные других модулей (аудит — резервная копия БД) |
+| D-46 | Решение менеджера (Q-27) | Параметр `td.energy_control.remote_switching_enabled` (**default `False`**): «Дистанційне перемикання комутаційних апаратів дозволено». Пока он `False`, команды дистанционного перемикання — `qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test` (поле `remote_gated=True` вида команды, M-31) — **отказываются** с `UserError("Дистанційне перемикання вимкнено: td.energy_control.remote_switching_enabled. Зверніться до адміністратора.")` в `prepare`, `confirm` и `confirm_second`; плитка `enabled=false` с той же причиной; флаг публикуется сборщику в API-24 `flags.remote_switching_enabled`, плагин дополнительно отказывает (`rejected`). Остальные команды (заряд/остановка BESS, `chp_stop`, сцены BMS, уставка воздуха, конфигурация) не затрагиваются. Demo-данные (`demo/ir_config_parameter_demo.xml`) и `hooks._td_enable_stand` ставят `True`; `neutralize.sql` возвращает `False` | Регламент объекта (Q-27) не подтверждён: дистанционное переключение отдельно от `write_enabled` |
 
 ---
 
@@ -79,7 +81,7 @@
 odoo_addons/td_energy_control/
 ├── __manifest__.py                       (менеджер) разд. 1
 ├── __init__.py                           (менеджер) from . import models, controllers; from .hooks import post_init_hook, uninstall_hook
-├── hooks.py                              A  post_init_hook: _load_sources_signals, _restore_archive, _seed_defaults, _bump_config; uninstall_hook
+├── hooks.py                              A  post_init_hook: _load_sources_signals, _seed_defaults, _bump_config; uninstall_hook (архивных таблиц нет, D-45)
 ├── models/
 │   ├── __init__.py                       A
 │   ├── td_source_signal.py               A  M-38 (selection_add `energy_ctl`, `energy_control`; регистрация валидаторов; вид события `control`)
@@ -175,7 +177,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 - `depends`: `td_energy` (≥ 19.0.1.1.0, W1), `td_telemetry` (`td.command`, коллектор), `td_bms` (цели ночного режима и сцен; `depends` td_telemetry, web — лёгкий). Необязательные (мягкая зависимость через `self.env.get(...)`/`importlib`): `td_genset_factory3d` (тест ДГУ, ADP-12), `td_viewer3d` (не нужен: 3D — отдельный мост).
 - `data` (порядок): `security/td_energy_control_security.xml`, `security/ir.model.access.csv`, `data/ir_config_parameter.xml`, `data/td_energy_interlock_data.xml`, `data/td_energy_command_kind_data.xml`, `data/td_energy_scenario_data.xml`, `data/td_energy_shed_item_data.xml`, `data/ir_cron.xml`, `views/td_energy_scenario_views.xml`, `views/td_energy_shed_item_views.xml`, `views/td_energy_command_kind_views.xml`, `views/td_energy_interlock_views.xml`, `views/td_energy_action_views.xml`, `views/td_energy_schedule_slot_views.xml`, `views/td_command_views.xml`, `views/res_config_settings_views.xml`, `views/td_energy_control_views.xml` (клиентское действие), `views/menus.xml` (последним).
 - `assets`: `web.assets_backend`: `td_energy_control/static/src/control/**`, `td_energy_control/static/src/handlers/**`; `web.assets_unit_tests`: `td_energy_control/static/tests/**/*.js`.
-- `post_init_hook`: `hooks.post_init_hook` (идемпотентный): `_load_sources_signals(env)` (разд. 5.6), `_restore_archive(env)` (если после предыдущего удаления остались таблицы `*_archive` — вернуть из них журнал, сценарии, приоритеты, слоты и блокировки в пустые таблицы моделей, затем удалить архив), `_seed_defaults(env)` (разд. 5.2…5.5 — только если записей нет), `_bump_config(env)` (`config_version`+1). `uninstall_hook`: **до** удаления моделей Odoo сохраняет бизнес-данные в SQL-таблицах `td_energy_action_archive`, `td_energy_scenario_archive`, `td_energy_shed_item_archive`, `td_energy_schedule_slot_archive`, `td_energy_interlock_archive` (`CREATE TABLE IF NOT EXISTS … AS TABLE …`; это не модели Odoo, они переживают удаление), затем удаляет сигналы и источники `module='energy_control'` и `type='energy_ctl'`, крон-задачи, параметры `td.energy_control.*`, сбрасывает `write_enabled`/`automation_enabled` в `False` и публикует сборщику пустую конфигурацию (A-51).
+- `post_init_hook`: `hooks.post_init_hook` (идемпотентный): `_load_sources_signals(env)` (разд. 5.6), `_seed_defaults(env)` (разд. 5.2…5.5 — только если записей нет), `_bump_config(env)` (`config_version`+1). `uninstall_hook`: **архивных таблиц нет** (D-45) — модуль удаляется вместе со своими данными, как любой модуль Odoo; хук удаляет сигналы и источники `module='energy_control'` и `type='energy_ctl'` (в т. ч. зависимые записи `td.command` `origin='energy'`), крон-задачи, параметры `td.energy_control.*`, сбрасывает `write_enabled`/`automation_enabled`/`remote_switching_enabled` в `False` и публикует сборщику пустую конфигурацию (A-51).
 - Внешних Python-зависимостей у Odoo-части нет. Сборщик: `td-collector-energy` (разд. 8.1).
 
 ## 2. Модели
@@ -285,6 +287,7 @@ odoo_addons/td_iot_sim/data/{td_sim_signal.csv, td_sim_scenario.xml}            
 | `undo_kind_id` | Many2one self | обратный вид (R-56 п.4) |
 | `valid_s` | Integer | TTL команды в очереди (`expires_at = now + valid_s`), default `td.energy_control.command_ttl_s` |
 | `active` | Boolean | default True |
+| `remote_gated` | Boolean | D-46: команда дистанционного перемикання (`qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test`); при `td.energy_control.remote_switching_enabled=False` `prepare`/`confirm`/`confirm_second` → `UserError`, `available` не меняется, плитка `enabled=false` |
 | `available` | Boolean | compute: R-42 п.2 (`genset` — мост установлен; `light`/`vent` — есть цели BMS; `intent` — источник `ENERGY-CTL` активен) |
 | `unavailable_reason` | Char | compute |
 
@@ -515,7 +518,7 @@ access_td_energy_control_state_admin,td.energy.control.state admin,model_td_ener
 
 ### 4.3 Предохранители («пять + один»)
 
-Чтобы устройство получило запись: (1) `td.telemetry.write_enabled`; (2) `td.energy_control.write_enabled`; (3) `td.source.write_enabled` источника (`MB-U73-SWB-CMD`, `ENERGY-CTL`, а для BMS — соответствующие источники `td_bms`; плюс `td.bms.write_enabled`); (4) `td.signal.write_enabled`; (5) `F3D_WRITE_ENABLED=true` в сборщике. Для автономных действий сценариев дополнительно (6) `td.energy_control.automation_enabled`. По умолчанию все `False` (прод) — на тестовом сервере включение делает менеджер скриптом `hooks._td_enable_stand(env)` (R-61). `neutralize.sql` сбрасывает (2), (3), (4), (6) (разд. 5.7). Стоп-кран `module='energy'` (W1 AC-81) не меняется: все записываемые сигналы этого модуля имеют `module='energy_control'`.
+Чтобы устройство получило запись: (1) `td.telemetry.write_enabled`; (2) `td.energy_control.write_enabled`; (3) `td.source.write_enabled` источника (`MB-U73-SWB-CMD`, `ENERGY-CTL`, а для BMS — соответствующие источники `td_bms`; плюс `td.bms.write_enabled`); (4) `td.signal.write_enabled`; (5) `F3D_WRITE_ENABLED=true` в сборщике. Для автономных действий сценариев дополнительно (6) `td.energy_control.automation_enabled`. Отдельно от предохранителей — переключатель `td.energy_control.remote_switching_enabled` (D-46, Q-27, default `False`): при `False` команды дистанционного перемикання (`remote_gated`) отказываются с `UserError` независимо от прочих флагов. По умолчанию все `False` (прод) — на тестовом сервере включение делает менеджер скриптом `hooks._td_enable_stand(env)` (R-61; ставит и `remote_switching_enabled=True`). `neutralize.sql` сбрасывает (2), (3), (4), (6) и `remote_switching_enabled` (разд. 5.7). Стоп-кран `module='energy'` (W1 AC-81) не меняется: все записываемые сигналы этого модуля имеют `module='energy_control'`.
 
 ### 4.4 Защита данных и действий
 
@@ -551,6 +554,7 @@ access_td_energy_control_state_admin,td.energy.control.state admin,model_td_ener
 | `td.energy_control.plan_horizon_days` | `2` | на сколько суток вперёд строится план (R-54) |
 | `td.energy_control.export_advice_min` | `5` | минут экспорта для правила EXPORT-T2 (R-55) |
 | `td.energy_control.journal_limit` | `50` | записей журнала за один запрос |
+| `td.energy_control.remote_switching_enabled` | `False` (demo/стенд — `True`) | D-46 / Q-27: дистанционное перемикання (`qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test`) разрешено; иначе `UserError` |
 
 ### 5.2 `data/td_energy_scenario_data.xml` — 6 сценариев (noupdate; тексты и параметры макета `Control.dc.html`)
 
@@ -681,7 +685,7 @@ access_td_energy_control_state_admin,td.energy.control.state admin,model_td_ener
 
 ### 5.7 `neutralize.sql`
 
-`UPDATE ir_config_parameter SET value='False' WHERE key IN ('td.energy_control.write_enabled','td.energy_control.automation_enabled');` `UPDATE td_source SET write_enabled=false, read_enabled=false WHERE module='energy_control';` `UPDATE td_signal SET write_enabled=false WHERE module='energy_control';` `UPDATE ir_cron SET active=false WHERE id IN (… 3 новых кронов …)`; `UPDATE td_command SET state='cancelled' WHERE origin='energy' AND state IN ('queued','sent');`.
+`UPDATE ir_config_parameter SET value='False' WHERE key IN ('td.energy_control.write_enabled','td.energy_control.automation_enabled','td.energy_control.remote_switching_enabled');` `UPDATE td_source SET write_enabled=false, read_enabled=false WHERE module='energy_control';` `UPDATE td_signal SET write_enabled=false WHERE module='energy_control';` `UPDATE ir_cron SET active=false WHERE id IN (… 3 новых кронов …)`; `UPDATE td_command SET state='cancelled' WHERE origin='energy' AND state IN ('queued','sent');`.
 
 ## 6. Крон-задачи и фоновые процессы
 
@@ -719,7 +723,7 @@ access_td_energy_control_state_admin,td.energy.control.state admin,model_td_ener
 
 ```json
 {"ts":"2026-10-18T11:20:03Z","now_local":"14:20",
- "meta":{"role":"manager","can_prepare":true,"can_confirm_b":false,"write_enabled":true,"automation_enabled":true,
+ "meta":{"role":"manager","can_prepare":true,"can_confirm_b":false,"write_enabled":true,"automation_enabled":true,"remote_switching_enabled":true,
          "limit_kw":760,"contract_kw":800,"refresh_s":30},
  "engine":{"connected":true,"mode":"auto","reason":null,"heartbeat_at":"2026-10-18T11:20:01Z","age_s":2,
            "config_version":17,"applied_version":17,"label":"Контролер ГРЩ і збирач на зв'язку · 14:20","level":"ok"},
@@ -757,7 +761,7 @@ access_td_energy_control_state_admin,td.energy.control.state admin,model_td_ener
 
 ```json
 {"schema":1,"config_version":17,"etag":"9f2c…","server_time":"2026-10-18T11:20:03Z","tz":"Europe/Kyiv",
- "flags":{"automation_enabled":true,"write_enabled":true},
+ "flags":{"automation_enabled":true,"write_enabled":true,"remote_switching_enabled":true},
  "engine":{"tick_s":2,"config_poll_s":10,"stale_hold_s":30,"min_write_interval_s":10,"max_writes_per_min":30,
            "exec_timeout_s":60,"step_timeout_s":8,"verify_timeout_s":30,"shed_restore_step_s":20},
  "plant":{"contract_kw":800,"pv_kwp":920,"bess_kwh":387,"bess_max_kw":200,"bess_reserve_pct":30,"cos_phi_target":0.95,
@@ -967,6 +971,7 @@ services/collector_plugins/td_collector_energy/
 5. Уведомление об `awaiting_second`: `bus.tick('action')` (баннер на экране «Керування», D-43) и `mail.activity` (тип «К выполнению», срок `second_expires_at`) для ≤ 10 пользователей `group_td_energy_manager`, кроме инициатора; activity закрывается при выполнении, отклонении или истечении.
 6. Класс отмены (`undo`) — класс обратного вида (`undo_kind`).
 7. Токен принадлежит пользователю, вызвавшему `prepare` (R-40 п.2); `confirm` чужого токена запрещён.
+8. **Дистанционное перемикання (D-46, Q-27).** Виды с `remote_gated=True` (`qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test`) при `td.energy_control.remote_switching_enabled=False` отказываются в `prepare`, `confirm`, `confirm_second` и `undo` с `UserError("Дистанційне перемикання вимкнено: td.energy_control.remote_switching_enabled. Зверніться до адміністратора.")` (проверка стоит раньше проверок блокировок); плитка и кнопки узла — `enabled=false` с причиной «Дистанційне перемикання вимкнено адміністратором».
 
 ### R-40 Поток `prepare → confirm → выполнение` (FR-50, FR-55; M-33)
 
@@ -1241,7 +1246,7 @@ services/collector_plugins/td_collector_energy/
 
 ### R-61 Стенд и демо-данные (E-11; FR-67)
 
-1. `hooks._td_enable_stand(env)` (вызывает менеджер через `odoo-bin shell`; **не** из `post_init_hook`): `td.telemetry.write_enabled=True`, `td.energy_control.write_enabled=True`, `td.energy_control.automation_enabled=True`; `write_enabled=True` для источников `MB-U73-SWB-CMD`, `ENERGY-CTL` и для сигналов `module='energy_control'` с R/W и W (`qs/cmd`, `pfc/*`, `bess/{mode,setpoint_kw,until_soc,valid_s}`, `chp/cmd`, `air/setpoint_bar`, `pv/limit_pct`, `shed/*`, `intent`); для целей BMS ночного режима — соответствующие сигналы и `td.bms.write_enabled`; возвращает перечень изменений. Сборщик: `F3D_WRITE_ENABLED=true`, `F3D_COMMANDS_POLL_S=2`; эмулятор: `SIM_WRITE_ACCEPT=1`.
+1. `hooks._td_enable_stand(env)` (вызывает менеджер через `odoo-bin shell`; **не** из `post_init_hook`): `td.telemetry.write_enabled=True`, `td.energy_control.write_enabled=True`, `td.energy_control.automation_enabled=True`, `td.energy_control.remote_switching_enabled=True` (D-46); `write_enabled=True` для источников `MB-U73-SWB-CMD`, `ENERGY-CTL` и для сигналов `module='energy_control'` с R/W и W (`qs/cmd`, `pfc/*`, `bess/{mode,setpoint_kw,until_soc,valid_s}`, `chp/cmd`, `air/setpoint_bar`, `pv/limit_pct`, `shed/*`, `intent`); для целей BMS ночного режима — соответствующие сигналы и `td.bms.write_enabled`; возвращает перечень изменений. Сборщик: `F3D_WRITE_ENABLED=true`, `F3D_COMMANDS_POLL_S=2`; эмулятор: `SIM_WRITE_ACCEPT=1`.
 2. Приёмка на стенде (ТК-19…ТК-28): воспроизведение макета — `export_demo` (экспорт 26 кВт, BESS 82 %, QS открыт), рекомендация EXPORT-T2 → «Зарядити BESS 50 кВт» → диалог → выполнено → «Скасувати»; QS: диалог с проверкой «блокування АВР — гаразд», второе подтверждение; `peak_load` → BESS → КГУ → сброс; `mains_loss` → резервное питание; ночной режим на границе `23:00` (время мира `POST /sim/v1/time`); `pfc_step_fault` остаётся сценарием W1.
 3. Генератор истории (W1 R-36) уже наполняет профиль для плана (R-54).
 
@@ -1263,7 +1268,7 @@ services/collector_plugins/td_collector_energy/
 
 ### R-66 Миграция и деинсталляция
 
-Новая установка (первая версия `19.0.1.0.0`): `post_init_hook` (разд. 1, 5.6) — идемпотентный; миграций нет. Повторный `-u` не меняет количеств (AC-235). `uninstall_hook` (разд. 1): **до** удаления моделей копирует бизнес-данные (`td.energy.action`, сценарии, приоритеты сброса, слоты, блокировки) в SQL-таблицы `td_energy_*_archive` (не модели Odoo, переживают удаление модуля), затем удаляет служебные данные (сигналы и источники `energy_control`/`energy_ctl`, кроны, параметры), сбрасывает флаги `write_enabled`/`automation_enabled`; при повторной установке `_restore_archive` возвращает архив в пустые таблицы моделей и удаляет его (A-51). `td_energy` после удаления модуля: `meta.control_available=false` (W1 `_td_control_available` смотрит на `ir.module.module`), кнопки `kind='control'` в Пульте исчезают (обработчик не зарегистрирован; D-02).
+Новая установка (первая версия `19.0.1.0.0`): `post_init_hook` (разд. 1, 5.6) — идемпотентный; миграций нет. Повторный `-u` не меняет количеств (AC-235). **Деинсталляция (D-45):** архивных таблиц нет — модуль удаляется вместе со своими данными, как любой модуль Odoo. `uninstall_hook` удаляет служебные данные (сигналы и источники `energy_control`/`energy_ctl`, кроны, параметры), сбрасывает флаги `write_enabled`/`automation_enabled`/`remote_switching_enabled` и публикует пустую конфигурацию; журнал `td.energy.action`, сценарии, приоритеты сброса, слоты, блокировки и виды команд удаляются вместе с моделями. Повторная установка создаёт данные заново (`post_init_hook`). `td_energy` после удаления модуля: `meta.control_available=false` (W1 `_td_control_available` смотрит на `ir.module.module`), кнопки `kind='control'` в Пульте исчезают (обработчик не зарегистрирован; D-02).
 
 ### R-67 Тест ДГУ через адаптер (`td_genset_factory3d`; FR-66, FR-69; ADP-12)
 
@@ -1347,6 +1352,8 @@ services/collector_plugins/td_collector_energy/
 | AC-192 | FR-58 | Given `td.energy_control.write_enabled=False`; When `prepare('qs_close')` → `UserError` «Керування вимкнено…»; When `write_enabled=True`, но `write_enabled` источника `ENERGY-CTL`/сигнала `False` → `confirm` даёт `blocked` «Запис вимкнено: …», `td.command` не создана | UT |
 | AC-193 | FR-55 | Given `td.command.create` с `origin='energy'`; When вне модуля (без контекста и `energy_action_id`) → `UserError`; без группы менеджера телеметрии и не `sudo` → `AccessError` (существующее правило) | UT |
 | AC-194 | FR-66 | Given без моста `td_genset_factory3d`; Then `genset_test.available=False`, причина «Не встановлено міст td_genset_factory3d», `prepare` → `UserError`; с мостом — `available=True` | UT |
+| AC-309 | FR-58 | Given `td.energy_control.remote_switching_enabled=False` (D-46); When `prepare` для `qs_close`, `qs_open`, `chp_start`, `bess_discharge`, `genset_test`; Then `UserError` «Дистанційне перемикання вимкнено: td.energy_control.remote_switching_enabled…»; те же действия, подготовленные до выключения флага, не проходят `confirm`/`confirm_second`; `get_control().commands[]` для них `enabled=false` с причиной; `bess_charge`, `bess_stop`, `chp_stop`, `light_*`, `vent_*`, `air_setpoint`, `scenario_*`, `shed_reorder` не затронуты | UT |
+| AC-310 | FR-58 | Given флаг `True`; Then `prepare('qs_close')` проходит как в AC-177…AC-194; `API-24 flags.remote_switching_enabled` равен значению параметра и меняет ETag; `neutralize.sql` и новая установка без demo дают `False`; demo-данные и `_td_enable_stand` дают `True` | UT |
 
 ### 12.4 Реестр блокировок — AC-195…AC-204
 
@@ -1409,7 +1416,7 @@ services/collector_plugins/td_collector_energy/
 | AC-229 | FR-60, FR-61 | Given демо-БД после W1; When `post_init_hook`; Then `td.source` 138, `td.signal` `energy_control` +36 с адресами HR 200…291 (28 на `MB-U73-SWB-CMD` + 8 на `ENERGY-CTL`), scenarios 6, kinds 16, interlocks 20, shed 5, slots ≥ 10, state 1; `write_enabled=False` везде; повтор не меняет количеств | UT |
 | AC-230 | FR-67 | When `hooks._td_enable_stand(env)`; Then флаги `td.telemetry.write_enabled`, `td.energy_control.write_enabled`, `automation_enabled` = `True`, `write_enabled` источников и записываемых сигналов `energy_control`; возвращает перечень изменений; `post_init_hook` этого не делает | UT |
 | AC-231 | FR-61 | When `neutralize.sql`; Then флаги `write_enabled`/`automation_enabled` = `False`, источники и сигналы `energy_control` без записи/чтения, 3 крон-задачи выключены, команды `origin='energy'` в `queued/sent` → `cancelled` | UT |
-| AC-232 | FR-61 | When `uninstall_hook`; Then бизнес-данные (`td.energy.action`, сценарии, приоритеты сброса, слоты, блокировки) скопированы в SQL-таблицы `td_energy_*_archive`; источники/сигналы `energy_control`, крон-задачи, параметры удалены, флаги сброшены; `meta.control_available=false` в `td_energy`; повторная установка (`post_init_hook` → `_restore_archive`) возвращает данные в пустые таблицы моделей и удаляет архивные таблицы | UT |
+| AC-232 | FR-61 | When `uninstall_hook` и удаление модуля (D-45); Then источники/сигналы `energy_control`, крон-задачи, параметры удалены, флаги сброшены; таблиц `td_energy_*_archive` **нет**; данные моделей модуля удалены вместе с ними; `meta.control_available=false` в `td_energy`; повторная установка создаёт данные заново (`post_init_hook`), `_restore_archive` не существует | UT |
 | AC-233 | FR-50 | When `_cron_expire`; Then просроченные `prepared` → `expired`; `awaiting_second` > 600 с → `expired`; `queued/sent` просроченная команда → `expired`; `executing` дольше `exec_timeout_s + 30` → `failed` и `td.energy.event kind='control'`; конфиг-действие без применения > 60 с → событие один раз | UT |
 | AC-234 | FR-57 | When `_cron_watch`; Then `automation_enabled` и heartbeat старше `4·heartbeat_stale_s` → событие `CTRL-HEARTBEAT` (dedup 15 мин), авторазрешение при восстановлении; изменение BMS-целей/тарифа → `config_etag` меняется и `bump()` | UT |
 | AC-235 | FR-61 | Given `td_energy_control` установлен; Then регрессия: `td_energy` (W0 142 + W1), `td_telemetry` (`td.command`), `td_bms` зелёные; повторный `-u td_energy_control` не меняет количеств | UT |
@@ -1567,6 +1574,8 @@ services/collector_plugins/td_collector_energy/
 | `test_neutralize.py` | `TestNeutralize` | AC-231 |
 | `test_crons.py` | `TestCrons` | AC-233, AC-234 |
 | `test_genset_exec.py` | `TestGensetExec` | AC-194, AC-277 (с имитацией адаптера, если мост не установлен) |
+| `test_remote_switching.py` | `TestRemoteSwitching` | AC-309, AC-310 |
+| `test_contracts.py` | `TestContracts` | набор ключей API-16/17/18/22/24/25/26/28 равен `contracts/*.json` (заморозка C-38…C-47) |
 | `td_genset_factory3d/tests/test_adp12.py` | `TestAdp12` | AC-275, AC-276 (`F3D_TEST_INSTALL=td_energy,td_genset,td_genset_factory3d $T/run_tests.sh <db> /td_genset_factory3d:TestAdp12`) |
 
 **Фронтенд (B)**: `test_ui.py::TestControlUi` (HttpCase, AC-294); `test_hoot.py::TestControlHoot.test_hoot_suite` (запускает `/web/tests?headless…&id=<hash('@td_energy_control')>` по образцу `td_energy/tests/test_w1_hoot.py`) — AC-295…AC-302 (файлы `control.test.js`, `confirm_dialog.test.js`, `advice_handler.test.js`, `node_actions.test.js`); `td_energy/static/tests/control_hooks.test.js` — AC-292, AC-301 (хуки), AC-302 (выполняется существующим hoot-набором `td_energy` `TestW1Hoot`); AC-303 — MAN.
@@ -1626,7 +1635,7 @@ services/collector_plugins/td_collector_energy/
 ### 13.5 DEPLOY_TEST (новый `docs/modules/td_energy_control/DEPLOY_TEST.md`)
 
 1. Копия демо-БД после W1 → `-i td_energy_control,td_energy_viewer3d`: количества (разд. 5.6: `td.source` 138, сигналы `energy_control` +36, scenarios 6, kinds 16, interlocks 20, shed 5, slots ≥ 10); `write_enabled=False` и `automation_enabled=False`; экран открывается, плитки показывают «Керування вимкнено адміністратором».
-2. Повторный `-u`: без изменений; `neutralize.sql`; откат: `uninstall` сохраняет журнал и конфигурацию в `td_energy_*_archive`, Пульт `td_energy` без кнопок управления, 3D-слой исчезает, `td_viewer3d` работает; повторная установка возвращает данные из архива (AC-232).
+2. Повторный `-u`: без изменений; `neutralize.sql`; откат: `uninstall` удаляет данные модуля без архивных таблиц (D-45), Пульт `td_energy` без кнопок управления, 3D-слой исчезает, `td_viewer3d` работает; повторная установка создаёт данные заново (AC-232).
 3. Стенд: установить плагин сборщика (`pip install`), перезапустить сборщик, `ENERGY-CTL` становится `online`; `_td_enable_stand`; ТК-19…ТК-28.
 4. Регрессия: `/td_energy`, `/td_telemetry`, `/td_bms`, `/td_viewer3d`, `/td_constructor_viewer3d`, `/td_genset_factory3d`; `pytest` коллектора, плагинов и эмулятора.
 
@@ -1654,13 +1663,13 @@ services/collector_plugins/td_collector_energy/
 | A-42 | Новый модуль `td_energy_control`, а не расширение `td_energy` (обоснование ARCH §2.1) | Управление отключается/удаляется без потери читающего приложения; предохранители по умолчанию; отдельный цикл тестов и рисков; слот `control_available` уже предусмотрен W1 (C-32) |
 | A-43 | Движок — `push_mode`-плагин `energy_ctl` в сборщике + аддитивное расширение `PluginContext` (`live`, `write_signal`, `read_signal`, `odoo`) | Минимальные изменения ядра, обратная совместимость, те же предохранители записи; без отдельного процесса |
 | A-44 | Шаги выполнения видов интентов и границы `params` — **собственность сборщика**; Odoo передаёт `kind` + `params` | Hard-блокировки и безопасность не зависят от доверия к данным Odoo; Odoo-проверка — подсказка (GAP §2.3) |
-| A-45 | Окно управления на `SWB-CTRL` (unit 73, HR 200…291) — единственный источник `MB-U73-SWB-CMD` для стенда | Один контроллер ГРЩ как точка управления (E-03); на объекте меняется только `address` (Q-26) |
+| A-45 | Окно управления на `SWB-CTRL` (unit 73, HR 200…291) — единственный источник `MB-U73-SWB-CMD` для стенда. **Подтверждено менеджером (Q-26): допущение сохраняется; карты регистров реальных объектов — позже (данные `address`, код не меняется)** | Один контроллер ГРЩ как точка управления (E-03); на объекте меняется только `address` (Q-26) |
 | A-46 | Все команды устройствам — уровневые (устанавливают значение), не переключатели | Безопасный повтор, идемпотентность при дублировании доставки |
 | A-47 | Сторожевые таймеры: `bess/valid_s`, `shed/valid_s` (вместе с `pv/limit_pct`) — «мёртвая рука» контроллера | Fail-safe при падении сборщика/движка (R-53 №7) |
 | A-48 | Тексты чипов сценариев составляет Odoo по шаблону из чисел движка | Язык и согласованность с макетом; движок без UI-строк |
 | A-49 | Двухшаговый поток `prepare → confirm` с токеном (TTL 60 с), `confirm` идемпотентен; диалог показывает проверки из Odoo | Диалог макета; защита от двойных кликов |
 | A-50 | Действия `config` применяются в Odoo сразу, «применённость» — по `applied_version` сборщика; чип «Очікує застосування» | Истину о выполнении даёт сборщик (D-20) |
-| A-51 | Журнал = `td.energy.action` + события W1; отмена — отдельное действие в пределах `undo_window_min`; при деинсталляции журнал и конфигурация копируются в SQL-таблицы `td_energy_*_archive` и возвращаются `_restore_archive` при повторной установке (R-66) | Единый бизнес-журнал (GAP CT-14); права по классу; таблицы модуля удаляются вместе с модулем, поэтому архив — вне моделей Odoo |
+| A-51 | Журнал = `td.energy.action` + события W1; отмена — отдельное действие в пределах `undo_window_min`; **при деинсталляции данные модуля удаляются вместе с ним, архивных таблиц нет (D-45, решение менеджера)** (R-66) | Единый бизнес-журнал (GAP CT-14); права по классу; поведение как у любого модуля Odoo |
 | A-52 | Слой 3D — мост `td_energy_viewer3d` + аддитивные VX-01…VX-05 в `td_viewer3d`; ключ `energy.layer` не меняет `meta.schema` | `td_energy` не зависит от `td_viewer3d`; образец `td_constructor_viewer3d` |
 | A-53 | `scene` узла = `equipment.td_code` или `node.code`; `C1`/`C2` → `CABLES` (худшее состояние); маркеры рисует клиент | Модель сцены имеет один объект кабелей |
 | A-54 | Ночной режим — режимы BMS `VEL`/`VE` и `sp_night`; «30 %» — справочный текст | Что умеет `td_bms` (D-40) |
