@@ -23,7 +23,7 @@ class TdEnergyTicketWizard(models.TransientModel):
     @api.model
     def _default_team(self):
         Team = self.env["maintenance.team"]
-        return Team.search([("name", "=", "Електрики")], limit=1) or Team.search([], order="sequence, id", limit=1)
+        return Team.search([("name", "=", "Електрики")], limit=1) or Team.search([], order="id", limit=1)
 
     @api.depends("node_id")
     def _compute_equipment_id(self):

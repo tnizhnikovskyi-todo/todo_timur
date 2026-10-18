@@ -101,13 +101,15 @@ class F3dEnergyEvent(models.Model):
 
     def _compute_request_id(self):
         Request = self.env["maintenance.request"].sudo()
+        newest = {}
+        signal_ids = self.signal_id.ids
+        if signal_ids:
+            for request in Request.search(
+                [("td_signal_id", "in", signal_ids), ("stage_id.done", "=", False)], order="id asc"
+            ):
+                newest[request.td_signal_id.id] = request
         for rec in self:
-            request = Request
-            if rec.signal_id:
-                request = Request.search(
-                    [("td_signal_id", "=", rec.signal_id.id), ("stage_id.done", "=", False)], order="id desc", limit=1
-                )
-            rec.request_id = request
+            rec.request_id = newest.get(rec.signal_id.id, Request)
 
     @api.depends("kind", "state", "signal_id")
     def _compute_action_code(self):
@@ -142,6 +144,8 @@ class F3dEnergyEvent(models.Model):
     ):  # fmt: skip
         """M-09: подія; `dedup_min > 0` і є така сама (kind, code, text) за останні хвилини — не створювати.
         W1 (API-03): `title`/`detail` — явні (інакше R-24); тік шини `alarm` — у `create`. SPEC-ім'я — `_td_log`."""
+        if self.env.context.get("td_backfill_mute"):  # R-36: розрахунок історії не створює подій
+            return self.browse()
         ts = ts or dates.now_utc(self.env)
         text = (text or "")[:256]
         if dedup_min > 0 and self.sudo().search_count(

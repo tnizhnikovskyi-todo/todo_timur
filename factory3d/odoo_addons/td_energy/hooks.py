@@ -451,6 +451,47 @@ def cos_thresholds(env, report):
     env["res.config.settings"]._td_apply_cos_thresholds()
 
 
+EVENT_BATCH = 5000
+
+
+def _migrate_events(env):
+    """W1_SPEC 5.4 п. 4: `title`/`detail` за R-24 для подій без заголовка; `warn|bad → resolved`, `info → na`."""
+    from .models.td_energy_event import split_text  # відкладено: models імпортується пакетом до hooks
+
+    cr, total = env.cr, 0
+    while True:
+        cr.execute(
+            "SELECT id, level, text FROM td_energy_event WHERE title IS NULL ORDER BY id LIMIT %s", (EVENT_BATCH,)
+        )
+        rows = cr.fetchall()
+        if not rows:
+            return total
+        data = []
+        for event_id, level, text in rows:
+            title, detail = split_text(text)
+            data.append((event_id, title, detail, "na" if level == "info" else "resolved"))
+        cr.execute_values(
+            """UPDATE td_energy_event e SET title = v.title, detail = v.detail, state = v.state,
+                      resolved_at = CASE WHEN v.state = 'resolved' THEN e.ts END
+                 FROM (VALUES %s) AS v(id, title, detail, state) WHERE e.id = v.id""",
+            data,
+            template="(%s::int, %s, %s, %s)",
+            page_size=EVENT_BATCH,
+        )
+        total += len(rows)
+
+
+def _migrate_w1(env):
+    """Міграція 19.0.1.1.0 (5.4): сигнали й джерело, пороги cos φ, геометрія схеми, події. Ідемпотентна."""
+    env = env(su=True, context=dict(env.context, tracking_disable=True, f3d_energy_internal=True))
+    report = {"signals": _ensure_w1_signals(env)}
+    env["res.config.settings"]._td_apply_cos_thresholds()
+    report["sld"] = _load_sld_layout(env)
+    report["events"] = _migrate_events(env)
+    _logger.info("td_energy: міграція W1: %s", dump(report))
+    return report
+
+
 def finish(env, report):
     _step("9 report")
     partial = report.get("unmatched_equipment", 0) > 0 or report.get("direct_without_wc", 0) > 0

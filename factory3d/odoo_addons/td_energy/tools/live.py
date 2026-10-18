@@ -36,12 +36,16 @@ def line_values(p, cos, i, rating_a, cos_nominal=0.9):
     return {"p": p, "q": _q(p, cos_l), "cos": cos_l, "i": i, "load": load}
 
 
-def site_totals(lines, q_kvar=None, rating_kvar=None):
+def site_totals(lines, q_kvar=None, rating_kvar=None, pfc_meas=None, pfc_step=None):
     """П. 2–3. `lines` — {код: {"section": 1|2, "p": кВт, "cos": float|None, "i": А|None, "rating_a": А,
     "cos_nominal": 0.9}}; `q_kvar` — {секція: виміряна квар на вводі або None}; `rating_kvar` — {секція: 350}.
+    W1 (R-35, D-09): `pfc_meas` — {секція: `energy/cells/PFC-s/q_kvar` або None} (замість різниці з вводом);
+    `pfc_step` — {секція: крок ступеня, квар} (за замовчуванням 50).
     Повертає {"lines", "sections": {s: {...}}, "p_now", "s_now", "cos_before", "cos_after"}."""
     q_kvar = q_kvar or {}
     rating_kvar = rating_kvar or {}
+    pfc_meas = pfc_meas or {}
+    pfc_step = pfc_step or {}
     out_lines = {}
     sections = {}
     for code, ln in lines.items():
@@ -56,12 +60,15 @@ def site_totals(lines, q_kvar=None, rating_kvar=None):
         sec["cos_before"] = p / math.hypot(p, q) if p or q else 1.0
         rating = rating_kvar.get(s, PFC_MAX) or PFC_MAX
         measured = q_kvar.get(s)
-        if measured is not None:
+        step = pfc_step.get(s) or PFC_STEP
+        if pfc_meas.get(s) is not None:
+            q_pfc = _clamp(pfc_meas[s], 0.0, rating)
+        elif measured is not None:
             q_pfc = _clamp(q - measured, 0.0, rating)
         else:
             q_pfc = _clamp(q - p * math.tan(math.acos(TARGET_COS)), 0.0, PFC_MAX)
         sec["q_pfc"] = q_pfc
-        sec["pfc_q_now"] = int(min(PFC_MAX, _round_half_up(q_pfc / PFC_STEP) * PFC_STEP))
+        sec["pfc_q_now"] = int(min(rating, _round_half_up(q_pfc / step) * step))
         sec["s"] = math.hypot(p, q - q_pfc)
         sec["cos_after"] = p / sec["s"] if sec["s"] else 1.0
         sum_p += p
