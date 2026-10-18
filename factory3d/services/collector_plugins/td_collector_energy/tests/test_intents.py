@@ -245,8 +245,14 @@ async def test_bess_kw_max_bound_uses_min_of_code_config_and_payload():  # R-42 
 
 
 CHARGE = {"power_kw": 50, "until": "16:00", "soc_limit_pct": 95}
-TEXT_STATES = {"remote": "remote", "bess_state": "standby", "chp_state": "stop", "ats_pos": "pos_I",
-               "src1_ok": "available", "qs_state": "open"}
+TEXT_STATES = {
+    "remote": "remote",
+    "bess_state": "standby",
+    "chp_state": "stop",
+    "ats_pos": "pos_I",
+    "src1_ok": "available",
+    "qs_state": "open",
+}
 
 
 async def test_state_signals_with_text_like_real_modbus_plugin():  # C-39: kind=state з `map` дає лише `text`
@@ -276,9 +282,19 @@ async def test_text_states_in_engine_inputs():
     assert h.engine.snapshot()["engine"]["controller_remote"] is True
 
 
-@pytest.mark.parametrize("name, text, number", [
-    ("bess_state", "sleep", 4), ("bess_state", "fault", 3), ("chp_state", "running", 2), ("chp_state", "cooling", 4),
-    ("ats_pos", "pos_II", 3), ("ats_pos", "pos_I", 2), ("remote", "local", 0), ("src1_ok", "available", 1)])
+@pytest.mark.parametrize(
+    "name, text, number",
+    [
+        ("bess_state", "sleep", 4),
+        ("bess_state", "fault", 3),
+        ("chp_state", "running", 2),
+        ("chp_state", "cooling", 4),
+        ("ats_pos", "pos_II", 3),
+        ("ats_pos", "pos_I", 2),
+        ("remote", "local", 0),
+        ("src1_ok", "available", 1),
+    ],
+)
 def test_text_state_mapping_table(name, text, number):
     from collector.core.types import Reading
 

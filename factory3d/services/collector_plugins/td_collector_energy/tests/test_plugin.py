@@ -179,5 +179,6 @@ def test_entry_point_declared_in_pyproject():  # SPEC 8.1.1
 
     data = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text("utf-8"))
     assert data["project"]["entry-points"]["factory3d_collector.plugins"] == {
-        "energy_ctl": "td_collector_energy:EnergyCtlPlugin"}
+        "energy_ctl": "td_collector_energy:EnergyCtlPlugin"
+    }
     assert data["project"]["name"] == "td-collector-energy" and data["project"]["dependencies"] == []
