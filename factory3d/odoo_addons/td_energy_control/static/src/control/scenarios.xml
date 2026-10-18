@@ -1,4 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
-    <!-- Шаблони OWL (SPEC 3.2). Власник: B -->
+    <!-- UI-14 ScenarioGrid, ScenarioCard (SPEC 3.2) -->
+    <t t-name="td_energy_control.ScenarioGrid">
+        <section class="o_td_en_scenarios" aria-labelledby="o_td_en_sc_h">
+            <div class="o_td_en_sec_head">
+                <h2 id="o_td_en_sc_h">Сценарії автоматики</h2>
+                <span class="o_td_en_sc_count o_td_en_note">увімкнено <t t-esc="props.scenarios.on_count"/> з <t t-esc="props.scenarios.total"/></span>
+            </div>
+            <div class="o_td_en_sc_grid">
+                <ScenarioCard t-foreach="props.scenarios.items" t-as="item" t-key="item.code" item="item"
+                              onToggle="props.onToggle" onParams="props.onParams"/>
+            </div>
+        </section>
+    </t>
+
+    <t t-name="td_energy_control.ScenarioCard">
+        <article class="o_td_en_sc" t-att-data-scenario="props.item.code">
+            <div class="o_td_en_sc_head">
+                <div class="o_td_en_sc_title">
+                    <h3 t-esc="props.item.title"/>
+                    <div class="o_td_en_sc_chips_row">
+                        <span t-att-class="chipClass" t-esc="props.item.status"/>
+                        <span t-if="!props.item.applied" class="o_td_en_chip o_td_en_chip--wait o_td_en_sc_pending">Очікує застосування</span>
+                        <span t-if="props.item.pending_action_id" class="o_td_en_chip o_td_en_chip--wait o_td_en_sc_second">Очікує другого підтвердження</span>
+                    </div>
+                </div>
+                <button type="button" role="switch" class="o_td_en_switch" t-att-aria-checked="props.item.enabled ? 'true' : 'false'"
+                        t-att-aria-label="props.item.title" t-att-title="switchTitle" t-att-disabled="!props.item.can_toggle"
+                        t-on-click="() => this.props.onToggle(props.item)">
+                    <span class="o_td_en_switch_knob"/>
+                </button>
+            </div>
+            <p class="o_td_en_sc_text" t-esc="props.item.text"/>
+            <div class="o_td_en_sc_foot">
+                <div class="o_td_en_sc_params">
+                    <span t-foreach="props.item.chips" t-as="chip" t-key="chip_index" class="o_td_en_param" t-esc="chip"/>
+                </div>
+                <button t-if="canEditParams" type="button" class="o_td_en_btn o_td_en_btn--sm o_td_en_sc_params_btn"
+                        t-att-aria-label="'Параметри: ' + props.item.title" t-att-disabled="!props.item.can_toggle"
+                        t-on-click="() => this.props.onParams(props.item)">Параметри</button>
+            </div>
+        </article>
+    </t>
 </templates>

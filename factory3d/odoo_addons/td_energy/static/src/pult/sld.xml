@@ -61,6 +61,10 @@
                             t-on-click="() => this.actions.openCard(selNode.code)">Відкрити картку вузла</button>
                     <button type="button" class="o_td_en_btn o_td_en_sel_3d"
                             t-on-click="() => this.actions.show3d(selNode.code)">Показати в 3D</button>
+                    <button t-foreach="ext.actions" t-as="act" t-key="act.code" type="button"
+                            t-attf-class="o_td_en_btn {{act.cls || ''}} o_td_en_node_action"
+                            t-att-data-action-code="act.code" t-att-disabled="act.disabled || false"
+                            t-att-title="act.title || undefined" t-on-click="() => this.runNodeAction(act)" t-esc="act.label"/>
                     <button type="button" class="o_td_en_btn o_td_en_btn--quiet o_td_en_sel_close" aria-label="Закрити деталі"
                             t-on-click="() => this.props.onSelect(null)">×</button>
                 </div>

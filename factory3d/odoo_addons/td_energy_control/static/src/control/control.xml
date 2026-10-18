@@ -1,4 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
-    <!-- Шаблони OWL (SPEC 3.2). Власник: B -->
+    <!-- UI-12, UI-13 Control, EngineChip (SPEC 3.2) -->
+    <t t-name="td_energy_control.EngineChip">
+        <span t-att-class="pillClass" role="status">
+            <span class="o_td_en_pill_dot" aria-hidden="true"/>
+            <t t-esc="text"/>
+        </span>
+    </t>
+
+    <t t-name="td_energy_control.Control">
+        <div class="o_td_en o_td_en_control o_action overflow-auto">
+            <t t-if="state.data">
+                <header class="o_td_en_head">
+                    <div class="o_td_en_head_title">
+                        <div class="o_td_en_crumbs">Енергетика / Керування</div>
+                        <h1 class="o_td_en_h1">Керування енергетикою заводу</h1>
+                        <div class="o_td_en_sub">Режими, сценарії автоматики, пріоритети навантажень і ручні команди</div>
+                    </div>
+                    <div class="o_td_en_head_tools">
+                        <EngineChip engine="state.data.engine"/>
+                    </div>
+                </header>
+
+                <main class="o_td_en_main">
+                    <div class="o_td_en_info" role="note">
+                        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 8v5M12 16.5v.5"/>
+                        </svg>
+                        <span t-esc="infoText"/>
+                    </div>
+
+                    <section t-if="state.data.pending and state.data.pending.length" class="o_td_en_pending" aria-label="Очікують другого підтвердження">
+                        <div t-foreach="state.data.pending" t-as="item" t-key="item.id" class="o_td_en_pending_row" role="status"
+                             t-att-data-action-id="item.id">
+                            <span class="o_td_en_pending_text">
+                                Очікує другого підтвердження: <b t-esc="item.summary"/> — <t t-esc="item.prepared_by"/>
+                            </span>
+                            <button t-if="item.can_confirm_second" type="button" class="o_td_en_btn o_td_en_btn--primary o_td_en_pending_ok"
+                                    t-att-disabled="state.busy" t-att-aria-label="'Підтвердити (2/2): ' + item.summary"
+                                    t-on-click="() => this.confirmSecond(item.id, item.summary)">Підтвердити (2/2)</button>
+                            <span t-else="" class="o_td_en_note">потрібне підтвердження іншого енергетика</span>
+                        </div>
+                    </section>
+
+                    <ScenarioGrid scenarios="state.data.scenarios" onToggle="(item) => this.toggleScenario(item)"
+                                  onParams="(item) => this.editParams(item)"/>
+
+                    <div class="o_td_en_row o_td_en_row--panels">
+                        <ShedList shed="state.data.shed" reorder="state.reorder" busy="state.busy"
+                                  onStart="() => this.startReorder()" onMove="(index, delta) => this.moveShed(index, delta)"
+                                  onSave="() => this.saveReorder()" onCancel="() => this.cancelReorder()"/>
+                        <CommandTiles commands="state.data.commands" meta="meta" busy="state.busy"
+                                      onRun="(cmd) => this.runTile(cmd)"/>
+                    </div>
+
+                    <ScheduleTimeline schedule="state.data.schedule" nowLocal="state.data.now_local"/>
+
+                    <Journal items="journalItems" more="journalMore" loading="state.loadingMore" busy="state.busy"
+                             canSecond="(item) => this.canSecond(item)" onUndo="(item) => this.undo(item)"
+                             onSecond="(item) => this.confirmSecond(item.id, item.what)" onMore="() => this.loadMore()"
+                             onAll="() => this.openAll()" onRef="(ref) => this.openRef(ref)"/>
+                </main>
+            </t>
+            <div t-elif="state.failed" class="o_td_en_main">
+                <div class="o_td_en_error o_td_en_card" role="alert">
+                    Не вдалося завантажити екран «Керування»: <t t-esc="state.failed"/>
+                    <button type="button" class="o_td_en_btn o_td_en_btn--sm ms-3" t-on-click="() => this.load()">Повторити</button>
+                </div>
+            </div>
+        </div>
+    </t>
 </templates>
