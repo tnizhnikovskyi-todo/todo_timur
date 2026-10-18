@@ -1,3 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Крони opportunity, opportunity_links (SPEC 6) (B). Каркас: наповнює воркер B. -->
-<odoo noupdate="1"/>
+<!-- SPEC 6: крони резервів (B). `nextcall` резервів — орієнтовно 03:30 Київ = 00:30 UTC -->
+<odoo noupdate="1">
+    <record id="cron_td_energy_opportunity" model="ir.cron">
+        <field name="name">Енергетика: резерви економії</field>
+        <field name="model_id" ref="model_td_energy_opportunity"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_detect()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(datetime.now() + relativedelta(days=1)).replace(hour=0, minute=30, second=0, microsecond=0)"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+    <record id="cron_td_energy_opportunity_links" model="ir.cron">
+        <field name="name">Енергетика: заявки резервів</field>
+        <field name="model_id" ref="model_td_energy_opportunity"/>
+        <field name="state">code</field>
+        <field name="code">model._td_link_requests()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

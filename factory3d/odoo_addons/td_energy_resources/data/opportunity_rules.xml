@@ -1,3 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 6 правил ядра (SPEC R-15…R-20) (B). Каркас: наповнює воркер B. -->
-<odoo noupdate="1"/>
+<!-- 6 правил ядра (SPEC R-15…R-20, M-09) (B). noupdate: пороги редагує енергетик (V-08); схема й дії — розробник.
+     Дії ticket: `{id}` у description замінюється на id резерву (тег [OPP-<id>], R-13 п. 5). -->
+<odoo noupdate="1">
+    <record id="rule_vent_offshift" model="td.energy.opportunity.rule">
+        <field name="code">vent_offshift</field>
+        <field name="name">Вентиляція працює поза змінами</field>
+        <field name="sequence">10</field>
+        <field name="resource_id" ref="td_energy_resources.resource_el"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">1000</field>
+        <field name="params" eval="{'group': 'vent', 'ratio_min': 0.35, 'target_ratio': 0.30}"/>
+        <field name="params_schema" eval="[
+            {'key': 'ratio_min', 'label': 'Поріг: нічний рівень / денний', 'type': 'float', 'min': 0.05, 'max': 1.0, 'unit': 'частка', 'default': 0.35},
+            {'key': 'target_ratio', 'label': 'Ціль: нічний рівень / денний', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.30}]"/>
+        <field name="actions" eval="[]"/>
+        <field name="control_intent">vent_night_mode</field>
+        <field name="control_label">Нічний режим вентиляції</field>
+        <field name="requires">td_energy_control (кнопка керування)</field>
+    </record>
+    <record id="rule_idle_machines" model="td.energy.opportunity.rule">
+        <field name="code">idle_machines</field>
+        <field name="name">Холостий хід верстатів під напругою</field>
+        <field name="sequence">20</field>
+        <field name="resource_id" ref="td_energy_resources.resource_el"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">1000</field>
+        <field name="params" eval="{'idle_share_min': 0.05, 'recoverable': 0.70}"/>
+        <field name="params_schema" eval="[
+            {'key': 'idle_share_min', 'label': 'Мінімальна частка простою в роботі РЦ', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.05},
+            {'key': 'recoverable', 'label': 'Частка простою, яку можна зекономити', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.70}]"/>
+        <field name="actions" eval="[{'code': 'alloc_report', 'label': 'Звіт по РЦ', 'kind': 'link', 'class': None, 'params': {'xmlid': 'td_energy.action_td_energy_alloc_pivot'}}]"/>
+        <field name="requires">td_energy: розподіл витрат по РЦ</field>
+    </record>
+    <record id="rule_air_leaks" model="td.energy.opportunity.rule">
+        <field name="code">air_leaks</field>
+        <field name="name">Витоки стисненого повітря</field>
+        <field name="sequence">30</field>
+        <field name="resource_id" ref="td_energy_resources.resource_air"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">1000</field>
+        <field name="params" eval="{'ratio_min': 0.10, 'min_flow': 0.2, 'reducible': 0.65}"/>
+        <field name="params_schema" eval="[
+            {'key': 'ratio_min', 'label': 'Поріг: нічна витрата / денна', 'type': 'float', 'min': 0.01, 'max': 1.0, 'unit': 'частка', 'default': 0.10},
+            {'key': 'min_flow', 'label': 'Мінімальна нічна витрата', 'type': 'float', 'min': 0.0, 'max': 100.0, 'unit': 'м³/хв', 'default': 0.2},
+            {'key': 'reducible', 'label': 'Частка витоків, яку можна усунути', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 0.65}]"/>
+        <field name="actions" eval="[{'code': 'ticket', 'label': 'Створити заявку', 'kind': 'ticket', 'class': None, 'params': {'node_code': 'COMPRESSOR', 'title': 'Витоки стисненого повітря', 'description': 'Пошук витоків стисненого повітря [OPP-{id}]'}}]"/>
+        <field name="requires">td_maintenance: заявки ТО</field>
+    </record>
+    <record id="rule_air_pressure" model="td.energy.opportunity.rule">
+        <field name="code">air_pressure</field>
+        <field name="name">Тиск стисненого повітря завищений</field>
+        <field name="sequence">40</field>
+        <field name="resource_id" ref="td_energy_resources.resource_air"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">1000</field>
+        <field name="params" eval="{'margin_bar': 0.3, 'k_per_bar': 0.07, 'min_save_bar': 0.2}"/>
+        <field name="params_schema" eval="[
+            {'key': 'margin_bar', 'label': 'Запас над найвибагливішим споживачем', 'type': 'float', 'min': 0.0, 'max': 2.0, 'unit': 'бар', 'default': 0.3},
+            {'key': 'k_per_bar', 'label': 'Економія електрики на 1 бар', 'type': 'float', 'min': 0.0, 'max': 0.2, 'unit': 'частка', 'default': 0.07},
+            {'key': 'min_save_bar', 'label': 'Мінімальне зниження уставки', 'type': 'float', 'min': 0.0, 'max': 2.0, 'unit': 'бар', 'default': 0.2}]"/>
+        <field name="actions" eval="[]"/>
+        <field name="control_intent">air_pressure_setpoint</field>
+        <field name="control_label">Знизити уставку тиску</field>
+        <field name="requires">td_energy_control (кнопка керування)</field>
+    </record>
+    <record id="rule_react_section" model="td.energy.opportunity.rule">
+        <field name="code">react_section</field>
+        <field name="name">Реактивна енергія на секції</field>
+        <field name="sequence">50</field>
+        <field name="resource_id" ref="td_energy_resources.resource_el"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">500</field>
+        <field name="params" eval="{'cos_target': 0.92, 'min_hours_day': 2.0}"/>
+        <field name="params_schema" eval="[
+            {'key': 'cos_target', 'label': 'Ціль cos φ після компенсації', 'type': 'float', 'min': 0.5, 'max': 1.0, 'unit': '', 'default': 0.92},
+            {'key': 'min_hours_day', 'label': 'Мінімум годин на добу нижче цілі', 'type': 'float', 'min': 0.0, 'max': 24.0, 'unit': 'год', 'default': 2.0}]"/>
+        <field name="actions" eval="[]"/>
+        <field name="requires">Тариф: tg φ і ставка доплати</field>
+    </record>
+    <record id="rule_pv_export" model="td.energy.opportunity.rule">
+        <field name="code">pv_export</field>
+        <field name="name">Експорт СЕС дешевше закупівлі</field>
+        <field name="sequence">60</field>
+        <field name="resource_id" ref="td_energy_resources.resource_el"/>
+        <field name="lookback_days">7</field>
+        <field name="min_saving_uah">500</field>
+        <field name="params" eval="{'min_export_kw': 10.0, 'capture': 1.0}"/>
+        <field name="params_schema" eval="[
+            {'key': 'min_export_kw', 'label': 'Мінімальна віддача в мережу', 'type': 'float', 'min': 0.0, 'max': 10000.0, 'unit': 'кВт', 'default': 10.0},
+            {'key': 'capture', 'label': 'Частка експорту, яку можна спожити', 'type': 'float', 'min': 0.0, 'max': 1.0, 'unit': 'частка', 'default': 1.0}]"/>
+        <field name="actions" eval="[]"/>
+        <field name="fallback_action" eval="{'code': 'open_generation', 'label': 'Відкрити генерацію', 'kind': 'link', 'class': None, 'params': {'xmlid': 'td_energy.action_td_energy_generation'}}"/>
+        <field name="control_intent">pv_self_consumption</field>
+        <field name="control_label">Збільшити власне споживання СЕС</field>
+        <field name="requires">td_energy_control (кнопка керування)</field>
+    </record>
+</odoo>
