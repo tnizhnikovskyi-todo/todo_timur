@@ -20,9 +20,22 @@ MAX_AGE_DEFAULT = 60.0
 # стани з текстом (kind=state з `map`): ядро віддає `Reading(text=…)` без `value` — зводимо до числа
 TEXT_NUM: dict[str, dict[str, float]] = {
     "remote": {"local": 0.0, "remote": 1.0},
-    "src1_ok": {"unavailable": 0.0, "available": 1.0},
+    "src1_ok": {"unavailable": 0.0, "lost": 0.0, "available": 1.0, "ok": 1.0},
     "qs_state": {"open": 0.0, "closed": 1.0},
+    # kind=state з `map` у W1 (energy_signals.csv): число = індекс стану
+    "bess_state": {"offline": 0.0, "standby": 1.0, "running": 2.0, "fault": 3.0, "sleep": 4.0},
+    "chp_state": {"stop": 0.0, "starting": 1.0, "running": 2.0, "fault": 3.0, "cooling": 4.0},
+    "ats_pos": {"unknown": 0.0, "pos_0": 1.0, "pos_i": 2.0, "pos_ii": 3.0},
 }
+
+
+def text_value(name: str, reading: Reading | None) -> float | None:
+    """Число показання: `value`, а для станів з текстом (`Reading(text="running")`) — індекс за `TEXT_NUM`."""
+    if reading is None:
+        return None
+    if reading.value is not None:
+        return float(reading.value)
+    return TEXT_NUM.get(name, {}).get(str(reading.text or "").lower())
 
 
 class Inputs:
@@ -61,12 +74,7 @@ class Inputs:
         return r
 
     def v(self, name: str) -> float | None:
-        r = self.reading(name)
-        if r is None:
-            return None
-        if r.value is not None:
-            return float(r.value)
-        return TEXT_NUM.get(name, {}).get(str(r.text or "").lower())
+        return text_value(name, self.reading(name))
 
     def t(self, name: str) -> str | None:
         r = self.reading(name)

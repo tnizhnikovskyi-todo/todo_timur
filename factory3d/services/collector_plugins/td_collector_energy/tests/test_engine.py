@@ -1,5 +1,6 @@
 """AC-244, AC-245, AC-248: режими off/hold/auto, арбітраж, відмови запису, рестарт зі Store (R-44, R-53)."""
 
+import asyncio
 import copy
 
 from collector.core.errors import WriteRefused
@@ -329,3 +330,70 @@ async def test_shed_chain_end_to_end_with_watchdog_refresh():  # R-51
     n = sum(1 for c_, _v in sheds if c_ == "energy_control/shed/valid_s")
     await h.run(10, 2)  # ще 20 с: перезапис кожні 20 с
     assert sum(1 for c_, _v, _t in h.device.writes if c_ == "energy_control/shed/valid_s") > n
+
+
+async def test_device_refusal_twice_warns_and_releases_resource():  # R-45 п.8, R-53 №15
+    h = await boot(grid_kw=800, bess_soc=82, bess_ack=2)
+    await h.tick(11)
+    assert h.engine.snapshot()["scenarios"]["peak"]["state"] == "active"
+    await h.tick(11)
+    snap = h.engine.snapshot()["scenarios"]["peak"]
+    assert snap["state"] == "warn" and "bess_ack = 2" in snap["facts"]["reason"]
+    assert any("Контролер відмовив: bess_ack = 2" in e["text"] for e in h.events("interlock"))
+    h.device.writes.clear()
+    await h.tick(11)
+    assert not any("/bess/" in c_ for c_, _v, _t in h.device.writes)  # ресурс звільнено на 60 с
+    feed(h, bess_ack=0)
+    await h.tick(61)
+    await h.tick(11)
+    assert any("/bess/" in c_ for c_, _v, _t in h.device.writes)
+
+
+async def test_engine_reason_reports_invalid_config_while_previous_stays():  # R-53 №12, AC-239
+    h = await boot()
+    await h.tick()
+    good = copy.deepcopy(h.odoo.raw)
+    h.odoo.raw = {**good, "schema": 2, "etag": "bad"}
+    await h.plugin._load_config()
+    snap = h.engine.snapshot()["engine"]
+    assert snap["mode"] == "auto" and snap["reason"].startswith("config invalid:")
+
+
+async def test_mode_and_state_changes_are_logged(caplog):  # SPEC 8.1.4
+    import logging
+
+    h = await boot(grid_kw=800, bess_soc=82)
+    with caplog.at_level(logging.INFO):
+        await h.tick()
+        feed(h, remote=0)
+        await h.tick(11)
+    text = caplog.text
+    assert "режим рушія: off → auto" in text and "режим рушія: auto → hold (контролер у місцевому режимі)" in text
+    assert "сценарій peak: None → active" in text
+
+
+async def test_engine_keeps_acting_on_cached_config_while_odoo_is_down_10_minutes():  # AC-247
+    from helpers import INTENT_SIGNAL, intent
+
+    h = await boot(grid_kw=800, bess_soc=82)
+    h.engine.store.cache_config(h.odoo.raw, h.clock.now())
+    h.odoo.down, h.odoo.status = True, 503
+    await h.tick()
+    refreshes = len(h.written("energy_control/bess/valid_s"))
+    ok = await h.plugin.call(INTENT_SIGNAL, intent("chp_stop", now=h.clock.now(), idem="o1", action_id=90))
+    assert ok["accepted"]
+    await asyncio.gather(*h.executor.running.values())
+    for _ in range(30):  # 10 хвилин: конфіг і звіт недоступні
+        await h.tick(20)
+        await h.plugin._load_config()
+        await h.reporter.flush()
+    assert h.cfg.version == 17 and h.engine.mode == "auto"
+    assert len(h.written("energy_control/bess/valid_s")) > refreshes + 20  # автоматика діє: сторожовий таймер BESS оновлюється
+    assert h.reporter.pending()[0] == 1 and h.reporter.pending()[1] >= 1  # дія й події чекають у буфері
+    assert h.odoo.states == []
+    h.odoo.down = False
+    h.clock.advance(70)
+    await h.reporter.flush()
+    assert h.reporter.pending() == (0, 0)
+    sent = h.odoo.states[-1]
+    assert [a["id"] for a in sent["actions"]] == [90] and sent["actions"][0]["state"] in ("done", "failed", "blocked")

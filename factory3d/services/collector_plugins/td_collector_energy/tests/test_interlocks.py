@@ -113,3 +113,10 @@ def test_ctx_absent_means_never_seen_not_stale():
     assert ctx.absent("fire_state") and not ctx.absent("remote")
     late = Inputs(cfg, env.inp.live, T0 + timedelta(seconds=500))
     assert late.v("remote") is None and not late.absent("remote")  # несвіже ≠ відсутнє
+
+
+def test_src1_ok_accepts_ats_source_state_value_2():
+    """`infra/ats/src1_state` ATyS (2 — джерело є) теж означає «мережа є»; 0 — немає."""
+    ok = il.CHECKS["no_island"](interlock_ctx({"ats_pos": 2, "src1_ok": 2}), {}, {})
+    assert ok.state == il.OK
+    assert il.CHECKS["no_island"](interlock_ctx({"ats_pos": 2, "src1_ok": 0}), {}, {}).state == il.FAIL

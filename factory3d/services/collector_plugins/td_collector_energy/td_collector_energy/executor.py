@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 from collections.abc import Callable
@@ -18,7 +19,7 @@ from jsonschema import Draft202012Validator
 from . import intents, limits
 from .actuator import Writer
 from .config import Config
-from .inputs import Inputs
+from .inputs import Inputs, text_value
 from .interlocks import Ctx, evaluate
 from .model import Event
 from .reporter import Reporter
@@ -243,6 +244,9 @@ class Executor:
                 out[n] = None
             if out[n] is not None and self.live is not None:
                 self.live.update([out[n]])
+            r = out[n]
+            if r is not None and r.value is None and (num := text_value(n, r)) is not None:
+                out[n] = dataclasses.replace(r, value=num)  # стан-текст → індекс, щоб предикати верифікації бачили число
         return out
 
     async def _verify(self, v: intents.Verify, cfg: Config, deadline: float) -> tuple[bool, str | None]:

@@ -71,7 +71,7 @@ def _src1_ok(c: Ctx) -> bool | None:
     txt, val = c.t("src1_ok"), c.v("src1_ok")
     if txt is None and val is None:
         return None
-    return txt == "available" or (txt is None and val == 1)
+    return txt == "available" or (txt is None and val is not None and val >= 1)
 
 
 def _controller_remote(c: Ctx, p: dict, x: dict) -> Result:

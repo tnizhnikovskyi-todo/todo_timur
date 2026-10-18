@@ -117,6 +117,7 @@ class EnergyCtlPlugin(SourcePlugin):
             clock=self.clock,
             get_cfg=get_cfg,
             write_enabled=self._write_enabled,
+            config_error=lambda: self.config_error,
             log=self.log,
         )
         self.executor = Executor(

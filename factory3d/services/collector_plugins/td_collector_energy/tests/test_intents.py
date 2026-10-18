@@ -242,3 +242,48 @@ async def test_bess_kw_max_bound_uses_min_of_code_config_and_payload():  # R-42 
         it.validate_params("bess_discharge", {"duration_min": 1.5}, cfg)
     with pytest.raises(it.ParamError, match="scene_number > 16"):
         it.validate_params("light_break", {"scene_number": 17}, cfg)
+
+
+CHARGE = {"power_kw": 50, "until": "16:00", "soc_limit_pct": 95}
+TEXT_STATES = {"remote": "remote", "bess_state": "standby", "chp_state": "stop", "ats_pos": "pos_I",
+               "src1_ok": "available", "qs_state": "open"}
+
+
+async def test_state_signals_with_text_like_real_modbus_plugin():  # C-39: kind=state з `map` дає лише `text`
+    h = await boot_ready(**TEXT_STATES)
+
+    def chp(value, text):
+        h.device.regs["infra/chp/state"] = (None, "starting" if value == 1 else "cooling")
+
+    def qs(value, text):
+        h.device.regs["energy/cells/QS/state"] = (None, "closed" if value == 2 else "open")
+
+    h.device.hooks["energy_control/chp/cmd"], h.device.hooks["energy_control/qs/cmd"] = chp, qs
+    h.device.sync()
+    res, action = await run_intent(h, "bess_charge", CHARGE, idem="t1", action_id=81)
+    assert res["accepted"] and action["state"] == "done", (res, action)  # bess_ok/no_island бачать індекси станів
+    res, action = await run_intent(h, "chp_start", {}, idem="t2", action_id=82)
+    assert res["accepted"] and action["state"] == "done"  # verify: chp_state "starting" → 1
+    res, action = await run_intent(h, "qs_close", {}, idem="t3", action_id=83)
+    assert res["accepted"] and action["state"] == "done"
+
+
+async def test_text_states_in_engine_inputs():
+    h = await boot_ready(**TEXT_STATES, grid_kw=800, bess_soc=82)
+    h.device.set("bess_state", None, "running")
+    await h.tick()
+    assert any(c.endswith("/bess/mode") for c, _v, _t in h.device.writes)  # peak: bess_state «running» → 2 ∈ {1,2,4}
+    assert h.engine.snapshot()["engine"]["controller_remote"] is True
+
+
+@pytest.mark.parametrize("name, text, number", [
+    ("bess_state", "sleep", 4), ("bess_state", "fault", 3), ("chp_state", "running", 2), ("chp_state", "cooling", 4),
+    ("ats_pos", "pos_II", 3), ("ats_pos", "pos_I", 2), ("remote", "local", 0), ("src1_ok", "available", 1)])
+def test_text_state_mapping_table(name, text, number):
+    from collector.core.types import Reading
+
+    from td_collector_energy.inputs import text_value
+
+    assert text_value(name, Reading("x", T0, text=text)) == number
+    assert text_value(name, Reading("x", T0, value=7.0, text=text)) == 7.0
+    assert text_value(name, Reading("x", T0, text="невідомо")) is None

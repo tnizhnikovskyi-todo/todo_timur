@@ -37,3 +37,11 @@ def test_event_only_on_change():
     first = pfc.step(env)
     assert len(kinds(first, "auto_step")) == 1 and "ціль cos φ 0.95" in kinds(first, "auto_step")[0].text
     assert not pfc.step(env).events
+
+
+def test_missing_remote_is_critical_input_warn_without_writes():  # R-44 п.3
+    out = pfc.step(make_env(base_cfg(), T0, **standard_inputs(remote=None)))
+    assert out.state == "warn" and "infra" not in out.facts["reason"] and "ctl/remote" in out.facts["reason"]
+    assert not out.requests
+    off = pfc.step(make_env(base_cfg(pfc={"enabled": False}), T0, **standard_inputs(remote=None)))
+    assert reqs(off, "pfc")  # вимкнений сценарій ручний режим виставляє й без remote

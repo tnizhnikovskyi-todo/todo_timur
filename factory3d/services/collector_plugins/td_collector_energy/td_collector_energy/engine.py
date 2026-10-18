@@ -37,11 +37,13 @@ class Engine:
         clock: Clock,
         get_cfg: Any,
         write_enabled: Any = None,
+        config_error: Any = None,
         log: logging.Logger | None = None,
     ) -> None:
         self.store, self.reporter, self.writer, self.actuator = store, reporter, writer, actuator
         self.live, self.clock, self.get_cfg = live, clock, get_cfg
         self.write_enabled = write_enabled  # () -> bool: F3D_WRITE_ENABLED збирача
+        self.config_error = config_error  # () -> str | None: «config invalid: …» (R-53 №12)
         self.log = log or logging.getLogger("collector.plugin.energy_ctl")
         eng = store.data["engine"]
         self.shared: dict[str, Any] = eng.setdefault("shared", {})
@@ -109,6 +111,7 @@ class Engine:
         events: list[Event] = []
         if mode != self.mode or reason != self.reason:
             events.append(self._mode_event(mode, reason))
+            self._log_mode(mode, reason)
             self.mode, self.reason = mode, reason
         if cfg is not None and inp is not None:
             if mode == "auto":
@@ -117,6 +120,7 @@ class Engine:
                     mode, reason = self._mode(cfg, inp, now)
                     if (mode, reason) != (self.mode, self.reason):
                         events.append(self._mode_event(mode, reason))
+                        self._log_mode(mode, reason)
                         self.mode, self.reason = mode, reason
             elif mode == "off":
                 self.states = {code: {"state": "off", "ts": to_iso_z(now_dt), "facts": {}} for code in CARDS}
@@ -129,6 +133,11 @@ class Engine:
         self.last_tick_at = now
         self.tick_ms.append((time.perf_counter() - t0) * 1000.0)
         self.store.save(now_dt, min_interval_s=5.0)
+
+    def _log_mode(self, mode: str, reason: str) -> None:
+        (self.log.warning if mode == "hold" else self.log.info)(
+            "режим рушія: %s → %s%s", self.mode, mode, f" ({reason})" if reason else ""
+        )
 
     def _mode_event(self, mode: str, reason: str) -> Event:
         text = f"Режим рушія: {self.mode} → {mode}" + (f" ({reason})" if reason else "")
@@ -195,6 +204,7 @@ class Engine:
         now = env.epoch
         for req in claimed.values():
             r = await self.actuator.apply(req, env.inp)
+            self._device_refusal(env, req, events)
             if r.refused:
                 self.refused_until, self.refused_reason = now + 30.0, f"запис заборонено: {r.refused}"
                 events.append(Event(req.scenario or None, "interlock", f"Запис вимкнено: {r.refused}", level="warn"))
@@ -218,6 +228,27 @@ class Engine:
                     )
                 )
 
+    def _device_refusal(self, env: Env, req: Request, events: list[Event]) -> None:
+        """Контролер відмовив (`bess_ack`/`chp_ack` = 2) двічі поспіль → сценарій `warn`, ресурс звільнено на 60 с."""
+        ack_name = {"bess": "bess_ack", "chp": "chp_ack"}.get(req.resource)
+        if ack_name is None or not req.scenario:
+            return
+        counts = self.shared.setdefault("ack_fails", {})
+        if env.inp.v(ack_name) != 2:
+            counts[req.resource] = 0
+            return
+        counts[req.resource] = counts.get(req.resource, 0) + 1
+        if counts[req.resource] >= 2:
+            counts[req.resource] = 0
+            self.shared.setdefault("blocked_until", {})[req.resource] = env.epoch + FAIL_BLOCK_S
+            self.shared.setdefault("warn", {})[req.scenario] = {
+                "reason": f"пристрій відмовив ({ack_name} = 2)",
+                "until": env.epoch + FAIL_BLOCK_S,
+            }
+            events.append(
+                Event(req.scenario, "interlock", f"Контролер відмовив: {ack_name} = 2, ресурс звільнено", level="warn")
+            )
+
     def _states(self, env: Env, now_dt: Any) -> None:
         warn = self.shared.get("warn") or {}
         for code in CARDS:
@@ -229,6 +260,11 @@ class Engine:
             if "vent" in env.blocked or "light" in env.blocked:
                 if code == "night" and state != "off":
                     state, facts["reason"] = "warn", "пожежна тривога"
+            prev = self.states.get(code, {}).get("state")
+            if prev != state:
+                (self.log.warning if state == "warn" else self.log.info)(
+                    "сценарій %s: %s → %s%s", code, prev, state, f" ({facts['reason']})" if facts.get("reason") else ""
+                )
             self.states[code] = {"state": state, "ts": to_iso_z(now_dt), "facts": facts}
 
     # --- відновлення після рестарту (R-44 п.9) --------------------------------------------------------
@@ -264,7 +300,7 @@ class Engine:
             "config_version_applied": cfg.version if cfg is not None else 0,
             "engine": {
                 "mode": self.mode,
-                "reason": self.reason or None,
+                "reason": self.reason or (self.config_error() if self.config_error else None),
                 "started_at": to_iso_z(self.started_at),
                 "ticks": self.ticks,
                 "tick_ms_p95": self.tick_p95(),

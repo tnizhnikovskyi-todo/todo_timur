@@ -10,6 +10,9 @@ def step(env: Env) -> Output:
     cfg, inp = env.cfg, env.inp
     sc = cfg.scenario("pfc")
     out = Output()
+    if inp.v("remote") is None and sc.enabled:  # R-44 п.3: `remote` — критичний вхід PFC
+        out.state, out.facts = "warn", {"reason": "немає даних: " + ", ".join(inp.code_list(["remote"]))}
+        return out
     faults = [(k, inp.v(f"pfc{k}_fault")) for k in (1, 2)]
     bad = next(((k, v) for k, v in faults if v is not None and v > 0), None)
     cos = {f"cos{k}": inp.v(f"s{k}_cos") for k in (1, 2) if inp.v(f"s{k}_cos") is not None}
