@@ -1,4 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- V-35 клієнтська дія «Керування»; V-36 стан керування (singleton, лише читання). Власник: B -->
 <odoo>
-    <!-- V-35, V-36 (SPEC 3.1/3.3). Власник: B -->
+    <record id="action_td_energy_control" model="ir.actions.client">
+        <field name="name">Керування енергетикою заводу</field>
+        <field name="tag">td_energy_control.control</field>
+    </record>
+
+    <record id="view_td_energy_control_state_list" model="ir.ui.view">
+        <field name="name">td.energy.control.state.list</field>
+        <field name="model">td.energy.control.state</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="engine_mode" widget="badge" decoration-success="engine_mode == 'auto'"
+                       decoration-warning="engine_mode in ('hold', 'off')"/>
+                <field name="connected" widget="boolean"/>
+                <field name="heartbeat_at"/>
+                <field name="config_version"/>
+                <field name="applied_version"/>
+                <field name="last_state_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_td_energy_control_state_form" model="ir.ui.view">
+        <field name="name">td.energy.control.state.form</field>
+        <field name="model">td.energy.control.state</field>
+        <field name="arch" type="xml">
+            <form create="0" delete="0" duplicate="0">
+                <header>
+                    <button name="bump" type="object" string="Опублікувати конфігурацію" class="btn-primary"
+                            groups="td_factory3d.group_td_admin"
+                            confirm="Збільшити версію конфігурації? Збирач завантажить її за наступним опитуванням."/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Рушій автоматики">
+                            <field name="engine_mode" readonly="1"/>
+                            <field name="engine_reason" readonly="1"/>
+                            <field name="connected" readonly="1"/>
+                            <field name="heartbeat_at" readonly="1"/>
+                            <field name="last_state_at" readonly="1"/>
+                            <field name="collector_id" readonly="1"/>
+                        </group>
+                        <group string="Конфігурація">
+                            <field name="config_version" readonly="1"/>
+                            <field name="applied_version" readonly="1"/>
+                            <field name="config_etag" readonly="1"/>
+                            <field name="last_config_pull_at" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Дані рушія (JSON)">
+                        <field name="engine_info" widget="json" readonly="1" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_td_energy_control_state" model="ir.actions.act_window">
+        <field name="name">Стан керування</field>
+        <field name="res_model">td.energy.control.state</field>
+        <field name="view_mode">list,form</field>
+    </record>
 </odoo>

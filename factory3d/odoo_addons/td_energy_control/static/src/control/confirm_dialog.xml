@@ -1,4 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
-    <!-- Шаблони OWL (SPEC 3.2). Власник: B -->
+    <!-- UI-17 ConfirmDialog (SPEC 3.2): подтверждение команды, проверки блокувань, прогресс выполнения -->
+    <t t-name="td_energy_control.ConfirmDialog">
+        <Dialog title="titleText" size="'md'" contentClass="'o_td_en_cd'" modalRef="modalRef">
+            <div class="o_td_en_cd_body" t-att-aria-busy="state.busy ? 'true' : 'false'">
+                <t t-if="props.prepared">
+                    <p class="o_td_en_cd_text" t-esc="props.prepared.text"/>
+                    <t t-if="state.phase === 'ask'">
+                        <t t-if="props.prepared.checks and props.prepared.checks.length">
+                            <div class="o_td_en_cd_sub">Перевірка блокувань</div>
+                            <ul class="o_td_en_cd_checks">
+                                <li t-foreach="props.prepared.checks" t-as="chk" t-key="chk.code"
+                                    class="o_td_en_cd_check" t-att-data-check-code="chk.code" t-att-data-check-state="chk.state">
+                                    <t t-esc="chk.label"/> — <b t-attf-class="o_td_en_cd_st o_td_en_cd_st--{{chk.state}}" t-esc="checkText[chk.state] || chk.state"/>
+                                    <span t-if="chk.state !== 'ok' and chk.detail" class="o_td_en_cd_detail" t-esc="' (' + chk.detail + ')'"/>
+                                    <span t-if="chk.state !== 'ok' and chk.hard" class="o_td_en_cd_hard"> · жорстка перевірка</span>
+                                </li>
+                            </ul>
+                        </t>
+                        <div t-if="props.prepared.needs_second" class="o_td_en_cd_second">
+                            Потрібне друге підтвердження іншим енергетиком
+                        </div>
+                        <div t-if="blockedReason" class="o_td_en_cd_alert o_td_en_cd_blocked" role="alert">
+                            <b>Заблоковано:</b> <t t-esc="blockedReason"/>
+                        </div>
+                        <div t-if="props.prepared.disabled_reason and props.prepared.disabled_reason !== blockedReason"
+                             class="o_td_en_cd_alert o_td_en_cd_disabled" role="alert"
+                             t-esc="props.prepared.disabled_reason"/>
+                        <div t-if="state.expired" class="o_td_en_cd_alert o_td_en_cd_expired" role="alert">
+                            Час підтвердження минув, відкрийте діалог знову
+                        </div>
+                        <div t-elif="!blockedReason and !props.prepared.disabled_reason" class="o_td_en_cd_ttl">
+                            Підтвердіть протягом <b class="o_td_en_cd_remaining" t-esc="state.remaining"/> с
+                        </div>
+                        <div t-if="state.error" class="o_td_en_cd_alert o_td_en_cd_error" role="alert" t-esc="state.error"/>
+                    </t>
+                </t>
+                <t t-if="state.tracked">
+                    <ol class="o_td_en_cd_steps" aria-live="polite" aria-label="Прогрес виконання">
+                        <li t-foreach="steps" t-as="st" t-key="st.key" t-attf-class="o_td_en_cd_step o_td_en_cd_step--{{st.cls}}"
+                            t-att-data-step="st.key" t-esc="st.text"/>
+                    </ol>
+                </t>
+                <div t-if="state.phase === 'second'" class="o_td_en_cd_second o_td_en_cd_waiting" role="status"
+                     t-esc="state.outcome.text"/>
+                <div t-if="state.phase === 'final' and !state.tracked and state.outcome" class="o_td_en_cd_alert" role="alert"
+                     t-esc="state.outcome.text"/>
+            </div>
+            <t t-set-slot="footer">
+                <t t-if="state.phase === 'ask'">
+                    <button type="button" class="btn btn-primary o_td_en_cd_ok" t-att-disabled="!canConfirm"
+                            t-on-click="confirm" t-esc="confirmLabel"/>
+                    <button type="button" class="btn btn-secondary o_td_en_cd_cancel" t-on-click="() => props.close()">Скасувати</button>
+                </t>
+                <button t-else="" type="button" class="btn btn-primary o_td_en_cd_close" t-on-click="() => props.close()">Закрити</button>
+            </t>
+        </Dialog>
+    </t>
 </templates>

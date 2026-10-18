@@ -10,6 +10,16 @@ export const SHOW_3D_METHOD = "action_f3d_show";
 export const VIEWER_TAG = "f3d_viewer.action";
 
 /**
+ * Реєстр переходів у 3D (C-45, AC-292): запис `default` = `{open({code}) => Promise}` додає міст `td_energy_viewer3d`.
+ * Без нього діє шлях W1 (сповіщення або `f3d_viewer.action`, метод вузла `action_f3d_show`).
+ */
+export const viewerLinks = registry.category("td_energy.viewer_links");
+
+function defaultViewerLink() {
+    return viewerLinks.contains("default") ? viewerLinks.get("default") : null;
+}
+
+/**
  * Хук з типовими діями. Повертає об'єкт, методи якого безпечні: помилки RPC показуються сповіщенням.
  */
 export function useEnergyActions() {
@@ -70,8 +80,17 @@ export function useEnergyActions() {
             return rows.length ? rows[0].id : null;
         },
 
-        /** «Показати в 3D» для вузла схеми: існуючий метод вузла повертає клієнтську дію переглядача. */
+        /** «Показати в 3D» для вузла схеми: міст 3D (`viewerLinks.default`) або існуючий метод вузла (W1). */
         async show3d(code) {
+            const link = defaultViewerLink();
+            if (link) {
+                try {
+                    await link.open({ code });
+                } catch (error) {
+                    fail(error);
+                }
+                return;
+            }
             try {
                 const id = await this.nodeId(code);
                 if (!id) {
@@ -87,8 +106,17 @@ export function useEnergyActions() {
             }
         },
 
-        /** «Відкрити в 3D» (Пульт): переглядач із шаром «Енергетика». */
-        async openViewer() {
+        /** «Відкрити в 3D» (Пульт): міст 3D (`viewerLinks.default`) або переглядач із шаром «Енергетика». */
+        async openViewer(opts = {}) {
+            const link = defaultViewerLink();
+            if (link) {
+                try {
+                    await link.open({ code: opts && opts.code });
+                } catch (error) {
+                    fail(error);
+                }
+                return;
+            }
             if (!registry.category("actions").contains(VIEWER_TAG)) {
                 notify("Модуль 3D-переглядача не встановлено.", "warning");
                 return;
@@ -99,7 +127,7 @@ export function useEnergyActions() {
                     tag: VIEWER_TAG,
                     name: "Завод 3D",
                     target: "current",
-                    params: { layer: "energy" },
+                    params: { layers: ["energy"] },
                 });
             } catch (error) {
                 fail(error);

@@ -2,9 +2,18 @@
 // UI-02 SldCanvas: однолінійна схема з даних вузлів (R-26). Блоки — абсолютно позиціоновані <button>, шини — смуги,
 // ребра — SVG-ламані (edgePath). Вибір вузла — у батьківському компоненті (props.selected/onSelect).
 
-import { Component } from "@odoo/owl";
+import { Component, useEffect, useState } from "@odoo/owl";
+import { registry } from "@web/core/registry";
+import { useService } from "@web/core/utils/hooks";
 import { useEnergyActions } from "../common/actions";
 import { SLD_STATE_LABELS } from "../common/format";
+
+/**
+ * Реєстр дій панелі вузла (C-46, AC-301): запис `{match(node) → bool, actions(node, ctx) → Promise<[{code, label, cls,
+ * onClick, disabled?, title?}]>}`. Реєструє `td_energy_control` (QS, BESS); без запису панель працює як у W1.
+ * `ctx` = `{orm, dialog, notify, fail, reload}`.
+ */
+export const nodeActions = registry.category("td_energy.node_actions");
 
 const clamp = (value, lo, hi) => Math.min(Math.max(value, lo), hi);
 
@@ -42,11 +51,74 @@ export class SldCanvas extends Component {
         sld: { type: Object },
         selected: { optional: true },
         onSelect: { type: Function },
+        onChanged: { type: Function, optional: true },
     };
 
     setup() {
         this.actions = useEnergyActions();
+        this.dialog = useService("dialog");
         this.stateLabels = SLD_STATE_LABELS;
+        this.ext = useState({ actions: [] });
+        this.extSeq = 0;
+        useEffect(
+            () => {
+                this.loadNodeActions();
+            },
+            () => {
+                const node = this.selNode;
+                return [this.props.selected, node && node.state];
+            }
+        );
+    }
+
+    /** Контекст для записів реєстру `td_energy.node_actions`. */
+    get extContext() {
+        const { orm, notify, fail } = this.actions;
+        return { orm, dialog: this.dialog, notify, fail, reload: () => this.reloadAfterAction() };
+    }
+
+    reloadAfterAction() {
+        return this.props.onChanged ? this.props.onChanged() : undefined;
+    }
+
+    /** Кнопки розширень для вибраного вузла (асинхронно; відповідь застарілого вибору відкидається). */
+    async loadNodeActions() {
+        const seq = ++this.extSeq;
+        const node = this.selNode;
+        if (!node) {
+            this.ext.actions = [];
+            return;
+        }
+        const ctx = this.extContext;
+        const entries = nodeActions.getAll().filter((entry) => {
+            try {
+                return entry.match(node);
+            } catch {
+                return false;
+            }
+        });
+        const lists = await Promise.all(
+            entries.map(async (entry) => {
+                try {
+                    return (await entry.actions(node, ctx)) || [];
+                } catch {
+                    return []; // розширення не повинне ламати панель вузла
+                }
+            })
+        );
+        if (seq === this.extSeq) {
+            this.ext.actions = lists.flat();
+        }
+    }
+
+    async runNodeAction(act) {
+        try {
+            await act.onClick();
+        } catch (error) {
+            this.actions.fail(error);
+            return;
+        }
+        await this.reloadAfterAction();
     }
 
     get canvas() {

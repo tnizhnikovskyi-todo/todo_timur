@@ -1,4 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- V-44 налаштування «Керування» у блоці енергетики (M-40). Прапори запобіжників — лише адміністратор (блок app вже
+     обмежений group_td_admin у td_energy). Власник: B -->
 <odoo>
-    <!-- V-44 (SPEC 3.1/3.3). Власник: B -->
+    <record id="res_config_settings_view_form_td_energy_control" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.td.energy.control</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="td_energy.res_config_settings_view_form_td_energy"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='td_energy']" position="inside">
+                <block title="Керування · запобіжники" name="td_energy_control_switches">
+                    <setting string="Керування пристроями (запобіжник 2)"
+                             help="Запис команд у пристрої: ручні команди, сценарії автоматики. Працює разом із запобіжниками телеметрії, джерела, сигналу й збирача (п'ять плюс один).">
+                        <field name="td_energy_control_write_enabled"/>
+                    </setting>
+                    <setting string="Автоматика (запобіжник 6)"
+                             help="Виконання сценаріїв автоматики контролером ГРЩ і збирачем.">
+                        <field name="td_energy_control_automation_enabled"/>
+                    </setting>
+                    <setting string="Дистанційне перемикання"
+                             help="QS, пуск КГУ, розряд BESS і тест ДГУ. Поки вимкнено — ці команди відхиляються; решта команд не залежать від прапора.">
+                        <field name="td_energy_control_remote_switching_enabled"/>
+                    </setting>
+                </block>
+                <block title="Керування · підтвердження" name="td_energy_control_confirm">
+                    <setting string="Строки підтвердження">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_confirm_ttl_s"/>
+                                <field name="td_energy_control_confirm_ttl_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_second_ttl_s"/>
+                                <field name="td_energy_control_second_ttl_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_undo_window_min"/>
+                                <field name="td_energy_control_undo_window_min"/></div>
+                        </div>
+                    </setting>
+                </block>
+                <block title="Керування · виконання" name="td_energy_control_exec">
+                    <setting string="Строки виконання команд">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_command_ttl_s"/>
+                                <field name="td_energy_control_command_ttl_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_exec_timeout_s"/>
+                                <field name="td_energy_control_exec_timeout_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_step_timeout_s"/>
+                                <field name="td_energy_control_step_timeout_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_verify_timeout_s"/>
+                                <field name="td_energy_control_verify_timeout_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_apply_timeout_s"/>
+                                <field name="td_energy_control_apply_timeout_s"/></div>
+                        </div>
+                    </setting>
+                </block>
+                <block title="Керування · автоматика" name="td_energy_control_auto">
+                    <setting string="Параметри рушія автоматики">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_engine_tick_s"/>
+                                <field name="td_energy_control_engine_tick_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_config_poll_s"/>
+                                <field name="td_energy_control_config_poll_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_stale_hold_s"/>
+                                <field name="td_energy_control_stale_hold_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_min_write_interval_s"/>
+                                <field name="td_energy_control_min_write_interval_s"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_max_writes_per_min"/>
+                                <field name="td_energy_control_max_writes_per_min"/></div>
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_shed_restore_step_s"/>
+                                <field name="td_energy_control_shed_restore_step_s"/></div>
+                        </div>
+                    </setting>
+                </block>
+                <block title="Керування · рекомендації" name="td_energy_control_advice">
+                    <setting string="Правила рекомендацій керування">
+                        <div class="content-group">
+                            <div class="row mt8"><label class="col-lg-5" for="td_energy_control_export_advice_min"/>
+                                <field name="td_energy_control_export_advice_min"/></div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
 </odoo>
