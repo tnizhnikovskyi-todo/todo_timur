@@ -85,7 +85,7 @@ def test_devices_fault_clear(api):
 
 def test_scenarios_start_conflict_stop(api):
     names = {s["name"] for s in api.get("/sim/v1/scenarios").json()}
-    assert len(names) == 20 and "filter_clogged" in names
+    assert len(names) == 23 and "filter_clogged" in names
     r = api.post("/sim/v1/scenario/filter_clogged/start",
                  json={"run_ref": "RUN/2026/0007", "params": {"device": "RV-05", "value": 285}})
     assert r.status_code == 201

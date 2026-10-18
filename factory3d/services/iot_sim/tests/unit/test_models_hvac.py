@@ -258,18 +258,18 @@ def test_water_pulses_in_shift(world):
     start = val(world, "infra/water/m3_total")
     for _ in range(360):  # 1 год зміни, крок 10 с
         world.step(10)
-    assert val(world, "infra/water/m3_total") - start == pytest.approx(2.1, abs=0.02)  # 210 імп.
-    assert val(world, "infra/water/flow_m3h") == pytest.approx(2.1)
+    assert val(world, "infra/water/m3_total") - start == pytest.approx(2.1, abs=0.04)  # 210 імп. (+ підживлення котельні 0,0125…0,025 м³/год, W3)
+    assert val(world, "infra/water/flow_m3h") == pytest.approx(2.1, abs=0.03)  # + підживлення котельні (W3)
 
 
 def test_water_off_shift_and_paint(world):
     _water_world(world, paint=True)
     world.advance(600)
-    assert val(world, "infra/water/flow_m3h") == pytest.approx(3.6)
+    assert val(world, "infra/water/flow_m3h") == pytest.approx(3.6, abs=0.03)
     _water_world(world, paint=False)
     world.clock.set(datetime(2026, 10, 12, 20, 0))
     world.advance(600)
-    assert val(world, "infra/water/flow_m3h") == pytest.approx(0.3)
+    assert val(world, "infra/water/flow_m3h") == pytest.approx(0.3, abs=0.03)
     world.workcenters.clear()
     world.step(10)  # без станів РЦ — за потужністю passive-номіналу (> 50 %) = «працює»
     wm = world.devices["WATER"].model
@@ -278,8 +278,8 @@ def test_water_off_shift_and_paint(world):
     world.force("energy/consumers/SPRAY-1/p_now", 0.0, BIG)
     world.force("energy/consumers/AUTOSPRAY-1/p_now", 0.0, BIG)
     world.advance(600)
-    assert val(world, "infra/water/flow_m3h") == pytest.approx(0.3)
+    assert val(world, "infra/water/flow_m3h") == pytest.approx(0.3, abs=0.03)
     world.signals.pop("energy/consumers/SPRAY-1/p_now")
     world.signals.pop("energy/consumers/AUTOSPRAY-1/p_now")
     world.advance(10)
-    assert val(world, "infra/water/flow_m3h") == pytest.approx(0.3)
+    assert val(world, "infra/water/flow_m3h") == pytest.approx(0.3, abs=0.03)

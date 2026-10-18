@@ -334,6 +334,7 @@ class Builder:
                 "kilowatts", 1))
         P(Point("ai", 6, "BOILER_BriquettesToday", self.flag_num("bacnet.BOILER.briquettes", 860.0),
                 "Брикети за добу", "kilograms", 1))
+        P(Point("ai", 7, "BOILER_GasFlow", lambda: self.num(f"{b}/gas_m3h"), "Витрата газу", "cubicMetersPerHour", 0.5))
         P(Point("av", 1, "BOILER_SupplySetpoint", self.flag_num("bacnet.BOILER.setpoint", 80.0),
                 "Уставка подачі", "degreesCelsius", 0.5,
                 write=self.setter_flag("BOILER", "bacnet.BOILER.setpoint", "SupplySetpoint", "boiler")))

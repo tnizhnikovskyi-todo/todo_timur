@@ -10,9 +10,9 @@ from .common import TAG_ARGS, SimCase
 @tagged(*TAG_ARGS)
 class TestSignalCatalog(SimCase):
 
-    def test_csv_loaded_1205(self):
+    def test_csv_loaded_1215(self):
         Signal = self.env['td.sim.signal']
-        self.assertEqual(Signal.search_count([]), 1205)
+        self.assertEqual(Signal.search_count([]), 1215)
         self.assertEqual(Signal.search_count([('protocol', '=', 'none')]), 151)
         self.assertFalse(Signal.search([('device_id', '=', False)]))
 
