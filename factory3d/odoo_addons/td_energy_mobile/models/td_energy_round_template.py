@@ -47,9 +47,7 @@ class TdEnergyRoundSlot(models.Model):
     def _check_weekdays(self):
         for rec in self:
             if schedule.parse_weekdays(rec.weekdays) is None:
-                raise ValidationError(
-                    _("Дні тижня слота «%s»: цифри 0…6 через кому без повторів (пн = 0).", rec.name)
-                )
+                raise ValidationError(_("Дні тижня слота «%s»: цифри 0…6 через кому без повторів (пн = 0).", rec.name))
 
 
 class TdEnergyRoundTemplateItem(models.Model):
@@ -97,7 +95,7 @@ class TdEnergyRoundTemplateItem(models.Model):
 
     @api.constrains("norm_kind", "norm_min", "norm_max")
     def _check_norm(self):
-        """`max` ⇒ задано `norm_max`, `min` ⇒ `norm_min` (0 для float = «не задано»), `range` ⇒ `norm_min ≤ norm_max`."""
+        """`max` ⇒ задано `norm_max`, `min` ⇒ `norm_min` (0 для float = «не задано»), `range` ⇒ мін ≤ макс."""
         for rec in self:
             kind = rec.norm_kind
             bad = (

@@ -21,7 +21,8 @@ class TestWHScheduleTools(TransactionCase):
         self.assertEqual(schedule.fmt_hhmm(16.5), "16:30")
         # звичайна доба: Київ = UTC+3 у жовтні до 25.10
         self.assertEqual(
-            schedule.slot_bounds(date(2026, 10, 20), 16.0, 23.0), (datetime(2026, 10, 20, 13, 0), datetime(2026, 10, 20, 20, 0))
+            schedule.slot_bounds(date(2026, 10, 20), 16.0, 23.0),
+            (datetime(2026, 10, 20, 13, 0), datetime(2026, 10, 20, 20, 0)),
         )
         self.assertEqual(schedule.local_hhmm(datetime(2026, 10, 20, 11, 40)), "14:40")
 

@@ -46,7 +46,10 @@ class TestWHRound(TestWHCommon):
         eng = self.R(user=self.u_eng)
         t1 = rnd.item_ids[0]
         eng.action_toggle_item(t1.id, True, comment="гарячий")
-        self.assertEqual((t1.result, t1.value, t1.value_text, rnd.deviation_count, rnd.done_count), ("deviation", 90.0, "90 °C", 1, 1))
+        self.assertEqual(
+            (t1.result, t1.value, t1.value_text, rnd.deviation_count, rnd.done_count),
+            ("deviation", 90.0, "90 °C", 1, 1),
+        )
         res = eng.action_toggle_item(t1.id, False)
         self.assertEqual((t1.done, t1.result, t1.value, t1.value_text, t1.done_at), (False, "pending", 0.0, "", False))
         self.assertFalse(t1.event_id)  # події — лише при завершенні

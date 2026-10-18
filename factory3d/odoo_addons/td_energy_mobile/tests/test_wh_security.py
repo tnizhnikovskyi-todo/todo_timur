@@ -102,13 +102,13 @@ class TestWHSecurity(TestWHCommon):
         item = rnd.item_ids[0]
         for user in (self.u_plain, self.u_view):
             R = self.R(user=user)
-            for call in (
-                lambda: R.action_toggle_item(item.id, True),
-                lambda: R.action_finish(rnd.id),
-                lambda: R.action_start(self.tpl.id),
+            for method, args in (
+                ("action_toggle_item", (item.id, True)),
+                ("action_finish", (rnd.id,)),
+                ("action_start", (self.tpl.id,)),
             ):
                 with self.assertRaises(AccessError):
-                    call()
+                    getattr(R, method)(*args)
         self.assertFalse(item.done)
         self.assertEqual(rnd.state, "open")
 

@@ -24,7 +24,9 @@ const waitFor = async (check, label, ms = 30000) => {
 };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
-const run = (body) => body().then(() => console.log("test successful")).catch((error) => console.error("UI test failed: " + error));
+const run = (body) => body()
+    .then(() => console.log("test successful"))
+    .catch((error) => console.error("UI test failed: " + error));
 """
 
 
@@ -58,7 +60,7 @@ class TestWHUi(HttpCase):
             $('.o_td_wh_item .o_td_wh_check').click();
             await waitFor(() => count() === '1 / 6', "лічильник після відмітки");
             $('.o_td_wh_finish').click();
-            await waitFor(() => $('.o_notification_body') && $('.o_notification_body').innerText.includes('залишилось 5'), "тост");
+            await waitFor(() => $$('.o_notification_body').some((el) => el.innerText.includes('залишилось 5')), "тост");
             const width = document.documentElement.scrollWidth;
             if (width > document.documentElement.clientWidth) { throw new Error("горизонтальна прокрутка: " + width); }
             });""",

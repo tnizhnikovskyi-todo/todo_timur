@@ -207,8 +207,14 @@ class TdEnergyRound(models.Model):
                     "code": item.code,
                     "title": item.title,
                     "hint": value.hint(
-                        item.hint, bool(value.parse_source(item.source)), item.norm_kind, item.norm_min,
-                        item.norm_max, item.unit, item.precision, values.get(item.id),
+                        item.hint,
+                        bool(value.parse_source(item.source)),
+                        item.norm_kind,
+                        item.norm_min,
+                        item.norm_max,
+                        item.unit,
+                        item.precision,
+                        values.get(item.id),
                     ),  # fmt: skip
                     "done": item.done,
                     "result": item.result,
@@ -254,7 +260,8 @@ class TdEnergyRound(models.Model):
 
     @api.model
     def _td_pick_round(self, now, round_id=None):
-        """R-H6 п. 1: вказаний обхід або `open`/`in_progress` за сьогодні: слот, що містить `now`, першим, далі за `starts_at`."""
+        """R-H6 п. 1: вказаний обхід або `open`/`in_progress` за сьогодні: слот, що містить `now`, першим,
+        далі за `starts_at`."""
         if round_id:
             rnd = self.browse(int(round_id)).exists()
             if rnd:
@@ -375,7 +382,9 @@ class TdEnergyRound(models.Model):
         rnd.message_post(
             body=_(
                 "Обхід завершено: %(done)s/%(total)s, відхилень %(dev)s",
-                done=rnd.done_count, total=rnd.total_count, dev=rnd.deviation_count,
+                done=rnd.done_count,
+                total=rnd.total_count,
+                dev=rnd.deviation_count,
             )  # fmt: skip
         )
         bus.tick(self.env, "state")
@@ -397,7 +406,9 @@ class TdEnergyRound(models.Model):
             slot = template.slot_ids.filtered(lambda s: s.id == int(slot_id))
             if not slot:
                 raise UserError(_("Слот не належить шаблону."))
-            if self.sudo().search_count([("template_id", "=", template.id), ("slot_id", "=", slot.id), ("date", "=", today)]):
+            if self.sudo().search_count(
+                [("template_id", "=", template.id), ("slot_id", "=", slot.id), ("date", "=", today)]
+            ):
                 raise UserError(_("Обхід уже відкритий."))
         starts_at, due_at = now, now + timedelta(hours=OFF_SCHEDULE_H)
         if slot:

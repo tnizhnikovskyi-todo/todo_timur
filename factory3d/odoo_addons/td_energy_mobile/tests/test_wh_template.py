@@ -42,7 +42,9 @@ class TestWHTemplate(TestWHCommon):
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"):
             self.Template.create({"name": "Дубль", "code": "TP-GRSH"})
         with self.assertRaises(IntegrityError), mute_logger("odoo.sql_db"):
-            self.env["td.energy.round.template.item"].create({"template_id": self.tpl.id, "code": "t1", "title": "Дубль"})
+            self.env["td.energy.round.template.item"].create(
+                {"template_id": self.tpl.id, "code": "t1", "title": "Дубль"}
+            )
         counts = [self.Template.search_count([]), self.Slot.search_count([]), len(self.tpl.item_ids)]
         self.assertFalse(hooks._seed_template(self.env))  # повторний `-u`/хук: шаблон є — без змін
         self.assertEqual([self.Template.search_count([]), self.Slot.search_count([]), len(self.tpl.item_ids)], counts)
@@ -52,7 +54,9 @@ class TestWHTemplate(TestWHCommon):
 
     def test_ac_h02_slot_constraints(self):
         tpl = self._tpl()
-        ok = self.Slot.create({"template_id": tpl.id, "name": "Ніч", "time_from": 0.0, "time_to": 24.0, "weekdays": "5,6"})
+        ok = self.Slot.create(
+            {"template_id": tpl.id, "name": "Ніч", "time_from": 0.0, "time_to": 24.0, "weekdays": "5,6"}
+        )
         self.assertTrue(ok)
         for vals in (
             {"time_from": 10.0, "time_to": 10.0},  # time_to ≤ time_from
@@ -74,7 +78,9 @@ class TestWHTemplate(TestWHCommon):
         Item = self.env["td.energy.round.template.item"]
         base = {"template_id": tpl.id, "title": "Пункт"}
         Item.create({**base, "code": "ok1", "norm_kind": "max", "norm_max": 85.0, "source": "signal:a/b"})
-        Item.create({**base, "code": "ok2", "norm_kind": "range", "norm_min": 1.0, "norm_max": 2.0, "source": "pult:a.b"})
+        Item.create(
+            {**base, "code": "ok2", "norm_kind": "range", "norm_min": 1.0, "norm_max": 2.0, "source": "pult:a.b"}
+        )
         Item.create({**base, "code": "ok3", "norm_kind": "none", "source": False})
         for i, vals in enumerate(
             (

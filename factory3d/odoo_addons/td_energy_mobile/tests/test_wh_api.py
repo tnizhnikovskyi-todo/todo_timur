@@ -10,7 +10,7 @@ from odoo.tests import tagged
 from odoo.addons.td_energy.tools import dates
 
 from ..tools import schedule
-from .common import T1, TAGS, TestWHCommon, utc
+from .common import T1, TAGS, TestWHCommon
 
 
 @tagged(*TAGS)
@@ -25,13 +25,13 @@ class TestWHApi(TestWHCommon):
             self._round(self.slot1, state="done" if i % 2 else "missed", now=day)
         data = eng.get_mobile()
         round_ = data["round"]
-        self.assertEqual(
-            (round_["done_count"], round_["total_count"], round_["progress_pct"]), (2, 6, 33)
-        )
+        self.assertEqual((round_["done_count"], round_["total_count"], round_["progress_pct"]), (2, 6, 33))
         self.assertEqual((round_["can_finish"], round_["finish_blocked"]), (False, "залишилось 4"))
         self.assertEqual([i["code"] for i in round_["items"]], ["t1", "t2", "swb", "pfc", "dgu", "bess"])
         self.assertTrue(round_["performer"]["is_me"])
-        self.assertEqual((round_["title"], round_["slot"], round_["due_local"]), ("Обхід ТП і ГРЩ · зміна 1", "Зміна 1", "16:00"))
+        self.assertEqual(
+            (round_["title"], round_["slot"], round_["due_local"]), ("Обхід ТП і ГРЩ · зміна 1", "Зміна 1", "16:00")
+        )
         self.assertEqual(round_["state"], "in_progress")
         self.assertEqual(len(data["history"]), 3)
         self.assertEqual(data["history"][0]["state"], "missed")  # новіші першими
@@ -59,7 +59,9 @@ class TestWHApi(TestWHCommon):
         self.assertIsNone(data["round"])
         self.assertEqual(data["next"], {"slot": "Зміна 2", "starts_local": "16:00"})
         self.assertEqual(data["history"], [])
-        self.assertEqual(self.R((2026, 10, 20, 6, 0), self.u_eng).get_mobile()["next"], {"slot": "Зміна 1", "starts_local": "07:00"})
+        self.assertEqual(
+            self.R((2026, 10, 20, 6, 0), self.u_eng).get_mobile()["next"], {"slot": "Зміна 1", "starts_local": "07:00"}
+        )
         self.assertIsNone(self.R((2026, 10, 20, 23, 30), self.u_eng).get_mobile()["next"])  # слотів більше немає
         self.assertIsNone(self.R((2026, 10, 17, 10, 0), self.u_eng).get_mobile()["next"])  # субота
         # історія: останні закриті
@@ -112,7 +114,20 @@ class TestWHApi(TestWHCommon):
         self.assertEqual((len(journal["items"]), journal["total"]), (2, 3))
         self.assertEqual(R.get_journal(limit=20, offset=2)["items"][0]["id"], dev.id)
         row = journal["items"][0]
-        self.assertEqual(set(row), {"id", "name", "date", "state", "performer", "finished_at_local", "done_count", "total_count", "deviation_count"})
+        self.assertEqual(
+            set(row),
+            {
+                "id",
+                "name",
+                "date",
+                "state",
+                "performer",
+                "finished_at_local",
+                "done_count",
+                "total_count",
+                "deviation_count",
+            },
+        )
         with self.assertRaises(AccessError):
             self.R(user=self.u_plain).get_journal()
         # видалення — лише admin
@@ -129,9 +144,13 @@ class TestWHApi(TestWHCommon):
         self.assertEqual(len(eng.get_mobile()["history"]), 2)
         # стандартний екран налаштувань відкривається лише `base.group_system`: значення записує `set_values`
         settings = self.env["res.config.settings"].create(
-            {"td_energy_mobile_history_limit": 1, "td_energy_mobile_value_fresh_s": 600, "td_energy_mobile_keep_days": 100,
-             "td_energy_mobile_missed_event": False}
-        )  # fmt: skip
+            {
+                "td_energy_mobile_history_limit": 1,
+                "td_energy_mobile_value_fresh_s": 600,
+                "td_energy_mobile_keep_days": 100,
+                "td_energy_mobile_missed_event": False,
+            }
+        )
         settings.set_values()
         icp = self.env["ir.config_parameter"].sudo()
         self.assertEqual(icp.get_param("td.energy_mobile.history_limit"), "1")

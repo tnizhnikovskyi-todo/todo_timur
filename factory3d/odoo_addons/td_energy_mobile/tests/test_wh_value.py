@@ -18,7 +18,9 @@ class TestWHValueTools(TransactionCase):
         data = {"kpis": {"generation": {"genset": {"fuel_pct": 78}}}}
         self.assertEqual(value.walk_path(data, "kpis.generation.genset.fuel_pct"), 78.0)
         self.assertIsNone(value.walk_path(data, "kpis.generation.genset.x"))
-        self.assertIsNone(value.walk_path({"kpis": {"generation": {"genset": None}}}, "kpis.generation.genset.fuel_pct"))
+        self.assertIsNone(
+            value.walk_path({"kpis": {"generation": {"genset": None}}}, "kpis.generation.genset.fuel_pct")
+        )
         self.assertIsNone(value.walk_path({"a": "text"}, "a"))
 
     def test_fresh(self):
@@ -116,7 +118,19 @@ class TestWHValue(TestWHCommon):
                 "code": "T-RNG",
                 "slot_ids": [(0, 0, {"name": "Д", "time_from": 0.0, "time_to": 24.0, "weekdays": "0,1,2,3,4,5,6"})],
                 "item_ids": [
-                    (0, 0, {"code": "r", "title": "R", "source": "signal:" + T1, "norm_kind": "range", "norm_min": 10.0, "norm_max": 20.0, "unit": "°C"})
+                    (
+                        0,
+                        0,
+                        {
+                            "code": "r",
+                            "title": "R",
+                            "source": "signal:" + T1,
+                            "norm_kind": "range",
+                            "norm_min": 10.0,
+                            "norm_max": 20.0,
+                            "unit": "°C",
+                        },
+                    )
                 ],
             }
         )
