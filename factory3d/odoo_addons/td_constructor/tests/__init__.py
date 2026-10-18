@@ -13,3 +13,4 @@ from . import test_checks
 from . import test_hoot_editor
 from . import test_hoot_model
 from . import test_seed_publish_idempotent
+from . import test_registries
