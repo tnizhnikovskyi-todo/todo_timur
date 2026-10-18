@@ -1,5 +1,5 @@
 # Реєстр пристроїв (генерує tools/gen_devices.py з dist/odoo_demo.json + plant/*; не правити вручну).
-# 277 пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.
+# 279 пристроїв; driver — лише для моделей цього воркера, решту визначає registry.driver_for.
 devices:
 - code: SAW-1
   name: Розкрій 1
@@ -2670,3 +2670,26 @@ devices:
   protocols: []
   params:
     protocol: none
+- code: GAS-MAIN
+  name: Корректор газу GAS-MAIN (u74; карта регістрів — ПРИПУЩЕННЯ Q-02)
+  role: gas_meter
+  protocols:
+  - P-07
+  unit_id: 74
+  driver: gas
+  params:
+    dry_nom: 6.0
+    canteen: 1.0
+- code: AIR-MAIN
+  name: Витратомір стисненого повітря AIR-MAIN (u75; карта регістрів — ПРИПУЩЕННЯ Q-02)
+  role: air_meter
+  protocols:
+  - P-07
+  unit_id: 75
+  driver: air
+  params:
+    leak: 1.6
+    q_ref: 9.8
+    load_ref: 66.0
+    load_min: 25.0
+    drop: 0.1
