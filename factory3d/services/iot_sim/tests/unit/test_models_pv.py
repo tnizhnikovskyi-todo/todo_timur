@@ -3,7 +3,14 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-from iot_sim.models.pv import ST_BLACKOUT, ST_NIGHT, ST_ON, ST_START, sun_factor
+from iot_sim.models.pv import (
+    ST_BLACKOUT,
+    ST_NIGHT,
+    ST_ON,
+    ST_START,
+    season_factor,
+    sun_factor,
+)
 
 
 def _total(world) -> float:
@@ -87,3 +94,29 @@ def test_energy_counters_and_state(world):
     world.fault("PV-INV")
     world.step(10)
     assert _total(world) == 0.0
+
+
+def test_season_october_profile(world):
+    """Жовтень: пік СЕС ≈ 0,75 від літнього (не 100 % щодоби); літо ≈ 1, грудень ≈ 0,56; parabola (макет) — 1."""
+    world.clock.set(datetime(2026, 10, 16, 12, 0))
+    assert season_factor(world) == pytest.approx(0.75, abs=0.03)
+    world.clock.set(datetime(2026, 6, 21, 12, 0))
+    assert season_factor(world) == pytest.approx(1.0, abs=0.01)
+    world.clock.set(datetime(2026, 12, 21, 12, 0))
+    assert season_factor(world) == pytest.approx(0.56, abs=0.04)
+    world.settings = SimpleNamespace(sun_model="parabola")
+    assert season_factor(world) == 1.0
+
+
+def test_october_day_peak_below_summer(world):
+    peak = {}
+    for day in (datetime(2026, 10, 16), datetime(2026, 6, 19)):
+        best = 0.0
+        for minute in range(12 * 60, 15 * 60, 15):  # навколо сонячного полудня
+            world.clock.set(day.replace(hour=minute // 60, minute=minute % 60))
+            world.step(10)
+            best = max(best, _total(world))
+        peak[day.month] = best
+    assert 400 <= peak[10] <= 640  # жовтень: ≈ 0,75·765 ± шум
+    assert peak[6] > 650  # літо: майже повна потужність
+    assert peak[10] < 0.85 * peak[6]

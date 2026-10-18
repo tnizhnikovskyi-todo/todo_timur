@@ -1,7 +1,9 @@
 """СЕС: 8 інверторів SUN2000 (R-11).
 
 ``sun``: ``SIM_SUN_MODEL=astral`` — ``max(0, sin(elev))/sin(elev_noon_today)`` для Києва;
-``parabola`` (макет) — ``max(0, 1 − ((h − 13)/6)²)``. ``P_total = 765·sun·cf·(0,92 + 0,08·r)``,
+``parabola`` (макет) — ``max(0, 1 − ((h − 13)/6)²)``. ``P_total = 765·sun·season·cf·(0,92 + 0,08·r)``,
+``season`` — сезонна амплітуда (лише для ``astral``): ``√(sin(h_noon сьогодні)/sin(h_noon літнього сонцестояння))``
+(жовтень ≈ 0,75, грудень ≈ 0,56, червень 1), бо ``sun`` нормований на полудень кожної доби;
 ``cf`` — прапор ``pv_cf`` (S-12), ``P_k = min(115, P_total/8)``. Статус 32089: ніч ``0xA000``,
 ``P < 1 кВт`` ``0x0001``, інакше ``0x0200``; ``blackout`` — ``0x0303`` і ``P = 0``; після повернення мережі
 інвертори стартують 60 с (``0x0001``).
@@ -27,6 +29,8 @@ ST_NIGHT, ST_START, ST_ON, ST_BLACKOUT, ST_FAULT = 0xA000, 0x0001, 0x0200, 0x030
 
 _KYIV = LocationInfo("Kyiv", "Ukraine", "Europe/Kyiv", 50.45, 30.52)
 _noon_cache: dict[date, float] = {}
+_season_cache: dict[date, float] = {}
+_SIN_NOON_MAX = math.sin(math.radians(90.0 - 50.45 + 23.44))  # полудень літнього сонцестояння, Київ
 
 
 def _astral_sun(now: datetime) -> float:
@@ -48,6 +52,19 @@ def sun_factor(world: Any) -> float:
         h = now.hour + now.minute / 60.0 + now.second / 3600.0
         return max(0.0, 1.0 - ((h - 13.0) / 6.0) ** 2)  # type: ignore[no-any-return]
     return _astral_sun(now)
+
+
+def season_factor(world: Any) -> float:
+    """Сезонна амплітуда СЕС 0…1: ``√(sin h_noon / sin h_noon_літо)``; для ``parabola`` (макет) — 1."""
+    if getattr(world.settings, "sun_model", "astral") == "parabola":
+        return 1.0
+    now = world.now()
+    d = now.date()
+    if d not in _season_cache:
+        obs = _KYIV.observer
+        h = elevation(obs, noon(obs, d, tzinfo=now.tzinfo))  # type: ignore[arg-type]
+        _season_cache[d] = math.sqrt(max(0.0, math.sin(math.radians(h))) / _SIN_NOON_MAX)
+    return min(1.0, _season_cache[d])
 
 
 @register_model("pv")
@@ -77,7 +94,7 @@ class Pv(Model):
         self.restart_left = max(0.0, self.restart_left - dt_s)
         sun = sun_factor(self.world)
         failed = self.device.fault is not None
-        p_total = P_PEAK * sun * self._cf() * (0.92 + 0.08 * self.r("pv_now"))
+        p_total = P_PEAK * sun * season_factor(self.world) * self._cf() * (0.92 + 0.08 * self.r("pv_now"))
         if isl or failed or self.restart_left > 0:
             p_total = 0.0
         p_k = min(INV_MAX_KW, p_total / INV_COUNT)

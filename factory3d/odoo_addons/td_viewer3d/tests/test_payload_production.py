@@ -203,13 +203,31 @@ class TestProduction(F3dViewerCase):
         self.assertEqual(len(prog), 30)
         self.assertTrue(all(w["duration"] >= 0 and w["date_planned_finished"] for w in prog))
 
+    def _seed_mo231_energy(self, cost_group=False):
+        """Зі встановленим `td_energy` енергія МО береться з його розподілу `td.energy.alloc` (R-16 п. 8), а не з
+        оцінки провайдера, тож тест дає МО 231 власні рядки: 86,2 кВт·год і 724,08 ₴ (86,2 × 8,4) — ті самі
+        очікування, що й без `td_energy`. `cost_group` — користувач бачить вартість (`td_energy_cost`)."""
+        env = self.env
+        if "td.energy.alloc" not in env:
+            return
+        mo = env["mrp.production"].search([("name", "=", "WH/MO/00231")], limit=1)
+        wo = mo.workorder_ids.sorted("sequence")[:1]
+        env["td.energy.alloc"].sudo().create({
+            "day": dates.local(dates.utc("2026-10-12 10:30"))[:10], "kind": "direct", "workorder_id": wo.id,
+            "workcenter_id": wo.workcenter_id.id, "kwh": 86.2, "cost": 724.08, "minutes": 60.0, "quality": "measured"})
+        if cost_group:
+            group = env.ref("td_energy.group_td_energy_cost")
+            self.user_f3d.sudo().write({"group_ids": [(4, group.id)]})
+
     def test_energy_kwh_mo231(self):
+        self._seed_mo231_energy()
         mo = next(m for m in self._data()["productions"] if m["name"] == "WH/MO/00231")
         self.assertAlmostEqual(mo["energy_kwh"], 86.2, delta=0.1)
         self.assertNotIn("energy_cost", mo)
 
     def test_energy_cost_requires_group(self):
         """AC-60."""
+        self._seed_mo231_energy(cost_group=True)
         orig = payload_tools.group_ok
 
         def fake(env, xmlid):

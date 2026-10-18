@@ -2,9 +2,11 @@
 
 Модель BESS рахується першою серед агрегатів (код ``BESS`` < ``Q1``), тому саме вона веде баланс:
 ``load = Σ p_now`` споживачів, ``gen = pv + chp``, ``surplus = gen − load``,
-``bess_kw = clamp(surplus, −200, +200)`` з обмеженням за SOC (заряд при ``SOC < 100``, розряд при
+``bess_kw = clamp(surplus, −200, +200)`` (розряд — лише понад поріг піку, див. нижче) з обмеженням за SOC (заряд при ``SOC < 100``, розряд при
 ``SOC > 10``), ``export = max(0, surplus − bess_kw)``, ``grid = max(0, load − gen − max(0, −bess_kw))``.
-``bess_kw > 0`` — заряд. Острів (``blackout``): ``grid = export = 0``; до переключення ATyS у II розряд
+``bess_kw > 0`` — заряд. Розряд на дефіцит — пік-шейвінг: лише та частина дефіциту, що перевищує
+``bess_shave_kw`` (прапор світу, за замовчуванням 600 кВт = параметр ``peak_shave_kw`` td_energy); штатно BESS в очікуванні
+(0 кВт), тож у робочу добу імпорт ``Q1 + Q2`` додатний, як у макеті; ``bess_shave_kw = 0`` — розряд на будь-який дефіцит (R-13 макета). Острів (``blackout``): ``grid = export = 0``; до переключення ATyS у II розряд
 ``−min(200, P_crit)`` (лише при ``SOC > 10``), після — 0. ``grid_kw``/``export_kw`` належать пристрою
 ``EMS-1`` (пасивний) — пишемо їх за повним кодом сигналу.
 """
@@ -17,6 +19,7 @@ from iot_sim.models.base import AGGREGATE, Model
 from iot_sim.models.meter import get, island, p_crit, put, total_load, update_rv_all
 
 BESS_KW_MAX = 200.0
+BESS_SHAVE_KW = 600.0  # поріг пік-шейвінгу, кВт (td_energy: peak_shave_kw)
 BESS_KWH = 387.0
 SOC_MIN, SOC_MAX = 10.0, 100.0
 ATS_POSITION = "infra/ats/position"
@@ -46,7 +49,8 @@ class Bess(Model):
         load = total_load(w)
         gen = float(get(w, "infra/totals/pv_now")) + float(get(w, "infra/totals/chp_kw"))
         surplus = gen - load
-        bess = clamp(surplus, -BESS_KW_MAX, BESS_KW_MAX)
+        shave = float(w.flags.get("bess_shave_kw", BESS_SHAVE_KW))
+        bess = clamp(surplus, 0.0, BESS_KW_MAX) if surplus >= 0 else -clamp(-surplus - shave, 0.0, BESS_KW_MAX)
         if (bess > 0 and soc >= SOC_MAX) or (bess < 0 and soc <= SOC_MIN):
             bess = 0.0
         export = max(0.0, surplus - bess)

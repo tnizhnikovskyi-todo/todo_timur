@@ -98,6 +98,18 @@ def _fresh(env):
     return env["td.energy.node"]._f3d_fresh_values()
 
 
+def _live(env, ctx):
+    """`(fresh, snap)` — один набір свіжих сигналів і один живий знімок на побудову payload: `build_energy` і
+    `build_infra` читають те саме (економить сигнали й вузли: 7 запитів з ~116 у `/data` на демо-базі)."""
+    if ctx is not None and "_td_live" in ctx:
+        return ctx["_td_live"]
+    fresh = _fresh(env)
+    live = (fresh, env["td.energy.node"]._f3d_live_snapshot(fresh))
+    if ctx is not None:
+        ctx["_td_live"] = live
+    return live
+
+
 def _val(fresh, code):
     item = fresh.get(code)
     return item[0] if item else None
@@ -166,8 +178,7 @@ def build_energy(env, ctx, payload):
         return payload
     now = _now(env, ctx)
     show_cost = _show_cost(env, ctx)
-    fresh = _fresh(env)
-    snap = Node._f3d_live_snapshot(fresh)
+    fresh, snap = _live(env, ctx)
     totals_live = snap["totals"]
     live_ok = bool(totals_live["lines"]) and snap["stale_feeders"] <= 2 and snap["stale_incomers"] < 2
     nodes = Node.search([])
@@ -178,7 +189,7 @@ def build_energy(env, ctx, payload):
 
     # meta
     tariff = env["td.energy.tariff"].sudo()._f3d_tariff_at(now)
-    _zone, price = env["td.energy.tariff"].sudo()._f3d_price_at(now)
+    _zone, price = env["td.energy.tariff"].sudo()._f3d_price_at(now, tariff=tariff)
     meta = energy.setdefault("meta", {})
     meta["source"] = SOURCE
     meta["u_kv"] = "10 / 0,4"
@@ -415,8 +426,7 @@ def fill_productions(env, ctx, productions):
 
 
 # --- infra ----------------------------------------------------------------------------------------------------
-def _node_num(env, code, key, default):
-    node = env["td.energy.node"].search([("code", "=", code)], limit=1)
+def _node_num(node, key, default):
     if node and node.equipment_id:
         val = node.equipment_id.sudo().f3d_get_num(key)
         if val:
@@ -438,8 +448,7 @@ def build_infra(env, ctx, payload):
     if not Node.has_access("read"):
         return payload
     now = _now(env, ctx)
-    fresh = _fresh(env)
-    snap = Node._f3d_live_snapshot(fresh)
+    fresh, snap = _live(env, ctx)
     infra = payload.setdefault("infra", {})
     cards = infra.setdefault("cards", {})
     totals = infra.setdefault("totals", {})
@@ -451,13 +460,14 @@ def build_infra(env, ctx, payload):
     critical = snap["critical_kw"]
     outage, last_outage = _open_outage(env)
 
-    pv_roof = Node.search([("code", "=", "PV-ROOF")], limit=1)
-    chp_node = Node.search([("code", "=", "CHP")], limit=1)
+    gen_nodes = {n.code: n for n in Node.search([("code", "in", ("PV-ROOF", "CHP", "BESS"))])}  # один запит
+    pv_roof = gen_nodes.get("PV-ROOF", Node)
+    chp_node = gen_nodes.get("CHP", Node)
     pv_kwp = pv_roof.p_inst_kw or 900.0
-    wp = _node_num(env, "PV-ROOF", "wp", 580.0)
+    wp = _node_num(pv_roof, "wp", 580.0)
     n_modules = int(round(pv_kwp * 1000.0 / wp))
     chp_rated = chp_node.p_inst_kw or 800.0
-    bess_kwh = 2 * _node_num(env, "BESS", "kwh", 193.5)
+    bess_kwh = 2 * _node_num(gen_nodes.get("BESS", Node), "kwh", 193.5)
     peak_shave = dates.param_float(env, "peak_shave_kw", 600.0)
 
     # totals (CE-03)

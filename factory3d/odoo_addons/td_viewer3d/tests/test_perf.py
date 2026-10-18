@@ -14,7 +14,10 @@ from .common import F3dViewerCase
 _logger = logging.getLogger(__name__)
 
 LIMIT_DATA_S = 1.5
-LIMIT_DATA_SQL = 80
+LIMIT_DATA_SQL = 80  # переглядач без td_energy: 77 SQL на демо-шаблоні (вимір 18.10.2026)
+# Провайдери td_energy (R-16/R-17: вузли, тариф, інтервали, сигнали, події) додають до /data сталі ≈ 29 SQL
+# (вимір 106 проти 77; до дедуплікації знімка/тарифу було 116) — це не N+1, число не росте з кількістю записів.
+LIMIT_DATA_SQL_ENERGY = 35
 LIMIT_FULL_S = 2.0
 LIMIT_GZIP_KB = 250
 LIMIT_STATIC_FIRST_S = 0.3
@@ -55,7 +58,8 @@ class TestPerf(HttpCase, F3dViewerCase):
     def test_data_query_count(self):
         self._build()
         self.env.invalidate_all()
-        with self.assertQueryCount(admin=LIMIT_DATA_SQL):
+        limit = LIMIT_DATA_SQL + (LIMIT_DATA_SQL_ENERGY if "td.energy.node" in self.env else 0)
+        with self.assertQueryCount(admin=limit):
             self._build()
 
     def test_data_full_and_gzip_size(self):

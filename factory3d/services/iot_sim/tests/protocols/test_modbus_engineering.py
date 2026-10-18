@@ -133,6 +133,9 @@ async def test_tedom_registers(modbus, world):
     assert (await hr(modbus, 72, 40020)).registers == [101]
     assert not (await modbus.client.write_register(40007, 70, slave=72)).isError()
     assert (await hr(modbus, 72, 40007)).registers == [70]
+    assert world.flag("chp_run") is True  # ненульове завдання навантаження запускає КГУ
+    assert not (await modbus.client.write_register(40007, 0, slave=72)).isError()
+    assert world.flag("chp_run") is False  # 0 — зупинка
 
 
 async def test_bit_exact_float_roundtrip_f32(modbus, world):

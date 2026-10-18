@@ -1,6 +1,6 @@
 """AC-37…AC-45, AC-85: розподіл енергії на завдання й пули (R-08, R-09, R-23)."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from odoo import Command, fields
@@ -21,7 +21,9 @@ class AllocMixin(EnergyMixin):
     def alloc_setup(cls, days_back=3):
         cls.Alloc = cls.env["td.energy.alloc"]
         cls.Node = cls.env["td.energy.node"]
-        cls.now = fields.Datetime.now()
+        # заморожений час (демо-годинник 12.10.2026 10:30 Київ): доба тесту лишається до журналів демо-МО (відкриті
+        # журнали демо-шаблону тягнуться з 11.10 і перекривали б спільні пули за реальною датою)
+        cls.now = datetime(2026, 10, 12, 7, 30)
         cls.day = dates.local_day(cls.now - timedelta(days=days_back))
         cls.d0, cls.d1 = dates.local_day_bounds(cls.day)
         cls.loss = cls.env["mrp.workcenter.productivity.loss"].search([("loss_type", "=", "productive")], limit=1)

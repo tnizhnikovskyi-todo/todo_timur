@@ -24,6 +24,7 @@ def build(ctx: Ctx) -> None:
         if not ctx.write_accept:
             raise ModbusError(4)
         ctx.world.set_flag("modbus.u72.setpoint", v)
+        ctx.world.set_flag("chp_run", v > 0)  # ненульове завдання навантаження запускає КГУ, 0 — зупиняє
         ctx.command(UNIT, f"Load setpoint = {v} %")
 
     um.add_hr(40007, lambda: [to_int(ctx.world.flag("modbus.u72.setpoint", 50))], 1,

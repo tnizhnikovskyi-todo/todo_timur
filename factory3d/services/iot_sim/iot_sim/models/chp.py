@@ -1,5 +1,8 @@
 """КГУ TEDOM Quanto D800 NG (R-12).
 
+У штатному стані КГУ **в резерві** (``state = 0``, ``P_el = heat = gas = 0``): запуск — прапор світу ``chp_run``
+(``world.set_flag("chp_run", True)``) або запис ненульового «Load setpoint» у HR 40007 (Modbus u72; 0 — зупинка);
+зупинка проходить через охолодження (60 с), запуск — через ``starting`` (60 с). Далі, поки КГУ в роботі:
 ``load = 0,5`` вдень (``sun > 0,05``), ``1,0`` вночі і при ``outdoor_c < 0``; ``P_el = 800·load ± 4·r``,
 ``heat = 497 / 856``, ``gas = 109 / 199``, ``hours += dt/3600``, ``state = 2``. Острів (``blackout``):
 ``chp_island=false`` — ``state`` 2 → 4 (cooling down, 60 с) → 0, ``P_el = heat = 0``; після повернення
@@ -23,9 +26,14 @@ TRANSITION_S = 60.0
 @register_model("chp")
 class Chp(Model):
     def attach(self) -> None:
+        self.first = True
         self.hold_s = 0.0
         self.kwh = 0.0
         self.hours = float(self.val("hours", 0.0) or 0.0)
+
+    def wanted(self) -> bool:
+        """КГУ запущено командою (``chp_run``); за замовчуванням — резерв."""
+        return bool(self.world.flags.get("chp_run", False))
 
     def _island_stops(self) -> bool:
         b = blackout(self.world)
@@ -35,8 +43,8 @@ class Chp(Model):
         if self.device.fault is not None:
             return FAULT
         if state == FAULT:  # збій усунено
-            state = RUN
-        if self._island_stops():
+            state = RUN if self.wanted() else STOPPED
+        if self._island_stops() or not self.wanted():
             if state in (RUN, STARTING):
                 self.hold_s = TRANSITION_S
                 return COOLING
@@ -51,7 +59,12 @@ class Chp(Model):
 
     def tick(self, dt_s: float) -> None:
         w = self.world
-        state = self._advance_state(int(self.val("state", RUN)), dt_s)
+        state = int(self.val("state", RUN))
+        if self.first:  # старт сервісу: штатно резерв, без «охолодження» з початкового номіналу каталогу
+            self.first = False
+            if state == RUN and not self.wanted():
+                state = STOPPED
+        state = self._advance_state(state, dt_s)
         sun = sun_factor(w)
         outdoor = float(get(w, "ventilation/totals/outdoor_c", 9.0))
         half = sun > 0.05 and outdoor >= 0

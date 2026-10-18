@@ -69,6 +69,7 @@ def test_balance(world):
 
 
 def test_balance_deficit_and_soc_limits(world):
+    world.set_flag("bess_shave_kw", 0)  # розряд на будь-який дефіцит (R-13 макета)
     zero_loads(world)
     hold(world, "energy/consumers/GANTRY-1/p_now", 300.0)
     hold(world, "energy/consumers/SAW-1/p_now", 326.0)
@@ -229,6 +230,7 @@ def _loads_sent(a):
     (348.0, False, 200.0, 200.0),   # явний genset_load_kw
 ])
 def test_island_genset_load(world, crit, chp_island, override, expected):
+    world.set_flag("chp_run", True)  # КГУ запущено командою (штатно — резерв)
     a = _hgm_island(world, crit=crit, chp_island=chp_island, genset_load_kw=override)
     assert _loads_sent(a)[-1] == pytest.approx(expected, abs=1.0)
     assert [p for e, p in a.relay_log if e == "mains"] == [{"available": False}]  # рівно раз
@@ -240,6 +242,7 @@ def test_island_genset_load(world, crit, chp_island, override, expected):
 
 
 def test_island_chp_variants(world):
+    world.set_flag("chp_run", True)
     loads(world, crit=348.0)
     set_blackout(world, chp_island=False)
     world.step(10)
@@ -261,6 +264,7 @@ def test_island_chp_variants(world):
 
 
 def test_chp_night_cold_hours_fault(world):
+    world.set_flag("chp_run", True)
     world.clock.set(datetime(2026, 10, 12, 23, 0))
     world.step(10)
     assert val(world, "infra/chp/heat_kw") == 856 and val(world, "infra/chp/gas_m3h") == 199
@@ -420,3 +424,66 @@ def test_reset_all_energies_zeroes_counters(world):
     world.advance(1)
     assert world.signals[f"energy/consumers/{c}/kwh_total"].value < 0.1
     assert not world.inbox["meter"]
+
+
+# --- КГУ: штатно резерв (R-12), запуск командою ----------------------------------------------
+def test_chp_reserve_by_default(world):
+    assert val(world, "infra/chp/state") == 2  # номінал каталогу до першого тіку
+    run(world, 120, 10)
+    assert val(world, "infra/chp/state") == 0  # без охолодження: одразу резерв
+    for code in ("infra/totals/chp_kw", "infra/chp/heat_kw", "infra/chp/gas_m3h"):
+        assert val(world, code) == 0.0
+    hours = val(world, "infra/chp/hours")
+    run(world, 60, 10)
+    assert val(world, "infra/chp/hours") == hours
+
+
+def test_chp_start_and_stop_commands(world):
+    run(world, 10, 10)
+    assert val(world, "infra/chp/state") == 0
+    world.set_flag("chp_run", True)
+    world.step(10)
+    assert val(world, "infra/chp/state") == 1 and val(world, "infra/totals/chp_kw") == 0.0
+    run(world, 70, 10)
+    assert val(world, "infra/chp/state") == 2
+    assert val(world, "infra/totals/chp_kw") > 300
+    world.set_flag("chp_run", False)
+    world.step(10)
+    assert val(world, "infra/chp/state") == 4 and val(world, "infra/totals/chp_kw") == 0.0
+    run(world, 70, 10)
+    assert val(world, "infra/chp/state") == 0
+
+
+def test_normal_working_day_imports_from_grid(world):
+    """Робоча доба в штатному стані (КГУ в резерві, СЕС за жовтневим профілем): Q1 + Q2 > 0 щогодини,
+    а Q2 може бути від'ємним (невеликий експорт через T2) лише вдень, коли СЕС перекриває секцію 2."""
+    world.clock.set(datetime(2026, 10, 16, 0, 5))  # п'ятниця
+    hold(world, "infra/totals/bess_soc", 10.0)  # BESS розряджений: дефіцит покриває мережа (R-13)
+    negative_q2 = []
+    for hour in range(24):
+        world.clock.set(datetime(2026, 10, 16, hour, 5))
+        run(world, 30, 10)
+        q1, q2 = val(world, "energy/cells/Q1/p_now"), val(world, "energy/cells/Q2/p_now")
+        assert q1 + q2 > 0, (hour, q1, q2)  # імпорт додатний (конвенція: імпорт +)
+        assert val(world, "infra/totals/export_kw") == 0.0
+        assert val(world, "infra/totals/chp_kw") == 0.0
+        if q2 < 0:
+            negative_q2.append(hour)
+        assert val(world, "infra/totals/grid_kw") == pytest.approx(q1 + q2, abs=1.0)
+    assert negative_q2 and all(9 <= h <= 17 for h in negative_q2), negative_q2
+
+
+def test_bess_peak_shaving_only_above_threshold(world):
+    """Штатно BESS в очікуванні: розряд лише на частину дефіциту понад ``bess_shave_kw`` (600 кВт), не більш як 200."""
+    zero_loads(world)
+    hold(world, "infra/totals/pv_now", 0.0)
+    hold(world, "infra/totals/chp_kw", 0.0)
+    hold(world, "energy/consumers/GANTRY-1/p_now", 300.0)  # секція 1
+    for load, bess, grid in ((326.0, 0.0, 326.0), (626.0, -26.0, 600.0), (826.0, -200.0, 626.0)):
+        hold(world, "energy/consumers/SAW-1/p_now", load - 300.0 if load > 326 else 26.0)
+        world.step(10)
+        assert val(world, "infra/totals/bess_kw") == pytest.approx(bess)
+        assert val(world, "infra/totals/grid_kw") == pytest.approx(grid)
+    hold(world, "energy/consumers/SAW-1/p_now", 26.0)
+    world.step(10)
+    assert val(world, "infra/bess/state") == 1  # очікування

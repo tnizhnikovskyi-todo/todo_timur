@@ -104,10 +104,11 @@ class F3dEnergyTariff(models.Model):
         )
 
     @api.model
-    def _f3d_price_at(self, dt_utc, company=None):
-        """R-05: (зона, ціна) за початком слота; немає тарифу чи зони — (порожня зона, 0.0)."""
+    def _f3d_price_at(self, dt_utc, company=None, tariff=None):
+        """R-05: (зона, ціна) за початком слота; немає тарифу чи зони — (порожня зона, 0.0).
+        `tariff` — уже знайдений `_f3d_tariff_at(dt_utc, company)` (без повторного пошуку)."""
         zone_model = self.env["td.energy.tariff.zone"]
-        tariff = self._f3d_tariff_at(dt_utc, company)
+        tariff = self._f3d_tariff_at(dt_utc, company) if tariff is None else tariff
         if not tariff:
             return zone_model, 0.0
         zone = tariff_tools.zone_for(tariff_tools.to_local(dt_utc), tariff.zone_ids.sorted("sequence"))
